@@ -102,6 +102,8 @@ off as work lands.
 - [x] Expose `$MessageList` and `::` shorthand for emitted message names
 - [x] Enhance message template placeholder formatting beyond simple positional substitution
 - [x] Add richer message template format specifiers for message-name parts, quoting, and symbol metadata
+- [x] Add message catalog inspection builtins for listing message names and definitions
+- [x] Surface message-definition presence in symbol inspection flows
 
 ### Tests
 

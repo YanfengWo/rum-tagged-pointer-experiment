@@ -102,6 +102,10 @@ where
                         flags.push("down");
                     }
 
+                    if info.message_count > 0 {
+                        flags.push("msg");
+                    }
+
                     writeln!(
                         self.output,
                         "{} :: {}{}",
@@ -158,6 +162,20 @@ mod tests {
         let rendered = String::from_utf8(output).unwrap();
         assert!(rendered.contains("x ::"));
         assert!(!rendered.contains("unexpected character"));
+    }
+
+    #[test]
+    fn repl_inspect_surfaces_message_definition_flags() {
+        let input = Cursor::new(":inspect f\n:quit\n");
+        let mut output = Vec::new();
+        let mut repl = Repl::new(input, &mut output);
+        let mut session = Session::new();
+        session.eval_text("f::argx = \"bad arg\"").unwrap();
+
+        repl.run(&mut session).unwrap();
+
+        let rendered = String::from_utf8(output).unwrap();
+        assert!(rendered.contains("[msg]"));
     }
 
     #[test]

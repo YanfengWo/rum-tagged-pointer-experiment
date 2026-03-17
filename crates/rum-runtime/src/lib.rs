@@ -180,6 +180,7 @@ pub struct SymbolInfo {
     pub has_own_value: bool,
     pub has_delayed_value: bool,
     pub has_down_values: bool,
+    pub message_count: usize,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -439,11 +440,22 @@ impl Session {
     }
 
     pub fn inspect(&self, name: &str) -> Option<SymbolInfo> {
-        let symbol = self.resolve_symbol_name(name, false)?;
+        let symbol = self
+            .resolve_symbol_name(name, false)
+            .or_else(|| self.resolve_symbol_name(name, true))?;
         let builtin = self.builtin_spec_for_symbol(&symbol);
         let definition = self.definitions.get(&symbol);
+        let message_count = self
+            .message_definitions
+            .keys()
+            .filter(|key| key.symbol == symbol)
+            .count();
 
-        if builtin.is_none() && definition.is_none() && !is_known_system_symbol(&symbol) {
+        if builtin.is_none()
+            && definition.is_none()
+            && message_count == 0
+            && !is_known_system_symbol(&symbol)
+        {
             return None;
         }
 
@@ -458,6 +470,7 @@ impl Session {
             has_down_values: definition
                 .map(|definition| !definition.down_values.is_empty())
                 .unwrap_or(false),
+            message_count,
         })
     }
 
@@ -704,6 +717,58 @@ impl Session {
         };
 
         Ok(format_message_template(&template, key, args))
+    }
+
+    fn lookup_message_symbol(&self, expr: &Expr) -> Option<Symbol> {
+        match expr {
+            Expr::Atom(Atom::Symbol(symbol)) => Some(symbol.clone()),
+            Expr::Atom(Atom::String(raw)) => self.resolve_symbol_name(raw, true),
+            _ => None,
+        }
+    }
+
+    fn message_names_expr_for_symbol(&self, symbol: Option<&Symbol>) -> Expr {
+        let items = self
+            .message_definitions
+            .keys()
+            .filter(|key| symbol.is_none_or(|symbol| key.symbol == *symbol))
+            .map(|key| message_name_expr(key.symbol.clone(), key.tag.clone()))
+            .collect::<Vec<_>>();
+
+        Expr::call(system_expr("List"), items)
+    }
+
+    fn message_definition_rule_expr(&self, key: &MessageNameKey, def: &MessageDefinition) -> Expr {
+        let lhs = message_name_expr(key.symbol.clone(), key.tag.clone());
+
+        if let Some(rhs) = &def.immediate {
+            Expr::call(system_expr("Rule"), vec![lhs, rhs.clone()])
+        } else if let Some(rhs) = &def.delayed {
+            Expr::call(system_expr("RuleDelayed"), vec![lhs, rhs.clone()])
+        } else {
+            Expr::call(system_expr("Rule"), vec![lhs, system_expr("Null")])
+        }
+    }
+
+    fn message_definitions_expr_for_symbol(&self, symbol: Option<&Symbol>) -> Expr {
+        let items = self
+            .message_definitions
+            .iter()
+            .filter(|(key, _)| symbol.is_none_or(|symbol| key.symbol == *symbol))
+            .map(|(key, def)| self.message_definition_rule_expr(key, def))
+            .collect::<Vec<_>>();
+
+        Expr::call(system_expr("List"), items)
+    }
+
+    fn message_definitions_expr_for_key(&self, key: &MessageNameKey) -> Expr {
+        let items = self
+            .message_definitions
+            .get(key)
+            .map(|def| vec![self.message_definition_rule_expr(key, def)])
+            .unwrap_or_default();
+
+        Expr::call(system_expr("List"), items)
     }
 
     fn lower_syntax_expr(&self, syntax: &SyntaxExpr) -> Result<Expr, EvalError> {
@@ -1053,6 +1118,8 @@ impl Session {
             "EndPackage" => self.eval_end_package(args).map(Some),
             "Message" => self.eval_message(args).map(Some),
             "MessageName" => self.eval_message_name(args).map(Some),
+            "Messages" => self.eval_messages(args).map(Some),
+            "MessageDefinitions" => self.eval_message_definitions(args).map(Some),
             "Check" => self.eval_check(args).map(Some),
             "Quiet" => self.eval_quiet(args).map(Some),
             "If" => self.eval_if(args).map(Some),
@@ -1332,6 +1399,61 @@ impl Session {
         };
 
         Ok(message_name_expr(key.symbol, key.tag))
+    }
+
+    fn eval_messages(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [] => Ok(self.message_names_expr_for_symbol(None)),
+            [expr] => {
+                if let Some(key) = self.message_name_key_from_expr(expr) {
+                    let items = if self.message_definitions.contains_key(&key) {
+                        vec![message_name_expr(key.symbol, key.tag)]
+                    } else {
+                        Vec::new()
+                    };
+                    Ok(Expr::call(system_expr("List"), items))
+                } else if let Some(symbol) = self.lookup_message_symbol(expr) {
+                    Ok(self.message_names_expr_for_symbol(Some(&symbol)))
+                } else {
+                    Ok(self.invalid_call_with_arg_form(
+                        "Messages",
+                        args,
+                        "expected no arguments, a symbol or symbol-name string, or a MessageName expression",
+                    ))
+                }
+            }
+            _ => Ok(self.invalid_call_with_message(
+                "Messages",
+                args,
+                "argx",
+                format!("expected 0 or 1 argument(s), got {}", args.len()),
+            )),
+        }
+    }
+
+    fn eval_message_definitions(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [] => Ok(self.message_definitions_expr_for_symbol(None)),
+            [expr] => {
+                if let Some(key) = self.message_name_key_from_expr(expr) {
+                    Ok(self.message_definitions_expr_for_key(&key))
+                } else if let Some(symbol) = self.lookup_message_symbol(expr) {
+                    Ok(self.message_definitions_expr_for_symbol(Some(&symbol)))
+                } else {
+                    Ok(self.invalid_call_with_arg_form(
+                        "MessageDefinitions",
+                        args,
+                        "expected no arguments, a symbol or symbol-name string, or a MessageName expression",
+                    ))
+                }
+            }
+            _ => Ok(self.invalid_call_with_message(
+                "MessageDefinitions",
+                args,
+                "argx",
+                format!("expected 0 or 1 argument(s), got {}", args.len()),
+            )),
+        }
     }
 
     fn eval_check(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -2782,9 +2904,8 @@ fn truthiness_symbol(expr: &Expr) -> Option<bool> {
 fn fallback_hold_attribute(name: &str) -> HoldAttribute {
     match name {
         "Hold" | "HoldAll" | "Evaluate" => HoldAttribute::HoldAll,
-        "Function" | "Which" | "Module" | "Block" | "Check" | "Quiet" | "MessageName" => {
-            HoldAttribute::HoldAll
-        }
+        "Function" | "Which" | "Module" | "Block" | "Check" | "Quiet" | "MessageName"
+        | "Messages" | "MessageDefinitions" => HoldAttribute::HoldAll,
         "Message" | "Context" => HoldAttribute::HoldFirst,
         "If" => HoldAttribute::HoldRest,
         "With" => HoldAttribute::HoldAll,
@@ -3478,7 +3599,9 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "List"
             | "MatchQ"
             | "Message"
+            | "MessageDefinitions"
             | "MessageName"
+            | "Messages"
             | "Module"
             | "Needs"
             | "Null"
@@ -4027,6 +4150,67 @@ mod tests {
                 .iter()
                 .any(|message| { message.text == "ctx=`1:context`; bad=`*:head`; nope=`1:nope`" })
         );
+    }
+
+    #[test]
+    fn messages_builtin_lists_defined_message_names() {
+        let mut session = Session::new();
+
+        session.eval_text("f::argx = \"bad arg\"").unwrap();
+        session.eval_text("f::usage = \"usage text\"").unwrap();
+        session.eval_text("g::tag = \"other\"").unwrap();
+
+        assert_eq!(
+            session.eval_text("Messages[f]").unwrap().value.to_string(),
+            "List[f::argx, f::usage]"
+        );
+        assert_eq!(
+            session.eval_text("Messages[]").unwrap().value.to_string(),
+            "List[f::argx, f::usage, g::tag]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Messages[f::argx]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f::argx]"
+        );
+    }
+
+    #[test]
+    fn message_definitions_builtin_lists_immediate_and_delayed_templates() {
+        let mut session = Session::new();
+
+        session.eval_text("f::argx = \"bad arg `1`\"").unwrap();
+        session.eval_text("f::usage := suffix").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("MessageDefinitions[f]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[Rule[f::argx, \"bad arg `1`\"], RuleDelayed[f::usage, suffix]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("MessageDefinitions[f::argx]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[Rule[f::argx, \"bad arg `1`\"]]"
+        );
+    }
+
+    #[test]
+    fn inspect_reports_message_definition_presence() {
+        let mut session = Session::new();
+
+        session.eval_text("f::argx = \"bad arg\"").unwrap();
+
+        let info = session.inspect("f").unwrap();
+        assert_eq!(info.message_count, 1);
     }
 
     #[test]

@@ -82,6 +82,16 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
     ),
     BuiltinSpec::with_hold(
+        "Messages",
+        "Lists message names defined for the whole session, a symbol, or one message query.",
+        HoldAttribute::HoldAll,
+    ),
+    BuiltinSpec::with_hold(
+        "MessageDefinitions",
+        "Lists stored message template definitions for the whole session, a symbol, or one message query.",
+        HoldAttribute::HoldAll,
+    ),
+    BuiltinSpec::with_hold(
         "Check",
         "Evaluates an expression and substitutes a fallback if matching messages are emitted.",
         HoldAttribute::HoldAll,
