@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use rum_core::{Atom, BigInt, Expr, Symbol};
+use rum_core::{Atom, BigInt, Expr, GLOBAL_CONTEXT, SYSTEM_CONTEXT, Symbol};
 use rum_syntax::{
     BinaryOp, BlankKind, PostfixOp, PrefixOp, SlotSpec, SyntaxError, SyntaxExpr, parse_expr,
 };
@@ -104,6 +104,8 @@ pub enum TraceEvent {
 #[derive(Clone, Debug)]
 pub struct Session {
     builtins: BTreeMap<String, BuiltinSpec>,
+    current_context: String,
+    context_path: Vec<String>,
     definitions: BTreeMap<Symbol, SymbolDefinition>,
     next_generated_symbol_id: u64,
     resource_limits: ResourceLimits,
@@ -179,6 +181,8 @@ impl Default for Session {
     fn default() -> Self {
         Self {
             builtins: BTreeMap::new(),
+            current_context: GLOBAL_CONTEXT.to_string(),
+            context_path: vec![SYSTEM_CONTEXT.to_string(), GLOBAL_CONTEXT.to_string()],
             definitions: BTreeMap::new(),
             next_generated_symbol_id: 0,
             resource_limits: ResourceLimits::default(),
@@ -227,19 +231,42 @@ impl Session {
         self.builtins.insert(spec.name.to_string(), spec);
     }
 
+    pub fn current_context(&self) -> &str {
+        &self.current_context
+    }
+
+    pub fn context_path(&self) -> &[String] {
+        &self.context_path
+    }
+
+    pub fn set_current_context(&mut self, context: impl Into<String>) {
+        self.current_context = normalize_context_name(context.into());
+    }
+
+    pub fn set_context_path<I, S>(&mut self, contexts: I)
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.context_path = contexts
+            .into_iter()
+            .map(|context| normalize_context_name(context.into()))
+            .collect();
+    }
+
     pub fn inspect(&self, name: &str) -> Option<SymbolInfo> {
-        let symbol = symbol_from_raw_name(name);
-        let builtin = self.builtins.get(symbol.name());
+        let symbol = self.resolve_symbol_name(name, false)?;
+        let builtin = self.builtin_spec_for_symbol(&symbol);
         let definition = self.definitions.get(&symbol);
 
-        if builtin.is_none() && definition.is_none() {
+        if builtin.is_none() && definition.is_none() && !is_known_system_symbol(&symbol) {
             return None;
         }
 
         Some(SymbolInfo {
-            qualified_name: symbol.to_string(),
+            qualified_name: symbol.fully_qualified_name(),
             summary: builtin.map(|builtin| builtin.summary.to_string()),
-            is_builtin: builtin.is_some(),
+            is_builtin: builtin.is_some() || is_known_system_symbol(&symbol),
             has_own_value: definition.and_then(|def| def.own_value.as_ref()).is_some(),
             has_delayed_value: definition
                 .and_then(|def| def.delayed_own_value.as_ref())
@@ -252,9 +279,52 @@ impl Session {
 
     pub fn eval_text(&mut self, input: &str) -> Result<EvalOutcome, EvalError> {
         let syntax = parse_expr(input)?;
-        let expr = lower_syntax_expr(&syntax)?;
+        let expr = self.lower_syntax_expr(&syntax)?;
         let value = self.evaluate(expr)?;
         Ok(EvalOutcome { value })
+    }
+
+    fn lower_syntax_expr(&self, syntax: &SyntaxExpr) -> Result<Expr, EvalError> {
+        lower_syntax_expr_with(syntax, &mut |raw| self.resolve_symbol_name(raw, true))
+    }
+
+    fn builtin_spec_for_symbol(&self, symbol: &Symbol) -> Option<&BuiltinSpec> {
+        (symbol.context() == SYSTEM_CONTEXT)
+            .then(|| self.builtins.get(symbol.name()))
+            .flatten()
+    }
+
+    fn resolve_symbol_name(&self, raw: &str, create_if_missing: bool) -> Option<Symbol> {
+        if let Some((context, name)) = split_symbol_name(raw) {
+            return Some(Symbol::new(normalize_context_name(context), name));
+        }
+
+        let mut seen_contexts = BTreeSet::new();
+
+        for context in self
+            .context_path
+            .iter()
+            .map(String::as_str)
+            .chain(std::iter::once(self.current_context.as_str()))
+        {
+            if !seen_contexts.insert(context) {
+                continue;
+            }
+
+            let symbol = Symbol::new(context.to_string(), raw);
+
+            if self.symbol_exists(&symbol) {
+                return Some(symbol);
+            }
+        }
+
+        create_if_missing.then(|| Symbol::new(self.current_context.clone(), raw))
+    }
+
+    fn symbol_exists(&self, symbol: &Symbol) -> bool {
+        self.definitions.contains_key(symbol)
+            || self.builtin_spec_for_symbol(symbol).is_some()
+            || is_known_system_symbol(symbol)
     }
 
     pub fn evaluate(&mut self, expr: Expr) -> Result<Expr, EvalError> {
@@ -314,6 +384,22 @@ impl Session {
     }
 
     fn evaluate_symbol(&mut self, symbol: Symbol) -> Result<Expr, EvalError> {
+        if symbol.context() == SYSTEM_CONTEXT {
+            match symbol.name() {
+                "$Context" => return Ok(Expr::string(self.current_context.clone())),
+                "$ContextPath" => {
+                    let contexts = self
+                        .context_path
+                        .iter()
+                        .cloned()
+                        .map(Expr::string)
+                        .collect::<Vec<_>>();
+                    return Ok(Expr::call(system_expr("List"), contexts));
+                }
+                _ => {}
+            }
+        }
+
         let definition = self.definitions.get(&symbol).cloned();
 
         match definition {
@@ -391,8 +477,11 @@ impl Session {
             return HoldAttribute::None;
         };
 
-        self.builtins
-            .get(symbol.name())
+        if symbol.context() != SYSTEM_CONTEXT {
+            return HoldAttribute::None;
+        }
+
+        self.builtin_spec_for_symbol(symbol)
             .map(|spec| spec.hold)
             .unwrap_or_else(|| fallback_hold_attribute(symbol.name()))
     }
@@ -405,6 +494,10 @@ impl Session {
         let Some(symbol) = expr_as_symbol(head) else {
             return Ok(None);
         };
+
+        if symbol.context() != SYSTEM_CONTEXT {
+            return Ok(None);
+        }
 
         match symbol.name() {
             "Set" => self.eval_set(args).map(Some),
@@ -430,6 +523,10 @@ impl Session {
             return Ok(None);
         };
 
+        if symbol.context() != SYSTEM_CONTEXT {
+            return Ok(None);
+        }
+
         match symbol.name() {
             "Identity" if args.len() == 1 => Ok(Some(args[0].clone())),
             "If" => self.eval_if(args).map(Some),
@@ -446,7 +543,7 @@ impl Session {
 
     fn eval_if(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if !(2..=4).contains(&args.len()) {
-            return Ok(Expr::call(Expr::symbol("If"), args.to_vec()));
+            return Ok(Expr::call(system_expr("If"), args.to_vec()));
         }
 
         match truthiness_symbol(&args[0]) {
@@ -455,17 +552,17 @@ impl Session {
                 if args.len() >= 3 {
                     self.evaluate(args[2].clone())
                 } else {
-                    Ok(Expr::symbol("Null"))
+                    Ok(system_expr("Null"))
                 }
             }
             None if args.len() == 4 => self.evaluate(args[3].clone()),
-            None => Ok(Expr::call(Expr::symbol("If"), args.to_vec())),
+            None => Ok(Expr::call(system_expr("If"), args.to_vec())),
         }
     }
 
     fn eval_which(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.is_empty() || args.len() % 2 != 0 {
-            return Ok(Expr::call(Expr::symbol("Which"), args.to_vec()));
+            return Ok(Expr::call(system_expr("Which"), args.to_vec()));
         }
 
         let mut index = 0;
@@ -479,21 +576,21 @@ impl Session {
                 None => {
                     let mut residual = args.to_vec();
                     residual[index] = condition;
-                    return Ok(Expr::call(Expr::symbol("Which"), residual));
+                    return Ok(Expr::call(system_expr("Which"), residual));
                 }
             }
         }
 
-        Ok(Expr::symbol("Null"))
+        Ok(system_expr("Null"))
     }
 
     fn eval_with(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(Expr::symbol("With"), args.to_vec()));
+            return Ok(Expr::call(system_expr("With"), args.to_vec()));
         }
 
         let Some(bindings) = self.evaluate_with_bindings(&args[0])? else {
-            return Ok(Expr::call(Expr::symbol("With"), args.to_vec()));
+            return Ok(Expr::call(system_expr("With"), args.to_vec()));
         };
 
         let body = substitute_lexical_bindings(&args[1], &bindings, &BTreeSet::new());
@@ -502,11 +599,11 @@ impl Session {
 
     fn eval_module(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(Expr::symbol("Module"), args.to_vec()));
+            return Ok(Expr::call(system_expr("Module"), args.to_vec()));
         }
 
         let Some(items) = parse_module_binding_list(&args[0]) else {
-            return Ok(Expr::call(Expr::symbol("Module"), args.to_vec()));
+            return Ok(Expr::call(system_expr("Module"), args.to_vec()));
         };
 
         let mut renames = BTreeMap::new();
@@ -545,11 +642,11 @@ impl Session {
 
     fn eval_block(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(Expr::symbol("Block"), args.to_vec()));
+            return Ok(Expr::call(system_expr("Block"), args.to_vec()));
         }
 
         let Some(items) = parse_module_binding_list(&args[0]) else {
-            return Ok(Expr::call(Expr::symbol("Block"), args.to_vec()));
+            return Ok(Expr::call(system_expr("Block"), args.to_vec()));
         };
 
         let mut saved_definitions = BTreeMap::new();
@@ -654,7 +751,7 @@ impl Session {
 
     fn eval_set(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(Expr::symbol("Set"), args.to_vec()));
+            return Ok(Expr::call(system_expr("Set"), args.to_vec()));
         }
 
         let lhs = args[0].clone();
@@ -671,13 +768,13 @@ impl Session {
             });
             Ok(rhs)
         } else {
-            Ok(Expr::call(Expr::symbol("Set"), vec![lhs, rhs]))
+            Ok(Expr::call(system_expr("Set"), vec![lhs, rhs]))
         }
     }
 
     fn eval_set_delayed(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(Expr::symbol("SetDelayed"), args.to_vec()));
+            return Ok(Expr::call(system_expr("SetDelayed"), args.to_vec()));
         }
 
         let lhs = args[0].clone();
@@ -692,7 +789,7 @@ impl Session {
                 kind: DefinitionKind::DelayedOwnValue,
                 value: rhs.to_string(),
             });
-            Ok(Expr::symbol("Null"))
+            Ok(system_expr("Null"))
         } else if let Some(head_symbol) = downvalue_head_symbol(&lhs).cloned() {
             let trace_symbol = head_symbol.to_string();
             let definition = self.definitions.entry(head_symbol).or_default();
@@ -705,41 +802,41 @@ impl Session {
                 kind: DefinitionKind::DownValue,
                 value: format!("{lhs} := {rhs}"),
             });
-            Ok(Expr::symbol("Null"))
+            Ok(system_expr("Null"))
         } else {
-            Ok(Expr::call(Expr::symbol("SetDelayed"), vec![lhs, rhs]))
+            Ok(Expr::call(system_expr("SetDelayed"), vec![lhs, rhs]))
         }
     }
 
     fn eval_rule(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(Expr::symbol("Rule"), args.to_vec()));
+            return Ok(Expr::call(system_expr("Rule"), args.to_vec()));
         }
 
         Ok(Expr::call(
-            Expr::symbol("Rule"),
+            system_expr("Rule"),
             vec![args[0].clone(), self.evaluate(args[1].clone())?],
         ))
     }
 
     fn eval_rule_delayed(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(Expr::symbol("RuleDelayed"), args.to_vec()));
+            return Ok(Expr::call(system_expr("RuleDelayed"), args.to_vec()));
         }
 
-        Ok(Expr::call(Expr::symbol("RuleDelayed"), args.to_vec()))
+        Ok(Expr::call(system_expr("RuleDelayed"), args.to_vec()))
     }
 
     fn eval_match_q(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(Expr::symbol("MatchQ"), args.to_vec()));
+            return Ok(Expr::call(system_expr("MatchQ"), args.to_vec()));
         }
 
         let value = self.evaluate(args[0].clone())?;
         let pattern = self.normalize_pattern_expr(&args[1])?;
         let mut bindings = BTreeMap::new();
 
-        Ok(Expr::symbol(
+        Ok(system_expr(
             if self.match_expr(&pattern, &value, &mut bindings)? {
                 "True"
             } else {
@@ -750,7 +847,7 @@ impl Session {
 
     fn eval_cases(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(Expr::symbol("Cases"), args.to_vec()));
+            return Ok(Expr::call(system_expr("Cases"), args.to_vec()));
         }
 
         let target = self.evaluate(args[0].clone())?;
@@ -759,12 +856,12 @@ impl Session {
 
         self.collect_cases(&target, &spec, &mut matches)?;
 
-        Ok(Expr::call(Expr::symbol("List"), matches))
+        Ok(Expr::call(system_expr("List"), matches))
     }
 
     fn eval_replace_all(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(Expr::symbol("ReplaceAll"), args.to_vec()));
+            return Ok(Expr::call(system_expr("ReplaceAll"), args.to_vec()));
         }
 
         let target = self.evaluate(args[0].clone())?;
@@ -772,7 +869,7 @@ impl Session {
 
         let Some(rules) = normalize_rewrite_rules(&rules_expr) else {
             return Ok(Expr::call(
-                Expr::symbol("ReplaceAll"),
+                system_expr("ReplaceAll"),
                 vec![target, rules_expr],
             ));
         };
@@ -783,7 +880,7 @@ impl Session {
 
     fn eval_replace_repeated(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(Expr::symbol("ReplaceRepeated"), args.to_vec()));
+            return Ok(Expr::call(system_expr("ReplaceRepeated"), args.to_vec()));
         }
 
         let mut current = self.evaluate(args[0].clone())?;
@@ -791,7 +888,7 @@ impl Session {
 
         let Some(rules) = normalize_rewrite_rules(&rules_expr) else {
             return Ok(Expr::call(
-                Expr::symbol("ReplaceRepeated"),
+                system_expr("ReplaceRepeated"),
                 vec![current, rules_expr],
             ));
         };
@@ -1118,6 +1215,15 @@ impl Session {
 }
 
 pub fn lower_syntax_expr(expr: &SyntaxExpr) -> Result<Expr, EvalError> {
+    lower_syntax_expr_with(expr, &mut |raw| {
+        resolve_unqualified_symbol(raw).or_else(|| Some(symbol_from_raw_name(raw)))
+    })
+}
+
+fn lower_syntax_expr_with<F>(expr: &SyntaxExpr, resolve_symbol: &mut F) -> Result<Expr, EvalError>
+where
+    F: FnMut(&str) -> Option<Symbol>,
+{
     match expr {
         SyntaxExpr::Integer(value) => {
             let bigint = BigInt::parse_bytes(value.as_bytes(), 10).ok_or_else(|| {
@@ -1129,29 +1235,32 @@ pub fn lower_syntax_expr(expr: &SyntaxExpr) -> Result<Expr, EvalError> {
             Ok(Expr::integer(bigint))
         }
         SyntaxExpr::String(value) => Ok(Expr::string(value.clone())),
-        SyntaxExpr::Symbol(value) => Ok(lower_symbol(value)),
+        SyntaxExpr::Symbol(value) => Ok(lower_symbol(value, resolve_symbol)),
         SyntaxExpr::List(items) => {
             let lowered_items = items
                 .iter()
-                .map(lower_syntax_expr)
+                .map(|item| lower_syntax_expr_with(item, resolve_symbol))
                 .collect::<Result<Vec<_>, _>>()?;
 
-            Ok(Expr::call(Expr::symbol("List"), lowered_items))
+            Ok(Expr::call(system_expr("List"), lowered_items))
         }
         SyntaxExpr::Slot(spec) => lower_slot(spec),
-        SyntaxExpr::Blank { kind, head } => lower_blank(*kind, head.as_deref()),
+        SyntaxExpr::Blank { kind, head } => lower_blank(*kind, head.as_deref(), resolve_symbol),
         SyntaxExpr::Pattern { name, pattern } => Ok(Expr::call(
-            Expr::symbol("Pattern"),
-            vec![lower_syntax_expr(name)?, lower_syntax_expr(pattern)?],
+            system_expr("Pattern"),
+            vec![
+                lower_syntax_expr_with(name, resolve_symbol)?,
+                lower_syntax_expr_with(pattern, resolve_symbol)?,
+            ],
         )),
-        SyntaxExpr::Prefix { op, expr } => lower_prefix(*op, expr),
-        SyntaxExpr::Binary { op, lhs, rhs } => lower_binary(*op, lhs, rhs),
-        SyntaxExpr::Postfix { op, expr } => lower_postfix(*op, expr),
+        SyntaxExpr::Prefix { op, expr } => lower_prefix(*op, expr, resolve_symbol),
+        SyntaxExpr::Binary { op, lhs, rhs } => lower_binary(*op, lhs, rhs, resolve_symbol),
+        SyntaxExpr::Postfix { op, expr } => lower_postfix(*op, expr, resolve_symbol),
         SyntaxExpr::Call { head, args } => {
-            let lowered_head = lower_syntax_expr(head)?;
+            let lowered_head = lower_syntax_expr_with(head, resolve_symbol)?;
             let lowered_args = args
                 .iter()
-                .map(lower_syntax_expr)
+                .map(|arg| lower_syntax_expr_with(arg, resolve_symbol))
                 .collect::<Result<Vec<_>, _>>()?;
 
             Ok(Expr::call(lowered_head, lowered_args))
@@ -1184,10 +1293,17 @@ fn lower_slot(spec: &SlotSpec) -> Result<Expr, EvalError> {
         }
     };
 
-    Ok(Expr::call(Expr::symbol(head), vec![arg]))
+    Ok(Expr::call(system_expr(head), vec![arg]))
 }
 
-fn lower_blank(kind: BlankKind, head: Option<&SyntaxExpr>) -> Result<Expr, EvalError> {
+fn lower_blank<F>(
+    kind: BlankKind,
+    head: Option<&SyntaxExpr>,
+    resolve_symbol: &mut F,
+) -> Result<Expr, EvalError>
+where
+    F: FnMut(&str) -> Option<Symbol>,
+{
     let head_symbol = match kind {
         BlankKind::Blank => "Blank",
         BlankKind::BlankSequence => "BlankSequence",
@@ -1195,113 +1311,163 @@ fn lower_blank(kind: BlankKind, head: Option<&SyntaxExpr>) -> Result<Expr, EvalE
     };
 
     let args = match head {
-        Some(head) => vec![lower_syntax_expr(head)?],
+        Some(head) => vec![lower_syntax_expr_with(head, resolve_symbol)?],
         None => Vec::new(),
     };
 
-    Ok(Expr::call(Expr::symbol(head_symbol), args))
+    Ok(Expr::call(system_expr(head_symbol), args))
 }
 
-fn lower_prefix(op: PrefixOp, expr: &SyntaxExpr) -> Result<Expr, EvalError> {
-    let lowered = lower_syntax_expr(expr)?;
+fn lower_prefix<F>(
+    op: PrefixOp,
+    expr: &SyntaxExpr,
+    resolve_symbol: &mut F,
+) -> Result<Expr, EvalError>
+where
+    F: FnMut(&str) -> Option<Symbol>,
+{
+    let lowered = lower_syntax_expr_with(expr, resolve_symbol)?;
 
     match op {
         PrefixOp::Plus => Ok(lowered),
         PrefixOp::Minus => Ok(Expr::call(
-            Expr::symbol("Times"),
+            system_expr("Times"),
             vec![Expr::integer(BigInt::from(-1)), lowered],
         )),
     }
 }
 
-fn lower_binary(op: BinaryOp, lhs: &SyntaxExpr, rhs: &SyntaxExpr) -> Result<Expr, EvalError> {
-    let lowered_lhs = lower_syntax_expr(lhs)?;
-    let lowered_rhs = lower_syntax_expr(rhs)?;
+fn lower_binary<F>(
+    op: BinaryOp,
+    lhs: &SyntaxExpr,
+    rhs: &SyntaxExpr,
+    resolve_symbol: &mut F,
+) -> Result<Expr, EvalError>
+where
+    F: FnMut(&str) -> Option<Symbol>,
+{
+    let lowered_lhs = lower_syntax_expr_with(lhs, resolve_symbol)?;
+    let lowered_rhs = lower_syntax_expr_with(rhs, resolve_symbol)?;
 
     match op {
         BinaryOp::Set => Ok(Expr::call(
-            Expr::symbol("Set"),
+            system_expr("Set"),
             vec![lowered_lhs, lowered_rhs],
         )),
         BinaryOp::SetDelayed => Ok(Expr::call(
-            Expr::symbol("SetDelayed"),
+            system_expr("SetDelayed"),
             vec![lowered_lhs, lowered_rhs],
         )),
         BinaryOp::ReplaceAll => Ok(Expr::call(
-            Expr::symbol("ReplaceAll"),
+            system_expr("ReplaceAll"),
             vec![lowered_lhs, lowered_rhs],
         )),
         BinaryOp::ReplaceRepeated => Ok(Expr::call(
-            Expr::symbol("ReplaceRepeated"),
+            system_expr("ReplaceRepeated"),
             vec![lowered_lhs, lowered_rhs],
         )),
         BinaryOp::Rule => Ok(Expr::call(
-            Expr::symbol("Rule"),
+            system_expr("Rule"),
             vec![lowered_lhs, lowered_rhs],
         )),
         BinaryOp::RuleDelayed => Ok(Expr::call(
-            Expr::symbol("RuleDelayed"),
+            system_expr("RuleDelayed"),
             vec![lowered_lhs, lowered_rhs],
         )),
         BinaryOp::Condition => Ok(Expr::call(
-            Expr::symbol("Condition"),
+            system_expr("Condition"),
             vec![lowered_lhs, lowered_rhs],
         )),
         BinaryOp::Add => Ok(Expr::call(
-            Expr::symbol("Plus"),
+            system_expr("Plus"),
             vec![lowered_lhs, lowered_rhs],
         )),
         BinaryOp::Subtract => Ok(Expr::call(
-            Expr::symbol("Plus"),
+            system_expr("Plus"),
             vec![
                 lowered_lhs,
                 Expr::call(
-                    Expr::symbol("Times"),
+                    system_expr("Times"),
                     vec![Expr::integer(BigInt::from(-1)), lowered_rhs],
                 ),
             ],
         )),
         BinaryOp::Times => Ok(Expr::call(
-            Expr::symbol("Times"),
+            system_expr("Times"),
             vec![lowered_lhs, lowered_rhs],
         )),
         BinaryOp::Divide => Ok(Expr::call(
-            Expr::symbol("Times"),
+            system_expr("Times"),
             vec![
                 lowered_lhs,
                 Expr::call(
-                    Expr::symbol("Power"),
+                    system_expr("Power"),
                     vec![lowered_rhs, Expr::integer(BigInt::from(-1))],
                 ),
             ],
         )),
         BinaryOp::Power => Ok(Expr::call(
-            Expr::symbol("Power"),
+            system_expr("Power"),
             vec![lowered_lhs, lowered_rhs],
         )),
     }
 }
 
-fn lower_postfix(op: PostfixOp, expr: &SyntaxExpr) -> Result<Expr, EvalError> {
-    let lowered = lower_syntax_expr(expr)?;
+fn lower_postfix<F>(
+    op: PostfixOp,
+    expr: &SyntaxExpr,
+    resolve_symbol: &mut F,
+) -> Result<Expr, EvalError>
+where
+    F: FnMut(&str) -> Option<Symbol>,
+{
+    let lowered = lower_syntax_expr_with(expr, resolve_symbol)?;
 
     match op {
-        PostfixOp::Function => Ok(Expr::call(Expr::symbol("Function"), vec![lowered])),
+        PostfixOp::Function => Ok(Expr::call(system_expr("Function"), vec![lowered])),
     }
 }
 
-fn lower_symbol(raw: &str) -> Expr {
-    Expr::Atom(Atom::Symbol(symbol_from_raw_name(raw)))
+fn lower_symbol<F>(raw: &str, resolve_symbol: &mut F) -> Expr
+where
+    F: FnMut(&str) -> Option<Symbol>,
+{
+    Expr::Atom(Atom::Symbol(
+        resolve_symbol(raw).unwrap_or_else(|| symbol_from_raw_name(raw)),
+    ))
 }
 
 fn symbol_from_raw_name(raw: &str) -> Symbol {
-    if let Some(split_at) = raw.rfind('`') {
-        let context = &raw[..=split_at];
-        let name = &raw[split_at + 1..];
+    if let Some((context, name)) = split_symbol_name(raw) {
         Symbol::new(context, name)
     } else {
         Symbol::from_name(raw)
     }
+}
+
+fn split_symbol_name(raw: &str) -> Option<(&str, &str)> {
+    raw.rfind('`')
+        .map(|split_at| (&raw[..=split_at], &raw[split_at + 1..]))
+}
+
+fn normalize_context_name(context: impl Into<String>) -> String {
+    let mut context = context.into();
+
+    if !context.ends_with('`') {
+        context.push('`');
+    }
+
+    context
+}
+
+fn resolve_unqualified_symbol(raw: &str) -> Option<Symbol> {
+    split_symbol_name(raw)
+        .map(|(context, name)| Symbol::new(normalize_context_name(context), name))
+        .or_else(|| is_known_system_symbol_name(raw).then(|| Symbol::new(SYSTEM_CONTEXT, raw)))
+}
+
+fn system_expr(name: &str) -> Expr {
+    Expr::system_symbol(name)
 }
 
 fn expr_as_symbol(expr: &Expr) -> Option<&Symbol> {
@@ -1312,9 +1478,11 @@ fn expr_as_symbol(expr: &Expr) -> Option<&Symbol> {
 }
 
 fn truthiness_symbol(expr: &Expr) -> Option<bool> {
-    match expr_as_symbol(expr).map(Symbol::name) {
-        Some("True") => Some(true),
-        Some("False") => Some(false),
+    match expr_as_symbol(expr) {
+        Some(symbol) if symbol.context() == SYSTEM_CONTEXT && symbol.name() == "True" => Some(true),
+        Some(symbol) if symbol.context() == SYSTEM_CONTEXT && symbol.name() == "False" => {
+            Some(false)
+        }
         _ => None,
     }
 }
@@ -1623,7 +1791,7 @@ fn bind_pattern_name(name: &Symbol, value: Expr, bindings: &mut BTreeMap<Symbol,
 }
 
 fn sequence_expr(values: Vec<Expr>) -> Expr {
-    Expr::call(Expr::symbol("Sequence"), values)
+    Expr::call(system_expr("Sequence"), values)
 }
 
 fn substitute_bindings(expr: &Expr, bindings: &BTreeMap<Symbol, Expr>) -> Expr {
@@ -1974,9 +2142,57 @@ fn sequence_items(expr: &Expr) -> Option<&[Expr]> {
     }
 }
 
+fn is_known_system_symbol(symbol: &Symbol) -> bool {
+    symbol.context() == SYSTEM_CONTEXT && is_known_system_symbol_name(symbol.name())
+}
+
+fn is_known_system_symbol_name(name: &str) -> bool {
+    matches!(
+        name,
+        "$Context"
+            | "$ContextPath"
+            | "Blank"
+            | "BlankNullSequence"
+            | "BlankSequence"
+            | "Block"
+            | "Cases"
+            | "Condition"
+            | "Evaluate"
+            | "False"
+            | "Function"
+            | "Hold"
+            | "HoldAll"
+            | "HoldFirst"
+            | "HoldRest"
+            | "Identity"
+            | "If"
+            | "Integer"
+            | "List"
+            | "MatchQ"
+            | "Module"
+            | "Null"
+            | "Pattern"
+            | "Plus"
+            | "Power"
+            | "ReplaceAll"
+            | "ReplaceRepeated"
+            | "Rule"
+            | "RuleDelayed"
+            | "Sequence"
+            | "Set"
+            | "SetDelayed"
+            | "Slot"
+            | "SlotSequence"
+            | "Times"
+            | "True"
+            | "Which"
+            | "With"
+    )
+}
+
 fn is_system_symbol_name(expr: &Expr, name: &str) -> bool {
     expr_as_symbol(expr)
-        .map(|symbol| symbol.name() == name)
+        .map(|symbol| symbol.context() == SYSTEM_CONTEXT && symbol.name() == name)
         .unwrap_or(false)
 }
 
@@ -2002,6 +2218,58 @@ mod tests {
             .unwrap();
 
         assert_eq!(outcome.value.to_string(), "123456789012345678901234567890");
+    }
+
+    #[test]
+    fn context_variables_and_builtin_inspection_reflect_session_contexts() {
+        let mut session = Session::new();
+        session.set_current_context("Rules");
+
+        assert_eq!(
+            session.eval_text("$Context").unwrap().value.to_string(),
+            "\"Rules`\""
+        );
+        assert_eq!(
+            session.eval_text("$ContextPath").unwrap().value.to_string(),
+            "List[\"System`\", \"Global`\"]"
+        );
+
+        let info = session.inspect("Identity").unwrap();
+        assert_eq!(info.qualified_name, "System`Identity");
+        assert!(info.is_builtin);
+    }
+
+    #[test]
+    fn bare_symbols_search_context_path_before_current_context() {
+        let mut session = Session::new();
+
+        session.eval_text("Global`x = 10").unwrap();
+        session.set_current_context("Rules");
+        session.eval_text("Rules`x = 20").unwrap();
+        session.eval_text("local = 30").unwrap();
+
+        assert_eq!(session.eval_text("x").unwrap().value.to_string(), "10");
+
+        let info = session.inspect("local").unwrap();
+        assert_eq!(info.qualified_name, "Rules`local");
+        assert_eq!(
+            session.eval_text("Rules`x").unwrap().value.to_string(),
+            "20"
+        );
+    }
+
+    #[test]
+    fn explicit_non_system_heads_do_not_trigger_builtin_dispatch() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Foo`If[True, Identity[1], Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Foo`If[True, 1, 2]"
+        );
     }
 
     #[test]

@@ -4,6 +4,7 @@ use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
 
 pub const GLOBAL_CONTEXT: &str = "Global`";
+pub const SYSTEM_CONTEXT: &str = "System`";
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Symbol {
@@ -23,6 +24,10 @@ impl Symbol {
         Self::new(GLOBAL_CONTEXT, name)
     }
 
+    pub fn system(name: impl Into<String>) -> Self {
+        Self::new(SYSTEM_CONTEXT, name)
+    }
+
     pub fn context(&self) -> &str {
         &self.context
     }
@@ -31,11 +36,15 @@ impl Symbol {
         &self.name
     }
 
+    pub fn fully_qualified_name(&self) -> String {
+        format!("{}{}", self.context, self.name)
+    }
+
     pub fn qualified_name(&self) -> String {
-        if self.context == GLOBAL_CONTEXT {
+        if self.context == GLOBAL_CONTEXT || self.context == SYSTEM_CONTEXT {
             self.name.clone()
         } else {
-            format!("{}{}", self.context, self.name)
+            self.fully_qualified_name()
         }
     }
 }
@@ -86,6 +95,10 @@ impl Expr {
         Self::Atom(Atom::Symbol(Symbol::new(context, name)))
     }
 
+    pub fn system_symbol(name: impl Into<String>) -> Self {
+        Self::Atom(Atom::Symbol(Symbol::system(name)))
+    }
+
     pub fn call(head: Expr, args: Vec<Expr>) -> Self {
         Self::Call {
             head: Box::new(head),
@@ -123,6 +136,13 @@ mod tests {
     fn displays_global_symbol_without_context_prefix() {
         let symbol = Symbol::from_name("x");
         assert_eq!(symbol.to_string(), "x");
+    }
+
+    #[test]
+    fn displays_system_symbol_without_context_prefix() {
+        let symbol = Symbol::system("If");
+        assert_eq!(symbol.to_string(), "If");
+        assert_eq!(symbol.fully_qualified_name(), "System`If");
     }
 
     #[test]

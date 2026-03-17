@@ -47,7 +47,12 @@ off as work lands.
 - [x] Add a definition table for symbol-bound values
 - [x] Distinguish immediate and delayed own values
 - [x] Add explicit storage for downvalues and pattern-based definitions
-- [ ] Add context-aware symbol interning and resolution rules
+- [x] Add context-aware symbol interning and resolution rules
+- [x] Track `current_context` and `context_path` in `Session`
+- [x] Resolve bare symbols through the context path before the current context
+- [x] Preserve explicit context-qualified symbols verbatim
+- [x] Restrict builtin dispatch to `System`` symbols
+- [ ] Add language-level context management helpers beyond session setters
 
 ### Evaluation loop
 

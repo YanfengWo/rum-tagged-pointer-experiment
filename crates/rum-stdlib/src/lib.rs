@@ -15,6 +15,18 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Collects subexpressions matching a pattern or rule.",
     ),
     BuiltinSpec::new("ReplaceAll", "Applies rules everywhere in an expression."),
+    BuiltinSpec::new(
+        "ReplaceRepeated",
+        "Repeatedly applies rules until an expression reaches a fixed point.",
+    ),
+    BuiltinSpec::new(
+        "$Context",
+        "Evaluates to the current default context name as a string.",
+    ),
+    BuiltinSpec::new(
+        "$ContextPath",
+        "Evaluates to the active context search path as a list of strings.",
+    ),
     BuiltinSpec::with_hold(
         "If",
         "Evaluates one of several branches conditionally.",
