@@ -236,6 +236,39 @@ enum CasesSpec {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct CasesLevelSpec {
+    min: usize,
+    max: Option<usize>,
+}
+
+impl CasesLevelSpec {
+    fn all() -> Self {
+        Self { min: 0, max: None }
+    }
+
+    fn exact(level: usize) -> Self {
+        Self {
+            min: level,
+            max: Some(level),
+        }
+    }
+
+    fn range(min: usize, max: Option<usize>) -> Self {
+        Self { min, max }
+    }
+
+    fn contains(self, level: usize) -> bool {
+        level >= self.min && self.max.is_none_or(|max| level <= max)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct CasesTraversalConfig {
+    levels: CasesLevelSpec,
+    include_heads: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ContextFrameKind {
     Begin,
     BeginPackage,
@@ -2270,15 +2303,66 @@ impl Session {
     }
 
     fn eval_cases(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if args.len() != 2 {
-            return Ok(self.invalid_call_with_exact_arg_count("Cases", args, 2));
+        if !(2..=4).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("Cases", args, 2, 4));
         }
 
         let target = self.evaluate(args[0].clone())?;
         let spec = self.normalize_cases_spec(&args[1])?;
+        let traversal = match args {
+            [_, _] => CasesTraversalConfig {
+                levels: CasesLevelSpec::all(),
+                include_heads: false,
+            },
+            [_, _, third] => {
+                let resolved_third = self.evaluate(third.clone())?;
+
+                if let Some(include_heads) = parse_cases_heads_option(&resolved_third) {
+                    CasesTraversalConfig {
+                        levels: CasesLevelSpec::all(),
+                        include_heads,
+                    }
+                } else if let Some(levels) = parse_cases_level_spec(&resolved_third) {
+                    CasesTraversalConfig {
+                        levels,
+                        include_heads: false,
+                    }
+                } else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "Cases",
+                        args,
+                        "expected a non-negative level spec or Heads -> True/False as the third argument",
+                    ));
+                }
+            }
+            [_, _, third, fourth] => {
+                let resolved_third = self.evaluate(third.clone())?;
+                let Some(levels) = parse_cases_level_spec(&resolved_third) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "Cases",
+                        args,
+                        "expected a non-negative level spec as the third argument",
+                    ));
+                };
+                let resolved_fourth = self.evaluate(fourth.clone())?;
+                let Some(include_heads) = parse_cases_heads_option(&resolved_fourth) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "Cases",
+                        args,
+                        "expected a Heads -> True/False option as the fourth argument",
+                    ));
+                };
+
+                CasesTraversalConfig {
+                    levels,
+                    include_heads,
+                }
+            }
+            _ => unreachable!(),
+        };
         let mut matches = Vec::new();
 
-        self.collect_cases(&target, &spec, &mut matches)?;
+        self.collect_cases(&target, &spec, traversal, 0, &mut matches)?;
 
         Ok(Expr::call(system_expr("List"), matches))
     }
@@ -2712,15 +2796,23 @@ impl Session {
         &mut self,
         expr: &Expr,
         spec: &CasesSpec,
+        traversal: CasesTraversalConfig,
+        level: usize,
         matches: &mut Vec<Expr>,
     ) -> Result<(), EvalError> {
-        if let Some(case) = self.try_collect_case(expr, spec)? {
+        if traversal.levels.contains(level)
+            && let Some(case) = self.try_collect_case(expr, spec)?
+        {
             matches.push(case);
         }
 
-        if let Expr::Call { args, .. } = expr {
+        if let Expr::Call { head, args } = expr {
+            if traversal.include_heads {
+                self.collect_cases(head, spec, traversal, level + 1, matches)?;
+            }
+
             for arg in args {
-                self.collect_cases(arg, spec, matches)?;
+                self.collect_cases(arg, spec, traversal, level + 1, matches)?;
             }
         }
 
@@ -3380,6 +3472,63 @@ fn expr_as_string_list(expr: &Expr) -> Option<Vec<String>> {
             _ => None,
         })
         .collect()
+}
+
+fn expr_as_non_negative_usize(expr: &Expr) -> Option<usize> {
+    match expr {
+        Expr::Atom(Atom::Integer(value)) => value.to_string().parse::<usize>().ok(),
+        _ => None,
+    }
+}
+
+fn parse_cases_level_spec(expr: &Expr) -> Option<CasesLevelSpec> {
+    if let Some(level) = expr_as_non_negative_usize(expr) {
+        return Some(CasesLevelSpec::exact(level));
+    }
+
+    if is_system_symbol_name(expr, "Infinity") {
+        return Some(CasesLevelSpec::all());
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "List") || args.len() != 2 {
+        return None;
+    }
+
+    let min = expr_as_non_negative_usize(&args[0])?;
+
+    if let Some(max) = expr_as_non_negative_usize(&args[1]) {
+        return Some(CasesLevelSpec::range(min, Some(max)));
+    }
+
+    if is_system_symbol_name(&args[1], "Infinity") {
+        return Some(CasesLevelSpec::range(min, None));
+    }
+
+    None
+}
+
+fn parse_cases_heads_option(expr: &Expr) -> Option<bool> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !(is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
+        || args.len() != 2
+    {
+        return None;
+    }
+
+    let symbol = expr_as_symbol(&args[0])?;
+
+    if symbol.context() != SYSTEM_CONTEXT || symbol.name() != "Heads" {
+        return None;
+    }
+
+    truthiness_symbol(&args[1])
 }
 
 fn parse_message_selectors(expr: &Expr) -> Option<Vec<MessageSelector>> {
@@ -4219,12 +4368,14 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "FindFile"
             | "Function"
             | "Get"
+            | "Heads"
             | "Hold"
             | "HoldAll"
             | "HoldFirst"
             | "HoldRest"
             | "Identity"
             | "If"
+            | "Infinity"
             | "Integer"
             | "List"
             | "MatchQ"
@@ -6517,6 +6668,104 @@ mod tests {
                 .value
                 .to_string(),
             "List[]"
+        );
+    }
+
+    #[test]
+    fn cases_supports_exact_level_specs() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Cases[f[g[1], 2, h[3]], x_Integer, 1]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[2]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Cases[f[g[1], 2, h[3]], x_Integer, 2]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[1, 3]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Cases[f[1], f[x_Integer], 0]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f[1]]"
+        );
+    }
+
+    #[test]
+    fn cases_supports_range_and_infinity_level_specs() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Cases[f[g[1], 2, h[3]], x_Integer, {1, 1}]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[2]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Cases[f[g[1], 2, h[3]], x_Integer, {1, 2}]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[1, 2, 3]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Cases[f[g[1], 2, h[3]], x_Integer, {2, Infinity}]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[1, 3]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Cases[f[g[1], 2, h[3]], x_Integer, Infinity]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[1, 2, 3]"
+        );
+    }
+
+    #[test]
+    fn cases_supports_explicit_head_traversal_control() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Cases[f[1, g[2]], x_Symbol, Heads -> True]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f, g]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Cases[f[1, g[2]], x_Symbol, 1, Heads -> True]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Cases[f[1, g[2]], x_Symbol, 2, Heads -> True]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[g]"
         );
     }
 

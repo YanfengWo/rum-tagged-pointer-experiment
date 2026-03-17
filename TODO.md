@@ -95,12 +95,12 @@ This roadmap now uses two levels of detail:
 
 ### `rum-runtime`: `Cases` and Traversal Controls
 
-- [ ] Decide the minimum level-spec subset to support first: `n`, `Infinity`, or `{min, max}`
-- [ ] Parse and normalize level specifications into an internal representation
-- [ ] Teach `Cases` to honor simple numeric level specs
-- [ ] Extend `Cases` to support bounded ranges such as `{min, max}`
-- [ ] Add explicit head-traversal control instead of hard-coding the current "do not visit heads" behavior
-- [ ] Add traversal tests that lock down root, head, and nested-argument behavior
+- [x] Decide the minimum level-spec subset to support first: `n`, `Infinity`, or `{min, max}`
+- [x] Parse and normalize level specifications into an internal representation
+- [x] Teach `Cases` to honor simple numeric level specs
+- [x] Extend `Cases` to support bounded ranges such as `{min, max}`
+- [x] Add explicit head-traversal control instead of hard-coding the current "do not visit heads" behavior
+- [x] Add traversal tests that lock down root, head, and nested-argument behavior
 
 ### `rum-runtime`: Evaluation Follow-Through
 
