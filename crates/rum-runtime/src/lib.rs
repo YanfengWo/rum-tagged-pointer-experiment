@@ -519,6 +519,65 @@ impl Session {
         }
     }
 
+    fn invalid_call(&self, symbol: &str, args: &[Expr]) -> Expr {
+        Expr::call(system_expr(symbol), args.to_vec())
+    }
+
+    fn invalid_call_with_message(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        tag: &str,
+        text: impl Into<String>,
+    ) -> Expr {
+        self.push_message(symbol, tag, text);
+        self.invalid_call(symbol, args)
+    }
+
+    fn invalid_call_with_exact_arg_count(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        expected: usize,
+    ) -> Expr {
+        self.invalid_call_with_message(
+            symbol,
+            args,
+            "argx",
+            format!(
+                "expected exactly {expected} argument(s), got {}",
+                args.len()
+            ),
+        )
+    }
+
+    fn invalid_call_with_arg_range(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        min: usize,
+        max: usize,
+    ) -> Expr {
+        self.invalid_call_with_message(
+            symbol,
+            args,
+            "argtu",
+            format!(
+                "expected between {min} and {max} argument(s), got {}",
+                args.len()
+            ),
+        )
+    }
+
+    fn invalid_call_with_arg_form(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        detail: impl Into<String>,
+    ) -> Expr {
+        self.invalid_call_with_message(symbol, args, "argform", detail)
+    }
+
     fn lower_syntax_expr(&self, syntax: &SyntaxExpr) -> Result<Expr, EvalError> {
         lower_syntax_expr_with(syntax, &mut |raw| self.resolve_symbol_name(raw, true))
     }
@@ -875,18 +934,31 @@ impl Session {
                 .resolve_symbol_name(raw_name, false)
                 .map(|symbol| Expr::string(symbol.context().to_string()))
                 .map_or_else(|| Ok(Expr::call(system_expr("Context"), args.to_vec())), Ok),
-            [_] => Ok(Expr::call(system_expr("Context"), args.to_vec())),
-            _ => Ok(Expr::call(system_expr("Context"), args.to_vec())),
+            [_] => Ok(self.invalid_call_with_arg_form(
+                "Context",
+                args,
+                "expected a symbol or string argument",
+            )),
+            _ => Ok(self.invalid_call_with_message(
+                "Context",
+                args,
+                "argx",
+                format!("expected 0 or 1 argument(s), got {}", args.len()),
+            )),
         }
     }
 
     fn eval_find_file(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let [spec] = args else {
-            return Ok(Expr::call(system_expr("FindFile"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("FindFile", args, 1));
         };
 
         let Some(spec) = load_spec_from_expr(spec) else {
-            return Ok(Expr::call(system_expr("FindFile"), args.to_vec()));
+            return Ok(self.invalid_call_with_arg_form(
+                "FindFile",
+                args,
+                "expected a string or File[\"...\"] load target",
+            ));
         };
 
         Ok(match self.find_load_target(&spec) {
@@ -906,11 +978,15 @@ impl Session {
 
     fn eval_get(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let [spec] = args else {
-            return Ok(Expr::call(system_expr("Get"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("Get", args, 1));
         };
 
         let Some(spec) = load_spec_from_expr(spec) else {
-            return Ok(Expr::call(system_expr("Get"), args.to_vec()));
+            return Ok(self.invalid_call_with_arg_form(
+                "Get",
+                args,
+                "expected a string or File[\"...\"] load target",
+            ));
         };
 
         let path = match self.resolve_load_target(&spec) {
@@ -941,12 +1017,30 @@ impl Session {
             ),
             [Expr::Atom(Atom::String(context)), spec] => {
                 let Some(spec) = load_spec_from_expr(spec) else {
-                    return Ok(Expr::call(system_expr("Needs"), args.to_vec()));
+                    return Ok(self.invalid_call_with_arg_form(
+                        "Needs",
+                        args,
+                        "expected a string or File[\"...\"] as the explicit load target",
+                    ));
                 };
 
                 (normalize_context_name(context), spec)
             }
-            _ => return Ok(Expr::call(system_expr("Needs"), args.to_vec())),
+            [_, ..] if args.len() <= 2 => {
+                return Ok(self.invalid_call_with_arg_form(
+                    "Needs",
+                    args,
+                    "expected a string context name, optionally followed by a string or File[\"...\"] load target",
+                ));
+            }
+            _ => {
+                return Ok(self.invalid_call_with_message(
+                    "Needs",
+                    args,
+                    "argx",
+                    format!("expected 1 or 2 argument(s), got {}", args.len()),
+                ));
+            }
         };
 
         if self.loaded_packages.iter().any(|loaded| loaded == &context) {
@@ -970,8 +1064,16 @@ impl Session {
     }
 
     fn eval_begin(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [Expr::Atom(Atom::String(context))] = args else {
-            return Ok(Expr::call(system_expr("Begin"), args.to_vec()));
+        let [context] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Begin", args, 1));
+        };
+
+        let Expr::Atom(Atom::String(context)) = context else {
+            return Ok(self.invalid_call_with_arg_form(
+                "Begin",
+                args,
+                "expected a string context name",
+            ));
         };
 
         let target = expand_context_spec(context, &self.current_context);
@@ -980,12 +1082,17 @@ impl Session {
 
     fn eval_end(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if !args.is_empty() {
-            return Ok(Expr::call(system_expr("End"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("End", args, 0));
         }
 
-        Ok(self
-            .end_context()
-            .unwrap_or_else(|| Expr::call(system_expr("End"), Vec::new())))
+        Ok(self.end_context().unwrap_or_else(|| {
+            self.invalid_call_with_message(
+                "End",
+                &[],
+                "context",
+                "no matching Begin[] frame is active",
+            )
+        }))
     }
 
     fn eval_begin_package(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -993,12 +1100,30 @@ impl Session {
             [Expr::Atom(Atom::String(context))] => (context, Vec::new()),
             [Expr::Atom(Atom::String(context)), needs] => {
                 let Some(needs) = expr_as_string_list(needs) else {
-                    return Ok(Expr::call(system_expr("BeginPackage"), args.to_vec()));
+                    return Ok(self.invalid_call_with_arg_form(
+                        "BeginPackage",
+                        args,
+                        "expected the dependency list to be a list of strings",
+                    ));
                 };
 
                 (context, needs)
             }
-            _ => return Ok(Expr::call(system_expr("BeginPackage"), args.to_vec())),
+            [_, ..] if args.len() <= 2 => {
+                return Ok(self.invalid_call_with_arg_form(
+                    "BeginPackage",
+                    args,
+                    "expected a string context name, optionally followed by a list of string dependencies",
+                ));
+            }
+            _ => {
+                return Ok(self.invalid_call_with_message(
+                    "BeginPackage",
+                    args,
+                    "argx",
+                    format!("expected 1 or 2 argument(s), got {}", args.len()),
+                ));
+            }
         };
 
         let target = expand_context_spec(context, &self.current_context);
@@ -1016,17 +1141,22 @@ impl Session {
 
     fn eval_end_package(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if !args.is_empty() {
-            return Ok(Expr::call(system_expr("EndPackage"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("EndPackage", args, 0));
         }
 
-        Ok(self
-            .end_package_context()
-            .unwrap_or_else(|| Expr::call(system_expr("EndPackage"), Vec::new())))
+        Ok(self.end_package_context().unwrap_or_else(|| {
+            self.invalid_call_with_message(
+                "EndPackage",
+                &[],
+                "context",
+                "no matching BeginPackage[] frame is active",
+            )
+        }))
     }
 
     fn eval_if(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if !(2..=4).contains(&args.len()) {
-            return Ok(Expr::call(system_expr("If"), args.to_vec()));
+            return Ok(self.invalid_call_with_arg_range("If", args, 2, 4));
         }
 
         match truthiness_symbol(&args[0]) {
@@ -1045,7 +1175,11 @@ impl Session {
 
     fn eval_which(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.is_empty() || args.len() % 2 != 0 {
-            return Ok(Expr::call(system_expr("Which"), args.to_vec()));
+            return Ok(self.invalid_call_with_arg_form(
+                "Which",
+                args,
+                "expected one or more condition/result pairs",
+            ));
         }
 
         let mut index = 0;
@@ -1069,11 +1203,15 @@ impl Session {
 
     fn eval_with(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(system_expr("With"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("With", args, 2));
         }
 
         let Some(bindings) = self.evaluate_with_bindings(&args[0])? else {
-            return Ok(Expr::call(system_expr("With"), args.to_vec()));
+            return Ok(self.invalid_call_with_arg_form(
+                "With",
+                args,
+                "expected a list of symbol assignments or rules as the first argument",
+            ));
         };
 
         let body = substitute_lexical_bindings(&args[1], &bindings, &BTreeSet::new());
@@ -1082,11 +1220,15 @@ impl Session {
 
     fn eval_module(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(system_expr("Module"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("Module", args, 2));
         }
 
         let Some(items) = parse_module_binding_list(&args[0]) else {
-            return Ok(Expr::call(system_expr("Module"), args.to_vec()));
+            return Ok(self.invalid_call_with_arg_form(
+                "Module",
+                args,
+                "expected a list of symbols or symbol initializers as the first argument",
+            ));
         };
 
         let mut renames = BTreeMap::new();
@@ -1125,11 +1267,15 @@ impl Session {
 
     fn eval_block(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(system_expr("Block"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("Block", args, 2));
         }
 
         let Some(items) = parse_module_binding_list(&args[0]) else {
-            return Ok(Expr::call(system_expr("Block"), args.to_vec()));
+            return Ok(self.invalid_call_with_arg_form(
+                "Block",
+                args,
+                "expected a list of symbols or symbol initializers as the first argument",
+            ));
         };
 
         let mut saved_definitions = BTreeMap::new();
@@ -1186,7 +1332,16 @@ impl Session {
             FunctionSpec::SlotBased(body) => substitute_slots(body, args),
             FunctionSpec::Explicit { params, body } => {
                 if params.len() != args.len() {
-                    return Ok(None);
+                    self.push_message(
+                        "Function",
+                        "argx",
+                        format!(
+                            "expected exactly {} argument(s), got {}",
+                            params.len(),
+                            args.len()
+                        ),
+                    );
+                    return Ok(Some(Expr::call(head.clone(), args.to_vec())));
                 }
 
                 let bindings = params.into_iter().zip(args.iter().cloned()).collect();
@@ -1234,7 +1389,7 @@ impl Session {
 
     fn eval_set(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(system_expr("Set"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("Set", args, 2));
         }
 
         let lhs = args[0].clone();
@@ -1257,7 +1412,7 @@ impl Session {
 
     fn eval_set_delayed(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(system_expr("SetDelayed"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("SetDelayed", args, 2));
         }
 
         let lhs = args[0].clone();
@@ -1293,7 +1448,7 @@ impl Session {
 
     fn eval_rule(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(system_expr("Rule"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("Rule", args, 2));
         }
 
         Ok(Expr::call(
@@ -1304,7 +1459,7 @@ impl Session {
 
     fn eval_rule_delayed(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(system_expr("RuleDelayed"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("RuleDelayed", args, 2));
         }
 
         Ok(Expr::call(system_expr("RuleDelayed"), args.to_vec()))
@@ -1312,7 +1467,7 @@ impl Session {
 
     fn eval_match_q(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(system_expr("MatchQ"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("MatchQ", args, 2));
         }
 
         let value = self.evaluate(args[0].clone())?;
@@ -1330,7 +1485,7 @@ impl Session {
 
     fn eval_cases(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(system_expr("Cases"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("Cases", args, 2));
         }
 
         let target = self.evaluate(args[0].clone())?;
@@ -1344,16 +1499,17 @@ impl Session {
 
     fn eval_replace_all(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(system_expr("ReplaceAll"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("ReplaceAll", args, 2));
         }
 
         let target = self.evaluate(args[0].clone())?;
         let rules_expr = self.evaluate(args[1].clone())?;
 
         let Some(rules) = normalize_rewrite_rules(&rules_expr) else {
-            return Ok(Expr::call(
-                system_expr("ReplaceAll"),
-                vec![target, rules_expr],
+            return Ok(self.invalid_call_with_arg_form(
+                "ReplaceAll",
+                &[target, rules_expr],
+                "expected a rule or list of rules as the second argument",
             ));
         };
 
@@ -1363,16 +1519,17 @@ impl Session {
 
     fn eval_replace_repeated(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
-            return Ok(Expr::call(system_expr("ReplaceRepeated"), args.to_vec()));
+            return Ok(self.invalid_call_with_exact_arg_count("ReplaceRepeated", args, 2));
         }
 
         let mut current = self.evaluate(args[0].clone())?;
         let rules_expr = self.evaluate(args[1].clone())?;
 
         let Some(rules) = normalize_rewrite_rules(&rules_expr) else {
-            return Ok(Expr::call(
-                system_expr("ReplaceRepeated"),
-                vec![current, rules_expr],
+            return Ok(self.invalid_call_with_arg_form(
+                "ReplaceRepeated",
+                &[current, rules_expr],
+                "expected a rule or list of rules as the second argument",
             ));
         };
 
@@ -3245,6 +3402,99 @@ mod tests {
                 .messages
                 .iter()
                 .any(|message| message.symbol == "Needs" && message.tag == "load")
+        );
+    }
+
+    #[test]
+    fn invalid_builtin_argument_shapes_emit_runtime_messages() {
+        let mut session = Session::new();
+
+        let with_outcome = session.eval_text("With[x, x]").unwrap();
+        assert_eq!(with_outcome.value.to_string(), "With[x, x]");
+        assert!(
+            with_outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "With" && message.tag == "argform" })
+        );
+
+        let replace_outcome = session.eval_text("7 /. 1").unwrap();
+        assert_eq!(replace_outcome.value.to_string(), "ReplaceAll[7, 1]");
+        assert!(
+            replace_outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "ReplaceAll" && message.tag == "argform" })
+        );
+
+        let get_outcome = session.eval_text("Get[1]").unwrap();
+        assert_eq!(get_outcome.value.to_string(), "Get[1]");
+        assert!(
+            get_outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "Get" && message.tag == "argform" })
+        );
+    }
+
+    #[test]
+    fn invalid_builtin_argument_counts_emit_runtime_messages() {
+        let mut session = Session::new();
+
+        let if_outcome = session.eval_text("If[True]").unwrap();
+        assert_eq!(if_outcome.value.to_string(), "If[True]");
+        assert!(
+            if_outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "If" && message.tag == "argtu" })
+        );
+
+        let set_outcome = session.eval_text("Set[x]").unwrap();
+        assert_eq!(set_outcome.value.to_string(), "Set[x]");
+        assert!(
+            set_outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "Set" && message.tag == "argx" })
+        );
+    }
+
+    #[test]
+    fn unbalanced_context_frames_emit_runtime_messages() {
+        let mut session = Session::new();
+
+        let end_outcome = session.eval_text("End[]").unwrap();
+        assert_eq!(end_outcome.value.to_string(), "End[]");
+        assert!(
+            end_outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "End" && message.tag == "context" })
+        );
+
+        let end_package_outcome = session.eval_text("EndPackage[]").unwrap();
+        assert_eq!(end_package_outcome.value.to_string(), "EndPackage[]");
+        assert!(
+            end_package_outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "EndPackage" && message.tag == "context" })
+        );
+    }
+
+    #[test]
+    fn explicit_parameter_function_arity_mismatch_emits_runtime_message() {
+        let mut session = Session::new();
+
+        let outcome = session.eval_text("Function[{x, y}, x][1]").unwrap();
+
+        assert_eq!(outcome.value.to_string(), "Function[List[x, y], x][1]");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "Function" && message.tag == "argx" })
         );
     }
 

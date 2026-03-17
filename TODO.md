@@ -92,6 +92,8 @@ off as work lands.
 - [x] Add structured runtime messages/diagnostics in evaluation outcomes
 - [x] Surface loader failures as `$Failed` plus messages where appropriate
 - [x] Render runtime messages cleanly in REPL and CLI flows
+- [x] Emit builtin argument-count and argument-form messages without turning them into Rust errors
+- [x] Surface context-stack misuse and pure-function arity mismatches via runtime messages
 
 ### Tests
 
