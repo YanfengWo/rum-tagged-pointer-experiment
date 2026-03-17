@@ -192,6 +192,13 @@ pub struct DefinitionCatalogEntry {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RewriteRuleInfo {
+    pub lhs: Expr,
+    pub rhs: Expr,
+    pub delayed: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MessageCatalogEntry {
     pub message_name: String,
     pub qualified_symbol_name: String,
@@ -218,6 +225,8 @@ pub struct DownValue {
 struct RewriteRule {
     lhs: Expr,
     rhs: Expr,
+    delayed: bool,
+    matcher: MatcherNode,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -246,6 +255,40 @@ struct LoaderSnapshot {
     context_path: Vec<String>,
     context_stack: Vec<ContextFrame>,
     loaded_packages: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum MatcherNode {
+    Exact(Expr),
+    Blank {
+        head_constraint: Option<Expr>,
+    },
+    Named {
+        name: Symbol,
+        inner: Box<MatcherNode>,
+    },
+    Condition {
+        inner: Box<MatcherNode>,
+        condition: Expr,
+    },
+    Call {
+        head: Box<MatcherNode>,
+        args: Vec<MatcherArg>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum MatcherArg {
+    Single(MatcherNode),
+    Sequence(CompiledSequencePattern),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CompiledSequencePattern {
+    min_len: usize,
+    head_constraint: Option<Expr>,
+    name: Option<Symbol>,
+    condition: Option<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -533,6 +576,24 @@ impl Session {
         }
 
         Some(self.definition_catalog_entries_for_symbol(&symbol))
+    }
+
+    pub fn inspect_rewrite_rules(
+        &mut self,
+        expr: Expr,
+    ) -> Result<Option<Vec<RewriteRuleInfo>>, EvalError> {
+        let resolved = self.evaluate(expr)?;
+
+        Ok(normalize_rewrite_rules(&resolved).map(|rules| {
+            rules
+                .into_iter()
+                .map(|rule| RewriteRuleInfo {
+                    lhs: rule.lhs,
+                    rhs: rule.rhs,
+                    delayed: rule.delayed,
+                })
+                .collect()
+        }))
     }
 
     pub fn eval_text(&mut self, input: &str) -> Result<EvalOutcome, EvalError> {
@@ -1015,6 +1076,20 @@ impl Session {
         Expr::call(system_expr("List"), items)
     }
 
+    fn rewrite_rule_expr(rule: &RewriteRule) -> Expr {
+        Expr::call(
+            system_expr(if rule.delayed { "RuleDelayed" } else { "Rule" }),
+            vec![rule.lhs.clone(), rule.rhs.clone()],
+        )
+    }
+
+    fn normalized_rules_expr(rules: &[RewriteRule]) -> Expr {
+        Expr::call(
+            system_expr("List"),
+            rules.iter().map(Self::rewrite_rule_expr).collect(),
+        )
+    }
+
     fn lower_syntax_expr(&self, syntax: &SyntaxExpr) -> Result<Expr, EvalError> {
         lower_syntax_expr_with(syntax, &mut |raw| self.resolve_symbol_name(raw, true))
     }
@@ -1367,6 +1442,7 @@ impl Session {
             "MessageTags" => self.eval_message_tags(args).map(Some),
             "OwnValues" => self.eval_own_values(args).map(Some),
             "DownValues" => self.eval_down_values(args).map(Some),
+            "NormalizeRules" => self.eval_normalize_rules(args).map(Some),
             "Check" => self.eval_check(args).map(Some),
             "Quiet" => self.eval_quiet(args).map(Some),
             "If" => self.eval_if(args).map(Some),
@@ -1759,6 +1835,24 @@ impl Session {
                 }
             }
             _ => Ok(self.invalid_call_with_exact_arg_count("DownValues", args, 1)),
+        }
+    }
+
+    fn eval_normalize_rules(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [expr] => {
+                let resolved = self.evaluate(expr.clone())?;
+
+                match normalize_rewrite_rules(&resolved) {
+                    Some(rules) => Ok(Self::normalized_rules_expr(&rules)),
+                    None => Ok(self.invalid_call_with_arg_form(
+                        "NormalizeRules",
+                        args,
+                        "expected a rule, a rule list, or a symbol that evaluates to rules",
+                    )),
+                }
+            }
+            _ => Ok(self.invalid_call_with_exact_arg_count("NormalizeRules", args, 1)),
         }
     }
 
@@ -2262,8 +2356,9 @@ impl Session {
 
         for down_value in definition.down_values {
             let mut bindings = BTreeMap::new();
+            let matcher = compile_matcher(&down_value.lhs);
 
-            if self.match_expr(&down_value.lhs, &candidate, &mut bindings)? {
+            if self.match_compiled(&matcher, &candidate, &mut bindings)? {
                 let substituted = substitute_rule_bindings(&down_value.rhs, &bindings);
                 self.push_trace(TraceEvent::RuleApplied {
                     source: RuleApplicationSource::DownValue,
@@ -2284,8 +2379,18 @@ impl Session {
         value: &Expr,
         bindings: &mut BTreeMap<Symbol, Expr>,
     ) -> Result<bool, EvalError> {
+        let matcher = compile_matcher(pattern);
+        self.match_compiled(&matcher, value, bindings)
+    }
+
+    fn match_compiled(
+        &mut self,
+        matcher: &MatcherNode,
+        value: &Expr,
+        bindings: &mut BTreeMap<Symbol, Expr>,
+    ) -> Result<bool, EvalError> {
         let snapshot = bindings.clone();
-        let matched = self.match_expr_inner(pattern, value, bindings)?;
+        let matched = self.match_compiled_inner(matcher, value, bindings)?;
 
         if !matched {
             *bindings = snapshot;
@@ -2294,14 +2399,163 @@ impl Session {
         Ok(matched)
     }
 
-    fn match_expr_inner(
+    fn match_compiled_inner(
+        &mut self,
+        matcher: &MatcherNode,
+        value: &Expr,
+        bindings: &mut BTreeMap<Symbol, Expr>,
+    ) -> Result<bool, EvalError> {
+        match matcher {
+            MatcherNode::Exact(pattern) => Ok(pattern == value),
+            MatcherNode::Blank { head_constraint } => {
+                Ok(match_blank(head_constraint.as_ref(), value))
+            }
+            MatcherNode::Named { name, inner } => {
+                if !self.match_compiled(inner, value, bindings)? {
+                    return Ok(false);
+                }
+
+                Ok(bind_pattern_name(name, value.clone(), bindings))
+            }
+            MatcherNode::Condition { inner, condition } => {
+                if !self.match_compiled(inner, value, bindings)? {
+                    return Ok(false);
+                }
+
+                let condition_expr = substitute_bindings(condition, bindings);
+                let result = self.evaluate(condition_expr)?;
+                Ok(is_system_symbol_name(&result, "True"))
+            }
+            MatcherNode::Call { head, args } => {
+                let Expr::Call {
+                    head: value_head,
+                    args: value_args,
+                } = value
+                else {
+                    return Ok(false);
+                };
+
+                if !self.match_compiled(head, value_head, bindings)? {
+                    return Ok(false);
+                }
+
+                self.match_compiled_args(args, value_args, bindings)
+            }
+        }
+    }
+
+    fn match_compiled_args(
+        &mut self,
+        pattern_args: &[MatcherArg],
+        value_args: &[Expr],
+        bindings: &mut BTreeMap<Symbol, Expr>,
+    ) -> Result<bool, EvalError> {
+        if pattern_args.is_empty() {
+            return Ok(value_args.is_empty());
+        }
+
+        match &pattern_args[0] {
+            MatcherArg::Sequence(spec) => {
+                let rest = &pattern_args[1..];
+                let min_rest = min_required_matcher_arg_count(rest);
+
+                if value_args.len() < spec.min_len + min_rest {
+                    return Ok(false);
+                }
+
+                let max_len = value_args.len() - min_rest;
+
+                for consume in spec.min_len..=max_len {
+                    let snapshot = bindings.clone();
+
+                    if self.match_compiled_sequence_pattern(
+                        spec,
+                        &value_args[..consume],
+                        bindings,
+                    )? && self.match_compiled_args(rest, &value_args[consume..], bindings)?
+                    {
+                        return Ok(true);
+                    }
+
+                    *bindings = snapshot;
+                }
+
+                Ok(false)
+            }
+            MatcherArg::Single(pattern) => {
+                let Some((value, rest)) = value_args.split_first() else {
+                    return Ok(false);
+                };
+
+                if !self.match_compiled(pattern, value, bindings)? {
+                    return Ok(false);
+                }
+
+                self.match_compiled_args(&pattern_args[1..], rest, bindings)
+            }
+        }
+    }
+
+    fn match_compiled_sequence_pattern(
+        &mut self,
+        spec: &CompiledSequencePattern,
+        values: &[Expr],
+        bindings: &mut BTreeMap<Symbol, Expr>,
+    ) -> Result<bool, EvalError> {
+        if values.len() < spec.min_len {
+            return Ok(false);
+        }
+
+        if !values
+            .iter()
+            .all(|value| match_blank(spec.head_constraint.as_ref(), value))
+        {
+            return Ok(false);
+        }
+
+        if let Some(name) = &spec.name {
+            let bound_value = sequence_expr(values.to_vec());
+
+            if !bind_pattern_name(name, bound_value, bindings) {
+                return Ok(false);
+            }
+        }
+
+        if let Some(condition) = &spec.condition {
+            let condition_expr = substitute_bindings(condition, bindings);
+            let result = self.evaluate(condition_expr)?;
+            return Ok(is_system_symbol_name(&result, "True"));
+        }
+
+        Ok(true)
+    }
+
+    #[cfg(test)]
+    fn match_expr_interpreted(
+        &mut self,
+        pattern: &Expr,
+        value: &Expr,
+        bindings: &mut BTreeMap<Symbol, Expr>,
+    ) -> Result<bool, EvalError> {
+        let snapshot = bindings.clone();
+        let matched = self.match_expr_interpreted_inner(pattern, value, bindings)?;
+
+        if !matched {
+            *bindings = snapshot;
+        }
+
+        Ok(matched)
+    }
+
+    #[cfg(test)]
+    fn match_expr_interpreted_inner(
         &mut self,
         pattern: &Expr,
         value: &Expr,
         bindings: &mut BTreeMap<Symbol, Expr>,
     ) -> Result<bool, EvalError> {
         if let Some((name, inner)) = pattern_named_pattern(pattern) {
-            if !self.match_expr(inner, value, bindings)? {
+            if !self.match_expr_interpreted(inner, value, bindings)? {
                 return Ok(false);
             }
 
@@ -2309,7 +2563,7 @@ impl Session {
         }
 
         if let Some((inner, condition)) = pattern_condition(pattern) {
-            if !self.match_expr(inner, value, bindings)? {
+            if !self.match_expr_interpreted(inner, value, bindings)? {
                 return Ok(false);
             }
 
@@ -2334,17 +2588,18 @@ impl Session {
                     args: rhs_args,
                 },
             ) => {
-                if !self.match_expr(lhs_head, rhs_head, bindings)? {
+                if !self.match_expr_interpreted(lhs_head, rhs_head, bindings)? {
                     return Ok(false);
                 }
 
-                self.match_call_args(lhs_args, rhs_args, bindings)
+                self.match_call_args_interpreted(lhs_args, rhs_args, bindings)
             }
             _ => Ok(false),
         }
     }
 
-    fn match_call_args(
+    #[cfg(test)]
+    fn match_call_args_interpreted(
         &mut self,
         pattern_args: &[Expr],
         value_args: &[Expr],
@@ -2367,8 +2622,11 @@ impl Session {
             for consume in spec.min_len..=max_len {
                 let snapshot = bindings.clone();
 
-                if self.match_sequence_pattern(spec, &value_args[..consume], bindings)?
-                    && self.match_call_args(rest, &value_args[consume..], bindings)?
+                if self.match_sequence_pattern_interpreted(
+                    spec,
+                    &value_args[..consume],
+                    bindings,
+                )? && self.match_call_args_interpreted(rest, &value_args[consume..], bindings)?
                 {
                     return Ok(true);
                 }
@@ -2383,14 +2641,15 @@ impl Session {
             return Ok(false);
         };
 
-        if !self.match_expr(&pattern_args[0], value, bindings)? {
+        if !self.match_expr_interpreted(&pattern_args[0], value, bindings)? {
             return Ok(false);
         }
 
-        self.match_call_args(&pattern_args[1..], rest, bindings)
+        self.match_call_args_interpreted(&pattern_args[1..], rest, bindings)
     }
 
-    fn match_sequence_pattern(
+    #[cfg(test)]
+    fn match_sequence_pattern_interpreted(
         &mut self,
         spec: SequencePatternSpec<'_>,
         values: &[Expr],
@@ -2484,7 +2743,7 @@ impl Session {
                 }
             }
             CasesSpec::Rule(rule) => {
-                if self.match_expr(&rule.lhs, expr, &mut bindings)? {
+                if self.match_compiled(&rule.matcher, expr, &mut bindings)? {
                     let transformed = substitute_rule_bindings(&rule.rhs, &bindings);
                     self.evaluate(transformed).map(Some)
                 } else {
@@ -2524,7 +2783,7 @@ impl Session {
         for rule in rules {
             let mut bindings = BTreeMap::new();
 
-            if self.match_expr(&rule.lhs, expr, &mut bindings)? {
+            if self.match_compiled(&rule.matcher, expr, &mut bindings)? {
                 let replaced = substitute_rule_bindings(&rule.rhs, &bindings);
                 self.push_trace(TraceEvent::RuleApplied {
                     source,
@@ -3212,7 +3471,9 @@ fn fallback_hold_attribute(name: &str) -> HoldAttribute {
     match name {
         "Hold" | "HoldAll" | "Evaluate" => HoldAttribute::HoldAll,
         "Function" | "Which" | "Module" | "Block" | "Check" | "Quiet" | "MessageName"
-        | "Messages" | "MessageDefinitions" | "MessageTags" => HoldAttribute::HoldAll,
+        | "Messages" | "MessageDefinitions" | "MessageTags" | "NormalizeRules" => {
+            HoldAttribute::HoldAll
+        }
         "Message" | "Context" | "OwnValues" | "DownValues" => HoldAttribute::HoldFirst,
         "If" => HoldAttribute::HoldRest,
         "With" => HoldAttribute::HoldAll,
@@ -3368,13 +3629,64 @@ fn normalize_single_rewrite_rule(expr: &Expr) -> Option<RewriteRule> {
                 || is_system_symbol_name(head, "RuleDelayed"))
                 && args.len() == 2 =>
         {
+            let delayed = is_system_symbol_name(head, "RuleDelayed");
+
             Some(RewriteRule {
                 lhs: args[0].clone(),
                 rhs: args[1].clone(),
+                delayed,
+                matcher: compile_matcher(&args[0]),
             })
         }
         _ => None,
     }
+}
+
+fn compile_matcher(expr: &Expr) -> MatcherNode {
+    if let Some((name, inner)) = pattern_named_pattern(expr) {
+        return MatcherNode::Named {
+            name: name.clone(),
+            inner: Box::new(compile_matcher(inner)),
+        };
+    }
+
+    if let Some((inner, condition)) = pattern_condition(expr) {
+        return MatcherNode::Condition {
+            inner: Box::new(compile_matcher(inner)),
+            condition: condition.clone(),
+        };
+    }
+
+    if let Some(blank_head) = pattern_blank_head(expr) {
+        return MatcherNode::Blank {
+            head_constraint: blank_head.cloned(),
+        };
+    }
+
+    match expr {
+        Expr::Atom(_) => MatcherNode::Exact(expr.clone()),
+        Expr::Call { head, args } => MatcherNode::Call {
+            head: Box::new(compile_matcher(head)),
+            args: compile_matcher_args(args),
+        },
+    }
+}
+
+fn compile_matcher_args(args: &[Expr]) -> Vec<MatcherArg> {
+    args.iter()
+        .map(|arg| {
+            if let Some(spec) = decompose_sequence_pattern(arg) {
+                MatcherArg::Sequence(CompiledSequencePattern {
+                    min_len: spec.min_len,
+                    head_constraint: spec.head_constraint.cloned(),
+                    name: spec.name.cloned(),
+                    condition: spec.condition.cloned(),
+                })
+            } else {
+                MatcherArg::Single(compile_matcher(arg))
+            }
+        })
+        .collect()
 }
 
 fn pattern_named_pattern(expr: &Expr) -> Option<(&Symbol, &Expr)> {
@@ -3451,6 +3763,7 @@ fn decompose_sequence_pattern(expr: &Expr) -> Option<SequencePatternSpec<'_>> {
     }
 }
 
+#[cfg(test)]
 fn min_required_arg_count(patterns: &[Expr]) -> usize {
     patterns
         .iter()
@@ -3458,6 +3771,16 @@ fn min_required_arg_count(patterns: &[Expr]) -> usize {
             decompose_sequence_pattern(pattern)
                 .map(|spec| spec.min_len)
                 .unwrap_or(1)
+        })
+        .sum()
+}
+
+fn min_required_matcher_arg_count(patterns: &[MatcherArg]) -> usize {
+    patterns
+        .iter()
+        .map(|pattern| match pattern {
+            MatcherArg::Single(_) => 1,
+            MatcherArg::Sequence(spec) => spec.min_len,
         })
         .sum()
 }
@@ -3912,6 +4235,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "MessageTags"
             | "Module"
             | "Needs"
+            | "NormalizeRules"
             | "Null"
             | "OwnValues"
             | "Pattern"
@@ -5685,6 +6009,89 @@ mod tests {
                 .to_string(),
             "List[RuleDelayed[f[Pattern[x, Blank[Integer]]], x], RuleDelayed[f[Pattern[y, Blank[String]]], y]]"
         );
+    }
+
+    #[test]
+    fn normalize_rules_lists_single_rules_rule_lists_and_preserves_delayedness() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("NormalizeRules[x_Integer -> 1]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[Rule[Pattern[x, Blank[Integer]], 1]]"
+        );
+
+        session
+            .eval_text("rules = {x_Integer -> 1, y_String :> y}")
+            .unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("NormalizeRules[rules]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[Rule[Pattern[x, Blank[Integer]], 1], RuleDelayed[Pattern[y, Blank[String]], y]]"
+        );
+    }
+
+    #[test]
+    fn inspect_rewrite_rules_reports_normalized_rules_and_delayed_flags() {
+        let mut session = Session::new();
+        let syntax = parse_expr("{x_Integer -> 1, y_String :> y}").unwrap();
+        let expr = lower_syntax_expr(&syntax).unwrap();
+
+        let rules = session.inspect_rewrite_rules(expr).unwrap().unwrap();
+
+        assert_eq!(rules.len(), 2);
+        assert_eq!(rules[0].lhs.to_string(), "Pattern[x, Blank[Integer]]");
+        assert_eq!(rules[0].rhs.to_string(), "1");
+        assert!(!rules[0].delayed);
+        assert_eq!(rules[1].lhs.to_string(), "Pattern[y, Blank[String]]");
+        assert_eq!(rules[1].rhs.to_string(), "y");
+        assert!(rules[1].delayed);
+    }
+
+    #[test]
+    fn compiled_matcher_matches_interpreted_matcher_on_supported_subset() {
+        let mut session = Session::new();
+
+        for (pattern_src, value_src, expected) in [
+            ("x_Integer", "7", true),
+            ("x_String", "7", false),
+            ("f[x_Integer, y_String]", "f[7, \"hi\"]", true),
+            ("f[x_Integer /; MatchQ[x, 7]]", "f[7]", true),
+            ("f[x_Integer /; MatchQ[x, 8]]", "f[7]", false),
+            ("f[x__, y_Integer]", "f[1, 2, 3]", true),
+            ("f[x___]", "f[]", true),
+        ] {
+            let pattern = lower_syntax_expr(&parse_expr(pattern_src).unwrap()).unwrap();
+            let pattern = session.normalize_pattern_expr(&pattern).unwrap();
+            let value = lower_syntax_expr(&parse_expr(value_src).unwrap()).unwrap();
+            let value = session.evaluate(value).unwrap();
+            let mut interpreted_bindings = BTreeMap::new();
+            let mut compiled_bindings = BTreeMap::new();
+
+            let interpreted = session
+                .match_expr_interpreted(&pattern, &value, &mut interpreted_bindings)
+                .unwrap();
+            let compiled = session
+                .match_expr(&pattern, &value, &mut compiled_bindings)
+                .unwrap();
+
+            assert_eq!(
+                interpreted, expected,
+                "interpreted mismatch for {pattern_src}"
+            );
+            assert_eq!(compiled, expected, "compiled mismatch for {pattern_src}");
+            assert_eq!(
+                compiled_bindings, interpreted_bindings,
+                "binding mismatch for {pattern_src}"
+            );
+        }
     }
 
     #[test]

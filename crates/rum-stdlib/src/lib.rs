@@ -19,6 +19,11 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "ReplaceRepeated",
         "Repeatedly applies rules until an expression reaches a fixed point.",
     ),
+    BuiltinSpec::with_hold(
+        "NormalizeRules",
+        "Normalizes a rule or rule list into an explicit canonical list form for debugging.",
+        HoldAttribute::HoldAll,
+    ),
     BuiltinSpec::new(
         "$Context",
         "Evaluates to the current default context name as a string.",

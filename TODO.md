@@ -85,13 +85,13 @@ This roadmap now uses two levels of detail:
 
 ### `rum-runtime`: Matcher IR and Rule Debugging
 
-- [ ] Define a matcher IR that can represent `Blank`, `Pattern`, `Condition`, `BlankSequence`, and `BlankNullSequence`
-- [ ] Lower supported pattern expressions into that matcher IR
-- [ ] Keep the current interpreter-based matcher as a reference path during the migration
-- [ ] Route `MatchQ` through the shared compiled matcher entrypoint
-- [ ] Route rule application and downvalue matching through the same compiled matcher path
-- [ ] Add rule-inspection helpers that make immediate vs delayed behavior and normalized rule form easier to see
-- [ ] Add tests that compare interpreter and compiled matcher behavior on the supported subset
+- [x] Define a matcher IR that can represent `Blank`, `Pattern`, `Condition`, `BlankSequence`, and `BlankNullSequence`
+- [x] Lower supported pattern expressions into that matcher IR
+- [x] Keep the current interpreter-based matcher as a reference path during the migration
+- [x] Route `MatchQ` through the shared compiled matcher entrypoint
+- [x] Route rule application and downvalue matching through the same compiled matcher path
+- [x] Add rule-inspection helpers that make immediate vs delayed behavior and normalized rule form easier to see
+- [x] Add tests that compare interpreter and compiled matcher behavior on the supported subset
 
 ### `rum-runtime`: `Cases` and Traversal Controls
 
