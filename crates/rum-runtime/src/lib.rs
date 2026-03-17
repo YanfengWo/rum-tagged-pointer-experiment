@@ -182,6 +182,28 @@ impl Session {
     }
 
     pub fn evaluate(&mut self, expr: Expr) -> Result<Expr, EvalError> {
+        let mut current = expr;
+        let mut fixed_point_seen = Vec::new();
+
+        loop {
+            if fixed_point_seen.iter().any(|previous| previous == &current) {
+                return Err(EvalError::EvaluationCycleDetected {
+                    expr: current.to_string(),
+                });
+            }
+
+            fixed_point_seen.push(current.clone());
+            let next = self.evaluate_once(current.clone())?;
+
+            if next == current {
+                return Ok(next);
+            }
+
+            current = next;
+        }
+    }
+
+    fn evaluate_once(&mut self, expr: Expr) -> Result<Expr, EvalError> {
         if self.evaluation_stack.iter().any(|active| active == &expr) {
             return Err(EvalError::EvaluationCycleDetected {
                 expr: expr.to_string(),
@@ -2259,6 +2281,20 @@ mod tests {
     }
 
     #[test]
+    fn fixed_point_evaluation_revisits_expressions_after_side_effects_change_head_meaning() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("f[f = Hold, Identity[1]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[Hold, 1]"
+        );
+    }
+
+    #[test]
     fn with_evaluates_bindings_and_substitutes_lexically() {
         let mut session = Session::new();
 
@@ -2399,7 +2435,15 @@ mod tests {
                 .unwrap()
                 .value
                 .to_string(),
-            "x"
+            "10"
+        );
+        assert_eq!(
+            session
+                .eval_text("Block[{x}, Hold[x]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[x]"
         );
         assert_eq!(session.eval_text("x").unwrap().value.to_string(), "10");
     }
