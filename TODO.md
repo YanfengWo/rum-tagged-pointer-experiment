@@ -1,230 +1,136 @@
 # TODO
 
-This file tracks the project roadmap in a milestone-oriented way, with the
-syntax frontend broken down into concrete engineering tasks that can be checked
-off as work lands.
+This roadmap now uses two levels of detail:
+- compact phase summaries for capability blocks that are already largely done
+- detailed checklists only for work that is still open or likely to move soon
 
-## Phase 0: Repository Foundation
+## Phase Summary
 
-- [x] Initialize a dedicated Git repository for `rum`
-- [x] Create a Rust workspace with core crates
-- [x] Add bootstrap architecture and README documentation
-- [x] Introduce exact integer support with `num-bigint`
-- [x] Make the workspace compile and test successfully
+### Phase 0: Repository Foundation
 
-## Phase 1: Syntax Frontend
+- [x] Set up the Git-managed Rust workspace, baseline docs, and exact integer support
+- [x] Keep the workspace compiling and passing tests as the project evolves
 
-- [x] Establish a stable syntax crate layout with `ast`, `lexer`, and `parser`
-- [x] Support grouped expressions and list literals
-- [x] Support infix operators for rules, assignments, arithmetic, and replace/condition forms
-- [x] Support pattern syntax for `_`, `__`, `___`, and named patterns such as `x_Integer`
-- [x] Support slots and pure functions with `#`, `#n`, and `&`
-- [x] Preserve exact integer literals as source text until lowering
-- [x] Expand parser test coverage around precedence and nested constructs
-- [ ] Introduce span-carrying syntax nodes or a green tree strategy
-- [ ] Add richer diagnostics with labels and recovery
+### Phase 1: Syntax Frontend
 
-## Phase 2: Core Lowering and IR
+- [x] Build a stable `rum-syntax` foundation with AST, lexer, parser, core precedence, lists, calls, rules, patterns, slots, and pure functions
+- [ ] Add spans, richer diagnostics, recovery, comments, and additional operator coverage
 
-- [ ] Lower syntax constructs into core `Expr` forms systematically
-- [ ] Define core heads for rules, patterns, slots, and scoping constructs
-- [ ] Separate syntax-level representations from runtime-level canonical forms
-- [ ] Add golden tests for syntax-to-core lowering
+### Phase 2: Core Lowering and IR
 
-## Phase 3: Definitions and Evaluation
+- [x] Lower the currently supported syntax into working core `Expr` forms used by the runtime
+- [ ] Formalize the lowering pipeline, canonical core-head inventory, and golden test coverage
 
-- [ ] Implement symbol tables and context-aware symbol resolution
-- [x] Add definition storage for `OwnValues` and `DownValues`
-- [ ] Implement standard evaluation sequencing
-- [ ] Implement `Set` and `SetDelayed`
-- [x] Add evaluation control attributes such as `HoldFirst`, `HoldRest`, and `HoldAll`
+### Phase 3: Definitions and Evaluation
 
-## `rum-runtime` Detailed Breakdown
+- [x] Implement sessions, contexts, package loading, ownvalues/downvalues, hold-aware evaluation, and core assignment semantics
+- [ ] Add first-class definition inspection and keep tightening evaluation semantics where the current interpreter is still ad hoc
 
-### Session state
+### Phase 4: Rules and Pattern Matching
 
-- [x] Keep builtin metadata separate from user definitions
-- [x] Add a definition table for symbol-bound values
-- [x] Distinguish immediate and delayed own values
-- [x] Add explicit storage for downvalues and pattern-based definitions
-- [x] Add context-aware symbol interning and resolution rules
-- [x] Track `current_context` and `context_path` in `Session`
-- [x] Resolve bare symbols through the context path before the current context
-- [x] Preserve explicit context-qualified symbols verbatim
-- [x] Restrict builtin dispatch to `System`` symbols
-- [x] Add language-level context management helpers beyond session setters
-- [x] Implement `Context[]` / `Context[symbol]` / `Context["name"]`
-- [x] Implement `Begin` / `End` with balanced context-frame restoration
-- [x] Implement `BeginPackage` / `EndPackage` basic package-path semantics
-- [x] Decide how `BeginPackage[..., needs]` should interact with future `Needs`
-- [x] Add package search path state and a minimal script/file loader
-- [x] Implement `Get` on explicit files and context-based package names
-- [x] Implement `Needs` with loaded-package tracking and idempotence
-- [x] Expose minimal `$Packages` / `$Path` inspection for package loading
-- [x] Implement `FindFile` over explicit file specs and context-style package names
-- [x] Support `Needs[context, file]` with an explicit loader target override
+- [x] Implement interpreter-based matching with `Rule`, `RuleDelayed`, `MatchQ`, `Cases`, `ReplaceAll`, `ReplaceRepeated`, conditions, and sequence blanks
+- [ ] Add a dedicated matcher IR, better rule inspection, and more complete traversal controls
 
-### Evaluation loop
+### Phase 5: Scoping and Runtime Control
 
-- [x] Evaluate bare symbols through definition lookup
-- [x] Evaluate general call heads and arguments recursively
-- [x] Add special-form dispatch for held assignment builtins
-- [x] Re-dispatch calls after head evaluation so symbols can resolve into special forms and held builtins
-- [x] Add recursion limits to bound recursive evaluation
-- [x] Add cycle detection for repeated evaluation targets
-- [x] Add a standard evaluation loop closer to Mathematica semantics
+- [x] Implement `Hold*`, `Evaluate`, `Sequence`, `If`, `Which`, `Function`, `With`, `Module`, `Block`, tracing, and resource limits
 
-### Assignment and definitions
+### Phase 6: REPL and Developer Tooling
 
-- [x] Implement `Set` for simple symbol left-hand sides
-- [x] Implement `SetDelayed` for simple symbol left-hand sides
-- [x] Leave unsupported assignment targets unevaluated for now
-- [x] Support pattern-based `SetDelayed` as stored downvalues
-- [ ] Add `OwnValues` / `DownValues` inspection helpers
+- [x] Ship a usable REPL baseline with evaluation, runtime-message rendering, `:inspect`, and `:messages`
+- [ ] Add multiline input, richer inspection, debug views, and stronger regression coverage
 
-### Builtins and inspection
+### Phase 7: Embedding and Jupyter Preparation
 
-- [x] Keep a builtin registry in `Session`
-- [x] Support a minimal non-held builtin dispatch path
-- [x] Extend symbol inspection to show definition presence
-- [x] Add builtin attribute metadata such as `HoldFirst` and `HoldAll`
-- [x] Add structured evaluation trace events
-- [x] Add structured runtime messages/diagnostics in evaluation outcomes
-- [x] Surface loader failures as `$Failed` plus messages where appropriate
-- [x] Render runtime messages cleanly in REPL and CLI flows
-- [x] Emit builtin argument-count and argument-form messages without turning them into Rust errors
-- [x] Surface context-stack misuse and pure-function arity mismatches via runtime messages
-- [x] Add `Check` to branch on emitted runtime messages during evaluation
-- [x] Add `Quiet` to suppress nested runtime messages without changing the returned value
-- [x] Support selector-aware `Check` targeting specific `symbol` or `symbol::tag` messages
-- [x] Support selector-aware `Quiet` for suppressing only chosen message streams
-- [x] Add `Message` / `MessageName` with minimal message template storage and emission
-- [x] Expose `$MessageList` and `::` shorthand for emitted message names
-- [x] Enhance message template placeholder formatting beyond simple positional substitution
-- [x] Add richer message template format specifiers for message-name parts, quoting, and symbol metadata
-- [x] Add message catalog inspection builtins for listing message names and definitions
-- [x] Surface message-definition presence in symbol inspection flows
-- [x] Add a finer-grained `MessageTags` builtin for tag-oriented inspection
-- [x] Expose structured message catalog entries for host tooling and REPL consumption
+- [ ] Stabilize a host-facing API around `Session`
+- [ ] Prepare protocol-friendly diagnostics and a future `rum-jupyter` crate
 
-### Tests
+## Open Workstreams
 
-- [x] Test simple symbol assignment and lookup
-- [x] Test delayed own values
-- [x] Test unsupported assignment fallback behavior
-- [x] Add evaluator tests for held arguments and sequencing
+### `rum-syntax`: Spans and Diagnostics
 
-## Phase 4: Rules and Pattern Matching
+- [ ] Choose a span model shared by lexer tokens, AST nodes, and future runtime diagnostics
+- [ ] Attach spans to all syntax nodes without breaking the current parser API too abruptly
+- [ ] Preserve operator and delimiter spans well enough to point at concrete source locations
+- [ ] Add parser diagnostics for missing `]`, `}`, and `)` with useful labels
+- [ ] Distinguish incomplete input from hard parse failure for REPL-friendly multiline handling
+- [ ] Introduce limited parser recovery so one malformed form does not poison the whole script
+- [ ] Add regression tests for malformed calls, lists, patterns, and pure functions
 
-- [ ] Implement blank-based matcher compilation
-- [ ] Add named pattern binding and environment capture
-- [x] Implement `Rule`, `RuleDelayed`, `ReplaceAll`, and `ReplaceRepeated`
-- [x] Add condition handling with `/;`
-- [ ] Add `MatchQ`, `Cases`, and related core traversal tools
+### `rum-syntax`: Comments and Surface Expansion
 
-## Rules and Replacement Breakdown
+- [ ] Add Wolfram-style `(* ... *)` comment lexing
+- [ ] Ensure comments can appear between tokens without changing parse results
+- [ ] Decide whether trivia should only be skipped or also preserved for future tooling
+- [ ] Add tests for comments around operators, calls, and nested expressions
+- [ ] Audit the next operator set needed by the evaluator roadmap and prioritize them explicitly
 
-### Matching core
+### `rum-core` and Lowering Cleanup
 
-- [x] Match simple blanks against atomic and call expressions
-- [x] Bind named pattern variables during matching
-- [x] Support condition-aware matching with `/;`
-- [x] Support `BlankSequence` and `BlankNullSequence` across argument lists
+- [ ] Audit every currently supported syntax feature and document its canonical lowered `Expr` form
+- [ ] Centralize the list of canonical core heads for rules, patterns, slots, scoping, contexts, and messages
+- [ ] Separate parser sugar from runtime-canonical representation more explicitly in the lowering code
+- [ ] Add golden tests for syntax-to-core lowering across rules, patterns, scoping, messages, and package constructs
+- [ ] Decide where lowering-time validation should stop and runtime validation should begin
 
-### Rule objects
+### `rum-runtime`: Definition Inspection
 
-- [x] Preserve immediate vs delayed rule behavior for replacement workflows
-- [x] Normalize single rules and rule lists for replacement
-- [ ] Add better inspection/debug support for rule expressions
+- [ ] Decide the public shape of definition-inspection builtins and their output conventions
+- [ ] Implement `OwnValues[symbol]` for immediate own values
+- [ ] Extend `OwnValues[symbol]` to surface delayed own values distinctly
+- [ ] Implement `DownValues[symbol]` while preserving rule order and delayedness
+- [ ] Decide whether message definitions should remain separate or also appear in broader symbol inspection views
+- [ ] Extend `:inspect` to show a short summary of stored ownvalues and downvalues
+- [ ] Add regression tests for definition inspection on plain symbols, delayed values, and pattern-based downvalues
 
-### Replacement engine
+### `rum-runtime`: Matcher IR and Rule Debugging
 
-- [x] Implement `MatchQ`
-- [x] Implement `ReplaceAll` with a single rule
-- [x] Implement `ReplaceAll` with rule lists
-- [x] Traverse nested expressions during replacement
-- [x] Implement `ReplaceRepeated`
+- [ ] Define a matcher IR that can represent `Blank`, `Pattern`, `Condition`, `BlankSequence`, and `BlankNullSequence`
+- [ ] Lower supported pattern expressions into that matcher IR
+- [ ] Keep the current interpreter-based matcher as a reference path during the migration
+- [ ] Route `MatchQ` through the shared compiled matcher entrypoint
+- [ ] Route rule application and downvalue matching through the same compiled matcher path
+- [ ] Add rule-inspection helpers that make immediate vs delayed behavior and normalized rule form easier to see
+- [ ] Add tests that compare interpreter and compiled matcher behavior on the supported subset
 
-### Traversal tools
+### `rum-runtime`: `Cases` and Traversal Controls
 
-- [x] Implement `Cases` on top of the matcher subset already supported today
-- [ ] Add level specifications and head-traversal options for `Cases`
+- [ ] Decide the minimum level-spec subset to support first: `n`, `Infinity`, or `{min, max}`
+- [ ] Parse and normalize level specifications into an internal representation
+- [ ] Teach `Cases` to honor simple numeric level specs
+- [ ] Extend `Cases` to support bounded ranges such as `{min, max}`
+- [ ] Add explicit head-traversal control instead of hard-coding the current "do not visit heads" behavior
+- [ ] Add traversal tests that lock down root, head, and nested-argument behavior
 
-## Phase 5: Scoping and Runtime Control
+### `rum-runtime`: Evaluation Follow-Through
 
-- [x] Add `If`, `Which`, and `Function` control-evaluation basics
-- [x] Implement `Module`
-- [x] Implement `With`
-- [x] Implement `Block`
-- [x] Add `Evaluate` and `Sequence`
-- [x] Add execution tracing hooks and resource limits
+- [ ] Audit current evaluation behavior against the intended Mathematica-style sequence and list the known gaps
+- [ ] Tighten the boundary between evaluation errors and language-level messages where it is still inconsistent
+- [ ] Review package-loading evaluation for better failure isolation and clearer message emission
+- [ ] Decide whether any additional resource limits are needed beyond recursion and `ReplaceRepeated` iteration caps
 
-## Control Evaluation Breakdown
+### `rum-repl` and `rum-cli`: Interactive Ergonomics
 
-- [x] Implement `If` with held branches and selected-branch evaluation
-- [x] Implement `Which` with sequential condition evaluation
-- [x] Implement `Function` application for `Slot`-based pure functions
-- [x] Implement `With` with lexical substitution over simple binding lists
-- [x] Implement `Module` with fresh lexical symbols and sequential initializers
-- [x] Implement `Block` with dynamic symbol rebinding and restoration
-- [x] Support `##` slot-sequence shorthand in pure functions
-- [x] Support named slots with rule-based pure-function arguments
-- [x] Support explicit parameter lists
+- [ ] Detect incomplete input and keep reading until a form is syntactically complete
+- [ ] Add a continuation prompt for multiline entry
+- [ ] Add line history persistence
+- [ ] Add symbol completion from builtins, active contexts, loaded packages, and user-defined symbols
+- [ ] Expand `:inspect` output with context, definition, and message-catalog details
+- [ ] Add a parse debug command such as `:parse`
+- [ ] Add a lowering debug command such as `:lower`
+- [ ] Decide whether trace viewing belongs in the REPL and, if so, add a minimal command flow for it
 
-## Phase 6: REPL and Developer Tooling
+### REPL and CLI Regression Coverage
 
-- [ ] Upgrade the REPL to support multiline input
-- [ ] Add history, completion, and symbol inspection improvements
-- [x] Add a `:messages` REPL command for browsing message catalog entries
-- [ ] Add parse tree and lowering debug views for development
-- [ ] Add snapshot tests for REPL behavior
+- [ ] Add snapshot tests for help output, inspection flows, and runtime-message rendering
+- [ ] Add multiline-session tests once multiline input exists
+- [ ] Add CLI tests for `--eval`, file execution, and machine-readable output modes as they are introduced
 
-## Phase 7: Embedding and Jupyter Preparation
+### Embedding and Jupyter Preparation
 
-- [ ] Define a stable host embedding API around `Session`
-- [ ] Add structured diagnostics and machine-readable outputs
-- [ ] Separate terminal REPL concerns from protocol-facing kernel concerns
-- [ ] Create a future `rum-jupyter` crate for Jupyter kernel integration
-
-## `rum-syntax` Detailed Breakdown
-
-### Crate structure
-
-- [x] Split the current prototype into `ast.rs`, `lexer.rs`, and `parser.rs`
-- [x] Re-export a stable public syntax API from `lib.rs`
-- [x] Keep syntax-layer concepts independent from runtime semantics where practical
-
-### Lexing
-
-- [x] Lex integers without width loss
-- [x] Lex strings with escape handling
-- [x] Lex symbols with Wolfram-style context markers
-- [x] Lex delimiters for calls, lists, and grouping
-- [x] Lex multi-character operators such as `:=`, `->`, `:>`, `/.`, and `/;`
-- [x] Add lexer tests for ambiguous prefixes and operator boundaries
-
-### AST
-
-- [x] Add AST nodes for lists
-- [x] Add AST nodes for prefix, infix, and postfix operators
-- [x] Add AST nodes for blanks and named patterns
-- [x] Add AST nodes for slots and pure functions
-- [x] Establish AST display/debug helpers for readable snapshots
-
-### Parsing
-
-- [x] Parse grouped expressions with parentheses
-- [x] Parse lists with `{...}`
-- [x] Parse call syntax with nested arguments
-- [x] Parse precedence for `+`, `-`, `*`, `/`, and `^`
-- [x] Parse `=`, `:=`, `->`, `:>`, `/.`, and `/;`
-- [x] Parse `_`, `__`, `___`, and named pattern shorthand
-- [x] Parse `#`, `#n`, and `expr &`
-- [x] Add parser tests for precedence, associativity, and nesting
-
-### Follow-up syntax work
-
-- [ ] Add spans to syntax nodes
-- [ ] Add parser recovery for REPL-friendly diagnostics
-- [ ] Add support for comments and additional trivia
-- [ ] Add more Wolfram operators as the evaluator roadmap demands them
+- [ ] Define a stable session-configuration surface for hosts to set resource limits, search paths, and context defaults
+- [ ] Stabilize parse/eval/inspect entrypoints that return machine-readable outcomes instead of terminal-formatted text
+- [ ] Carry messages, traces, and diagnostics in a transport-friendly structure that does not depend on the REPL
+- [ ] Separate terminal presentation concerns from protocol-facing kernel concerns more explicitly in crate boundaries
+- [ ] Create a placeholder `rum-jupyter` crate when the host API is stable enough
+- [ ] Map Jupyter-style execute, inspect, and completion requests onto the stabilized session API
