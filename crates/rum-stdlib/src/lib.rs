@@ -191,9 +191,24 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Prevents evaluation of all arguments and disables Evaluate and Sequence escapes.",
         AttributeSet::from_attribute(Attribute::HoldAllComplete),
     ),
+    BuiltinSpec::with_attributes(
+        "Unevaluated",
+        "Temporarily leaves an argument unevaluated as a direct function argument.",
+        AttributeSet::from_attribute(Attribute::HoldAllComplete),
+    ),
     BuiltinSpec::with_hold(
         "Evaluate",
         "Forces evaluation in held contexts.",
+        HoldAttribute::HoldAll,
+    ),
+    BuiltinSpec::with_hold(
+        "HoldPattern",
+        "Marks a pattern expression so it is matched without prior evaluation.",
+        HoldAttribute::HoldAll,
+    ),
+    BuiltinSpec::with_hold(
+        "ReleaseHold",
+        "Removes supported hold wrappers and resumes evaluation.",
         HoldAttribute::HoldAll,
     ),
     BuiltinSpec::new("Sequence", "Splices a sequence of arguments into a call."),

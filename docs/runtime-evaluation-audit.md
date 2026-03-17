@@ -77,6 +77,9 @@ early subset:
 
 - `Attributes`, `SetAttributes`, and `ClearAttributes`
 - `HoldAllComplete`
+- `Unevaluated`
+- `HoldPattern`
+- `ReleaseHold`
 - `Hold`, `HoldFirst`, `HoldRest`, `HoldAll`
 - `SequenceHold`
 - `Evaluate` in held positions
@@ -169,9 +172,6 @@ broader set of non-evaluation wrappers and held-pattern tools.
 
 Missing or incomplete areas:
 
-- `Unevaluated`
-- `HoldPattern`
-- `ReleaseHold`
 - `Function[..., attrs]`
 - more exact interaction rules among held wrappers, pattern matching, and
   substitution
@@ -246,12 +246,13 @@ Practical impact:
 
 The cleanest next steps for `rum-runtime` are:
 
-1. add `Unevaluated`, `HoldPattern`, and `ReleaseHold`
-2. add definition lifecycle tools and then expand toward `UpValues`
-3. make builtin dispatch order more declarative so new semantics do not depend
+1. add definition lifecycle tools and then expand toward `UpValues`
+2. make builtin dispatch order more declarative so new semantics do not depend
    on ad hoc handler placement
-4. extend the attribute table beyond hold-oriented behavior into `Orderless`,
+3. extend the attribute table beyond hold-oriented behavior into `Orderless`,
    `Flat`, `OneIdentity`, and later `Listable`
+4. let `Function` accept explicit attributes / hold behavior so held evaluation
+   is not limited to builtin and symbol-level attributes
 5. extend regression tests around head evaluation, held arguments, scoping, and
    delayed definitions before widening the pattern language further
 

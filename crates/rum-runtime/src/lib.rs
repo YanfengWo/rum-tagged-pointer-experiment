@@ -1718,7 +1718,17 @@ impl Session {
 
         for (index, arg) in args.into_iter().enumerate() {
             let (evaluated_arg, allow_sequence_splice) = if hold.holds_argument(index) {
-                self.evaluate_held_argument(arg, blocks_evaluate_override)?
+                if !blocks_evaluate_override {
+                    if let Some(inner) = unevaluated_wrapper_arg(&arg) {
+                        (inner.clone(), false)
+                    } else {
+                        self.evaluate_held_argument(arg, blocks_evaluate_override)?
+                    }
+                } else {
+                    self.evaluate_held_argument(arg, blocks_evaluate_override)?
+                }
+            } else if let Some(inner) = unevaluated_wrapper_arg(&arg) {
+                (inner.clone(), true)
             } else {
                 (self.evaluate(arg)?, true)
             };
@@ -1824,9 +1834,11 @@ impl Session {
             "If" => self.eval_if(args).map(Some),
             "Which" => self.eval_which(args).map(Some),
             "With" => self.eval_with(args).map(Some),
-            "Hold" | "HoldFirst" | "HoldRest" | "HoldAll" | "HoldAllComplete" => {
+            "Hold" | "HoldFirst" | "HoldRest" | "HoldAll" | "HoldAllComplete" | "HoldPattern" => {
                 Ok(Some(Expr::call(head.clone(), args.to_vec())))
             }
+            "Unevaluated" if args.len() == 1 => Ok(Some(args[0].clone())),
+            "ReleaseHold" => self.eval_release_hold(args).map(Some),
             "Evaluate" if args.len() == 1 => self.evaluate(args[0].clone()).map(Some),
             "Sequence" => Ok(Some(sequence_expr(args.to_vec()))),
             _ => Ok(None),
@@ -2237,6 +2249,20 @@ impl Session {
 
     fn eval_clear_attributes(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         self.eval_update_attributes("ClearAttributes", args, AttributeUpdate::Remove)
+    }
+
+    fn eval_release_hold(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("ReleaseHold", args, 1));
+        }
+
+        let mut released = args[0].clone();
+
+        while let Some(next) = release_hold_once(&released) {
+            released = next;
+        }
+
+        self.evaluate(released)
     }
 
     fn eval_update_attributes(
@@ -3211,9 +3237,11 @@ impl Session {
     }
 
     fn normalize_pattern_expr(&mut self, expr: &Expr) -> Result<Expr, EvalError> {
-        match expr {
-            Expr::Atom(Atom::Symbol(_)) => self.evaluate(expr.clone()),
-            _ => Ok(expr.clone()),
+        let normalized = strip_hold_pattern(expr);
+
+        match normalized {
+            Expr::Atom(Atom::Symbol(_)) => self.evaluate(normalized.clone()),
+            other => Ok(other.clone()),
         }
     }
 
@@ -4067,7 +4095,10 @@ fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
     match symbol.name() {
         "Attributes" | "Context" | "Message" | "OwnValues" | "DownValues" | "SetAttributes"
         | "ClearAttributes" => AttributeSet::from_attribute(Attribute::HoldFirst),
-        "HoldAllComplete" => AttributeSet::from_attribute(Attribute::HoldAllComplete),
+        "HoldAllComplete" | "Unevaluated" => {
+            AttributeSet::from_attribute(Attribute::HoldAllComplete)
+        }
+        "ReleaseHold" | "HoldPattern" => AttributeSet::from_attribute(Attribute::HoldAll),
         "Hold" | "HoldAll" | "Evaluate" | "Function" | "Which" | "Module" | "Block" | "Check"
         | "Quiet" | "MessageName" | "Messages" | "MessageDefinitions" | "MessageTags"
         | "NormalizeRules" | "With" => AttributeSet::from_attribute(Attribute::HoldAll),
@@ -4100,6 +4131,51 @@ fn evaluate_wrapper_arg(expr: &Expr) -> Option<&Expr> {
         }
         _ => None,
     }
+}
+
+fn unevaluated_wrapper_arg(expr: &Expr) -> Option<&Expr> {
+    match expr {
+        Expr::Call { head, args }
+            if is_system_symbol_name(head, "Unevaluated") && args.len() == 1 =>
+        {
+            Some(&args[0])
+        }
+        _ => None,
+    }
+}
+
+fn strip_hold_pattern<'a>(expr: &'a Expr) -> &'a Expr {
+    match expr {
+        Expr::Call { head, args }
+            if is_system_symbol_name(head, "HoldPattern") && args.len() == 1 =>
+        {
+            strip_hold_pattern(&args[0])
+        }
+        _ => expr,
+    }
+}
+
+fn release_hold_once(expr: &Expr) -> Option<Expr> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if expr_as_symbol(head)
+        .filter(|symbol| symbol.context() == SYSTEM_CONTEXT)
+        .is_some_and(|symbol| {
+            matches!(
+                symbol.name(),
+                "Hold" | "HoldFirst" | "HoldRest" | "HoldAll" | "HoldAllComplete" | "HoldPattern"
+            )
+        })
+    {
+        return Some(match args.as_slice() {
+            [single] => single.clone(),
+            _ => sequence_expr(args.clone()),
+        });
+    }
+
+    None
 }
 
 fn splice_sequence_argument(args: &mut Vec<Expr>, expr: Expr) {
@@ -4205,7 +4281,7 @@ fn collect_with_binding_symbols(expr: &Expr, locals: &mut BTreeSet<Symbol>) {
 }
 
 fn downvalue_head_symbol(expr: &Expr) -> Option<&Symbol> {
-    match expr {
+    match strip_hold_pattern(expr) {
         Expr::Call { head, args }
             if is_system_symbol_name(head, "Condition") && !args.is_empty() =>
         {
@@ -4253,6 +4329,8 @@ fn normalize_single_rewrite_rule(expr: &Expr) -> Option<RewriteRule> {
 }
 
 fn compile_matcher(expr: &Expr) -> MatcherNode {
+    let expr = strip_hold_pattern(expr);
+
     if let Some((name, inner)) = pattern_named_pattern(expr) {
         return MatcherNode::Named {
             name: name.clone(),
@@ -4837,6 +4915,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "HoldAll"
             | "HoldAllComplete"
             | "HoldFirst"
+            | "HoldPattern"
             | "HoldRest"
             | "Identity"
             | "If"
@@ -4862,6 +4941,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "Rule"
             | "RuleDelayed"
             | "Quiet"
+            | "ReleaseHold"
             | "Sequence"
             | "SequenceHold"
             | "Set"
@@ -4873,6 +4953,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "Symbol"
             | "Times"
             | "True"
+            | "Unevaluated"
             | "DownValues"
             | "Which"
             | "With"
@@ -6284,11 +6365,13 @@ mod tests {
 
         assert_eq!(
             session
-                .eval_text("HoldAllComplete[Evaluate[Identity[1]], Sequence[2, 3]]")
+                .eval_text(
+                    "HoldAllComplete[Evaluate[Identity[1]], Unevaluated[Identity[2]], Sequence[3, 4]]",
+                )
                 .unwrap()
                 .value
                 .to_string(),
-            "HoldAllComplete[Evaluate[Identity[1]], Sequence[2, 3]]"
+            "HoldAllComplete[Evaluate[Identity[1]], Unevaluated[Identity[2]], Sequence[3, 4]]"
         );
     }
 
@@ -6307,6 +6390,89 @@ mod tests {
                 .value
                 .to_string(),
             "f[Evaluate[Identity[1]], Identity[2], Sequence[3, 4]]"
+        );
+    }
+
+    #[test]
+    fn unevaluated_temporarily_preserves_direct_function_arguments() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Unevaluated[Identity[1]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(
+            session
+                .eval_text("Hold[Unevaluated[Identity[1]]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[Identity[1]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Attributes[Unevaluated]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[HoldAllComplete]"
+        );
+    }
+
+    #[test]
+    fn holdpattern_preserves_patterns_without_prior_evaluation() {
+        let mut session = Session::new();
+        session.eval_text("f = 1").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("MatchQ[Hold[f[7]], Hold[HoldPattern[f[x_Integer]]]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "True"
+        );
+        assert_eq!(
+            session
+                .eval_text("Hold[f[7]] /. HoldPattern[f[x_Integer]] :> x")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[7]"
+        );
+    }
+
+    #[test]
+    fn releasehold_releases_supported_hold_wrappers() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("ReleaseHold[Hold[Identity[1]]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(
+            session
+                .eval_text("ReleaseHold[HoldAllComplete[Identity[1]]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(
+            session
+                .eval_text("ReleaseHold[HoldPattern[f[x_Integer]]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[Pattern[x, Blank[Integer]]]"
         );
     }
 

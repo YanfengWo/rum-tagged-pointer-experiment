@@ -124,9 +124,9 @@ This roadmap now uses two levels of detail:
 
 ### `rum-runtime`: Held Evaluation and Scoping Gaps
 
-- [ ] Add `Unevaluated`
-- [ ] Add `HoldPattern`
-- [ ] Add `ReleaseHold`
+- [x] Add `Unevaluated`
+- [x] Add `HoldPattern`
+- [x] Add `ReleaseHold`
 - [ ] Let `Function` accept explicit attributes / hold behavior
 - [ ] Audit `Block` rebinding scope beyond ownvalue-style symbol values and decide the intended breadth
 - [ ] Audit `Module` freshness and capture edge cases now that more held and rule-based constructs exist
