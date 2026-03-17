@@ -26,6 +26,10 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         summary: "Tests whether an expression matches a pattern.",
     },
     BuiltinSpec {
+        name: "Cases",
+        summary: "Collects subexpressions matching a pattern or rule.",
+    },
+    BuiltinSpec {
         name: "ReplaceAll",
         summary: "Applies rules everywhere in an expression.",
     },

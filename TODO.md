@@ -113,7 +113,8 @@ off as work lands.
 
 ### Traversal tools
 
-- [ ] Implement `Cases` on top of the matcher subset already supported today
+- [x] Implement `Cases` on top of the matcher subset already supported today
+- [ ] Add level specifications and head-traversal options for `Cases`
 
 ## Phase 5: Scoping and Runtime Control
 

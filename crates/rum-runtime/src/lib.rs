@@ -54,6 +54,12 @@ struct RewriteRule {
     rhs: Expr,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum CasesSpec {
+    Pattern(Expr),
+    Rule(RewriteRule),
+}
+
 #[derive(Debug, Error)]
 pub enum EvalError {
     #[error(transparent)]
@@ -168,6 +174,7 @@ impl Session {
             "Rule" => self.eval_rule(args).map(Some),
             "RuleDelayed" => self.eval_rule_delayed(args).map(Some),
             "MatchQ" => self.eval_match_q(args).map(Some),
+            "Cases" => self.eval_cases(args).map(Some),
             "ReplaceAll" => self.eval_replace_all(args).map(Some),
             "ReplaceRepeated" => self.eval_replace_repeated(args).map(Some),
             _ => Ok(None),
@@ -264,6 +271,20 @@ impl Session {
                 "False"
             },
         ))
+    }
+
+    fn eval_cases(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(Expr::call(Expr::symbol("Cases"), args.to_vec()));
+        }
+
+        let target = self.evaluate(args[0].clone())?;
+        let spec = self.normalize_cases_spec(&args[1])?;
+        let mut matches = Vec::new();
+
+        self.collect_cases(&target, &spec, &mut matches)?;
+
+        Ok(Expr::call(Expr::symbol("List"), matches))
     }
 
     fn eval_replace_all(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -423,6 +444,69 @@ impl Session {
         match expr {
             Expr::Atom(Atom::Symbol(_)) => self.evaluate(expr.clone()),
             _ => Ok(expr.clone()),
+        }
+    }
+
+    fn normalize_cases_spec(&mut self, expr: &Expr) -> Result<CasesSpec, EvalError> {
+        let resolved = match expr {
+            Expr::Atom(Atom::Symbol(_)) => self.evaluate(expr.clone())?,
+            Expr::Call { head, .. }
+                if is_system_symbol_name(head, "Rule")
+                    || is_system_symbol_name(head, "RuleDelayed") =>
+            {
+                self.evaluate(expr.clone())?
+            }
+            _ => expr.clone(),
+        };
+
+        Ok(match normalize_single_rewrite_rule(&resolved) {
+            Some(rule) => CasesSpec::Rule(rule),
+            None => CasesSpec::Pattern(resolved),
+        })
+    }
+
+    fn collect_cases(
+        &mut self,
+        expr: &Expr,
+        spec: &CasesSpec,
+        matches: &mut Vec<Expr>,
+    ) -> Result<(), EvalError> {
+        if let Some(case) = self.try_collect_case(expr, spec)? {
+            matches.push(case);
+        }
+
+        if let Expr::Call { args, .. } = expr {
+            for arg in args {
+                self.collect_cases(arg, spec, matches)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn try_collect_case(
+        &mut self,
+        expr: &Expr,
+        spec: &CasesSpec,
+    ) -> Result<Option<Expr>, EvalError> {
+        let mut bindings = BTreeMap::new();
+
+        match spec {
+            CasesSpec::Pattern(pattern) => {
+                if self.match_expr(pattern, expr, &mut bindings)? {
+                    Ok(Some(expr.clone()))
+                } else {
+                    Ok(None)
+                }
+            }
+            CasesSpec::Rule(rule) => {
+                if self.match_expr(&rule.lhs, expr, &mut bindings)? {
+                    let transformed = substitute_bindings(&rule.rhs, &bindings);
+                    self.evaluate(transformed).map(Some)
+                } else {
+                    Ok(None)
+                }
+            }
         }
     }
 
@@ -1063,6 +1147,103 @@ mod tests {
                 .value
                 .to_string(),
             "False"
+        );
+    }
+
+    #[test]
+    fn cases_collects_nested_matches() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Cases[f[g[1], 2, \"hi\"], x_Integer]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[1, 2]"
+        );
+    }
+
+    #[test]
+    fn cases_can_match_the_root_expression() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Cases[f[1], f[x_Integer]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f[1]]"
+        );
+    }
+
+    #[test]
+    fn cases_does_not_treat_heads_as_separate_candidates() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Cases[f[1, g[2]], x_Symbol]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[]"
+        );
+    }
+
+    #[test]
+    fn cases_applies_rule_transformations() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Cases[f[g[1], 2], g[x_Integer] :> h[x]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[h[1]]"
+        );
+    }
+
+    #[test]
+    fn cases_preserves_immediate_and_delayed_rule_behavior() {
+        let mut session = Session::new();
+
+        session.eval_text("n = 1").unwrap();
+        session.eval_text("immediate = x_Integer -> n").unwrap();
+        session.eval_text("delayed = x_Integer :> n").unwrap();
+        session.eval_text("n = 2").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("Cases[{7}, immediate]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[1]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Cases[{7}, delayed]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[2]"
+        );
+    }
+
+    #[test]
+    fn cases_honors_condition_patterns() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Cases[f[7, 8, 9], x_Integer /; MatchQ[x, 8]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[8]"
         );
     }
 
