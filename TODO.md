@@ -61,6 +61,8 @@ off as work lands.
 - [x] Implement `Get` on explicit files and context-based package names
 - [x] Implement `Needs` with loaded-package tracking and idempotence
 - [x] Expose minimal `$Packages` / `$Path` inspection for package loading
+- [x] Implement `FindFile` over explicit file specs and context-style package names
+- [x] Support `Needs[context, file]` with an explicit loader target override
 
 ### Evaluation loop
 

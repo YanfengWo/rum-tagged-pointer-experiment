@@ -501,39 +501,15 @@ impl Session {
     }
 
     fn resolve_load_target(&self, spec: &str) -> Result<PathBuf, EvalError> {
-        let candidates = if spec.ends_with('`') {
-            package_candidates_for_context(spec)
-        } else {
-            vec![PathBuf::from(spec)]
-        };
-
-        let mut searched = Vec::new();
-
-        for candidate in candidates {
-            if candidate.is_absolute() {
-                searched.push(candidate.display().to_string());
-
-                if candidate.is_file() {
-                    return Ok(candidate);
+        self.find_load_target(spec)
+            .map(|(path, _)| path)
+            .ok_or_else(|| {
+                let (_, searched) = self.load_target_candidates(spec);
+                EvalError::LoadPathNotFound {
+                    target: spec.to_string(),
+                    searched,
                 }
-
-                continue;
-            }
-
-            for root in self.load_search_roots() {
-                let path = root.join(&candidate);
-                searched.push(path.display().to_string());
-
-                if path.is_file() {
-                    return Ok(path);
-                }
-            }
-        }
-
-        Err(EvalError::LoadPathNotFound {
-            target: spec.to_string(),
-            searched,
-        })
+            })
     }
 
     fn load_search_roots(&self) -> Vec<PathBuf> {
@@ -549,6 +525,45 @@ impl Session {
 
         roots.extend(self.package_search_paths.iter().cloned());
         dedup_paths(roots)
+    }
+
+    fn find_load_target(&self, spec: &str) -> Option<(PathBuf, Vec<String>)> {
+        let (candidates, searched) = self.load_target_candidates(spec);
+
+        for candidate in candidates {
+            if candidate.is_file() {
+                return Some((normalize_found_path(&candidate), searched));
+            }
+        }
+
+        None
+    }
+
+    fn load_target_candidates(&self, spec: &str) -> (Vec<PathBuf>, Vec<String>) {
+        let specs = if spec.ends_with('`') {
+            package_candidates_for_context(spec)
+        } else {
+            vec![PathBuf::from(spec)]
+        };
+
+        let mut candidates = Vec::new();
+        let mut searched = Vec::new();
+
+        for spec in specs {
+            if spec.is_absolute() {
+                searched.push(spec.display().to_string());
+                candidates.push(spec);
+                continue;
+            }
+
+            for root in self.load_search_roots() {
+                let path = root.join(&spec);
+                searched.push(path.display().to_string());
+                candidates.push(path);
+            }
+        }
+
+        (candidates, searched)
     }
 
     pub fn evaluate(&mut self, expr: Expr) -> Result<Expr, EvalError> {
@@ -770,6 +785,7 @@ impl Session {
 
         match symbol.name() {
             "Identity" if args.len() == 1 => Ok(Some(args[0].clone())),
+            "FindFile" => self.eval_find_file(args).map(Some),
             "Get" => self.eval_get(args).map(Some),
             "Needs" => self.eval_needs(args).map(Some),
             "Context" => self.eval_context(args).map(Some),
@@ -802,12 +818,31 @@ impl Session {
         }
     }
 
+    fn eval_find_file(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [spec] = args else {
+            return Ok(Expr::call(system_expr("FindFile"), args.to_vec()));
+        };
+
+        let Some(spec) = load_spec_from_expr(spec) else {
+            return Ok(Expr::call(system_expr("FindFile"), args.to_vec()));
+        };
+
+        Ok(match self.find_load_target(&spec) {
+            Some((path, _)) => Expr::string(path.display().to_string()),
+            None => system_expr("$Failed"),
+        })
+    }
+
     fn eval_get(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [Expr::Atom(Atom::String(spec))] = args else {
+        let [spec] = args else {
             return Ok(Expr::call(system_expr("Get"), args.to_vec()));
         };
 
-        let path = self.resolve_load_target(spec)?;
+        let Some(spec) = load_spec_from_expr(spec) else {
+            return Ok(Expr::call(system_expr("Get"), args.to_vec()));
+        };
+
+        let path = self.resolve_load_target(&spec)?;
         Ok(self.eval_file(path)?.value)
     }
 
@@ -817,10 +852,13 @@ impl Session {
                 normalize_context_name(context),
                 normalize_context_name(context),
             ),
-            [
-                Expr::Atom(Atom::String(context)),
-                Expr::Atom(Atom::String(spec)),
-            ] => (normalize_context_name(context), spec.clone()),
+            [Expr::Atom(Atom::String(context)), spec] => {
+                let Some(spec) = load_spec_from_expr(spec) else {
+                    return Ok(Expr::call(system_expr("Needs"), args.to_vec()));
+                };
+
+                (normalize_context_name(context), spec)
+            }
             _ => return Ok(Expr::call(system_expr("Needs"), args.to_vec())),
         };
 
@@ -1841,6 +1879,29 @@ fn dedup_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
     deduped
 }
 
+fn normalize_found_path(path: &Path) -> PathBuf {
+    let canonical = fs::canonicalize(path).unwrap_or_else(|_| {
+        if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            std::env::current_dir()
+                .map(|cwd| cwd.join(path))
+                .unwrap_or_else(|_| path.to_path_buf())
+        }
+    });
+
+    strip_windows_verbatim_prefix(canonical)
+}
+
+fn strip_windows_verbatim_prefix(path: PathBuf) -> PathBuf {
+    let rendered = path.display().to_string();
+
+    rendered
+        .strip_prefix("\\\\?\\")
+        .map(PathBuf::from)
+        .unwrap_or(path)
+}
+
 fn package_candidates_for_context(context: &str) -> Vec<PathBuf> {
     let trimmed = context.trim_end_matches('`');
     let segments = trimmed
@@ -1923,6 +1984,19 @@ fn system_expr(name: &str) -> Expr {
 fn expr_as_symbol(expr: &Expr) -> Option<&Symbol> {
     match expr {
         Expr::Atom(Atom::Symbol(symbol)) => Some(symbol),
+        _ => None,
+    }
+}
+
+fn load_spec_from_expr(expr: &Expr) -> Option<String> {
+    match expr {
+        Expr::Atom(Atom::String(spec)) => Some(spec.clone()),
+        Expr::Call { head, args } if is_system_symbol_name(head, "File") && args.len() == 1 => {
+            match &args[0] {
+                Expr::Atom(Atom::String(spec)) => Some(spec.clone()),
+                _ => None,
+            }
+        }
         _ => None,
     }
 }
@@ -2619,6 +2693,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
         name,
         "$Context"
             | "$ContextPath"
+            | "$Failed"
             | "$Packages"
             | "$Path"
             | "Begin"
@@ -2634,6 +2709,8 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "EndPackage"
             | "Evaluate"
             | "False"
+            | "File"
+            | "FindFile"
             | "Function"
             | "Get"
             | "Hold"
@@ -2966,6 +3043,75 @@ mod tests {
         assert_eq!(
             session.eval_text("Demo`token").unwrap().value.to_string(),
             "5"
+        );
+    }
+
+    #[test]
+    fn findfile_resolves_package_names_and_file_wrappers() {
+        let dir = TempDirGuard::new("findfile");
+        let file = dir.write(
+            "Demo.rum",
+            "BeginPackage[\"Demo`\"]\ntoken = 1\nEndPackage[]",
+        );
+        let mut session = Session::new();
+        session.set_package_search_paths([dir.path().to_path_buf()]);
+
+        assert_eq!(
+            session
+                .eval_text("FindFile[\"Demo`\"]")
+                .unwrap()
+                .value
+                .to_string(),
+            format!("\"{}\"", file.display())
+        );
+        assert_eq!(
+            session
+                .eval_text(&format!("FindFile[File[\"{}\"]]", rum_path(&file)))
+                .unwrap()
+                .value
+                .to_string(),
+            format!("\"{}\"", file.display())
+        );
+        assert_eq!(
+            session
+                .eval_text("FindFile[\"Missing`\"]")
+                .unwrap()
+                .value
+                .to_string(),
+            "$Failed"
+        );
+    }
+
+    #[test]
+    fn needs_supports_explicit_file_targets() {
+        let dir = TempDirGuard::new("needs-file");
+        let file = dir.write(
+            "custom-package.rum",
+            "BeginPackage[\"Custom`\"]\nflag = 9\nEndPackage[]",
+        );
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text(&format!("Needs[\"Custom`\", \"{}\"]", rum_path(&file)))
+                .unwrap()
+                .value
+                .to_string(),
+            "Null"
+        );
+        assert_eq!(session.eval_text("flag").unwrap().value.to_string(), "9");
+
+        session.eval_text("Custom`flag = 12").unwrap();
+        session
+            .eval_text(&format!(
+                "Needs[\"Custom`\", File[\"{}\"]]",
+                rum_path(&file)
+            ))
+            .unwrap();
+
+        assert_eq!(
+            session.eval_text("Custom`flag").unwrap().value.to_string(),
+            "12"
         );
     }
 

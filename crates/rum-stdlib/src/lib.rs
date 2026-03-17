@@ -27,6 +27,7 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "$ContextPath",
         "Evaluates to the active context search path as a list of strings.",
     ),
+    BuiltinSpec::new("$Failed", "Represents a failed operation."),
     BuiltinSpec::new(
         "$Packages",
         "Lists package contexts loaded into the current session.",
@@ -36,6 +37,11 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Context",
         "Returns the context of the current session or of a symbol.",
         HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::new("File", "Represents an explicit file specification."),
+    BuiltinSpec::new(
+        "FindFile",
+        "Finds the full path of a file or package using the current search path.",
     ),
     BuiltinSpec::new(
         "Get",
