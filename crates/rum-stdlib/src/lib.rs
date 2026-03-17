@@ -69,12 +69,12 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::with_hold(
         "Check",
-        "Evaluates an expression and substitutes a fallback if messages are emitted.",
+        "Evaluates an expression and substitutes a fallback if matching messages are emitted.",
         HoldAttribute::HoldAll,
     ),
     BuiltinSpec::with_hold(
         "Quiet",
-        "Evaluates an expression while suppressing any runtime messages it emits.",
+        "Evaluates an expression while suppressing matching runtime messages it emits.",
         HoldAttribute::HoldAll,
     ),
     BuiltinSpec::with_hold(

@@ -111,9 +111,25 @@ pub struct RuntimeMessage {
     pub text: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct MessageSelector {
+    symbol: String,
+    tag: Option<String>,
+}
+
 impl fmt::Display for RuntimeMessage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}::{}: {}", self.symbol, self.tag, self.text)
+    }
+}
+
+impl MessageSelector {
+    fn matches(&self, message: &RuntimeMessage) -> bool {
+        self.symbol == message.symbol
+            && self
+                .tag
+                .as_ref()
+                .map_or(true, |tag| message.tag.as_str() == tag.as_str())
     }
 }
 
@@ -576,6 +592,22 @@ impl Session {
         detail: impl Into<String>,
     ) -> Expr {
         self.invalid_call_with_message(symbol, args, "argform", detail)
+    }
+
+    fn messages_since_match(&self, checkpoint: usize, selectors: &[MessageSelector]) -> bool {
+        self.messages[checkpoint..]
+            .iter()
+            .any(|message| selectors.iter().any(|selector| selector.matches(message)))
+    }
+
+    fn suppress_messages_since(&mut self, checkpoint: usize, selectors: &[MessageSelector]) {
+        let trailing_messages = self.messages.split_off(checkpoint);
+
+        for message in trailing_messages {
+            if !selectors.iter().any(|selector| selector.matches(&message)) {
+                self.messages.push(message);
+            }
+        }
     }
 
     fn lower_syntax_expr(&self, syntax: &SyntaxExpr) -> Result<Expr, EvalError> {
@@ -1157,14 +1189,37 @@ impl Session {
     }
 
     fn eval_check(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if args.len() != 2 {
-            return Ok(self.invalid_call_with_exact_arg_count("Check", args, 2));
+        if !(2..=3).contains(&args.len()) {
+            return Ok(self.invalid_call_with_message(
+                "Check",
+                args,
+                "argx",
+                format!("expected 2 or 3 argument(s), got {}", args.len()),
+            ));
         }
+
+        let selectors = if let Some(selector_expr) = args.get(2) {
+            let Some(selectors) = parse_message_selectors(selector_expr) else {
+                return Ok(self.invalid_call_with_arg_form(
+                    "Check",
+                    args,
+                    "expected the optional message selector to be a symbol, a \"symbol::tag\" string, or a list of those",
+                ));
+            };
+            Some(selectors)
+        } else {
+            None
+        };
 
         let message_checkpoint = self.messages.len();
         let value = self.evaluate(args[0].clone())?;
 
-        if self.messages.len() > message_checkpoint {
+        let matched = selectors.as_ref().map_or_else(
+            || self.messages.len() > message_checkpoint,
+            |selectors| self.messages_since_match(message_checkpoint, selectors),
+        );
+
+        if matched {
             self.evaluate(args[1].clone())
         } else {
             Ok(value)
@@ -1172,13 +1227,37 @@ impl Session {
     }
 
     fn eval_quiet(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if args.len() != 1 {
-            return Ok(self.invalid_call_with_exact_arg_count("Quiet", args, 1));
+        if !(1..=2).contains(&args.len()) {
+            return Ok(self.invalid_call_with_message(
+                "Quiet",
+                args,
+                "argx",
+                format!("expected 1 or 2 argument(s), got {}", args.len()),
+            ));
         }
+
+        let selectors = if let Some(selector_expr) = args.get(1) {
+            let Some(selectors) = parse_message_selectors(selector_expr) else {
+                return Ok(self.invalid_call_with_arg_form(
+                    "Quiet",
+                    args,
+                    "expected the optional message selector to be a symbol, a \"symbol::tag\" string, or a list of those",
+                ));
+            };
+            Some(selectors)
+        } else {
+            None
+        };
 
         let message_checkpoint = self.messages.len();
         let result = self.evaluate(args[0].clone());
-        self.messages.truncate(message_checkpoint);
+
+        if let Some(selectors) = selectors.as_ref() {
+            self.suppress_messages_since(message_checkpoint, selectors);
+        } else {
+            self.messages.truncate(message_checkpoint);
+        }
+
         result
     }
 
@@ -2298,6 +2377,49 @@ fn expr_as_string_list(expr: &Expr) -> Option<Vec<String>> {
             _ => None,
         })
         .collect()
+}
+
+fn parse_message_selectors(expr: &Expr) -> Option<Vec<MessageSelector>> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "List") => args
+            .iter()
+            .map(parse_message_selector_item)
+            .collect::<Option<Vec<_>>>(),
+        _ => Some(vec![parse_message_selector_item(expr)?]),
+    }
+}
+
+fn parse_message_selector_item(expr: &Expr) -> Option<MessageSelector> {
+    match expr {
+        Expr::Atom(Atom::String(spec)) => parse_message_selector_string(spec),
+        Expr::Atom(Atom::Symbol(symbol)) => Some(MessageSelector {
+            symbol: symbol.to_string(),
+            tag: None,
+        }),
+        _ => None,
+    }
+}
+
+fn parse_message_selector_string(spec: &str) -> Option<MessageSelector> {
+    if spec.is_empty() {
+        return None;
+    }
+
+    if let Some((symbol, tag)) = spec.split_once("::") {
+        if symbol.is_empty() || tag.is_empty() {
+            return None;
+        }
+
+        return Some(MessageSelector {
+            symbol: symbol.to_string(),
+            tag: Some(tag.to_string()),
+        });
+    }
+
+    Some(MessageSelector {
+        symbol: spec.to_string(),
+        tag: None,
+    })
 }
 
 fn truthiness_symbol(expr: &Expr) -> Option<bool> {
@@ -3575,6 +3697,114 @@ mod tests {
 
         assert_eq!(outcome.value.to_string(), "$Failed");
         assert!(outcome.messages.is_empty());
+    }
+
+    #[test]
+    fn check_can_target_specific_message_selectors() {
+        let mut session = Session::new();
+
+        let non_matching = session
+            .eval_text("Check[FindFile[\"Missing`\"], 99, \"Get::notfound\"]")
+            .unwrap();
+        assert_eq!(non_matching.value.to_string(), "$Failed");
+        assert!(
+            non_matching
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "FindFile" && message.tag == "notfound" })
+        );
+
+        let matching = session
+            .eval_text("Check[FindFile[\"Missing`\"], 99, \"FindFile::notfound\"]")
+            .unwrap();
+        assert_eq!(matching.value.to_string(), "99");
+        assert!(
+            matching
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "FindFile" && message.tag == "notfound" })
+        );
+    }
+
+    #[test]
+    fn check_can_match_by_message_symbol_only() {
+        let mut session = Session::new();
+
+        let outcome = session
+            .eval_text("Check[Needs[\"Missing`\"], 99, Needs]")
+            .unwrap();
+
+        assert_eq!(outcome.value.to_string(), "99");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "Get" && message.tag == "notfound" })
+        );
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "Needs" && message.tag == "load" })
+        );
+    }
+
+    #[test]
+    fn quiet_can_selectively_suppress_message_streams() {
+        let mut session = Session::new();
+
+        let outcome = session
+            .eval_text("Quiet[Needs[\"Missing`\"], Get]")
+            .unwrap();
+
+        assert_eq!(outcome.value.to_string(), "$Failed");
+        assert!(
+            !outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "Get" && message.tag == "notfound" })
+        );
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "Needs" && message.tag == "load" })
+        );
+    }
+
+    #[test]
+    fn quiet_accepts_selector_lists() {
+        let mut session = Session::new();
+
+        let outcome = session
+            .eval_text("Quiet[Needs[\"Missing`\"], {Get, \"Needs::load\"}]")
+            .unwrap();
+
+        assert_eq!(outcome.value.to_string(), "$Failed");
+        assert!(outcome.messages.is_empty());
+    }
+
+    #[test]
+    fn invalid_message_selector_specs_emit_runtime_messages() {
+        let mut session = Session::new();
+
+        let check_outcome = session.eval_text("Check[Identity[1], 0, 1]").unwrap();
+        assert_eq!(check_outcome.value.to_string(), "Check[Identity[1], 0, 1]");
+        assert!(
+            check_outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "Check" && message.tag == "argform" })
+        );
+
+        let quiet_outcome = session.eval_text("Quiet[Identity[1], 1]").unwrap();
+        assert_eq!(quiet_outcome.value.to_string(), "Quiet[Identity[1], 1]");
+        assert!(
+            quiet_outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "Quiet" && message.tag == "argform" })
+        );
     }
 
     #[test]

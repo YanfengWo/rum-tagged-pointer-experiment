@@ -96,6 +96,8 @@ off as work lands.
 - [x] Surface context-stack misuse and pure-function arity mismatches via runtime messages
 - [x] Add `Check` to branch on emitted runtime messages during evaluation
 - [x] Add `Quiet` to suppress nested runtime messages without changing the returned value
+- [x] Support selector-aware `Check` targeting specific `symbol` or `symbol::tag` messages
+- [x] Support selector-aware `Quiet` for suppressing only chosen message streams
 
 ### Tests
 
