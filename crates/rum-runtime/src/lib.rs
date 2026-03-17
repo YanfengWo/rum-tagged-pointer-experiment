@@ -7,6 +7,7 @@ use rum_syntax::{
 use thiserror::Error;
 
 const REPLACE_REPEATED_LIMIT: usize = 256;
+const DEFAULT_RECURSION_LIMIT: usize = 256;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HoldAttribute {
@@ -52,11 +53,13 @@ impl BuiltinSpec {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Session {
     builtins: BTreeMap<String, BuiltinSpec>,
     definitions: BTreeMap<Symbol, SymbolDefinition>,
     next_generated_symbol_id: u64,
+    recursion_limit: usize,
+    evaluation_depth: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -113,13 +116,31 @@ pub enum EvalError {
     Syntax(#[from] SyntaxError),
     #[error("invalid integer literal `{literal}`")]
     InvalidInteger { literal: String },
+    #[error("evaluation exceeded recursion limit ({limit})")]
+    RecursionLimitExceeded { limit: usize },
     #[error("ReplaceRepeated exceeded iteration limit ({limit})")]
     IterationLimitExceeded { limit: usize },
+}
+
+impl Default for Session {
+    fn default() -> Self {
+        Self {
+            builtins: BTreeMap::new(),
+            definitions: BTreeMap::new(),
+            next_generated_symbol_id: 0,
+            recursion_limit: DEFAULT_RECURSION_LIMIT,
+            evaluation_depth: 0,
+        }
+    }
 }
 
 impl Session {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn set_recursion_limit(&mut self, limit: usize) {
+        self.recursion_limit = limit;
     }
 
     pub fn register_builtin(&mut self, spec: BuiltinSpec) {
@@ -157,6 +178,19 @@ impl Session {
     }
 
     pub fn evaluate(&mut self, expr: Expr) -> Result<Expr, EvalError> {
+        if self.evaluation_depth >= self.recursion_limit {
+            return Err(EvalError::RecursionLimitExceeded {
+                limit: self.recursion_limit,
+            });
+        }
+
+        self.evaluation_depth += 1;
+        let result = self.evaluate_inner(expr);
+        self.evaluation_depth -= 1;
+        result
+    }
+
+    fn evaluate_inner(&mut self, expr: Expr) -> Result<Expr, EvalError> {
         match expr {
             Expr::Atom(Atom::Symbol(symbol)) => self.evaluate_symbol(symbol),
             Expr::Call { head, args } => self.evaluate_call(*head, args),
@@ -2159,6 +2193,41 @@ mod tests {
                 .to_string(),
             "1"
         );
+    }
+
+    #[test]
+    fn recursion_limit_stops_self_referential_definitions_and_recovers_after_error() {
+        let mut session = Session::new();
+        session.set_recursion_limit(32);
+
+        session.eval_text("x := x").unwrap();
+
+        let error = session
+            .eval_text("x")
+            .expect_err("expected recursion limit error");
+
+        assert!(matches!(
+            error,
+            EvalError::RecursionLimitExceeded { limit: 32 }
+        ));
+        assert_eq!(session.eval_text("1").unwrap().value.to_string(), "1");
+    }
+
+    #[test]
+    fn recursion_limit_stops_recursive_downvalues() {
+        let mut session = Session::new();
+        session.set_recursion_limit(32);
+
+        session.eval_text("f[x_Integer] := f[x]").unwrap();
+
+        let error = session
+            .eval_text("f[1]")
+            .expect_err("expected recursion limit error");
+
+        assert!(matches!(
+            error,
+            EvalError::RecursionLimitExceeded { limit: 32 }
+        ));
     }
 
     #[test]
