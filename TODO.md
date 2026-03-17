@@ -108,7 +108,7 @@ This roadmap now uses two levels of detail:
 - [x] Preserve language-level messages emitted by successful earlier forms when a later form aborts `eval_script`
 - [x] Roll back definitions, contexts, loaded packages, traces, and message state when `eval_file` / `Get` fail
 - [x] Add a fixed-point evaluation pass limit alongside recursion and `ReplaceRepeated` limits
-- [ ] Continue tightening the remaining boundary between evaluation errors and language-level messages outside loader/script flows
+- [x] Continue tightening the remaining boundary between evaluation errors and language-level messages outside loader/script flows
 
 ### `rum-repl` and `rum-cli`: Interactive Ergonomics
 

@@ -167,6 +167,7 @@ pub struct Session {
     trace_events: Vec<TraceEvent>,
     messages: Vec<RuntimeMessage>,
     last_message_list: Vec<RuntimeMessage>,
+    handled_non_loader_eval_errors: Vec<RuntimeMessage>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -395,6 +396,7 @@ impl Default for Session {
             trace_events: Vec::new(),
             messages: Vec::new(),
             last_message_list: Vec::new(),
+            handled_non_loader_eval_errors: Vec::new(),
         }
     }
 }
@@ -646,12 +648,29 @@ impl Session {
 
     pub fn eval_text(&mut self, input: &str) -> Result<EvalOutcome, EvalError> {
         let message_checkpoint = self.messages.len();
-        let syntax = parse_expr(input)?;
-        let expr = self.lower_syntax_expr(&syntax)?;
-        let value = self.evaluate(expr)?;
-        let messages = self.messages.split_off(message_checkpoint);
-        self.last_message_list = messages.clone();
-        Ok(EvalOutcome { value, messages })
+        let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
+        let result = (|| {
+            let syntax = parse_expr(input)?;
+            let expr = self.lower_syntax_expr(&syntax)?;
+            self.evaluate(expr)
+        })();
+
+        match result {
+            Ok(value) => {
+                let messages = self.messages.split_off(message_checkpoint);
+                self.last_message_list = messages.clone();
+                self.handled_non_loader_eval_errors
+                    .truncate(handled_error_checkpoint);
+                Ok(EvalOutcome { value, messages })
+            }
+            Err(err) => {
+                self.emit_non_loader_eval_message(handled_error_checkpoint, &err);
+                self.last_message_list = self.messages[message_checkpoint..].to_vec();
+                self.handled_non_loader_eval_errors
+                    .truncate(handled_error_checkpoint);
+                Err(err)
+            }
+        }
     }
 
     pub fn eval_script(&mut self, source: &str) -> Result<EvalOutcome, EvalError> {
@@ -735,6 +754,39 @@ impl Session {
             tag: tag.to_string(),
             text: text.into(),
         });
+    }
+
+    fn runtime_message_for_non_loader_eval_error(error: &EvalError) -> Option<RuntimeMessage> {
+        let tag = match error {
+            EvalError::EvaluationCycleDetected { .. } => "cycle",
+            EvalError::RecursionLimitExceeded { .. } => "reclim",
+            EvalError::IterationLimitExceeded { .. } => "iterlim",
+            EvalError::EvaluationPassLimitExceeded { .. } => "passlim",
+            _ => return None,
+        };
+
+        Some(RuntimeMessage {
+            symbol: "General".to_string(),
+            tag: tag.to_string(),
+            text: error.to_string(),
+        })
+    }
+
+    fn emit_non_loader_eval_message(&mut self, checkpoint: usize, error: &EvalError) -> bool {
+        let Some(message) = Self::runtime_message_for_non_loader_eval_error(error) else {
+            return false;
+        };
+
+        if self.handled_non_loader_eval_errors[checkpoint..]
+            .iter()
+            .any(|existing| existing == &message)
+        {
+            return true;
+        }
+
+        self.handled_non_loader_eval_errors.push(message.clone());
+        self.messages.push(message);
+        true
     }
 
     fn emit_loader_message(&mut self, symbol: &str, error: &EvalError) {
@@ -1960,12 +2012,32 @@ impl Session {
         };
 
         let message_checkpoint = self.messages.len();
-        let value = self.evaluate(args[0].clone())?;
+        let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
+        let value = match self.evaluate(args[0].clone()) {
+            Ok(value) => value,
+            Err(err) => {
+                self.emit_non_loader_eval_message(handled_error_checkpoint, &err);
+
+                let matched = selectors.as_ref().map_or_else(
+                    || self.messages.len() > message_checkpoint,
+                    |selectors| self.messages_since_match(message_checkpoint, selectors),
+                );
+
+                if matched {
+                    return self.evaluate(args[1].clone());
+                }
+
+                return Err(err);
+            }
+        };
 
         let matched = selectors.as_ref().map_or_else(
             || self.messages.len() > message_checkpoint,
             |selectors| self.messages_since_match(message_checkpoint, selectors),
         );
+
+        self.handled_non_loader_eval_errors
+            .truncate(handled_error_checkpoint);
 
         if matched {
             self.evaluate(args[1].clone())
@@ -1998,12 +2070,24 @@ impl Session {
         };
 
         let message_checkpoint = self.messages.len();
-        let result = self.evaluate(args[0].clone());
+        let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
+        let result = match self.evaluate(args[0].clone()) {
+            Ok(value) => Ok(value),
+            Err(err) => {
+                self.emit_non_loader_eval_message(handled_error_checkpoint, &err);
+                Err(err)
+            }
+        };
 
         if let Some(selectors) = selectors.as_ref() {
             self.suppress_messages_since(message_checkpoint, selectors);
         } else {
             self.messages.truncate(message_checkpoint);
+        }
+
+        if result.is_ok() {
+            self.handled_non_loader_eval_errors
+                .truncate(handled_error_checkpoint);
         }
 
         result
@@ -4415,6 +4499,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "FindFile"
             | "Function"
             | "Get"
+            | "General"
             | "Heads"
             | "Hold"
             | "HoldAll"
@@ -5460,6 +5545,113 @@ mod tests {
                 .messages
                 .iter()
                 .any(|message| { message.symbol == "Quiet" && message.tag == "argform" })
+        );
+    }
+
+    #[test]
+    fn non_loader_evaluation_errors_emit_general_messages_at_top_level() {
+        let mut session = Session::new();
+        session.eval_text("self := self").unwrap();
+
+        let error = session
+            .eval_text("self")
+            .expect_err("expected a cycle error from delayed self reference");
+
+        assert!(matches!(
+            error,
+            EvalError::EvaluationCycleDetected { ref expr } if expr == "self"
+        ));
+
+        assert_eq!(
+            session.eval_text("$MessageList").unwrap().value.to_string(),
+            "List[General::cycle]"
+        );
+        assert!(
+            session
+                .take_messages()
+                .iter()
+                .any(|message| { message.symbol == "General" && message.tag == "cycle" })
+        );
+    }
+
+    #[test]
+    fn check_can_catch_non_loader_evaluation_errors_via_general_messages() {
+        let mut session = Session::new();
+        session.eval_text("self := self").unwrap();
+
+        let outcome = session.eval_text("Check[self, 99, General]").unwrap();
+
+        assert_eq!(outcome.value.to_string(), "99");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "General" && message.tag == "cycle" })
+        );
+    }
+
+    #[test]
+    fn check_can_match_specific_general_error_selectors() {
+        let mut session = Session::new();
+        session.eval_text("self := self").unwrap();
+
+        let non_matching = session
+            .eval_text("Check[self, 99, \"General::reclim\"]")
+            .expect_err("expected a cycle error when selector does not match");
+        assert!(matches!(
+            non_matching,
+            EvalError::EvaluationCycleDetected { ref expr } if expr == "self"
+        ));
+        assert!(
+            session
+                .take_messages()
+                .iter()
+                .any(|message| { message.symbol == "General" && message.tag == "cycle" })
+        );
+
+        let matching = session
+            .eval_text("Check[self, 99, \"General::cycle\"]")
+            .unwrap();
+        assert_eq!(matching.value.to_string(), "99");
+        assert!(
+            matching
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "General" && message.tag == "cycle" })
+        );
+    }
+
+    #[test]
+    fn quiet_suppresses_general_error_messages_without_masking_errors() {
+        let mut session = Session::new();
+        session.eval_text("self := self").unwrap();
+
+        let error = session
+            .eval_text("Quiet[self]")
+            .expect_err("expected Quiet to preserve the underlying evaluation error");
+
+        assert!(matches!(
+            error,
+            EvalError::EvaluationCycleDetected { ref expr } if expr == "self"
+        ));
+        assert!(session.take_messages().is_empty());
+    }
+
+    #[test]
+    fn check_can_catch_iteration_limit_messages_from_replace_repeated() {
+        let mut session = Session::new();
+        session.set_replace_repeated_limit(8);
+
+        let outcome = session
+            .eval_text("Check[1 //. {1 -> 2, 2 -> 1}, 99, \"General::iterlim\"]")
+            .unwrap();
+
+        assert_eq!(outcome.value.to_string(), "99");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "General" && message.tag == "iterlim" })
         );
     }
 
