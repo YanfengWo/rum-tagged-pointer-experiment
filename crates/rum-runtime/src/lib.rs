@@ -448,11 +448,22 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Option<Expr>, EvalError> {
-        let Some(body) = function_body(head) else {
+        let Some(function) = parse_function(head) else {
             return Ok(None);
         };
 
-        let applied = substitute_slots(body, args);
+        let applied = match function {
+            FunctionSpec::SlotBased(body) => substitute_slots(body, args),
+            FunctionSpec::Explicit { params, body } => {
+                if params.len() != args.len() {
+                    return Ok(None);
+                }
+
+                let bindings = params.into_iter().zip(args.iter().cloned()).collect();
+                substitute_lexical_bindings(body, &bindings, &BTreeSet::new())
+            }
+        };
+
         self.evaluate(applied).map(Some)
     }
 
@@ -1139,13 +1150,42 @@ fn splice_sequence_argument(args: &mut Vec<Expr>, expr: Expr) {
     }
 }
 
-fn function_body(expr: &Expr) -> Option<&Expr> {
+enum FunctionSpec<'a> {
+    SlotBased(&'a Expr),
+    Explicit { params: Vec<Symbol>, body: &'a Expr },
+}
+
+fn parse_function(expr: &Expr) -> Option<FunctionSpec<'_>> {
     match expr {
         Expr::Call { head, args } if is_system_symbol_name(head, "Function") && args.len() == 1 => {
-            Some(&args[0])
+            Some(FunctionSpec::SlotBased(&args[0]))
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "Function") && args.len() >= 2 => {
+            Some(FunctionSpec::Explicit {
+                params: parse_function_parameters(&args[0])?,
+                body: &args[1],
+            })
         }
         _ => None,
     }
+}
+
+fn parse_function_parameters(expr: &Expr) -> Option<Vec<Symbol>> {
+    if let Some(symbol) = expr_as_symbol(expr) {
+        return Some(vec![symbol.clone()]);
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "List") {
+        return None;
+    }
+
+    args.iter()
+        .map(|arg| expr_as_symbol(arg).cloned())
+        .collect::<Option<Vec<_>>>()
 }
 
 fn parse_with_binding_item(expr: &Expr) -> Option<(Symbol, Expr)> {
@@ -1519,6 +1559,34 @@ fn substitute_lexical_bindings(
                 args[1..]
                     .iter()
                     .map(|arg| substitute_lexical_bindings(arg, bindings, &body_shadowed)),
+            );
+
+            Expr::call(substituted_head, substituted_args)
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "Function") && args.len() >= 2 => {
+            let substituted_head = substitute_lexical_bindings(head, bindings, shadowed);
+            let Some(params) = parse_function_parameters(&args[0]) else {
+                return Expr::call(
+                    substituted_head,
+                    args.iter()
+                        .map(|arg| substitute_lexical_bindings(arg, bindings, shadowed))
+                        .collect(),
+                );
+            };
+
+            let mut body_shadowed = shadowed.clone();
+            body_shadowed.extend(params);
+
+            let mut substituted_args = vec![args[0].clone()];
+            substituted_args.push(substitute_lexical_bindings(
+                &args[1],
+                bindings,
+                &body_shadowed,
+            ));
+            substituted_args.extend(
+                args[2..]
+                    .iter()
+                    .map(|arg| substitute_lexical_bindings(arg, bindings, shadowed)),
             );
 
             Expr::call(substituted_head, substituted_args)
@@ -1928,6 +1996,22 @@ mod tests {
                 .to_string(),
             "Plus[1, 2]"
         );
+        assert_eq!(
+            session
+                .eval_text("Function[x, x][Identity[1]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(
+            session
+                .eval_text("Function[{x, y}, Hold[x, y]][Identity[1], Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[1, 2]"
+        );
     }
 
     #[test]
@@ -1997,6 +2081,36 @@ mod tests {
                 .value
                 .to_string(),
             "Hold[3]"
+        );
+    }
+
+    #[test]
+    fn explicit_parameter_functions_respect_shadowing_and_pattern_locals() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Function[x, Function[x, x]][1]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Function[x, x]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Function[x, 7 /. x_Integer :> x][1]")
+                .unwrap()
+                .value
+                .to_string(),
+            "7"
+        );
+        assert_eq!(
+            session
+                .eval_text("Function[{x, y}, y][1, 2]")
+                .unwrap()
+                .value
+                .to_string(),
+            "2"
         );
     }
 
