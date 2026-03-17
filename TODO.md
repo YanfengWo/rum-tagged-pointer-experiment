@@ -54,6 +54,7 @@ off as work lands.
 - [x] Evaluate bare symbols through definition lookup
 - [x] Evaluate general call heads and arguments recursively
 - [x] Add special-form dispatch for held assignment builtins
+- [x] Re-dispatch calls after head evaluation so symbols can resolve into special forms and held builtins
 - [ ] Add a standard evaluation loop closer to Mathematica semantics
 - [ ] Add recursion limits and cycle detection
 

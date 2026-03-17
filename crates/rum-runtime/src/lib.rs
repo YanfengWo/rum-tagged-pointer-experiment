@@ -181,11 +181,12 @@ impl Session {
     }
 
     fn evaluate_call(&mut self, head: Expr, args: Vec<Expr>) -> Result<Expr, EvalError> {
-        if let Some(result) = self.try_evaluate_special_form(&head, args.as_slice())? {
+        let evaluated_head = self.evaluate(head)?;
+
+        if let Some(result) = self.try_evaluate_special_form(&evaluated_head, args.as_slice())? {
             return Ok(result);
         }
 
-        let evaluated_head = self.evaluate(head)?;
         let evaluated_args = self.evaluate_call_args(&evaluated_head, args)?;
 
         if let Some(result) =
@@ -2111,6 +2112,52 @@ mod tests {
                 .value
                 .to_string(),
             "2"
+        );
+    }
+
+    #[test]
+    fn head_evaluation_can_activate_special_forms_and_held_builtins() {
+        let mut session = Session::new();
+
+        session.eval_text("assign = Set").unwrap();
+        assert_eq!(
+            session
+                .eval_text("assign[x, Identity[1]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
+
+        session.eval_text("repl = ReplaceAll").unwrap();
+        assert_eq!(
+            session
+                .eval_text("repl[f[1], f[x_Integer] -> x]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+
+        session.eval_text("hold = Hold").unwrap();
+        assert_eq!(
+            session
+                .eval_text("hold[Identity[1]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[Identity[1]]"
+        );
+
+        session.eval_text("chooser = If").unwrap();
+        assert_eq!(
+            session
+                .eval_text("chooser[True, Identity[1], x]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
         );
     }
 
