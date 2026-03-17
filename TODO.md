@@ -88,6 +88,29 @@ off as work lands.
 - [ ] Add condition handling with `/;`
 - [ ] Add `MatchQ`, `Cases`, and related core traversal tools
 
+## Rules and Replacement Breakdown
+
+### Matching core
+
+- [x] Match simple blanks against atomic and call expressions
+- [x] Bind named pattern variables during matching
+- [ ] Support `BlankSequence` and `BlankNullSequence` across argument lists
+- [ ] Support condition-aware matching with `/;`
+
+### Rule objects
+
+- [x] Preserve immediate vs delayed rule behavior for replacement workflows
+- [x] Normalize single rules and rule lists for replacement
+- [ ] Add better inspection/debug support for rule expressions
+
+### Replacement engine
+
+- [x] Implement `MatchQ`
+- [x] Implement `ReplaceAll` with a single rule
+- [x] Implement `ReplaceAll` with rule lists
+- [x] Traverse nested expressions during replacement
+- [ ] Implement `ReplaceRepeated`
+
 ## Phase 5: Scoping and Runtime Control
 
 - [ ] Implement `Module`

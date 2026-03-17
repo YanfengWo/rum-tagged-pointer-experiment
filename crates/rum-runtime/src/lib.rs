@@ -46,6 +46,12 @@ pub struct DownValue {
     pub rhs: Expr,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct RewriteRule {
+    lhs: Expr,
+    rhs: Expr,
+}
+
 #[derive(Debug, Error)]
 pub enum EvalError {
     #[error(transparent)]
@@ -155,6 +161,10 @@ impl Session {
         match symbol.name() {
             "Set" => self.eval_set(args).map(Some),
             "SetDelayed" => self.eval_set_delayed(args).map(Some),
+            "Rule" => self.eval_rule(args).map(Some),
+            "RuleDelayed" => self.eval_rule_delayed(args).map(Some),
+            "MatchQ" => self.eval_match_q(args).map(Some),
+            "ReplaceAll" => self.eval_replace_all(args).map(Some),
             _ => Ok(None),
         }
     }
@@ -214,6 +224,62 @@ impl Session {
         }
     }
 
+    fn eval_rule(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(Expr::call(Expr::symbol("Rule"), args.to_vec()));
+        }
+
+        Ok(Expr::call(
+            Expr::symbol("Rule"),
+            vec![args[0].clone(), self.evaluate(args[1].clone())?],
+        ))
+    }
+
+    fn eval_rule_delayed(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(Expr::call(Expr::symbol("RuleDelayed"), args.to_vec()));
+        }
+
+        Ok(Expr::call(Expr::symbol("RuleDelayed"), args.to_vec()))
+    }
+
+    fn eval_match_q(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(Expr::call(Expr::symbol("MatchQ"), args.to_vec()));
+        }
+
+        let value = self.evaluate(args[0].clone())?;
+        let pattern = self.normalize_pattern_expr(&args[1])?;
+        let mut bindings = BTreeMap::new();
+
+        Ok(Expr::symbol(
+            if match_expr(&pattern, &value, &mut bindings) {
+                "True"
+            } else {
+                "False"
+            },
+        ))
+    }
+
+    fn eval_replace_all(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(Expr::call(Expr::symbol("ReplaceAll"), args.to_vec()));
+        }
+
+        let target = self.evaluate(args[0].clone())?;
+        let rules_expr = self.evaluate(args[1].clone())?;
+
+        let Some(rules) = normalize_rewrite_rules(&rules_expr) else {
+            return Ok(Expr::call(
+                Expr::symbol("ReplaceAll"),
+                vec![target, rules_expr],
+            ));
+        };
+
+        let replaced = apply_replace_all(target, &rules);
+        self.evaluate(replaced)
+    }
+
     fn try_apply_down_values(
         &mut self,
         head: &Expr,
@@ -239,6 +305,13 @@ impl Session {
         }
 
         Ok(None)
+    }
+
+    fn normalize_pattern_expr(&mut self, expr: &Expr) -> Result<Expr, EvalError> {
+        match expr {
+            Expr::Atom(Atom::Symbol(_)) => self.evaluate(expr.clone()),
+            _ => Ok(expr.clone()),
+        }
     }
 }
 
@@ -427,6 +500,66 @@ fn downvalue_head_symbol(expr: &Expr) -> Option<&Symbol> {
         Expr::Call { head, .. } => expr_as_symbol(head),
         _ => None,
     }
+}
+
+fn normalize_rewrite_rules(expr: &Expr) -> Option<Vec<RewriteRule>> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
+            let mut rules = Vec::new();
+
+            for item in args {
+                let rule = normalize_single_rewrite_rule(item)?;
+                rules.push(rule);
+            }
+
+            Some(rules)
+        }
+        _ => normalize_single_rewrite_rule(expr).map(|rule| vec![rule]),
+    }
+}
+
+fn normalize_single_rewrite_rule(expr: &Expr) -> Option<RewriteRule> {
+    match expr {
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "Rule")
+                || is_system_symbol_name(head, "RuleDelayed"))
+                && args.len() == 2 =>
+        {
+            Some(RewriteRule {
+                lhs: args[0].clone(),
+                rhs: args[1].clone(),
+            })
+        }
+        _ => None,
+    }
+}
+
+fn apply_replace_all(expr: Expr, rules: &[RewriteRule]) -> Expr {
+    if let Some(replaced) = apply_rules_once(&expr, rules) {
+        return replaced;
+    }
+
+    match expr {
+        Expr::Atom(_) => expr,
+        Expr::Call { head, args } => Expr::call(
+            apply_replace_all(*head, rules),
+            args.into_iter()
+                .map(|arg| apply_replace_all(arg, rules))
+                .collect(),
+        ),
+    }
+}
+
+fn apply_rules_once(expr: &Expr, rules: &[RewriteRule]) -> Option<Expr> {
+    for rule in rules {
+        let mut bindings = BTreeMap::new();
+
+        if match_expr(&rule.lhs, expr, &mut bindings) {
+            return Some(substitute_bindings(&rule.rhs, &bindings));
+        }
+    }
+
+    None
 }
 
 fn match_expr(pattern: &Expr, value: &Expr, bindings: &mut BTreeMap<Symbol, Expr>) -> bool {
@@ -650,6 +783,34 @@ mod tests {
     }
 
     #[test]
+    fn matchq_reports_true_for_matching_pattern() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("MatchQ[7, x_Integer]")
+                .unwrap()
+                .value
+                .to_string(),
+            "True"
+        );
+    }
+
+    #[test]
+    fn matchq_reports_false_for_non_matching_pattern() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("MatchQ[\"hi\", x_Integer]")
+                .unwrap()
+                .value
+                .to_string(),
+            "False"
+        );
+    }
+
+    #[test]
     fn downvalue_matches_after_argument_evaluation() {
         let mut session = Session::new();
 
@@ -680,6 +841,76 @@ mod tests {
         assert_eq!(
             session.eval_text("f[\"hi\"]").unwrap().value.to_string(),
             "f[\"hi\"]"
+        );
+    }
+
+    #[test]
+    fn replaceall_applies_single_rule() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("7 /. x_Integer -> x")
+                .unwrap()
+                .value
+                .to_string(),
+            "7"
+        );
+    }
+
+    #[test]
+    fn replaceall_applies_rule_list_in_order() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("7 /. {x_String -> 0, x_Integer -> 1}")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+    }
+
+    #[test]
+    fn replaceall_traverses_nested_expressions() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("f[g[1]] /. g[x_Integer] -> h[x]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[h[1]]"
+        );
+    }
+
+    #[test]
+    fn immediate_rule_captures_current_rhs_value() {
+        let mut session = Session::new();
+
+        session.eval_text("n = 1").unwrap();
+        session.eval_text("rule = x_Integer -> n").unwrap();
+        session.eval_text("n = 2").unwrap();
+
+        assert_eq!(
+            session.eval_text("7 /. rule").unwrap().value.to_string(),
+            "1"
+        );
+    }
+
+    #[test]
+    fn delayed_rule_uses_current_rhs_value_at_application_time() {
+        let mut session = Session::new();
+
+        session.eval_text("n = 1").unwrap();
+        session.eval_text("rule = x_Integer :> n").unwrap();
+        session.eval_text("n = 2").unwrap();
+
+        assert_eq!(
+            session.eval_text("7 /. rule").unwrap().value.to_string(),
+            "2"
         );
     }
 }
