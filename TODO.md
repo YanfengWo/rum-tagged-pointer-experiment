@@ -98,6 +98,8 @@ off as work lands.
 - [x] Add `Quiet` to suppress nested runtime messages without changing the returned value
 - [x] Support selector-aware `Check` targeting specific `symbol` or `symbol::tag` messages
 - [x] Support selector-aware `Quiet` for suppressing only chosen message streams
+- [x] Add `Message` / `MessageName` with minimal message template storage and emission
+- [x] Expose `$MessageList` and `::` shorthand for emitted message names
 
 ### Tests
 

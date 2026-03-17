@@ -272,6 +272,7 @@ impl Parser {
 
     fn current_binary_op(&self) -> Option<BinaryOp> {
         match self.current().kind {
+            TokenKind::MessageName => Some(BinaryOp::MessageName),
             TokenKind::Set => Some(BinaryOp::Set),
             TokenKind::SetDelayed => Some(BinaryOp::SetDelayed),
             TokenKind::ReplaceAll => Some(BinaryOp::ReplaceAll),
@@ -481,5 +482,28 @@ mod tests {
     fn parses_prefix_minus_with_power_precedence() {
         let parsed = parse_expr("-x^2").unwrap();
         assert_eq!(parsed.to_string(), "-x ^ 2");
+    }
+
+    #[test]
+    fn parses_message_name_before_assignment() {
+        let parsed = parse_expr("f::argx = \"bad arg `1`\"").unwrap();
+        assert_eq!(
+            parsed,
+            SyntaxExpr::Binary {
+                op: BinaryOp::Set,
+                lhs: Box::new(SyntaxExpr::Binary {
+                    op: BinaryOp::MessageName,
+                    lhs: Box::new(SyntaxExpr::Symbol("f".to_string())),
+                    rhs: Box::new(SyntaxExpr::Symbol("argx".to_string())),
+                }),
+                rhs: Box::new(SyntaxExpr::String("bad arg `1`".to_string())),
+            }
+        );
+    }
+
+    #[test]
+    fn parses_message_name_inside_calls() {
+        let parsed = parse_expr("Message[f::argx, x]").unwrap();
+        assert_eq!(parsed.to_string(), "Message[f :: argx, x]");
     }
 }

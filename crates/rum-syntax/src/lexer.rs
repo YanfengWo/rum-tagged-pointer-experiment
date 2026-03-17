@@ -24,6 +24,7 @@ pub(crate) enum TokenKind {
     Star,
     Slash,
     Caret,
+    MessageName,
     Arrow,
     RuleDelayed,
     Set,
@@ -100,7 +101,9 @@ impl<'a> Lexer<'a> {
                 }
             }
             ':' => {
-                if self.consume_str(":=") {
+                if self.consume_str("::") {
+                    TokenKind::MessageName
+                } else if self.consume_str(":=") {
                     TokenKind::SetDelayed
                 } else if self.consume_str(":>") {
                     TokenKind::RuleDelayed
@@ -267,8 +270,13 @@ mod tests {
 
     #[test]
     fn lexes_multi_char_operators() {
-        let tokens = lex("x := y //. z /. q -> w /; p").unwrap();
+        let tokens = lex("x::tag := y //. z /. q -> w /; p").unwrap();
 
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::MessageName))
+        );
         assert!(
             tokens
                 .iter()

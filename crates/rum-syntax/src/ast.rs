@@ -58,6 +58,7 @@ pub enum PrefixOp {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BinaryOp {
+    MessageName,
     Set,
     SetDelayed,
     ReplaceAll,
@@ -103,6 +104,7 @@ impl PrefixOp {
 impl BinaryOp {
     pub fn token(self) -> &'static str {
         match self {
+            Self::MessageName => "::",
             Self::Set => "=",
             Self::SetDelayed => ":=",
             Self::ReplaceAll => "/.",
@@ -120,6 +122,7 @@ impl BinaryOp {
 
     pub(crate) fn precedence(self) -> u8 {
         match self {
+            Self::MessageName => 75,
             Self::Set | Self::SetDelayed => 10,
             Self::ReplaceAll | Self::ReplaceRepeated => 20,
             Self::Rule | Self::RuleDelayed => 30,

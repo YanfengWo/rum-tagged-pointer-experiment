@@ -29,6 +29,10 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::new("$Failed", "Represents a failed operation."),
     BuiltinSpec::new(
+        "$MessageList",
+        "Lists the message names emitted by the most recent top-level evaluation.",
+    ),
+    BuiltinSpec::new(
         "$Packages",
         "Lists package contexts loaded into the current session.",
     ),
@@ -66,6 +70,16 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::new(
         "EndPackage",
         "Ends a package context and leaves it on the restored context path.",
+    ),
+    BuiltinSpec::with_hold(
+        "Message",
+        "Emits a message described by a MessageName expression.",
+        HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::with_hold(
+        "MessageName",
+        "Represents a symbolic message name such as f::tag.",
+        HoldAttribute::HoldAll,
     ),
     BuiltinSpec::with_hold(
         "Check",

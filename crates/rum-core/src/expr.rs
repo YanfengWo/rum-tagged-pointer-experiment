@@ -112,6 +112,10 @@ impl fmt::Display for Expr {
         match self {
             Self::Atom(atom) => write!(f, "{atom}"),
             Self::Call { head, args } => {
+                if let Some(rendered) = format_message_name_call(head, args) {
+                    return f.write_str(&rendered);
+                }
+
                 write!(f, "{head}[")?;
 
                 for (index, arg) in args.iter().enumerate() {
@@ -126,6 +130,24 @@ impl fmt::Display for Expr {
             }
         }
     }
+}
+
+fn format_message_name_call(head: &Expr, args: &[Expr]) -> Option<String> {
+    let Expr::Atom(Atom::Symbol(symbol)) = head else {
+        return None;
+    };
+
+    if symbol.context() != SYSTEM_CONTEXT || symbol.name() != "MessageName" || args.len() != 2 {
+        return None;
+    }
+
+    let tag = match &args[1] {
+        Expr::Atom(Atom::String(tag)) => tag.clone(),
+        Expr::Atom(Atom::Symbol(tag)) => tag.name().to_string(),
+        _ => return None,
+    };
+
+    Some(format!("{}::{}", args[0], tag))
 }
 
 #[cfg(test)]
@@ -153,5 +175,15 @@ mod tests {
         );
 
         assert_eq!(expr.to_string(), "f[42, x]");
+    }
+
+    #[test]
+    fn displays_message_name_shorthand() {
+        let expr = Expr::call(
+            Expr::system_symbol("MessageName"),
+            vec![Expr::symbol("f"), Expr::string("argx")],
+        );
+
+        assert_eq!(expr.to_string(), "f::argx");
     }
 }
