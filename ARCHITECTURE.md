@@ -107,6 +107,9 @@ architecture is:
 4. apply rewrite rules and scoping semantics
 5. expose traceable results to CLI, REPL, or host APIs
 
+The current implemented evaluation sequence and the remaining semantic gaps are
+tracked in `docs/runtime-evaluation-audit.md`.
+
 ## Numeric model
 
 Early support for exact integers is required because it matters for both

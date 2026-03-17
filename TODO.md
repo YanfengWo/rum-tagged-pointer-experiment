@@ -24,7 +24,8 @@ This roadmap now uses two levels of detail:
 ### Phase 3: Definitions and Evaluation
 
 - [x] Implement sessions, contexts, package loading, ownvalues/downvalues, hold-aware evaluation, and core assignment semantics
-- [ ] Add first-class definition inspection and keep tightening evaluation semantics where the current interpreter is still ad hoc
+- [x] Add first-class definition inspection for ownvalues, downvalues, and message definitions
+- [ ] Tighten evaluation semantics where the current interpreter is still ad hoc
 
 ### Phase 4: Rules and Pattern Matching
 
@@ -104,11 +105,32 @@ This roadmap now uses two levels of detail:
 
 ### `rum-runtime`: Evaluation Follow-Through
 
-- [ ] Audit current evaluation behavior against the intended Mathematica-style sequence and list the known gaps
+- [x] Audit current evaluation behavior against the intended Mathematica-style sequence and list the known gaps
+- [x] Write down the current evaluation pipeline and prioritized semantic gaps in `docs/runtime-evaluation-audit.md`
 - [x] Preserve language-level messages emitted by successful earlier forms when a later form aborts `eval_script`
 - [x] Roll back definitions, contexts, loaded packages, traces, and message state when `eval_file` / `Get` fail
 - [x] Add a fixed-point evaluation pass limit alongside recursion and `ReplaceRepeated` limits
 - [x] Continue tightening the remaining boundary between evaluation errors and language-level messages outside loader/script flows
+
+### `rum-runtime`: Attribute and Definition Semantics
+
+- [ ] Add a first-class runtime attribute table instead of relying only on builtin hold metadata and fallback rules
+- [ ] Implement `Attributes`, `SetAttributes`, and `ClearAttributes`
+- [ ] Add `SequenceHold` and route argument preprocessing through attribute-aware sequence handling
+- [ ] Add `HoldAllComplete` and make held-argument evaluation honor it
+- [ ] Decide and document precedence among user definitions, builtin dispatch, and future attribute-driven evaluation
+- [ ] Add `UpValues` and the supporting lookup path needed for argument-owned behavior
+- [ ] Add `Unset`, `Clear`, and `ClearAll` so definitions can be managed and removed cleanly
+
+### `rum-runtime`: Held Evaluation and Scoping Gaps
+
+- [ ] Add `Unevaluated`
+- [ ] Add `HoldPattern`
+- [ ] Add `ReleaseHold`
+- [ ] Let `Function` accept explicit attributes / hold behavior
+- [ ] Audit `Block` rebinding scope beyond ownvalue-style symbol values and decide the intended breadth
+- [ ] Audit `Module` freshness and capture edge cases now that more held and rule-based constructs exist
+- [ ] Add regression tests that lock down interactions among head evaluation, delayed definitions, held arguments, and scoping
 
 ### `rum-repl` and `rum-cli`: Interactive Ergonomics
 
