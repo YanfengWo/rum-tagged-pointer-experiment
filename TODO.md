@@ -34,7 +34,7 @@ off as work lands.
 ## Phase 3: Definitions and Evaluation
 
 - [ ] Implement symbol tables and context-aware symbol resolution
-- [ ] Add definition storage for `OwnValues` and `DownValues`
+- [x] Add definition storage for `OwnValues` and `DownValues`
 - [ ] Implement standard evaluation sequencing
 - [ ] Implement `Set` and `SetDelayed`
 - [ ] Add evaluation control attributes such as `HoldFirst`, `HoldRest`, and `HoldAll`
@@ -46,7 +46,7 @@ off as work lands.
 - [x] Keep builtin metadata separate from user definitions
 - [x] Add a definition table for symbol-bound values
 - [x] Distinguish immediate and delayed own values
-- [ ] Add explicit storage for downvalues and pattern-based definitions
+- [x] Add explicit storage for downvalues and pattern-based definitions
 - [ ] Add context-aware symbol interning and resolution rules
 
 ### Evaluation loop
@@ -62,7 +62,7 @@ off as work lands.
 - [x] Implement `Set` for simple symbol left-hand sides
 - [x] Implement `SetDelayed` for simple symbol left-hand sides
 - [x] Leave unsupported assignment targets unevaluated for now
-- [ ] Support pattern-based `SetDelayed` as stored downvalues
+- [x] Support pattern-based `SetDelayed` as stored downvalues
 - [ ] Add `OwnValues` / `DownValues` inspection helpers
 
 ### Builtins and inspection

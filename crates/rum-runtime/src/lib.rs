@@ -30,12 +30,20 @@ pub struct SymbolInfo {
     pub is_builtin: bool,
     pub has_own_value: bool,
     pub has_delayed_value: bool,
+    pub has_down_values: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SymbolDefinition {
     pub own_value: Option<Expr>,
     pub delayed_own_value: Option<Expr>,
+    pub down_values: Vec<DownValue>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DownValue {
+    pub lhs: Expr,
+    pub rhs: Expr,
 }
 
 #[derive(Debug, Error)]
@@ -72,6 +80,9 @@ impl Session {
             has_delayed_value: definition
                 .and_then(|def| def.delayed_own_value.as_ref())
                 .is_some(),
+            has_down_values: definition
+                .map(|definition| !definition.down_values.is_empty())
+                .unwrap_or(false),
         })
     }
 
@@ -116,6 +127,12 @@ impl Session {
             .into_iter()
             .map(|arg| self.evaluate(arg))
             .collect::<Result<Vec<_>, _>>()?;
+
+        if let Some(result) =
+            self.try_apply_down_values(&evaluated_head, evaluated_args.as_slice())?
+        {
+            return Ok(result);
+        }
 
         if let Some(result) =
             self.try_evaluate_non_held_builtin(&evaluated_head, evaluated_args.as_slice())?
@@ -188,9 +205,40 @@ impl Session {
             definition.own_value = None;
             definition.delayed_own_value = Some(rhs);
             Ok(Expr::symbol("Null"))
+        } else if let Some(head_symbol) = downvalue_head_symbol(&lhs).cloned() {
+            let definition = self.definitions.entry(head_symbol).or_default();
+            definition.down_values.push(DownValue { lhs, rhs });
+            Ok(Expr::symbol("Null"))
         } else {
             Ok(Expr::call(Expr::symbol("SetDelayed"), vec![lhs, rhs]))
         }
+    }
+
+    fn try_apply_down_values(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Option<Expr>, EvalError> {
+        let Some(symbol) = expr_as_symbol(head) else {
+            return Ok(None);
+        };
+
+        let Some(definition) = self.definitions.get(symbol).cloned() else {
+            return Ok(None);
+        };
+
+        let candidate = Expr::call(head.clone(), args.to_vec());
+
+        for down_value in definition.down_values {
+            let mut bindings = BTreeMap::new();
+
+            if match_expr(&down_value.lhs, &candidate, &mut bindings) {
+                let substituted = substitute_bindings(&down_value.rhs, &bindings);
+                return self.evaluate(substituted).map(Some);
+            }
+        }
+
+        Ok(None)
     }
 }
 
@@ -374,6 +422,132 @@ fn expr_as_symbol(expr: &Expr) -> Option<&Symbol> {
     }
 }
 
+fn downvalue_head_symbol(expr: &Expr) -> Option<&Symbol> {
+    match expr {
+        Expr::Call { head, .. } => expr_as_symbol(head),
+        _ => None,
+    }
+}
+
+fn match_expr(pattern: &Expr, value: &Expr, bindings: &mut BTreeMap<Symbol, Expr>) -> bool {
+    if let Some((name, inner)) = pattern_named_pattern(pattern) {
+        if !match_expr(inner, value, bindings) {
+            return false;
+        }
+
+        return bind_pattern_name(name, value.clone(), bindings);
+    }
+
+    if let Some(blank_head) = pattern_blank_head(pattern) {
+        return match_blank(blank_head, value);
+    }
+
+    match (pattern, value) {
+        (Expr::Atom(lhs), Expr::Atom(rhs)) => lhs == rhs,
+        (
+            Expr::Call {
+                head: lhs_head,
+                args: lhs_args,
+            },
+            Expr::Call {
+                head: rhs_head,
+                args: rhs_args,
+            },
+        ) => {
+            lhs_args.len() == rhs_args.len()
+                && match_expr(lhs_head, rhs_head, bindings)
+                && lhs_args
+                    .iter()
+                    .zip(rhs_args.iter())
+                    .all(|(lhs, rhs)| match_expr(lhs, rhs, bindings))
+        }
+        _ => false,
+    }
+}
+
+fn pattern_named_pattern(expr: &Expr) -> Option<(&Symbol, &Expr)> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Pattern") && args.len() == 2 => {
+            let name = expr_as_symbol(&args[0])?;
+            Some((name, &args[1]))
+        }
+        _ => None,
+    }
+}
+
+fn pattern_blank_head(expr: &Expr) -> Option<Option<&Expr>> {
+    match expr {
+        Expr::Call { head, args }
+            if is_system_symbol_name(head, "Blank")
+                || is_system_symbol_name(head, "BlankSequence")
+                || is_system_symbol_name(head, "BlankNullSequence") =>
+        {
+            if args.is_empty() {
+                Some(None)
+            } else if args.len() == 1 {
+                Some(Some(&args[0]))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+fn match_blank(head_constraint: Option<&Expr>, value: &Expr) -> bool {
+    match head_constraint {
+        None => true,
+        Some(head_constraint) => expr_has_head(value, head_constraint),
+    }
+}
+
+fn expr_has_head(value: &Expr, head_constraint: &Expr) -> bool {
+    let Some(expected_symbol) = expr_as_symbol(head_constraint) else {
+        return false;
+    };
+
+    match value {
+        Expr::Atom(Atom::Integer(_)) => expected_symbol.name() == "Integer",
+        Expr::Atom(Atom::String(_)) => expected_symbol.name() == "String",
+        Expr::Atom(Atom::Symbol(_)) => expected_symbol.name() == "Symbol",
+        Expr::Call { head, .. } => expr_as_symbol(head)
+            .map(|actual| actual == expected_symbol)
+            .unwrap_or(false),
+    }
+}
+
+fn bind_pattern_name(name: &Symbol, value: Expr, bindings: &mut BTreeMap<Symbol, Expr>) -> bool {
+    match bindings.get(name) {
+        Some(existing) => existing == &value,
+        None => {
+            bindings.insert(name.clone(), value);
+            true
+        }
+    }
+}
+
+fn substitute_bindings(expr: &Expr, bindings: &BTreeMap<Symbol, Expr>) -> Expr {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => bindings
+            .get(symbol)
+            .cloned()
+            .unwrap_or_else(|| Expr::Atom(Atom::Symbol(symbol.clone()))),
+        Expr::Atom(atom) => Expr::Atom(atom.clone()),
+        Expr::Call { head, args } => Expr::call(
+            substitute_bindings(head, bindings),
+            args.iter()
+                .map(|arg| substitute_bindings(arg, bindings))
+                .collect(),
+        ),
+    }
+}
+
+fn is_system_symbol_name(expr: &Expr, name: &str) -> bool {
+    expr_as_symbol(expr)
+        .map(|symbol| symbol.name() == name)
+        .unwrap_or(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -427,6 +601,7 @@ mod tests {
         let info = session.inspect("y").unwrap();
         assert!(!info.has_own_value);
         assert!(info.has_delayed_value);
+        assert!(!info.has_down_values);
     }
 
     #[test]
@@ -454,5 +629,57 @@ mod tests {
         let lowered = lower_syntax_expr(&syntax).unwrap();
 
         assert_eq!(lowered.to_string(), "Function[Plus[Slot[1], Slot[2]]]");
+    }
+
+    #[test]
+    fn setdelayed_stores_and_applies_simple_downvalue() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("f[x_Integer] := x")
+                .unwrap()
+                .value
+                .to_string(),
+            "Null"
+        );
+        assert_eq!(session.eval_text("f[7]").unwrap().value.to_string(), "7");
+
+        let info = session.inspect("f").unwrap();
+        assert!(info.has_down_values);
+    }
+
+    #[test]
+    fn downvalue_matches_after_argument_evaluation() {
+        let mut session = Session::new();
+
+        session.eval_text("f[x_Integer] := x").unwrap();
+        session.eval_text("y = 11").unwrap();
+
+        assert_eq!(session.eval_text("f[y]").unwrap().value.to_string(), "11");
+    }
+
+    #[test]
+    fn downvalue_can_substitute_multiple_named_patterns() {
+        let mut session = Session::new();
+
+        session.eval_text("pair[a_, b_] := {a, b}").unwrap();
+
+        assert_eq!(
+            session.eval_text("pair[1, 2]").unwrap().value.to_string(),
+            "List[1, 2]"
+        );
+    }
+
+    #[test]
+    fn unmatched_downvalue_leaves_call_in_place() {
+        let mut session = Session::new();
+
+        session.eval_text("f[x_Integer] := x").unwrap();
+
+        assert_eq!(
+            session.eval_text("f[\"hi\"]").unwrap().value.to_string(),
+            "f[\"hi\"]"
+        );
     }
 }

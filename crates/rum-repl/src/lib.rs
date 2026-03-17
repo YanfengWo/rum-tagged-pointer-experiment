@@ -86,6 +86,10 @@ where
                         flags.push("delayed");
                     }
 
+                    if info.has_down_values {
+                        flags.push("down");
+                    }
+
                     writeln!(
                         self.output,
                         "{} :: {}{}",
