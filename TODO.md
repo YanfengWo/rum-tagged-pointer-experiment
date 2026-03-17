@@ -39,6 +39,47 @@ off as work lands.
 - [ ] Implement `Set` and `SetDelayed`
 - [ ] Add evaluation control attributes such as `HoldFirst`, `HoldRest`, and `HoldAll`
 
+## `rum-runtime` Detailed Breakdown
+
+### Session state
+
+- [x] Keep builtin metadata separate from user definitions
+- [x] Add a definition table for symbol-bound values
+- [x] Distinguish immediate and delayed own values
+- [ ] Add explicit storage for downvalues and pattern-based definitions
+- [ ] Add context-aware symbol interning and resolution rules
+
+### Evaluation loop
+
+- [x] Evaluate bare symbols through definition lookup
+- [x] Evaluate general call heads and arguments recursively
+- [x] Add special-form dispatch for held assignment builtins
+- [ ] Add a standard evaluation loop closer to Mathematica semantics
+- [ ] Add recursion limits and cycle detection
+
+### Assignment and definitions
+
+- [x] Implement `Set` for simple symbol left-hand sides
+- [x] Implement `SetDelayed` for simple symbol left-hand sides
+- [x] Leave unsupported assignment targets unevaluated for now
+- [ ] Support pattern-based `SetDelayed` as stored downvalues
+- [ ] Add `OwnValues` / `DownValues` inspection helpers
+
+### Builtins and inspection
+
+- [x] Keep a builtin registry in `Session`
+- [x] Support a minimal non-held builtin dispatch path
+- [x] Extend symbol inspection to show definition presence
+- [ ] Add builtin attribute metadata such as `HoldFirst` and `HoldAll`
+- [ ] Add structured evaluation trace events
+
+### Tests
+
+- [x] Test simple symbol assignment and lookup
+- [x] Test delayed own values
+- [x] Test unsupported assignment fallback behavior
+- [ ] Add evaluator tests for held arguments and sequencing
+
 ## Phase 4: Rules and Pattern Matching
 
 - [ ] Implement blank-based matcher compilation

@@ -8,6 +8,12 @@ pub struct Repl<R, W> {
     prompt: String,
 }
 
+enum CommandAction {
+    NotHandled,
+    Handled,
+    Exit,
+}
+
 impl<R, W> Repl<R, W>
 where
     R: BufRead,
@@ -40,8 +46,10 @@ where
                 continue;
             }
 
-            if self.try_handle_command(session, line)? {
-                return Ok(());
+            match self.try_handle_command(session, line)? {
+                CommandAction::Exit => return Ok(()),
+                CommandAction::Handled => continue,
+                CommandAction::NotHandled => {}
             }
 
             match session.eval_text(line) {
@@ -51,32 +59,51 @@ where
         }
     }
 
-    fn try_handle_command(&mut self, session: &Session, line: &str) -> io::Result<bool> {
+    fn try_handle_command(&mut self, session: &Session, line: &str) -> io::Result<CommandAction> {
         match line {
-            ":quit" | ":q" => Ok(true),
+            ":quit" | ":q" => Ok(CommandAction::Exit),
             ":help" => {
                 writeln!(self.output, ":help           Show REPL commands.")?;
                 writeln!(self.output, ":inspect NAME   Show basic symbol metadata.")?;
                 writeln!(self.output, ":quit           Exit the REPL.")?;
-                Ok(false)
+                Ok(CommandAction::Handled)
             }
             _ if line.starts_with(":inspect ") => {
                 let name = line.trim_start_matches(":inspect ").trim();
 
                 if let Some(info) = session.inspect(name) {
+                    let mut flags = Vec::new();
+
+                    if info.is_builtin {
+                        flags.push("builtin");
+                    }
+
+                    if info.has_own_value {
+                        flags.push("own");
+                    }
+
+                    if info.has_delayed_value {
+                        flags.push("delayed");
+                    }
+
                     writeln!(
                         self.output,
-                        "{} :: {}",
+                        "{} :: {}{}",
                         info.qualified_name,
-                        info.summary.unwrap_or_default()
+                        info.summary.unwrap_or_default(),
+                        if flags.is_empty() {
+                            String::new()
+                        } else {
+                            format!(" [{}]", flags.join(", "))
+                        }
                     )?;
                 } else {
                     writeln!(self.output, "! unknown symbol `{name}`")?;
                 }
 
-                Ok(false)
+                Ok(CommandAction::Handled)
             }
-            _ => Ok(false),
+            _ => Ok(CommandAction::NotHandled),
         }
     }
 }
@@ -100,5 +127,20 @@ mod tests {
 
         let rendered = String::from_utf8(output).unwrap();
         assert!(rendered.contains(":inspect NAME"));
+    }
+
+    #[test]
+    fn repl_inspect_command_does_not_fall_through_to_evaluation() {
+        let input = Cursor::new(":inspect x\n:quit\n");
+        let mut output = Vec::new();
+        let mut repl = Repl::new(input, &mut output);
+        let mut session = Session::new();
+        session.eval_text("x = 1").unwrap();
+
+        repl.run(&mut session).unwrap();
+
+        let rendered = String::from_utf8(output).unwrap();
+        assert!(rendered.contains("x ::"));
+        assert!(!rendered.contains("unexpected character"));
     }
 }

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use rum_core::{BigInt, Expr, Symbol};
+use rum_core::{Atom, BigInt, Expr, Symbol};
 use rum_syntax::{
     BinaryOp, BlankKind, PostfixOp, PrefixOp, SlotSpec, SyntaxError, SyntaxExpr, parse_expr,
 };
@@ -15,6 +15,7 @@ pub struct BuiltinSpec {
 #[derive(Clone, Debug, Default)]
 pub struct Session {
     builtins: BTreeMap<String, BuiltinSpec>,
+    definitions: BTreeMap<Symbol, SymbolDefinition>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -27,6 +28,14 @@ pub struct SymbolInfo {
     pub qualified_name: String,
     pub summary: Option<String>,
     pub is_builtin: bool,
+    pub has_own_value: bool,
+    pub has_delayed_value: bool,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SymbolDefinition {
+    pub own_value: Option<Expr>,
+    pub delayed_own_value: Option<Expr>,
 }
 
 #[derive(Debug, Error)]
@@ -47,12 +56,22 @@ impl Session {
     }
 
     pub fn inspect(&self, name: &str) -> Option<SymbolInfo> {
-        let builtin = self.builtins.get(name)?;
+        let symbol = symbol_from_raw_name(name);
+        let builtin = self.builtins.get(symbol.name());
+        let definition = self.definitions.get(&symbol);
+
+        if builtin.is_none() && definition.is_none() {
+            return None;
+        }
 
         Some(SymbolInfo {
-            qualified_name: name.to_string(),
-            summary: Some(builtin.summary.to_string()),
-            is_builtin: true,
+            qualified_name: symbol.to_string(),
+            summary: builtin.map(|builtin| builtin.summary.to_string()),
+            is_builtin: builtin.is_some(),
+            has_own_value: definition.and_then(|def| def.own_value.as_ref()).is_some(),
+            has_delayed_value: definition
+                .and_then(|def| def.delayed_own_value.as_ref())
+                .is_some(),
         })
     }
 
@@ -65,16 +84,112 @@ impl Session {
 
     pub fn evaluate(&mut self, expr: Expr) -> Result<Expr, EvalError> {
         match expr {
-            Expr::Call { head, mut args } => {
-                if let Expr::Atom(rum_core::Atom::Symbol(symbol)) = head.as_ref() {
-                    if symbol.name() == "Identity" && args.len() == 1 {
-                        return self.evaluate(args.remove(0));
-                    }
-                }
-
-                Ok(Expr::Call { head, args })
-            }
+            Expr::Atom(Atom::Symbol(symbol)) => self.evaluate_symbol(symbol),
+            Expr::Call { head, args } => self.evaluate_call(*head, args),
             other => Ok(other),
+        }
+    }
+
+    fn evaluate_symbol(&mut self, symbol: Symbol) -> Result<Expr, EvalError> {
+        let definition = self.definitions.get(&symbol).cloned();
+
+        match definition {
+            Some(SymbolDefinition {
+                own_value: Some(value),
+                ..
+            }) => self.evaluate(value),
+            Some(SymbolDefinition {
+                delayed_own_value: Some(value),
+                ..
+            }) => self.evaluate(value),
+            _ => Ok(Expr::Atom(Atom::Symbol(symbol))),
+        }
+    }
+
+    fn evaluate_call(&mut self, head: Expr, args: Vec<Expr>) -> Result<Expr, EvalError> {
+        if let Some(result) = self.try_evaluate_special_form(&head, args.as_slice())? {
+            return Ok(result);
+        }
+
+        let evaluated_head = self.evaluate(head)?;
+        let evaluated_args = args
+            .into_iter()
+            .map(|arg| self.evaluate(arg))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        if let Some(result) =
+            self.try_evaluate_non_held_builtin(&evaluated_head, evaluated_args.as_slice())?
+        {
+            return Ok(result);
+        }
+
+        Ok(Expr::call(evaluated_head, evaluated_args))
+    }
+
+    fn try_evaluate_special_form(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Option<Expr>, EvalError> {
+        let Some(symbol) = expr_as_symbol(head) else {
+            return Ok(None);
+        };
+
+        match symbol.name() {
+            "Set" => self.eval_set(args).map(Some),
+            "SetDelayed" => self.eval_set_delayed(args).map(Some),
+            _ => Ok(None),
+        }
+    }
+
+    fn try_evaluate_non_held_builtin(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Option<Expr>, EvalError> {
+        let Some(symbol) = expr_as_symbol(head) else {
+            return Ok(None);
+        };
+
+        match symbol.name() {
+            "Identity" if args.len() == 1 => self.evaluate(args[0].clone()).map(Some),
+            _ => Ok(None),
+        }
+    }
+
+    fn eval_set(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(Expr::call(Expr::symbol("Set"), args.to_vec()));
+        }
+
+        let lhs = args[0].clone();
+        let rhs = self.evaluate(args[1].clone())?;
+
+        if let Some(symbol) = expr_as_symbol(&lhs).cloned() {
+            let definition = self.definitions.entry(symbol).or_default();
+            definition.own_value = Some(rhs.clone());
+            definition.delayed_own_value = None;
+            Ok(rhs)
+        } else {
+            Ok(Expr::call(Expr::symbol("Set"), vec![lhs, rhs]))
+        }
+    }
+
+    fn eval_set_delayed(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(Expr::call(Expr::symbol("SetDelayed"), args.to_vec()));
+        }
+
+        let lhs = args[0].clone();
+        let rhs = args[1].clone();
+
+        if let Some(symbol) = expr_as_symbol(&lhs).cloned() {
+            let definition = self.definitions.entry(symbol).or_default();
+            definition.own_value = None;
+            definition.delayed_own_value = Some(rhs);
+            Ok(Expr::symbol("Null"))
+        } else {
+            Ok(Expr::call(Expr::symbol("SetDelayed"), vec![lhs, rhs]))
         }
     }
 }
@@ -239,12 +354,23 @@ fn lower_postfix(op: PostfixOp, expr: &SyntaxExpr) -> Result<Expr, EvalError> {
 }
 
 fn lower_symbol(raw: &str) -> Expr {
+    Expr::Atom(Atom::Symbol(symbol_from_raw_name(raw)))
+}
+
+fn symbol_from_raw_name(raw: &str) -> Symbol {
     if let Some(split_at) = raw.rfind('`') {
         let context = &raw[..=split_at];
         let name = &raw[split_at + 1..];
-        Expr::Atom(rum_core::Atom::Symbol(Symbol::new(context, name)))
+        Symbol::new(context, name)
     } else {
-        Expr::symbol(raw)
+        Symbol::from_name(raw)
+    }
+}
+
+fn expr_as_symbol(expr: &Expr) -> Option<&Symbol> {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => Some(symbol),
+        _ => None,
     }
 }
 
@@ -270,6 +396,45 @@ mod tests {
             .unwrap();
 
         assert_eq!(outcome.value.to_string(), "123456789012345678901234567890");
+    }
+
+    #[test]
+    fn set_assigns_simple_symbol_and_lookup_works() {
+        let mut session = Session::new();
+
+        let assigned = session.eval_text("x = 42").unwrap();
+        assert_eq!(assigned.value.to_string(), "42");
+
+        let looked_up = session.eval_text("x").unwrap();
+        assert_eq!(looked_up.value.to_string(), "42");
+
+        let info = session.inspect("x").unwrap();
+        assert!(info.has_own_value);
+        assert!(!info.has_delayed_value);
+    }
+
+    #[test]
+    fn setdelayed_stores_rhs_without_immediate_evaluation() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session.eval_text("y := x").unwrap().value.to_string(),
+            "Null"
+        );
+        assert_eq!(session.eval_text("x = 9").unwrap().value.to_string(), "9");
+        assert_eq!(session.eval_text("y").unwrap().value.to_string(), "9");
+
+        let info = session.inspect("y").unwrap();
+        assert!(!info.has_own_value);
+        assert!(info.has_delayed_value);
+    }
+
+    #[test]
+    fn set_with_non_symbol_lhs_remains_unevaluated_for_now() {
+        let mut session = Session::new();
+        let outcome = session.eval_text("f[x] = 1").unwrap();
+
+        assert_eq!(outcome.value.to_string(), "Set[f[x], 1]");
     }
 
     #[test]

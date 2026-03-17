@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 pub const GLOBAL_CONTEXT: &str = "Global`";
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Symbol {
     context: String,
     name: String,
