@@ -60,6 +60,14 @@ enum CasesSpec {
     Rule(RewriteRule),
 }
 
+#[derive(Clone, Copy, Debug)]
+struct SequencePatternSpec<'a> {
+    min_len: usize,
+    head_constraint: Option<&'a Expr>,
+    name: Option<&'a Symbol>,
+    condition: Option<&'a Expr>,
+}
+
 #[derive(Debug, Error)]
 pub enum EvalError {
     #[error(transparent)]
@@ -356,7 +364,7 @@ impl Session {
             let mut bindings = BTreeMap::new();
 
             if self.match_expr(&down_value.lhs, &candidate, &mut bindings)? {
-                let substituted = substitute_bindings(&down_value.rhs, &bindings);
+                let substituted = substitute_rule_bindings(&down_value.rhs, &bindings);
                 return self.evaluate(substituted).map(Some);
             }
         }
@@ -420,24 +428,94 @@ impl Session {
                     args: rhs_args,
                 },
             ) => {
-                if lhs_args.len() != rhs_args.len() {
-                    return Ok(false);
-                }
-
                 if !self.match_expr(lhs_head, rhs_head, bindings)? {
                     return Ok(false);
                 }
 
-                for (lhs, rhs) in lhs_args.iter().zip(rhs_args.iter()) {
-                    if !self.match_expr(lhs, rhs, bindings)? {
-                        return Ok(false);
-                    }
-                }
-
-                Ok(true)
+                self.match_call_args(lhs_args, rhs_args, bindings)
             }
             _ => Ok(false),
         }
+    }
+
+    fn match_call_args(
+        &mut self,
+        pattern_args: &[Expr],
+        value_args: &[Expr],
+        bindings: &mut BTreeMap<Symbol, Expr>,
+    ) -> Result<bool, EvalError> {
+        if pattern_args.is_empty() {
+            return Ok(value_args.is_empty());
+        }
+
+        if let Some(spec) = decompose_sequence_pattern(&pattern_args[0]) {
+            let rest = &pattern_args[1..];
+            let min_rest = min_required_arg_count(rest);
+
+            if value_args.len() < spec.min_len + min_rest {
+                return Ok(false);
+            }
+
+            let max_len = value_args.len() - min_rest;
+
+            for consume in spec.min_len..=max_len {
+                let snapshot = bindings.clone();
+
+                if self.match_sequence_pattern(spec, &value_args[..consume], bindings)?
+                    && self.match_call_args(rest, &value_args[consume..], bindings)?
+                {
+                    return Ok(true);
+                }
+
+                *bindings = snapshot;
+            }
+
+            return Ok(false);
+        }
+
+        let Some((value, rest)) = value_args.split_first() else {
+            return Ok(false);
+        };
+
+        if !self.match_expr(&pattern_args[0], value, bindings)? {
+            return Ok(false);
+        }
+
+        self.match_call_args(&pattern_args[1..], rest, bindings)
+    }
+
+    fn match_sequence_pattern(
+        &mut self,
+        spec: SequencePatternSpec<'_>,
+        values: &[Expr],
+        bindings: &mut BTreeMap<Symbol, Expr>,
+    ) -> Result<bool, EvalError> {
+        if values.len() < spec.min_len {
+            return Ok(false);
+        }
+
+        if !values
+            .iter()
+            .all(|value| match_blank(spec.head_constraint, value))
+        {
+            return Ok(false);
+        }
+
+        if let Some(name) = spec.name {
+            let bound_value = sequence_expr(values.to_vec());
+
+            if !bind_pattern_name(name, bound_value, bindings) {
+                return Ok(false);
+            }
+        }
+
+        if let Some(condition) = spec.condition {
+            let condition_expr = substitute_bindings(condition, bindings);
+            let result = self.evaluate(condition_expr)?;
+            return Ok(is_system_symbol_name(&result, "True"));
+        }
+
+        Ok(true)
     }
 
     fn normalize_pattern_expr(&mut self, expr: &Expr) -> Result<Expr, EvalError> {
@@ -501,7 +579,7 @@ impl Session {
             }
             CasesSpec::Rule(rule) => {
                 if self.match_expr(&rule.lhs, expr, &mut bindings)? {
-                    let transformed = substitute_bindings(&rule.rhs, &bindings);
+                    let transformed = substitute_rule_bindings(&rule.rhs, &bindings);
                     self.evaluate(transformed).map(Some)
                 } else {
                     Ok(None)
@@ -535,7 +613,7 @@ impl Session {
             let mut bindings = BTreeMap::new();
 
             if self.match_expr(&rule.lhs, expr, &mut bindings)? {
-                return Ok(Some(substitute_bindings(&rule.rhs, &bindings)));
+                return Ok(Some(substitute_rule_bindings(&rule.rhs, &bindings)));
             }
         }
 
@@ -792,6 +870,70 @@ fn pattern_condition(expr: &Expr) -> Option<(&Expr, &Expr)> {
     }
 }
 
+fn decompose_sequence_pattern(expr: &Expr) -> Option<SequencePatternSpec<'_>> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Pattern") && args.len() == 2 => {
+            let mut spec = decompose_sequence_pattern(&args[1])?;
+            let name = expr_as_symbol(&args[0])?;
+
+            if spec.name.is_some() {
+                return None;
+            }
+
+            spec.name = Some(name);
+            Some(spec)
+        }
+        Expr::Call { head, args }
+            if is_system_symbol_name(head, "Condition") && args.len() == 2 =>
+        {
+            let mut spec = decompose_sequence_pattern(&args[0])?;
+
+            if spec.condition.is_some() {
+                return None;
+            }
+
+            spec.condition = Some(&args[1]);
+            Some(spec)
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "BlankSequence") => {
+            if args.len() > 1 {
+                return None;
+            }
+
+            Some(SequencePatternSpec {
+                min_len: 1,
+                head_constraint: args.first(),
+                name: None,
+                condition: None,
+            })
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "BlankNullSequence") => {
+            if args.len() > 1 {
+                return None;
+            }
+
+            Some(SequencePatternSpec {
+                min_len: 0,
+                head_constraint: args.first(),
+                name: None,
+                condition: None,
+            })
+        }
+        _ => None,
+    }
+}
+
+fn min_required_arg_count(patterns: &[Expr]) -> usize {
+    patterns
+        .iter()
+        .map(|pattern| {
+            decompose_sequence_pattern(pattern)
+                .map(|spec| spec.min_len)
+                .unwrap_or(1)
+        })
+        .sum()
+}
+
 fn pattern_blank_head(expr: &Expr) -> Option<Option<&Expr>> {
     match expr {
         Expr::Call { head, args }
@@ -843,6 +985,10 @@ fn bind_pattern_name(name: &Symbol, value: Expr, bindings: &mut BTreeMap<Symbol,
     }
 }
 
+fn sequence_expr(values: Vec<Expr>) -> Expr {
+    Expr::call(Expr::symbol("Sequence"), values)
+}
+
 fn substitute_bindings(expr: &Expr, bindings: &BTreeMap<Symbol, Expr>) -> Expr {
     match expr {
         Expr::Atom(Atom::Symbol(symbol)) => bindings
@@ -856,6 +1002,39 @@ fn substitute_bindings(expr: &Expr, bindings: &BTreeMap<Symbol, Expr>) -> Expr {
                 .map(|arg| substitute_bindings(arg, bindings))
                 .collect(),
         ),
+    }
+}
+
+fn substitute_rule_bindings(expr: &Expr, bindings: &BTreeMap<Symbol, Expr>) -> Expr {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => bindings
+            .get(symbol)
+            .cloned()
+            .unwrap_or_else(|| Expr::Atom(Atom::Symbol(symbol.clone()))),
+        Expr::Atom(atom) => Expr::Atom(atom.clone()),
+        Expr::Call { head, args } => {
+            let substituted_head = substitute_rule_bindings(head, bindings);
+            let mut substituted_args = Vec::new();
+
+            for arg in args {
+                let substituted_arg = substitute_rule_bindings(arg, bindings);
+
+                if let Some(sequence_items) = sequence_items(&substituted_arg) {
+                    substituted_args.extend(sequence_items.iter().cloned());
+                } else {
+                    substituted_args.push(substituted_arg);
+                }
+            }
+
+            Expr::call(substituted_head, substituted_args)
+        }
+    }
+}
+
+fn sequence_items(expr: &Expr) -> Option<&[Expr]> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Sequence") => Some(args),
+        _ => None,
     }
 }
 
@@ -995,6 +1174,72 @@ mod tests {
     }
 
     #[test]
+    fn matchq_supports_blanksequence_in_argument_lists() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("MatchQ[f[1, 2], f[x__]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "True"
+        );
+        assert_eq!(
+            session
+                .eval_text("MatchQ[f[], f[x__]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "False"
+        );
+    }
+
+    #[test]
+    fn matchq_supports_blanknullsequence_in_argument_lists() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("MatchQ[f[], f[x___]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "True"
+        );
+        assert_eq!(
+            session
+                .eval_text("MatchQ[f[1, 2, 3], f[x__, y_Integer]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "True"
+        );
+    }
+
+    #[test]
+    fn matchq_supports_conditions_on_sequence_patterns() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("MatchQ[f[1, 2], f[x__ /; MatchQ[x, Sequence[1, 2]]]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "True"
+        );
+        assert_eq!(
+            session
+                .eval_text("MatchQ[f[1, 2], f[x__ /; MatchQ[x, Sequence[2, 1]]]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "False"
+        );
+    }
+
+    #[test]
     fn downvalue_matches_after_argument_evaluation() {
         let mut session = Session::new();
 
@@ -1012,6 +1257,38 @@ mod tests {
 
         assert_eq!(
             session.eval_text("pair[1, 2]").unwrap().value.to_string(),
+            "List[1, 2]"
+        );
+    }
+
+    #[test]
+    fn downvalue_splices_named_blanksequence_into_rhs_calls() {
+        let mut session = Session::new();
+
+        session.eval_text("echo[x__] := g[x]").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("echo[1, 2, 3]")
+                .unwrap()
+                .value
+                .to_string(),
+            "g[1, 2, 3]"
+        );
+    }
+
+    #[test]
+    fn downvalue_splices_named_blanknullsequence_into_empty_lists() {
+        let mut session = Session::new();
+
+        session.eval_text("pack[x___] := {x}").unwrap();
+
+        assert_eq!(
+            session.eval_text("pack[]").unwrap().value.to_string(),
+            "List[]"
+        );
+        assert_eq!(
+            session.eval_text("pack[1, 2]").unwrap().value.to_string(),
             "List[1, 2]"
         );
     }
@@ -1067,6 +1344,20 @@ mod tests {
                 .value
                 .to_string(),
             "f[h[1]]"
+        );
+    }
+
+    #[test]
+    fn replaceall_splices_named_blanksequence_into_rhs_calls() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("f[1, 2] /. f[x__] -> g[x]")
+                .unwrap()
+                .value
+                .to_string(),
+            "g[1, 2]"
         );
     }
 
@@ -1244,6 +1535,20 @@ mod tests {
                 .value
                 .to_string(),
             "List[8]"
+        );
+    }
+
+    #[test]
+    fn cases_rule_rhs_splices_named_blanksequence_matches() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Cases[f[g[1, 2], g[3]], g[x__] :> {x}]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[List[1, 2], List[3]]"
         );
     }
 

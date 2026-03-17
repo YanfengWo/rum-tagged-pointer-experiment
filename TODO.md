@@ -95,7 +95,7 @@ off as work lands.
 - [x] Match simple blanks against atomic and call expressions
 - [x] Bind named pattern variables during matching
 - [x] Support condition-aware matching with `/;`
-- [ ] Support `BlankSequence` and `BlankNullSequence` across argument lists
+- [x] Support `BlankSequence` and `BlankNullSequence` across argument lists
 
 ### Rule objects
 
