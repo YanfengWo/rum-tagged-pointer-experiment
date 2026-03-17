@@ -15,8 +15,21 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Collects subexpressions matching a pattern or rule.",
     ),
     BuiltinSpec::new("ReplaceAll", "Applies rules everywhere in an expression."),
-    BuiltinSpec::new("If", "Evaluates one of several branches conditionally."),
-    BuiltinSpec::new("Function", "Creates a pure function."),
+    BuiltinSpec::with_hold(
+        "If",
+        "Evaluates one of several branches conditionally.",
+        HoldAttribute::HoldRest,
+    ),
+    BuiltinSpec::with_hold(
+        "Which",
+        "Evaluates conditions in order and returns the first matching branch.",
+        HoldAttribute::HoldAll,
+    ),
+    BuiltinSpec::with_hold(
+        "Function",
+        "Creates a pure function.",
+        HoldAttribute::HoldAll,
+    ),
     BuiltinSpec::new("Module", "Creates lexical local symbols."),
     BuiltinSpec::new("Block", "Temporarily rebinds symbols dynamically."),
     BuiltinSpec::new("With", "Substitutes local constants lexically."),

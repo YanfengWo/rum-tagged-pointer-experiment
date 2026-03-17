@@ -199,6 +199,10 @@ impl Session {
             return Ok(result);
         }
 
+        if let Some(result) = self.try_apply_function(&evaluated_head, evaluated_args.as_slice())? {
+            return Ok(result);
+        }
+
         Ok(Expr::call(evaluated_head, evaluated_args))
     }
 
@@ -275,6 +279,8 @@ impl Session {
 
         match symbol.name() {
             "Identity" if args.len() == 1 => Ok(Some(args[0].clone())),
+            "If" => self.eval_if(args).map(Some),
+            "Which" => self.eval_which(args).map(Some),
             "Hold" | "HoldFirst" | "HoldRest" | "HoldAll" => {
                 Ok(Some(Expr::call(head.clone(), args.to_vec())))
             }
@@ -282,6 +288,62 @@ impl Session {
             "Sequence" => Ok(Some(sequence_expr(args.to_vec()))),
             _ => Ok(None),
         }
+    }
+
+    fn eval_if(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !(2..=4).contains(&args.len()) {
+            return Ok(Expr::call(Expr::symbol("If"), args.to_vec()));
+        }
+
+        match truthiness_symbol(&args[0]) {
+            Some(true) => self.evaluate(args[1].clone()),
+            Some(false) => {
+                if args.len() >= 3 {
+                    self.evaluate(args[2].clone())
+                } else {
+                    Ok(Expr::symbol("Null"))
+                }
+            }
+            None if args.len() == 4 => self.evaluate(args[3].clone()),
+            None => Ok(Expr::call(Expr::symbol("If"), args.to_vec())),
+        }
+    }
+
+    fn eval_which(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.is_empty() || args.len() % 2 != 0 {
+            return Ok(Expr::call(Expr::symbol("Which"), args.to_vec()));
+        }
+
+        let mut index = 0;
+
+        while index < args.len() {
+            let condition = self.evaluate(args[index].clone())?;
+
+            match truthiness_symbol(&condition) {
+                Some(true) => return self.evaluate(args[index + 1].clone()),
+                Some(false) => index += 2,
+                None => {
+                    let mut residual = args.to_vec();
+                    residual[index] = condition;
+                    return Ok(Expr::call(Expr::symbol("Which"), residual));
+                }
+            }
+        }
+
+        Ok(Expr::symbol("Null"))
+    }
+
+    fn try_apply_function(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Option<Expr>, EvalError> {
+        let Some(body) = function_body(head) else {
+            return Ok(None);
+        };
+
+        let applied = substitute_slots(body, args);
+        self.evaluate(applied).map(Some)
     }
 
     fn eval_set(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -885,9 +947,19 @@ fn expr_as_symbol(expr: &Expr) -> Option<&Symbol> {
     }
 }
 
+fn truthiness_symbol(expr: &Expr) -> Option<bool> {
+    match expr_as_symbol(expr).map(Symbol::name) {
+        Some("True") => Some(true),
+        Some("False") => Some(false),
+        _ => None,
+    }
+}
+
 fn fallback_hold_attribute(name: &str) -> HoldAttribute {
     match name {
         "Hold" | "HoldAll" | "Evaluate" => HoldAttribute::HoldAll,
+        "Function" | "Which" => HoldAttribute::HoldAll,
+        "If" => HoldAttribute::HoldRest,
         "HoldFirst" => HoldAttribute::HoldFirst,
         "HoldRest" => HoldAttribute::HoldRest,
         _ => HoldAttribute::None,
@@ -908,6 +980,15 @@ fn splice_sequence_argument(args: &mut Vec<Expr>, expr: Expr) {
         args.extend(items.iter().cloned());
     } else {
         args.push(expr);
+    }
+}
+
+fn function_body(expr: &Expr) -> Option<&Expr> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Function") && args.len() == 1 => {
+            Some(&args[0])
+        }
+        _ => None,
     }
 }
 
@@ -1137,6 +1218,52 @@ fn substitute_rule_bindings(expr: &Expr, bindings: &BTreeMap<Symbol, Expr>) -> E
     }
 }
 
+fn substitute_slots(expr: &Expr, args: &[Expr]) -> Expr {
+    if let Some(substituted) = substitute_single_slot(expr, args) {
+        return substituted;
+    }
+
+    match expr {
+        Expr::Atom(atom) => Expr::Atom(atom.clone()),
+        Expr::Call {
+            head,
+            args: call_args,
+        } => Expr::call(
+            substitute_slots(head, args),
+            call_args
+                .iter()
+                .map(|arg| substitute_slots(arg, args))
+                .collect(),
+        ),
+    }
+}
+
+fn substitute_single_slot(expr: &Expr, args: &[Expr]) -> Option<Expr> {
+    let Expr::Call {
+        head,
+        args: slot_args,
+    } = expr
+    else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "Slot") || slot_args.len() != 1 {
+        return None;
+    }
+
+    match &slot_args[0] {
+        Expr::Atom(Atom::Integer(index)) => {
+            let index = index.to_string().parse::<usize>().ok()?;
+            if index == 0 {
+                None
+            } else {
+                args.get(index - 1).cloned()
+            }
+        }
+        _ => None,
+    }
+}
+
 fn sequence_items(expr: &Expr) -> Option<&[Expr]> {
     match expr {
         Expr::Call { head, args } if is_system_symbol_name(head, "Sequence") => Some(args),
@@ -1269,6 +1396,122 @@ mod tests {
                 .value
                 .to_string(),
             "Hold[1, 2, 3]"
+        );
+    }
+
+    #[test]
+    fn if_evaluates_only_the_selected_branch() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("If[True, Identity[1], x]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(
+            session
+                .eval_text("If[False, x, Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "2"
+        );
+        assert_eq!(
+            session.eval_text("If[False, x]").unwrap().value.to_string(),
+            "Null"
+        );
+        assert_eq!(
+            session
+                .eval_text("If[maybe, Identity[1], Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "If[maybe, Identity[1], Identity[2]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("If[maybe, x, y, Identity[3]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "3"
+        );
+    }
+
+    #[test]
+    fn which_evaluates_conditions_in_order() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Which[False, x, True, Identity[2], True, Identity[3]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "2"
+        );
+        assert_eq!(
+            session
+                .eval_text("Which[False, x, False, y]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Null"
+        );
+        assert_eq!(
+            session
+                .eval_text("Which[maybe, Identity[1], True, Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Which[maybe, Identity[1], True, Identity[2]]"
+        );
+    }
+
+    #[test]
+    fn function_applies_slots_positionally() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Function[Slot[1]][Identity[1]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(
+            session
+                .eval_text("Function[Plus[Slot[1], Slot[2]]][1, 2]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Plus[1, 2]"
+        );
+    }
+
+    #[test]
+    fn pure_function_syntax_uses_slots_and_evaluated_arguments() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("(#1 &)[Identity[1]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(
+            session
+                .eval_text("(#2 &)[10, Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "2"
         );
     }
 
