@@ -75,6 +75,13 @@ impl Parser {
             };
         }
 
+        while self.consume_unset() {
+            lhs = SyntaxExpr::Postfix {
+                op: PostfixOp::Unset,
+                expr: Box::new(lhs),
+            };
+        }
+
         Ok(lhs)
     }
 
@@ -273,6 +280,7 @@ impl Parser {
     fn current_binary_op(&self) -> Option<BinaryOp> {
         match self.current().kind {
             TokenKind::MessageName => Some(BinaryOp::MessageName),
+            TokenKind::TagSet => Some(BinaryOp::TagSet),
             TokenKind::Set => Some(BinaryOp::Set),
             TokenKind::SetDelayed => Some(BinaryOp::SetDelayed),
             TokenKind::ReplaceAll => Some(BinaryOp::ReplaceAll),
@@ -291,6 +299,15 @@ impl Parser {
 
     fn consume_ampersand(&mut self) -> bool {
         if matches!(self.current().kind, TokenKind::Ampersand) {
+            self.bump();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn consume_unset(&mut self) -> bool {
+        if matches!(self.current().kind, TokenKind::Unset) {
             self.bump();
             true
         } else {
@@ -505,5 +522,52 @@ mod tests {
     fn parses_message_name_inside_calls() {
         let parsed = parse_expr("Message[f::argx, x]").unwrap();
         assert_eq!(parsed.to_string(), "Message[f :: argx, x]");
+    }
+
+    #[test]
+    fn parses_tagset_before_assignment_rhs() {
+        let parsed = parse_expr("f /: g[x_] := rhs").unwrap();
+        assert_eq!(
+            parsed,
+            SyntaxExpr::Binary {
+                op: BinaryOp::TagSet,
+                lhs: Box::new(SyntaxExpr::Symbol("f".to_string())),
+                rhs: Box::new(SyntaxExpr::Binary {
+                    op: BinaryOp::SetDelayed,
+                    lhs: Box::new(SyntaxExpr::Call {
+                        head: Box::new(SyntaxExpr::Symbol("g".to_string())),
+                        args: vec![SyntaxExpr::Pattern {
+                            name: Box::new(SyntaxExpr::Symbol("x".to_string())),
+                            pattern: Box::new(SyntaxExpr::Blank {
+                                kind: BlankKind::Blank,
+                                head: None,
+                            }),
+                        }],
+                    }),
+                    rhs: Box::new(SyntaxExpr::Symbol("rhs".to_string())),
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn parses_unset_postfix() {
+        let parsed = parse_expr("f[x_] =.").unwrap();
+        assert_eq!(
+            parsed,
+            SyntaxExpr::Postfix {
+                op: PostfixOp::Unset,
+                expr: Box::new(SyntaxExpr::Call {
+                    head: Box::new(SyntaxExpr::Symbol("f".to_string())),
+                    args: vec![SyntaxExpr::Pattern {
+                        name: Box::new(SyntaxExpr::Symbol("x".to_string())),
+                        pattern: Box::new(SyntaxExpr::Blank {
+                            kind: BlankKind::Blank,
+                            head: None,
+                        }),
+                    }],
+                }),
+            }
+        );
     }
 }

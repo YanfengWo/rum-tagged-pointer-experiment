@@ -7,6 +7,14 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "SetDelayed",
         "Assigns a delayed definition evaluated on use.",
     ),
+    BuiltinSpec::new(
+        "TagSet",
+        "Stores an immediate tagged definition, including upvalues when the tag appears in an argument position.",
+    ),
+    BuiltinSpec::new(
+        "TagSetDelayed",
+        "Stores a delayed tagged definition, including upvalues when the tag appears in an argument position.",
+    ),
     BuiltinSpec::new("Rule", "Represents an immediate rewrite rule."),
     BuiltinSpec::new("RuleDelayed", "Represents a delayed rewrite rule."),
     BuiltinSpec::new("MatchQ", "Tests whether an expression matches a pattern."),
@@ -107,6 +115,11 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldFirst,
     ),
     BuiltinSpec::with_hold(
+        "UpValues",
+        "Lists stored tagged upvalue definitions for a symbol.",
+        HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::with_hold(
         "DownValues",
         "Lists stored downvalue definitions for a symbol.",
         HoldAttribute::HoldFirst,
@@ -125,6 +138,21 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "ClearAttributes",
         "Removes attributes from one or more symbols.",
         HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::with_hold(
+        "Unset",
+        "Removes a specific stored definition or message template.",
+        HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::with_hold(
+        "Clear",
+        "Clears values and rules from one or more symbols.",
+        HoldAttribute::HoldAll,
+    ),
+    BuiltinSpec::with_hold(
+        "ClearAll",
+        "Clears values, rules, messages, and user-defined attributes from one or more symbols.",
+        HoldAttribute::HoldAll,
     ),
     BuiltinSpec::with_hold(
         "Check",

@@ -106,6 +106,10 @@ where
                         flags.push("delayed");
                     }
 
+                    if info.has_up_values {
+                        flags.push("up");
+                    }
+
                     if info.has_down_values {
                         flags.push("down");
                     }
@@ -140,12 +144,29 @@ where
                             .iter()
                             .filter(|entry| entry.kind == DefinitionKind::DownValue)
                             .collect::<Vec<_>>();
+                        let up_entries = entries
+                            .iter()
+                            .filter(|entry| entry.kind == DefinitionKind::UpValue)
+                            .collect::<Vec<_>>();
 
                         if !own_entries.is_empty() {
                             writeln!(
                                 self.output,
                                 "  own: {}",
                                 own_entries
+                                    .iter()
+                                    .map(|entry| format_definition_entry(entry))
+                                    .collect::<Vec<_>>()
+                                    .join(" | ")
+                            )?;
+                        }
+
+                        if !up_entries.is_empty() {
+                            writeln!(
+                                self.output,
+                                "  up[{}]: {}",
+                                up_entries.len(),
+                                up_entries
                                     .iter()
                                     .map(|entry| format_definition_entry(entry))
                                     .collect::<Vec<_>>()

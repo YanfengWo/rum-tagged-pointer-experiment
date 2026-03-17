@@ -25,9 +25,11 @@ pub(crate) enum TokenKind {
     Slash,
     Caret,
     MessageName,
+    TagSet,
     Arrow,
     RuleDelayed,
     Set,
+    Unset,
     SetDelayed,
     ReplaceAll,
     ReplaceRepeated,
@@ -114,12 +116,20 @@ impl<'a> Lexer<'a> {
                     });
                 }
             }
-            '=' => self.single(TokenKind::Set),
+            '=' => {
+                if self.consume_str("=.") {
+                    TokenKind::Unset
+                } else {
+                    self.single(TokenKind::Set)
+                }
+            }
             '/' => {
                 if self.consume_str("//.") {
                     TokenKind::ReplaceRepeated
                 } else if self.consume_str("/.") {
                     TokenKind::ReplaceAll
+                } else if self.consume_str("/:") {
+                    TokenKind::TagSet
                 } else if self.consume_str("/;") {
                     TokenKind::Condition
                 } else {
@@ -270,7 +280,7 @@ mod tests {
 
     #[test]
     fn lexes_multi_char_operators() {
-        let tokens = lex("x::tag := y //. z /. q -> w /; p").unwrap();
+        let tokens = lex("x::tag := y //. z /. q -> w /; p f /: g =.").unwrap();
 
         assert!(
             tokens
@@ -301,6 +311,16 @@ mod tests {
             tokens
                 .iter()
                 .any(|token| matches!(token.kind, TokenKind::Condition))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::TagSet))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Unset))
         );
     }
 

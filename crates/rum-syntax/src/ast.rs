@@ -59,6 +59,7 @@ pub enum PrefixOp {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BinaryOp {
     MessageName,
+    TagSet,
     Set,
     SetDelayed,
     ReplaceAll,
@@ -76,6 +77,7 @@ pub enum BinaryOp {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PostfixOp {
     Function,
+    Unset,
 }
 
 impl BlankKind {
@@ -105,6 +107,7 @@ impl BinaryOp {
     pub fn token(self) -> &'static str {
         match self {
             Self::MessageName => "::",
+            Self::TagSet => "/:",
             Self::Set => "=",
             Self::SetDelayed => ":=",
             Self::ReplaceAll => "/.",
@@ -123,6 +126,7 @@ impl BinaryOp {
     pub(crate) fn precedence(self) -> u8 {
         match self {
             Self::MessageName => 75,
+            Self::TagSet => 5,
             Self::Set | Self::SetDelayed => 10,
             Self::ReplaceAll | Self::ReplaceRepeated => 20,
             Self::Rule | Self::RuleDelayed => 30,
@@ -136,7 +140,8 @@ impl BinaryOp {
     pub(crate) fn is_right_associative(self) -> bool {
         matches!(
             self,
-            Self::Set
+            Self::TagSet
+                | Self::Set
                 | Self::SetDelayed
                 | Self::Rule
                 | Self::RuleDelayed
@@ -150,11 +155,15 @@ impl PostfixOp {
     pub fn token(self) -> &'static str {
         match self {
             Self::Function => "&",
+            Self::Unset => "=.",
         }
     }
 
     pub(crate) fn precedence(self) -> u8 {
-        5
+        match self {
+            Self::Function => 5,
+            Self::Unset => 10,
+        }
     }
 }
 

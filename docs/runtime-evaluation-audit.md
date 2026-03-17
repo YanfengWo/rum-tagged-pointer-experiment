@@ -56,10 +56,12 @@ Call evaluation currently follows this order:
 3. Otherwise evaluate arguments according to the evaluated head's hold
    attribute.
 4. Splice `Sequence[...]` in non-held positions.
-5. Try downvalues on the evaluated head plus evaluated arguments.
-6. Try builtin dispatch for non-special system builtins.
-7. Try pure-function application.
-8. Reconstruct the call if nothing fires.
+5. Unless the head has `HoldAllComplete`, try upvalues attached to symbols that
+   appear in the evaluated arguments.
+6. Try downvalues on the evaluated head plus evaluated arguments.
+7. Try builtin dispatch for non-special system builtins.
+8. Try pure-function application.
+9. Reconstruct the call if nothing fires.
 
 This gives the runtime a workable precedence order for the currently supported
 subset:
@@ -67,6 +69,8 @@ subset:
 - head evaluation happens before almost everything else
 - special forms get raw syntax-level arguments
 - hold-sensitive builtins get partially evaluated arguments
+- upvalues run before downvalues on ordinary calls, unless `HoldAllComplete`
+  blocks them
 - downvalues see evaluated arguments
 - pure functions run after ordinary builtin dispatch
 
@@ -97,7 +101,11 @@ The current runtime supports:
 
 - immediate ownvalues
 - delayed ownvalues
-- delayed downvalues
+- immediate and delayed downvalues
+- immediate and delayed tagged definitions via `TagSet` / `TagSetDelayed`
+- upvalue inspection via `UpValues`
+- `Unset`, `Clear`, and `ClearAll` for the currently supported definition
+  categories
 - immediate and delayed rewrite rules
 - compiled matcher dispatch for the currently supported pattern subset
 - `ReplaceAll`, `ReplaceRepeated`, `Cases`, and `MatchQ`
@@ -115,6 +123,7 @@ good enough to build on:
 - head-first call evaluation
 - builtin hold handling for the implemented subset
 - `Evaluate` + `Sequence` interaction in held vs non-held positions
+- upvalue application ahead of downvalues for ordinary calls
 - downvalue application after argument evaluation
 - immediate vs delayed rule behavior
 - lexical scoping via `With` and `Module`
@@ -152,18 +161,18 @@ definition lattice.
 
 Missing or incomplete areas:
 
-- `UpValues`
 - `SubValues`
-- tag-based definition attachment
-- definition lifecycle tools such as `Unset`, `Clear`, and `ClearAll`
-- a documented precedence table for user definitions vs builtin dispatch
+- broader tag-based definition attachment such as `TagUnset` / `TagUnsetDelayed`
+- a more declarative precedence table for user definitions vs builtin dispatch
 
 Practical impact:
 
-- symbolic protocols that rely on argument-owned behavior cannot yet be modeled
-- host-side DSL embedding still has to route most behavior through head-owned
-  downvalues
-- state cleanup and redefinition ergonomics are weaker than they should be
+- common argument-owned protocols can now be modeled with `TagSet` /
+  `TagSetDelayed`, but deeper multi-owner dispatch is still absent
+- host-side DSL embedding still cannot rely on the full Wolfram definition
+  lattice
+- lifecycle management is usable now, but still narrower than the long-term
+  target
 
 ### 3. Held Evaluation Is Functional but Not Yet Rich
 
@@ -246,7 +255,7 @@ Practical impact:
 
 The cleanest next steps for `rum-runtime` are:
 
-1. add definition lifecycle tools and then expand toward `UpValues`
+1. expand from `UpValues` toward `SubValues` and the rest of the definition lattice
 2. make builtin dispatch order more declarative so new semantics do not depend
    on ad hoc handler placement
 3. extend the attribute table beyond hold-oriented behavior into `Orderless`,

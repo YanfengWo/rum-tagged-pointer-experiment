@@ -118,9 +118,13 @@ This roadmap now uses two levels of detail:
 - [x] Implement `Attributes`, `SetAttributes`, and `ClearAttributes`
 - [x] Add `SequenceHold` and route argument preprocessing through attribute-aware sequence handling
 - [x] Add `HoldAllComplete` and make held-argument evaluation honor it
-- [ ] Decide and document precedence among user definitions, builtin dispatch, and future attribute-driven evaluation
-- [ ] Add `UpValues` and the supporting lookup path needed for argument-owned behavior
-- [ ] Add `Unset`, `Clear`, and `ClearAll` so definitions can be managed and removed cleanly
+- [x] Decide and document precedence among upvalues, downvalues, builtin dispatch, and future attribute-driven evaluation
+- [x] Add `/:` syntax and `TagSet` / `TagSetDelayed` lowering support
+- [x] Add `UpValues[symbol]` inspection and structured definition-catalog coverage
+- [x] Add runtime upvalue storage and matching for argument-owned behavior
+- [x] Add `Unset` support for ownvalues, downvalues, and tagged upvalues
+- [x] Add `Clear` to remove values and rule-based definitions while leaving messages and attributes available for later inspection
+- [x] Add `ClearAll` to extend `Clear` with message and user-defined attribute reset semantics
 
 ### `rum-runtime`: Held Evaluation and Scoping Gaps
 
