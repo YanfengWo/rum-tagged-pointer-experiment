@@ -37,7 +37,7 @@ off as work lands.
 - [x] Add definition storage for `OwnValues` and `DownValues`
 - [ ] Implement standard evaluation sequencing
 - [ ] Implement `Set` and `SetDelayed`
-- [ ] Add evaluation control attributes such as `HoldFirst`, `HoldRest`, and `HoldAll`
+- [x] Add evaluation control attributes such as `HoldFirst`, `HoldRest`, and `HoldAll`
 
 ## `rum-runtime` Detailed Breakdown
 
@@ -70,7 +70,7 @@ off as work lands.
 - [x] Keep a builtin registry in `Session`
 - [x] Support a minimal non-held builtin dispatch path
 - [x] Extend symbol inspection to show definition presence
-- [ ] Add builtin attribute metadata such as `HoldFirst` and `HoldAll`
+- [x] Add builtin attribute metadata such as `HoldFirst` and `HoldAll`
 - [ ] Add structured evaluation trace events
 
 ### Tests
@@ -78,7 +78,7 @@ off as work lands.
 - [x] Test simple symbol assignment and lookup
 - [x] Test delayed own values
 - [x] Test unsupported assignment fallback behavior
-- [ ] Add evaluator tests for held arguments and sequencing
+- [x] Add evaluator tests for held arguments and sequencing
 
 ## Phase 4: Rules and Pattern Matching
 
@@ -121,7 +121,7 @@ off as work lands.
 - [ ] Implement `Module`
 - [ ] Implement `With`
 - [ ] Implement `Block`
-- [ ] Add `Evaluate` and `Sequence`
+- [x] Add `Evaluate` and `Sequence`
 - [ ] Add execution tracing hooks and resource limits
 
 ## Phase 6: REPL and Developer Tooling

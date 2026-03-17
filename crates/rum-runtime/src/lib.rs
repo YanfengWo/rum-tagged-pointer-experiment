@@ -9,9 +9,47 @@ use thiserror::Error;
 const REPLACE_REPEATED_LIMIT: usize = 256;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HoldAttribute {
+    None,
+    HoldFirst,
+    HoldRest,
+    HoldAll,
+}
+
+impl HoldAttribute {
+    fn holds_argument(self, index: usize) -> bool {
+        match self {
+            Self::None => false,
+            Self::HoldFirst => index == 0,
+            Self::HoldRest => index > 0,
+            Self::HoldAll => true,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BuiltinSpec {
     pub name: &'static str,
     pub summary: &'static str,
+    pub hold: HoldAttribute,
+}
+
+impl BuiltinSpec {
+    pub const fn new(name: &'static str, summary: &'static str) -> Self {
+        Self {
+            name,
+            summary,
+            hold: HoldAttribute::None,
+        }
+    }
+
+    pub const fn with_hold(name: &'static str, summary: &'static str, hold: HoldAttribute) -> Self {
+        Self {
+            name,
+            summary,
+            hold,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -147,10 +185,7 @@ impl Session {
         }
 
         let evaluated_head = self.evaluate(head)?;
-        let evaluated_args = args
-            .into_iter()
-            .map(|arg| self.evaluate(arg))
-            .collect::<Result<Vec<_>, _>>()?;
+        let evaluated_args = self.evaluate_call_args(&evaluated_head, args)?;
 
         if let Some(result) =
             self.try_apply_down_values(&evaluated_head, evaluated_args.as_slice())?
@@ -165,6 +200,46 @@ impl Session {
         }
 
         Ok(Expr::call(evaluated_head, evaluated_args))
+    }
+
+    fn evaluate_call_args(&mut self, head: &Expr, args: Vec<Expr>) -> Result<Vec<Expr>, EvalError> {
+        let hold = self.hold_attribute_for_head(head);
+        let mut evaluated_args = Vec::new();
+
+        for (index, arg) in args.into_iter().enumerate() {
+            let (evaluated_arg, allow_sequence_splice) = if hold.holds_argument(index) {
+                self.evaluate_held_argument(arg)?
+            } else {
+                (self.evaluate(arg)?, true)
+            };
+
+            if allow_sequence_splice {
+                splice_sequence_argument(&mut evaluated_args, evaluated_arg);
+            } else {
+                evaluated_args.push(evaluated_arg);
+            }
+        }
+
+        Ok(evaluated_args)
+    }
+
+    fn evaluate_held_argument(&mut self, arg: Expr) -> Result<(Expr, bool), EvalError> {
+        if let Some(inner) = evaluate_wrapper_arg(&arg) {
+            return self.evaluate(inner.clone()).map(|value| (value, true));
+        }
+
+        Ok((arg, false))
+    }
+
+    fn hold_attribute_for_head(&self, head: &Expr) -> HoldAttribute {
+        let Some(symbol) = expr_as_symbol(head) else {
+            return HoldAttribute::None;
+        };
+
+        self.builtins
+            .get(symbol.name())
+            .map(|spec| spec.hold)
+            .unwrap_or_else(|| fallback_hold_attribute(symbol.name()))
     }
 
     fn try_evaluate_special_form(
@@ -199,7 +274,12 @@ impl Session {
         };
 
         match symbol.name() {
-            "Identity" if args.len() == 1 => self.evaluate(args[0].clone()).map(Some),
+            "Identity" if args.len() == 1 => Ok(Some(args[0].clone())),
+            "Hold" | "HoldFirst" | "HoldRest" | "HoldAll" => {
+                Ok(Some(Expr::call(head.clone(), args.to_vec())))
+            }
+            "Evaluate" if args.len() == 1 => self.evaluate(args[0].clone()).map(Some),
+            "Sequence" => Ok(Some(sequence_expr(args.to_vec()))),
             _ => Ok(None),
         }
     }
@@ -805,6 +885,32 @@ fn expr_as_symbol(expr: &Expr) -> Option<&Symbol> {
     }
 }
 
+fn fallback_hold_attribute(name: &str) -> HoldAttribute {
+    match name {
+        "Hold" | "HoldAll" | "Evaluate" => HoldAttribute::HoldAll,
+        "HoldFirst" => HoldAttribute::HoldFirst,
+        "HoldRest" => HoldAttribute::HoldRest,
+        _ => HoldAttribute::None,
+    }
+}
+
+fn evaluate_wrapper_arg(expr: &Expr) -> Option<&Expr> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Evaluate") && args.len() == 1 => {
+            Some(&args[0])
+        }
+        _ => None,
+    }
+}
+
+fn splice_sequence_argument(args: &mut Vec<Expr>, expr: Expr) {
+    if let Some(items) = sequence_items(&expr) {
+        args.extend(items.iter().cloned());
+    } else {
+        args.push(expr);
+    }
+}
+
 fn downvalue_head_symbol(expr: &Expr) -> Option<&Symbol> {
     match expr {
         Expr::Call { head, args }
@@ -1066,6 +1172,104 @@ mod tests {
             .unwrap();
 
         assert_eq!(outcome.value.to_string(), "123456789012345678901234567890");
+    }
+
+    #[test]
+    fn hold_family_respects_builtin_hold_attributes() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Hold[Identity[1], Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[Identity[1], Identity[2]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("HoldFirst[Identity[1], Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "HoldFirst[Identity[1], 2]"
+        );
+        assert_eq!(
+            session
+                .eval_text("HoldRest[Identity[1], Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "HoldRest[1, Identity[2]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("HoldAll[Identity[1], Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "HoldAll[Identity[1], Identity[2]]"
+        );
+    }
+
+    #[test]
+    fn evaluate_forces_evaluation_inside_held_arguments() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Evaluate[Identity[1]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(
+            session
+                .eval_text("Hold[Evaluate[Identity[1]]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[1]"
+        );
+    }
+
+    #[test]
+    fn sequence_splices_in_non_held_calls_but_not_in_raw_held_ones() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("f[Sequence[1, 2], 3]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[1, 2, 3]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Sequence[1, Sequence[2, 3]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Sequence[1, 2, 3]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Hold[Sequence[1, 2], 3]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[Sequence[1, 2], 3]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Hold[Evaluate[Sequence[1, 2]], 3]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[1, 2, 3]"
+        );
     }
 
     #[test]

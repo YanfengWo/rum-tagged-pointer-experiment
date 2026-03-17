@@ -1,82 +1,51 @@
-use rum_runtime::{BuiltinSpec, Session};
+use rum_runtime::{BuiltinSpec, HoldAttribute, Session};
 
 pub const CORE_BUILTINS: &[BuiltinSpec] = &[
-    BuiltinSpec {
-        name: "Identity",
-        summary: "Returns its argument unchanged.",
-    },
-    BuiltinSpec {
-        name: "Set",
-        summary: "Assigns an immediate value to a symbol or pattern.",
-    },
-    BuiltinSpec {
-        name: "SetDelayed",
-        summary: "Assigns a delayed definition evaluated on use.",
-    },
-    BuiltinSpec {
-        name: "Rule",
-        summary: "Represents an immediate rewrite rule.",
-    },
-    BuiltinSpec {
-        name: "RuleDelayed",
-        summary: "Represents a delayed rewrite rule.",
-    },
-    BuiltinSpec {
-        name: "MatchQ",
-        summary: "Tests whether an expression matches a pattern.",
-    },
-    BuiltinSpec {
-        name: "Cases",
-        summary: "Collects subexpressions matching a pattern or rule.",
-    },
-    BuiltinSpec {
-        name: "ReplaceAll",
-        summary: "Applies rules everywhere in an expression.",
-    },
-    BuiltinSpec {
-        name: "If",
-        summary: "Evaluates one of several branches conditionally.",
-    },
-    BuiltinSpec {
-        name: "Function",
-        summary: "Creates a pure function.",
-    },
-    BuiltinSpec {
-        name: "Module",
-        summary: "Creates lexical local symbols.",
-    },
-    BuiltinSpec {
-        name: "Block",
-        summary: "Temporarily rebinds symbols dynamically.",
-    },
-    BuiltinSpec {
-        name: "With",
-        summary: "Substitutes local constants lexically.",
-    },
-    BuiltinSpec {
-        name: "Hold",
-        summary: "Prevents evaluation of its arguments.",
-    },
-    BuiltinSpec {
-        name: "HoldFirst",
-        summary: "Prevents evaluation of the first argument.",
-    },
-    BuiltinSpec {
-        name: "HoldRest",
-        summary: "Prevents evaluation of all but the first argument.",
-    },
-    BuiltinSpec {
-        name: "HoldAll",
-        summary: "Prevents evaluation of all arguments.",
-    },
-    BuiltinSpec {
-        name: "Evaluate",
-        summary: "Forces evaluation in held contexts.",
-    },
-    BuiltinSpec {
-        name: "Sequence",
-        summary: "Splices a sequence of arguments into a call.",
-    },
+    BuiltinSpec::new("Identity", "Returns its argument unchanged."),
+    BuiltinSpec::new("Set", "Assigns an immediate value to a symbol or pattern."),
+    BuiltinSpec::new(
+        "SetDelayed",
+        "Assigns a delayed definition evaluated on use.",
+    ),
+    BuiltinSpec::new("Rule", "Represents an immediate rewrite rule."),
+    BuiltinSpec::new("RuleDelayed", "Represents a delayed rewrite rule."),
+    BuiltinSpec::new("MatchQ", "Tests whether an expression matches a pattern."),
+    BuiltinSpec::new(
+        "Cases",
+        "Collects subexpressions matching a pattern or rule.",
+    ),
+    BuiltinSpec::new("ReplaceAll", "Applies rules everywhere in an expression."),
+    BuiltinSpec::new("If", "Evaluates one of several branches conditionally."),
+    BuiltinSpec::new("Function", "Creates a pure function."),
+    BuiltinSpec::new("Module", "Creates lexical local symbols."),
+    BuiltinSpec::new("Block", "Temporarily rebinds symbols dynamically."),
+    BuiltinSpec::new("With", "Substitutes local constants lexically."),
+    BuiltinSpec::with_hold(
+        "Hold",
+        "Prevents evaluation of its arguments.",
+        HoldAttribute::HoldAll,
+    ),
+    BuiltinSpec::with_hold(
+        "HoldFirst",
+        "Prevents evaluation of the first argument.",
+        HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::with_hold(
+        "HoldRest",
+        "Prevents evaluation of all but the first argument.",
+        HoldAttribute::HoldRest,
+    ),
+    BuiltinSpec::with_hold(
+        "HoldAll",
+        "Prevents evaluation of all arguments.",
+        HoldAttribute::HoldAll,
+    ),
+    BuiltinSpec::with_hold(
+        "Evaluate",
+        "Forces evaluation in held contexts.",
+        HoldAttribute::HoldAll,
+    ),
+    BuiltinSpec::new("Sequence", "Splices a sequence of arguments into a call."),
 ];
 
 pub fn install_core(session: &mut Session) {
