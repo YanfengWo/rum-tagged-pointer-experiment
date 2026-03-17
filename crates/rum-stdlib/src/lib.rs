@@ -97,6 +97,16 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
     ),
     BuiltinSpec::with_hold(
+        "OwnValues",
+        "Lists stored immediate or delayed ownvalue definitions for a symbol.",
+        HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::with_hold(
+        "DownValues",
+        "Lists stored downvalue definitions for a symbol.",
+        HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::with_hold(
         "Check",
         "Evaluates an expression and substitutes a fallback if matching messages are emitted.",
         HoldAttribute::HoldAll,

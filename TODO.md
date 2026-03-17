@@ -75,13 +75,13 @@ This roadmap now uses two levels of detail:
 
 ### `rum-runtime`: Definition Inspection
 
-- [ ] Decide the public shape of definition-inspection builtins and their output conventions
-- [ ] Implement `OwnValues[symbol]` for immediate own values
-- [ ] Extend `OwnValues[symbol]` to surface delayed own values distinctly
-- [ ] Implement `DownValues[symbol]` while preserving rule order and delayedness
-- [ ] Decide whether message definitions should remain separate or also appear in broader symbol inspection views
-- [ ] Extend `:inspect` to show a short summary of stored ownvalues and downvalues
-- [ ] Add regression tests for definition inspection on plain symbols, delayed values, and pattern-based downvalues
+- [x] Decide the public shape of definition-inspection builtins and their output conventions
+- [x] Implement `OwnValues[symbol]` for immediate own values
+- [x] Extend `OwnValues[symbol]` to surface delayed own values distinctly
+- [x] Implement `DownValues[symbol]` while preserving rule order and delayedness
+- [x] Keep message definitions on their own inspection path instead of merging them into `OwnValues` / `DownValues`
+- [x] Extend `:inspect` to show a short summary of stored ownvalues and downvalues
+- [x] Add regression tests for definition inspection on plain symbols, delayed values, and pattern-based downvalues
 
 ### `rum-runtime`: Matcher IR and Rule Debugging
 

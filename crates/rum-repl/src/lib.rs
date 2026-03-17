@@ -1,6 +1,6 @@
 use std::io::{self, BufRead, Write};
 
-use rum_runtime::Session;
+use rum_runtime::{DefinitionCatalogEntry, DefinitionKind, Session};
 
 pub struct Repl<R, W> {
     input: R,
@@ -121,6 +121,47 @@ where
                             format!(" [{}]", flags.join(", "))
                         }
                     )?;
+
+                    if let Some(entries) = session.inspect_definition_catalog(name) {
+                        let own_entries = entries
+                            .iter()
+                            .filter(|entry| {
+                                matches!(
+                                    entry.kind,
+                                    DefinitionKind::OwnValue | DefinitionKind::DelayedOwnValue
+                                )
+                            })
+                            .collect::<Vec<_>>();
+                        let down_entries = entries
+                            .iter()
+                            .filter(|entry| entry.kind == DefinitionKind::DownValue)
+                            .collect::<Vec<_>>();
+
+                        if !own_entries.is_empty() {
+                            writeln!(
+                                self.output,
+                                "  own: {}",
+                                own_entries
+                                    .iter()
+                                    .map(|entry| format_definition_entry(entry))
+                                    .collect::<Vec<_>>()
+                                    .join(" | ")
+                            )?;
+                        }
+
+                        if !down_entries.is_empty() {
+                            writeln!(
+                                self.output,
+                                "  down[{}]: {}",
+                                down_entries.len(),
+                                down_entries
+                                    .iter()
+                                    .map(|entry| format_definition_entry(entry))
+                                    .collect::<Vec<_>>()
+                                    .join(" | ")
+                            )?;
+                        }
+                    }
                 } else {
                     writeln!(self.output, "! unknown symbol `{name}`")?;
                 }
@@ -162,6 +203,15 @@ where
             _ => Ok(CommandAction::NotHandled),
         }
     }
+}
+
+fn format_definition_entry(entry: &DefinitionCatalogEntry) -> String {
+    format!(
+        "{} {} {}",
+        entry.lhs,
+        if entry.delayed { ":=" } else { "=" },
+        entry.rhs
+    )
 }
 
 #[cfg(test)]
@@ -212,6 +262,22 @@ mod tests {
 
         let rendered = String::from_utf8(output).unwrap();
         assert!(rendered.contains("[msg]"));
+    }
+
+    #[test]
+    fn repl_inspect_shows_definition_summaries() {
+        let input = Cursor::new(":inspect x\n:inspect f\n:quit\n");
+        let mut output = Vec::new();
+        let mut repl = Repl::new(input, &mut output);
+        let mut session = Session::new();
+        session.eval_text("x = 1").unwrap();
+        session.eval_text("f[z_Integer] := z").unwrap();
+
+        repl.run(&mut session).unwrap();
+
+        let rendered = String::from_utf8(output).unwrap();
+        assert!(rendered.contains("own: x = 1"));
+        assert!(rendered.contains("down[1]: f[Pattern[z, Blank[Integer]]] := z"));
     }
 
     #[test]

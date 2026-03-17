@@ -184,6 +184,14 @@ pub struct SymbolInfo {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DefinitionCatalogEntry {
+    pub kind: DefinitionKind,
+    pub lhs: Expr,
+    pub rhs: Expr,
+    pub delayed: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MessageCatalogEntry {
     pub message_name: String,
     pub qualified_symbol_name: String,
@@ -203,6 +211,7 @@ pub struct SymbolDefinition {
 pub struct DownValue {
     pub lhs: Expr,
     pub rhs: Expr,
+    pub delayed: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -503,6 +512,27 @@ impl Session {
                 MessageCatalogQuery::Key(key) => Some(self.message_catalog_entries_for_key(&key)),
             },
         }
+    }
+
+    pub fn inspect_definition_catalog(&self, name: &str) -> Option<Vec<DefinitionCatalogEntry>> {
+        let symbol = self
+            .resolve_symbol_name(name, false)
+            .or_else(|| self.resolve_symbol_name(name, true))?;
+        let message_count = self
+            .message_definitions
+            .keys()
+            .filter(|key| key.symbol == symbol)
+            .count();
+
+        if self.builtin_spec_for_symbol(&symbol).is_none()
+            && !self.definitions.contains_key(&symbol)
+            && message_count == 0
+            && !is_known_system_symbol(&symbol)
+        {
+            return None;
+        }
+
+        Some(self.definition_catalog_entries_for_symbol(&symbol))
     }
 
     pub fn eval_text(&mut self, input: &str) -> Result<EvalOutcome, EvalError> {
@@ -901,6 +931,90 @@ impl Session {
         Expr::call(system_expr("List"), items)
     }
 
+    fn build_definition_catalog_entries(
+        &self,
+        symbol: &Symbol,
+        definition: &SymbolDefinition,
+    ) -> Vec<DefinitionCatalogEntry> {
+        let mut entries = Vec::new();
+
+        if let Some(rhs) = &definition.own_value {
+            entries.push(DefinitionCatalogEntry {
+                kind: DefinitionKind::OwnValue,
+                lhs: Expr::Atom(Atom::Symbol(symbol.clone())),
+                rhs: rhs.clone(),
+                delayed: false,
+            });
+        }
+
+        if let Some(rhs) = &definition.delayed_own_value {
+            entries.push(DefinitionCatalogEntry {
+                kind: DefinitionKind::DelayedOwnValue,
+                lhs: Expr::Atom(Atom::Symbol(symbol.clone())),
+                rhs: rhs.clone(),
+                delayed: true,
+            });
+        }
+
+        entries.extend(
+            definition
+                .down_values
+                .iter()
+                .map(|down_value| DefinitionCatalogEntry {
+                    kind: DefinitionKind::DownValue,
+                    lhs: down_value.lhs.clone(),
+                    rhs: down_value.rhs.clone(),
+                    delayed: down_value.delayed,
+                }),
+        );
+
+        entries
+    }
+
+    fn definition_catalog_entries_for_symbol(
+        &self,
+        symbol: &Symbol,
+    ) -> Vec<DefinitionCatalogEntry> {
+        self.definitions
+            .get(symbol)
+            .map(|definition| self.build_definition_catalog_entries(symbol, definition))
+            .unwrap_or_default()
+    }
+
+    fn definition_rule_expr(entry: &DefinitionCatalogEntry) -> Expr {
+        Expr::call(
+            system_expr(if entry.delayed { "RuleDelayed" } else { "Rule" }),
+            vec![entry.lhs.clone(), entry.rhs.clone()],
+        )
+    }
+
+    fn own_values_expr_for_symbol(&self, symbol: &Symbol) -> Expr {
+        let items = self
+            .definition_catalog_entries_for_symbol(symbol)
+            .into_iter()
+            .filter(|entry| {
+                matches!(
+                    entry.kind,
+                    DefinitionKind::OwnValue | DefinitionKind::DelayedOwnValue
+                )
+            })
+            .map(|entry| Self::definition_rule_expr(&entry))
+            .collect::<Vec<_>>();
+
+        Expr::call(system_expr("List"), items)
+    }
+
+    fn down_values_expr_for_symbol(&self, symbol: &Symbol) -> Expr {
+        let items = self
+            .definition_catalog_entries_for_symbol(symbol)
+            .into_iter()
+            .filter(|entry| entry.kind == DefinitionKind::DownValue)
+            .map(|entry| Self::definition_rule_expr(&entry))
+            .collect::<Vec<_>>();
+
+        Expr::call(system_expr("List"), items)
+    }
+
     fn lower_syntax_expr(&self, syntax: &SyntaxExpr) -> Result<Expr, EvalError> {
         lower_syntax_expr_with(syntax, &mut |raw| self.resolve_symbol_name(raw, true))
     }
@@ -1251,6 +1365,8 @@ impl Session {
             "Messages" => self.eval_messages(args).map(Some),
             "MessageDefinitions" => self.eval_message_definitions(args).map(Some),
             "MessageTags" => self.eval_message_tags(args).map(Some),
+            "OwnValues" => self.eval_own_values(args).map(Some),
+            "DownValues" => self.eval_down_values(args).map(Some),
             "Check" => self.eval_check(args).map(Some),
             "Quiet" => self.eval_quiet(args).map(Some),
             "If" => self.eval_if(args).map(Some),
@@ -1609,6 +1725,40 @@ impl Session {
                 "argx",
                 format!("expected 0 or 1 argument(s), got {}", args.len()),
             )),
+        }
+    }
+
+    fn eval_own_values(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [expr] => {
+                if let Some(symbol) = self.lookup_message_symbol(expr) {
+                    Ok(self.own_values_expr_for_symbol(&symbol))
+                } else {
+                    Ok(self.invalid_call_with_arg_form(
+                        "OwnValues",
+                        args,
+                        "expected a symbol or symbol-name string argument",
+                    ))
+                }
+            }
+            _ => Ok(self.invalid_call_with_exact_arg_count("OwnValues", args, 1)),
+        }
+    }
+
+    fn eval_down_values(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [expr] => {
+                if let Some(symbol) = self.lookup_message_symbol(expr) {
+                    Ok(self.down_values_expr_for_symbol(&symbol))
+                } else {
+                    Ok(self.invalid_call_with_arg_form(
+                        "DownValues",
+                        args,
+                        "expected a symbol or symbol-name string argument",
+                    ))
+                }
+            }
+            _ => Ok(self.invalid_call_with_exact_arg_count("DownValues", args, 1)),
         }
     }
 
@@ -1975,6 +2125,7 @@ impl Session {
             definition.down_values.push(DownValue {
                 lhs: lhs.clone(),
                 rhs: rhs.clone(),
+                delayed: true,
             });
             self.push_trace(TraceEvent::DefinitionStored {
                 symbol: trace_symbol,
@@ -3062,7 +3213,7 @@ fn fallback_hold_attribute(name: &str) -> HoldAttribute {
         "Hold" | "HoldAll" | "Evaluate" => HoldAttribute::HoldAll,
         "Function" | "Which" | "Module" | "Block" | "Check" | "Quiet" | "MessageName"
         | "Messages" | "MessageDefinitions" | "MessageTags" => HoldAttribute::HoldAll,
-        "Message" | "Context" => HoldAttribute::HoldFirst,
+        "Message" | "Context" | "OwnValues" | "DownValues" => HoldAttribute::HoldFirst,
         "If" => HoldAttribute::HoldRest,
         "With" => HoldAttribute::HoldAll,
         "HoldFirst" => HoldAttribute::HoldFirst,
@@ -3762,6 +3913,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "Module"
             | "Needs"
             | "Null"
+            | "OwnValues"
             | "Pattern"
             | "Plus"
             | "Power"
@@ -3779,6 +3931,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "Symbol"
             | "Times"
             | "True"
+            | "DownValues"
             | "Which"
             | "With"
     )
@@ -5490,6 +5643,78 @@ mod tests {
         assert!(!info.has_own_value);
         assert!(info.has_delayed_value);
         assert!(!info.has_down_values);
+    }
+
+    #[test]
+    fn ownvalues_lists_immediate_and_delayed_symbol_definitions() {
+        let mut session = Session::new();
+
+        session.eval_text("x = 42").unwrap();
+        session.eval_text("y := x").unwrap();
+
+        assert_eq!(
+            session.eval_text("OwnValues[x]").unwrap().value.to_string(),
+            "List[Rule[x, 42]]"
+        );
+        assert_eq!(
+            session.eval_text("OwnValues[y]").unwrap().value.to_string(),
+            "List[RuleDelayed[y, x]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("OwnValues[\"missing\"]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[]"
+        );
+    }
+
+    #[test]
+    fn downvalues_lists_stored_pattern_definitions_in_order() {
+        let mut session = Session::new();
+
+        session.eval_text("f[x_Integer] := x").unwrap();
+        session.eval_text("f[y_String] := y").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("DownValues[f]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[RuleDelayed[f[Pattern[x, Blank[Integer]]], x], RuleDelayed[f[Pattern[y, Blank[String]]], y]]"
+        );
+    }
+
+    #[test]
+    fn inspect_definition_catalog_reports_kinds_and_delayedness() {
+        let mut session = Session::new();
+
+        session.eval_text("x = 42").unwrap();
+        session.eval_text("y := x").unwrap();
+        session.eval_text("f[z_Integer] := z").unwrap();
+
+        let own_entries = session.inspect_definition_catalog("x").unwrap();
+        assert_eq!(own_entries.len(), 1);
+        assert_eq!(own_entries[0].kind, DefinitionKind::OwnValue);
+        assert!(!own_entries[0].delayed);
+        assert_eq!(own_entries[0].lhs.to_string(), "x");
+        assert_eq!(own_entries[0].rhs.to_string(), "42");
+
+        let delayed_entries = session.inspect_definition_catalog("y").unwrap();
+        assert_eq!(delayed_entries.len(), 1);
+        assert_eq!(delayed_entries[0].kind, DefinitionKind::DelayedOwnValue);
+        assert!(delayed_entries[0].delayed);
+
+        let down_entries = session.inspect_definition_catalog("f").unwrap();
+        assert_eq!(down_entries.len(), 1);
+        assert_eq!(down_entries[0].kind, DefinitionKind::DownValue);
+        assert!(down_entries[0].delayed);
+        assert_eq!(
+            down_entries[0].lhs.to_string(),
+            "f[Pattern[z, Blank[Integer]]]"
+        );
     }
 
     #[test]
