@@ -30,7 +30,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             })?;
 
             let outcome = session.eval_text(&input)?;
-            println!("{}", outcome.value);
+            print_outcome(&outcome);
         }
         Some("--file") => {
             let path = args.next().ok_or_else(|| {
@@ -55,8 +55,16 @@ fn run_repl(session: &mut Session) -> io::Result<()> {
 
 fn eval_file(session: &mut Session, path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let outcome = session.eval_file(path)?;
-    println!("{}", outcome.value);
+    print_outcome(&outcome);
     Ok(())
+}
+
+fn print_outcome(outcome: &rum_runtime::EvalOutcome) {
+    for message in &outcome.messages {
+        eprintln!("! {message}");
+    }
+
+    println!("{}", outcome.value);
 }
 
 fn print_usage() {

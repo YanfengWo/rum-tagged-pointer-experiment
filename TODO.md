@@ -89,6 +89,9 @@ off as work lands.
 - [x] Extend symbol inspection to show definition presence
 - [x] Add builtin attribute metadata such as `HoldFirst` and `HoldAll`
 - [x] Add structured evaluation trace events
+- [x] Add structured runtime messages/diagnostics in evaluation outcomes
+- [x] Surface loader failures as `$Failed` plus messages where appropriate
+- [x] Render runtime messages cleanly in REPL and CLI flows
 
 ### Tests
 

@@ -53,8 +53,20 @@ where
             }
 
             match session.eval_text(line) {
-                Ok(outcome) => writeln!(self.output, "{}", outcome.value)?,
-                Err(err) => writeln!(self.output, "! {err}")?,
+                Ok(outcome) => {
+                    for message in outcome.messages {
+                        writeln!(self.output, "! {message}")?;
+                    }
+
+                    writeln!(self.output, "{}", outcome.value)?
+                }
+                Err(err) => {
+                    for message in session.take_messages() {
+                        writeln!(self.output, "! {message}")?;
+                    }
+
+                    writeln!(self.output, "! {err}")?
+                }
             }
         }
     }
@@ -146,5 +158,19 @@ mod tests {
         let rendered = String::from_utf8(output).unwrap();
         assert!(rendered.contains("x ::"));
         assert!(!rendered.contains("unexpected character"));
+    }
+
+    #[test]
+    fn repl_renders_runtime_messages_before_results() {
+        let input = Cursor::new("FindFile[\"Missing`\"]\n:quit\n");
+        let mut output = Vec::new();
+        let mut repl = Repl::new(input, &mut output);
+        let mut session = Session::new();
+
+        repl.run(&mut session).unwrap();
+
+        let rendered = String::from_utf8(output).unwrap();
+        assert!(rendered.contains("! FindFile::notfound:"));
+        assert!(rendered.contains("$Failed"));
     }
 }

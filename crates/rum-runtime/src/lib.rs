@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -103,6 +104,19 @@ pub enum TraceEvent {
     },
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RuntimeMessage {
+    pub symbol: String,
+    pub tag: String,
+    pub text: String,
+}
+
+impl fmt::Display for RuntimeMessage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}::{}: {}", self.symbol, self.tag, self.text)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Session {
     builtins: BTreeMap<String, BuiltinSpec>,
@@ -119,11 +133,13 @@ pub struct Session {
     evaluation_stack: Vec<Expr>,
     tracing_enabled: bool,
     trace_events: Vec<TraceEvent>,
+    messages: Vec<RuntimeMessage>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EvalOutcome {
     pub value: Expr,
+    pub messages: Vec<RuntimeMessage>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -233,6 +249,7 @@ impl Default for Session {
             evaluation_stack: Vec::new(),
             tracing_enabled: false,
             trace_events: Vec::new(),
+            messages: Vec::new(),
         }
     }
 }
@@ -268,6 +285,14 @@ impl Session {
 
     pub fn take_trace(&mut self) -> Vec<TraceEvent> {
         std::mem::take(&mut self.trace_events)
+    }
+
+    pub fn messages(&self) -> &[RuntimeMessage] {
+        &self.messages
+    }
+
+    pub fn take_messages(&mut self) -> Vec<RuntimeMessage> {
+        std::mem::take(&mut self.messages)
     }
 
     pub fn register_builtin(&mut self, spec: BuiltinSpec) {
@@ -405,21 +430,28 @@ impl Session {
     }
 
     pub fn eval_text(&mut self, input: &str) -> Result<EvalOutcome, EvalError> {
+        let message_checkpoint = self.messages.len();
         let syntax = parse_expr(input)?;
         let expr = self.lower_syntax_expr(&syntax)?;
         let value = self.evaluate(expr)?;
-        Ok(EvalOutcome { value })
+        Ok(EvalOutcome {
+            value,
+            messages: self.messages.split_off(message_checkpoint),
+        })
     }
 
     pub fn eval_script(&mut self, source: &str) -> Result<EvalOutcome, EvalError> {
         let forms = split_script_into_forms(source)?;
         let mut value = system_expr("Null");
+        let mut messages = Vec::new();
 
         for form in forms {
-            value = self.eval_text(&form)?.value;
+            let outcome = self.eval_text(&form)?;
+            value = outcome.value;
+            messages.extend(outcome.messages);
         }
 
-        Ok(EvalOutcome { value })
+        Ok(EvalOutcome { value, messages })
     }
 
     pub fn eval_file(&mut self, path: impl AsRef<Path>) -> Result<EvalOutcome, EvalError> {
@@ -455,6 +487,36 @@ impl Session {
         self.context_path = snapshot.context_path;
         self.context_stack = snapshot.context_stack;
         self.loaded_packages = snapshot.loaded_packages;
+    }
+
+    fn push_message(&mut self, symbol: &str, tag: &str, text: impl Into<String>) {
+        self.messages.push(RuntimeMessage {
+            symbol: symbol.to_string(),
+            tag: tag.to_string(),
+            text: text.into(),
+        });
+    }
+
+    fn emit_loader_message(&mut self, symbol: &str, error: &EvalError) {
+        match error {
+            EvalError::LoadPathNotFound { target, searched } => {
+                let detail = if searched.is_empty() {
+                    format!("could not locate `{target}`")
+                } else {
+                    format!("could not locate `{target}` in {}", searched.join(", "))
+                };
+                self.push_message(symbol, "notfound", detail);
+            }
+            EvalError::Io { path, source } => {
+                self.push_message(symbol, "io", format!("could not read `{path}`: {source}"));
+            }
+            EvalError::Syntax(err) => {
+                self.push_message(symbol, "syntax", err.to_string());
+            }
+            other => {
+                self.push_message(symbol, "load", other.to_string());
+            }
+        }
     }
 
     fn lower_syntax_expr(&self, syntax: &SyntaxExpr) -> Result<Expr, EvalError> {
@@ -829,7 +891,16 @@ impl Session {
 
         Ok(match self.find_load_target(&spec) {
             Some((path, _)) => Expr::string(path.display().to_string()),
-            None => system_expr("$Failed"),
+            None => {
+                self.emit_loader_message(
+                    "FindFile",
+                    &EvalError::LoadPathNotFound {
+                        target: spec.clone(),
+                        searched: self.load_target_candidates(&spec).1,
+                    },
+                );
+                system_expr("$Failed")
+            }
         })
     }
 
@@ -842,8 +913,24 @@ impl Session {
             return Ok(Expr::call(system_expr("Get"), args.to_vec()));
         };
 
-        let path = self.resolve_load_target(&spec)?;
-        Ok(self.eval_file(path)?.value)
+        let path = match self.resolve_load_target(&spec) {
+            Ok(path) => path,
+            Err(err) => {
+                self.emit_loader_message("Get", &err);
+                return Ok(system_expr("$Failed"));
+            }
+        };
+
+        match self.eval_file(path) {
+            Ok(outcome) => {
+                self.messages.extend(outcome.messages);
+                Ok(outcome.value)
+            }
+            Err(err) => {
+                self.emit_loader_message("Get", &err);
+                Ok(system_expr("$Failed"))
+            }
+        }
     }
 
     fn eval_needs(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -866,7 +953,17 @@ impl Session {
             return Ok(system_expr("Null"));
         }
 
-        self.eval_get(&[Expr::string(load_spec)])?;
+        let result = self.eval_get(&[Expr::string(load_spec)])?;
+
+        if is_system_symbol_name(&result, "$Failed") {
+            self.push_message(
+                "Needs",
+                "load",
+                format!("context `{context}` could not be loaded"),
+            );
+            return Ok(system_expr("$Failed"));
+        }
+
         self.mark_package_loaded(&context);
         self.context_path = prepend_context(&context, &self.context_path);
         Ok(system_expr("Null"))
@@ -3083,6 +3180,21 @@ mod tests {
     }
 
     #[test]
+    fn missing_findfile_emits_runtime_message() {
+        let mut session = Session::new();
+
+        let outcome = session.eval_text("FindFile[\"Missing`\"]").unwrap();
+
+        assert_eq!(outcome.value.to_string(), "$Failed");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == "FindFile" && message.tag == "notfound")
+        );
+    }
+
+    #[test]
     fn needs_supports_explicit_file_targets() {
         let dir = TempDirGuard::new("needs-file");
         let file = dir.write(
@@ -3112,6 +3224,27 @@ mod tests {
         assert_eq!(
             session.eval_text("Custom`flag").unwrap().value.to_string(),
             "12"
+        );
+    }
+
+    #[test]
+    fn missing_needs_returns_failed_and_emits_messages() {
+        let mut session = Session::new();
+
+        let outcome = session.eval_text("Needs[\"Missing`\"]").unwrap();
+
+        assert_eq!(outcome.value.to_string(), "$Failed");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == "Get" && message.tag == "notfound")
+        );
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == "Needs" && message.tag == "load")
         );
     }
 
