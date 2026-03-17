@@ -119,6 +119,7 @@ This roadmap now uses two levels of detail:
 - [x] Add `SequenceHold` and route argument preprocessing through attribute-aware sequence handling
 - [x] Add `HoldAllComplete` and make held-argument evaluation honor it
 - [x] Extend attribute-driven normalization and matching with `Orderless`, `Flat`, and `OneIdentity`
+- [x] Add first-pass `Listable` threading for user-defined symbols, pure functions, and builtin arithmetic heads
 - [x] Decide and document precedence among upvalues, downvalues, builtin dispatch, and future attribute-driven evaluation
 - [x] Add `/:` syntax and `TagSet` / `TagSetDelayed` lowering support
 - [x] Add `UpValues[symbol]` inspection and structured definition-catalog coverage

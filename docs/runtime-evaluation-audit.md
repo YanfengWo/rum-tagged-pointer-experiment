@@ -56,7 +56,7 @@ Call evaluation currently follows this order:
 3. Otherwise evaluate arguments according to the evaluated head's hold
    attribute.
 4. Normalize ordinary calls with attribute-driven preprocessing such as
-   `Sequence`, `Flat`, and `Orderless`.
+   `Sequence`, `Flat`, `Orderless`, and first-pass `Listable` threading.
 5. Unless the head has `HoldAllComplete`, try upvalues attached to symbols that
    appear in the evaluated arguments.
 6. Try downvalues on the evaluated head plus evaluated arguments.
@@ -130,7 +130,8 @@ good enough to build on:
 - fixed-point top-level evaluation with dedicated pass/cycle/recursion guards
 - head-first call evaluation
 - builtin hold handling for the implemented subset
-- attribute-driven call normalization for `Sequence`, `Flat`, and `Orderless`
+- attribute-driven call normalization for `Sequence`, `Flat`, `Orderless`, and
+  first-pass `Listable` threading
 - `Evaluate` + `Sequence` interaction in held vs non-held positions
 - `OneIdentity`-aware matching for singleton-head patterns
 - upvalue application ahead of downvalues for ordinary calls
@@ -153,15 +154,15 @@ The remaining gaps fall into a few clear buckets.
 
 Missing or incomplete areas:
 
-- `Listable`
 - richer inspection and lifecycle coverage around user-defined attribute state
+- fuller `Listable` semantics beyond the current equal-length top-level
+  threading and scalar broadcast subset
 
 Practical impact:
 
-- evaluation order is still missing higher-level attribute families such as
-  `Listable`
-- matcher and evaluator normalization now cover a useful subset, but not the
-  broader Wolfram attribute surface
+- matcher and evaluator normalization now cover a useful subset, including a
+  practical first pass of `Listable`, but not the broader Wolfram attribute
+  surface
 - sequence behavior is much better aligned with the intended long-term language
   model than before, but still not exhaustive
 
@@ -271,8 +272,8 @@ The cleanest next steps for `rum-runtime` are:
    share a less ad hoc dispatch model
 2. extend tag-oriented lifecycle tools beyond `Unset` / `Clear` / `ClearAll`
    into richer multi-owner tag behavior
-3. extend the attribute table from the current hold/order/associativity subset
-   into later families such as `Listable`
+3. extend the attribute table from the current
+   hold/order/associativity/list-threading subset into later families
 4. continue auditing scoping and held-wrapper interactions now that
    `Function[..., attrs]`, broader `Block`, and safer `Module` freshness are in
    place

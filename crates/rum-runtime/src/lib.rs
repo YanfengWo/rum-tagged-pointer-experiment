@@ -39,22 +39,24 @@ pub enum Attribute {
     HoldFirst,
     HoldRest,
     SequenceHold,
+    Listable,
     Orderless,
     Flat,
     OneIdentity,
 }
 
 impl Attribute {
-    const fn bit(self) -> u8 {
+    const fn bit(self) -> u16 {
         match self {
             Self::HoldAllComplete => 1 << 0,
             Self::HoldAll => 1 << 1,
             Self::HoldFirst => 1 << 2,
             Self::HoldRest => 1 << 3,
             Self::SequenceHold => 1 << 4,
-            Self::Orderless => 1 << 5,
-            Self::Flat => 1 << 6,
-            Self::OneIdentity => 1 << 7,
+            Self::Listable => 1 << 5,
+            Self::Orderless => 1 << 6,
+            Self::Flat => 1 << 7,
+            Self::OneIdentity => 1 << 8,
         }
     }
 
@@ -65,6 +67,7 @@ impl Attribute {
             Self::HoldFirst => "HoldFirst",
             Self::HoldRest => "HoldRest",
             Self::SequenceHold => "SequenceHold",
+            Self::Listable => "Listable",
             Self::Orderless => "Orderless",
             Self::Flat => "Flat",
             Self::OneIdentity => "OneIdentity",
@@ -88,6 +91,7 @@ impl Attribute {
             "HoldFirst" => Some(Self::HoldFirst),
             "HoldRest" => Some(Self::HoldRest),
             "SequenceHold" => Some(Self::SequenceHold),
+            "Listable" => Some(Self::Listable),
             "Orderless" => Some(Self::Orderless),
             "Flat" => Some(Self::Flat),
             "OneIdentity" => Some(Self::OneIdentity),
@@ -102,7 +106,7 @@ impl Attribute {
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct AttributeSet {
-    bits: u8,
+    bits: u16,
 }
 
 impl AttributeSet {
@@ -196,12 +200,13 @@ impl AttributeSet {
     }
 }
 
-const ALL_ATTRIBUTES: [Attribute; 8] = [
+const ALL_ATTRIBUTES: [Attribute; 9] = [
     Attribute::HoldAllComplete,
     Attribute::HoldAll,
     Attribute::HoldFirst,
     Attribute::HoldRest,
     Attribute::SequenceHold,
+    Attribute::Listable,
     Attribute::Orderless,
     Attribute::Flat,
     Attribute::OneIdentity,
@@ -1860,6 +1865,14 @@ impl Session {
             plan.attributes,
         );
 
+        if let Some(threaded) = self.try_thread_listable_call(
+            &evaluated_head,
+            evaluated_args.as_slice(),
+            plan.attributes,
+        ) {
+            return self.evaluate(threaded);
+        }
+
         for stage in plan.stages {
             if let Some(result) =
                 self.try_resolve_call_stage(stage, &evaluated_head, evaluated_args.as_slice())?
@@ -1986,6 +1999,52 @@ impl Session {
         }
 
         normalized_args
+    }
+
+    fn try_thread_listable_call(
+        &self,
+        head: &Expr,
+        args: &[Expr],
+        attributes: AttributeSet,
+    ) -> Option<Expr> {
+        if !attributes.contains(Attribute::Listable) {
+            return None;
+        }
+
+        let mut target_len = None;
+        let mut has_list_arg = false;
+
+        for arg in args {
+            let Some(items) = list_items(arg) else {
+                continue;
+            };
+
+            has_list_arg = true;
+
+            match target_len {
+                Some(expected_len) if expected_len != items.len() => return None,
+                Some(_) => {}
+                None => target_len = Some(items.len()),
+            }
+        }
+
+        let target_len = target_len?;
+
+        let threaded = (0..target_len)
+            .map(|index| {
+                Expr::call(
+                    head.clone(),
+                    args.iter()
+                        .map(|arg| match list_items(arg) {
+                            Some(items) => items[index].clone(),
+                            None => arg.clone(),
+                        })
+                        .collect(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        has_list_arg.then(|| Expr::call(system_expr("List"), threaded))
     }
 
     fn try_evaluate_special_form(
@@ -4930,6 +4989,7 @@ fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
         "HoldFirst" => AttributeSet::from_attribute(Attribute::HoldFirst),
         "HoldRest" => AttributeSet::from_attribute(Attribute::HoldRest),
         "Plus" | "Times" => AttributeSet::empty()
+            .with(Attribute::Listable)
             .with(Attribute::Orderless)
             .with(Attribute::Flat)
             .with(Attribute::OneIdentity),
@@ -5935,6 +5995,13 @@ fn sequence_items(expr: &Expr) -> Option<&[Expr]> {
     }
 }
 
+fn list_items(expr: &Expr) -> Option<&[Expr]> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "List") => Some(args),
+        _ => None,
+    }
+}
+
 fn flatten_flat_call_args(head: &Expr, args: Vec<Expr>) -> Vec<Expr> {
     let mut flattened = Vec::new();
 
@@ -6013,6 +6080,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "Infinity"
             | "Integer"
             | "List"
+            | "Listable"
             | "MatchQ"
             | "Message"
             | "MessageDefinitions"
@@ -6208,6 +6276,14 @@ mod tests {
                 .value
                 .to_string(),
             "List[]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Attributes[Plus]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[Listable, Orderless, Flat, OneIdentity]"
         );
 
         session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
@@ -9427,6 +9503,68 @@ mod tests {
                 .value
                 .to_string(),
             "True"
+        );
+    }
+
+    #[test]
+    fn listable_threads_user_defined_calls_and_broadcasts_scalars() {
+        let mut session = Session::new();
+
+        session.eval_text("SetAttributes[f, Listable]").unwrap();
+
+        assert_eq!(
+            session.eval_text("f[{a, b}, c]").unwrap().value.to_string(),
+            "List[f[a, c], f[b, c]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("f[{a, b}, {c, d}]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f[a, c], f[b, d]]"
+        );
+        assert_eq!(
+            session.eval_text("f[{}, x]").unwrap().value.to_string(),
+            "List[]"
+        );
+    }
+
+    #[test]
+    fn listable_leaves_mismatched_list_lengths_unevaluated() {
+        let mut session = Session::new();
+
+        session.eval_text("SetAttributes[f, Listable]").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("f[{a, b}, {c}]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[List[a, b], List[c]]"
+        );
+    }
+
+    #[test]
+    fn listable_interacts_with_builtin_and_function_attributes() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Plus[{b, a}, c]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[Plus[b, c], Plus[a, c]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Function[f[Slot[1]], Listable][{a, b}]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f[a], f[b]]"
         );
     }
 }
