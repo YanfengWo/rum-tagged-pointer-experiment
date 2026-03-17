@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use rum_core::{Atom, BigInt, Expr, Symbol};
 use rum_syntax::{
@@ -281,6 +281,7 @@ impl Session {
             "Identity" if args.len() == 1 => Ok(Some(args[0].clone())),
             "If" => self.eval_if(args).map(Some),
             "Which" => self.eval_which(args).map(Some),
+            "With" => self.eval_with(args).map(Some),
             "Hold" | "HoldFirst" | "HoldRest" | "HoldAll" => {
                 Ok(Some(Expr::call(head.clone(), args.to_vec())))
             }
@@ -333,6 +334,19 @@ impl Session {
         Ok(Expr::symbol("Null"))
     }
 
+    fn eval_with(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(Expr::call(Expr::symbol("With"), args.to_vec()));
+        }
+
+        let Some(bindings) = self.evaluate_with_bindings(&args[0])? else {
+            return Ok(Expr::call(Expr::symbol("With"), args.to_vec()));
+        };
+
+        let body = substitute_lexical_bindings(&args[1], &bindings, &BTreeSet::new());
+        self.evaluate(body)
+    }
+
     fn try_apply_function(
         &mut self,
         head: &Expr,
@@ -344,6 +358,33 @@ impl Session {
 
         let applied = substitute_slots(body, args);
         self.evaluate(applied).map(Some)
+    }
+
+    fn evaluate_with_bindings(
+        &mut self,
+        expr: &Expr,
+    ) -> Result<Option<BTreeMap<Symbol, Expr>>, EvalError> {
+        let Expr::Call { head, args } = expr else {
+            return Ok(None);
+        };
+
+        if !is_system_symbol_name(head, "List") {
+            return Ok(None);
+        }
+
+        let mut bindings = BTreeMap::new();
+
+        for item in args {
+            let Some((symbol, rhs)) = parse_with_binding_item(item) else {
+                return Ok(None);
+            };
+
+            let substituted_rhs = substitute_lexical_bindings(&rhs, &bindings, &BTreeSet::new());
+            let value = self.evaluate(substituted_rhs)?;
+            bindings.insert(symbol, value);
+        }
+
+        Ok(Some(bindings))
     }
 
     fn eval_set(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -960,6 +1001,7 @@ fn fallback_hold_attribute(name: &str) -> HoldAttribute {
         "Hold" | "HoldAll" | "Evaluate" => HoldAttribute::HoldAll,
         "Function" | "Which" => HoldAttribute::HoldAll,
         "If" => HoldAttribute::HoldRest,
+        "With" => HoldAttribute::HoldAll,
         "HoldFirst" => HoldAttribute::HoldFirst,
         "HoldRest" => HoldAttribute::HoldRest,
         _ => HoldAttribute::None,
@@ -989,6 +1031,34 @@ fn function_body(expr: &Expr) -> Option<&Expr> {
             Some(&args[0])
         }
         _ => None,
+    }
+}
+
+fn parse_with_binding_item(expr: &Expr) -> Option<(Symbol, Expr)> {
+    match expr {
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "Set") || is_system_symbol_name(head, "Rule"))
+                && args.len() == 2 =>
+        {
+            Some((expr_as_symbol(&args[0])?.clone(), args[1].clone()))
+        }
+        _ => None,
+    }
+}
+
+fn collect_with_binding_symbols(expr: &Expr, locals: &mut BTreeSet<Symbol>) {
+    let Expr::Call { head, args } = expr else {
+        return;
+    };
+
+    if !is_system_symbol_name(head, "List") {
+        return;
+    }
+
+    for item in args {
+        if let Some((symbol, _)) = parse_with_binding_item(item) {
+            locals.insert(symbol);
+        }
     }
 }
 
@@ -1215,6 +1285,169 @@ fn substitute_rule_bindings(expr: &Expr, bindings: &BTreeMap<Symbol, Expr>) -> E
 
             Expr::call(substituted_head, substituted_args)
         }
+    }
+}
+
+fn substitute_lexical_bindings(
+    expr: &Expr,
+    bindings: &BTreeMap<Symbol, Expr>,
+    shadowed: &BTreeSet<Symbol>,
+) -> Expr {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => {
+            if shadowed.contains(symbol) {
+                Expr::Atom(Atom::Symbol(symbol.clone()))
+            } else {
+                bindings
+                    .get(symbol)
+                    .cloned()
+                    .unwrap_or_else(|| Expr::Atom(Atom::Symbol(symbol.clone())))
+            }
+        }
+        Expr::Atom(atom) => Expr::Atom(atom.clone()),
+        Expr::Call { head, args } if is_system_symbol_name(head, "Pattern") && args.len() == 2 => {
+            Expr::call(
+                substitute_lexical_bindings(head, bindings, shadowed),
+                vec![
+                    args[0].clone(),
+                    substitute_lexical_bindings(&args[1], bindings, shadowed),
+                ],
+            )
+        }
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "Rule")
+                || is_system_symbol_name(head, "RuleDelayed")
+                || is_system_symbol_name(head, "SetDelayed"))
+                && args.len() == 2 =>
+        {
+            let substituted_head = substitute_lexical_bindings(head, bindings, shadowed);
+            let substituted_lhs = substitute_lexical_bindings(&args[0], bindings, shadowed);
+            let mut rhs_shadowed = shadowed.clone();
+            collect_pattern_locals(&substituted_lhs, &mut rhs_shadowed);
+
+            Expr::call(
+                substituted_head,
+                vec![
+                    substituted_lhs,
+                    substitute_lexical_bindings(&args[1], bindings, &rhs_shadowed),
+                ],
+            )
+        }
+        Expr::Call { head, args }
+            if is_system_symbol_name(head, "Condition") && args.len() == 2 =>
+        {
+            let substituted_head = substitute_lexical_bindings(head, bindings, shadowed);
+            let substituted_lhs = substitute_lexical_bindings(&args[0], bindings, shadowed);
+            let mut condition_shadowed = shadowed.clone();
+            collect_pattern_locals(&substituted_lhs, &mut condition_shadowed);
+
+            Expr::call(
+                substituted_head,
+                vec![
+                    substituted_lhs,
+                    substitute_lexical_bindings(&args[1], bindings, &condition_shadowed),
+                ],
+            )
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "With") && args.len() == 2 => {
+            let substituted_head = substitute_lexical_bindings(head, bindings, shadowed);
+            let substituted_bindings = substitute_with_binding_list(&args[0], bindings, shadowed);
+            let mut body_shadowed = shadowed.clone();
+            collect_with_binding_symbols(&args[0], &mut body_shadowed);
+
+            Expr::call(
+                substituted_head,
+                vec![
+                    substituted_bindings,
+                    substitute_lexical_bindings(&args[1], bindings, &body_shadowed),
+                ],
+            )
+        }
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "Module") || is_system_symbol_name(head, "Block"))
+                && !args.is_empty() =>
+        {
+            let substituted_head = substitute_lexical_bindings(head, bindings, shadowed);
+            let substituted_bindings = substitute_with_binding_list(&args[0], bindings, shadowed);
+            let mut body_shadowed = shadowed.clone();
+            collect_with_binding_symbols(&args[0], &mut body_shadowed);
+            let mut substituted_args = vec![substituted_bindings];
+
+            substituted_args.extend(
+                args[1..]
+                    .iter()
+                    .map(|arg| substitute_lexical_bindings(arg, bindings, &body_shadowed)),
+            );
+
+            Expr::call(substituted_head, substituted_args)
+        }
+        Expr::Call { head, args } => Expr::call(
+            substitute_lexical_bindings(head, bindings, shadowed),
+            args.iter()
+                .map(|arg| substitute_lexical_bindings(arg, bindings, shadowed))
+                .collect(),
+        ),
+    }
+}
+
+fn substitute_with_binding_list(
+    expr: &Expr,
+    bindings: &BTreeMap<Symbol, Expr>,
+    shadowed: &BTreeSet<Symbol>,
+) -> Expr {
+    let Expr::Call { head, args } = expr else {
+        return substitute_lexical_bindings(expr, bindings, shadowed);
+    };
+
+    if !is_system_symbol_name(head, "List") {
+        return substitute_lexical_bindings(expr, bindings, shadowed);
+    }
+
+    Expr::call(
+        substitute_lexical_bindings(head, bindings, shadowed),
+        args.iter()
+            .map(|item| substitute_with_binding_item(item, bindings, shadowed))
+            .collect(),
+    )
+}
+
+fn substitute_with_binding_item(
+    expr: &Expr,
+    bindings: &BTreeMap<Symbol, Expr>,
+    shadowed: &BTreeSet<Symbol>,
+) -> Expr {
+    match expr {
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "Set") || is_system_symbol_name(head, "Rule"))
+                && args.len() == 2
+                && expr_as_symbol(&args[0]).is_some() =>
+        {
+            Expr::call(
+                substitute_lexical_bindings(head, bindings, shadowed),
+                vec![
+                    args[0].clone(),
+                    substitute_lexical_bindings(&args[1], bindings, shadowed),
+                ],
+            )
+        }
+        _ => substitute_lexical_bindings(expr, bindings, shadowed),
+    }
+}
+
+fn collect_pattern_locals(expr: &Expr, locals: &mut BTreeSet<Symbol>) {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Pattern") && args.len() == 2 => {
+            if let Some(symbol) = expr_as_symbol(&args[0]) {
+                locals.insert(symbol.clone());
+            }
+            collect_pattern_locals(&args[1], locals);
+        }
+        Expr::Call { args, .. } => {
+            for arg in args {
+                collect_pattern_locals(arg, locals);
+            }
+        }
+        Expr::Atom(_) => {}
     }
 }
 
@@ -1512,6 +1745,72 @@ mod tests {
                 .value
                 .to_string(),
             "2"
+        );
+    }
+
+    #[test]
+    fn with_evaluates_bindings_and_substitutes_lexically() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("With[{x = Identity[1], y = x}, y]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(
+            session
+                .eval_text("With[{x = 1}, Hold[x]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[1]"
+        );
+    }
+
+    #[test]
+    fn with_supports_rule_style_bindings_and_nested_shadowing() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("With[{x -> 1}, x]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(
+            session
+                .eval_text("With[{x = 1}, With[{x = 2}, x]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "2"
+        );
+    }
+
+    #[test]
+    fn with_respects_pattern_local_names_but_substitutes_pattern_metadata() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("With[{x = 1}, 7 /. x_Integer :> x]")
+                .unwrap()
+                .value
+                .to_string(),
+            "7"
+        );
+        assert_eq!(
+            session
+                .eval_text("With[{t = Integer}, MatchQ[7, x_t]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "True"
         );
     }
 

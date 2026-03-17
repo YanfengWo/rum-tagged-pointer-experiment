@@ -30,9 +30,13 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Creates a pure function.",
         HoldAttribute::HoldAll,
     ),
+    BuiltinSpec::with_hold(
+        "With",
+        "Lexically substitutes local constants into a body.",
+        HoldAttribute::HoldAll,
+    ),
     BuiltinSpec::new("Module", "Creates lexical local symbols."),
     BuiltinSpec::new("Block", "Temporarily rebinds symbols dynamically."),
-    BuiltinSpec::new("With", "Substitutes local constants lexically."),
     BuiltinSpec::with_hold(
         "Hold",
         "Prevents evaluation of its arguments.",

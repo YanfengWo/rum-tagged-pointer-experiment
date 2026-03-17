@@ -120,7 +120,7 @@ off as work lands.
 
 - [x] Add `If`, `Which`, and `Function` control-evaluation basics
 - [ ] Implement `Module`
-- [ ] Implement `With`
+- [x] Implement `With`
 - [ ] Implement `Block`
 - [x] Add `Evaluate` and `Sequence`
 - [ ] Add execution tracing hooks and resource limits
@@ -130,6 +130,7 @@ off as work lands.
 - [x] Implement `If` with held branches and selected-branch evaluation
 - [x] Implement `Which` with sequential condition evaluation
 - [x] Implement `Function` application for `Slot`-based pure functions
+- [x] Implement `With` with lexical substitution over simple binding lists
 - [ ] Support explicit parameter lists, named slots, and `##`
 
 ## Phase 6: REPL and Developer Tooling
