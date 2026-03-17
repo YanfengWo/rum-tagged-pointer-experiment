@@ -56,6 +56,7 @@ impl BuiltinSpec {
 pub struct Session {
     builtins: BTreeMap<String, BuiltinSpec>,
     definitions: BTreeMap<Symbol, SymbolDefinition>,
+    next_generated_symbol_id: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -262,6 +263,7 @@ impl Session {
             "RuleDelayed" => self.eval_rule_delayed(args).map(Some),
             "MatchQ" => self.eval_match_q(args).map(Some),
             "Cases" => self.eval_cases(args).map(Some),
+            "Module" => self.eval_module(args).map(Some),
             "ReplaceAll" => self.eval_replace_all(args).map(Some),
             "ReplaceRepeated" => self.eval_replace_repeated(args).map(Some),
             _ => Ok(None),
@@ -347,6 +349,49 @@ impl Session {
         self.evaluate(body)
     }
 
+    fn eval_module(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(Expr::call(Expr::symbol("Module"), args.to_vec()));
+        }
+
+        let Some(items) = parse_module_binding_list(&args[0]) else {
+            return Ok(Expr::call(Expr::symbol("Module"), args.to_vec()));
+        };
+
+        let mut renames = BTreeMap::new();
+
+        for (symbol, _) in &items {
+            renames.insert(
+                symbol.clone(),
+                Expr::Atom(Atom::Symbol(self.allocate_fresh_symbol(symbol))),
+            );
+        }
+
+        for (symbol, init) in items {
+            let Some(fresh_expr) = renames.get(&symbol) else {
+                continue;
+            };
+            let Some(fresh_symbol) = expr_as_symbol(fresh_expr).cloned() else {
+                continue;
+            };
+
+            let definition = self.definitions.entry(fresh_symbol.clone()).or_default();
+            definition.own_value = None;
+            definition.delayed_own_value = None;
+
+            if let Some(init) = init {
+                let renamed_init = substitute_lexical_bindings(&init, &renames, &BTreeSet::new());
+                let value = self.evaluate(renamed_init)?;
+                let definition = self.definitions.entry(fresh_symbol).or_default();
+                definition.own_value = Some(value);
+                definition.delayed_own_value = None;
+            }
+        }
+
+        let body = substitute_lexical_bindings(&args[1], &renames, &BTreeSet::new());
+        self.evaluate(body)
+    }
+
     fn try_apply_function(
         &mut self,
         head: &Expr,
@@ -385,6 +430,14 @@ impl Session {
         }
 
         Ok(Some(bindings))
+    }
+
+    fn allocate_fresh_symbol(&mut self, symbol: &Symbol) -> Symbol {
+        self.next_generated_symbol_id += 1;
+        Symbol::new(
+            symbol.context().to_string(),
+            format!("{}${}", symbol.name(), self.next_generated_symbol_id),
+        )
     }
 
     fn eval_set(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -999,7 +1052,7 @@ fn truthiness_symbol(expr: &Expr) -> Option<bool> {
 fn fallback_hold_attribute(name: &str) -> HoldAttribute {
     match name {
         "Hold" | "HoldAll" | "Evaluate" => HoldAttribute::HoldAll,
-        "Function" | "Which" => HoldAttribute::HoldAll,
+        "Function" | "Which" | "Module" => HoldAttribute::HoldAll,
         "If" => HoldAttribute::HoldRest,
         "With" => HoldAttribute::HoldAll,
         "HoldFirst" => HoldAttribute::HoldFirst,
@@ -1046,6 +1099,34 @@ fn parse_with_binding_item(expr: &Expr) -> Option<(Symbol, Expr)> {
     }
 }
 
+fn parse_module_binding_list(expr: &Expr) -> Option<Vec<(Symbol, Option<Expr>)>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "List") {
+        return None;
+    }
+
+    args.iter().map(parse_module_binding_item).collect()
+}
+
+fn parse_module_binding_item(expr: &Expr) -> Option<(Symbol, Option<Expr>)> {
+    if let Some(symbol) = expr_as_symbol(expr) {
+        return Some((symbol.clone(), None));
+    }
+
+    match expr {
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "Set") || is_system_symbol_name(head, "Rule"))
+                && args.len() == 2 =>
+        {
+            Some((expr_as_symbol(&args[0])?.clone(), Some(args[1].clone())))
+        }
+        _ => None,
+    }
+}
+
 fn collect_with_binding_symbols(expr: &Expr, locals: &mut BTreeSet<Symbol>) {
     let Expr::Call { head, args } = expr else {
         return;
@@ -1056,7 +1137,7 @@ fn collect_with_binding_symbols(expr: &Expr, locals: &mut BTreeSet<Symbol>) {
     }
 
     for item in args {
-        if let Some((symbol, _)) = parse_with_binding_item(item) {
+        if let Some((symbol, _)) = parse_module_binding_item(item) {
             locals.insert(symbol);
         }
     }
@@ -1417,6 +1498,7 @@ fn substitute_with_binding_item(
     shadowed: &BTreeSet<Symbol>,
 ) -> Expr {
     match expr {
+        Expr::Atom(Atom::Symbol(_)) => expr.clone(),
         Expr::Call { head, args }
             if (is_system_symbol_name(head, "Set") || is_system_symbol_name(head, "Rule"))
                 && args.len() == 2
@@ -1811,6 +1893,60 @@ mod tests {
                 .value
                 .to_string(),
             "True"
+        );
+    }
+
+    #[test]
+    fn module_generates_fresh_lexical_symbols_and_initializes_sequentially() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Module[{x = 1, y = x}, y]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+
+        let first = session.eval_text("Module[{x}, Hold[x]]").unwrap().value;
+        let second = session.eval_text("Module[{x}, Hold[x]]").unwrap().value;
+
+        let first_text = first.to_string();
+        let second_text = second.to_string();
+
+        assert!(first_text.starts_with("Hold[x$"));
+        assert!(second_text.starts_with("Hold[x$"));
+        assert_ne!(first_text, second_text);
+    }
+
+    #[test]
+    fn module_respects_nested_shadowing_and_pattern_locals() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Module[{x = 1}, Module[{x = 2}, x]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "2"
+        );
+        let nested = session
+            .eval_text("Module[{x = 1}, Module[{x}, Hold[x]]]")
+            .unwrap()
+            .value
+            .to_string();
+        assert!(nested.starts_with("Hold[x$"));
+        assert_ne!(nested, "Hold[x]");
+        assert_ne!(nested, "Hold[1]");
+        assert_eq!(
+            session
+                .eval_text("Module[{x = 1}, 7 /. x_Integer :> x]")
+                .unwrap()
+                .value
+                .to_string(),
+            "7"
         );
     }
 

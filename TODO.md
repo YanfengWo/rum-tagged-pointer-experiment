@@ -119,7 +119,7 @@ off as work lands.
 ## Phase 5: Scoping and Runtime Control
 
 - [x] Add `If`, `Which`, and `Function` control-evaluation basics
-- [ ] Implement `Module`
+- [x] Implement `Module`
 - [x] Implement `With`
 - [ ] Implement `Block`
 - [x] Add `Evaluate` and `Sequence`
@@ -131,6 +131,7 @@ off as work lands.
 - [x] Implement `Which` with sequential condition evaluation
 - [x] Implement `Function` application for `Slot`-based pure functions
 - [x] Implement `With` with lexical substitution over simple binding lists
+- [x] Implement `Module` with fresh lexical symbols and sequential initializers
 - [ ] Support explicit parameter lists, named slots, and `##`
 
 ## Phase 6: REPL and Developer Tooling

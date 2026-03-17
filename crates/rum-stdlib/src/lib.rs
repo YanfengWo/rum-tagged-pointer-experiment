@@ -35,7 +35,11 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Lexically substitutes local constants into a body.",
         HoldAttribute::HoldAll,
     ),
-    BuiltinSpec::new("Module", "Creates lexical local symbols."),
+    BuiltinSpec::with_hold(
+        "Module",
+        "Creates lexical local symbols.",
+        HoldAttribute::HoldAll,
+    ),
     BuiltinSpec::new("Block", "Temporarily rebinds symbols dynamically."),
     BuiltinSpec::with_hold(
         "Hold",
