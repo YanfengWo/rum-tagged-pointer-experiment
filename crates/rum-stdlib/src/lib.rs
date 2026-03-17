@@ -112,6 +112,21 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldFirst,
     ),
     BuiltinSpec::with_hold(
+        "Attributes",
+        "Lists the currently active attributes for a symbol.",
+        HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::with_hold(
+        "SetAttributes",
+        "Adds attributes to one or more symbols.",
+        HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::with_hold(
+        "ClearAttributes",
+        "Removes attributes from one or more symbols.",
+        HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::with_hold(
         "Check",
         "Evaluates an expression and substitutes a fallback if matching messages are emitted.",
         HoldAttribute::HoldAll,

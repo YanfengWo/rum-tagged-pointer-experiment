@@ -94,6 +94,10 @@ where
                         flags.push("builtin");
                     }
 
+                    if info.attribute_count > 0 {
+                        flags.push("attr");
+                    }
+
                     if info.has_own_value {
                         flags.push("own");
                     }
@@ -262,6 +266,20 @@ mod tests {
 
         let rendered = String::from_utf8(output).unwrap();
         assert!(rendered.contains("[msg]"));
+    }
+
+    #[test]
+    fn repl_inspect_surfaces_attribute_flags() {
+        let input = Cursor::new(":inspect f\n:quit\n");
+        let mut output = Vec::new();
+        let mut repl = Repl::new(input, &mut output);
+        let mut session = Session::new();
+        session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
+
+        repl.run(&mut session).unwrap();
+
+        let rendered = String::from_utf8(output).unwrap();
+        assert!(rendered.contains("[attr]"));
     }
 
     #[test]

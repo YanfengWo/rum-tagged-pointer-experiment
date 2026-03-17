@@ -114,9 +114,9 @@ This roadmap now uses two levels of detail:
 
 ### `rum-runtime`: Attribute and Definition Semantics
 
-- [ ] Add a first-class runtime attribute table instead of relying only on builtin hold metadata and fallback rules
-- [ ] Implement `Attributes`, `SetAttributes`, and `ClearAttributes`
-- [ ] Add `SequenceHold` and route argument preprocessing through attribute-aware sequence handling
+- [x] Add a first-class runtime attribute table instead of relying only on builtin hold metadata and fallback rules
+- [x] Implement `Attributes`, `SetAttributes`, and `ClearAttributes`
+- [x] Add `SequenceHold` and route argument preprocessing through attribute-aware sequence handling
 - [ ] Add `HoldAllComplete` and make held-argument evaluation honor it
 - [ ] Decide and document precedence among user definitions, builtin dispatch, and future attribute-driven evaluation
 - [ ] Add `UpValues` and the supporting lookup path needed for argument-owned behavior

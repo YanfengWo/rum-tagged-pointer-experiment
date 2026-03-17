@@ -33,10 +33,158 @@ impl HoldAttribute {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Attribute {
+    HoldAll,
+    HoldFirst,
+    HoldRest,
+    SequenceHold,
+}
+
+impl Attribute {
+    const fn bit(self) -> u8 {
+        match self {
+            Self::HoldAll => 1 << 0,
+            Self::HoldFirst => 1 << 1,
+            Self::HoldRest => 1 << 2,
+            Self::SequenceHold => 1 << 3,
+        }
+    }
+
+    fn symbol_name(self) -> &'static str {
+        match self {
+            Self::HoldAll => "HoldAll",
+            Self::HoldFirst => "HoldFirst",
+            Self::HoldRest => "HoldRest",
+            Self::SequenceHold => "SequenceHold",
+        }
+    }
+
+    fn from_expr(expr: &Expr) -> Option<Self> {
+        match expr {
+            Expr::Atom(Atom::Symbol(symbol)) if symbol.context() == SYSTEM_CONTEXT => {
+                Self::from_name(symbol.name())
+            }
+            Expr::Atom(Atom::String(name)) => Self::from_name(name),
+            _ => None,
+        }
+    }
+
+    fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "HoldAll" => Some(Self::HoldAll),
+            "HoldFirst" => Some(Self::HoldFirst),
+            "HoldRest" => Some(Self::HoldRest),
+            "SequenceHold" => Some(Self::SequenceHold),
+            _ => None,
+        }
+    }
+
+    fn expr(self) -> Expr {
+        system_expr(self.symbol_name())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct AttributeSet {
+    bits: u8,
+}
+
+impl AttributeSet {
+    pub const fn empty() -> Self {
+        Self { bits: 0 }
+    }
+
+    pub const fn from_attribute(attribute: Attribute) -> Self {
+        Self {
+            bits: attribute.bit(),
+        }
+    }
+
+    pub const fn from_hold(hold: HoldAttribute) -> Self {
+        match hold {
+            HoldAttribute::None => Self::empty(),
+            HoldAttribute::HoldFirst => Self::from_attribute(Attribute::HoldFirst),
+            HoldAttribute::HoldRest => Self::from_attribute(Attribute::HoldRest),
+            HoldAttribute::HoldAll => Self::from_attribute(Attribute::HoldAll),
+        }
+    }
+
+    pub const fn with(self, attribute: Attribute) -> Self {
+        Self {
+            bits: self.bits | attribute.bit(),
+        }
+    }
+
+    fn contains(self, attribute: Attribute) -> bool {
+        self.bits & attribute.bit() != 0
+    }
+
+    fn insert(&mut self, attribute: Attribute) {
+        self.bits |= attribute.bit();
+    }
+
+    fn remove(&mut self, attribute: Attribute) {
+        self.bits &= !attribute.bit();
+    }
+
+    fn is_empty(self) -> bool {
+        self.bits == 0
+    }
+
+    fn len(self) -> usize {
+        self.attributes().len()
+    }
+
+    fn attributes(self) -> Vec<Attribute> {
+        ALL_ATTRIBUTES
+            .iter()
+            .copied()
+            .filter(|attribute| self.contains(*attribute))
+            .collect()
+    }
+
+    fn hold_attribute(self) -> HoldAttribute {
+        let holds_first = self.contains(Attribute::HoldFirst);
+        let holds_rest = self.contains(Attribute::HoldRest);
+
+        if self.contains(Attribute::HoldAll) || (holds_first && holds_rest) {
+            HoldAttribute::HoldAll
+        } else if holds_first {
+            HoldAttribute::HoldFirst
+        } else if holds_rest {
+            HoldAttribute::HoldRest
+        } else {
+            HoldAttribute::None
+        }
+    }
+
+    fn sequence_hold(self) -> bool {
+        self.contains(Attribute::SequenceHold)
+    }
+
+    fn expr(self) -> Expr {
+        Expr::call(
+            system_expr("List"),
+            self.attributes()
+                .into_iter()
+                .map(Attribute::expr)
+                .collect::<Vec<_>>(),
+        )
+    }
+}
+
+const ALL_ATTRIBUTES: [Attribute; 4] = [
+    Attribute::HoldAll,
+    Attribute::HoldFirst,
+    Attribute::HoldRest,
+    Attribute::SequenceHold,
+];
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BuiltinSpec {
     pub name: &'static str,
     pub summary: &'static str,
-    pub hold: HoldAttribute,
+    pub attributes: AttributeSet,
 }
 
 impl BuiltinSpec {
@@ -44,7 +192,7 @@ impl BuiltinSpec {
         Self {
             name,
             summary,
-            hold: HoldAttribute::None,
+            attributes: AttributeSet::empty(),
         }
     }
 
@@ -52,7 +200,19 @@ impl BuiltinSpec {
         Self {
             name,
             summary,
-            hold,
+            attributes: AttributeSet::from_hold(hold),
+        }
+    }
+
+    pub const fn with_attributes(
+        name: &'static str,
+        summary: &'static str,
+        attributes: AttributeSet,
+    ) -> Self {
+        Self {
+            name,
+            summary,
+            attributes,
         }
     }
 }
@@ -151,6 +311,7 @@ impl MessageSelector {
 #[derive(Clone, Debug)]
 pub struct Session {
     builtins: BTreeMap<String, BuiltinSpec>,
+    attributes: BTreeMap<Symbol, AttributeSet>,
     current_context: String,
     context_path: Vec<String>,
     context_stack: Vec<ContextFrame>,
@@ -181,6 +342,7 @@ pub struct SymbolInfo {
     pub qualified_name: String,
     pub summary: Option<String>,
     pub is_builtin: bool,
+    pub attribute_count: usize,
     pub has_own_value: bool,
     pub has_delayed_value: bool,
     pub has_down_values: bool,
@@ -288,6 +450,7 @@ struct ContextFrame {
 
 #[derive(Clone, Debug)]
 struct LoaderSnapshot {
+    attributes: BTreeMap<Symbol, AttributeSet>,
     current_context: String,
     context_path: Vec<String>,
     context_stack: Vec<ContextFrame>,
@@ -341,6 +504,12 @@ enum MessageCatalogQuery {
     Key(MessageNameKey),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum AttributeUpdate {
+    Insert,
+    Remove,
+}
+
 #[derive(Clone, Copy, Debug)]
 struct SequencePatternSpec<'a> {
     min_len: usize,
@@ -380,6 +549,7 @@ impl Default for Session {
     fn default() -> Self {
         Self {
             builtins: BTreeMap::new(),
+            attributes: BTreeMap::new(),
             current_context: GLOBAL_CONTEXT.to_string(),
             context_path: vec![SYSTEM_CONTEXT.to_string(), GLOBAL_CONTEXT.to_string()],
             context_stack: Vec::new(),
@@ -448,6 +618,11 @@ impl Session {
 
     pub fn register_builtin(&mut self, spec: BuiltinSpec) {
         self.builtins.insert(spec.name.to_string(), spec);
+
+        if !spec.attributes.is_empty() {
+            self.attributes
+                .insert(Symbol::new(SYSTEM_CONTEXT, spec.name), spec.attributes);
+        }
     }
 
     pub fn current_context(&self) -> &str {
@@ -563,6 +738,7 @@ impl Session {
             .or_else(|| self.resolve_symbol_name(name, true))?;
         let builtin = self.builtin_spec_for_symbol(&symbol);
         let definition = self.definitions.get(&symbol);
+        let attributes = self.attribute_set_for_symbol(&symbol);
         let message_count = self
             .message_definitions
             .keys()
@@ -571,6 +747,7 @@ impl Session {
 
         if builtin.is_none()
             && definition.is_none()
+            && attributes.is_empty()
             && message_count == 0
             && !is_known_system_symbol(&symbol)
         {
@@ -581,6 +758,7 @@ impl Session {
             qualified_name: symbol.fully_qualified_name(),
             summary: builtin.map(|builtin| builtin.summary.to_string()),
             is_builtin: builtin.is_some() || is_known_system_symbol(&symbol),
+            attribute_count: attributes.len(),
             has_own_value: definition.and_then(|def| def.own_value.as_ref()).is_some(),
             has_delayed_value: definition
                 .and_then(|def| def.delayed_own_value.as_ref())
@@ -722,6 +900,7 @@ impl Session {
 
     fn capture_loader_snapshot(&self) -> LoaderSnapshot {
         LoaderSnapshot {
+            attributes: self.attributes.clone(),
             current_context: self.current_context.clone(),
             context_path: self.context_path.clone(),
             context_stack: self.context_stack.clone(),
@@ -736,6 +915,7 @@ impl Session {
     }
 
     fn restore_loader_snapshot(&mut self, snapshot: LoaderSnapshot) {
+        self.attributes = snapshot.attributes;
         self.current_context = snapshot.current_context;
         self.context_path = snapshot.context_path;
         self.context_stack = snapshot.context_stack;
@@ -972,6 +1152,28 @@ impl Session {
             Expr::Atom(Atom::Symbol(symbol)) => Some(symbol.clone()),
             Expr::Atom(Atom::String(raw)) => self.resolve_symbol_name(raw, true),
             _ => None,
+        }
+    }
+
+    fn lookup_attribute_target(&self, expr: &Expr, create_if_missing: bool) -> Option<Symbol> {
+        match expr {
+            Expr::Atom(Atom::Symbol(symbol)) => Some(symbol.clone()),
+            Expr::Atom(Atom::String(raw)) => self.resolve_symbol_name(raw, create_if_missing),
+            _ => None,
+        }
+    }
+
+    fn lookup_attribute_targets(
+        &self,
+        expr: &Expr,
+        create_if_missing: bool,
+    ) -> Option<Vec<Symbol>> {
+        match expr {
+            Expr::Call { head, args } if is_system_symbol_name(head, "List") => args
+                .iter()
+                .map(|item| self.lookup_attribute_target(item, create_if_missing))
+                .collect(),
+            _ => Some(vec![self.lookup_attribute_target(expr, create_if_missing)?]),
         }
     }
 
@@ -1255,8 +1457,30 @@ impl Session {
 
     fn symbol_exists(&self, symbol: &Symbol) -> bool {
         self.definitions.contains_key(symbol)
+            || self
+                .attributes
+                .get(symbol)
+                .copied()
+                .is_some_and(|attributes| !attributes.is_empty())
             || self.builtin_spec_for_symbol(symbol).is_some()
             || is_known_system_symbol(symbol)
+    }
+
+    fn attribute_set_for_symbol(&self, symbol: &Symbol) -> AttributeSet {
+        self.attributes
+            .get(symbol)
+            .copied()
+            .unwrap_or_else(|| default_system_attribute_set(symbol))
+    }
+
+    fn set_attribute_set_for_symbol(&mut self, symbol: Symbol, attributes: AttributeSet) {
+        let default = default_system_attribute_set(&symbol);
+
+        if attributes == default {
+            self.attributes.remove(&symbol);
+        } else {
+            self.attributes.insert(symbol, attributes);
+        }
     }
 
     fn resolve_load_target(&self, spec: &str) -> Result<PathBuf, EvalError> {
@@ -1474,7 +1698,9 @@ impl Session {
     }
 
     fn evaluate_call_args(&mut self, head: &Expr, args: Vec<Expr>) -> Result<Vec<Expr>, EvalError> {
-        let hold = self.hold_attribute_for_head(head);
+        let attributes = self.attribute_set_for_head(head);
+        let hold = attributes.hold_attribute();
+        let sequence_hold = attributes.sequence_hold();
         let mut evaluated_args = Vec::new();
 
         for (index, arg) in args.into_iter().enumerate() {
@@ -1484,7 +1710,7 @@ impl Session {
                 (self.evaluate(arg)?, true)
             };
 
-            if allow_sequence_splice {
+            if allow_sequence_splice && !sequence_hold {
                 splice_sequence_argument(&mut evaluated_args, evaluated_arg);
             } else {
                 evaluated_args.push(evaluated_arg);
@@ -1502,18 +1728,12 @@ impl Session {
         Ok((arg, false))
     }
 
-    fn hold_attribute_for_head(&self, head: &Expr) -> HoldAttribute {
+    fn attribute_set_for_head(&self, head: &Expr) -> AttributeSet {
         let Some(symbol) = expr_as_symbol(head) else {
-            return HoldAttribute::None;
+            return AttributeSet::empty();
         };
 
-        if symbol.context() != SYSTEM_CONTEXT {
-            return HoldAttribute::None;
-        }
-
-        self.builtin_spec_for_symbol(symbol)
-            .map(|spec| spec.hold)
-            .unwrap_or_else(|| fallback_hold_attribute(symbol.name()))
+        self.attribute_set_for_symbol(symbol)
     }
 
     fn try_evaluate_special_form(
@@ -1574,6 +1794,9 @@ impl Session {
             "MessageTags" => self.eval_message_tags(args).map(Some),
             "OwnValues" => self.eval_own_values(args).map(Some),
             "DownValues" => self.eval_down_values(args).map(Some),
+            "Attributes" => self.eval_attributes(args).map(Some),
+            "SetAttributes" => self.eval_set_attributes(args).map(Some),
+            "ClearAttributes" => self.eval_clear_attributes(args).map(Some),
             "NormalizeRules" => self.eval_normalize_rules(args).map(Some),
             "Check" => self.eval_check(args).map(Some),
             "Quiet" => self.eval_quiet(args).map(Some),
@@ -1968,6 +2191,74 @@ impl Session {
             }
             _ => Ok(self.invalid_call_with_exact_arg_count("DownValues", args, 1)),
         }
+    }
+
+    fn eval_attributes(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [expr] => {
+                if let Some(symbol) = self.lookup_attribute_target(expr, false) {
+                    Ok(self.attribute_set_for_symbol(&symbol).expr())
+                } else {
+                    Ok(self.invalid_call_with_arg_form(
+                        "Attributes",
+                        args,
+                        "expected a symbol or symbol-name string argument",
+                    ))
+                }
+            }
+            _ => Ok(self.invalid_call_with_exact_arg_count("Attributes", args, 1)),
+        }
+    }
+
+    fn eval_set_attributes(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        self.eval_update_attributes("SetAttributes", args, AttributeUpdate::Insert)
+    }
+
+    fn eval_clear_attributes(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        self.eval_update_attributes("ClearAttributes", args, AttributeUpdate::Remove)
+    }
+
+    fn eval_update_attributes(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        update: AttributeUpdate,
+    ) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(self.invalid_call_with_exact_arg_count(symbol, args, 2));
+        }
+
+        let Some(targets) = self.lookup_attribute_targets(&args[0], true) else {
+            return Ok(self.invalid_call_with_arg_form(
+                symbol,
+                args,
+                "expected a symbol, symbol-name string, or list of those as the first argument",
+            ));
+        };
+
+        let resolved_attributes = self.evaluate(args[1].clone())?;
+        let Some(attributes) = parse_attribute_set_expr(&resolved_attributes) else {
+            return Ok(self.invalid_call_with_arg_form(
+                symbol,
+                args,
+                "expected an attribute symbol or list of attribute symbols as the second argument",
+            ));
+        };
+
+        for target in targets {
+            let mut current = self.attribute_set_for_symbol(&target);
+
+            for attribute in attributes.attributes() {
+                match update {
+                    AttributeUpdate::Insert => current.insert(attribute),
+                    AttributeUpdate::Remove => current.remove(attribute),
+                }
+            }
+
+            self.set_attribute_set_for_symbol(target, current);
+        }
+
+        Ok(system_expr("Null"))
     }
 
     fn eval_normalize_rules(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -3747,19 +4038,36 @@ fn truthiness_symbol(expr: &Expr) -> Option<bool> {
     }
 }
 
-fn fallback_hold_attribute(name: &str) -> HoldAttribute {
-    match name {
-        "Hold" | "HoldAll" | "Evaluate" => HoldAttribute::HoldAll,
-        "Function" | "Which" | "Module" | "Block" | "Check" | "Quiet" | "MessageName"
-        | "Messages" | "MessageDefinitions" | "MessageTags" | "NormalizeRules" => {
-            HoldAttribute::HoldAll
+fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
+    if symbol.context() != SYSTEM_CONTEXT {
+        return AttributeSet::empty();
+    }
+
+    match symbol.name() {
+        "Attributes" | "Context" | "Message" | "OwnValues" | "DownValues" | "SetAttributes"
+        | "ClearAttributes" => AttributeSet::from_attribute(Attribute::HoldFirst),
+        "Hold" | "HoldAll" | "Evaluate" | "Function" | "Which" | "Module" | "Block" | "Check"
+        | "Quiet" | "MessageName" | "Messages" | "MessageDefinitions" | "MessageTags"
+        | "NormalizeRules" | "With" => AttributeSet::from_attribute(Attribute::HoldAll),
+        "If" => AttributeSet::from_attribute(Attribute::HoldRest),
+        "HoldFirst" => AttributeSet::from_attribute(Attribute::HoldFirst),
+        "HoldRest" => AttributeSet::from_attribute(Attribute::HoldRest),
+        _ => AttributeSet::empty(),
+    }
+}
+
+fn parse_attribute_set_expr(expr: &Expr) -> Option<AttributeSet> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
+            let mut attributes = AttributeSet::empty();
+
+            for item in args {
+                attributes.insert(Attribute::from_expr(item)?);
+            }
+
+            Some(attributes)
         }
-        "Message" | "Context" | "OwnValues" | "DownValues" => HoldAttribute::HoldFirst,
-        "If" => HoldAttribute::HoldRest,
-        "With" => HoldAttribute::HoldAll,
-        "HoldFirst" => HoldAttribute::HoldFirst,
-        "HoldRest" => HoldAttribute::HoldRest,
-        _ => HoldAttribute::None,
+        _ => Some(AttributeSet::from_attribute(Attribute::from_expr(expr)?)),
     }
 }
 
@@ -4481,6 +4789,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "$MessageList"
             | "$Packages"
             | "$Path"
+            | "Attributes"
             | "Begin"
             | "BeginPackage"
             | "Blank"
@@ -4489,6 +4798,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "Block"
             | "Cases"
             | "Check"
+            | "ClearAttributes"
             | "Condition"
             | "Context"
             | "End"
@@ -4530,7 +4840,9 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "RuleDelayed"
             | "Quiet"
             | "Sequence"
+            | "SequenceHold"
             | "Set"
+            | "SetAttributes"
             | "SetDelayed"
             | "Slot"
             | "SlotSequence"
@@ -4645,6 +4957,42 @@ mod tests {
         let info = session.inspect("Identity").unwrap();
         assert_eq!(info.qualified_name, "System`Identity");
         assert!(info.is_builtin);
+    }
+
+    #[test]
+    fn attributes_reports_builtin_and_user_defined_attribute_sets() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Attributes[If]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[HoldRest]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Attributes[Identity]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[]"
+        );
+
+        session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("Attributes[f]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[HoldFirst]"
+        );
+
+        let info = session.inspect("f").unwrap();
+        assert_eq!(info.attribute_count, 1);
     }
 
     #[test]
@@ -4844,7 +5192,7 @@ mod tests {
         let dir = TempDirGuard::new("get-rollback");
         let file = dir.write(
             "broken.rum",
-            "BeginPackage[\"Broken`\"]\nFindFile[\"Missing`\"]\nflag = 1\nself := self\nself",
+            "BeginPackage[\"Broken`\"]\nFindFile[\"Missing`\"]\nflag = 1\nSetAttributes[f, HoldFirst]\nself := self\nself",
         );
         let mut session = Session::new();
 
@@ -4876,6 +5224,14 @@ mod tests {
         assert_eq!(
             session.eval_text("Broken`flag").unwrap().value.to_string(),
             "Broken`flag"
+        );
+        assert_eq!(
+            session
+                .eval_text("Attributes[Broken`f]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[]"
         );
     }
 
@@ -5799,6 +6155,95 @@ mod tests {
                 .value
                 .to_string(),
             "Hold[1, 2, 3]"
+        );
+    }
+
+    #[test]
+    fn setattributes_and_clearattributes_control_argument_evaluation() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("SetAttributes[f, HoldFirst]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Null"
+        );
+        assert_eq!(
+            session
+                .eval_text("f[Identity[1], Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[Identity[1], 2]"
+        );
+
+        assert_eq!(
+            session
+                .eval_text("ClearAttributes[f, HoldFirst]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Null"
+        );
+        assert_eq!(
+            session
+                .eval_text("f[Identity[1], Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[1, 2]"
+        );
+    }
+
+    #[test]
+    fn setattributes_accepts_symbol_lists_and_combined_hold_attributes() {
+        let mut session = Session::new();
+
+        session
+            .eval_text("SetAttributes[{f, g}, {HoldFirst, HoldRest}]")
+            .unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("Attributes[f]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[HoldFirst, HoldRest]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Attributes[g]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[HoldFirst, HoldRest]"
+        );
+        assert_eq!(
+            session
+                .eval_text("g[Identity[1], Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "g[Identity[1], Identity[2]]"
+        );
+    }
+
+    #[test]
+    fn sequencehold_prevents_sequence_splicing() {
+        let mut session = Session::new();
+
+        session.eval_text("SetAttributes[f, SequenceHold]").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("f[Sequence[1, 2], 3]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[Sequence[1, 2], 3]"
         );
     }
 

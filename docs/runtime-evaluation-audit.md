@@ -72,12 +72,14 @@ subset:
 
 ### Currently Implemented Hold Behavior
 
-The runtime currently supports a hold model based on builtin metadata plus a
-small fallback table:
+The runtime now has a first-class session-level attribute table for the current
+early subset:
 
+- `Attributes`, `SetAttributes`, and `ClearAttributes`
 - `Hold`, `HoldFirst`, `HoldRest`, `HoldAll`
+- `SequenceHold`
 - `Evaluate` in held positions
-- `Sequence` splicing in non-held positions
+- `Sequence` splicing in non-held positions unless `SequenceHold` is active
 - held control constructs such as `If`, `Which`, `With`, `Module`, `Block`,
   `Check`, and `Quiet`
 
@@ -121,21 +123,16 @@ usable and internally consistent core for rule-driven DSL work.
 
 The remaining gaps fall into a few clear buckets.
 
-### 1. Attribute Model Is Still Hold-Only
-
-The current evaluator only understands hold behavior. It does not yet have a
-first-class runtime attribute table.
+### 1. Attribute Model Is Still an Early Subset
 
 Missing or incomplete areas:
 
-- user-visible `Attributes`, `SetAttributes`, and `ClearAttributes`
-- `SequenceHold`
 - `HoldAllComplete`
 - `Orderless`
 - `Flat`
 - `OneIdentity`
 - `Listable`
-- builtin-independent attribute lookup
+- richer inspection and lifecycle coverage around user-defined attribute state
 
 Practical impact:
 
@@ -248,13 +245,12 @@ Practical impact:
 
 The cleanest next steps for `rum-runtime` are:
 
-1. introduce a real attribute table and implement `Attributes` /
-   `SetAttributes` / `ClearAttributes`
-2. add `SequenceHold`, `HoldAllComplete`, `Unevaluated`, `HoldPattern`, and
-   `ReleaseHold`
-3. add definition lifecycle tools and then expand toward `UpValues`
-4. make builtin dispatch order more declarative so new semantics do not depend
+1. add `HoldAllComplete`, `Unevaluated`, `HoldPattern`, and `ReleaseHold`
+2. add definition lifecycle tools and then expand toward `UpValues`
+3. make builtin dispatch order more declarative so new semantics do not depend
    on ad hoc handler placement
+4. extend the attribute table beyond hold-oriented behavior into `Orderless`,
+   `Flat`, `OneIdentity`, and later `Listable`
 5. extend regression tests around head evaluation, held arguments, scoping, and
    delayed definitions before widening the pattern language further
 
