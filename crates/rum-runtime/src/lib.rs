@@ -914,6 +914,8 @@ impl Session {
             "End" => self.eval_end(args).map(Some),
             "BeginPackage" => self.eval_begin_package(args).map(Some),
             "EndPackage" => self.eval_end_package(args).map(Some),
+            "Check" => self.eval_check(args).map(Some),
+            "Quiet" => self.eval_quiet(args).map(Some),
             "If" => self.eval_if(args).map(Some),
             "Which" => self.eval_which(args).map(Some),
             "With" => self.eval_with(args).map(Some),
@@ -1152,6 +1154,32 @@ impl Session {
                 "no matching BeginPackage[] frame is active",
             )
         }))
+    }
+
+    fn eval_check(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(self.invalid_call_with_exact_arg_count("Check", args, 2));
+        }
+
+        let message_checkpoint = self.messages.len();
+        let value = self.evaluate(args[0].clone())?;
+
+        if self.messages.len() > message_checkpoint {
+            self.evaluate(args[1].clone())
+        } else {
+            Ok(value)
+        }
+    }
+
+    fn eval_quiet(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("Quiet", args, 1));
+        }
+
+        let message_checkpoint = self.messages.len();
+        let result = self.evaluate(args[0].clone());
+        self.messages.truncate(message_checkpoint);
+        result
     }
 
     fn eval_if(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -2285,7 +2313,7 @@ fn truthiness_symbol(expr: &Expr) -> Option<bool> {
 fn fallback_hold_attribute(name: &str) -> HoldAttribute {
     match name {
         "Hold" | "HoldAll" | "Evaluate" => HoldAttribute::HoldAll,
-        "Function" | "Which" | "Module" | "Block" => HoldAttribute::HoldAll,
+        "Function" | "Which" | "Module" | "Block" | "Check" | "Quiet" => HoldAttribute::HoldAll,
         "Context" => HoldAttribute::HoldFirst,
         "If" => HoldAttribute::HoldRest,
         "With" => HoldAttribute::HoldAll,
@@ -2957,6 +2985,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "BlankSequence"
             | "Block"
             | "Cases"
+            | "Check"
             | "Condition"
             | "Context"
             | "End"
@@ -2986,6 +3015,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "ReplaceRepeated"
             | "Rule"
             | "RuleDelayed"
+            | "Quiet"
             | "Sequence"
             | "Set"
             | "SetDelayed"
@@ -3496,6 +3526,55 @@ mod tests {
                 .iter()
                 .any(|message| { message.symbol == "Function" && message.tag == "argx" })
         );
+    }
+
+    #[test]
+    fn check_returns_fallback_when_messages_are_emitted() {
+        let mut session = Session::new();
+
+        let outcome = session
+            .eval_text("Check[FindFile[\"Missing`\"], 99]")
+            .unwrap();
+
+        assert_eq!(outcome.value.to_string(), "99");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| { message.symbol == "FindFile" && message.tag == "notfound" })
+        );
+    }
+
+    #[test]
+    fn check_leaves_value_unchanged_when_no_messages_are_emitted() {
+        let mut session = Session::new();
+
+        let outcome = session.eval_text("Check[Identity[7], 99]").unwrap();
+
+        assert_eq!(outcome.value.to_string(), "7");
+        assert!(outcome.messages.is_empty());
+    }
+
+    #[test]
+    fn quiet_suppresses_runtime_messages_from_nested_evaluation() {
+        let mut session = Session::new();
+
+        let outcome = session.eval_text("Quiet[FindFile[\"Missing`\"]]").unwrap();
+
+        assert_eq!(outcome.value.to_string(), "$Failed");
+        assert!(outcome.messages.is_empty());
+    }
+
+    #[test]
+    fn quiet_prevents_check_from_observing_suppressed_messages() {
+        let mut session = Session::new();
+
+        let outcome = session
+            .eval_text("Check[Quiet[FindFile[\"Missing`\"]], 99]")
+            .unwrap();
+
+        assert_eq!(outcome.value.to_string(), "$Failed");
+        assert!(outcome.messages.is_empty());
     }
 
     #[test]

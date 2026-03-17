@@ -68,6 +68,16 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Ends a package context and leaves it on the restored context path.",
     ),
     BuiltinSpec::with_hold(
+        "Check",
+        "Evaluates an expression and substitutes a fallback if messages are emitted.",
+        HoldAttribute::HoldAll,
+    ),
+    BuiltinSpec::with_hold(
+        "Quiet",
+        "Evaluates an expression while suppressing any runtime messages it emits.",
+        HoldAttribute::HoldAll,
+    ),
+    BuiltinSpec::with_hold(
         "If",
         "Evaluates one of several branches conditionally.",
         HoldAttribute::HoldRest,

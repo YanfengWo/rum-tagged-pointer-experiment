@@ -94,6 +94,8 @@ off as work lands.
 - [x] Render runtime messages cleanly in REPL and CLI flows
 - [x] Emit builtin argument-count and argument-form messages without turning them into Rust errors
 - [x] Surface context-stack misuse and pure-function arity mismatches via runtime messages
+- [x] Add `Check` to branch on emitted runtime messages during evaluation
+- [x] Add `Quiet` to suppress nested runtime messages without changing the returned value
 
 ### Tests
 
