@@ -121,7 +121,7 @@ off as work lands.
 - [x] Add `If`, `Which`, and `Function` control-evaluation basics
 - [x] Implement `Module`
 - [x] Implement `With`
-- [ ] Implement `Block`
+- [x] Implement `Block`
 - [x] Add `Evaluate` and `Sequence`
 - [ ] Add execution tracing hooks and resource limits
 
@@ -132,6 +132,7 @@ off as work lands.
 - [x] Implement `Function` application for `Slot`-based pure functions
 - [x] Implement `With` with lexical substitution over simple binding lists
 - [x] Implement `Module` with fresh lexical symbols and sequential initializers
+- [x] Implement `Block` with dynamic symbol rebinding and restoration
 - [ ] Support explicit parameter lists, named slots, and `##`
 
 ## Phase 6: REPL and Developer Tooling

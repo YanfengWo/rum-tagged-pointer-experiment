@@ -264,6 +264,7 @@ impl Session {
             "MatchQ" => self.eval_match_q(args).map(Some),
             "Cases" => self.eval_cases(args).map(Some),
             "Module" => self.eval_module(args).map(Some),
+            "Block" => self.eval_block(args).map(Some),
             "ReplaceAll" => self.eval_replace_all(args).map(Some),
             "ReplaceRepeated" => self.eval_replace_repeated(args).map(Some),
             _ => Ok(None),
@@ -390,6 +391,56 @@ impl Session {
 
         let body = substitute_lexical_bindings(&args[1], &renames, &BTreeSet::new());
         self.evaluate(body)
+    }
+
+    fn eval_block(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(Expr::call(Expr::symbol("Block"), args.to_vec()));
+        }
+
+        let Some(items) = parse_module_binding_list(&args[0]) else {
+            return Ok(Expr::call(Expr::symbol("Block"), args.to_vec()));
+        };
+
+        let mut saved_definitions = BTreeMap::new();
+
+        for (symbol, _) in &items {
+            saved_definitions
+                .entry(symbol.clone())
+                .or_insert_with(|| self.definitions.get(symbol).cloned());
+        }
+
+        let result = (|| -> Result<Expr, EvalError> {
+            for (symbol, _) in &items {
+                let definition = self.definitions.entry(symbol.clone()).or_default();
+                definition.own_value = None;
+                definition.delayed_own_value = None;
+            }
+
+            for (symbol, init) in &items {
+                if let Some(init) = init {
+                    let value = self.evaluate(init.clone())?;
+                    let definition = self.definitions.entry(symbol.clone()).or_default();
+                    definition.own_value = Some(value);
+                    definition.delayed_own_value = None;
+                }
+            }
+
+            self.evaluate(args[1].clone())
+        })();
+
+        for (symbol, prior_definition) in saved_definitions {
+            match prior_definition {
+                Some(definition) => {
+                    self.definitions.insert(symbol, definition);
+                }
+                None => {
+                    self.definitions.remove(&symbol);
+                }
+            }
+        }
+
+        result
     }
 
     fn try_apply_function(
@@ -1052,7 +1103,7 @@ fn truthiness_symbol(expr: &Expr) -> Option<bool> {
 fn fallback_hold_attribute(name: &str) -> HoldAttribute {
     match name {
         "Hold" | "HoldAll" | "Evaluate" => HoldAttribute::HoldAll,
-        "Function" | "Which" | "Module" => HoldAttribute::HoldAll,
+        "Function" | "Which" | "Module" | "Block" => HoldAttribute::HoldAll,
         "If" => HoldAttribute::HoldRest,
         "With" => HoldAttribute::HoldAll,
         "HoldFirst" => HoldAttribute::HoldFirst,
@@ -1948,6 +1999,92 @@ mod tests {
                 .to_string(),
             "7"
         );
+    }
+
+    #[test]
+    fn block_temporarily_rebinds_and_restores_symbol_values() {
+        let mut session = Session::new();
+
+        session.eval_text("x = 10").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("Block[{x = 1}, x]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(session.eval_text("x").unwrap().value.to_string(), "10");
+        assert_eq!(
+            session
+                .eval_text("Block[{x}, x]")
+                .unwrap()
+                .value
+                .to_string(),
+            "x"
+        );
+        assert_eq!(session.eval_text("x").unwrap().value.to_string(), "10");
+    }
+
+    #[test]
+    fn block_applies_dynamic_scope_across_called_definitions() {
+        let mut session = Session::new();
+
+        session.eval_text("x = 10").unwrap();
+        session.eval_text("f[] := x").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("Block[{x = 1}, f[]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(session.eval_text("f[]").unwrap().value.to_string(), "10");
+        assert_eq!(
+            session
+                .eval_text("Block[{x}, x = 3]")
+                .unwrap()
+                .value
+                .to_string(),
+            "3"
+        );
+        assert_eq!(session.eval_text("x").unwrap().value.to_string(), "10");
+    }
+
+    #[test]
+    fn block_supports_sequential_initializers_and_nested_shadowing() {
+        let mut session = Session::new();
+
+        session.eval_text("x = 10").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("Block[{x = 1, y = x}, y]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(
+            session
+                .eval_text("Block[{x -> 1}, x]")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+        assert_eq!(
+            session
+                .eval_text("Block[{x = 1}, Block[{x = 2}, x]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "2"
+        );
+        assert_eq!(session.eval_text("x").unwrap().value.to_string(), "10");
     }
 
     #[test]

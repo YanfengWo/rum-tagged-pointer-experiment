@@ -40,7 +40,11 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Creates lexical local symbols.",
         HoldAttribute::HoldAll,
     ),
-    BuiltinSpec::new("Block", "Temporarily rebinds symbols dynamically."),
+    BuiltinSpec::with_hold(
+        "Block",
+        "Temporarily rebinds symbols dynamically.",
+        HoldAttribute::HoldAll,
+    ),
     BuiltinSpec::with_hold(
         "Hold",
         "Prevents evaluation of its arguments.",
