@@ -183,6 +183,15 @@ pub struct SymbolInfo {
     pub message_count: usize,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MessageCatalogEntry {
+    pub message_name: String,
+    pub qualified_symbol_name: String,
+    pub tag: String,
+    pub template: Expr,
+    pub delayed: bool,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SymbolDefinition {
     pub own_value: Option<Expr>,
@@ -228,6 +237,13 @@ struct LoaderSnapshot {
     context_path: Vec<String>,
     context_stack: Vec<ContextFrame>,
     loaded_packages: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum MessageCatalogQuery {
+    All,
+    Symbol(Symbol),
+    Key(MessageNameKey),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -472,6 +488,21 @@ impl Session {
                 .unwrap_or(false),
             message_count,
         })
+    }
+
+    pub fn inspect_message_catalog(&self, query: Option<&str>) -> Option<Vec<MessageCatalogEntry>> {
+        let query = query.map(str::trim).filter(|query| !query.is_empty());
+
+        match query {
+            None => Some(self.message_catalog_entries_for_symbol(None)),
+            Some(query) => match self.resolve_message_catalog_query(query)? {
+                MessageCatalogQuery::All => Some(self.message_catalog_entries_for_symbol(None)),
+                MessageCatalogQuery::Symbol(symbol) => {
+                    Some(self.message_catalog_entries_for_symbol(Some(&symbol)))
+                }
+                MessageCatalogQuery::Key(key) => Some(self.message_catalog_entries_for_key(&key)),
+            },
+        }
     }
 
     pub fn eval_text(&mut self, input: &str) -> Result<EvalOutcome, EvalError> {
@@ -727,6 +758,33 @@ impl Session {
         }
     }
 
+    fn resolve_message_catalog_query(&self, query: &str) -> Option<MessageCatalogQuery> {
+        let query = query.trim();
+
+        if query.is_empty() {
+            return Some(MessageCatalogQuery::All);
+        }
+
+        if let Some((symbol_name, tag)) = query.rsplit_once("::") {
+            let symbol_name = symbol_name.trim();
+            let tag = tag.trim();
+
+            if symbol_name.is_empty() || tag.is_empty() {
+                return None;
+            }
+
+            return self.resolve_symbol_name(symbol_name, true).map(|symbol| {
+                MessageCatalogQuery::Key(MessageNameKey {
+                    symbol,
+                    tag: tag.to_string(),
+                })
+            });
+        }
+
+        self.resolve_symbol_name(query, true)
+            .map(MessageCatalogQuery::Symbol)
+    }
+
     fn message_names_expr_for_symbol(&self, symbol: Option<&Symbol>) -> Expr {
         let items = self
             .message_definitions
@@ -736,6 +794,28 @@ impl Session {
             .collect::<Vec<_>>();
 
         Expr::call(system_expr("List"), items)
+    }
+
+    fn build_message_catalog_entry(
+        &self,
+        key: &MessageNameKey,
+        def: &MessageDefinition,
+    ) -> MessageCatalogEntry {
+        let (template, delayed) = if let Some(rhs) = &def.immediate {
+            (rhs.clone(), false)
+        } else if let Some(rhs) = &def.delayed {
+            (rhs.clone(), true)
+        } else {
+            (system_expr("Null"), false)
+        };
+
+        MessageCatalogEntry {
+            message_name: message_name_expr(key.symbol.clone(), key.tag.clone()).to_string(),
+            qualified_symbol_name: key.symbol.fully_qualified_name(),
+            tag: key.tag.clone(),
+            template,
+            delayed,
+        }
     }
 
     fn message_definition_rule_expr(&self, key: &MessageNameKey, def: &MessageDefinition) -> Expr {
@@ -761,11 +841,61 @@ impl Session {
         Expr::call(system_expr("List"), items)
     }
 
+    fn message_catalog_entries_for_symbol(
+        &self,
+        symbol: Option<&Symbol>,
+    ) -> Vec<MessageCatalogEntry> {
+        self.message_definitions
+            .iter()
+            .filter(|(key, _)| symbol.is_none_or(|symbol| key.symbol == *symbol))
+            .map(|(key, def)| self.build_message_catalog_entry(key, def))
+            .collect()
+    }
+
+    fn message_catalog_entries_for_key(&self, key: &MessageNameKey) -> Vec<MessageCatalogEntry> {
+        self.message_definitions
+            .get(key)
+            .map(|def| vec![self.build_message_catalog_entry(key, def)])
+            .unwrap_or_default()
+    }
+
+    fn message_tags_expr_for_symbol(&self, symbol: Option<&Symbol>) -> Expr {
+        let tags = if symbol.is_some() {
+            self.message_definitions
+                .keys()
+                .filter(|key| symbol.is_none_or(|symbol| key.symbol == *symbol))
+                .map(|key| key.tag.clone())
+                .collect::<Vec<_>>()
+        } else {
+            self.message_definitions
+                .keys()
+                .map(|key| key.tag.clone())
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect::<Vec<_>>()
+        };
+
+        Expr::call(
+            system_expr("List"),
+            tags.into_iter().map(Expr::string).collect(),
+        )
+    }
+
     fn message_definitions_expr_for_key(&self, key: &MessageNameKey) -> Expr {
         let items = self
             .message_definitions
             .get(key)
             .map(|def| vec![self.message_definition_rule_expr(key, def)])
+            .unwrap_or_default();
+
+        Expr::call(system_expr("List"), items)
+    }
+
+    fn message_tags_expr_for_key(&self, key: &MessageNameKey) -> Expr {
+        let items = self
+            .message_definitions
+            .contains_key(key)
+            .then(|| vec![Expr::string(key.tag.clone())])
             .unwrap_or_default();
 
         Expr::call(system_expr("List"), items)
@@ -1120,6 +1250,7 @@ impl Session {
             "MessageName" => self.eval_message_name(args).map(Some),
             "Messages" => self.eval_messages(args).map(Some),
             "MessageDefinitions" => self.eval_message_definitions(args).map(Some),
+            "MessageTags" => self.eval_message_tags(args).map(Some),
             "Check" => self.eval_check(args).map(Some),
             "Quiet" => self.eval_quiet(args).map(Some),
             "If" => self.eval_if(args).map(Some),
@@ -1449,6 +1580,31 @@ impl Session {
             }
             _ => Ok(self.invalid_call_with_message(
                 "MessageDefinitions",
+                args,
+                "argx",
+                format!("expected 0 or 1 argument(s), got {}", args.len()),
+            )),
+        }
+    }
+
+    fn eval_message_tags(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [] => Ok(self.message_tags_expr_for_symbol(None)),
+            [expr] => {
+                if let Some(key) = self.message_name_key_from_expr(expr) {
+                    Ok(self.message_tags_expr_for_key(&key))
+                } else if let Some(symbol) = self.lookup_message_symbol(expr) {
+                    Ok(self.message_tags_expr_for_symbol(Some(&symbol)))
+                } else {
+                    Ok(self.invalid_call_with_arg_form(
+                        "MessageTags",
+                        args,
+                        "expected no arguments, a symbol or symbol-name string, or a MessageName expression",
+                    ))
+                }
+            }
+            _ => Ok(self.invalid_call_with_message(
+                "MessageTags",
                 args,
                 "argx",
                 format!("expected 0 or 1 argument(s), got {}", args.len()),
@@ -2905,7 +3061,7 @@ fn fallback_hold_attribute(name: &str) -> HoldAttribute {
     match name {
         "Hold" | "HoldAll" | "Evaluate" => HoldAttribute::HoldAll,
         "Function" | "Which" | "Module" | "Block" | "Check" | "Quiet" | "MessageName"
-        | "Messages" | "MessageDefinitions" => HoldAttribute::HoldAll,
+        | "Messages" | "MessageDefinitions" | "MessageTags" => HoldAttribute::HoldAll,
         "Message" | "Context" => HoldAttribute::HoldFirst,
         "If" => HoldAttribute::HoldRest,
         "With" => HoldAttribute::HoldAll,
@@ -3602,6 +3758,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "MessageDefinitions"
             | "MessageName"
             | "Messages"
+            | "MessageTags"
             | "Module"
             | "Needs"
             | "Null"
@@ -4204,6 +4361,40 @@ mod tests {
     }
 
     #[test]
+    fn message_tags_builtin_lists_global_symbol_and_exact_message_tags() {
+        let mut session = Session::new();
+
+        session.eval_text("f::argx = \"bad arg\"").unwrap();
+        session.eval_text("f::usage := suffix").unwrap();
+        session.eval_text("g::argx = \"other\"").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("MessageTags[f]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[\"argx\", \"usage\"]"
+        );
+        assert_eq!(
+            session
+                .eval_text("MessageTags[]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[\"argx\", \"usage\"]"
+        );
+        assert_eq!(
+            session
+                .eval_text("MessageTags[f::argx]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[\"argx\"]"
+        );
+    }
+
+    #[test]
     fn inspect_reports_message_definition_presence() {
         let mut session = Session::new();
 
@@ -4211,6 +4402,28 @@ mod tests {
 
         let info = session.inspect("f").unwrap();
         assert_eq!(info.message_count, 1);
+    }
+
+    #[test]
+    fn inspect_message_catalog_exposes_templates_and_delayed_flags() {
+        let mut session = Session::new();
+
+        session.eval_text("f::argx = \"bad arg\"").unwrap();
+        session.eval_text("f::usage := suffix").unwrap();
+
+        let entries = session.inspect_message_catalog(Some("f")).unwrap();
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].message_name, "f::argx");
+        assert!(!entries[0].delayed);
+        assert_eq!(entries[0].template.to_string(), "\"bad arg\"");
+        assert_eq!(entries[1].message_name, "f::usage");
+        assert!(entries[1].delayed);
+        assert_eq!(entries[1].template.to_string(), "suffix");
+
+        let exact = session.inspect_message_catalog(Some("f::usage")).unwrap();
+        assert_eq!(exact.len(), 1);
+        assert_eq!(exact[0].message_name, "f::usage");
     }
 
     #[test]

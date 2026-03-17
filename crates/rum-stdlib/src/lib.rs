@@ -92,6 +92,11 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
     ),
     BuiltinSpec::with_hold(
+        "MessageTags",
+        "Lists message tags defined globally, for a symbol, or for one message query.",
+        HoldAttribute::HoldAll,
+    ),
+    BuiltinSpec::with_hold(
         "Check",
         "Evaluates an expression and substitutes a fallback if matching messages are emitted.",
         HoldAttribute::HoldAll,

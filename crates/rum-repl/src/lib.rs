@@ -77,6 +77,10 @@ where
             ":help" => {
                 writeln!(self.output, ":help           Show REPL commands.")?;
                 writeln!(self.output, ":inspect NAME   Show basic symbol metadata.")?;
+                writeln!(
+                    self.output,
+                    ":messages [NAME]   Show message definitions globally or for a symbol/message."
+                )?;
                 writeln!(self.output, ":quit           Exit the REPL.")?;
                 Ok(CommandAction::Handled)
             }
@@ -119,6 +123,38 @@ where
                     )?;
                 } else {
                     writeln!(self.output, "! unknown symbol `{name}`")?;
+                }
+
+                Ok(CommandAction::Handled)
+            }
+            _ if line == ":messages" || line.starts_with(":messages ") => {
+                let query = line
+                    .strip_prefix(":messages")
+                    .map(str::trim)
+                    .filter(|query| !query.is_empty());
+
+                let Some(entries) = session.inspect_message_catalog(query) else {
+                    let name = query.unwrap_or("<invalid>");
+                    writeln!(self.output, "! invalid message selector `{name}`")?;
+                    return Ok(CommandAction::Handled);
+                };
+
+                if entries.is_empty() {
+                    if let Some(name) = query {
+                        writeln!(self.output, "! no messages for `{name}`")?;
+                    } else {
+                        writeln!(self.output, "(no message definitions)")?;
+                    }
+                    return Ok(CommandAction::Handled);
+                }
+
+                for entry in entries {
+                    let operator = if entry.delayed { ":=" } else { "=" };
+                    writeln!(
+                        self.output,
+                        "{} {} {}",
+                        entry.message_name, operator, entry.template
+                    )?;
                 }
 
                 Ok(CommandAction::Handled)
@@ -176,6 +212,35 @@ mod tests {
 
         let rendered = String::from_utf8(output).unwrap();
         assert!(rendered.contains("[msg]"));
+    }
+
+    #[test]
+    fn repl_messages_lists_catalog_entries_for_a_symbol() {
+        let input = Cursor::new(":messages f\n:quit\n");
+        let mut output = Vec::new();
+        let mut repl = Repl::new(input, &mut output);
+        let mut session = Session::new();
+        session.eval_text("f::argx = \"bad arg\"").unwrap();
+        session.eval_text("f::usage := suffix").unwrap();
+
+        repl.run(&mut session).unwrap();
+
+        let rendered = String::from_utf8(output).unwrap();
+        assert!(rendered.contains("f::argx = \"bad arg\""));
+        assert!(rendered.contains("f::usage := suffix"));
+    }
+
+    #[test]
+    fn repl_messages_reports_when_a_symbol_has_no_messages() {
+        let input = Cursor::new(":messages f\n:quit\n");
+        let mut output = Vec::new();
+        let mut repl = Repl::new(input, &mut output);
+        let mut session = Session::new();
+
+        repl.run(&mut session).unwrap();
+
+        let rendered = String::from_utf8(output).unwrap();
+        assert!(rendered.contains("! no messages for `f`"));
     }
 
     #[test]

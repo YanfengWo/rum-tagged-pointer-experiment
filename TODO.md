@@ -104,6 +104,8 @@ off as work lands.
 - [x] Add richer message template format specifiers for message-name parts, quoting, and symbol metadata
 - [x] Add message catalog inspection builtins for listing message names and definitions
 - [x] Surface message-definition presence in symbol inspection flows
+- [x] Add a finer-grained `MessageTags` builtin for tag-oriented inspection
+- [x] Expose structured message catalog entries for host tooling and REPL consumption
 
 ### Tests
 
@@ -173,6 +175,7 @@ off as work lands.
 
 - [ ] Upgrade the REPL to support multiline input
 - [ ] Add history, completion, and symbol inspection improvements
+- [x] Add a `:messages` REPL command for browsing message catalog entries
 - [ ] Add parse tree and lowering debug views for development
 - [ ] Add snapshot tests for REPL behavior
 
