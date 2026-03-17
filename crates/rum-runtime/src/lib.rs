@@ -6,6 +6,8 @@ use rum_syntax::{
 };
 use thiserror::Error;
 
+const REPLACE_REPEATED_LIMIT: usize = 256;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BuiltinSpec {
     pub name: &'static str,
@@ -58,6 +60,8 @@ pub enum EvalError {
     Syntax(#[from] SyntaxError),
     #[error("invalid integer literal `{literal}`")]
     InvalidInteger { literal: String },
+    #[error("ReplaceRepeated exceeded iteration limit ({limit})")]
+    IterationLimitExceeded { limit: usize },
 }
 
 impl Session {
@@ -165,6 +169,7 @@ impl Session {
             "RuleDelayed" => self.eval_rule_delayed(args).map(Some),
             "MatchQ" => self.eval_match_q(args).map(Some),
             "ReplaceAll" => self.eval_replace_all(args).map(Some),
+            "ReplaceRepeated" => self.eval_replace_repeated(args).map(Some),
             _ => Ok(None),
         }
     }
@@ -253,7 +258,7 @@ impl Session {
         let mut bindings = BTreeMap::new();
 
         Ok(Expr::symbol(
-            if match_expr(&pattern, &value, &mut bindings) {
+            if self.match_expr(&pattern, &value, &mut bindings)? {
                 "True"
             } else {
                 "False"
@@ -276,8 +281,39 @@ impl Session {
             ));
         };
 
-        let replaced = apply_replace_all(target, &rules);
+        let replaced = self.apply_replace_all(target, &rules)?;
         self.evaluate(replaced)
+    }
+
+    fn eval_replace_repeated(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(Expr::call(Expr::symbol("ReplaceRepeated"), args.to_vec()));
+        }
+
+        let mut current = self.evaluate(args[0].clone())?;
+        let rules_expr = self.evaluate(args[1].clone())?;
+
+        let Some(rules) = normalize_rewrite_rules(&rules_expr) else {
+            return Ok(Expr::call(
+                Expr::symbol("ReplaceRepeated"),
+                vec![current, rules_expr],
+            ));
+        };
+
+        for _ in 0..REPLACE_REPEATED_LIMIT {
+            let replaced = self.apply_replace_all(current.clone(), &rules)?;
+            let next = self.evaluate(replaced)?;
+
+            if next == current {
+                return Ok(next);
+            }
+
+            current = next;
+        }
+
+        Err(EvalError::IterationLimitExceeded {
+            limit: REPLACE_REPEATED_LIMIT,
+        })
     }
 
     fn try_apply_down_values(
@@ -298,7 +334,7 @@ impl Session {
         for down_value in definition.down_values {
             let mut bindings = BTreeMap::new();
 
-            if match_expr(&down_value.lhs, &candidate, &mut bindings) {
+            if self.match_expr(&down_value.lhs, &candidate, &mut bindings)? {
                 let substituted = substitute_bindings(&down_value.rhs, &bindings);
                 return self.evaluate(substituted).map(Some);
             }
@@ -307,11 +343,119 @@ impl Session {
         Ok(None)
     }
 
+    fn match_expr(
+        &mut self,
+        pattern: &Expr,
+        value: &Expr,
+        bindings: &mut BTreeMap<Symbol, Expr>,
+    ) -> Result<bool, EvalError> {
+        let snapshot = bindings.clone();
+        let matched = self.match_expr_inner(pattern, value, bindings)?;
+
+        if !matched {
+            *bindings = snapshot;
+        }
+
+        Ok(matched)
+    }
+
+    fn match_expr_inner(
+        &mut self,
+        pattern: &Expr,
+        value: &Expr,
+        bindings: &mut BTreeMap<Symbol, Expr>,
+    ) -> Result<bool, EvalError> {
+        if let Some((name, inner)) = pattern_named_pattern(pattern) {
+            if !self.match_expr(inner, value, bindings)? {
+                return Ok(false);
+            }
+
+            return Ok(bind_pattern_name(name, value.clone(), bindings));
+        }
+
+        if let Some((inner, condition)) = pattern_condition(pattern) {
+            if !self.match_expr(inner, value, bindings)? {
+                return Ok(false);
+            }
+
+            let condition_expr = substitute_bindings(condition, bindings);
+            let result = self.evaluate(condition_expr)?;
+            return Ok(is_system_symbol_name(&result, "True"));
+        }
+
+        if let Some(blank_head) = pattern_blank_head(pattern) {
+            return Ok(match_blank(blank_head, value));
+        }
+
+        match (pattern, value) {
+            (Expr::Atom(lhs), Expr::Atom(rhs)) => Ok(lhs == rhs),
+            (
+                Expr::Call {
+                    head: lhs_head,
+                    args: lhs_args,
+                },
+                Expr::Call {
+                    head: rhs_head,
+                    args: rhs_args,
+                },
+            ) => {
+                if lhs_args.len() != rhs_args.len() {
+                    return Ok(false);
+                }
+
+                if !self.match_expr(lhs_head, rhs_head, bindings)? {
+                    return Ok(false);
+                }
+
+                for (lhs, rhs) in lhs_args.iter().zip(rhs_args.iter()) {
+                    if !self.match_expr(lhs, rhs, bindings)? {
+                        return Ok(false);
+                    }
+                }
+
+                Ok(true)
+            }
+            _ => Ok(false),
+        }
+    }
+
     fn normalize_pattern_expr(&mut self, expr: &Expr) -> Result<Expr, EvalError> {
         match expr {
             Expr::Atom(Atom::Symbol(_)) => self.evaluate(expr.clone()),
             _ => Ok(expr.clone()),
         }
+    }
+
+    fn apply_replace_all(&mut self, expr: Expr, rules: &[RewriteRule]) -> Result<Expr, EvalError> {
+        if let Some(replaced) = self.apply_rules_once(&expr, rules)? {
+            return Ok(replaced);
+        }
+
+        match expr {
+            Expr::Atom(_) => Ok(expr),
+            Expr::Call { head, args } => Ok(Expr::call(
+                self.apply_replace_all(*head, rules)?,
+                args.into_iter()
+                    .map(|arg| self.apply_replace_all(arg, rules))
+                    .collect::<Result<Vec<_>, _>>()?,
+            )),
+        }
+    }
+
+    fn apply_rules_once(
+        &mut self,
+        expr: &Expr,
+        rules: &[RewriteRule],
+    ) -> Result<Option<Expr>, EvalError> {
+        for rule in rules {
+            let mut bindings = BTreeMap::new();
+
+            if self.match_expr(&rule.lhs, expr, &mut bindings)? {
+                return Ok(Some(substitute_bindings(&rule.rhs, &bindings)));
+            }
+        }
+
+        Ok(None)
     }
 }
 
@@ -419,6 +563,10 @@ fn lower_binary(op: BinaryOp, lhs: &SyntaxExpr, rhs: &SyntaxExpr) -> Result<Expr
             Expr::symbol("ReplaceAll"),
             vec![lowered_lhs, lowered_rhs],
         )),
+        BinaryOp::ReplaceRepeated => Ok(Expr::call(
+            Expr::symbol("ReplaceRepeated"),
+            vec![lowered_lhs, lowered_rhs],
+        )),
         BinaryOp::Rule => Ok(Expr::call(
             Expr::symbol("Rule"),
             vec![lowered_lhs, lowered_rhs],
@@ -497,6 +645,11 @@ fn expr_as_symbol(expr: &Expr) -> Option<&Symbol> {
 
 fn downvalue_head_symbol(expr: &Expr) -> Option<&Symbol> {
     match expr {
+        Expr::Call { head, args }
+            if is_system_symbol_name(head, "Condition") && !args.is_empty() =>
+        {
+            downvalue_head_symbol(&args[0])
+        }
         Expr::Call { head, .. } => expr_as_symbol(head),
         _ => None,
     }
@@ -534,75 +687,22 @@ fn normalize_single_rewrite_rule(expr: &Expr) -> Option<RewriteRule> {
     }
 }
 
-fn apply_replace_all(expr: Expr, rules: &[RewriteRule]) -> Expr {
-    if let Some(replaced) = apply_rules_once(&expr, rules) {
-        return replaced;
-    }
-
-    match expr {
-        Expr::Atom(_) => expr,
-        Expr::Call { head, args } => Expr::call(
-            apply_replace_all(*head, rules),
-            args.into_iter()
-                .map(|arg| apply_replace_all(arg, rules))
-                .collect(),
-        ),
-    }
-}
-
-fn apply_rules_once(expr: &Expr, rules: &[RewriteRule]) -> Option<Expr> {
-    for rule in rules {
-        let mut bindings = BTreeMap::new();
-
-        if match_expr(&rule.lhs, expr, &mut bindings) {
-            return Some(substitute_bindings(&rule.rhs, &bindings));
-        }
-    }
-
-    None
-}
-
-fn match_expr(pattern: &Expr, value: &Expr, bindings: &mut BTreeMap<Symbol, Expr>) -> bool {
-    if let Some((name, inner)) = pattern_named_pattern(pattern) {
-        if !match_expr(inner, value, bindings) {
-            return false;
-        }
-
-        return bind_pattern_name(name, value.clone(), bindings);
-    }
-
-    if let Some(blank_head) = pattern_blank_head(pattern) {
-        return match_blank(blank_head, value);
-    }
-
-    match (pattern, value) {
-        (Expr::Atom(lhs), Expr::Atom(rhs)) => lhs == rhs,
-        (
-            Expr::Call {
-                head: lhs_head,
-                args: lhs_args,
-            },
-            Expr::Call {
-                head: rhs_head,
-                args: rhs_args,
-            },
-        ) => {
-            lhs_args.len() == rhs_args.len()
-                && match_expr(lhs_head, rhs_head, bindings)
-                && lhs_args
-                    .iter()
-                    .zip(rhs_args.iter())
-                    .all(|(lhs, rhs)| match_expr(lhs, rhs, bindings))
-        }
-        _ => false,
-    }
-}
-
 fn pattern_named_pattern(expr: &Expr) -> Option<(&Symbol, &Expr)> {
     match expr {
         Expr::Call { head, args } if is_system_symbol_name(head, "Pattern") && args.len() == 2 => {
             let name = expr_as_symbol(&args[0])?;
             Some((name, &args[1]))
+        }
+        _ => None,
+    }
+}
+
+fn pattern_condition(expr: &Expr) -> Option<(&Expr, &Expr)> {
+    match expr {
+        Expr::Call { head, args }
+            if is_system_symbol_name(head, "Condition") && args.len() == 2 =>
+        {
+            Some((&args[0], &args[1]))
         }
         _ => None,
     }
@@ -887,6 +987,36 @@ mod tests {
     }
 
     #[test]
+    fn replacerepeated_reaches_a_fixed_point() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("f[1] //. {f[x_Integer] -> g[x], g[x_Integer] -> x}")
+                .unwrap()
+                .value
+                .to_string(),
+            "1"
+        );
+    }
+
+    #[test]
+    fn replacerepeated_errors_on_non_terminating_rewrite_cycle() {
+        let mut session = Session::new();
+
+        let error = session
+            .eval_text("1 //. {1 -> 2, 2 -> 1}")
+            .expect_err("expected iteration limit error");
+
+        assert!(matches!(
+            error,
+            EvalError::IterationLimitExceeded {
+                limit: REPLACE_REPEATED_LIMIT
+            }
+        ));
+    }
+
+    #[test]
     fn immediate_rule_captures_current_rhs_value() {
         let mut session = Session::new();
 
@@ -912,5 +1042,73 @@ mod tests {
             session.eval_text("7 /. rule").unwrap().value.to_string(),
             "2"
         );
+    }
+
+    #[test]
+    fn matchq_honors_condition_patterns() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("MatchQ[7, x_Integer /; MatchQ[x, 7]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "True"
+        );
+        assert_eq!(
+            session
+                .eval_text("MatchQ[8, x_Integer /; MatchQ[x, 7]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "False"
+        );
+    }
+
+    #[test]
+    fn replaceall_honors_condition_patterns() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("7 /. (x_Integer /; MatchQ[x, 7]) -> y")
+                .unwrap()
+                .value
+                .to_string(),
+            "y"
+        );
+        assert_eq!(
+            session
+                .eval_text("8 /. (x_Integer /; MatchQ[x, 7]) -> y")
+                .unwrap()
+                .value
+                .to_string(),
+            "8"
+        );
+    }
+
+    #[test]
+    fn conditioned_downvalue_matches_only_when_test_passes() {
+        let mut session = Session::new();
+
+        session
+            .eval_text("f[x_Integer /; MatchQ[x, 7]] := x")
+            .unwrap();
+
+        assert_eq!(session.eval_text("f[7]").unwrap().value.to_string(), "7");
+        assert_eq!(session.eval_text("f[8]").unwrap().value.to_string(), "f[8]");
+    }
+
+    #[test]
+    fn outer_conditioned_downvalue_is_stored_and_applied() {
+        let mut session = Session::new();
+
+        session
+            .eval_text("(f[x_Integer] /; MatchQ[x, 7]) := x")
+            .unwrap();
+
+        assert_eq!(session.eval_text("f[7]").unwrap().value.to_string(), "7");
+        assert_eq!(session.eval_text("f[8]").unwrap().value.to_string(), "f[8]");
     }
 }

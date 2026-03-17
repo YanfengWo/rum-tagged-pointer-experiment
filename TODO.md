@@ -84,8 +84,8 @@ off as work lands.
 
 - [ ] Implement blank-based matcher compilation
 - [ ] Add named pattern binding and environment capture
-- [ ] Implement `Rule`, `RuleDelayed`, `ReplaceAll`, and `ReplaceRepeated`
-- [ ] Add condition handling with `/;`
+- [x] Implement `Rule`, `RuleDelayed`, `ReplaceAll`, and `ReplaceRepeated`
+- [x] Add condition handling with `/;`
 - [ ] Add `MatchQ`, `Cases`, and related core traversal tools
 
 ## Rules and Replacement Breakdown
@@ -94,8 +94,8 @@ off as work lands.
 
 - [x] Match simple blanks against atomic and call expressions
 - [x] Bind named pattern variables during matching
+- [x] Support condition-aware matching with `/;`
 - [ ] Support `BlankSequence` and `BlankNullSequence` across argument lists
-- [ ] Support condition-aware matching with `/;`
 
 ### Rule objects
 
@@ -109,7 +109,11 @@ off as work lands.
 - [x] Implement `ReplaceAll` with a single rule
 - [x] Implement `ReplaceAll` with rule lists
 - [x] Traverse nested expressions during replacement
-- [ ] Implement `ReplaceRepeated`
+- [x] Implement `ReplaceRepeated`
+
+### Traversal tools
+
+- [ ] Implement `Cases` on top of the matcher subset already supported today
 
 ## Phase 5: Scoping and Runtime Control
 
@@ -148,7 +152,7 @@ off as work lands.
 - [x] Lex symbols with Wolfram-style context markers
 - [x] Lex delimiters for calls, lists, and grouping
 - [x] Lex multi-character operators such as `:=`, `->`, `:>`, `/.`, and `/;`
-- [ ] Add lexer tests for ambiguous prefixes and operator boundaries
+- [x] Add lexer tests for ambiguous prefixes and operator boundaries
 
 ### AST
 

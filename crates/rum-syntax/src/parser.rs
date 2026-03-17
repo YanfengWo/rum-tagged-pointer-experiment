@@ -264,6 +264,7 @@ impl Parser {
             TokenKind::Set => Some(BinaryOp::Set),
             TokenKind::SetDelayed => Some(BinaryOp::SetDelayed),
             TokenKind::ReplaceAll => Some(BinaryOp::ReplaceAll),
+            TokenKind::ReplaceRepeated => Some(BinaryOp::ReplaceRepeated),
             TokenKind::Arrow => Some(BinaryOp::Rule),
             TokenKind::RuleDelayed => Some(BinaryOp::RuleDelayed),
             TokenKind::Condition => Some(BinaryOp::Condition),
@@ -388,6 +389,29 @@ mod tests {
             parsed,
             SyntaxExpr::Binary {
                 op: BinaryOp::ReplaceAll,
+                lhs: Box::new(SyntaxExpr::Symbol("expr".to_string())),
+                rhs: Box::new(SyntaxExpr::Binary {
+                    op: BinaryOp::Rule,
+                    lhs: Box::new(SyntaxExpr::Pattern {
+                        name: Box::new(SyntaxExpr::Symbol("x".to_string())),
+                        pattern: Box::new(SyntaxExpr::Blank {
+                            kind: BlankKind::Blank,
+                            head: Some(Box::new(SyntaxExpr::Symbol("Integer".to_string()))),
+                        }),
+                    }),
+                    rhs: Box::new(SyntaxExpr::Symbol("y".to_string())),
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn parses_replace_repeated_precedence() {
+        let parsed = parse_expr("expr //. x_Integer -> y").unwrap();
+        assert_eq!(
+            parsed,
+            SyntaxExpr::Binary {
+                op: BinaryOp::ReplaceRepeated,
                 lhs: Box::new(SyntaxExpr::Symbol("expr".to_string())),
                 rhs: Box::new(SyntaxExpr::Binary {
                     op: BinaryOp::Rule,

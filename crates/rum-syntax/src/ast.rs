@@ -59,6 +59,7 @@ pub enum BinaryOp {
     Set,
     SetDelayed,
     ReplaceAll,
+    ReplaceRepeated,
     Rule,
     RuleDelayed,
     Condition,
@@ -103,6 +104,7 @@ impl BinaryOp {
             Self::Set => "=",
             Self::SetDelayed => ":=",
             Self::ReplaceAll => "/.",
+            Self::ReplaceRepeated => "//.",
             Self::Rule => "->",
             Self::RuleDelayed => ":>",
             Self::Condition => "/;",
@@ -117,7 +119,7 @@ impl BinaryOp {
     pub(crate) fn precedence(self) -> u8 {
         match self {
             Self::Set | Self::SetDelayed => 10,
-            Self::ReplaceAll => 20,
+            Self::ReplaceAll | Self::ReplaceRepeated => 20,
             Self::Rule | Self::RuleDelayed => 30,
             Self::Condition => 40,
             Self::Add | Self::Subtract => 50,

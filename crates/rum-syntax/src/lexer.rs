@@ -29,6 +29,7 @@ pub(crate) enum TokenKind {
     Set,
     SetDelayed,
     ReplaceAll,
+    ReplaceRepeated,
     Condition,
     Ampersand,
     Hash,
@@ -112,7 +113,9 @@ impl<'a> Lexer<'a> {
             }
             '=' => self.single(TokenKind::Set),
             '/' => {
-                if self.consume_str("/.") {
+                if self.consume_str("//.") {
+                    TokenKind::ReplaceRepeated
+                } else if self.consume_str("/.") {
                     TokenKind::ReplaceAll
                 } else if self.consume_str("/;") {
                     TokenKind::Condition
@@ -264,12 +267,17 @@ mod tests {
 
     #[test]
     fn lexes_multi_char_operators() {
-        let tokens = lex("x := y /. z -> w /; p").unwrap();
+        let tokens = lex("x := y //. z /. q -> w /; p").unwrap();
 
         assert!(
             tokens
                 .iter()
                 .any(|token| matches!(token.kind, TokenKind::SetDelayed))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::ReplaceRepeated))
         );
         assert!(
             tokens
@@ -295,5 +303,12 @@ mod tests {
             &tokens[0].kind,
             TokenKind::Symbol(value) if value == "System`List"
         ));
+    }
+
+    #[test]
+    fn lexes_replace_repeated_before_replace_all_prefix() {
+        let tokens = lex("expr //. rule").unwrap();
+
+        assert!(matches!(tokens[1].kind, TokenKind::ReplaceRepeated));
     }
 }
