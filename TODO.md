@@ -56,8 +56,8 @@ off as work lands.
 - [x] Add special-form dispatch for held assignment builtins
 - [x] Re-dispatch calls after head evaluation so symbols can resolve into special forms and held builtins
 - [x] Add recursion limits to bound recursive evaluation
+- [x] Add cycle detection for repeated evaluation targets
 - [ ] Add a standard evaluation loop closer to Mathematica semantics
-- [ ] Add cycle detection
 
 ### Assignment and definitions
 

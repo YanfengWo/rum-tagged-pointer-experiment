@@ -60,6 +60,7 @@ pub struct Session {
     next_generated_symbol_id: u64,
     recursion_limit: usize,
     evaluation_depth: usize,
+    evaluation_stack: Vec<Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -116,6 +117,8 @@ pub enum EvalError {
     Syntax(#[from] SyntaxError),
     #[error("invalid integer literal `{literal}`")]
     InvalidInteger { literal: String },
+    #[error("evaluation cycle detected while re-entering `{expr}`")]
+    EvaluationCycleDetected { expr: String },
     #[error("evaluation exceeded recursion limit ({limit})")]
     RecursionLimitExceeded { limit: usize },
     #[error("ReplaceRepeated exceeded iteration limit ({limit})")]
@@ -130,6 +133,7 @@ impl Default for Session {
             next_generated_symbol_id: 0,
             recursion_limit: DEFAULT_RECURSION_LIMIT,
             evaluation_depth: 0,
+            evaluation_stack: Vec::new(),
         }
     }
 }
@@ -178,15 +182,23 @@ impl Session {
     }
 
     pub fn evaluate(&mut self, expr: Expr) -> Result<Expr, EvalError> {
+        if self.evaluation_stack.iter().any(|active| active == &expr) {
+            return Err(EvalError::EvaluationCycleDetected {
+                expr: expr.to_string(),
+            });
+        }
+
         if self.evaluation_depth >= self.recursion_limit {
             return Err(EvalError::RecursionLimitExceeded {
                 limit: self.recursion_limit,
             });
         }
 
+        self.evaluation_stack.push(expr.clone());
         self.evaluation_depth += 1;
         let result = self.evaluate_inner(expr);
         self.evaluation_depth -= 1;
+        self.evaluation_stack.pop();
         result
     }
 
@@ -2196,32 +2208,48 @@ mod tests {
     }
 
     #[test]
-    fn recursion_limit_stops_self_referential_definitions_and_recovers_after_error() {
+    fn cycle_detection_stops_self_referential_definitions_and_recovers_after_error() {
         let mut session = Session::new();
-        session.set_recursion_limit(32);
 
         session.eval_text("x := x").unwrap();
 
         let error = session
             .eval_text("x")
-            .expect_err("expected recursion limit error");
+            .expect_err("expected cycle detection error");
 
         assert!(matches!(
             error,
-            EvalError::RecursionLimitExceeded { limit: 32 }
+            EvalError::EvaluationCycleDetected { ref expr } if expr == "x"
         ));
         assert_eq!(session.eval_text("1").unwrap().value.to_string(), "1");
     }
 
     #[test]
-    fn recursion_limit_stops_recursive_downvalues() {
+    fn cycle_detection_stops_mutually_recursive_downvalues() {
         let mut session = Session::new();
-        session.set_recursion_limit(32);
 
-        session.eval_text("f[x_Integer] := f[x]").unwrap();
+        session.eval_text("f[x_Integer] := g[x]").unwrap();
+        session.eval_text("g[x_Integer] := f[x]").unwrap();
 
         let error = session
             .eval_text("f[1]")
+            .expect_err("expected cycle detection error");
+
+        assert!(matches!(
+            error,
+            EvalError::EvaluationCycleDetected { ref expr } if expr == "f[1]"
+        ));
+    }
+
+    #[test]
+    fn recursion_limit_stops_expanding_recursive_downvalues() {
+        let mut session = Session::new();
+        session.set_recursion_limit(32);
+
+        session.eval_text("grow[x_] := grow[f[x]]").unwrap();
+
+        let error = session
+            .eval_text("grow[1]")
             .expect_err("expected recursion limit error");
 
         assert!(matches!(
