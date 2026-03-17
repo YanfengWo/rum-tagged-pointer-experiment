@@ -134,7 +134,8 @@ off as work lands.
 - [x] Implement `Module` with fresh lexical symbols and sequential initializers
 - [x] Implement `Block` with dynamic symbol rebinding and restoration
 - [x] Support `##` slot-sequence shorthand in pure functions
-- [ ] Support explicit parameter lists and named slots
+- [x] Support named slots with rule-based pure-function arguments
+- [ ] Support explicit parameter lists
 
 ## Phase 6: REPL and Developer Tooling
 

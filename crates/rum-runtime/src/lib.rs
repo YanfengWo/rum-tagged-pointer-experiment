@@ -1649,6 +1649,7 @@ fn substitute_single_slot(expr: &Expr, args: &[Expr]) -> Option<Expr> {
                 args.get(index - 1).cloned()
             }
         }
+        ("Slot", Expr::Atom(Atom::String(name))) => lookup_named_slot(args, name),
         ("SlotSequence", Expr::Atom(Atom::Integer(index))) => {
             let index = index.to_string().parse::<usize>().ok()?;
             if index == 0 {
@@ -1661,6 +1662,36 @@ fn substitute_single_slot(expr: &Expr, args: &[Expr]) -> Option<Expr> {
         }
         _ => None,
     }
+}
+
+fn lookup_named_slot(args: &[Expr], name: &str) -> Option<Expr> {
+    for arg in args {
+        let Expr::Call {
+            head,
+            args: rule_args,
+        } = arg
+        else {
+            continue;
+        };
+
+        if !(is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
+            || rule_args.len() != 2
+        {
+            continue;
+        }
+
+        let matches_name = match &rule_args[0] {
+            Expr::Atom(Atom::Symbol(symbol)) => symbol.name() == name,
+            Expr::Atom(Atom::String(value)) => value == name,
+            _ => false,
+        };
+
+        if matches_name {
+            return Some(rule_args[1].clone());
+        }
+    }
+
+    None
 }
 
 fn is_slot_sequence_expr(expr: &Expr) -> bool {
@@ -1943,6 +1974,30 @@ mod tests {
                 .to_string(),
             "Hold[1, 2]"
         );
+        assert_eq!(
+            session
+                .eval_text("(f[#x, #y] &)[x -> 1, y -> Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[1, 2]"
+        );
+        assert_eq!(
+            session
+                .eval_text("(f[#x, #1] &)[10, x -> 20]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[20, 10]"
+        );
+        assert_eq!(
+            session
+                .eval_text("(Hold[#x] &)[\"x\" -> Identity[3]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[3]"
+        );
     }
 
     #[test]
@@ -2216,6 +2271,11 @@ mod tests {
             sequence_lowered.to_string(),
             "Function[Plus[SlotSequence[1], SlotSequence[2]]]"
         );
+
+        let named_syntax = parse_expr("#x &").unwrap();
+        let named_lowered = lower_syntax_expr(&named_syntax).unwrap();
+
+        assert_eq!(named_lowered.to_string(), "Function[Slot[\"x\"]]");
     }
 
     #[test]

@@ -466,6 +466,15 @@ mod tests {
                 }),
             }
         );
+
+        let named_parsed = parse_expr("#x &").unwrap();
+        assert_eq!(
+            named_parsed,
+            SyntaxExpr::Postfix {
+                op: PostfixOp::Function,
+                expr: Box::new(SyntaxExpr::Slot(SlotSpec::Named("x".to_string()))),
+            }
+        );
     }
 
     #[test]
