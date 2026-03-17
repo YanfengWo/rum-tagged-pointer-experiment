@@ -101,6 +101,7 @@ off as work lands.
 - [x] Add `Message` / `MessageName` with minimal message template storage and emission
 - [x] Expose `$MessageList` and `::` shorthand for emitted message names
 - [x] Enhance message template placeholder formatting beyond simple positional substitution
+- [x] Add richer message template format specifiers for message-name parts, quoting, and symbol metadata
 
 ### Tests
 

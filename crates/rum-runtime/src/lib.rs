@@ -2395,12 +2395,6 @@ fn runtime_message_name_expr(message: RuntimeMessage) -> Expr {
 }
 
 fn format_message_template(template: &str, key: &MessageNameKey, args: &[Expr]) -> String {
-    let message_name = message_name_expr(key.symbol.clone(), key.tag.clone()).to_string();
-    let all_args = args
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join(", ");
     let mut rendered = String::with_capacity(template.len());
     let mut cursor = 0;
 
@@ -2417,20 +2411,10 @@ fn format_message_template(template: &str, key: &MessageNameKey, args: &[Expr]) 
         let end = token_start + end_rel;
         let token = &template[token_start..end];
 
-        match token {
-            "0" => rendered.push_str(&message_name),
-            "*" => rendered.push_str(&all_args),
-            _ => {
-                if let Ok(index) = token.parse::<usize>() {
-                    if let Some(arg) = index.checked_sub(1).and_then(|index| args.get(index)) {
-                        rendered.push_str(&arg.to_string());
-                    } else {
-                        rendered.push_str(&template[start..=end]);
-                    }
-                } else {
-                    rendered.push_str(&template[start..=end]);
-                }
-            }
+        if let Some(formatted) = format_message_placeholder(token, key, args) {
+            rendered.push_str(&formatted);
+        } else {
+            rendered.push_str(&template[start..=end]);
         }
 
         cursor = end + 1;
@@ -2438,6 +2422,94 @@ fn format_message_template(template: &str, key: &MessageNameKey, args: &[Expr]) 
 
     rendered.push_str(&template[cursor..]);
     rendered
+}
+
+fn format_message_placeholder(token: &str, key: &MessageNameKey, args: &[Expr]) -> Option<String> {
+    let (base, spec) = token
+        .split_once(':')
+        .map_or((token, None), |(base, spec)| (base, Some(spec)));
+
+    match base {
+        "0" => format_message_name_placeholder(key, spec),
+        "*" => format_message_star_placeholder(args, spec),
+        _ => {
+            let index = base.parse::<usize>().ok()?;
+            let arg = index.checked_sub(1).and_then(|index| args.get(index))?;
+            format_message_arg_placeholder(arg, spec)
+        }
+    }
+}
+
+fn format_message_name_placeholder(key: &MessageNameKey, spec: Option<&str>) -> Option<String> {
+    match spec {
+        None => Some(message_name_expr(key.symbol.clone(), key.tag.clone()).to_string()),
+        Some("symbol") => Some(key.symbol.to_string()),
+        Some("tag") => Some(key.tag.clone()),
+        Some("fullsymbol") => Some(key.symbol.fully_qualified_name()),
+        _ => None,
+    }
+}
+
+fn format_message_star_placeholder(args: &[Expr], spec: Option<&str>) -> Option<String> {
+    match spec {
+        None => Some(
+            args.iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", "),
+        ),
+        Some("count") => Some(args.len().to_string()),
+        Some("quoted") => Some(
+            args.iter()
+                .map(|arg| quote_message_fragment(&arg.to_string()))
+                .collect::<Vec<_>>()
+                .join(", "),
+        ),
+        _ => None,
+    }
+}
+
+fn format_message_arg_placeholder(arg: &Expr, spec: Option<&str>) -> Option<String> {
+    match spec {
+        None => Some(arg.to_string()),
+        Some("head") => Some(message_arg_head(arg)),
+        Some("name") => Some(expr_as_symbol(arg)?.name().to_string()),
+        Some("context") => Some(expr_as_symbol(arg)?.context().to_string()),
+        Some("full") => Some(expr_as_symbol(arg)?.fully_qualified_name()),
+        Some("quoted") => Some(quote_message_fragment(&arg.to_string())),
+        Some("count") => match arg {
+            Expr::Call { args, .. } => Some(args.len().to_string()),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn message_arg_head(expr: &Expr) -> String {
+    match expr {
+        Expr::Atom(Atom::Integer(_)) => "Integer".to_string(),
+        Expr::Atom(Atom::String(_)) => "String".to_string(),
+        Expr::Atom(Atom::Symbol(_)) => "Symbol".to_string(),
+        Expr::Call { head, .. } => head.to_string(),
+    }
+}
+
+fn quote_message_fragment(text: &str) -> String {
+    let mut quoted = String::with_capacity(text.len() + 2);
+    quoted.push('"');
+
+    for ch in text.chars() {
+        match ch {
+            '\\' => quoted.push_str("\\\\"),
+            '"' => quoted.push_str("\\\""),
+            '\n' => quoted.push_str("\\n"),
+            '\t' => quoted.push_str("\\t"),
+            other => quoted.push(other),
+        }
+    }
+
+    quoted.push('"');
+    quoted
 }
 
 fn normalize_context_name(context: impl Into<String>) -> String {
@@ -3905,6 +3977,25 @@ mod tests {
     }
 
     #[test]
+    fn message_templates_support_richer_format_specifiers() {
+        let mut session = Session::new();
+
+        session
+            .eval_text(
+                "f::argx = \"sym=`0:symbol`; tag=`0:tag`; count=`*:count`; head=`1:head`; name=`2:name`; ctx=`2:context`; full=`2:full`; quoted=`3:quoted`; argc=`3:count`\"",
+            )
+            .unwrap();
+        let outcome = session
+            .eval_text("Message[f::argx, 7, Global`x, g[1, 2]]")
+            .unwrap();
+
+        assert!(outcome.messages.iter().any(|message| {
+            message.text
+                == "sym=f; tag=argx; count=3; head=Integer; name=x; ctx=Global`; full=Global`x; quoted=\"g[1, 2]\"; argc=2"
+        }));
+    }
+
+    #[test]
     fn message_templates_leave_unknown_placeholders_unchanged() {
         let mut session = Session::new();
 
@@ -3918,6 +4009,23 @@ mod tests {
                 .messages
                 .iter()
                 .any(|message| { message.text == "missing=`3`; literal=`name`" })
+        );
+    }
+
+    #[test]
+    fn message_templates_leave_unsupported_format_specs_unchanged() {
+        let mut session = Session::new();
+
+        session
+            .eval_text("f::argx = \"ctx=`1:context`; bad=`*:head`; nope=`1:nope`\"")
+            .unwrap();
+        let outcome = session.eval_text("Message[f::argx, 7]").unwrap();
+
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| { message.text == "ctx=`1:context`; bad=`*:head`; nope=`1:nope`" })
         );
     }
 
