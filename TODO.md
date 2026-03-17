@@ -1,0 +1,113 @@
+# TODO
+
+This file tracks the project roadmap in a milestone-oriented way, with the
+syntax frontend broken down into concrete engineering tasks that can be checked
+off as work lands.
+
+## Phase 0: Repository Foundation
+
+- [x] Initialize a dedicated Git repository for `rum`
+- [x] Create a Rust workspace with core crates
+- [x] Add bootstrap architecture and README documentation
+- [x] Introduce exact integer support with `num-bigint`
+- [x] Make the workspace compile and test successfully
+
+## Phase 1: Syntax Frontend
+
+- [x] Establish a stable syntax crate layout with `ast`, `lexer`, and `parser`
+- [x] Support grouped expressions and list literals
+- [x] Support infix operators for rules, assignments, arithmetic, and replace/condition forms
+- [x] Support pattern syntax for `_`, `__`, `___`, and named patterns such as `x_Integer`
+- [x] Support slots and pure functions with `#`, `#n`, and `&`
+- [x] Preserve exact integer literals as source text until lowering
+- [x] Expand parser test coverage around precedence and nested constructs
+- [ ] Introduce span-carrying syntax nodes or a green tree strategy
+- [ ] Add richer diagnostics with labels and recovery
+
+## Phase 2: Core Lowering and IR
+
+- [ ] Lower syntax constructs into core `Expr` forms systematically
+- [ ] Define core heads for rules, patterns, slots, and scoping constructs
+- [ ] Separate syntax-level representations from runtime-level canonical forms
+- [ ] Add golden tests for syntax-to-core lowering
+
+## Phase 3: Definitions and Evaluation
+
+- [ ] Implement symbol tables and context-aware symbol resolution
+- [ ] Add definition storage for `OwnValues` and `DownValues`
+- [ ] Implement standard evaluation sequencing
+- [ ] Implement `Set` and `SetDelayed`
+- [ ] Add evaluation control attributes such as `HoldFirst`, `HoldRest`, and `HoldAll`
+
+## Phase 4: Rules and Pattern Matching
+
+- [ ] Implement blank-based matcher compilation
+- [ ] Add named pattern binding and environment capture
+- [ ] Implement `Rule`, `RuleDelayed`, `ReplaceAll`, and `ReplaceRepeated`
+- [ ] Add condition handling with `/;`
+- [ ] Add `MatchQ`, `Cases`, and related core traversal tools
+
+## Phase 5: Scoping and Runtime Control
+
+- [ ] Implement `Module`
+- [ ] Implement `With`
+- [ ] Implement `Block`
+- [ ] Add `Evaluate` and `Sequence`
+- [ ] Add execution tracing hooks and resource limits
+
+## Phase 6: REPL and Developer Tooling
+
+- [ ] Upgrade the REPL to support multiline input
+- [ ] Add history, completion, and symbol inspection improvements
+- [ ] Add parse tree and lowering debug views for development
+- [ ] Add snapshot tests for REPL behavior
+
+## Phase 7: Embedding and Jupyter Preparation
+
+- [ ] Define a stable host embedding API around `Session`
+- [ ] Add structured diagnostics and machine-readable outputs
+- [ ] Separate terminal REPL concerns from protocol-facing kernel concerns
+- [ ] Create a future `rum-jupyter` crate for Jupyter kernel integration
+
+## `rum-syntax` Detailed Breakdown
+
+### Crate structure
+
+- [x] Split the current prototype into `ast.rs`, `lexer.rs`, and `parser.rs`
+- [x] Re-export a stable public syntax API from `lib.rs`
+- [x] Keep syntax-layer concepts independent from runtime semantics where practical
+
+### Lexing
+
+- [x] Lex integers without width loss
+- [x] Lex strings with escape handling
+- [x] Lex symbols with Wolfram-style context markers
+- [x] Lex delimiters for calls, lists, and grouping
+- [x] Lex multi-character operators such as `:=`, `->`, `:>`, `/.`, and `/;`
+- [ ] Add lexer tests for ambiguous prefixes and operator boundaries
+
+### AST
+
+- [x] Add AST nodes for lists
+- [x] Add AST nodes for prefix, infix, and postfix operators
+- [x] Add AST nodes for blanks and named patterns
+- [x] Add AST nodes for slots and pure functions
+- [x] Establish AST display/debug helpers for readable snapshots
+
+### Parsing
+
+- [x] Parse grouped expressions with parentheses
+- [x] Parse lists with `{...}`
+- [x] Parse call syntax with nested arguments
+- [x] Parse precedence for `+`, `-`, `*`, `/`, and `^`
+- [x] Parse `=`, `:=`, `->`, `:>`, `/.`, and `/;`
+- [x] Parse `_`, `__`, `___`, and named pattern shorthand
+- [x] Parse `#`, `#n`, and `expr &`
+- [x] Add parser tests for precedence, associativity, and nesting
+
+### Follow-up syntax work
+
+- [ ] Add spans to syntax nodes
+- [ ] Add parser recovery for REPL-friendly diagnostics
+- [ ] Add support for comments and additional trivia
+- [ ] Add more Wolfram operators as the evaluator roadmap demands them
