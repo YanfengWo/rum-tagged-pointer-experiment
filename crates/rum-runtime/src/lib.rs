@@ -252,12 +252,14 @@ pub enum DefinitionKind {
     DelayedOwnValue,
     UpValue,
     DownValue,
+    SubValue,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RuleApplicationSource {
     UpValue,
     DownValue,
+    SubValue,
     ReplaceAll,
     ReplaceRepeated,
 }
@@ -361,6 +363,7 @@ pub struct SymbolInfo {
     pub has_delayed_value: bool,
     pub has_up_values: bool,
     pub has_down_values: bool,
+    pub has_sub_values: bool,
     pub message_count: usize,
 }
 
@@ -394,6 +397,7 @@ pub struct SymbolDefinition {
     pub delayed_own_value: Option<Expr>,
     pub up_values: Vec<UpValue>,
     pub down_values: Vec<DownValue>,
+    pub sub_values: Vec<SubValue>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -410,12 +414,20 @@ pub struct DownValue {
     pub delayed: bool,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SubValue {
+    pub lhs: Expr,
+    pub rhs: Expr,
+    pub delayed: bool,
+}
+
 impl SymbolDefinition {
     fn is_empty(&self) -> bool {
         self.own_value.is_none()
             && self.delayed_own_value.is_none()
             && self.up_values.is_empty()
             && self.down_values.is_empty()
+            && self.sub_values.is_empty()
     }
 }
 
@@ -800,6 +812,9 @@ impl Session {
                 .unwrap_or(false),
             has_down_values: definition
                 .map(|definition| !definition.down_values.is_empty())
+                .unwrap_or(false),
+            has_sub_values: definition
+                .map(|definition| !definition.sub_values.is_empty())
                 .unwrap_or(false),
             message_count,
         })
@@ -1404,6 +1419,18 @@ impl Session {
                 }),
         );
 
+        entries.extend(
+            definition
+                .sub_values
+                .iter()
+                .map(|sub_value| DefinitionCatalogEntry {
+                    kind: DefinitionKind::SubValue,
+                    lhs: sub_value.lhs.clone(),
+                    rhs: sub_value.rhs.clone(),
+                    delayed: sub_value.delayed,
+                }),
+        );
+
         entries
     }
 
@@ -1456,6 +1483,17 @@ impl Session {
             .definition_catalog_entries_for_symbol(symbol)
             .into_iter()
             .filter(|entry| entry.kind == DefinitionKind::UpValue)
+            .map(|entry| Self::definition_rule_expr(&entry))
+            .collect::<Vec<_>>();
+
+        Expr::call(system_expr("List"), items)
+    }
+
+    fn sub_values_expr_for_symbol(&self, symbol: &Symbol) -> Expr {
+        let items = self
+            .definition_catalog_entries_for_symbol(symbol)
+            .into_iter()
+            .filter(|entry| entry.kind == DefinitionKind::SubValue)
             .map(|entry| Self::definition_rule_expr(&entry))
             .collect::<Vec<_>>();
 
@@ -1752,6 +1790,12 @@ impl Session {
         }
 
         if let Some(result) =
+            self.try_apply_sub_values(&evaluated_head, evaluated_args.as_slice())?
+        {
+            return Ok(result);
+        }
+
+        if let Some(result) =
             self.try_evaluate_non_held_builtin(&evaluated_head, evaluated_args.as_slice())?
         {
             return Ok(result);
@@ -1883,6 +1927,7 @@ impl Session {
             "OwnValues" => self.eval_own_values(args).map(Some),
             "UpValues" => self.eval_up_values(args).map(Some),
             "DownValues" => self.eval_down_values(args).map(Some),
+            "SubValues" => self.eval_sub_values(args).map(Some),
             "Attributes" => self.eval_attributes(args).map(Some),
             "SetAttributes" => self.eval_set_attributes(args).map(Some),
             "ClearAttributes" => self.eval_clear_attributes(args).map(Some),
@@ -2304,6 +2349,23 @@ impl Session {
         }
     }
 
+    fn eval_sub_values(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [expr] => {
+                if let Some(symbol) = self.lookup_message_symbol(expr) {
+                    Ok(self.sub_values_expr_for_symbol(&symbol))
+                } else {
+                    Ok(self.invalid_call_with_arg_form(
+                        "SubValues",
+                        args,
+                        "expected a symbol or symbol-name string argument",
+                    ))
+                }
+            }
+            _ => Ok(self.invalid_call_with_exact_arg_count("SubValues", args, 1)),
+        }
+    }
+
     fn eval_attributes(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
             [expr] => {
@@ -2453,6 +2515,17 @@ impl Session {
             return Ok(false);
         };
 
+        self.store_definition_target(target, lhs, rhs, delayed);
+        Ok(true)
+    }
+
+    fn store_definition_target(
+        &mut self,
+        target: TaggedDefinitionTarget,
+        lhs: Expr,
+        rhs: Expr,
+        delayed: bool,
+    ) {
         match target {
             TaggedDefinitionTarget::OwnValue(symbol) => {
                 let definition = self.definitions.entry(symbol.clone()).or_default();
@@ -2488,6 +2561,19 @@ impl Session {
                     value: format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs),
                 });
             }
+            TaggedDefinitionTarget::SubValue(symbol) => {
+                let definition = self.definitions.entry(symbol.clone()).or_default();
+                definition.sub_values.push(SubValue {
+                    lhs: lhs.clone(),
+                    rhs: rhs.clone(),
+                    delayed,
+                });
+                self.push_trace(TraceEvent::DefinitionStored {
+                    symbol: symbol.to_string(),
+                    kind: DefinitionKind::SubValue,
+                    value: format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs),
+                });
+            }
             TaggedDefinitionTarget::UpValue(symbol) => {
                 let definition = self.definitions.entry(symbol.clone()).or_default();
                 definition.up_values.push(UpValue {
@@ -2502,8 +2588,6 @@ impl Session {
                 });
             }
         }
-
-        Ok(true)
     }
 
     fn unset_definition(&mut self, expr: &Expr) -> bool {
@@ -2540,6 +2624,12 @@ impl Session {
             return true;
         }
 
+        if let Some(base_symbol) = subvalue_base_symbol(expr).cloned() {
+            self.remove_matching_sub_values(&base_symbol, expr);
+            self.prune_definition_if_empty(&base_symbol);
+            return true;
+        }
+
         false
     }
 
@@ -2557,6 +2647,11 @@ impl Session {
             }
             Some(TaggedDefinitionTarget::DownValue(symbol)) => {
                 let changed = self.remove_matching_down_values(&symbol, lhs);
+                self.prune_definition_if_empty(&symbol);
+                changed
+            }
+            Some(TaggedDefinitionTarget::SubValue(symbol)) => {
+                let changed = self.remove_matching_sub_values(&symbol, lhs);
                 self.prune_definition_if_empty(&symbol);
                 changed
             }
@@ -2591,6 +2686,18 @@ impl Session {
             .up_values
             .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
         definition.up_values.len() != original_len
+    }
+
+    fn remove_matching_sub_values(&mut self, symbol: &Symbol, lhs: &Expr) -> bool {
+        let Some(definition) = self.definitions.get_mut(symbol) else {
+            return false;
+        };
+
+        let original_len = definition.sub_values.len();
+        definition
+            .sub_values
+            .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
+        definition.sub_values.len() != original_len
     }
 
     fn prune_definition_if_empty(&mut self, symbol: &Symbol) {
@@ -3064,14 +3171,15 @@ impl Session {
         }
 
         if let Some(symbol) = expr_as_symbol(&lhs).cloned() {
-            let definition = self.definitions.entry(symbol).or_default();
-            definition.own_value = Some(rhs.clone());
-            definition.delayed_own_value = None;
-            self.push_trace(TraceEvent::DefinitionStored {
-                symbol: lhs.to_string(),
-                kind: DefinitionKind::OwnValue,
-                value: rhs.to_string(),
-            });
+            self.store_definition_target(
+                TaggedDefinitionTarget::OwnValue(symbol),
+                lhs.clone(),
+                rhs.clone(),
+                false,
+            );
+            Ok(rhs)
+        } else if let Some(target) = classify_definition_lhs(&lhs) {
+            self.store_definition_target(target, lhs.clone(), rhs.clone(), false);
             Ok(rhs)
         } else {
             Ok(Expr::call(system_expr("Set"), vec![lhs, rhs]))
@@ -3092,28 +3200,15 @@ impl Session {
         }
 
         if let Some(symbol) = expr_as_symbol(&lhs).cloned() {
-            let definition = self.definitions.entry(symbol).or_default();
-            definition.own_value = None;
-            definition.delayed_own_value = Some(rhs.clone());
-            self.push_trace(TraceEvent::DefinitionStored {
-                symbol: lhs.to_string(),
-                kind: DefinitionKind::DelayedOwnValue,
-                value: rhs.to_string(),
-            });
+            self.store_definition_target(
+                TaggedDefinitionTarget::OwnValue(symbol),
+                lhs.clone(),
+                rhs.clone(),
+                true,
+            );
             Ok(system_expr("Null"))
-        } else if let Some(head_symbol) = downvalue_head_symbol(&lhs).cloned() {
-            let trace_symbol = head_symbol.to_string();
-            let definition = self.definitions.entry(head_symbol).or_default();
-            definition.down_values.push(DownValue {
-                lhs: lhs.clone(),
-                rhs: rhs.clone(),
-                delayed: true,
-            });
-            self.push_trace(TraceEvent::DefinitionStored {
-                symbol: trace_symbol,
-                kind: DefinitionKind::DownValue,
-                value: format!("{lhs} := {rhs}"),
-            });
+        } else if let Some(target) = classify_definition_lhs(&lhs) {
+            self.store_definition_target(target, lhs.clone(), rhs.clone(), true);
             Ok(system_expr("Null"))
         } else {
             Ok(Expr::call(system_expr("SetDelayed"), vec![lhs, rhs]))
@@ -3338,6 +3433,40 @@ impl Session {
                     });
                     return self.evaluate(substituted).map(Some);
                 }
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn try_apply_sub_values(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Option<Expr>, EvalError> {
+        let Some(symbol) = base_head_symbol_of_nested_call(head).cloned() else {
+            return Ok(None);
+        };
+
+        let Some(definition) = self.definitions.get(&symbol).cloned() else {
+            return Ok(None);
+        };
+
+        let candidate = Expr::call(head.clone(), args.to_vec());
+
+        for sub_value in definition.sub_values {
+            let mut bindings = BTreeMap::new();
+            let matcher = compile_matcher(&sub_value.lhs);
+
+            if self.match_compiled(&matcher, &candidate, &mut bindings)? {
+                let substituted = substitute_rule_bindings(&sub_value.rhs, &bindings);
+                self.push_trace(TraceEvent::RuleApplied {
+                    source: RuleApplicationSource::SubValue,
+                    input: candidate.to_string(),
+                    rule: sub_value.lhs.to_string(),
+                    result: substituted.to_string(),
+                });
+                return self.evaluate(substituted).map(Some);
             }
         }
 
@@ -4543,7 +4672,7 @@ fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
 
     match symbol.name() {
         "Attributes" | "Context" | "Message" | "OwnValues" | "UpValues" | "DownValues"
-        | "SetAttributes" | "ClearAttributes" | "Unset" => {
+        | "SubValues" | "SetAttributes" | "ClearAttributes" | "Unset" => {
             AttributeSet::from_attribute(Attribute::HoldFirst)
         }
         "HoldAllComplete" | "Unevaluated" => {
@@ -4737,12 +4866,31 @@ fn collect_with_binding_symbols(expr: &Expr, locals: &mut BTreeSet<Symbol>) {
 enum TaggedDefinitionTarget {
     OwnValue(Symbol),
     DownValue(Symbol),
+    SubValue(Symbol),
     UpValue(Symbol),
+}
+
+fn classify_definition_lhs(lhs: &Expr) -> Option<TaggedDefinitionTarget> {
+    if let Some(symbol) = expr_as_symbol(lhs).cloned() {
+        return Some(TaggedDefinitionTarget::OwnValue(symbol));
+    }
+
+    if let Some(symbol) = subvalue_base_symbol(lhs).cloned() {
+        return Some(TaggedDefinitionTarget::SubValue(symbol));
+    }
+
+    downvalue_head_symbol(lhs)
+        .cloned()
+        .map(TaggedDefinitionTarget::DownValue)
 }
 
 fn classify_tagged_definition(tag: &Symbol, lhs: &Expr) -> Option<TaggedDefinitionTarget> {
     if expr_as_symbol(lhs).is_some_and(|symbol| symbol == tag) {
         return Some(TaggedDefinitionTarget::OwnValue(tag.clone()));
+    }
+
+    if subvalue_base_symbol(lhs).is_some_and(|symbol| symbol == tag) {
+        return Some(TaggedDefinitionTarget::SubValue(tag.clone()));
     }
 
     if downvalue_head_symbol(lhs).is_some_and(|symbol| symbol == tag) {
@@ -4854,6 +5002,28 @@ fn downvalue_head_symbol(expr: &Expr) -> Option<&Symbol> {
             downvalue_head_symbol(&args[0])
         }
         Expr::Call { head, .. } => expr_as_symbol(head),
+        _ => None,
+    }
+}
+
+fn subvalue_base_symbol(expr: &Expr) -> Option<&Symbol> {
+    match strip_hold_pattern(expr) {
+        Expr::Call { head, args }
+            if is_system_symbol_name(head, "Condition") && !args.is_empty() =>
+        {
+            subvalue_base_symbol(&args[0])
+        }
+        Expr::Call { head, .. } => base_head_symbol_of_nested_call(head),
+        _ => None,
+    }
+}
+
+fn base_head_symbol_of_nested_call(expr: &Expr) -> Option<&Symbol> {
+    match expr {
+        Expr::Call { head, .. } => match &**head {
+            Expr::Call { .. } => base_head_symbol_of_nested_call(head),
+            _ => expr_as_symbol(head),
+        },
         _ => None,
     }
 }
@@ -5518,6 +5688,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "Slot"
             | "SlotSequence"
             | "String"
+            | "SubValues"
             | "Symbol"
             | "TagSet"
             | "TagSetDelayed"
@@ -7794,6 +7965,42 @@ mod tests {
     }
 
     #[test]
+    fn subvalues_list_and_apply_nested_head_definitions() {
+        let mut session = Session::new();
+
+        session.eval_text("f[x_][y_Integer] := pair[x, y]").unwrap();
+
+        assert_eq!(
+            session.eval_text("f[1][2]").unwrap().value.to_string(),
+            "pair[1, 2]"
+        );
+        assert_eq!(
+            session.eval_text("SubValues[f]").unwrap().value.to_string(),
+            "List[RuleDelayed[f[Pattern[x, Blank[]]][Pattern[y, Blank[Integer]]], pair[x, y]]]"
+        );
+    }
+
+    #[test]
+    fn tagged_subvalues_attach_to_the_head_symbol_not_to_upvalues() {
+        let mut session = Session::new();
+
+        session.eval_text("f /: f[x_][y_] := pair[x, y]").unwrap();
+
+        assert_eq!(
+            session.eval_text("f[1][2]").unwrap().value.to_string(),
+            "pair[1, 2]"
+        );
+        assert_eq!(
+            session.eval_text("UpValues[f]").unwrap().value.to_string(),
+            "List[]"
+        );
+        assert_eq!(
+            session.eval_text("SubValues[f]").unwrap().value.to_string(),
+            "List[RuleDelayed[f[Pattern[x, Blank[]]][Pattern[y, Blank[]]], pair[x, y]]]"
+        );
+    }
+
+    #[test]
     fn unset_can_remove_symbol_downvalue_and_upvalue_definitions() {
         let mut session = Session::new();
 
@@ -7966,6 +8173,7 @@ mod tests {
         session.eval_text("y := x").unwrap();
         session.eval_text("f[z_Integer] := z").unwrap();
         session.eval_text("a /: g[a] := 1").unwrap();
+        session.eval_text("h[u_][v_] := pair[u, v]").unwrap();
 
         let own_entries = session.inspect_definition_catalog("x").unwrap();
         assert_eq!(own_entries.len(), 1);
@@ -7993,14 +8201,39 @@ mod tests {
         assert_eq!(up_entries[0].kind, DefinitionKind::UpValue);
         assert!(up_entries[0].delayed);
         assert_eq!(up_entries[0].lhs.to_string(), "g[a]");
+
+        let sub_entries = session.inspect_definition_catalog("h").unwrap();
+        assert_eq!(sub_entries.len(), 1);
+        assert_eq!(sub_entries[0].kind, DefinitionKind::SubValue);
+        assert!(sub_entries[0].delayed);
+        assert_eq!(
+            sub_entries[0].lhs.to_string(),
+            "h[Pattern[u, Blank[]]][Pattern[v, Blank[]]]"
+        );
     }
 
     #[test]
-    fn set_with_non_symbol_lhs_remains_unevaluated_for_now() {
+    fn set_supports_immediate_pattern_based_downvalues_and_subvalues() {
         let mut session = Session::new();
-        let outcome = session.eval_text("f[x] = 1").unwrap();
 
-        assert_eq!(outcome.value.to_string(), "Set[f[x], 1]");
+        assert_eq!(
+            session.eval_text("f[x_] = 1").unwrap().value.to_string(),
+            "1"
+        );
+        assert_eq!(session.eval_text("f[z]").unwrap().value.to_string(), "1");
+
+        assert_eq!(
+            session
+                .eval_text("g[x_][y_] = pair[x, y]")
+                .unwrap()
+                .value
+                .to_string(),
+            "pair[x, y]"
+        );
+        assert_eq!(
+            session.eval_text("g[1][2]").unwrap().value.to_string(),
+            "pair[1, 2]"
+        );
     }
 
     #[test]

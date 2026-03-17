@@ -125,6 +125,11 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldFirst,
     ),
     BuiltinSpec::with_hold(
+        "SubValues",
+        "Lists stored subvalue definitions for a symbol.",
+        HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::with_hold(
         "Attributes",
         "Lists the currently active attributes for a symbol.",
         HoldAttribute::HoldFirst,

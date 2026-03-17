@@ -114,6 +114,10 @@ where
                         flags.push("down");
                     }
 
+                    if info.has_sub_values {
+                        flags.push("sub");
+                    }
+
                     if info.message_count > 0 {
                         flags.push("msg");
                     }
@@ -143,6 +147,10 @@ where
                         let down_entries = entries
                             .iter()
                             .filter(|entry| entry.kind == DefinitionKind::DownValue)
+                            .collect::<Vec<_>>();
+                        let sub_entries = entries
+                            .iter()
+                            .filter(|entry| entry.kind == DefinitionKind::SubValue)
                             .collect::<Vec<_>>();
                         let up_entries = entries
                             .iter()
@@ -180,6 +188,19 @@ where
                                 "  down[{}]: {}",
                                 down_entries.len(),
                                 down_entries
+                                    .iter()
+                                    .map(|entry| format_definition_entry(entry))
+                                    .collect::<Vec<_>>()
+                                    .join(" | ")
+                            )?;
+                        }
+
+                        if !sub_entries.is_empty() {
+                            writeln!(
+                                self.output,
+                                "  sub[{}]: {}",
+                                sub_entries.len(),
+                                sub_entries
                                     .iter()
                                     .map(|entry| format_definition_entry(entry))
                                     .collect::<Vec<_>>()

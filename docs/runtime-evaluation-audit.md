@@ -59,9 +59,10 @@ Call evaluation currently follows this order:
 5. Unless the head has `HoldAllComplete`, try upvalues attached to symbols that
    appear in the evaluated arguments.
 6. Try downvalues on the evaluated head plus evaluated arguments.
-7. Try builtin dispatch for non-special system builtins.
-8. Try pure-function application.
-9. Reconstruct the call if nothing fires.
+7. Try subvalues keyed by the leftmost base symbol of a nested evaluated head.
+8. Try builtin dispatch for non-special system builtins.
+9. Try pure-function application.
+10. Reconstruct the call if nothing fires.
 
 This gives the runtime a workable precedence order for the currently supported
 subset:
@@ -72,6 +73,7 @@ subset:
 - upvalues run before downvalues on ordinary calls, unless `HoldAllComplete`
   blocks them
 - downvalues see evaluated arguments
+- subvalues run after downvalues once the nested head has stabilized
 - pure functions run after ordinary builtin dispatch
 
 ### Currently Implemented Hold Behavior
@@ -102,8 +104,10 @@ The current runtime supports:
 - immediate ownvalues
 - delayed ownvalues
 - immediate and delayed downvalues
+- immediate and delayed subvalues
 - immediate and delayed tagged definitions via `TagSet` / `TagSetDelayed`
 - upvalue inspection via `UpValues`
+- subvalue inspection via `SubValues`
 - `Unset`, `Clear`, and `ClearAll` for the currently supported definition
   categories
 - immediate and delayed rewrite rules
@@ -125,6 +129,7 @@ good enough to build on:
 - `Evaluate` + `Sequence` interaction in held vs non-held positions
 - upvalue application ahead of downvalues for ordinary calls
 - downvalue application after argument evaluation
+- subvalue application for nested-head expressions such as `f[x_][y_]`
 - immediate vs delayed rule behavior
 - lexical scoping via `With` and `Module`
 - dynamic rebinding via `Block` for ownvalue-style symbol values
@@ -156,12 +161,11 @@ Practical impact:
 ### 2. Definition Precedence Is Still a Narrow Slice
 
 The current evaluator has a workable precedence order for ownvalues,
-downvalues, builtins, and pure functions, but it does not yet model the wider
-definition lattice.
+upvalues, downvalues, subvalues, builtins, and pure functions, but it does not
+yet model the wider definition lattice.
 
 Missing or incomplete areas:
 
-- `SubValues`
 - broader tag-based definition attachment such as `TagUnset` / `TagUnsetDelayed`
 - a more declarative precedence table for user definitions vs builtin dispatch
 
@@ -170,7 +174,8 @@ Practical impact:
 - common argument-owned protocols can now be modeled with `TagSet` /
   `TagSetDelayed`, but deeper multi-owner dispatch is still absent
 - host-side DSL embedding still cannot rely on the full Wolfram definition
-  lattice
+  lattice, especially where nested-head behavior must interact with future
+  `UpValues` refinements and richer tag operations
 - lifecycle management is usable now, but still narrower than the long-term
   target
 
@@ -255,9 +260,10 @@ Practical impact:
 
 The cleanest next steps for `rum-runtime` are:
 
-1. expand from `UpValues` toward `SubValues` and the rest of the definition lattice
-2. make builtin dispatch order more declarative so new semantics do not depend
+1. make builtin dispatch order more declarative so new semantics do not depend
    on ad hoc handler placement
+2. extend tag-oriented lifecycle tools beyond `Unset` / `Clear` / `ClearAll`
+   into the rest of the definition lattice
 3. extend the attribute table beyond hold-oriented behavior into `Orderless`,
    `Flat`, `OneIdentity`, and later `Listable`
 4. let `Function` accept explicit attributes / hold behavior so held evaluation

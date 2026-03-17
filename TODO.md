@@ -125,6 +125,9 @@ This roadmap now uses two levels of detail:
 - [x] Add `Unset` support for ownvalues, downvalues, and tagged upvalues
 - [x] Add `Clear` to remove values and rule-based definitions while leaving messages and attributes available for later inspection
 - [x] Add `ClearAll` to extend `Clear` with message and user-defined attribute reset semantics
+- [x] Add `SubValues[symbol]` inspection and nested-head definition storage
+- [x] Add runtime subvalue matching for expressions such as `f[x_][y_]`
+- [x] Extend `Set` / `SetDelayed` and tagged definitions to cover immediate and delayed subvalues
 
 ### `rum-runtime`: Held Evaluation and Scoping Gaps
 
