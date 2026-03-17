@@ -28,6 +28,27 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Evaluates to the active context search path as a list of strings.",
     ),
     BuiltinSpec::with_hold(
+        "Context",
+        "Returns the context of the current session or of a symbol.",
+        HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::new(
+        "Begin",
+        "Switches into a context and prepends it to the context path.",
+    ),
+    BuiltinSpec::new(
+        "End",
+        "Restores the previous context after a matching Begin.",
+    ),
+    BuiltinSpec::new(
+        "BeginPackage",
+        "Starts a package context with a package-oriented context path.",
+    ),
+    BuiltinSpec::new(
+        "EndPackage",
+        "Ends a package context and leaves it on the restored context path.",
+    ),
+    BuiltinSpec::with_hold(
         "If",
         "Evaluates one of several branches conditionally.",
         HoldAttribute::HoldRest,

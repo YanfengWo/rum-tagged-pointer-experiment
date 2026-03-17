@@ -52,7 +52,11 @@ off as work lands.
 - [x] Resolve bare symbols through the context path before the current context
 - [x] Preserve explicit context-qualified symbols verbatim
 - [x] Restrict builtin dispatch to `System`` symbols
-- [ ] Add language-level context management helpers beyond session setters
+- [x] Add language-level context management helpers beyond session setters
+- [x] Implement `Context[]` / `Context[symbol]` / `Context["name"]`
+- [x] Implement `Begin` / `End` with balanced context-frame restoration
+- [x] Implement `BeginPackage` / `EndPackage` basic package-path semantics
+- [ ] Decide how `BeginPackage[..., needs]` should interact with future `Needs`
 
 ### Evaluation loop
 

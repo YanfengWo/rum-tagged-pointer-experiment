@@ -106,6 +106,7 @@ pub struct Session {
     builtins: BTreeMap<String, BuiltinSpec>,
     current_context: String,
     context_path: Vec<String>,
+    context_stack: Vec<ContextFrame>,
     definitions: BTreeMap<Symbol, SymbolDefinition>,
     next_generated_symbol_id: u64,
     resource_limits: ResourceLimits,
@@ -155,6 +156,20 @@ enum CasesSpec {
     Rule(RewriteRule),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ContextFrameKind {
+    Begin,
+    BeginPackage,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ContextFrame {
+    kind: ContextFrameKind,
+    previous_context: String,
+    previous_context_path: Vec<String>,
+    opened_context: String,
+}
+
 #[derive(Clone, Copy, Debug)]
 struct SequencePatternSpec<'a> {
     min_len: usize,
@@ -183,6 +198,7 @@ impl Default for Session {
             builtins: BTreeMap::new(),
             current_context: GLOBAL_CONTEXT.to_string(),
             context_path: vec![SYSTEM_CONTEXT.to_string(), GLOBAL_CONTEXT.to_string()],
+            context_stack: Vec::new(),
             definitions: BTreeMap::new(),
             next_generated_symbol_id: 0,
             resource_limits: ResourceLimits::default(),
@@ -252,6 +268,61 @@ impl Session {
             .into_iter()
             .map(|context| normalize_context_name(context.into()))
             .collect();
+    }
+
+    fn begin_context(&mut self, context: String) -> Expr {
+        let previous_context = self.current_context.clone();
+        let previous_context_path = self.context_path.clone();
+        self.context_stack.push(ContextFrame {
+            kind: ContextFrameKind::Begin,
+            previous_context,
+            previous_context_path,
+            opened_context: context.clone(),
+        });
+        self.current_context = context.clone();
+        self.context_path = prepend_context(&context, &self.context_path);
+        Expr::string(context)
+    }
+
+    fn end_context(&mut self) -> Option<Expr> {
+        let frame = self.context_stack.pop()?;
+
+        if frame.kind != ContextFrameKind::Begin {
+            self.context_stack.push(frame);
+            return None;
+        }
+
+        let current = self.current_context.clone();
+        self.current_context = frame.previous_context;
+        self.context_path = frame.previous_context_path;
+        Some(Expr::string(current))
+    }
+
+    fn begin_package_context(&mut self, context: String) -> Expr {
+        let previous_context = self.current_context.clone();
+        let previous_context_path = self.context_path.clone();
+        self.context_stack.push(ContextFrame {
+            kind: ContextFrameKind::BeginPackage,
+            previous_context,
+            previous_context_path,
+            opened_context: context.clone(),
+        });
+        self.current_context = context.clone();
+        self.context_path = vec![context.clone(), SYSTEM_CONTEXT.to_string()];
+        Expr::string(context)
+    }
+
+    fn end_package_context(&mut self) -> Option<Expr> {
+        let frame = self.context_stack.pop()?;
+
+        if frame.kind != ContextFrameKind::BeginPackage {
+            self.context_stack.push(frame);
+            return None;
+        }
+
+        self.current_context = frame.previous_context;
+        self.context_path = prepend_context(&frame.opened_context, &frame.previous_context_path);
+        Some(system_expr("Null"))
     }
 
     pub fn inspect(&self, name: &str) -> Option<SymbolInfo> {
@@ -529,6 +600,11 @@ impl Session {
 
         match symbol.name() {
             "Identity" if args.len() == 1 => Ok(Some(args[0].clone())),
+            "Context" => self.eval_context(args).map(Some),
+            "Begin" => self.eval_begin(args).map(Some),
+            "End" => self.eval_end(args).map(Some),
+            "BeginPackage" => self.eval_begin_package(args).map(Some),
+            "EndPackage" => self.eval_end_package(args).map(Some),
             "If" => self.eval_if(args).map(Some),
             "Which" => self.eval_which(args).map(Some),
             "With" => self.eval_with(args).map(Some),
@@ -539,6 +615,57 @@ impl Session {
             "Sequence" => Ok(Some(sequence_expr(args.to_vec()))),
             _ => Ok(None),
         }
+    }
+
+    fn eval_context(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [] => Ok(Expr::string(self.current_context.clone())),
+            [Expr::Atom(Atom::Symbol(symbol))] => Ok(Expr::string(symbol.context().to_string())),
+            [Expr::Atom(Atom::String(raw_name))] => self
+                .resolve_symbol_name(raw_name, false)
+                .map(|symbol| Expr::string(symbol.context().to_string()))
+                .map_or_else(|| Ok(Expr::call(system_expr("Context"), args.to_vec())), Ok),
+            [_] => Ok(Expr::call(system_expr("Context"), args.to_vec())),
+            _ => Ok(Expr::call(system_expr("Context"), args.to_vec())),
+        }
+    }
+
+    fn eval_begin(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [Expr::Atom(Atom::String(context))] = args else {
+            return Ok(Expr::call(system_expr("Begin"), args.to_vec()));
+        };
+
+        let target = expand_context_spec(context, &self.current_context);
+        Ok(self.begin_context(target))
+    }
+
+    fn eval_end(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !args.is_empty() {
+            return Ok(Expr::call(system_expr("End"), args.to_vec()));
+        }
+
+        Ok(self
+            .end_context()
+            .unwrap_or_else(|| Expr::call(system_expr("End"), Vec::new())))
+    }
+
+    fn eval_begin_package(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [Expr::Atom(Atom::String(context))] = args else {
+            return Ok(Expr::call(system_expr("BeginPackage"), args.to_vec()));
+        };
+
+        let target = expand_context_spec(context, &self.current_context);
+        Ok(self.begin_package_context(target))
+    }
+
+    fn eval_end_package(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !args.is_empty() {
+            return Ok(Expr::call(system_expr("EndPackage"), args.to_vec()));
+        }
+
+        Ok(self
+            .end_package_context()
+            .unwrap_or_else(|| Expr::call(system_expr("EndPackage"), Vec::new())))
     }
 
     fn eval_if(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -1460,6 +1587,27 @@ fn normalize_context_name(context: impl Into<String>) -> String {
     context
 }
 
+fn expand_context_spec(spec: &str, current_context: &str) -> String {
+    if let Some(suffix) = spec.strip_prefix('`') {
+        normalize_context_name(format!("{current_context}{suffix}"))
+    } else {
+        normalize_context_name(spec)
+    }
+}
+
+fn prepend_context(context: &str, path: &[String]) -> Vec<String> {
+    let mut result = Vec::with_capacity(path.len() + 1);
+    result.push(normalize_context_name(context));
+
+    for existing in path {
+        if existing != context {
+            result.push(existing.clone());
+        }
+    }
+
+    result
+}
+
 fn resolve_unqualified_symbol(raw: &str) -> Option<Symbol> {
     split_symbol_name(raw)
         .map(|(context, name)| Symbol::new(normalize_context_name(context), name))
@@ -1491,6 +1639,7 @@ fn fallback_hold_attribute(name: &str) -> HoldAttribute {
     match name {
         "Hold" | "HoldAll" | "Evaluate" => HoldAttribute::HoldAll,
         "Function" | "Which" | "Module" | "Block" => HoldAttribute::HoldAll,
+        "Context" => HoldAttribute::HoldFirst,
         "If" => HoldAttribute::HoldRest,
         "With" => HoldAttribute::HoldAll,
         "HoldFirst" => HoldAttribute::HoldFirst,
@@ -2151,12 +2300,17 @@ fn is_known_system_symbol_name(name: &str) -> bool {
         name,
         "$Context"
             | "$ContextPath"
+            | "Begin"
+            | "BeginPackage"
             | "Blank"
             | "BlankNullSequence"
             | "BlankSequence"
             | "Block"
             | "Cases"
             | "Condition"
+            | "Context"
+            | "End"
+            | "EndPackage"
             | "Evaluate"
             | "False"
             | "Function"
@@ -2183,6 +2337,8 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "SetDelayed"
             | "Slot"
             | "SlotSequence"
+            | "String"
+            | "Symbol"
             | "Times"
             | "True"
             | "Which"
@@ -2255,6 +2411,142 @@ mod tests {
         assert_eq!(
             session.eval_text("Rules`x").unwrap().value.to_string(),
             "20"
+        );
+    }
+
+    #[test]
+    fn context_builtin_reports_session_and_symbol_contexts_without_evaluating_symbols() {
+        let mut session = Session::new();
+
+        session.eval_text("x = 1").unwrap();
+
+        assert_eq!(
+            session.eval_text("Context[]").unwrap().value.to_string(),
+            "\"Global`\""
+        );
+        assert_eq!(
+            session.eval_text("Context[x]").unwrap().value.to_string(),
+            "\"Global`\""
+        );
+        assert_eq!(
+            session
+                .eval_text("Context[Identity]")
+                .unwrap()
+                .value
+                .to_string(),
+            "\"System`\""
+        );
+        assert_eq!(
+            session
+                .eval_text("Context[\"Identity\"]")
+                .unwrap()
+                .value
+                .to_string(),
+            "\"System`\""
+        );
+        assert_eq!(
+            session
+                .eval_text("Context[\"MissingSymbol\"]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Context[\"MissingSymbol\"]"
+        );
+    }
+
+    #[test]
+    fn begin_and_end_balance_context_and_context_path() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Begin[\"Rules`\"]")
+                .unwrap()
+                .value
+                .to_string(),
+            "\"Rules`\""
+        );
+        assert_eq!(
+            session.eval_text("$Context").unwrap().value.to_string(),
+            "\"Rules`\""
+        );
+        assert_eq!(
+            session.eval_text("$ContextPath").unwrap().value.to_string(),
+            "List[\"Rules`\", \"System`\", \"Global`\"]"
+        );
+
+        assert_eq!(
+            session
+                .eval_text("Begin[\"`Private`\"]")
+                .unwrap()
+                .value
+                .to_string(),
+            "\"Rules`Private`\""
+        );
+        assert_eq!(
+            session.eval_text("$Context").unwrap().value.to_string(),
+            "\"Rules`Private`\""
+        );
+        assert_eq!(
+            session.eval_text("End[]").unwrap().value.to_string(),
+            "\"Rules`Private`\""
+        );
+        assert_eq!(
+            session.eval_text("$Context").unwrap().value.to_string(),
+            "\"Rules`\""
+        );
+        assert_eq!(
+            session.eval_text("$ContextPath").unwrap().value.to_string(),
+            "List[\"Rules`\", \"System`\", \"Global`\"]"
+        );
+    }
+
+    #[test]
+    fn begin_package_and_end_package_restore_outer_context_and_export_package_context() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("BeginPackage[\"Demo`\"]")
+                .unwrap()
+                .value
+                .to_string(),
+            "\"Demo`\""
+        );
+        assert_eq!(
+            session.eval_text("$Context").unwrap().value.to_string(),
+            "\"Demo`\""
+        );
+        assert_eq!(
+            session.eval_text("$ContextPath").unwrap().value.to_string(),
+            "List[\"Demo`\", \"System`\"]"
+        );
+
+        session.eval_text("Begin[\"`Private`\"]").unwrap();
+        session.eval_text("hidden = 1").unwrap();
+        assert_eq!(
+            session.eval_text("End[]").unwrap().value.to_string(),
+            "\"Demo`Private`\""
+        );
+
+        session.eval_text("public = 2").unwrap();
+
+        assert_eq!(
+            session.eval_text("EndPackage[]").unwrap().value.to_string(),
+            "Null"
+        );
+        assert_eq!(
+            session.eval_text("$Context").unwrap().value.to_string(),
+            "\"Global`\""
+        );
+        assert_eq!(
+            session.eval_text("$ContextPath").unwrap().value.to_string(),
+            "List[\"Demo`\", \"System`\", \"Global`\"]"
+        );
+        assert_eq!(session.eval_text("public").unwrap().value.to_string(), "2");
+        assert_eq!(
+            session.eval_text("hidden").unwrap().value.to_string(),
+            "hidden"
         );
     }
 
