@@ -178,18 +178,29 @@ impl Parser {
 
     fn parse_slot(&mut self) -> Result<SyntaxExpr, SyntaxError> {
         self.bump();
+        let is_sequence = matches!(self.current().kind, TokenKind::Hash);
 
-        let spec = match &self.current().kind {
-            TokenKind::Integer(value) => {
+        if is_sequence {
+            self.bump();
+        }
+
+        let spec = match (&self.current().kind, is_sequence) {
+            (TokenKind::Integer(value), false) => {
                 let value = value.clone();
                 self.bump();
                 SlotSpec::Number(value)
             }
-            TokenKind::Symbol(value) => {
+            (TokenKind::Symbol(value), false) => {
                 let value = value.clone();
                 self.bump();
                 SlotSpec::Named(value)
             }
+            (TokenKind::Integer(value), true) => {
+                let value = value.clone();
+                self.bump();
+                SlotSpec::SequenceNumber(value)
+            }
+            _ if is_sequence => SlotSpec::Sequence,
             _ => SlotSpec::Anonymous,
         };
 
@@ -439,6 +450,19 @@ mod tests {
                     op: BinaryOp::Add,
                     lhs: Box::new(SyntaxExpr::Slot(SlotSpec::Number("1".to_string()))),
                     rhs: Box::new(SyntaxExpr::Slot(SlotSpec::Number("2".to_string()))),
+                }),
+            }
+        );
+
+        let sequence_parsed = parse_expr("## + ##2 &").unwrap();
+        assert_eq!(
+            sequence_parsed,
+            SyntaxExpr::Postfix {
+                op: PostfixOp::Function,
+                expr: Box::new(SyntaxExpr::Binary {
+                    op: BinaryOp::Add,
+                    lhs: Box::new(SyntaxExpr::Slot(SlotSpec::Sequence)),
+                    rhs: Box::new(SyntaxExpr::Slot(SlotSpec::SequenceNumber("2".to_string()))),
                 }),
             }
         );

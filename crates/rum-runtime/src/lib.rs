@@ -951,8 +951,8 @@ pub fn lower_syntax_expr(expr: &SyntaxExpr) -> Result<Expr, EvalError> {
 }
 
 fn lower_slot(spec: &SlotSpec) -> Result<Expr, EvalError> {
-    let arg = match spec {
-        SlotSpec::Anonymous => Expr::integer(BigInt::from(1_u8)),
+    let (head, arg) = match spec {
+        SlotSpec::Anonymous => ("Slot", Expr::integer(BigInt::from(1_u8))),
         SlotSpec::Number(value) => {
             let bigint = BigInt::parse_bytes(value.as_bytes(), 10).ok_or_else(|| {
                 EvalError::InvalidInteger {
@@ -960,12 +960,22 @@ fn lower_slot(spec: &SlotSpec) -> Result<Expr, EvalError> {
                 }
             })?;
 
-            Expr::integer(bigint)
+            ("Slot", Expr::integer(bigint))
         }
-        SlotSpec::Named(value) => Expr::string(value.clone()),
+        SlotSpec::Named(value) => ("Slot", Expr::string(value.clone())),
+        SlotSpec::Sequence => ("SlotSequence", Expr::integer(BigInt::from(1_u8))),
+        SlotSpec::SequenceNumber(value) => {
+            let bigint = BigInt::parse_bytes(value.as_bytes(), 10).ok_or_else(|| {
+                EvalError::InvalidInteger {
+                    literal: value.clone(),
+                }
+            })?;
+
+            ("SlotSequence", Expr::integer(bigint))
+        }
     };
 
-    Ok(Expr::call(Expr::symbol("Slot"), vec![arg]))
+    Ok(Expr::call(Expr::symbol(head), vec![arg]))
 }
 
 fn lower_blank(kind: BlankKind, head: Option<&SyntaxExpr>) -> Result<Expr, EvalError> {
@@ -1594,13 +1604,26 @@ fn substitute_slots(expr: &Expr, args: &[Expr]) -> Expr {
         Expr::Call {
             head,
             args: call_args,
-        } => Expr::call(
-            substitute_slots(head, args),
-            call_args
-                .iter()
-                .map(|arg| substitute_slots(arg, args))
-                .collect(),
-        ),
+        } => {
+            let substituted_head = substitute_slots(head, args);
+            let mut substituted_args = Vec::new();
+
+            for arg in call_args {
+                let substituted_arg = substitute_slots(arg, args);
+
+                if is_slot_sequence_expr(arg) {
+                    if let Some(items) = sequence_items(&substituted_arg) {
+                        substituted_args.extend(items.iter().cloned());
+                    } else {
+                        substituted_args.push(substituted_arg);
+                    }
+                } else {
+                    substituted_args.push(substituted_arg);
+                }
+            }
+
+            Expr::call(substituted_head, substituted_args)
+        }
     }
 }
 
@@ -1613,12 +1636,12 @@ fn substitute_single_slot(expr: &Expr, args: &[Expr]) -> Option<Expr> {
         return None;
     };
 
-    if !is_system_symbol_name(head, "Slot") || slot_args.len() != 1 {
+    if slot_args.len() != 1 {
         return None;
     }
 
-    match &slot_args[0] {
-        Expr::Atom(Atom::Integer(index)) => {
+    match (expr_as_symbol(head)?.name(), &slot_args[0]) {
+        ("Slot", Expr::Atom(Atom::Integer(index))) => {
             let index = index.to_string().parse::<usize>().ok()?;
             if index == 0 {
                 None
@@ -1626,7 +1649,24 @@ fn substitute_single_slot(expr: &Expr, args: &[Expr]) -> Option<Expr> {
                 args.get(index - 1).cloned()
             }
         }
+        ("SlotSequence", Expr::Atom(Atom::Integer(index))) => {
+            let index = index.to_string().parse::<usize>().ok()?;
+            if index == 0 {
+                None
+            } else {
+                Some(sequence_expr(
+                    args.iter().skip(index - 1).cloned().collect(),
+                ))
+            }
+        }
         _ => None,
+    }
+}
+
+fn is_slot_sequence_expr(expr: &Expr) -> bool {
+    match expr {
+        Expr::Call { head, args } => is_system_symbol_name(head, "SlotSequence") && args.len() == 1,
+        _ => false,
     }
 }
 
@@ -1878,6 +1918,30 @@ mod tests {
                 .value
                 .to_string(),
             "2"
+        );
+        assert_eq!(
+            session
+                .eval_text("(f[##] &)[1, Identity[2], 3]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[1, 2, 3]"
+        );
+        assert_eq!(
+            session
+                .eval_text("(f[##2] &)[10, Identity[20], 30]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[20, 30]"
+        );
+        assert_eq!(
+            session
+                .eval_text("(Hold[##] &)[1, 2]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[1, 2]"
         );
     }
 
@@ -2144,6 +2208,14 @@ mod tests {
         let lowered = lower_syntax_expr(&syntax).unwrap();
 
         assert_eq!(lowered.to_string(), "Function[Plus[Slot[1], Slot[2]]]");
+
+        let sequence_syntax = parse_expr("## + ##2 &").unwrap();
+        let sequence_lowered = lower_syntax_expr(&sequence_syntax).unwrap();
+
+        assert_eq!(
+            sequence_lowered.to_string(),
+            "Function[Plus[SlotSequence[1], SlotSequence[2]]]"
+        );
     }
 
     #[test]

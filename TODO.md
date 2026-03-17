@@ -133,7 +133,8 @@ off as work lands.
 - [x] Implement `With` with lexical substitution over simple binding lists
 - [x] Implement `Module` with fresh lexical symbols and sequential initializers
 - [x] Implement `Block` with dynamic symbol rebinding and restoration
-- [ ] Support explicit parameter lists, named slots, and `##`
+- [x] Support `##` slot-sequence shorthand in pure functions
+- [ ] Support explicit parameter lists and named slots
 
 ## Phase 6: REPL and Developer Tooling
 

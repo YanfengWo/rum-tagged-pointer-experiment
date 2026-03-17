@@ -39,6 +39,8 @@ pub enum SlotSpec {
     Anonymous,
     Number(String),
     Named(String),
+    Sequence,
+    SequenceNumber(String),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -192,6 +194,8 @@ fn format_expr(
             SlotSpec::Anonymous => f.write_str("#")?,
             SlotSpec::Number(value) => write!(f, "#{value}")?,
             SlotSpec::Named(value) => write!(f, "#{value}")?,
+            SlotSpec::Sequence => f.write_str("##")?,
+            SlotSpec::SequenceNumber(value) => write!(f, "##{value}")?,
         },
         SyntaxExpr::Blank { kind, head } => {
             f.write_str(kind.token())?;
