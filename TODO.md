@@ -73,7 +73,7 @@ off as work lands.
 - [x] Support a minimal non-held builtin dispatch path
 - [x] Extend symbol inspection to show definition presence
 - [x] Add builtin attribute metadata such as `HoldFirst` and `HoldAll`
-- [ ] Add structured evaluation trace events
+- [x] Add structured evaluation trace events
 
 ### Tests
 
@@ -125,7 +125,7 @@ off as work lands.
 - [x] Implement `With`
 - [x] Implement `Block`
 - [x] Add `Evaluate` and `Sequence`
-- [ ] Add execution tracing hooks and resource limits
+- [x] Add execution tracing hooks and resource limits
 
 ## Control Evaluation Breakdown
 

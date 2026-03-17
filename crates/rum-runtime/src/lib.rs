@@ -6,7 +6,7 @@ use rum_syntax::{
 };
 use thiserror::Error;
 
-const REPLACE_REPEATED_LIMIT: usize = 256;
+const DEFAULT_REPLACE_REPEATED_LIMIT: usize = 256;
 const DEFAULT_RECURSION_LIMIT: usize = 256;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -53,14 +53,64 @@ impl BuiltinSpec {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ResourceLimits {
+    pub recursion_limit: usize,
+    pub replace_repeated_limit: usize,
+}
+
+impl Default for ResourceLimits {
+    fn default() -> Self {
+        Self {
+            recursion_limit: DEFAULT_RECURSION_LIMIT,
+            replace_repeated_limit: DEFAULT_REPLACE_REPEATED_LIMIT,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DefinitionKind {
+    OwnValue,
+    DelayedOwnValue,
+    DownValue,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RuleApplicationSource {
+    DownValue,
+    ReplaceAll,
+    ReplaceRepeated,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TraceEvent {
+    EvaluationPass {
+        before: String,
+        after: String,
+    },
+    DefinitionStored {
+        symbol: String,
+        kind: DefinitionKind,
+        value: String,
+    },
+    RuleApplied {
+        source: RuleApplicationSource,
+        input: String,
+        rule: String,
+        result: String,
+    },
+}
+
 #[derive(Clone, Debug)]
 pub struct Session {
     builtins: BTreeMap<String, BuiltinSpec>,
     definitions: BTreeMap<Symbol, SymbolDefinition>,
     next_generated_symbol_id: u64,
-    recursion_limit: usize,
+    resource_limits: ResourceLimits,
     evaluation_depth: usize,
     evaluation_stack: Vec<Expr>,
+    tracing_enabled: bool,
+    trace_events: Vec<TraceEvent>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -131,9 +181,11 @@ impl Default for Session {
             builtins: BTreeMap::new(),
             definitions: BTreeMap::new(),
             next_generated_symbol_id: 0,
-            recursion_limit: DEFAULT_RECURSION_LIMIT,
+            resource_limits: ResourceLimits::default(),
             evaluation_depth: 0,
             evaluation_stack: Vec::new(),
+            tracing_enabled: false,
+            trace_events: Vec::new(),
         }
     }
 }
@@ -144,7 +196,31 @@ impl Session {
     }
 
     pub fn set_recursion_limit(&mut self, limit: usize) {
-        self.recursion_limit = limit;
+        self.resource_limits.recursion_limit = limit;
+    }
+
+    pub fn set_replace_repeated_limit(&mut self, limit: usize) {
+        self.resource_limits.replace_repeated_limit = limit;
+    }
+
+    pub fn set_resource_limits(&mut self, limits: ResourceLimits) {
+        self.resource_limits = limits;
+    }
+
+    pub fn resource_limits(&self) -> ResourceLimits {
+        self.resource_limits
+    }
+
+    pub fn enable_tracing(&mut self, enabled: bool) {
+        self.tracing_enabled = enabled;
+    }
+
+    pub fn trace(&self) -> &[TraceEvent] {
+        &self.trace_events
+    }
+
+    pub fn take_trace(&mut self) -> Vec<TraceEvent> {
+        std::mem::take(&mut self.trace_events)
     }
 
     pub fn register_builtin(&mut self, spec: BuiltinSpec) {
@@ -199,6 +275,11 @@ impl Session {
                 return Ok(next);
             }
 
+            self.push_trace(TraceEvent::EvaluationPass {
+                before: current.to_string(),
+                after: next.to_string(),
+            });
+
             current = next;
         }
     }
@@ -210,9 +291,9 @@ impl Session {
             });
         }
 
-        if self.evaluation_depth >= self.recursion_limit {
+        if self.evaluation_depth >= self.resource_limits.recursion_limit {
             return Err(EvalError::RecursionLimitExceeded {
-                limit: self.recursion_limit,
+                limit: self.resource_limits.recursion_limit,
             });
         }
 
@@ -583,6 +664,11 @@ impl Session {
             let definition = self.definitions.entry(symbol).or_default();
             definition.own_value = Some(rhs.clone());
             definition.delayed_own_value = None;
+            self.push_trace(TraceEvent::DefinitionStored {
+                symbol: lhs.to_string(),
+                kind: DefinitionKind::OwnValue,
+                value: rhs.to_string(),
+            });
             Ok(rhs)
         } else {
             Ok(Expr::call(Expr::symbol("Set"), vec![lhs, rhs]))
@@ -600,11 +686,25 @@ impl Session {
         if let Some(symbol) = expr_as_symbol(&lhs).cloned() {
             let definition = self.definitions.entry(symbol).or_default();
             definition.own_value = None;
-            definition.delayed_own_value = Some(rhs);
+            definition.delayed_own_value = Some(rhs.clone());
+            self.push_trace(TraceEvent::DefinitionStored {
+                symbol: lhs.to_string(),
+                kind: DefinitionKind::DelayedOwnValue,
+                value: rhs.to_string(),
+            });
             Ok(Expr::symbol("Null"))
         } else if let Some(head_symbol) = downvalue_head_symbol(&lhs).cloned() {
+            let trace_symbol = head_symbol.to_string();
             let definition = self.definitions.entry(head_symbol).or_default();
-            definition.down_values.push(DownValue { lhs, rhs });
+            definition.down_values.push(DownValue {
+                lhs: lhs.clone(),
+                rhs: rhs.clone(),
+            });
+            self.push_trace(TraceEvent::DefinitionStored {
+                symbol: trace_symbol,
+                kind: DefinitionKind::DownValue,
+                value: format!("{lhs} := {rhs}"),
+            });
             Ok(Expr::symbol("Null"))
         } else {
             Ok(Expr::call(Expr::symbol("SetDelayed"), vec![lhs, rhs]))
@@ -677,7 +777,7 @@ impl Session {
             ));
         };
 
-        let replaced = self.apply_replace_all(target, &rules)?;
+        let replaced = self.apply_replace_all(target, &rules, RuleApplicationSource::ReplaceAll)?;
         self.evaluate(replaced)
     }
 
@@ -696,8 +796,12 @@ impl Session {
             ));
         };
 
-        for _ in 0..REPLACE_REPEATED_LIMIT {
-            let replaced = self.apply_replace_all(current.clone(), &rules)?;
+        for _ in 0..self.resource_limits.replace_repeated_limit {
+            let replaced = self.apply_replace_all(
+                current.clone(),
+                &rules,
+                RuleApplicationSource::ReplaceRepeated,
+            )?;
             let next = self.evaluate(replaced)?;
 
             if next == current {
@@ -708,7 +812,7 @@ impl Session {
         }
 
         Err(EvalError::IterationLimitExceeded {
-            limit: REPLACE_REPEATED_LIMIT,
+            limit: self.resource_limits.replace_repeated_limit,
         })
     }
 
@@ -732,6 +836,12 @@ impl Session {
 
             if self.match_expr(&down_value.lhs, &candidate, &mut bindings)? {
                 let substituted = substitute_rule_bindings(&down_value.rhs, &bindings);
+                self.push_trace(TraceEvent::RuleApplied {
+                    source: RuleApplicationSource::DownValue,
+                    input: candidate.to_string(),
+                    rule: down_value.lhs.to_string(),
+                    result: substituted.to_string(),
+                });
                 return self.evaluate(substituted).map(Some);
             }
         }
@@ -955,17 +1065,22 @@ impl Session {
         }
     }
 
-    fn apply_replace_all(&mut self, expr: Expr, rules: &[RewriteRule]) -> Result<Expr, EvalError> {
-        if let Some(replaced) = self.apply_rules_once(&expr, rules)? {
+    fn apply_replace_all(
+        &mut self,
+        expr: Expr,
+        rules: &[RewriteRule],
+        source: RuleApplicationSource,
+    ) -> Result<Expr, EvalError> {
+        if let Some(replaced) = self.apply_rules_once(&expr, rules, source)? {
             return Ok(replaced);
         }
 
         match expr {
             Expr::Atom(_) => Ok(expr),
             Expr::Call { head, args } => Ok(Expr::call(
-                self.apply_replace_all(*head, rules)?,
+                self.apply_replace_all(*head, rules, source)?,
                 args.into_iter()
-                    .map(|arg| self.apply_replace_all(arg, rules))
+                    .map(|arg| self.apply_replace_all(arg, rules, source))
                     .collect::<Result<Vec<_>, _>>()?,
             )),
         }
@@ -975,16 +1090,30 @@ impl Session {
         &mut self,
         expr: &Expr,
         rules: &[RewriteRule],
+        source: RuleApplicationSource,
     ) -> Result<Option<Expr>, EvalError> {
         for rule in rules {
             let mut bindings = BTreeMap::new();
 
             if self.match_expr(&rule.lhs, expr, &mut bindings)? {
-                return Ok(Some(substitute_rule_bindings(&rule.rhs, &bindings)));
+                let replaced = substitute_rule_bindings(&rule.rhs, &bindings);
+                self.push_trace(TraceEvent::RuleApplied {
+                    source,
+                    input: expr.to_string(),
+                    rule: rule.lhs.to_string(),
+                    result: replaced.to_string(),
+                });
+                return Ok(Some(replaced));
             }
         }
 
         Ok(None)
+    }
+
+    fn push_trace(&mut self, event: TraceEvent) {
+        if self.tracing_enabled {
+            self.trace_events.push(event);
+        }
     }
 }
 
@@ -2295,6 +2424,56 @@ mod tests {
     }
 
     #[test]
+    fn tracing_records_definition_rule_and_evaluation_events() {
+        let mut session = Session::new();
+        session.enable_tracing(true);
+
+        session.eval_text("f[x_Integer] := x").unwrap();
+        session.eval_text("f[1]").unwrap();
+
+        let trace = session.take_trace();
+
+        assert!(trace.iter().any(|event| matches!(
+            event,
+            TraceEvent::DefinitionStored {
+                symbol,
+                kind: DefinitionKind::DownValue,
+                ..
+            } if symbol == "f"
+        )));
+        assert!(trace.iter().any(|event| matches!(
+            event,
+            TraceEvent::RuleApplied {
+                source: RuleApplicationSource::DownValue,
+                input,
+                ..
+            } if input == "f[1]"
+        )));
+        assert!(trace.iter().any(|event| matches!(
+            event,
+            TraceEvent::EvaluationPass { before, after }
+                if before == "f[1]" && after == "1"
+        )));
+        assert!(session.take_trace().is_empty());
+    }
+
+    #[test]
+    fn configurable_replace_repeated_limit_is_respected() {
+        let mut session = Session::new();
+        session.set_replace_repeated_limit(8);
+
+        let error = session
+            .eval_text("1 //. {1 -> 2, 2 -> 1}")
+            .expect_err("expected iteration limit error");
+
+        assert!(matches!(
+            error,
+            EvalError::IterationLimitExceeded { limit: 8 }
+        ));
+        assert_eq!(session.resource_limits().replace_repeated_limit, 8);
+    }
+
+    #[test]
     fn with_evaluates_bindings_and_substitutes_lexically() {
         let mut session = Session::new();
 
@@ -2839,7 +3018,7 @@ mod tests {
         assert!(matches!(
             error,
             EvalError::IterationLimitExceeded {
-                limit: REPLACE_REPEATED_LIMIT
+                limit: DEFAULT_REPLACE_REPEATED_LIMIT
             }
         ));
     }
