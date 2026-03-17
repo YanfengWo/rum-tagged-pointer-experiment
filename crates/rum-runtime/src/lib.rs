@@ -34,6 +34,7 @@ impl HoldAttribute {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Attribute {
+    HoldAllComplete,
     HoldAll,
     HoldFirst,
     HoldRest,
@@ -43,15 +44,17 @@ pub enum Attribute {
 impl Attribute {
     const fn bit(self) -> u8 {
         match self {
-            Self::HoldAll => 1 << 0,
-            Self::HoldFirst => 1 << 1,
-            Self::HoldRest => 1 << 2,
-            Self::SequenceHold => 1 << 3,
+            Self::HoldAllComplete => 1 << 0,
+            Self::HoldAll => 1 << 1,
+            Self::HoldFirst => 1 << 2,
+            Self::HoldRest => 1 << 3,
+            Self::SequenceHold => 1 << 4,
         }
     }
 
     fn symbol_name(self) -> &'static str {
         match self {
+            Self::HoldAllComplete => "HoldAllComplete",
             Self::HoldAll => "HoldAll",
             Self::HoldFirst => "HoldFirst",
             Self::HoldRest => "HoldRest",
@@ -71,6 +74,7 @@ impl Attribute {
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
+            "HoldAllComplete" => Some(Self::HoldAllComplete),
             "HoldAll" => Some(Self::HoldAll),
             "HoldFirst" => Some(Self::HoldFirst),
             "HoldRest" => Some(Self::HoldRest),
@@ -147,7 +151,10 @@ impl AttributeSet {
         let holds_first = self.contains(Attribute::HoldFirst);
         let holds_rest = self.contains(Attribute::HoldRest);
 
-        if self.contains(Attribute::HoldAll) || (holds_first && holds_rest) {
+        if self.contains(Attribute::HoldAllComplete)
+            || self.contains(Attribute::HoldAll)
+            || (holds_first && holds_rest)
+        {
             HoldAttribute::HoldAll
         } else if holds_first {
             HoldAttribute::HoldFirst
@@ -159,7 +166,11 @@ impl AttributeSet {
     }
 
     fn sequence_hold(self) -> bool {
-        self.contains(Attribute::SequenceHold)
+        self.contains(Attribute::HoldAllComplete) || self.contains(Attribute::SequenceHold)
+    }
+
+    fn blocks_evaluate_override(self) -> bool {
+        self.contains(Attribute::HoldAllComplete)
     }
 
     fn expr(self) -> Expr {
@@ -173,7 +184,8 @@ impl AttributeSet {
     }
 }
 
-const ALL_ATTRIBUTES: [Attribute; 4] = [
+const ALL_ATTRIBUTES: [Attribute; 5] = [
+    Attribute::HoldAllComplete,
     Attribute::HoldAll,
     Attribute::HoldFirst,
     Attribute::HoldRest,
@@ -1701,11 +1713,12 @@ impl Session {
         let attributes = self.attribute_set_for_head(head);
         let hold = attributes.hold_attribute();
         let sequence_hold = attributes.sequence_hold();
+        let blocks_evaluate_override = attributes.blocks_evaluate_override();
         let mut evaluated_args = Vec::new();
 
         for (index, arg) in args.into_iter().enumerate() {
             let (evaluated_arg, allow_sequence_splice) = if hold.holds_argument(index) {
-                self.evaluate_held_argument(arg)?
+                self.evaluate_held_argument(arg, blocks_evaluate_override)?
             } else {
                 (self.evaluate(arg)?, true)
             };
@@ -1720,7 +1733,15 @@ impl Session {
         Ok(evaluated_args)
     }
 
-    fn evaluate_held_argument(&mut self, arg: Expr) -> Result<(Expr, bool), EvalError> {
+    fn evaluate_held_argument(
+        &mut self,
+        arg: Expr,
+        blocks_evaluate_override: bool,
+    ) -> Result<(Expr, bool), EvalError> {
+        if blocks_evaluate_override {
+            return Ok((arg, false));
+        }
+
         if let Some(inner) = evaluate_wrapper_arg(&arg) {
             return self.evaluate(inner.clone()).map(|value| (value, true));
         }
@@ -1803,7 +1824,7 @@ impl Session {
             "If" => self.eval_if(args).map(Some),
             "Which" => self.eval_which(args).map(Some),
             "With" => self.eval_with(args).map(Some),
-            "Hold" | "HoldFirst" | "HoldRest" | "HoldAll" => {
+            "Hold" | "HoldFirst" | "HoldRest" | "HoldAll" | "HoldAllComplete" => {
                 Ok(Some(Expr::call(head.clone(), args.to_vec())))
             }
             "Evaluate" if args.len() == 1 => self.evaluate(args[0].clone()).map(Some),
@@ -4046,6 +4067,7 @@ fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
     match symbol.name() {
         "Attributes" | "Context" | "Message" | "OwnValues" | "DownValues" | "SetAttributes"
         | "ClearAttributes" => AttributeSet::from_attribute(Attribute::HoldFirst),
+        "HoldAllComplete" => AttributeSet::from_attribute(Attribute::HoldAllComplete),
         "Hold" | "HoldAll" | "Evaluate" | "Function" | "Which" | "Module" | "Block" | "Check"
         | "Quiet" | "MessageName" | "Messages" | "MessageDefinitions" | "MessageTags"
         | "NormalizeRules" | "With" => AttributeSet::from_attribute(Attribute::HoldAll),
@@ -4813,6 +4835,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "Heads"
             | "Hold"
             | "HoldAll"
+            | "HoldAllComplete"
             | "HoldFirst"
             | "HoldRest"
             | "Identity"
@@ -4970,6 +4993,14 @@ mod tests {
                 .value
                 .to_string(),
             "List[HoldRest]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Attributes[HoldAllComplete]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[HoldAllComplete]"
         );
         assert_eq!(
             session
@@ -6244,6 +6275,38 @@ mod tests {
                 .value
                 .to_string(),
             "f[Sequence[1, 2], 3]"
+        );
+    }
+
+    #[test]
+    fn holdallcomplete_prevents_evaluate_override_and_sequence_splicing() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("HoldAllComplete[Evaluate[Identity[1]], Sequence[2, 3]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "HoldAllComplete[Evaluate[Identity[1]], Sequence[2, 3]]"
+        );
+    }
+
+    #[test]
+    fn user_defined_holdallcomplete_attribute_holds_all_arguments_completely() {
+        let mut session = Session::new();
+
+        session
+            .eval_text("SetAttributes[f, HoldAllComplete]")
+            .unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("f[Evaluate[Identity[1]], Identity[2], Sequence[3, 4]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[Evaluate[Identity[1]], Identity[2], Sequence[3, 4]]"
         );
     }
 

@@ -1,4 +1,4 @@
-use rum_runtime::{BuiltinSpec, HoldAttribute, Session};
+use rum_runtime::{Attribute, AttributeSet, BuiltinSpec, HoldAttribute, Session};
 
 pub const CORE_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::new("Identity", "Returns its argument unchanged."),
@@ -185,6 +185,11 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "HoldAll",
         "Prevents evaluation of all arguments.",
         HoldAttribute::HoldAll,
+    ),
+    BuiltinSpec::with_attributes(
+        "HoldAllComplete",
+        "Prevents evaluation of all arguments and disables Evaluate and Sequence escapes.",
+        AttributeSet::from_attribute(Attribute::HoldAllComplete),
     ),
     BuiltinSpec::with_hold(
         "Evaluate",

@@ -76,10 +76,12 @@ The runtime now has a first-class session-level attribute table for the current
 early subset:
 
 - `Attributes`, `SetAttributes`, and `ClearAttributes`
+- `HoldAllComplete`
 - `Hold`, `HoldFirst`, `HoldRest`, `HoldAll`
 - `SequenceHold`
 - `Evaluate` in held positions
-- `Sequence` splicing in non-held positions unless `SequenceHold` is active
+- `Sequence` splicing in non-held positions unless `SequenceHold` or
+  `HoldAllComplete` is active
 - held control constructs such as `If`, `Which`, `With`, `Module`, `Block`,
   `Check`, and `Quiet`
 
@@ -127,7 +129,6 @@ The remaining gaps fall into a few clear buckets.
 
 Missing or incomplete areas:
 
-- `HoldAllComplete`
 - `Orderless`
 - `Flat`
 - `OneIdentity`
@@ -245,7 +246,7 @@ Practical impact:
 
 The cleanest next steps for `rum-runtime` are:
 
-1. add `HoldAllComplete`, `Unevaluated`, `HoldPattern`, and `ReleaseHold`
+1. add `Unevaluated`, `HoldPattern`, and `ReleaseHold`
 2. add definition lifecycle tools and then expand toward `UpValues`
 3. make builtin dispatch order more declarative so new semantics do not depend
    on ad hoc handler placement

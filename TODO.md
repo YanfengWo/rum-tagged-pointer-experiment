@@ -117,7 +117,7 @@ This roadmap now uses two levels of detail:
 - [x] Add a first-class runtime attribute table instead of relying only on builtin hold metadata and fallback rules
 - [x] Implement `Attributes`, `SetAttributes`, and `ClearAttributes`
 - [x] Add `SequenceHold` and route argument preprocessing through attribute-aware sequence handling
-- [ ] Add `HoldAllComplete` and make held-argument evaluation honor it
+- [x] Add `HoldAllComplete` and make held-argument evaluation honor it
 - [ ] Decide and document precedence among user definitions, builtin dispatch, and future attribute-driven evaluation
 - [ ] Add `UpValues` and the supporting lookup path needed for argument-owned behavior
 - [ ] Add `Unset`, `Clear`, and `ClearAll` so definitions can be managed and removed cleanly
