@@ -128,6 +128,8 @@ This roadmap now uses two levels of detail:
 - [x] Add `SubValues[symbol]` inspection and nested-head definition storage
 - [x] Add runtime subvalue matching for expressions such as `f[x_][y_]`
 - [x] Extend `Set` / `SetDelayed` and tagged definitions to cover immediate and delayed subvalues
+- [x] Add explicit `TagUnset` support and route `f /: lhs =.` through it
+- [x] Tighten tag validation to outer-two-level positions and emit dedicated tag lifecycle messages
 
 ### `rum-runtime`: Held Evaluation and Scoping Gaps
 

@@ -15,6 +15,10 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "TagSetDelayed",
         "Stores a delayed tagged definition, including upvalues when the tag appears in an argument position.",
     ),
+    BuiltinSpec::new(
+        "TagUnset",
+        "Removes a tagged definition using an explicit tag and lhs.",
+    ),
     BuiltinSpec::new("Rule", "Represents an immediate rewrite rule."),
     BuiltinSpec::new("RuleDelayed", "Represents a delayed rewrite rule."),
     BuiltinSpec::new("MatchQ", "Tests whether an expression matches a pattern."),

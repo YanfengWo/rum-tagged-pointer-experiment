@@ -106,10 +106,12 @@ The current runtime supports:
 - immediate and delayed downvalues
 - immediate and delayed subvalues
 - immediate and delayed tagged definitions via `TagSet` / `TagSetDelayed`
+- explicit tagged removal via `TagUnset`
 - upvalue inspection via `UpValues`
 - subvalue inspection via `SubValues`
 - `Unset`, `Clear`, and `ClearAll` for the currently supported definition
   categories
+- dedicated tag lifecycle messages for missing tags and invalid tag positions
 - immediate and delayed rewrite rules
 - compiled matcher dispatch for the currently supported pattern subset
 - `ReplaceAll`, `ReplaceRepeated`, `Cases`, and `MatchQ`
@@ -166,7 +168,7 @@ yet model the wider definition lattice.
 
 Missing or incomplete areas:
 
-- broader tag-based definition attachment such as `TagUnset` / `TagUnsetDelayed`
+- broader tag-based definition attachment such as multi-owner tag propagation
 - a more declarative precedence table for user definitions vs builtin dispatch
 
 Practical impact:
@@ -263,7 +265,7 @@ The cleanest next steps for `rum-runtime` are:
 1. make builtin dispatch order more declarative so new semantics do not depend
    on ad hoc handler placement
 2. extend tag-oriented lifecycle tools beyond `Unset` / `Clear` / `ClearAll`
-   into the rest of the definition lattice
+   into richer multi-owner tag behavior
 3. extend the attribute table beyond hold-oriented behavior into `Orderless`,
    `Flat`, `OneIdentity`, and later `Listable`
 4. let `Function` accept explicit attributes / hold behavior so held evaluation

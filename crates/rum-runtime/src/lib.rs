@@ -1884,6 +1884,7 @@ impl Session {
             "SetDelayed" => self.eval_set_delayed(args).map(Some),
             "TagSet" => self.eval_tag_set(args).map(Some),
             "TagSetDelayed" => self.eval_tag_set_delayed(args).map(Some),
+            "TagUnset" => self.eval_tag_unset(args).map(Some),
             "Rule" => self.eval_rule(args).map(Some),
             "RuleDelayed" => self.eval_rule_delayed(args).map(Some),
             "MatchQ" => self.eval_match_q(args).map(Some),
@@ -2406,15 +2407,7 @@ impl Session {
 
         let lhs = args[1].clone();
         let rhs = self.evaluate(args[2].clone())?;
-        if self.store_tagged_definition(tag, lhs, rhs.clone(), false)? {
-            Ok(rhs)
-        } else {
-            Ok(self.invalid_call_with_arg_form(
-                "TagSet",
-                args,
-                "expected the tag symbol to occur in the assignment lhs",
-            ))
-        }
+        self.store_tagged_definition("TagSet", args, tag, lhs, rhs, false)
     }
 
     fn eval_tag_set_delayed(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -2432,14 +2425,28 @@ impl Session {
 
         let lhs = args[1].clone();
         let rhs = args[2].clone();
-        if self.store_tagged_definition(tag, lhs, rhs, true)? {
-            Ok(system_expr("Null"))
-        } else {
-            Ok(self.invalid_call_with_arg_form(
-                "TagSetDelayed",
+        self.store_tagged_definition("TagSetDelayed", args, tag, lhs, rhs, true)
+    }
+
+    fn eval_tag_unset(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(self.invalid_call_with_exact_arg_count("TagUnset", args, 2));
+        }
+
+        let Some(tag) = self.lookup_attribute_target(&args[0], true) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "TagUnset",
                 args,
-                "expected the tag symbol to occur in the assignment lhs",
-            ))
+                "expected a symbol or symbol-name string tag as the first argument",
+            ));
+        };
+
+        match self.unset_tagged_definition(&tag, &args[1]) {
+            Ok(_) => {
+                self.prune_definition_if_empty(&tag);
+                Ok(system_expr("Null"))
+            }
+            Err(error) => Ok(self.invalid_tagged_definition_call("TagUnset", args, error)),
         }
     }
 
@@ -2504,19 +2511,44 @@ impl Session {
         Ok(system_expr("Null"))
     }
 
+    fn invalid_tagged_definition_call(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        error: TagDefinitionError,
+    ) -> Expr {
+        match error {
+            TagDefinitionError::TagNotFound => self.invalid_call_with_message(
+                symbol,
+                args,
+                "tagnf",
+                "tag symbol does not occur in the assignment lhs",
+            ),
+            TagDefinitionError::TagPositionInvalid => self.invalid_call_with_message(
+                symbol,
+                args,
+                "tagpos",
+                "tag symbol must appear within the outer two levels of the assignment lhs",
+            ),
+        }
+    }
+
     fn store_tagged_definition(
         &mut self,
+        symbol: &str,
+        args: &[Expr],
         tag: Symbol,
         lhs: Expr,
         rhs: Expr,
         delayed: bool,
-    ) -> Result<bool, EvalError> {
-        let Some(target) = classify_tagged_definition(&tag, &lhs) else {
-            return Ok(false);
-        };
-
-        self.store_definition_target(target, lhs, rhs, delayed);
-        Ok(true)
+    ) -> Result<Expr, EvalError> {
+        match classify_tagged_definition(&tag, &lhs) {
+            Ok(target) => {
+                self.store_definition_target(target, lhs, rhs.clone(), delayed);
+                Ok(if delayed { system_expr("Null") } else { rhs })
+            }
+            Err(error) => Ok(self.invalid_tagged_definition_call(symbol, args, error)),
+        }
     }
 
     fn store_definition_target(
@@ -2609,9 +2641,12 @@ impl Session {
         if let Expr::Call { head, args } = expr {
             if is_system_symbol_name(head, "TagSet") && args.len() == 2 {
                 if let Some(tag) = self.lookup_attribute_target(&args[0], true) {
-                    self.unset_tagged_definition(&tag, &args[1]);
-                    self.prune_definition_if_empty(&tag);
-                    return true;
+                    if self.unset_tagged_definition(&tag, &args[1]).is_ok() {
+                        self.prune_definition_if_empty(&tag);
+                        return true;
+                    }
+
+                    return false;
                 }
 
                 return false;
@@ -2633,34 +2668,38 @@ impl Session {
         false
     }
 
-    fn unset_tagged_definition(&mut self, tag: &Symbol, lhs: &Expr) -> bool {
+    fn unset_tagged_definition(
+        &mut self,
+        tag: &Symbol,
+        lhs: &Expr,
+    ) -> Result<bool, TagDefinitionError> {
         match classify_tagged_definition(tag, lhs) {
-            Some(TaggedDefinitionTarget::OwnValue(symbol)) => {
+            Ok(TaggedDefinitionTarget::OwnValue(symbol)) => {
                 if let Some(definition) = self.definitions.get_mut(&symbol) {
                     let changed = definition.own_value.take().is_some()
                         || definition.delayed_own_value.take().is_some();
                     self.prune_definition_if_empty(&symbol);
-                    changed
+                    Ok(changed)
                 } else {
-                    false
+                    Ok(false)
                 }
             }
-            Some(TaggedDefinitionTarget::DownValue(symbol)) => {
+            Ok(TaggedDefinitionTarget::DownValue(symbol)) => {
                 let changed = self.remove_matching_down_values(&symbol, lhs);
                 self.prune_definition_if_empty(&symbol);
-                changed
+                Ok(changed)
             }
-            Some(TaggedDefinitionTarget::SubValue(symbol)) => {
+            Ok(TaggedDefinitionTarget::SubValue(symbol)) => {
                 let changed = self.remove_matching_sub_values(&symbol, lhs);
                 self.prune_definition_if_empty(&symbol);
-                changed
+                Ok(changed)
             }
-            Some(TaggedDefinitionTarget::UpValue(symbol)) => {
+            Ok(TaggedDefinitionTarget::UpValue(symbol)) => {
                 let changed = self.remove_matching_up_values(&symbol, lhs);
                 self.prune_definition_if_empty(&symbol);
-                changed
+                Ok(changed)
             }
-            None => false,
+            Err(error) => Err(error),
         }
     }
 
@@ -4179,11 +4218,8 @@ fn lower_tag_set_expr(tag: Expr, rhs: Expr) -> Result<Expr, EvalError> {
         }
         Expr::Call { head, args } if is_system_symbol_name(&head, "Unset") && args.len() == 1 => {
             Ok(Expr::call(
-                system_expr("Unset"),
-                vec![Expr::call(
-                    system_expr("TagSet"),
-                    vec![tag, args[0].clone()],
-                )],
+                system_expr("TagUnset"),
+                vec![tag, args[0].clone()],
             ))
         }
         _ => Ok(Expr::call(system_expr("TagSet"), vec![tag, rhs])),
@@ -4870,6 +4906,12 @@ enum TaggedDefinitionTarget {
     UpValue(Symbol),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TagDefinitionError {
+    TagNotFound,
+    TagPositionInvalid,
+}
+
 fn classify_definition_lhs(lhs: &Expr) -> Option<TaggedDefinitionTarget> {
     if let Some(symbol) = expr_as_symbol(lhs).cloned() {
         return Some(TaggedDefinitionTarget::OwnValue(symbol));
@@ -4884,20 +4926,46 @@ fn classify_definition_lhs(lhs: &Expr) -> Option<TaggedDefinitionTarget> {
         .map(TaggedDefinitionTarget::DownValue)
 }
 
-fn classify_tagged_definition(tag: &Symbol, lhs: &Expr) -> Option<TaggedDefinitionTarget> {
+fn classify_tagged_definition(
+    tag: &Symbol,
+    lhs: &Expr,
+) -> Result<TaggedDefinitionTarget, TagDefinitionError> {
+    if let Expr::Call { head, args } = strip_hold_pattern(lhs) {
+        if is_system_symbol_name(head, "Condition") && !args.is_empty() {
+            return classify_tagged_definition(tag, &args[0]);
+        }
+    }
+
     if expr_as_symbol(lhs).is_some_and(|symbol| symbol == tag) {
-        return Some(TaggedDefinitionTarget::OwnValue(tag.clone()));
+        return Ok(TaggedDefinitionTarget::OwnValue(tag.clone()));
     }
 
     if subvalue_base_symbol(lhs).is_some_and(|symbol| symbol == tag) {
-        return Some(TaggedDefinitionTarget::SubValue(tag.clone()));
+        return Ok(TaggedDefinitionTarget::SubValue(tag.clone()));
     }
 
     if downvalue_head_symbol(lhs).is_some_and(|symbol| symbol == tag) {
-        return Some(TaggedDefinitionTarget::DownValue(tag.clone()));
+        return Ok(TaggedDefinitionTarget::DownValue(tag.clone()));
     }
 
-    expr_contains_symbol(lhs, tag).then(|| TaggedDefinitionTarget::UpValue(tag.clone()))
+    if matches!(strip_hold_pattern(lhs), Expr::Call { args, .. } if args.iter().any(|arg| valid_upvalue_tag_position(arg, tag)))
+    {
+        return Ok(TaggedDefinitionTarget::UpValue(tag.clone()));
+    }
+
+    if expr_contains_symbol(lhs, tag) {
+        Err(TagDefinitionError::TagPositionInvalid)
+    } else {
+        Err(TagDefinitionError::TagNotFound)
+    }
+}
+
+fn valid_upvalue_tag_position(expr: &Expr, tag: &Symbol) -> bool {
+    expr_as_symbol(expr).is_some_and(|symbol| symbol == tag)
+        || match expr {
+            Expr::Call { head, .. } => expr_as_symbol(head).is_some_and(|symbol| symbol == tag),
+            _ => false,
+        }
 }
 
 fn expr_contains_symbol(expr: &Expr, target: &Symbol) -> bool {
@@ -5692,6 +5760,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "Symbol"
             | "TagSet"
             | "TagSetDelayed"
+            | "TagUnset"
             | "Times"
             | "True"
             | "Unevaluated"
@@ -5792,7 +5861,7 @@ mod tests {
 
         assert_eq!(
             lowered_unset.to_string(),
-            "Unset[TagSet[f, g[Pattern[x, Blank[]]]]]"
+            "TagUnset[f, g[Pattern[x, Blank[]]]]"
         );
     }
 
@@ -8026,6 +8095,52 @@ mod tests {
             "List[]"
         );
         assert_eq!(session.eval_text("h[a]").unwrap().value.to_string(), "h[a]");
+    }
+
+    #[test]
+    fn explicit_tagunset_removes_tagged_subvalue_definitions() {
+        let mut session = Session::new();
+
+        session.eval_text("f /: f[x_][y_] := pair[x, y]").unwrap();
+        session.eval_text("TagUnset[f, f[x_][y_]]").unwrap();
+
+        assert_eq!(
+            session.eval_text("SubValues[f]").unwrap().value.to_string(),
+            "List[]"
+        );
+        assert_eq!(
+            session.eval_text("f[1][2]").unwrap().value.to_string(),
+            "f[1][2]"
+        );
+    }
+
+    #[test]
+    fn tag_definition_messages_distinguish_missing_tags_from_invalid_positions() {
+        let mut session = Session::new();
+
+        let missing = session.eval_text("f /: g[x_] := 1").unwrap();
+        assert!(
+            missing
+                .messages
+                .iter()
+                .any(|message| message.symbol == "TagSetDelayed" && message.tag == "tagnf")
+        );
+
+        let invalid_position = session.eval_text("f /: g[h[f[x_]]] := 1").unwrap();
+        assert!(
+            invalid_position
+                .messages
+                .iter()
+                .any(|message| message.symbol == "TagSetDelayed" && message.tag == "tagpos")
+        );
+
+        let invalid_unset = session.eval_text("TagUnset[f, g[h[f[x_]]]]").unwrap();
+        assert!(
+            invalid_unset
+                .messages
+                .iter()
+                .any(|message| message.symbol == "TagUnset" && message.tag == "tagpos")
+        );
     }
 
     #[test]
