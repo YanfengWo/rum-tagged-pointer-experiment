@@ -703,7 +703,7 @@ impl Session {
             other => other.to_string(),
         };
 
-        Ok(format_message_template(&template, args))
+        Ok(format_message_template(&template, key, args))
     }
 
     fn lower_syntax_expr(&self, syntax: &SyntaxExpr) -> Result<Expr, EvalError> {
@@ -2394,13 +2394,49 @@ fn runtime_message_name_expr(message: RuntimeMessage) -> Expr {
     message_name_expr(symbol_from_raw_name(&message.symbol), message.tag)
 }
 
-fn format_message_template(template: &str, args: &[Expr]) -> String {
-    let mut rendered = template.to_string();
+fn format_message_template(template: &str, key: &MessageNameKey, args: &[Expr]) -> String {
+    let message_name = message_name_expr(key.symbol.clone(), key.tag.clone()).to_string();
+    let all_args = args
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let mut rendered = String::with_capacity(template.len());
+    let mut cursor = 0;
 
-    for (index, arg) in args.iter().enumerate() {
-        rendered = rendered.replace(&format!("`{}`", index + 1), &arg.to_string());
+    while let Some(start_rel) = template[cursor..].find('`') {
+        let start = cursor + start_rel;
+        rendered.push_str(&template[cursor..start]);
+        let token_start = start + 1;
+
+        let Some(end_rel) = template[token_start..].find('`') else {
+            rendered.push_str(&template[start..]);
+            return rendered;
+        };
+
+        let end = token_start + end_rel;
+        let token = &template[token_start..end];
+
+        match token {
+            "0" => rendered.push_str(&message_name),
+            "*" => rendered.push_str(&all_args),
+            _ => {
+                if let Ok(index) = token.parse::<usize>() {
+                    if let Some(arg) = index.checked_sub(1).and_then(|index| args.get(index)) {
+                        rendered.push_str(&arg.to_string());
+                    } else {
+                        rendered.push_str(&template[start..=end]);
+                    }
+                } else {
+                    rendered.push_str(&template[start..=end]);
+                }
+            }
+        }
+
+        cursor = end + 1;
     }
 
+    rendered.push_str(&template[cursor..]);
     rendered
 }
 
@@ -3849,6 +3885,39 @@ mod tests {
                 .messages
                 .iter()
                 .any(|message| message.text == "bad arg 42")
+        );
+    }
+
+    #[test]
+    fn message_templates_support_message_name_and_all_args_placeholders() {
+        let mut session = Session::new();
+
+        session
+            .eval_text("f::argx = \"`0`: first=`1`; all=`*`\"")
+            .unwrap();
+        let outcome = session.eval_text("Message[f::argx, 1, 2]").unwrap();
+
+        assert!(outcome.messages.iter().any(|message| {
+            message.symbol == "f"
+                && message.tag == "argx"
+                && message.text == "f::argx: first=1; all=1, 2"
+        }));
+    }
+
+    #[test]
+    fn message_templates_leave_unknown_placeholders_unchanged() {
+        let mut session = Session::new();
+
+        session
+            .eval_text("f::argx = \"missing=`3`; literal=`name`\"")
+            .unwrap();
+        let outcome = session.eval_text("Message[f::argx, 1]").unwrap();
+
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| { message.text == "missing=`3`; literal=`name`" })
         );
     }
 

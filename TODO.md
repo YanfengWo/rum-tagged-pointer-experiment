@@ -100,6 +100,7 @@ off as work lands.
 - [x] Support selector-aware `Quiet` for suppressing only chosen message streams
 - [x] Add `Message` / `MessageName` with minimal message template storage and emission
 - [x] Expose `$MessageList` and `::` shorthand for emitted message names
+- [x] Enhance message template placeholder formatting beyond simple positional substitution
 
 ### Tests
 
