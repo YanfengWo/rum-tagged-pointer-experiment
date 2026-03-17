@@ -1,0 +1,21 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/rum-cli",
+    "crates/rum-core",
+    "crates/rum-repl",
+    "crates/rum-runtime",
+    "crates/rum-stdlib",
+    "crates/rum-syntax",
+]
+default-members = ["crates/rum-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+
+[workspace.dependencies]
+num-bigint = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"

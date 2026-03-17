@@ -1,0 +1,10 @@
+[package]
+name = "rum-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rum-repl = { path = "../rum-repl" }
+rum-runtime = { path = "../rum-runtime" }
+rum-stdlib = { path = "../rum-stdlib" }

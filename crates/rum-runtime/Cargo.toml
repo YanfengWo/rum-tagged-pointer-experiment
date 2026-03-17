@@ -1,0 +1,10 @@
+[package]
+name = "rum-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rum-core = { path = "../rum-core" }
+rum-syntax = { path = "../rum-syntax" }
+thiserror.workspace = true
