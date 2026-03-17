@@ -1,4 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use rum_core::{Atom, BigInt, Expr, GLOBAL_CONTEXT, SYSTEM_CONTEXT, Symbol};
 use rum_syntax::{
@@ -107,6 +109,9 @@ pub struct Session {
     current_context: String,
     context_path: Vec<String>,
     context_stack: Vec<ContextFrame>,
+    package_search_paths: Vec<PathBuf>,
+    loaded_packages: Vec<String>,
+    load_stack: Vec<PathBuf>,
     definitions: BTreeMap<Symbol, SymbolDefinition>,
     next_generated_symbol_id: u64,
     resource_limits: ResourceLimits,
@@ -170,6 +175,14 @@ struct ContextFrame {
     opened_context: String,
 }
 
+#[derive(Clone, Debug)]
+struct LoaderSnapshot {
+    current_context: String,
+    context_path: Vec<String>,
+    context_stack: Vec<ContextFrame>,
+    loaded_packages: Vec<String>,
+}
+
 #[derive(Clone, Copy, Debug)]
 struct SequencePatternSpec<'a> {
     min_len: usize,
@@ -184,6 +197,17 @@ pub enum EvalError {
     Syntax(#[from] SyntaxError),
     #[error("invalid integer literal `{literal}`")]
     InvalidInteger { literal: String },
+    #[error("could not read `{path}`: {source}")]
+    Io {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("could not resolve package or file `{target}`")]
+    LoadPathNotFound {
+        target: String,
+        searched: Vec<String>,
+    },
     #[error("evaluation cycle detected while re-entering `{expr}`")]
     EvaluationCycleDetected { expr: String },
     #[error("evaluation exceeded recursion limit ({limit})")]
@@ -199,6 +223,9 @@ impl Default for Session {
             current_context: GLOBAL_CONTEXT.to_string(),
             context_path: vec![SYSTEM_CONTEXT.to_string(), GLOBAL_CONTEXT.to_string()],
             context_stack: Vec::new(),
+            package_search_paths: vec![PathBuf::from(".")],
+            loaded_packages: Vec::new(),
+            load_stack: Vec::new(),
             definitions: BTreeMap::new(),
             next_generated_symbol_id: 0,
             resource_limits: ResourceLimits::default(),
@@ -270,6 +297,34 @@ impl Session {
             .collect();
     }
 
+    pub fn package_search_paths(&self) -> &[PathBuf] {
+        &self.package_search_paths
+    }
+
+    pub fn set_package_search_paths<I, P>(&mut self, paths: I)
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<PathBuf>,
+    {
+        self.package_search_paths = paths.into_iter().map(Into::into).collect();
+    }
+
+    pub fn add_package_search_path(&mut self, path: impl Into<PathBuf>) {
+        self.package_search_paths.push(path.into());
+    }
+
+    pub fn loaded_packages(&self) -> &[String] {
+        &self.loaded_packages
+    }
+
+    fn mark_package_loaded(&mut self, context: &str) {
+        let context = normalize_context_name(context);
+
+        if !self.loaded_packages.iter().any(|loaded| loaded == &context) {
+            self.loaded_packages.push(context);
+        }
+    }
+
     fn begin_context(&mut self, context: String) -> Expr {
         let previous_context = self.current_context.clone();
         let previous_context_path = self.context_path.clone();
@@ -309,6 +364,7 @@ impl Session {
         });
         self.current_context = context.clone();
         self.context_path = vec![context.clone(), SYSTEM_CONTEXT.to_string()];
+        self.mark_package_loaded(&context);
         Expr::string(context)
     }
 
@@ -355,6 +411,52 @@ impl Session {
         Ok(EvalOutcome { value })
     }
 
+    pub fn eval_script(&mut self, source: &str) -> Result<EvalOutcome, EvalError> {
+        let forms = split_script_into_forms(source)?;
+        let mut value = system_expr("Null");
+
+        for form in forms {
+            value = self.eval_text(&form)?.value;
+        }
+
+        Ok(EvalOutcome { value })
+    }
+
+    pub fn eval_file(&mut self, path: impl AsRef<Path>) -> Result<EvalOutcome, EvalError> {
+        let path = path.as_ref().to_path_buf();
+        let source = fs::read_to_string(&path).map_err(|source| EvalError::Io {
+            path: path.display().to_string(),
+            source,
+        })?;
+        let snapshot = self.capture_loader_snapshot();
+
+        self.load_stack.push(path);
+        let result = self.eval_script(&source);
+        self.load_stack.pop();
+
+        if result.is_err() {
+            self.restore_loader_snapshot(snapshot);
+        }
+
+        result
+    }
+
+    fn capture_loader_snapshot(&self) -> LoaderSnapshot {
+        LoaderSnapshot {
+            current_context: self.current_context.clone(),
+            context_path: self.context_path.clone(),
+            context_stack: self.context_stack.clone(),
+            loaded_packages: self.loaded_packages.clone(),
+        }
+    }
+
+    fn restore_loader_snapshot(&mut self, snapshot: LoaderSnapshot) {
+        self.current_context = snapshot.current_context;
+        self.context_path = snapshot.context_path;
+        self.context_stack = snapshot.context_stack;
+        self.loaded_packages = snapshot.loaded_packages;
+    }
+
     fn lower_syntax_expr(&self, syntax: &SyntaxExpr) -> Result<Expr, EvalError> {
         lower_syntax_expr_with(syntax, &mut |raw| self.resolve_symbol_name(raw, true))
     }
@@ -396,6 +498,57 @@ impl Session {
         self.definitions.contains_key(symbol)
             || self.builtin_spec_for_symbol(symbol).is_some()
             || is_known_system_symbol(symbol)
+    }
+
+    fn resolve_load_target(&self, spec: &str) -> Result<PathBuf, EvalError> {
+        let candidates = if spec.ends_with('`') {
+            package_candidates_for_context(spec)
+        } else {
+            vec![PathBuf::from(spec)]
+        };
+
+        let mut searched = Vec::new();
+
+        for candidate in candidates {
+            if candidate.is_absolute() {
+                searched.push(candidate.display().to_string());
+
+                if candidate.is_file() {
+                    return Ok(candidate);
+                }
+
+                continue;
+            }
+
+            for root in self.load_search_roots() {
+                let path = root.join(&candidate);
+                searched.push(path.display().to_string());
+
+                if path.is_file() {
+                    return Ok(path);
+                }
+            }
+        }
+
+        Err(EvalError::LoadPathNotFound {
+            target: spec.to_string(),
+            searched,
+        })
+    }
+
+    fn load_search_roots(&self) -> Vec<PathBuf> {
+        let mut roots = Vec::new();
+
+        if let Some(parent) = self
+            .load_stack
+            .last()
+            .and_then(|path| path.parent().map(Path::to_path_buf))
+        {
+            roots.push(parent);
+        }
+
+        roots.extend(self.package_search_paths.iter().cloned());
+        dedup_paths(roots)
     }
 
     pub fn evaluate(&mut self, expr: Expr) -> Result<Expr, EvalError> {
@@ -466,6 +619,23 @@ impl Session {
                         .map(Expr::string)
                         .collect::<Vec<_>>();
                     return Ok(Expr::call(system_expr("List"), contexts));
+                }
+                "$Packages" => {
+                    let packages = self
+                        .loaded_packages
+                        .iter()
+                        .cloned()
+                        .map(Expr::string)
+                        .collect::<Vec<_>>();
+                    return Ok(Expr::call(system_expr("List"), packages));
+                }
+                "$Path" => {
+                    let paths = self
+                        .package_search_paths
+                        .iter()
+                        .map(|path| Expr::string(path.display().to_string()))
+                        .collect::<Vec<_>>();
+                    return Ok(Expr::call(system_expr("List"), paths));
                 }
                 _ => {}
             }
@@ -600,6 +770,8 @@ impl Session {
 
         match symbol.name() {
             "Identity" if args.len() == 1 => Ok(Some(args[0].clone())),
+            "Get" => self.eval_get(args).map(Some),
+            "Needs" => self.eval_needs(args).map(Some),
             "Context" => self.eval_context(args).map(Some),
             "Begin" => self.eval_begin(args).map(Some),
             "End" => self.eval_end(args).map(Some),
@@ -630,6 +802,38 @@ impl Session {
         }
     }
 
+    fn eval_get(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [Expr::Atom(Atom::String(spec))] = args else {
+            return Ok(Expr::call(system_expr("Get"), args.to_vec()));
+        };
+
+        let path = self.resolve_load_target(spec)?;
+        Ok(self.eval_file(path)?.value)
+    }
+
+    fn eval_needs(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let (context, load_spec) = match args {
+            [Expr::Atom(Atom::String(context))] => (
+                normalize_context_name(context),
+                normalize_context_name(context),
+            ),
+            [
+                Expr::Atom(Atom::String(context)),
+                Expr::Atom(Atom::String(spec)),
+            ] => (normalize_context_name(context), spec.clone()),
+            _ => return Ok(Expr::call(system_expr("Needs"), args.to_vec())),
+        };
+
+        if self.loaded_packages.iter().any(|loaded| loaded == &context) {
+            return Ok(system_expr("Null"));
+        }
+
+        self.eval_get(&[Expr::string(load_spec)])?;
+        self.mark_package_loaded(&context);
+        self.context_path = prepend_context(&context, &self.context_path);
+        Ok(system_expr("Null"))
+    }
+
     fn eval_begin(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let [Expr::Atom(Atom::String(context))] = args else {
             return Ok(Expr::call(system_expr("Begin"), args.to_vec()));
@@ -650,12 +854,29 @@ impl Session {
     }
 
     fn eval_begin_package(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [Expr::Atom(Atom::String(context))] = args else {
-            return Ok(Expr::call(system_expr("BeginPackage"), args.to_vec()));
+        let (context, needs) = match args {
+            [Expr::Atom(Atom::String(context))] => (context, Vec::new()),
+            [Expr::Atom(Atom::String(context)), needs] => {
+                let Some(needs) = expr_as_string_list(needs) else {
+                    return Ok(Expr::call(system_expr("BeginPackage"), args.to_vec()));
+                };
+
+                (context, needs)
+            }
+            _ => return Ok(Expr::call(system_expr("BeginPackage"), args.to_vec())),
         };
 
         let target = expand_context_spec(context, &self.current_context);
-        Ok(self.begin_package_context(target))
+        let result = self.begin_package_context(target.clone());
+
+        for need in needs {
+            let context = normalize_context_name(need);
+            self.eval_needs(&[Expr::string(context)])?;
+        }
+
+        self.context_path = prepend_context(&target, &self.context_path);
+
+        Ok(result)
     }
 
     fn eval_end_package(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -1608,6 +1829,87 @@ fn prepend_context(context: &str, path: &[String]) -> Vec<String> {
     result
 }
 
+fn dedup_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    let mut deduped = Vec::new();
+
+    for path in paths {
+        if !deduped.iter().any(|existing| existing == &path) {
+            deduped.push(path);
+        }
+    }
+
+    deduped
+}
+
+fn package_candidates_for_context(context: &str) -> Vec<PathBuf> {
+    let trimmed = context.trim_end_matches('`');
+    let segments = trimmed
+        .split('`')
+        .filter(|segment| !segment.is_empty())
+        .collect::<Vec<_>>();
+
+    let Some((leaf, parents)) = segments.split_last() else {
+        return Vec::new();
+    };
+
+    package_candidates_for_segments(parents, leaf)
+}
+
+fn package_candidates_for_segments(parents: &[&str], leaf: &str) -> Vec<PathBuf> {
+    let base_dir = parents.iter().fold(PathBuf::new(), |mut path, segment| {
+        path.push(segment);
+        path
+    });
+    let mut candidates = Vec::new();
+
+    for extension in ["rum", "wl", "m"] {
+        candidates.push(base_dir.join(format!("{leaf}.{extension}")));
+        candidates.push(
+            base_dir
+                .join(leaf)
+                .join("Kernel")
+                .join(format!("init.{extension}")),
+        );
+        candidates.push(base_dir.join(leaf).join(format!("init.{extension}")));
+    }
+
+    candidates
+}
+
+fn split_script_into_forms(source: &str) -> Result<Vec<String>, EvalError> {
+    let mut forms = Vec::new();
+    let mut current = String::new();
+
+    for raw_line in source.lines() {
+        if current.is_empty() && raw_line.trim().is_empty() {
+            continue;
+        }
+
+        if !current.is_empty() {
+            current.push('\n');
+        }
+
+        current.push_str(raw_line);
+
+        if current.trim().is_empty() {
+            current.clear();
+            continue;
+        }
+
+        if parse_expr(&current).is_ok() {
+            forms.push(current.trim().to_string());
+            current.clear();
+        }
+    }
+
+    if !current.trim().is_empty() {
+        parse_expr(&current)?;
+        forms.push(current.trim().to_string());
+    }
+
+    Ok(forms)
+}
+
 fn resolve_unqualified_symbol(raw: &str) -> Option<Symbol> {
     split_symbol_name(raw)
         .map(|(context, name)| Symbol::new(normalize_context_name(context), name))
@@ -1623,6 +1925,23 @@ fn expr_as_symbol(expr: &Expr) -> Option<&Symbol> {
         Expr::Atom(Atom::Symbol(symbol)) => Some(symbol),
         _ => None,
     }
+}
+
+fn expr_as_string_list(expr: &Expr) -> Option<Vec<String>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "List") {
+        return None;
+    }
+
+    args.iter()
+        .map(|arg| match arg {
+            Expr::Atom(Atom::String(value)) => Some(value.clone()),
+            _ => None,
+        })
+        .collect()
 }
 
 fn truthiness_symbol(expr: &Expr) -> Option<bool> {
@@ -2300,6 +2619,8 @@ fn is_known_system_symbol_name(name: &str) -> bool {
         name,
         "$Context"
             | "$ContextPath"
+            | "$Packages"
+            | "$Path"
             | "Begin"
             | "BeginPackage"
             | "Blank"
@@ -2314,6 +2635,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "Evaluate"
             | "False"
             | "Function"
+            | "Get"
             | "Hold"
             | "HoldAll"
             | "HoldFirst"
@@ -2324,6 +2646,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "List"
             | "MatchQ"
             | "Module"
+            | "Needs"
             | "Null"
             | "Pattern"
             | "Plus"
@@ -2354,7 +2677,53 @@ fn is_system_symbol_name(expr: &Expr, name: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::env;
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     use super::*;
+
+    struct TempDirGuard {
+        path: PathBuf,
+    }
+
+    impl TempDirGuard {
+        fn new(prefix: &str) -> Self {
+            let unique = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let path = env::temp_dir().join(format!("rum-{prefix}-{unique}"));
+            fs::create_dir_all(&path).unwrap();
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+
+        fn write(&self, relative: &str, source: &str) -> PathBuf {
+            let path = self.path.join(relative);
+
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent).unwrap();
+            }
+
+            fs::write(&path, source).unwrap();
+            path
+        }
+    }
+
+    impl Drop for TempDirGuard {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
+    fn rum_path(path: &Path) -> String {
+        path.display().to_string().replace('\\', "/")
+    }
 
     #[test]
     fn lowers_big_integer_into_core_expr() {
@@ -2547,6 +2916,91 @@ mod tests {
         assert_eq!(
             session.eval_text("hidden").unwrap().value.to_string(),
             "hidden"
+        );
+    }
+
+    #[test]
+    fn get_loads_a_script_file_and_returns_the_last_value() {
+        let dir = TempDirGuard::new("get");
+        let file = dir.write("script.rum", "x = 1\npair = {\n  x,\n  2\n}\npair");
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text(&format!("Get[\"{}\"]", rum_path(&file)))
+                .unwrap()
+                .value
+                .to_string(),
+            "List[1, 2]"
+        );
+        assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
+    }
+
+    #[test]
+    fn needs_loads_package_once_and_tracks_loaded_packages() {
+        let dir = TempDirGuard::new("needs-once");
+        dir.write(
+            "Demo.rum",
+            "BeginPackage[\"Demo`\"]\ntoken = 1\nEndPackage[]",
+        );
+        let mut session = Session::new();
+        session.set_package_search_paths([dir.path().to_path_buf()]);
+
+        assert_eq!(
+            session
+                .eval_text("Needs[\"Demo`\"]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Null"
+        );
+        assert_eq!(session.eval_text("token").unwrap().value.to_string(), "1");
+        assert_eq!(
+            session.eval_text("$Packages").unwrap().value.to_string(),
+            "List[\"Demo`\"]"
+        );
+
+        session.eval_text("Demo`token = 5").unwrap();
+        session.eval_text("Needs[\"Demo`\"]").unwrap();
+
+        assert_eq!(
+            session.eval_text("Demo`token").unwrap().value.to_string(),
+            "5"
+        );
+    }
+
+    #[test]
+    fn beginpackage_can_load_dependencies_via_needs() {
+        let dir = TempDirGuard::new("needs-deps");
+        dir.write(
+            "Dep.rum",
+            "BeginPackage[\"Dep`\"]\ndepValue = 7\nEndPackage[]",
+        );
+        dir.write(
+            "Main.rum",
+            "BeginPackage[\"Main`\", {\"Dep`\"}]\nvalue = Dep`depValue\nEndPackage[]",
+        );
+        let mut session = Session::new();
+        session.set_package_search_paths([dir.path().to_path_buf()]);
+
+        session.eval_text("Needs[\"Main`\"]").unwrap();
+
+        assert_eq!(session.eval_text("value").unwrap().value.to_string(), "7");
+        assert_eq!(
+            session.eval_text("$Packages").unwrap().value.to_string(),
+            "List[\"Main`\", \"Dep`\"]"
+        );
+    }
+
+    #[test]
+    fn path_builtin_reflects_package_search_roots() {
+        let dir = TempDirGuard::new("path");
+        let mut session = Session::new();
+        session.set_package_search_paths([dir.path().to_path_buf()]);
+
+        assert_eq!(
+            session.eval_text("$Path").unwrap().value.to_string(),
+            format!("List[\"{}\"]", dir.path().display())
         );
     }
 

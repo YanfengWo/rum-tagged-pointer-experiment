@@ -56,7 +56,11 @@ off as work lands.
 - [x] Implement `Context[]` / `Context[symbol]` / `Context["name"]`
 - [x] Implement `Begin` / `End` with balanced context-frame restoration
 - [x] Implement `BeginPackage` / `EndPackage` basic package-path semantics
-- [ ] Decide how `BeginPackage[..., needs]` should interact with future `Needs`
+- [x] Decide how `BeginPackage[..., needs]` should interact with future `Needs`
+- [x] Add package search path state and a minimal script/file loader
+- [x] Implement `Get` on explicit files and context-based package names
+- [x] Implement `Needs` with loaded-package tracking and idempotence
+- [x] Expose minimal `$Packages` / `$Path` inspection for package loading
 
 ### Evaluation loop
 

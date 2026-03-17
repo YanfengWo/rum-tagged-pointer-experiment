@@ -27,10 +27,23 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "$ContextPath",
         "Evaluates to the active context search path as a list of strings.",
     ),
+    BuiltinSpec::new(
+        "$Packages",
+        "Lists package contexts loaded into the current session.",
+    ),
+    BuiltinSpec::new("$Path", "Lists search roots used by the package loader."),
     BuiltinSpec::with_hold(
         "Context",
         "Returns the context of the current session or of a symbol.",
         HoldAttribute::HoldFirst,
+    ),
+    BuiltinSpec::new(
+        "Get",
+        "Reads a file or package and evaluates the expressions it contains.",
+    ),
+    BuiltinSpec::new(
+        "Needs",
+        "Loads a package only if its context has not already been loaded.",
     ),
     BuiltinSpec::new(
         "Begin",

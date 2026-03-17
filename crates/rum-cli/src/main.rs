@@ -1,5 +1,4 @@
 use std::env;
-use std::fs;
 use std::io;
 use std::process::ExitCode;
 
@@ -55,8 +54,7 @@ fn run_repl(session: &mut Session) -> io::Result<()> {
 }
 
 fn eval_file(session: &mut Session, path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let source = fs::read_to_string(path)?;
-    let outcome = session.eval_text(&source)?;
+    let outcome = session.eval_file(path)?;
     println!("{}", outcome.value);
     Ok(())
 }
