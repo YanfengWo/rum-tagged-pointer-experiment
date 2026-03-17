@@ -39,6 +39,9 @@ pub enum Attribute {
     HoldFirst,
     HoldRest,
     SequenceHold,
+    Orderless,
+    Flat,
+    OneIdentity,
 }
 
 impl Attribute {
@@ -49,6 +52,9 @@ impl Attribute {
             Self::HoldFirst => 1 << 2,
             Self::HoldRest => 1 << 3,
             Self::SequenceHold => 1 << 4,
+            Self::Orderless => 1 << 5,
+            Self::Flat => 1 << 6,
+            Self::OneIdentity => 1 << 7,
         }
     }
 
@@ -59,6 +65,9 @@ impl Attribute {
             Self::HoldFirst => "HoldFirst",
             Self::HoldRest => "HoldRest",
             Self::SequenceHold => "SequenceHold",
+            Self::Orderless => "Orderless",
+            Self::Flat => "Flat",
+            Self::OneIdentity => "OneIdentity",
         }
     }
 
@@ -79,6 +88,9 @@ impl Attribute {
             "HoldFirst" => Some(Self::HoldFirst),
             "HoldRest" => Some(Self::HoldRest),
             "SequenceHold" => Some(Self::SequenceHold),
+            "Orderless" => Some(Self::Orderless),
+            "Flat" => Some(Self::Flat),
+            "OneIdentity" => Some(Self::OneIdentity),
             _ => None,
         }
     }
@@ -184,12 +196,15 @@ impl AttributeSet {
     }
 }
 
-const ALL_ATTRIBUTES: [Attribute; 5] = [
+const ALL_ATTRIBUTES: [Attribute; 8] = [
     Attribute::HoldAllComplete,
     Attribute::HoldAll,
     Attribute::HoldFirst,
     Attribute::HoldRest,
     Attribute::SequenceHold,
+    Attribute::Orderless,
+    Attribute::Flat,
+    Attribute::OneIdentity,
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -490,6 +505,28 @@ struct ContextFrame {
     previous_context: String,
     previous_context_path: Vec<String>,
     opened_context: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CallResolutionStage {
+    UpValues,
+    DownValues,
+    SubValues,
+    Builtin,
+    Function,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CallResolutionPlan {
+    attributes: AttributeSet,
+    stages: Vec<CallResolutionStage>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct BlockSymbolState {
+    definition: Option<SymbolDefinition>,
+    attributes: Option<AttributeSet>,
+    messages: Vec<(MessageNameKey, MessageDefinition)>,
 }
 
 #[derive(Clone, Debug)]
@@ -1514,6 +1551,49 @@ impl Session {
         )
     }
 
+    fn compile_rewrite_rules_for_matching(&self, expr: &Expr) -> Option<Vec<RewriteRule>> {
+        match expr {
+            Expr::Call { head, args } if is_system_symbol_name(head, "List") => args
+                .iter()
+                .map(|item| self.compile_rewrite_rule_for_matching(item))
+                .collect(),
+            _ => self
+                .compile_rewrite_rule_for_matching(expr)
+                .map(|rule| vec![rule]),
+        }
+    }
+
+    fn compile_rewrite_rule_for_matching(&self, expr: &Expr) -> Option<RewriteRule> {
+        let mut rule = normalize_single_rewrite_rule(expr)?;
+        rule.matcher = self.compile_matcher_for_expr(&rule.lhs);
+        Some(rule)
+    }
+
+    fn compile_matcher_for_expr(&self, expr: &Expr) -> MatcherNode {
+        compile_matcher(&self.normalize_match_expr(expr))
+    }
+
+    fn normalize_match_expr(&self, expr: &Expr) -> Expr {
+        match expr {
+            Expr::Atom(_) => expr.clone(),
+            Expr::Call { head, args } => {
+                let normalized_head = self.normalize_match_expr(head);
+                let normalized_args = args
+                    .iter()
+                    .map(|arg| self.normalize_match_expr(arg))
+                    .collect::<Vec<_>>();
+                let attributes = self.attribute_set_for_head(&normalized_head);
+                let normalized_args = self.normalize_call_args_by_attributes(
+                    &normalized_head,
+                    normalized_args,
+                    attributes,
+                );
+
+                Expr::call(normalized_head, normalized_args)
+            }
+        }
+    }
+
     fn lower_syntax_expr(&self, syntax: &SyntaxExpr) -> Result<Expr, EvalError> {
         lower_syntax_expr_with(syntax, &mut |raw| self.resolve_symbol_name(raw, true))
     }
@@ -1772,44 +1852,30 @@ impl Session {
             return Ok(result);
         }
 
-        let evaluated_args = self.evaluate_call_args(&evaluated_head, args)?;
-        let attributes = self.attribute_set_for_head(&evaluated_head);
+        let plan = self.build_call_resolution_plan(&evaluated_head);
+        let mut evaluated_args = self.evaluate_call_args_with_attributes(plan.attributes, args)?;
+        evaluated_args = self.normalize_call_args_by_attributes(
+            &evaluated_head,
+            evaluated_args,
+            plan.attributes,
+        );
 
-        if !attributes.contains(Attribute::HoldAllComplete) {
+        for stage in plan.stages {
             if let Some(result) =
-                self.try_apply_up_values(&evaluated_head, evaluated_args.as_slice())?
+                self.try_resolve_call_stage(stage, &evaluated_head, evaluated_args.as_slice())?
             {
                 return Ok(result);
             }
         }
 
-        if let Some(result) =
-            self.try_apply_down_values(&evaluated_head, evaluated_args.as_slice())?
-        {
-            return Ok(result);
-        }
-
-        if let Some(result) =
-            self.try_apply_sub_values(&evaluated_head, evaluated_args.as_slice())?
-        {
-            return Ok(result);
-        }
-
-        if let Some(result) =
-            self.try_evaluate_non_held_builtin(&evaluated_head, evaluated_args.as_slice())?
-        {
-            return Ok(result);
-        }
-
-        if let Some(result) = self.try_apply_function(&evaluated_head, evaluated_args.as_slice())? {
-            return Ok(result);
-        }
-
         Ok(Expr::call(evaluated_head, evaluated_args))
     }
 
-    fn evaluate_call_args(&mut self, head: &Expr, args: Vec<Expr>) -> Result<Vec<Expr>, EvalError> {
-        let attributes = self.attribute_set_for_head(head);
+    fn evaluate_call_args_with_attributes(
+        &mut self,
+        attributes: AttributeSet,
+        args: Vec<Expr>,
+    ) -> Result<Vec<Expr>, EvalError> {
         let hold = attributes.hold_attribute();
         let sequence_hold = attributes.sequence_hold();
         let blocks_evaluate_override = attributes.blocks_evaluate_override();
@@ -1842,6 +1908,39 @@ impl Session {
         Ok(evaluated_args)
     }
 
+    fn build_call_resolution_plan(&self, head: &Expr) -> CallResolutionPlan {
+        let attributes = self.attribute_set_for_head(head);
+        let mut stages = Vec::with_capacity(5);
+
+        if !attributes.contains(Attribute::HoldAllComplete) {
+            stages.push(CallResolutionStage::UpValues);
+        }
+
+        stages.extend([
+            CallResolutionStage::DownValues,
+            CallResolutionStage::SubValues,
+            CallResolutionStage::Builtin,
+            CallResolutionStage::Function,
+        ]);
+
+        CallResolutionPlan { attributes, stages }
+    }
+
+    fn try_resolve_call_stage(
+        &mut self,
+        stage: CallResolutionStage,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Option<Expr>, EvalError> {
+        match stage {
+            CallResolutionStage::UpValues => self.try_apply_up_values(head, args),
+            CallResolutionStage::DownValues => self.try_apply_down_values(head, args),
+            CallResolutionStage::SubValues => self.try_apply_sub_values(head, args),
+            CallResolutionStage::Builtin => self.try_evaluate_non_held_builtin(head, args),
+            CallResolutionStage::Function => self.try_apply_function(head, args),
+        }
+    }
+
     fn evaluate_held_argument(
         &mut self,
         arg: Expr,
@@ -1859,11 +1958,34 @@ impl Session {
     }
 
     fn attribute_set_for_head(&self, head: &Expr) -> AttributeSet {
+        if let Some(function) = parse_function(head) {
+            return function.attributes();
+        }
+
         let Some(symbol) = expr_as_symbol(head) else {
             return AttributeSet::empty();
         };
 
         self.attribute_set_for_symbol(symbol)
+    }
+
+    fn normalize_call_args_by_attributes(
+        &self,
+        head: &Expr,
+        args: Vec<Expr>,
+        attributes: AttributeSet,
+    ) -> Vec<Expr> {
+        let mut normalized_args = if attributes.contains(Attribute::Flat) {
+            flatten_flat_call_args(head, args)
+        } else {
+            args
+        };
+
+        if attributes.contains(Attribute::Orderless) {
+            normalized_args.sort_by(compare_expr_canonical);
+        }
+
+        normalized_args
     }
 
     fn try_evaluate_special_form(
@@ -3087,19 +3209,19 @@ impl Session {
             ));
         };
 
-        let mut saved_definitions = BTreeMap::new();
-
-        for (symbol, _) in &items {
-            saved_definitions
-                .entry(symbol.clone())
-                .or_insert_with(|| self.definitions.get(symbol).cloned());
-        }
+        let saved_state = self.capture_block_symbol_states(
+            &items
+                .iter()
+                .map(|(symbol, _)| symbol.clone())
+                .collect::<Vec<_>>(),
+        );
 
         let result = (|| -> Result<Expr, EvalError> {
             for (symbol, _) in &items {
-                let definition = self.definitions.entry(symbol.clone()).or_default();
-                definition.own_value = None;
-                definition.delayed_own_value = None;
+                self.definitions.remove(symbol);
+                self.attributes.remove(symbol);
+                self.message_definitions
+                    .retain(|key, _| key.symbol != *symbol);
             }
 
             for (symbol, init) in &items {
@@ -3114,18 +3236,61 @@ impl Session {
             self.evaluate(args[1].clone())
         })();
 
-        for (symbol, prior_definition) in saved_definitions {
-            match prior_definition {
+        self.restore_block_symbol_states(saved_state);
+
+        result
+    }
+
+    fn capture_block_symbol_states(
+        &self,
+        symbols: &[Symbol],
+    ) -> BTreeMap<Symbol, BlockSymbolState> {
+        let mut states = BTreeMap::new();
+
+        for symbol in symbols {
+            states
+                .entry(symbol.clone())
+                .or_insert_with(|| BlockSymbolState {
+                    definition: self.definitions.get(symbol).cloned(),
+                    attributes: self.attributes.get(symbol).copied(),
+                    messages: self
+                        .message_definitions
+                        .iter()
+                        .filter(|(key, _)| key.symbol == *symbol)
+                        .map(|(key, value)| (key.clone(), value.clone()))
+                        .collect(),
+                });
+        }
+
+        states
+    }
+
+    fn restore_block_symbol_states(&mut self, states: BTreeMap<Symbol, BlockSymbolState>) {
+        for (symbol, state) in states {
+            match state.definition {
                 Some(definition) => {
-                    self.definitions.insert(symbol, definition);
+                    self.definitions.insert(symbol.clone(), definition);
                 }
                 None => {
                     self.definitions.remove(&symbol);
                 }
             }
-        }
 
-        result
+            match state.attributes {
+                Some(attributes) => {
+                    self.attributes.insert(symbol.clone(), attributes);
+                }
+                None => {
+                    self.attributes.remove(&symbol);
+                }
+            }
+
+            self.message_definitions
+                .retain(|key, _| key.symbol != symbol);
+            for (key, definition) in state.messages {
+                self.message_definitions.insert(key, definition);
+            }
+        }
     }
 
     fn try_apply_function(
@@ -3138,8 +3303,8 @@ impl Session {
         };
 
         let applied = match function {
-            FunctionSpec::SlotBased(body) => substitute_slots(body, args),
-            FunctionSpec::Explicit { params, body } => {
+            FunctionSpec::SlotBased { body, .. } => substitute_slots(body, args),
+            FunctionSpec::Explicit { params, body, .. } => {
                 if params.len() != args.len() {
                     self.push_message(
                         "Function",
@@ -3189,11 +3354,25 @@ impl Session {
     }
 
     fn allocate_fresh_symbol(&mut self, symbol: &Symbol) -> Symbol {
-        self.next_generated_symbol_id += 1;
-        Symbol::new(
-            symbol.context().to_string(),
-            format!("{}${}", symbol.name(), self.next_generated_symbol_id),
-        )
+        loop {
+            self.next_generated_symbol_id += 1;
+            let candidate = Symbol::new(
+                symbol.context().to_string(),
+                format!("{}${}", symbol.name(), self.next_generated_symbol_id),
+            );
+
+            if !self.generated_symbol_exists(&candidate) {
+                return candidate;
+            }
+        }
+    }
+
+    fn generated_symbol_exists(&self, symbol: &Symbol) -> bool {
+        self.symbol_exists(symbol)
+            || self
+                .message_definitions
+                .keys()
+                .any(|key| key.symbol == *symbol)
     }
 
     fn eval_set(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -3364,7 +3543,7 @@ impl Session {
         let target = self.evaluate(args[0].clone())?;
         let rules_expr = self.evaluate(args[1].clone())?;
 
-        let Some(rules) = normalize_rewrite_rules(&rules_expr) else {
+        let Some(rules) = self.compile_rewrite_rules_for_matching(&rules_expr) else {
             return Ok(self.invalid_call_with_arg_form(
                 "ReplaceAll",
                 &[target, rules_expr],
@@ -3384,7 +3563,7 @@ impl Session {
         let mut current = self.evaluate(args[0].clone())?;
         let rules_expr = self.evaluate(args[1].clone())?;
 
-        let Some(rules) = normalize_rewrite_rules(&rules_expr) else {
+        let Some(rules) = self.compile_rewrite_rules_for_matching(&rules_expr) else {
             return Ok(self.invalid_call_with_arg_form(
                 "ReplaceRepeated",
                 &[current, rules_expr],
@@ -3426,12 +3605,13 @@ impl Session {
         };
 
         let candidate = Expr::call(head.clone(), args.to_vec());
+        let normalized_candidate = self.normalize_match_expr(&candidate);
 
         for down_value in definition.down_values {
             let mut bindings = BTreeMap::new();
-            let matcher = compile_matcher(&down_value.lhs);
+            let matcher = self.compile_matcher_for_expr(&down_value.lhs);
 
-            if self.match_compiled(&matcher, &candidate, &mut bindings)? {
+            if self.match_compiled(&matcher, &normalized_candidate, &mut bindings)? {
                 let substituted = substitute_rule_bindings(&down_value.rhs, &bindings);
                 self.push_trace(TraceEvent::RuleApplied {
                     source: RuleApplicationSource::DownValue,
@@ -3452,6 +3632,7 @@ impl Session {
         args: &[Expr],
     ) -> Result<Option<Expr>, EvalError> {
         let candidate = Expr::call(head.clone(), args.to_vec());
+        let normalized_candidate = self.normalize_match_expr(&candidate);
 
         for symbol in collect_upvalue_candidate_symbols(args) {
             let Some(definition) = self.definitions.get(&symbol).cloned() else {
@@ -3460,9 +3641,9 @@ impl Session {
 
             for up_value in definition.up_values {
                 let mut bindings = BTreeMap::new();
-                let matcher = compile_matcher(&up_value.lhs);
+                let matcher = self.compile_matcher_for_expr(&up_value.lhs);
 
-                if self.match_compiled(&matcher, &candidate, &mut bindings)? {
+                if self.match_compiled(&matcher, &normalized_candidate, &mut bindings)? {
                     let substituted = substitute_rule_bindings(&up_value.rhs, &bindings);
                     self.push_trace(TraceEvent::RuleApplied {
                         source: RuleApplicationSource::UpValue,
@@ -3492,12 +3673,13 @@ impl Session {
         };
 
         let candidate = Expr::call(head.clone(), args.to_vec());
+        let normalized_candidate = self.normalize_match_expr(&candidate);
 
         for sub_value in definition.sub_values {
             let mut bindings = BTreeMap::new();
-            let matcher = compile_matcher(&sub_value.lhs);
+            let matcher = self.compile_matcher_for_expr(&sub_value.lhs);
 
-            if self.match_compiled(&matcher, &candidate, &mut bindings)? {
+            if self.match_compiled(&matcher, &normalized_candidate, &mut bindings)? {
                 let substituted = substitute_rule_bindings(&sub_value.rhs, &bindings);
                 self.push_trace(TraceEvent::RuleApplied {
                     source: RuleApplicationSource::SubValue,
@@ -3518,8 +3700,9 @@ impl Session {
         value: &Expr,
         bindings: &mut BTreeMap<Symbol, Expr>,
     ) -> Result<bool, EvalError> {
-        let matcher = compile_matcher(pattern);
-        self.match_compiled(&matcher, value, bindings)
+        let matcher = self.compile_matcher_for_expr(pattern);
+        let normalized_value = self.normalize_match_expr(value);
+        self.match_compiled(&matcher, &normalized_value, bindings)
     }
 
     fn match_compiled(
@@ -3565,21 +3748,25 @@ impl Session {
                 let result = self.evaluate(condition_expr)?;
                 Ok(is_system_symbol_name(&result, "True"))
             }
-            MatcherNode::Call { head, args } => {
-                let Expr::Call {
+            MatcherNode::Call { head, args } => match value {
+                Expr::Call {
                     head: value_head,
                     args: value_args,
-                } = value
-                else {
-                    return Ok(false);
-                };
+                } => {
+                    if !self.match_compiled(head, value_head, bindings)? {
+                        return Ok(false);
+                    }
 
-                if !self.match_compiled(head, value_head, bindings)? {
-                    return Ok(false);
+                    self.match_compiled_args(args, value_args, bindings)
                 }
-
-                self.match_compiled_args(args, value_args, bindings)
-            }
+                _ if matcher_head_has_attribute(head, self, Attribute::OneIdentity) => {
+                    match args.as_slice() {
+                        [MatcherArg::Single(inner)] => self.match_compiled(inner, value, bindings),
+                        _ => Ok(false),
+                    }
+                }
+                _ => Ok(false),
+            },
         }
     }
 
@@ -3676,8 +3863,11 @@ impl Session {
         value: &Expr,
         bindings: &mut BTreeMap<Symbol, Expr>,
     ) -> Result<bool, EvalError> {
+        let normalized_pattern = self.normalize_match_expr(pattern);
+        let normalized_value = self.normalize_match_expr(value);
         let snapshot = bindings.clone();
-        let matched = self.match_expr_interpreted_inner(pattern, value, bindings)?;
+        let matched =
+            self.match_expr_interpreted_inner(&normalized_pattern, &normalized_value, bindings)?;
 
         if !matched {
             *bindings = snapshot;
@@ -3732,6 +3922,18 @@ impl Session {
                 }
 
                 self.match_call_args_interpreted(lhs_args, rhs_args, bindings)
+            }
+            (Expr::Call { head, args }, _)
+                if matcher_head_has_attribute(
+                    &MatcherNode::Exact((**head).clone()),
+                    self,
+                    Attribute::OneIdentity,
+                ) =>
+            {
+                match args.as_slice() {
+                    [single] => self.match_expr_interpreted(single, value, bindings),
+                    _ => Ok(false),
+                }
             }
             _ => Ok(false),
         }
@@ -3824,11 +4026,12 @@ impl Session {
 
     fn normalize_pattern_expr(&mut self, expr: &Expr) -> Result<Expr, EvalError> {
         let normalized = strip_hold_pattern(expr);
-
-        match normalized {
+        let normalized = match normalized {
             Expr::Atom(Atom::Symbol(_)) => self.evaluate(normalized.clone()),
             other => Ok(other.clone()),
-        }
+        }?;
+
+        Ok(self.normalize_match_expr(&normalized))
     }
 
     fn normalize_cases_spec(&mut self, expr: &Expr) -> Result<CasesSpec, EvalError> {
@@ -3843,7 +4046,7 @@ impl Session {
             _ => expr.clone(),
         };
 
-        Ok(match normalize_single_rewrite_rule(&resolved) {
+        Ok(match self.compile_rewrite_rule_for_matching(&resolved) {
             Some(rule) => CasesSpec::Rule(rule),
             None => CasesSpec::Pattern(resolved),
         })
@@ -3882,6 +4085,7 @@ impl Session {
         spec: &CasesSpec,
     ) -> Result<Option<Expr>, EvalError> {
         let mut bindings = BTreeMap::new();
+        let normalized_expr = self.normalize_match_expr(expr);
 
         match spec {
             CasesSpec::Pattern(pattern) => {
@@ -3892,7 +4096,7 @@ impl Session {
                 }
             }
             CasesSpec::Rule(rule) => {
-                if self.match_compiled(&rule.matcher, expr, &mut bindings)? {
+                if self.match_compiled(&rule.matcher, &normalized_expr, &mut bindings)? {
                     let transformed = substitute_rule_bindings(&rule.rhs, &bindings);
                     self.evaluate(transformed).map(Some)
                 } else {
@@ -3929,10 +4133,12 @@ impl Session {
         rules: &[RewriteRule],
         source: RuleApplicationSource,
     ) -> Result<Option<Expr>, EvalError> {
+        let normalized_expr = self.normalize_match_expr(expr);
+
         for rule in rules {
             let mut bindings = BTreeMap::new();
 
-            if self.match_compiled(&rule.matcher, expr, &mut bindings)? {
+            if self.match_compiled(&rule.matcher, &normalized_expr, &mut bindings)? {
                 let replaced = substitute_rule_bindings(&rule.rhs, &bindings);
                 self.push_trace(TraceEvent::RuleApplied {
                     source,
@@ -4723,6 +4929,10 @@ fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
         "If" => AttributeSet::from_attribute(Attribute::HoldRest),
         "HoldFirst" => AttributeSet::from_attribute(Attribute::HoldFirst),
         "HoldRest" => AttributeSet::from_attribute(Attribute::HoldRest),
+        "Plus" | "Times" => AttributeSet::empty()
+            .with(Attribute::Orderless)
+            .with(Attribute::Flat)
+            .with(Attribute::OneIdentity),
         _ => AttributeSet::empty(),
     }
 }
@@ -4805,19 +5015,52 @@ fn splice_sequence_argument(args: &mut Vec<Expr>, expr: Expr) {
 }
 
 enum FunctionSpec<'a> {
-    SlotBased(&'a Expr),
-    Explicit { params: Vec<Symbol>, body: &'a Expr },
+    SlotBased {
+        body: &'a Expr,
+        attributes: AttributeSet,
+    },
+    Explicit {
+        params: Vec<Symbol>,
+        body: &'a Expr,
+        attributes: AttributeSet,
+    },
+}
+
+impl FunctionSpec<'_> {
+    fn attributes(&self) -> AttributeSet {
+        match self {
+            Self::SlotBased { attributes, .. } | Self::Explicit { attributes, .. } => *attributes,
+        }
+    }
 }
 
 fn parse_function(expr: &Expr) -> Option<FunctionSpec<'_>> {
     match expr {
         Expr::Call { head, args } if is_system_symbol_name(head, "Function") && args.len() == 1 => {
-            Some(FunctionSpec::SlotBased(&args[0]))
+            Some(FunctionSpec::SlotBased {
+                body: &args[0],
+                attributes: AttributeSet::empty(),
+            })
         }
-        Expr::Call { head, args } if is_system_symbol_name(head, "Function") && args.len() >= 2 => {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Function") && args.len() == 2 => {
+            if let Some(params) = parse_function_parameters(&args[0]) {
+                Some(FunctionSpec::Explicit {
+                    params,
+                    body: &args[1],
+                    attributes: AttributeSet::empty(),
+                })
+            } else {
+                Some(FunctionSpec::SlotBased {
+                    body: &args[0],
+                    attributes: parse_attribute_set_expr(&args[1])?,
+                })
+            }
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "Function") && args.len() == 3 => {
             Some(FunctionSpec::Explicit {
                 params: parse_function_parameters(&args[0])?,
                 body: &args[1],
+                attributes: parse_attribute_set_expr(&args[2])?,
             })
         }
         _ => None,
@@ -5467,33 +5710,45 @@ fn substitute_lexical_bindings(
 
             Expr::call(substituted_head, substituted_args)
         }
-        Expr::Call { head, args } if is_system_symbol_name(head, "Function") && args.len() >= 2 => {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Function") => {
             let substituted_head = substitute_lexical_bindings(head, bindings, shadowed);
-            let Some(params) = parse_function_parameters(&args[0]) else {
-                return Expr::call(
+
+            match parse_function(expr) {
+                Some(FunctionSpec::SlotBased { body, .. }) => {
+                    let mut substituted_args =
+                        vec![substitute_lexical_bindings(body, bindings, shadowed)];
+                    substituted_args.extend(
+                        args[1..]
+                            .iter()
+                            .map(|arg| substitute_lexical_bindings(arg, bindings, shadowed)),
+                    );
+                    Expr::call(substituted_head, substituted_args)
+                }
+                Some(FunctionSpec::Explicit { params, body, .. }) => {
+                    let mut body_shadowed = shadowed.clone();
+                    body_shadowed.extend(params);
+
+                    let mut substituted_args = vec![args[0].clone()];
+                    substituted_args.push(substitute_lexical_bindings(
+                        body,
+                        bindings,
+                        &body_shadowed,
+                    ));
+                    substituted_args.extend(
+                        args[2..]
+                            .iter()
+                            .map(|arg| substitute_lexical_bindings(arg, bindings, shadowed)),
+                    );
+
+                    Expr::call(substituted_head, substituted_args)
+                }
+                None => Expr::call(
                     substituted_head,
                     args.iter()
                         .map(|arg| substitute_lexical_bindings(arg, bindings, shadowed))
                         .collect(),
-                );
-            };
-
-            let mut body_shadowed = shadowed.clone();
-            body_shadowed.extend(params);
-
-            let mut substituted_args = vec![args[0].clone()];
-            substituted_args.push(substitute_lexical_bindings(
-                &args[1],
-                bindings,
-                &body_shadowed,
-            ));
-            substituted_args.extend(
-                args[2..]
-                    .iter()
-                    .map(|arg| substitute_lexical_bindings(arg, bindings, shadowed)),
-            );
-
-            Expr::call(substituted_head, substituted_args)
+                ),
+            }
         }
         Expr::Call { head, args } => Expr::call(
             substitute_lexical_bindings(head, bindings, shadowed),
@@ -5680,6 +5935,35 @@ fn sequence_items(expr: &Expr) -> Option<&[Expr]> {
     }
 }
 
+fn flatten_flat_call_args(head: &Expr, args: Vec<Expr>) -> Vec<Expr> {
+    let mut flattened = Vec::new();
+
+    for arg in args {
+        match arg {
+            Expr::Call {
+                head: nested_head,
+                args: nested_args,
+            } if nested_head.as_ref() == head => flattened.extend(nested_args),
+            other => flattened.push(other),
+        }
+    }
+
+    flattened
+}
+
+fn compare_expr_canonical(lhs: &Expr, rhs: &Expr) -> std::cmp::Ordering {
+    lhs.to_string().cmp(&rhs.to_string())
+}
+
+fn matcher_head_has_attribute(head: &MatcherNode, session: &Session, attribute: Attribute) -> bool {
+    match head {
+        MatcherNode::Exact(Expr::Atom(Atom::Symbol(symbol))) => {
+            session.attribute_set_for_symbol(symbol).contains(attribute)
+        }
+        _ => false,
+    }
+}
+
 fn is_known_system_symbol(symbol: &Symbol) -> bool {
     symbol.context() == SYSTEM_CONTEXT && is_known_system_symbol_name(symbol.name())
 }
@@ -5713,6 +5997,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "False"
             | "File"
             | "FindFile"
+            | "Flat"
             | "Function"
             | "Get"
             | "General"
@@ -5738,7 +6023,9 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "Needs"
             | "NormalizeRules"
             | "Null"
+            | "OneIdentity"
             | "OwnValues"
+            | "Orderless"
             | "Pattern"
             | "Plus"
             | "Power"
@@ -8950,5 +9237,196 @@ mod tests {
 
         assert_eq!(session.eval_text("f[7]").unwrap().value.to_string(), "7");
         assert_eq!(session.eval_text("f[8]").unwrap().value.to_string(), "f[8]");
+    }
+
+    #[test]
+    fn function_accepts_explicit_attributes_for_application() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Function[x, Hold[x], HoldAll][Identity[1]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[Identity[1]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Function[Hold[Slot[1]], HoldAll][Identity[1]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[Identity[1]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Function[{x, y}, Hold[x, y], HoldFirst][Identity[1], Identity[2]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[Identity[1], 2]"
+        );
+    }
+
+    #[test]
+    fn evaluated_head_function_attributes_control_argument_evaluation() {
+        let mut session = Session::new();
+
+        session
+            .eval_text("gate = Function[Hold[Slot[1]], HoldAll]")
+            .unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("gate[Identity[1]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "Hold[Identity[1]]"
+        );
+    }
+
+    #[test]
+    fn block_localizes_definitions_attributes_and_messages() {
+        let mut session = Session::new();
+
+        session.eval_text("f[x_] := x").unwrap();
+        session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
+        session.eval_text("f::tag = \"outer\"").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("Block[{f}, {Attributes[f], MessageDefinitions[f], f[Identity[1]]}]",)
+                .unwrap()
+                .value
+                .to_string(),
+            "List[List[], List[], 1]"
+        );
+
+        assert_eq!(
+            session
+                .eval_text("Attributes[f]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[HoldFirst]"
+        );
+        assert_eq!(
+            session
+                .eval_text("MessageDefinitions[f]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[Rule[f::tag, \"outer\"]]"
+        );
+        assert_eq!(session.eval_text("f[1]").unwrap().value.to_string(), "1");
+    }
+
+    #[test]
+    fn module_skips_existing_generated_symbol_names() {
+        let mut session = Session::new();
+
+        session.eval_text("x$1 = occupied").unwrap();
+        session.eval_text("x$2 = occupied").unwrap();
+
+        let value = session.eval_text("Module[{x}, Hold[x]]").unwrap().value;
+        assert_eq!(value.to_string(), "Hold[x$3]");
+    }
+
+    #[test]
+    fn orderless_attribute_canonicalizes_calls_and_rules() {
+        let mut session = Session::new();
+
+        session.eval_text("SetAttributes[f, Orderless]").unwrap();
+
+        assert_eq!(
+            session.eval_text("f[b, a, c]").unwrap().value.to_string(),
+            "f[a, b, c]"
+        );
+        assert_eq!(
+            session
+                .eval_text("MatchQ[f[b, a], f[a, b]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "True"
+        );
+        assert_eq!(
+            session
+                .eval_text("f[2, 1] /. f[a_, b_] -> {a, b}")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[1, 2]"
+        );
+    }
+
+    #[test]
+    fn flat_attribute_flattens_calls_and_matches_flat_patterns() {
+        let mut session = Session::new();
+
+        session.eval_text("SetAttributes[f, Flat]").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("f[a, f[b, c], d]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[a, b, c, d]"
+        );
+        assert_eq!(
+            session
+                .eval_text("MatchQ[f[a, f[b, c]], f[a, b, c]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "True"
+        );
+        assert_eq!(
+            session
+                .eval_text("f[a, f[b, c]] /. f[x_, y_, z_] -> {x, y, z}")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[a, b, c]"
+        );
+    }
+
+    #[test]
+    fn one_identity_allows_singleton_head_patterns_to_match_atoms() {
+        let mut session = Session::new();
+
+        session.eval_text("SetAttributes[f, OneIdentity]").unwrap();
+
+        assert_eq!(
+            session
+                .eval_text("MatchQ[7, f[x_Integer]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "True"
+        );
+        assert_eq!(
+            session
+                .eval_text("7 /. f[x_Integer] -> x")
+                .unwrap()
+                .value
+                .to_string(),
+            "7"
+        );
+        assert_eq!(
+            session.eval_text("Plus[b, a]").unwrap().value.to_string(),
+            "Plus[a, b]"
+        );
+        assert_eq!(
+            session
+                .eval_text("MatchQ[7, Plus[x_Integer]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "True"
+        );
     }
 }

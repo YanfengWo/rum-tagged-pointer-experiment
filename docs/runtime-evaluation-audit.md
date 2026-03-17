@@ -55,7 +55,8 @@ Call evaluation currently follows this order:
    the original arguments.
 3. Otherwise evaluate arguments according to the evaluated head's hold
    attribute.
-4. Splice `Sequence[...]` in non-held positions.
+4. Normalize ordinary calls with attribute-driven preprocessing such as
+   `Sequence`, `Flat`, and `Orderless`.
 5. Unless the head has `HoldAllComplete`, try upvalues attached to symbols that
    appear in the evaluated arguments.
 6. Try downvalues on the evaluated head plus evaluated arguments.
@@ -88,6 +89,7 @@ early subset:
 - `ReleaseHold`
 - `Hold`, `HoldFirst`, `HoldRest`, `HoldAll`
 - `SequenceHold`
+- `Function[..., attrs]` for explicit application-time hold behavior
 - `Evaluate` in held positions
 - `Sequence` splicing in non-held positions unless `SequenceHold` or
   `HoldAllComplete` is active
@@ -128,13 +130,16 @@ good enough to build on:
 - fixed-point top-level evaluation with dedicated pass/cycle/recursion guards
 - head-first call evaluation
 - builtin hold handling for the implemented subset
+- attribute-driven call normalization for `Sequence`, `Flat`, and `Orderless`
 - `Evaluate` + `Sequence` interaction in held vs non-held positions
+- `OneIdentity`-aware matching for singleton-head patterns
 - upvalue application ahead of downvalues for ordinary calls
 - downvalue application after argument evaluation
 - subvalue application for nested-head expressions such as `f[x_][y_]`
 - immediate vs delayed rule behavior
 - lexical scoping via `With` and `Module`
-- dynamic rebinding via `Block` for ownvalue-style symbol values
+- dynamic rebinding via `Block` for definitions, attributes, and messages on
+  localized symbols
 - runtime messages, `Check`, `Quiet`, and `$MessageList`
 
 These pieces are not "complete Mathematica semantics", but together they form a
@@ -148,17 +153,17 @@ The remaining gaps fall into a few clear buckets.
 
 Missing or incomplete areas:
 
-- `Orderless`
-- `Flat`
-- `OneIdentity`
 - `Listable`
 - richer inspection and lifecycle coverage around user-defined attribute state
 
 Practical impact:
 
-- evaluation order cannot yet be customized for host-defined DSL constructs
-- matcher normalization is still unaware of order/associativity attributes
-- sequence behavior is more rigid than the intended long-term language model
+- evaluation order is still missing higher-level attribute families such as
+  `Listable`
+- matcher and evaluator normalization now cover a useful subset, but not the
+  broader Wolfram attribute surface
+- sequence behavior is much better aligned with the intended long-term language
+  model than before, but still not exhaustive
 
 ### 2. Definition Precedence Is Still a Narrow Slice
 
@@ -169,7 +174,8 @@ yet model the wider definition lattice.
 Missing or incomplete areas:
 
 - broader tag-based definition attachment such as multi-owner tag propagation
-- a more declarative precedence table for user definitions vs builtin dispatch
+- further consolidation of special forms and builtin dispatch under reusable
+  evaluator metadata
 
 Practical impact:
 
@@ -178,8 +184,8 @@ Practical impact:
 - host-side DSL embedding still cannot rely on the full Wolfram definition
   lattice, especially where nested-head behavior must interact with future
   `UpValues` refinements and richer tag operations
-- lifecycle management is usable now, but still narrower than the long-term
-  target
+- the ordinary call path is now more declarative, but special-form placement is
+  still partly handwritten
 
 ### 3. Held Evaluation Is Functional but Not Yet Rich
 
@@ -188,7 +194,6 @@ broader set of non-evaluation wrappers and held-pattern tools.
 
 Missing or incomplete areas:
 
-- `Function[..., attrs]`
 - more exact interaction rules among held wrappers, pattern matching, and
   substitution
 
@@ -196,7 +201,8 @@ Practical impact:
 
 - some advanced rule authoring patterns still require awkward workarounds
 - held pattern matching is less faithful than the intended core-language target
-- host DSL authors cannot yet choose function application attributes explicitly
+- host DSL authors can now choose function application attributes explicitly,
+  but the surrounding held-wrapper rules are still not complete
 
 ### 4. Scoping Is Good Enough for Core Use, but Not Yet Exhaustive
 
@@ -205,10 +211,11 @@ minimal semantics slice rather than a full scoping model.
 
 Known gaps:
 
-- `Block` currently rebinds ownvalue-style symbol values, not the broader space
-  of attributes/messages/other definition categories
-- `Module` freshness is based on generated names, but supporting machinery such
-  as `$ModuleNumber` is absent
+- `Block` now localizes definitions, user attributes, and message templates for
+  the named symbols it rebinds, but the runtime still lacks broader categories
+  such as options/format values
+- `Module` fresh-name allocation now skips pre-existing generated symbols, but
+  supporting machinery such as `$ModuleNumber` is absent
 - nested interactions among scoping, held patterns, and future attribute-driven
   evaluation have not been fully audited yet
 
@@ -225,12 +232,10 @@ encoded directly in handlers rather than through a more general semantic model.
 
 Known gaps:
 
-- special forms vs held builtins are split across separate dispatch paths
-- the evaluator does not yet expose a single declarative model for
-  "head evaluation, attribute preprocessing, definition lookup, builtin
-  dispatch, and residual reconstruction"
-- more of the behavior is encoded in handwritten handler order than in reusable
-  evaluator metadata
+- special forms vs held builtins are still split across separate dispatch paths
+- the ordinary-call precedence path is now explicit, but it has not yet been
+  generalized into one uniform dispatch model that also covers special forms
+- builtin metadata still does not drive all evaluator decisions
 
 Practical impact:
 
@@ -262,16 +267,17 @@ Practical impact:
 
 The cleanest next steps for `rum-runtime` are:
 
-1. make builtin dispatch order more declarative so new semantics do not depend
-   on ad hoc handler placement
+1. keep consolidating evaluator metadata so special forms and ordinary builtins
+   share a less ad hoc dispatch model
 2. extend tag-oriented lifecycle tools beyond `Unset` / `Clear` / `ClearAll`
    into richer multi-owner tag behavior
-3. extend the attribute table beyond hold-oriented behavior into `Orderless`,
-   `Flat`, `OneIdentity`, and later `Listable`
-4. let `Function` accept explicit attributes / hold behavior so held evaluation
-   is not limited to builtin and symbol-level attributes
-5. extend regression tests around head evaluation, held arguments, scoping, and
-   delayed definitions before widening the pattern language further
+3. extend the attribute table from the current hold/order/associativity subset
+   into later families such as `Listable`
+4. continue auditing scoping and held-wrapper interactions now that
+   `Function[..., attrs]`, broader `Block`, and safer `Module` freshness are in
+   place
+5. widen the matcher language only after the current evaluation and scoping
+   semantics feel fully locked down
 
 ## Summary
 

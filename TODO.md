@@ -118,6 +118,7 @@ This roadmap now uses two levels of detail:
 - [x] Implement `Attributes`, `SetAttributes`, and `ClearAttributes`
 - [x] Add `SequenceHold` and route argument preprocessing through attribute-aware sequence handling
 - [x] Add `HoldAllComplete` and make held-argument evaluation honor it
+- [x] Extend attribute-driven normalization and matching with `Orderless`, `Flat`, and `OneIdentity`
 - [x] Decide and document precedence among upvalues, downvalues, builtin dispatch, and future attribute-driven evaluation
 - [x] Add `/:` syntax and `TagSet` / `TagSetDelayed` lowering support
 - [x] Add `UpValues[symbol]` inspection and structured definition-catalog coverage
@@ -136,10 +137,10 @@ This roadmap now uses two levels of detail:
 - [x] Add `Unevaluated`
 - [x] Add `HoldPattern`
 - [x] Add `ReleaseHold`
-- [ ] Let `Function` accept explicit attributes / hold behavior
-- [ ] Audit `Block` rebinding scope beyond ownvalue-style symbol values and decide the intended breadth
-- [ ] Audit `Module` freshness and capture edge cases now that more held and rule-based constructs exist
-- [ ] Add regression tests that lock down interactions among head evaluation, delayed definitions, held arguments, and scoping
+- [x] Let `Function` accept explicit attributes / hold behavior
+- [x] Audit `Block` rebinding scope beyond ownvalue-style symbol values and localize definitions, attributes, and messages
+- [x] Audit `Module` freshness and capture edge cases now that more held and rule-based constructs exist
+- [x] Add regression tests that lock down interactions among head evaluation, delayed definitions, held arguments, and scoping
 
 ### `rum-repl` and `rum-cli`: Interactive Ergonomics
 
