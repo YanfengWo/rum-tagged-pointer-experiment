@@ -11,6 +11,7 @@ use thiserror::Error;
 
 const DEFAULT_REPLACE_REPEATED_LIMIT: usize = 256;
 const DEFAULT_RECURSION_LIMIT: usize = 256;
+const DEFAULT_EVALUATION_PASS_LIMIT: usize = 256;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HoldAttribute {
@@ -60,6 +61,7 @@ impl BuiltinSpec {
 pub struct ResourceLimits {
     pub recursion_limit: usize,
     pub replace_repeated_limit: usize,
+    pub evaluation_pass_limit: usize,
 }
 
 impl Default for ResourceLimits {
@@ -67,6 +69,7 @@ impl Default for ResourceLimits {
         Self {
             recursion_limit: DEFAULT_RECURSION_LIMIT,
             replace_repeated_limit: DEFAULT_REPLACE_REPEATED_LIMIT,
+            evaluation_pass_limit: DEFAULT_EVALUATION_PASS_LIMIT,
         }
     }
 }
@@ -288,6 +291,12 @@ struct LoaderSnapshot {
     context_path: Vec<String>,
     context_stack: Vec<ContextFrame>,
     loaded_packages: Vec<String>,
+    definitions: BTreeMap<Symbol, SymbolDefinition>,
+    message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
+    next_generated_symbol_id: u64,
+    trace_events: Vec<TraceEvent>,
+    messages: Vec<RuntimeMessage>,
+    last_message_list: Vec<RuntimeMessage>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -362,6 +371,8 @@ pub enum EvalError {
     RecursionLimitExceeded { limit: usize },
     #[error("ReplaceRepeated exceeded iteration limit ({limit})")]
     IterationLimitExceeded { limit: usize },
+    #[error("evaluation exceeded fixed-point pass limit ({limit})")]
+    EvaluationPassLimitExceeded { limit: usize },
 }
 
 impl Default for Session {
@@ -399,6 +410,10 @@ impl Session {
 
     pub fn set_replace_repeated_limit(&mut self, limit: usize) {
         self.resource_limits.replace_repeated_limit = limit;
+    }
+
+    pub fn set_evaluation_pass_limit(&mut self, limit: usize) {
+        self.resource_limits.evaluation_pass_limit = limit;
     }
 
     pub fn set_resource_limits(&mut self, limits: ResourceLimits) {
@@ -640,16 +655,30 @@ impl Session {
     }
 
     pub fn eval_script(&mut self, source: &str) -> Result<EvalOutcome, EvalError> {
+        let message_checkpoint = self.messages.len();
         let forms = split_script_into_forms(source)?;
         let mut value = system_expr("Null");
         let mut messages = Vec::new();
 
         for form in forms {
-            let outcome = self.eval_text(&form)?;
-            value = outcome.value;
-            messages.extend(outcome.messages);
+            match self.eval_text(&form) {
+                Ok(outcome) => {
+                    value = outcome.value;
+                    messages.extend(outcome.messages);
+                }
+                Err(err) => {
+                    if !messages.is_empty() {
+                        self.messages
+                            .splice(message_checkpoint..message_checkpoint, messages);
+                        self.last_message_list = self.messages[message_checkpoint..].to_vec();
+                    }
+
+                    return Err(err);
+                }
+            }
         }
 
+        self.last_message_list = messages.clone();
         Ok(EvalOutcome { value, messages })
     }
 
@@ -678,6 +707,12 @@ impl Session {
             context_path: self.context_path.clone(),
             context_stack: self.context_stack.clone(),
             loaded_packages: self.loaded_packages.clone(),
+            definitions: self.definitions.clone(),
+            message_definitions: self.message_definitions.clone(),
+            next_generated_symbol_id: self.next_generated_symbol_id,
+            trace_events: self.trace_events.clone(),
+            messages: self.messages.clone(),
+            last_message_list: self.last_message_list.clone(),
         }
     }
 
@@ -686,6 +721,12 @@ impl Session {
         self.context_path = snapshot.context_path;
         self.context_stack = snapshot.context_stack;
         self.loaded_packages = snapshot.loaded_packages;
+        self.definitions = snapshot.definitions;
+        self.message_definitions = snapshot.message_definitions;
+        self.next_generated_symbol_id = snapshot.next_generated_symbol_id;
+        self.trace_events = snapshot.trace_events;
+        self.messages = snapshot.messages;
+        self.last_message_list = snapshot.last_message_list;
     }
 
     fn push_message(&mut self, symbol: &str, tag: &str, text: impl Into<String>) {
@@ -1237,6 +1278,12 @@ impl Session {
         let mut fixed_point_seen = Vec::new();
 
         loop {
+            if fixed_point_seen.len() >= self.resource_limits.evaluation_pass_limit {
+                return Err(EvalError::EvaluationPassLimitExceeded {
+                    limit: self.resource_limits.evaluation_pass_limit,
+                });
+            }
+
             if fixed_point_seen.iter().any(|previous| previous == &current) {
                 return Err(EvalError::EvaluationCycleDetected {
                     expr: current.to_string(),
@@ -4688,6 +4735,66 @@ mod tests {
     }
 
     #[test]
+    fn eval_script_preserves_messages_emitted_before_a_later_error() {
+        let mut session = Session::new();
+
+        let error = session
+            .eval_script("FindFile[\"Missing`\"]\nself := self\nself")
+            .expect_err("expected a later evaluation error");
+
+        assert!(matches!(
+            error,
+            EvalError::EvaluationCycleDetected { ref expr } if expr == "self"
+        ));
+        assert!(
+            session
+                .take_messages()
+                .iter()
+                .any(|message| { message.symbol == "FindFile" && message.tag == "notfound" })
+        );
+    }
+
+    #[test]
+    fn get_rolls_back_loader_side_effects_and_collapses_failed_file_messages() {
+        let dir = TempDirGuard::new("get-rollback");
+        let file = dir.write(
+            "broken.rum",
+            "BeginPackage[\"Broken`\"]\nFindFile[\"Missing`\"]\nflag = 1\nself := self\nself",
+        );
+        let mut session = Session::new();
+
+        let outcome = session
+            .eval_text(&format!("Get[\"{}\"]", rum_path(&file)))
+            .unwrap();
+
+        assert_eq!(outcome.value.to_string(), "$Failed");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == "Get" && message.tag == "load")
+        );
+        assert!(
+            !outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == "FindFile" && message.tag == "notfound")
+        );
+        assert_eq!(
+            session.eval_text("$Packages").unwrap().value.to_string(),
+            "List[]"
+        );
+        assert_eq!(
+            session.eval_text("Context[]").unwrap().value.to_string(),
+            "\"Global`\""
+        );
+        assert_eq!(
+            session.eval_text("Broken`flag").unwrap().value.to_string(),
+            "Broken`flag"
+        );
+    }
+
+    #[test]
     fn needs_loads_package_once_and_tracks_loaded_packages() {
         let dir = TempDirGuard::new("needs-once");
         dir.write(
@@ -5822,6 +5929,22 @@ mod tests {
                 .to_string(),
             "Hold[Hold, 1]"
         );
+    }
+
+    #[test]
+    fn evaluation_pass_limit_bounds_fixed_point_revisits() {
+        let mut session = Session::new();
+        session.set_evaluation_pass_limit(1);
+
+        let error = session
+            .eval_text("f[f = Hold, Identity[1]]")
+            .expect_err("expected evaluation pass limit error");
+
+        assert!(matches!(
+            error,
+            EvalError::EvaluationPassLimitExceeded { limit: 1 }
+        ));
+        assert_eq!(session.resource_limits().evaluation_pass_limit, 1);
     }
 
     #[test]

@@ -105,9 +105,10 @@ This roadmap now uses two levels of detail:
 ### `rum-runtime`: Evaluation Follow-Through
 
 - [ ] Audit current evaluation behavior against the intended Mathematica-style sequence and list the known gaps
-- [ ] Tighten the boundary between evaluation errors and language-level messages where it is still inconsistent
-- [ ] Review package-loading evaluation for better failure isolation and clearer message emission
-- [ ] Decide whether any additional resource limits are needed beyond recursion and `ReplaceRepeated` iteration caps
+- [x] Preserve language-level messages emitted by successful earlier forms when a later form aborts `eval_script`
+- [x] Roll back definitions, contexts, loaded packages, traces, and message state when `eval_file` / `Get` fail
+- [x] Add a fixed-point evaluation pass limit alongside recursion and `ReplaceRepeated` limits
+- [ ] Continue tightening the remaining boundary between evaluation errors and language-level messages outside loader/script flows
 
 ### `rum-repl` and `rum-cli`: Interactive Ergonomics
 
