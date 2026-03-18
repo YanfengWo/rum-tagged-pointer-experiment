@@ -54,19 +54,22 @@ Call evaluation currently follows this order:
 2. Run a staged call-dispatch plan that can inspect raw arguments, prepare
    evaluated arguments, apply attribute-driven preprocessing, and then try
    definitions, builtins, and pure functions in order.
-3. Special forms still see the original raw arguments.
-4. Ordinary calls evaluate arguments according to the evaluated head's hold
+3. Metadata-backed dispatch planning now omits inactive builtin stages instead
+   of always running a fixed superset and letting later handlers no-op.
+4. Special forms still see the original raw arguments.
+5. Ordinary calls evaluate arguments according to the evaluated head's hold
    attribute.
-5. Ordinary-call preprocessing now handles `Sequence`, `Flat`, `Orderless`,
+6. Ordinary-call preprocessing now handles `Sequence`, `Flat`, `Orderless`,
    recursive `Listable` threading with mismatch messages, and shared
    `Thread`-style argument threading helpers.
-6. Unless the head has `HoldAllComplete`, try upvalues attached to symbols that
+7. Unless the head has `HoldAllComplete`, try upvalues attached to symbols that
    appear in the evaluated arguments.
-7. Try downvalues on the evaluated head plus evaluated arguments.
-8. Try subvalues keyed by the leftmost base symbol of a nested evaluated head.
-9. Try builtin dispatch for non-special system builtins.
-10. Try pure-function application.
-11. Reconstruct the call if nothing fires.
+8. Try downvalues on the evaluated head plus evaluated arguments.
+9. Try subvalues keyed by the leftmost base symbol of a nested evaluated head.
+10. Try builtin dispatch for non-special system builtins.
+11. Try pure-function application when the head is itself a `Function[...]`
+    object.
+12. Reconstruct the call if nothing fires.
 
 This gives the runtime a workable precedence order for the currently supported
 subset:
@@ -76,6 +79,8 @@ subset:
   functions now share one staged dispatch pipeline
 - builtin call handlers now sit behind metadata-backed handler specs instead of
   only direct name matching in the evaluator
+- stage assembly is now driven by builtin metadata, attributes, and head traits
+  rather than always traversing a larger fixed stage superset
 - hold-sensitive builtins get partially evaluated arguments
 - upvalues run before downvalues on ordinary calls, unless `HoldAllComplete`
   blocks them
@@ -140,6 +145,10 @@ good enough to build on:
   recursive `Listable` threading
 - explicit `Thread[expr]` and `Thread[expr, head]` threading for the current
   subset, including scalar broadcast and mismatch preservation
+- a standard sequence-spec subset for `Thread`'s third argument:
+  `All`, `None`, `n`, `-n`, `{n}`, `{m,n}`, and `{m,n,s}`
+- `Thread` now evaluates its first argument before threading, matching the
+  documented Wolfram behavior more closely
 - `Evaluate` + `Sequence` interaction in held vs non-held positions
 - `OneIdentity`-aware matching for singleton-head patterns
 - upvalue application ahead of downvalues for ordinary calls
@@ -170,8 +179,8 @@ Missing or incomplete areas:
 Practical impact:
 
 - matcher and evaluator normalization now cover a useful subset, including a
-  practical recursive `Listable` implementation plus explicit `Thread` support,
-  but not the broader Wolfram attribute surface
+  practical recursive `Listable` implementation plus explicit `Thread` support
+  with sequence specs, but not the broader Wolfram attribute surface
 - sequence behavior is much better aligned with the intended long-term language
   model than before, but still not exhaustive
 

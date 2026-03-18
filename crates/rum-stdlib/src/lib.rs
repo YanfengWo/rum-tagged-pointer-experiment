@@ -322,10 +322,9 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Splices a sequence of arguments into a call.",
         BuiltinHandler::Sequence,
     ),
-    BuiltinSpec::ordinary_with_hold(
+    BuiltinSpec::ordinary(
         "Thread",
         "Threads an expression over arguments that share a common head.",
-        HoldAttribute::HoldFirst,
         BuiltinHandler::Thread,
     ),
 ];

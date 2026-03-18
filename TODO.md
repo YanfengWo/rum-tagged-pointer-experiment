@@ -113,6 +113,7 @@ This roadmap now uses two levels of detail:
 - [x] Continue tightening the remaining boundary between evaluation errors and language-level messages outside loader/script flows
 - [x] Refactor ordinary call evaluation around a staged dispatch model that covers special forms, argument preparation, list threading, definitions, builtins, and pure functions
 - [x] Route builtin stage selection through metadata-backed builtin specs instead of direct name-based dispatch branches
+- [x] Build call-dispatch stage plans from builtin metadata, attributes, and head traits so inactive stages are omitted instead of being no-op filtered later
 
 ### `rum-runtime`: Attribute and Definition Semantics
 
@@ -125,6 +126,8 @@ This roadmap now uses two levels of detail:
 - [x] Emit `Thread::tdlen`-style runtime messages when `Listable` arguments cannot be threaded together
 - [x] Add an explicit `Thread` builtin and share threading helpers between `Thread` and `Listable`
 - [x] Support `Thread[expr]` and `Thread[expr, head]` with scalar broadcast and mismatch preservation for the current subset
+- [x] Support the standard sequence-spec subset for `Thread`'s third argument: `All`, `None`, `n`, `-n`, `{n}`, `{m, n}`, and `{m, n, s}`
+- [x] Make `Thread` evaluate its first argument before threading, matching the documented Wolfram behavior more closely
 - [x] Decide and document precedence among upvalues, downvalues, builtin dispatch, and future attribute-driven evaluation
 - [x] Add `/:` syntax and `TagSet` / `TagSetDelayed` lowering support
 - [x] Add `UpValues[symbol]` inspection and structured definition-catalog coverage

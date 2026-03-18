@@ -777,6 +777,20 @@ struct SequencePatternSpec<'a> {
     condition: Option<&'a Expr>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum ThreadArgSpec {
+    All,
+    None,
+    Prefix(usize),
+    Suffix(usize),
+    Single(isize),
+    Range {
+        start: isize,
+        end: isize,
+        step: isize,
+    },
+}
+
 #[derive(Debug, Error)]
 pub enum EvalError {
     #[error(transparent)]
@@ -2094,24 +2108,38 @@ impl Session {
 
     fn build_call_dispatch_plan(&self, head: &Expr) -> CallDispatchPlan {
         let attributes = self.attribute_set_for_head(head);
-        let mut stages = Vec::with_capacity(8);
+        let builtin_dispatch = expr_as_symbol(head)
+            .and_then(|symbol| self.builtin_dispatch_spec_for_symbol(symbol))
+            .map(|spec| spec.dispatch);
 
-        stages.extend([
-            CallDispatchStage::SpecialForm,
-            CallDispatchStage::PrepareArguments,
-            CallDispatchStage::Listable,
-        ]);
+        if builtin_dispatch == Some(BuiltinDispatch::SpecialForm) {
+            return CallDispatchPlan {
+                attributes,
+                stages: vec![CallDispatchStage::SpecialForm],
+            };
+        }
+
+        let mut stages = Vec::with_capacity(6);
+
+        stages.push(CallDispatchStage::PrepareArguments);
+
+        if attributes.contains(Attribute::Listable) {
+            stages.push(CallDispatchStage::Listable);
+        }
 
         if !attributes.contains(Attribute::HoldAllComplete) {
             stages.push(CallDispatchStage::UpValues);
         }
 
-        stages.extend([
-            CallDispatchStage::DownValues,
-            CallDispatchStage::SubValues,
-            CallDispatchStage::OrdinaryBuiltin,
-            CallDispatchStage::Function,
-        ]);
+        stages.extend([CallDispatchStage::DownValues, CallDispatchStage::SubValues]);
+
+        if builtin_dispatch == Some(BuiltinDispatch::Ordinary) {
+            stages.push(CallDispatchStage::OrdinaryBuiltin);
+        }
+
+        if parse_function(head).is_some() {
+            stages.push(CallDispatchStage::Function);
+        }
 
         CallDispatchPlan { attributes, stages }
     }
@@ -2172,7 +2200,13 @@ impl Session {
             return Ok(ThreadingDispatch::NotApplicable);
         }
 
-        self.thread_call_args(head, args, &system_expr("List"), &system_expr("List"))
+        self.thread_call_args(
+            head,
+            args,
+            &system_expr("List"),
+            &system_expr("List"),
+            &ThreadArgSpec::All,
+        )
     }
 
     fn thread_call_args(
@@ -2181,11 +2215,22 @@ impl Session {
         args: &[Expr],
         thread_head: &Expr,
         wrapper_head: &Expr,
+        arg_spec: &ThreadArgSpec,
     ) -> Result<ThreadingDispatch, EvalError> {
+        let selected_indices = resolve_thread_arg_indices(arg_spec, args.len());
+
+        if selected_indices.is_empty() {
+            return Ok(ThreadingDispatch::NotApplicable);
+        }
+
         let mut target_len = None;
         let mut thread_lengths = Vec::new();
 
-        for arg in args {
+        for (index, arg) in args.iter().enumerate() {
+            if !selected_indices.contains(&index) {
+                continue;
+            }
+
             let Some(items) = call_items_with_head(arg, thread_head) else {
                 continue;
             };
@@ -2211,10 +2256,16 @@ impl Session {
                 Expr::call(
                     head.clone(),
                     args.iter()
-                        .map(|arg| match call_items_with_head(arg, thread_head) {
-                            Some(items) => items[index].clone(),
-                            None => arg.clone(),
-                        })
+                        .enumerate()
+                        .map(
+                            |(arg_index, arg)| match call_items_with_head(arg, thread_head) {
+                                Some(items) if selected_indices.contains(&arg_index) => {
+                                    items[index].clone()
+                                }
+                                None => arg.clone(),
+                                Some(_) => arg.clone(),
+                            },
+                        )
                         .collect(),
                 )
             })
@@ -2931,15 +2982,26 @@ impl Session {
     }
 
     fn eval_thread(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-        let (expr, thread_head) = match args {
-            [expr] => (expr.clone(), system_expr("List")),
-            [expr, thread_head] => (expr.clone(), thread_head.clone()),
+        let (expr, thread_head, arg_spec) = match args {
+            [expr] => (expr.clone(), system_expr("List"), ThreadArgSpec::All),
+            [expr, thread_head] => (expr.clone(), thread_head.clone(), ThreadArgSpec::All),
+            [expr, thread_head, spec] => {
+                let Some(arg_spec) = parse_thread_arg_spec(spec) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "Thread",
+                        args,
+                        "expected the third argument to be a standard sequence specification such as All, None, n, -n, {n}, {m, n}, or {m, n, s}",
+                    ));
+                };
+
+                (expr.clone(), thread_head.clone(), arg_spec)
+            }
             _ => {
                 return Ok(self.invalid_call_with_message(
                     "Thread",
                     args,
                     "argx",
-                    format!("expected 1 or 2 argument(s), got {}", args.len()),
+                    format!("expected 1, 2, or 3 argument(s), got {}", args.len()),
                 ));
             }
         };
@@ -2957,6 +3019,7 @@ impl Session {
             threaded_args,
             &thread_head,
             &thread_head,
+            &arg_spec,
         )? {
             ThreadingDispatch::NotApplicable => Ok(expr),
             ThreadingDispatch::Threaded(threaded) => Ok(threaded),
@@ -5125,6 +5188,173 @@ fn expr_as_non_negative_usize(expr: &Expr) -> Option<usize> {
     }
 }
 
+fn is_negative_one_expr(expr: &Expr) -> bool {
+    matches!(expr, Expr::Atom(Atom::Integer(value)) if value == &BigInt::from(-1))
+}
+
+fn expr_as_signed_isize(expr: &Expr) -> Option<isize> {
+    match expr {
+        Expr::Atom(Atom::Integer(value)) => value.to_string().parse::<isize>().ok(),
+        Expr::Call { head, args } if is_system_symbol_name(head, "Times") && args.len() == 2 => {
+            if is_negative_one_expr(&args[0]) {
+                expr_as_non_negative_usize(&args[1])
+                    .and_then(|value| isize::try_from(value).ok())
+                    .map(|value| -value)
+            } else if is_negative_one_expr(&args[1]) {
+                expr_as_non_negative_usize(&args[0])
+                    .and_then(|value| isize::try_from(value).ok())
+                    .map(|value| -value)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+fn parse_thread_arg_spec(expr: &Expr) -> Option<ThreadArgSpec> {
+    if is_system_symbol_name(expr, "All") {
+        return Some(ThreadArgSpec::All);
+    }
+
+    if is_system_symbol_name(expr, "None") {
+        return Some(ThreadArgSpec::None);
+    }
+
+    if let Some(count) = expr_as_signed_isize(expr) {
+        return if count >= 0 {
+            usize::try_from(count).ok().map(ThreadArgSpec::Prefix)
+        } else {
+            count
+                .checked_abs()
+                .and_then(|value| usize::try_from(value).ok())
+                .map(ThreadArgSpec::Suffix)
+        };
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "List") {
+        return None;
+    }
+
+    match args.as_slice() {
+        [index] => Some(ThreadArgSpec::Single(expr_as_signed_isize(index)?)),
+        [start, end] => Some(ThreadArgSpec::Range {
+            start: expr_as_signed_isize(start)?,
+            end: expr_as_signed_isize(end)?,
+            step: 1,
+        }),
+        [start, end, step] => Some(ThreadArgSpec::Range {
+            start: expr_as_signed_isize(start)?,
+            end: expr_as_signed_isize(end)?,
+            step: expr_as_signed_isize(step)?,
+        }),
+        _ => None,
+    }
+}
+
+fn resolve_thread_arg_indices(spec: &ThreadArgSpec, arg_count: usize) -> Vec<usize> {
+    match spec {
+        ThreadArgSpec::All => (0..arg_count).collect(),
+        ThreadArgSpec::None => Vec::new(),
+        ThreadArgSpec::Prefix(count) => (0..(*count).min(arg_count)).collect(),
+        ThreadArgSpec::Suffix(count) => {
+            let start = arg_count.saturating_sub(*count);
+            (start..arg_count).collect()
+        }
+        ThreadArgSpec::Single(index) => normalize_thread_position(*index, arg_count)
+            .map(|position| vec![position])
+            .unwrap_or_default(),
+        ThreadArgSpec::Range { start, end, step } => {
+            resolve_thread_range_indices(*start, *end, *step, arg_count)
+        }
+    }
+}
+
+fn resolve_thread_range_indices(
+    start: isize,
+    end: isize,
+    step: isize,
+    arg_count: usize,
+) -> Vec<usize> {
+    if step == 0 || arg_count == 0 {
+        return Vec::new();
+    }
+
+    let Some(start_index) = clamp_thread_position(start, arg_count) else {
+        return Vec::new();
+    };
+    let Some(end_index) = clamp_thread_position(end, arg_count) else {
+        return Vec::new();
+    };
+
+    let ascending = step > 0;
+    let step = step.unsigned_abs();
+    let mut indices = Vec::new();
+
+    if ascending {
+        if start_index > end_index {
+            return indices;
+        }
+
+        let mut current = start_index;
+        while current <= end_index {
+            indices.push(current);
+            current = current.saturating_add(step);
+            if current == usize::MAX {
+                break;
+            }
+        }
+    } else {
+        if start_index < end_index {
+            return indices;
+        }
+
+        let mut current = start_index;
+        while current >= end_index {
+            indices.push(current);
+            let next = current.saturating_sub(step);
+            if next == current {
+                break;
+            }
+            current = next;
+        }
+    }
+
+    indices
+}
+
+fn normalize_thread_position(position: isize, arg_count: usize) -> Option<usize> {
+    if arg_count == 0 || position == 0 {
+        return None;
+    }
+
+    if position > 0 {
+        let zero_based = usize::try_from(position).ok()?.checked_sub(1)?;
+        (zero_based < arg_count).then_some(zero_based)
+    } else {
+        let from_end = usize::try_from(position.checked_abs()?).ok()?;
+        (from_end <= arg_count).then_some(arg_count - from_end)
+    }
+}
+
+fn clamp_thread_position(position: isize, arg_count: usize) -> Option<usize> {
+    if arg_count == 0 || position == 0 {
+        return None;
+    }
+
+    if position > 0 {
+        let one_based = usize::try_from(position).ok()?;
+        Some(one_based.clamp(1, arg_count) - 1)
+    } else {
+        let from_end = usize::try_from(position.checked_abs()?).ok()?;
+        Some(arg_count.saturating_sub(from_end.min(arg_count)))
+    }
+}
+
 fn parse_cases_level_spec(expr: &Expr) -> Option<CasesLevelSpec> {
     if let Some(level) = expr_as_non_negative_usize(expr) {
         return Some(CasesLevelSpec::exact(level));
@@ -5455,12 +5685,7 @@ fn default_builtin_dispatch_spec(name: &str) -> Option<BuiltinSpec> {
             BuiltinHandler::ReleaseHold,
         ),
         "Sequence" => BuiltinSpec::ordinary("", "", BuiltinHandler::Sequence),
-        "Thread" => BuiltinSpec::ordinary_with_hold(
-            "",
-            "",
-            HoldAttribute::HoldFirst,
-            BuiltinHandler::Thread,
-        ),
+        "Thread" => BuiltinSpec::ordinary("", "", BuiltinHandler::Thread),
         _ => return None,
     })
 }
@@ -5472,7 +5697,7 @@ fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
 
     match symbol.name() {
         "Attributes" | "Context" | "Message" | "OwnValues" | "UpValues" | "DownValues"
-        | "SubValues" | "SetAttributes" | "ClearAttributes" | "Unset" | "Thread" => {
+        | "SubValues" | "SetAttributes" | "ClearAttributes" | "Unset" => {
             AttributeSet::from_attribute(Attribute::HoldFirst)
         }
         "HoldAllComplete" | "Unevaluated" => {
@@ -6551,6 +6776,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "$MessageList"
             | "$Packages"
             | "$Path"
+            | "All"
             | "Attributes"
             | "Begin"
             | "BeginPackage"
@@ -6597,6 +6823,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "Module"
             | "Needs"
             | "NormalizeRules"
+            | "None"
             | "Null"
             | "OneIdentity"
             | "OwnValues"
@@ -8464,6 +8691,51 @@ mod tests {
     }
 
     #[test]
+    fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
+        let session = Session::new();
+
+        let set_plan = session.build_call_dispatch_plan(&system_expr("Set"));
+        assert_eq!(set_plan.stages, vec![CallDispatchStage::SpecialForm]);
+
+        let thread_plan = session.build_call_dispatch_plan(&system_expr("Thread"));
+        assert_eq!(
+            thread_plan.stages,
+            vec![
+                CallDispatchStage::PrepareArguments,
+                CallDispatchStage::UpValues,
+                CallDispatchStage::DownValues,
+                CallDispatchStage::SubValues,
+                CallDispatchStage::OrdinaryBuiltin,
+            ]
+        );
+
+        let plus_plan = session.build_call_dispatch_plan(&system_expr("Plus"));
+        assert_eq!(
+            plus_plan.stages,
+            vec![
+                CallDispatchStage::PrepareArguments,
+                CallDispatchStage::Listable,
+                CallDispatchStage::UpValues,
+                CallDispatchStage::DownValues,
+                CallDispatchStage::SubValues,
+            ]
+        );
+
+        let function_head = Expr::call(system_expr("Function"), vec![system_expr("Null")]);
+        let function_plan = session.build_call_dispatch_plan(&function_head);
+        assert_eq!(
+            function_plan.stages,
+            vec![
+                CallDispatchStage::PrepareArguments,
+                CallDispatchStage::UpValues,
+                CallDispatchStage::DownValues,
+                CallDispatchStage::SubValues,
+                CallDispatchStage::Function,
+            ]
+        );
+    }
+
+    #[test]
     fn cycle_detection_stops_self_referential_definitions_and_recovers_after_error() {
         let mut session = Session::new();
 
@@ -10134,6 +10406,72 @@ mod tests {
     }
 
     #[test]
+    fn thread_builtin_supports_standard_sequence_spec_subset() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Thread[f[{a, b}, {c, d}, {e, f}], List, All]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f[a, c, e], f[b, d, f]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Thread[f[{a, b}, {c, d}], List, None]")
+                .unwrap()
+                .value
+                .to_string(),
+            "f[List[a, b], List[c, d]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Thread[f[{a, b}, {c, d}, {e, f}], List, 2]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f[a, c, List[e, f]], f[b, d, List[e, f]]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Thread[f[{a, b}, {c, d}, {e, f}], List, -2]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f[List[a, b], c, e], f[List[a, b], d, f]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Thread[f[{a, b}, {c, d}, {e, f}], List, {2}]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f[List[a, b], c, List[e, f]], f[List[a, b], d, List[e, f]]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Thread[f[{a, b}, {c, d}, {e, f}, {g, h}], List, {2, 4, 2}]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f[List[a, b], c, List[e, f], g], f[List[a, b], d, List[e, f], h]]"
+        );
+    }
+
+    #[test]
+    fn thread_evaluates_its_first_argument_before_threading() {
+        let mut session = Session::new();
+
+        session.eval_text("x = f[{a, b}, c]").unwrap();
+
+        assert_eq!(
+            session.eval_text("Thread[x]").unwrap().value.to_string(),
+            "List[f[a, c], f[b, c]]"
+        );
+    }
+
+    #[test]
     fn thread_builtin_mismatch_emits_message_and_stays_unevaluated() {
         let mut session = Session::new();
 
@@ -10162,6 +10500,18 @@ mod tests {
                 .value
                 .to_string(),
             "fallback"
+        );
+
+        let invalid_spec = session.eval_text("Thread[f[{a, b}], List, bad]").unwrap();
+        assert_eq!(
+            invalid_spec.value.to_string(),
+            "Thread[f[List[a, b]], List, bad]"
+        );
+        assert!(
+            invalid_spec
+                .messages
+                .iter()
+                .any(|message| message.symbol == "Thread" && message.tag == "argform")
         );
     }
 }
