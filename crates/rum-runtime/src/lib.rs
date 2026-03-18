@@ -213,10 +213,72 @@ const ALL_ATTRIBUTES: [Attribute; 9] = [
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BuiltinDispatch {
+    None,
+    SpecialForm,
+    Ordinary,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BuiltinHandler {
+    Identity,
+    Set,
+    SetDelayed,
+    TagSet,
+    TagSetDelayed,
+    TagUnset,
+    Rule,
+    RuleDelayed,
+    MatchQ,
+    Cases,
+    Module,
+    Block,
+    ReplaceAll,
+    ReplaceRepeated,
+    FindFile,
+    Get,
+    Needs,
+    Context,
+    Begin,
+    End,
+    BeginPackage,
+    EndPackage,
+    Message,
+    MessageName,
+    Messages,
+    MessageDefinitions,
+    MessageTags,
+    OwnValues,
+    UpValues,
+    DownValues,
+    SubValues,
+    Attributes,
+    SetAttributes,
+    ClearAttributes,
+    Unset,
+    Clear,
+    ClearAll,
+    NormalizeRules,
+    Check,
+    Quiet,
+    If,
+    Which,
+    With,
+    HoldLiteral,
+    Unevaluated,
+    ReleaseHold,
+    Evaluate,
+    Sequence,
+    Thread,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BuiltinSpec {
     pub name: &'static str,
     pub summary: &'static str,
     pub attributes: AttributeSet,
+    pub dispatch: BuiltinDispatch,
+    pub handler: Option<BuiltinHandler>,
 }
 
 impl BuiltinSpec {
@@ -225,6 +287,8 @@ impl BuiltinSpec {
             name,
             summary,
             attributes: AttributeSet::empty(),
+            dispatch: BuiltinDispatch::None,
+            handler: None,
         }
     }
 
@@ -233,6 +297,8 @@ impl BuiltinSpec {
             name,
             summary,
             attributes: AttributeSet::from_hold(hold),
+            dispatch: BuiltinDispatch::None,
+            handler: None,
         }
     }
 
@@ -245,7 +311,79 @@ impl BuiltinSpec {
             name,
             summary,
             attributes,
+            dispatch: BuiltinDispatch::None,
+            handler: None,
         }
+    }
+
+    pub const fn special(
+        name: &'static str,
+        summary: &'static str,
+        handler: BuiltinHandler,
+    ) -> Self {
+        Self {
+            name,
+            summary,
+            attributes: AttributeSet::empty(),
+            dispatch: BuiltinDispatch::SpecialForm,
+            handler: Some(handler),
+        }
+    }
+
+    pub const fn ordinary(
+        name: &'static str,
+        summary: &'static str,
+        handler: BuiltinHandler,
+    ) -> Self {
+        Self {
+            name,
+            summary,
+            attributes: AttributeSet::empty(),
+            dispatch: BuiltinDispatch::Ordinary,
+            handler: Some(handler),
+        }
+    }
+
+    pub const fn ordinary_with_hold(
+        name: &'static str,
+        summary: &'static str,
+        hold: HoldAttribute,
+        handler: BuiltinHandler,
+    ) -> Self {
+        Self {
+            name,
+            summary,
+            attributes: AttributeSet::from_hold(hold),
+            dispatch: BuiltinDispatch::Ordinary,
+            handler: Some(handler),
+        }
+    }
+
+    pub const fn ordinary_with_attributes(
+        name: &'static str,
+        summary: &'static str,
+        attributes: AttributeSet,
+        handler: BuiltinHandler,
+    ) -> Self {
+        Self {
+            name,
+            summary,
+            attributes,
+            dispatch: BuiltinDispatch::Ordinary,
+            handler: Some(handler),
+        }
+    }
+
+    fn with_fallback_dispatch(mut self, fallback: Self) -> Self {
+        if self.dispatch == BuiltinDispatch::None {
+            self.dispatch = fallback.dispatch;
+        }
+
+        if self.handler.is_none() {
+            self.handler = fallback.handler;
+        }
+
+        self
     }
 }
 
@@ -556,10 +694,10 @@ impl CallDispatchState {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum ListableDispatch {
+enum ThreadingDispatch {
     NotApplicable,
     Threaded(Expr),
-    Mismatch(Expr),
+    Mismatch,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -1644,6 +1782,22 @@ impl Session {
             .flatten()
     }
 
+    fn builtin_dispatch_spec_for_symbol(&self, symbol: &Symbol) -> Option<BuiltinSpec> {
+        if symbol.context() != SYSTEM_CONTEXT {
+            return None;
+        }
+
+        match (
+            self.builtin_spec_for_symbol(symbol).copied(),
+            default_builtin_dispatch_spec(symbol.name()),
+        ) {
+            (Some(spec), Some(fallback)) => Some(spec.with_fallback_dispatch(fallback)),
+            (Some(spec), None) => Some(spec),
+            (None, Some(fallback)) => Some(fallback),
+            (None, None) => None,
+        }
+    }
+
     fn resolve_symbol_name(&self, raw: &str, create_if_missing: bool) -> Option<Symbol> {
         if let Some((context, name)) = split_symbol_name(raw) {
             return Some(Symbol::new(normalize_context_name(context), name));
@@ -1970,9 +2124,11 @@ impl Session {
         state: &mut CallDispatchState,
     ) -> Result<Option<Expr>, EvalError> {
         match stage {
-            CallDispatchStage::SpecialForm => {
-                self.try_evaluate_special_form(head, state.raw_args.as_slice())
-            }
+            CallDispatchStage::SpecialForm => self.try_dispatch_builtin_call(
+                BuiltinDispatch::SpecialForm,
+                head,
+                state.raw_args.as_slice(),
+            ),
             CallDispatchStage::PrepareArguments => {
                 let raw_args = std::mem::take(&mut state.raw_args);
                 let mut evaluated_args =
@@ -1984,9 +2140,12 @@ impl Session {
             }
             CallDispatchStage::Listable => {
                 match self.dispatch_listable_stage(head, state.evaluated_args(), attributes)? {
-                    ListableDispatch::NotApplicable => Ok(None),
-                    ListableDispatch::Threaded(threaded) => self.evaluate(threaded).map(Some),
-                    ListableDispatch::Mismatch(original_call) => Ok(Some(original_call)),
+                    ThreadingDispatch::NotApplicable => Ok(None),
+                    ThreadingDispatch::Threaded(threaded) => self.evaluate(threaded).map(Some),
+                    ThreadingDispatch::Mismatch => Ok(Some(Expr::call(
+                        head.clone(),
+                        state.evaluated_args().to_vec(),
+                    ))),
                 }
             }
             CallDispatchStage::UpValues => self.try_apply_up_values(head, state.evaluated_args()),
@@ -1994,9 +2153,11 @@ impl Session {
                 self.try_apply_down_values(head, state.evaluated_args())
             }
             CallDispatchStage::SubValues => self.try_apply_sub_values(head, state.evaluated_args()),
-            CallDispatchStage::OrdinaryBuiltin => {
-                self.try_evaluate_non_held_builtin(head, state.evaluated_args())
-            }
+            CallDispatchStage::OrdinaryBuiltin => self.try_dispatch_builtin_call(
+                BuiltinDispatch::Ordinary,
+                head,
+                state.evaluated_args(),
+            ),
             CallDispatchStage::Function => self.try_apply_function(head, state.evaluated_args()),
         }
     }
@@ -2006,36 +2167,35 @@ impl Session {
         head: &Expr,
         args: &[Expr],
         attributes: AttributeSet,
-    ) -> Result<ListableDispatch, EvalError> {
+    ) -> Result<ThreadingDispatch, EvalError> {
         if !attributes.contains(Attribute::Listable) {
-            return Ok(ListableDispatch::NotApplicable);
+            return Ok(ThreadingDispatch::NotApplicable);
         }
 
+        self.thread_call_args(head, args, &system_expr("List"), &system_expr("List"))
+    }
+
+    fn thread_call_args(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+        thread_head: &Expr,
+        wrapper_head: &Expr,
+    ) -> Result<ThreadingDispatch, EvalError> {
         let mut target_len = None;
-        let mut list_lengths = Vec::new();
+        let mut thread_lengths = Vec::new();
 
         for arg in args {
-            let Some(items) = list_items(arg) else {
+            let Some(items) = call_items_with_head(arg, thread_head) else {
                 continue;
             };
 
-            list_lengths.push(items.len());
+            thread_lengths.push(items.len());
 
             match target_len {
                 Some(expected_len) if expected_len != items.len() => {
-                    self.push_message(
-                        "Thread",
-                        "tdlen",
-                        format!(
-                            "cannot thread `{}` over list arguments of lengths {}",
-                            head,
-                            format_list_lengths(&list_lengths)
-                        ),
-                    );
-                    return Ok(ListableDispatch::Mismatch(Expr::call(
-                        head.clone(),
-                        args.to_vec(),
-                    )));
+                    self.emit_thread_length_message(head, thread_head, &thread_lengths);
+                    return Ok(ThreadingDispatch::Mismatch);
                 }
                 Some(_) => {}
                 None => target_len = Some(items.len()),
@@ -2043,7 +2203,7 @@ impl Session {
         }
 
         let Some(target_len) = target_len else {
-            return Ok(ListableDispatch::NotApplicable);
+            return Ok(ThreadingDispatch::NotApplicable);
         };
 
         let threaded = (0..target_len)
@@ -2051,7 +2211,7 @@ impl Session {
                 Expr::call(
                     head.clone(),
                     args.iter()
-                        .map(|arg| match list_items(arg) {
+                        .map(|arg| match call_items_with_head(arg, thread_head) {
                             Some(items) => items[index].clone(),
                             None => arg.clone(),
                         })
@@ -2060,10 +2220,34 @@ impl Session {
             })
             .collect::<Vec<_>>();
 
-        Ok(ListableDispatch::Threaded(Expr::call(
-            system_expr("List"),
+        Ok(ThreadingDispatch::Threaded(Expr::call(
+            wrapper_head.clone(),
             threaded,
         )))
+    }
+
+    fn emit_thread_length_message(
+        &mut self,
+        call_head: &Expr,
+        thread_head: &Expr,
+        thread_lengths: &[usize],
+    ) {
+        let detail = if is_system_symbol_name(thread_head, "List") {
+            format!(
+                "cannot thread `{}` over list arguments of lengths {}",
+                call_head,
+                format_list_lengths(thread_lengths)
+            )
+        } else {
+            format!(
+                "cannot thread `{}` over arguments with head `{}` of lengths {}",
+                call_head,
+                thread_head,
+                format_list_lengths(thread_lengths)
+            )
+        };
+
+        self.push_message("Thread", "tdlen", detail);
     }
 
     fn evaluate_held_argument(
@@ -2113,8 +2297,9 @@ impl Session {
         normalized_args
     }
 
-    fn try_evaluate_special_form(
+    fn try_dispatch_builtin_call(
         &mut self,
+        dispatch: BuiltinDispatch,
         head: &Expr,
         args: &[Expr],
     ) -> Result<Option<Expr>, EvalError> {
@@ -2122,80 +2307,89 @@ impl Session {
             return Ok(None);
         };
 
-        if symbol.context() != SYSTEM_CONTEXT {
+        let Some(spec) = self.builtin_dispatch_spec_for_symbol(symbol) else {
+            return Ok(None);
+        };
+
+        if spec.dispatch != dispatch {
             return Ok(None);
         }
 
-        match symbol.name() {
-            "Set" => self.eval_set(args).map(Some),
-            "SetDelayed" => self.eval_set_delayed(args).map(Some),
-            "TagSet" => self.eval_tag_set(args).map(Some),
-            "TagSetDelayed" => self.eval_tag_set_delayed(args).map(Some),
-            "TagUnset" => self.eval_tag_unset(args).map(Some),
-            "Rule" => self.eval_rule(args).map(Some),
-            "RuleDelayed" => self.eval_rule_delayed(args).map(Some),
-            "MatchQ" => self.eval_match_q(args).map(Some),
-            "Cases" => self.eval_cases(args).map(Some),
-            "Module" => self.eval_module(args).map(Some),
-            "Block" => self.eval_block(args).map(Some),
-            "ReplaceAll" => self.eval_replace_all(args).map(Some),
-            "ReplaceRepeated" => self.eval_replace_repeated(args).map(Some),
-            _ => Ok(None),
-        }
+        let Some(handler) = spec.handler else {
+            return Ok(None);
+        };
+
+        self.run_builtin_handler(handler, head, args).map(Some)
     }
 
-    fn try_evaluate_non_held_builtin(
+    fn run_builtin_handler(
         &mut self,
+        handler: BuiltinHandler,
         head: &Expr,
         args: &[Expr],
-    ) -> Result<Option<Expr>, EvalError> {
-        let Some(symbol) = expr_as_symbol(head) else {
-            return Ok(None);
-        };
-
-        if symbol.context() != SYSTEM_CONTEXT {
-            return Ok(None);
-        }
-
-        match symbol.name() {
-            "Identity" if args.len() == 1 => Ok(Some(args[0].clone())),
-            "FindFile" => self.eval_find_file(args).map(Some),
-            "Get" => self.eval_get(args).map(Some),
-            "Needs" => self.eval_needs(args).map(Some),
-            "Context" => self.eval_context(args).map(Some),
-            "Begin" => self.eval_begin(args).map(Some),
-            "End" => self.eval_end(args).map(Some),
-            "BeginPackage" => self.eval_begin_package(args).map(Some),
-            "EndPackage" => self.eval_end_package(args).map(Some),
-            "Message" => self.eval_message(args).map(Some),
-            "MessageName" => self.eval_message_name(args).map(Some),
-            "Messages" => self.eval_messages(args).map(Some),
-            "MessageDefinitions" => self.eval_message_definitions(args).map(Some),
-            "MessageTags" => self.eval_message_tags(args).map(Some),
-            "OwnValues" => self.eval_own_values(args).map(Some),
-            "UpValues" => self.eval_up_values(args).map(Some),
-            "DownValues" => self.eval_down_values(args).map(Some),
-            "SubValues" => self.eval_sub_values(args).map(Some),
-            "Attributes" => self.eval_attributes(args).map(Some),
-            "SetAttributes" => self.eval_set_attributes(args).map(Some),
-            "ClearAttributes" => self.eval_clear_attributes(args).map(Some),
-            "Unset" => self.eval_unset(args).map(Some),
-            "Clear" => self.eval_clear(args).map(Some),
-            "ClearAll" => self.eval_clear_all(args).map(Some),
-            "NormalizeRules" => self.eval_normalize_rules(args).map(Some),
-            "Check" => self.eval_check(args).map(Some),
-            "Quiet" => self.eval_quiet(args).map(Some),
-            "If" => self.eval_if(args).map(Some),
-            "Which" => self.eval_which(args).map(Some),
-            "With" => self.eval_with(args).map(Some),
-            "Hold" | "HoldFirst" | "HoldRest" | "HoldAll" | "HoldAllComplete" | "HoldPattern" => {
-                Ok(Some(Expr::call(head.clone(), args.to_vec())))
-            }
-            "Unevaluated" if args.len() == 1 => Ok(Some(args[0].clone())),
-            "ReleaseHold" => self.eval_release_hold(args).map(Some),
-            "Evaluate" if args.len() == 1 => self.evaluate(args[0].clone()).map(Some),
-            "Sequence" => Ok(Some(sequence_expr(args.to_vec()))),
-            _ => Ok(None),
+    ) -> Result<Expr, EvalError> {
+        match handler {
+            BuiltinHandler::Identity => Ok(if args.len() == 1 {
+                args[0].clone()
+            } else {
+                Expr::call(head.clone(), args.to_vec())
+            }),
+            BuiltinHandler::Set => self.eval_set(args),
+            BuiltinHandler::SetDelayed => self.eval_set_delayed(args),
+            BuiltinHandler::TagSet => self.eval_tag_set(args),
+            BuiltinHandler::TagSetDelayed => self.eval_tag_set_delayed(args),
+            BuiltinHandler::TagUnset => self.eval_tag_unset(args),
+            BuiltinHandler::Rule => self.eval_rule(args),
+            BuiltinHandler::RuleDelayed => self.eval_rule_delayed(args),
+            BuiltinHandler::MatchQ => self.eval_match_q(args),
+            BuiltinHandler::Cases => self.eval_cases(args),
+            BuiltinHandler::Module => self.eval_module(args),
+            BuiltinHandler::Block => self.eval_block(args),
+            BuiltinHandler::ReplaceAll => self.eval_replace_all(args),
+            BuiltinHandler::ReplaceRepeated => self.eval_replace_repeated(args),
+            BuiltinHandler::FindFile => self.eval_find_file(args),
+            BuiltinHandler::Get => self.eval_get(args),
+            BuiltinHandler::Needs => self.eval_needs(args),
+            BuiltinHandler::Context => self.eval_context(args),
+            BuiltinHandler::Begin => self.eval_begin(args),
+            BuiltinHandler::End => self.eval_end(args),
+            BuiltinHandler::BeginPackage => self.eval_begin_package(args),
+            BuiltinHandler::EndPackage => self.eval_end_package(args),
+            BuiltinHandler::Message => self.eval_message(args),
+            BuiltinHandler::MessageName => self.eval_message_name(args),
+            BuiltinHandler::Messages => self.eval_messages(args),
+            BuiltinHandler::MessageDefinitions => self.eval_message_definitions(args),
+            BuiltinHandler::MessageTags => self.eval_message_tags(args),
+            BuiltinHandler::OwnValues => self.eval_own_values(args),
+            BuiltinHandler::UpValues => self.eval_up_values(args),
+            BuiltinHandler::DownValues => self.eval_down_values(args),
+            BuiltinHandler::SubValues => self.eval_sub_values(args),
+            BuiltinHandler::Attributes => self.eval_attributes(args),
+            BuiltinHandler::SetAttributes => self.eval_set_attributes(args),
+            BuiltinHandler::ClearAttributes => self.eval_clear_attributes(args),
+            BuiltinHandler::Unset => self.eval_unset(args),
+            BuiltinHandler::Clear => self.eval_clear(args),
+            BuiltinHandler::ClearAll => self.eval_clear_all(args),
+            BuiltinHandler::NormalizeRules => self.eval_normalize_rules(args),
+            BuiltinHandler::Check => self.eval_check(args),
+            BuiltinHandler::Quiet => self.eval_quiet(args),
+            BuiltinHandler::If => self.eval_if(args),
+            BuiltinHandler::Which => self.eval_which(args),
+            BuiltinHandler::With => self.eval_with(args),
+            BuiltinHandler::HoldLiteral => Ok(Expr::call(head.clone(), args.to_vec())),
+            BuiltinHandler::Unevaluated => Ok(if args.len() == 1 {
+                args[0].clone()
+            } else {
+                Expr::call(head.clone(), args.to_vec())
+            }),
+            BuiltinHandler::ReleaseHold => self.eval_release_hold(args),
+            BuiltinHandler::Evaluate => Ok(if args.len() == 1 {
+                self.evaluate(args[0].clone())?
+            } else {
+                Expr::call(head.clone(), args.to_vec())
+            }),
+            BuiltinHandler::Sequence => Ok(sequence_expr(args.to_vec())),
+            BuiltinHandler::Thread => self.eval_thread(head, args),
         }
     }
 
@@ -2734,6 +2928,40 @@ impl Session {
         }
 
         self.evaluate(released)
+    }
+
+    fn eval_thread(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let (expr, thread_head) = match args {
+            [expr] => (expr.clone(), system_expr("List")),
+            [expr, thread_head] => (expr.clone(), thread_head.clone()),
+            _ => {
+                return Ok(self.invalid_call_with_message(
+                    "Thread",
+                    args,
+                    "argx",
+                    format!("expected 1 or 2 argument(s), got {}", args.len()),
+                ));
+            }
+        };
+
+        let Expr::Call {
+            head: threaded_head,
+            args: threaded_args,
+        } = &expr
+        else {
+            return Ok(expr);
+        };
+
+        match self.thread_call_args(
+            threaded_head.as_ref(),
+            threaded_args,
+            &thread_head,
+            &thread_head,
+        )? {
+            ThreadingDispatch::NotApplicable => Ok(expr),
+            ThreadingDispatch::Threaded(threaded) => Ok(threaded),
+            ThreadingDispatch::Mismatch => Ok(Expr::call(head.clone(), args.to_vec())),
+        }
     }
 
     fn eval_clear_like(
@@ -5032,6 +5260,211 @@ fn truthiness_symbol(expr: &Expr) -> Option<bool> {
     }
 }
 
+fn default_builtin_dispatch_spec(name: &str) -> Option<BuiltinSpec> {
+    Some(match name {
+        "Identity" => BuiltinSpec::ordinary("", "", BuiltinHandler::Identity),
+        "Set" => BuiltinSpec::special("", "", BuiltinHandler::Set),
+        "SetDelayed" => BuiltinSpec::special("", "", BuiltinHandler::SetDelayed),
+        "TagSet" => BuiltinSpec::special("", "", BuiltinHandler::TagSet),
+        "TagSetDelayed" => BuiltinSpec::special("", "", BuiltinHandler::TagSetDelayed),
+        "TagUnset" => BuiltinSpec::special("", "", BuiltinHandler::TagUnset),
+        "Rule" => BuiltinSpec::special("", "", BuiltinHandler::Rule),
+        "RuleDelayed" => BuiltinSpec::special("", "", BuiltinHandler::RuleDelayed),
+        "MatchQ" => BuiltinSpec::special("", "", BuiltinHandler::MatchQ),
+        "Cases" => BuiltinSpec::special("", "", BuiltinHandler::Cases),
+        "Module" => BuiltinSpec::special("", "", BuiltinHandler::Module),
+        "Block" => BuiltinSpec::special("", "", BuiltinHandler::Block),
+        "ReplaceAll" => BuiltinSpec::special("", "", BuiltinHandler::ReplaceAll),
+        "ReplaceRepeated" => BuiltinSpec::special("", "", BuiltinHandler::ReplaceRepeated),
+        "FindFile" => BuiltinSpec::ordinary("", "", BuiltinHandler::FindFile),
+        "Get" => BuiltinSpec::ordinary("", "", BuiltinHandler::Get),
+        "Needs" => BuiltinSpec::ordinary("", "", BuiltinHandler::Needs),
+        "Context" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldFirst,
+            BuiltinHandler::Context,
+        ),
+        "Begin" => BuiltinSpec::ordinary("", "", BuiltinHandler::Begin),
+        "End" => BuiltinSpec::ordinary("", "", BuiltinHandler::End),
+        "BeginPackage" => BuiltinSpec::ordinary("", "", BuiltinHandler::BeginPackage),
+        "EndPackage" => BuiltinSpec::ordinary("", "", BuiltinHandler::EndPackage),
+        "Message" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldFirst,
+            BuiltinHandler::Message,
+        ),
+        "MessageName" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldAll,
+            BuiltinHandler::MessageName,
+        ),
+        "Messages" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldAll,
+            BuiltinHandler::Messages,
+        ),
+        "MessageDefinitions" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldAll,
+            BuiltinHandler::MessageDefinitions,
+        ),
+        "MessageTags" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldAll,
+            BuiltinHandler::MessageTags,
+        ),
+        "OwnValues" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldFirst,
+            BuiltinHandler::OwnValues,
+        ),
+        "UpValues" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldFirst,
+            BuiltinHandler::UpValues,
+        ),
+        "DownValues" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldFirst,
+            BuiltinHandler::DownValues,
+        ),
+        "SubValues" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldFirst,
+            BuiltinHandler::SubValues,
+        ),
+        "Attributes" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldFirst,
+            BuiltinHandler::Attributes,
+        ),
+        "SetAttributes" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldFirst,
+            BuiltinHandler::SetAttributes,
+        ),
+        "ClearAttributes" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldFirst,
+            BuiltinHandler::ClearAttributes,
+        ),
+        "Unset" => {
+            BuiltinSpec::ordinary_with_hold("", "", HoldAttribute::HoldFirst, BuiltinHandler::Unset)
+        }
+        "Clear" => {
+            BuiltinSpec::ordinary_with_hold("", "", HoldAttribute::HoldAll, BuiltinHandler::Clear)
+        }
+        "ClearAll" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldAll,
+            BuiltinHandler::ClearAll,
+        ),
+        "NormalizeRules" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldAll,
+            BuiltinHandler::NormalizeRules,
+        ),
+        "Check" => {
+            BuiltinSpec::ordinary_with_hold("", "", HoldAttribute::HoldAll, BuiltinHandler::Check)
+        }
+        "Quiet" => {
+            BuiltinSpec::ordinary_with_hold("", "", HoldAttribute::HoldAll, BuiltinHandler::Quiet)
+        }
+        "If" => {
+            BuiltinSpec::ordinary_with_hold("", "", HoldAttribute::HoldRest, BuiltinHandler::If)
+        }
+        "Which" => {
+            BuiltinSpec::ordinary_with_hold("", "", HoldAttribute::HoldAll, BuiltinHandler::Which)
+        }
+        "Function" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldAll,
+            BuiltinHandler::HoldLiteral,
+        ),
+        "With" => {
+            BuiltinSpec::ordinary_with_hold("", "", HoldAttribute::HoldAll, BuiltinHandler::With)
+        }
+        "Hold" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldAll,
+            BuiltinHandler::HoldLiteral,
+        ),
+        "HoldFirst" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldFirst,
+            BuiltinHandler::HoldLiteral,
+        ),
+        "HoldRest" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldRest,
+            BuiltinHandler::HoldLiteral,
+        ),
+        "HoldAll" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldAll,
+            BuiltinHandler::HoldLiteral,
+        ),
+        "HoldAllComplete" => BuiltinSpec::ordinary_with_attributes(
+            "",
+            "",
+            AttributeSet::from_attribute(Attribute::HoldAllComplete),
+            BuiltinHandler::HoldLiteral,
+        ),
+        "Unevaluated" => BuiltinSpec::ordinary_with_attributes(
+            "",
+            "",
+            AttributeSet::from_attribute(Attribute::HoldAllComplete),
+            BuiltinHandler::Unevaluated,
+        ),
+        "Evaluate" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldAll,
+            BuiltinHandler::Evaluate,
+        ),
+        "HoldPattern" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldAll,
+            BuiltinHandler::HoldLiteral,
+        ),
+        "ReleaseHold" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldAll,
+            BuiltinHandler::ReleaseHold,
+        ),
+        "Sequence" => BuiltinSpec::ordinary("", "", BuiltinHandler::Sequence),
+        "Thread" => BuiltinSpec::ordinary_with_hold(
+            "",
+            "",
+            HoldAttribute::HoldFirst,
+            BuiltinHandler::Thread,
+        ),
+        _ => return None,
+    })
+}
+
 fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
     if symbol.context() != SYSTEM_CONTEXT {
         return AttributeSet::empty();
@@ -5039,7 +5472,7 @@ fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
 
     match symbol.name() {
         "Attributes" | "Context" | "Message" | "OwnValues" | "UpValues" | "DownValues"
-        | "SubValues" | "SetAttributes" | "ClearAttributes" | "Unset" => {
+        | "SubValues" | "SetAttributes" | "ClearAttributes" | "Unset" | "Thread" => {
             AttributeSet::from_attribute(Attribute::HoldFirst)
         }
         "HoldAllComplete" | "Unevaluated" => {
@@ -6061,9 +6494,9 @@ fn sequence_items(expr: &Expr) -> Option<&[Expr]> {
     }
 }
 
-fn list_items(expr: &Expr) -> Option<&[Expr]> {
+fn call_items_with_head<'a>(expr: &'a Expr, expected_head: &Expr) -> Option<&'a [Expr]> {
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "List") => Some(args),
+        Expr::Call { head, args } if head.as_ref() == expected_head => Some(args),
         _ => None,
     }
 }
@@ -8018,6 +8451,16 @@ mod tests {
                 .to_string(),
             "1"
         );
+
+        session.eval_text("threader = Thread").unwrap();
+        assert_eq!(
+            session
+                .eval_text("threader[f[{a, b}, c]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f[a, c], f[b, c]]"
+        );
     }
 
     #[test]
@@ -9657,6 +10100,68 @@ mod tests {
                 .value
                 .to_string(),
             "List[f[a], f[b]]"
+        );
+    }
+
+    #[test]
+    fn thread_builtin_supports_default_and_custom_thread_heads() {
+        let mut session = Session::new();
+
+        assert_eq!(
+            session
+                .eval_text("Thread[f[{a, b}, c]]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[f[a, c], f[b, c]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Thread[f[g[a, b], g[c, d]], g]")
+                .unwrap()
+                .value
+                .to_string(),
+            "g[f[a, c], f[b, d]]"
+        );
+        assert_eq!(
+            session
+                .eval_text("Thread[f[g[a, b], c], g]")
+                .unwrap()
+                .value
+                .to_string(),
+            "g[f[a, c], f[b, c]]"
+        );
+    }
+
+    #[test]
+    fn thread_builtin_mismatch_emits_message_and_stays_unevaluated() {
+        let mut session = Session::new();
+
+        let outcome = session.eval_text("Thread[f[{a, b}, {c}]]").unwrap();
+        assert_eq!(outcome.value.to_string(), "Thread[f[List[a, b], List[c]]]");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == "Thread" && message.tag == "tdlen")
+        );
+
+        let custom = session.eval_text("Thread[f[g[a, b], g[c]], g]").unwrap();
+        assert_eq!(custom.value.to_string(), "Thread[f[g[a, b], g[c]], g]");
+        assert!(
+            custom
+                .messages
+                .iter()
+                .any(|message| message.symbol == "Thread" && message.tag == "tdlen")
+        );
+
+        assert_eq!(
+            session
+                .eval_text("Check[Thread[f[{a, b}, {c}]], fallback, Thread]")
+                .unwrap()
+                .value
+                .to_string(),
+            "fallback"
         );
     }
 }

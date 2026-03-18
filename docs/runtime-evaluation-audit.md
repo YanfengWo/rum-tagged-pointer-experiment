@@ -58,7 +58,8 @@ Call evaluation currently follows this order:
 4. Ordinary calls evaluate arguments according to the evaluated head's hold
    attribute.
 5. Ordinary-call preprocessing now handles `Sequence`, `Flat`, `Orderless`,
-   and recursive `Listable` threading with mismatch messages.
+   recursive `Listable` threading with mismatch messages, and shared
+   `Thread`-style argument threading helpers.
 6. Unless the head has `HoldAllComplete`, try upvalues attached to symbols that
    appear in the evaluated arguments.
 7. Try downvalues on the evaluated head plus evaluated arguments.
@@ -73,6 +74,8 @@ subset:
 - head evaluation happens before almost everything else
 - special forms, argument preparation, ordinary builtins, definitions, and pure
   functions now share one staged dispatch pipeline
+- builtin call handlers now sit behind metadata-backed handler specs instead of
+  only direct name matching in the evaluator
 - hold-sensitive builtins get partially evaluated arguments
 - upvalues run before downvalues on ordinary calls, unless `HoldAllComplete`
   blocks them
@@ -135,6 +138,8 @@ good enough to build on:
 - builtin hold handling for the implemented subset
 - attribute-driven call normalization for `Sequence`, `Flat`, `Orderless`, and
   recursive `Listable` threading
+- explicit `Thread[expr]` and `Thread[expr, head]` threading for the current
+  subset, including scalar broadcast and mismatch preservation
 - `Evaluate` + `Sequence` interaction in held vs non-held positions
 - `OneIdentity`-aware matching for singleton-head patterns
 - upvalue application ahead of downvalues for ordinary calls
@@ -159,13 +164,14 @@ Missing or incomplete areas:
 
 - richer inspection and lifecycle coverage around user-defined attribute state
 - fuller `Listable` semantics beyond the current recursive threading,
-  scalar-broadcast, and `Thread::tdlen` mismatch subset
+  scalar-broadcast, `Thread[expr]` / `Thread[expr, head]`, and `Thread::tdlen`
+  mismatch subset
 
 Practical impact:
 
 - matcher and evaluator normalization now cover a useful subset, including a
-  practical recursive `Listable` implementation, but not the broader Wolfram
-  attribute surface
+  practical recursive `Listable` implementation plus explicit `Thread` support,
+  but not the broader Wolfram attribute surface
 - sequence behavior is much better aligned with the intended long-term language
   model than before, but still not exhaustive
 
@@ -178,8 +184,8 @@ yet model the wider definition lattice.
 Missing or incomplete areas:
 
 - broader tag-based definition attachment such as multi-owner tag propagation
-- more data-driven handler registration on top of the current staged dispatch
-  pipeline
+- broader builtin metadata so future evaluator decisions can keep moving out of
+  handwritten stage logic
 
 Practical impact:
 
@@ -188,8 +194,8 @@ Practical impact:
 - host-side DSL embedding still cannot rely on the full Wolfram definition
   lattice, especially where nested-head behavior must interact with future
   `UpValues` refinements and richer tag operations
-- the call path is now more uniform, but handler registration is still partly
-  handwritten
+- the call path is now more uniform and metadata-backed, but future builtin
+  families can still lean on handwritten stage internals if we are not careful
 
 ### 3. Held Evaluation Is Functional but Not Yet Rich
 
@@ -236,16 +242,16 @@ encoded directly in handlers rather than through a more general semantic model.
 
 Known gaps:
 
-- special forms and ordinary builtins now share one staged dispatch path, but
-  builtin metadata still does not drive all evaluator decisions
-- the dispatch stages are explicit, but handler registration is still hardcoded
+- special forms and ordinary builtins now share one staged dispatch path, and
+  builtin handlers are metadata-backed, but builtin metadata still does not
+  drive all evaluator decisions
 - future features can still accidentally lean on implicit ordering inside the
   handwritten stage handlers
 
 Practical impact:
 
-- adding new builtins still requires careful manual placement in the dispatch
-  order
+- adding new builtins is less error-prone than before, but still requires
+  careful placement when a feature needs brand-new stage behavior
 - it is easy for future features to accidentally depend on implicit handler
   ordering
 

@@ -1,40 +1,71 @@
-use rum_runtime::{Attribute, AttributeSet, BuiltinSpec, HoldAttribute, Session};
+use rum_runtime::{Attribute, AttributeSet, BuiltinHandler, BuiltinSpec, HoldAttribute, Session};
 
 pub const CORE_BUILTINS: &[BuiltinSpec] = &[
-    BuiltinSpec::new("Identity", "Returns its argument unchanged."),
-    BuiltinSpec::new("Set", "Assigns an immediate value to a symbol or pattern."),
-    BuiltinSpec::new(
+    BuiltinSpec::ordinary(
+        "Identity",
+        "Returns its argument unchanged.",
+        BuiltinHandler::Identity,
+    ),
+    BuiltinSpec::special(
+        "Set",
+        "Assigns an immediate value to a symbol or pattern.",
+        BuiltinHandler::Set,
+    ),
+    BuiltinSpec::special(
         "SetDelayed",
         "Assigns a delayed definition evaluated on use.",
+        BuiltinHandler::SetDelayed,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::special(
         "TagSet",
         "Stores an immediate tagged definition, including upvalues when the tag appears in an argument position.",
+        BuiltinHandler::TagSet,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::special(
         "TagSetDelayed",
         "Stores a delayed tagged definition, including upvalues when the tag appears in an argument position.",
+        BuiltinHandler::TagSetDelayed,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::special(
         "TagUnset",
         "Removes a tagged definition using an explicit tag and lhs.",
+        BuiltinHandler::TagUnset,
     ),
-    BuiltinSpec::new("Rule", "Represents an immediate rewrite rule."),
-    BuiltinSpec::new("RuleDelayed", "Represents a delayed rewrite rule."),
-    BuiltinSpec::new("MatchQ", "Tests whether an expression matches a pattern."),
-    BuiltinSpec::new(
+    BuiltinSpec::special(
+        "Rule",
+        "Represents an immediate rewrite rule.",
+        BuiltinHandler::Rule,
+    ),
+    BuiltinSpec::special(
+        "RuleDelayed",
+        "Represents a delayed rewrite rule.",
+        BuiltinHandler::RuleDelayed,
+    ),
+    BuiltinSpec::special(
+        "MatchQ",
+        "Tests whether an expression matches a pattern.",
+        BuiltinHandler::MatchQ,
+    ),
+    BuiltinSpec::special(
         "Cases",
         "Collects subexpressions matching a pattern or rule.",
+        BuiltinHandler::Cases,
     ),
-    BuiltinSpec::new("ReplaceAll", "Applies rules everywhere in an expression."),
-    BuiltinSpec::new(
+    BuiltinSpec::special(
+        "ReplaceAll",
+        "Applies rules everywhere in an expression.",
+        BuiltinHandler::ReplaceAll,
+    ),
+    BuiltinSpec::special(
         "ReplaceRepeated",
         "Repeatedly applies rules until an expression reaches a fixed point.",
+        BuiltinHandler::ReplaceRepeated,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "NormalizeRules",
         "Normalizes a rule or rule list into an explicit canonical list form for debugging.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::NormalizeRules,
     ),
     BuiltinSpec::new(
         "$Context",
@@ -54,201 +85,249 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Lists package contexts loaded into the current session.",
     ),
     BuiltinSpec::new("$Path", "Lists search roots used by the package loader."),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "Context",
         "Returns the context of the current session or of a symbol.",
         HoldAttribute::HoldFirst,
+        BuiltinHandler::Context,
     ),
     BuiltinSpec::new("File", "Represents an explicit file specification."),
-    BuiltinSpec::new(
+    BuiltinSpec::ordinary(
         "FindFile",
         "Finds the full path of a file or package using the current search path.",
+        BuiltinHandler::FindFile,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::ordinary(
         "Get",
         "Reads a file or package and evaluates the expressions it contains.",
+        BuiltinHandler::Get,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::ordinary(
         "Needs",
         "Loads a package only if its context has not already been loaded.",
+        BuiltinHandler::Needs,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::ordinary(
         "Begin",
         "Switches into a context and prepends it to the context path.",
+        BuiltinHandler::Begin,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::ordinary(
         "End",
         "Restores the previous context after a matching Begin.",
+        BuiltinHandler::End,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::ordinary(
         "BeginPackage",
         "Starts a package context with a package-oriented context path.",
+        BuiltinHandler::BeginPackage,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::ordinary(
         "EndPackage",
         "Ends a package context and leaves it on the restored context path.",
+        BuiltinHandler::EndPackage,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "Message",
         "Emits a message described by a MessageName expression.",
         HoldAttribute::HoldFirst,
+        BuiltinHandler::Message,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "MessageName",
         "Represents a symbolic message name such as f::tag.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::MessageName,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "Messages",
         "Lists message names defined for the whole session, a symbol, or one message query.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::Messages,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "MessageDefinitions",
         "Lists stored message template definitions for the whole session, a symbol, or one message query.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::MessageDefinitions,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "MessageTags",
         "Lists message tags defined globally, for a symbol, or for one message query.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::MessageTags,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "OwnValues",
         "Lists stored immediate or delayed ownvalue definitions for a symbol.",
         HoldAttribute::HoldFirst,
+        BuiltinHandler::OwnValues,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "UpValues",
         "Lists stored tagged upvalue definitions for a symbol.",
         HoldAttribute::HoldFirst,
+        BuiltinHandler::UpValues,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "DownValues",
         "Lists stored downvalue definitions for a symbol.",
         HoldAttribute::HoldFirst,
+        BuiltinHandler::DownValues,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "SubValues",
         "Lists stored subvalue definitions for a symbol.",
         HoldAttribute::HoldFirst,
+        BuiltinHandler::SubValues,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "Attributes",
         "Lists the currently active attributes for a symbol.",
         HoldAttribute::HoldFirst,
+        BuiltinHandler::Attributes,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "SetAttributes",
         "Adds attributes to one or more symbols.",
         HoldAttribute::HoldFirst,
+        BuiltinHandler::SetAttributes,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "ClearAttributes",
         "Removes attributes from one or more symbols.",
         HoldAttribute::HoldFirst,
+        BuiltinHandler::ClearAttributes,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "Unset",
         "Removes a specific stored definition or message template.",
         HoldAttribute::HoldFirst,
+        BuiltinHandler::Unset,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "Clear",
         "Clears values and rules from one or more symbols.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::Clear,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "ClearAll",
         "Clears values, rules, messages, and user-defined attributes from one or more symbols.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::ClearAll,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "Check",
         "Evaluates an expression and substitutes a fallback if matching messages are emitted.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::Check,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "Quiet",
         "Evaluates an expression while suppressing matching runtime messages it emits.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::Quiet,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "If",
         "Evaluates one of several branches conditionally.",
         HoldAttribute::HoldRest,
+        BuiltinHandler::If,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "Which",
         "Evaluates conditions in order and returns the first matching branch.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::Which,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "Function",
         "Creates a pure function.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::HoldLiteral,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "With",
         "Lexically substitutes local constants into a body.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::With,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::special(
         "Module",
         "Creates lexical local symbols.",
-        HoldAttribute::HoldAll,
+        BuiltinHandler::Module,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::special(
         "Block",
         "Temporarily rebinds symbols dynamically.",
-        HoldAttribute::HoldAll,
+        BuiltinHandler::Block,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "Hold",
         "Prevents evaluation of its arguments.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::HoldLiteral,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "HoldFirst",
         "Prevents evaluation of the first argument.",
         HoldAttribute::HoldFirst,
+        BuiltinHandler::HoldLiteral,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "HoldRest",
         "Prevents evaluation of all but the first argument.",
         HoldAttribute::HoldRest,
+        BuiltinHandler::HoldLiteral,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "HoldAll",
         "Prevents evaluation of all arguments.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::HoldLiteral,
     ),
-    BuiltinSpec::with_attributes(
+    BuiltinSpec::ordinary_with_attributes(
         "HoldAllComplete",
         "Prevents evaluation of all arguments and disables Evaluate and Sequence escapes.",
         AttributeSet::from_attribute(Attribute::HoldAllComplete),
+        BuiltinHandler::HoldLiteral,
     ),
-    BuiltinSpec::with_attributes(
+    BuiltinSpec::ordinary_with_attributes(
         "Unevaluated",
         "Temporarily leaves an argument unevaluated as a direct function argument.",
         AttributeSet::from_attribute(Attribute::HoldAllComplete),
+        BuiltinHandler::Unevaluated,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "Evaluate",
         "Forces evaluation in held contexts.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::Evaluate,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "HoldPattern",
         "Marks a pattern expression so it is matched without prior evaluation.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::HoldLiteral,
     ),
-    BuiltinSpec::with_hold(
+    BuiltinSpec::ordinary_with_hold(
         "ReleaseHold",
         "Removes supported hold wrappers and resumes evaluation.",
         HoldAttribute::HoldAll,
+        BuiltinHandler::ReleaseHold,
     ),
-    BuiltinSpec::new("Sequence", "Splices a sequence of arguments into a call."),
+    BuiltinSpec::ordinary(
+        "Sequence",
+        "Splices a sequence of arguments into a call.",
+        BuiltinHandler::Sequence,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Thread",
+        "Threads an expression over arguments that share a common head.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::Thread,
+    ),
 ];
 
 pub fn install_core(session: &mut Session) {
