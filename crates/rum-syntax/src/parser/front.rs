@@ -2,8 +2,7 @@ use super::*;
 
 pub fn parse_expr(input: &str) -> Result<SyntaxExpr, SyntaxError> {
     let tokens = lex(input)?;
-    let mut parser = Parser::new(tokens);
-    parser.parse_root()
+    super::parse_tokens(tokens)
 }
 
 pub(super) struct Parser {

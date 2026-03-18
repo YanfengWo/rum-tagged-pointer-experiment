@@ -54,10 +54,57 @@ pub enum SyntaxTokenKind {
     End,
 }
 
+impl SyntaxTokenKind {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Integer(_) => "integer",
+            Self::String(_) => "string",
+            Self::Symbol(_) => "symbol",
+            Self::LBracket => "[",
+            Self::RBracket => "]",
+            Self::LBrace => "{",
+            Self::RBrace => "}",
+            Self::LParen => "(",
+            Self::RParen => ")",
+            Self::Comma => ",",
+            Self::Plus => "+",
+            Self::Minus => "-",
+            Self::Star => "*",
+            Self::Slash => "/",
+            Self::Caret => "^",
+            Self::MessageName => "::",
+            Self::TagSet => "/:",
+            Self::Arrow => "->",
+            Self::RuleDelayed => ":>",
+            Self::Set => "=",
+            Self::Unset => "=.",
+            Self::SetDelayed => ":=",
+            Self::ReplaceAll => "/.",
+            Self::ReplaceRepeated => "//.",
+            Self::Condition => "/;",
+            Self::Ampersand => "&",
+            Self::Hash => "#",
+            Self::Underscore => "_",
+            Self::DoubleUnderscore => "__",
+            Self::TripleUnderscore => "___",
+            Self::End => "end of input",
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TriviaKind {
     Whitespace,
     Comment,
+}
+
+impl TriviaKind {
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Whitespace => "whitespace",
+            Self::Comment => "comment",
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

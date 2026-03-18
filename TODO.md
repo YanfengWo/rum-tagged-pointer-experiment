@@ -54,10 +54,19 @@ This roadmap now uses two levels of detail:
 - [x] Choose a span model shared by lexer tokens, AST nodes, and future runtime diagnostics
 - [x] Attach spans to all syntax nodes without breaking the current parser API too abruptly
 - [x] Preserve operator and delimiter spans well enough to point at concrete source locations
+- [x] Add a parsed-source API that bundles source text, spans, syntax, and preserved trivia for formatter and source-preserving diagnostics
 - [x] Add parser diagnostics for missing `]`, `}`, and `)` with useful labels
 - [x] Distinguish incomplete input from hard parse failure for REPL-friendly multiline handling
 - [x] Introduce limited parser recovery so one malformed form does not poison the whole script
 - [x] Add regression tests for malformed calls, lists, patterns, and pure functions
+- [x] Build richer user-facing diagnostics on top of the parsed-source / source-location helpers
+
+### `rum-syntax`: Formatter Prototype
+
+- [x] Introduce a formatter prototype API that works from parsed syntax rather than runtime lowering
+- [x] Preserve outer trivia in the prototype formatter while canonicalizing the core expression layout
+- [ ] Decide how interior comments and trivia attachment should participate in future formatting passes
+- [ ] Add formatter regression coverage for more complex nested forms and comment placement
 
 ### `rum-syntax`: Comments and Surface Expansion
 
@@ -160,6 +169,8 @@ This roadmap now uses two levels of detail:
 - [x] Add symbol completion from builtins, active contexts, loaded packages, and user-defined symbols
 - [x] Expand `:inspect` output with context, definition, and message-catalog details
 - [x] Add a parse debug command such as `:parse`
+- [x] Render parser diagnostics with line/column/snippet output in REPL debug and interactive paths
+- [x] Add a formatting debug command such as `:format`
 - [x] Add a lowering debug command such as `:lower`
 - [ ] Decide whether trace viewing belongs in the REPL and, if so, add a minimal command flow for it
 

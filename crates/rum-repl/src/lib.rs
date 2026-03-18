@@ -3,8 +3,8 @@ use std::fs;
 use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
 
-use rum_runtime::{DefinitionCatalogEntry, DefinitionKind, Session};
-use rum_syntax::parse_expr;
+use rum_runtime::{DefinitionCatalogEntry, DefinitionKind, EvalError, Session};
+use rum_syntax::{FormatterOptions, SourceText, format_parsed_source, parse_with_diagnostics};
 
 pub struct Repl<R, W> {
     input: R,
@@ -74,11 +74,10 @@ where
                 let pending = buffer.trim();
 
                 if !pending.is_empty() {
-                    if let Err(err) = parse_expr(pending) {
-                        if err.is_incomplete() {
-                            writeln!(self.output, "! {err}")?;
-                            return Ok(());
-                        }
+                    if let Err(diagnostic) = parse_with_diagnostics(pending) {
+                        self.record_history(pending);
+                        writeln!(self.output, "{}", diagnostic.render())?;
+                        return Ok(());
                     }
 
                     self.record_history(pending);
@@ -117,19 +116,19 @@ where
 
             let pending = buffer.trim();
 
-            match parse_expr(pending) {
+            match parse_with_diagnostics(pending) {
                 Ok(_) => {
                     let input = pending.to_string();
                     buffer.clear();
                     self.record_history(&input);
                     self.evaluate_input(session, &input)?;
                 }
-                Err(err) if err.is_incomplete() => continue,
-                Err(_) => {
+                Err(diagnostic) if diagnostic.error().is_incomplete() => continue,
+                Err(diagnostic) => {
                     let input = pending.to_string();
                     buffer.clear();
                     self.record_history(&input);
-                    self.evaluate_input(session, &input)?;
+                    writeln!(self.output, "{}", diagnostic.render())?;
                 }
             }
         }
@@ -143,6 +142,10 @@ where
                 }
 
                 writeln!(self.output, "{}", outcome.value)
+            }
+            Err(EvalError::Syntax(err)) => {
+                let rendered = SourceText::new(input).render_syntax_error(&err);
+                writeln!(self.output, "{rendered}")
             }
             Err(err) => {
                 for message in session.take_messages() {
@@ -211,6 +214,10 @@ where
                 )?;
                 writeln!(
                     self.output,
+                    ":format EXPR    Format syntax into the current canonical style."
+                )?;
+                writeln!(
+                    self.output,
                     ":lower EXPR     Lower syntax into core Expr form."
                 )?;
                 writeln!(
@@ -232,9 +239,27 @@ where
                 if input.is_empty() {
                     writeln!(self.output, "! :parse expects an expression")?;
                 } else {
-                    match parse_expr(input) {
-                        Ok(syntax) => writeln!(self.output, "{syntax:#?}")?,
-                        Err(err) => writeln!(self.output, "! {err}")?,
+                    match parse_with_diagnostics(input) {
+                        Ok(parsed) => write!(self.output, "{}", parsed.debug_dump())?,
+                        Err(diagnostic) => writeln!(self.output, "{}", diagnostic.render())?,
+                    }
+                }
+
+                Ok(CommandAction::Handled)
+            }
+            _ if line == ":format" || line.starts_with(":format ") => {
+                let input = line.trim_start_matches(":format").trim();
+
+                if input.is_empty() {
+                    writeln!(self.output, "! :format expects an expression")?;
+                } else {
+                    match parse_with_diagnostics(input) {
+                        Ok(parsed) => {
+                            let formatted =
+                                format_parsed_source(&parsed, FormatterOptions::default());
+                            writeln!(self.output, "{formatted}")?;
+                        }
+                        Err(diagnostic) => writeln!(self.output, "{}", diagnostic.render())?,
                     }
                 }
 
@@ -248,6 +273,10 @@ where
                 } else {
                     match session.lower_text(input) {
                         Ok(expr) => writeln!(self.output, "{expr}")?,
+                        Err(EvalError::Syntax(err)) => {
+                            let rendered = SourceText::new(input).render_syntax_error(&err);
+                            writeln!(self.output, "{rendered}")?;
+                        }
                         Err(err) => writeln!(self.output, "! {err}")?,
                     }
                 }

@@ -71,7 +71,8 @@ a usable early core-language slice:
 
 - exact integer atoms via `num_bigint::BigInt`
 - parser and lowering support for rules, patterns, slots, message names,
-  tagging, Wolfram-style comments, preserved lexer trivia, and core call syntax
+  tagging, Wolfram-style comments, preserved lexer trivia, and source-aware
+  parse tooling
 - session-based evaluation with ownvalues, upvalues, downvalues, and subvalues
 - hold-aware control flow with `Hold*`, `Evaluate`, `Sequence`, `If`, `Which`,
   `Function`, `With`, `Module`, and `Block`
@@ -80,7 +81,7 @@ a usable early core-language slice:
 - runtime messages, `Check`, `Quiet`, tracing, resource limits, `Thread`, and
   `Listable`
 - a working REPL with multiline input, history persistence, completion, `:parse`,
-  `:lower`, `:inspect`, and `:messages`
+  `:format`, `:lower`, `:inspect`, and `:messages`
 
 The source tree has also been reorganized around real Rust module boundaries so
 that maintenance and incremental compilation stay practical as the runtime
@@ -103,7 +104,8 @@ cmd /c "call ..\scripts\activate.cmd && cargo run -p rum-cli -- --eval \"Identit
 Useful REPL commands:
 
 - `:help`
-- `:parse <expr>`
+- `:parse <expr>`  (shows syntax plus token/trivia debug output)
+- `:format <expr>`  (prototype canonical formatter)
 - `:lower <expr>`
 - `:complete <prefix>`
 - `:history [N]`
@@ -116,8 +118,8 @@ Useful REPL commands:
 The next stage is to deepen tooling and tighten the remaining semantic gaps
 rather than to "make evaluation exist" from scratch:
 
-1. richer spans, diagnostics, recovery, and comment handling in `rum-syntax`
-2. better REPL ergonomics such as history, completion, and debug views
+1. richer source-preserving diagnostics and formatter behavior in `rum-syntax`
+2. better REPL ergonomics such as trace-oriented debug views
 3. continued evaluator cleanup based on the runtime audit and TODO roadmap
 4. host-facing API stabilization and later Jupyter integration through a
    separate adapter crate

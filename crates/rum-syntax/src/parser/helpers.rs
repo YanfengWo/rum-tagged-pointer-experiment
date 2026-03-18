@@ -212,7 +212,7 @@ impl Parser {
     }
 
     pub(super) fn current_token_label(&self) -> String {
-        token_label(&self.current().kind).to_string()
+        self.current().kind.label().to_string()
     }
 
     pub(super) fn current(&self) -> &Token {
@@ -231,41 +231,5 @@ impl Parser {
 
     pub(super) fn at_end(&self) -> bool {
         matches!(self.current().kind, TokenKind::End)
-    }
-}
-
-fn token_label(kind: &TokenKind) -> &'static str {
-    match kind {
-        TokenKind::Integer(_) => "integer",
-        TokenKind::String(_) => "string",
-        TokenKind::Symbol(_) => "symbol",
-        TokenKind::LBracket => "[",
-        TokenKind::RBracket => "]",
-        TokenKind::LBrace => "{",
-        TokenKind::RBrace => "}",
-        TokenKind::LParen => "(",
-        TokenKind::RParen => ")",
-        TokenKind::Comma => ",",
-        TokenKind::Plus => "+",
-        TokenKind::Minus => "-",
-        TokenKind::Star => "*",
-        TokenKind::Slash => "/",
-        TokenKind::Caret => "^",
-        TokenKind::MessageName => "::",
-        TokenKind::TagSet => "/:",
-        TokenKind::Arrow => "->",
-        TokenKind::RuleDelayed => ":>",
-        TokenKind::Set => "=",
-        TokenKind::Unset => "=.",
-        TokenKind::SetDelayed => ":=",
-        TokenKind::ReplaceAll => "/.",
-        TokenKind::ReplaceRepeated => "//.",
-        TokenKind::Condition => "/;",
-        TokenKind::Ampersand => "&",
-        TokenKind::Hash => "#",
-        TokenKind::Underscore => "_",
-        TokenKind::DoubleUnderscore => "__",
-        TokenKind::TripleUnderscore => "___",
-        TokenKind::End => "end of input",
     }
 }

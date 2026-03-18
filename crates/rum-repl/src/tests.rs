@@ -27,6 +27,7 @@ fn repl_handles_help_and_quit() {
 
     let rendered = String::from_utf8(output).unwrap();
     assert!(rendered.contains(":inspect NAME"));
+    assert!(rendered.contains(":format EXPR"));
 }
 
 #[test]
@@ -149,7 +150,7 @@ fn repl_reads_multiline_input_until_a_form_is_complete() {
 
 #[test]
 fn repl_parse_command_prints_syntax_debug_output() {
-    let input = Cursor::new(":parse x_Integer\n:quit\n");
+    let input = Cursor::new(":parse f[(* note *) x_Integer]\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
     let mut session = Session::new();
@@ -157,8 +158,54 @@ fn repl_parse_command_prints_syntax_debug_output() {
     repl.run(&mut session).unwrap();
 
     let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("syntax:"));
     assert!(rendered.contains("Pattern"));
-    assert!(rendered.contains("span: Span"));
+    assert!(rendered.contains("tokens:"));
+    assert!(rendered.contains("trivia comment"));
+    assert!(rendered.contains("(* note *)"));
+}
+
+#[test]
+fn repl_parse_command_renders_source_diagnostic_for_bad_input() {
+    let input = Cursor::new(":parse f[1 2]\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("error: expected ,"));
+    assert!(rendered.contains("--> 1:5"));
+    assert!(rendered.contains("1 | f[1 2]"));
+}
+
+#[test]
+fn repl_format_command_prints_canonical_surface_form() {
+    let input = Cursor::new(":format (* header *) f [ x_Integer , y ]\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("(* header *)"));
+    assert!(rendered.contains("f[x_Integer, y]"));
+}
+
+#[test]
+fn repl_renders_parser_diagnostics_for_regular_input_errors() {
+    let input = Cursor::new("f[1 2]\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("error: expected ,"));
+    assert!(rendered.contains("--> 1:5"));
 }
 
 #[test]
@@ -230,5 +277,6 @@ fn repl_reports_incomplete_multiline_input_when_input_ends() {
 
     let rendered = String::from_utf8(output).unwrap();
     assert!(rendered.contains("rum> ...> ...> "));
-    assert!(rendered.contains("! incomplete input: expected ]"));
+    assert!(rendered.contains("error: incomplete input: expected ]"));
+    assert!(rendered.contains("--> 2:4"));
 }
