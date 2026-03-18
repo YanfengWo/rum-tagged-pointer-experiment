@@ -1,8 +1,20 @@
 use std::io::Cursor;
+use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::{env, fs};
 
 use rum_runtime::Session;
+use rum_stdlib::install_core;
 
 use super::Repl;
+
+fn temp_history_path(prefix: &str) -> PathBuf {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    env::temp_dir().join(format!("rum-repl-{prefix}-{unique}.history"))
+}
 
 #[test]
 fn repl_handles_help_and_quit() {
@@ -130,6 +142,78 @@ fn repl_reads_multiline_input_until_a_form_is_complete() {
 
     let rendered = String::from_utf8(output).unwrap();
     assert!(rendered.contains("rum> ...> ...> 123"));
+}
+
+#[test]
+fn repl_parse_command_prints_syntax_debug_output() {
+    let input = Cursor::new(":parse x_Integer\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("Pattern"));
+    assert!(rendered.contains("span: Span"));
+}
+
+#[test]
+fn repl_lower_command_prints_canonical_core_expression() {
+    let input = Cursor::new(":lower x_Integer := f[x]\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("SetDelayed[Pattern[x, Blank[Integer]], f[x]]"));
+}
+
+#[test]
+fn repl_complete_command_lists_builtin_and_user_candidates() {
+    let input = Cursor::new(":complete Id\n:complete loc\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = Session::new();
+    install_core(&mut session);
+    session.eval_text("localName = 1").unwrap();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("Identity"));
+    assert!(rendered.contains("localName"));
+}
+
+#[test]
+fn repl_history_persists_when_a_history_path_is_configured() {
+    let history_path = temp_history_path("persist");
+
+    {
+        let input = Cursor::new("1 + 2\n:quit\n");
+        let mut output = Vec::new();
+        let mut repl = Repl::new(input, &mut output).with_history_path(&history_path);
+        let mut session = Session::new();
+
+        repl.run(&mut session).unwrap();
+    }
+
+    let input = Cursor::new(":history\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output).with_history_path(&history_path);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("1 + 2"));
+
+    let persisted = fs::read_to_string(&history_path).unwrap();
+    assert!(persisted.contains("1 + 2"));
+
+    let _ = fs::remove_file(history_path);
 }
 
 #[test]

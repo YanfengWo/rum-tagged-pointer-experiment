@@ -79,7 +79,8 @@ a usable early core-language slice:
   `Needs`, `Get`, and `FindFile`
 - runtime messages, `Check`, `Quiet`, tracing, resource limits, `Thread`, and
   `Listable`
-- a working REPL with multiline input, `:inspect`, and `:messages`
+- a working REPL with multiline input, history persistence, completion, `:parse`,
+  `:lower`, `:inspect`, and `:messages`
 
 The source tree has also been reorganized around real Rust module boundaries so
 that maintenance and incremental compilation stay practical as the runtime
@@ -102,6 +103,10 @@ cmd /c "call ..\scripts\activate.cmd && cargo run -p rum-cli -- --eval \"Identit
 Useful REPL commands:
 
 - `:help`
+- `:parse <expr>`
+- `:lower <expr>`
+- `:complete <prefix>`
+- `:history [N]`
 - `:inspect <symbol>`
 - `:messages <symbol>`
 - `:quit`

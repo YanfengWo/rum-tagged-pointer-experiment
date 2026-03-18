@@ -49,7 +49,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 fn run_repl(session: &mut Session) -> io::Result<()> {
     let stdin = io::stdin();
     let stdout = io::stdout();
-    let mut repl = Repl::new(stdin.lock(), stdout.lock());
+    let mut repl = Repl::new(stdin.lock(), stdout.lock()).with_default_history();
     repl.run(session)
 }
 

@@ -93,6 +93,55 @@ impl Session {
         self.package_search_paths.push(path.into());
     }
 
+    pub fn lower_text(&self, input: &str) -> Result<Expr, EvalError> {
+        let syntax = parse_expr(input)?;
+        self.lower_syntax_expr(&syntax)
+    }
+
+    pub fn complete_symbol_prefix(&self, prefix: &str) -> Vec<String> {
+        let prefix = prefix.trim();
+        let explicit_context = prefix.contains('`');
+        let mut candidates = BTreeSet::new();
+
+        for name in self.builtins.keys() {
+            let symbol = Symbol::new(SYSTEM_CONTEXT, name);
+            self.insert_completion_candidate(&mut candidates, &symbol, prefix, explicit_context);
+        }
+
+        for symbol in self.definitions.keys() {
+            self.insert_completion_candidate(&mut candidates, symbol, prefix, explicit_context);
+        }
+
+        for symbol in self.attributes.keys() {
+            self.insert_completion_candidate(&mut candidates, symbol, prefix, explicit_context);
+        }
+
+        for key in self.message_definitions.keys() {
+            self.insert_completion_candidate(
+                &mut candidates,
+                &key.symbol,
+                prefix,
+                explicit_context,
+            );
+        }
+
+        for context in self
+            .context_path
+            .iter()
+            .map(String::as_str)
+            .chain(std::iter::once(self.current_context.as_str()))
+            .chain(self.loaded_packages.iter().map(String::as_str))
+        {
+            let context = normalize_context_name(context);
+
+            if context.starts_with(prefix) {
+                candidates.insert(context);
+            }
+        }
+
+        candidates.into_iter().collect()
+    }
+
     pub fn loaded_packages(&self) -> &[String] {
         &self.loaded_packages
     }
@@ -102,6 +151,24 @@ impl Session {
 
         if !self.loaded_packages.iter().any(|loaded| loaded == &context) {
             self.loaded_packages.push(context);
+        }
+    }
+
+    fn insert_completion_candidate(
+        &self,
+        candidates: &mut BTreeSet<String>,
+        symbol: &Symbol,
+        prefix: &str,
+        explicit_context: bool,
+    ) {
+        let candidate = if explicit_context {
+            symbol.fully_qualified_name()
+        } else {
+            symbol.qualified_name()
+        };
+
+        if candidate.starts_with(prefix) {
+            candidates.insert(candidate);
         }
     }
 

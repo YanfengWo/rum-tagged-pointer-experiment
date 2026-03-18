@@ -121,15 +121,29 @@ pub(super) fn split_script_into_forms(source: &str) -> Result<Vec<String>, EvalE
             continue;
         }
 
-        if parse_expr(&current).is_ok() {
-            forms.push(current.trim().to_string());
-            current.clear();
+        match parse_expr(&current) {
+            Ok(_) => {
+                forms.push(current.trim().to_string());
+                current.clear();
+            }
+            Err(err) if err.is_incomplete() => {}
+            Err(_) => {
+                forms.push(current.trim().to_string());
+                current.clear();
+            }
         }
     }
 
     if !current.trim().is_empty() {
-        parse_expr(&current)?;
-        forms.push(current.trim().to_string());
+        match parse_expr(&current) {
+            Ok(_) => {
+                forms.push(current.trim().to_string());
+            }
+            Err(err) if err.is_incomplete() => return Err(err.into()),
+            Err(_) => {
+                forms.push(current.trim().to_string());
+            }
+        }
     }
 
     Ok(forms)

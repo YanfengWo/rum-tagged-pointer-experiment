@@ -292,6 +292,61 @@ fn reports_incomplete_rhs_after_binary_operator() {
 }
 
 #[test]
+fn reports_malformed_call_arguments_without_marking_input_incomplete() {
+    let err = parse_expr("f[1 2]").unwrap_err();
+
+    assert_eq!(
+        err,
+        SyntaxError::Expected {
+            expected: ",",
+            span: Span::new(4, 5),
+        }
+    );
+    assert!(!err.is_incomplete());
+}
+
+#[test]
+fn reports_malformed_list_items_without_marking_input_incomplete() {
+    let err = parse_expr("{1,,2}").unwrap_err();
+
+    assert_eq!(
+        err,
+        SyntaxError::Expected {
+            expected: "expression",
+            span: Span::new(3, 4),
+        }
+    );
+    assert!(!err.is_incomplete());
+}
+
+#[test]
+fn reports_trailing_pattern_tokens_as_hard_errors() {
+    let err = parse_expr("x_,").unwrap_err();
+
+    assert_eq!(
+        err,
+        SyntaxError::TrailingInput {
+            span: Span::new(2, 3),
+        }
+    );
+    assert!(!err.is_incomplete());
+}
+
+#[test]
+fn reports_bare_pure_function_marker_as_hard_error() {
+    let err = parse_expr("&").unwrap_err();
+
+    assert_eq!(
+        err,
+        SyntaxError::Expected {
+            expected: "expression",
+            span: Span::new(0, 1),
+        }
+    );
+    assert!(!err.is_incomplete());
+}
+
+#[test]
 fn distinguishes_empty_input_from_incomplete_input() {
     let err = parse_expr("").unwrap_err();
 

@@ -56,8 +56,8 @@ This roadmap now uses two levels of detail:
 - [x] Preserve operator and delimiter spans well enough to point at concrete source locations
 - [x] Add parser diagnostics for missing `]`, `}`, and `)` with useful labels
 - [x] Distinguish incomplete input from hard parse failure for REPL-friendly multiline handling
-- [ ] Introduce limited parser recovery so one malformed form does not poison the whole script
-- [ ] Add regression tests for malformed calls, lists, patterns, and pure functions
+- [x] Introduce limited parser recovery so one malformed form does not poison the whole script
+- [x] Add regression tests for malformed calls, lists, patterns, and pure functions
 
 ### `rum-syntax`: Comments and Surface Expansion
 
@@ -156,11 +156,11 @@ This roadmap now uses two levels of detail:
 
 - [x] Detect incomplete input and keep reading until a form is syntactically complete
 - [x] Add a continuation prompt for multiline entry
-- [ ] Add line history persistence
-- [ ] Add symbol completion from builtins, active contexts, loaded packages, and user-defined symbols
+- [x] Add line history persistence
+- [x] Add symbol completion from builtins, active contexts, loaded packages, and user-defined symbols
 - [ ] Expand `:inspect` output with context, definition, and message-catalog details
-- [ ] Add a parse debug command such as `:parse`
-- [ ] Add a lowering debug command such as `:lower`
+- [x] Add a parse debug command such as `:parse`
+- [x] Add a lowering debug command such as `:lower`
 - [ ] Decide whether trace viewing belongs in the REPL and, if so, add a minimal command flow for it
 
 ### REPL and CLI Regression Coverage

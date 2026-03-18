@@ -291,6 +291,13 @@ fn get_loads_a_script_file_and_returns_the_last_value() {
 }
 
 #[test]
+fn split_script_into_forms_stops_hard_syntax_errors_from_poisoning_later_forms() {
+    let forms = split_script_into_forms("1 2\n3").unwrap();
+
+    assert_eq!(forms, vec!["1 2".to_string(), "3".to_string()]);
+}
+
+#[test]
 fn eval_script_preserves_messages_emitted_before_a_later_error() {
     let mut session = Session::new();
 
