@@ -6,6 +6,25 @@ The goal is to keep the codebase maintainable, auditable, and friendly to
 incremental compilation without turning the repository into an overly fragmented
 set of tiny files.
 
+## Development environment note
+
+At the moment, `rum` is developed inside a parent portable toolchain workspace.
+Because of that, routine local development commands should prefer the portable
+entrypoints exposed by the parent workspace rather than assuming global tools.
+
+In practice, this means that for the current development setup we should prefer
+commands such as:
+
+- `cmd /c "call ..\scripts\activate.cmd && cargo test --workspace"`
+- `cmd /c "call ..\scripts\activate.cmd && cargo fmt --all"`
+- `cmd /c "call ..\scripts\activate.cmd && git status"`
+
+This is an environment-adaptation rule for the current repository location, not
+part of the long-term product design. During release hardening or packaging, we
+should explicitly review and remove development-only wrappers, parent-relative
+entrypoints, and any assumptions that `rum` must be run from the surrounding
+portable workspace.
+
 ## Core principles
 
 ### 1. Split source files for maintainability first

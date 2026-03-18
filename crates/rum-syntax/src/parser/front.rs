@@ -27,7 +27,7 @@ impl Parser {
             Ok(expr)
         } else {
             Err(SyntaxError::TrailingInput {
-                offset: self.current().start,
+                span: self.current().span,
             })
         }
     }
@@ -35,11 +35,9 @@ impl Parser {
     pub(super) fn parse_function_expr(&mut self) -> Result<SyntaxExpr, SyntaxError> {
         let mut expr = self.parse_binary_expr(0)?;
 
-        while self.consume_ampersand() {
-            expr = SyntaxExpr::Postfix {
-                op: PostfixOp::Function,
-                expr: Box::new(expr),
-            };
+        while let Some(ampersand_span) = self.consume_ampersand() {
+            let span = expr.span().merge(ampersand_span);
+            expr = SyntaxExpr::postfix(PostfixOp::Function, expr, span);
         }
 
         Ok(expr)
@@ -69,40 +67,33 @@ impl Parser {
             };
 
             let rhs = self.parse_binary_expr(next_min_precedence)?;
-            lhs = SyntaxExpr::Binary {
-                op,
-                lhs: Box::new(lhs),
-                rhs: Box::new(rhs),
-            };
+            let span = lhs.span().merge(rhs.span());
+            lhs = SyntaxExpr::binary(op, lhs, rhs, span);
         }
 
-        while self.consume_unset() {
-            lhs = SyntaxExpr::Postfix {
-                op: PostfixOp::Unset,
-                expr: Box::new(lhs),
-            };
+        while let Some(unset_span) = self.consume_unset() {
+            let span = lhs.span().merge(unset_span);
+            lhs = SyntaxExpr::postfix(PostfixOp::Unset, lhs, span);
         }
 
         Ok(lhs)
     }
 
     pub(super) fn parse_prefix_expr(&mut self) -> Result<SyntaxExpr, SyntaxError> {
-        match &self.current().kind {
+        let token = self.current().clone();
+
+        match &token.kind {
             TokenKind::Plus => {
                 self.bump();
                 let expr = self.parse_binary_expr(PrefixOp::Plus.precedence())?;
-                Ok(SyntaxExpr::Prefix {
-                    op: PrefixOp::Plus,
-                    expr: Box::new(expr),
-                })
+                let span = token.span.merge(expr.span());
+                Ok(SyntaxExpr::prefix(PrefixOp::Plus, expr, span))
             }
             TokenKind::Minus => {
                 self.bump();
                 let expr = self.parse_binary_expr(PrefixOp::Minus.precedence())?;
-                Ok(SyntaxExpr::Prefix {
-                    op: PrefixOp::Minus,
-                    expr: Box::new(expr),
-                })
+                let span = token.span.merge(expr.span());
+                Ok(SyntaxExpr::prefix(PrefixOp::Minus, expr, span))
             }
             _ => self.parse_postfix_expr(),
         }
@@ -112,21 +103,17 @@ impl Parser {
         let mut expr = self.parse_primary()?;
 
         loop {
-            if self.consume_lbracket() {
-                let args = self.parse_expression_list(TokenKind::RBracket, "]")?;
-                expr = SyntaxExpr::Call {
-                    head: Box::new(expr),
-                    args,
-                };
+            if self.consume_lbracket().is_some() {
+                let (args, close_span) = self.parse_expression_list(TokenKind::RBracket, "]")?;
+                let span = expr.span().merge(close_span);
+                expr = SyntaxExpr::call(expr, args, span);
                 continue;
             }
 
-            if let Some(kind) = self.consume_blank_kind() {
-                let pattern = self.parse_blank_tail(kind)?;
-                expr = SyntaxExpr::Pattern {
-                    name: Box::new(expr),
-                    pattern: Box::new(pattern),
-                };
+            if let Some((kind, blank_span)) = self.consume_blank_kind() {
+                let pattern = self.parse_blank_tail(kind, blank_span)?;
+                let span = expr.span().merge(pattern.span());
+                expr = SyntaxExpr::pattern(expr, pattern, span);
                 continue;
             }
 
@@ -142,44 +129,47 @@ impl Parser {
         match token.kind {
             TokenKind::Integer(value) => {
                 self.bump();
-                Ok(SyntaxExpr::Integer(value))
+                Ok(SyntaxExpr::integer(value, token.span))
             }
             TokenKind::String(value) => {
                 self.bump();
-                Ok(SyntaxExpr::String(value))
+                Ok(SyntaxExpr::string(value, token.span))
             }
             TokenKind::Symbol(value) => {
                 self.bump();
-                Ok(SyntaxExpr::Symbol(value))
+                Ok(SyntaxExpr::symbol(value, token.span))
             }
             TokenKind::Hash => self.parse_slot(),
             TokenKind::Underscore => {
                 self.bump();
-                self.parse_blank_tail(BlankKind::Blank)
+                self.parse_blank_tail(BlankKind::Blank, token.span)
             }
             TokenKind::DoubleUnderscore => {
                 self.bump();
-                self.parse_blank_tail(BlankKind::BlankSequence)
+                self.parse_blank_tail(BlankKind::BlankSequence, token.span)
             }
             TokenKind::TripleUnderscore => {
                 self.bump();
-                self.parse_blank_tail(BlankKind::BlankNullSequence)
+                self.parse_blank_tail(BlankKind::BlankNullSequence, token.span)
             }
             TokenKind::LParen => {
                 self.bump();
                 let expr = self.parse_function_expr()?;
-                self.expect_rparen()?;
-                Ok(expr)
+                let close_span = self.expect_rparen()?;
+                Ok(expr.with_span(token.span.merge(close_span)))
             }
             TokenKind::LBrace => {
                 self.bump();
-                let items = self.parse_expression_list(TokenKind::RBrace, "}")?;
-                Ok(SyntaxExpr::List(items))
+                let (items, close_span) = self.parse_expression_list(TokenKind::RBrace, "}")?;
+                Ok(SyntaxExpr::list(items, token.span.merge(close_span)))
             }
-            TokenKind::End => Err(SyntaxError::EmptyInput),
+            TokenKind::End => Err(SyntaxError::Incomplete {
+                expected: "expression",
+                span: token.span,
+            }),
             _ => Err(SyntaxError::Expected {
                 expected: "expression",
-                offset: token.start,
+                span: token.span,
             }),
         }
     }

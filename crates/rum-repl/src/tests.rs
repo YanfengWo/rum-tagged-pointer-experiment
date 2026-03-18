@@ -118,3 +118,30 @@ fn repl_renders_runtime_messages_before_results() {
     assert!(rendered.contains("! FindFile::notfound:"));
     assert!(rendered.contains("$Failed"));
 }
+
+#[test]
+fn repl_reads_multiline_input_until_a_form_is_complete() {
+    let input = Cursor::new("Identity[\n123\n]\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("rum> ...> ...> 123"));
+}
+
+#[test]
+fn repl_reports_incomplete_multiline_input_when_input_ends() {
+    let input = Cursor::new("Identity[\n123\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("rum> ...> ...> "));
+    assert!(rendered.contains("! incomplete input: expected ]"));
+}

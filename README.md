@@ -39,6 +39,31 @@ The repository is organized as a Cargo workspace:
 - [Code Organization Guidelines](./docs/code-organization-guidelines.md)
 - [Roadmap](./TODO.md)
 
+## Development environment note
+
+The current repository lives inside a larger portable toolchain workspace.
+
+For the current development environment, do not assume global `cargo`, `git`,
+`python`, or `node` should be used directly from inside `rum`. Prefer entering
+the portable environment first through the parent workspace tooling, for
+example:
+
+```powershell
+cmd /c "call ..\scripts\activate.cmd && cargo test --workspace"
+```
+
+or:
+
+```powershell
+cmd /c "call ..\scripts\activate.cmd && cargo run -p rum-cli"
+```
+
+This is a temporary adaptation rule for the current local development setup,
+not a permanent release requirement. Before packaging or publishing `rum`,
+portable-environment wrappers, parent-relative entrypoints, and development-only
+tooling assumptions should be reviewed and removed or replaced with normal
+project-local release flows.
+
 ## Current status
 
 `rum` is no longer just a bootstrap echo runtime. The current workspace now has
@@ -54,7 +79,7 @@ a usable early core-language slice:
   `Needs`, `Get`, and `FindFile`
 - runtime messages, `Check`, `Quiet`, tracing, resource limits, `Thread`, and
   `Listable`
-- a working REPL with `:inspect` and `:messages`
+- a working REPL with multiline input, `:inspect`, and `:messages`
 
 The source tree has also been reorganized around real Rust module boundaries so
 that maintenance and incremental compilation stay practical as the runtime
@@ -65,13 +90,13 @@ grows.
 Run the REPL:
 
 ```powershell
-cargo run -p rum-cli
+cmd /c "call ..\scripts\activate.cmd && cargo run -p rum-cli"
 ```
 
 Evaluate a single expression:
 
 ```powershell
-cargo run -p rum-cli -- --eval "Identity[123456789012345678901234567890]"
+cmd /c "call ..\scripts\activate.cmd && cargo run -p rum-cli -- --eval \"Identity[123456789012345678901234567890]\""
 ```
 
 Useful REPL commands:
@@ -87,8 +112,7 @@ The next stage is to deepen tooling and tighten the remaining semantic gaps
 rather than to "make evaluation exist" from scratch:
 
 1. richer spans, diagnostics, recovery, and comment handling in `rum-syntax`
-2. better REPL ergonomics such as multiline input, history, completion, and
-   debug views
+2. better REPL ergonomics such as history, completion, and debug views
 3. continued evaluator cleanup based on the runtime audit and TODO roadmap
 4. host-facing API stabilization and later Jupyter integration through a
    separate adapter crate

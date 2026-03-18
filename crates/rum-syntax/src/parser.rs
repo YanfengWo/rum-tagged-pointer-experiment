@@ -1,3 +1,4 @@
+use crate::Span;
 use crate::ast::{BinaryOp, BlankKind, PostfixOp, PrefixOp, SlotSpec, SyntaxExpr};
 use crate::error::SyntaxError;
 use crate::lexer::{Token, TokenKind, lex};

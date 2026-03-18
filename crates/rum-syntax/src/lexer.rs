@@ -1,10 +1,10 @@
 use crate::error::SyntaxError;
+use crate::span::Span;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Token {
     pub(crate) kind: TokenKind,
-    pub(crate) start: usize,
-    pub(crate) end: usize,
+    pub(crate) span: Span,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -74,8 +74,7 @@ impl<'a> Lexer<'a> {
         if self.is_eof() {
             return Ok(Some(Token {
                 kind: TokenKind::End,
-                start: self.offset,
-                end: self.offset,
+                span: Span::point(self.offset),
             }));
         }
 
@@ -112,7 +111,7 @@ impl<'a> Lexer<'a> {
                 } else {
                     return Err(SyntaxError::UnexpectedCharacter {
                         found: ch,
-                        offset: start,
+                        span: Span::new(start, self.offset),
                     });
                 }
             }
@@ -151,15 +150,14 @@ impl<'a> Lexer<'a> {
             other => {
                 return Err(SyntaxError::UnexpectedCharacter {
                     found: other,
-                    offset: start,
+                    span: Span::new(start, self.offset),
                 });
             }
         };
 
         Ok(Some(Token {
             kind: token,
-            start,
-            end: self.offset,
+            span: Span::new(start, self.offset),
         }))
     }
 
@@ -198,9 +196,9 @@ impl<'a> Lexer<'a> {
                 '\\' => {
                     self.bump_char();
 
-                    let escaped = self
-                        .peek_char()
-                        .ok_or(SyntaxError::UnterminatedString { offset: start })?;
+                    let escaped = self.peek_char().ok_or(SyntaxError::UnterminatedString {
+                        span: Span::new(start, self.offset),
+                    })?;
 
                     match escaped {
                         '"' | '\\' => {
@@ -228,7 +226,9 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        Err(SyntaxError::UnterminatedString { offset: start })
+        Err(SyntaxError::UnterminatedString {
+            span: Span::new(start, self.offset),
+        })
     }
 
     fn single(&mut self, kind: TokenKind) -> TokenKind {
@@ -338,5 +338,16 @@ mod tests {
         let tokens = lex("expr //. rule").unwrap();
 
         assert!(matches!(tokens[1].kind, TokenKind::ReplaceRepeated));
+    }
+
+    #[test]
+    fn tokens_carry_byte_spans() {
+        let tokens = lex("f[x]").unwrap();
+
+        assert_eq!(tokens[0].span, Span::new(0, 1));
+        assert_eq!(tokens[1].span, Span::new(1, 2));
+        assert_eq!(tokens[2].span, Span::new(2, 3));
+        assert_eq!(tokens[3].span, Span::new(3, 4));
+        assert_eq!(tokens[4].span, Span::point(4));
     }
 }

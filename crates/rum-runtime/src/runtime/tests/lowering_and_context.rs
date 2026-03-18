@@ -1,9 +1,11 @@
 use super::*;
+use rum_syntax::Span;
 
 #[test]
 fn lowers_big_integer_into_core_expr() {
-    let lowered = lower_syntax_expr(&SyntaxExpr::Integer(
-        "123456789012345678901234567890".to_string(),
+    let lowered = lower_syntax_expr(&SyntaxExpr::integer(
+        "123456789012345678901234567890",
+        Span::default(),
     ))
     .unwrap();
 

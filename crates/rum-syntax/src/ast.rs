@@ -1,7 +1,135 @@
 use std::fmt;
 
+use crate::Span;
+
+#[derive(Clone, Debug)]
+pub struct SyntaxExpr {
+    pub kind: SyntaxExprKind,
+    pub span: Span,
+}
+
+impl SyntaxExpr {
+    pub fn new(kind: SyntaxExprKind, span: Span) -> Self {
+        Self { kind, span }
+    }
+
+    pub fn integer(value: impl Into<String>, span: Span) -> Self {
+        Self::new(SyntaxExprKind::Integer(value.into()), span)
+    }
+
+    pub fn string(value: impl Into<String>, span: Span) -> Self {
+        Self::new(SyntaxExprKind::String(value.into()), span)
+    }
+
+    pub fn symbol(value: impl Into<String>, span: Span) -> Self {
+        Self::new(SyntaxExprKind::Symbol(value.into()), span)
+    }
+
+    pub fn list(items: Vec<Self>, span: Span) -> Self {
+        Self::new(SyntaxExprKind::List(items), span)
+    }
+
+    pub fn slot(spec: SlotSpec, span: Span) -> Self {
+        Self::new(SyntaxExprKind::Slot(spec), span)
+    }
+
+    pub fn blank(kind: BlankKind, head: Option<Self>, span: Span) -> Self {
+        Self::new(
+            SyntaxExprKind::Blank {
+                kind,
+                head: head.map(Box::new),
+            },
+            span,
+        )
+    }
+
+    pub fn pattern(name: Self, pattern: Self, span: Span) -> Self {
+        Self::new(
+            SyntaxExprKind::Pattern {
+                name: Box::new(name),
+                pattern: Box::new(pattern),
+            },
+            span,
+        )
+    }
+
+    pub fn prefix(op: PrefixOp, expr: Self, span: Span) -> Self {
+        Self::new(
+            SyntaxExprKind::Prefix {
+                op,
+                expr: Box::new(expr),
+            },
+            span,
+        )
+    }
+
+    pub fn binary(op: BinaryOp, lhs: Self, rhs: Self, span: Span) -> Self {
+        Self::new(
+            SyntaxExprKind::Binary {
+                op,
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+            },
+            span,
+        )
+    }
+
+    pub fn postfix(op: PostfixOp, expr: Self, span: Span) -> Self {
+        Self::new(
+            SyntaxExprKind::Postfix {
+                op,
+                expr: Box::new(expr),
+            },
+            span,
+        )
+    }
+
+    pub fn call(head: Self, args: Vec<Self>, span: Span) -> Self {
+        Self::new(
+            SyntaxExprKind::Call {
+                head: Box::new(head),
+                args,
+            },
+            span,
+        )
+    }
+
+    pub const fn span(&self) -> Span {
+        self.span
+    }
+
+    pub fn with_span(mut self, span: Span) -> Self {
+        self.span = span;
+        self
+    }
+
+    fn precedence(&self) -> u8 {
+        match &self.kind {
+            SyntaxExprKind::Postfix { op, .. } => op.precedence(),
+            SyntaxExprKind::Binary { op, .. } => op.precedence(),
+            SyntaxExprKind::Prefix { op, .. } => op.precedence(),
+            SyntaxExprKind::Pattern { .. } => 80,
+            SyntaxExprKind::Blank { .. } => 80,
+            SyntaxExprKind::Call { .. } => 90,
+            SyntaxExprKind::Integer(_)
+            | SyntaxExprKind::String(_)
+            | SyntaxExprKind::Symbol(_)
+            | SyntaxExprKind::List(_)
+            | SyntaxExprKind::Slot(_) => 95,
+        }
+    }
+}
+
+impl PartialEq for SyntaxExpr {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
+    }
+}
+
+impl Eq for SyntaxExpr {}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum SyntaxExpr {
+pub enum SyntaxExprKind {
     Integer(String),
     String(String),
     Symbol(String),
@@ -185,11 +313,11 @@ fn format_expr(
         f.write_str("(")?;
     }
 
-    match expr {
-        SyntaxExpr::Integer(value) => f.write_str(value)?,
-        SyntaxExpr::String(value) => write!(f, "\"{value}\"")?,
-        SyntaxExpr::Symbol(value) => f.write_str(value)?,
-        SyntaxExpr::List(items) => {
+    match &expr.kind {
+        SyntaxExprKind::Integer(value) => f.write_str(value)?,
+        SyntaxExprKind::String(value) => write!(f, "\"{value}\"")?,
+        SyntaxExprKind::Symbol(value) => f.write_str(value)?,
+        SyntaxExprKind::List(items) => {
             f.write_str("{")?;
 
             for (index, item) in items.iter().enumerate() {
@@ -202,29 +330,29 @@ fn format_expr(
 
             f.write_str("}")?;
         }
-        SyntaxExpr::Slot(spec) => match spec {
+        SyntaxExprKind::Slot(spec) => match spec {
             SlotSpec::Anonymous => f.write_str("#")?,
             SlotSpec::Number(value) => write!(f, "#{value}")?,
             SlotSpec::Named(value) => write!(f, "#{value}")?,
             SlotSpec::Sequence => f.write_str("##")?,
             SlotSpec::SequenceNumber(value) => write!(f, "##{value}")?,
         },
-        SyntaxExpr::Blank { kind, head } => {
+        SyntaxExprKind::Blank { kind, head } => {
             f.write_str(kind.token())?;
 
             if let Some(head) = head {
                 format_expr(head, f, precedence)?;
             }
         }
-        SyntaxExpr::Pattern { name, pattern } => {
+        SyntaxExprKind::Pattern { name, pattern } => {
             format_expr(name, f, precedence)?;
             format_expr(pattern, f, precedence)?;
         }
-        SyntaxExpr::Prefix { op, expr } => {
+        SyntaxExprKind::Prefix { op, expr } => {
             f.write_str(op.token())?;
             format_expr(expr, f, op.precedence())?;
         }
-        SyntaxExpr::Binary { op, lhs, rhs } => {
+        SyntaxExprKind::Binary { op, lhs, rhs } => {
             let lhs_precedence = op.precedence() + u8::from(op.is_right_associative());
             let rhs_precedence = op.precedence() + u8::from(!op.is_right_associative());
 
@@ -232,11 +360,11 @@ fn format_expr(
             write!(f, " {} ", op.token())?;
             format_expr(rhs, f, rhs_precedence)?;
         }
-        SyntaxExpr::Postfix { op, expr } => {
+        SyntaxExprKind::Postfix { op, expr } => {
             format_expr(expr, f, op.precedence())?;
             write!(f, " {}", op.token())?;
         }
-        SyntaxExpr::Call { head, args } => {
+        SyntaxExprKind::Call { head, args } => {
             format_expr(head, f, precedence)?;
             f.write_str("[")?;
 
@@ -257,22 +385,4 @@ fn format_expr(
     }
 
     Ok(())
-}
-
-impl SyntaxExpr {
-    fn precedence(&self) -> u8 {
-        match self {
-            Self::Postfix { op, .. } => op.precedence(),
-            Self::Binary { op, .. } => op.precedence(),
-            Self::Prefix { op, .. } => op.precedence(),
-            Self::Pattern { .. } => 80,
-            Self::Blank { .. } => 80,
-            Self::Call { .. } => 90,
-            Self::Integer(_)
-            | Self::String(_)
-            | Self::Symbol(_)
-            | Self::List(_)
-            | Self::Slot(_) => 95,
-        }
-    }
 }

@@ -1,11 +1,13 @@
 use std::io::{self, BufRead, Write};
 
 use rum_runtime::{DefinitionCatalogEntry, DefinitionKind, Session};
+use rum_syntax::parse_expr;
 
 pub struct Repl<R, W> {
     input: R,
     output: W,
     prompt: String,
+    continuation_prompt: String,
 }
 
 enum CommandAction {
@@ -24,12 +26,21 @@ where
             input,
             output,
             prompt: "rum> ".to_string(),
+            continuation_prompt: "...> ".to_string(),
         }
     }
 
     pub fn run(&mut self, session: &mut Session) -> io::Result<()> {
+        let mut buffer = String::new();
+
         loop {
-            self.output.write_all(self.prompt.as_bytes())?;
+            let prompt = if buffer.trim().is_empty() {
+                &self.prompt
+            } else {
+                &self.continuation_prompt
+            };
+
+            self.output.write_all(prompt.as_bytes())?;
             self.output.flush()?;
 
             let mut line = String::new();
@@ -37,36 +48,77 @@ where
 
             if bytes_read == 0 {
                 writeln!(self.output)?;
+
+                let pending = buffer.trim();
+
+                if !pending.is_empty() {
+                    if let Err(err) = parse_expr(pending) {
+                        if err.is_incomplete() {
+                            writeln!(self.output, "! {err}")?;
+                            return Ok(());
+                        }
+                    }
+
+                    self.evaluate_input(session, pending)?;
+                }
+
                 return Ok(());
             }
 
-            let line = line.trim();
+            let line = line.trim_end_matches(['\r', '\n']);
+            let trimmed = line.trim();
 
-            if line.is_empty() {
+            if buffer.trim().is_empty() && trimmed.is_empty() {
                 continue;
             }
 
-            match self.try_handle_command(session, line)? {
-                CommandAction::Exit => return Ok(()),
-                CommandAction::Handled => continue,
-                CommandAction::NotHandled => {}
+            if buffer.trim().is_empty() {
+                match self.try_handle_command(session, trimmed)? {
+                    CommandAction::Exit => return Ok(()),
+                    CommandAction::Handled => continue,
+                    CommandAction::NotHandled => {}
+                }
             }
 
-            match session.eval_text(line) {
-                Ok(outcome) => {
-                    for message in outcome.messages {
-                        writeln!(self.output, "! {message}")?;
-                    }
+            if !buffer.is_empty() {
+                buffer.push('\n');
+            }
 
-                    writeln!(self.output, "{}", outcome.value)?
-                }
-                Err(err) => {
-                    for message in session.take_messages() {
-                        writeln!(self.output, "! {message}")?;
-                    }
+            buffer.push_str(line);
 
-                    writeln!(self.output, "! {err}")?
+            let pending = buffer.trim();
+
+            match parse_expr(pending) {
+                Ok(_) => {
+                    let input = pending.to_string();
+                    buffer.clear();
+                    self.evaluate_input(session, &input)?;
                 }
+                Err(err) if err.is_incomplete() => continue,
+                Err(_) => {
+                    let input = pending.to_string();
+                    buffer.clear();
+                    self.evaluate_input(session, &input)?;
+                }
+            }
+        }
+    }
+
+    fn evaluate_input(&mut self, session: &mut Session, input: &str) -> io::Result<()> {
+        match session.eval_text(input) {
+            Ok(outcome) => {
+                for message in outcome.messages {
+                    writeln!(self.output, "! {message}")?;
+                }
+
+                writeln!(self.output, "{}", outcome.value)
+            }
+            Err(err) => {
+                for message in session.take_messages() {
+                    writeln!(self.output, "! {message}")?;
+                }
+
+                writeln!(self.output, "! {err}")
             }
         }
     }

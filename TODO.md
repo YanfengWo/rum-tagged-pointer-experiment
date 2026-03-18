@@ -51,11 +51,11 @@ This roadmap now uses two levels of detail:
 
 ### `rum-syntax`: Spans and Diagnostics
 
-- [ ] Choose a span model shared by lexer tokens, AST nodes, and future runtime diagnostics
-- [ ] Attach spans to all syntax nodes without breaking the current parser API too abruptly
-- [ ] Preserve operator and delimiter spans well enough to point at concrete source locations
-- [ ] Add parser diagnostics for missing `]`, `}`, and `)` with useful labels
-- [ ] Distinguish incomplete input from hard parse failure for REPL-friendly multiline handling
+- [x] Choose a span model shared by lexer tokens, AST nodes, and future runtime diagnostics
+- [x] Attach spans to all syntax nodes without breaking the current parser API too abruptly
+- [x] Preserve operator and delimiter spans well enough to point at concrete source locations
+- [x] Add parser diagnostics for missing `]`, `}`, and `)` with useful labels
+- [x] Distinguish incomplete input from hard parse failure for REPL-friendly multiline handling
 - [ ] Introduce limited parser recovery so one malformed form does not poison the whole script
 - [ ] Add regression tests for malformed calls, lists, patterns, and pure functions
 
@@ -154,8 +154,8 @@ This roadmap now uses two levels of detail:
 
 ### `rum-repl` and `rum-cli`: Interactive Ergonomics
 
-- [ ] Detect incomplete input and keep reading until a form is syntactically complete
-- [ ] Add a continuation prompt for multiline entry
+- [x] Detect incomplete input and keep reading until a form is syntactically complete
+- [x] Add a continuation prompt for multiline entry
 - [ ] Add line history persistence
 - [ ] Add symbol completion from builtins, active contexts, loaded packages, and user-defined symbols
 - [ ] Expand `:inspect` output with context, definition, and message-catalog details
@@ -166,7 +166,7 @@ This roadmap now uses two levels of detail:
 ### REPL and CLI Regression Coverage
 
 - [ ] Add snapshot tests for help output, inspection flows, and runtime-message rendering
-- [ ] Add multiline-session tests once multiline input exists
+- [x] Add multiline-session tests once multiline input exists
 - [ ] Add CLI tests for `--eval`, file execution, and machine-readable output modes as they are introduced
 
 ### Embedding and Jupyter Preparation

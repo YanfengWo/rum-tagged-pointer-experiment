@@ -5,7 +5,8 @@ use std::path::{Path, PathBuf};
 
 use rum_core::{Atom, BigInt, Expr, GLOBAL_CONTEXT, SYSTEM_CONTEXT, Symbol};
 use rum_syntax::{
-    BinaryOp, BlankKind, PostfixOp, PrefixOp, SlotSpec, SyntaxError, SyntaxExpr, parse_expr,
+    BinaryOp, BlankKind, PostfixOp, PrefixOp, SlotSpec, SyntaxError, SyntaxExpr, SyntaxExprKind,
+    parse_expr,
 };
 
 mod attributes;

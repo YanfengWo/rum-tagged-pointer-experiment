@@ -13,8 +13,8 @@ pub(super) fn lower_syntax_expr_with<F>(
 where
     F: FnMut(&str) -> Option<Symbol>,
 {
-    match expr {
-        SyntaxExpr::Integer(value) => {
+    match &expr.kind {
+        SyntaxExprKind::Integer(value) => {
             let bigint = BigInt::parse_bytes(value.as_bytes(), 10).ok_or_else(|| {
                 EvalError::InvalidInteger {
                     literal: value.clone(),
@@ -23,9 +23,9 @@ where
 
             Ok(Expr::integer(bigint))
         }
-        SyntaxExpr::String(value) => Ok(Expr::string(value.clone())),
-        SyntaxExpr::Symbol(value) => Ok(lower_symbol(value, resolve_symbol)),
-        SyntaxExpr::List(items) => {
+        SyntaxExprKind::String(value) => Ok(Expr::string(value.clone())),
+        SyntaxExprKind::Symbol(value) => Ok(lower_symbol(value, resolve_symbol)),
+        SyntaxExprKind::List(items) => {
             let lowered_items = items
                 .iter()
                 .map(|item| lower_syntax_expr_with(item, resolve_symbol))
@@ -33,19 +33,19 @@ where
 
             Ok(Expr::call(system_expr("List"), lowered_items))
         }
-        SyntaxExpr::Slot(spec) => lower_slot(spec),
-        SyntaxExpr::Blank { kind, head } => lower_blank(*kind, head.as_deref(), resolve_symbol),
-        SyntaxExpr::Pattern { name, pattern } => Ok(Expr::call(
+        SyntaxExprKind::Slot(spec) => lower_slot(spec),
+        SyntaxExprKind::Blank { kind, head } => lower_blank(*kind, head.as_deref(), resolve_symbol),
+        SyntaxExprKind::Pattern { name, pattern } => Ok(Expr::call(
             system_expr("Pattern"),
             vec![
                 lower_syntax_expr_with(name, resolve_symbol)?,
                 lower_syntax_expr_with(pattern, resolve_symbol)?,
             ],
         )),
-        SyntaxExpr::Prefix { op, expr } => lower_prefix(*op, expr, resolve_symbol),
-        SyntaxExpr::Binary { op, lhs, rhs } => lower_binary(*op, lhs, rhs, resolve_symbol),
-        SyntaxExpr::Postfix { op, expr } => lower_postfix(*op, expr, resolve_symbol),
-        SyntaxExpr::Call { head, args } => {
+        SyntaxExprKind::Prefix { op, expr } => lower_prefix(*op, expr, resolve_symbol),
+        SyntaxExprKind::Binary { op, lhs, rhs } => lower_binary(*op, lhs, rhs, resolve_symbol),
+        SyntaxExprKind::Postfix { op, expr } => lower_postfix(*op, expr, resolve_symbol),
+        SyntaxExprKind::Call { head, args } => {
             let lowered_head = lower_syntax_expr_with(head, resolve_symbol)?;
             let lowered_args = args
                 .iter()
@@ -222,17 +222,17 @@ pub(super) fn lower_message_tag_expr<F>(
 where
     F: FnMut(&str) -> Option<Symbol>,
 {
-    match expr {
-        SyntaxExpr::Symbol(value) => Ok(Expr::string(value.clone())),
-        SyntaxExpr::String(value) => Ok(Expr::string(value.clone())),
+    match &expr.kind {
+        SyntaxExprKind::Symbol(value) => Ok(Expr::string(value.clone())),
+        SyntaxExprKind::String(value) => Ok(Expr::string(value.clone())),
         _ => lower_syntax_expr_with(expr, resolve_symbol),
     }
 }
 
 pub(super) fn lower_message_tag_string(expr: &SyntaxExpr) -> String {
-    match expr {
-        SyntaxExpr::Symbol(value) | SyntaxExpr::String(value) => value.clone(),
-        other => other.to_string(),
+    match &expr.kind {
+        SyntaxExprKind::Symbol(value) | SyntaxExprKind::String(value) => value.clone(),
+        _ => expr.to_string(),
     }
 }
 

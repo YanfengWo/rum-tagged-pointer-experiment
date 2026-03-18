@@ -2,64 +2,88 @@ use super::*;
 
 impl Parser {
     pub(super) fn parse_slot(&mut self) -> Result<SyntaxExpr, SyntaxError> {
-        self.bump();
+        let start_span = self.bump();
+        let mut end_span = start_span;
         let is_sequence = matches!(self.current().kind, TokenKind::Hash);
 
         if is_sequence {
-            self.bump();
+            end_span = self.bump();
         }
 
         let spec = match (&self.current().kind, is_sequence) {
             (TokenKind::Integer(value), false) => {
                 let value = value.clone();
-                self.bump();
+                end_span = self.bump();
                 SlotSpec::Number(value)
             }
             (TokenKind::Symbol(value), false) => {
                 let value = value.clone();
-                self.bump();
+                end_span = self.bump();
                 SlotSpec::Named(value)
             }
             (TokenKind::Integer(value), true) => {
                 let value = value.clone();
-                self.bump();
+                end_span = self.bump();
                 SlotSpec::SequenceNumber(value)
             }
             _ if is_sequence => SlotSpec::Sequence,
             _ => SlotSpec::Anonymous,
         };
 
-        Ok(SyntaxExpr::Slot(spec))
+        Ok(SyntaxExpr::slot(spec, start_span.merge(end_span)))
     }
 
-    pub(super) fn parse_blank_tail(&mut self, kind: BlankKind) -> Result<SyntaxExpr, SyntaxError> {
+    pub(super) fn parse_blank_tail(
+        &mut self,
+        kind: BlankKind,
+        start_span: Span,
+    ) -> Result<SyntaxExpr, SyntaxError> {
         let head = if self.token_starts_primary() {
-            Some(Box::new(self.parse_postfix_expr()?))
+            Some(self.parse_postfix_expr()?)
         } else {
             None
         };
 
-        Ok(SyntaxExpr::Blank { kind, head })
+        let span = head
+            .as_ref()
+            .map(|head| start_span.merge(head.span()))
+            .unwrap_or(start_span);
+
+        Ok(SyntaxExpr::blank(kind, head, span))
     }
 
     pub(super) fn parse_expression_list(
         &mut self,
         end_kind: TokenKind,
         end_label: &'static str,
-    ) -> Result<Vec<SyntaxExpr>, SyntaxError> {
+    ) -> Result<(Vec<SyntaxExpr>, Span), SyntaxError> {
         let mut items = Vec::new();
 
         if self.current().kind == end_kind {
-            self.bump();
-            return Ok(items);
+            let end_span = self.bump();
+            return Ok((items, end_span));
+        }
+
+        if self.at_end() {
+            return Err(SyntaxError::Incomplete {
+                expected: end_label,
+                span: self.current().span,
+            });
         }
 
         loop {
             items.push(self.parse_function_expr()?);
 
             if self.current().kind == end_kind {
-                self.bump();
-                return Ok(items);
+                let end_span = self.bump();
+                return Ok((items, end_span));
+            }
+
+            if self.at_end() {
+                return Err(SyntaxError::Incomplete {
+                    expected: end_label,
+                    span: self.current().span,
+                });
             }
 
             self.expect_comma()?;
@@ -67,14 +91,14 @@ impl Parser {
             if self.current().kind == end_kind {
                 return Err(SyntaxError::Expected {
                     expected: "expression",
-                    offset: self.current().start,
+                    span: self.current().span,
                 });
             }
 
             if self.at_end() {
-                return Err(SyntaxError::Expected {
+                return Err(SyntaxError::Incomplete {
                     expected: end_label,
-                    offset: self.current().start,
+                    span: self.current().span,
                 });
             }
         }
@@ -115,34 +139,31 @@ impl Parser {
         }
     }
 
-    pub(super) fn consume_ampersand(&mut self) -> bool {
+    pub(super) fn consume_ampersand(&mut self) -> Option<Span> {
         if matches!(self.current().kind, TokenKind::Ampersand) {
-            self.bump();
-            true
+            Some(self.bump())
         } else {
-            false
+            None
         }
     }
 
-    pub(super) fn consume_unset(&mut self) -> bool {
+    pub(super) fn consume_unset(&mut self) -> Option<Span> {
         if matches!(self.current().kind, TokenKind::Unset) {
-            self.bump();
-            true
+            Some(self.bump())
         } else {
-            false
+            None
         }
     }
 
-    pub(super) fn consume_lbracket(&mut self) -> bool {
+    pub(super) fn consume_lbracket(&mut self) -> Option<Span> {
         if matches!(self.current().kind, TokenKind::LBracket) {
-            self.bump();
-            true
+            Some(self.bump())
         } else {
-            false
+            None
         }
     }
 
-    pub(super) fn consume_blank_kind(&mut self) -> Option<BlankKind> {
+    pub(super) fn consume_blank_kind(&mut self) -> Option<(BlankKind, Span)> {
         let kind = match self.current().kind {
             TokenKind::Underscore => BlankKind::Blank,
             TokenKind::DoubleUnderscore => BlankKind::BlankSequence,
@@ -150,30 +171,39 @@ impl Parser {
             _ => return None,
         };
 
-        self.bump();
-        Some(kind)
+        let span = self.bump();
+        Some((kind, span))
     }
 
     pub(super) fn expect_comma(&mut self) -> Result<(), SyntaxError> {
         if matches!(self.current().kind, TokenKind::Comma) {
             self.bump();
             Ok(())
+        } else if self.at_end() {
+            Err(SyntaxError::Incomplete {
+                expected: ",",
+                span: self.current().span,
+            })
         } else {
             Err(SyntaxError::Expected {
                 expected: ",",
-                offset: self.current().start,
+                span: self.current().span,
             })
         }
     }
 
-    pub(super) fn expect_rparen(&mut self) -> Result<(), SyntaxError> {
+    pub(super) fn expect_rparen(&mut self) -> Result<Span, SyntaxError> {
         if matches!(self.current().kind, TokenKind::RParen) {
-            self.bump();
-            Ok(())
+            Ok(self.bump())
+        } else if self.at_end() {
+            Err(SyntaxError::Incomplete {
+                expected: ")",
+                span: self.current().span,
+            })
         } else {
             Err(SyntaxError::Expected {
                 expected: ")",
-                offset: self.current().start,
+                span: self.current().span,
             })
         }
     }
@@ -182,10 +212,14 @@ impl Parser {
         &self.tokens[self.index]
     }
 
-    pub(super) fn bump(&mut self) {
+    pub(super) fn bump(&mut self) -> Span {
+        let span = self.current().span;
+
         if !self.at_end() {
             self.index += 1;
         }
+
+        span
     }
 
     pub(super) fn at_end(&self) -> bool {
