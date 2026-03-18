@@ -71,8 +71,8 @@ a usable early core-language slice:
 
 - exact integer atoms via `num_bigint::BigInt`
 - parser and lowering support for rules, patterns, slots, message names,
-  tagging, Wolfram-style comments, preserved lexer trivia, and source-aware
-  parse tooling
+  tagging, Wolfram-style comments, preserved lexer trivia, source-aware parse
+  tooling, and a formatter prototype
 - session-based evaluation with ownvalues, upvalues, downvalues, and subvalues
 - hold-aware control flow with `Hold*`, `Evaluate`, `Sequence`, `If`, `Which`,
   `Function`, `With`, `Module`, and `Block`
@@ -101,6 +101,18 @@ Evaluate a single expression:
 cmd /c "call ..\scripts\activate.cmd && cargo run -p rum-cli -- --eval \"Identity[123456789012345678901234567890]\""
 ```
 
+Inspect parse output from the CLI:
+
+```powershell
+cmd /c "call ..\scripts\activate.cmd && cargo run -p rum-cli -- --parse \"f[1 2]\""
+```
+
+Format a single expression from the CLI:
+
+```powershell
+cmd /c "call ..\scripts\activate.cmd && cargo run -p rum-cli -- --format \"f[x(* note *)+y]\""
+```
+
 Useful REPL commands:
 
 - `:help`
@@ -118,7 +130,7 @@ Useful REPL commands:
 The next stage is to deepen tooling and tighten the remaining semantic gaps
 rather than to "make evaluation exist" from scratch:
 
-1. richer source-preserving diagnostics and formatter behavior in `rum-syntax`
+1. deeper formatter semantics and richer multi-span diagnostics in `rum-syntax`
 2. better REPL ergonomics such as trace-oriented debug views
 3. continued evaluator cleanup based on the runtime audit and TODO roadmap
 4. host-facing API stabilization and later Jupyter integration through a

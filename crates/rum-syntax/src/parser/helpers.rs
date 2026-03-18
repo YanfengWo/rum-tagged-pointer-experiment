@@ -56,6 +56,8 @@ impl Parser {
         &mut self,
         end_kind: TokenKind,
         end_label: &'static str,
+        opening_span: Span,
+        opening: &'static str,
     ) -> Result<(Vec<SyntaxExpr>, Span), SyntaxError> {
         let mut items = Vec::new();
 
@@ -65,9 +67,11 @@ impl Parser {
         }
 
         if self.at_end() {
-            return Err(SyntaxError::Incomplete {
+            return Err(SyntaxError::UnclosedDelimiter {
                 expected: end_label,
                 span: self.current().span,
+                opening_span,
+                opening,
             });
         }
 
@@ -80,9 +84,11 @@ impl Parser {
             }
 
             if self.at_end() {
-                return Err(SyntaxError::Incomplete {
+                return Err(SyntaxError::UnclosedDelimiter {
                     expected: end_label,
                     span: self.current().span,
+                    opening_span,
+                    opening,
                 });
             }
 
@@ -97,9 +103,11 @@ impl Parser {
             }
 
             if self.at_end() {
-                return Err(SyntaxError::Incomplete {
+                return Err(SyntaxError::UnclosedDelimiter {
                     expected: end_label,
                     span: self.current().span,
+                    opening_span,
+                    opening,
                 });
             }
         }
@@ -194,13 +202,19 @@ impl Parser {
         }
     }
 
-    pub(super) fn expect_rparen(&mut self) -> Result<Span, SyntaxError> {
+    pub(super) fn expect_rparen(
+        &mut self,
+        opening_span: Span,
+        opening: &'static str,
+    ) -> Result<Span, SyntaxError> {
         if matches!(self.current().kind, TokenKind::RParen) {
             Ok(self.bump())
         } else if self.at_end() {
-            Err(SyntaxError::Incomplete {
+            Err(SyntaxError::UnclosedDelimiter {
                 expected: ")",
                 span: self.current().span,
+                opening_span,
+                opening,
             })
         } else {
             Err(SyntaxError::UnexpectedToken {

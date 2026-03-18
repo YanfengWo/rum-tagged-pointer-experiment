@@ -3,6 +3,8 @@ use std::fmt::{self, Write};
 use crate::parser::parse_tokens;
 use crate::{LexedSource, Span, SyntaxError, SyntaxExpr, lex_with_trivia};
 
+const MULTILINE_CONTEXT_LIMIT: usize = 3;
+
 #[derive(Clone, Debug)]
 pub struct SourceText {
     source: String,
@@ -74,44 +76,135 @@ impl SourceText {
             return output.trim_end().to_string();
         };
 
-        let Some(location) = self.location(span.start) else {
+        let Some((start, end)) = self.span_locations(span) else {
             return output.trim_end().to_string();
         };
 
-        writeln!(&mut output, " --> {}:{}", location.line, location.column).unwrap();
+        writeln!(&mut output, " --> {}:{}", start.line, start.column).unwrap();
         writeln!(&mut output, "  |").unwrap();
+        self.render_span_excerpt(&mut output, span, None).unwrap();
 
-        let line_text = self.line_text(location.line).unwrap_or("");
-        let gutter_width = location.line.to_string().len();
+        if let Some(related_span) = error.related_span() {
+            writeln!(&mut output, "  |").unwrap();
+            self.render_span_excerpt(&mut output, related_span, error.related_label().as_deref())
+                .unwrap();
+        }
 
-        writeln!(
-            &mut output,
-            "{:>width$} | {}",
-            location.line,
-            line_text,
-            width = gutter_width
-        )
-        .unwrap();
-        writeln!(
-            &mut output,
-            "{:>width$} | {}",
-            "",
-            self.highlight_line_span(location.line, span),
-            width = gutter_width
-        )
-        .unwrap();
-
-        if self.span_crosses_line(span, location.line) {
+        if start.line != end.line {
             writeln!(
                 &mut output,
-                "{:>width$} = note: showing only the first line of a multi-line span",
-                "",
-                width = gutter_width
+                "  = note: span covers lines {} through {}",
+                start.line, end.line
             )
             .unwrap();
         }
 
         output.trim_end().to_string()
+    }
+
+    fn render_span_excerpt(
+        &self,
+        output: &mut String,
+        span: Span,
+        label: Option<&str>,
+    ) -> fmt::Result {
+        let Some((start, end)) = self.span_locations(span) else {
+            return Ok(());
+        };
+
+        if start.line == end.line {
+            return self.render_single_line_span(output, start.line, span, label);
+        }
+
+        let last_line = end.line;
+        let first_line = start.line;
+        let middle_lines = last_line.saturating_sub(first_line + 1);
+        let show_last_directly = middle_lines <= MULTILINE_CONTEXT_LIMIT.saturating_sub(2);
+
+        self.render_single_line_span(
+            output,
+            first_line,
+            Span::new(
+                span.start,
+                self.line_bounds(first_line)
+                    .map_or(span.end, |(_, line_end)| line_end),
+            ),
+            label.or(Some("span begins here")),
+        )?;
+
+        if middle_lines > 0 {
+            if show_last_directly {
+                for line in (first_line + 1)..last_line {
+                    self.render_continuation_line(output, line)?;
+                }
+            } else {
+                writeln!(output, "   | ...")?;
+            }
+        }
+
+        self.render_single_line_span(
+            output,
+            last_line,
+            Span::new(
+                self.line_bounds(last_line)
+                    .map_or(span.start, |(line_start, _)| line_start),
+                span.end,
+            ),
+            Some("span ends here"),
+        )
+    }
+
+    fn render_single_line_span(
+        &self,
+        output: &mut String,
+        line: usize,
+        span: Span,
+        label: Option<&str>,
+    ) -> fmt::Result {
+        let line_text = self.line_text(line).unwrap_or("");
+        let gutter_width = line.to_string().len();
+        let highlight = self.highlight_line_span(line, span);
+
+        writeln!(
+            output,
+            "{:>width$} | {}",
+            line,
+            line_text,
+            width = gutter_width
+        )?;
+
+        if let Some(label) = label {
+            writeln!(
+                output,
+                "{:>width$} | {} {}",
+                "",
+                highlight,
+                label,
+                width = gutter_width
+            )
+        } else {
+            writeln!(
+                output,
+                "{:>width$} | {}",
+                "",
+                highlight,
+                width = gutter_width
+            )
+        }
+    }
+
+    fn render_continuation_line(&self, output: &mut String, line: usize) -> fmt::Result {
+        let line_text = self.line_text(line).unwrap_or("");
+        let gutter_width = line.to_string().len();
+
+        writeln!(
+            output,
+            "{:>width$} | {}",
+            line,
+            line_text,
+            width = gutter_width
+        )?;
+        writeln!(output, "{:>width$} | ^^^", "", width = gutter_width)
     }
 
     fn line_bounds(&self, line: usize) -> Option<(usize, usize)> {
@@ -141,9 +234,10 @@ impl SourceText {
         let line_text = line_text.trim_end_matches('\r');
         let visible_line_end = line_start + line_text.len();
 
-        let start_column = self.location(span.start).map_or(1, |loc| loc.column);
-        let highlight_end = span.end.min(visible_line_end);
-        let end_column = if highlight_end > span.start {
+        let highlight_start = span.start.max(line_start).min(visible_line_end);
+        let highlight_end = span.end.max(highlight_start).min(visible_line_end);
+        let start_column = self.location(highlight_start).map_or(1, |loc| loc.column);
+        let end_column = if highlight_end > highlight_start {
             self.location(highlight_end)
                 .map_or(start_column + 1, |loc| loc.column)
         } else {
@@ -155,11 +249,6 @@ impl SourceText {
             " ".repeat(start_column.saturating_sub(1)),
             "^".repeat(end_column.saturating_sub(start_column).max(1))
         )
-    }
-
-    fn span_crosses_line(&self, span: Span, line: usize) -> bool {
-        self.line_bounds(line)
-            .is_some_and(|(_, line_end)| span.end > line_end)
     }
 }
 
@@ -351,5 +440,27 @@ mod tests {
         assert!(rendered.contains("--> 1:5"));
         assert!(rendered.contains("1 | f[1 2]"));
         assert!(rendered.contains("^"));
+    }
+
+    #[test]
+    fn source_diagnostic_renders_related_opening_span() {
+        let diagnostic = parse_with_diagnostics("f[\n  1").unwrap_err();
+        let rendered = diagnostic.render();
+
+        assert!(rendered.contains("opening `[` for expected `]`"));
+        assert!(rendered.contains("1 | f["));
+        assert!(rendered.contains("2 |   1"));
+    }
+
+    #[test]
+    fn source_diagnostic_renders_multiline_spans() {
+        let source = SourceText::new("\"a\nb\nc");
+        let rendered = source.render_syntax_error(&SyntaxError::UnterminatedString {
+            span: Span::new(0, 6),
+        });
+
+        assert!(rendered.contains("span begins here"));
+        assert!(rendered.contains("span ends here"));
+        assert!(rendered.contains("span covers lines 1 through 3"));
     }
 }

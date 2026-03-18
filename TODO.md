@@ -65,7 +65,8 @@ This roadmap now uses two levels of detail:
 
 - [x] Introduce a formatter prototype API that works from parsed syntax rather than runtime lowering
 - [x] Preserve outer trivia in the prototype formatter while canonicalizing the core expression layout
-- [ ] Decide how interior comments and trivia attachment should participate in future formatting passes
+- [x] Preserve and reattach interior comments/trivia across the current token-stream formatting subset
+- [ ] Decide how indentation and line breaking should interact with interior comments in future formatting passes
 - [ ] Add formatter regression coverage for more complex nested forms and comment placement
 
 ### `rum-syntax`: Comments and Surface Expansion
@@ -172,6 +173,7 @@ This roadmap now uses two levels of detail:
 - [x] Render parser diagnostics with line/column/snippet output in REPL debug and interactive paths
 - [x] Add a formatting debug command such as `:format`
 - [x] Add a lowering debug command such as `:lower`
+- [x] Add CLI parse/format entrypoints that reuse the source-aware syntax tooling
 - [ ] Decide whether trace viewing belongs in the REPL and, if so, add a minimal command flow for it
 
 ### REPL and CLI Regression Coverage

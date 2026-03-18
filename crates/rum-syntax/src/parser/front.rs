@@ -102,8 +102,9 @@ impl Parser {
         let mut expr = self.parse_primary()?;
 
         loop {
-            if self.consume_lbracket().is_some() {
-                let (args, close_span) = self.parse_expression_list(TokenKind::RBracket, "]")?;
+            if let Some(open_span) = self.consume_lbracket() {
+                let (args, close_span) =
+                    self.parse_expression_list(TokenKind::RBracket, "]", open_span, "[")?;
                 let span = expr.span().merge(close_span);
                 expr = SyntaxExpr::call(expr, args, span);
                 continue;
@@ -154,12 +155,13 @@ impl Parser {
             TokenKind::LParen => {
                 self.bump();
                 let expr = self.parse_function_expr()?;
-                let close_span = self.expect_rparen()?;
+                let close_span = self.expect_rparen(token.span, "(")?;
                 Ok(expr.with_span(token.span.merge(close_span)))
             }
             TokenKind::LBrace => {
                 self.bump();
-                let (items, close_span) = self.parse_expression_list(TokenKind::RBrace, "}")?;
+                let (items, close_span) =
+                    self.parse_expression_list(TokenKind::RBrace, "}", token.span, "{")?;
                 Ok(SyntaxExpr::list(items, token.span.merge(close_span)))
             }
             TokenKind::End => Err(SyntaxError::Incomplete {

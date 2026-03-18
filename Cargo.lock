@@ -62,6 +62,7 @@ dependencies = [
  "rum-repl",
  "rum-runtime",
  "rum-stdlib",
+ "rum-syntax",
 ]
 
 [[package]]

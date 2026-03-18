@@ -265,13 +265,16 @@ fn reports_incomplete_call_input() {
 
     assert_eq!(
         err,
-        SyntaxError::Incomplete {
+        SyntaxError::UnclosedDelimiter {
             expected: "]",
             span: Span::point(3),
+            opening_span: Span::new(1, 2),
+            opening: "[",
         }
     );
     assert!(err.is_incomplete());
     assert_eq!(err.span(), Some(Span::point(3)));
+    assert_eq!(err.related_span(), Some(Span::new(1, 2)));
 }
 
 #[test]
@@ -280,9 +283,11 @@ fn reports_incomplete_group_input() {
 
     assert_eq!(
         err,
-        SyntaxError::Incomplete {
+        SyntaxError::UnclosedDelimiter {
             expected: ")",
             span: Span::point(6),
+            opening_span: Span::new(0, 1),
+            opening: "(",
         }
     );
 }

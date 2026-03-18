@@ -15,6 +15,13 @@ pub enum SyntaxError {
     },
     #[error("incomplete input: expected {expected} at bytes {span}")]
     Incomplete { expected: &'static str, span: Span },
+    #[error("incomplete input: expected {expected} at bytes {span}")]
+    UnclosedDelimiter {
+        expected: &'static str,
+        span: Span,
+        opening_span: Span,
+        opening: &'static str,
+    },
     #[error("trailing input at bytes {span}")]
     TrailingInput { span: Span },
     #[error("unexpected character `{found}` at bytes {span}")]
@@ -27,7 +34,10 @@ pub enum SyntaxError {
 
 impl SyntaxError {
     pub fn is_incomplete(&self) -> bool {
-        matches!(self, Self::Incomplete { .. })
+        matches!(
+            self,
+            Self::Incomplete { .. } | Self::UnclosedDelimiter { .. }
+        )
     }
 
     pub fn span(&self) -> Option<Span> {
@@ -36,10 +46,27 @@ impl SyntaxError {
             Self::Expected { span, .. }
             | Self::UnexpectedToken { span, .. }
             | Self::Incomplete { span, .. }
+            | Self::UnclosedDelimiter { span, .. }
             | Self::TrailingInput { span }
             | Self::UnexpectedCharacter { span, .. }
             | Self::UnterminatedString { span }
             | Self::UnterminatedComment { span } => Some(*span),
+        }
+    }
+
+    pub fn related_span(&self) -> Option<Span> {
+        match self {
+            Self::UnclosedDelimiter { opening_span, .. } => Some(*opening_span),
+            _ => None,
+        }
+    }
+
+    pub fn related_label(&self) -> Option<String> {
+        match self {
+            Self::UnclosedDelimiter {
+                opening, expected, ..
+            } => Some(format!("opening `{opening}` for expected `{expected}`")),
+            _ => None,
         }
     }
 }
