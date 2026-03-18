@@ -1,0 +1,10 @@
+use super::*;
+
+#[test]
+fn installs_identity_builtin() {
+    let mut session = Session::new();
+    install_core(&mut session);
+
+    let info = session.inspect("Identity").unwrap();
+    assert!(info.is_builtin);
+}

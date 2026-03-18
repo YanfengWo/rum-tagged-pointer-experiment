@@ -1,0 +1,194 @@
+use super::*;
+
+impl Parser {
+    pub(super) fn parse_slot(&mut self) -> Result<SyntaxExpr, SyntaxError> {
+        self.bump();
+        let is_sequence = matches!(self.current().kind, TokenKind::Hash);
+
+        if is_sequence {
+            self.bump();
+        }
+
+        let spec = match (&self.current().kind, is_sequence) {
+            (TokenKind::Integer(value), false) => {
+                let value = value.clone();
+                self.bump();
+                SlotSpec::Number(value)
+            }
+            (TokenKind::Symbol(value), false) => {
+                let value = value.clone();
+                self.bump();
+                SlotSpec::Named(value)
+            }
+            (TokenKind::Integer(value), true) => {
+                let value = value.clone();
+                self.bump();
+                SlotSpec::SequenceNumber(value)
+            }
+            _ if is_sequence => SlotSpec::Sequence,
+            _ => SlotSpec::Anonymous,
+        };
+
+        Ok(SyntaxExpr::Slot(spec))
+    }
+
+    pub(super) fn parse_blank_tail(&mut self, kind: BlankKind) -> Result<SyntaxExpr, SyntaxError> {
+        let head = if self.token_starts_primary() {
+            Some(Box::new(self.parse_postfix_expr()?))
+        } else {
+            None
+        };
+
+        Ok(SyntaxExpr::Blank { kind, head })
+    }
+
+    pub(super) fn parse_expression_list(
+        &mut self,
+        end_kind: TokenKind,
+        end_label: &'static str,
+    ) -> Result<Vec<SyntaxExpr>, SyntaxError> {
+        let mut items = Vec::new();
+
+        if self.current().kind == end_kind {
+            self.bump();
+            return Ok(items);
+        }
+
+        loop {
+            items.push(self.parse_function_expr()?);
+
+            if self.current().kind == end_kind {
+                self.bump();
+                return Ok(items);
+            }
+
+            self.expect_comma()?;
+
+            if self.current().kind == end_kind {
+                return Err(SyntaxError::Expected {
+                    expected: "expression",
+                    offset: self.current().start,
+                });
+            }
+
+            if self.at_end() {
+                return Err(SyntaxError::Expected {
+                    expected: end_label,
+                    offset: self.current().start,
+                });
+            }
+        }
+    }
+
+    pub(super) fn token_starts_primary(&self) -> bool {
+        matches!(
+            self.current().kind,
+            TokenKind::Integer(_)
+                | TokenKind::String(_)
+                | TokenKind::Symbol(_)
+                | TokenKind::Hash
+                | TokenKind::Underscore
+                | TokenKind::DoubleUnderscore
+                | TokenKind::TripleUnderscore
+                | TokenKind::LParen
+                | TokenKind::LBrace
+        )
+    }
+
+    pub(super) fn current_binary_op(&self) -> Option<BinaryOp> {
+        match self.current().kind {
+            TokenKind::MessageName => Some(BinaryOp::MessageName),
+            TokenKind::TagSet => Some(BinaryOp::TagSet),
+            TokenKind::Set => Some(BinaryOp::Set),
+            TokenKind::SetDelayed => Some(BinaryOp::SetDelayed),
+            TokenKind::ReplaceAll => Some(BinaryOp::ReplaceAll),
+            TokenKind::ReplaceRepeated => Some(BinaryOp::ReplaceRepeated),
+            TokenKind::Arrow => Some(BinaryOp::Rule),
+            TokenKind::RuleDelayed => Some(BinaryOp::RuleDelayed),
+            TokenKind::Condition => Some(BinaryOp::Condition),
+            TokenKind::Plus => Some(BinaryOp::Add),
+            TokenKind::Minus => Some(BinaryOp::Subtract),
+            TokenKind::Star => Some(BinaryOp::Times),
+            TokenKind::Slash => Some(BinaryOp::Divide),
+            TokenKind::Caret => Some(BinaryOp::Power),
+            _ => None,
+        }
+    }
+
+    pub(super) fn consume_ampersand(&mut self) -> bool {
+        if matches!(self.current().kind, TokenKind::Ampersand) {
+            self.bump();
+            true
+        } else {
+            false
+        }
+    }
+
+    pub(super) fn consume_unset(&mut self) -> bool {
+        if matches!(self.current().kind, TokenKind::Unset) {
+            self.bump();
+            true
+        } else {
+            false
+        }
+    }
+
+    pub(super) fn consume_lbracket(&mut self) -> bool {
+        if matches!(self.current().kind, TokenKind::LBracket) {
+            self.bump();
+            true
+        } else {
+            false
+        }
+    }
+
+    pub(super) fn consume_blank_kind(&mut self) -> Option<BlankKind> {
+        let kind = match self.current().kind {
+            TokenKind::Underscore => BlankKind::Blank,
+            TokenKind::DoubleUnderscore => BlankKind::BlankSequence,
+            TokenKind::TripleUnderscore => BlankKind::BlankNullSequence,
+            _ => return None,
+        };
+
+        self.bump();
+        Some(kind)
+    }
+
+    pub(super) fn expect_comma(&mut self) -> Result<(), SyntaxError> {
+        if matches!(self.current().kind, TokenKind::Comma) {
+            self.bump();
+            Ok(())
+        } else {
+            Err(SyntaxError::Expected {
+                expected: ",",
+                offset: self.current().start,
+            })
+        }
+    }
+
+    pub(super) fn expect_rparen(&mut self) -> Result<(), SyntaxError> {
+        if matches!(self.current().kind, TokenKind::RParen) {
+            self.bump();
+            Ok(())
+        } else {
+            Err(SyntaxError::Expected {
+                expected: ")",
+                offset: self.current().start,
+            })
+        }
+    }
+
+    pub(super) fn current(&self) -> &Token {
+        &self.tokens[self.index]
+    }
+
+    pub(super) fn bump(&mut self) {
+        if !self.at_end() {
+            self.index += 1;
+        }
+    }
+
+    pub(super) fn at_end(&self) -> bool {
+        matches!(self.current().kind, TokenKind::End)
+    }
+}

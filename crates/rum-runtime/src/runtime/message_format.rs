@@ -1,0 +1,154 @@
+use super::*;
+
+pub(super) fn symbol_from_raw_name(raw: &str) -> Symbol {
+    if let Some((context, name)) = split_symbol_name(raw) {
+        Symbol::new(context, name)
+    } else {
+        Symbol::from_name(raw)
+    }
+}
+
+pub(super) fn split_symbol_name(raw: &str) -> Option<(&str, &str)> {
+    raw.rfind('`')
+        .map(|split_at| (&raw[..=split_at], &raw[split_at + 1..]))
+}
+
+pub(super) fn message_name_expr(symbol: Symbol, tag: impl Into<String>) -> Expr {
+    Expr::call(
+        system_expr("MessageName"),
+        vec![Expr::Atom(Atom::Symbol(symbol)), Expr::string(tag.into())],
+    )
+}
+
+pub(super) fn runtime_message_name_expr(message: RuntimeMessage) -> Expr {
+    message_name_expr(symbol_from_raw_name(&message.symbol), message.tag)
+}
+
+pub(super) fn format_message_template(
+    template: &str,
+    key: &MessageNameKey,
+    args: &[Expr],
+) -> String {
+    let mut rendered = String::with_capacity(template.len());
+    let mut cursor = 0;
+
+    while let Some(start_rel) = template[cursor..].find('`') {
+        let start = cursor + start_rel;
+        rendered.push_str(&template[cursor..start]);
+        let token_start = start + 1;
+
+        let Some(end_rel) = template[token_start..].find('`') else {
+            rendered.push_str(&template[start..]);
+            return rendered;
+        };
+
+        let end = token_start + end_rel;
+        let token = &template[token_start..end];
+
+        if let Some(formatted) = format_message_placeholder(token, key, args) {
+            rendered.push_str(&formatted);
+        } else {
+            rendered.push_str(&template[start..=end]);
+        }
+
+        cursor = end + 1;
+    }
+
+    rendered.push_str(&template[cursor..]);
+    rendered
+}
+
+pub(super) fn format_message_placeholder(
+    token: &str,
+    key: &MessageNameKey,
+    args: &[Expr],
+) -> Option<String> {
+    let (base, spec) = token
+        .split_once(':')
+        .map_or((token, None), |(base, spec)| (base, Some(spec)));
+
+    match base {
+        "0" => format_message_name_placeholder(key, spec),
+        "*" => format_message_star_placeholder(args, spec),
+        _ => {
+            let index = base.parse::<usize>().ok()?;
+            let arg = index.checked_sub(1).and_then(|index| args.get(index))?;
+            format_message_arg_placeholder(arg, spec)
+        }
+    }
+}
+
+pub(super) fn format_message_name_placeholder(
+    key: &MessageNameKey,
+    spec: Option<&str>,
+) -> Option<String> {
+    match spec {
+        None => Some(message_name_expr(key.symbol.clone(), key.tag.clone()).to_string()),
+        Some("symbol") => Some(key.symbol.to_string()),
+        Some("tag") => Some(key.tag.clone()),
+        Some("fullsymbol") => Some(key.symbol.fully_qualified_name()),
+        _ => None,
+    }
+}
+
+pub(super) fn format_message_star_placeholder(args: &[Expr], spec: Option<&str>) -> Option<String> {
+    match spec {
+        None => Some(
+            args.iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", "),
+        ),
+        Some("count") => Some(args.len().to_string()),
+        Some("quoted") => Some(
+            args.iter()
+                .map(|arg| quote_message_fragment(&arg.to_string()))
+                .collect::<Vec<_>>()
+                .join(", "),
+        ),
+        _ => None,
+    }
+}
+
+pub(super) fn format_message_arg_placeholder(arg: &Expr, spec: Option<&str>) -> Option<String> {
+    match spec {
+        None => Some(arg.to_string()),
+        Some("head") => Some(message_arg_head(arg)),
+        Some("name") => Some(expr_as_symbol(arg)?.name().to_string()),
+        Some("context") => Some(expr_as_symbol(arg)?.context().to_string()),
+        Some("full") => Some(expr_as_symbol(arg)?.fully_qualified_name()),
+        Some("quoted") => Some(quote_message_fragment(&arg.to_string())),
+        Some("count") => match arg {
+            Expr::Call { args, .. } => Some(args.len().to_string()),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+pub(super) fn message_arg_head(expr: &Expr) -> String {
+    match expr {
+        Expr::Atom(Atom::Integer(_)) => "Integer".to_string(),
+        Expr::Atom(Atom::String(_)) => "String".to_string(),
+        Expr::Atom(Atom::Symbol(_)) => "Symbol".to_string(),
+        Expr::Call { head, .. } => head.to_string(),
+    }
+}
+
+pub(super) fn quote_message_fragment(text: &str) -> String {
+    let mut quoted = String::with_capacity(text.len() + 2);
+    quoted.push('"');
+
+    for ch in text.chars() {
+        match ch {
+            '\\' => quoted.push_str("\\\\"),
+            '"' => quoted.push_str("\\\""),
+            '\n' => quoted.push_str("\\n"),
+            '\t' => quoted.push_str("\\t"),
+            other => quoted.push(other),
+        }
+    }
+
+    quoted.push('"');
+    quoted
+}

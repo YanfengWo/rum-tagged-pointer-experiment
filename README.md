@@ -32,14 +32,33 @@ The repository is organized as a Cargo workspace:
 - `rum-repl`: interactive shell layer
 - `rum-cli`: command-line entry point
 
+## Documentation
+
+- [Architecture](./ARCHITECTURE.md)
+- [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md)
+- [Code Organization Guidelines](./docs/code-organization-guidelines.md)
+- [Roadmap](./TODO.md)
+
 ## Current status
 
-This bootstrap commit focuses on project structure and a thin executable slice:
+`rum` is no longer just a bootstrap echo runtime. The current workspace now has
+a usable early core-language slice:
 
-- exact integer atoms are already represented with `num_bigint::BigInt`
-- the parser can currently handle integers, symbols, strings, and simple calls
-- evaluation is intentionally minimal and mostly echoes lowered expressions
-- the REPL is present now so we can evolve the runtime interactively
+- exact integer atoms via `num_bigint::BigInt`
+- parser and lowering support for rules, patterns, slots, message names,
+  tagging, and core call syntax
+- session-based evaluation with ownvalues, upvalues, downvalues, and subvalues
+- hold-aware control flow with `Hold*`, `Evaluate`, `Sequence`, `If`, `Which`,
+  `Function`, `With`, `Module`, and `Block`
+- contexts, package loading, and inspection builtins such as `BeginPackage`,
+  `Needs`, `Get`, and `FindFile`
+- runtime messages, `Check`, `Quiet`, tracing, resource limits, `Thread`, and
+  `Listable`
+- a working REPL with `:inspect` and `:messages`
+
+The source tree has also been reorganized around real Rust module boundaries so
+that maintenance and incremental compilation stay practical as the runtime
+grows.
 
 ## Getting started
 
@@ -59,16 +78,17 @@ Useful REPL commands:
 
 - `:help`
 - `:inspect <symbol>`
+- `:messages <symbol>`
 - `:quit`
 
 ## Next steps
 
-The immediate roadmap is to move from the bootstrap runtime toward real
-Mathematica-style core semantics:
+The next stage is to deepen tooling and tighten the remaining semantic gaps
+rather than to "make evaluation exist" from scratch:
 
-1. richer parser coverage for patterns, rules, and operators
-2. definition tables and evaluation control
-3. pattern matching and rule application
-4. scoping constructs and contexts
-5. better REPL ergonomics and eventual Jupyter integration via a separate
-   adapter crate
+1. richer spans, diagnostics, recovery, and comment handling in `rum-syntax`
+2. better REPL ergonomics such as multiline input, history, completion, and
+   debug views
+3. continued evaluator cleanup based on the runtime audit and TODO roadmap
+4. host-facing API stabilization and later Jupyter integration through a
+   separate adapter crate

@@ -10,6 +10,7 @@ This roadmap now uses two levels of detail:
 
 - [x] Set up the Git-managed Rust workspace, baseline docs, and exact integer support
 - [x] Keep the workspace compiling and passing tests as the project evolves
+- [x] Establish source-organization guidelines and convert major `include!`-style roots into real module boundaries
 
 ### Phase 1: Syntax Frontend
 
@@ -23,18 +24,18 @@ This roadmap now uses two levels of detail:
 
 ### Phase 3: Definitions and Evaluation
 
-- [x] Implement sessions, contexts, package loading, ownvalues/downvalues, hold-aware evaluation, and core assignment semantics
+- [x] Implement sessions, contexts, package loading, ownvalues/upvalues/downvalues/subvalues, hold-aware evaluation, and core assignment semantics
 - [x] Add first-class definition inspection for ownvalues, downvalues, and message definitions
 - [ ] Tighten evaluation semantics where the current interpreter is still ad hoc
 
 ### Phase 4: Rules and Pattern Matching
 
-- [x] Implement interpreter-based matching with `Rule`, `RuleDelayed`, `MatchQ`, `Cases`, `ReplaceAll`, `ReplaceRepeated`, conditions, and sequence blanks
-- [ ] Add a dedicated matcher IR, better rule inspection, and more complete traversal controls
+- [x] Implement matcher-IR-backed matching with `Rule`, `RuleDelayed`, `MatchQ`, `Cases`, `ReplaceAll`, `ReplaceRepeated`, conditions, sequence blanks, and rule inspection
+- [ ] Extend the matcher language and traversal semantics beyond the current early subset
 
 ### Phase 5: Scoping and Runtime Control
 
-- [x] Implement `Hold*`, `Evaluate`, `Sequence`, `If`, `Which`, `Function`, `With`, `Module`, `Block`, tracing, and resource limits
+- [x] Implement `Hold*`, `Evaluate`, `Sequence`, `If`, `Which`, `Function`, `With`, `Module`, `Block`, tracing, resource limits, and the current attribute/threading subset
 
 ### Phase 6: REPL and Developer Tooling
 

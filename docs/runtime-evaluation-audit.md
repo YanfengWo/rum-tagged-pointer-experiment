@@ -7,6 +7,12 @@ intended Mathematica-style core language.
 It is an engineering audit of the current implementation, not a promise that
 every listed behavior is final.
 
+This document focuses on evaluator semantics. Source-organization and module
+boundary rules are tracked separately in
+`code-organization-guidelines.md`; the runtime and parser roots are now
+split along real Rust module boundaries rather than `include!`-style text
+aggregation.
+
 ## Current Evaluation Pipeline
 
 At a high level, `Session::eval_text` does:

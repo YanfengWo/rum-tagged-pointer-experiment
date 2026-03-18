@@ -63,16 +63,21 @@ Owns stateful execution:
 
 - lowering from syntax into core values
 - evaluation sessions
-- builtin registration
+- staged call dispatch and evaluation sequencing
+- definition storage and application
+- contexts and package loading
+- runtime messages, tracing, and resource limits
 - symbol inspection
-- later: rule dispatch, attributes, tracing, resource limits, contexts, and
-  scoping semantics
+- scoping semantics
+
+This crate now contains the evaluator core rather than only bootstrap scaffolding.
 
 ### `rum-stdlib`
 
-Owns builtin installation for the core language. This crate should register
-names and later provide the executable implementations for core builtins such
-as `Set`, `SetDelayed`, `MatchQ`, `ReplaceAll`, `Module`, and `Hold*`.
+Owns builtin installation metadata for the core language. This crate centralizes
+the builtin inventory, summaries, attributes, and handler registration used by
+the runtime. It should stay thin and declarative rather than turning into a
+second evaluator.
 
 ### `rum-repl`
 
@@ -96,19 +101,38 @@ Owns process-level concerns:
 - REPL startup
 - process exit codes
 
-## Execution model direction
+## Current execution model
 
-The bootstrap code only implements a tiny echo-style evaluator, but the target
-architecture is:
+The current architecture is no longer a tiny bootstrap evaluator. At a high
+level it now does:
 
 1. parse source into syntax expressions
 2. lower syntax into runtime `Expr` values
-3. evaluate according to symbol definitions and attributes
-4. apply rewrite rules and scoping semantics
-5. expose traceable results to CLI, REPL, or host APIs
+3. evaluate to a fixed point under recursion, cycle, and pass limits
+4. run a staged call-dispatch pipeline covering special forms, argument
+   preparation, list threading, definitions, builtins, and pure functions
+5. expose values, runtime messages, and optional trace data to CLI, REPL, or
+   host APIs
 
 The current implemented evaluation sequence and the remaining semantic gaps are
 tracked in `docs/runtime-evaluation-audit.md`.
+
+## Code organization
+
+As the runtime grows, source organization is treated as an architectural concern
+rather than cleanup trivia.
+
+The current direction is:
+
+- split code along real Rust module boundaries instead of `include!`-style text
+  concatenation
+- keep files small enough to review comfortably, with roughly `10k` characters
+  as a maintenance target
+- prefer boundaries that help both readability and incremental compilation
+- avoid over-splitting into tiny files when the compile-time gain is negligible
+
+The detailed rule set for this lives in
+`docs/code-organization-guidelines.md`.
 
 ## Numeric model
 
@@ -119,7 +143,7 @@ language fidelity and practical rule/DSL scenarios such as:
 - exact arithmetic in financial or operational logic
 - deterministic serialization and comparison
 
-The current bootstrap uses `num_bigint::BigInt` in `rum-core::Atom::Integer`.
+The current runtime uses `num_bigint::BigInt` in `rum-core::Atom::Integer`.
 This should remain the foundation as the numeric tower expands later.
 
 ## REPL and Jupyter boundary
@@ -142,8 +166,9 @@ translate protocol messages into those session-oriented runtime calls.
 
 ## Near-term roadmap
 
-1. expand the parser to cover operators, rules, patterns, and placeholders
-2. add proper symbol tables and definition storage
-3. implement pattern matching and rule application
-4. add evaluation control and scoping constructs
-5. improve the REPL with history, completion, and inspection
+1. improve syntax spans, diagnostics, recovery, and comment handling
+2. continue reducing ad hoc evaluator behavior through clearer metadata-driven
+   sequencing
+3. improve the REPL with multiline input, history, completion, and debug
+   surfaces
+4. stabilize host-facing session APIs for embedding and future Jupyter work

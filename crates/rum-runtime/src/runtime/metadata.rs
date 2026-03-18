@@ -1,0 +1,376 @@
+use super::*;
+
+pub(super) const DEFAULT_REPLACE_REPEATED_LIMIT: usize = 256;
+pub(super) const DEFAULT_RECURSION_LIMIT: usize = 256;
+pub(super) const DEFAULT_EVALUATION_PASS_LIMIT: usize = 256;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HoldAttribute {
+    None,
+    HoldFirst,
+    HoldRest,
+    HoldAll,
+}
+
+impl HoldAttribute {
+    pub(super) fn holds_argument(self, index: usize) -> bool {
+        match self {
+            Self::None => false,
+            Self::HoldFirst => index == 0,
+            Self::HoldRest => index > 0,
+            Self::HoldAll => true,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Attribute {
+    HoldAllComplete,
+    HoldAll,
+    HoldFirst,
+    HoldRest,
+    SequenceHold,
+    Listable,
+    Orderless,
+    Flat,
+    OneIdentity,
+}
+
+impl Attribute {
+    pub(super) const fn bit(self) -> u16 {
+        match self {
+            Self::HoldAllComplete => 1 << 0,
+            Self::HoldAll => 1 << 1,
+            Self::HoldFirst => 1 << 2,
+            Self::HoldRest => 1 << 3,
+            Self::SequenceHold => 1 << 4,
+            Self::Listable => 1 << 5,
+            Self::Orderless => 1 << 6,
+            Self::Flat => 1 << 7,
+            Self::OneIdentity => 1 << 8,
+        }
+    }
+
+    pub(super) fn symbol_name(self) -> &'static str {
+        match self {
+            Self::HoldAllComplete => "HoldAllComplete",
+            Self::HoldAll => "HoldAll",
+            Self::HoldFirst => "HoldFirst",
+            Self::HoldRest => "HoldRest",
+            Self::SequenceHold => "SequenceHold",
+            Self::Listable => "Listable",
+            Self::Orderless => "Orderless",
+            Self::Flat => "Flat",
+            Self::OneIdentity => "OneIdentity",
+        }
+    }
+
+    pub(super) fn from_expr(expr: &Expr) -> Option<Self> {
+        match expr {
+            Expr::Atom(Atom::Symbol(symbol)) if symbol.context() == SYSTEM_CONTEXT => {
+                Self::from_name(symbol.name())
+            }
+            Expr::Atom(Atom::String(name)) => Self::from_name(name),
+            _ => None,
+        }
+    }
+
+    pub(super) fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "HoldAllComplete" => Some(Self::HoldAllComplete),
+            "HoldAll" => Some(Self::HoldAll),
+            "HoldFirst" => Some(Self::HoldFirst),
+            "HoldRest" => Some(Self::HoldRest),
+            "SequenceHold" => Some(Self::SequenceHold),
+            "Listable" => Some(Self::Listable),
+            "Orderless" => Some(Self::Orderless),
+            "Flat" => Some(Self::Flat),
+            "OneIdentity" => Some(Self::OneIdentity),
+            _ => None,
+        }
+    }
+
+    pub(super) fn expr(self) -> Expr {
+        system_expr(self.symbol_name())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct AttributeSet {
+    bits: u16,
+}
+
+impl AttributeSet {
+    pub const fn empty() -> Self {
+        Self { bits: 0 }
+    }
+
+    pub const fn from_attribute(attribute: Attribute) -> Self {
+        Self {
+            bits: attribute.bit(),
+        }
+    }
+
+    pub const fn from_hold(hold: HoldAttribute) -> Self {
+        match hold {
+            HoldAttribute::None => Self::empty(),
+            HoldAttribute::HoldFirst => Self::from_attribute(Attribute::HoldFirst),
+            HoldAttribute::HoldRest => Self::from_attribute(Attribute::HoldRest),
+            HoldAttribute::HoldAll => Self::from_attribute(Attribute::HoldAll),
+        }
+    }
+
+    pub const fn with(self, attribute: Attribute) -> Self {
+        Self {
+            bits: self.bits | attribute.bit(),
+        }
+    }
+
+    pub(super) fn contains(self, attribute: Attribute) -> bool {
+        self.bits & attribute.bit() != 0
+    }
+
+    pub(super) fn insert(&mut self, attribute: Attribute) {
+        self.bits |= attribute.bit();
+    }
+
+    pub(super) fn remove(&mut self, attribute: Attribute) {
+        self.bits &= !attribute.bit();
+    }
+
+    pub(super) fn is_empty(self) -> bool {
+        self.bits == 0
+    }
+
+    pub(super) fn len(self) -> usize {
+        self.attributes().len()
+    }
+
+    pub(super) fn attributes(self) -> Vec<Attribute> {
+        ALL_ATTRIBUTES
+            .iter()
+            .copied()
+            .filter(|attribute| self.contains(*attribute))
+            .collect()
+    }
+
+    pub(super) fn hold_attribute(self) -> HoldAttribute {
+        let holds_first = self.contains(Attribute::HoldFirst);
+        let holds_rest = self.contains(Attribute::HoldRest);
+
+        if self.contains(Attribute::HoldAllComplete)
+            || self.contains(Attribute::HoldAll)
+            || (holds_first && holds_rest)
+        {
+            HoldAttribute::HoldAll
+        } else if holds_first {
+            HoldAttribute::HoldFirst
+        } else if holds_rest {
+            HoldAttribute::HoldRest
+        } else {
+            HoldAttribute::None
+        }
+    }
+
+    pub(super) fn sequence_hold(self) -> bool {
+        self.contains(Attribute::HoldAllComplete) || self.contains(Attribute::SequenceHold)
+    }
+
+    pub(super) fn blocks_evaluate_override(self) -> bool {
+        self.contains(Attribute::HoldAllComplete)
+    }
+
+    pub(super) fn expr(self) -> Expr {
+        Expr::call(
+            system_expr("List"),
+            self.attributes()
+                .into_iter()
+                .map(Attribute::expr)
+                .collect::<Vec<_>>(),
+        )
+    }
+}
+
+pub(super) const ALL_ATTRIBUTES: [Attribute; 9] = [
+    Attribute::HoldAllComplete,
+    Attribute::HoldAll,
+    Attribute::HoldFirst,
+    Attribute::HoldRest,
+    Attribute::SequenceHold,
+    Attribute::Listable,
+    Attribute::Orderless,
+    Attribute::Flat,
+    Attribute::OneIdentity,
+];
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BuiltinDispatch {
+    None,
+    SpecialForm,
+    Ordinary,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BuiltinHandler {
+    Identity,
+    Set,
+    SetDelayed,
+    TagSet,
+    TagSetDelayed,
+    TagUnset,
+    Rule,
+    RuleDelayed,
+    MatchQ,
+    Cases,
+    Module,
+    Block,
+    ReplaceAll,
+    ReplaceRepeated,
+    FindFile,
+    Get,
+    Needs,
+    Context,
+    Begin,
+    End,
+    BeginPackage,
+    EndPackage,
+    Message,
+    MessageName,
+    Messages,
+    MessageDefinitions,
+    MessageTags,
+    OwnValues,
+    UpValues,
+    DownValues,
+    SubValues,
+    Attributes,
+    SetAttributes,
+    ClearAttributes,
+    Unset,
+    Clear,
+    ClearAll,
+    NormalizeRules,
+    Check,
+    Quiet,
+    If,
+    Which,
+    With,
+    HoldLiteral,
+    Unevaluated,
+    ReleaseHold,
+    Evaluate,
+    Sequence,
+    Thread,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BuiltinSpec {
+    pub name: &'static str,
+    pub summary: &'static str,
+    pub attributes: AttributeSet,
+    pub dispatch: BuiltinDispatch,
+    pub handler: Option<BuiltinHandler>,
+}
+
+impl BuiltinSpec {
+    pub const fn new(name: &'static str, summary: &'static str) -> Self {
+        Self {
+            name,
+            summary,
+            attributes: AttributeSet::empty(),
+            dispatch: BuiltinDispatch::None,
+            handler: None,
+        }
+    }
+
+    pub const fn with_hold(name: &'static str, summary: &'static str, hold: HoldAttribute) -> Self {
+        Self {
+            name,
+            summary,
+            attributes: AttributeSet::from_hold(hold),
+            dispatch: BuiltinDispatch::None,
+            handler: None,
+        }
+    }
+
+    pub const fn with_attributes(
+        name: &'static str,
+        summary: &'static str,
+        attributes: AttributeSet,
+    ) -> Self {
+        Self {
+            name,
+            summary,
+            attributes,
+            dispatch: BuiltinDispatch::None,
+            handler: None,
+        }
+    }
+
+    pub const fn special(
+        name: &'static str,
+        summary: &'static str,
+        handler: BuiltinHandler,
+    ) -> Self {
+        Self {
+            name,
+            summary,
+            attributes: AttributeSet::empty(),
+            dispatch: BuiltinDispatch::SpecialForm,
+            handler: Some(handler),
+        }
+    }
+
+    pub const fn ordinary(
+        name: &'static str,
+        summary: &'static str,
+        handler: BuiltinHandler,
+    ) -> Self {
+        Self {
+            name,
+            summary,
+            attributes: AttributeSet::empty(),
+            dispatch: BuiltinDispatch::Ordinary,
+            handler: Some(handler),
+        }
+    }
+
+    pub const fn ordinary_with_hold(
+        name: &'static str,
+        summary: &'static str,
+        hold: HoldAttribute,
+        handler: BuiltinHandler,
+    ) -> Self {
+        Self {
+            name,
+            summary,
+            attributes: AttributeSet::from_hold(hold),
+            dispatch: BuiltinDispatch::Ordinary,
+            handler: Some(handler),
+        }
+    }
+
+    pub const fn ordinary_with_attributes(
+        name: &'static str,
+        summary: &'static str,
+        attributes: AttributeSet,
+        handler: BuiltinHandler,
+    ) -> Self {
+        Self {
+            name,
+            summary,
+            attributes,
+            dispatch: BuiltinDispatch::Ordinary,
+            handler: Some(handler),
+        }
+    }
+
+    pub(super) fn with_fallback_dispatch(mut self, fallback: Self) -> Self {
+        if self.dispatch == BuiltinDispatch::None {
+            self.dispatch = fallback.dispatch;
+        }
+
+        if self.handler.is_none() {
+            self.handler = fallback.handler;
+        }
+
+        self
+    }
+}
