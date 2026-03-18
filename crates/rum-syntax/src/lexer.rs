@@ -1,52 +1,16 @@
 use crate::error::SyntaxError;
 use crate::span::Span;
+use crate::trivia::{LexedSource, SyntaxToken, SyntaxTokenKind, TriviaPiece};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct Token {
-    pub(crate) kind: TokenKind,
-    pub(crate) span: Span,
-}
+pub(crate) type Token = SyntaxToken;
+pub(crate) type TokenKind = SyntaxTokenKind;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum TokenKind {
-    Integer(String),
-    String(String),
-    Symbol(String),
-    LBracket,
-    RBracket,
-    LBrace,
-    RBrace,
-    LParen,
-    RParen,
-    Comma,
-    Plus,
-    Minus,
-    Star,
-    Slash,
-    Caret,
-    MessageName,
-    TagSet,
-    Arrow,
-    RuleDelayed,
-    Set,
-    Unset,
-    SetDelayed,
-    ReplaceAll,
-    ReplaceRepeated,
-    Condition,
-    Ampersand,
-    Hash,
-    Underscore,
-    DoubleUnderscore,
-    TripleUnderscore,
-    End,
-}
-
-pub(crate) fn lex(input: &str) -> Result<Vec<Token>, SyntaxError> {
+pub fn lex_with_trivia(input: &str) -> Result<LexedSource, SyntaxError> {
     let mut lexer = Lexer::new(input);
     let mut tokens = Vec::new();
+    let mut trivia = Vec::new();
 
-    while let Some(token) = lexer.next_token()? {
+    while let Some(token) = lexer.next_token(&mut trivia)? {
         let is_end = matches!(token.kind, TokenKind::End);
         tokens.push(token);
 
@@ -55,7 +19,11 @@ pub(crate) fn lex(input: &str) -> Result<Vec<Token>, SyntaxError> {
         }
     }
 
-    Ok(tokens)
+    Ok(LexedSource::new(tokens, trivia))
+}
+
+pub(crate) fn lex(input: &str) -> Result<Vec<Token>, SyntaxError> {
+    Ok(lex_with_trivia(input)?.into_tokens())
 }
 
 struct Lexer<'a> {
@@ -68,14 +36,15 @@ impl<'a> Lexer<'a> {
         Self { input, offset: 0 }
     }
 
-    fn next_token(&mut self) -> Result<Option<Token>, SyntaxError> {
-        self.skip_trivia()?;
+    fn next_token(&mut self, trivia: &mut Vec<TriviaPiece>) -> Result<Option<Token>, SyntaxError> {
+        let leading_trivia = self.collect_trivia(trivia)?;
 
         if self.is_eof() {
-            return Ok(Some(Token {
-                kind: TokenKind::End,
-                span: Span::point(self.offset),
-            }));
+            return Ok(Some(Token::new(
+                TokenKind::End,
+                Span::point(self.offset),
+                leading_trivia,
+            )));
         }
 
         let start = self.offset;
@@ -155,10 +124,11 @@ impl<'a> Lexer<'a> {
             }
         };
 
-        Ok(Some(Token {
-            kind: token,
-            span: Span::new(start, self.offset),
-        }))
+        Ok(Some(Token::new(
+            token,
+            Span::new(start, self.offset),
+            leading_trivia,
+        )))
     }
 
     fn lex_integer(&mut self) -> TokenKind {
@@ -245,26 +215,37 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn skip_trivia(&mut self) -> Result<(), SyntaxError> {
+    fn collect_trivia(
+        &mut self,
+        trivia: &mut Vec<TriviaPiece>,
+    ) -> Result<std::ops::Range<usize>, SyntaxError> {
+        let start = trivia.len();
+
         loop {
-            let start = self.offset;
+            let whitespace_start = self.offset;
 
             while matches!(self.peek_char(), Some(ch) if ch.is_whitespace()) {
                 self.bump_char();
             }
 
+            if self.offset > whitespace_start {
+                let span = Span::new(whitespace_start, self.offset);
+                trivia.push(TriviaPiece::whitespace(
+                    span,
+                    self.input[whitespace_start..self.offset].to_string(),
+                ));
+            }
+
             if self.input[self.offset..].starts_with("(*") {
-                self.skip_comment()?;
+                trivia.push(self.collect_comment()?);
                 continue;
             }
 
-            if self.offset == start {
-                return Ok(());
-            }
+            return Ok(start..trivia.len());
         }
     }
 
-    fn skip_comment(&mut self) -> Result<(), SyntaxError> {
+    fn collect_comment(&mut self) -> Result<TriviaPiece, SyntaxError> {
         let start = self.offset;
         self.offset += 2;
         let mut depth = 1usize;
@@ -281,7 +262,11 @@ impl<'a> Lexer<'a> {
                 depth -= 1;
 
                 if depth == 0 {
-                    return Ok(());
+                    let span = Span::new(start, self.offset);
+                    return Ok(TriviaPiece::comment(
+                        span,
+                        self.input[start..self.offset].to_string(),
+                    ));
                 }
 
                 continue;
@@ -321,6 +306,7 @@ fn is_symbol_continue(ch: char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::TriviaKind;
 
     #[test]
     fn lexes_multi_char_operators() {
@@ -423,5 +409,33 @@ mod tests {
         assert_eq!(tokens[0].span, Span::new(0, 1));
         assert_eq!(tokens[1].span, Span::new(12, 13));
         assert_eq!(tokens[2].span, Span::new(13, 14));
+    }
+
+    #[test]
+    fn preserves_comments_and_whitespace_as_leading_trivia() {
+        let lexed = lex_with_trivia("f[ (* a *) x, y]").unwrap();
+        let trivia = lexed.leading_trivia(2).unwrap();
+
+        assert_eq!(trivia.len(), 3);
+        assert_eq!(trivia[0].kind, TriviaKind::Whitespace);
+        assert_eq!(trivia[0].span, Span::new(2, 3));
+        assert_eq!(trivia[0].text, " ");
+        assert_eq!(trivia[1].kind, TriviaKind::Comment);
+        assert_eq!(trivia[1].span, Span::new(3, 10));
+        assert_eq!(trivia[1].text, "(* a *)");
+        assert_eq!(trivia[2].kind, TriviaKind::Whitespace);
+        assert_eq!(trivia[2].span, Span::new(10, 11));
+        assert_eq!(trivia[2].text, " ");
+    }
+
+    #[test]
+    fn preserves_trailing_trivia_on_end_token() {
+        let lexed = lex_with_trivia("x (* tail *)").unwrap();
+        let trivia = lexed.leading_trivia(1).unwrap();
+
+        assert_eq!(trivia.len(), 2);
+        assert_eq!(trivia[0].kind, TriviaKind::Whitespace);
+        assert_eq!(trivia[1].kind, TriviaKind::Comment);
+        assert_eq!(trivia[1].text, "(* tail *)");
     }
 }

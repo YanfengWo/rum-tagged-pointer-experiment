@@ -71,7 +71,7 @@ a usable early core-language slice:
 
 - exact integer atoms via `num_bigint::BigInt`
 - parser and lowering support for rules, patterns, slots, message names,
-  tagging, Wolfram-style comments, and core call syntax
+  tagging, Wolfram-style comments, preserved lexer trivia, and core call syntax
 - session-based evaluation with ownvalues, upvalues, downvalues, and subvalues
 - hold-aware control flow with `Hold*`, `Evaluate`, `Sequence`, `If`, `Which`,
   `Function`, `With`, `Module`, and `Block`

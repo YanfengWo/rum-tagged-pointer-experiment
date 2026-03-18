@@ -63,7 +63,7 @@ This roadmap now uses two levels of detail:
 
 - [x] Add Wolfram-style `(* ... *)` comment lexing
 - [x] Ensure comments can appear between tokens without changing parse results
-- [ ] Decide whether trivia should only be skipped or also preserved for future tooling
+- [x] Preserve whitespace/comment trivia in a structured lexer output for future tooling without disturbing the parser token stream
 - [x] Add tests for comments around operators, calls, and nested expressions
 - [ ] Audit the next operator set needed by the evaluator roadmap and prioritize them explicitly
 

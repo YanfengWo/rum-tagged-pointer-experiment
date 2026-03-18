@@ -1,0 +1,111 @@
+use std::ops::Range;
+
+use crate::Span;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SyntaxToken {
+    pub kind: SyntaxTokenKind,
+    pub span: Span,
+    pub leading_trivia: Range<usize>,
+}
+
+impl SyntaxToken {
+    pub fn new(kind: SyntaxTokenKind, span: Span, leading_trivia: Range<usize>) -> Self {
+        Self {
+            kind,
+            span,
+            leading_trivia,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SyntaxTokenKind {
+    Integer(String),
+    String(String),
+    Symbol(String),
+    LBracket,
+    RBracket,
+    LBrace,
+    RBrace,
+    LParen,
+    RParen,
+    Comma,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Caret,
+    MessageName,
+    TagSet,
+    Arrow,
+    RuleDelayed,
+    Set,
+    Unset,
+    SetDelayed,
+    ReplaceAll,
+    ReplaceRepeated,
+    Condition,
+    Ampersand,
+    Hash,
+    Underscore,
+    DoubleUnderscore,
+    TripleUnderscore,
+    End,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TriviaKind {
+    Whitespace,
+    Comment,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TriviaPiece {
+    pub kind: TriviaKind,
+    pub span: Span,
+    pub text: String,
+}
+
+impl TriviaPiece {
+    pub fn new(kind: TriviaKind, span: Span, text: String) -> Self {
+        Self { kind, span, text }
+    }
+
+    pub fn whitespace(span: Span, text: impl Into<String>) -> Self {
+        Self::new(TriviaKind::Whitespace, span, text.into())
+    }
+
+    pub fn comment(span: Span, text: impl Into<String>) -> Self {
+        Self::new(TriviaKind::Comment, span, text.into())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LexedSource {
+    tokens: Vec<SyntaxToken>,
+    trivia: Vec<TriviaPiece>,
+}
+
+impl LexedSource {
+    pub fn new(tokens: Vec<SyntaxToken>, trivia: Vec<TriviaPiece>) -> Self {
+        Self { tokens, trivia }
+    }
+
+    pub fn tokens(&self) -> &[SyntaxToken] {
+        &self.tokens
+    }
+
+    pub fn trivia(&self) -> &[TriviaPiece] {
+        &self.trivia
+    }
+
+    pub fn leading_trivia(&self, token_index: usize) -> Option<&[TriviaPiece]> {
+        let token = self.tokens.get(token_index)?;
+        Some(&self.trivia[token.leading_trivia.clone()])
+    }
+
+    pub fn into_tokens(self) -> Vec<SyntaxToken> {
+        self.tokens
+    }
+}
