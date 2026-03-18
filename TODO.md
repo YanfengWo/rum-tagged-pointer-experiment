@@ -61,10 +61,10 @@ This roadmap now uses two levels of detail:
 
 ### `rum-syntax`: Comments and Surface Expansion
 
-- [ ] Add Wolfram-style `(* ... *)` comment lexing
-- [ ] Ensure comments can appear between tokens without changing parse results
+- [x] Add Wolfram-style `(* ... *)` comment lexing
+- [x] Ensure comments can appear between tokens without changing parse results
 - [ ] Decide whether trivia should only be skipped or also preserved for future tooling
-- [ ] Add tests for comments around operators, calls, and nested expressions
+- [x] Add tests for comments around operators, calls, and nested expressions
 - [ ] Audit the next operator set needed by the evaluator roadmap and prioritize them explicitly
 
 ### `rum-core` and Lowering Cleanup
@@ -158,7 +158,7 @@ This roadmap now uses two levels of detail:
 - [x] Add a continuation prompt for multiline entry
 - [x] Add line history persistence
 - [x] Add symbol completion from builtins, active contexts, loaded packages, and user-defined symbols
-- [ ] Expand `:inspect` output with context, definition, and message-catalog details
+- [x] Expand `:inspect` output with context, definition, and message-catalog details
 - [x] Add a parse debug command such as `:parse`
 - [x] Add a lowering debug command such as `:lower`
 - [ ] Decide whether trace viewing belongs in the REPL and, if so, add a minimal command flow for it

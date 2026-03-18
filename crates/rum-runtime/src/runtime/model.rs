@@ -127,15 +127,19 @@ pub struct EvalOutcome {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SymbolInfo {
     pub qualified_name: String,
+    pub context: String,
+    pub display_name: String,
     pub summary: Option<String>,
     pub is_builtin: bool,
     pub attribute_count: usize,
+    pub attributes: Vec<String>,
     pub has_own_value: bool,
     pub has_delayed_value: bool,
     pub has_up_values: bool,
     pub has_down_values: bool,
     pub has_sub_values: bool,
     pub message_count: usize,
+    pub message_tags: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

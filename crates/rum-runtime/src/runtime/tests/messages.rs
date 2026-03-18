@@ -203,6 +203,7 @@ fn inspect_reports_message_definition_presence() {
 
     let info = session.inspect("f").unwrap();
     assert_eq!(info.message_count, 1);
+    assert_eq!(info.message_tags, vec!["argx".to_string()]);
 }
 
 #[test]

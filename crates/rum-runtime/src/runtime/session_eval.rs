@@ -8,11 +8,20 @@ impl Session {
         let builtin = self.builtin_spec_for_symbol(&symbol);
         let definition = self.definitions.get(&symbol);
         let attributes = self.attribute_set_for_symbol(&symbol);
-        let message_count = self
+        let message_tags = self
             .message_definitions
             .keys()
             .filter(|key| key.symbol == symbol)
-            .count();
+            .map(|key| key.tag.clone())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        let message_count = message_tags.len();
+        let attribute_names = attributes
+            .attributes()
+            .into_iter()
+            .map(|attribute| attribute.symbol_name().to_string())
+            .collect::<Vec<_>>();
 
         if builtin.is_none()
             && definition.is_none()
@@ -25,9 +34,12 @@ impl Session {
 
         Some(SymbolInfo {
             qualified_name: symbol.fully_qualified_name(),
+            context: symbol.context().to_string(),
+            display_name: symbol.to_string(),
             summary: builtin.map(|builtin| builtin.summary.to_string()),
             is_builtin: builtin.is_some() || is_known_system_symbol(&symbol),
             attribute_count: attributes.len(),
+            attributes: attribute_names,
             has_own_value: definition.and_then(|def| def.own_value.as_ref()).is_some(),
             has_delayed_value: definition
                 .and_then(|def| def.delayed_own_value.as_ref())
@@ -42,6 +54,7 @@ impl Session {
                 .map(|definition| !definition.sub_values.is_empty())
                 .unwrap_or(false),
             message_count,
+            message_tags,
         })
     }
 

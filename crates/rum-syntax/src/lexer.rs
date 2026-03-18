@@ -69,7 +69,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn next_token(&mut self) -> Result<Option<Token>, SyntaxError> {
-        self.skip_whitespace();
+        self.skip_trivia()?;
 
         if self.is_eof() {
             return Ok(Some(Token {
@@ -245,10 +245,54 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn skip_whitespace(&mut self) {
-        while matches!(self.peek_char(), Some(ch) if ch.is_whitespace()) {
+    fn skip_trivia(&mut self) -> Result<(), SyntaxError> {
+        loop {
+            let start = self.offset;
+
+            while matches!(self.peek_char(), Some(ch) if ch.is_whitespace()) {
+                self.bump_char();
+            }
+
+            if self.input[self.offset..].starts_with("(*") {
+                self.skip_comment()?;
+                continue;
+            }
+
+            if self.offset == start {
+                return Ok(());
+            }
+        }
+    }
+
+    fn skip_comment(&mut self) -> Result<(), SyntaxError> {
+        let start = self.offset;
+        self.offset += 2;
+        let mut depth = 1usize;
+
+        while !self.is_eof() {
+            if self.input[self.offset..].starts_with("(*") {
+                self.offset += 2;
+                depth += 1;
+                continue;
+            }
+
+            if self.input[self.offset..].starts_with("*)") {
+                self.offset += 2;
+                depth -= 1;
+
+                if depth == 0 {
+                    return Ok(());
+                }
+
+                continue;
+            }
+
             self.bump_char();
         }
+
+        Err(SyntaxError::UnterminatedComment {
+            span: Span::new(start, self.offset),
+        })
     }
 
     fn peek_char(&self) -> Option<char> {
@@ -334,6 +378,27 @@ mod tests {
     }
 
     #[test]
+    fn skips_comments_and_nested_comments_as_trivia() {
+        let tokens = lex("f[(* outer (* inner *) *)x, y]").unwrap();
+
+        assert!(matches!(&tokens[0].kind, TokenKind::Symbol(value) if value == "f"));
+        assert!(matches!(&tokens[2].kind, TokenKind::Symbol(value) if value == "x"));
+        assert!(matches!(&tokens[4].kind, TokenKind::Symbol(value) if value == "y"));
+    }
+
+    #[test]
+    fn reports_unterminated_nested_comment() {
+        let err = lex("f[(* outer (* inner *)").unwrap_err();
+
+        assert_eq!(
+            err,
+            SyntaxError::UnterminatedComment {
+                span: Span::new(2, 22),
+            }
+        );
+    }
+
+    #[test]
     fn lexes_replace_repeated_before_replace_all_prefix() {
         let tokens = lex("expr //. rule").unwrap();
 
@@ -349,5 +414,14 @@ mod tests {
         assert_eq!(tokens[2].span, Span::new(2, 3));
         assert_eq!(tokens[3].span, Span::new(3, 4));
         assert_eq!(tokens[4].span, Span::point(4));
+    }
+
+    #[test]
+    fn comments_do_not_shift_token_spans_for_following_tokens() {
+        let tokens = lex("x(*comment*)+y").unwrap();
+
+        assert_eq!(tokens[0].span, Span::new(0, 1));
+        assert_eq!(tokens[1].span, Span::new(12, 13));
+        assert_eq!(tokens[2].span, Span::new(13, 14));
     }
 }

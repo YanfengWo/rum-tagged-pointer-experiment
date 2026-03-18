@@ -23,6 +23,15 @@ fn parses_lists_and_nested_calls() {
 }
 
 #[test]
+fn parses_expressions_with_comments_between_tokens() {
+    let parsed = parse_expr("f[(* a *) x, y (* b *)]").unwrap();
+    assert_eq!(parsed.to_string(), "f[x, y]");
+
+    let nested = parse_expr("x (* outer (* inner *) *) + y").unwrap();
+    assert_eq!(nested.to_string(), "x + y");
+}
+
+#[test]
 fn parses_named_patterns() {
     let parsed = parse_expr("x_Integer").unwrap();
     assert_eq!(
@@ -297,8 +306,9 @@ fn reports_malformed_call_arguments_without_marking_input_incomplete() {
 
     assert_eq!(
         err,
-        SyntaxError::Expected {
+        SyntaxError::UnexpectedToken {
             expected: ",",
+            found: "integer".to_string(),
             span: Span::new(4, 5),
         }
     );
@@ -311,8 +321,9 @@ fn reports_malformed_list_items_without_marking_input_incomplete() {
 
     assert_eq!(
         err,
-        SyntaxError::Expected {
+        SyntaxError::UnexpectedToken {
             expected: "expression",
+            found: ",".to_string(),
             span: Span::new(3, 4),
         }
     );
@@ -338,12 +349,27 @@ fn reports_bare_pure_function_marker_as_hard_error() {
 
     assert_eq!(
         err,
-        SyntaxError::Expected {
+        SyntaxError::UnexpectedToken {
             expected: "expression",
+            found: "&".to_string(),
             span: Span::new(0, 1),
         }
     );
     assert!(!err.is_incomplete());
+}
+
+#[test]
+fn reports_unexpected_closing_delimiters_with_token_labels() {
+    let err = parse_expr(")").unwrap_err();
+
+    assert_eq!(
+        err,
+        SyntaxError::UnexpectedToken {
+            expected: "expression",
+            found: ")".to_string(),
+            span: Span::new(0, 1),
+        }
+    );
 }
 
 #[test]

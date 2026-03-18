@@ -56,6 +56,7 @@ fn repl_inspect_surfaces_message_definition_flags() {
 
     let rendered = String::from_utf8(output).unwrap();
     assert!(rendered.contains("[msg]"));
+    assert!(rendered.contains("messages[1]: argx"));
 }
 
 #[test]
@@ -70,6 +71,7 @@ fn repl_inspect_surfaces_attribute_flags() {
 
     let rendered = String::from_utf8(output).unwrap();
     assert!(rendered.contains("[attr]"));
+    assert!(rendered.contains("attributes[1]: HoldFirst"));
 }
 
 #[test]
@@ -84,6 +86,7 @@ fn repl_inspect_shows_definition_summaries() {
     repl.run(&mut session).unwrap();
 
     let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("context: Global`"));
     assert!(rendered.contains("own: x = 1"));
     assert!(rendered.contains("down[1]: f[Pattern[z, Blank[Integer]]] := z"));
 }

@@ -63,6 +63,8 @@ fn context_variables_and_builtin_inspection_reflect_session_contexts() {
 
     let info = session.inspect("Identity").unwrap();
     assert_eq!(info.qualified_name, "System`Identity");
+    assert_eq!(info.context, "System`");
+    assert_eq!(info.display_name, "Identity");
     assert!(info.is_builtin);
 }
 
@@ -116,6 +118,7 @@ fn attributes_reports_builtin_and_user_defined_attribute_sets() {
 
     let info = session.inspect("f").unwrap();
     assert_eq!(info.attribute_count, 1);
+    assert_eq!(info.attributes, vec!["HoldFirst".to_string()]);
 }
 
 #[test]
@@ -131,6 +134,7 @@ fn bare_symbols_search_context_path_before_current_context() {
 
     let info = session.inspect("local").unwrap();
     assert_eq!(info.qualified_name, "Rules`local");
+    assert_eq!(info.context, "Rules`");
     assert_eq!(
         session.eval_text("Rules`x").unwrap().value.to_string(),
         "20"

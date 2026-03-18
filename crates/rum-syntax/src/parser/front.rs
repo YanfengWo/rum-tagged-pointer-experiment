@@ -167,8 +167,9 @@ impl Parser {
                 expected: "expression",
                 span: token.span,
             }),
-            _ => Err(SyntaxError::Expected {
+            _ => Err(SyntaxError::UnexpectedToken {
                 expected: "expression",
+                found: self.current_token_label(),
                 span: token.span,
             }),
         }

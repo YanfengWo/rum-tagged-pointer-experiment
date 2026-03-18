@@ -7,6 +7,12 @@ pub enum SyntaxError {
     EmptyInput,
     #[error("expected {expected} at bytes {span}")]
     Expected { expected: &'static str, span: Span },
+    #[error("expected {expected}, found {found} at bytes {span}")]
+    UnexpectedToken {
+        expected: &'static str,
+        found: String,
+        span: Span,
+    },
     #[error("incomplete input: expected {expected} at bytes {span}")]
     Incomplete { expected: &'static str, span: Span },
     #[error("trailing input at bytes {span}")]
@@ -15,6 +21,8 @@ pub enum SyntaxError {
     UnexpectedCharacter { found: char, span: Span },
     #[error("unterminated string at bytes {span}")]
     UnterminatedString { span: Span },
+    #[error("unterminated comment at bytes {span}")]
+    UnterminatedComment { span: Span },
 }
 
 impl SyntaxError {
@@ -26,10 +34,12 @@ impl SyntaxError {
         match self {
             Self::EmptyInput => None,
             Self::Expected { span, .. }
+            | Self::UnexpectedToken { span, .. }
             | Self::Incomplete { span, .. }
             | Self::TrailingInput { span }
             | Self::UnexpectedCharacter { span, .. }
-            | Self::UnterminatedString { span } => Some(*span),
+            | Self::UnterminatedString { span }
+            | Self::UnterminatedComment { span } => Some(*span),
         }
     }
 }

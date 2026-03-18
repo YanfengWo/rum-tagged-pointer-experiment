@@ -360,6 +360,26 @@ where
                         }
                     )?;
 
+                    writeln!(self.output, "  context: {}", info.context)?;
+
+                    if !info.attributes.is_empty() {
+                        writeln!(
+                            self.output,
+                            "  attributes[{}]: {}",
+                            info.attributes.len(),
+                            info.attributes.join(", ")
+                        )?;
+                    }
+
+                    if !info.message_tags.is_empty() {
+                        writeln!(
+                            self.output,
+                            "  messages[{}]: {}",
+                            info.message_tags.len(),
+                            info.message_tags.join(", ")
+                        )?;
+                    }
+
                     if let Some(entries) = session.inspect_definition_catalog(name) {
                         let own_entries = entries
                             .iter()
