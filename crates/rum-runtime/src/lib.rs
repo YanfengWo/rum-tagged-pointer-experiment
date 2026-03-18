@@ -513,18 +513,53 @@ struct ContextFrame {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum CallResolutionStage {
+enum CallDispatchStage {
+    SpecialForm,
+    PrepareArguments,
+    Listable,
     UpValues,
     DownValues,
     SubValues,
-    Builtin,
+    OrdinaryBuiltin,
     Function,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct CallResolutionPlan {
+struct CallDispatchPlan {
     attributes: AttributeSet,
-    stages: Vec<CallResolutionStage>,
+    stages: Vec<CallDispatchStage>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct CallDispatchState {
+    raw_args: Vec<Expr>,
+    evaluated_args: Option<Vec<Expr>>,
+}
+
+impl CallDispatchState {
+    fn new(raw_args: Vec<Expr>) -> Self {
+        Self {
+            raw_args,
+            evaluated_args: None,
+        }
+    }
+
+    fn evaluated_args(&self) -> &[Expr] {
+        self.evaluated_args
+            .as_deref()
+            .expect("call arguments should be prepared before this stage")
+    }
+
+    fn into_final_args(self) -> Vec<Expr> {
+        self.evaluated_args.unwrap_or(self.raw_args)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum ListableDispatch {
+    NotApplicable,
+    Threaded(Expr),
+    Mismatch(Expr),
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -1852,36 +1887,18 @@ impl Session {
 
     fn evaluate_call(&mut self, head: Expr, args: Vec<Expr>) -> Result<Expr, EvalError> {
         let evaluated_head = self.evaluate(head)?;
-
-        if let Some(result) = self.try_evaluate_special_form(&evaluated_head, args.as_slice())? {
-            return Ok(result);
-        }
-
-        let plan = self.build_call_resolution_plan(&evaluated_head);
-        let mut evaluated_args = self.evaluate_call_args_with_attributes(plan.attributes, args)?;
-        evaluated_args = self.normalize_call_args_by_attributes(
-            &evaluated_head,
-            evaluated_args,
-            plan.attributes,
-        );
-
-        if let Some(threaded) = self.try_thread_listable_call(
-            &evaluated_head,
-            evaluated_args.as_slice(),
-            plan.attributes,
-        ) {
-            return self.evaluate(threaded);
-        }
+        let plan = self.build_call_dispatch_plan(&evaluated_head);
+        let mut state = CallDispatchState::new(args);
 
         for stage in plan.stages {
             if let Some(result) =
-                self.try_resolve_call_stage(stage, &evaluated_head, evaluated_args.as_slice())?
+                self.run_call_dispatch_stage(stage, &evaluated_head, plan.attributes, &mut state)?
             {
                 return Ok(result);
             }
         }
 
-        Ok(Expr::call(evaluated_head, evaluated_args))
+        Ok(Expr::call(evaluated_head, state.into_final_args()))
     }
 
     fn evaluate_call_args_with_attributes(
@@ -1921,37 +1938,132 @@ impl Session {
         Ok(evaluated_args)
     }
 
-    fn build_call_resolution_plan(&self, head: &Expr) -> CallResolutionPlan {
+    fn build_call_dispatch_plan(&self, head: &Expr) -> CallDispatchPlan {
         let attributes = self.attribute_set_for_head(head);
-        let mut stages = Vec::with_capacity(5);
+        let mut stages = Vec::with_capacity(8);
+
+        stages.extend([
+            CallDispatchStage::SpecialForm,
+            CallDispatchStage::PrepareArguments,
+            CallDispatchStage::Listable,
+        ]);
 
         if !attributes.contains(Attribute::HoldAllComplete) {
-            stages.push(CallResolutionStage::UpValues);
+            stages.push(CallDispatchStage::UpValues);
         }
 
         stages.extend([
-            CallResolutionStage::DownValues,
-            CallResolutionStage::SubValues,
-            CallResolutionStage::Builtin,
-            CallResolutionStage::Function,
+            CallDispatchStage::DownValues,
+            CallDispatchStage::SubValues,
+            CallDispatchStage::OrdinaryBuiltin,
+            CallDispatchStage::Function,
         ]);
 
-        CallResolutionPlan { attributes, stages }
+        CallDispatchPlan { attributes, stages }
     }
 
-    fn try_resolve_call_stage(
+    fn run_call_dispatch_stage(
         &mut self,
-        stage: CallResolutionStage,
+        stage: CallDispatchStage,
         head: &Expr,
-        args: &[Expr],
+        attributes: AttributeSet,
+        state: &mut CallDispatchState,
     ) -> Result<Option<Expr>, EvalError> {
         match stage {
-            CallResolutionStage::UpValues => self.try_apply_up_values(head, args),
-            CallResolutionStage::DownValues => self.try_apply_down_values(head, args),
-            CallResolutionStage::SubValues => self.try_apply_sub_values(head, args),
-            CallResolutionStage::Builtin => self.try_evaluate_non_held_builtin(head, args),
-            CallResolutionStage::Function => self.try_apply_function(head, args),
+            CallDispatchStage::SpecialForm => {
+                self.try_evaluate_special_form(head, state.raw_args.as_slice())
+            }
+            CallDispatchStage::PrepareArguments => {
+                let raw_args = std::mem::take(&mut state.raw_args);
+                let mut evaluated_args =
+                    self.evaluate_call_args_with_attributes(attributes, raw_args)?;
+                evaluated_args =
+                    self.normalize_call_args_by_attributes(head, evaluated_args, attributes);
+                state.evaluated_args = Some(evaluated_args);
+                Ok(None)
+            }
+            CallDispatchStage::Listable => {
+                match self.dispatch_listable_stage(head, state.evaluated_args(), attributes)? {
+                    ListableDispatch::NotApplicable => Ok(None),
+                    ListableDispatch::Threaded(threaded) => self.evaluate(threaded).map(Some),
+                    ListableDispatch::Mismatch(original_call) => Ok(Some(original_call)),
+                }
+            }
+            CallDispatchStage::UpValues => self.try_apply_up_values(head, state.evaluated_args()),
+            CallDispatchStage::DownValues => {
+                self.try_apply_down_values(head, state.evaluated_args())
+            }
+            CallDispatchStage::SubValues => self.try_apply_sub_values(head, state.evaluated_args()),
+            CallDispatchStage::OrdinaryBuiltin => {
+                self.try_evaluate_non_held_builtin(head, state.evaluated_args())
+            }
+            CallDispatchStage::Function => self.try_apply_function(head, state.evaluated_args()),
         }
+    }
+
+    fn dispatch_listable_stage(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+        attributes: AttributeSet,
+    ) -> Result<ListableDispatch, EvalError> {
+        if !attributes.contains(Attribute::Listable) {
+            return Ok(ListableDispatch::NotApplicable);
+        }
+
+        let mut target_len = None;
+        let mut list_lengths = Vec::new();
+
+        for arg in args {
+            let Some(items) = list_items(arg) else {
+                continue;
+            };
+
+            list_lengths.push(items.len());
+
+            match target_len {
+                Some(expected_len) if expected_len != items.len() => {
+                    self.push_message(
+                        "Thread",
+                        "tdlen",
+                        format!(
+                            "cannot thread `{}` over list arguments of lengths {}",
+                            head,
+                            format_list_lengths(&list_lengths)
+                        ),
+                    );
+                    return Ok(ListableDispatch::Mismatch(Expr::call(
+                        head.clone(),
+                        args.to_vec(),
+                    )));
+                }
+                Some(_) => {}
+                None => target_len = Some(items.len()),
+            }
+        }
+
+        let Some(target_len) = target_len else {
+            return Ok(ListableDispatch::NotApplicable);
+        };
+
+        let threaded = (0..target_len)
+            .map(|index| {
+                Expr::call(
+                    head.clone(),
+                    args.iter()
+                        .map(|arg| match list_items(arg) {
+                            Some(items) => items[index].clone(),
+                            None => arg.clone(),
+                        })
+                        .collect(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        Ok(ListableDispatch::Threaded(Expr::call(
+            system_expr("List"),
+            threaded,
+        )))
     }
 
     fn evaluate_held_argument(
@@ -1999,52 +2111,6 @@ impl Session {
         }
 
         normalized_args
-    }
-
-    fn try_thread_listable_call(
-        &self,
-        head: &Expr,
-        args: &[Expr],
-        attributes: AttributeSet,
-    ) -> Option<Expr> {
-        if !attributes.contains(Attribute::Listable) {
-            return None;
-        }
-
-        let mut target_len = None;
-        let mut has_list_arg = false;
-
-        for arg in args {
-            let Some(items) = list_items(arg) else {
-                continue;
-            };
-
-            has_list_arg = true;
-
-            match target_len {
-                Some(expected_len) if expected_len != items.len() => return None,
-                Some(_) => {}
-                None => target_len = Some(items.len()),
-            }
-        }
-
-        let target_len = target_len?;
-
-        let threaded = (0..target_len)
-            .map(|index| {
-                Expr::call(
-                    head.clone(),
-                    args.iter()
-                        .map(|arg| match list_items(arg) {
-                            Some(items) => items[index].clone(),
-                            None => arg.clone(),
-                        })
-                        .collect(),
-                )
-            })
-            .collect::<Vec<_>>();
-
-        has_list_arg.then(|| Expr::call(system_expr("List"), threaded))
     }
 
     fn try_evaluate_special_form(
@@ -6002,6 +6068,14 @@ fn list_items(expr: &Expr) -> Option<&[Expr]> {
     }
 }
 
+fn format_list_lengths(lengths: &[usize]) -> String {
+    lengths
+        .iter()
+        .map(|length| length.to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 fn flatten_flat_call_args(head: &Expr, args: Vec<Expr>) -> Vec<Expr> {
     let mut flattened = Vec::new();
 
@@ -6116,6 +6190,7 @@ fn is_known_system_symbol_name(name: &str) -> bool {
             | "TagSet"
             | "TagSetDelayed"
             | "TagUnset"
+            | "Thread"
             | "Times"
             | "True"
             | "Unevaluated"
@@ -9528,21 +9603,38 @@ mod tests {
             session.eval_text("f[{}, x]").unwrap().value.to_string(),
             "List[]"
         );
+        assert_eq!(
+            session
+                .eval_text("f[{{a, b}, {c, d}}, x]")
+                .unwrap()
+                .value
+                .to_string(),
+            "List[List[f[a, x], f[b, x]], List[f[c, x], f[d, x]]]"
+        );
     }
 
     #[test]
-    fn listable_leaves_mismatched_list_lengths_unevaluated() {
+    fn listable_mismatched_lengths_emit_thread_message_and_leave_call_unevaluated() {
         let mut session = Session::new();
 
         session.eval_text("SetAttributes[f, Listable]").unwrap();
 
+        let outcome = session.eval_text("f[{a, b}, {c}]").unwrap();
+
+        assert_eq!(outcome.value.to_string(), "f[List[a, b], List[c]]");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == "Thread" && message.tag == "tdlen")
+        );
         assert_eq!(
             session
-                .eval_text("f[{a, b}, {c}]")
+                .eval_text("Check[f[{a, b}, {c}], fallback, Thread]")
                 .unwrap()
                 .value
                 .to_string(),
-            "f[List[a, b], List[c]]"
+            "fallback"
         );
     }
 

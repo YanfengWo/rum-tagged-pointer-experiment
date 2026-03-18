@@ -111,6 +111,7 @@ This roadmap now uses two levels of detail:
 - [x] Roll back definitions, contexts, loaded packages, traces, and message state when `eval_file` / `Get` fail
 - [x] Add a fixed-point evaluation pass limit alongside recursion and `ReplaceRepeated` limits
 - [x] Continue tightening the remaining boundary between evaluation errors and language-level messages outside loader/script flows
+- [x] Refactor ordinary call evaluation around a staged dispatch model that covers special forms, argument preparation, list threading, definitions, builtins, and pure functions
 
 ### `rum-runtime`: Attribute and Definition Semantics
 
@@ -119,7 +120,8 @@ This roadmap now uses two levels of detail:
 - [x] Add `SequenceHold` and route argument preprocessing through attribute-aware sequence handling
 - [x] Add `HoldAllComplete` and make held-argument evaluation honor it
 - [x] Extend attribute-driven normalization and matching with `Orderless`, `Flat`, and `OneIdentity`
-- [x] Add first-pass `Listable` threading for user-defined symbols, pure functions, and builtin arithmetic heads
+- [x] Add recursive `Listable` threading for user-defined symbols, pure functions, and builtin arithmetic heads
+- [x] Emit `Thread::tdlen`-style runtime messages when `Listable` arguments cannot be threaded together
 - [x] Decide and document precedence among upvalues, downvalues, builtin dispatch, and future attribute-driven evaluation
 - [x] Add `/:` syntax and `TagSet` / `TagSetDelayed` lowering support
 - [x] Add `UpValues[symbol]` inspection and structured definition-catalog coverage

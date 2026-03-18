@@ -51,25 +51,28 @@ evaluation loop" model.
 Call evaluation currently follows this order:
 
 1. Evaluate the head.
-2. If the evaluated head is a system special form, run its dedicated handler on
-   the original arguments.
-3. Otherwise evaluate arguments according to the evaluated head's hold
+2. Run a staged call-dispatch plan that can inspect raw arguments, prepare
+   evaluated arguments, apply attribute-driven preprocessing, and then try
+   definitions, builtins, and pure functions in order.
+3. Special forms still see the original raw arguments.
+4. Ordinary calls evaluate arguments according to the evaluated head's hold
    attribute.
-4. Normalize ordinary calls with attribute-driven preprocessing such as
-   `Sequence`, `Flat`, `Orderless`, and first-pass `Listable` threading.
-5. Unless the head has `HoldAllComplete`, try upvalues attached to symbols that
+5. Ordinary-call preprocessing now handles `Sequence`, `Flat`, `Orderless`,
+   and recursive `Listable` threading with mismatch messages.
+6. Unless the head has `HoldAllComplete`, try upvalues attached to symbols that
    appear in the evaluated arguments.
-6. Try downvalues on the evaluated head plus evaluated arguments.
-7. Try subvalues keyed by the leftmost base symbol of a nested evaluated head.
-8. Try builtin dispatch for non-special system builtins.
-9. Try pure-function application.
-10. Reconstruct the call if nothing fires.
+7. Try downvalues on the evaluated head plus evaluated arguments.
+8. Try subvalues keyed by the leftmost base symbol of a nested evaluated head.
+9. Try builtin dispatch for non-special system builtins.
+10. Try pure-function application.
+11. Reconstruct the call if nothing fires.
 
 This gives the runtime a workable precedence order for the currently supported
 subset:
 
 - head evaluation happens before almost everything else
-- special forms get raw syntax-level arguments
+- special forms, argument preparation, ordinary builtins, definitions, and pure
+  functions now share one staged dispatch pipeline
 - hold-sensitive builtins get partially evaluated arguments
 - upvalues run before downvalues on ordinary calls, unless `HoldAllComplete`
   blocks them
@@ -131,7 +134,7 @@ good enough to build on:
 - head-first call evaluation
 - builtin hold handling for the implemented subset
 - attribute-driven call normalization for `Sequence`, `Flat`, `Orderless`, and
-  first-pass `Listable` threading
+  recursive `Listable` threading
 - `Evaluate` + `Sequence` interaction in held vs non-held positions
 - `OneIdentity`-aware matching for singleton-head patterns
 - upvalue application ahead of downvalues for ordinary calls
@@ -155,14 +158,14 @@ The remaining gaps fall into a few clear buckets.
 Missing or incomplete areas:
 
 - richer inspection and lifecycle coverage around user-defined attribute state
-- fuller `Listable` semantics beyond the current equal-length top-level
-  threading and scalar broadcast subset
+- fuller `Listable` semantics beyond the current recursive threading,
+  scalar-broadcast, and `Thread::tdlen` mismatch subset
 
 Practical impact:
 
 - matcher and evaluator normalization now cover a useful subset, including a
-  practical first pass of `Listable`, but not the broader Wolfram attribute
-  surface
+  practical recursive `Listable` implementation, but not the broader Wolfram
+  attribute surface
 - sequence behavior is much better aligned with the intended long-term language
   model than before, but still not exhaustive
 
@@ -175,8 +178,8 @@ yet model the wider definition lattice.
 Missing or incomplete areas:
 
 - broader tag-based definition attachment such as multi-owner tag propagation
-- further consolidation of special forms and builtin dispatch under reusable
-  evaluator metadata
+- more data-driven handler registration on top of the current staged dispatch
+  pipeline
 
 Practical impact:
 
@@ -185,8 +188,8 @@ Practical impact:
 - host-side DSL embedding still cannot rely on the full Wolfram definition
   lattice, especially where nested-head behavior must interact with future
   `UpValues` refinements and richer tag operations
-- the ordinary call path is now more declarative, but special-form placement is
-  still partly handwritten
+- the call path is now more uniform, but handler registration is still partly
+  handwritten
 
 ### 3. Held Evaluation Is Functional but Not Yet Rich
 
@@ -233,10 +236,11 @@ encoded directly in handlers rather than through a more general semantic model.
 
 Known gaps:
 
-- special forms vs held builtins are still split across separate dispatch paths
-- the ordinary-call precedence path is now explicit, but it has not yet been
-  generalized into one uniform dispatch model that also covers special forms
-- builtin metadata still does not drive all evaluator decisions
+- special forms and ordinary builtins now share one staged dispatch path, but
+  builtin metadata still does not drive all evaluator decisions
+- the dispatch stages are explicit, but handler registration is still hardcoded
+- future features can still accidentally lean on implicit ordering inside the
+  handwritten stage handlers
 
 Practical impact:
 
@@ -269,7 +273,8 @@ Practical impact:
 The cleanest next steps for `rum-runtime` are:
 
 1. keep consolidating evaluator metadata so special forms and ordinary builtins
-   share a less ad hoc dispatch model
+   sit on a more data-driven dispatch model instead of handwritten handler
+   registration
 2. extend tag-oriented lifecycle tools beyond `Unset` / `Clear` / `ClearAll`
    into richer multi-owner tag behavior
 3. extend the attribute table from the current
