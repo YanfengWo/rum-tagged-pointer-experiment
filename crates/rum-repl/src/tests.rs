@@ -46,6 +46,20 @@ fn repl_inspect_command_does_not_fall_through_to_evaluation() {
 }
 
 #[test]
+fn repl_bare_inspect_command_shows_usage_instead_of_evaluating() {
+    let input = Cursor::new(":inspect\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("! :inspect expects a symbol name"));
+    assert!(!rendered.contains("unexpected character"));
+}
+
+#[test]
 fn repl_inspect_surfaces_message_definition_flags() {
     let input = Cursor::new(":inspect f\n:quit\n");
     let mut output = Vec::new();

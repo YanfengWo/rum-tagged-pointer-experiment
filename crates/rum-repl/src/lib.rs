@@ -339,6 +339,10 @@ where
 
                 Ok(CommandAction::Handled)
             }
+            _ if line == ":inspect" => {
+                writeln!(self.output, "! :inspect expects a symbol name")?;
+                Ok(CommandAction::Handled)
+            }
             _ if line.starts_with(":inspect ") => {
                 let name = line.trim_start_matches(":inspect ").trim();
 

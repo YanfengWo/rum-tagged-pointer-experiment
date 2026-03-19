@@ -4,7 +4,8 @@ impl Parser {
     pub(super) fn parse_slot(&mut self) -> Result<SyntaxExpr, SyntaxError> {
         let start_span = self.bump();
         let mut end_span = start_span;
-        let is_sequence = matches!(self.current().kind, TokenKind::Hash);
+        let is_sequence = matches!(self.current().kind, TokenKind::Hash)
+            && self.current().leading_trivia.is_empty();
 
         if is_sequence {
             end_span = self.bump();

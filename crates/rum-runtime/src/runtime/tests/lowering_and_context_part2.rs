@@ -97,7 +97,7 @@ fn findfile_resolves_package_names_and_file_wrappers() {
             .unwrap()
             .value
             .to_string(),
-        format!("\"{}\"", file.display())
+        Expr::string(file.display().to_string()).to_string()
     );
     assert_eq!(
         session
@@ -105,7 +105,7 @@ fn findfile_resolves_package_names_and_file_wrappers() {
             .unwrap()
             .value
             .to_string(),
-        format!("\"{}\"", file.display())
+        Expr::string(file.display().to_string()).to_string()
     );
     assert_eq!(
         session

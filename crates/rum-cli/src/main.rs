@@ -79,6 +79,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             eval_file(&mut session, &path)?;
         }
         Some("--help") | Some("-h") => print_usage(),
+        Some(flag) if flag.starts_with("--") => {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("unknown flag `{flag}`"),
+            )));
+        }
         Some(path) => eval_file(&mut session, path)?,
     }
 
@@ -120,6 +126,7 @@ fn print_usage() {
     println!("rum [--format <expr>]");
     println!("rum [--eval <expr>]");
     println!("rum [--file <path>]");
+    println!("rum [--help]");
     println!("rum [<path>]");
     println!("rum");
 }

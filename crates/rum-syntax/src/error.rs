@@ -5,8 +5,6 @@ use thiserror::Error;
 pub enum SyntaxError {
     #[error("input is empty")]
     EmptyInput,
-    #[error("expected {expected} at bytes {span}")]
-    Expected { expected: &'static str, span: Span },
     #[error("expected {expected}, found {found} at bytes {span}")]
     UnexpectedToken {
         expected: &'static str,
@@ -43,8 +41,7 @@ impl SyntaxError {
     pub fn span(&self) -> Option<Span> {
         match self {
             Self::EmptyInput => None,
-            Self::Expected { span, .. }
-            | Self::UnexpectedToken { span, .. }
+            Self::UnexpectedToken { span, .. }
             | Self::Incomplete { span, .. }
             | Self::UnclosedDelimiter { span, .. }
             | Self::TrailingInput { span }

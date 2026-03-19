@@ -113,11 +113,16 @@ Format a single expression from the CLI:
 cmd /c "call ..\scripts\activate.cmd && cargo run -p rum-cli -- --format \"f[x(* note *)+y]\""
 ```
 
+The formatter API now supports configurable width through
+`FormatterOptions::line_width`; the CLI and REPL still use the default style.
+The current formatter rules and roadmap are documented in
+`docs/formatter-style.md`.
+
 Useful REPL commands:
 
 - `:help`
 - `:parse <expr>`  (shows syntax plus token/trivia debug output)
-- `:format <expr>`  (prototype canonical formatter)
+- `:format <expr>`  (prototype canonical formatter; see `docs/formatter-style.md`)
 - `:lower <expr>`
 - `:complete <prefix>`
 - `:history [N]`
@@ -130,7 +135,8 @@ Useful REPL commands:
 The next stage is to deepen tooling and tighten the remaining semantic gaps
 rather than to "make evaluation exist" from scratch:
 
-1. deeper formatter semantics and richer multi-span diagnostics in `rum-syntax`
+1. formatter stabilization, richer multi-span diagnostics, and the later
+   document-IR pretty-printer migration in `rum-syntax`
 2. better REPL ergonomics such as trace-oriented debug views
 3. continued evaluator cleanup based on the runtime audit and TODO roadmap
 4. host-facing API stabilization and later Jupyter integration through a

@@ -146,6 +146,23 @@ fn parses_slots_and_pure_functions() {
 }
 
 #[test]
+fn does_not_merge_slots_across_trivia_into_a_sequence_slot() {
+    assert_eq!(
+        parse_expr("# # &"),
+        Err(SyntaxError::TrailingInput {
+            span: Span::new(2, 3),
+        })
+    );
+
+    assert_eq!(
+        parse_expr("#(* gap *)# &"),
+        Err(SyntaxError::TrailingInput {
+            span: Span::new(10, 11),
+        })
+    );
+}
+
+#[test]
 fn parses_prefix_minus_with_power_precedence() {
     let parsed = parse_expr("-x^2").unwrap();
     assert_eq!(parsed.to_string(), "-x ^ 2");

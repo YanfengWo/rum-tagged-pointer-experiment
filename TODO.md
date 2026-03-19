@@ -66,8 +66,11 @@ This roadmap now uses two levels of detail:
 - [x] Introduce a formatter prototype API that works from parsed syntax rather than runtime lowering
 - [x] Preserve outer trivia in the prototype formatter while canonicalizing the core expression layout
 - [x] Preserve and reattach interior comments/trivia across the current token-stream formatting subset
-- [ ] Decide how indentation and line breaking should interact with interior comments in future formatting passes
-- [ ] Add formatter regression coverage for more complex nested forms and comment placement
+- [x] Decide how indentation and line breaking should interact with interior comments in the current formatter passes
+- [x] Add formatter regression coverage for more complex nested forms, chains, and comment placement
+- [x] Expand `FormatterOptions` with configurable width control for API callers
+- [x] Add idempotence coverage for a representative formatter regression corpus
+- [ ] Replace the current token-stream layout-hint engine with a document-IR pretty-printer while preserving trivia-aware output
 
 ### `rum-syntax`: Comments and Surface Expansion
 

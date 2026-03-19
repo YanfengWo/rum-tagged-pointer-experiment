@@ -49,7 +49,7 @@ fn path_builtin_reflects_package_search_roots() {
 
     assert_eq!(
         session.eval_text("$Path").unwrap().value.to_string(),
-        format!("List[\"{}\"]", dir.path().display())
+        format!("List[{}]", Expr::string(dir.path().display().to_string()))
     );
 }
 

@@ -66,10 +66,28 @@ impl fmt::Display for Atom {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Integer(value) => write!(f, "{value}"),
-            Self::String(value) => write!(f, "\"{value}\""),
+            Self::String(value) => write_escaped_string(f, value),
             Self::Symbol(symbol) => write!(f, "{symbol}"),
         }
     }
+}
+
+fn write_escaped_string(f: &mut fmt::Formatter<'_>, value: &str) -> fmt::Result {
+    f.write_str("\"")?;
+
+    for ch in value.chars() {
+        match ch {
+            '"' => f.write_str("\\\"")?,
+            '\\' => f.write_str("\\\\")?,
+            '\n' => f.write_str("\\n")?,
+            '\r' => f.write_str("\\r")?,
+            '\t' => f.write_str("\\t")?,
+            other if other.is_control() => write!(f, "\\u{{{:X}}}", other as u32)?,
+            other => write!(f, "{other}")?,
+        }
+    }
+
+    f.write_str("\"")
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -185,5 +203,11 @@ mod tests {
         );
 
         assert_eq!(expr.to_string(), "f::argx");
+    }
+
+    #[test]
+    fn displays_string_atoms_with_escaped_special_characters() {
+        let expr = Expr::string("he said \"hi\"\n\\");
+        assert_eq!(expr.to_string(), "\"he said \\\"hi\\\"\\n\\\\\"");
     }
 }
