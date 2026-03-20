@@ -20,64 +20,18 @@ impl Session {
             return Ok(self.invalid_call_with_arg_range("Cases", args, 2, 4));
         }
 
-        let target = self.evaluate(args[0].clone())?;
-        let spec = self.normalize_cases_spec(&args[1])?;
-        let traversal = match args {
-            [_, _] => CasesTraversalConfig {
-                levels: CasesLevelSpec::all(),
-                include_heads: false,
-            },
-            [_, _, third] => {
-                let resolved_third = self.evaluate(third.clone())?;
-
-                if let Some(include_heads) = parse_cases_heads_option(&resolved_third) {
-                    CasesTraversalConfig {
-                        levels: CasesLevelSpec::all(),
-                        include_heads,
-                    }
-                } else if let Some(levels) = parse_cases_level_spec(&resolved_third) {
-                    CasesTraversalConfig {
-                        levels,
-                        include_heads: false,
-                    }
-                } else {
-                    return Ok(self.invalid_call_with_arg_form(
-                        "Cases",
-                        args,
-                        "expected a non-negative level spec or Heads -> True/False as the third argument",
-                    ));
-                }
+        let call_args = args.to_vec();
+        let target_result = self.evaluate(args[0].clone());
+        let target = self.suspend_with_frame(target_result, {
+            let spec_expr = args[1].clone();
+            let option_exprs = args[2..].to_vec();
+            let call_args = call_args.clone();
+            move |session, target| {
+                session.resume_cases_after_target(target, spec_expr, option_exprs, call_args)
             }
-            [_, _, third, fourth] => {
-                let resolved_third = self.evaluate(third.clone())?;
-                let Some(levels) = parse_cases_level_spec(&resolved_third) else {
-                    return Ok(self.invalid_call_with_arg_form(
-                        "Cases",
-                        args,
-                        "expected a non-negative level spec as the third argument",
-                    ));
-                };
-                let resolved_fourth = self.evaluate(fourth.clone())?;
-                let Some(include_heads) = parse_cases_heads_option(&resolved_fourth) else {
-                    return Ok(self.invalid_call_with_arg_form(
-                        "Cases",
-                        args,
-                        "expected a Heads -> True/False option as the fourth argument",
-                    ));
-                };
+        })?;
 
-                CasesTraversalConfig {
-                    levels,
-                    include_heads,
-                }
-            }
-            _ => unreachable!(),
-        };
-        let mut matches = Vec::new();
-
-        self.collect_cases(&target, &spec, traversal, 0, &mut matches)?;
-
-        Ok(Expr::call(system_expr("List"), matches))
+        self.resume_cases_after_target(target, args[1].clone(), args[2..].to_vec(), call_args)
     }
 
     pub(super) fn eval_replace_all(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -121,76 +75,299 @@ impl Session {
         Ok(self.normalize_match_expr(&normalized))
     }
 
-    pub(super) fn normalize_cases_spec(&mut self, expr: &Expr) -> Result<CasesSpec, EvalError> {
-        let resolved = match expr {
-            Expr::Atom(Atom::Symbol(_)) => self.evaluate(expr.clone())?,
-            Expr::Call { head, .. }
-                if is_system_symbol_name(head, "Rule")
-                    || is_system_symbol_name(head, "RuleDelayed") =>
+    fn resolve_cases_spec_expr(&mut self, expr: Expr) -> Result<Expr, EvalError> {
+        match expr {
+            Expr::Atom(Atom::Symbol(_)) => self.evaluate(expr),
+            Expr::Call { ref head, .. }
+                if is_system_symbol_name(&head, "Rule")
+                    || is_system_symbol_name(&head, "RuleDelayed") =>
             {
-                self.evaluate(expr.clone())?
+                self.evaluate(expr)
             }
-            _ => expr.clone(),
-        };
+            other => Ok(other),
+        }
+    }
 
-        Ok(match self.compile_rewrite_rule_for_matching(&resolved) {
+    fn compile_cases_spec_from_resolved(&self, resolved: Expr) -> CasesSpec {
+        match self.compile_rewrite_rule_for_matching(&resolved) {
             Some(rule) => CasesSpec::Rule(rule),
             None => CasesSpec::Pattern(resolved),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn normalize_cases_spec(&mut self, expr: &Expr) -> Result<CasesSpec, EvalError> {
+        let resolved = self.resolve_cases_spec_expr(expr.clone())?;
+        Ok(self.compile_cases_spec_from_resolved(resolved))
+    }
+
+    fn resume_cases_after_target(
+        &mut self,
+        target: Expr,
+        spec_expr: Expr,
+        option_exprs: Vec<Expr>,
+        call_args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let spec_result = self.resolve_cases_spec_expr(spec_expr.clone());
+        let resolved_spec = self.suspend_with_frame(spec_result, {
+            let target = target.clone();
+            let option_exprs = option_exprs.clone();
+            let call_args = call_args.clone();
+            move |session, resolved_spec| {
+                session.resume_cases_after_resolved_spec(
+                    target,
+                    resolved_spec,
+                    option_exprs,
+                    call_args,
+                )
+            }
+        })?;
+
+        self.resume_cases_after_resolved_spec(target, resolved_spec, option_exprs, call_args)
+    }
+
+    fn resume_cases_after_resolved_spec(
+        &mut self,
+        target: Expr,
+        resolved_spec: Expr,
+        option_exprs: Vec<Expr>,
+        call_args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let spec = self.compile_cases_spec_from_resolved(resolved_spec);
+
+        match option_exprs.as_slice() {
+            [] => self.finish_cases_with_traversal(
+                target,
+                spec,
+                CasesTraversalConfig {
+                    levels: CasesLevelSpec::all(),
+                    include_heads: false,
+                },
+            ),
+            [third] => {
+                let third_result = self.evaluate(third.clone());
+                let resolved_third = self.suspend_with_frame(third_result, {
+                    let target = target.clone();
+                    let spec = spec.clone();
+                    let call_args = call_args.clone();
+                    move |session, resolved_third| {
+                        session.resume_cases_after_third(target, spec, resolved_third, call_args)
+                    }
+                })?;
+
+                self.resume_cases_after_third(target, spec, resolved_third, call_args)
+            }
+            [third, fourth] => {
+                let third_result = self.evaluate(third.clone());
+                let resolved_third = self.suspend_with_frame(third_result, {
+                    let target = target.clone();
+                    let spec = spec.clone();
+                    let fourth = fourth.clone();
+                    let call_args = call_args.clone();
+                    move |session, resolved_third| {
+                        session.resume_cases_after_third_and_fourth(
+                            target,
+                            spec,
+                            resolved_third,
+                            fourth,
+                            call_args,
+                        )
+                    }
+                })?;
+
+                self.resume_cases_after_third_and_fourth(
+                    target,
+                    spec,
+                    resolved_third,
+                    fourth.clone(),
+                    call_args,
+                )
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    fn resume_cases_after_third(
+        &mut self,
+        target: Expr,
+        spec: CasesSpec,
+        resolved_third: Expr,
+        call_args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let traversal = if let Some(include_heads) = parse_cases_heads_option(&resolved_third) {
+            CasesTraversalConfig {
+                levels: CasesLevelSpec::all(),
+                include_heads,
+            }
+        } else if let Some(levels) = parse_cases_level_spec(&resolved_third) {
+            CasesTraversalConfig {
+                levels,
+                include_heads: false,
+            }
+        } else {
+            return Ok(self.invalid_call_with_arg_form(
+                "Cases",
+                &call_args,
+                "expected a non-negative level spec or Heads -> True/False as the third argument",
+            ));
+        };
+
+        self.finish_cases_with_traversal(target, spec, traversal)
+    }
+
+    fn resume_cases_after_third_and_fourth(
+        &mut self,
+        target: Expr,
+        spec: CasesSpec,
+        resolved_third: Expr,
+        fourth: Expr,
+        call_args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let Some(levels) = parse_cases_level_spec(&resolved_third) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "Cases",
+                &call_args,
+                "expected a non-negative level spec as the third argument",
+            ));
+        };
+
+        let fourth_result = self.evaluate(fourth);
+        let resolved_fourth = self.suspend_with_frame(fourth_result, {
+            let target = target.clone();
+            let spec = spec.clone();
+            let call_args = call_args.clone();
+            move |session, resolved_fourth| {
+                session.resume_cases_after_fourth(target, spec, levels, resolved_fourth, call_args)
+            }
+        })?;
+
+        self.resume_cases_after_fourth(target, spec, levels, resolved_fourth, call_args)
+    }
+
+    fn resume_cases_after_fourth(
+        &mut self,
+        target: Expr,
+        spec: CasesSpec,
+        levels: CasesLevelSpec,
+        resolved_fourth: Expr,
+        call_args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let Some(include_heads) = parse_cases_heads_option(&resolved_fourth) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "Cases",
+                &call_args,
+                "expected a Heads -> True/False option as the fourth argument",
+            ));
+        };
+
+        self.finish_cases_with_traversal(
+            target,
+            spec,
+            CasesTraversalConfig {
+                levels,
+                include_heads,
+            },
+        )
+    }
+
+    fn finish_cases_with_traversal(
+        &mut self,
+        target: Expr,
+        spec: CasesSpec,
+        traversal: CasesTraversalConfig,
+    ) -> Result<Expr, EvalError> {
+        let matches_result = self.collect_cases_owned(target, spec, traversal, 0);
+        self.drive_internal_value(matches_result, move |_, matches| {
+            Ok(Expr::call(system_expr("List"), matches))
         })
     }
 
-    pub(super) fn collect_cases(
+    fn collect_cases_owned(
         &mut self,
-        expr: &Expr,
-        spec: &CasesSpec,
+        expr: Expr,
+        spec: CasesSpec,
         traversal: CasesTraversalConfig,
         level: usize,
-        matches: &mut Vec<Expr>,
-    ) -> Result<(), EvalError> {
-        if traversal.levels.contains(level)
-            && let Some(case) = self.try_collect_case(expr, spec)?
-        {
-            matches.push(case);
-        }
+    ) -> Result<Vec<Expr>, EvalError> {
+        let case_result = if traversal.levels.contains(level) {
+            self.try_collect_case_owned(expr.clone(), spec.clone())
+        } else {
+            Ok(None)
+        };
 
-        if let Expr::Call { head, args } = expr {
-            if traversal.include_heads {
-                self.collect_cases(head, spec, traversal, level + 1, matches)?;
+        self.drive_internal_value(case_result, move |session, case| {
+            let mut matches = Vec::new();
+            if let Some(case) = case {
+                matches.push(case);
             }
 
-            for arg in args {
-                self.collect_cases(arg, spec, traversal, level + 1, matches)?;
-            }
-        }
+            match expr {
+                Expr::Atom(_) => Ok(matches),
+                Expr::Call { head, args } => {
+                    let mut children = Vec::new();
+                    if traversal.include_heads {
+                        children.push(*head);
+                    }
+                    children.extend(args);
 
-        Ok(())
+                    session.collect_cases_children(children, spec, traversal, level + 1, matches)
+                }
+            }
+        })
     }
 
-    pub(super) fn try_collect_case(
+    fn collect_cases_children(
         &mut self,
-        expr: &Expr,
-        spec: &CasesSpec,
+        children: Vec<Expr>,
+        spec: CasesSpec,
+        traversal: CasesTraversalConfig,
+        level: usize,
+        mut matches: Vec<Expr>,
+    ) -> Result<Vec<Expr>, EvalError> {
+        let Some((child, rest)) = children.split_first() else {
+            return Ok(matches);
+        };
+
+        let child_result = self.collect_cases_owned(child.clone(), spec.clone(), traversal, level);
+        let rest = rest.to_vec();
+
+        self.drive_internal_value(child_result, move |session, child_matches| {
+            matches.extend(child_matches);
+            session.collect_cases_children(rest, spec, traversal, level, matches)
+        })
+    }
+
+    fn try_collect_case_owned(
+        &mut self,
+        expr: Expr,
+        spec: CasesSpec,
     ) -> Result<Option<Expr>, EvalError> {
-        let mut bindings = BTreeMap::new();
-        let normalized_expr = self.normalize_match_expr(expr);
+        let normalized_expr = self.normalize_match_expr(&expr);
 
         match spec {
             CasesSpec::Pattern(pattern) => {
-                if self.match_expr(pattern, expr, &mut bindings)? {
-                    Ok(Some(expr.clone()))
-                } else {
-                    Ok(None)
-                }
+                let match_result = self.match_expr_owned(pattern, expr.clone(), BTreeMap::new());
+                self.drive_internal_value(match_result, move |_, outcome| {
+                    Ok(if outcome.matched { Some(expr) } else { None })
+                })
             }
             CasesSpec::Rule(rule) => {
-                if self.match_compiled(&rule.matcher, &normalized_expr, &mut bindings)? {
-                    let transformed = substitute_rule_bindings(&rule.rhs, &bindings);
-                    let transformed_result = self.evaluate(transformed);
-                    self.suspend_with_frame(transformed_result, |_, value| Ok(value))
+                let match_result = self.match_compiled_owned(
+                    rule.matcher.clone(),
+                    normalized_expr,
+                    BTreeMap::new(),
+                );
+                self.drive_internal_value(match_result, move |session, outcome| {
+                    if !outcome.matched {
+                        return Ok(None);
+                    }
+
+                    let transformed = substitute_rule_bindings(&rule.rhs, &outcome.bindings);
+                    let transformed_result = session.evaluate(transformed);
+                    session
+                        .suspend_with_frame(transformed_result, |_, value| Ok(value))
                         .map(Some)
-                } else {
-                    Ok(None)
-                }
+                })
             }
         }
     }
@@ -222,15 +399,10 @@ impl Session {
         value: Expr,
     ) -> Result<Expr, EvalError> {
         let pattern = self.normalize_match_expr(&pattern);
-        let mut bindings = BTreeMap::new();
-
-        Ok(system_expr(
-            if self.match_expr(&pattern, &value, &mut bindings)? {
-                "True"
-            } else {
-                "False"
-            },
-        ))
+        let match_result = self.match_expr_owned(pattern, value, BTreeMap::new());
+        self.drive_internal_value(match_result, move |_, outcome| {
+            Ok(system_expr(if outcome.matched { "True" } else { "False" }))
+        })
     }
 
     fn resume_replace_all_after_target(

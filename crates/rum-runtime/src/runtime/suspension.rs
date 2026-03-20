@@ -54,6 +54,55 @@ impl ContinuationValue for String {
     }
 }
 
+impl ContinuationValue for Option<Expr> {
+    fn into_continuation_expr(self) -> Expr {
+        match self {
+            Some(expr) => Expr::call(system_expr("InternalContinuationSome"), vec![expr]),
+            None => Expr::call(system_expr("InternalContinuationNone"), vec![]),
+        }
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        match expr {
+            Expr::Call { head, args }
+                if is_system_symbol_name(&head, "InternalContinuationSome") =>
+            {
+                let mut items = args.into_iter();
+                let first = items.next();
+                debug_assert!(
+                    items.next().is_none(),
+                    "option continuation payloads use exactly one item for Some"
+                );
+                first
+            }
+            Expr::Call { head, args }
+                if is_system_symbol_name(&head, "InternalContinuationNone") =>
+            {
+                debug_assert!(args.is_empty(), "none continuation payloads are empty");
+                None
+            }
+            other => Some(other),
+        }
+    }
+}
+
+impl ContinuationValue for Vec<Expr> {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(system_expr("InternalContinuationVec"), self)
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        match expr {
+            Expr::Call { head, args }
+                if is_system_symbol_name(&head, "InternalContinuationVec") =>
+            {
+                args
+            }
+            other => vec![other],
+        }
+    }
+}
+
 struct ClosureFrame<F> {
     resume: Option<F>,
 }
@@ -170,10 +219,17 @@ impl Session {
     }
 
     pub(super) fn begin_input_suspension(&mut self, request: RuntimeInputRequest) {
+        // The current InputString call and its immediate caller are both
+        // resumed from saved suspension frames rather than by restarting
+        // evaluate_once. Keeping either expression on the active stack causes
+        // false-positive cycle detection when matcher backtracking or other
+        // helper-level continuations legitimately re-enter that caller after
+        // input arrives.
+        let retained_depth = self.evaluation_stack.len().saturating_sub(2);
         let active_stack = self
             .evaluation_stack
             .iter()
-            .take(self.evaluation_stack.len().saturating_sub(1))
+            .take(retained_depth)
             .cloned()
             .collect::<Vec<_>>();
 

@@ -19,6 +19,7 @@ use crate::{
 
 pub struct KernelAdapter {
     session: Session,
+    kernel_username: String,
     execution_count: u64,
     next_message_id: u64,
     execution_state: KernelExecutionState,
@@ -37,8 +38,13 @@ struct PendingExecute {
 
 impl KernelAdapter {
     pub fn new(session: Session) -> Self {
+        Self::with_username(session, "kernel")
+    }
+
+    pub fn with_username(session: Session, username: impl Into<String>) -> Self {
         Self {
             session,
+            kernel_username: username.into(),
             execution_count: 0,
             next_message_id: 0,
             execution_state: KernelExecutionState::Idle,
@@ -503,7 +509,7 @@ impl KernelAdapter {
         let mut header = KernelMessageHeader::new(
             format!("rum-msg-{}", self.next_message_id),
             &parent_header.session_id,
-            &parent_header.username,
+            &self.kernel_username,
             msg_type,
         );
         header.protocol_version = parent_header.protocol_version.clone();

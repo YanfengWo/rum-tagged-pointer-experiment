@@ -131,6 +131,23 @@ a usable early core-language slice:
 - an explicit transport-backend boundary, with the current mock transport
   living behind the same bootstrap/layout seam that a future ZeroMQ backend can
   reuse
+- a first local socket-style backend plus frontend handles, so execute/stdin
+  flows can be exercised in a more frontend-like way without directly mutating
+  mock transport queues
+- frontend-style end-to-end execute/stdin round-trip coverage on top of that
+  local backend, plus bootstrap-driven kernel usernames in reply / `IOPub`
+  headers and a first heartbeat echo path
+- a first ZeroMQ-facing `socket/session/poller` seam, including explicit
+  ROUTER / PUB / REP socket roles, bind-mode-aware session config, and a
+  local socket driver that proves transport replacement can happen beneath the
+  adapter rather than inside it
+- a first ZeroMQ-shaped transport backend behind that seam, with multipart
+  ROUTER / PUB / REP frame translation, bind/connect-aware socket setup, and
+  fake-socket regression coverage that exercises execute and heartbeat flows
+  without teaching the adapter about a concrete socket library
+- a first concrete native-Rust ZeroMQ backend behind that same seam, currently
+  powered by the `zeromq` crate and covered by real loopback execute /
+  heartbeat round-trip tests
 - a real runtime-side input path through `InputString`, so host or notebook
   clients can satisfy input requests without falling back to terminal-only
   behavior
@@ -213,6 +230,9 @@ rather than to "make evaluation exist" from scratch:
 3. continued evaluator cleanup based on the runtime audit and TODO roadmap
 4. continued host-facing API hardening and deeper Jupyter/kernel compatibility
    through the separate adapter crate
+   this now includes both the first ZeroMQ-shaped seam and a first concrete
+   native-Rust backend behind it, with future work focused on transport
+   hardening and notebook compatibility
 5. after the core/runtime foundation is tighter, a dedicated full-string
    roadmap covering construction, slicing, search, replacement, string
    patterns, and unicode-sensitive behavior

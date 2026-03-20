@@ -40,6 +40,62 @@ fn compiled_matcher_matches_interpreted_matcher_on_supported_subset() {
 }
 
 #[test]
+fn interpreted_matcher_owned_can_resume_sequence_conditions_across_input() {
+    let mut session = Session::new();
+    let pattern = lower_syntax_expr(
+        &parse_expr(
+            "f[x__ /; MatchQ[InputString[\"first: \"], \"yes\"], y__ /; MatchQ[InputString[\"second: \"], \"ok\"]]",
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let pattern = session.normalize_pattern_expr(&pattern).unwrap();
+    let value = lower_syntax_expr(&parse_expr("f[1, 2, 3]").unwrap()).unwrap();
+    let value = session.evaluate(value).unwrap();
+
+    let failure = session
+        .match_expr_interpreted_owned(pattern, value, BTreeMap::new())
+        .expect_err("interpreted matcher should suspend when a sequence condition requests input");
+
+    match failure {
+        EvalError::InputRequired { request } => {
+            assert_eq!(request.prompt, "first: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let second = session
+        .resume_suspended_evaluation("yes")
+        .expect_err("resuming the first condition should still allow the second to suspend");
+
+    match second {
+        EvalError::InputRequired { request } => {
+            assert_eq!(request.prompt, "second: ");
+        }
+        other => panic!("expected second input-required failure, got {other:?}"),
+    }
+
+    let third = session
+        .resume_suspended_evaluation("ok")
+        .expect_err("backtracking should be able to stage the second condition again");
+
+    match third {
+        EvalError::InputRequired { request } => {
+            assert_eq!(request.prompt, "second: ");
+        }
+        other => panic!("expected repeated second input-required failure, got {other:?}"),
+    }
+
+    let outcome = CompiledMatchOutcome::from_continuation_expr(
+        session
+            .resume_suspended_evaluation("ok")
+            .expect("final resume should complete interpreted matcher evaluation"),
+    );
+
+    assert!(outcome.matched);
+}
+
+#[test]
 fn inspect_definition_catalog_reports_kinds_and_delayedness() {
     let mut session = Session::new();
 

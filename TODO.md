@@ -258,5 +258,14 @@ Reference docs for this workstream:
 - [x] Back protocol-side stdin with a real `InputString` builtin plus request suspension/resume instead of restarting whole execute requests after input replies
 - [x] Introduce a typed internal continuation/driver bridge so non-`Expr` helper paths can suspend and resume through the same session machinery
 - [x] Use that internal continuation bridge for delayed message-template rendering so Jupyter stdin can flow through runtime message generation without replaying the whole evaluation
-- [ ] Extend the typed internal continuation/driver design into matcher, pattern-condition, and other owned-state helper paths that still sit outside the current suspension/resume surface
-- [ ] Continue hardening the early kernel adapter toward more complete Jupyter transport, lifecycle, and frontend-compatibility behavior beyond the current mock/bootstrap-backed layer
+- [x] Extend the typed internal continuation/driver design through compiled matcher paths, definition/rule application, and matcher backtracking so suspended input can resume without replaying whole outer rewrites
+- [x] Extend the typed internal continuation/driver design into `Cases` spec/traversal normalization and the interpreted matcher reference path so helper-local suspension no longer drops matcher or traversal state
+- [x] Add a first local socket-style transport backend plus frontend handle boundary so notebook-style flows can be exercised without mutating mock transport queues directly
+- [x] Add frontend-style end-to-end execute and stdin round-trip tests on top of that local backend
+- [x] Use bootstrap-configured kernel usernames in generated reply / `IOPub` headers and add a first heartbeat echo path on the local backend
+- [x] Add a first ZeroMQ-facing socket/session config layer with explicit ROUTER / PUB / REP roles and bind/connect metadata derived from the Jupyter connection file
+- [x] Add a socket-poller / socket-driver boundary above the event pump so future ZeroMQ transports can replace the local session without changing adapter semantics
+- [x] Hang a first ZeroMQ-shaped transport backend behind that seam so multipart routing, bind/connect setup, and heartbeat/execute flow tests can evolve independently of the adapter and later accept a concrete socket library
+- [x] Back that seam with a first concrete native-Rust ZeroMQ implementation and real loopback execute / heartbeat round-trip tests
+- [ ] Audit the remaining non-`Expr` inspection/debug helper paths and decide which ones should become suspension-safe next, instead of treating `InputRequired` as a plain error
+- [ ] Continue hardening the early kernel adapter toward more complete Jupyter transport, lifecycle, and frontend-compatibility behavior beyond the current mock/local-socket-backed layer

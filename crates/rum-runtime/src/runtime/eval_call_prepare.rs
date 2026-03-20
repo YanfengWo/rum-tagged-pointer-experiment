@@ -123,7 +123,7 @@ impl Session {
         prepared_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         let plan = self.build_call_dispatch_plan(&head);
-        let mut state = CallDispatchState {
+        let state = CallDispatchState {
             raw_args: Vec::new(),
             evaluated_args: Some(self.normalize_call_args_by_attributes(
                 &head,
@@ -131,26 +131,8 @@ impl Session {
                 plan.attributes,
             )),
         };
-        let mut seen_prepare = false;
 
-        for stage in plan.stages {
-            if stage == CallDispatchStage::PrepareArguments {
-                seen_prepare = true;
-                continue;
-            }
-
-            if !seen_prepare {
-                continue;
-            }
-
-            if let Some(result) =
-                self.run_call_dispatch_stage(stage, &head, plan.attributes, &mut state)?
-            {
-                return Ok(result);
-            }
-        }
-
-        Ok(Expr::call(head, state.into_final_args()))
+        self.resume_call_with_dispatch_plan(head, plan, state, 0)
     }
 
     pub(super) fn attribute_set_for_head(&self, head: &Expr) -> AttributeSet {

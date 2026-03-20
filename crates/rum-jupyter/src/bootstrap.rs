@@ -1,8 +1,9 @@
 use rum_runtime::Session;
 
 use crate::{
-    KernelAdapter, KernelChannel, KernelConnectionFile, KernelEventPump, KernelTransport,
-    KernelTransportKind, KernelWireCodec, KernelWireConfig, MockSocketTransport,
+    KernelAdapter, KernelChannel, KernelConnectionFile, KernelEventPump, KernelSocketSessionConfig,
+    KernelTransportKind, KernelWireCodec, KernelWireConfig, LocalFrontendConnection,
+    LocalSocketSession, MockSocketTransport,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -94,12 +95,15 @@ impl KernelBootstrapConfig {
     }
 
     pub fn event_pump(&self, session: Session) -> KernelEventPump {
-        KernelEventPump::new(KernelAdapter::new(session), self.wire_codec())
+        KernelEventPump::new(
+            KernelAdapter::with_username(session, self.username.clone()),
+            self.wire_codec(),
+        )
     }
 }
 
 pub trait KernelTransportBackend {
-    type Transport: KernelTransport;
+    type Transport;
 
     fn bootstrap_config(&self) -> &KernelBootstrapConfig;
     fn transport_layout(&self) -> &KernelTransportLayout;
@@ -142,6 +146,71 @@ impl MockTransportBackend {
 
 impl KernelTransportBackend for MockTransportBackend {
     type Transport = MockSocketTransport;
+
+    fn bootstrap_config(&self) -> &KernelBootstrapConfig {
+        &self.bootstrap_config
+    }
+
+    fn transport_layout(&self) -> &KernelTransportLayout {
+        &self.transport_layout
+    }
+
+    fn transport(&self) -> &Self::Transport {
+        &self.transport
+    }
+
+    fn transport_mut(&mut self) -> &mut Self::Transport {
+        &mut self.transport
+    }
+}
+
+#[derive(Debug)]
+pub struct LocalSocketTransportBackend {
+    bootstrap_config: KernelBootstrapConfig,
+    transport_layout: KernelTransportLayout,
+    socket_session_config: KernelSocketSessionConfig,
+    transport: LocalSocketSession,
+    frontend: LocalFrontendConnection,
+}
+
+impl LocalSocketTransportBackend {
+    pub fn new(bootstrap_config: KernelBootstrapConfig) -> Self {
+        let transport_layout = bootstrap_config.transport_layout();
+        let socket_session_config = bootstrap_config.socket_session_config();
+        let (transport, frontend) = LocalSocketSession::new(socket_session_config.clone());
+
+        Self {
+            bootstrap_config,
+            transport_layout,
+            socket_session_config,
+            transport,
+            frontend,
+        }
+    }
+
+    pub fn frontend(&self) -> LocalFrontendConnection {
+        self.frontend.clone()
+    }
+
+    pub fn event_pump(&self, session: Session) -> KernelEventPump {
+        self.bootstrap_config.event_pump(session)
+    }
+
+    pub fn socket_session_config(&self) -> &KernelSocketSessionConfig {
+        &self.socket_session_config
+    }
+
+    pub fn pump_heartbeat_once(&mut self) -> bool {
+        self.transport.pump_heartbeat_once()
+    }
+
+    pub fn pump_heartbeats_until_idle(&mut self) -> usize {
+        self.transport.pump_heartbeats_until_idle()
+    }
+}
+
+impl KernelTransportBackend for LocalSocketTransportBackend {
+    type Transport = LocalSocketSession;
 
     fn bootstrap_config(&self) -> &KernelBootstrapConfig {
         &self.bootstrap_config

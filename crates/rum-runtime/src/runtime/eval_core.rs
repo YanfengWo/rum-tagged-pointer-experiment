@@ -104,16 +104,41 @@ impl Session {
         args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         let plan = self.build_call_dispatch_plan(&evaluated_head);
-        let mut state = CallDispatchState::new(args);
+        let state = CallDispatchState::new(args);
 
-        for stage in plan.stages {
-            if let Some(result) =
-                self.run_call_dispatch_stage(stage, &evaluated_head, plan.attributes, &mut state)?
-            {
-                return Ok(result);
-            }
+        self.resume_call_with_dispatch_plan(evaluated_head, plan, state, 0)
+    }
+
+    pub(super) fn resume_call_with_dispatch_plan(
+        &mut self,
+        evaluated_head: Expr,
+        plan: CallDispatchPlan,
+        state: CallDispatchState,
+        stage_index: usize,
+    ) -> Result<Expr, EvalError> {
+        if stage_index >= plan.stages.len() {
+            return Ok(Expr::call(evaluated_head, state.into_final_args()));
         }
 
-        Ok(Expr::call(evaluated_head, state.into_final_args()))
+        let stage = plan.stages[stage_index];
+        if stage == CallDispatchStage::PrepareArguments && state.evaluated_args.is_some() {
+            return self.resume_call_with_dispatch_plan(
+                evaluated_head,
+                plan,
+                state,
+                stage_index + 1,
+            );
+        }
+
+        let mut state = state;
+        let stage_result =
+            self.run_call_dispatch_stage(stage, &evaluated_head, plan.attributes, &mut state);
+
+        self.drive_internal_value(stage_result, move |session, outcome| match outcome {
+            Some(result) => Ok(result),
+            None => {
+                session.resume_call_with_dispatch_plan(evaluated_head, plan, state, stage_index + 1)
+            }
+        })
     }
 }

@@ -17,26 +17,51 @@ impl Session {
         let candidate = Expr::call(head.clone(), args.to_vec());
         let normalized_candidate = self.normalize_match_expr(&candidate);
 
-        for down_value in definition.down_values {
-            let mut bindings = BTreeMap::new();
-            let matcher = self.compile_matcher_for_expr(&down_value.lhs);
+        self.try_apply_down_values_from_list(
+            candidate,
+            normalized_candidate,
+            definition.down_values,
+            0,
+        )
+    }
 
-            if self.match_compiled(&matcher, &normalized_candidate, &mut bindings)? {
-                let substituted = substitute_rule_bindings(&down_value.rhs, &bindings);
-                self.push_trace(TraceEvent::RuleApplied {
-                    source: RuleApplicationSource::DownValue,
-                    input: candidate.to_string(),
-                    rule: down_value.lhs.to_string(),
-                    result: substituted.to_string(),
-                });
-                let substituted_result = self.evaluate(substituted);
-                return self
-                    .suspend_with_frame(substituted_result, |_, value| Ok(value))
-                    .map(Some);
+    fn try_apply_down_values_from_list(
+        &mut self,
+        candidate: Expr,
+        normalized_candidate: Expr,
+        down_values: Vec<DownValue>,
+        index: usize,
+    ) -> Result<Option<Expr>, EvalError> {
+        let Some(down_value) = down_values.get(index).cloned() else {
+            return Ok(None);
+        };
+
+        let matcher = self.compile_matcher_for_expr(&down_value.lhs);
+        let match_result =
+            self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new());
+
+        self.drive_internal_value(match_result, move |session, outcome| {
+            if !outcome.matched {
+                return session.try_apply_down_values_from_list(
+                    candidate,
+                    normalized_candidate,
+                    down_values,
+                    index + 1,
+                );
             }
-        }
 
-        Ok(None)
+            let substituted = substitute_rule_bindings(&down_value.rhs, &outcome.bindings);
+            session.push_trace(TraceEvent::RuleApplied {
+                source: RuleApplicationSource::DownValue,
+                input: candidate.to_string(),
+                rule: down_value.lhs.to_string(),
+                result: substituted.to_string(),
+            });
+            let substituted_result = session.evaluate(substituted);
+            session
+                .suspend_with_frame(substituted_result, |_, value| Ok(value))
+                .map(Some)
+        })
     }
 
     pub(super) fn try_apply_up_values(
@@ -46,33 +71,55 @@ impl Session {
     ) -> Result<Option<Expr>, EvalError> {
         let candidate = Expr::call(head.clone(), args.to_vec());
         let normalized_candidate = self.normalize_match_expr(&candidate);
+        let mut up_values = Vec::new();
 
         for symbol in collect_upvalue_candidate_symbols(args) {
             let Some(definition) = self.definitions.get(&symbol).cloned() else {
                 continue;
             };
-
-            for up_value in definition.up_values {
-                let mut bindings = BTreeMap::new();
-                let matcher = self.compile_matcher_for_expr(&up_value.lhs);
-
-                if self.match_compiled(&matcher, &normalized_candidate, &mut bindings)? {
-                    let substituted = substitute_rule_bindings(&up_value.rhs, &bindings);
-                    self.push_trace(TraceEvent::RuleApplied {
-                        source: RuleApplicationSource::UpValue,
-                        input: candidate.to_string(),
-                        rule: up_value.lhs.to_string(),
-                        result: substituted.to_string(),
-                    });
-                    let substituted_result = self.evaluate(substituted);
-                    return self
-                        .suspend_with_frame(substituted_result, |_, value| Ok(value))
-                        .map(Some);
-                }
-            }
+            up_values.extend(definition.up_values);
         }
 
-        Ok(None)
+        self.try_apply_up_values_from_list(candidate, normalized_candidate, up_values, 0)
+    }
+
+    fn try_apply_up_values_from_list(
+        &mut self,
+        candidate: Expr,
+        normalized_candidate: Expr,
+        up_values: Vec<UpValue>,
+        index: usize,
+    ) -> Result<Option<Expr>, EvalError> {
+        let Some(up_value) = up_values.get(index).cloned() else {
+            return Ok(None);
+        };
+
+        let matcher = self.compile_matcher_for_expr(&up_value.lhs);
+        let match_result =
+            self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new());
+
+        self.drive_internal_value(match_result, move |session, outcome| {
+            if !outcome.matched {
+                return session.try_apply_up_values_from_list(
+                    candidate,
+                    normalized_candidate,
+                    up_values,
+                    index + 1,
+                );
+            }
+
+            let substituted = substitute_rule_bindings(&up_value.rhs, &outcome.bindings);
+            session.push_trace(TraceEvent::RuleApplied {
+                source: RuleApplicationSource::UpValue,
+                input: candidate.to_string(),
+                rule: up_value.lhs.to_string(),
+                result: substituted.to_string(),
+            });
+            let substituted_result = session.evaluate(substituted);
+            session
+                .suspend_with_frame(substituted_result, |_, value| Ok(value))
+                .map(Some)
+        })
     }
 
     pub(super) fn try_apply_sub_values(
@@ -91,26 +138,51 @@ impl Session {
         let candidate = Expr::call(head.clone(), args.to_vec());
         let normalized_candidate = self.normalize_match_expr(&candidate);
 
-        for sub_value in definition.sub_values {
-            let mut bindings = BTreeMap::new();
-            let matcher = self.compile_matcher_for_expr(&sub_value.lhs);
+        self.try_apply_sub_values_from_list(
+            candidate,
+            normalized_candidate,
+            definition.sub_values,
+            0,
+        )
+    }
 
-            if self.match_compiled(&matcher, &normalized_candidate, &mut bindings)? {
-                let substituted = substitute_rule_bindings(&sub_value.rhs, &bindings);
-                self.push_trace(TraceEvent::RuleApplied {
-                    source: RuleApplicationSource::SubValue,
-                    input: candidate.to_string(),
-                    rule: sub_value.lhs.to_string(),
-                    result: substituted.to_string(),
-                });
-                let substituted_result = self.evaluate(substituted);
-                return self
-                    .suspend_with_frame(substituted_result, |_, value| Ok(value))
-                    .map(Some);
+    fn try_apply_sub_values_from_list(
+        &mut self,
+        candidate: Expr,
+        normalized_candidate: Expr,
+        sub_values: Vec<SubValue>,
+        index: usize,
+    ) -> Result<Option<Expr>, EvalError> {
+        let Some(sub_value) = sub_values.get(index).cloned() else {
+            return Ok(None);
+        };
+
+        let matcher = self.compile_matcher_for_expr(&sub_value.lhs);
+        let match_result =
+            self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new());
+
+        self.drive_internal_value(match_result, move |session, outcome| {
+            if !outcome.matched {
+                return session.try_apply_sub_values_from_list(
+                    candidate,
+                    normalized_candidate,
+                    sub_values,
+                    index + 1,
+                );
             }
-        }
 
-        Ok(None)
+            let substituted = substitute_rule_bindings(&sub_value.rhs, &outcome.bindings);
+            session.push_trace(TraceEvent::RuleApplied {
+                source: RuleApplicationSource::SubValue,
+                input: candidate.to_string(),
+                rule: sub_value.lhs.to_string(),
+                result: substituted.to_string(),
+            });
+            let substituted_result = session.evaluate(substituted);
+            session
+                .suspend_with_frame(substituted_result, |_, value| Ok(value))
+                .map(Some)
+        })
     }
 
     pub(super) fn apply_replace_all(
@@ -119,45 +191,109 @@ impl Session {
         rules: &[RewriteRule],
         source: RuleApplicationSource,
     ) -> Result<Expr, EvalError> {
-        if let Some(replaced) = self.apply_rules_once(&expr, rules, source)? {
-            return Ok(replaced);
-        }
+        self.apply_replace_all_owned(expr, rules.to_vec(), source)
+    }
 
+    fn apply_replace_all_owned(
+        &mut self,
+        expr: Expr,
+        rules: Vec<RewriteRule>,
+        source: RuleApplicationSource,
+    ) -> Result<Expr, EvalError> {
+        let normalized_expr = self.normalize_match_expr(&expr);
+        let replace_result = self.apply_rules_once_from_list(
+            expr.clone(),
+            normalized_expr,
+            rules.clone(),
+            source,
+            0,
+        );
+
+        self.drive_internal_value(replace_result, move |session, outcome| match outcome {
+            Some(replaced) => Ok(replaced),
+            None => session.apply_replace_all_after_miss(expr, rules, source),
+        })
+    }
+
+    fn apply_replace_all_after_miss(
+        &mut self,
+        expr: Expr,
+        rules: Vec<RewriteRule>,
+        source: RuleApplicationSource,
+    ) -> Result<Expr, EvalError> {
         match expr {
             Expr::Atom(_) => Ok(expr),
-            Expr::Call { head, args } => Ok(Expr::call(
-                self.apply_replace_all(*head, rules, source)?,
-                args.into_iter()
-                    .map(|arg| self.apply_replace_all(arg, rules, source))
-                    .collect::<Result<Vec<_>, _>>()?,
-            )),
+            Expr::Call { head, args } => {
+                let head_result = self.apply_replace_all_owned(*head, rules.clone(), source);
+                self.drive_evaluated_value::<Expr, Expr, _>(
+                    head_result,
+                    move |session, new_head| {
+                        session.apply_replace_all_args(new_head, Vec::new(), args, rules, source)
+                    },
+                )
+            }
         }
     }
 
-    pub(super) fn apply_rules_once(
+    fn apply_replace_all_args(
         &mut self,
-        expr: &Expr,
-        rules: &[RewriteRule],
+        head: Expr,
+        mut rewritten_args: Vec<Expr>,
+        remaining_args: Vec<Expr>,
+        rules: Vec<RewriteRule>,
         source: RuleApplicationSource,
+    ) -> Result<Expr, EvalError> {
+        let Some((current, rest)) = remaining_args.split_first() else {
+            return Ok(Expr::call(head, rewritten_args));
+        };
+
+        let rest = rest.to_vec();
+        let arg_result = self.apply_replace_all_owned(current.clone(), rules.clone(), source);
+
+        self.drive_evaluated_value::<Expr, Expr, _>(arg_result, move |session, rewritten| {
+            rewritten_args.push(rewritten);
+            session.apply_replace_all_args(head, rewritten_args, rest, rules, source)
+        })
+    }
+
+    fn apply_rules_once_from_list(
+        &mut self,
+        expr: Expr,
+        normalized_expr: Expr,
+        rules: Vec<RewriteRule>,
+        source: RuleApplicationSource,
+        index: usize,
     ) -> Result<Option<Expr>, EvalError> {
-        let normalized_expr = self.normalize_match_expr(expr);
+        let Some(rule) = rules.get(index).cloned() else {
+            return Ok(None);
+        };
 
-        for rule in rules {
-            let mut bindings = BTreeMap::new();
+        let match_result = self.match_compiled_owned(
+            rule.matcher.clone(),
+            normalized_expr.clone(),
+            BTreeMap::new(),
+        );
 
-            if self.match_compiled(&rule.matcher, &normalized_expr, &mut bindings)? {
-                let replaced = substitute_rule_bindings(&rule.rhs, &bindings);
-                self.push_trace(TraceEvent::RuleApplied {
+        self.drive_internal_value(match_result, move |session, outcome| {
+            if !outcome.matched {
+                return session.apply_rules_once_from_list(
+                    expr,
+                    normalized_expr,
+                    rules,
                     source,
-                    input: expr.to_string(),
-                    rule: rule.lhs.to_string(),
-                    result: replaced.to_string(),
-                });
-                return Ok(Some(replaced));
+                    index + 1,
+                );
             }
-        }
 
-        Ok(None)
+            let replaced = substitute_rule_bindings(&rule.rhs, &outcome.bindings);
+            session.push_trace(TraceEvent::RuleApplied {
+                source,
+                input: expr.to_string(),
+                rule: rule.lhs.to_string(),
+                result: replaced.to_string(),
+            });
+            Ok(Some(replaced))
+        })
     }
 
     pub(super) fn push_trace(&mut self, event: TraceEvent) {

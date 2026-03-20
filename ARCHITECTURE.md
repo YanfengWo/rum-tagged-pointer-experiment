@@ -129,10 +129,66 @@ Owns protocol-adapter concerns for future notebook or kernel integration:
   implementation can share the same bootstrap and channel-layout model
 - protocol-side stdin scaffolding that now reaches a real runtime input
   facility instead of stopping at a mock-only adapter boundary
+- a first local socket-style backend plus frontend handles, so execute/stdin
+  flows can be exercised through a more frontend-like boundary without directly
+  mutating mock queue state
+- frontend-style end-to-end execute/stdin round-trip coverage on top of that
+  local backend, plus bootstrap-driven kernel usernames in reply / `IOPub`
+  headers and a first heartbeat echo path
+- a first ZeroMQ-facing `socket/session/poller` seam, with explicit ROUTER /
+  PUB / REP socket roles, bind-mode-aware session config, and a local socket
+  driver that can exercise those boundaries without teaching the adapter about
+  any concrete socket library
+- a first ZeroMQ-shaped backend implementation behind that seam, where
+  multipart frame translation, socket setup, and backend-specific session
+  behavior can evolve separately from adapter semantics and later accept a
+  concrete native socket library
+- that seam is now backed by a first concrete native-Rust ZeroMQ
+  implementation using the `zeromq` crate, while still keeping adapter logic
+  independent from the socket backend and leaving room for future transport
+  swaps or compatibility tightening
 
 This crate is now an early kernel adapter rather than a pure placeholder. It
 should stay focused on protocol and host-adapter concerns, not on evaluation
 logic or terminal rendering.
+
+### Host-facing extensibility principle
+
+The long-term architectural goal is not merely "support Jupyter", but to grow
+`rum-runtime` into a reusable language kernel that can serve multiple hosts:
+
+- terminal tools such as the CLI and REPL
+- future notebook adapters such as `rum-jupyter`
+- a possible GUI front end later
+- host embedding inside other Rust or non-Rust applications
+- future protocol layers that may look more like WSTP-style external links than
+  terminal I/O
+
+That means some infrastructure introduced while building the Jupyter path is
+expected to remain in the core runtime. This is intentional when the capability
+is host-agnostic, for example:
+
+- session/request APIs such as parse, eval, inspect, complete, and is-complete
+- structured diagnostics, messages, and transport-friendly result payloads
+- host-driven input requests
+- suspension/resume and internal continuation machinery
+- stable session configuration
+
+These are not considered Jupyter leakage. They are kernel capabilities that
+happen to be exercised early by the Jupyter workstream and should also benefit
+future GUI, embedding, and external-protocol work.
+
+By contrast, protocol-specific details must stay outside the runtime core:
+
+- Jupyter message schemas and channel layouts
+- wire codecs, routing ids, signatures, and connection files
+- notebook-specific output envelopes and MIME bundle shaping
+- transport loops and backend-specific socket behavior
+
+In short, `rum-jupyter` is both an optional tool for early notebook integration
+and a proving ground for kernel APIs. The adapter should demonstrate and stress
+the host-facing runtime surface, but it should not define the runtime's
+evaluation semantics.
 
 ### `rum-stdlib`
 
@@ -270,6 +326,11 @@ Host-driven input is also now part of that request surface. `InputString`
 reaches a real runtime input facility, and suspended evaluations resume from
 saved continuation state rather than replaying the whole execute request after
 an input reply arrives.
+
+This request-oriented surface should be treated as a long-term kernel boundary,
+not as a temporary Jupyter shim. If a future GUI front end or external-link
+protocol is added, it should build on the same session-oriented runtime calls
+rather than introducing a second, incompatible control path into the evaluator.
 
 The runtime has also started growing a more general internal continuation
 bridge for helper paths that do not naturally return `Expr` values. The first

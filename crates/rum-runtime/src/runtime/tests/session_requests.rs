@@ -367,3 +367,231 @@ fn resume_eval_request_with_input_continues_replace_all_without_restarting_targe
 
     assert_eq!(response.value.to_string(), "List[\"Alice\", \"Alice\"]");
 }
+
+#[test]
+fn resume_eval_request_with_input_can_finish_conditioned_matchq() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("MatchQ[1, x_ /; MatchQ[InputString[\"cond: \"], \"yes\"]]")
+        .expect_err("matcher condition should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should finish conditioned MatchQ");
+
+    assert_eq!(response.value.to_string(), "True");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_sequence_conditioned_matchq() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("MatchQ[f[1, 2], f[x__ /; InputString[\"cond: \"], y_]]")
+        .expect_err("sequence-pattern condition should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should finish sequence-pattern MatchQ");
+
+    assert_eq!(response.value.to_string(), "False");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_nested_matcher_inside_sequence_conditioned_matchq() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("MatchQ[f[1, 2], f[x__ /; MatchQ[InputString[\"cond: \"], \"yes\"], y_]]")
+        .expect_err("nested matcher inside a sequence-pattern condition should suspend");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should finish sequence-pattern matching with the nested matcher");
+
+    assert_eq!(response.value.to_string(), "True");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_multi_sequence_backtracking_conditions() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "MatchQ[f[1, 2, 3], f[x__ /; MatchQ[InputString[\"first: \"], \"yes\"], y__ /; MatchQ[InputString[\"second: \"], \"ok\"]]]",
+        )
+        .expect_err("multi-sequence matcher conditions should suspend on the first nested matcher");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "first: ");
+        }
+        other => panic!("expected first input-required failure, got {other:?}"),
+    }
+
+    let second = session.resume_eval_request_with_input("yes").expect_err(
+        "after the first sequence condition resumes, the second should still be able to suspend",
+    );
+
+    match &second.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "second: ");
+        }
+        other => panic!("expected second input-required failure, got {other:?}"),
+    }
+
+    let third = session
+        .resume_eval_request_with_input("ok")
+        .expect_err("backtracking into a new sequence split should be able to suspend again");
+
+    match &third.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "second: ");
+        }
+        other => panic!("expected repeated second input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("ok")
+        .expect("resume should finish the original multi-sequence MatchQ after backtracking");
+
+    assert_eq!(response.value.to_string(), "True");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_conditioned_downvalue_matching() {
+    let mut session = Session::new();
+    session
+        .eval_text("f[x_ /; MatchQ[InputString[\"cond: \"], \"yes\"]] := x")
+        .unwrap();
+
+    let failure = session
+        .eval_request("f[1]")
+        .expect_err("conditioned downvalue match should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should finish conditioned downvalue matching");
+
+    assert_eq!(response.value.to_string(), "1");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_conditioned_replace_all() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("ReplaceAll[1, x_ /; MatchQ[InputString[\"cond: \"], \"yes\"] :> List[x, x]]")
+        .expect_err("conditioned ReplaceAll rule should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should finish conditioned ReplaceAll");
+
+    assert_eq!(response.value.to_string(), "List[1, 1]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_conditioned_cases() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("Cases[f[1], x_Integer /; MatchQ[InputString[\"cond: \"], \"yes\"]]")
+        .expect_err("conditioned Cases pattern should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should finish conditioned Cases");
+
+    assert_eq!(response.value.to_string(), "List[1]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_cases_with_suspending_symbol_spec() {
+    let mut session = Session::new();
+    session
+        .eval_text("p := x_Integer /; MatchQ[InputString[\"cond: \"], \"yes\"]")
+        .unwrap();
+
+    let failure = session.eval_request("Cases[f[1], p]").expect_err(
+        "Cases spec evaluation should suspend when the referenced symbol requests input",
+    );
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue Cases after the spec symbol resolves");
+
+    assert_eq!(response.value.to_string(), "List[1]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_cases_with_suspending_level_spec() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("Cases[f[1], _Integer, If[MatchQ[InputString[\"lvl: \"], \"yes\"], 1, 0]]")
+        .expect_err("Cases level-spec evaluation should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "lvl: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue Cases after the level spec resolves");
+
+    assert_eq!(response.value.to_string(), "List[1]");
+}
