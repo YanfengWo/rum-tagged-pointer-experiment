@@ -148,6 +148,14 @@ a usable early core-language slice:
 - a first concrete native-Rust ZeroMQ backend behind that same seam, currently
   powered by the `zeromq` crate and covered by real loopback execute /
   heartbeat round-trip tests
+- real frontend-style native-backend coverage for execute/stdin/control/
+  `IOPub` flows, including shared-identity stdin routing, richer reply/header
+  metadata checks, control-first shutdown behavior, and multi-message
+  frontend sessions that keep execution counts coherent across repeated
+  requests
+- native signed-transport end-to-end coverage on that concrete backend,
+  including successful signed execute / `IOPub` round-trips and rejection of
+  tampered signed requests before they reach the adapter
 - a real runtime-side input path through `InputString`, so host or notebook
   clients can satisfy input requests without falling back to terminal-only
   behavior

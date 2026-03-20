@@ -147,6 +147,13 @@ Owns protocol-adapter concerns for future notebook or kernel integration:
   implementation using the `zeromq` crate, while still keeping adapter logic
   independent from the socket backend and leaving room for future transport
   swaps or compatibility tightening
+- real frontend-style native-backend regression coverage for shell/stdin/
+  control/`IOPub` flows, including shared-identity stdin routing, metadata-
+  rich execute replies, control-first shutdown behavior, and multi-message
+  frontend sessions that keep execution counts and shutdown state coherent
+- native end-to-end signed-transport coverage on top of the concrete ZeroMQ
+  backend, including successful signed execute / `IOPub` round-trips plus
+  rejection of tampered signed requests before they reach the adapter
 
 This crate is now an early kernel adapter rather than a pure placeholder. It
 should stay focused on protocol and host-adapter concerns, not on evaluation

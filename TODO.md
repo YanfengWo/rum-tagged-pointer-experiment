@@ -267,5 +267,8 @@ Reference docs for this workstream:
 - [x] Add a socket-poller / socket-driver boundary above the event pump so future ZeroMQ transports can replace the local session without changing adapter semantics
 - [x] Hang a first ZeroMQ-shaped transport backend behind that seam so multipart routing, bind/connect setup, and heartbeat/execute flow tests can evolve independently of the adapter and later accept a concrete socket library
 - [x] Back that seam with a first concrete native-Rust ZeroMQ implementation and real loopback execute / heartbeat round-trip tests
+- [x] Add real frontend-style native ZeroMQ regressions for execute/stdin/control flows so shell, `IOPub`, and stdin routing can be exercised against the concrete backend instead of only the mock/local layers
+- [x] Add frontend-style multi-message native backend coverage that keeps a single frontend session alive across multiple execute requests, stdin resume, execution-count increments, and final shutdown handling
+- [x] Add signed native-backend end-to-end coverage, including successful signed execute / `IOPub` round-trips and rejection of tampered signed requests
 - [ ] Audit the remaining non-`Expr` inspection/debug helper paths and decide which ones should become suspension-safe next, instead of treating `InputRequired` as a plain error
 - [ ] Continue hardening the early kernel adapter toward more complete Jupyter transport, lifecycle, and frontend-compatibility behavior beyond the current mock/local-socket-backed layer

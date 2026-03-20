@@ -163,6 +163,32 @@ impl<S: ZeroMqSocket> ZeroMqSocketSession<S> {
             }),
         })
     }
+
+    fn poll_channel_into_buffer(&self, channel: KernelChannel) -> bool {
+        let mut state = self.state.borrow_mut();
+        if state.has_buffered_channel(channel) {
+            return true;
+        }
+
+        let frames = match channel {
+            KernelChannel::Shell => state.shell.try_recv_multipart(),
+            KernelChannel::Control => state.control.try_recv_multipart(),
+            KernelChannel::IoPub => None,
+            KernelChannel::Stdin => state.stdin.try_recv_multipart(),
+        };
+
+        if let Some(frames) = frames {
+            let message = frames_to_wire_message(channel, &self.delimiter, frames)
+                .expect("ZeroMQ session should only surface valid Jupyter multipart frames");
+            state
+                .incoming_queue_mut(channel)
+                .expect("channel-backed incoming queues exist")
+                .push_back(message);
+            true
+        } else {
+            false
+        }
+    }
 }
 
 impl<S: ZeroMqSocket> KernelTransport for ZeroMqSocketSession<S> {
@@ -187,10 +213,9 @@ impl<S: ZeroMqSocket> KernelQueuedTransport for ZeroMqSocketSession<S> {
     }
 
     fn has_pending_incoming(&self) -> bool {
-        let state = self.state.borrow();
-        state.has_buffered_channel(KernelChannel::Shell)
-            || state.has_buffered_channel(KernelChannel::Control)
-            || state.has_buffered_channel(KernelChannel::Stdin)
+        self.poll_channel_into_buffer(KernelChannel::Control)
+            || self.poll_channel_into_buffer(KernelChannel::Shell)
+            || self.poll_channel_into_buffer(KernelChannel::Stdin)
     }
 }
 
@@ -200,29 +225,7 @@ impl<S: ZeroMqSocket> KernelSocketSession for ZeroMqSocketSession<S> {
     }
 
     fn has_pending_channel(&self, channel: KernelChannel) -> bool {
-        let mut state = self.state.borrow_mut();
-        if state.has_buffered_channel(channel) {
-            return true;
-        }
-
-        let frames = match channel {
-            KernelChannel::Shell => state.shell.try_recv_multipart(),
-            KernelChannel::Control => state.control.try_recv_multipart(),
-            KernelChannel::IoPub => None,
-            KernelChannel::Stdin => state.stdin.try_recv_multipart(),
-        };
-
-        if let Some(frames) = frames {
-            let message = frames_to_wire_message(channel, &self.delimiter, frames)
-                .expect("ZeroMQ session should only surface valid Jupyter multipart frames");
-            state
-                .incoming_queue_mut(channel)
-                .expect("channel-backed incoming queues exist")
-                .push_back(message);
-            true
-        } else {
-            false
-        }
+        self.poll_channel_into_buffer(channel)
     }
 
     fn has_pending_heartbeat(&self) -> bool {
@@ -947,7 +950,19 @@ async fn run_router_socket_worker(
             command = next_command => {
                 match command {
                     Some(NativeRouterSocketCommand::Send(frames)) => {
-                        if send_half.send(frames_to_zmq_message(frames)).await.is_err() {
+                        let mut delivered = false;
+                        for _ in 0..50 {
+                            if send_half
+                                .send(frames_to_zmq_message(frames.clone()))
+                                .await
+                                .is_ok()
+                            {
+                                delivered = true;
+                                break;
+                            }
+                            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                        }
+                        if !delivered {
                             break;
                         }
                     }
@@ -1198,10 +1213,11 @@ fn zmq_message_to_frames(message: ZmqMessage) -> Vec<Vec<u8>> {
 mod tests {
     use std::{
         net::TcpListener,
+        str::FromStr,
         time::{Duration, Instant},
     };
 
-    use zeromq::{DealerSocket, ReqSocket};
+    use zeromq::{DealerSocket, ReqSocket, SocketOptions, SubSocket, util::PeerIdentity};
 
     use super::*;
     use crate::{
@@ -1372,6 +1388,37 @@ mod tests {
         .with_session_validation("frontend-session")
     }
 
+    fn signed_loopback_connection() -> KernelBootstrapConfig {
+        let listeners = (0..5)
+            .map(|_| TcpListener::bind("127.0.0.1:0").expect("ephemeral port should bind"))
+            .collect::<Vec<_>>();
+        let ports = listeners
+            .iter()
+            .map(|listener| {
+                listener
+                    .local_addr()
+                    .expect("listener should expose a local address")
+                    .port()
+            })
+            .collect::<Vec<_>>();
+        drop(listeners);
+
+        KernelBootstrapConfig::from_connection_file(KernelConnectionFile {
+            transport: crate::KernelTransportKind::Tcp,
+            ip: "127.0.0.1".to_string(),
+            shell_port: ports[0],
+            iopub_port: ports[1],
+            stdin_port: ports[2],
+            control_port: ports[3],
+            hb_port: ports[4],
+            key: "secret".to_string(),
+            signature_scheme: crate::KernelSignatureScheme::HmacSha256,
+            kernel_name: Some("rum".to_string()),
+        })
+        .with_username("rum-kernel")
+        .with_session_validation("frontend-session")
+    }
+
     fn test_runtime() -> tokio::runtime::Runtime {
         tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -1395,6 +1442,26 @@ mod tests {
             assert!(
                 Instant::now() < deadline,
                 "timed out waiting for socket event {expected:?}"
+            );
+            thread::sleep(Duration::from_millis(10));
+        }
+    }
+
+    fn wait_for_next_socket_event(
+        driver: &mut KernelSocketDriver,
+        transport: &mut ZeroMqSocketSession<NativeZeroMqSocket>,
+    ) -> crate::KernelSocketPollEvent {
+        let deadline = Instant::now() + Duration::from_secs(2);
+        loop {
+            if let Some(event) = driver
+                .pump_once(transport)
+                .expect("socket driver should keep pumping")
+            {
+                return event;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "timed out waiting for the next socket event"
             );
             thread::sleep(Duration::from_millis(10));
         }
@@ -1594,5 +1661,1191 @@ mod tests {
                 .expect("heartbeat reply should decode")
         });
         assert_eq!(zmq_message_to_frames(reply), vec![b"hb".to_vec()]);
+    }
+
+    #[test]
+    fn native_zeromq_backend_frontend_style_execute_preserves_headers_and_iopub_metadata() {
+        let bootstrap = loopback_connection();
+        let codec = bootstrap.wire_codec();
+        let shell_endpoint = bootstrap.transport_layout().shell.uri();
+        let iopub_endpoint = bootstrap.transport_layout().iopub.uri();
+        let runtime = test_runtime();
+        let mut backend = NativeZeroMqTransportBackend::new_native(bootstrap.clone())
+            .expect("native zeromq backend should build");
+        let mut driver = backend.socket_driver(Session::new());
+
+        let mut shell = runtime.block_on(async {
+            let mut shell = DealerSocket::new();
+            shell
+                .connect(&shell_endpoint)
+                .await
+                .expect("shell dealer should connect");
+            shell
+        });
+        let mut iopub = runtime.block_on(async {
+            let mut iopub = SubSocket::new();
+            iopub
+                .connect(&iopub_endpoint)
+                .await
+                .expect("iopub sub should connect");
+            iopub
+                .subscribe("")
+                .await
+                .expect("iopub sub should subscribe");
+            iopub
+        });
+
+        runtime.block_on(async {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        });
+
+        let execute_header = KernelMessageHeader::new(
+            "execute-zmq-metadata-1",
+            "frontend-session",
+            "frontend",
+            "execute_request",
+        );
+        let execute_request = codec
+            .encode_request_envelope(&KernelRequestEnvelope {
+                channel: KernelChannel::Shell,
+                header: execute_header.clone(),
+                parent_header: None,
+                metadata: KernelMetadata::new(),
+                request: KernelRequest::Execute(crate::KernelExecuteRequest::new("1")),
+            })
+            .expect("execute request should encode");
+        runtime.block_on(async {
+            shell
+                .send(frames_to_zmq_message(
+                    wire_message_to_frames(execute_request).frames,
+                ))
+                .await
+                .expect("shell dealer should send execute request");
+        });
+
+        wait_for_socket_event(
+            &mut driver,
+            backend.transport_mut(),
+            crate::KernelSocketPollEvent::Channel(KernelChannel::Shell),
+        );
+
+        let shell_reply_wire = runtime.block_on(async {
+            tokio::time::timeout(Duration::from_secs(2), shell.recv())
+                .await
+                .expect("shell reply should arrive before timeout")
+                .expect("shell reply should decode")
+        });
+        let shell_reply = decode_response_message(
+            &frames_to_wire_message(
+                KernelChannel::Shell,
+                &bootstrap.wire_config().delimiter,
+                zmq_message_to_frames(shell_reply_wire),
+            )
+            .expect("shell reply frames should convert"),
+        )
+        .expect("shell reply should decode");
+
+        assert_eq!(shell_reply.header.username, "rum-kernel");
+        assert_eq!(
+            shell_reply.header.protocol_version,
+            execute_header.protocol_version
+        );
+        assert_eq!(shell_reply.parent_header, Some(execute_header.clone()));
+        assert_eq!(shell_reply.metadata.get("channel"), Some("shell"));
+        assert_eq!(
+            shell_reply.metadata.get("parent_msg_type"),
+            Some("execute_request")
+        );
+
+        match shell_reply.response {
+            KernelResponse::Execute(response) => {
+                assert_eq!(response.status, KernelReplyStatus::Ok);
+                assert_eq!(response.execution_count, Some(1));
+            }
+            other => panic!("expected execute reply, got {other:?}"),
+        }
+
+        let mut iopub_messages = Vec::new();
+        while iopub_messages.len() < 4 {
+            let message = runtime.block_on(async {
+                tokio::time::timeout(Duration::from_secs(2), iopub.recv())
+                    .await
+                    .expect("iopub message should arrive before timeout")
+                    .expect("iopub message should decode")
+            });
+            let envelope = crate::decode_iopub_message(
+                &frames_to_wire_message(
+                    KernelChannel::IoPub,
+                    &bootstrap.wire_config().delimiter,
+                    zmq_message_to_frames(message),
+                )
+                .expect("iopub frames should convert"),
+            )
+            .expect("iopub message should parse");
+            iopub_messages.push(envelope);
+        }
+
+        for message in &iopub_messages {
+            assert_eq!(message.header.username, "rum-kernel");
+            assert_eq!(
+                message.header.protocol_version,
+                execute_header.protocol_version
+            );
+            assert_eq!(message.parent_header, Some(execute_header.clone()));
+            assert_eq!(message.metadata.get("channel"), Some("iopub"));
+            assert_eq!(
+                message.metadata.get("parent_msg_type"),
+                Some("execute_request")
+            );
+        }
+
+        assert!(iopub_messages.iter().any(|message| matches!(
+            &message.payload,
+            crate::KernelIoPubPayload::Status(status)
+                if status.execution_state == crate::KernelExecutionState::Busy
+                    && status.lifecycle_state == crate::KernelLifecycleState::Running
+        )));
+        assert!(iopub_messages.iter().any(|message| matches!(
+            &message.payload,
+            crate::KernelIoPubPayload::ExecuteInput(input)
+                if input.code == "1" && input.execution_count == Some(1)
+        )));
+        assert!(iopub_messages.iter().any(|message| matches!(
+            &message.payload,
+            crate::KernelIoPubPayload::ExecuteResult(result) if result.data.get("text/plain").is_some()
+        )));
+        assert!(iopub_messages.iter().any(|message| matches!(
+            &message.payload,
+            crate::KernelIoPubPayload::Status(status)
+                if status.execution_state == crate::KernelExecutionState::Idle
+                    && status.lifecycle_state == crate::KernelLifecycleState::Running
+        )));
+    }
+
+    #[test]
+    fn native_zeromq_backend_frontend_style_stdin_round_trip_emits_iopub_and_shell_reply() {
+        let bootstrap = loopback_connection();
+        let codec = bootstrap.wire_codec();
+        let shell_endpoint = bootstrap.transport_layout().shell.uri();
+        let stdin_endpoint = bootstrap.transport_layout().stdin.uri();
+        let iopub_endpoint = bootstrap.transport_layout().iopub.uri();
+        let frontend_identity =
+            PeerIdentity::from_str("frontend-zmq-stdin-client").expect("identity should parse");
+        let runtime = test_runtime();
+        let mut backend = NativeZeroMqTransportBackend::new_native(bootstrap.clone())
+            .expect("native zeromq backend should build");
+        let mut driver = backend.socket_driver(Session::new());
+
+        let mut shell = runtime.block_on(async {
+            let mut options = SocketOptions::default();
+            options.peer_identity(frontend_identity.clone());
+            let mut shell = DealerSocket::with_options(options);
+            shell
+                .connect(&shell_endpoint)
+                .await
+                .expect("shell dealer should connect");
+            shell
+        });
+        let mut stdin = runtime.block_on(async {
+            let mut options = SocketOptions::default();
+            options.peer_identity(frontend_identity);
+            let mut stdin = DealerSocket::with_options(options);
+            stdin
+                .connect(&stdin_endpoint)
+                .await
+                .expect("stdin dealer should connect");
+            stdin
+        });
+        let mut iopub = runtime.block_on(async {
+            let mut iopub = SubSocket::new();
+            iopub
+                .connect(&iopub_endpoint)
+                .await
+                .expect("iopub sub should connect");
+            iopub
+                .subscribe("")
+                .await
+                .expect("iopub sub should subscribe");
+            iopub
+        });
+
+        runtime.block_on(async {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        });
+
+        let execute_header = KernelMessageHeader::new(
+            "execute-zmq-stdin-1",
+            "frontend-session",
+            "frontend",
+            "execute_request",
+        );
+        let execute_request = codec
+            .encode_request_envelope(&KernelRequestEnvelope {
+                channel: KernelChannel::Shell,
+                header: execute_header.clone(),
+                parent_header: None,
+                metadata: KernelMetadata::new(),
+                request: KernelRequest::Execute(crate::KernelExecuteRequest::new(
+                    "InputString[\"Name: \"]",
+                )),
+            })
+            .expect("execute request should encode");
+        runtime.block_on(async {
+            shell
+                .send(frames_to_zmq_message(
+                    wire_message_to_frames(execute_request).frames,
+                ))
+                .await
+                .expect("shell dealer should send execute request");
+        });
+
+        wait_for_socket_event(
+            &mut driver,
+            backend.transport_mut(),
+            crate::KernelSocketPollEvent::Channel(KernelChannel::Shell),
+        );
+
+        let stdin_request_wire = runtime.block_on(async {
+            tokio::time::timeout(Duration::from_secs(2), stdin.recv())
+                .await
+                .expect("stdin request should arrive before timeout")
+                .expect("stdin request should decode")
+        });
+        let stdin_request_wire = frames_to_wire_message(
+            KernelChannel::Stdin,
+            &bootstrap.wire_config().delimiter,
+            zmq_message_to_frames(stdin_request_wire),
+        )
+        .expect("stdin request frames should convert");
+        let stdin_request = crate::decode_input_request_message(&stdin_request_wire)
+            .expect("stdin request should parse");
+        assert_eq!(stdin_request.request.prompt, "Name: ");
+
+        let input_reply = codec
+            .encode_input_reply_envelope(&crate::KernelInputReplyEnvelope {
+                channel: KernelChannel::Stdin,
+                header: KernelMessageHeader::new(
+                    "input-zmq-reply-1",
+                    "frontend-session",
+                    "frontend",
+                    "input_reply",
+                ),
+                parent_header: Some(stdin_request.header.clone()),
+                metadata: KernelMetadata::new(),
+                reply: crate::KernelInputReply::new("Ada"),
+            })
+            .expect("input reply should encode");
+        runtime.block_on(async {
+            stdin
+                .send(frames_to_zmq_message(
+                    wire_message_to_frames(input_reply).frames,
+                ))
+                .await
+                .expect("stdin dealer should send input reply");
+        });
+
+        wait_for_socket_event(
+            &mut driver,
+            backend.transport_mut(),
+            crate::KernelSocketPollEvent::Channel(KernelChannel::Stdin),
+        );
+
+        let shell_reply_wire = runtime.block_on(async {
+            tokio::time::timeout(Duration::from_secs(2), shell.recv())
+                .await
+                .expect("shell reply should arrive before timeout")
+                .expect("shell reply should decode")
+        });
+        let shell_reply = decode_response_message(
+            &frames_to_wire_message(
+                KernelChannel::Shell,
+                &bootstrap.wire_config().delimiter,
+                zmq_message_to_frames(shell_reply_wire),
+            )
+            .expect("shell reply frames should convert"),
+        )
+        .expect("shell reply should decode");
+        match shell_reply.response {
+            KernelResponse::Execute(response) => {
+                assert_eq!(response.status, KernelReplyStatus::Ok);
+                assert_eq!(response.execution_count, Some(1));
+            }
+            other => panic!("expected execute reply, got {other:?}"),
+        }
+
+        let mut iopub_payloads = Vec::new();
+        while iopub_payloads.len() < 4 {
+            let message = runtime.block_on(async {
+                tokio::time::timeout(Duration::from_secs(2), iopub.recv())
+                    .await
+                    .expect("iopub message should arrive before timeout")
+                    .expect("iopub message should decode")
+            });
+            let envelope = crate::decode_iopub_message(
+                &frames_to_wire_message(
+                    KernelChannel::IoPub,
+                    &bootstrap.wire_config().delimiter,
+                    zmq_message_to_frames(message),
+                )
+                .expect("iopub frames should convert"),
+            )
+            .expect("iopub message should parse");
+            iopub_payloads.push(envelope.payload);
+        }
+
+        assert!(iopub_payloads.iter().any(|payload| matches!(
+            payload,
+            crate::KernelIoPubPayload::Status(status)
+                if status.execution_state == crate::KernelExecutionState::Busy
+        )));
+        assert!(iopub_payloads.iter().any(|payload| matches!(
+            payload,
+            crate::KernelIoPubPayload::ExecuteInput(input)
+                if input.code == "InputString[\"Name: \"]"
+        )));
+        assert!(iopub_payloads.iter().any(|payload| matches!(
+            payload,
+            crate::KernelIoPubPayload::ExecuteResult(result)
+                if result.data.get("text/plain") == Some("\"Ada\"")
+        )));
+        assert!(iopub_payloads.iter().any(|payload| matches!(
+            payload,
+            crate::KernelIoPubPayload::Status(status)
+                if status.execution_state == crate::KernelExecutionState::Idle
+        )));
+    }
+
+    #[test]
+    fn native_zeromq_backend_frontend_style_multi_message_session_flow_tracks_counts_and_shutdown()
+    {
+        let bootstrap = loopback_connection();
+        let codec = bootstrap.wire_codec();
+        let shell_endpoint = bootstrap.transport_layout().shell.uri();
+        let stdin_endpoint = bootstrap.transport_layout().stdin.uri();
+        let control_endpoint = bootstrap.transport_layout().control.uri();
+        let iopub_endpoint = bootstrap.transport_layout().iopub.uri();
+        let frontend_identity =
+            PeerIdentity::from_str("frontend-zmq-multi-client").expect("identity should parse");
+        let runtime = test_runtime();
+        let mut backend = NativeZeroMqTransportBackend::new_native(bootstrap.clone())
+            .expect("native zeromq backend should build");
+        let mut driver = backend.socket_driver(Session::new());
+
+        let mut shell = runtime.block_on(async {
+            let mut options = SocketOptions::default();
+            options.peer_identity(frontend_identity.clone());
+            let mut shell = DealerSocket::with_options(options);
+            shell
+                .connect(&shell_endpoint)
+                .await
+                .expect("shell dealer should connect");
+            shell
+        });
+        let mut stdin = runtime.block_on(async {
+            let mut options = SocketOptions::default();
+            options.peer_identity(frontend_identity);
+            let mut stdin = DealerSocket::with_options(options);
+            stdin
+                .connect(&stdin_endpoint)
+                .await
+                .expect("stdin dealer should connect");
+            stdin
+        });
+        let mut control = runtime.block_on(async {
+            let mut control = DealerSocket::new();
+            control
+                .connect(&control_endpoint)
+                .await
+                .expect("control dealer should connect");
+            control
+        });
+        let mut iopub = runtime.block_on(async {
+            let mut iopub = SubSocket::new();
+            iopub
+                .connect(&iopub_endpoint)
+                .await
+                .expect("iopub sub should connect");
+            iopub
+                .subscribe("")
+                .await
+                .expect("iopub sub should subscribe");
+            iopub
+        });
+
+        runtime.block_on(async {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        });
+
+        let first_execute_header = KernelMessageHeader::new(
+            "execute-zmq-multi-1",
+            "frontend-session",
+            "frontend",
+            "execute_request",
+        );
+        let first_execute = codec
+            .encode_request_envelope(&KernelRequestEnvelope {
+                channel: KernelChannel::Shell,
+                header: first_execute_header.clone(),
+                parent_header: None,
+                metadata: KernelMetadata::new(),
+                request: KernelRequest::Execute(crate::KernelExecuteRequest::new("1")),
+            })
+            .expect("first execute request should encode");
+        runtime.block_on(async {
+            shell
+                .send(frames_to_zmq_message(
+                    wire_message_to_frames(first_execute).frames,
+                ))
+                .await
+                .expect("shell dealer should send first execute");
+        });
+
+        wait_for_socket_event(
+            &mut driver,
+            backend.transport_mut(),
+            crate::KernelSocketPollEvent::Channel(KernelChannel::Shell),
+        );
+
+        let first_reply_wire = runtime.block_on(async {
+            tokio::time::timeout(Duration::from_secs(2), shell.recv())
+                .await
+                .expect("first shell reply should arrive before timeout")
+                .expect("first shell reply should decode")
+        });
+        let first_reply = decode_response_message(
+            &frames_to_wire_message(
+                KernelChannel::Shell,
+                &bootstrap.wire_config().delimiter,
+                zmq_message_to_frames(first_reply_wire),
+            )
+            .expect("first shell reply frames should convert"),
+        )
+        .expect("first shell reply should decode");
+        match first_reply.response {
+            KernelResponse::Execute(response) => {
+                assert_eq!(response.status, KernelReplyStatus::Ok);
+                assert_eq!(response.execution_count, Some(1));
+            }
+            other => panic!("expected first execute reply, got {other:?}"),
+        }
+
+        let mut first_iopub = Vec::new();
+        while first_iopub.len() < 4 {
+            let message = runtime.block_on(async {
+                tokio::time::timeout(Duration::from_secs(2), iopub.recv())
+                    .await
+                    .expect("first iopub message should arrive before timeout")
+                    .expect("first iopub message should decode")
+            });
+            first_iopub.push(
+                crate::decode_iopub_message(
+                    &frames_to_wire_message(
+                        KernelChannel::IoPub,
+                        &bootstrap.wire_config().delimiter,
+                        zmq_message_to_frames(message),
+                    )
+                    .expect("first iopub frames should convert"),
+                )
+                .expect("first iopub message should parse"),
+            );
+        }
+        assert!(first_iopub.iter().any(|message| matches!(
+            &message.payload,
+            crate::KernelIoPubPayload::ExecuteInput(input)
+                if input.code == "1" && input.execution_count == Some(1)
+        )));
+        assert!(first_iopub.iter().any(|message| matches!(
+            &message.payload,
+            crate::KernelIoPubPayload::ExecuteResult(result)
+                if result.data.get("text/plain") == Some("1")
+        )));
+
+        let second_execute_header = KernelMessageHeader::new(
+            "execute-zmq-multi-2",
+            "frontend-session",
+            "frontend",
+            "execute_request",
+        );
+        let second_execute = codec
+            .encode_request_envelope(&KernelRequestEnvelope {
+                channel: KernelChannel::Shell,
+                header: second_execute_header.clone(),
+                parent_header: None,
+                metadata: KernelMetadata::new(),
+                request: KernelRequest::Execute(crate::KernelExecuteRequest::new(
+                    "InputString[\"Name: \"]",
+                )),
+            })
+            .expect("second execute request should encode");
+        runtime.block_on(async {
+            shell
+                .send(frames_to_zmq_message(
+                    wire_message_to_frames(second_execute).frames,
+                ))
+                .await
+                .expect("shell dealer should send second execute");
+        });
+
+        wait_for_socket_event(
+            &mut driver,
+            backend.transport_mut(),
+            crate::KernelSocketPollEvent::Channel(KernelChannel::Shell),
+        );
+
+        let stdin_request_wire = runtime.block_on(async {
+            tokio::time::timeout(Duration::from_secs(2), stdin.recv())
+                .await
+                .expect("stdin request should arrive before timeout")
+                .expect("stdin request should decode")
+        });
+        let stdin_request_wire = frames_to_wire_message(
+            KernelChannel::Stdin,
+            &bootstrap.wire_config().delimiter,
+            zmq_message_to_frames(stdin_request_wire),
+        )
+        .expect("stdin request frames should convert");
+        let stdin_request = crate::decode_input_request_message(&stdin_request_wire)
+            .expect("stdin request should decode");
+        assert_eq!(stdin_request.request.prompt, "Name: ");
+
+        let input_reply = codec
+            .encode_input_reply_envelope(&crate::KernelInputReplyEnvelope {
+                channel: KernelChannel::Stdin,
+                header: KernelMessageHeader::new(
+                    "input-zmq-multi-1",
+                    "frontend-session",
+                    "frontend",
+                    "input_reply",
+                ),
+                parent_header: Some(stdin_request.header.clone()),
+                metadata: KernelMetadata::new(),
+                reply: crate::KernelInputReply::new("Ada"),
+            })
+            .expect("stdin reply should encode");
+        runtime.block_on(async {
+            stdin
+                .send(frames_to_zmq_message(
+                    wire_message_to_frames(input_reply).frames,
+                ))
+                .await
+                .expect("stdin dealer should send input reply");
+        });
+
+        wait_for_socket_event(
+            &mut driver,
+            backend.transport_mut(),
+            crate::KernelSocketPollEvent::Channel(KernelChannel::Stdin),
+        );
+
+        let second_reply_wire = runtime.block_on(async {
+            tokio::time::timeout(Duration::from_secs(2), shell.recv())
+                .await
+                .expect("second shell reply should arrive before timeout")
+                .expect("second shell reply should decode")
+        });
+        let second_reply = decode_response_message(
+            &frames_to_wire_message(
+                KernelChannel::Shell,
+                &bootstrap.wire_config().delimiter,
+                zmq_message_to_frames(second_reply_wire),
+            )
+            .expect("second shell reply frames should convert"),
+        )
+        .expect("second shell reply should decode");
+        match second_reply.response {
+            KernelResponse::Execute(response) => {
+                assert_eq!(response.status, KernelReplyStatus::Ok);
+                assert_eq!(response.execution_count, Some(2));
+            }
+            other => panic!("expected second execute reply, got {other:?}"),
+        }
+
+        let mut second_iopub = Vec::new();
+        while second_iopub.len() < 4 {
+            let message = runtime.block_on(async {
+                tokio::time::timeout(Duration::from_secs(2), iopub.recv())
+                    .await
+                    .expect("second iopub message should arrive before timeout")
+                    .expect("second iopub message should decode")
+            });
+            second_iopub.push(
+                crate::decode_iopub_message(
+                    &frames_to_wire_message(
+                        KernelChannel::IoPub,
+                        &bootstrap.wire_config().delimiter,
+                        zmq_message_to_frames(message),
+                    )
+                    .expect("second iopub frames should convert"),
+                )
+                .expect("second iopub message should parse"),
+            );
+        }
+        assert!(second_iopub.iter().any(|message| matches!(
+            &message.payload,
+            crate::KernelIoPubPayload::ExecuteInput(input)
+                if input.code == "InputString[\"Name: \"]" && input.execution_count == Some(2)
+        )));
+        assert!(second_iopub.iter().any(|message| matches!(
+            &message.payload,
+            crate::KernelIoPubPayload::ExecuteResult(result)
+                if result.data.get("text/plain") == Some("\"Ada\"")
+        )));
+
+        let third_execute_header = KernelMessageHeader::new(
+            "execute-zmq-multi-3",
+            "frontend-session",
+            "frontend",
+            "execute_request",
+        );
+        let third_execute = codec
+            .encode_request_envelope(&KernelRequestEnvelope {
+                channel: KernelChannel::Shell,
+                header: third_execute_header.clone(),
+                parent_header: None,
+                metadata: KernelMetadata::new(),
+                request: KernelRequest::Execute(crate::KernelExecuteRequest::new("2")),
+            })
+            .expect("third execute request should encode");
+        runtime.block_on(async {
+            shell
+                .send(frames_to_zmq_message(
+                    wire_message_to_frames(third_execute).frames,
+                ))
+                .await
+                .expect("shell dealer should send third execute");
+        });
+
+        wait_for_socket_event(
+            &mut driver,
+            backend.transport_mut(),
+            crate::KernelSocketPollEvent::Channel(KernelChannel::Shell),
+        );
+
+        let third_reply_wire = runtime.block_on(async {
+            tokio::time::timeout(Duration::from_secs(2), shell.recv())
+                .await
+                .expect("third shell reply should arrive before timeout")
+                .expect("third shell reply should decode")
+        });
+        let third_reply = decode_response_message(
+            &frames_to_wire_message(
+                KernelChannel::Shell,
+                &bootstrap.wire_config().delimiter,
+                zmq_message_to_frames(third_reply_wire),
+            )
+            .expect("third shell reply frames should convert"),
+        )
+        .expect("third shell reply should decode");
+        match third_reply.response {
+            KernelResponse::Execute(response) => {
+                assert_eq!(response.status, KernelReplyStatus::Ok);
+                assert_eq!(response.execution_count, Some(3));
+            }
+            other => panic!("expected third execute reply, got {other:?}"),
+        }
+
+        let mut third_iopub = Vec::new();
+        while third_iopub.len() < 4 {
+            let message = runtime.block_on(async {
+                tokio::time::timeout(Duration::from_secs(2), iopub.recv())
+                    .await
+                    .expect("third iopub message should arrive before timeout")
+                    .expect("third iopub message should decode")
+            });
+            third_iopub.push(
+                crate::decode_iopub_message(
+                    &frames_to_wire_message(
+                        KernelChannel::IoPub,
+                        &bootstrap.wire_config().delimiter,
+                        zmq_message_to_frames(message),
+                    )
+                    .expect("third iopub frames should convert"),
+                )
+                .expect("third iopub message should parse"),
+            );
+        }
+        assert!(third_iopub.iter().any(|message| matches!(
+            &message.payload,
+            crate::KernelIoPubPayload::ExecuteInput(input)
+                if input.code == "2" && input.execution_count == Some(3)
+        )));
+        assert!(third_iopub.iter().any(|message| matches!(
+            &message.payload,
+            crate::KernelIoPubPayload::ExecuteResult(result)
+                if result.data.get("text/plain") == Some("2")
+        )));
+
+        let shutdown_header = KernelMessageHeader::new(
+            "shutdown-zmq-multi-1",
+            "frontend-session",
+            "frontend",
+            "shutdown_request",
+        );
+        let shutdown_request = codec
+            .encode_request_envelope(&KernelRequestEnvelope {
+                channel: KernelChannel::Control,
+                header: shutdown_header.clone(),
+                parent_header: None,
+                metadata: KernelMetadata::new(),
+                request: KernelRequest::Shutdown(crate::KernelShutdownRequest { restart: false }),
+            })
+            .expect("shutdown request should encode");
+        runtime.block_on(async {
+            control
+                .send(frames_to_zmq_message(
+                    wire_message_to_frames(shutdown_request).frames,
+                ))
+                .await
+                .expect("control dealer should send shutdown request");
+        });
+
+        wait_for_socket_event(
+            &mut driver,
+            backend.transport_mut(),
+            crate::KernelSocketPollEvent::Channel(KernelChannel::Control),
+        );
+
+        let shutdown_reply_wire = runtime.block_on(async {
+            tokio::time::timeout(Duration::from_secs(2), control.recv())
+                .await
+                .expect("shutdown reply should arrive before timeout")
+                .expect("shutdown reply should decode")
+        });
+        let shutdown_reply = decode_response_message(
+            &frames_to_wire_message(
+                KernelChannel::Control,
+                &bootstrap.wire_config().delimiter,
+                zmq_message_to_frames(shutdown_reply_wire),
+            )
+            .expect("shutdown reply frames should convert"),
+        )
+        .expect("shutdown reply should decode");
+        match shutdown_reply.response {
+            KernelResponse::Shutdown(response) => {
+                assert_eq!(response.status, KernelReplyStatus::Ok);
+                assert!(!response.restart);
+                assert_eq!(
+                    response.lifecycle_state,
+                    crate::KernelLifecycleState::ShutdownRequested
+                );
+            }
+            other => panic!("expected shutdown reply, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn native_zeromq_backend_frontend_style_control_interrupt_round_trip() {
+        let bootstrap = loopback_connection();
+        let codec = bootstrap.wire_codec();
+        let control_endpoint = bootstrap.transport_layout().control.uri();
+        let runtime = test_runtime();
+        let mut backend = NativeZeroMqTransportBackend::new_native(bootstrap.clone())
+            .expect("native zeromq backend should build");
+        let mut driver = backend.socket_driver(Session::new());
+
+        let mut control = runtime.block_on(async {
+            let mut control = DealerSocket::new();
+            control
+                .connect(&control_endpoint)
+                .await
+                .expect("control dealer should connect");
+            control
+        });
+
+        runtime.block_on(async {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        });
+
+        let interrupt_request = codec
+            .encode_request_envelope(&KernelRequestEnvelope {
+                channel: KernelChannel::Control,
+                header: KernelMessageHeader::new(
+                    "interrupt-zmq-1",
+                    "frontend-session",
+                    "frontend",
+                    "interrupt_request",
+                ),
+                parent_header: None,
+                metadata: KernelMetadata::new(),
+                request: KernelRequest::Interrupt(crate::KernelInterruptRequest),
+            })
+            .expect("interrupt request should encode");
+        runtime.block_on(async {
+            control
+                .send(frames_to_zmq_message(
+                    wire_message_to_frames(interrupt_request).frames,
+                ))
+                .await
+                .expect("control dealer should send interrupt request");
+        });
+
+        wait_for_socket_event(
+            &mut driver,
+            backend.transport_mut(),
+            crate::KernelSocketPollEvent::Channel(KernelChannel::Control),
+        );
+
+        let reply_wire = runtime.block_on(async {
+            tokio::time::timeout(Duration::from_secs(2), control.recv())
+                .await
+                .expect("control reply should arrive before timeout")
+                .expect("control reply should decode")
+        });
+        let reply = decode_response_message(
+            &frames_to_wire_message(
+                KernelChannel::Control,
+                &bootstrap.wire_config().delimiter,
+                zmq_message_to_frames(reply_wire),
+            )
+            .expect("control reply frames should convert"),
+        )
+        .expect("control reply should decode");
+        match reply.response {
+            KernelResponse::Interrupt(response) => {
+                assert_eq!(response.status, KernelReplyStatus::Ok);
+                assert_eq!(
+                    response.lifecycle_state,
+                    crate::KernelLifecycleState::InterruptRequested
+                );
+            }
+            other => panic!("expected interrupt reply, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn native_zeromq_backend_shutdown_stops_shell_work_and_reports_pending_shell_messages() {
+        let bootstrap = loopback_connection();
+        let codec = bootstrap.wire_codec();
+        let shell_endpoint = bootstrap.transport_layout().shell.uri();
+        let control_endpoint = bootstrap.transport_layout().control.uri();
+        let runtime = test_runtime();
+        let mut backend = NativeZeroMqTransportBackend::new_native(bootstrap.clone())
+            .expect("native zeromq backend should build");
+        let mut driver = backend.socket_driver(Session::new());
+
+        let mut shell = runtime.block_on(async {
+            let mut shell = DealerSocket::new();
+            shell
+                .connect(&shell_endpoint)
+                .await
+                .expect("shell dealer should connect");
+            shell
+        });
+        let mut control = runtime.block_on(async {
+            let mut control = DealerSocket::new();
+            control
+                .connect(&control_endpoint)
+                .await
+                .expect("control dealer should connect");
+            control
+        });
+
+        runtime.block_on(async {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        });
+
+        let execute_request = codec
+            .encode_request_envelope(&KernelRequestEnvelope {
+                channel: KernelChannel::Shell,
+                header: KernelMessageHeader::new(
+                    "execute-zmq-shutdown-queued-1",
+                    "frontend-session",
+                    "frontend",
+                    "execute_request",
+                ),
+                parent_header: None,
+                metadata: KernelMetadata::new(),
+                request: KernelRequest::Execute(crate::KernelExecuteRequest::new("1")),
+            })
+            .expect("queued execute request should encode");
+        let shutdown_header = KernelMessageHeader::new(
+            "shutdown-zmq-1",
+            "frontend-session",
+            "frontend",
+            "shutdown_request",
+        );
+        let shutdown_request = codec
+            .encode_request_envelope(&KernelRequestEnvelope {
+                channel: KernelChannel::Control,
+                header: shutdown_header.clone(),
+                parent_header: None,
+                metadata: KernelMetadata::new(),
+                request: KernelRequest::Shutdown(crate::KernelShutdownRequest { restart: true }),
+            })
+            .expect("shutdown request should encode");
+
+        runtime.block_on(async {
+            control
+                .send(frames_to_zmq_message(
+                    wire_message_to_frames(shutdown_request).frames,
+                ))
+                .await
+                .expect("control dealer should send shutdown request");
+            tokio::time::sleep(Duration::from_millis(30)).await;
+            shell
+                .send(frames_to_zmq_message(
+                    wire_message_to_frames(execute_request).frames,
+                ))
+                .await
+                .expect("shell dealer should send queued execute request");
+            tokio::time::sleep(Duration::from_millis(70)).await;
+        });
+
+        let first_event = wait_for_next_socket_event(&mut driver, backend.transport_mut());
+        assert_eq!(
+            first_event,
+            crate::KernelSocketPollEvent::Channel(KernelChannel::Control)
+        );
+
+        let report = driver
+            .pump_until_idle(backend.transport_mut())
+            .expect("driver should stop cleanly after shutdown");
+        assert_eq!(report.control_messages, 0);
+        assert_eq!(report.shell_messages, 0);
+        assert_eq!(report.stdin_messages, 0);
+        assert_eq!(report.heartbeat_messages, 0);
+        assert!(report.stopped_for_shutdown);
+        assert!(driver.event_pump().adapter().shutdown_requested());
+        assert_eq!(
+            driver.event_pump().adapter().lifecycle_state(),
+            crate::KernelLifecycleState::Shutdown
+        );
+
+        let control_reply_wire = runtime.block_on(async {
+            tokio::time::timeout(Duration::from_secs(2), control.recv())
+                .await
+                .expect("shutdown reply should arrive before timeout")
+                .expect("shutdown reply should decode")
+        });
+        let control_reply = decode_response_message(
+            &frames_to_wire_message(
+                KernelChannel::Control,
+                &bootstrap.wire_config().delimiter,
+                zmq_message_to_frames(control_reply_wire),
+            )
+            .expect("shutdown reply frames should convert"),
+        )
+        .expect("shutdown reply should decode");
+        assert_eq!(control_reply.header.username, "rum-kernel");
+        assert_eq!(
+            control_reply.header.protocol_version,
+            shutdown_header.protocol_version
+        );
+        assert_eq!(control_reply.parent_header, Some(shutdown_header.clone()));
+
+        match control_reply.response {
+            KernelResponse::Shutdown(response) => {
+                assert_eq!(response.status, KernelReplyStatus::Ok);
+                assert!(response.restart);
+                assert_eq!(
+                    response.lifecycle_state,
+                    crate::KernelLifecycleState::ShutdownRequested
+                );
+            }
+            other => panic!("expected shutdown reply, got {other:?}"),
+        }
+
+        let shell_timeout = runtime.block_on(async {
+            tokio::time::timeout(Duration::from_millis(200), shell.recv()).await
+        });
+        assert!(
+            shell_timeout.is_err(),
+            "queued shell work should remain pending after shutdown"
+        );
+    }
+
+    #[test]
+    fn native_zeromq_backend_round_trips_signed_execute_and_signed_iopub_messages() {
+        let bootstrap = signed_loopback_connection();
+        let codec = bootstrap.wire_codec();
+        let shell_endpoint = bootstrap.transport_layout().shell.uri();
+        let iopub_endpoint = bootstrap.transport_layout().iopub.uri();
+        let runtime = test_runtime();
+        let mut backend = NativeZeroMqTransportBackend::new_native(bootstrap.clone())
+            .expect("signed native zeromq backend should build");
+        let mut driver = backend.socket_driver(Session::new());
+
+        let mut shell = runtime.block_on(async {
+            let mut shell = DealerSocket::new();
+            shell
+                .connect(&shell_endpoint)
+                .await
+                .expect("shell dealer should connect");
+            shell
+        });
+        let mut iopub = runtime.block_on(async {
+            let mut iopub = SubSocket::new();
+            iopub
+                .connect(&iopub_endpoint)
+                .await
+                .expect("iopub sub should connect");
+            iopub
+                .subscribe("")
+                .await
+                .expect("iopub sub should subscribe");
+            iopub
+        });
+
+        runtime.block_on(async {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        });
+
+        let request = codec
+            .encode_request_envelope(&KernelRequestEnvelope {
+                channel: KernelChannel::Shell,
+                header: KernelMessageHeader::new(
+                    "execute-zmq-signed-1",
+                    "frontend-session",
+                    "frontend",
+                    "execute_request",
+                ),
+                parent_header: None,
+                metadata: KernelMetadata::new(),
+                request: KernelRequest::Execute(crate::KernelExecuteRequest::new("1")),
+            })
+            .expect("signed execute request should encode");
+        assert!(request.signature.is_some());
+
+        runtime.block_on(async {
+            shell
+                .send(frames_to_zmq_message(
+                    wire_message_to_frames(request).frames,
+                ))
+                .await
+                .expect("shell dealer should send signed execute request");
+        });
+
+        wait_for_socket_event(
+            &mut driver,
+            backend.transport_mut(),
+            crate::KernelSocketPollEvent::Channel(KernelChannel::Shell),
+        );
+
+        let reply_wire = frames_to_wire_message(
+            KernelChannel::Shell,
+            &bootstrap.wire_config().delimiter,
+            runtime.block_on(async {
+                tokio::time::timeout(Duration::from_secs(2), shell.recv())
+                    .await
+                    .expect("signed shell reply should arrive before timeout")
+                    .expect("signed shell reply should decode")
+                    .into_vec()
+                    .into_iter()
+                    .map(|frame| frame.to_vec())
+                    .collect::<Vec<_>>()
+            }),
+        )
+        .expect("signed shell reply frames should convert");
+        assert!(reply_wire.signature.is_some());
+        let reply = codec
+            .decode_response_message(&reply_wire)
+            .expect("signed shell reply should validate and decode");
+        match reply.response {
+            KernelResponse::Execute(response) => {
+                assert_eq!(response.status, KernelReplyStatus::Ok);
+                assert_eq!(response.execution_count, Some(1));
+            }
+            other => panic!("expected signed execute reply, got {other:?}"),
+        }
+
+        let mut saw_signed_execute_result = false;
+        while !saw_signed_execute_result {
+            let message = runtime.block_on(async {
+                tokio::time::timeout(Duration::from_secs(2), iopub.recv())
+                    .await
+                    .expect("signed iopub message should arrive before timeout")
+                    .expect("signed iopub message should decode")
+            });
+            let wire = frames_to_wire_message(
+                KernelChannel::IoPub,
+                &bootstrap.wire_config().delimiter,
+                zmq_message_to_frames(message),
+            )
+            .expect("signed iopub frames should convert");
+            assert!(wire.signature.is_some());
+            let envelope = codec
+                .decode_iopub_message(&wire)
+                .expect("signed iopub message should validate and decode");
+            if matches!(
+                envelope.payload,
+                crate::KernelIoPubPayload::ExecuteResult(ref result)
+                    if result.data.get("text/plain") == Some("1")
+            ) {
+                saw_signed_execute_result = true;
+            }
+        }
+    }
+
+    #[test]
+    fn native_zeromq_backend_rejects_tampered_signed_requests_end_to_end() {
+        let bootstrap = signed_loopback_connection();
+        let codec = bootstrap.wire_codec();
+        let shell_endpoint = bootstrap.transport_layout().shell.uri();
+        let runtime = test_runtime();
+        let mut backend = NativeZeroMqTransportBackend::new_native(bootstrap.clone())
+            .expect("signed native zeromq backend should build");
+        let mut driver = backend.socket_driver(Session::new());
+
+        let mut shell = runtime.block_on(async {
+            let mut shell = DealerSocket::new();
+            shell
+                .connect(&shell_endpoint)
+                .await
+                .expect("shell dealer should connect");
+            shell
+        });
+
+        runtime.block_on(async {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        });
+
+        let mut tampered_request = codec
+            .encode_request_envelope(&KernelRequestEnvelope {
+                channel: KernelChannel::Shell,
+                header: KernelMessageHeader::new(
+                    "execute-zmq-signed-bad-1",
+                    "frontend-session",
+                    "frontend",
+                    "execute_request",
+                ),
+                parent_header: None,
+                metadata: KernelMetadata::new(),
+                request: KernelRequest::Execute(crate::KernelExecuteRequest::new("1")),
+            })
+            .expect("signed request should encode before tampering");
+        tampered_request.signature = Some("bad-signature".to_string());
+
+        runtime.block_on(async {
+            shell
+                .send(frames_to_zmq_message(
+                    wire_message_to_frames(tampered_request).frames,
+                ))
+                .await
+                .expect("shell dealer should send tampered signed request");
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        });
+
+        let deadline = Instant::now() + Duration::from_secs(2);
+        loop {
+            match driver.pump_once(backend.transport_mut()) {
+                Err(crate::KernelWireError::InvalidSignature) => break,
+                Ok(None) | Ok(Some(_)) => {
+                    assert!(
+                        Instant::now() < deadline,
+                        "timed out waiting for invalid-signature failure"
+                    );
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(other) => panic!("expected invalid signature error, got {other:?}"),
+            }
+        }
+
+        let shell_timeout = runtime.block_on(async {
+            tokio::time::timeout(Duration::from_millis(200), shell.recv()).await
+        });
+        assert!(
+            shell_timeout.is_err(),
+            "tampered signed request should not produce a shell reply"
+        );
     }
 }
