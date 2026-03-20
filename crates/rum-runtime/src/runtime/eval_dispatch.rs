@@ -55,7 +55,7 @@ impl Session {
             CallDispatchStage::PrepareArguments => {
                 let raw_args = std::mem::take(&mut state.raw_args);
                 let mut evaluated_args =
-                    self.evaluate_call_args_with_attributes(attributes, raw_args)?;
+                    self.prepare_arguments_for_call(head.clone(), attributes, raw_args)?;
                 evaluated_args =
                     self.normalize_call_args_by_attributes(head, evaluated_args, attributes);
                 state.evaluated_args = Some(evaluated_args);
@@ -64,7 +64,11 @@ impl Session {
             CallDispatchStage::Listable => {
                 match self.dispatch_listable_stage(head, state.evaluated_args(), attributes)? {
                     ThreadingDispatch::NotApplicable => Ok(None),
-                    ThreadingDispatch::Threaded(threaded) => self.evaluate(threaded).map(Some),
+                    ThreadingDispatch::Threaded(threaded) => {
+                        let threaded_result = self.evaluate(threaded);
+                        self.suspend_with_frame(threaded_result, |_, value| Ok(value))
+                            .map(Some)
+                    }
                     ThreadingDispatch::Mismatch => Ok(Some(Expr::call(
                         head.clone(),
                         state.evaluated_args().to_vec(),
@@ -172,12 +176,14 @@ impl Session {
             }),
             BuiltinHandler::ReleaseHold => self.eval_release_hold(args),
             BuiltinHandler::Evaluate => Ok(if args.len() == 1 {
-                self.evaluate(args[0].clone())?
+                let evaluated_result = self.evaluate(args[0].clone());
+                self.suspend_with_frame(evaluated_result, |_, value| Ok(value))?
             } else {
                 Expr::call(head.clone(), args.to_vec())
             }),
             BuiltinHandler::Sequence => Ok(sequence_expr(args.to_vec())),
             BuiltinHandler::Thread => self.eval_thread(head, args),
+            BuiltinHandler::InputString => self.eval_input_string(args),
         }
     }
 }

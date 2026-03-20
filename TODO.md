@@ -45,8 +45,8 @@ This roadmap now uses two levels of detail:
 ### Phase 7: Embedding and Jupyter Preparation
 
 - [x] Stabilize a host-facing request/config API around `Session` and keep terminal rendering out of it
-- [x] Create an initial protocol-facing completion/kernel adapter slice and a placeholder `rum-jupyter` crate
-- [ ] Grow that placeholder into a fuller Jupyter-facing adapter and kernel lifecycle surface
+- [x] Create an initial protocol-facing completion/kernel adapter slice and a first `rum-jupyter` crate
+- [ ] Continue hardening `rum-jupyter` from an early adapter into a fuller Jupyter-facing kernel surface with real transport/lifecycle polish
 
 ### Phase 8: String Language and Text Processing
 
@@ -106,6 +106,7 @@ Reference docs for this workstream:
 - [x] Separate parser sugar from runtime-canonical representation more explicitly in the lowering code
 - [x] Add golden tests for syntax-to-core lowering across rules, patterns, scoping, messages, and package constructs
 - [x] Decide where lowering-time validation should stop and runtime validation should begin
+- [ ] Revisit integer representation later if performance demands it; evaluate whether `rum-core::Atom::Integer` should stay pure `BigInt` or grow a `small-int + bigint` hybrid representation
 
 ### `rum-runtime`: Definition Inspection
 
@@ -226,7 +227,7 @@ Reference docs for this workstream:
 - [x] Separate terminal presentation concerns from protocol-facing kernel concerns more explicitly in crate boundaries
 - [x] Add a transport-friendly completion request/response surface alongside parse/eval/inspect
 - [x] Define the first protocol-neutral kernel models for execute, inspect, and completion traffic
-- [x] Create a placeholder `rum-jupyter` crate now that the host API is stable enough
+- [x] Create an initial `rum-jupyter` crate now that the host API is stable enough
 - [x] Map Jupyter-style execute, inspect, and completion requests onto the stabilized session API
 - [x] Decide the first-pass execute result surface: execution count, rendered result payloads, messages, and structured failures
 - [x] Add adapter-level tests that lock down kernel/request translation without requiring a notebook frontend
@@ -249,4 +250,13 @@ Reference docs for this workstream:
 - [x] Preserve shell reply routing ids and add a first mock-transport event pump that can decode wire requests, dispatch them, and publish wire responses
 - [x] Tighten reply / `IOPub` schema details with header dates plus lifecycle-aware `status` and `shutdown` content
 - [x] Grow the mock event-pump into a more realistic control-first transport loop that can keep draining queued work until idle or stop after shutdown
-- [ ] Grow the placeholder adapter toward real Jupyter request/response envelopes, stream/display payloads, and kernel lifecycle management
+- [x] Add a first protocol-side stdin path with `allow_stdin`, `input_request` / `input_reply`, and pending-input handling in the mock transport loop
+- [x] Tighten notebook-facing completion cursor semantics so replacement ranges cover the full symbol span when the cursor sits inside an identifier
+- [x] Add a first Jupyter connection-file model/parser and a bootstrap-config layer for deriving endpoint URIs plus wire/signature setup
+- [x] Define a transport-backend seam so the current mock transport and a future ZeroMQ backend can share the same bootstrap/layout boundary
+- [x] Connect the protocol-side stdin scaffolding to a real language/runtime input facility once host-driven input builtins exist
+- [x] Back protocol-side stdin with a real `InputString` builtin plus request suspension/resume instead of restarting whole execute requests after input replies
+- [x] Introduce a typed internal continuation/driver bridge so non-`Expr` helper paths can suspend and resume through the same session machinery
+- [x] Use that internal continuation bridge for delayed message-template rendering so Jupyter stdin can flow through runtime message generation without replaying the whole evaluation
+- [ ] Extend the typed internal continuation/driver design into matcher, pattern-condition, and other owned-state helper paths that still sit outside the current suspension/resume surface
+- [ ] Continue hardening the early kernel adapter toward more complete Jupyter transport, lifecycle, and frontend-compatibility behavior beyond the current mock/bootstrap-backed layer

@@ -259,6 +259,7 @@ pub enum BuiltinHandler {
     Evaluate,
     Sequence,
     Thread,
+    InputString,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BuiltinSpec {

@@ -1,14 +1,18 @@
-use rum_runtime::Session;
+use rum_runtime::{Session, SessionRequestFailure};
 
 use super::{
-    InMemoryTransport, KernelAdapter, KernelChannel, KernelCompleteRequest, KernelEventPump,
-    KernelExecuteOutcome, KernelExecuteRequest, KernelExecutionState, KernelInfoRequest,
-    KernelInspectRequest, KernelInterruptRequest, KernelIoPubPayload, KernelIsCompleteRequest,
-    KernelIsCompleteStatus, KernelLifecycleState, KernelMessageHeader, KernelOutput,
-    KernelReplyStatus, KernelRequest, KernelRequestEnvelope, KernelResponse, KernelShutdownRequest,
-    KernelSignaturePolicy, KernelStreamName, KernelTransport, KernelWireCodec, KernelWireConfig,
-    KernelWireError, MockSocketTransport, decode_iopub_message, decode_response_message,
-    encode_dispatch_result, encode_request_envelope,
+    InMemoryTransport, KernelAdapter, KernelBootstrapConfig, KernelChannel, KernelCompleteRequest,
+    KernelConnectionFile, KernelConnectionFileError, KernelEventPump, KernelExecuteOutcome,
+    KernelExecuteRequest, KernelExecutionState, KernelInfoRequest, KernelInputReply,
+    KernelInputReplyEnvelope, KernelInputRequest, KernelInspectRequest, KernelInterruptRequest,
+    KernelIoPubPayload, KernelIsCompleteRequest, KernelIsCompleteStatus, KernelLifecycleState,
+    KernelMessageHeader, KernelOutput, KernelReplyStatus, KernelRequest, KernelRequestEnvelope,
+    KernelResponse, KernelShutdownRequest, KernelSignaturePolicy, KernelSignatureScheme,
+    KernelStreamName, KernelTransport, KernelTransportBackend, KernelTransportKind,
+    KernelWireCodec, KernelWireConfig, KernelWireError, MockSocketTransport, MockTransportBackend,
+    decode_input_reply_message, decode_input_request_message, decode_iopub_message,
+    decode_response_message, encode_dispatch_result, encode_input_reply_envelope,
+    encode_request_envelope,
 };
 
 #[test]
@@ -45,6 +49,135 @@ fn execute_request_maps_to_session_eval_and_tracks_execution_count() {
         }
         other => panic!("expected execute result output, got {other:?}"),
     }
+
+    let request = KernelExecuteRequest::new("1");
+    assert!(request.allow_stdin);
+}
+
+#[test]
+fn connection_file_parser_loads_jupyter_connection_shapes() {
+    let connection = KernelConnectionFile::parse_json(
+        r#"{
+            "transport": "tcp",
+            "ip": "127.0.0.1",
+            "shell_port": 57503,
+            "iopub_port": 40885,
+            "stdin_port": 52597,
+            "control_port": 50160,
+            "hb_port": 42540,
+            "key": "secret",
+            "signature_scheme": "hmac-sha256",
+            "kernel_name": "rum"
+        }"#,
+    )
+    .expect("connection file should parse");
+
+    assert_eq!(connection.transport, KernelTransportKind::Tcp);
+    assert_eq!(connection.ip, "127.0.0.1");
+    assert_eq!(connection.shell_port, 57503);
+    assert_eq!(
+        connection.channel_endpoint(KernelChannel::Shell),
+        "tcp://127.0.0.1:57503"
+    );
+    assert_eq!(connection.heartbeat_endpoint(), "tcp://127.0.0.1:42540");
+    assert_eq!(
+        connection.signature_scheme,
+        KernelSignatureScheme::HmacSha256
+    );
+    assert_eq!(connection.kernel_name.as_deref(), Some("rum"));
+    assert_eq!(
+        connection.signature_policy(),
+        KernelSignaturePolicy::Required("secret".to_string())
+    );
+}
+
+#[test]
+fn connection_file_parser_reports_missing_required_fields() {
+    let error = KernelConnectionFile::parse_json(
+        r#"{
+            "transport": "tcp",
+            "ip": "127.0.0.1"
+        }"#,
+    )
+    .expect_err("incomplete connection file should fail");
+
+    assert_eq!(
+        error,
+        KernelConnectionFileError::MissingField {
+            field: "shell_port"
+        }
+    );
+}
+
+#[test]
+fn bootstrap_config_derives_endpoints_and_wire_policy_from_connection_file() {
+    let connection = KernelConnectionFile::parse_json(
+        r#"{
+            "transport": "tcp",
+            "ip": "127.0.0.1",
+            "shell_port": 57503,
+            "iopub_port": 40885,
+            "stdin_port": 52597,
+            "control_port": 50160,
+            "hb_port": 42540,
+            "key": "secret",
+            "signature_scheme": "hmac-sha256"
+        }"#,
+    )
+    .expect("connection file should parse");
+
+    let bootstrap = KernelBootstrapConfig::from_connection_file(connection)
+        .with_username("rum-kernel")
+        .with_session_validation("frontend-session");
+    let layout = bootstrap.transport_layout();
+    let wire = bootstrap.wire_config();
+
+    assert_eq!(bootstrap.username, "rum-kernel");
+    assert_eq!(layout.shell.uri(), "tcp://127.0.0.1:57503");
+    assert_eq!(layout.control.uri(), "tcp://127.0.0.1:50160");
+    assert_eq!(layout.stdin.uri(), "tcp://127.0.0.1:52597");
+    assert_eq!(layout.iopub.uri(), "tcp://127.0.0.1:40885");
+    assert_eq!(layout.heartbeat.uri(), "tcp://127.0.0.1:42540");
+    assert_eq!(wire.session_id, Some("frontend-session".to_string()));
+    assert_eq!(
+        wire.signature_policy,
+        KernelSignaturePolicy::Required("secret".to_string())
+    );
+}
+
+#[test]
+fn mock_transport_backend_exposes_bootstrap_boundary_for_future_real_transports() {
+    let connection = KernelConnectionFile::parse_json(
+        r#"{
+            "transport": "tcp",
+            "ip": "127.0.0.1",
+            "shell_port": 57503,
+            "iopub_port": 40885,
+            "stdin_port": 52597,
+            "control_port": 50160,
+            "hb_port": 42540,
+            "key": "",
+            "signature_scheme": ""
+        }"#,
+    )
+    .expect("connection file should parse");
+
+    let bootstrap = KernelBootstrapConfig::from_connection_file(connection);
+    let backend = MockTransportBackend::new(bootstrap.clone());
+
+    assert_eq!(backend.bootstrap_config(), &bootstrap);
+    assert_eq!(
+        backend.transport_layout().shell.uri(),
+        "tcp://127.0.0.1:57503"
+    );
+    assert!(backend.transport().shell.is_empty());
+
+    let pump = backend.event_pump(Session::new());
+    assert_eq!(pump.codec().config().session_id, None);
+    assert_eq!(
+        pump.codec().config().signature_policy,
+        KernelSignaturePolicy::Disabled
+    );
 }
 
 #[test]
@@ -152,6 +285,20 @@ fn complete_request_maps_cursor_prefix_to_session_completion_response() {
 }
 
 #[test]
+fn complete_request_replaces_the_full_symbol_when_cursor_is_inside_it() {
+    let mut session = Session::new();
+    session.eval_text("localName = 1").unwrap();
+    let adapter = KernelAdapter::new(session);
+
+    let response = adapter.complete(KernelCompleteRequest::new("localName", 3));
+
+    assert_eq!(response.replacement_start, 0);
+    assert_eq!(response.replacement_end, "localName".len());
+    assert_eq!(response.prefix, "loc");
+    assert_eq!(response.matches, vec!["localName"]);
+}
+
+#[test]
 fn execute_request_with_tracing_emits_display_data_separately_from_execute_result() {
     let mut session = Session::new();
     session.enable_tracing(true);
@@ -216,10 +363,14 @@ fn dispatch_request_emits_iopub_status_execute_input_and_execute_result() {
         metadata: super::KernelMetadata::new(),
         request: KernelRequest::Execute(KernelExecuteRequest::new("1")),
     });
+    let reply = dispatch
+        .reply
+        .as_ref()
+        .expect("execute should reply immediately");
 
-    assert_eq!(dispatch.reply.channel, KernelChannel::Shell);
-    assert_eq!(dispatch.reply.header.msg_type, "execute_reply");
-    assert_eq!(dispatch.reply.metadata.get("status"), Some("ok"));
+    assert_eq!(reply.channel, KernelChannel::Shell);
+    assert_eq!(reply.header.msg_type, "execute_reply");
+    assert_eq!(reply.metadata.get("status"), Some("ok"));
     assert_eq!(adapter.execution_state(), KernelExecutionState::Idle);
     assert_eq!(dispatch.iopub.len(), 4);
 
@@ -254,9 +405,9 @@ fn dispatch_request_emits_iopub_status_execute_input_and_execute_result() {
         other => panic!("expected idle status payload, got {other:?}"),
     }
 
-    assert_eq!(dispatch.reply.metadata.get("channel"), Some("shell"));
+    assert_eq!(reply.metadata.get("channel"), Some("shell"));
     assert_eq!(
-        dispatch.reply.metadata.get("parent_msg_type"),
+        reply.metadata.get("parent_msg_type"),
         Some("execute_request")
     );
     assert_eq!(dispatch.iopub[0].metadata.get("channel"), Some("iopub"));
@@ -275,18 +426,20 @@ fn shell_request_envelope_dispatches_kernel_info_and_shutdown() {
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);
 
-    let info = adapter.handle_shell_request(KernelRequestEnvelope {
-        channel: KernelChannel::Shell,
-        header: KernelMessageHeader::new(
-            "client-msg-7",
-            "session-1",
-            "tester",
-            "kernel_info_request",
-        ),
-        parent_header: None,
-        metadata: super::KernelMetadata::new(),
-        request: KernelRequest::KernelInfo(KernelInfoRequest),
-    });
+    let info = adapter
+        .handle_shell_request(KernelRequestEnvelope {
+            channel: KernelChannel::Shell,
+            header: KernelMessageHeader::new(
+                "client-msg-7",
+                "session-1",
+                "tester",
+                "kernel_info_request",
+            ),
+            parent_header: None,
+            metadata: super::KernelMetadata::new(),
+            request: KernelRequest::KernelInfo(KernelInfoRequest),
+        })
+        .expect("kernel_info should reply immediately");
 
     assert_eq!(info.channel, KernelChannel::Shell);
     assert_eq!(info.header.msg_type, "kernel_info_reply");
@@ -308,13 +461,20 @@ fn shell_request_envelope_dispatches_kernel_info_and_shutdown() {
         other => panic!("expected kernel-info response, got {other:?}"),
     }
 
-    let shutdown = adapter.handle_shell_request(KernelRequestEnvelope {
-        channel: KernelChannel::Shell,
-        header: KernelMessageHeader::new("client-msg-8", "session-1", "tester", "shutdown_request"),
-        parent_header: None,
-        metadata: super::KernelMetadata::new(),
-        request: KernelRequest::Shutdown(KernelShutdownRequest { restart: false }),
-    });
+    let shutdown = adapter
+        .handle_shell_request(KernelRequestEnvelope {
+            channel: KernelChannel::Shell,
+            header: KernelMessageHeader::new(
+                "client-msg-8",
+                "session-1",
+                "tester",
+                "shutdown_request",
+            ),
+            parent_header: None,
+            metadata: super::KernelMetadata::new(),
+            request: KernelRequest::Shutdown(KernelShutdownRequest { restart: false }),
+        })
+        .expect("shutdown should reply immediately");
 
     assert_eq!(shutdown.channel, KernelChannel::Shell);
     assert_eq!(shutdown.header.msg_type, "shutdown_reply");
@@ -337,13 +497,20 @@ fn shell_request_envelope_dispatches_execute_requests() {
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);
 
-    let response = adapter.handle_shell_request(KernelRequestEnvelope {
-        channel: KernelChannel::Shell,
-        header: KernelMessageHeader::new("client-msg-12", "session-2", "tester", "execute_request"),
-        parent_header: None,
-        metadata: super::KernelMetadata::new(),
-        request: KernelRequest::Execute(KernelExecuteRequest::new("1")),
-    });
+    let response = adapter
+        .handle_shell_request(KernelRequestEnvelope {
+            channel: KernelChannel::Shell,
+            header: KernelMessageHeader::new(
+                "client-msg-12",
+                "session-2",
+                "tester",
+                "execute_request",
+            ),
+            parent_header: None,
+            metadata: super::KernelMetadata::new(),
+            request: KernelRequest::Execute(KernelExecuteRequest::new("1")),
+        })
+        .expect("simple execute should reply immediately");
 
     assert_eq!(response.channel, KernelChannel::Shell);
     assert_eq!(response.header.msg_type, "execute_reply");
@@ -381,12 +548,16 @@ fn control_request_interrupt_updates_lifecycle_state() {
         metadata: super::KernelMetadata::new(),
         request: KernelRequest::Interrupt(KernelInterruptRequest),
     });
+    let reply = dispatch
+        .reply
+        .as_ref()
+        .expect("interrupt should reply immediately");
 
-    assert_eq!(dispatch.reply.channel, KernelChannel::Control);
+    assert_eq!(reply.channel, KernelChannel::Control);
     assert!(dispatch.iopub.is_empty());
-    assert_eq!(dispatch.reply.header.msg_type, "interrupt_reply");
+    assert_eq!(reply.header.msg_type, "interrupt_reply");
     assert_eq!(
-        dispatch.reply.metadata.get("lifecycle_state"),
+        reply.metadata.get("lifecycle_state"),
         Some("interrupt_requested")
     );
     assert_eq!(
@@ -395,7 +566,7 @@ fn control_request_interrupt_updates_lifecycle_state() {
     );
     assert!(adapter.interrupt_requested());
 
-    match dispatch.reply.response {
+    match &reply.response {
         KernelResponse::Interrupt(response) => {
             assert_eq!(response.status, KernelReplyStatus::Ok);
             assert!(response.interrupt_requested);
@@ -425,11 +596,15 @@ fn control_request_shutdown_transitions_kernel_to_shutdown() {
         metadata: super::KernelMetadata::new(),
         request: KernelRequest::Shutdown(KernelShutdownRequest { restart: false }),
     });
+    let reply = dispatch
+        .reply
+        .as_ref()
+        .expect("shutdown should reply immediately");
 
-    assert_eq!(dispatch.reply.channel, KernelChannel::Control);
-    assert_eq!(dispatch.reply.header.msg_type, "shutdown_reply");
+    assert_eq!(reply.channel, KernelChannel::Control);
+    assert_eq!(reply.header.msg_type, "shutdown_reply");
     assert_eq!(
-        dispatch.reply.metadata.get("lifecycle_state"),
+        reply.metadata.get("lifecycle_state"),
         Some("shutdown_requested")
     );
     assert_eq!(adapter.lifecycle_state(), KernelLifecycleState::Shutdown);
@@ -441,18 +616,20 @@ fn shell_request_envelope_dispatches_is_complete_requests() {
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);
 
-    let response = adapter.handle_shell_request(KernelRequestEnvelope {
-        channel: KernelChannel::Shell,
-        header: KernelMessageHeader::new(
-            "client-msg-40",
-            "session-5",
-            "tester",
-            "is_complete_request",
-        ),
-        parent_header: None,
-        metadata: super::KernelMetadata::new(),
-        request: KernelRequest::IsComplete(KernelIsCompleteRequest::new("f[\n  1")),
-    });
+    let response = adapter
+        .handle_shell_request(KernelRequestEnvelope {
+            channel: KernelChannel::Shell,
+            header: KernelMessageHeader::new(
+                "client-msg-40",
+                "session-5",
+                "tester",
+                "is_complete_request",
+            ),
+            parent_header: None,
+            metadata: super::KernelMetadata::new(),
+            request: KernelRequest::IsComplete(KernelIsCompleteRequest::new("f[\n  1")),
+        })
+        .expect("is_complete should reply immediately");
 
     assert_eq!(response.header.msg_type, "is_complete_reply");
     assert_eq!(response.metadata.get("status"), Some("ok"));
@@ -484,14 +661,13 @@ fn transport_encoding_serializes_reply_and_iopub_messages() {
     });
 
     let batch = encode_dispatch_result(&dispatch);
-    assert_eq!(batch.reply.channel, KernelChannel::Shell);
-    assert!(
-        batch
-            .reply
-            .header_json
-            .contains("\"msg_type\":\"execute_reply\"")
-    );
-    assert!(batch.reply.content_json.contains("\"status\":\"ok\""));
+    let reply = batch
+        .reply
+        .as_ref()
+        .expect("execute batch should include a reply");
+    assert_eq!(reply.channel, KernelChannel::Shell);
+    assert!(reply.header_json.contains("\"msg_type\":\"execute_reply\""));
+    assert!(reply.content_json.contains("\"status\":\"ok\""));
     assert_eq!(batch.iopub.len(), 4);
     assert!(
         batch.iopub[0]
@@ -556,6 +732,39 @@ fn signed_transport_codec_round_trips_request_messages() {
         KernelRequest::Execute(request) => {
             assert_eq!(request.code, "1+1");
             assert!(request.store_history);
+            assert!(request.allow_stdin);
+        }
+        other => panic!("expected execute request, got {other:?}"),
+    }
+}
+
+#[test]
+fn execute_request_round_trips_allow_stdin_flag() {
+    let codec = KernelWireCodec::new(KernelWireConfig::default().with_session_id("session-7b"));
+    let envelope = KernelRequestEnvelope {
+        channel: KernelChannel::Shell,
+        header: KernelMessageHeader::new(
+            "client-msg-60b",
+            "session-7b",
+            "tester",
+            "execute_request",
+        ),
+        parent_header: None,
+        metadata: super::KernelMetadata::new(),
+        request: KernelRequest::Execute(KernelExecuteRequest::new("1+1").without_stdin()),
+    };
+
+    let wire = codec
+        .encode_request_envelope(&envelope)
+        .expect("request should encode");
+    assert!(wire.content_json.contains("\"allow_stdin\":false"));
+
+    let decoded = codec
+        .decode_request_message(&wire)
+        .expect("request should decode");
+    match decoded.request {
+        KernelRequest::Execute(request) => {
+            assert!(!request.allow_stdin);
         }
         other => panic!("expected execute request, got {other:?}"),
     }
@@ -673,7 +882,13 @@ fn transport_codec_decodes_execute_reply_and_iopub_messages() {
     });
 
     let batch = encode_dispatch_result(&dispatch);
-    let reply = decode_response_message(&batch.reply).expect("reply should decode");
+    let reply = decode_response_message(
+        batch
+            .reply
+            .as_ref()
+            .expect("execute batch should include a reply"),
+    )
+    .expect("reply should decode");
     assert_eq!(reply.channel, KernelChannel::Shell);
     assert_eq!(reply.header.msg_type, "execute_reply");
     assert!(reply.header.date.contains('T'));
@@ -826,6 +1041,167 @@ fn request_headers_round_trip_date_field_through_wire_codec() {
 }
 
 #[test]
+fn adapter_can_stage_stdin_requests_for_future_execute_integration() {
+    let session = Session::new();
+    let mut adapter = KernelAdapter::new(session);
+    let parent_header =
+        KernelMessageHeader::new("client-msg-67b", "session-14b", "tester", "execute_request");
+    let execute = KernelExecuteRequest::new("futureInput[]");
+
+    let request = adapter
+        .request_stdin_for_execute(&parent_header, &execute, KernelInputRequest::new("name: "))
+        .expect("stdin request should be allowed");
+
+    assert!(adapter.awaiting_stdin());
+    assert_eq!(request.channel, KernelChannel::Stdin);
+    assert_eq!(request.header.msg_type, "input_request");
+    assert_eq!(request.request.prompt, "name: ");
+    assert!(!request.request.password);
+    assert_eq!(request.metadata.get("allow_stdin"), Some("true"));
+    assert_eq!(request.metadata.get("channel"), Some("stdin"));
+}
+
+#[test]
+fn adapter_rejects_stdin_requests_when_execute_disallows_them() {
+    let session = Session::new();
+    let mut adapter = KernelAdapter::new(session);
+    let parent_header =
+        KernelMessageHeader::new("client-msg-67c", "session-14c", "tester", "execute_request");
+    let execute = KernelExecuteRequest::new("futureInput[]").without_stdin();
+
+    let error = adapter
+        .request_stdin_for_execute(&parent_header, &execute, KernelInputRequest::new("name: "))
+        .expect_err("stdin request should be rejected");
+    assert_eq!(error, super::KernelStdinError::StdinNotAllowed);
+    assert!(!adapter.awaiting_stdin());
+}
+
+#[test]
+fn execute_request_with_inputstring_stages_stdin_and_defers_execute_reply() {
+    let session = Session::new();
+    let mut adapter = KernelAdapter::new(session);
+
+    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+        channel: KernelChannel::Shell,
+        header: KernelMessageHeader::new(
+            "client-msg-input-1",
+            "session-input-1",
+            "tester",
+            "execute_request",
+        ),
+        parent_header: None,
+        metadata: super::KernelMetadata::new(),
+        request: KernelRequest::Execute(KernelExecuteRequest::new("InputString[\"name: \"]")),
+    });
+
+    assert!(dispatch.reply.is_none());
+    assert_eq!(dispatch.stdin.len(), 1);
+    assert_eq!(dispatch.stdin[0].request.prompt, "name: ");
+    assert_eq!(dispatch.iopub.len(), 2);
+    assert!(adapter.awaiting_stdin());
+    assert_eq!(adapter.execution_state(), KernelExecutionState::Busy);
+
+    match &dispatch.iopub[0].payload {
+        KernelIoPubPayload::Status(status) => {
+            assert_eq!(status.execution_state, KernelExecutionState::Busy);
+        }
+        other => panic!("expected busy status payload, got {other:?}"),
+    }
+
+    match &dispatch.iopub[1].payload {
+        KernelIoPubPayload::ExecuteInput(input) => {
+            assert_eq!(input.code, "InputString[\"name: \"]");
+        }
+        other => panic!("expected execute_input payload, got {other:?}"),
+    }
+}
+
+#[test]
+fn execute_request_with_disallowed_stdin_returns_input_error_reply() {
+    let session = Session::new();
+    let mut adapter = KernelAdapter::new(session);
+
+    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+        channel: KernelChannel::Shell,
+        header: KernelMessageHeader::new(
+            "client-msg-input-2",
+            "session-input-2",
+            "tester",
+            "execute_request",
+        ),
+        parent_header: None,
+        metadata: super::KernelMetadata::new(),
+        request: KernelRequest::Execute(KernelExecuteRequest::new("InputString[]").without_stdin()),
+    });
+    let reply = dispatch
+        .reply
+        .as_ref()
+        .expect("disallowed stdin should fail immediately");
+
+    assert!(dispatch.stdin.is_empty());
+    assert_eq!(dispatch.iopub.len(), 4);
+    assert_eq!(reply.metadata.get("status"), Some("error"));
+
+    match &reply.response {
+        KernelResponse::Execute(response) => {
+            assert_eq!(response.status, KernelReplyStatus::Error);
+            assert!(matches!(
+                response.outcome,
+                KernelExecuteOutcome::Failure(SessionRequestFailure {
+                    error: rum_runtime::SessionRequestError::InputRequired { .. },
+                    ..
+                })
+            ));
+        }
+        other => panic!("expected execute reply, got {other:?}"),
+    }
+}
+
+#[test]
+fn transport_codec_round_trips_stdin_input_messages() {
+    let codec = KernelWireCodec::new(
+        KernelWireConfig::default()
+            .with_session_id("session-14d")
+            .with_signature_key("secret"),
+    );
+    let input_request = super::KernelInputRequestEnvelope {
+        channel: KernelChannel::Stdin,
+        header: KernelMessageHeader::new("kernel-msg-1", "session-14d", "tester", "input_request"),
+        parent_header: Some(KernelMessageHeader::new(
+            "client-msg-parent",
+            "session-14d",
+            "tester",
+            "execute_request",
+        )),
+        metadata: super::KernelMetadata::new(),
+        request: KernelInputRequest::new("password: ").password(),
+    };
+
+    let request_wire = codec
+        .encode_input_request_envelope(&input_request)
+        .expect("stdin request should encode");
+    let decoded_request =
+        decode_input_request_message(&request_wire).expect("request should decode");
+    assert_eq!(decoded_request.request.prompt, "password: ");
+    assert!(decoded_request.request.password);
+
+    let reply_wire = encode_input_reply_envelope(&KernelInputReplyEnvelope {
+        channel: KernelChannel::Stdin,
+        header: KernelMessageHeader::new(
+            "client-msg-stdin",
+            "session-14d",
+            "tester",
+            "input_reply",
+        ),
+        parent_header: Some(decoded_request.header.clone()),
+        metadata: super::KernelMetadata::new(),
+        reply: KernelInputReply::new("secret"),
+    });
+    let decoded_reply = decode_input_reply_message(&reply_wire).expect("reply should decode");
+    assert_eq!(decoded_reply.reply.value, "secret");
+}
+
+#[test]
 fn pump_next_prioritizes_control_messages_before_shell_messages() {
     let codec = KernelWireCodec::new(KernelWireConfig::default().with_session_id("session-15"));
     let adapter = KernelAdapter::new(Session::new());
@@ -874,6 +1250,307 @@ fn pump_next_prioritizes_control_messages_before_shell_messages() {
     assert_eq!(transport.control.len(), 1);
     assert!(transport.shell.is_empty());
     assert_eq!(transport.incoming_len(KernelChannel::Shell), 1);
+}
+
+#[test]
+fn pump_next_prioritizes_stdin_replies_while_kernel_is_waiting_for_input() {
+    let codec = KernelWireCodec::new(KernelWireConfig::default().with_session_id("session-15b"));
+    let adapter = KernelAdapter::new(Session::new());
+    let mut pump = KernelEventPump::new(adapter, codec.clone());
+    let mut transport = MockSocketTransport::default();
+
+    let parent_header = KernelMessageHeader::new(
+        "client-msg-stdin-parent",
+        "session-15b",
+        "tester",
+        "execute_request",
+    );
+    let pending = pump
+        .adapter_mut()
+        .request_stdin_for_execute(
+            &parent_header,
+            &KernelExecuteRequest::new("futureInput[]"),
+            KernelInputRequest::new("name: "),
+        )
+        .expect("stdin request should stage");
+
+    transport.queue_incoming(
+        codec
+            .encode_request_envelope(&KernelRequestEnvelope {
+                channel: KernelChannel::Shell,
+                header: KernelMessageHeader::new(
+                    "client-msg-shell",
+                    "session-15b",
+                    "tester",
+                    "execute_request",
+                ),
+                parent_header: None,
+                metadata: super::KernelMetadata::new(),
+                request: KernelRequest::Execute(KernelExecuteRequest::new("1")),
+            })
+            .expect("shell request should encode"),
+    );
+    transport.queue_incoming(encode_input_reply_envelope(&KernelInputReplyEnvelope {
+        channel: KernelChannel::Stdin,
+        header: KernelMessageHeader::new(
+            "client-msg-stdin-reply",
+            "session-15b",
+            "tester",
+            "input_reply",
+        ),
+        parent_header: Some(pending.header.clone()),
+        metadata: super::KernelMetadata::new(),
+        reply: KernelInputReply::new("Alice"),
+    }));
+
+    let channel = pump
+        .pump_next(&mut transport)
+        .expect("pump should succeed")
+        .expect("one request should be processed");
+
+    assert_eq!(channel, KernelChannel::Stdin);
+    assert!(!pump.adapter().awaiting_stdin());
+    assert_eq!(
+        pump.adapter_mut()
+            .take_last_input_reply()
+            .map(|reply| reply.value),
+        Some("Alice".to_string())
+    );
+    assert!(transport.shell.is_empty());
+    assert_eq!(transport.incoming_len(KernelChannel::Shell), 1);
+}
+
+#[test]
+fn input_reply_resumes_execute_and_preserves_shell_routing_ids() {
+    let codec = KernelWireCodec::new(KernelWireConfig::default().with_session_id("session-15c"));
+    let adapter = KernelAdapter::new(Session::new());
+    let mut pump = KernelEventPump::new(adapter, codec.clone());
+    let mut transport = MockSocketTransport::default();
+
+    let mut request = codec
+        .encode_request_envelope(&KernelRequestEnvelope {
+            channel: KernelChannel::Shell,
+            header: KernelMessageHeader::new(
+                "client-msg-input-3",
+                "session-15c",
+                "tester",
+                "execute_request",
+            ),
+            parent_header: None,
+            metadata: super::KernelMetadata::new(),
+            request: KernelRequest::Execute(KernelExecuteRequest::new("InputString[\"name: \"]")),
+        })
+        .expect("execute request should encode");
+    request.routing_ids = vec![b"frontend".to_vec(), b"shell".to_vec()];
+    transport.queue_incoming(request);
+
+    let first_channel = pump
+        .pump_next(&mut transport)
+        .expect("first pump should succeed")
+        .expect("one request should be processed");
+    assert_eq!(first_channel, KernelChannel::Shell);
+    assert!(transport.shell.is_empty());
+    assert_eq!(transport.stdin.len(), 1);
+    assert_eq!(transport.iopub.len(), 2);
+
+    let input_request =
+        decode_input_request_message(&transport.stdin[0]).expect("stdin request should decode");
+    transport.queue_incoming(encode_input_reply_envelope(&KernelInputReplyEnvelope {
+        channel: KernelChannel::Stdin,
+        header: KernelMessageHeader::new(
+            "client-msg-input-reply",
+            "session-15c",
+            "tester",
+            "input_reply",
+        ),
+        parent_header: Some(input_request.header.clone()),
+        metadata: super::KernelMetadata::new(),
+        reply: KernelInputReply::new("Alice"),
+    }));
+
+    let second_channel = pump
+        .pump_next(&mut transport)
+        .expect("second pump should succeed")
+        .expect("one request should be processed");
+    assert_eq!(second_channel, KernelChannel::Stdin);
+    assert_eq!(
+        pump.adapter_mut()
+            .take_last_input_reply()
+            .map(|reply| reply.value),
+        Some("Alice".to_string())
+    );
+
+    assert_eq!(transport.shell.len(), 1);
+    assert_eq!(
+        transport.shell[0].routing_ids,
+        vec![b"frontend".to_vec(), b"shell".to_vec()]
+    );
+    assert_eq!(transport.iopub.len(), 4);
+
+    let reply = decode_response_message(&transport.shell[0]).expect("reply should decode");
+    match reply.response {
+        KernelResponse::Execute(response) => {
+            assert_eq!(response.status, KernelReplyStatus::Ok);
+            assert_eq!(response.execution_count, Some(1));
+        }
+        other => panic!("expected execute reply, got {other:?}"),
+    }
+
+    let execute_result =
+        decode_iopub_message(&transport.iopub[2]).expect("execute_result should decode");
+    match execute_result.payload {
+        KernelIoPubPayload::ExecuteResult(result) => {
+            assert_eq!(result.data.get("text/plain"), Some("\"Alice\""));
+        }
+        other => panic!("expected execute_result payload, got {other:?}"),
+    }
+
+    let idle_status = decode_iopub_message(&transport.iopub[3]).expect("idle status should decode");
+    match idle_status.payload {
+        KernelIoPubPayload::Status(status) => {
+            assert_eq!(status.execution_state, KernelExecutionState::Idle);
+        }
+        other => panic!("expected status payload, got {other:?}"),
+    }
+}
+
+#[test]
+fn input_reply_resumes_execute_without_rerunning_prefix_side_effects() {
+    let mut session = Session::new();
+    session.eval_text("x = seed").unwrap();
+    let mut adapter = KernelAdapter::new(session);
+
+    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+        channel: KernelChannel::Shell,
+        header: KernelMessageHeader::new(
+            "client-msg-input-4",
+            "session-input-4",
+            "tester",
+            "execute_request",
+        ),
+        parent_header: None,
+        metadata: super::KernelMetadata::new(),
+        request: KernelRequest::Execute(KernelExecuteRequest::new(
+            "List[x = List[x], InputString[\"name: \"], x = List[x]]",
+        )),
+    });
+
+    assert!(dispatch.reply.is_none());
+    assert_eq!(dispatch.stdin.len(), 1);
+
+    let resumed = adapter
+        .handle_input_reply(KernelInputReplyEnvelope {
+            channel: KernelChannel::Stdin,
+            header: KernelMessageHeader::new(
+                "client-msg-input-reply-2",
+                "session-input-4",
+                "tester",
+                "input_reply",
+            ),
+            parent_header: Some(dispatch.stdin[0].header.clone()),
+            metadata: super::KernelMetadata::new(),
+            reply: KernelInputReply::new("Alice"),
+        })
+        .expect("stdin reply should be accepted")
+        .expect("stdin reply should resume the suspended execute");
+
+    let reply = resumed
+        .reply
+        .as_ref()
+        .expect("resumed execute should now have a reply");
+
+    match &reply.response {
+        KernelResponse::Execute(response) => {
+            assert_eq!(response.status, KernelReplyStatus::Ok);
+            assert_eq!(response.execution_count, Some(1));
+            assert_eq!(response.outputs.len(), 1);
+            match &response.outputs[0] {
+                KernelOutput::ExecuteResult(result) => {
+                    assert_eq!(
+                        result.data.get("text/plain"),
+                        Some("List[List[seed], \"Alice\", List[List[seed]]]")
+                    );
+                }
+                other => panic!("expected execute result output, got {other:?}"),
+            }
+        }
+        other => panic!("expected execute reply, got {other:?}"),
+    }
+
+    assert_eq!(
+        adapter
+            .session_mut()
+            .eval_request("x")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[seed]]"
+    );
+}
+
+#[test]
+fn input_reply_resumes_delayed_message_templates_through_internal_string_driver() {
+    let mut session = Session::new();
+    session
+        .eval_text("f::argx := InputString[\"msg: \"]")
+        .unwrap();
+    let mut adapter = KernelAdapter::new(session);
+
+    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+        channel: KernelChannel::Shell,
+        header: KernelMessageHeader::new(
+            "client-msg-input-5",
+            "session-input-5",
+            "tester",
+            "execute_request",
+        ),
+        parent_header: None,
+        metadata: super::KernelMetadata::new(),
+        request: KernelRequest::Execute(KernelExecuteRequest::new("Message[f::argx]")),
+    });
+
+    assert!(dispatch.reply.is_none());
+    assert_eq!(dispatch.stdin.len(), 1);
+    assert_eq!(dispatch.stdin[0].request.prompt, "msg: ");
+
+    let resumed = adapter
+        .handle_input_reply(KernelInputReplyEnvelope {
+            channel: KernelChannel::Stdin,
+            header: KernelMessageHeader::new(
+                "client-msg-input-reply-3",
+                "session-input-5",
+                "tester",
+                "input_reply",
+            ),
+            parent_header: Some(dispatch.stdin[0].header.clone()),
+            metadata: super::KernelMetadata::new(),
+            reply: KernelInputReply::new("Alice"),
+        })
+        .expect("stdin reply should be accepted")
+        .expect("stdin reply should resume the suspended execute");
+
+    let reply = resumed
+        .reply
+        .as_ref()
+        .expect("resumed execute should now have a reply");
+
+    match &reply.response {
+        KernelResponse::Execute(response) => {
+            assert_eq!(response.status, KernelReplyStatus::Ok);
+            assert_eq!(response.execution_count, Some(1));
+            assert!(response.outputs.iter().any(|output| matches!(
+                output,
+                KernelOutput::Stream(stream)
+                    if stream.text.contains("f::argx: Alice")
+            )));
+            assert!(response.outputs.iter().any(|output| matches!(
+                output,
+                KernelOutput::ExecuteResult(result)
+                    if result.data.get("text/plain") == Some("Null")
+            )));
+        }
+        other => panic!("expected execute reply, got {other:?}"),
+    }
 }
 
 #[test]

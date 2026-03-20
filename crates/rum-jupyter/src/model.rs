@@ -9,6 +9,7 @@ use rum_runtime::{SessionEvalResponse, SessionInspectResponse, SessionRequestFai
 pub struct KernelExecuteRequest {
     pub code: String,
     pub store_history: bool,
+    pub allow_stdin: bool,
 }
 
 impl KernelExecuteRequest {
@@ -16,11 +17,17 @@ impl KernelExecuteRequest {
         Self {
             code: code.into(),
             store_history: true,
+            allow_stdin: true,
         }
     }
 
     pub fn without_history(mut self) -> Self {
         self.store_history = false;
+        self
+    }
+
+    pub fn without_stdin(mut self) -> Self {
+        self.allow_stdin = false;
         self
     }
 }
@@ -173,6 +180,39 @@ pub struct KernelExecuteInput {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KernelInputRequest {
+    pub prompt: String,
+    pub password: bool,
+}
+
+impl KernelInputRequest {
+    pub fn new(prompt: impl Into<String>) -> Self {
+        Self {
+            prompt: prompt.into(),
+            password: false,
+        }
+    }
+
+    pub fn password(mut self) -> Self {
+        self.password = true;
+        self
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KernelInputReply {
+    pub value: String,
+}
+
+impl KernelInputReply {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self {
+            value: value.into(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KernelExecutePayload {
     pub source: String,
     pub data: KernelMimeBundle,
@@ -226,6 +266,14 @@ pub struct KernelExecuteResponse {
     pub error: Option<KernelErrorOutput>,
     pub outputs: Vec<KernelOutput>,
     pub outcome: KernelExecuteOutcome,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum KernelStdinError {
+    StdinNotAllowed,
+    AlreadyAwaitingInput,
+    NoPendingInputRequest,
+    ReplyParentMismatch { expected: String, found: String },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -421,6 +469,24 @@ pub struct KernelRequestEnvelope {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KernelInputRequestEnvelope {
+    pub channel: KernelChannel,
+    pub header: KernelMessageHeader,
+    pub parent_header: Option<KernelMessageHeader>,
+    pub metadata: KernelMetadata,
+    pub request: KernelInputRequest,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KernelInputReplyEnvelope {
+    pub channel: KernelChannel,
+    pub header: KernelMessageHeader,
+    pub parent_header: Option<KernelMessageHeader>,
+    pub metadata: KernelMetadata,
+    pub reply: KernelInputReply,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum KernelResponse {
     Execute(KernelExecuteResponse),
     Inspect(KernelInspectResponse),
@@ -451,8 +517,9 @@ pub struct KernelIoPubEnvelope {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KernelDispatchResult {
-    pub reply: KernelResponseEnvelope,
+    pub reply: Option<KernelResponseEnvelope>,
     pub iopub: Vec<KernelIoPubEnvelope>,
+    pub stdin: Vec<KernelInputRequestEnvelope>,
 }
 
 fn current_timestamp_rfc3339() -> String {

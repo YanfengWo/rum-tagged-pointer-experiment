@@ -70,6 +70,19 @@ impl Session {
         std::mem::take(&mut self.messages)
     }
 
+    pub fn pending_input_request(&self) -> Option<&RuntimeInputRequest> {
+        self.pending_input_request.as_ref()
+    }
+
+    pub fn take_pending_input_request(&mut self) -> Option<RuntimeInputRequest> {
+        self.pending_input_request.take()
+    }
+
+    pub fn queue_input_response(&mut self, value: impl Into<String>) {
+        self.queued_input_responses.push_back(value.into());
+        self.pending_input_request = None;
+    }
+
     pub fn register_builtin(&mut self, spec: BuiltinSpec) {
         self.builtins.insert(spec.name.to_string(), spec);
 

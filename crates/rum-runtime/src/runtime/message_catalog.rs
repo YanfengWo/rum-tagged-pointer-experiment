@@ -60,7 +60,11 @@ impl Session {
             Some(MessageDefinition {
                 delayed: Some(expr),
                 ..
-            }) => self.evaluate(expr)?,
+            }) => {
+                let delayed_result = self.evaluate(expr);
+                self.drive_evaluated_value::<String, String, _>(delayed_result, |_, text| Ok(text))?
+            }
+            .into_continuation_expr(),
             _ => {
                 if args.is_empty() {
                     return Ok("message emitted".to_string());

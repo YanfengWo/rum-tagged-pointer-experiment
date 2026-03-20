@@ -191,7 +191,12 @@ impl Session {
             }
 
             fixed_point_seen.push(current.clone());
-            let next = self.evaluate_once(current.clone())?;
+            let current_for_resume = current.clone();
+            let seen_for_resume = fixed_point_seen.clone();
+            let next_result = self.evaluate_once(current.clone());
+            let next = self.suspend_with_frame(next_result, move |session, next| {
+                session.resume_fixed_point_from(current_for_resume, seen_for_resume, next)
+            })?;
 
             if next == current {
                 return Ok(next);
@@ -202,6 +207,57 @@ impl Session {
                 after: next.to_string(),
             });
 
+            current = next;
+        }
+    }
+
+    pub(super) fn resume_fixed_point_from(
+        &mut self,
+        current: Expr,
+        fixed_point_seen: Vec<Expr>,
+        next: Expr,
+    ) -> Result<Expr, EvalError> {
+        if next == current {
+            return Ok(next);
+        }
+
+        self.push_trace(TraceEvent::EvaluationPass {
+            before: current.to_string(),
+            after: next.to_string(),
+        });
+
+        let mut current = next;
+        let mut fixed_point_seen = fixed_point_seen;
+
+        loop {
+            if fixed_point_seen.len() >= self.resource_limits.evaluation_pass_limit {
+                return Err(EvalError::EvaluationPassLimitExceeded {
+                    limit: self.resource_limits.evaluation_pass_limit,
+                });
+            }
+
+            if fixed_point_seen.iter().any(|previous| previous == &current) {
+                return Err(EvalError::EvaluationCycleDetected {
+                    expr: current.to_string(),
+                });
+            }
+
+            fixed_point_seen.push(current.clone());
+            let current_for_resume = current.clone();
+            let seen_for_resume = fixed_point_seen.clone();
+            let next_result = self.evaluate_once(current.clone());
+            let next = self.suspend_with_frame(next_result, move |session, next| {
+                session.resume_fixed_point_from(current_for_resume, seen_for_resume, next)
+            })?;
+
+            if next == current {
+                return Ok(next);
+            }
+
+            self.push_trace(TraceEvent::EvaluationPass {
+                before: current.to_string(),
+                after: next.to_string(),
+            });
             current = next;
         }
     }

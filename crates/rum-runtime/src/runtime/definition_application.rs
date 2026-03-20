@@ -29,7 +29,10 @@ impl Session {
                     rule: down_value.lhs.to_string(),
                     result: substituted.to_string(),
                 });
-                return self.evaluate(substituted).map(Some);
+                let substituted_result = self.evaluate(substituted);
+                return self
+                    .suspend_with_frame(substituted_result, |_, value| Ok(value))
+                    .map(Some);
             }
         }
 
@@ -61,7 +64,10 @@ impl Session {
                         rule: up_value.lhs.to_string(),
                         result: substituted.to_string(),
                     });
-                    return self.evaluate(substituted).map(Some);
+                    let substituted_result = self.evaluate(substituted);
+                    return self
+                        .suspend_with_frame(substituted_result, |_, value| Ok(value))
+                        .map(Some);
                 }
             }
         }
@@ -97,7 +103,10 @@ impl Session {
                     rule: sub_value.lhs.to_string(),
                     result: substituted.to_string(),
                 });
-                return self.evaluate(substituted).map(Some);
+                let substituted_result = self.evaluate(substituted);
+                return self
+                    .suspend_with_frame(substituted_result, |_, value| Ok(value))
+                    .map(Some);
             }
         }
 

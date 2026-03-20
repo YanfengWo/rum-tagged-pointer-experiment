@@ -6,17 +6,13 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("MatchQ", args, 2));
         }
 
-        let value = self.evaluate(args[0].clone())?;
-        let pattern = self.normalize_pattern_expr(&args[1])?;
-        let mut bindings = BTreeMap::new();
+        let value_result = self.evaluate(args[0].clone());
+        let value = self.suspend_with_frame(value_result, {
+            let pattern_expr = args[1].clone();
+            move |session, value| session.resume_match_q_after_value(pattern_expr, value)
+        })?;
 
-        Ok(system_expr(
-            if self.match_expr(&pattern, &value, &mut bindings)? {
-                "True"
-            } else {
-                "False"
-            },
-        ))
+        self.resume_match_q_after_value(args[1].clone(), value)
     }
 
     pub(super) fn eval_cases(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -89,19 +85,13 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("ReplaceAll", args, 2));
         }
 
-        let target = self.evaluate(args[0].clone())?;
-        let rules_expr = self.evaluate(args[1].clone())?;
+        let target_result = self.evaluate(args[0].clone());
+        let target = self.suspend_with_frame(target_result, {
+            let rules_expr = args[1].clone();
+            move |session, target| session.resume_replace_all_after_target(target, rules_expr)
+        })?;
 
-        let Some(rules) = self.compile_rewrite_rules_for_matching(&rules_expr) else {
-            return Ok(self.invalid_call_with_arg_form(
-                "ReplaceAll",
-                &[target, rules_expr],
-                "expected a rule or list of rules as the second argument",
-            ));
-        };
-
-        let replaced = self.apply_replace_all(target, &rules, RuleApplicationSource::ReplaceAll)?;
-        self.evaluate(replaced)
+        self.resume_replace_all_after_target(target, args[1].clone())
     }
 
     pub(super) fn eval_replace_repeated(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -109,37 +99,18 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("ReplaceRepeated", args, 2));
         }
 
-        let mut current = self.evaluate(args[0].clone())?;
-        let rules_expr = self.evaluate(args[1].clone())?;
-
-        let Some(rules) = self.compile_rewrite_rules_for_matching(&rules_expr) else {
-            return Ok(self.invalid_call_with_arg_form(
-                "ReplaceRepeated",
-                &[current, rules_expr],
-                "expected a rule or list of rules as the second argument",
-            ));
-        };
-
-        for _ in 0..self.resource_limits.replace_repeated_limit {
-            let replaced = self.apply_replace_all(
-                current.clone(),
-                &rules,
-                RuleApplicationSource::ReplaceRepeated,
-            )?;
-            let next = self.evaluate(replaced)?;
-
-            if next == current {
-                return Ok(next);
+        let current_result = self.evaluate(args[0].clone());
+        let current = self.suspend_with_frame(current_result, {
+            let rules_expr = args[1].clone();
+            move |session, current| {
+                session.resume_replace_repeated_after_current(current, rules_expr)
             }
+        })?;
 
-            current = next;
-        }
-
-        Err(EvalError::IterationLimitExceeded {
-            limit: self.resource_limits.replace_repeated_limit,
-        })
+        self.resume_replace_repeated_after_current(current, args[1].clone())
     }
 
+    #[allow(dead_code)]
     pub(super) fn normalize_pattern_expr(&mut self, expr: &Expr) -> Result<Expr, EvalError> {
         let normalized = strip_hold_pattern(expr);
         let normalized = match normalized {
@@ -214,11 +185,172 @@ impl Session {
             CasesSpec::Rule(rule) => {
                 if self.match_compiled(&rule.matcher, &normalized_expr, &mut bindings)? {
                     let transformed = substitute_rule_bindings(&rule.rhs, &bindings);
-                    self.evaluate(transformed).map(Some)
+                    let transformed_result = self.evaluate(transformed);
+                    self.suspend_with_frame(transformed_result, |_, value| Ok(value))
+                        .map(Some)
                 } else {
                     Ok(None)
                 }
             }
+        }
+    }
+
+    fn resume_match_q_after_value(
+        &mut self,
+        pattern_expr: Expr,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        let normalized = strip_hold_pattern(&pattern_expr);
+        let pattern = match normalized {
+            Expr::Atom(Atom::Symbol(_)) => {
+                let pattern_result = self.evaluate(normalized.clone());
+                let resolved = self.suspend_with_frame(pattern_result, {
+                    let value = value.clone();
+                    move |session, resolved| session.finish_match_q_with_pattern(resolved, value)
+                })?;
+                return self.finish_match_q_with_pattern(resolved, value);
+            }
+            other => other.clone(),
+        };
+
+        self.finish_match_q_with_pattern(pattern, value)
+    }
+
+    fn finish_match_q_with_pattern(
+        &mut self,
+        pattern: Expr,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        let pattern = self.normalize_match_expr(&pattern);
+        let mut bindings = BTreeMap::new();
+
+        Ok(system_expr(
+            if self.match_expr(&pattern, &value, &mut bindings)? {
+                "True"
+            } else {
+                "False"
+            },
+        ))
+    }
+
+    fn resume_replace_all_after_target(
+        &mut self,
+        target: Expr,
+        rules_expr: Expr,
+    ) -> Result<Expr, EvalError> {
+        let rules_result = self.evaluate(rules_expr.clone());
+        let resolved_rules = self.suspend_with_frame(rules_result, {
+            let target = target.clone();
+            let rules_expr_for_resume = rules_expr.clone();
+            move |session, resolved_rules| {
+                session.resume_replace_all_after_rules(
+                    target,
+                    rules_expr_for_resume,
+                    resolved_rules,
+                )
+            }
+        })?;
+
+        self.resume_replace_all_after_rules(target, rules_expr, resolved_rules)
+    }
+
+    fn resume_replace_all_after_rules(
+        &mut self,
+        target: Expr,
+        _rules_expr: Expr,
+        resolved_rules: Expr,
+    ) -> Result<Expr, EvalError> {
+        let Some(rules) = self.compile_rewrite_rules_for_matching(&resolved_rules) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "ReplaceAll",
+                &[target, resolved_rules],
+                "expected a rule or list of rules as the second argument",
+            ));
+        };
+
+        let replaced = self.apply_replace_all(target, &rules, RuleApplicationSource::ReplaceAll)?;
+        let replaced_result = self.evaluate(replaced);
+        self.suspend_with_frame(replaced_result, |_, value| Ok(value))
+    }
+
+    fn resume_replace_repeated_after_current(
+        &mut self,
+        current: Expr,
+        rules_expr: Expr,
+    ) -> Result<Expr, EvalError> {
+        let rules_result = self.evaluate(rules_expr.clone());
+        let resolved_rules = self.suspend_with_frame(rules_result, {
+            let current = current.clone();
+            let rules_expr_for_resume = rules_expr.clone();
+            move |session, resolved_rules| {
+                session.resume_replace_repeated_after_rules(
+                    current,
+                    rules_expr_for_resume,
+                    resolved_rules,
+                )
+            }
+        })?;
+
+        self.resume_replace_repeated_after_rules(current, rules_expr, resolved_rules)
+    }
+
+    fn resume_replace_repeated_after_rules(
+        &mut self,
+        current: Expr,
+        resolved_rules_input: Expr,
+        resolved_rules: Expr,
+    ) -> Result<Expr, EvalError> {
+        let Some(rules) = self.compile_rewrite_rules_for_matching(&resolved_rules) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "ReplaceRepeated",
+                &[current, resolved_rules_input],
+                "expected a rule or list of rules as the second argument",
+            ));
+        };
+
+        self.resume_replace_repeated_loop(current, rules, 0)
+    }
+
+    fn resume_replace_repeated_loop(
+        &mut self,
+        current: Expr,
+        rules: Vec<RewriteRule>,
+        iteration: usize,
+    ) -> Result<Expr, EvalError> {
+        if iteration >= self.resource_limits.replace_repeated_limit {
+            return Err(EvalError::IterationLimitExceeded {
+                limit: self.resource_limits.replace_repeated_limit,
+            });
+        }
+
+        let replaced = self.apply_replace_all(
+            current.clone(),
+            &rules,
+            RuleApplicationSource::ReplaceRepeated,
+        )?;
+        let next_result = self.evaluate(replaced);
+        let next = self.suspend_with_frame(next_result, {
+            let current = current.clone();
+            let rules = rules.clone();
+            move |session, next| {
+                session.resume_replace_repeated_after_next(current, rules, iteration, next)
+            }
+        })?;
+
+        self.resume_replace_repeated_after_next(current, rules, iteration, next)
+    }
+
+    fn resume_replace_repeated_after_next(
+        &mut self,
+        current: Expr,
+        rules: Vec<RewriteRule>,
+        iteration: usize,
+        next: Expr,
+    ) -> Result<Expr, EvalError> {
+        if next == current {
+            Ok(next)
+        } else {
+            self.resume_replace_repeated_loop(next, rules, iteration + 1)
         }
     }
 }

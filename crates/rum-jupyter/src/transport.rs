@@ -4,13 +4,14 @@ use crate::{
     KernelAdapter, KernelChannel, KernelCompleteRequest, KernelCompleteResponse,
     KernelDispatchResult, KernelDisplayOutput, KernelErrorOutput, KernelExecuteInput,
     KernelExecuteOutcome, KernelExecutePayload, KernelExecuteRequest, KernelExecuteResponse,
-    KernelExecuteResult, KernelHelpLink, KernelInfoResponse, KernelInspectRequest,
+    KernelExecuteResult, KernelHelpLink, KernelInfoResponse, KernelInputReply,
+    KernelInputReplyEnvelope, KernelInputRequest, KernelInputRequestEnvelope, KernelInspectRequest,
     KernelInspectResponse, KernelInterruptRequest, KernelInterruptResponse, KernelIoPubEnvelope,
     KernelIoPubPayload, KernelIsCompleteRequest, KernelIsCompleteResponse, KernelIsCompleteStatus,
     KernelLanguageInfo, KernelMessageHeader, KernelMetadata, KernelMimeBundle, KernelReplyStatus,
     KernelRequest, KernelRequestEnvelope, KernelResponse, KernelResponseEnvelope,
-    KernelShutdownRequest, KernelShutdownResponse, KernelStatusOutput, KernelStreamName,
-    KernelStreamOutput,
+    KernelShutdownRequest, KernelShutdownResponse, KernelStatusOutput, KernelStdinError,
+    KernelStreamName, KernelStreamOutput,
 };
 
 const DEFAULT_DELIMITER: &str = "<IDS|MSG>";
@@ -30,15 +31,20 @@ pub struct KernelWireMessage {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KernelWireBatch {
-    pub reply: KernelWireMessage,
+    pub reply: Option<KernelWireMessage>,
     pub iopub: Vec<KernelWireMessage>,
+    pub stdin: Vec<KernelWireMessage>,
 }
 
 impl KernelWireBatch {
     pub fn messages(&self) -> Vec<&KernelWireMessage> {
-        let mut messages = Vec::with_capacity(1 + self.iopub.len());
-        messages.push(&self.reply);
+        let mut messages =
+            Vec::with_capacity(self.reply.iter().count() + self.iopub.len() + self.stdin.len());
+        if let Some(reply) = &self.reply {
+            messages.push(reply);
+        }
         messages.extend(self.iopub.iter());
+        messages.extend(self.stdin.iter());
         messages
     }
 }
@@ -47,8 +53,13 @@ pub trait KernelTransport {
     fn send(&mut self, message: KernelWireMessage);
 
     fn send_batch(&mut self, batch: KernelWireBatch) {
-        self.send(batch.reply);
+        if let Some(reply) = batch.reply {
+            self.send(reply);
+        }
         for message in batch.iopub {
+            self.send(message);
+        }
+        for message in batch.stdin {
             self.send(message);
         }
     }
@@ -210,9 +221,33 @@ pub enum KernelWireError {
         field: &'static str,
         value: String,
     },
+    InvalidStdinState {
+        message: String,
+    },
     InvalidJson {
         message: String,
     },
+}
+
+impl From<KernelStdinError> for KernelWireError {
+    fn from(error: KernelStdinError) -> Self {
+        Self::InvalidStdinState {
+            message: match error {
+                KernelStdinError::StdinNotAllowed => {
+                    "stdin was requested for an execute request that disallows it".to_string()
+                }
+                KernelStdinError::AlreadyAwaitingInput => {
+                    "kernel is already waiting for an input_reply".to_string()
+                }
+                KernelStdinError::NoPendingInputRequest => {
+                    "received input_reply without a pending input_request".to_string()
+                }
+                KernelStdinError::ReplyParentMismatch { expected, found } => format!(
+                    "input_reply parent header did not match pending input_request ({expected} != {found})"
+                ),
+            },
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -329,14 +364,71 @@ impl KernelWireCodec {
         reply_routing_ids: Vec<Vec<u8>>,
     ) -> Result<KernelWireBatch, KernelWireError> {
         Ok(KernelWireBatch {
-            reply: self
-                .encode_response_envelope_with_routing(&dispatch.reply, reply_routing_ids)?,
+            reply: dispatch
+                .reply
+                .as_ref()
+                .map(|reply| {
+                    self.encode_response_envelope_with_routing(reply, reply_routing_ids.clone())
+                })
+                .transpose()?,
             iopub: dispatch
                 .iopub
                 .iter()
                 .map(|message| self.encode_iopub_envelope(message))
                 .collect::<Result<Vec<_>, _>>()?,
+            stdin: dispatch
+                .stdin
+                .iter()
+                .map(|message| {
+                    self.encode_input_request_envelope_with_routing(
+                        message,
+                        reply_routing_ids.clone(),
+                    )
+                })
+                .collect::<Result<Vec<_>, _>>()?,
         })
+    }
+
+    pub fn encode_input_request_envelope(
+        &self,
+        envelope: &KernelInputRequestEnvelope,
+    ) -> Result<KernelWireMessage, KernelWireError> {
+        self.encode_input_request_envelope_with_routing(envelope, Vec::new())
+    }
+
+    pub fn encode_input_request_envelope_with_routing(
+        &self,
+        envelope: &KernelInputRequestEnvelope,
+        routing_ids: Vec<Vec<u8>>,
+    ) -> Result<KernelWireMessage, KernelWireError> {
+        self.validate_session_id(&envelope.header.session_id)?;
+        self.validate_input_request_channel(envelope.channel, &envelope.header.msg_type)?;
+
+        self.build_wire_message(
+            envelope.channel,
+            routing_ids,
+            &envelope.header,
+            envelope.parent_header.as_ref(),
+            encode_metadata(&envelope.metadata),
+            encode_input_request_content(&envelope.request),
+        )
+    }
+
+    pub fn encode_input_reply_envelope(
+        &self,
+        envelope: &KernelInputReplyEnvelope,
+    ) -> Result<KernelWireMessage, KernelWireError> {
+        self.validate_session_id(&envelope.header.session_id)?;
+        self.validate_input_reply_channel(envelope.channel, &envelope.header.msg_type)?;
+
+        self.build_wire_message(
+            envelope.channel,
+            Vec::new(),
+            &envelope.header,
+            envelope.parent_header.as_ref(),
+            encode_metadata(&envelope.metadata),
+            encode_input_reply_content(&envelope.reply),
+        )
     }
 
     pub fn decode_request_message(
@@ -398,6 +490,46 @@ impl KernelWireCodec {
             parent_header: parse_optional_header(&message.parent_header_json)?,
             payload: parse_iopub_content(&header.msg_type, &message.content_json, &metadata)?,
             metadata,
+        })
+    }
+
+    pub fn decode_input_request_message(
+        &self,
+        message: &KernelWireMessage,
+    ) -> Result<KernelInputRequestEnvelope, KernelWireError> {
+        self.validate_delimiter(&message.delimiter)?;
+        self.verify_signature(message)?;
+
+        let header = parse_header(&message.header_json)?;
+        self.validate_session_id(&header.session_id)?;
+        self.validate_input_request_channel(message.channel, &header.msg_type)?;
+
+        Ok(KernelInputRequestEnvelope {
+            channel: message.channel,
+            header: header.clone(),
+            parent_header: parse_optional_header(&message.parent_header_json)?,
+            metadata: parse_metadata(&message.metadata_json)?,
+            request: parse_input_request_content(&header.msg_type, &message.content_json)?,
+        })
+    }
+
+    pub fn decode_input_reply_message(
+        &self,
+        message: &KernelWireMessage,
+    ) -> Result<KernelInputReplyEnvelope, KernelWireError> {
+        self.validate_delimiter(&message.delimiter)?;
+        self.verify_signature(message)?;
+
+        let header = parse_header(&message.header_json)?;
+        self.validate_session_id(&header.session_id)?;
+        self.validate_input_reply_channel(message.channel, &header.msg_type)?;
+
+        Ok(KernelInputReplyEnvelope {
+            channel: message.channel,
+            header: header.clone(),
+            parent_header: parse_optional_header(&message.parent_header_json)?,
+            metadata: parse_metadata(&message.metadata_json)?,
+            reply: parse_input_reply_content(&header.msg_type, &message.content_json)?,
         })
     }
 
@@ -595,6 +727,36 @@ impl KernelWireCodec {
             })
         }
     }
+
+    fn validate_input_request_channel(
+        &self,
+        channel: KernelChannel,
+        msg_type: &str,
+    ) -> Result<(), KernelWireError> {
+        if channel == KernelChannel::Stdin && msg_type == "input_request" {
+            Ok(())
+        } else {
+            Err(KernelWireError::InvalidChannelForMessageType {
+                channel,
+                msg_type: msg_type.to_string(),
+            })
+        }
+    }
+
+    fn validate_input_reply_channel(
+        &self,
+        channel: KernelChannel,
+        msg_type: &str,
+    ) -> Result<(), KernelWireError> {
+        if channel == KernelChannel::Stdin && msg_type == "input_reply" {
+            Ok(())
+        } else {
+            Err(KernelWireError::InvalidChannelForMessageType {
+                channel,
+                msg_type: msg_type.to_string(),
+            })
+        }
+    }
 }
 
 pub fn encode_request_envelope(envelope: &KernelRequestEnvelope) -> KernelWireMessage {
@@ -621,6 +783,18 @@ pub fn encode_dispatch_result(dispatch: &KernelDispatchResult) -> KernelWireBatc
         .expect("default transport encoding should succeed for valid dispatch results")
 }
 
+pub fn encode_input_request_envelope(envelope: &KernelInputRequestEnvelope) -> KernelWireMessage {
+    KernelWireCodec::default()
+        .encode_input_request_envelope(envelope)
+        .expect("default transport encoding should succeed for valid stdin request envelopes")
+}
+
+pub fn encode_input_reply_envelope(envelope: &KernelInputReplyEnvelope) -> KernelWireMessage {
+    KernelWireCodec::default()
+        .encode_input_reply_envelope(envelope)
+        .expect("default transport encoding should succeed for valid stdin reply envelopes")
+}
+
 pub fn decode_request_message(
     message: &KernelWireMessage,
 ) -> Result<KernelRequestEnvelope, KernelWireError> {
@@ -639,10 +813,22 @@ pub fn decode_iopub_message(
     KernelWireCodec::default().decode_iopub_message(message)
 }
 
-#[derive(Debug)]
+pub fn decode_input_request_message(
+    message: &KernelWireMessage,
+) -> Result<KernelInputRequestEnvelope, KernelWireError> {
+    KernelWireCodec::default().decode_input_request_message(message)
+}
+
+pub fn decode_input_reply_message(
+    message: &KernelWireMessage,
+) -> Result<KernelInputReplyEnvelope, KernelWireError> {
+    KernelWireCodec::default().decode_input_reply_message(message)
+}
+
 pub struct KernelEventPump {
     adapter: KernelAdapter,
     codec: KernelWireCodec,
+    pending_execute_routing_ids: Option<Vec<Vec<u8>>>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -661,7 +847,11 @@ impl KernelTransportLoopReport {
 
 impl KernelEventPump {
     pub fn new(adapter: KernelAdapter, codec: KernelWireCodec) -> Self {
-        Self { adapter, codec }
+        Self {
+            adapter,
+            codec,
+            pending_execute_routing_ids: None,
+        }
     }
 
     pub fn adapter(&self) -> &KernelAdapter {
@@ -684,8 +874,35 @@ impl KernelEventPump {
         let routing_ids = request.routing_ids.clone();
         let envelope = self.codec.decode_request_message(&request)?;
         let dispatch = self.adapter.dispatch_request(envelope);
+        if dispatch.reply.is_none() && !dispatch.stdin.is_empty() {
+            self.pending_execute_routing_ids = Some(routing_ids.clone());
+        }
+        if dispatch.reply.is_some() {
+            self.pending_execute_routing_ids = None;
+        }
         self.codec
             .send_dispatch_with_routing(transport, &dispatch, routing_ids)
+    }
+
+    pub fn handle_wire_input_reply<T: KernelTransport>(
+        &mut self,
+        transport: &mut T,
+        reply: KernelWireMessage,
+    ) -> Result<(), KernelWireError> {
+        let envelope = self.codec.decode_input_reply_message(&reply)?;
+        if let Some(dispatch) = self
+            .adapter
+            .handle_input_reply(envelope)
+            .map_err(KernelWireError::from)?
+        {
+            let routing_ids = self.pending_execute_routing_ids.clone().unwrap_or_default();
+            if dispatch.reply.is_some() {
+                self.pending_execute_routing_ids = None;
+            }
+            self.codec
+                .send_dispatch_with_routing(transport, &dispatch, routing_ids)?;
+        }
+        Ok(())
     }
 
     pub fn pump_once(
@@ -694,7 +911,15 @@ impl KernelEventPump {
         channel: KernelChannel,
     ) -> Result<bool, KernelWireError> {
         if let Some(request) = transport.pop_incoming(channel) {
-            self.handle_wire_request(transport, request)?;
+            match channel {
+                KernelChannel::Shell | KernelChannel::Control => {
+                    self.handle_wire_request(transport, request)?;
+                }
+                KernelChannel::Stdin => {
+                    self.handle_wire_input_reply(transport, request)?;
+                }
+                KernelChannel::IoPub => return Ok(false),
+            }
             Ok(true)
         } else {
             Ok(false)
@@ -709,11 +934,21 @@ impl KernelEventPump {
             return Ok(None);
         }
 
-        for channel in [
-            KernelChannel::Control,
-            KernelChannel::Shell,
-            KernelChannel::Stdin,
-        ] {
+        let channels = if self.adapter.awaiting_stdin() {
+            [
+                KernelChannel::Control,
+                KernelChannel::Stdin,
+                KernelChannel::Shell,
+            ]
+        } else {
+            [
+                KernelChannel::Control,
+                KernelChannel::Shell,
+                KernelChannel::Stdin,
+            ]
+        };
+
+        for channel in channels {
             if self.pump_once(transport, channel)? {
                 return Ok(Some(channel));
             }
@@ -775,9 +1010,11 @@ fn encode_request_content(request: &KernelRequest) -> String {
         KernelRequest::Execute(KernelExecuteRequest {
             code,
             store_history,
+            allow_stdin,
         }) => json_object(vec![
             field("code", json_string(code)),
             field("store_history", json_bool(*store_history)),
+            field("allow_stdin", json_bool(*allow_stdin)),
         ]),
         KernelRequest::Inspect(KernelInspectRequest {
             code,
@@ -801,6 +1038,17 @@ fn encode_request_content(request: &KernelRequest) -> String {
             json_object(vec![field("restart", json_bool(*restart))])
         }
     }
+}
+
+fn encode_input_request_content(request: &KernelInputRequest) -> String {
+    json_object(vec![
+        field("prompt", json_string(&request.prompt)),
+        field("password", json_bool(request.password)),
+    ])
+}
+
+fn encode_input_reply_content(reply: &KernelInputReply) -> String {
+    json_object(vec![field("value", json_string(&reply.value))])
 }
 
 fn encode_response_content(response: &KernelResponse) -> String {
@@ -1124,6 +1372,7 @@ fn parse_request_content(msg_type: &str, input: &str) -> Result<KernelRequest, K
         "execute_request" => Ok(KernelRequest::Execute(KernelExecuteRequest {
             code: string_field(&object, "content", "code")?,
             store_history: bool_field_with_default(&object, "content", "store_history", true)?,
+            allow_stdin: bool_field_with_default(&object, "content", "allow_stdin", true)?,
         })),
         "inspect_request" => Ok(KernelRequest::Inspect(KernelInspectRequest {
             code: string_field(&object, "content", "code")?,
@@ -1141,6 +1390,39 @@ fn parse_request_content(msg_type: &str, input: &str) -> Result<KernelRequest, K
         "shutdown_request" => Ok(KernelRequest::Shutdown(KernelShutdownRequest {
             restart: bool_field_with_default(&object, "content", "restart", false)?,
         })),
+        _ => Err(KernelWireError::UnsupportedMessageType {
+            msg_type: msg_type.to_string(),
+        }),
+    }
+}
+
+fn parse_input_request_content(
+    msg_type: &str,
+    input: &str,
+) -> Result<KernelInputRequest, KernelWireError> {
+    let object = parse_object(input, "content")?;
+
+    match msg_type {
+        "input_request" => Ok(KernelInputRequest {
+            prompt: string_field(&object, "content", "prompt")?,
+            password: bool_field_with_default(&object, "content", "password", false)?,
+        }),
+        _ => Err(KernelWireError::UnsupportedMessageType {
+            msg_type: msg_type.to_string(),
+        }),
+    }
+}
+
+fn parse_input_reply_content(
+    msg_type: &str,
+    input: &str,
+) -> Result<KernelInputReply, KernelWireError> {
+    let object = parse_object(input, "content")?;
+
+    match msg_type {
+        "input_reply" => Ok(KernelInputReply {
+            value: string_field(&object, "content", "value")?,
+        }),
         _ => Err(KernelWireError::UnsupportedMessageType {
             msg_type: msg_type.to_string(),
         }),

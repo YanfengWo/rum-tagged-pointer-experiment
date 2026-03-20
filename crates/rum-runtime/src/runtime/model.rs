@@ -146,6 +146,26 @@ pub struct RuntimeMessage {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RuntimeInputRequest {
+    pub prompt: String,
+    pub password: bool,
+}
+
+impl RuntimeInputRequest {
+    pub fn new(prompt: impl Into<String>) -> Self {
+        Self {
+            prompt: prompt.into(),
+            password: false,
+        }
+    }
+
+    pub fn password(mut self) -> Self {
+        self.password = true;
+        self
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct MessageSelector {
     pub(super) symbol: String,
     pub(super) tag: Option<String>,
@@ -166,6 +186,16 @@ pub(super) struct MessageDefinition {
 impl fmt::Display for RuntimeMessage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}::{}: {}", self.symbol, self.tag, self.text)
+    }
+}
+
+impl fmt::Display for RuntimeInputRequest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.prompt.is_empty() {
+            f.write_str("input required")
+        } else {
+            write!(f, "input required: {}", self.prompt)
+        }
     }
 }
 
@@ -190,6 +220,7 @@ impl fmt::Display for SessionRequestError {
             Self::EvaluationPassLimitExceeded { limit } => {
                 write!(f, "evaluation exceeded fixed-point pass limit ({limit})")
             }
+            Self::InputRequired { request } => write!(f, "{request}"),
             Self::Other { message } => f.write_str(message),
         }
     }
@@ -205,7 +236,6 @@ impl MessageSelector {
     }
 }
 
-#[derive(Clone, Debug)]
 pub struct Session {
     pub(super) builtins: BTreeMap<String, BuiltinSpec>,
     pub(super) attributes: BTreeMap<Symbol, AttributeSet>,
@@ -226,6 +256,10 @@ pub struct Session {
     pub(super) messages: Vec<RuntimeMessage>,
     pub(super) last_message_list: Vec<RuntimeMessage>,
     pub(super) handled_non_loader_eval_errors: Vec<RuntimeMessage>,
+    pub(super) queued_input_responses: VecDeque<String>,
+    pub(super) pending_input_request: Option<RuntimeInputRequest>,
+    pub(super) pending_eval_request: Option<PendingEvalRequest>,
+    pub(super) pending_suspension: Option<SuspendedEvaluation>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -304,6 +338,9 @@ pub enum SessionRequestError {
     EvaluationPassLimitExceeded {
         limit: usize,
     },
+    InputRequired {
+        request: RuntimeInputRequest,
+    },
     Other {
         message: String,
     },
@@ -314,6 +351,13 @@ pub struct SessionRequestFailure {
     pub error: SessionRequestError,
     pub messages: Vec<RuntimeMessage>,
     pub trace: Vec<TraceEvent>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct PendingEvalRequest {
+    pub(super) message_checkpoint: usize,
+    pub(super) handled_error_checkpoint: usize,
+    pub(super) trace_checkpoint: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

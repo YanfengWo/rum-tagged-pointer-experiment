@@ -196,6 +196,7 @@ pub(super) fn default_builtin_dispatch_spec(name: &str) -> Option<BuiltinSpec> {
         ),
         "Sequence" => BuiltinSpec::ordinary("", "", BuiltinHandler::Sequence),
         "Thread" => BuiltinSpec::ordinary("", "", BuiltinHandler::Thread),
+        "InputString" => BuiltinSpec::ordinary("", "", BuiltinHandler::InputString),
         _ => return None,
     })
 }

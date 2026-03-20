@@ -19,9 +19,14 @@ impl Session {
             ));
         };
 
-        let text = self.render_message_text(&key, &args[1..])?;
-        self.push_message(&key.symbol.to_string(), &key.tag, text);
-        Ok(system_expr("Null"))
+        let rendered_text = self.render_message_text(&key, &args[1..]);
+        let symbol_name = key.symbol.to_string();
+        let tag = key.tag.clone();
+
+        self.drive_internal_value::<String, Expr, _>(rendered_text, move |session, text| {
+            session.push_message(&symbol_name, &tag, text);
+            Ok(system_expr("Null"))
+        })
     }
 
     pub(super) fn eval_message_name(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {

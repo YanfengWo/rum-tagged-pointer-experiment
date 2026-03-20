@@ -89,7 +89,20 @@ impl Session {
     }
 
     pub(super) fn evaluate_call(&mut self, head: Expr, args: Vec<Expr>) -> Result<Expr, EvalError> {
-        let evaluated_head = self.evaluate(head)?;
+        let args_for_resume = args.clone();
+        let evaluated_head_result = self.evaluate(head);
+        let evaluated_head = self
+            .suspend_with_frame(evaluated_head_result, move |session, value| {
+                session.resume_call_after_head(value, args_for_resume)
+            })?;
+        self.resume_call_after_head(evaluated_head, args)
+    }
+
+    pub(super) fn resume_call_after_head(
+        &mut self,
+        evaluated_head: Expr,
+        args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
         let plan = self.build_call_dispatch_plan(&evaluated_head);
         let mut state = CallDispatchState::new(args);
 

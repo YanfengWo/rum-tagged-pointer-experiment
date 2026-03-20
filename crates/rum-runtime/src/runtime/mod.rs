@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -13,6 +13,7 @@ mod attributes;
 mod binding_substitution;
 mod builtin_defaults;
 mod builtins_context_loader;
+mod builtins_input;
 mod builtins_messages;
 mod builtins_messages_inspect;
 mod context_and_load_helpers;
@@ -52,20 +53,21 @@ mod session_helpers;
 mod session_requests;
 mod session_state;
 mod slot_substitution;
+mod suspension;
 
 #[allow(unused_imports)]
 use self::{
     attributes::*, binding_substitution::*, builtin_defaults::*, builtins_context_loader::*,
-    builtins_messages::*, builtins_messages_inspect::*, context_and_load_helpers::*,
-    control_flow::*, definition_analysis_helpers::*, definition_application::*,
-    definition_catalog::*, definition_clear::*, definition_tags::*, definitions::*,
-    eval_call_prepare::*, eval_core::*, eval_dispatch::*, expr_helpers::*, expr_runtime_helpers::*,
-    function_and_subst_helpers::*, hold_thread::*, lexical_substitution::*, listable_dispatch::*,
-    lowering::*, matcher_and_symbols::*, message_catalog::*, message_format::*,
-    message_selector_parsing::*, metadata::*, model::*, parse_and_message_helpers::*,
-    pattern_matching::*, resolution::*, rewrite_builtins::*, scoping::*, session_api::*,
-    session_eval::*, session_helpers::*, session_requests::*, session_state::*,
-    slot_substitution::*,
+    builtins_input::*, builtins_messages::*, builtins_messages_inspect::*,
+    context_and_load_helpers::*, control_flow::*, definition_analysis_helpers::*,
+    definition_application::*, definition_catalog::*, definition_clear::*, definition_tags::*,
+    definitions::*, eval_call_prepare::*, eval_core::*, eval_dispatch::*, expr_helpers::*,
+    expr_runtime_helpers::*, function_and_subst_helpers::*, hold_thread::*,
+    lexical_substitution::*, listable_dispatch::*, lowering::*, matcher_and_symbols::*,
+    message_catalog::*, message_format::*, message_selector_parsing::*, metadata::*, model::*,
+    parse_and_message_helpers::*, pattern_matching::*, resolution::*, rewrite_builtins::*,
+    scoping::*, session_api::*, session_eval::*, session_helpers::*, session_requests::*,
+    session_state::*, slot_substitution::*, suspension::*,
 };
 pub use self::{lowering::lower_syntax_expr, metadata::*, model::*, session_state::EvalError};
 

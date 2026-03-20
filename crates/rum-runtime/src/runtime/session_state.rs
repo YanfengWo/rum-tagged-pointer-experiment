@@ -181,6 +181,8 @@ pub enum EvalError {
     IterationLimitExceeded { limit: usize },
     #[error("evaluation exceeded fixed-point pass limit ({limit})")]
     EvaluationPassLimitExceeded { limit: usize },
+    #[error("{request}")]
+    InputRequired { request: RuntimeInputRequest },
 }
 
 impl Default for Session {
@@ -205,6 +207,10 @@ impl Default for Session {
             messages: Vec::new(),
             last_message_list: Vec::new(),
             handled_non_loader_eval_errors: Vec::new(),
+            queued_input_responses: VecDeque::new(),
+            pending_input_request: None,
+            pending_eval_request: None,
+            pending_suspension: None,
         }
     }
 }

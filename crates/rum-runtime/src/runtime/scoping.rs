@@ -6,7 +6,7 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("With", args, 2));
         }
 
-        let Some(bindings) = self.evaluate_with_bindings(&args[0])? else {
+        let Some(items) = parse_with_binding_items(&args[0]) else {
             return Ok(self.invalid_call_with_arg_form(
                 "With",
                 args,
@@ -14,8 +14,7 @@ impl Session {
             ));
         };
 
-        let body = substitute_lexical_bindings(&args[1], &bindings, &BTreeSet::new());
-        self.evaluate(body)
+        self.resume_with_bindings(items, args[1].clone(), BTreeMap::new(), 0)
     }
 
     pub(super) fn eval_module(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -40,7 +39,7 @@ impl Session {
             );
         }
 
-        for (symbol, init) in items {
+        for (symbol, _init) in &items {
             let Some(fresh_expr) = renames.get(&symbol) else {
                 continue;
             };
@@ -51,18 +50,9 @@ impl Session {
             let definition = self.definitions.entry(fresh_symbol.clone()).or_default();
             definition.own_value = None;
             definition.delayed_own_value = None;
-
-            if let Some(init) = init {
-                let renamed_init = substitute_lexical_bindings(&init, &renames, &BTreeSet::new());
-                let value = self.evaluate(renamed_init)?;
-                let definition = self.definitions.entry(fresh_symbol).or_default();
-                definition.own_value = Some(value);
-                definition.delayed_own_value = None;
-            }
         }
 
-        let body = substitute_lexical_bindings(&args[1], &renames, &BTreeSet::new());
-        self.evaluate(body)
+        self.resume_module_initializers(items, args[1].clone(), renames, 0)
     }
 
     pub(super) fn eval_block(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -84,30 +74,14 @@ impl Session {
                 .map(|(symbol, _)| symbol.clone())
                 .collect::<Vec<_>>(),
         );
+        for (symbol, _) in &items {
+            self.definitions.remove(symbol);
+            self.attributes.remove(symbol);
+            self.message_definitions
+                .retain(|key, _| key.symbol != *symbol);
+        }
 
-        let result = (|| -> Result<Expr, EvalError> {
-            for (symbol, _) in &items {
-                self.definitions.remove(symbol);
-                self.attributes.remove(symbol);
-                self.message_definitions
-                    .retain(|key, _| key.symbol != *symbol);
-            }
-
-            for (symbol, init) in &items {
-                if let Some(init) = init {
-                    let value = self.evaluate(init.clone())?;
-                    let definition = self.definitions.entry(symbol.clone()).or_default();
-                    definition.own_value = Some(value);
-                    definition.delayed_own_value = None;
-                }
-            }
-
-            self.evaluate(args[1].clone())
-        })();
-
-        self.restore_block_symbol_states(saved_state);
-
-        result
+        self.resume_block_initializers(items, args[1].clone(), saved_state, 0)
     }
 
     pub(super) fn capture_block_symbol_states(
@@ -195,34 +169,9 @@ impl Session {
             }
         };
 
-        self.evaluate(applied).map(Some)
-    }
-
-    pub(super) fn evaluate_with_bindings(
-        &mut self,
-        expr: &Expr,
-    ) -> Result<Option<BTreeMap<Symbol, Expr>>, EvalError> {
-        let Expr::Call { head, args } = expr else {
-            return Ok(None);
-        };
-
-        if !is_system_symbol_name(head, "List") {
-            return Ok(None);
-        }
-
-        let mut bindings = BTreeMap::new();
-
-        for item in args {
-            let Some((symbol, rhs)) = parse_with_binding_item(item) else {
-                return Ok(None);
-            };
-
-            let substituted_rhs = substitute_lexical_bindings(&rhs, &bindings, &BTreeSet::new());
-            let value = self.evaluate(substituted_rhs)?;
-            bindings.insert(symbol, value);
-        }
-
-        Ok(Some(bindings))
+        let applied_result = self.evaluate(applied);
+        self.suspend_with_frame(applied_result, |_, value| Ok(value))
+            .map(Some)
     }
 
     pub(super) fn allocate_fresh_symbol(&mut self, symbol: &Symbol) -> Symbol {
@@ -246,4 +195,194 @@ impl Session {
                 .keys()
                 .any(|key| key.symbol == *symbol)
     }
+
+    fn resume_with_bindings(
+        &mut self,
+        items: Vec<(Symbol, Expr)>,
+        body: Expr,
+        mut bindings: BTreeMap<Symbol, Expr>,
+        index: usize,
+    ) -> Result<Expr, EvalError> {
+        if index >= items.len() {
+            let body = substitute_lexical_bindings(&body, &bindings, &BTreeSet::new());
+            return self.evaluate(body);
+        }
+
+        let (symbol, rhs) = items[index].clone();
+        let substituted_rhs = substitute_lexical_bindings(&rhs, &bindings, &BTreeSet::new());
+        let rhs_result = self.evaluate(substituted_rhs);
+        let outcome = self.suspend_with_frame(rhs_result, {
+            let items = items.clone();
+            let body = body.clone();
+            let bindings = bindings.clone();
+            let symbol = symbol.clone();
+            move |session, value| {
+                let mut bindings = bindings;
+                bindings.insert(symbol, value);
+                session.resume_with_bindings(items, body, bindings, index + 1)
+            }
+        })?;
+        bindings.insert(symbol, outcome);
+        self.resume_with_bindings(items, body, bindings, index + 1)
+    }
+
+    fn resume_module_initializers(
+        &mut self,
+        items: Vec<(Symbol, Option<Expr>)>,
+        body: Expr,
+        renames: BTreeMap<Symbol, Expr>,
+        index: usize,
+    ) -> Result<Expr, EvalError> {
+        if index >= items.len() {
+            let body = substitute_lexical_bindings(&body, &renames, &BTreeSet::new());
+            return self.evaluate(body);
+        }
+
+        let (symbol, init) = items[index].clone();
+        if let Some(init) = init {
+            let renamed_init = substitute_lexical_bindings(&init, &renames, &BTreeSet::new());
+            let init_result = self.evaluate(renamed_init);
+            let outcome = self.suspend_with_frame(init_result, {
+                let items = items.clone();
+                let body = body.clone();
+                let renames = renames.clone();
+                let symbol = symbol.clone();
+                move |session, value| {
+                    session.store_module_initializer_value(&renames, &symbol, value);
+                    session.resume_module_initializers(items, body, renames, index + 1)
+                }
+            })?;
+            self.store_module_initializer_value(&renames, &symbol, outcome);
+        }
+
+        self.resume_module_initializers(items, body, renames, index + 1)
+    }
+
+    fn store_module_initializer_value(
+        &mut self,
+        renames: &BTreeMap<Symbol, Expr>,
+        symbol: &Symbol,
+        value: Expr,
+    ) {
+        let Some(fresh_expr) = renames.get(symbol) else {
+            return;
+        };
+        let Some(fresh_symbol) = expr_as_symbol(fresh_expr).cloned() else {
+            return;
+        };
+
+        let definition = self.definitions.entry(fresh_symbol).or_default();
+        definition.own_value = Some(value);
+        definition.delayed_own_value = None;
+    }
+
+    fn resume_block_initializers(
+        &mut self,
+        items: Vec<(Symbol, Option<Expr>)>,
+        body: Expr,
+        saved_state: BTreeMap<Symbol, BlockSymbolState>,
+        index: usize,
+    ) -> Result<Expr, EvalError> {
+        if index >= items.len() {
+            return self.resume_block_body(body, saved_state);
+        }
+
+        let (symbol, init) = items[index].clone();
+        if let Some(init) = init {
+            let init_result = self.evaluate(init);
+            let outcome = self.suspend_with_result_frame(init_result, {
+                let items = items.clone();
+                let body = body.clone();
+                let saved_state = saved_state.clone();
+                let symbol = symbol.clone();
+                move |session, outcome| {
+                    session.resume_block_after_initializer(
+                        items,
+                        body,
+                        saved_state,
+                        index,
+                        symbol,
+                        outcome,
+                    )
+                }
+            });
+
+            return match outcome {
+                Err(EvalError::InputRequired { request }) => {
+                    Err(EvalError::InputRequired { request })
+                }
+                outcome => self.resume_block_after_initializer(
+                    items,
+                    body,
+                    saved_state,
+                    index,
+                    symbol,
+                    outcome,
+                ),
+            };
+        }
+
+        self.resume_block_initializers(items, body, saved_state, index + 1)
+    }
+
+    fn resume_block_after_initializer(
+        &mut self,
+        items: Vec<(Symbol, Option<Expr>)>,
+        body: Expr,
+        saved_state: BTreeMap<Symbol, BlockSymbolState>,
+        index: usize,
+        symbol: Symbol,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) => {
+                let definition = self.definitions.entry(symbol).or_default();
+                definition.own_value = Some(value);
+                definition.delayed_own_value = None;
+                self.resume_block_initializers(items, body, saved_state, index + 1)
+            }
+            Err(error) => {
+                self.restore_block_symbol_states(saved_state);
+                Err(error)
+            }
+        }
+    }
+
+    fn resume_block_body(
+        &mut self,
+        body: Expr,
+        saved_state: BTreeMap<Symbol, BlockSymbolState>,
+    ) -> Result<Expr, EvalError> {
+        let body_result = self.evaluate(body);
+        let outcome = self.suspend_with_result_frame(body_result, {
+            let saved_state = saved_state.clone();
+            move |session, outcome| session.finish_block_scope(saved_state, outcome)
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.finish_block_scope(saved_state, outcome),
+        }
+    }
+
+    fn finish_block_scope(
+        &mut self,
+        saved_state: BTreeMap<Symbol, BlockSymbolState>,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        self.restore_block_symbol_states(saved_state);
+        outcome
+    }
+}
+
+fn parse_with_binding_items(expr: &Expr) -> Option<Vec<(Symbol, Expr)>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "List") {
+        return None;
+    }
+
+    args.iter().map(parse_with_binding_item).collect()
 }

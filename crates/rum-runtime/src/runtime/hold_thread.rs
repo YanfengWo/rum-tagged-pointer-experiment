@@ -12,7 +12,8 @@ impl Session {
             released = next;
         }
 
-        self.evaluate(released)
+        let released_result = self.evaluate(released);
+        self.suspend_with_frame(released_result, |_, value| Ok(value))
     }
 
     pub(super) fn eval_thread(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {

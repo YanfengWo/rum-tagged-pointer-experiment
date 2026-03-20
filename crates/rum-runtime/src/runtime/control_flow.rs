@@ -24,38 +24,33 @@ impl Session {
             None
         };
 
+        let fallback = args[1].clone();
         let message_checkpoint = self.messages.len();
         let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
-        let value = match self.evaluate(args[0].clone()) {
-            Ok(value) => value,
-            Err(err) => {
-                self.emit_non_loader_eval_message(handled_error_checkpoint, &err);
-
-                let matched = selectors.as_ref().map_or_else(
-                    || self.messages.len() > message_checkpoint,
-                    |selectors| self.messages_since_match(message_checkpoint, selectors),
-                );
-
-                if matched {
-                    return self.evaluate(args[1].clone());
-                }
-
-                return Err(err);
+        let primary_result = self.evaluate(args[0].clone());
+        let outcome = self.suspend_with_result_frame(primary_result, {
+            let selectors = selectors.clone();
+            let fallback = fallback.clone();
+            move |session, outcome| {
+                session.resume_check_after_primary(
+                    selectors,
+                    fallback,
+                    message_checkpoint,
+                    handled_error_checkpoint,
+                    outcome,
+                )
             }
-        };
+        });
 
-        let matched = selectors.as_ref().map_or_else(
-            || self.messages.len() > message_checkpoint,
-            |selectors| self.messages_since_match(message_checkpoint, selectors),
-        );
-
-        self.handled_non_loader_eval_errors
-            .truncate(handled_error_checkpoint);
-
-        if matched {
-            self.evaluate(args[1].clone())
-        } else {
-            Ok(value)
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.resume_check_after_primary(
+                selectors,
+                fallback,
+                message_checkpoint,
+                handled_error_checkpoint,
+                outcome,
+            ),
         }
     }
 
@@ -84,7 +79,112 @@ impl Session {
 
         let message_checkpoint = self.messages.len();
         let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
-        let result = match self.evaluate(args[0].clone()) {
+        let primary_result = self.evaluate(args[0].clone());
+        let result = self.suspend_with_result_frame(primary_result, {
+            let selectors = selectors.clone();
+            move |session, outcome| {
+                session.resume_quiet_after_primary(
+                    selectors,
+                    message_checkpoint,
+                    handled_error_checkpoint,
+                    outcome,
+                )
+            }
+        });
+
+        match result {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.resume_quiet_after_primary(
+                selectors,
+                message_checkpoint,
+                handled_error_checkpoint,
+                outcome,
+            ),
+        }
+    }
+
+    pub(super) fn eval_if(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !(2..=4).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("If", args, 2, 4));
+        }
+
+        if let Some(truth) = truthiness_symbol(&args[0]) {
+            return self.resume_if_after_condition(
+                args.to_vec(),
+                system_expr(if truth { "True" } else { "False" }),
+            );
+        }
+
+        let condition_result = self.evaluate(args[0].clone());
+        let condition = self.suspend_with_frame(condition_result, {
+            let args = args.to_vec();
+            move |session, condition| session.resume_if_after_condition(args, condition)
+        })?;
+
+        self.resume_if_after_condition(args.to_vec(), condition)
+    }
+
+    pub(super) fn eval_which(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.is_empty() || args.len() % 2 != 0 {
+            return Ok(self.invalid_call_with_arg_form(
+                "Which",
+                args,
+                "expected one or more condition/result pairs",
+            ));
+        }
+
+        self.resume_which_from_index(args.to_vec(), 0)
+    }
+
+    fn resume_check_after_primary(
+        &mut self,
+        selectors: Option<Vec<MessageSelector>>,
+        fallback: Expr,
+        message_checkpoint: usize,
+        handled_error_checkpoint: usize,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) => {
+                let matched = selectors.as_ref().map_or_else(
+                    || self.messages.len() > message_checkpoint,
+                    |selectors| self.messages_since_match(message_checkpoint, selectors),
+                );
+
+                self.handled_non_loader_eval_errors
+                    .truncate(handled_error_checkpoint);
+
+                if matched {
+                    self.evaluate(fallback)
+                } else {
+                    Ok(value)
+                }
+            }
+            Err(err) => {
+                self.emit_non_loader_eval_message(handled_error_checkpoint, &err);
+
+                let matched = selectors.as_ref().map_or_else(
+                    || self.messages.len() > message_checkpoint,
+                    |selectors| self.messages_since_match(message_checkpoint, selectors),
+                );
+
+                if matched {
+                    self.evaluate(fallback)
+                } else {
+                    Err(err)
+                }
+            }
+        }
+    }
+
+    fn resume_quiet_after_primary(
+        &mut self,
+        selectors: Option<Vec<MessageSelector>>,
+        message_checkpoint: usize,
+        handled_error_checkpoint: usize,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        let outcome = match outcome {
             Ok(value) => Ok(value),
             Err(err) => {
                 self.emit_non_loader_eval_message(handled_error_checkpoint, &err);
@@ -98,20 +198,20 @@ impl Session {
             self.messages.truncate(message_checkpoint);
         }
 
-        if result.is_ok() {
+        if outcome.is_ok() {
             self.handled_non_loader_eval_errors
                 .truncate(handled_error_checkpoint);
         }
 
-        result
+        outcome
     }
 
-    pub(super) fn eval_if(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if !(2..=4).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("If", args, 2, 4));
-        }
-
-        match truthiness_symbol(&args[0]) {
+    fn resume_if_after_condition(
+        &mut self,
+        args: Vec<Expr>,
+        condition: Expr,
+    ) -> Result<Expr, EvalError> {
+        match truthiness_symbol(&condition) {
             Some(true) => self.evaluate(args[1].clone()),
             Some(false) => {
                 if args.len() >= 3 {
@@ -121,35 +221,46 @@ impl Session {
                 }
             }
             None if args.len() == 4 => self.evaluate(args[3].clone()),
-            None => Ok(Expr::call(system_expr("If"), args.to_vec())),
+            None => {
+                let mut residual = args;
+                residual[0] = condition;
+                Ok(Expr::call(system_expr("If"), residual))
+            }
         }
     }
 
-    pub(super) fn eval_which(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if args.is_empty() || args.len() % 2 != 0 {
-            return Ok(self.invalid_call_with_arg_form(
-                "Which",
-                args,
-                "expected one or more condition/result pairs",
-            ));
+    fn resume_which_from_index(
+        &mut self,
+        args: Vec<Expr>,
+        index: usize,
+    ) -> Result<Expr, EvalError> {
+        if index >= args.len() {
+            return Ok(system_expr("Null"));
         }
 
-        let mut index = 0;
+        let condition_result = self.evaluate(args[index].clone());
+        let condition = self.suspend_with_frame(condition_result, {
+            let args = args.clone();
+            move |session, condition| session.resume_which_after_condition(args, index, condition)
+        })?;
 
-        while index < args.len() {
-            let condition = self.evaluate(args[index].clone())?;
+        self.resume_which_after_condition(args, index, condition)
+    }
 
-            match truthiness_symbol(&condition) {
-                Some(true) => return self.evaluate(args[index + 1].clone()),
-                Some(false) => index += 2,
-                None => {
-                    let mut residual = args.to_vec();
-                    residual[index] = condition;
-                    return Ok(Expr::call(system_expr("Which"), residual));
-                }
+    fn resume_which_after_condition(
+        &mut self,
+        args: Vec<Expr>,
+        index: usize,
+        condition: Expr,
+    ) -> Result<Expr, EvalError> {
+        match truthiness_symbol(&condition) {
+            Some(true) => self.evaluate(args[index + 1].clone()),
+            Some(false) => self.resume_which_from_index(args, index + 2),
+            None => {
+                let mut residual = args;
+                residual[index] = condition;
+                Ok(Expr::call(system_expr("Which"), residual))
             }
         }
-
-        Ok(system_expr("Null"))
     }
 }

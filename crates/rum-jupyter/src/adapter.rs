@@ -1,5 +1,5 @@
 use rum_runtime::{
-    RuleApplicationSource, RuntimeMessage, Session, SessionCompletenessStatus,
+    RuleApplicationSource, RuntimeInputRequest, RuntimeMessage, Session, SessionCompletenessStatus,
     SessionInspectResponse, SessionRequestError, SessionRequestFailure, TraceEvent,
 };
 
@@ -7,22 +7,32 @@ use crate::{
     KernelChannel, KernelCompleteRequest, KernelCompleteResponse, KernelDispatchResult,
     KernelDisplayOutput, KernelErrorOutput, KernelExecuteInput, KernelExecuteOutcome,
     KernelExecutePayload, KernelExecuteRequest, KernelExecuteResponse, KernelExecuteResult,
-    KernelExecutionState, KernelHelpLink, KernelInfoRequest, KernelInfoResponse,
-    KernelInspectRequest, KernelInspectResponse, KernelInterruptRequest, KernelInterruptResponse,
-    KernelIoPubEnvelope, KernelIoPubPayload, KernelIsCompleteRequest, KernelIsCompleteResponse,
-    KernelIsCompleteStatus, KernelLanguageInfo, KernelLifecycleState, KernelMessageHeader,
-    KernelMetadata, KernelMimeBundle, KernelOutput, KernelReplyStatus, KernelRequest,
-    KernelRequestEnvelope, KernelResponse, KernelResponseEnvelope, KernelShutdownRequest,
-    KernelShutdownResponse, KernelStatusOutput, KernelStreamName, KernelStreamOutput,
+    KernelExecutionState, KernelHelpLink, KernelInfoRequest, KernelInfoResponse, KernelInputReply,
+    KernelInputReplyEnvelope, KernelInputRequest, KernelInputRequestEnvelope, KernelInspectRequest,
+    KernelInspectResponse, KernelInterruptRequest, KernelInterruptResponse, KernelIoPubEnvelope,
+    KernelIoPubPayload, KernelIsCompleteRequest, KernelIsCompleteResponse, KernelIsCompleteStatus,
+    KernelLanguageInfo, KernelLifecycleState, KernelMessageHeader, KernelMetadata,
+    KernelMimeBundle, KernelOutput, KernelReplyStatus, KernelRequest, KernelRequestEnvelope,
+    KernelResponse, KernelResponseEnvelope, KernelShutdownRequest, KernelShutdownResponse,
+    KernelStatusOutput, KernelStdinError, KernelStreamName, KernelStreamOutput,
 };
 
-#[derive(Debug)]
 pub struct KernelAdapter {
     session: Session,
     execution_count: u64,
     next_message_id: u64,
     execution_state: KernelExecutionState,
     lifecycle_state: KernelLifecycleState,
+    pending_input: Option<KernelInputRequestEnvelope>,
+    pending_execute: Option<PendingExecute>,
+    last_input_reply: Option<KernelInputReply>,
+}
+
+#[derive(Clone, Debug)]
+struct PendingExecute {
+    parent_header: KernelMessageHeader,
+    request: KernelExecuteRequest,
+    execution_count: Option<u64>,
 }
 
 impl KernelAdapter {
@@ -33,6 +43,9 @@ impl KernelAdapter {
             next_message_id: 0,
             execution_state: KernelExecutionState::Idle,
             lifecycle_state: KernelLifecycleState::Running,
+            pending_input: None,
+            pending_execute: None,
+            last_input_reply: None,
         }
     }
 
@@ -59,6 +72,18 @@ impl KernelAdapter {
         )
     }
 
+    pub fn awaiting_stdin(&self) -> bool {
+        self.pending_input.is_some()
+    }
+
+    pub fn pending_input_request(&self) -> Option<&KernelInputRequestEnvelope> {
+        self.pending_input.as_ref()
+    }
+
+    pub fn take_last_input_reply(&mut self) -> Option<KernelInputReply> {
+        self.last_input_reply.take()
+    }
+
     pub fn session(&self) -> &Session {
         &self.session
     }
@@ -68,36 +93,24 @@ impl KernelAdapter {
     }
 
     pub fn execute(&mut self, request: KernelExecuteRequest) -> KernelExecuteResponse {
-        let execution_count = if request.store_history {
+        let execution_count = self.next_execution_count(request.store_history);
+        let outcome = self.run_execute_request(&request);
+        build_execute_response(execution_count, outcome)
+    }
+
+    fn next_execution_count(&mut self, store_history: bool) -> Option<u64> {
+        if store_history {
             self.execution_count += 1;
             Some(self.execution_count)
         } else {
             None
-        };
+        }
+    }
 
-        let outcome = match self.session.eval_request(&request.code) {
+    fn run_execute_request(&mut self, request: &KernelExecuteRequest) -> KernelExecuteOutcome {
+        match self.session.eval_request(&request.code) {
             Ok(response) => KernelExecuteOutcome::Success(response),
             Err(failure) => KernelExecuteOutcome::Failure(failure),
-        };
-        let outputs = build_execute_outputs(execution_count, &outcome);
-        let error = match &outcome {
-            KernelExecuteOutcome::Success(_) => None,
-            KernelExecuteOutcome::Failure(failure) => Some(error_output(failure)),
-            KernelExecuteOutcome::WireDecoded => None,
-        };
-
-        KernelExecuteResponse {
-            status: if matches!(outcome, KernelExecuteOutcome::Success(_)) {
-                KernelReplyStatus::Ok
-            } else {
-                KernelReplyStatus::Error
-            },
-            execution_count,
-            payload: Vec::<KernelExecutePayload>::new(),
-            user_expressions: Default::default(),
-            error,
-            outputs,
-            outcome,
         }
     }
 
@@ -194,69 +207,282 @@ impl KernelAdapter {
         }
     }
 
+    pub fn request_stdin_for_execute(
+        &mut self,
+        parent_header: &KernelMessageHeader,
+        request: &KernelExecuteRequest,
+        input: KernelInputRequest,
+    ) -> Result<KernelInputRequestEnvelope, KernelStdinError> {
+        if !request.allow_stdin {
+            return Err(KernelStdinError::StdinNotAllowed);
+        }
+
+        if self.pending_input.is_some() {
+            return Err(KernelStdinError::AlreadyAwaitingInput);
+        }
+
+        let metadata = input_request_metadata(parent_header, request, &input);
+        let envelope = KernelInputRequestEnvelope {
+            channel: KernelChannel::Stdin,
+            header: self.next_response_header(parent_header, "input_request"),
+            parent_header: Some(parent_header.clone()),
+            metadata,
+            request: input,
+        };
+
+        self.pending_input = Some(envelope.clone());
+
+        Ok(envelope)
+    }
+
+    pub fn handle_input_reply(
+        &mut self,
+        envelope: KernelInputReplyEnvelope,
+    ) -> Result<Option<KernelDispatchResult>, KernelStdinError> {
+        let pending = self
+            .pending_input
+            .as_ref()
+            .ok_or(KernelStdinError::NoPendingInputRequest)?;
+        let found = envelope
+            .parent_header
+            .as_ref()
+            .map(|header| header.msg_id.as_str())
+            .unwrap_or_default()
+            .to_string();
+
+        if found != pending.header.msg_id {
+            return Err(KernelStdinError::ReplyParentMismatch {
+                expected: pending.header.msg_id.clone(),
+                found,
+            });
+        }
+
+        self.last_input_reply = Some(envelope.reply);
+        self.pending_input = None;
+
+        let Some(pending_execute) = self.pending_execute.take() else {
+            return Ok(None);
+        };
+
+        Ok(Some(self.resume_pending_execute(pending_execute)))
+    }
+
     pub fn dispatch_request(&mut self, envelope: KernelRequestEnvelope) -> KernelDispatchResult {
         let parent_header = envelope.header.clone();
-        let (response, iopub) = match envelope.request {
+        match envelope.request {
             KernelRequest::Execute(request) => {
-                let code = request.code.clone();
-                self.execution_state = KernelExecutionState::Busy;
-                let response = self.execute(request);
-                let execution_count = response.execution_count;
+                self.dispatch_execute_request(parent_header, request)
+            }
+            KernelRequest::Inspect(request) => self.finish_non_execute_request(
+                envelope.channel,
+                parent_header,
+                KernelResponse::Inspect(self.inspect(request)),
+            ),
+            KernelRequest::Complete(request) => self.finish_non_execute_request(
+                envelope.channel,
+                parent_header,
+                KernelResponse::Complete(self.complete(request)),
+            ),
+            KernelRequest::IsComplete(request) => self.finish_non_execute_request(
+                envelope.channel,
+                parent_header,
+                KernelResponse::IsComplete(self.is_complete(request)),
+            ),
+            KernelRequest::KernelInfo(request) => self.finish_non_execute_request(
+                envelope.channel,
+                parent_header,
+                KernelResponse::KernelInfo(self.kernel_info(request)),
+            ),
+            KernelRequest::Interrupt(request) => {
+                let response = KernelResponse::Interrupt(self.interrupt(request));
+                self.finish_non_execute_request(envelope.channel, parent_header, response)
+            }
+            KernelRequest::Shutdown(request) => {
+                let response = KernelResponse::Shutdown(self.shutdown(request));
+                self.finish_non_execute_request(envelope.channel, parent_header, response)
+            }
+        }
+    }
 
-                let mut iopub = vec![self.status_iopub(&parent_header, KernelExecutionState::Busy)];
+    pub fn handle_shell_request(
+        &mut self,
+        envelope: KernelRequestEnvelope,
+    ) -> Option<KernelResponseEnvelope> {
+        self.dispatch_request(envelope).reply
+    }
 
-                if execution_count.is_some() {
-                    iopub.push(self.execute_input_iopub(&parent_header, execution_count, &code));
-                }
+    fn dispatch_execute_request(
+        &mut self,
+        parent_header: KernelMessageHeader,
+        request: KernelExecuteRequest,
+    ) -> KernelDispatchResult {
+        let execution_count = self.next_execution_count(request.store_history);
+        self.execution_state = KernelExecutionState::Busy;
 
+        let outcome = self.run_execute_request(&request);
+        if let Some(input) = input_request_from_outcome(&outcome) {
+            if request.allow_stdin {
+                let mut iopub =
+                    self.execute_prologue_iopub(&parent_header, execution_count, &request.code);
                 iopub.extend(
-                    response
-                        .outputs
+                    build_suspended_outputs(&outcome)
                         .iter()
                         .map(|output| self.output_iopub(&parent_header, output)),
                 );
+                let stdin = self
+                    .request_stdin_for_execute(
+                        &parent_header,
+                        &request,
+                        kernel_input_request(&input),
+                    )
+                    .expect("execute request should be able to stage stdin exactly once");
+                self.pending_execute = Some(PendingExecute {
+                    parent_header: parent_header.clone(),
+                    request: request.clone(),
+                    execution_count,
+                });
 
-                self.execution_state = KernelExecutionState::Idle;
-                iopub.push(self.status_iopub(&parent_header, KernelExecutionState::Idle));
+                return KernelDispatchResult {
+                    reply: None,
+                    iopub,
+                    stdin: vec![stdin],
+                };
+            }
+        }
 
-                (KernelResponse::Execute(response), iopub)
-            }
-            KernelRequest::Inspect(request) => {
-                (KernelResponse::Inspect(self.inspect(request)), Vec::new())
-            }
-            KernelRequest::Complete(request) => {
-                (KernelResponse::Complete(self.complete(request)), Vec::new())
-            }
-            KernelRequest::IsComplete(request) => (
-                KernelResponse::IsComplete(self.is_complete(request)),
-                Vec::new(),
-            ),
-            KernelRequest::KernelInfo(request) => (
-                KernelResponse::KernelInfo(self.kernel_info(request)),
-                Vec::new(),
-            ),
-            KernelRequest::Interrupt(request) => (
-                KernelResponse::Interrupt(self.interrupt(request)),
-                Vec::new(),
-            ),
-            KernelRequest::Shutdown(request) => {
-                (KernelResponse::Shutdown(self.shutdown(request)), Vec::new())
-            }
+        self.finish_execute_request(
+            &parent_header,
+            &request.code,
+            execution_count,
+            outcome,
+            true,
+        )
+    }
+
+    fn resume_pending_execute(&mut self, pending: PendingExecute) -> KernelDispatchResult {
+        let input = self
+            .last_input_reply
+            .as_ref()
+            .map(|reply| reply.value.clone())
+            .expect("pending execute resumes only after an input reply");
+        let outcome = match self.session.resume_eval_request_with_input(input) {
+            Ok(response) => KernelExecuteOutcome::Success(response),
+            Err(failure) => KernelExecuteOutcome::Failure(failure),
         };
+        if let Some(input) = input_request_from_outcome(&outcome) {
+            if pending.request.allow_stdin {
+                let stdin = self
+                    .request_stdin_for_execute(
+                        &pending.parent_header,
+                        &pending.request,
+                        kernel_input_request(&input),
+                    )
+                    .expect("resumed execute request should be able to stage stdin exactly once");
+                self.pending_execute = Some(pending);
+
+                return KernelDispatchResult {
+                    reply: None,
+                    iopub: Vec::new(),
+                    stdin: vec![stdin],
+                };
+            }
+        }
+
+        self.finish_execute_request(
+            &pending.parent_header,
+            &pending.request.code,
+            pending.execution_count,
+            outcome,
+            false,
+        )
+    }
+
+    fn execute_prologue_iopub(
+        &mut self,
+        parent_header: &KernelMessageHeader,
+        execution_count: Option<u64>,
+        code: &str,
+    ) -> Vec<KernelIoPubEnvelope> {
+        let mut iopub = vec![self.status_iopub(parent_header, KernelExecutionState::Busy)];
+
+        if execution_count.is_some() {
+            iopub.push(self.execute_input_iopub(parent_header, execution_count, code));
+        }
+
+        iopub
+    }
+
+    fn finish_execute_request(
+        &mut self,
+        parent_header: &KernelMessageHeader,
+        code: &str,
+        execution_count: Option<u64>,
+        outcome: KernelExecuteOutcome,
+        emit_prologue: bool,
+    ) -> KernelDispatchResult {
+        let response = build_execute_response(execution_count, outcome);
+        let mut iopub = if emit_prologue {
+            self.execute_prologue_iopub(parent_header, execution_count, code)
+        } else {
+            Vec::new()
+        };
+
+        iopub.extend(
+            response
+                .outputs
+                .iter()
+                .map(|output| self.output_iopub(parent_header, output)),
+        );
+
+        self.execution_state = KernelExecutionState::Idle;
+        iopub.push(self.status_iopub(parent_header, KernelExecutionState::Idle));
+
+        let reply = self.response_envelope(
+            KernelChannel::Shell,
+            parent_header,
+            KernelResponse::Execute(response),
+        );
+
+        KernelDispatchResult {
+            reply: Some(reply),
+            iopub,
+            stdin: Vec::new(),
+        }
+    }
+
+    fn finish_non_execute_request(
+        &mut self,
+        channel: KernelChannel,
+        parent_header: KernelMessageHeader,
+        response: KernelResponse,
+    ) -> KernelDispatchResult {
+        KernelDispatchResult {
+            reply: Some(self.response_envelope(channel, &parent_header, response)),
+            iopub: Vec::new(),
+            stdin: Vec::new(),
+        }
+    }
+
+    fn response_envelope(
+        &mut self,
+        channel: KernelChannel,
+        parent_header: &KernelMessageHeader,
+        response: KernelResponse,
+    ) -> KernelResponseEnvelope {
         let response_metadata = response_metadata(
             &response,
-            envelope.channel,
-            &parent_header,
+            channel,
+            parent_header,
             self.execution_state,
             self.lifecycle_state,
         );
         let response_header =
-            self.next_response_header(&parent_header, response_msg_type(&response));
+            self.next_response_header(parent_header, response_msg_type(&response));
 
         let reply = KernelResponseEnvelope {
-            channel: envelope.channel,
+            channel,
             header: response_header,
-            parent_header: Some(parent_header),
+            parent_header: Some(parent_header.clone()),
             metadata: response_metadata,
             response,
         };
@@ -265,14 +491,7 @@ impl KernelAdapter {
             self.lifecycle_state = KernelLifecycleState::Shutdown;
         }
 
-        KernelDispatchResult { reply, iopub }
-    }
-
-    pub fn handle_shell_request(
-        &mut self,
-        envelope: KernelRequestEnvelope,
-    ) -> KernelResponseEnvelope {
-        self.dispatch_request(envelope).reply
+        reply
     }
 
     fn next_response_header(
@@ -401,9 +620,10 @@ impl KernelAdapter {
 fn completion_prefix(source: &str, cursor_offset: usize) -> (usize, usize, String) {
     let cursor_offset = clamp_char_boundary(source, cursor_offset);
     let replacement_start = scan_symbol_left(source, cursor_offset);
+    let replacement_end = scan_symbol_right(source, cursor_offset);
     let prefix = source[replacement_start..cursor_offset].to_string();
 
-    (replacement_start, cursor_offset, prefix)
+    (replacement_start, replacement_end, prefix)
 }
 
 fn symbol_at_cursor(source: &str, cursor_offset: usize) -> Option<String> {
@@ -474,6 +694,50 @@ fn is_symbol_char(ch: char) -> bool {
     ch.is_ascii_alphanumeric() || matches!(ch, '_' | '$' | '`')
 }
 
+fn input_request_from_outcome(outcome: &KernelExecuteOutcome) -> Option<RuntimeInputRequest> {
+    match outcome {
+        KernelExecuteOutcome::Failure(SessionRequestFailure {
+            error: SessionRequestError::InputRequired { request },
+            ..
+        }) => Some(request.clone()),
+        _ => None,
+    }
+}
+
+fn kernel_input_request(request: &RuntimeInputRequest) -> KernelInputRequest {
+    let mut input = KernelInputRequest::new(&request.prompt);
+    if request.password {
+        input = input.password();
+    }
+    input
+}
+
+fn build_execute_response(
+    execution_count: Option<u64>,
+    outcome: KernelExecuteOutcome,
+) -> KernelExecuteResponse {
+    let outputs = build_execute_outputs(execution_count, &outcome);
+    let error = match &outcome {
+        KernelExecuteOutcome::Success(_) => None,
+        KernelExecuteOutcome::Failure(failure) => Some(error_output(failure)),
+        KernelExecuteOutcome::WireDecoded => None,
+    };
+
+    KernelExecuteResponse {
+        status: if matches!(outcome, KernelExecuteOutcome::Success(_)) {
+            KernelReplyStatus::Ok
+        } else {
+            KernelReplyStatus::Error
+        },
+        execution_count,
+        payload: Vec::<KernelExecutePayload>::new(),
+        user_expressions: Default::default(),
+        error,
+        outputs,
+        outcome,
+    }
+}
+
 fn build_execute_outputs(
     execution_count: Option<u64>,
     outcome: &KernelExecuteOutcome,
@@ -509,6 +773,24 @@ fn build_execute_outputs(
     }
 }
 
+fn build_suspended_outputs(outcome: &KernelExecuteOutcome) -> Vec<KernelOutput> {
+    match outcome {
+        KernelExecuteOutcome::Failure(failure)
+            if matches!(failure.error, SessionRequestError::InputRequired { .. }) =>
+        {
+            let mut outputs = runtime_message_streams(&failure.messages);
+            if !failure.trace.is_empty() {
+                outputs.push(KernelOutput::DisplayData(KernelDisplayOutput {
+                    data: trace_mime_bundle(&failure.trace),
+                    metadata: trace_metadata(),
+                }));
+            }
+            outputs
+        }
+        _ => Vec::new(),
+    }
+}
+
 fn runtime_message_streams(messages: &[RuntimeMessage]) -> Vec<KernelOutput> {
     messages
         .iter()
@@ -541,6 +823,7 @@ fn error_output(failure: &SessionRequestFailure) -> KernelErrorOutput {
         SessionRequestError::EvaluationPassLimitExceeded { .. } => {
             ("EvaluationPassLimitExceeded".to_string(), None)
         }
+        SessionRequestError::InputRequired { .. } => ("InputRequired".to_string(), None),
         SessionRequestError::Other { .. } => ("Other".to_string(), None),
     };
 
@@ -669,6 +952,23 @@ fn complete_metadata(
     metadata.insert("cursor_start", replacement_start.to_string());
     metadata.insert("cursor_end", replacement_end.to_string());
     metadata.insert("prefix", prefix);
+    metadata
+}
+
+fn input_request_metadata(
+    parent_header: &KernelMessageHeader,
+    request: &KernelExecuteRequest,
+    input: &KernelInputRequest,
+) -> KernelMetadata {
+    let mut metadata = KernelMetadata::new();
+    metadata.insert("msg_type", "input_request");
+    metadata.insert("channel", KernelChannel::Stdin.as_str());
+    metadata.insert("parent_msg_type", &parent_header.msg_type);
+    metadata.insert(
+        "allow_stdin",
+        if request.allow_stdin { "true" } else { "false" },
+    );
+    metadata.insert("password", if input.password { "true" } else { "false" });
     metadata
 }
 

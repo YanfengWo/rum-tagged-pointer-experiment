@@ -111,4 +111,9 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Threads an expression over arguments that share a common head.",
         BuiltinHandler::Thread,
     ),
+    BuiltinSpec::ordinary(
+        "InputString",
+        "Requests one line of host-provided text and returns it as a string.",
+        BuiltinHandler::InputString,
+    ),
 ];

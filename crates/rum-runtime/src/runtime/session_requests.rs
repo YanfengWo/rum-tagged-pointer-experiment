@@ -17,6 +17,26 @@ impl RequestCheckpoint {
     }
 }
 
+impl From<RequestCheckpoint> for PendingEvalRequest {
+    fn from(checkpoint: RequestCheckpoint) -> Self {
+        Self {
+            message_checkpoint: checkpoint.message_checkpoint,
+            handled_error_checkpoint: checkpoint.handled_error_checkpoint,
+            trace_checkpoint: checkpoint.trace_checkpoint,
+        }
+    }
+}
+
+impl From<PendingEvalRequest> for RequestCheckpoint {
+    fn from(state: PendingEvalRequest) -> Self {
+        Self {
+            message_checkpoint: state.message_checkpoint,
+            handled_error_checkpoint: state.handled_error_checkpoint,
+            trace_checkpoint: state.trace_checkpoint,
+        }
+    }
+}
+
 impl Session {
     pub fn complete_request(&self, prefix: &str) -> SessionCompletionResponse {
         let prefix = prefix.trim().to_string();
@@ -90,9 +110,69 @@ impl Session {
         let expr = self
             .lower_syntax_expr(parsed.syntax())
             .map_err(|err| self.finish_request_failure(checkpoint, err))?;
-        let value = self
-            .evaluate(expr)
-            .map_err(|err| self.finish_request_failure(checkpoint, err))?;
+        let value = match self.evaluate(expr) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { .. }) => {
+                self.pending_eval_request = Some(checkpoint.into());
+                return Err(self.finish_request_failure(
+                    checkpoint,
+                    EvalError::InputRequired {
+                        request: self
+                            .pending_input_request()
+                            .cloned()
+                            .expect("input suspension should record the pending request"),
+                    },
+                ));
+            }
+            Err(err) => return Err(self.finish_request_failure(checkpoint, err)),
+        };
+
+        let messages = self.messages.split_off(checkpoint.message_checkpoint);
+        let trace = self.trace_events[checkpoint.trace_checkpoint..].to_vec();
+        self.last_message_list = messages.clone();
+        self.handled_non_loader_eval_errors
+            .truncate(checkpoint.handled_error_checkpoint);
+        self.pending_eval_request = None;
+
+        Ok(SessionEvalResponse {
+            value,
+            messages,
+            trace,
+        })
+    }
+
+    pub fn resume_eval_request_with_input(
+        &mut self,
+        input: impl Into<String>,
+    ) -> Result<SessionEvalResponse, SessionRequestFailure> {
+        let checkpoint = self
+            .pending_eval_request
+            .take()
+            .map(RequestCheckpoint::from)
+            .ok_or_else(|| SessionRequestFailure {
+                error: SessionRequestError::Other {
+                    message: "no suspended evaluation is waiting for host input".to_string(),
+                },
+                messages: Vec::new(),
+                trace: Vec::new(),
+            })?;
+
+        let value = match self.resume_suspended_evaluation(input) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { .. }) => {
+                self.pending_eval_request = Some(checkpoint.into());
+                return Err(self.finish_request_failure(
+                    checkpoint,
+                    EvalError::InputRequired {
+                        request: self
+                            .pending_input_request()
+                            .cloned()
+                            .expect("nested input suspension should record the pending request"),
+                    },
+                ));
+            }
+            Err(err) => return Err(self.finish_request_failure(checkpoint, err)),
+        };
 
         let messages = self.messages.split_off(checkpoint.message_checkpoint);
         let trace = self.trace_events[checkpoint.trace_checkpoint..].to_vec();
@@ -267,5 +347,8 @@ fn session_request_error_from_eval_error_with_source(
         EvalError::EvaluationPassLimitExceeded { limit } => {
             SessionRequestError::EvaluationPassLimitExceeded { limit: *limit }
         }
+        EvalError::InputRequired { request } => SessionRequestError::InputRequired {
+            request: request.clone(),
+        },
     }
 }

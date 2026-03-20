@@ -96,7 +96,7 @@ a usable early core-language slice:
   context defaults, package search paths, and tracing behavior
 - a separate terminal-presentation crate so CLI/REPL rendering no longer lives
   inside the protocol-facing session API layer
-- an initial `rum-jupyter` placeholder that maps execute/inspect/complete-style
+- an early `rum-jupyter` adapter that maps execute/inspect/complete-style
   kernel requests onto the session API without depending on terminal text
 - a first execute-output model in `rum-jupyter` that separates text/plain result
   payloads, stderr-style runtime-message streams, and structured error outputs
@@ -120,6 +120,26 @@ a usable early core-language slice:
   including header dates, lifecycle-aware `status` / `shutdown` payloads, and
   a control-first transport loop that can drain queued requests until idle or
   stop early once shutdown is requested
+- a first protocol-side `stdin` flow with `allow_stdin`, `input_request` /
+  `input_reply`, pending-input tracking in the adapter, and stdin-aware mock
+  event-pump ordering while the kernel is waiting for frontend input
+- tighter completion cursor semantics so notebook-facing completion can replace
+  the full symbol span even when the cursor sits in the middle of an identifier
+- a first Jupyter connection-file model/parser plus bootstrap config that can
+  derive endpoint URIs, signature policy, and wire-codec setup without
+  hard-coding notebook launch details inside the adapter
+- an explicit transport-backend boundary, with the current mock transport
+  living behind the same bootstrap/layout seam that a future ZeroMQ backend can
+  reuse
+- a real runtime-side input path through `InputString`, so host or notebook
+  clients can satisfy input requests without falling back to terminal-only
+  behavior
+- true request suspension/resume for host-driven input, so execute flows can
+  continue from saved continuation state instead of restarting after each
+  `input_reply`
+- a first typed internal continuation/driver bridge for non-`Expr` helper
+  paths, already used by delayed message-template rendering so stdin-driven
+  executions can resume cleanly through runtime message generation
 
 The source tree has also been reorganized around real Rust module boundaries so
 that maintenance and incremental compilation stay practical as the runtime
@@ -191,8 +211,8 @@ rather than to "make evaluation exist" from scratch:
    cleanup of remaining pretty-printer fit and planning gaps in `rum-syntax`
 2. better REPL ergonomics such as trace-oriented debug views
 3. continued evaluator cleanup based on the runtime audit and TODO roadmap
-4. host-facing API stabilization and later Jupyter integration through a
-   separate adapter crate
+4. continued host-facing API hardening and deeper Jupyter/kernel compatibility
+   through the separate adapter crate
 5. after the core/runtime foundation is tighter, a dedicated full-string
    roadmap covering construction, slicing, search, replacement, string
    patterns, and unicode-sensitive behavior

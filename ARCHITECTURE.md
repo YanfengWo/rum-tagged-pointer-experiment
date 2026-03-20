@@ -117,10 +117,22 @@ Owns protocol-adapter concerns for future notebook or kernel integration:
   `status` / `shutdown` content, and a control-first transport loop that can
   keep draining queued requests until the mock kernel goes idle or enters
   shutdown
+- a first protocol-side stdin path with `allow_stdin`, `input_request` /
+  `input_reply`, pending-input tracking, and stdin-prioritized mock transport
+  handling while the kernel is waiting for frontend input
+- tighter completion replacement ranges so cursor-in-symbol completions map
+  more naturally onto notebook frontends
+- a first Jupyter connection-file model/parser and bootstrap-config layer that
+  derive endpoint URIs, signature policy, and wire-codec setup from notebook
+  launch metadata instead of scattering that logic through the adapter
+- a transport-backend seam so the current mock transport and a future ZeroMQ
+  implementation can share the same bootstrap and channel-layout model
+- protocol-side stdin scaffolding that now reaches a real runtime input
+  facility instead of stopping at a mock-only adapter boundary
 
-This crate is intentionally a placeholder for now. It should stay focused on
-protocol and host-adapter concerns, not on evaluation logic or terminal
-rendering.
+This crate is now an early kernel adapter rather than a pure placeholder. It
+should stay focused on protocol and host-adapter concerns, not on evaluation
+logic or terminal rendering.
 
 ### `rum-stdlib`
 
@@ -254,6 +266,17 @@ into hosts. Terminal text rendering now lives in `rum-terminal`, which gives
 the CLI and REPL a shared presentation layer without forcing terminal
 formatting into the host-facing API surface.
 
+Host-driven input is also now part of that request surface. `InputString`
+reaches a real runtime input facility, and suspended evaluations resume from
+saved continuation state rather than replaying the whole execute request after
+an input reply arrives.
+
+The runtime has also started growing a more general internal continuation
+bridge for helper paths that do not naturally return `Expr` values. The first
+typed bridge already covers `Expr`, `bool`, and `String`, and it is now used
+for delayed message-template rendering so runtime message generation can
+suspend and resume without dropping out of the structured request model.
+
 Hosts also now have a stable `SessionConfig` entrypoint for session setup,
 covering resource limits, current-context defaults, context-path defaults,
 package search roots, and tracing. That configuration layer should remain the
@@ -261,8 +284,8 @@ main way embedders shape a session before evaluation starts.
 
 When a Jupyter adapter is added later, it should live in a separate crate and
 translate protocol messages into those session-oriented runtime calls.
-That placeholder crate now exists as `rum-jupyter`, with a first execute /
-inspect / complete adapter slice built directly on the stabilized session API.
+That crate now exists as `rum-jupyter`, with execute / inspect / complete /
+stdin-aware adapter slices built directly on the stabilized session API.
 
 ## Near-term roadmap
 

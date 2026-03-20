@@ -62,27 +62,13 @@ pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
         return true;
     }
 
+    if default_builtin_dispatch_spec(name).is_some() {
+        return true;
+    }
+
     matches!(
         name,
-        "Cases"
-            | "Check"
-            | "Clear"
-            | "ClearAll"
-            | "Flat"
-            | "Heads"
-            | "Hold"
-            | "HoldAll"
-            | "HoldAllComplete"
-            | "HoldFirst"
-            | "HoldRest"
-            | "Identity"
-            | "Listable"
-            | "MatchQ"
-            | "OneIdentity"
-            | "Orderless"
-            | "Quiet"
-            | "SequenceHold"
-            | "Thread"
+        "Flat" | "Heads" | "Listable" | "OneIdentity" | "Orderless" | "SequenceHold"
     )
 }
 

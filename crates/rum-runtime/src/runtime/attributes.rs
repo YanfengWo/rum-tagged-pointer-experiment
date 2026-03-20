@@ -44,11 +44,37 @@ impl Session {
             ));
         };
 
-        let resolved_attributes = self.evaluate(args[1].clone())?;
+        let symbol_name = symbol.to_string();
+        let resolved_result = self.evaluate(args[1].clone());
+        let resolved_attributes = self.suspend_with_frame(resolved_result, {
+            let targets = targets.clone();
+            let original_args = args.to_vec();
+            move |session, resolved| {
+                session.resume_update_attributes(
+                    &symbol_name,
+                    original_args,
+                    targets,
+                    update,
+                    resolved,
+                )
+            }
+        })?;
+
+        self.resume_update_attributes(symbol, args.to_vec(), targets, update, resolved_attributes)
+    }
+
+    fn resume_update_attributes(
+        &mut self,
+        symbol: &str,
+        original_args: Vec<Expr>,
+        targets: Vec<Symbol>,
+        update: AttributeUpdate,
+        resolved_attributes: Expr,
+    ) -> Result<Expr, EvalError> {
         let Some(attributes) = parse_attribute_set_expr(&resolved_attributes) else {
             return Ok(self.invalid_call_with_arg_form(
                 symbol,
-                args,
+                &original_args,
                 "expected an attribute symbol or list of attribute symbols as the second argument",
             ));
         };

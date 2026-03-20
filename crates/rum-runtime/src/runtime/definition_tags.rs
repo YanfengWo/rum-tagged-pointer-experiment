@@ -15,7 +15,15 @@ impl Session {
         };
 
         let lhs = args[1].clone();
-        let rhs = self.evaluate(args[2].clone())?;
+        let rhs_result = self.evaluate(args[2].clone());
+        let rhs = self.suspend_with_frame(rhs_result, {
+            let tag = tag.clone();
+            let lhs = lhs.clone();
+            let args = args.to_vec();
+            move |session, rhs| {
+                session.store_tagged_definition("TagSet", &args, tag, lhs, rhs, false)
+            }
+        })?;
         self.store_tagged_definition("TagSet", args, tag, lhs, rhs, false)
     }
 
