@@ -214,7 +214,7 @@ where
                 )?;
                 writeln!(
                     self.output,
-                    ":format EXPR    Format syntax into the current canonical style."
+                    ":format [--line-width N] EXPR  Format syntax into the current canonical style."
                 )?;
                 writeln!(
                     self.output,
@@ -253,13 +253,15 @@ where
                 if input.is_empty() {
                     writeln!(self.output, "! :format expects an expression")?;
                 } else {
-                    match parse_with_diagnostics(input) {
-                        Ok(parsed) => {
-                            let formatted =
-                                format_parsed_source(&parsed, FormatterOptions::default());
-                            writeln!(self.output, "{formatted}")?;
-                        }
-                        Err(diagnostic) => writeln!(self.output, "{}", diagnostic.render())?,
+                    match parse_format_request(input) {
+                        Err(message) => writeln!(self.output, "! {message}")?,
+                        Ok((expr, options)) => match parse_with_diagnostics(expr) {
+                            Ok(parsed) => {
+                                let formatted = format_parsed_source(&parsed, options);
+                                writeln!(self.output, "{formatted}")?;
+                            }
+                            Err(diagnostic) => writeln!(self.output, "{}", diagnostic.render())?,
+                        },
                     }
                 }
 
@@ -272,7 +274,7 @@ where
                     writeln!(self.output, "! :lower expects an expression")?;
                 } else {
                     match session.lower_text(input) {
-                        Ok(expr) => writeln!(self.output, "{expr}")?,
+                        Ok(parsed) => writeln!(self.output, "{parsed}")?,
                         Err(EvalError::Syntax(err)) => {
                             let rendered = SourceText::new(input).render_syntax_error(&err);
                             writeln!(self.output, "{rendered}")?;
@@ -543,6 +545,56 @@ fn format_definition_entry(entry: &DefinitionCatalogEntry) -> String {
         if entry.delayed { ":=" } else { "=" },
         entry.rhs
     )
+}
+
+fn parse_format_request(input: &str) -> Result<(&str, FormatterOptions), String> {
+    let input = input.trim();
+    if input.is_empty() {
+        return Err(":format expects an expression".to_owned());
+    }
+
+    let mut options = FormatterOptions::default();
+
+    if let Some(rest) = input.strip_prefix("--line-width=") {
+        let (raw_width, expr) = split_option_argument(rest);
+        options.line_width = parse_line_width(raw_width, "--line-width")?;
+        let expr = expr.trim();
+        if expr.is_empty() {
+            return Err(":format expects an expression".to_owned());
+        }
+        return Ok((expr, options));
+    }
+
+    if let Some(rest) = input.strip_prefix("--line-width") {
+        let rest = rest.trim_start();
+        if rest.is_empty() {
+            return Err("--line-width expects a positive integer".to_owned());
+        }
+
+        let (raw_width, expr) = split_option_argument(rest);
+        options.line_width = parse_line_width(raw_width, "--line-width")?;
+        let expr = expr.trim();
+        if expr.is_empty() {
+            return Err(":format expects an expression".to_owned());
+        }
+        return Ok((expr, options));
+    }
+
+    Ok((input, options))
+}
+
+fn split_option_argument(input: &str) -> (&str, &str) {
+    match input.find(char::is_whitespace) {
+        Some(index) => (&input[..index], input[index..].trim_start()),
+        None => (input, ""),
+    }
+}
+
+fn parse_line_width(raw: &str, flag: &str) -> Result<usize, String> {
+    match raw.parse::<usize>() {
+        Ok(0) | Err(_) => Err(format!("{flag} expects a positive integer")),
+        Ok(width) => Ok(width),
+    }
 }
 
 #[cfg(test)]

@@ -15,11 +15,13 @@ The formatter now has a stable prototype surface for:
   chains
 - normalized hanging layouts for multiline binary chains
 - regression coverage for mixed inline/block comment placement in nested forms
+- a document-IR pretty-printer built around `Doc`, `Break`, `SoftLine`, and
+  `Group`
 
-The current implementation is still a token-stream formatter with
-syntax-guided layout hints. The approved next architecture step is to replace
-that layout-hint engine with a true document-IR pretty-printer while keeping
-the current trivia-aware output behavior.
+The current implementation is no longer a token-stream layout-hint formatter.
+It now builds a document IR directly from parsed syntax and trivia, uses a
+structured group planner for containers and binary chains, and renders groups
+with current-column-aware fit checks.
 
 ## API
 
@@ -30,7 +32,8 @@ the current trivia-aware output behavior.
 
 The default `line_width` is `40`.
 
-The CLI and REPL `:format` command still use the default formatter options.
+The CLI exposes width override through `--format ... --line-width N`.
+The REPL exposes width override through `:format [--line-width N] EXPR`.
 
 ## Current Layout Rules
 
@@ -44,6 +47,8 @@ The CLI and REPL `:format` command still use the default formatter options.
 - Nested multiline children do not automatically force the parent container to
   expand unless the parent's own top-level layout triggers one of the rules
   above.
+- Nested groups are fitted relative to the column where they appear, not only
+  as if they started at column 0.
 
 ### Binary Expressions
 
@@ -72,12 +77,29 @@ The formatter now has:
   placement
 - an idempotence regression corpus that asserts
   `format(format(source)) == format(source)` for representative inputs
+- regression coverage for current-column-aware fitting of nested groups
+
+## Known Limitations
+
+- Width fitting still uses `flat_width` estimates derived from syntax display,
+  not the exact flat rendering of the document tree.
+- As a result, very long inline comments or string literals that need escaping
+  can remain inline longer than the configured `line_width` would suggest.
+- CLI and REPL both expose `line_width`, but they currently parse that option
+  with separate helper implementations rather than one shared formatter-UX path.
 
 ## Next Formatter Milestone
 
-The next formatter milestone is no longer "add another handful of layout
-heuristics".
+The current formatter milestone is now architectural consolidation rather than
+another formatter rewrite.
 
-It is to promote the formatter from the current syntax-guided token-stream
-prototype to a true document-IR pretty-printer, while keeping the existing
-comment-preservation behavior and regression corpus intact.
+The remaining work is to keep refining the pretty-printer implementation:
+
+- replace estimated `flat_width` planning with true flat-doc measurement
+- add width-regression coverage for long inline comments and escaped strings
+- fix syntax-display string escaping so formatter planning can rely on
+  round-trippable surface rendering
+- unify formatter option parsing across CLI and REPL
+- continue splitting formatter internals into smaller planner, builder, render,
+  and test modules
+- keep expanding the regression corpus as new syntax support lands

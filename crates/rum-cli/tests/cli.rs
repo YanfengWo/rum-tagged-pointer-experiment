@@ -70,6 +70,31 @@ fn format_flag_prints_canonical_surface_form() {
 }
 
 #[test]
+fn format_flag_respects_custom_line_width() {
+    let output = run_cli(&[
+        "--format",
+        "f[aaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbb]",
+        "--line-width",
+        "60",
+    ]);
+
+    assert!(output.status.success());
+    assert_eq!(
+        stdout(&output).trim(),
+        "f[aaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbb]"
+    );
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
+fn format_flag_rejects_invalid_line_width() {
+    let output = run_cli(&["--format", "f[x]", "--line-width", "0"]);
+
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("error: --line-width expects a positive integer"));
+}
+
+#[test]
 fn eval_flag_renders_source_aware_syntax_diagnostics() {
     let output = run_cli(&["--eval", "f[1 2]"]);
 

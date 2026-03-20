@@ -27,7 +27,7 @@ fn repl_handles_help_and_quit() {
 
     let rendered = String::from_utf8(output).unwrap();
     assert!(rendered.contains(":inspect NAME"));
-    assert!(rendered.contains(":format EXPR"));
+    assert!(rendered.contains(":format [--line-width N] EXPR"));
 }
 
 #[test]
@@ -206,6 +206,33 @@ fn repl_format_command_prints_canonical_surface_form() {
     let rendered = String::from_utf8(output).unwrap();
     assert!(rendered.contains("(* header *)"));
     assert!(rendered.contains("f[x_Integer, y]"));
+}
+
+#[test]
+fn repl_format_command_respects_custom_line_width() {
+    let input =
+        Cursor::new(":format --line-width 60 f[aaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbb]\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("f[aaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbb]"));
+}
+
+#[test]
+fn repl_format_command_rejects_invalid_line_width() {
+    let input = Cursor::new(":format --line-width nope f[x]\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("! --line-width expects a positive integer"));
 }
 
 #[test]

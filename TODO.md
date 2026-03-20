@@ -70,7 +70,11 @@ This roadmap now uses two levels of detail:
 - [x] Add formatter regression coverage for more complex nested forms, chains, and comment placement
 - [x] Expand `FormatterOptions` with configurable width control for API callers
 - [x] Add idempotence coverage for a representative formatter regression corpus
-- [ ] Replace the current token-stream layout-hint engine with a document-IR pretty-printer while preserving trivia-aware output
+- [x] Replace the current token-stream layout-hint engine with a document-IR pretty-printer while preserving trivia-aware output
+- [x] Decide whether to expose formatter width control through the CLI and REPL surfaces
+- [ ] Replace `flat_width` estimates based on `SyntaxExpr::to_string()` with flat-doc width measurement so comments and escaped strings participate in fit decisions
+- [ ] Add formatter regression coverage for width-driven layouts that include long inline comments and escaped string literals
+- [ ] Continue splitting formatter internals into smaller planner/builder/test modules as the syntax surface grows
 
 ### `rum-syntax`: Comments and Surface Expansion
 
@@ -78,7 +82,12 @@ This roadmap now uses two levels of detail:
 - [x] Ensure comments can appear between tokens without changing parse results
 - [x] Preserve whitespace/comment trivia in a structured lexer output for future tooling without disturbing the parser token stream
 - [x] Add tests for comments around operators, calls, and nested expressions
+- [ ] Fix `SyntaxExpr::Display` string escaping so syntax display remains round-trippable for quoted strings
 - [ ] Audit the next operator set needed by the evaluator roadmap and prioritize them explicitly
+
+### CLI and REPL Formatter UX
+
+- [ ] Share formatter option parsing between CLI and REPL so `line_width` handling, accepted shapes, and error messages stay aligned
 
 ### `rum-core` and Lowering Cleanup
 

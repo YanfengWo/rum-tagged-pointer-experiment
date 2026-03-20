@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use crate::{
     ParsedSource, SyntaxError, SyntaxExpr, SyntaxExprKind, SyntaxTokenKind, TriviaKind,
@@ -24,15 +24,206 @@ impl Default for FormatterOptions {
     }
 }
 
+// The document IR forms the boundary between layout planning and final rendering.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Doc {
+    Text(String),
+    #[allow(dead_code)]
+    HardLine {
+        indentation_level: usize,
+    },
+    SoftLine {
+        indentation_level: usize,
+    },
+    Break {
+        flat: String,
+        indentation_level: usize,
+    },
+    Concat(Vec<Doc>),
+    Group {
+        doc: Box<Doc>,
+        force_break: bool,
+        flat_width: Option<usize>,
+    },
+}
+
+#[path = "formatter/render.rs"]
+mod render;
+
+use render::{doc_trailing_state, render_doc};
+
+#[derive(Debug)]
+struct DocBuilder {
+    parts: Vec<Doc>,
+    pending_break: Option<(String, usize)>,
+    ends_with_newline: bool,
+    ends_with_whitespace: bool,
+}
+
+impl DocBuilder {
+    fn new() -> Self {
+        Self {
+            parts: Vec::new(),
+            pending_break: None,
+            ends_with_newline: false,
+            ends_with_whitespace: false,
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.parts.is_empty()
+    }
+
+    fn ends_with_newline(&self) -> bool {
+        self.pending_break.is_some() || self.ends_with_newline
+    }
+
+    fn ends_with_whitespace(&self) -> bool {
+        self.pending_break.is_some() || self.ends_with_whitespace
+    }
+
+    fn push_char(&mut self, ch: char) {
+        self.push_text(&ch.to_string());
+    }
+
+    fn push_text(&mut self, text: &str) {
+        if text.is_empty() {
+            return;
+        }
+
+        self.flush_pending_break();
+
+        match self.parts.last_mut() {
+            Some(Doc::Text(existing)) => existing.push_str(text),
+            _ => self.parts.push(Doc::Text(text.to_owned())),
+        }
+
+        if let Some(last_char) = text.chars().next_back() {
+            self.ends_with_newline = last_char == '\n';
+            self.ends_with_whitespace = last_char.is_whitespace();
+        }
+    }
+
+    fn push_doc(&mut self, doc: Doc) {
+        self.flush_pending_break();
+
+        match doc {
+            Doc::Text(text) => self.push_text(&text),
+            other => {
+                let (ends_with_newline, ends_with_whitespace) = doc_trailing_state(&other);
+                self.parts.push(other);
+                self.ends_with_newline = ends_with_newline;
+                self.ends_with_whitespace = ends_with_whitespace;
+            }
+        }
+    }
+
+    fn push_break(&mut self, flat: String, indentation_level: usize) {
+        if self.ends_with_newline() {
+            return;
+        }
+
+        self.pending_break = Some((flat, indentation_level));
+        self.ends_with_newline = true;
+        self.ends_with_whitespace = true;
+    }
+
+    fn finish(mut self) -> Doc {
+        self.flush_pending_break();
+        concat_docs(self.parts)
+    }
+
+    fn flush_pending_break(&mut self) {
+        if let Some((flat, indentation_level)) = self.pending_break.take() {
+            self.parts.push(Doc::Break {
+                flat,
+                indentation_level,
+            });
+        }
+    }
+}
+
+fn concat_docs(parts: Vec<Doc>) -> Doc {
+    if parts.len() == 1 {
+        parts
+            .into_iter()
+            .next()
+            .expect("single-part document should exist")
+    } else {
+        Doc::Concat(parts)
+    }
+}
+
+fn append_softline(doc: Doc, indentation_level: usize) -> Doc {
+    if doc_is_empty(&doc) || doc_trailing_state(&doc).0 {
+        return doc;
+    }
+
+    concat_docs(vec![doc, Doc::SoftLine { indentation_level }])
+}
+
+fn doc_is_empty(doc: &Doc) -> bool {
+    matches!(doc, Doc::Concat(parts) if parts.is_empty())
+}
+
+fn canonical_token_separator(
+    before_previous_kind: Option<&SyntaxTokenKind>,
+    previous_kind: Option<&SyntaxTokenKind>,
+    current_kind: &SyntaxTokenKind,
+) -> String {
+    previous_kind
+        .is_some_and(|previous| needs_space_between(before_previous_kind, previous, current_kind))
+        .then_some(" ".to_owned())
+        .unwrap_or_default()
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 struct TriviaRenderState {
     inserted_separator: bool,
     ended_with_newline: bool,
 }
 
-#[derive(Debug, Default)]
-struct LayoutHints {
-    newline_before_tokens: BTreeSet<usize>,
+#[derive(Clone, Debug)]
+enum GroupLayout {
+    Container {
+        item_start_indices: Vec<usize>,
+        closing_index: usize,
+    },
+    BinaryChain {
+        rhs_start_indices: Vec<usize>,
+    },
+}
+
+impl GroupLayout {
+    fn break_before_token(&self, token_index: usize) -> bool {
+        match self {
+            Self::Container {
+                item_start_indices,
+                closing_index,
+            } => item_start_indices.contains(&token_index) || *closing_index == token_index,
+            Self::BinaryChain { rhs_start_indices } => rhs_start_indices.contains(&token_index),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct GroupPlan {
+    start_index: usize,
+    end_index: usize,
+    layout: GroupLayout,
+    flat_width: Option<usize>,
+    force_break: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct GroupIdentity {
+    start_index: usize,
+    end_index: usize,
+}
+
+struct FormattingContext<'a> {
+    parsed: &'a ParsedSource,
+    group_plans: BTreeMap<usize, Vec<GroupPlan>>,
 }
 
 pub fn format_source(source: &str) -> Result<String, SyntaxError> {
@@ -41,62 +232,22 @@ pub fn format_source(source: &str) -> Result<String, SyntaxError> {
 }
 
 pub fn format_parsed_source(parsed: &ParsedSource, options: FormatterOptions) -> String {
-    let mut output = String::new();
-    let tokens = parsed.lexed().tokens();
-    let layout_hints = collect_layout_hints(parsed, options);
-    let mut before_previous_kind: Option<SyntaxTokenKind> = None;
-    let mut previous_kind: Option<SyntaxTokenKind> = None;
-    let mut nesting_depth = 0usize;
+    let mut document = build_format_document(parsed);
 
-    for (index, token) in tokens.iter().enumerate() {
-        if matches!(token.kind, SyntaxTokenKind::End) {
-            render_end_trivia(parsed, index, &mut output);
-            break;
-        }
-
-        let comment_indentation_level = nesting_depth;
-        let indentation_level = indentation_level_for_token(nesting_depth, &token.kind);
-        let force_newline = layout_hints.newline_before_tokens.contains(&index);
-        let trivia_state = render_leading_trivia(
-            parsed,
-            index,
-            previous_kind.as_ref(),
-            &token.kind,
-            comment_indentation_level,
-            force_newline,
-            &mut output,
-        );
-
-        if output.ends_with('\n') {
-            write_indentation(&mut output, indentation_level);
-        }
-
-        if !trivia_state.inserted_separator
-            && !trivia_state.ended_with_newline
-            && previous_kind.as_ref().is_some_and(|previous| {
-                needs_space_between(before_previous_kind.as_ref(), previous, &token.kind)
-            })
-        {
-            output.push(' ');
-        }
-
-        if let Some(text) = parsed.text(token.span) {
-            output.push_str(text);
-        }
-
-        before_previous_kind = previous_kind;
-        previous_kind = Some(token.kind.clone());
-        update_nesting_depth(&mut nesting_depth, &token.kind);
+    if options.trailing_newline {
+        document = append_softline(document, 0);
     }
 
-    if options.trailing_newline && !output.ends_with('\n') {
-        output.push('\n');
-    }
-
-    output
+    render_doc(&document, options.line_width)
 }
 
-fn collect_layout_hints(parsed: &ParsedSource, options: FormatterOptions) -> LayoutHints {
+fn build_format_document(parsed: &ParsedSource) -> Doc {
+    let context = build_formatting_context(parsed);
+    let end_index = parsed.lexed().tokens().len().saturating_sub(1);
+    build_document(&context, 0, end_index, 0, false, None, None)
+}
+
+fn build_formatting_context(parsed: &ParsedSource) -> FormattingContext<'_> {
     let mut token_index_by_start = BTreeMap::new();
     let mut token_index_by_end = BTreeMap::new();
 
@@ -105,140 +256,137 @@ fn collect_layout_hints(parsed: &ParsedSource, options: FormatterOptions) -> Lay
         token_index_by_end.entry(token.span.end).or_insert(index);
     }
 
-    let mut hints = LayoutHints::default();
-    collect_layout_hints_from_expr(
+    let mut group_plans = BTreeMap::new();
+    collect_container_group_plans(
         parsed,
-        options,
         parsed.syntax(),
         &token_index_by_start,
         &token_index_by_end,
-        &mut hints,
+        &mut group_plans,
     );
-    hints
+    collect_binary_group_plans(
+        parsed,
+        parsed.syntax(),
+        &token_index_by_start,
+        &token_index_by_end,
+        None,
+        &mut group_plans,
+    );
+
+    FormattingContext {
+        parsed,
+        group_plans,
+    }
 }
 
-fn collect_layout_hints_from_expr(
+fn collect_container_group_plans(
     parsed: &ParsedSource,
-    options: FormatterOptions,
     expr: &SyntaxExpr,
     token_index_by_start: &BTreeMap<usize, usize>,
     token_index_by_end: &BTreeMap<usize, usize>,
-    hints: &mut LayoutHints,
+    plans: &mut BTreeMap<usize, Vec<GroupPlan>>,
 ) {
     match &expr.kind {
         SyntaxExprKind::List(items) => {
             for item in items {
-                collect_layout_hints_from_expr(
+                collect_container_group_plans(
                     parsed,
-                    options,
                     item,
                     token_index_by_start,
                     token_index_by_end,
-                    hints,
+                    plans,
                 );
             }
 
-            maybe_expand_container(
+            maybe_collect_container_group_plan(
                 parsed,
-                options,
                 expr,
                 items,
                 expr.span.end,
                 SyntaxTokenKind::RBrace,
                 token_index_by_start,
                 token_index_by_end,
-                hints,
+                plans,
             );
         }
         SyntaxExprKind::Pattern { name, pattern } => {
-            collect_layout_hints_from_expr(
+            collect_container_group_plans(
                 parsed,
-                options,
                 name,
                 token_index_by_start,
                 token_index_by_end,
-                hints,
+                plans,
             );
-            collect_layout_hints_from_expr(
+            collect_container_group_plans(
                 parsed,
-                options,
                 pattern,
                 token_index_by_start,
                 token_index_by_end,
-                hints,
+                plans,
             );
         }
         SyntaxExprKind::Prefix { expr, .. } | SyntaxExprKind::Postfix { expr, .. } => {
-            collect_layout_hints_from_expr(
+            collect_container_group_plans(
                 parsed,
-                options,
                 expr,
                 token_index_by_start,
                 token_index_by_end,
-                hints,
+                plans,
             );
         }
         SyntaxExprKind::Binary { lhs, rhs, .. } => {
-            collect_layout_hints_from_expr(
+            collect_container_group_plans(
                 parsed,
-                options,
                 lhs,
                 token_index_by_start,
                 token_index_by_end,
-                hints,
+                plans,
             );
-            collect_layout_hints_from_expr(
+            collect_container_group_plans(
                 parsed,
-                options,
                 rhs,
                 token_index_by_start,
                 token_index_by_end,
-                hints,
+                plans,
             );
-
-            maybe_expand_binary_expr(parsed, options, expr, token_index_by_start, hints);
         }
         SyntaxExprKind::Call { head, args } => {
-            collect_layout_hints_from_expr(
+            collect_container_group_plans(
                 parsed,
-                options,
                 head,
                 token_index_by_start,
                 token_index_by_end,
-                hints,
+                plans,
             );
             for arg in args {
-                collect_layout_hints_from_expr(
+                collect_container_group_plans(
                     parsed,
-                    options,
                     arg,
                     token_index_by_start,
                     token_index_by_end,
-                    hints,
+                    plans,
                 );
             }
 
-            maybe_expand_container(
+            maybe_collect_container_group_plan(
                 parsed,
-                options,
                 expr,
                 args,
                 expr.span.end,
                 SyntaxTokenKind::RBracket,
                 token_index_by_start,
                 token_index_by_end,
-                hints,
+                plans,
             );
         }
         SyntaxExprKind::Blank { head, .. } => {
             if let Some(head) = head {
-                collect_layout_hints_from_expr(
+                collect_container_group_plans(
                     parsed,
-                    options,
                     head,
                     token_index_by_start,
                     token_index_by_end,
-                    hints,
+                    plans,
                 );
             }
         }
@@ -249,17 +397,20 @@ fn collect_layout_hints_from_expr(
     }
 }
 
-fn maybe_expand_container(
+fn maybe_collect_container_group_plan(
     parsed: &ParsedSource,
-    options: FormatterOptions,
     container: &SyntaxExpr,
     items: &[SyntaxExpr],
     closing_offset: usize,
     closing_kind: SyntaxTokenKind,
     token_index_by_start: &BTreeMap<usize, usize>,
     token_index_by_end: &BTreeMap<usize, usize>,
-    hints: &mut LayoutHints,
+    plans: &mut BTreeMap<usize, Vec<GroupPlan>>,
 ) {
+    let Some(start_index) = token_index_by_start.get(&container.span.start).copied() else {
+        return;
+    };
+
     let Some(closing_index) = token_index_by_end.get(&closing_offset).copied() else {
         return;
     };
@@ -273,35 +424,192 @@ fn maybe_expand_container(
         .filter_map(|item| token_index_by_start.get(&item.span.start).copied())
         .collect::<Vec<_>>();
 
-    if !should_expand_container(
-        parsed,
-        options,
-        container,
-        &item_start_indices,
-        closing_index,
-    ) {
+    let force_break = should_force_break_container(parsed, &item_start_indices, closing_index);
+    let flat_width = (item_start_indices.len() >= 2).then_some(container.to_string().len());
+
+    if !force_break && flat_width.is_none() {
         return;
     }
 
-    for index in item_start_indices {
-        hints.newline_before_tokens.insert(index);
-    }
-
-    hints.newline_before_tokens.insert(closing_index);
+    insert_group_plan(
+        plans,
+        GroupPlan {
+            start_index,
+            end_index: closing_index,
+            layout: GroupLayout::Container {
+                item_start_indices,
+                closing_index,
+            },
+            flat_width,
+            force_break,
+        },
+    );
 }
 
-fn should_expand_container(
+fn collect_binary_group_plans(
     parsed: &ParsedSource,
-    options: FormatterOptions,
-    container: &SyntaxExpr,
+    expr: &SyntaxExpr,
+    token_index_by_start: &BTreeMap<usize, usize>,
+    token_index_by_end: &BTreeMap<usize, usize>,
+    parent_binary_op: Option<crate::BinaryOp>,
+    plans: &mut BTreeMap<usize, Vec<GroupPlan>>,
+) {
+    match &expr.kind {
+        SyntaxExprKind::Pattern { name, pattern } => {
+            collect_binary_group_plans(
+                parsed,
+                name,
+                token_index_by_start,
+                token_index_by_end,
+                None,
+                plans,
+            );
+            collect_binary_group_plans(
+                parsed,
+                pattern,
+                token_index_by_start,
+                token_index_by_end,
+                None,
+                plans,
+            );
+        }
+        SyntaxExprKind::Prefix { expr, .. } | SyntaxExprKind::Postfix { expr, .. } => {
+            collect_binary_group_plans(
+                parsed,
+                expr,
+                token_index_by_start,
+                token_index_by_end,
+                None,
+                plans,
+            );
+        }
+        SyntaxExprKind::Binary { op, lhs, rhs } => {
+            collect_binary_group_plans(
+                parsed,
+                lhs,
+                token_index_by_start,
+                token_index_by_end,
+                Some(*op),
+                plans,
+            );
+            collect_binary_group_plans(
+                parsed,
+                rhs,
+                token_index_by_start,
+                token_index_by_end,
+                Some(*op),
+                plans,
+            );
+            if !parent_binary_op
+                .is_some_and(|parent_op| binary_chain_child_matches(expr, parent_op))
+            {
+                maybe_collect_binary_group_plan(
+                    parsed,
+                    expr,
+                    token_index_by_start,
+                    token_index_by_end,
+                    plans,
+                );
+            }
+        }
+        SyntaxExprKind::Call { head, args } => {
+            collect_binary_group_plans(
+                parsed,
+                head,
+                token_index_by_start,
+                token_index_by_end,
+                None,
+                plans,
+            );
+            for arg in args {
+                collect_binary_group_plans(
+                    parsed,
+                    arg,
+                    token_index_by_start,
+                    token_index_by_end,
+                    None,
+                    plans,
+                );
+            }
+        }
+        SyntaxExprKind::List(items) => {
+            for item in items {
+                collect_binary_group_plans(
+                    parsed,
+                    item,
+                    token_index_by_start,
+                    token_index_by_end,
+                    None,
+                    plans,
+                );
+            }
+        }
+        SyntaxExprKind::Blank { head, .. } => {
+            if let Some(head) = head {
+                collect_binary_group_plans(
+                    parsed,
+                    head,
+                    token_index_by_start,
+                    token_index_by_end,
+                    None,
+                    plans,
+                );
+            }
+        }
+        SyntaxExprKind::Integer(_)
+        | SyntaxExprKind::String(_)
+        | SyntaxExprKind::Symbol(_)
+        | SyntaxExprKind::Slot(_) => {}
+    }
+}
+
+fn maybe_collect_binary_group_plan(
+    parsed: &ParsedSource,
+    expr: &SyntaxExpr,
+    token_index_by_start: &BTreeMap<usize, usize>,
+    token_index_by_end: &BTreeMap<usize, usize>,
+    plans: &mut BTreeMap<usize, Vec<GroupPlan>>,
+) {
+    let Some(start_index) = token_index_by_start.get(&expr.span.start).copied() else {
+        return;
+    };
+
+    let Some(end_index) = token_index_by_end.get(&expr.span.end).copied() else {
+        return;
+    };
+
+    let rhs_start_indices = collect_binary_chain_rhs_start_indices(expr, token_index_by_start);
+    if rhs_start_indices.is_empty() {
+        return;
+    }
+
+    let force_break = rhs_start_indices
+        .iter()
+        .copied()
+        .any(|rhs_start_index| leading_trivia_has_newline(parsed, rhs_start_index));
+
+    insert_group_plan(
+        plans,
+        GroupPlan {
+            start_index,
+            end_index,
+            layout: GroupLayout::BinaryChain { rhs_start_indices },
+            flat_width: Some(expr.to_string().len()),
+            force_break,
+        },
+    );
+}
+
+fn insert_group_plan(plans: &mut BTreeMap<usize, Vec<GroupPlan>>, plan: GroupPlan) {
+    plans.entry(plan.start_index).or_default().push(plan);
+}
+
+fn should_force_break_container(
+    parsed: &ParsedSource,
     item_start_indices: &[usize],
     closing_index: usize,
 ) -> bool {
     if item_start_indices.len() >= ACTIVE_MULTILINE_ITEM_THRESHOLD {
-        return true;
-    }
-
-    if item_start_indices.len() >= 2 && container.to_string().len() > options.line_width {
         return true;
     }
 
@@ -312,20 +620,166 @@ fn should_expand_container(
         .any(|index| leading_trivia_has_newline(parsed, index))
 }
 
-fn maybe_expand_binary_expr(
-    parsed: &ParsedSource,
-    options: FormatterOptions,
-    expr: &SyntaxExpr,
-    token_index_by_start: &BTreeMap<usize, usize>,
-    hints: &mut LayoutHints,
-) {
-    let rhs_start_indices = collect_binary_chain_rhs_start_indices(expr, token_index_by_start);
+fn build_document(
+    context: &FormattingContext<'_>,
+    start_index: usize,
+    end_index: usize,
+    starting_nesting_depth: usize,
+    skip_first_leading_trivia: bool,
+    layout: Option<&GroupLayout>,
+    suppressed_group: Option<GroupIdentity>,
+) -> Doc {
+    let mut document = DocBuilder::new();
+    let tokens = context.parsed.lexed().tokens();
+    let mut before_previous_kind: Option<SyntaxTokenKind> = None;
+    let mut previous_kind: Option<SyntaxTokenKind> = None;
+    let mut nesting_depth = starting_nesting_depth;
+    let mut index = start_index;
 
-    if should_expand_binary_expr(parsed, options, expr, &rhs_start_indices) {
-        for rhs_start_index in rhs_start_indices {
-            hints.newline_before_tokens.insert(rhs_start_index);
+    while index <= end_index {
+        let token = &tokens[index];
+
+        if matches!(token.kind, SyntaxTokenKind::End) {
+            render_end_trivia(context.parsed, index, &mut document);
+            break;
         }
+
+        if let Some(plan) = select_group_plan(context, index, end_index, suppressed_group) {
+            let trivia_state = render_token_leading_trivia(
+                context,
+                &mut document,
+                start_index,
+                index,
+                before_previous_kind.as_ref(),
+                previous_kind.as_ref(),
+                &token.kind,
+                nesting_depth,
+                skip_first_leading_trivia,
+                layout,
+            );
+
+            if !trivia_state.inserted_separator
+                && !trivia_state.ended_with_newline
+                && previous_kind.as_ref().is_some_and(|previous| {
+                    needs_space_between(before_previous_kind.as_ref(), previous, &token.kind)
+                })
+            {
+                document.push_char(' ');
+            }
+
+            document.push_doc(build_group_doc(context, plan, nesting_depth));
+            before_previous_kind = previous_kind;
+            previous_kind = Some(tokens[plan.end_index].kind.clone());
+            index = plan.end_index.saturating_add(1);
+            continue;
+        }
+
+        let trivia_state = render_token_leading_trivia(
+            context,
+            &mut document,
+            start_index,
+            index,
+            before_previous_kind.as_ref(),
+            previous_kind.as_ref(),
+            &token.kind,
+            nesting_depth,
+            skip_first_leading_trivia,
+            layout,
+        );
+
+        if !trivia_state.inserted_separator
+            && !trivia_state.ended_with_newline
+            && previous_kind.as_ref().is_some_and(|previous| {
+                needs_space_between(before_previous_kind.as_ref(), previous, &token.kind)
+            })
+        {
+            document.push_char(' ');
+        }
+
+        if let Some(text) = context.parsed.text(token.span) {
+            document.push_text(text);
+        }
+
+        before_previous_kind = previous_kind;
+        previous_kind = Some(token.kind.clone());
+        update_nesting_depth(&mut nesting_depth, &token.kind);
+        index = index.saturating_add(1);
     }
+
+    document.finish()
+}
+
+fn build_group_doc(context: &FormattingContext<'_>, plan: &GroupPlan, nesting_depth: usize) -> Doc {
+    let group_identity = Some(GroupIdentity {
+        start_index: plan.start_index,
+        end_index: plan.end_index,
+    });
+    let doc = build_document(
+        context,
+        plan.start_index,
+        plan.end_index,
+        nesting_depth,
+        true,
+        Some(&plan.layout),
+        group_identity,
+    );
+
+    Doc::Group {
+        doc: Box::new(doc),
+        force_break: plan.force_break,
+        flat_width: plan.flat_width,
+    }
+}
+
+fn select_group_plan<'a>(
+    context: &'a FormattingContext<'_>,
+    start_index: usize,
+    range_end_index: usize,
+    suppressed_group: Option<GroupIdentity>,
+) -> Option<&'a GroupPlan> {
+    context.group_plans.get(&start_index).and_then(|plans| {
+        plans
+            .iter()
+            .filter(|plan| {
+                plan.end_index <= range_end_index
+                    && Some(GroupIdentity {
+                        start_index: plan.start_index,
+                        end_index: plan.end_index,
+                    }) != suppressed_group
+            })
+            .max_by_key(|plan| plan.end_index)
+    })
+}
+
+fn render_token_leading_trivia(
+    context: &FormattingContext<'_>,
+    document: &mut DocBuilder,
+    range_start_index: usize,
+    token_index: usize,
+    before_previous_kind: Option<&SyntaxTokenKind>,
+    previous_kind: Option<&SyntaxTokenKind>,
+    current_kind: &SyntaxTokenKind,
+    nesting_depth: usize,
+    skip_first_leading_trivia: bool,
+    layout: Option<&GroupLayout>,
+) -> TriviaRenderState {
+    if skip_first_leading_trivia && token_index == range_start_index {
+        return TriviaRenderState::default();
+    }
+
+    let force_newline =
+        layout.is_some_and(|group_layout| group_layout.break_before_token(token_index));
+
+    render_leading_trivia(
+        context.parsed,
+        token_index,
+        before_previous_kind,
+        previous_kind,
+        current_kind,
+        nesting_depth,
+        force_newline,
+        document,
+    )
 }
 
 fn collect_binary_chain_rhs_start_indices(
@@ -374,19 +828,6 @@ fn binary_chain_child_matches(expr: &SyntaxExpr, parent_op: crate::BinaryOp) -> 
     )
 }
 
-fn should_expand_binary_expr(
-    parsed: &ParsedSource,
-    options: FormatterOptions,
-    expr: &SyntaxExpr,
-    rhs_start_indices: &[usize],
-) -> bool {
-    expr.to_string().len() > options.line_width
-        || rhs_start_indices
-            .iter()
-            .copied()
-            .any(|rhs_start_index| leading_trivia_has_newline(parsed, rhs_start_index))
-}
-
 fn leading_trivia_has_newline(parsed: &ParsedSource, token_index: usize) -> bool {
     parsed
         .lexed()
@@ -396,7 +837,7 @@ fn leading_trivia_has_newline(parsed: &ParsedSource, token_index: usize) -> bool
         .any(|piece| matches!(piece.kind, TriviaKind::Whitespace) && piece.text.contains('\n'))
 }
 
-fn render_end_trivia(parsed: &ParsedSource, token_index: usize, output: &mut String) {
+fn render_end_trivia(parsed: &ParsedSource, token_index: usize, output: &mut DocBuilder) {
     let Some(trivia) = parsed.lexed().leading_trivia(token_index) else {
         return;
     };
@@ -407,18 +848,18 @@ fn render_end_trivia(parsed: &ParsedSource, token_index: usize, output: &mut Str
         match piece.kind {
             TriviaKind::Whitespace => {
                 if piece.text.contains('\n') {
-                    if emitted_any && !output.ends_with('\n') {
-                        output.push('\n');
+                    if emitted_any && !output.ends_with_newline() {
+                        output.push_break(" ".to_owned(), 0);
                     }
-                } else if emitted_any && !output.ends_with(char::is_whitespace) {
-                    output.push(' ');
+                } else if emitted_any && !output.ends_with_whitespace() {
+                    output.push_char(' ');
                 }
             }
             TriviaKind::Comment => {
-                if !output.is_empty() && !output.ends_with(char::is_whitespace) {
-                    output.push(' ');
+                if !output.is_empty() && !output.ends_with_whitespace() {
+                    output.push_char(' ');
                 }
-                output.push_str(&piece.text);
+                output.push_text(&piece.text);
                 emitted_any = true;
             }
         }
@@ -428,11 +869,12 @@ fn render_end_trivia(parsed: &ParsedSource, token_index: usize, output: &mut Str
 fn render_leading_trivia(
     parsed: &ParsedSource,
     token_index: usize,
+    before_previous_kind: Option<&SyntaxTokenKind>,
     previous_kind: Option<&SyntaxTokenKind>,
     current_kind: &SyntaxTokenKind,
-    indentation_level: usize,
+    nesting_depth: usize,
     force_newline: bool,
-    output: &mut String,
+    output: &mut DocBuilder,
 ) -> TriviaRenderState {
     let Some(trivia) = parsed.lexed().leading_trivia(token_index) else {
         return TriviaRenderState::default();
@@ -452,8 +894,11 @@ fn render_leading_trivia(
 
     if comments.is_empty() {
         if has_newline {
-            if !output.is_empty() && !output.ends_with('\n') {
-                output.push('\n');
+            if !output.is_empty() {
+                output.push_break(
+                    canonical_token_separator(before_previous_kind, previous_kind, current_kind),
+                    indentation_level_for_token(nesting_depth, current_kind),
+                );
             }
 
             return TriviaRenderState {
@@ -466,20 +911,28 @@ fn render_leading_trivia(
     }
 
     if has_newline {
-        if !output.is_empty() && !output.ends_with('\n') {
-            output.push('\n');
+        let comment_indentation_level = nesting_depth;
+        let token_indentation_level = indentation_level_for_token(nesting_depth, current_kind);
+
+        if !output.is_empty() && !output.ends_with_newline() {
+            let flat = needs_space_before_inline_comment(previous_kind)
+                .then_some(" ".to_owned())
+                .unwrap_or_default();
+            output.push_break(flat, comment_indentation_level);
         }
 
         for (index, comment) in comments.iter().enumerate() {
             if index > 0 {
-                output.push('\n');
+                output.push_break(" ".to_owned(), comment_indentation_level);
             }
-            write_indentation(output, indentation_level);
-            output.push_str(comment);
+            output.push_text(comment);
         }
 
-        if !output.ends_with('\n') {
-            output.push('\n');
+        if !output.ends_with_newline() {
+            let flat = needs_space_after_inline_comment(current_kind)
+                .then_some(" ".to_owned())
+                .unwrap_or_default();
+            output.push_break(flat, token_indentation_level);
         }
 
         TriviaRenderState {
@@ -488,33 +941,27 @@ fn render_leading_trivia(
         }
     } else {
         if !output.is_empty() && needs_space_before_inline_comment(previous_kind) {
-            if !output.ends_with(char::is_whitespace) {
-                output.push(' ');
+            if !output.ends_with_whitespace() {
+                output.push_char(' ');
             }
         }
 
         for (index, comment) in comments.iter().enumerate() {
             if index > 0 {
-                output.push(' ');
+                output.push_char(' ');
             }
-            output.push_str(comment);
+            output.push_text(comment);
         }
 
         let inserted_separator = needs_space_after_inline_comment(current_kind);
-        if inserted_separator && !output.ends_with(char::is_whitespace) {
-            output.push(' ');
+        if inserted_separator && !output.ends_with_whitespace() {
+            output.push_char(' ');
         }
 
         TriviaRenderState {
             inserted_separator,
             ..TriviaRenderState::default()
         }
-    }
-}
-
-fn write_indentation(output: &mut String, indentation_level: usize) {
-    for _ in 0..indentation_level.saturating_mul(INDENT_WIDTH) {
-        output.push(' ');
     }
 }
 
@@ -778,6 +1225,18 @@ mod tests {
             formatted,
             "aaaaaaaaaaaaaa + bbbbbbbbbbbbbb + cccccccccccccc"
         );
+    }
+
+    #[test]
+    fn formatter_accounts_for_current_column_when_fitting_nested_groups() {
+        let formatted = format_with_options(
+            "f[aaaaaaaa + bbbbbbbb]",
+            FormatterOptions {
+                line_width: 20,
+                ..FormatterOptions::default()
+            },
+        );
+        assert_eq!(formatted, "f[aaaaaaaa +\n  bbbbbbbb]");
     }
 
     #[test]
