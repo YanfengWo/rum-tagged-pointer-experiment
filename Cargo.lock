@@ -75,6 +75,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rum-jupyter"
+version = "0.1.0"
+dependencies = [
+ "rum-runtime",
+]
+
+[[package]]
 name = "rum-repl"
 version = "0.1.0"
 dependencies = [

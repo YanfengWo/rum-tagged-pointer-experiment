@@ -240,6 +240,26 @@ pub struct SessionParseResponse {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SessionCompletionResponse {
+    pub prefix: String,
+    pub matches: Vec<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SessionCompletenessStatus {
+    Complete,
+    Incomplete,
+    Invalid,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SessionIsCompleteResponse {
+    pub status: SessionCompletenessStatus,
+    pub indent: Option<String>,
+    pub diagnostic: Option<StructuredSourceDiagnostic>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SessionLowerResponse {
     pub expr: Expr,
 }

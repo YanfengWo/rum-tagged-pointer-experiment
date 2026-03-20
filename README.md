@@ -27,6 +27,7 @@ The repository is organized as a Cargo workspace:
 
 - `rum-syntax`: syntax tree and parser
 - `rum-core`: shared core data structures such as `Expr` and `Symbol`
+- `rum-jupyter`: early protocol-adapter crate for execute/inspect/complete/is-complete kernel flows and wire-level message shaping
 - `rum-runtime`: evaluation session and lowering from syntax into core values
 - `rum-stdlib`: builtin symbol registration for the core language
 - `rum-terminal`: terminal-facing rendering for diagnostics, runtime messages, and inspection output
@@ -95,6 +96,30 @@ a usable early core-language slice:
   context defaults, package search paths, and tracing behavior
 - a separate terminal-presentation crate so CLI/REPL rendering no longer lives
   inside the protocol-facing session API layer
+- an initial `rum-jupyter` placeholder that maps execute/inspect/complete-style
+  kernel requests onto the session API without depending on terminal text
+- a first execute-output model in `rum-jupyter` that separates text/plain result
+  payloads, stderr-style runtime-message streams, and structured error outputs
+- MIME-bundle-backed execute/display outputs and a first shell-envelope layer
+  with request ids plus `kernel_info` / `shutdown` lifecycle handling
+- inspect-side MIME bundles plus a more Jupyter-like header / parent-header /
+  channel envelope, so notebook-facing adapters can stay structured end to end
+- a first wire-level split between shell replies and `IOPub` events, including
+  `status`, `execute_input`, and output publication plus minimal
+  interrupt/shutdown lifecycle handling
+- more Jupyter-like reply contents for execute/inspect/complete/kernel-info,
+  a first `is_complete` flow, and an explicit wire-message / transport boundary
+  for reply plus `IOPub` publication
+- inbound wire decoding for signed request messages plus first-pass
+  session-id/channel validation and a mock socket transport that splits shell /
+  control / `IOPub` traffic
+- symmetric inbound decoding for reply / `IOPub` messages, configurable
+  signature policy, reply routing-id preservation, and a first mock-transport
+  event pump that can execute wire requests end to end
+- more Jupyter-like lifecycle details in reply / `IOPub` metadata and content,
+  including header dates, lifecycle-aware `status` / `shutdown` payloads, and
+  a control-first transport loop that can drain queued requests until idle or
+  stop early once shutdown is requested
 
 The source tree has also been reorganized around real Rust module boundaries so
 that maintenance and incremental compilation stay practical as the runtime

@@ -88,6 +88,40 @@ session/request models exposed by `rum-runtime`, but protocol-facing hosts
 should consume those structured payloads directly instead of round-tripping
 through terminal text.
 
+### `rum-jupyter`
+
+Owns protocol-adapter concerns for future notebook or kernel integration:
+
+- protocol-neutral execute / inspect / complete request models
+- adapter logic that maps those requests onto `Session` request APIs
+- kernel-side result shapes such as execution counts, stream/display outputs,
+  and structured failures
+- a first shell-envelope layer with request ids and minimal lifecycle requests
+  such as `kernel_info` and `shutdown`
+- MIME-bundle and metadata-oriented result shapes for execute, inspect, and
+  trace-style display payloads, without depending on terminal rendering
+- a first wire-level split between shell/control replies and `IOPub` traffic,
+  with busy/idle status publication, `execute_input`, and minimal interrupt /
+  shutdown lifecycle handling
+- more Jupyter-like reply-content shapes for execute / inspect / complete /
+  kernel-info flows, plus a first `is_complete` request/response path
+- an explicit wire-message encoding and transport boundary so future ZeroMQ or
+  mock transports do not need to live inside the adapter itself
+- first-pass inbound wire decoding, signature checks, session-id validation,
+  request-channel validation, and a mock socket transport that models the
+  shell / control / `IOPub` split more directly
+- symmetric reply / `IOPub` decoding, configurable signature policy, routing-id
+  preservation on replies, and a first event-pump layer that can consume wire
+  requests and publish wire responses over the mock transport
+- richer reply / `IOPub` schema details such as header dates, lifecycle-aware
+  `status` / `shutdown` content, and a control-first transport loop that can
+  keep draining queued requests until the mock kernel goes idle or enters
+  shutdown
+
+This crate is intentionally a placeholder for now. It should stay focused on
+protocol and host-adapter concerns, not on evaluation logic or terminal
+rendering.
+
 ### `rum-stdlib`
 
 Owns builtin installation metadata for the core language. This crate centralizes
@@ -227,6 +261,8 @@ main way embedders shape a session before evaluation starts.
 
 When a Jupyter adapter is added later, it should live in a separate crate and
 translate protocol messages into those session-oriented runtime calls.
+That placeholder crate now exists as `rum-jupyter`, with a first execute /
+inspect / complete adapter slice built directly on the stabilized session API.
 
 ## Near-term roadmap
 

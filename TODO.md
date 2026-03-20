@@ -44,8 +44,9 @@ This roadmap now uses two levels of detail:
 
 ### Phase 7: Embedding and Jupyter Preparation
 
-- [ ] Stabilize a host-facing API around `Session`
-- [ ] Prepare protocol-friendly diagnostics and a future `rum-jupyter` crate
+- [x] Stabilize a host-facing request/config API around `Session` and keep terminal rendering out of it
+- [x] Create an initial protocol-facing completion/kernel adapter slice and a placeholder `rum-jupyter` crate
+- [ ] Grow that placeholder into a fuller Jupyter-facing adapter and kernel lifecycle surface
 
 ### Phase 8: String Language and Text Processing
 
@@ -77,8 +78,8 @@ This roadmap now uses two levels of detail:
 - [x] Add idempotence coverage for a representative formatter regression corpus
 - [x] Replace the current token-stream layout-hint engine with a document-IR pretty-printer while preserving trivia-aware output
 - [x] Decide whether to expose formatter width control through the CLI and REPL surfaces
-- [ ] Replace `flat_width` estimates based on `SyntaxExpr::to_string()` with flat-doc width measurement so comments and escaped strings participate in fit decisions
-- [ ] Add formatter regression coverage for width-driven layouts that include long inline comments and escaped string literals
+- [x] Replace `flat_width` estimates based on `SyntaxExpr::to_string()` with flat-doc width measurement so comments and escaped strings participate in fit decisions
+- [x] Add formatter regression coverage for width-driven layouts that include long inline comments and escaped string literals
 - [ ] Continue splitting formatter internals into smaller planner/builder/test modules as the syntax surface grows
 
 ### `rum-syntax`: Comments and Surface Expansion
@@ -87,7 +88,7 @@ This roadmap now uses two levels of detail:
 - [x] Ensure comments can appear between tokens without changing parse results
 - [x] Preserve whitespace/comment trivia in a structured lexer output for future tooling without disturbing the parser token stream
 - [x] Add tests for comments around operators, calls, and nested expressions
-- [ ] Fix `SyntaxExpr::Display` string escaping so syntax display remains round-trippable for quoted strings
+- [x] Fix `SyntaxExpr::Display` string escaping so syntax display remains round-trippable for quoted strings
 - [ ] Audit the next operator set needed by the evaluator roadmap and prioritize them explicitly
 
 ### CLI and REPL Formatter UX
@@ -223,5 +224,29 @@ Reference docs for this workstream:
 - [x] Stabilize parse/eval/inspect entrypoints that return machine-readable outcomes instead of terminal-formatted text
 - [x] Carry messages, traces, and diagnostics in a transport-friendly structure that does not depend on the REPL
 - [x] Separate terminal presentation concerns from protocol-facing kernel concerns more explicitly in crate boundaries
-- [ ] Create a placeholder `rum-jupyter` crate when the host API is stable enough
-- [ ] Map Jupyter-style execute, inspect, and completion requests onto the stabilized session API
+- [x] Add a transport-friendly completion request/response surface alongside parse/eval/inspect
+- [x] Define the first protocol-neutral kernel models for execute, inspect, and completion traffic
+- [x] Create a placeholder `rum-jupyter` crate now that the host API is stable enough
+- [x] Map Jupyter-style execute, inspect, and completion requests onto the stabilized session API
+- [x] Decide the first-pass execute result surface: execution count, rendered result payloads, messages, and structured failures
+- [x] Add adapter-level tests that lock down kernel/request translation without requiring a notebook frontend
+- [x] Add an initial execute output model with text/plain result payloads, stderr-style runtime-message streams, and structured error outputs
+- [x] Promote execute outputs from plain text placeholders to MIME-bundle payloads and separate `execute_result` from `display_data`
+- [x] Add a first shell-envelope/lifecycle layer with request ids plus `kernel_info` and `shutdown`
+- [x] Add inspect-side MIME-bundle output and metadata so protocol adapters do not need terminal formatting for hover/help flows
+- [x] Add output metadata and richer MIME variants such as markdown/custom `rum` bundles for execute and trace payloads
+- [x] Replace the toy request envelope with a more Jupyter-like message header / parent-header / channel shape
+- [x] Split shell replies from `IOPub` traffic and emit first-pass wire-level `status`, `execute_input`, and output events
+- [x] Introduce minimal control/lifecycle handling with interrupt/shutdown requests plus tracked execution/lifecycle state
+- [x] Align execute / inspect / complete / kernel-info reply contents more closely with Jupyter-style content fields instead of relying mostly on envelope metadata
+- [x] Add an `is_complete` request/response path on both the stable session API and the `rum-jupyter` adapter
+- [x] Introduce a first wire-message encoding / transport boundary for shell replies and `IOPub` publication
+- [x] Add inbound wire decoding for request messages so notebook-facing transports can recover structured envelopes instead of hand-parsing JSON
+- [x] Add first-pass signature, session-id, and request-channel validation around the wire codec
+- [x] Add a mock socket transport that models separate shell / control / `IOPub` channels for adapter-level testing
+- [x] Add symmetric inbound decoding for shell replies and `IOPub` traffic so the wire codec is round-trippable in both directions
+- [x] Replace the ad hoc optional signature key with a clearer signing policy surface that can require or optionally accept signed messages
+- [x] Preserve shell reply routing ids and add a first mock-transport event pump that can decode wire requests, dispatch them, and publish wire responses
+- [x] Tighten reply / `IOPub` schema details with header dates plus lifecycle-aware `status` and `shutdown` content
+- [x] Grow the mock event-pump into a more realistic control-first transport loop that can keep draining queued work until idle or stop after shutdown
+- [ ] Grow the placeholder adapter toward real Jupyter request/response envelopes, stream/display payloads, and kernel lifecycle management

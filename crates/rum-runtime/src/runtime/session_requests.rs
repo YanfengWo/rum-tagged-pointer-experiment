@@ -18,6 +18,48 @@ impl RequestCheckpoint {
 }
 
 impl Session {
+    pub fn complete_request(&self, prefix: &str) -> SessionCompletionResponse {
+        let prefix = prefix.trim().to_string();
+        let matches = self.complete_symbol_prefix(&prefix);
+
+        SessionCompletionResponse { prefix, matches }
+    }
+
+    pub fn is_complete_request(&self, input: &str) -> SessionIsCompleteResponse {
+        if input.trim().is_empty() {
+            return SessionIsCompleteResponse {
+                status: SessionCompletenessStatus::Complete,
+                indent: None,
+                diagnostic: None,
+            };
+        }
+
+        match parse_with_diagnostics(input) {
+            Ok(_) => SessionIsCompleteResponse {
+                status: SessionCompletenessStatus::Complete,
+                indent: None,
+                diagnostic: None,
+            },
+            Err(diagnostic) => {
+                let diagnostic = diagnostic.structured();
+
+                if diagnostic.is_incomplete {
+                    SessionIsCompleteResponse {
+                        status: SessionCompletenessStatus::Incomplete,
+                        indent: Some(suggest_continuation_indent(input)),
+                        diagnostic: Some(diagnostic),
+                    }
+                } else {
+                    SessionIsCompleteResponse {
+                        status: SessionCompletenessStatus::Invalid,
+                        indent: None,
+                        diagnostic: Some(diagnostic),
+                    }
+                }
+            }
+        }
+    }
+
     pub fn parse_request(
         &self,
         input: &str,
@@ -163,6 +205,21 @@ fn request_syntax_failure(diagnostic: rum_syntax::SourceDiagnostic) -> SessionRe
         messages: Vec::new(),
         trace: Vec::new(),
     }
+}
+
+fn suggest_continuation_indent(input: &str) -> String {
+    let base_indent = input
+        .lines()
+        .rev()
+        .find(|line| !line.trim().is_empty())
+        .map(|line| {
+            line.chars()
+                .take_while(|ch| ch.is_whitespace())
+                .collect::<String>()
+        })
+        .unwrap_or_default();
+
+    format!("{base_indent}  ")
 }
 
 fn session_request_error_from_eval_error(err: &EvalError) -> SessionRequestError {
