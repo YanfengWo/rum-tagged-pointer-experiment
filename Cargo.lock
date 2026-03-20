@@ -63,6 +63,7 @@ dependencies = [
  "rum-runtime",
  "rum-stdlib",
  "rum-syntax",
+ "rum-terminal",
 ]
 
 [[package]]
@@ -80,6 +81,7 @@ dependencies = [
  "rum-runtime",
  "rum-stdlib",
  "rum-syntax",
+ "rum-terminal",
 ]
 
 [[package]]
@@ -103,6 +105,15 @@ name = "rum-syntax"
 version = "0.1.0"
 dependencies = [
  "thiserror",
+]
+
+[[package]]
+name = "rum-terminal"
+version = "0.1.0"
+dependencies = [
+ "rum-core",
+ "rum-runtime",
+ "rum-syntax",
 ]
 
 [[package]]

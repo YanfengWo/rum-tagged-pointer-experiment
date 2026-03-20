@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 
 use rum_core::{Atom, BigInt, Expr, GLOBAL_CONTEXT, SYSTEM_CONTEXT, Symbol, heads};
 use rum_syntax::{
-    BinaryOp, BlankKind, PostfixOp, PrefixOp, SlotSpec, SyntaxError, SyntaxExpr, SyntaxExprKind,
-    parse_expr,
+    BinaryOp, BlankKind, ParsedSource, PostfixOp, PrefixOp, SlotSpec, StructuredSourceDiagnostic,
+    SyntaxError, SyntaxExpr, SyntaxExprKind, parse_expr, parse_with_diagnostics,
 };
 
 mod attributes;
@@ -49,6 +49,7 @@ mod scoping;
 mod session_api;
 mod session_eval;
 mod session_helpers;
+mod session_requests;
 mod session_state;
 mod slot_substitution;
 
@@ -63,7 +64,8 @@ use self::{
     lowering::*, matcher_and_symbols::*, message_catalog::*, message_format::*,
     message_selector_parsing::*, metadata::*, model::*, parse_and_message_helpers::*,
     pattern_matching::*, resolution::*, rewrite_builtins::*, scoping::*, session_api::*,
-    session_eval::*, session_helpers::*, session_state::*, slot_substitution::*,
+    session_eval::*, session_helpers::*, session_requests::*, session_state::*,
+    slot_substitution::*,
 };
 pub use self::{lowering::lower_syntax_expr, metadata::*, model::*, session_state::EvalError};
 

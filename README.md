@@ -29,6 +29,7 @@ The repository is organized as a Cargo workspace:
 - `rum-core`: shared core data structures such as `Expr` and `Symbol`
 - `rum-runtime`: evaluation session and lowering from syntax into core values
 - `rum-stdlib`: builtin symbol registration for the core language
+- `rum-terminal`: terminal-facing rendering for diagnostics, runtime messages, and inspection output
 - `rum-repl`: interactive shell layer
 - `rum-cli`: command-line entry point
 
@@ -88,6 +89,12 @@ a usable early core-language slice:
   `Listable`
 - a working REPL with multiline input, history persistence, completion, `:parse`,
   `:format`, `:lower`, `:inspect`, and `:messages`
+- early host-facing request APIs for parse/lower/eval/inspect, with structured
+  syntax diagnostics and transport-friendly message/trace payloads
+- a stable `SessionConfig` surface for host-side setup of resource limits,
+  context defaults, package search paths, and tracing behavior
+- a separate terminal-presentation crate so CLI/REPL rendering no longer lives
+  inside the protocol-facing session API layer
 
 The source tree has also been reorganized around real Rust module boundaries so
 that maintenance and incremental compilation stay practical as the runtime

@@ -10,7 +10,8 @@ mod trivia;
 
 pub use ast::{BinaryOp, BlankKind, PostfixOp, PrefixOp, SlotSpec, SyntaxExpr, SyntaxExprKind};
 pub use document::{
-    ParsedSource, SourceDiagnostic, SourceLocation, SourceText, parse_with_diagnostics,
+    ParsedSource, SourceDiagnostic, SourceDiagnosticSpan, SourceLocation, SourceText,
+    StructuredSourceDiagnostic, parse_with_diagnostics,
 };
 pub use error::SyntaxError;
 pub use format_request::{parse_format_cli_args, parse_format_command};

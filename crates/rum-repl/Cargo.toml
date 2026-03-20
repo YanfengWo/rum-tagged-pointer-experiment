@@ -7,6 +7,7 @@ rust-version.workspace = true
 [dependencies]
 rum-runtime = { path = "../rum-runtime" }
 rum-syntax = { path = "../rum-syntax" }
+rum-terminal = { path = "../rum-terminal" }
 
 [dev-dependencies]
 rum-stdlib = { path = "../rum-stdlib" }

@@ -3,8 +3,12 @@ use std::fs;
 use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
 
-use rum_runtime::{DefinitionCatalogEntry, DefinitionKind, EvalError, Session};
-use rum_syntax::{SourceText, format_parsed_source, parse_format_command, parse_with_diagnostics};
+use rum_runtime::{Session, SessionRequestError, SessionRequestFailure};
+use rum_syntax::{format_parsed_source, parse_format_command};
+use rum_terminal::{
+    render_eval_response, render_inspect_response, render_message_catalog_entries,
+    render_request_failure,
+};
 
 pub struct Repl<R, W> {
     input: R,
@@ -74,9 +78,9 @@ where
                 let pending = buffer.trim();
 
                 if !pending.is_empty() {
-                    if let Err(diagnostic) = parse_with_diagnostics(pending) {
+                    if let Err(failure) = session.parse_request(pending) {
                         self.record_history(pending);
-                        writeln!(self.output, "{}", diagnostic.render())?;
+                        write_request_failure(&mut self.output, &failure)?;
                         return Ok(());
                     }
 
@@ -116,44 +120,28 @@ where
 
             let pending = buffer.trim();
 
-            match parse_with_diagnostics(pending) {
+            match session.parse_request(pending) {
                 Ok(_) => {
                     let input = pending.to_string();
                     buffer.clear();
                     self.record_history(&input);
                     self.evaluate_input(session, &input)?;
                 }
-                Err(diagnostic) if diagnostic.error().is_incomplete() => continue,
-                Err(diagnostic) => {
+                Err(failure) if request_failure_is_incomplete(&failure) => continue,
+                Err(failure) => {
                     let input = pending.to_string();
                     buffer.clear();
                     self.record_history(&input);
-                    writeln!(self.output, "{}", diagnostic.render())?;
+                    write_request_failure(&mut self.output, &failure)?;
                 }
             }
         }
     }
 
     fn evaluate_input(&mut self, session: &mut Session, input: &str) -> io::Result<()> {
-        match session.eval_text(input) {
-            Ok(outcome) => {
-                for message in outcome.messages {
-                    writeln!(self.output, "! {message}")?;
-                }
-
-                writeln!(self.output, "{}", outcome.value)
-            }
-            Err(EvalError::Syntax(err)) => {
-                let rendered = SourceText::new(input).render_syntax_error(&err);
-                writeln!(self.output, "{rendered}")
-            }
-            Err(err) => {
-                for message in session.take_messages() {
-                    writeln!(self.output, "! {message}")?;
-                }
-
-                writeln!(self.output, "! {err}")
-            }
+        match session.eval_request(input) {
+            Ok(response) => writeln!(self.output, "{}", render_eval_response(&response)),
+            Err(failure) => write_request_failure(&mut self.output, &failure),
         }
     }
 
@@ -203,7 +191,11 @@ where
         fs::write(path, contents)
     }
 
-    fn try_handle_command(&mut self, session: &Session, line: &str) -> io::Result<CommandAction> {
+    fn try_handle_command(
+        &mut self,
+        session: &mut Session,
+        line: &str,
+    ) -> io::Result<CommandAction> {
         match line {
             ":quit" | ":q" => Ok(CommandAction::Exit),
             ":help" => {
@@ -239,9 +231,9 @@ where
                 if input.is_empty() {
                     writeln!(self.output, "! :parse expects an expression")?;
                 } else {
-                    match parse_with_diagnostics(input) {
-                        Ok(parsed) => write!(self.output, "{}", parsed.debug_dump())?,
-                        Err(diagnostic) => writeln!(self.output, "{}", diagnostic.render())?,
+                    match session.parse_request(input) {
+                        Ok(response) => write!(self.output, "{}", response.parsed.debug_dump())?,
+                        Err(failure) => write_request_failure(&mut self.output, &failure)?,
                     }
                 }
 
@@ -252,12 +244,12 @@ where
 
                 match parse_format_command(input, ":format") {
                     Err(message) => writeln!(self.output, "! {message}")?,
-                    Ok((expr, options)) => match parse_with_diagnostics(expr) {
-                        Ok(parsed) => {
-                            let formatted = format_parsed_source(&parsed, options);
+                    Ok((expr, options)) => match session.parse_request(expr) {
+                        Ok(response) => {
+                            let formatted = format_parsed_source(&response.parsed, options);
                             writeln!(self.output, "{formatted}")?;
                         }
-                        Err(diagnostic) => writeln!(self.output, "{}", diagnostic.render())?,
+                        Err(failure) => write_request_failure(&mut self.output, &failure)?,
                     },
                 }
 
@@ -269,13 +261,9 @@ where
                 if input.is_empty() {
                     writeln!(self.output, "! :lower expects an expression")?;
                 } else {
-                    match session.lower_text(input) {
-                        Ok(parsed) => writeln!(self.output, "{parsed}")?,
-                        Err(EvalError::Syntax(err)) => {
-                            let rendered = SourceText::new(input).render_syntax_error(&err);
-                            writeln!(self.output, "{rendered}")?;
-                        }
-                        Err(err) => writeln!(self.output, "! {err}")?,
+                    match session.lower_request(input) {
+                        Ok(response) => writeln!(self.output, "{}", response.expr)?,
+                        Err(failure) => write_request_failure(&mut self.output, &failure)?,
                     }
                 }
 
@@ -344,147 +332,8 @@ where
             _ if line.starts_with(":inspect ") => {
                 let name = line.trim_start_matches(":inspect ").trim();
 
-                if let Some(info) = session.inspect(name) {
-                    let mut flags = Vec::new();
-
-                    if info.is_builtin {
-                        flags.push("builtin");
-                    }
-
-                    if info.attribute_count > 0 {
-                        flags.push("attr");
-                    }
-
-                    if info.has_own_value {
-                        flags.push("own");
-                    }
-
-                    if info.has_delayed_value {
-                        flags.push("delayed");
-                    }
-
-                    if info.has_up_values {
-                        flags.push("up");
-                    }
-
-                    if info.has_down_values {
-                        flags.push("down");
-                    }
-
-                    if info.has_sub_values {
-                        flags.push("sub");
-                    }
-
-                    if info.message_count > 0 {
-                        flags.push("msg");
-                    }
-
-                    writeln!(
-                        self.output,
-                        "{} :: {}{}",
-                        info.qualified_name,
-                        info.summary.unwrap_or_default(),
-                        if flags.is_empty() {
-                            String::new()
-                        } else {
-                            format!(" [{}]", flags.join(", "))
-                        }
-                    )?;
-
-                    writeln!(self.output, "  context: {}", info.context)?;
-
-                    if !info.attributes.is_empty() {
-                        writeln!(
-                            self.output,
-                            "  attributes[{}]: {}",
-                            info.attributes.len(),
-                            info.attributes.join(", ")
-                        )?;
-                    }
-
-                    if !info.message_tags.is_empty() {
-                        writeln!(
-                            self.output,
-                            "  messages[{}]: {}",
-                            info.message_tags.len(),
-                            info.message_tags.join(", ")
-                        )?;
-                    }
-
-                    if let Some(entries) = session.inspect_definition_catalog(name) {
-                        let own_entries = entries
-                            .iter()
-                            .filter(|entry| {
-                                matches!(
-                                    entry.kind,
-                                    DefinitionKind::OwnValue | DefinitionKind::DelayedOwnValue
-                                )
-                            })
-                            .collect::<Vec<_>>();
-                        let down_entries = entries
-                            .iter()
-                            .filter(|entry| entry.kind == DefinitionKind::DownValue)
-                            .collect::<Vec<_>>();
-                        let sub_entries = entries
-                            .iter()
-                            .filter(|entry| entry.kind == DefinitionKind::SubValue)
-                            .collect::<Vec<_>>();
-                        let up_entries = entries
-                            .iter()
-                            .filter(|entry| entry.kind == DefinitionKind::UpValue)
-                            .collect::<Vec<_>>();
-
-                        if !own_entries.is_empty() {
-                            writeln!(
-                                self.output,
-                                "  own: {}",
-                                own_entries
-                                    .iter()
-                                    .map(|entry| format_definition_entry(entry))
-                                    .collect::<Vec<_>>()
-                                    .join(" | ")
-                            )?;
-                        }
-
-                        if !up_entries.is_empty() {
-                            writeln!(
-                                self.output,
-                                "  up[{}]: {}",
-                                up_entries.len(),
-                                up_entries
-                                    .iter()
-                                    .map(|entry| format_definition_entry(entry))
-                                    .collect::<Vec<_>>()
-                                    .join(" | ")
-                            )?;
-                        }
-
-                        if !down_entries.is_empty() {
-                            writeln!(
-                                self.output,
-                                "  down[{}]: {}",
-                                down_entries.len(),
-                                down_entries
-                                    .iter()
-                                    .map(|entry| format_definition_entry(entry))
-                                    .collect::<Vec<_>>()
-                                    .join(" | ")
-                            )?;
-                        }
-
-                        if !sub_entries.is_empty() {
-                            writeln!(
-                                self.output,
-                                "  sub[{}]: {}",
-                                sub_entries.len(),
-                                sub_entries
-                                    .iter()
-                                    .map(|entry| format_definition_entry(entry))
-                                    .collect::<Vec<_>>()
-                                    .join(" | ")
-                            )?;
-                        }
-                    }
+                if let Some(response) = session.inspect_request(name) {
+                    writeln!(self.output, "{}", render_inspect_response(&response))?;
                 } else {
                     writeln!(self.output, "! unknown symbol `{name}`")?;
                 }
@@ -512,14 +361,7 @@ where
                     return Ok(CommandAction::Handled);
                 }
 
-                for entry in entries {
-                    let operator = if entry.delayed { ":=" } else { "=" };
-                    writeln!(
-                        self.output,
-                        "{} {} {}",
-                        entry.message_name, operator, entry.template
-                    )?;
-                }
+                writeln!(self.output, "{}", render_message_catalog_entries(&entries))?;
 
                 Ok(CommandAction::Handled)
             }
@@ -534,13 +376,18 @@ fn default_history_path() -> Option<PathBuf> {
         .or_else(|| env::current_dir().ok().map(|dir| dir.join(".rum_history")))
 }
 
-fn format_definition_entry(entry: &DefinitionCatalogEntry) -> String {
-    format!(
-        "{} {} {}",
-        entry.lhs,
-        if entry.delayed { ":=" } else { "=" },
-        entry.rhs
+fn request_failure_is_incomplete(failure: &SessionRequestFailure) -> bool {
+    matches!(
+        &failure.error,
+        SessionRequestError::Syntax(diagnostic) if diagnostic.is_incomplete
     )
+}
+
+fn write_request_failure<W: Write>(
+    output: &mut W,
+    failure: &SessionRequestFailure,
+) -> io::Result<()> {
+    writeln!(output, "{}", render_request_failure(failure))
 }
 
 #[cfg(test)]

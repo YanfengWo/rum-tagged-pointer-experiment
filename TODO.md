@@ -219,9 +219,9 @@ Reference docs for this workstream:
 
 ### Embedding and Jupyter Preparation
 
-- [ ] Define a stable session-configuration surface for hosts to set resource limits, search paths, and context defaults
-- [ ] Stabilize parse/eval/inspect entrypoints that return machine-readable outcomes instead of terminal-formatted text
-- [ ] Carry messages, traces, and diagnostics in a transport-friendly structure that does not depend on the REPL
-- [ ] Separate terminal presentation concerns from protocol-facing kernel concerns more explicitly in crate boundaries
+- [x] Define a stable session-configuration surface for hosts to set resource limits, search paths, and context defaults
+- [x] Stabilize parse/eval/inspect entrypoints that return machine-readable outcomes instead of terminal-formatted text
+- [x] Carry messages, traces, and diagnostics in a transport-friendly structure that does not depend on the REPL
+- [x] Separate terminal presentation concerns from protocol-facing kernel concerns more explicitly in crate boundaries
 - [ ] Create a placeholder `rum-jupyter` crate when the host API is stable enough
 - [ ] Map Jupyter-style execute, inspect, and completion requests onto the stabilized session API

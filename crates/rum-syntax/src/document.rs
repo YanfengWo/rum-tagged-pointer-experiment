@@ -17,6 +17,23 @@ pub struct SourceLocation {
     pub column: usize,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SourceDiagnosticSpan {
+    pub span: Span,
+    pub start: SourceLocation,
+    pub end: SourceLocation,
+    pub label: Option<String>,
+    pub text: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StructuredSourceDiagnostic {
+    pub message: String,
+    pub rendered: String,
+    pub is_incomplete: bool,
+    pub spans: Vec<SourceDiagnosticSpan>,
+}
+
 #[derive(Clone, Debug)]
 pub struct SourceDiagnostic {
     source: SourceText,
@@ -272,6 +289,32 @@ impl SourceDiagnostic {
     pub fn render(&self) -> String {
         self.source.render_syntax_error(&self.error)
     }
+
+    pub fn structured(&self) -> StructuredSourceDiagnostic {
+        let mut spans = Vec::new();
+
+        if let Some(span) = self.error.span() {
+            if let Some(span) = self.source.diagnostic_span(span, None) {
+                spans.push(span);
+            }
+        }
+
+        if let Some(related_span) = self.error.related_span() {
+            if let Some(span) = self
+                .source
+                .diagnostic_span(related_span, self.error.related_label().as_deref())
+            {
+                spans.push(span);
+            }
+        }
+
+        StructuredSourceDiagnostic {
+            message: self.error.to_string(),
+            rendered: self.render(),
+            is_incomplete: self.error.is_incomplete(),
+            spans,
+        }
+    }
 }
 
 impl fmt::Display for SourceDiagnostic {
@@ -372,6 +415,20 @@ impl ParsedSource {
     }
 }
 
+impl SourceText {
+    fn diagnostic_span(&self, span: Span, label: Option<&str>) -> Option<SourceDiagnosticSpan> {
+        let (start, end) = self.span_locations(span)?;
+
+        Some(SourceDiagnosticSpan {
+            span,
+            start,
+            end,
+            label: label.map(str::to_owned),
+            text: self.text(span).unwrap_or_default().to_string(),
+        })
+    }
+}
+
 fn collect_line_starts(source: &str) -> Vec<usize> {
     let mut starts = vec![0];
 
@@ -462,5 +519,19 @@ mod tests {
         assert!(rendered.contains("span begins here"));
         assert!(rendered.contains("span ends here"));
         assert!(rendered.contains("span covers lines 1 through 3"));
+    }
+
+    #[test]
+    fn source_diagnostic_exposes_structured_span_data() {
+        let diagnostic = parse_with_diagnostics("f[1 2]").unwrap_err().structured();
+
+        assert!(diagnostic.message.starts_with("expected ,"));
+        assert!(!diagnostic.is_incomplete);
+        assert_eq!(diagnostic.spans.len(), 1);
+        assert_eq!(
+            diagnostic.spans[0].start,
+            SourceLocation { line: 1, column: 5 }
+        );
+        assert_eq!(diagnostic.spans[0].text, "2");
     }
 }

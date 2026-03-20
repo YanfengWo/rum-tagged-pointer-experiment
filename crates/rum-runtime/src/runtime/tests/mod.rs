@@ -59,5 +59,7 @@ mod lowering_golden;
 mod messages;
 mod messages_part2;
 mod messages_part3;
+mod session_config;
+mod session_requests;
 mod thread_and_dispatch;
 mod thread_and_dispatch_part2;

@@ -75,6 +75,19 @@ Owns stateful execution:
 
 This crate now contains the evaluator core rather than only bootstrap scaffolding.
 
+### `rum-terminal`
+
+Owns terminal-facing presentation:
+
+- rendered runtime messages
+- rendered request failures and source diagnostics for terminal clients
+- rendered inspection and message-catalog text views
+
+This crate is intentionally presentation-only. It should depend on the stable
+session/request models exposed by `rum-runtime`, but protocol-facing hosts
+should consume those structured payloads directly instead of round-tripping
+through terminal text.
+
 ### `rum-stdlib`
 
 Owns builtin installation metadata for the core language. This crate centralizes
@@ -89,7 +102,9 @@ shared algorithms stay in `rum-runtime`.
 ### `rum-repl`
 
 Owns interactive shell behavior. It should stay thin and work through stable
-runtime APIs instead of reaching into evaluator internals directly.
+runtime APIs instead of reaching into evaluator internals directly. Terminal
+formatting should come from `rum-terminal` rather than being reimplemented
+inside the REPL.
 
 That separation is important because the same session model should be reusable
 for:
@@ -107,6 +122,10 @@ Owns process-level concerns:
 - file execution
 - REPL startup
 - process exit codes
+
+Like the REPL, the CLI should keep using request-style runtime APIs for
+machine-readable outcomes, then delegate user-facing rendering to
+`rum-terminal`.
 
 ## Current execution model
 
@@ -192,6 +211,19 @@ as:
 - inspect symbol
 - emit diagnostics
 - optionally expose execution traces
+
+The current runtime now has an initial request-style layer for parse, lower,
+evaluate, and inspect flows, with structured syntax diagnostics and
+transport-friendly message/trace payloads. That layer should become the basis
+for later protocol adapters instead of pushing terminal-formatted strings up
+into hosts. Terminal text rendering now lives in `rum-terminal`, which gives
+the CLI and REPL a shared presentation layer without forcing terminal
+formatting into the host-facing API surface.
+
+Hosts also now have a stable `SessionConfig` entrypoint for session setup,
+covering resource limits, current-context defaults, context-path defaults,
+package search roots, and tracing. That configuration layer should remain the
+main way embedders shape a session before evaluation starts.
 
 When a Jupyter adapter is added later, it should live in a separate crate and
 translate protocol messages into those session-oriented runtime calls.
