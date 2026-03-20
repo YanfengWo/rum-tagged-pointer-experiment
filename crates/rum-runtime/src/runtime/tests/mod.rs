@@ -55,6 +55,7 @@ mod holding_and_control_part2;
 mod holding_and_control_part3;
 mod lowering_and_context;
 mod lowering_and_context_part2;
+mod lowering_golden;
 mod messages;
 mod messages_part2;
 mod messages_part3;

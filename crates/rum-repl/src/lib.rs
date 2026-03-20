@@ -4,7 +4,7 @@ use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
 
 use rum_runtime::{DefinitionCatalogEntry, DefinitionKind, EvalError, Session};
-use rum_syntax::{FormatterOptions, SourceText, format_parsed_source, parse_with_diagnostics};
+use rum_syntax::{SourceText, format_parsed_source, parse_format_command, parse_with_diagnostics};
 
 pub struct Repl<R, W> {
     input: R,
@@ -250,19 +250,15 @@ where
             _ if line == ":format" || line.starts_with(":format ") => {
                 let input = line.trim_start_matches(":format").trim();
 
-                if input.is_empty() {
-                    writeln!(self.output, "! :format expects an expression")?;
-                } else {
-                    match parse_format_request(input) {
-                        Err(message) => writeln!(self.output, "! {message}")?,
-                        Ok((expr, options)) => match parse_with_diagnostics(expr) {
-                            Ok(parsed) => {
-                                let formatted = format_parsed_source(&parsed, options);
-                                writeln!(self.output, "{formatted}")?;
-                            }
-                            Err(diagnostic) => writeln!(self.output, "{}", diagnostic.render())?,
-                        },
-                    }
+                match parse_format_command(input, ":format") {
+                    Err(message) => writeln!(self.output, "! {message}")?,
+                    Ok((expr, options)) => match parse_with_diagnostics(expr) {
+                        Ok(parsed) => {
+                            let formatted = format_parsed_source(&parsed, options);
+                            writeln!(self.output, "{formatted}")?;
+                        }
+                        Err(diagnostic) => writeln!(self.output, "{}", diagnostic.render())?,
+                    },
                 }
 
                 Ok(CommandAction::Handled)
@@ -545,56 +541,6 @@ fn format_definition_entry(entry: &DefinitionCatalogEntry) -> String {
         if entry.delayed { ":=" } else { "=" },
         entry.rhs
     )
-}
-
-fn parse_format_request(input: &str) -> Result<(&str, FormatterOptions), String> {
-    let input = input.trim();
-    if input.is_empty() {
-        return Err(":format expects an expression".to_owned());
-    }
-
-    let mut options = FormatterOptions::default();
-
-    if let Some(rest) = input.strip_prefix("--line-width=") {
-        let (raw_width, expr) = split_option_argument(rest);
-        options.line_width = parse_line_width(raw_width, "--line-width")?;
-        let expr = expr.trim();
-        if expr.is_empty() {
-            return Err(":format expects an expression".to_owned());
-        }
-        return Ok((expr, options));
-    }
-
-    if let Some(rest) = input.strip_prefix("--line-width") {
-        let rest = rest.trim_start();
-        if rest.is_empty() {
-            return Err("--line-width expects a positive integer".to_owned());
-        }
-
-        let (raw_width, expr) = split_option_argument(rest);
-        options.line_width = parse_line_width(raw_width, "--line-width")?;
-        let expr = expr.trim();
-        if expr.is_empty() {
-            return Err(":format expects an expression".to_owned());
-        }
-        return Ok((expr, options));
-    }
-
-    Ok((input, options))
-}
-
-fn split_option_argument(input: &str) -> (&str, &str) {
-    match input.find(char::is_whitespace) {
-        Some(index) => (&input[..index], input[index..].trim_start()),
-        None => (input, ""),
-    }
-}
-
-fn parse_line_width(raw: &str, flag: &str) -> Result<usize, String> {
-    match raw.parse::<usize>() {
-        Ok(0) | Err(_) => Err(format!("{flag} expects a positive integer")),
-        Ok(width) => Ok(width),
-    }
 }
 
 #[cfg(test)]

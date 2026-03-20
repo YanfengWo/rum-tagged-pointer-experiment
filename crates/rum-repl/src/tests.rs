@@ -223,6 +223,20 @@ fn repl_format_command_respects_custom_line_width() {
 }
 
 #[test]
+fn repl_format_command_accepts_suffix_equals_line_width() {
+    let input =
+        Cursor::new(":format f[aaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbb] --line-width=60\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("f[aaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbb]"));
+}
+
+#[test]
 fn repl_format_command_rejects_invalid_line_width() {
     let input = Cursor::new(":format --line-width nope f[x]\n:quit\n");
     let mut output = Vec::new();

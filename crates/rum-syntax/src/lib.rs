@@ -1,6 +1,7 @@
 mod ast;
 mod document;
 mod error;
+mod format_request;
 mod formatter;
 mod lexer;
 mod parser;
@@ -12,6 +13,7 @@ pub use document::{
     ParsedSource, SourceDiagnostic, SourceLocation, SourceText, parse_with_diagnostics,
 };
 pub use error::SyntaxError;
+pub use format_request::{parse_format_cli_args, parse_format_command};
 pub use formatter::{FormatterOptions, format_parsed_source, format_source};
 pub use lexer::lex_with_trivia;
 pub use parser::parse_expr;

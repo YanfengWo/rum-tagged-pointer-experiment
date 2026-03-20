@@ -50,7 +50,7 @@ enum Doc {
 #[path = "formatter/render.rs"]
 mod render;
 
-use render::{doc_trailing_state, render_doc};
+use render::{doc_trailing_state, flat_doc_width, render_doc};
 
 #[derive(Debug)]
 struct DocBuilder {
@@ -211,7 +211,6 @@ struct GroupPlan {
     start_index: usize,
     end_index: usize,
     layout: GroupLayout,
-    flat_width: Option<usize>,
     force_break: bool,
 }
 
@@ -425,9 +424,8 @@ fn maybe_collect_container_group_plan(
         .collect::<Vec<_>>();
 
     let force_break = should_force_break_container(parsed, &item_start_indices, closing_index);
-    let flat_width = (item_start_indices.len() >= 2).then_some(container.to_string().len());
 
-    if !force_break && flat_width.is_none() {
+    if !force_break && item_start_indices.len() < 2 {
         return;
     }
 
@@ -440,7 +438,6 @@ fn maybe_collect_container_group_plan(
                 item_start_indices,
                 closing_index,
             },
-            flat_width,
             force_break,
         },
     );
@@ -594,7 +591,6 @@ fn maybe_collect_binary_group_plan(
             start_index,
             end_index,
             layout: GroupLayout::BinaryChain { rhs_start_indices },
-            flat_width: Some(expr.to_string().len()),
             force_break,
         },
     );
@@ -723,11 +719,12 @@ fn build_group_doc(context: &FormattingContext<'_>, plan: &GroupPlan, nesting_de
         Some(&plan.layout),
         group_identity,
     );
+    let flat_width = flat_doc_width(&doc);
 
     Doc::Group {
         doc: Box::new(doc),
         force_break: plan.force_break,
-        flat_width: plan.flat_width,
+        flat_width,
     }
 }
 
@@ -1201,6 +1198,21 @@ mod tests {
     }
 
     #[test]
+    fn formatter_actively_expands_binary_expressions_with_long_inline_comments() {
+        let formatted = format_with_options(
+            "aaaaaaaa + (* very very very long inline comment *) bbbbbbbb",
+            FormatterOptions {
+                line_width: 30,
+                ..FormatterOptions::default()
+            },
+        );
+        assert_eq!(
+            formatted,
+            "aaaaaaaa +\n(* very very very long inline comment *)\nbbbbbbbb"
+        );
+    }
+
+    #[test]
     fn formatter_respects_custom_line_width_for_calls() {
         let formatted = format_with_options(
             "f[aaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbb]",
@@ -1210,6 +1222,33 @@ mod tests {
             },
         );
         assert_eq!(formatted, "f[aaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbb]");
+    }
+
+    #[test]
+    fn formatter_actively_expands_calls_with_long_inline_comments() {
+        let formatted = format_with_options(
+            "f[x (* very very very long inline comment *), y]",
+            FormatterOptions {
+                line_width: 30,
+                ..FormatterOptions::default()
+            },
+        );
+        assert_eq!(
+            formatted,
+            "f[\n  x (* very very very long inline comment *),\n  y\n]"
+        );
+    }
+
+    #[test]
+    fn formatter_actively_expands_calls_with_escaped_string_literals() {
+        let formatted = format_with_options(
+            "f[\"aaaaaaaaaa\\\"bbbbbbbbbb\", z]",
+            FormatterOptions {
+                line_width: 29,
+                ..FormatterOptions::default()
+            },
+        );
+        assert_eq!(formatted, "f[\n  \"aaaaaaaaaa\\\"bbbbbbbbbb\",\n  z\n]");
     }
 
     #[test]
@@ -1414,7 +1453,7 @@ mod tests {
         let formatted = format_source("f[g[x, (* inline *) y,\n(* block *) h[z]], w]").unwrap();
         assert_eq!(
             formatted,
-            "f[g[\n    x,\n    (* inline *)\n    y,\n    (* block *)\n    h[z]\n  ], w]"
+            "f[\n  g[\n    x,\n    (* inline *)\n    y,\n    (* block *)\n    h[z]\n  ],\n  w\n]"
         );
     }
 
@@ -1436,7 +1475,7 @@ mod tests {
             format_source("f[{a, (* list inline *) b,\n(* list block *) {c, d}}, t]").unwrap();
         assert_eq!(
             formatted,
-            "f[{\n    a,\n    (* list inline *)\n    b,\n    (* list block *)\n    {c, d}\n  }, t]"
+            "f[\n  {\n    a,\n    (* list inline *)\n    b,\n    (* list block *)\n    {c, d}\n  },\n  t\n]"
         );
     }
 
@@ -1449,7 +1488,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             formatted,
-            "f[(x (* left inline *) +\n    (* rhs block *)\n    g[y, (* arg inline *) z]), u]"
+            "f[\n  (x (* left inline *) +\n    (* rhs block *)\n    g[y, (* arg inline *) z]),\n  u\n]"
         );
     }
 
@@ -1461,7 +1500,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             formatted,
-            "f[\n  g[(x +\n      (* deep block *)\n      y), (* after paren *) z],\n  (* outer note *)\n  {m, n}\n]"
+            "f[\n  g[\n    (x +\n      (* deep block *)\n      y),\n    (* after paren *)\n    z\n  ],\n  (* outer note *)\n  {m, n}\n]"
         );
     }
 

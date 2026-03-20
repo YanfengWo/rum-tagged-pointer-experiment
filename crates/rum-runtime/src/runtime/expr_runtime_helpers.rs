@@ -2,14 +2,18 @@ use super::*;
 
 pub(super) fn is_slot_sequence_expr(expr: &Expr) -> bool {
     match expr {
-        Expr::Call { head, args } => is_system_symbol_name(head, "SlotSequence") && args.len() == 1,
+        Expr::Call { head, args } => {
+            is_system_symbol_name(head, heads::functions::SLOT_SEQUENCE) && args.len() == 1
+        }
         _ => false,
     }
 }
 
 pub(super) fn sequence_items(expr: &Expr) -> Option<&[Expr]> {
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "Sequence") => Some(args),
+        Expr::Call { head, args } if is_system_symbol_name(head, heads::functions::SEQUENCE) => {
+            Some(args)
+        }
         _ => None,
     }
 }
@@ -54,97 +58,31 @@ pub(super) fn is_known_system_symbol(symbol: &Symbol) -> bool {
 }
 
 pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
+    if rum_core::is_canonical_core_head_name(name) {
+        return true;
+    }
+
     matches!(
         name,
-        "$Context"
-            | "$ContextPath"
-            | "$Failed"
-            | "$MessageList"
-            | "$Packages"
-            | "$Path"
-            | "All"
-            | "Attributes"
-            | "Begin"
-            | "BeginPackage"
-            | "Blank"
-            | "BlankNullSequence"
-            | "BlankSequence"
-            | "Block"
-            | "Cases"
+        "Cases"
             | "Check"
             | "Clear"
             | "ClearAll"
-            | "ClearAttributes"
-            | "Condition"
-            | "Context"
-            | "End"
-            | "EndPackage"
-            | "Evaluate"
-            | "False"
-            | "File"
-            | "FindFile"
             | "Flat"
-            | "Function"
-            | "Get"
-            | "General"
             | "Heads"
             | "Hold"
             | "HoldAll"
             | "HoldAllComplete"
             | "HoldFirst"
-            | "HoldPattern"
             | "HoldRest"
             | "Identity"
-            | "If"
-            | "Infinity"
-            | "Integer"
-            | "List"
             | "Listable"
             | "MatchQ"
-            | "Message"
-            | "MessageDefinitions"
-            | "MessageName"
-            | "Messages"
-            | "MessageTags"
-            | "Module"
-            | "Needs"
-            | "NormalizeRules"
-            | "None"
-            | "Null"
             | "OneIdentity"
-            | "OwnValues"
             | "Orderless"
-            | "Pattern"
-            | "Plus"
-            | "Power"
-            | "ReplaceAll"
-            | "ReplaceRepeated"
-            | "Rule"
-            | "RuleDelayed"
             | "Quiet"
-            | "ReleaseHold"
-            | "Sequence"
             | "SequenceHold"
-            | "Set"
-            | "SetAttributes"
-            | "SetDelayed"
-            | "Slot"
-            | "SlotSequence"
-            | "String"
-            | "SubValues"
-            | "Symbol"
-            | "TagSet"
-            | "TagSetDelayed"
-            | "TagUnset"
             | "Thread"
-            | "Times"
-            | "True"
-            | "Unevaluated"
-            | "DownValues"
-            | "Unset"
-            | "UpValues"
-            | "Which"
-            | "With"
     )
 }
 

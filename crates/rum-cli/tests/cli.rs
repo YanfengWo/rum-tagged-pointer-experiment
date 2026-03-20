@@ -87,6 +87,22 @@ fn format_flag_respects_custom_line_width() {
 }
 
 #[test]
+fn format_flag_accepts_prefix_equals_line_width() {
+    let output = run_cli(&[
+        "--format",
+        "--line-width=60",
+        "f[aaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbb]",
+    ]);
+
+    assert!(output.status.success());
+    assert_eq!(
+        stdout(&output).trim(),
+        "f[aaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbb]"
+    );
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
 fn format_flag_rejects_invalid_line_width() {
     let output = run_cli(&["--format", "f[x]", "--line-width", "0"]);
 

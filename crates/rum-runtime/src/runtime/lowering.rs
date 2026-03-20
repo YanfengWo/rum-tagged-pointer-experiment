@@ -13,79 +13,113 @@ pub(super) fn lower_syntax_expr_with<F>(
 where
     F: FnMut(&str) -> Option<Symbol>,
 {
+    // Keep a sharp boundary here:
+    // - direct syntax that already matches runtime Expr shape should preserve its head
+    // - parser-only sugar should be rewritten into canonical system-head forms
     match &expr.kind {
-        SyntaxExprKind::Integer(value) => {
-            let bigint = BigInt::parse_bytes(value.as_bytes(), 10).ok_or_else(|| {
-                EvalError::InvalidInteger {
-                    literal: value.clone(),
-                }
-            })?;
-
-            Ok(Expr::integer(bigint))
-        }
+        SyntaxExprKind::Integer(value) => lower_integer_atom(value),
         SyntaxExprKind::String(value) => Ok(Expr::string(value.clone())),
         SyntaxExprKind::Symbol(value) => Ok(lower_symbol(value, resolve_symbol)),
-        SyntaxExprKind::List(items) => {
-            let lowered_items = items
-                .iter()
-                .map(|item| lower_syntax_expr_with(item, resolve_symbol))
-                .collect::<Result<Vec<_>, _>>()?;
-
-            Ok(Expr::call(system_expr("List"), lowered_items))
+        SyntaxExprKind::List(items) => lower_list_sugar(items, resolve_symbol),
+        SyntaxExprKind::Slot(spec) => lower_slot_sugar(spec),
+        SyntaxExprKind::Blank { kind, head } => {
+            lower_blank_sugar(*kind, head.as_deref(), resolve_symbol)
         }
-        SyntaxExprKind::Slot(spec) => lower_slot(spec),
-        SyntaxExprKind::Blank { kind, head } => lower_blank(*kind, head.as_deref(), resolve_symbol),
-        SyntaxExprKind::Pattern { name, pattern } => Ok(Expr::call(
-            system_expr("Pattern"),
-            vec![
-                lower_syntax_expr_with(name, resolve_symbol)?,
-                lower_syntax_expr_with(pattern, resolve_symbol)?,
-            ],
-        )),
-        SyntaxExprKind::Prefix { op, expr } => lower_prefix(*op, expr, resolve_symbol),
-        SyntaxExprKind::Binary { op, lhs, rhs } => lower_binary(*op, lhs, rhs, resolve_symbol),
-        SyntaxExprKind::Postfix { op, expr } => lower_postfix(*op, expr, resolve_symbol),
+        SyntaxExprKind::Pattern { name, pattern } => {
+            lower_pattern_sugar(name, pattern, resolve_symbol)
+        }
+        SyntaxExprKind::Prefix { op, expr } => lower_prefix_sugar(*op, expr, resolve_symbol),
+        SyntaxExprKind::Binary { op, lhs, rhs } => {
+            lower_binary_sugar(*op, lhs, rhs, resolve_symbol)
+        }
+        SyntaxExprKind::Postfix { op, expr } => lower_postfix_sugar(*op, expr, resolve_symbol),
         SyntaxExprKind::Call { head, args } => {
-            let lowered_head = lower_syntax_expr_with(head, resolve_symbol)?;
-            let lowered_args = args
-                .iter()
-                .map(|arg| lower_syntax_expr_with(arg, resolve_symbol))
-                .collect::<Result<Vec<_>, _>>()?;
-
-            Ok(Expr::call(lowered_head, lowered_args))
+            lower_head_preserving_call(head, args, resolve_symbol)
         }
     }
 }
 
-pub(super) fn lower_slot(spec: &SlotSpec) -> Result<Expr, EvalError> {
+fn lower_integer_atom(value: &str) -> Result<Expr, EvalError> {
+    let bigint =
+        BigInt::parse_bytes(value.as_bytes(), 10).ok_or_else(|| EvalError::InvalidInteger {
+            literal: value.to_owned(),
+        })?;
+
+    Ok(Expr::integer(bigint))
+}
+
+fn lower_syntax_args<F>(args: &[SyntaxExpr], resolve_symbol: &mut F) -> Result<Vec<Expr>, EvalError>
+where
+    F: FnMut(&str) -> Option<Symbol>,
+{
+    args.iter()
+        .map(|arg| lower_syntax_expr_with(arg, resolve_symbol))
+        .collect()
+}
+
+fn lower_head_preserving_call<F>(
+    head: &SyntaxExpr,
+    args: &[SyntaxExpr],
+    resolve_symbol: &mut F,
+) -> Result<Expr, EvalError>
+where
+    F: FnMut(&str) -> Option<Symbol>,
+{
+    let lowered_head = lower_syntax_expr_with(head, resolve_symbol)?;
+    let lowered_args = lower_syntax_args(args, resolve_symbol)?;
+    Ok(Expr::call(lowered_head, lowered_args))
+}
+
+fn canonical_call(head: &'static str, args: Vec<Expr>) -> Expr {
+    Expr::call(system_expr(head), args)
+}
+
+// Parser sugar lowers into canonical runtime heads.
+fn lower_list_sugar<F>(items: &[SyntaxExpr], resolve_symbol: &mut F) -> Result<Expr, EvalError>
+where
+    F: FnMut(&str) -> Option<Symbol>,
+{
+    Ok(canonical_call(
+        heads::structure::LIST,
+        lower_syntax_args(items, resolve_symbol)?,
+    ))
+}
+
+fn lower_pattern_sugar<F>(
+    name: &SyntaxExpr,
+    pattern: &SyntaxExpr,
+    resolve_symbol: &mut F,
+) -> Result<Expr, EvalError>
+where
+    F: FnMut(&str) -> Option<Symbol>,
+{
+    Ok(canonical_call(
+        heads::patterns::PATTERN,
+        vec![
+            lower_syntax_expr_with(name, resolve_symbol)?,
+            lower_syntax_expr_with(pattern, resolve_symbol)?,
+        ],
+    ))
+}
+
+pub(super) fn lower_slot_sugar(spec: &SlotSpec) -> Result<Expr, EvalError> {
     let (head, arg) = match spec {
-        SlotSpec::Anonymous => ("Slot", Expr::integer(BigInt::from(1_u8))),
-        SlotSpec::Number(value) => {
-            let bigint = BigInt::parse_bytes(value.as_bytes(), 10).ok_or_else(|| {
-                EvalError::InvalidInteger {
-                    literal: value.clone(),
-                }
-            })?;
-
-            ("Slot", Expr::integer(bigint))
-        }
-        SlotSpec::Named(value) => ("Slot", Expr::string(value.clone())),
-        SlotSpec::Sequence => ("SlotSequence", Expr::integer(BigInt::from(1_u8))),
+        SlotSpec::Anonymous => (heads::functions::SLOT, Expr::integer(BigInt::from(1_u8))),
+        SlotSpec::Number(value) => (heads::functions::SLOT, lower_integer_atom(value)?),
+        SlotSpec::Named(value) => (heads::functions::SLOT, Expr::string(value.clone())),
+        SlotSpec::Sequence => (
+            heads::functions::SLOT_SEQUENCE,
+            Expr::integer(BigInt::from(1_u8)),
+        ),
         SlotSpec::SequenceNumber(value) => {
-            let bigint = BigInt::parse_bytes(value.as_bytes(), 10).ok_or_else(|| {
-                EvalError::InvalidInteger {
-                    literal: value.clone(),
-                }
-            })?;
-
-            ("SlotSequence", Expr::integer(bigint))
+            (heads::functions::SLOT_SEQUENCE, lower_integer_atom(value)?)
         }
     };
 
-    Ok(Expr::call(system_expr(head), vec![arg]))
+    Ok(canonical_call(head, vec![arg]))
 }
 
-pub(super) fn lower_blank<F>(
+pub(super) fn lower_blank_sugar<F>(
     kind: BlankKind,
     head: Option<&SyntaxExpr>,
     resolve_symbol: &mut F,
@@ -94,9 +128,9 @@ where
     F: FnMut(&str) -> Option<Symbol>,
 {
     let head_symbol = match kind {
-        BlankKind::Blank => "Blank",
-        BlankKind::BlankSequence => "BlankSequence",
-        BlankKind::BlankNullSequence => "BlankNullSequence",
+        BlankKind::Blank => heads::patterns::BLANK,
+        BlankKind::BlankSequence => heads::patterns::BLANK_SEQUENCE,
+        BlankKind::BlankNullSequence => heads::patterns::BLANK_NULL_SEQUENCE,
     };
 
     let args = match head {
@@ -104,10 +138,10 @@ where
         None => Vec::new(),
     };
 
-    Ok(Expr::call(system_expr(head_symbol), args))
+    Ok(canonical_call(head_symbol, args))
 }
 
-pub(super) fn lower_prefix<F>(
+pub(super) fn lower_prefix_sugar<F>(
     op: PrefixOp,
     expr: &SyntaxExpr,
     resolve_symbol: &mut F,
@@ -119,14 +153,14 @@ where
 
     match op {
         PrefixOp::Plus => Ok(lowered),
-        PrefixOp::Minus => Ok(Expr::call(
-            system_expr("Times"),
+        PrefixOp::Minus => Ok(canonical_call(
+            heads::arithmetic::TIMES,
             vec![Expr::integer(BigInt::from(-1)), lowered],
         )),
     }
 }
 
-pub(super) fn lower_binary<F>(
+pub(super) fn lower_binary_sugar<F>(
     op: BinaryOp,
     lhs: &SyntaxExpr,
     rhs: &SyntaxExpr,
@@ -143,73 +177,73 @@ where
             match lowered_lhs {
                 Expr::Atom(Atom::Symbol(symbol)) => symbol,
                 other => {
-                    return Ok(Expr::call(
-                        system_expr("MessageName"),
+                    return Ok(canonical_call(
+                        heads::messages::MESSAGE_NAME,
                         vec![other, lower_message_tag_expr(rhs, resolve_symbol)?],
                     ));
                 }
             },
             lower_message_tag_string(rhs),
         )),
-        BinaryOp::TagSet => lower_tag_set_expr(lowered_lhs, lowered_rhs),
-        BinaryOp::Set => Ok(Expr::call(
-            system_expr("Set"),
+        BinaryOp::TagSet => lower_tag_set_sugar(lowered_lhs, lowered_rhs),
+        BinaryOp::Set => Ok(canonical_call(
+            heads::rules::SET,
             vec![lowered_lhs, lowered_rhs],
         )),
-        BinaryOp::SetDelayed => Ok(Expr::call(
-            system_expr("SetDelayed"),
+        BinaryOp::SetDelayed => Ok(canonical_call(
+            heads::rules::SET_DELAYED,
             vec![lowered_lhs, lowered_rhs],
         )),
-        BinaryOp::ReplaceAll => Ok(Expr::call(
-            system_expr("ReplaceAll"),
+        BinaryOp::ReplaceAll => Ok(canonical_call(
+            heads::rules::REPLACE_ALL,
             vec![lowered_lhs, lowered_rhs],
         )),
-        BinaryOp::ReplaceRepeated => Ok(Expr::call(
-            system_expr("ReplaceRepeated"),
+        BinaryOp::ReplaceRepeated => Ok(canonical_call(
+            heads::rules::REPLACE_REPEATED,
             vec![lowered_lhs, lowered_rhs],
         )),
-        BinaryOp::Rule => Ok(Expr::call(
-            system_expr("Rule"),
+        BinaryOp::Rule => Ok(canonical_call(
+            heads::rules::RULE,
             vec![lowered_lhs, lowered_rhs],
         )),
-        BinaryOp::RuleDelayed => Ok(Expr::call(
-            system_expr("RuleDelayed"),
+        BinaryOp::RuleDelayed => Ok(canonical_call(
+            heads::rules::RULE_DELAYED,
             vec![lowered_lhs, lowered_rhs],
         )),
-        BinaryOp::Condition => Ok(Expr::call(
-            system_expr("Condition"),
+        BinaryOp::Condition => Ok(canonical_call(
+            heads::patterns::CONDITION,
             vec![lowered_lhs, lowered_rhs],
         )),
-        BinaryOp::Add => Ok(Expr::call(
-            system_expr("Plus"),
+        BinaryOp::Add => Ok(canonical_call(
+            heads::arithmetic::PLUS,
             vec![lowered_lhs, lowered_rhs],
         )),
-        BinaryOp::Subtract => Ok(Expr::call(
-            system_expr("Plus"),
+        BinaryOp::Subtract => Ok(canonical_call(
+            heads::arithmetic::PLUS,
             vec![
                 lowered_lhs,
-                Expr::call(
-                    system_expr("Times"),
+                canonical_call(
+                    heads::arithmetic::TIMES,
                     vec![Expr::integer(BigInt::from(-1)), lowered_rhs],
                 ),
             ],
         )),
-        BinaryOp::Times => Ok(Expr::call(
-            system_expr("Times"),
+        BinaryOp::Times => Ok(canonical_call(
+            heads::arithmetic::TIMES,
             vec![lowered_lhs, lowered_rhs],
         )),
-        BinaryOp::Divide => Ok(Expr::call(
-            system_expr("Times"),
+        BinaryOp::Divide => Ok(canonical_call(
+            heads::arithmetic::TIMES,
             vec![
                 lowered_lhs,
-                Expr::call(
-                    system_expr("Power"),
+                canonical_call(
+                    heads::arithmetic::POWER,
                     vec![lowered_rhs, Expr::integer(BigInt::from(-1))],
                 ),
             ],
         )),
-        BinaryOp::Power => Ok(Expr::call(
-            system_expr("Power"),
+        BinaryOp::Power => Ok(canonical_call(
+            heads::arithmetic::POWER,
             vec![lowered_lhs, lowered_rhs],
         )),
     }
@@ -236,7 +270,7 @@ pub(super) fn lower_message_tag_string(expr: &SyntaxExpr) -> String {
     }
 }
 
-pub(super) fn lower_postfix<F>(
+pub(super) fn lower_postfix_sugar<F>(
     op: PostfixOp,
     expr: &SyntaxExpr,
     resolve_symbol: &mut F,
@@ -247,34 +281,38 @@ where
     let lowered = lower_syntax_expr_with(expr, resolve_symbol)?;
 
     match op {
-        PostfixOp::Function => Ok(Expr::call(system_expr("Function"), vec![lowered])),
-        PostfixOp::Unset => Ok(Expr::call(system_expr("Unset"), vec![lowered])),
+        PostfixOp::Function => Ok(canonical_call(heads::functions::FUNCTION, vec![lowered])),
+        PostfixOp::Unset => Ok(canonical_call(heads::rules::UNSET, vec![lowered])),
     }
 }
 
-pub(super) fn lower_tag_set_expr(tag: Expr, rhs: Expr) -> Result<Expr, EvalError> {
+pub(super) fn lower_tag_set_sugar(tag: Expr, rhs: Expr) -> Result<Expr, EvalError> {
     match rhs {
-        Expr::Call { head, args } if is_system_symbol_name(&head, "Set") && args.len() == 2 => {
-            Ok(Expr::call(
-                system_expr("TagSet"),
+        Expr::Call { head, args }
+            if is_system_symbol_name(&head, heads::rules::SET) && args.len() == 2 =>
+        {
+            Ok(canonical_call(
+                heads::rules::TAG_SET,
                 vec![tag, args[0].clone(), args[1].clone()],
             ))
         }
         Expr::Call { head, args }
-            if is_system_symbol_name(&head, "SetDelayed") && args.len() == 2 =>
+            if is_system_symbol_name(&head, heads::rules::SET_DELAYED) && args.len() == 2 =>
         {
-            Ok(Expr::call(
-                system_expr("TagSetDelayed"),
+            Ok(canonical_call(
+                heads::rules::TAG_SET_DELAYED,
                 vec![tag, args[0].clone(), args[1].clone()],
             ))
         }
-        Expr::Call { head, args } if is_system_symbol_name(&head, "Unset") && args.len() == 1 => {
-            Ok(Expr::call(
-                system_expr("TagUnset"),
+        Expr::Call { head, args }
+            if is_system_symbol_name(&head, heads::rules::UNSET) && args.len() == 1 =>
+        {
+            Ok(canonical_call(
+                heads::rules::TAG_UNSET,
                 vec![tag, args[0].clone()],
             ))
         }
-        _ => Ok(Expr::call(system_expr("TagSet"), vec![tag, rhs])),
+        _ => Ok(canonical_call(heads::rules::TAG_SET, vec![tag, rhs])),
     }
 }
 

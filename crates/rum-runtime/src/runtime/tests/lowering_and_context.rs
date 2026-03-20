@@ -11,6 +11,18 @@ fn lowers_big_integer_into_core_expr() {
 
     assert_eq!(lowered.to_string(), "123456789012345678901234567890");
 }
+
+#[test]
+fn lowering_rejects_invalid_integer_literals_before_runtime() {
+    let error = lower_syntax_expr(&SyntaxExpr::integer("not-a-number", Span::default()))
+        .expect_err("invalid integer syntax atoms should fail during lowering");
+
+    assert!(matches!(
+        error,
+        EvalError::InvalidInteger { ref literal } if literal == "not-a-number"
+    ));
+}
+
 #[test]
 fn lowers_message_name_syntax_into_core_expr() {
     let syntax = parse_expr("FindFile::notfound").unwrap();
@@ -34,6 +46,27 @@ fn lowers_tagset_and_unset_syntax_into_core_expr() {
     assert_eq!(
         lowered_unset.to_string(),
         "TagUnset[f, g[Pattern[x, Blank[]]]]"
+    );
+}
+
+#[test]
+fn lowering_preserves_tagset_shape_for_runtime_semantic_validation() {
+    let syntax = parse_expr("f /: g[h[f[x_]]] := 1").unwrap();
+    let lowered = lower_syntax_expr(&syntax).unwrap();
+
+    assert_eq!(
+        lowered.to_string(),
+        "TagSetDelayed[f, g[h[f[Pattern[x, Blank[]]]]], 1]"
+    );
+
+    let mut session = Session::new();
+    let outcome = session.eval_text("f /: g[h[f[x_]]] := 1").unwrap();
+
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "TagSetDelayed" && message.tag == "tagpos")
     );
 }
 

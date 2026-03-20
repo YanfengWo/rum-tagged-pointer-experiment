@@ -4,6 +4,25 @@ pub(super) fn render_doc(doc: &Doc, line_width: usize) -> String {
     render_doc_mode(doc, line_width, RenderMode::Broken)
 }
 
+pub(super) fn flat_doc_width(doc: &Doc) -> Option<usize> {
+    match doc {
+        Doc::Text(text) => (!text.contains('\n')).then_some(text.len()),
+        Doc::HardLine { .. } => None,
+        Doc::SoftLine { .. } => Some(0),
+        Doc::Break { flat, .. } => (!flat.contains('\n')).then_some(flat.len()),
+        Doc::Concat(parts) => {
+            let mut width = 0usize;
+
+            for part in parts {
+                width = width.checked_add(flat_doc_width(part)?)?;
+            }
+
+            Some(width)
+        }
+        Doc::Group { doc, .. } => flat_doc_width(doc),
+    }
+}
+
 fn render_doc_mode(doc: &Doc, line_width: usize, mode: RenderMode) -> String {
     let mut output = String::new();
     render_doc_into(doc, line_width, mode, 0, &mut output);

@@ -35,9 +35,15 @@ The repository is organized as a Cargo workspace:
 ## Documentation
 
 - [Architecture](./ARCHITECTURE.md)
-- [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md)
+- [Lowering Canonical Forms](./docs/lowering-canonical-forms.md) for the syntax-to-`Expr` contract, canonical heads, and lowering/runtime validation boundary
+- [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md) for evaluator sequencing and the remaining semantic cleanup work
+- [Formatter Style](./docs/formatter-style.md)
 - [Code Organization Guidelines](./docs/code-organization-guidelines.md)
 - [Roadmap](./TODO.md)
+
+If you are orienting around lowering specifically, the recommended reading path
+is: `Architecture -> Lowering Canonical Forms -> Runtime Evaluation Audit ->
+TODO`.
 
 ## Development environment note
 
@@ -72,7 +78,7 @@ a usable early core-language slice:
 - exact integer atoms via `num_bigint::BigInt`
 - parser and lowering support for rules, patterns, slots, message names,
   tagging, Wolfram-style comments, preserved lexer trivia, source-aware parse
-  tooling, and a formatter prototype
+  tooling, and a trivia-aware document-IR formatter
 - session-based evaluation with ownvalues, upvalues, downvalues, and subvalues
 - hold-aware control flow with `Hold*`, `Evaluate`, `Sequence`, `If`, `Which`,
   `Function`, `With`, `Module`, and `Block`
@@ -86,6 +92,14 @@ a usable early core-language slice:
 The source tree has also been reorganized around real Rust module boundaries so
 that maintenance and incremental compilation stay practical as the runtime
 grows.
+
+String literals and string atoms are already part of the implemented
+core-language slice, but full Wolfram-style string functionality is now treated
+as an explicit post-foundation roadmap item. For the first implementation wave,
+that work is expected to stay distributed across `rum-syntax`, `rum-core`,
+`rum-runtime`, and `rum-stdlib`; a dedicated string crate should only be
+introduced later if the subsystem becomes large and stable enough to justify a
+new boundary.
 
 ## Getting started
 
@@ -142,8 +156,11 @@ The next stage is to deepen tooling and tighten the remaining semantic gaps
 rather than to "make evaluation exist" from scratch:
 
 1. formatter stabilization, richer multi-span diagnostics, and the later
-   pretty-printer consolidation in `rum-syntax`
+   cleanup of remaining pretty-printer fit and planning gaps in `rum-syntax`
 2. better REPL ergonomics such as trace-oriented debug views
 3. continued evaluator cleanup based on the runtime audit and TODO roadmap
 4. host-facing API stabilization and later Jupyter integration through a
    separate adapter crate
+5. after the core/runtime foundation is tighter, a dedicated full-string
+   roadmap covering construction, slicing, search, replacement, string
+   patterns, and unicode-sensitive behavior

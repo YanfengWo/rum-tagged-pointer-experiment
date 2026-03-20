@@ -41,7 +41,7 @@ Owns source-facing syntax:
 
 - parser inputs and errors
 - syntax expression tree
-- text-oriented concerns such as strings, symbol tokens, and call syntax
+- text-oriented concerns such as string literals, symbol tokens, and call syntax
 
 This crate should stay focused on source structure rather than evaluation.
 
@@ -53,6 +53,7 @@ Owns runtime-neutral core values:
 - `Atom`
 - `Symbol`
 - numeric atom representation
+- the canonical string atom representation shared by runtime layers
 
 The most important design decision already in place is that exact integers are
 first-class runtime values, not an afterthought.
@@ -69,6 +70,8 @@ Owns stateful execution:
 - runtime messages, tracing, and resource limits
 - symbol inspection
 - scoping semantics
+- string builtin semantics, matching, and text-processing behavior for the
+  implemented subset
 
 This crate now contains the evaluator core rather than only bootstrap scaffolding.
 
@@ -78,6 +81,10 @@ Owns builtin installation metadata for the core language. This crate centralizes
 the builtin inventory, summaries, attributes, and handler registration used by
 the runtime. It should stay thin and declarative rather than turning into a
 second evaluator.
+
+For the upcoming string-language workstream, `rum-stdlib` should remain the
+place where string builtins are registered and described, while evaluation and
+shared algorithms stay in `rum-runtime`.
 
 ### `rum-repl`
 
@@ -117,6 +124,11 @@ level it now does:
 The current implemented evaluation sequence and the remaining semantic gaps are
 tracked in `docs/runtime-evaluation-audit.md`.
 
+For lowering-specific orientation, use `docs/lowering-canonical-forms.md` for
+the surface-syntax-to-core contract and validation boundary, then read
+`docs/runtime-evaluation-audit.md` for the later evaluator-side semantics that
+still intentionally live beyond lowering.
+
 ## Code organization
 
 As the runtime grows, source organization is treated as an architectural concern
@@ -146,6 +158,26 @@ language fidelity and practical rule/DSL scenarios such as:
 The current runtime uses `num_bigint::BigInt` in `rum-core::Atom::Integer`.
 This should remain the foundation as the numeric tower expands later.
 
+## String subsystem direction
+
+Full Wolfram-style string functionality is important to the project's intended
+commercial, industrial, and DSL-oriented use cases, so it is now treated as a
+planned core-language workstream rather than a peripheral convenience feature.
+
+The intended first implementation wave is:
+
+- keep string literal parsing, escaping, and source-facing syntax in
+  `rum-syntax`
+- keep canonical string atoms in `rum-core`
+- implement evaluation semantics, string patterns, and search/transform
+  behavior in `rum-runtime`
+- register and document builtin inventory in `rum-stdlib`
+
+The project should not introduce a dedicated `rum-string` crate yet. That
+boundary should be revisited only after the builtin surface, shared helpers,
+and performance constraints are concrete enough to justify a new subsystem
+crate.
+
 ## REPL and Jupyter boundary
 
 The REPL is treated as a first-class feature from the beginning. The project
@@ -172,3 +204,6 @@ translate protocol messages into those session-oriented runtime calls.
 3. improve the REPL with multiline input, history, completion, and debug
    surfaces
 4. stabilize host-facing session APIs for embedding and future Jupyter work
+5. once the core/runtime foundation is tighter, execute the full-string
+   roadmap across parsing, evaluation, text operations, string patterns, and
+   unicode-sensitive behavior

@@ -315,7 +315,7 @@ fn format_expr(
 
     match &expr.kind {
         SyntaxExprKind::Integer(value) => f.write_str(value)?,
-        SyntaxExprKind::String(value) => write!(f, "\"{value}\"")?,
+        SyntaxExprKind::String(value) => write_escaped_string(f, value)?,
         SyntaxExprKind::Symbol(value) => f.write_str(value)?,
         SyntaxExprKind::List(items) => {
             f.write_str("{")?;
@@ -385,4 +385,39 @@ fn format_expr(
     }
 
     Ok(())
+}
+
+fn write_escaped_string(f: &mut fmt::Formatter<'_>, value: &str) -> fmt::Result {
+    f.write_str("\"")?;
+
+    for ch in value.chars() {
+        match ch {
+            '"' => f.write_str("\\\"")?,
+            '\\' => f.write_str("\\\\")?,
+            '\n' => f.write_str("\\n")?,
+            '\t' => f.write_str("\\t")?,
+            other => write!(f, "{other}")?,
+        }
+    }
+
+    f.write_str("\"")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parse_expr;
+
+    fn z() -> Span {
+        Span::default()
+    }
+
+    #[test]
+    fn syntax_string_display_escapes_round_trippable_characters() {
+        let expr = SyntaxExpr::string("a\"b\\c\nd\t", z());
+        let rendered = expr.to_string();
+
+        assert_eq!(rendered, "\"a\\\"b\\\\c\\nd\\t\"");
+        assert_eq!(parse_expr(&rendered).unwrap(), expr);
+    }
 }

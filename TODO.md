@@ -20,7 +20,7 @@ This roadmap now uses two levels of detail:
 ### Phase 2: Core Lowering and IR
 
 - [x] Lower the currently supported syntax into working core `Expr` forms used by the runtime
-- [ ] Formalize the lowering pipeline, canonical core-head inventory, and golden test coverage
+- [x] Formalize the lowering pipeline, canonical core-head inventory, and golden test coverage
 
 ### Phase 3: Definitions and Evaluation
 
@@ -46,6 +46,11 @@ This roadmap now uses two levels of detail:
 
 - [ ] Stabilize a host-facing API around `Session`
 - [ ] Prepare protocol-friendly diagnostics and a future `rum-jupyter` crate
+
+### Phase 8: String Language and Text Processing
+
+- [ ] Build toward full Wolfram core-language string support for business, industrial, and DLS-oriented workloads
+- [ ] Decide when the string subsystem is large and stable enough to justify a dedicated crate boundary
 
 ## Open Workstreams
 
@@ -87,15 +92,19 @@ This roadmap now uses two levels of detail:
 
 ### CLI and REPL Formatter UX
 
-- [ ] Share formatter option parsing between CLI and REPL so `line_width` handling, accepted shapes, and error messages stay aligned
+- [x] Share formatter option parsing between CLI and REPL so `line_width` handling, accepted shapes, and error messages stay aligned
 
 ### `rum-core` and Lowering Cleanup
 
-- [ ] Audit every currently supported syntax feature and document its canonical lowered `Expr` form
-- [ ] Centralize the list of canonical core heads for rules, patterns, slots, scoping, contexts, and messages
-- [ ] Separate parser sugar from runtime-canonical representation more explicitly in the lowering code
-- [ ] Add golden tests for syntax-to-core lowering across rules, patterns, scoping, messages, and package constructs
-- [ ] Decide where lowering-time validation should stop and runtime validation should begin
+Reference docs for this workstream:
+- `docs/lowering-canonical-forms.md`
+- `docs/runtime-evaluation-audit.md`
+
+- [x] Audit every currently supported syntax feature and document its canonical lowered `Expr` form
+- [x] Centralize the list of canonical core heads for rules, patterns, slots, scoping, contexts, and messages
+- [x] Separate parser sugar from runtime-canonical representation more explicitly in the lowering code
+- [x] Add golden tests for syntax-to-core lowering across rules, patterns, scoping, messages, and package constructs
+- [x] Decide where lowering-time validation should stop and runtime validation should begin
 
 ### `rum-runtime`: Definition Inspection
 
@@ -173,6 +182,20 @@ This roadmap now uses two levels of detail:
 - [x] Audit `Block` rebinding scope beyond ownvalue-style symbol values and localize definitions, attributes, and messages
 - [x] Audit `Module` freshness and capture edge cases now that more held and rule-based constructs exist
 - [x] Add regression tests that lock down interactions among head evaluation, delayed definitions, held arguments, and scoping
+
+### Post-Core Workstream: Full String Language
+
+- [ ] Treat full string support as a first-class post-foundation roadmap item rather than an incidental builtin grab bag
+- [ ] Keep string literal parsing in `rum-syntax`, the canonical string atom in `rum-core`, evaluation semantics in `rum-runtime`, and builtin registration in `rum-stdlib` for the first implementation wave
+- [ ] Do not create a dedicated string crate yet; revisit a future `rum-string` extraction only after the builtin surface, shared helpers, and performance constraints are concrete enough to justify a new boundary
+- [ ] Audit the Wolfram core-language string surface and split it into explicit implementation tiers with documented priorities
+- [ ] Tier 0 correctness: finish round-trippable string escaping/display, decide the Unicode/codepoint model, and lock down escape/unicode regression fixtures
+- [ ] Tier 1 basic construction and slicing: `StringJoin`, `StringLength`, `Characters`, `CharacterRange`, `StringRepeat`, `ToString`, `StringTake`, `StringDrop`, and `StringPart`
+- [ ] Tier 2 search and transformation: `StringContainsQ`, `StringStartsQ`, `StringEndsQ`, `StringPosition`, `StringSplit`, `StringTrim`, `StringReplace`, and `StringCases`
+- [ ] Tier 3 string patterns: `StringExpression`, alternatives, repetition forms, start/end anchors, `Shortest` / `Longest`, and `RegularExpression` interop
+- [ ] Tier 4 conversions and interoperability: `CharacterCode`, `FromCharacterCode`, formatting/conversion touchpoints, file/path string conventions, and message-template compatibility
+- [ ] Add golden tests that cover evaluator behavior, round-tripping, formatting, matching, and unicode-heavy cases across the implemented string subset
+- [ ] Document supported string semantics, temporary limitations, and any deliberate divergence from Wolfram behavior as the subsystem grows
 
 ### `rum-repl` and `rum-cli`: Interactive Ergonomics
 
