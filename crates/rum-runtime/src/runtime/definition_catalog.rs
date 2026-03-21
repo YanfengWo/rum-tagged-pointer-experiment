@@ -43,13 +43,17 @@ impl Session {
         let candidate = strip_hold_pattern(&expr).clone();
 
         if should_evaluate_single_rule_candidate(&candidate) {
-            let resolved = self.evaluate(candidate)?;
-
-            if self.compile_rewrite_rule_for_matching(&resolved).is_some() {
-                return Ok(resolved);
-            }
-
-            return Ok(self.normalize_match_expr(&resolved));
+            let resolved_result = self.evaluate(candidate);
+            return self.drive_evaluated_value(resolved_result, move |session, resolved| {
+                if session
+                    .compile_rewrite_rule_for_matching(&resolved)
+                    .is_some()
+                {
+                    Ok(resolved)
+                } else {
+                    Ok(session.normalize_match_expr(&resolved))
+                }
+            });
         }
 
         self.resolve_matcher_pattern_expr_owned(candidate)
@@ -107,8 +111,10 @@ impl Session {
         &mut self,
         expr: Expr,
     ) -> Result<Option<Vec<Expr>>, EvalError> {
-        let resolved = self.evaluate(expr)?;
-        Ok(self.normalize_rewrite_rule_exprs_from_resolved(&resolved))
+        let resolved_result = self.evaluate(expr);
+        self.drive_evaluated_value(resolved_result, |session, resolved| {
+            Ok(session.normalize_rewrite_rule_exprs_from_resolved(&resolved))
+        })
     }
 
     pub(super) fn normalize_rewrite_rule_exprs_from_resolved(

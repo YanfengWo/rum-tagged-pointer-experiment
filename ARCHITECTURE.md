@@ -3,47 +3,97 @@
 ## Mission
 
 `rum` is a Rust implementation of a Mathematica / Wolfram-style core language.
-The initial target is not a notebook system or a CAS, but a programmable core
-language runtime that can eventually power:
 
-- complex rule evaluation
-- business and industrial decision logic
-- host-embedded DSLs
-- interactive scripting through a REPL, with a later path to Jupyter
+The project's long-term goal is not merely to parse and evaluate expressions,
+but to grow a reusable language kernel that can support:
+
+- symbolic evaluation and rule-based programming
+- business, industrial, and DSL-oriented execution
+- CLI and REPL use
+- future GUI frontends
+- future IDE or editor integrations
+- future protocol adapters such as Jupyter
+- future external host communication layers that may resemble WSTP-style links
+
+The early product is therefore the kernel, not a notebook application.
 
 ## Scope
 
 ### In scope
 
 - symbolic expression trees
-- exact integer atoms through `BigInt`
-- parser and core syntax model
+- exact integers
+- parser, lowering, and diagnostics
 - evaluator and rule engine
-- symbol definitions and attributes
-- scoping and contexts
+- definitions, attributes, scoping, and contexts
 - embeddable runtime sessions
-- REPL and future kernel adapters
+- host-facing request/config APIs
+- terminal tools and optional protocol adapters
 
 ### Out of scope for the early phases
 
-- notebooks and GUI tooling
-- graphics
-- advanced algebra and numerical systems
-- front-end compatibility layers
+- full notebook or GUI products
+- graphics and visualization
+- full CAS coverage
+- broad front-end compatibility shims
+
+## Design Goals
+
+The architecture is intended to optimize for four things at once:
+
+- a kernel that is useful on its own
+- clear layering and maintainable module boundaries
+- host-agnostic extensibility
+- steady growth without turning the evaluator into an untestable monolith
+
+That is why the project does not treat CLI, REPL, host embedding, and Jupyter
+as separate products with separate cores. They are different clients of the
+same runtime.
+
+## Why This Is Not Overdesign
+
+Some of the current infrastructure was accelerated by the Jupyter workstream:
+
+- session-oriented request APIs
+- structured diagnostics and machine-readable failures
+- host-driven input requests
+- suspension/resume
+- stable session configuration
+- explicit terminal-vs-protocol separation
+
+These should not be viewed as Jupyter leakage.
+
+They are kernel capabilities that are also required by any serious future host:
+
+- a GUI frontend needs structured results, diagnostics, completion, inspect,
+  and resumable input
+- an IDE integration needs parse/complete/inspect/is-complete style requests
+- an embedding API needs stable configuration and transport-friendly outcomes
+- an external protocol layer needs resumable execution and non-terminal result
+  shapes
+
+In other words, Jupyter has been a useful forcing function, but the resulting
+infrastructure serves the broader architectural goal of a reusable language
+kernel.
+
+What *would* count as overdesign would be pushing protocol-specific details
+into the evaluator core. That boundary is deliberately avoided.
 
 ## Layering
 
-The workspace is intentionally split by responsibility.
+The workspace is split by responsibility.
 
 ### `rum-syntax`
 
 Owns source-facing syntax:
 
-- parser inputs and errors
-- syntax expression tree
-- text-oriented concerns such as string literals, symbol tokens, and call syntax
+- lexer and parser
+- syntax tree
+- spans and source diagnostics
+- preserved trivia
+- formatter / pretty-printer
 
-This crate should stay focused on source structure rather than evaluation.
+This crate should describe source structure, not runtime semantics.
 
 ### `rum-core`
 
@@ -52,341 +102,247 @@ Owns runtime-neutral core values:
 - `Expr`
 - `Atom`
 - `Symbol`
-- numeric atom representation
-- the canonical string atom representation shared by runtime layers
+- exact integer representation
+- canonical string atoms
 
-The most important design decision already in place is that exact integers are
-first-class runtime values, not an afterthought.
+This layer exists so syntax, runtime, and future hosts can share a stable value
+model without dragging evaluator state into every crate.
 
 ### `rum-runtime`
 
-Owns stateful execution:
+Owns the actual kernel:
 
 - lowering from syntax into core values
 - evaluation sessions
 - staged call dispatch and evaluation sequencing
-- definition storage and application
+- definitions and rule application
 - contexts and package loading
-- runtime messages, tracing, and resource limits
+- messages, tracing, and resource limits
+- scoping and held evaluation
 - symbol inspection
-- scoping semantics
-- string builtin semantics, matching, and text-processing behavior for the
-  implemented subset
+- host-facing request/config APIs
+- runtime-side suspension/resume
 
-This crate now contains the evaluator core rather than only bootstrap scaffolding.
+This crate is the center of the system. It should contain language semantics,
+not terminal presentation or protocol envelopes.
+
+### `rum-stdlib`
+
+Owns builtin installation and future library growth.
+
+The single source of truth for core builtin metadata now lives in
+`rum-runtime`, while `rum-stdlib` remains responsible for installation and
+library expansion. This keeps builtin semantics, dispatch metadata, and
+registration from drifting apart.
 
 ### `rum-terminal`
 
 Owns terminal-facing presentation:
 
 - rendered runtime messages
-- rendered request failures and source diagnostics for terminal clients
-- rendered inspection and message-catalog text views
+- rendered diagnostics
+- rendered inspection output
 
-This crate is intentionally presentation-only. It should depend on the stable
-session/request models exposed by `rum-runtime`, but protocol-facing hosts
-should consume those structured payloads directly instead of round-tripping
-through terminal text.
-
-### `rum-jupyter`
-
-Owns protocol-adapter concerns for future notebook or kernel integration:
-
-- protocol-neutral execute / inspect / complete request models
-- adapter logic that maps those requests onto `Session` request APIs
-- kernel-side result shapes such as execution counts, stream/display outputs,
-  and structured failures
-- a first shell-envelope layer with request ids and minimal lifecycle requests
-  such as `kernel_info` and `shutdown`
-- MIME-bundle and metadata-oriented result shapes for execute, inspect, and
-  trace-style display payloads, without depending on terminal rendering
-- a first wire-level split between shell/control replies and `IOPub` traffic,
-  with busy/idle status publication, `execute_input`, and minimal interrupt /
-  shutdown lifecycle handling
-- more Jupyter-like reply-content shapes for execute / inspect / complete /
-  kernel-info flows, plus a first `is_complete` request/response path
-- an explicit wire-message encoding and transport boundary so future ZeroMQ or
-  mock transports do not need to live inside the adapter itself
-- first-pass inbound wire decoding, signature checks, session-id validation,
-  request-channel validation, and a mock socket transport that models the
-  shell / control / `IOPub` split more directly
-- symmetric reply / `IOPub` decoding, configurable signature policy, routing-id
-  preservation on replies, and a first event-pump layer that can consume wire
-  requests and publish wire responses over the mock transport
-- richer reply / `IOPub` schema details such as header dates, lifecycle-aware
-  `status` / `shutdown` content, and a control-first transport loop that can
-  keep draining queued requests until the mock kernel goes idle or enters
-  shutdown
-- a first protocol-side stdin path with `allow_stdin`, `input_request` /
-  `input_reply`, pending-input tracking, and stdin-prioritized mock transport
-  handling while the kernel is waiting for frontend input
-- tighter completion replacement ranges so cursor-in-symbol completions map
-  more naturally onto notebook frontends
-- a first Jupyter connection-file model/parser and bootstrap-config layer that
-  derive endpoint URIs, signature policy, and wire-codec setup from notebook
-  launch metadata instead of scattering that logic through the adapter
-- a transport-backend seam so the current mock transport and a future ZeroMQ
-  implementation can share the same bootstrap and channel-layout model
-- protocol-side stdin scaffolding that now reaches a real runtime input
-  facility instead of stopping at a mock-only adapter boundary
-- a first local socket-style backend plus frontend handles, so execute/stdin
-  flows can be exercised through a more frontend-like boundary without directly
-  mutating mock queue state
-- frontend-style end-to-end execute/stdin round-trip coverage on top of that
-  local backend, plus bootstrap-driven kernel usernames in reply / `IOPub`
-  headers and a first heartbeat echo path
-- a first ZeroMQ-facing `socket/session/poller` seam, with explicit ROUTER /
-  PUB / REP socket roles, bind-mode-aware session config, and a local socket
-  driver that can exercise those boundaries without teaching the adapter about
-  any concrete socket library
-- a first ZeroMQ-shaped backend implementation behind that seam, where
-  multipart frame translation, socket setup, and backend-specific session
-  behavior can evolve separately from adapter semantics and later accept a
-  concrete native socket library
-- that seam is now backed by a first concrete native-Rust ZeroMQ
-  implementation using the `zeromq` crate, while still keeping adapter logic
-  independent from the socket backend and leaving room for future transport
-  swaps or compatibility tightening
-- real frontend-style native-backend regression coverage for shell/stdin/
-  control/`IOPub` flows, including shared-identity stdin routing, metadata-
-  rich execute replies, control-first shutdown behavior, and multi-message
-  frontend sessions that keep execution counts and shutdown state coherent
-- native end-to-end signed-transport coverage on top of the concrete ZeroMQ
-  backend, including successful signed execute / `IOPub` round-trips plus
-  rejection of tampered signed requests before they reach the adapter
-
-This crate is now an early kernel adapter rather than a pure placeholder. It
-should stay focused on protocol and host-adapter concerns, not on evaluation
-logic or terminal rendering.
-
-### Host-facing extensibility principle
-
-The long-term architectural goal is not merely "support Jupyter", but to grow
-`rum-runtime` into a reusable language kernel that can serve multiple hosts:
-
-- terminal tools such as the CLI and REPL
-- future notebook adapters such as `rum-jupyter`
-- a possible GUI front end later
-- host embedding inside other Rust or non-Rust applications
-- future protocol layers that may look more like WSTP-style external links than
-  terminal I/O
-
-That means some infrastructure introduced while building the Jupyter path is
-expected to remain in the core runtime. This is intentional when the capability
-is host-agnostic, for example:
-
-- session/request APIs such as parse, eval, inspect, complete, and is-complete
-- structured diagnostics, messages, and transport-friendly result payloads
-- host-driven input requests
-- suspension/resume and internal continuation machinery
-- stable session configuration
-
-These are not considered Jupyter leakage. They are kernel capabilities that
-happen to be exercised early by the Jupyter workstream and should also benefit
-future GUI, embedding, and external-protocol work.
-
-By contrast, protocol-specific details must stay outside the runtime core:
-
-- Jupyter message schemas and channel layouts
-- wire codecs, routing ids, signatures, and connection files
-- notebook-specific output envelopes and MIME bundle shaping
-- transport loops and backend-specific socket behavior
-
-In short, `rum-jupyter` is both an optional tool for early notebook integration
-and a proving ground for kernel APIs. The adapter should demonstrate and stress
-the host-facing runtime surface, but it should not define the runtime's
-evaluation semantics.
-
-### `rum-stdlib`
-
-Owns builtin installation metadata for the core language. This crate centralizes
-the builtin inventory, summaries, attributes, and handler registration used by
-the runtime. It should stay thin and declarative rather than turning into a
-second evaluator.
-
-For the upcoming string-language workstream, `rum-stdlib` should remain the
-place where string builtins are registered and described, while evaluation and
-shared algorithms stay in `rum-runtime`.
+This crate exists so CLI/REPL output can evolve without forcing terminal text
+formats into the kernel API.
 
 ### `rum-repl`
 
-Owns interactive shell behavior. It should stay thin and work through stable
-runtime APIs instead of reaching into evaluator internals directly. Terminal
-formatting should come from `rum-terminal` rather than being reimplemented
-inside the REPL.
+Owns interactive shell behavior:
 
-That separation is important because the same session model should be reusable
-for:
+- input loop
+- multiline handling
+- history
+- command parsing
+- shell-oriented interaction flow
 
-- terminal REPL use
-- tests and golden files
-- host embedding
-- a future Jupyter kernel adapter
+The REPL should stay thin and build on stable runtime and terminal layers.
 
 ### `rum-cli`
 
 Owns process-level concerns:
 
 - argument parsing
-- file execution
+- file/script entry
 - REPL startup
-- process exit codes
+- exit codes
 
-Like the REPL, the CLI should keep using request-style runtime APIs for
-machine-readable outcomes, then delegate user-facing rendering to
-`rum-terminal`.
+Like the REPL, the CLI should use runtime request APIs and terminal rendering
+instead of reaching directly into evaluator internals.
 
-## Current execution model
+### `rum-jupyter`
 
-The current architecture is no longer a tiny bootstrap evaluator. At a high
-level it now does:
+Owns Jupyter-facing protocol and transport concerns:
+
+- execute / inspect / complete / is-complete mapping
+- notebook-oriented output envelopes and MIME bundles
+- wire codecs
+- connection-file/bootstrap handling
+- channel/session/signature handling
+- transport loops and backend-specific socket behavior
+
+This crate is intentionally optional. It is a host adapter, not part of the
+core evaluator.
+
+## Architectural Principle: Kernel First, Adapters Second
+
+The central rule of this architecture is:
+
+`rum-runtime` should expose a host-facing kernel boundary, and every frontend
+or protocol adapter should build on top of it.
+
+That boundary now includes:
+
+- parse/eval/inspect/complete/is-complete style requests
+- structured diagnostics and failures
+- transport-friendly message and trace payloads
+- stable session configuration
+- host-driven input requests
+- suspend/resume behavior
+
+This boundary is intentionally host-agnostic. It is used today by:
+
+- CLI
+- REPL
+- tests
+- `rum-jupyter`
+
+It should also be the basis for any future:
+
+- GUI frontend
+- IDE/editor integration
+- embedding API
+- external protocol or link layer
+
+## What Must Stay Out Of The Kernel
+
+The following belong outside `rum-runtime`:
+
+- Jupyter message schemas
+- wire codecs
+- routing ids
+- channel layouts
+- connection files
+- signature policies
+- notebook-specific MIME shaping
+- backend-specific transport loops
+- terminal-oriented text formatting
+
+Those concerns are real and important, but they belong in adapters such as
+`rum-terminal` and `rum-jupyter`, not in the evaluator core.
+
+## Current Execution Model
+
+At a high level, the kernel currently does this:
 
 1. parse source into syntax expressions
-2. lower syntax into runtime `Expr` values
+2. lower syntax into canonical core `Expr` values
 3. evaluate to a fixed point under recursion, cycle, and pass limits
-4. run a staged call-dispatch pipeline covering special forms, argument
-   preparation, list threading, definitions, builtins, and pure functions
-5. expose values, runtime messages, and optional trace data to CLI, REPL, or
-   host APIs
+4. run a staged dispatch pipeline for special forms, argument preparation,
+   threading, definitions, builtins, and pure functions
+5. return values plus structured diagnostics, messages, and optional traces
 
-The current implemented evaluation sequence and the remaining semantic gaps are
-tracked in `docs/runtime-evaluation-audit.md`.
+Lowering and evaluation are intentionally separated:
 
-For lowering-specific orientation, use `docs/lowering-canonical-forms.md` for
-the surface-syntax-to-core contract and validation boundary, then read
-`docs/runtime-evaluation-audit.md` for the later evaluator-side semantics that
-still intentionally live beyond lowering.
+- lowering is responsible for syntax sugar normalization and representation
+  validity
+- runtime evaluation is responsible for semantic validity and execution
 
-Within that evaluator, normalization is now treated as a first-class design
-boundary instead of an incidental parsing detail. In practice there are two
-families:
+For details, see:
 
-- resolved-argument normalization for builtins that intentionally evaluate
-  parts of their input before compiling an internal config, such as `Thread`,
-  `Cases`, attribute updates, and loader calls with explicit resolved specs
-- raw-form normalization for builtins whose first argument is semantically held
-  or syntax-shaped, such as `Check` / `Quiet` message selectors, message and
-  definition-inspection targets, definition-clear / tagged-definition targets,
-  assignment lhs classification for `Set` / `SetDelayed`, and `With` /
-  `Module` / `Block` binding lists
+- [Lowering Canonical Forms](./docs/lowering-canonical-forms.md)
+- [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md)
 
-This distinction matters because it prevents the runtime from accidentally
-evaluating syntax-shaped control inputs just to make internal dispatch code
-convenient. New evaluator work should prefer extending one of these explicit
-normalization families over adding one-off inline parsers in each builtin.
+## Normalization As A First-Class Boundary
 
-The same principle now applies to non-`Expr` helper flows. When inspection or
-debug helpers need to evaluate something but ultimately return structured Rust
-data instead of an `Expr`, they should go through the typed suspension driver
-instead of collapsing `InputRequired` into an unrecoverable helper error. That
-keeps host-driven execution, stdin suspension, and direct helper APIs aligned.
+The runtime now treats normalization as an architectural concern rather than an
+incidental parsing detail.
 
-## Code organization
+There are two explicit normalization families:
 
-As the runtime grows, source organization is treated as an architectural concern
-rather than cleanup trivia.
+- resolved-argument normalization
+  - for builtins that intentionally evaluate parts of their input before
+    compiling internal config
+  - examples include `Thread`, traversal config, loader calls, and attribute
+    updates
+- raw-form normalization
+  - for builtins whose inputs are held or syntax-shaped and therefore must be
+    interpreted without ordinary evaluation
+  - examples include message selectors, definition targets, assignment lhs
+    classification, and scoping binding lists
 
-The current direction is:
+This distinction matters because it prevents the evaluator from silently
+collapsing held/syntax-driven language constructs into ad hoc inline parsers.
 
-- split code along real Rust module boundaries instead of `include!`-style text
-  concatenation
-- keep files small enough to review comfortably, with roughly `10k` characters
-  as a maintenance target
-- prefer boundaries that help both readability and incremental compilation
-- avoid over-splitting into tiny files when the compile-time gain is negligible
+## Suspension/Resume As Kernel Infrastructure
 
-The detailed rule set for this lives in
-`docs/code-organization-guidelines.md`.
+Host-driven input and resumable execution are now part of the kernel model.
 
-## Numeric model
+That includes:
 
-Early support for exact integers is required because it matters for both
-language fidelity and practical rule/DSL scenarios such as:
+- `InputString` backed by a real runtime input facility
+- saved continuation state instead of request replay
+- typed internal continuation support for helper paths that do not naturally
+  return `Expr`
 
-- identifiers that exceed machine integer width
-- exact arithmetic in financial or operational logic
-- deterministic serialization and comparison
+This is another place where the design should be understood as general kernel
+infrastructure, not Jupyter-specific machinery. The same model is valuable for
+future GUI prompts, embedding, and protocol-driven hosts.
 
-The current runtime uses `num_bigint::BigInt` in `rum-core::Atom::Integer`.
-This should remain the foundation as the numeric tower expands later.
+## Numeric Model
 
-## String subsystem direction
+Exact integers are first-class kernel values, not an afterthought. That matters
+for both Wolfram-style language fidelity and practical deterministic DSL work.
+
+The current foundation is `num_bigint::BigInt` inside `rum-core::Atom::Integer`.
+Future numeric expansion should build from that exact baseline.
+
+## String Subsystem Direction
 
 Full Wolfram-style string functionality is important to the project's intended
-commercial, industrial, and DSL-oriented use cases, so it is now treated as a
+commercial, industrial, and DSL-oriented use cases, so strings are treated as a
 planned core-language workstream rather than a peripheral convenience feature.
 
-The intended first implementation wave is:
+The intended first implementation wave keeps responsibilities split as follows:
 
-- keep string literal parsing, escaping, and source-facing syntax in
-  `rum-syntax`
-- keep canonical string atoms in `rum-core`
-- implement evaluation semantics, string patterns, and search/transform
-  behavior in `rum-runtime`
-- register and document builtin inventory in `rum-stdlib`
+- `rum-syntax`: string literals and source-facing escaping
+- `rum-core`: canonical string atoms
+- `rum-runtime`: evaluation semantics, matching, search, and transformation
+- `rum-stdlib`: builtin registration and library growth
 
-The project should not introduce a dedicated `rum-string` crate yet. That
-boundary should be revisited only after the builtin surface, shared helpers,
-and performance constraints are concrete enough to justify a new subsystem
-crate.
+A dedicated string crate is intentionally deferred until the subsystem is large
+and stable enough to justify its own boundary.
 
-## REPL and Jupyter boundary
+## Code Organization As Architecture
 
-The REPL is treated as a first-class feature from the beginning. The project
-should not assume that interactivity is a thin afterthought over a batch-only
-runtime.
+Source organization is treated as part of the architecture, not as cleanup
+after the fact.
 
-That means runtime APIs should evolve toward session-oriented operations such
-as:
+The governing principles are:
 
-- parse
-- evaluate
-- inspect symbol
-- emit diagnostics
-- optionally expose execution traces
+- keep modules readable to humans
+- avoid both giant files and forests of tiny files
+- prefer feature-oriented subfolders once a subsystem grows
+- favor boundaries that help incremental compilation
+- design functions so important behavior is reachable by focused unit tests
 
-The current runtime now has an initial request-style layer for parse, lower,
-evaluate, and inspect flows, with structured syntax diagnostics and
-transport-friendly message/trace payloads. That layer should become the basis
-for later protocol adapters instead of pushing terminal-formatted strings up
-into hosts. Terminal text rendering now lives in `rum-terminal`, which gives
-the CLI and REPL a shared presentation layer without forcing terminal
-formatting into the host-facing API surface.
+That is why the project is steadily moving away from giant catch-all files and
+toward clearer module boundaries, smaller helpers, and explicit planning or
+normalization layers.
 
-Host-driven input is also now part of that request surface. `InputString`
-reaches a real runtime input facility, and suspended evaluations resume from
-saved continuation state rather than replaying the whole execute request after
-an input reply arrives.
+The detailed rules live in
+[Code Organization Guidelines](./docs/code-organization-guidelines.md).
 
-This request-oriented surface should be treated as a long-term kernel boundary,
-not as a temporary Jupyter shim. If a future GUI front end or external-link
-protocol is added, it should build on the same session-oriented runtime calls
-rather than introducing a second, incompatible control path into the evaluator.
+## Relationship To The Roadmap
 
-The runtime has also started growing a more general internal continuation
-bridge for helper paths that do not naturally return `Expr` values. The first
-typed bridge already covers `Expr`, `bool`, and `String`, and it is now used
-for delayed message-template rendering so runtime message generation can
-suspend and resume without dropping out of the structured request model.
+This document describes structural intent and long-term rationale.
 
-Hosts also now have a stable `SessionConfig` entrypoint for session setup,
-covering resource limits, current-context defaults, context-path defaults,
-package search roots, and tracing. That configuration layer should remain the
-main way embedders shape a session before evaluation starts.
+It should stay relatively stable and answer questions such as:
 
-When a Jupyter adapter is added later, it should live in a separate crate and
-translate protocol messages into those session-oriented runtime calls.
-That crate now exists as `rum-jupyter`, with execute / inspect / complete /
-stdin-aware adapter slices built directly on the stabilized session API.
+- what belongs in each crate?
+- why does the runtime expose host-facing session APIs?
+- why is `rum-jupyter` separate?
+- why are some Jupyter-motivated facilities still intentionally in the kernel?
 
-## Near-term roadmap
-
-1. improve syntax spans, diagnostics, recovery, and comment handling
-2. continue reducing ad hoc evaluator behavior through clearer metadata-driven
-   sequencing
-3. improve the REPL with multiline input, history, completion, and debug
-   surfaces
-4. stabilize host-facing session APIs for embedding and future Jupyter work
-5. once the core/runtime foundation is tighter, execute the full-string
-   roadmap across parsing, evaluation, text operations, string patterns, and
-   unicode-sensitive behavior
+For active work, open gaps, and near-term sequencing, the source of truth is
+[TODO.md](./TODO.md), not this file.

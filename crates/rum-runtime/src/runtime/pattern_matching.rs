@@ -178,6 +178,143 @@ impl Session {
         })
     }
 
+    fn match_compiled_named_owned(
+        &mut self,
+        name: Symbol,
+        inner: MatcherNode,
+        value: Expr,
+        bindings: BTreeMap<Symbol, Expr>,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let inner_result = self.match_compiled_owned(inner, value.clone(), bindings);
+        self.drive_internal_value(inner_result, move |_, outcome| {
+            if !outcome.matched {
+                return Ok(outcome);
+            }
+
+            let mut bindings = outcome.bindings;
+            Ok(match_outcome(
+                bind_pattern_name(&name, value.clone(), &mut bindings),
+                bindings,
+            ))
+        })
+    }
+
+    fn match_compiled_condition_owned(
+        &mut self,
+        inner: MatcherNode,
+        condition: Expr,
+        value: Expr,
+        bindings: BTreeMap<Symbol, Expr>,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let inner_result = self.match_compiled_owned(inner, value, bindings);
+        self.drive_internal_value(inner_result, move |session, outcome| {
+            if !outcome.matched {
+                return Ok(outcome);
+            }
+
+            let snapshot = outcome.bindings.clone();
+            let bindings = outcome.bindings;
+            let condition_expr = substitute_bindings(&condition, &bindings);
+            let condition_result = session.evaluate(condition_expr);
+
+            session.drive_evaluated_value::<Expr, CompiledMatchOutcome, _>(
+                condition_result,
+                move |_, result| {
+                    Ok(if is_system_symbol_name(&result, "True") {
+                        match_outcome(true, bindings)
+                    } else {
+                        match_outcome(false, snapshot)
+                    })
+                },
+            )
+        })
+    }
+
+    fn match_compiled_pattern_test_owned(
+        &mut self,
+        inner: MatcherNode,
+        test: Expr,
+        value: Expr,
+        bindings: BTreeMap<Symbol, Expr>,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let inner_result = self.match_compiled_owned(inner, value.clone(), bindings);
+        self.drive_internal_value(inner_result, move |session, outcome| {
+            if !outcome.matched {
+                return Ok(outcome);
+            }
+
+            let false_bindings = outcome.bindings.clone();
+            session.evaluate_pattern_test_owned(
+                test,
+                value.clone(),
+                outcome.bindings,
+                false_bindings,
+            )
+        })
+    }
+
+    fn match_compiled_except_owned(
+        &mut self,
+        excluded: MatcherNode,
+        inner: MatcherNode,
+        value: Expr,
+        bindings: BTreeMap<Symbol, Expr>,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let snapshot = bindings.clone();
+        let inner_result = self.match_compiled_owned(inner, value.clone(), bindings);
+        self.drive_internal_value(inner_result, move |session, outcome| {
+            if !outcome.matched {
+                return Ok(outcome);
+            }
+
+            let accepted_bindings = outcome.bindings.clone();
+            let excluded_result = session.match_compiled_owned(excluded, value, outcome.bindings);
+            session.drive_internal_value(excluded_result, move |_, excluded_outcome| {
+                Ok(if excluded_outcome.matched {
+                    match_outcome(false, snapshot)
+                } else {
+                    match_outcome(true, accepted_bindings)
+                })
+            })
+        })
+    }
+
+    fn match_compiled_call_owned(
+        &mut self,
+        head: MatcherNode,
+        args: Vec<MatcherArg>,
+        value: Expr,
+        bindings: BTreeMap<Symbol, Expr>,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let one_identity = matcher_head_has_attribute(&head, self, Attribute::OneIdentity);
+
+        match value {
+            Expr::Call {
+                head: value_head,
+                args: value_args,
+            } => {
+                let head_result = self.match_compiled_owned(head, *value_head, bindings);
+                self.drive_internal_value(head_result, move |session, outcome| {
+                    if !outcome.matched {
+                        return Ok(outcome);
+                    }
+
+                    session.match_compiled_args_owned(args, value_args, outcome.bindings)
+                })
+            }
+            other if one_identity => match args.as_slice() {
+                [single] => self.match_compiled_arg_and_rest_owned(
+                    single.clone(),
+                    Vec::new(),
+                    vec![other],
+                    bindings,
+                ),
+                _ => Ok(match_outcome(false, bindings)),
+            },
+            _ => Ok(match_outcome(false, bindings)),
+        }
+    }
+
     pub(super) fn evaluate_sequence_pattern_checks_owned(
         &mut self,
         checks: Vec<SequencePatternCheck>,
@@ -255,111 +392,22 @@ impl Session {
                 bindings,
             )),
             MatcherNode::Named { name, inner } => {
-                let inner_result = self.match_compiled_owned(*inner, value.clone(), bindings);
-                self.drive_internal_value(inner_result, move |_, outcome| {
-                    if !outcome.matched {
-                        return Ok(outcome);
-                    }
-
-                    let mut bindings = outcome.bindings;
-                    Ok(match_outcome(
-                        bind_pattern_name(&name, value.clone(), &mut bindings),
-                        bindings,
-                    ))
-                })
+                self.match_compiled_named_owned(name, *inner, value, bindings)
             }
             MatcherNode::Condition { inner, condition } => {
-                let inner_result = self.match_compiled_owned(*inner, value, bindings);
-                self.drive_internal_value(inner_result, move |session, outcome| {
-                    if !outcome.matched {
-                        return Ok(outcome);
-                    }
-
-                    let snapshot = outcome.bindings.clone();
-                    let bindings = outcome.bindings;
-                    let condition_expr = substitute_bindings(&condition, &bindings);
-                    let condition_result = session.evaluate(condition_expr);
-
-                    session.drive_evaluated_value::<Expr, CompiledMatchOutcome, _>(
-                        condition_result,
-                        move |_, result| {
-                            Ok(if is_system_symbol_name(&result, "True") {
-                                match_outcome(true, bindings)
-                            } else {
-                                match_outcome(false, snapshot)
-                            })
-                        },
-                    )
-                })
+                self.match_compiled_condition_owned(*inner, condition, value, bindings)
             }
             MatcherNode::PatternTest { inner, test } => {
-                let inner_result = self.match_compiled_owned(*inner, value.clone(), bindings);
-                self.drive_internal_value(inner_result, move |session, outcome| {
-                    if !outcome.matched {
-                        return Ok(outcome);
-                    }
-
-                    let false_bindings = outcome.bindings.clone();
-                    session.evaluate_pattern_test_owned(
-                        test,
-                        value.clone(),
-                        outcome.bindings,
-                        false_bindings,
-                    )
-                })
+                self.match_compiled_pattern_test_owned(*inner, test, value, bindings)
             }
             MatcherNode::Except { excluded, inner } => {
-                let snapshot = bindings.clone();
-                let inner_result = self.match_compiled_owned(*inner, value.clone(), bindings);
-                self.drive_internal_value(inner_result, move |session, outcome| {
-                    if !outcome.matched {
-                        return Ok(outcome);
-                    }
-
-                    let accepted_bindings = outcome.bindings.clone();
-                    let excluded_result =
-                        session.match_compiled_owned(*excluded, value, outcome.bindings);
-                    session.drive_internal_value(excluded_result, move |_, excluded_outcome| {
-                        Ok(if excluded_outcome.matched {
-                            match_outcome(false, snapshot)
-                        } else {
-                            match_outcome(true, accepted_bindings)
-                        })
-                    })
-                })
+                self.match_compiled_except_owned(*excluded, *inner, value, bindings)
             }
             MatcherNode::Alternatives(alternatives) => {
                 self.match_compiled_alternatives_owned(alternatives, value, bindings, 0)
             }
             MatcherNode::Call { head, args } => {
-                let one_identity =
-                    matcher_head_has_attribute(head.as_ref(), self, Attribute::OneIdentity);
-
-                match value {
-                    Expr::Call {
-                        head: value_head,
-                        args: value_args,
-                    } => {
-                        let head_result = self.match_compiled_owned(*head, *value_head, bindings);
-                        self.drive_internal_value(head_result, move |session, outcome| {
-                            if !outcome.matched {
-                                return Ok(outcome);
-                            }
-
-                            session.match_compiled_args_owned(args, value_args, outcome.bindings)
-                        })
-                    }
-                    other if one_identity => match args.as_slice() {
-                        [single] => self.match_compiled_arg_and_rest_owned(
-                            single.clone(),
-                            Vec::new(),
-                            vec![other],
-                            bindings,
-                        ),
-                        _ => Ok(match_outcome(false, bindings)),
-                    },
-                    _ => Ok(match_outcome(false, bindings)),
-                }
+                self.match_compiled_call_owned(*head, args, value, bindings)
             }
         }
     }

@@ -1,38 +1,42 @@
 # Runtime Evaluation Audit
 
-This document captures the current `rum-runtime` evaluation sequence as it
-exists today, and the main semantic gaps that still separate it from the
-intended Mathematica-style core language.
+This document captures the current `rum-runtime` evaluation model and the main
+semantic gaps that still separate it from the intended Mathematica /
+Wolfram-style core language.
 
 It is an engineering audit of the current implementation, not a promise that
 every listed behavior is final.
 
-This document focuses on evaluator semantics. Source-organization and module
-boundary rules are tracked separately in
-`code-organization-guidelines.md`; the runtime and parser roots are now
-split along real Rust module boundaries rather than `include!`-style text
-aggregation.
+This document focuses on evaluator semantics. Architecture, code-organization
+rules, and roadmap sequencing are tracked separately in:
+
+- `../ARCHITECTURE.md`
+- `./code-organization-guidelines.md`
+- `../TODO.md`
 
 ## Current Evaluation Pipeline
 
 At a high level, `Session::eval_text` does:
 
 1. parse source into `SyntaxExpr`
-2. lower syntax into core `Expr`
+2. lower syntax into canonical core `Expr`
 3. evaluate to a fixed point
 4. return the final value plus runtime messages emitted during that top-level
    evaluation
 
-Within `Session::evaluate`, the current runtime behaves like this:
+The same evaluator core is also exposed through host-facing request APIs, so
+CLI, REPL, tests, and protocol adapters no longer need distinct execution
+paths.
 
-1. Repeatedly call `evaluate_once` until the expression stops changing.
-2. Abort with `EvaluationPassLimitExceeded` if the fixed-point loop exceeds the
-   configured pass limit.
-3. Abort with `EvaluationCycleDetected` if the same expression reappears in the
-   same fixed-point loop.
-4. Inside `evaluate_once`, guard against recursive re-entry with an evaluation
-   stack and a recursion limit.
-5. Dispatch atoms and calls separately.
+Within `Session::evaluate`, the runtime currently behaves like this:
+
+1. repeatedly call `evaluate_once` until the expression stops changing
+2. abort with `EvaluationPassLimitExceeded` if the fixed-point loop exceeds the
+   configured pass limit
+3. abort with `EvaluationCycleDetected` if the same expression reappears in the
+   same fixed-point loop
+4. guard recursive re-entry with an evaluation stack and recursion limit
+5. dispatch atoms and calls separately
 
 ### Symbol Evaluation
 
@@ -42,276 +46,240 @@ Symbol evaluation currently supports:
   `$Path`, and `$MessageList`
 - immediate ownvalues
 - delayed ownvalues
-- context-path-aware symbol resolution at parse/lowering time and inspection
+- context-path-aware symbol resolution at lowering and inspection time
 
-The current behavior for both immediate and delayed ownvalues is:
+The current model for both immediate and delayed ownvalues is:
 
 1. look up the stored value
 2. feed that stored expression back into `evaluate`
 
-That gives `rum` a simple and predictable "definitions re-enter the standard
-evaluation loop" model.
+That gives `rum` a predictable "definitions re-enter the normal evaluation
+loop" model.
 
 ### Call Evaluation
 
 Call evaluation currently follows this order:
 
-1. Evaluate the head.
-2. Run a staged call-dispatch plan that can inspect raw arguments, prepare
-   evaluated arguments, apply attribute-driven preprocessing, and then try
-   definitions, builtins, and pure functions in order.
-3. Metadata-backed dispatch planning now omits inactive builtin stages instead
-   of always running a fixed superset and letting later handlers no-op.
-4. Special forms still see the original raw arguments.
-5. Ordinary calls evaluate arguments according to the evaluated head's hold
-   attribute.
-6. Ordinary-call preprocessing now handles `Sequence`, `Flat`, `Orderless`,
-   recursive `Listable` threading with mismatch messages, and shared
-   `Thread`-style argument threading helpers.
-7. Unless the head has `HoldAllComplete`, try upvalues attached to symbols that
-   appear in the evaluated arguments.
-8. Try downvalues on the evaluated head plus evaluated arguments.
-9. Try subvalues keyed by the leftmost base symbol of a nested evaluated head.
-10. Try builtin dispatch for non-special system builtins.
-11. Try pure-function application when the head is itself a `Function[...]`
-    object.
-12. Reconstruct the call if nothing fires.
+1. evaluate the head
+2. assemble a staged dispatch plan using builtin metadata, attributes, and head
+   traits
+3. let special forms inspect the original raw arguments
+4. evaluate ordinary arguments according to the evaluated head's hold behavior
+5. run attribute-driven preprocessing such as `Sequence`, `Flat`, `Orderless`,
+   recursive `Listable`, and shared `Thread` helpers
+6. unless blocked by `HoldAllComplete`, try upvalues attached to evaluated
+   arguments
+7. try downvalues on the evaluated head plus evaluated arguments
+8. try subvalues keyed by the leftmost base symbol of a nested evaluated head
+9. try ordinary builtin dispatch for non-special system heads
+10. try pure-function application when the head is itself `Function[...]`
+11. reconstruct the call if nothing fires
 
-This gives the runtime a workable precedence order for the currently supported
-subset:
+This gives the runtime a workable precedence order for the current subset:
 
 - head evaluation happens before almost everything else
-- special forms, argument preparation, ordinary builtins, definitions, and pure
-  functions now share one staged dispatch pipeline
-- builtin call handlers now sit behind metadata-backed handler specs instead of
-  only direct name matching in the evaluator
-- stage assembly is now driven by builtin metadata, attributes, and head traits
-  rather than always traversing a larger fixed stage superset
-- hold-sensitive builtins get partially evaluated arguments
-- upvalues run before downvalues on ordinary calls, unless `HoldAllComplete`
+- special forms, argument preparation, definitions, builtins, and pure
+  functions share one staged pipeline
+- builtin stage assembly is metadata-backed rather than entirely handwritten
+- upvalues run before downvalues on ordinary calls unless `HoldAllComplete`
   blocks them
 - downvalues see evaluated arguments
-- subvalues run after downvalues once the nested head has stabilized
+- subvalues run after downvalues once the nested head is stable
 - pure functions run after ordinary builtin dispatch
 
-### Currently Implemented Hold Behavior
+## Normalization And Suspension Boundaries
 
-The runtime now has a first-class session-level attribute table for the current
-early subset:
+Two design boundaries now matter a lot to evaluator coherence.
 
-- `Attributes`, `SetAttributes`, and `ClearAttributes`
-- `HoldAllComplete`
-- `Unevaluated`
-- `HoldPattern`
-- `ReleaseHold`
-- `Hold`, `HoldFirst`, `HoldRest`, `HoldAll`
-- `SequenceHold`
-- `Function[..., attrs]` for explicit application-time hold behavior
-- `Evaluate` in held positions
-- `Sequence` splicing in non-held positions unless `SequenceHold` or
-  `HoldAllComplete` is active
-- held control constructs such as `If`, `Which`, `With`, `Module`, `Block`,
-  `Check`, and `Quiet`
+### 1. Normalization Families
 
-This is enough for the current core rule language, but it is still a narrow
-subset of the broader Wolfram attribute model.
+The runtime now distinguishes between:
 
-### Currently Implemented Definition and Rule Behavior
+- resolved-argument normalization
+  - for builtins that intentionally evaluate part of their input before
+    compiling an internal config
+  - examples: `Thread`, traversal config, loader config, attribute updates
+- raw-form normalization
+  - for builtins whose inputs are held or syntax-shaped and must be interpreted
+    without ordinary evaluation
+  - examples: message selectors, definition targets, assignment lhs
+    classification, and scoping binding lists
 
-The current runtime supports:
+This is important because it keeps the runtime from drifting back toward ad hoc
+per-builtin parsers.
 
-- immediate ownvalues
-- delayed ownvalues
-- immediate and delayed downvalues
-- immediate and delayed subvalues
-- immediate and delayed tagged definitions via `TagSet` / `TagSetDelayed`
-- explicit tagged removal via `TagUnset`
-- upvalue inspection via `UpValues`
-- subvalue inspection via `SubValues`
-- `Unset`, `Clear`, and `ClearAll` for the currently supported definition
-  categories
-- dedicated tag lifecycle messages for missing tags and invalid tag positions
-- immediate and delayed rewrite rules
-- compiled matcher dispatch for the currently supported pattern subset
-- `ReplaceAll`, `ReplaceRepeated`, `Cases`, and `MatchQ`
+### 2. Suspension / Resume
 
-`ReplaceRepeated` already has its own iteration limit, and fixed-point
-evaluation now has a separate pass limit. Non-loader evaluation failures for
-cycle/limit conditions also emit language-level `General::*` messages.
+Host-driven input is now part of the evaluator model rather than a front-end
+shim.
+
+That includes:
+
+- `InputString` backed by a real runtime input facility
+- request suspension and continuation-based resume instead of full request replay
+- typed internal continuation support for helper paths that do not naturally
+  return `Expr`
+
+This machinery now reaches not only ordinary evaluation but also matcher and
+inspection-related helper paths in the currently covered subset.
 
 ## What Is Already Coherent
 
-The following parts of the evaluation model are now reasonably coherent and are
-good enough to build on:
+The following parts of the evaluation model are now coherent enough to build on:
 
-- fixed-point top-level evaluation with dedicated pass/cycle/recursion guards
-- head-first call evaluation
-- builtin hold handling for the implemented subset
-- attribute-driven call normalization for `Sequence`, `Flat`, `Orderless`, and
-  recursive `Listable` threading
-- explicit `Thread[expr]` and `Thread[expr, head]` threading for the current
-  subset, including scalar broadcast and mismatch preservation
-- a standard sequence-spec subset for `Thread`'s third argument:
-  `All`, `None`, `n`, `-n`, `{n}`, `{m,n}`, and `{m,n,s}`
-- `Thread` now evaluates its first argument before threading, matching the
-  documented Wolfram behavior more closely
-- `Evaluate` + `Sequence` interaction in held vs non-held positions
-- `OneIdentity`-aware matching for singleton-head patterns
-- upvalue application ahead of downvalues for ordinary calls
-- downvalue application after argument evaluation
-- subvalue application for nested-head expressions such as `f[x_][y_]`
+- fixed-point top-level evaluation with separate pass, cycle, and recursion
+  guards
+- head-first staged call evaluation
+- metadata-backed builtin dispatch planning
+- attribute-driven call normalization for `Sequence`, `Flat`, `Orderless`,
+  recursive `Listable`, and `Thread`
+- `Thread[expr]`, `Thread[expr, head]`, and the implemented third-argument
+  sequence-spec subset
+- `Evaluate` and `Unevaluated` interaction in held and non-held positions
+- `HoldPattern`, `ReleaseHold`, and explicit function application attributes
+- upvalues, downvalues, subvalues, tagged definitions, `TagUnset`, `Clear`,
+  `ClearAll`, and definition inspection for the supported categories
 - immediate vs delayed rule behavior
+- compiled matcher dispatch for the current early subset, including
+  `Condition`, sequence blanks, `PatternTest`, `Alternatives`, `Optional`,
+  `Except`, `Repeated`, `MatchQ`, `Cases`, `ReplaceAll`, and
+  `ReplaceRepeated`
 - lexical scoping via `With` and `Module`
-- dynamic rebinding via `Block` for definitions, attributes, and messages on
-  localized symbols
+- dynamic rebinding via `Block` for the currently localized categories
 - runtime messages, `Check`, `Quiet`, and `$MessageList`
+- request-oriented input suspension/resume for host-driven execution
 
-These pieces are not "complete Mathematica semantics", but together they form a
-usable and internally consistent core for rule-driven DSL work.
+These pieces do not yet amount to "full Wolfram semantics", but together they
+form a real, internally consistent core-language runtime.
 
 ## Known Semantic Gaps
 
-The remaining gaps fall into a few clear buckets.
+The remaining gaps are now narrower and more specific than they were earlier in
+the project.
 
-### 1. Attribute Model Is Still an Early Subset
+### 1. Attribute Model Is Still An Early Subset
 
-Missing or incomplete areas:
+Missing or incomplete areas include:
 
-- richer inspection and lifecycle coverage around user-defined attribute state
-- fuller `Listable` semantics beyond the current recursive threading,
-  scalar-broadcast, `Thread[expr]` / `Thread[expr, head]`, and `Thread::tdlen`
-  mismatch subset
-
-Practical impact:
-
-- matcher and evaluator normalization now cover a useful subset, including a
-  practical recursive `Listable` implementation plus explicit `Thread` support
-  with sequence specs, but not the broader Wolfram attribute surface
-- sequence behavior is much better aligned with the intended long-term language
-  model than before, but still not exhaustive
-
-### 2. Definition Precedence Is Still a Narrow Slice
-
-The current evaluator has a workable precedence order for ownvalues,
-upvalues, downvalues, subvalues, builtins, and pure functions, but it does not
-yet model the wider definition lattice.
-
-Missing or incomplete areas:
-
-- broader tag-based definition attachment such as multi-owner tag propagation
-- broader builtin metadata so future evaluator decisions can keep moving out of
-  handwritten stage logic
+- broader attribute families beyond the current hold / flattening /
+  associativity / threading subset
+- richer lifecycle and inspection coverage around user-defined attributes
+- fuller `Listable` semantics beyond the currently implemented recursive
+  threading and mismatch-message subset
 
 Practical impact:
 
-- common argument-owned protocols can now be modeled with `TagSet` /
-  `TagSetDelayed`, but deeper multi-owner dispatch is still absent
-- host-side DSL embedding still cannot rely on the full Wolfram definition
-  lattice, especially where nested-head behavior must interact with future
-  `UpValues` refinements and richer tag operations
-- the call path is now more uniform and metadata-backed, but future builtin
-  families can still lean on handwritten stage internals if we are not careful
+- the current attribute model is already useful, but still far from the broader
+  Wolfram attribute surface
 
-### 3. Held Evaluation Is Functional but Not Yet Rich
+### 2. Definition Lattice And Precedence Are Still A Narrow Slice
 
-Held evaluation currently covers the main control constructs, but not the
-broader set of non-evaluation wrappers and held-pattern tools.
+The evaluator now has a workable precedence order for ownvalues, upvalues,
+downvalues, subvalues, builtins, and pure functions, but it still does not
+model the full broader definition lattice.
 
-Missing or incomplete areas:
+Missing or incomplete areas include:
 
-- more exact interaction rules among held wrappers, pattern matching, and
+- richer tag-based ownership and attachment models
+- broader metadata-driven semantics so fewer evaluator decisions remain
+  handwritten
+
+Practical impact:
+
+- common argument-owned protocols are possible, but deeper multi-owner and
+  future richer precedence cases are still absent
+
+### 3. Held Evaluation Is Functional But Not Exhaustive
+
+Held evaluation now covers the core control and wrapper subset, but not the
+full intended language.
+
+Missing or incomplete areas include:
+
+- more exact interactions among held wrappers, pattern matching, and
   substitution
+- deeper audit of wrappers that should preserve structure more faithfully
 
 Practical impact:
 
-- some advanced rule authoring patterns still require awkward workarounds
-- held pattern matching is less faithful than the intended core-language target
-- host DSL authors can now choose function application attributes explicitly,
-  but the surrounding held-wrapper rules are still not complete
+- advanced metaprogramming patterns can still hit rough edges even though the
+  main control-flow subset is usable
 
-### 4. Scoping Is Good Enough for Core Use, but Not Yet Exhaustive
+### 4. Scoping Semantics Are Good Enough For Core Use, But Not Yet Exhaustive
 
-`With`, `Module`, and `Block` are implemented, but they still represent a
-minimal semantics slice rather than a full scoping model.
+`With`, `Module`, and `Block` are implemented and useful, but still represent a
+core slice rather than a fully mature scoping system.
 
-Known gaps:
+Known gaps include:
 
-- `Block` now localizes definitions, user attributes, and message templates for
-  the named symbols it rebinds, but the runtime still lacks broader categories
-  such as options/format values
-- `Module` fresh-name allocation now skips pre-existing generated symbols, but
-  supporting machinery such as `$ModuleNumber` is absent
-- nested interactions among scoping, held patterns, and future attribute-driven
-  evaluation have not been fully audited yet
+- `Block` localizes currently supported categories, but broader categories such
+  as options/format-like state are still absent
+- `Module` freshness is much better than before, but supporting machinery such
+  as `$ModuleNumber` is still absent
+- deeper interactions among scoping, held patterns, and future attribute-driven
+  behavior have not been fully audited
 
-Practical impact:
+### 5. Evaluator Sequencing Still Has Some Ad Hoc Edges
 
-- the current behavior is strong enough for many rule DSL scenarios
-- deeper meta-programming workflows may still expose capture or rebinding edge
-  cases
+The evaluator is much less ad hoc than it used to be, but some sequencing rules
+and builtin-specific paths still need further consolidation.
 
-### 5. Evaluation Sequencing Is Still Somewhat Ad Hoc Around Builtins
+Known gaps include:
 
-The runtime now has a real evaluation loop, but some sequencing rules are still
-encoded directly in handlers rather than through a more general semantic model.
+- not every evaluator decision is yet driven by unified metadata or shared
+  normalization helpers
+- some remaining held/spec-driven families still need the same normalization
+  treatment already applied to messages, loaders, definitions, scoping, and
+  traversal config
 
-Known gaps:
+### 6. Non-`Expr` Helper Suspension Audit Is Not Fully Closed
 
-- special forms and ordinary builtins now share one staged dispatch path, and
-  builtin handlers are metadata-backed, but builtin metadata still does not
-  drive all evaluator decisions
-- future features can still accidentally lean on implicit ordering inside the
-  handwritten stage handlers
+Typed suspension/resume is now real kernel infrastructure, but the audit is not
+fully complete.
 
-Practical impact:
+Known gap:
 
-- adding new builtins is less error-prone than before, but still requires
-  careful placement when a feature needs brand-new stage behavior
-- it is easy for future features to accidentally depend on implicit handler
-  ordering
+- some remaining inspection/debug helper paths may still need to be pulled onto
+  the same typed continuation driver that now covers the currently audited
+  subset
 
-### 6. Pattern and Rule Semantics Still Cover Only the Intended Early Subset
+### 7. Pattern And Traversal Semantics Still Cover Only The Current Early Subset
 
-The matcher IR is in place, but it still targets the current early-language
-subset.
+The matcher is no longer minimal, but it still does not aim at the full
+language yet.
 
-Missing or incomplete areas:
+Missing or incomplete areas include:
 
-- richer pattern forms such as `Alternatives`, `Repeated`, `Optional`,
-  `PatternTest`, `Except`, `Longest`, and `Shortest`
-- tighter integration between held-pattern constructs and matcher lowering
-- broader traversal controls beyond the currently implemented `Cases` subset
+- richer pattern operators such as `Longest` and `Shortest`
+- broader traversal semantics beyond the currently implemented `Cases` subset
+- later integration work with future string-pattern semantics
 
 Practical impact:
 
 - rule authoring is already useful, but still not expressive enough for many
   mature Wolfram-style idioms
-- some business-rule authoring patterns will remain verbose until the matcher
-  language grows
 
-## Priority Order Suggested by This Audit
+## Priority Order Suggested By This Audit
 
 The cleanest next steps for `rum-runtime` are:
 
-1. keep consolidating evaluator metadata so special forms and ordinary builtins
-   sit on a more data-driven dispatch model instead of handwritten handler
-   registration
-2. extend tag-oriented lifecycle tools beyond `Unset` / `Clear` / `ClearAll`
-   into richer multi-owner tag behavior
-3. extend the attribute table from the current
-   hold/order/associativity/list-threading subset into later families
-4. continue auditing scoping and held-wrapper interactions now that
-   `Function[..., attrs]`, broader `Block`, and safer `Module` freshness are in
-   place
-5. widen the matcher language only after the current evaluation and scoping
-   semantics feel fully locked down
+1. continue tightening evaluator semantics and reducing the remaining ad hoc
+   sequencing edges
+2. continue auditing remaining raw-form / held-spec builtin families so they
+   join the shared normalization model
+3. finish auditing any remaining non-`Expr` helper paths for typed
+   suspension/resume
+4. widen matcher and traversal semantics only after the current evaluator
+   boundaries feel fully locked down
+5. strengthen verification and conformance coverage as the semantic surface
+   expands
 
 ## Summary
 
-`rum-runtime` now has a real evaluation core rather than a bootstrap echo
-interpreter. The remaining work is no longer "make evaluation exist"; it is
-"make the evaluator less ad hoc and more semantic."
+`rum-runtime` is now a real evaluator core rather than a bootstrap interpreter.
+The remaining work is no longer "make evaluation exist"; it is "make the
+evaluator less ad hoc, more explicit, and more complete."
 
 That is a good place to be. The implementation is already strong enough to
-support meaningful rule-based DSL experimentation, and the gaps are now narrow
-enough to attack in a deliberate order.
+support meaningful rule-based DSL experimentation, and the remaining gaps are
+now specific enough to attack deliberately.

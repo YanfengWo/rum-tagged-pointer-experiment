@@ -7,21 +7,19 @@ rule is final.
 
 ## Status
 
-The formatter now has a stable prototype surface for:
+The formatter is no longer a token-stream prototype. The current implementation
+is a trivia-aware document-IR pretty-printer built around `Doc`, `Break`,
+`SoftLine`, and `Group`.
+
+The current implemented surface includes:
 
 - canonical spacing across the currently supported syntax subset
 - preserved outer trivia and interior comment trivia
-- width-aware multiline layout for calls, lists, binary expressions, and binary
-  chains
+- width-aware layout for calls, lists, binary expressions, and binary chains
 - normalized hanging layouts for multiline binary chains
-- regression coverage for mixed inline/block comment placement in nested forms
-- a document-IR pretty-printer built around `Doc`, `Break`, `SoftLine`, and
-  `Group`
-
-The current implementation is no longer a token-stream layout-hint formatter.
-It now builds a document IR directly from parsed syntax and trivia, uses a
-structured group planner for containers and binary chains, and renders groups
-with current-column-aware fit checks.
+- current-column-aware fitting of nested groups
+- regression coverage for nested forms, comments, width-driven layout, and
+  idempotence
 
 ## API
 
@@ -34,6 +32,9 @@ The default `line_width` is `40`.
 
 The CLI exposes width override through `--format ... --line-width N`.
 The REPL exposes width override through `:format [--line-width N] EXPR`.
+
+Formatter-option parsing is now shared across CLI and REPL so width handling
+and error messages stay aligned.
 
 ## Current Layout Rules
 
@@ -75,31 +76,31 @@ The formatter now has:
 
 - targeted regression tests for nested forms, width-driven layout, and comment
   placement
+- regression coverage for long inline comments and escaped string literals in
+  width-driven layouts
 - an idempotence regression corpus that asserts
   `format(format(source)) == format(source)` for representative inputs
-- regression coverage for current-column-aware fitting of nested groups
+- current-column-aware fit coverage for nested groups
 
 ## Known Limitations
 
-- Width fitting still uses `flat_width` estimates derived from syntax display,
-  not the exact flat rendering of the document tree.
-- As a result, very long inline comments or string literals that need escaping
-  can remain inline longer than the configured `line_width` would suggest.
-- CLI and REPL both expose `line_width`, but they currently parse that option
-  with separate helper implementations rather than one shared formatter-UX path.
+- The formatter only covers the currently implemented syntax subset. As parser
+  and evaluator surface area grows, formatter coverage will need to expand with
+  it.
+- Width and grouping policy are intentionally simple and local. The formatter
+  is good at the current call/list/binary subset, but it is not yet trying to
+  solve broader global layout optimization across every future construct.
+- Formatter internals are still larger and flatter than the strengthened code-
+  organization rules ideally allow, especially inside `formatter.rs`.
 
 ## Next Formatter Milestone
 
-The current formatter milestone is now architectural consolidation rather than
-another formatter rewrite.
+The current formatter milestone is continued consolidation rather than another
+architectural rewrite.
 
-The remaining work is to keep refining the pretty-printer implementation:
+The remaining work is to:
 
-- replace estimated `flat_width` planning with true flat-doc measurement
-- add width-regression coverage for long inline comments and escaped strings
-- fix syntax-display string escaping so formatter planning can rely on
-  round-trippable surface rendering
-- unify formatter option parsing across CLI and REPL
-- continue splitting formatter internals into smaller planner, builder, render,
-  and test modules
-- keep expanding the regression corpus as new syntax support lands
+- keep splitting formatter internals into smaller planner, builder, render, and
+  test modules
+- continue expanding formatter coverage as more syntax/operators are added
+- keep extending the regression corpus as the supported syntax surface grows

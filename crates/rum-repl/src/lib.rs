@@ -4,11 +4,10 @@ use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
 
 use rum_runtime::{Session, SessionRequestError, SessionRequestFailure};
-use rum_syntax::{format_parsed_source, parse_format_command};
-use rum_terminal::{
-    render_eval_response, render_inspect_response, render_message_catalog_entries,
-    render_request_failure,
-};
+use rum_terminal::{render_eval_response, render_request_failure};
+
+mod commands;
+use self::commands::*;
 
 pub struct Repl<R, W> {
     input: R,
@@ -17,12 +16,6 @@ pub struct Repl<R, W> {
     continuation_prompt: String,
     history: Vec<String>,
     history_path: Option<PathBuf>,
-}
-
-enum CommandAction {
-    NotHandled,
-    Handled,
-    Exit,
 }
 
 impl<R, W> Repl<R, W>
@@ -99,16 +92,14 @@ where
             }
 
             if buffer.trim().is_empty() {
-                match self.try_handle_command(session, trimmed)? {
-                    CommandAction::Exit => {
+                if let Some(execution) = self.try_handle_command(session, trimmed)? {
+                    if matches!(execution, CommandExecution::Exit) {
                         self.record_history(trimmed);
                         return Ok(());
                     }
-                    CommandAction::Handled => {
-                        self.record_history(trimmed);
-                        continue;
-                    }
-                    CommandAction::NotHandled => {}
+
+                    self.record_history(trimmed);
+                    continue;
                 }
             }
 
@@ -195,178 +186,28 @@ where
         &mut self,
         session: &mut Session,
         line: &str,
-    ) -> io::Result<CommandAction> {
-        match line {
-            ":quit" | ":q" => Ok(CommandAction::Exit),
-            ":help" => {
-                writeln!(self.output, ":help           Show REPL commands.")?;
-                writeln!(
-                    self.output,
-                    ":parse EXPR     Parse and print the syntax tree."
-                )?;
-                writeln!(
-                    self.output,
-                    ":format [--line-width N] EXPR  Format syntax into the current canonical style."
-                )?;
-                writeln!(
-                    self.output,
-                    ":lower EXPR     Lower syntax into core Expr form."
-                )?;
-                writeln!(
-                    self.output,
-                    ":complete PREF  Show symbol and context completions."
-                )?;
-                writeln!(self.output, ":history [N]    Show recent input history.")?;
-                writeln!(self.output, ":inspect NAME   Show basic symbol metadata.")?;
-                writeln!(
-                    self.output,
-                    ":messages [NAME]   Show message definitions globally or for a symbol/message."
-                )?;
-                writeln!(self.output, ":quit           Exit the REPL.")?;
-                Ok(CommandAction::Handled)
+    ) -> io::Result<Option<CommandExecution>> {
+        let Some(command) = (match parse_repl_command(line) {
+            Ok(command) => command,
+            Err(message) => {
+                writeln!(self.output, "! {message}")?;
+                return Ok(Some(CommandExecution::Output(String::new())));
             }
-            _ if line == ":parse" || line.starts_with(":parse ") => {
-                let input = line.trim_start_matches(":parse").trim();
+        }) else {
+            return Ok(None);
+        };
 
-                if input.is_empty() {
-                    writeln!(self.output, "! :parse expects an expression")?;
-                } else {
-                    match session.parse_request(input) {
-                        Ok(response) => write!(self.output, "{}", response.parsed.debug_dump())?,
-                        Err(failure) => write_request_failure(&mut self.output, &failure)?,
-                    }
-                }
+        let execution = execute_repl_command(session, &self.history, command);
 
-                Ok(CommandAction::Handled)
+        match &execution {
+            CommandExecution::Exit => {}
+            CommandExecution::Output(rendered) if rendered.is_empty() => {}
+            CommandExecution::Output(rendered) => {
+                writeln!(self.output, "{rendered}")?;
             }
-            _ if line == ":format" || line.starts_with(":format ") => {
-                let input = line.trim_start_matches(":format").trim();
-
-                match parse_format_command(input, ":format") {
-                    Err(message) => writeln!(self.output, "! {message}")?,
-                    Ok((expr, options)) => match session.parse_request(expr) {
-                        Ok(response) => {
-                            let formatted = format_parsed_source(&response.parsed, options);
-                            writeln!(self.output, "{formatted}")?;
-                        }
-                        Err(failure) => write_request_failure(&mut self.output, &failure)?,
-                    },
-                }
-
-                Ok(CommandAction::Handled)
-            }
-            _ if line == ":lower" || line.starts_with(":lower ") => {
-                let input = line.trim_start_matches(":lower").trim();
-
-                if input.is_empty() {
-                    writeln!(self.output, "! :lower expects an expression")?;
-                } else {
-                    match session.lower_request(input) {
-                        Ok(response) => writeln!(self.output, "{}", response.expr)?,
-                        Err(failure) => write_request_failure(&mut self.output, &failure)?,
-                    }
-                }
-
-                Ok(CommandAction::Handled)
-            }
-            _ if line == ":history" || line.starts_with(":history ") => {
-                let raw_limit = line
-                    .strip_prefix(":history")
-                    .map(str::trim)
-                    .filter(|raw| !raw.is_empty());
-
-                let limit = match raw_limit {
-                    Some(raw) => match raw.parse::<usize>() {
-                        Ok(limit) => Some(limit),
-                        Err(_) => {
-                            writeln!(self.output, "! invalid history count `{raw}`")?;
-                            return Ok(CommandAction::Handled);
-                        }
-                    },
-                    None => None,
-                };
-
-                if self.history.is_empty() {
-                    writeln!(self.output, "(no history)")?;
-                    return Ok(CommandAction::Handled);
-                }
-
-                let limit = limit.unwrap_or(self.history.len());
-                let start = self.history.len().saturating_sub(limit);
-
-                for (index, entry) in self.history[start..].iter().enumerate() {
-                    writeln!(
-                        self.output,
-                        "{:>4}: {}",
-                        start + index + 1,
-                        entry.replace('\n', "\\n")
-                    )?;
-                }
-
-                Ok(CommandAction::Handled)
-            }
-            _ if line == ":complete" || line.starts_with(":complete ") => {
-                let prefix = line.trim_start_matches(":complete").trim();
-
-                if prefix.is_empty() {
-                    writeln!(self.output, "! :complete expects a prefix")?;
-                    return Ok(CommandAction::Handled);
-                }
-
-                let completions = session.complete_symbol_prefix(prefix);
-
-                if completions.is_empty() {
-                    writeln!(self.output, "(no completions)")?;
-                } else {
-                    for completion in completions {
-                        writeln!(self.output, "{completion}")?;
-                    }
-                }
-
-                Ok(CommandAction::Handled)
-            }
-            _ if line == ":inspect" => {
-                writeln!(self.output, "! :inspect expects a symbol name")?;
-                Ok(CommandAction::Handled)
-            }
-            _ if line.starts_with(":inspect ") => {
-                let name = line.trim_start_matches(":inspect ").trim();
-
-                if let Some(response) = session.inspect_request(name) {
-                    writeln!(self.output, "{}", render_inspect_response(&response))?;
-                } else {
-                    writeln!(self.output, "! unknown symbol `{name}`")?;
-                }
-
-                Ok(CommandAction::Handled)
-            }
-            _ if line == ":messages" || line.starts_with(":messages ") => {
-                let query = line
-                    .strip_prefix(":messages")
-                    .map(str::trim)
-                    .filter(|query| !query.is_empty());
-
-                let Some(entries) = session.inspect_message_catalog(query) else {
-                    let name = query.unwrap_or("<invalid>");
-                    writeln!(self.output, "! invalid message selector `{name}`")?;
-                    return Ok(CommandAction::Handled);
-                };
-
-                if entries.is_empty() {
-                    if let Some(name) = query {
-                        writeln!(self.output, "! no messages for `{name}`")?;
-                    } else {
-                        writeln!(self.output, "(no message definitions)")?;
-                    }
-                    return Ok(CommandAction::Handled);
-                }
-
-                writeln!(self.output, "{}", render_message_catalog_entries(&entries))?;
-
-                Ok(CommandAction::Handled)
-            }
-            _ => Ok(CommandAction::NotHandled),
         }
+
+        Ok(Some(execution))
     }
 }
 

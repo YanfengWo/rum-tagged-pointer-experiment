@@ -1,6 +1,7 @@
 # TODO
 
-This roadmap now uses two levels of detail:
+This roadmap intentionally uses two levels of detail:
+
 - compact phase summaries for capability blocks that are already largely done
 - detailed checklists only for work that is still open or likely to move soon
 
@@ -11,187 +12,119 @@ This roadmap now uses two levels of detail:
 - [x] Set up the Git-managed Rust workspace, baseline docs, and exact integer support
 - [x] Keep the workspace compiling and passing tests as the project evolves
 - [x] Establish source-organization guidelines and convert major `include!`-style roots into real module boundaries
+- [ ] Keep source organization aligned with the strengthened code-organization rules: human-readable modules, maintainable file sizes, feature-oriented subfolders, incremental-compilation-friendly boundaries, and unit-test-friendly function design
 
 ### Phase 1: Syntax Frontend
 
-- [x] Build a stable `rum-syntax` foundation with AST, lexer, parser, core precedence, lists, calls, rules, patterns, slots, and pure functions
-- [ ] Add spans, richer diagnostics, recovery, comments, and additional operator coverage
+- [x] Build a stable `rum-syntax` foundation with AST, lexer, parser, spans, source-aware diagnostics, preserved trivia, multiline-aware parsing, and a document-IR formatter
+- [ ] Continue expanding operator coverage and keep splitting formatter internals as the syntax surface grows
 
 ### Phase 2: Core Lowering and IR
 
 - [x] Lower the currently supported syntax into working core `Expr` forms used by the runtime
-- [x] Formalize the lowering pipeline, canonical core-head inventory, and golden test coverage
+- [x] Formalize the lowering pipeline, canonical core-head inventory, validation boundary, and golden test coverage
+- [ ] Revisit integer representation later if performance demands it; evaluate whether `rum-core::Atom::Integer` should stay pure `BigInt` or grow a `small-int + bigint` hybrid representation
 
 ### Phase 3: Definitions and Evaluation
 
-- [x] Implement sessions, contexts, package loading, ownvalues/upvalues/downvalues/subvalues, hold-aware evaluation, and core assignment semantics
-- [x] Add first-class definition inspection for ownvalues, downvalues, and message definitions
-- [ ] Tighten evaluation semantics where the current interpreter is still ad hoc
+- [x] Implement sessions, contexts, package loading, ownvalues/upvalues/downvalues/subvalues, hold-aware evaluation, shared normalization families, and core assignment semantics
+- [x] Add first-class definition inspection plus shared raw-form normalization across message, definition, scoping, and loader families
+- [ ] Tighten the remaining evaluator semantics where behavior is still somewhat ad hoc
 
 ### Phase 4: Rules and Pattern Matching
 
-- [x] Implement matcher-IR-backed matching with `Rule`, `RuleDelayed`, `MatchQ`, `Cases`, `ReplaceAll`, `ReplaceRepeated`, conditions, sequence blanks, and rule inspection
+- [x] Implement matcher-IR-backed matching for the current early subset, including conditions, sequence blanks, `PatternTest`, `Alternatives`, `Optional`, `Except`, `Repeated`, `MatchQ`, `Cases`, `ReplaceAll`, and `ReplaceRepeated`
+- [x] Extend matcher and rewrite flows so suspended input can resume without replaying whole outer rewrites
 - [ ] Extend the matcher language and traversal semantics beyond the current early subset
 
 ### Phase 5: Scoping and Runtime Control
 
 - [x] Implement `Hold*`, `Evaluate`, `Sequence`, `If`, `Which`, `Function`, `With`, `Module`, `Block`, tracing, resource limits, and the current attribute/threading subset
+- [x] Add host-driven input through `InputString` plus real suspension/resume for request-oriented execution
+- [ ] Continue auditing remaining non-`Expr` helper paths that still need the same suspension-safe treatment
 
 ### Phase 6: REPL and Developer Tooling
 
-- [x] Ship a usable REPL baseline with evaluation, runtime-message rendering, `:inspect`, and `:messages`
-- [ ] Add multiline input, richer inspection, debug views, and stronger regression coverage
+- [x] Ship a usable REPL baseline with multiline input, history, completion, `:parse`, `:format`, `:lower`, `:inspect`, `:messages`, and shared terminal rendering
+- [x] Add CLI parse/format entrypoints and formatter width overrides shared with REPL behavior
+- [ ] Continue tightening regression coverage and decide whether trace viewing belongs in the REPL surface
 
 ### Phase 7: Embedding and Jupyter Preparation
 
 - [x] Stabilize a host-facing request/config API around `Session` and keep terminal rendering out of it
-- [x] Create an initial protocol-facing completion/kernel adapter slice and a first `rum-jupyter` crate
-- [ ] Continue hardening `rum-jupyter` from an early adapter into a fuller Jupyter-facing kernel surface with real transport/lifecycle polish
+- [x] Create an initial `rum-jupyter` crate with execute/inspect/complete/is-complete mapping, structured outputs, stdin handling, wire codecs, connection-file/bootstrap support, local socket backends, and native ZeroMQ-backed transport coverage
+- [ ] Continue hardening `rum-jupyter` from an early adapter into a fuller Jupyter-facing kernel surface with more lifecycle/frontend compatibility polish
 
 ### Phase 8: String Language and Text Processing
 
 - [ ] Build toward full Wolfram core-language string support for business, industrial, and DLS-oriented workloads
 - [ ] Decide when the string subsystem is large and stable enough to justify a dedicated crate boundary
 
-## Open Workstreams
+### Phase 9: Verification, Coverage, and Conformance
 
-### `rum-syntax`: Spans and Diagnostics
+- [ ] Build a deliberate, cross-cutting test strategy instead of relying only on feature-local regressions
+- [ ] Expand the project toward a fuller test suite covering unit behavior, boundary conditions, semantic regressions, and host-facing conformance
+- [ ] Add optional differential checking against Wolfram behavior where local `wolframscript` is available
 
-- [x] Choose a span model shared by lexer tokens, AST nodes, and future runtime diagnostics
-- [x] Attach spans to all syntax nodes without breaking the current parser API too abruptly
-- [x] Preserve operator and delimiter spans well enough to point at concrete source locations
-- [x] Add a parsed-source API that bundles source text, spans, syntax, and preserved trivia for formatter and source-preserving diagnostics
-- [x] Add parser diagnostics for missing `]`, `}`, and `)` with useful labels
-- [x] Distinguish incomplete input from hard parse failure for REPL-friendly multiline handling
-- [x] Introduce limited parser recovery so one malformed form does not poison the whole script
-- [x] Add regression tests for malformed calls, lists, patterns, and pure functions
-- [x] Build richer user-facing diagnostics on top of the parsed-source / source-location helpers
+## Active Workstreams
 
-### `rum-syntax`: Formatter Prototype
+### Code Organization and Testability
 
-- [x] Introduce a formatter prototype API that works from parsed syntax rather than runtime lowering
-- [x] Preserve outer trivia in the prototype formatter while canonicalizing the core expression layout
-- [x] Preserve and reattach interior comments/trivia across the current token-stream formatting subset
-- [x] Decide how indentation and line breaking should interact with interior comments in the current formatter passes
-- [x] Add formatter regression coverage for more complex nested forms, chains, and comment placement
-- [x] Expand `FormatterOptions` with configurable width control for API callers
-- [x] Add idempotence coverage for a representative formatter regression corpus
-- [x] Replace the current token-stream layout-hint engine with a document-IR pretty-printer while preserving trivia-aware output
-- [x] Decide whether to expose formatter width control through the CLI and REPL surfaces
-- [x] Replace `flat_width` estimates based on `SyntaxExpr::to_string()` with flat-doc width measurement so comments and escaped strings participate in fit decisions
-- [x] Add formatter regression coverage for width-driven layouts that include long inline comments and escaped string literals
-- [ ] Continue splitting formatter internals into smaller planner/builder/test modules as the syntax surface grows
+- [ ] Keep turning large branch-heavy functions into smaller helpers when that makes important policy or normalization behavior reachable from direct unit tests
+- [ ] Keep separating pure planning/normalization logic from state mutation and rendering paths when that improves testability without creating micro-modules
+- [ ] Split active files that have already grown well past the `10k` warning threshold, starting with:
+  - [ ] `crates/rum-jupyter/src/transport.rs`
+  - [ ] `crates/rum-jupyter/src/tests.rs`
+  - [ ] `crates/rum-jupyter/src/zeromq.rs`
+  - [ ] `crates/rum-jupyter/src/adapter.rs`
+  - [ ] `crates/rum-syntax/src/formatter.rs`
+  - [ ] `crates/rum-runtime/src/runtime/pattern_matching.rs`
+  - [ ] `crates/rum-runtime/src/runtime/tests/session_requests.rs`
 
-### `rum-syntax`: Comments and Surface Expansion
+### `rum-syntax`
 
-- [x] Add Wolfram-style `(* ... *)` comment lexing
-- [x] Ensure comments can appear between tokens without changing parse results
-- [x] Preserve whitespace/comment trivia in a structured lexer output for future tooling without disturbing the parser token stream
-- [x] Add tests for comments around operators, calls, and nested expressions
-- [x] Fix `SyntaxExpr::Display` string escaping so syntax display remains round-trippable for quoted strings
-- [ ] Audit the next operator set needed by the evaluator roadmap and prioritize them explicitly
+- [ ] Continue splitting formatter internals into smaller planner/builder/render/test modules as the syntax surface grows
+- [ ] Audit the next operator set needed by the evaluator roadmap and prioritize it explicitly
 
-### CLI and REPL Formatter UX
+### `rum-runtime`
 
-- [x] Share formatter option parsing between CLI and REPL so `line_width` handling, accepted shapes, and error messages stay aligned
-
-### `rum-core` and Lowering Cleanup
-
-Reference docs for this workstream:
-- `docs/lowering-canonical-forms.md`
-- `docs/runtime-evaluation-audit.md`
-
-- [x] Audit every currently supported syntax feature and document its canonical lowered `Expr` form
-- [x] Centralize the list of canonical core heads for rules, patterns, slots, scoping, contexts, and messages
-- [x] Separate parser sugar from runtime-canonical representation more explicitly in the lowering code
-- [x] Add golden tests for syntax-to-core lowering across rules, patterns, scoping, messages, and package constructs
-- [x] Decide where lowering-time validation should stop and runtime validation should begin
-- [ ] Revisit integer representation later if performance demands it; evaluate whether `rum-core::Atom::Integer` should stay pure `BigInt` or grow a `small-int + bigint` hybrid representation
-
-### `rum-runtime`: Definition Inspection
-
-- [x] Decide the public shape of definition-inspection builtins and their output conventions
-- [x] Implement `OwnValues[symbol]` for immediate own values
-- [x] Extend `OwnValues[symbol]` to surface delayed own values distinctly
-- [x] Implement `DownValues[symbol]` while preserving rule order and delayedness
-- [x] Keep message definitions on their own inspection path instead of merging them into `OwnValues` / `DownValues`
-- [x] Extend `:inspect` to show a short summary of stored ownvalues and downvalues
-- [x] Add regression tests for definition inspection on plain symbols, delayed values, and pattern-based downvalues
-
-### `rum-runtime`: Matcher IR and Rule Debugging
-
-- [x] Define a matcher IR that can represent `Blank`, `Pattern`, `Condition`, `BlankSequence`, and `BlankNullSequence`
-- [x] Lower supported pattern expressions into that matcher IR
-- [x] Keep the current interpreter-based matcher as a reference path during the migration
-- [x] Route `MatchQ` through the shared compiled matcher entrypoint
-- [x] Route rule application and downvalue matching through the same compiled matcher path
-- [x] Add rule-inspection helpers that make immediate vs delayed behavior and normalized rule form easier to see
-- [x] Add tests that compare interpreter and compiled matcher behavior on the supported subset
-
-### `rum-runtime`: `Cases` and Traversal Controls
-
-- [x] Decide the minimum level-spec subset to support first: `n`, `Infinity`, or `{min, max}`
-- [x] Parse and normalize level specifications into an internal representation
-- [x] Teach `Cases` to honor simple numeric level specs
-- [x] Extend `Cases` to support bounded ranges such as `{min, max}`
-- [x] Add explicit head-traversal control instead of hard-coding the current "do not visit heads" behavior
-- [x] Add traversal tests that lock down root, head, and nested-argument behavior
-
-### `rum-runtime`: Evaluation Follow-Through
-
-- [x] Audit current evaluation behavior against the intended Mathematica-style sequence and list the known gaps
-- [x] Write down the current evaluation pipeline and prioritized semantic gaps in `docs/runtime-evaluation-audit.md`
-- [x] Preserve language-level messages emitted by successful earlier forms when a later form aborts `eval_script`
-- [x] Roll back definitions, contexts, loaded packages, traces, and message state when `eval_file` / `Get` fail
-- [x] Add a fixed-point evaluation pass limit alongside recursion and `ReplaceRepeated` limits
-- [x] Continue tightening the remaining boundary between evaluation errors and language-level messages outside loader/script flows
-- [x] Refactor ordinary call evaluation around a staged dispatch model that covers special forms, argument preparation, list threading, definitions, builtins, and pure functions
-- [x] Route builtin stage selection through metadata-backed builtin specs instead of direct name-based dispatch branches
-- [x] Build call-dispatch stage plans from builtin metadata, attributes, and head traits so inactive stages are omitted instead of being no-op filtered later
-- [x] Normalize rewrite pattern / rule / traversal spec parsing through shared helpers instead of keeping separate ad hoc paths in `MatchQ`, `Cases`, `ReplaceAll`, and `ReplaceRepeated`
-- [x] Normalize raw message-selector parsing through a shared `Check` / `Quiet` helper instead of inline selector branches
-- [x] Normalize loader-spec parsing through shared `FindFile` / `Get` / `Needs` / `BeginPackage` call-config helpers
-- [x] Normalize message and definition-inspection targets through shared raw-form helpers across `Message`, `Messages`, `MessageDefinitions`, `MessageTags`, `OwnValues`, `UpValues`, `DownValues`, and `SubValues`
-- [x] Normalize definition-assignment lhs parsing through a shared raw-form helper across `Set` and `SetDelayed`
-- [x] Normalize `With` / `Module` / `Block` binding-list parsing through a shared raw-form family while preserving held/raw binding semantics
-- [x] Normalize definition-clear / tagged-target parsing through shared raw-form helpers across `Clear`, `ClearAll`, `Unset`, `TagSet`, `TagSetDelayed`, and `TagUnset`
+- [ ] Continue tightening evaluator semantics where stage ordering or builtin behavior is still more ad hoc than intended
 - [ ] Continue auditing any remaining held/spec-driven target families so raw-form builtins stop hand-rolling target parsing one by one
+- [ ] Continue auditing remaining non-`Expr` inspection/debug helper paths that still need typed suspension-driver treatment
+- [ ] Continue extending matcher and traversal semantics beyond the currently implemented early subset
 
-### `rum-runtime`: Attribute and Definition Semantics
+### `rum-repl` and `rum-cli`
 
-- [x] Add a first-class runtime attribute table instead of relying only on builtin hold metadata and fallback rules
-- [x] Implement `Attributes`, `SetAttributes`, and `ClearAttributes`
-- [x] Add `SequenceHold` and route argument preprocessing through attribute-aware sequence handling
-- [x] Add `HoldAllComplete` and make held-argument evaluation honor it
-- [x] Extend attribute-driven normalization and matching with `Orderless`, `Flat`, and `OneIdentity`
-- [x] Add recursive `Listable` threading for user-defined symbols, pure functions, and builtin arithmetic heads
-- [x] Emit `Thread::tdlen`-style runtime messages when `Listable` arguments cannot be threaded together
-- [x] Add an explicit `Thread` builtin and share threading helpers between `Thread` and `Listable`
-- [x] Support `Thread[expr]` and `Thread[expr, head]` with scalar broadcast and mismatch preservation for the current subset
-- [x] Support the standard sequence-spec subset for `Thread`'s third argument: `All`, `None`, `n`, `-n`, `{n}`, `{m, n}`, and `{m, n, s}`
-- [x] Make `Thread` evaluate its first argument before threading, matching the documented Wolfram behavior more closely
-- [x] Decide and document precedence among upvalues, downvalues, builtin dispatch, and future attribute-driven evaluation
-- [x] Add `/:` syntax and `TagSet` / `TagSetDelayed` lowering support
-- [x] Add `UpValues[symbol]` inspection and structured definition-catalog coverage
-- [x] Add runtime upvalue storage and matching for argument-owned behavior
-- [x] Add `Unset` support for ownvalues, downvalues, and tagged upvalues
-- [x] Add `Clear` to remove values and rule-based definitions while leaving messages and attributes available for later inspection
-- [x] Add `ClearAll` to extend `Clear` with message and user-defined attribute reset semantics
-- [x] Add `SubValues[symbol]` inspection and nested-head definition storage
-- [x] Add runtime subvalue matching for expressions such as `f[x_][y_]`
-- [x] Extend `Set` / `SetDelayed` and tagged definitions to cover immediate and delayed subvalues
-- [x] Add explicit `TagUnset` support and route `f /: lhs =.` through it
-- [x] Tighten tag validation to outer-two-level positions and emit dedicated tag lifecycle messages
+- [ ] Decide whether trace viewing belongs in the REPL and, if so, add a minimal command flow for it
+- [ ] Add snapshot-style regression coverage for help output, inspection flows, and runtime-message rendering
+- [ ] Add CLI regression coverage for future machine-readable output modes if and when they are introduced
 
-### `rum-runtime`: Held Evaluation and Scoping Gaps
+### `rum-jupyter`
 
-- [x] Add `Unevaluated`
-- [x] Add `HoldPattern`
-- [x] Add `ReleaseHold`
-- [x] Let `Function` accept explicit attributes / hold behavior
-- [x] Audit `Block` rebinding scope beyond ownvalue-style symbol values and localize definitions, attributes, and messages
-- [x] Audit `Module` freshness and capture edge cases now that more held and rule-based constructs exist
-- [x] Add regression tests that lock down interactions among head evaluation, delayed definitions, held arguments, and scoping
+- [ ] Keep the kernel adapter optional and layered on top of host-facing runtime APIs rather than letting protocol details leak back into `rum-runtime`
+- [ ] Continue hardening lifecycle and frontend-compatibility details beyond the current local-socket and native-ZeroMQ-backed coverage
+- [ ] Continue splitting oversized `rum-jupyter` transport/backend/test modules as part of the code-organization workstream
+
+### Cross-Cutting Test Suites and Conformance
+
+- [ ] Define a project-wide testing pyramid that distinguishes:
+  - [ ] direct unit tests for small helpers, planners, normalization logic, and matcher branches
+  - [ ] subsystem regression tests for syntax, lowering, runtime, terminal, REPL, CLI, and Jupyter adapters
+  - [ ] end-to-end behavior tests for user-facing flows and protocol-level interactions
+- [ ] Strengthen boundary and edge-case coverage for parser, lowering, evaluator, matcher, scoping, threading, loader, and message semantics
+- [ ] Add broader regression corpora and golden fixtures for syntax formatting, lowering, evaluation, runtime messages, and transport-facing APIs
+- [ ] Establish explicit coverage goals for high-risk semantic areas instead of relying only on opportunistic test growth
+- [ ] Add differential-conformance fixtures that compare selected `rum` results against Wolfram behavior for the supported subset
+- [ ] Keep Wolfram-oracle checks optional and environment-gated:
+  - [ ] prefer local `wolframscript` when available
+  - [ ] do not make default development or CI flows depend on Wolfram tooling being installed
+  - [ ] record any deliberate divergences from Wolfram behavior alongside those fixtures
+- [ ] Prioritize oracle-style checks for the most semantics-sensitive areas first:
+  - [ ] arithmetic normalization and exact-integer behavior
+  - [ ] rules, patterns, replacement, and traversal behavior
+  - [ ] scoping and held-evaluation constructs
+  - [ ] messages, attributes, and definition precedence
+  - [ ] string semantics once the string workstream begins landing
 
 ### Post-Core Workstream: Full String Language
 
@@ -199,85 +132,10 @@ Reference docs for this workstream:
 - [ ] Keep string literal parsing in `rum-syntax`, the canonical string atom in `rum-core`, evaluation semantics in `rum-runtime`, and builtin registration in `rum-stdlib` for the first implementation wave
 - [ ] Do not create a dedicated string crate yet; revisit a future `rum-string` extraction only after the builtin surface, shared helpers, and performance constraints are concrete enough to justify a new boundary
 - [ ] Audit the Wolfram core-language string surface and split it into explicit implementation tiers with documented priorities
-- [ ] Tier 0 correctness: finish round-trippable string escaping/display, decide the Unicode/codepoint model, and lock down escape/unicode regression fixtures
+- [ ] Tier 0 correctness: decide the Unicode/codepoint model and lock down escape/unicode regression fixtures
 - [ ] Tier 1 basic construction and slicing: `StringJoin`, `StringLength`, `Characters`, `CharacterRange`, `StringRepeat`, `ToString`, `StringTake`, `StringDrop`, and `StringPart`
 - [ ] Tier 2 search and transformation: `StringContainsQ`, `StringStartsQ`, `StringEndsQ`, `StringPosition`, `StringSplit`, `StringTrim`, `StringReplace`, and `StringCases`
 - [ ] Tier 3 string patterns: `StringExpression`, alternatives, repetition forms, start/end anchors, `Shortest` / `Longest`, and `RegularExpression` interop
 - [ ] Tier 4 conversions and interoperability: `CharacterCode`, `FromCharacterCode`, formatting/conversion touchpoints, file/path string conventions, and message-template compatibility
 - [ ] Add golden tests that cover evaluator behavior, round-tripping, formatting, matching, and unicode-heavy cases across the implemented string subset
 - [ ] Document supported string semantics, temporary limitations, and any deliberate divergence from Wolfram behavior as the subsystem grows
-
-### `rum-repl` and `rum-cli`: Interactive Ergonomics
-
-- [x] Detect incomplete input and keep reading until a form is syntactically complete
-- [x] Add a continuation prompt for multiline entry
-- [x] Add line history persistence
-- [x] Add symbol completion from builtins, active contexts, loaded packages, and user-defined symbols
-- [x] Expand `:inspect` output with context, definition, and message-catalog details
-- [x] Add a parse debug command such as `:parse`
-- [x] Render parser diagnostics with line/column/snippet output in REPL debug and interactive paths
-- [x] Add a formatting debug command such as `:format`
-- [x] Add a lowering debug command such as `:lower`
-- [x] Add CLI parse/format entrypoints that reuse the source-aware syntax tooling
-- [ ] Decide whether trace viewing belongs in the REPL and, if so, add a minimal command flow for it
-
-### REPL and CLI Regression Coverage
-
-- [ ] Add snapshot tests for help output, inspection flows, and runtime-message rendering
-- [x] Add multiline-session tests once multiline input exists
-- [ ] Add CLI tests for `--eval`, file execution, and machine-readable output modes as they are introduced
-
-### Embedding and Jupyter Preparation
-
-- [x] Define a stable session-configuration surface for hosts to set resource limits, search paths, and context defaults
-- [x] Stabilize parse/eval/inspect entrypoints that return machine-readable outcomes instead of terminal-formatted text
-- [x] Carry messages, traces, and diagnostics in a transport-friendly structure that does not depend on the REPL
-- [x] Separate terminal presentation concerns from protocol-facing kernel concerns more explicitly in crate boundaries
-- [x] Add a transport-friendly completion request/response surface alongside parse/eval/inspect
-- [x] Define the first protocol-neutral kernel models for execute, inspect, and completion traffic
-- [x] Create an initial `rum-jupyter` crate now that the host API is stable enough
-- [x] Map Jupyter-style execute, inspect, and completion requests onto the stabilized session API
-- [x] Decide the first-pass execute result surface: execution count, rendered result payloads, messages, and structured failures
-- [x] Add adapter-level tests that lock down kernel/request translation without requiring a notebook frontend
-- [x] Add an initial execute output model with text/plain result payloads, stderr-style runtime-message streams, and structured error outputs
-- [x] Promote execute outputs from plain text placeholders to MIME-bundle payloads and separate `execute_result` from `display_data`
-- [x] Add a first shell-envelope/lifecycle layer with request ids plus `kernel_info` and `shutdown`
-- [x] Add inspect-side MIME-bundle output and metadata so protocol adapters do not need terminal formatting for hover/help flows
-- [x] Add output metadata and richer MIME variants such as markdown/custom `rum` bundles for execute and trace payloads
-- [x] Replace the toy request envelope with a more Jupyter-like message header / parent-header / channel shape
-- [x] Split shell replies from `IOPub` traffic and emit first-pass wire-level `status`, `execute_input`, and output events
-- [x] Introduce minimal control/lifecycle handling with interrupt/shutdown requests plus tracked execution/lifecycle state
-- [x] Align execute / inspect / complete / kernel-info reply contents more closely with Jupyter-style content fields instead of relying mostly on envelope metadata
-- [x] Add an `is_complete` request/response path on both the stable session API and the `rum-jupyter` adapter
-- [x] Introduce a first wire-message encoding / transport boundary for shell replies and `IOPub` publication
-- [x] Add inbound wire decoding for request messages so notebook-facing transports can recover structured envelopes instead of hand-parsing JSON
-- [x] Add first-pass signature, session-id, and request-channel validation around the wire codec
-- [x] Add a mock socket transport that models separate shell / control / `IOPub` channels for adapter-level testing
-- [x] Add symmetric inbound decoding for shell replies and `IOPub` traffic so the wire codec is round-trippable in both directions
-- [x] Replace the ad hoc optional signature key with a clearer signing policy surface that can require or optionally accept signed messages
-- [x] Preserve shell reply routing ids and add a first mock-transport event pump that can decode wire requests, dispatch them, and publish wire responses
-- [x] Tighten reply / `IOPub` schema details with header dates plus lifecycle-aware `status` and `shutdown` content
-- [x] Grow the mock event-pump into a more realistic control-first transport loop that can keep draining queued work until idle or stop after shutdown
-- [x] Add a first protocol-side stdin path with `allow_stdin`, `input_request` / `input_reply`, and pending-input handling in the mock transport loop
-- [x] Tighten notebook-facing completion cursor semantics so replacement ranges cover the full symbol span when the cursor sits inside an identifier
-- [x] Add a first Jupyter connection-file model/parser and a bootstrap-config layer for deriving endpoint URIs plus wire/signature setup
-- [x] Define a transport-backend seam so the current mock transport and a future ZeroMQ backend can share the same bootstrap/layout boundary
-- [x] Connect the protocol-side stdin scaffolding to a real language/runtime input facility once host-driven input builtins exist
-- [x] Back protocol-side stdin with a real `InputString` builtin plus request suspension/resume instead of restarting whole execute requests after input replies
-- [x] Introduce a typed internal continuation/driver bridge so non-`Expr` helper paths can suspend and resume through the same session machinery
-- [x] Use that internal continuation bridge for delayed message-template rendering so Jupyter stdin can flow through runtime message generation without replaying the whole evaluation
-- [x] Extend the typed internal continuation/driver design through compiled matcher paths, definition/rule application, and matcher backtracking so suspended input can resume without replaying whole outer rewrites
-- [x] Extend the typed internal continuation/driver design into `Cases` spec/traversal normalization and the interpreted matcher reference path so helper-local suspension no longer drops matcher or traversal state
-- [x] Add a first local socket-style transport backend plus frontend handle boundary so notebook-style flows can be exercised without mutating mock transport queues directly
-- [x] Add frontend-style end-to-end execute and stdin round-trip tests on top of that local backend
-- [x] Use bootstrap-configured kernel usernames in generated reply / `IOPub` headers and add a first heartbeat echo path on the local backend
-- [x] Add a first ZeroMQ-facing socket/session config layer with explicit ROUTER / PUB / REP roles and bind/connect metadata derived from the Jupyter connection file
-- [x] Add a socket-poller / socket-driver boundary above the event pump so future ZeroMQ transports can replace the local session without changing adapter semantics
-- [x] Hang a first ZeroMQ-shaped transport backend behind that seam so multipart routing, bind/connect setup, and heartbeat/execute flow tests can evolve independently of the adapter and later accept a concrete socket library
-- [x] Back that seam with a first concrete native-Rust ZeroMQ implementation and real loopback execute / heartbeat round-trip tests
-- [x] Add real frontend-style native ZeroMQ regressions for execute/stdin/control flows so shell, `IOPub`, and stdin routing can be exercised against the concrete backend instead of only the mock/local layers
-- [x] Add frontend-style multi-message native backend coverage that keeps a single frontend session alive across multiple execute requests, stdin resume, execution-count increments, and final shutdown handling
-- [x] Add signed native-backend end-to-end coverage, including successful signed execute / `IOPub` round-trips and rejection of tampered signed requests
-- [x] Make non-`Expr` rewrite-rule inspection suspendable through typed continuation payloads and an explicit resume path instead of treating `InputRequired` as a terminal helper error
-- [ ] Continue auditing any remaining non-`Expr` inspection/debug helper paths that still need the same suspension-safe treatment
-- [ ] Continue hardening the early kernel adapter toward more complete Jupyter transport, lifecycle, and frontend-compatibility behavior beyond the current mock/local-socket-backed layer

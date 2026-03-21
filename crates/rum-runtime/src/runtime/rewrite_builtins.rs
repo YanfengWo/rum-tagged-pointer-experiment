@@ -290,10 +290,9 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         let normalized_rule_exprs_result =
             self.resolve_rewrite_rule_exprs_owned(rules_expr.clone());
-        let normalized_rule_exprs = self
-            .drive_internal_value(normalized_rule_exprs_result, |_, rule_exprs| Ok(rule_exprs))?;
-
-        self.resume_replace_all_after_rule_exprs(target, rules_expr, normalized_rule_exprs)
+        self.drive_internal_value(normalized_rule_exprs_result, move |session, rule_exprs| {
+            session.resume_replace_all_after_rule_exprs(target, rules_expr, rule_exprs)
+        })
     }
 
     fn resume_replace_all_after_rule_exprs(
@@ -326,10 +325,9 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         let normalized_rule_exprs_result =
             self.resolve_rewrite_rule_exprs_owned(rules_expr.clone());
-        let normalized_rule_exprs = self
-            .drive_internal_value(normalized_rule_exprs_result, |_, rule_exprs| Ok(rule_exprs))?;
-
-        self.resume_replace_repeated_after_rule_exprs(current, rules_expr, normalized_rule_exprs)
+        self.drive_internal_value(normalized_rule_exprs_result, move |session, rule_exprs| {
+            session.resume_replace_repeated_after_rule_exprs(current, rules_expr, rule_exprs)
+        })
     }
 
     fn resume_replace_repeated_after_rule_exprs(

@@ -11,7 +11,7 @@ use rum_syntax::{
 
 mod attributes;
 mod binding_substitution;
-mod builtin_defaults;
+mod builtin_catalog;
 mod builtins_context_loader;
 mod builtins_input;
 mod builtins_messages;
@@ -57,7 +57,7 @@ mod suspension;
 
 #[allow(unused_imports)]
 use self::{
-    attributes::*, binding_substitution::*, builtin_defaults::*, builtins_context_loader::*,
+    attributes::*, binding_substitution::*, builtin_catalog::*, builtins_context_loader::*,
     builtins_input::*, builtins_messages::*, builtins_messages_inspect::*,
     context_and_load_helpers::*, control_flow::*, definition_analysis_helpers::*,
     definition_application::*, definition_catalog::*, definition_clear::*, definition_tags::*,
@@ -69,7 +69,10 @@ use self::{
     scoping::*, session_api::*, session_eval::*, session_helpers::*, session_requests::*,
     session_state::*, slot_substitution::*, suspension::*,
 };
-pub use self::{lowering::lower_syntax_expr, metadata::*, model::*, session_state::EvalError};
+pub use self::{
+    builtin_catalog::core_builtin_specs, lowering::lower_syntax_expr, metadata::*, model::*,
+    session_state::EvalError,
+};
 
 #[cfg(test)]
 mod tests;

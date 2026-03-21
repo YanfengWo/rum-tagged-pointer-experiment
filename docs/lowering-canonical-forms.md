@@ -8,6 +8,9 @@ it should preserve direct calls when no syntax sugar needs rewriting, and it
 should avoid baking in runtime-only validation that belongs later in the
 evaluator.
 
+This document is not an exhaustive builtin catalog. It records the canonical
+surface that lowering itself is responsible for producing or preserving.
+
 ## Related docs
 
 - `../ARCHITECTURE.md` explains where lowering sits in the crate/layer model
@@ -22,7 +25,8 @@ evaluator.
 - integers lower to exact `BigInt` atoms
 - strings lower to string atoms
 - ordinary calls preserve their head and recursively lower arguments
-- syntax sugar rewrites into canonical system-head calls
+- direct calls that already use canonical runtime heads are preserved
+- parser sugar rewrites into canonical system-head calls
 
 ## Canonical forms in the current implementation
 
@@ -34,6 +38,8 @@ evaluator.
 ### Patterns and slots
 
 - `x_Integer` -> `Pattern[x, Blank[Integer]]`
+- `x__` -> `Pattern[x, BlankSequence[]]`
+- `x___` -> `Pattern[x, BlankNullSequence[]]`
 - `x_ /; test[x]` -> `Condition[Pattern[x, Blank[]], test[x]]`
 - `#` -> `Slot[1]`
 - `#3` -> `Slot[3]`
@@ -41,6 +47,16 @@ evaluator.
 - `##` -> `SlotSequence[1]`
 - `##2` -> `SlotSequence[2]`
 - `expr &` -> `Function[expr]`
+
+Pattern-language constructs that are already written as canonical calls are not
+rewritten further. For example:
+
+- `Alternatives[a, b]` stays `Alternatives[a, b]`
+- `PatternTest[p, test]` stays `PatternTest[p, test]`
+- `Optional[p]` stays `Optional[p]`
+- `Except[p]` stays `Except[p]`
+- `Repeated[p]` stays `Repeated[p]`
+- `RepeatedNull[p]` stays `RepeatedNull[p]`
 
 ### Assignment and rewrite sugar
 
@@ -68,6 +84,7 @@ evaluator.
 ### Messages, contexts, and package constructs
 
 - `FindFile::notfound` -> `MessageName[FindFile, "notfound"]`
+- `FindFile::"notfound"` -> `MessageName[FindFile, "notfound"]`
 - `Context["Identity"]` -> `Context["Identity"]`
 - `Begin["Demo`"]` -> `Begin["Demo`"]`
 - `BeginPackage["Demo`"]` -> `BeginPackage["Demo`"]`
@@ -82,6 +99,10 @@ recursively because list literals and assignments inside them are syntax sugar.
 - `With[{x = 1}, body]` -> `With[List[Set[x, 1]], body]`
 - `Module[{x = 1}, body]` -> `Module[List[Set[x, 1]], body]`
 - `Block[{x = 1}, body]` -> `Block[List[Set[x, 1]], body]`
+
+More generally, lowering prefers head-preserving behavior for runtime-facing
+forms that are already expressed directly. It rewrites only the syntax sugar
+needed to reach the canonical core surface.
 
 ## Validation boundary
 

@@ -88,20 +88,26 @@ impl Session {
         args: &[Expr],
     ) -> Result<String, EvalError> {
         let template = self.message_definitions.get(key).cloned();
+        let finish_rendered = {
+            let key = key.clone();
+            let args = args.to_vec();
+            move |session: &mut Session, rendered: Expr| {
+                Ok(session.finish_render_message_text(rendered, &key, &args))
+            }
+        };
 
-        let rendered = match template {
+        match template {
             Some(MessageDefinition {
                 immediate: Some(expr),
                 ..
-            }) => expr,
+            }) => finish_rendered(self, expr),
             Some(MessageDefinition {
                 delayed: Some(expr),
                 ..
             }) => {
                 let delayed_result = self.evaluate(expr);
-                self.drive_evaluated_value::<String, String, _>(delayed_result, |_, text| Ok(text))?
+                self.drive_evaluated_value::<Expr, String, _>(delayed_result, finish_rendered)
             }
-            .into_continuation_expr(),
             _ => {
                 if args.is_empty() {
                     return Ok("message emitted".to_string());
@@ -113,14 +119,21 @@ impl Session {
                     .collect::<Vec<_>>()
                     .join(", "));
             }
-        };
+        }
+    }
 
+    fn finish_render_message_text(
+        &self,
+        rendered: Expr,
+        key: &MessageNameKey,
+        args: &[Expr],
+    ) -> String {
         let template = match rendered {
             Expr::Atom(Atom::String(text)) => text,
             other => other.to_string(),
         };
 
-        Ok(format_message_template(&template, key, args))
+        format_message_template(&template, key, args)
     }
 
     pub(super) fn lookup_message_symbol(&self, expr: &Expr) -> Option<Symbol> {

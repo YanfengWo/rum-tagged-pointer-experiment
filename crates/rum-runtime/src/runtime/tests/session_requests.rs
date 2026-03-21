@@ -347,6 +347,36 @@ fn resume_eval_request_with_input_can_finish_delayed_message_templates() {
 }
 
 #[test]
+fn resume_eval_request_with_input_formats_delayed_message_templates_after_resume() {
+    let mut session = Session::new();
+    session
+        .eval_text(
+            "f::argx := If[MatchQ[InputString[\"msg: \"], \"Alice\"], \"bad arg `1` from Alice\", \"bad arg `1` from stranger\"]",
+        )
+        .unwrap();
+
+    let failure = session
+        .eval_request("Message[f::argx, 42]")
+        .expect_err("delayed formatted message template should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "msg: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("Alice")
+        .expect("resume should finish delayed message formatting after the template resolves");
+
+    assert_eq!(response.value.to_string(), "Null");
+    assert!(response.messages.iter().any(|message| {
+        message.symbol == "f" && message.tag == "argx" && message.text == "bad arg 42 from Alice"
+    }));
+}
+
+#[test]
 fn resume_eval_request_with_input_continues_replace_all_without_restarting_target() {
     let mut session = Session::new();
 
@@ -642,6 +672,63 @@ fn resume_eval_request_with_input_can_finish_cases_with_suspending_heads_option_
         .expect("resume should continue Cases after the fourth argument resolves");
 
     assert_eq!(response.value.to_string(), "List[g]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_normalize_rules_after_suspending_rule_source() {
+    let mut session = Session::new();
+    session
+        .eval_text(
+            "rules := If[MatchQ[InputString[\"rules: \"], \"yes\"], x_Integer -> 1, y_String :> y]",
+        )
+        .unwrap();
+
+    let failure = session
+        .eval_request("NormalizeRules[rules]")
+        .expect_err("NormalizeRules should suspend when its rule source requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "rules: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue NormalizeRules after the rule source resolves");
+
+    assert_eq!(
+        response.value.to_string(),
+        "List[Rule[Pattern[x, Blank[Integer]], 1]]"
+    );
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_replaceall_after_suspending_rule_source() {
+    let mut session = Session::new();
+    session
+        .eval_text(
+            "rules := If[MatchQ[InputString[\"rules: \"], \"yes\"], x_Integer -> 1, y_String :> y]",
+        )
+        .unwrap();
+
+    let failure = session
+        .eval_request("1 /. rules")
+        .expect_err("ReplaceAll should suspend when its rule source requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "rules: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue ReplaceAll after the rule source resolves");
+
+    assert_eq!(response.value.to_string(), "1");
 }
 
 #[test]

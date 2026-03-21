@@ -202,6 +202,22 @@ pub(super) const ALL_ATTRIBUTES: [Attribute; 9] = [
     Attribute::Flat,
     Attribute::OneIdentity,
 ];
+
+pub(super) fn parse_attribute_set_expr(expr: &Expr) -> Option<AttributeSet> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
+            let mut attributes = AttributeSet::empty();
+
+            for item in args {
+                attributes.insert(Attribute::from_expr(item)?);
+            }
+
+            Some(attributes)
+        }
+        _ => Some(AttributeSet::from_attribute(Attribute::from_expr(expr)?)),
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BuiltinDispatch {
     None,
@@ -314,6 +330,36 @@ impl BuiltinSpec {
             name,
             summary,
             attributes: AttributeSet::empty(),
+            dispatch: BuiltinDispatch::SpecialForm,
+            handler: Some(handler),
+        }
+    }
+
+    pub const fn special_with_hold(
+        name: &'static str,
+        summary: &'static str,
+        hold: HoldAttribute,
+        handler: BuiltinHandler,
+    ) -> Self {
+        Self {
+            name,
+            summary,
+            attributes: AttributeSet::from_hold(hold),
+            dispatch: BuiltinDispatch::SpecialForm,
+            handler: Some(handler),
+        }
+    }
+
+    pub const fn special_with_attributes(
+        name: &'static str,
+        summary: &'static str,
+        attributes: AttributeSet,
+        handler: BuiltinHandler,
+    ) -> Self {
+        Self {
+            name,
+            summary,
+            attributes,
             dispatch: BuiltinDispatch::SpecialForm,
             handler: Some(handler),
         }

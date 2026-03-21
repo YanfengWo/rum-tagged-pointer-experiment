@@ -1,6 +1,6 @@
-use rum_runtime::{BuiltinHandler, BuiltinSpec, HoldAttribute};
+use super::*;
 
-pub const CORE_BUILTINS: &[BuiltinSpec] = &[
+const CORE_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary(
         "Identity",
         "Returns its argument unchanged.",
@@ -217,4 +217,175 @@ pub const CORE_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
         BuiltinHandler::ClearAll,
     ),
+    BuiltinSpec::ordinary_with_hold(
+        "Check",
+        "Evaluates an expression and substitutes a fallback if matching messages are emitted.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Check,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Quiet",
+        "Evaluates an expression while suppressing matching runtime messages it emits.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Quiet,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "If",
+        "Evaluates one of several branches conditionally.",
+        HoldAttribute::HoldRest,
+        BuiltinHandler::If,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Which",
+        "Evaluates conditions in order and returns the first matching branch.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Which,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Function",
+        "Creates a pure function.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::HoldLiteral,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "With",
+        "Lexically substitutes local constants into a body.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::With,
+    ),
+    BuiltinSpec::special_with_hold(
+        "Module",
+        "Creates lexical local symbols.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Module,
+    ),
+    BuiltinSpec::special_with_hold(
+        "Block",
+        "Temporarily rebinds symbols dynamically.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Block,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Hold",
+        "Prevents evaluation of its arguments.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::HoldLiteral,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "HoldFirst",
+        "Prevents evaluation of the first argument.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::HoldLiteral,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "HoldRest",
+        "Prevents evaluation of all but the first argument.",
+        HoldAttribute::HoldRest,
+        BuiltinHandler::HoldLiteral,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "HoldAll",
+        "Prevents evaluation of all arguments.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::HoldLiteral,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "HoldAllComplete",
+        "Prevents evaluation of all arguments and disables Evaluate and Sequence escapes.",
+        AttributeSet::from_attribute(Attribute::HoldAllComplete),
+        BuiltinHandler::HoldLiteral,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Unevaluated",
+        "Temporarily leaves an argument unevaluated as a direct function argument.",
+        AttributeSet::from_attribute(Attribute::HoldAllComplete),
+        BuiltinHandler::Unevaluated,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Evaluate",
+        "Forces evaluation in held contexts.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Evaluate,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "HoldPattern",
+        "Marks a pattern expression so it is matched without prior evaluation.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::HoldLiteral,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "ReleaseHold",
+        "Removes supported hold wrappers and resumes evaluation.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::ReleaseHold,
+    ),
+    BuiltinSpec::ordinary(
+        "Sequence",
+        "Splices a sequence of arguments into a call.",
+        BuiltinHandler::Sequence,
+    ),
+    BuiltinSpec::ordinary(
+        "Thread",
+        "Threads an expression over arguments that share a common head.",
+        BuiltinHandler::Thread,
+    ),
+    BuiltinSpec::ordinary(
+        "InputString",
+        "Requests one line of host-provided text and returns it as a string.",
+        BuiltinHandler::InputString,
+    ),
 ];
+
+pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
+    CORE_BUILTINS
+}
+
+pub(super) fn default_builtin_dispatch_spec(name: &str) -> Option<BuiltinSpec> {
+    CORE_BUILTINS.iter().find(|spec| spec.name == name).copied()
+}
+
+pub(super) fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
+    if symbol.context() != SYSTEM_CONTEXT {
+        return AttributeSet::empty();
+    }
+
+    default_builtin_dispatch_spec(symbol.name())
+        .map(|spec| spec.attributes)
+        .unwrap_or_else(|| match symbol.name() {
+            "Plus" | "Times" => AttributeSet::empty()
+                .with(Attribute::Listable)
+                .with(Attribute::Orderless)
+                .with(Attribute::Flat)
+                .with(Attribute::OneIdentity),
+            _ => AttributeSet::empty(),
+        })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn core_catalog_drives_both_dispatch_and_default_attributes() {
+        let module = Symbol::new(SYSTEM_CONTEXT, "Module");
+        let spec = default_builtin_dispatch_spec("Module").expect("Module should be cataloged");
+
+        assert_eq!(spec.dispatch, BuiltinDispatch::SpecialForm);
+        assert_eq!(
+            spec.attributes,
+            AttributeSet::from_hold(HoldAttribute::HoldAll)
+        );
+        assert_eq!(default_system_attribute_set(&module), spec.attributes);
+    }
+
+    #[test]
+    fn non_catalog_system_attributes_can_still_use_manual_fallbacks() {
+        let plus = Symbol::new(SYSTEM_CONTEXT, "Plus");
+        let attributes = default_system_attribute_set(&plus);
+
+        assert!(attributes.contains(Attribute::Listable));
+        assert!(attributes.contains(Attribute::Orderless));
+        assert!(attributes.contains(Attribute::Flat));
+        assert!(attributes.contains(Attribute::OneIdentity));
+    }
+}

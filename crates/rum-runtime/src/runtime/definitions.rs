@@ -58,22 +58,21 @@ impl Session {
 
     fn resume_normalize_rules(&mut self, original: Expr) -> Result<Expr, EvalError> {
         let normalized_rule_exprs_result = self.resolve_rewrite_rule_exprs_owned(original.clone());
-        let normalized_rule_exprs = self
-            .drive_internal_value(normalized_rule_exprs_result, |_, rule_exprs| Ok(rule_exprs))?;
-
-        match normalized_rule_exprs {
-            Some(rule_exprs) => {
-                let rules = self
-                    .compile_rewrite_rules_from_normalized_exprs(rule_exprs)
-                    .expect("normalized rewrite rule expressions should recompile");
-                Ok(Self::normalized_rules_expr(&rules))
+        self.drive_internal_value(normalized_rule_exprs_result, move |session, rule_exprs| {
+            match rule_exprs {
+                Some(rule_exprs) => {
+                    let rules = session
+                        .compile_rewrite_rules_from_normalized_exprs(rule_exprs)
+                        .expect("normalized rewrite rule expressions should recompile");
+                    Ok(Self::normalized_rules_expr(&rules))
+                }
+                None => Ok(session.invalid_call_with_arg_form(
+                    "NormalizeRules",
+                    &[original],
+                    "expected a rule, a rule list, or a symbol that evaluates to rules",
+                )),
             }
-            None => Ok(self.invalid_call_with_arg_form(
-                "NormalizeRules",
-                &[original],
-                "expected a rule, a rule list, or a symbol that evaluates to rules",
-            )),
-        }
+        })
     }
 
     fn resume_set_with_rhs(&mut self, lhs: Expr, rhs: Expr) -> Result<Expr, EvalError> {
