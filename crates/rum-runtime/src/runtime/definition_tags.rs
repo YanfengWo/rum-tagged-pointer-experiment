@@ -6,12 +6,11 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("TagSet", args, 3));
         }
 
-        let Some(tag) = self.lookup_attribute_target(&args[0], true) else {
-            return Ok(self.invalid_call_with_arg_form(
-                "TagSet",
-                args,
-                "expected a symbol or symbol-name string tag as the first argument",
-            ));
+        let tag = match self.normalize_tag_target(&args[0]) {
+            Ok(tag) => tag,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form("TagSet", args, error.message()));
+            }
         };
 
         let lhs = args[1].clone();
@@ -32,12 +31,11 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("TagSetDelayed", args, 3));
         }
 
-        let Some(tag) = self.lookup_attribute_target(&args[0], true) else {
-            return Ok(self.invalid_call_with_arg_form(
-                "TagSetDelayed",
-                args,
-                "expected a symbol or symbol-name string tag as the first argument",
-            ));
+        let tag = match self.normalize_tag_target(&args[0]) {
+            Ok(tag) => tag,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form("TagSetDelayed", args, error.message()));
+            }
         };
 
         let lhs = args[1].clone();
@@ -50,12 +48,11 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("TagUnset", args, 2));
         }
 
-        let Some(tag) = self.lookup_attribute_target(&args[0], true) else {
-            return Ok(self.invalid_call_with_arg_form(
-                "TagUnset",
-                args,
-                "expected a symbol or symbol-name string tag as the first argument",
-            ));
+        let tag = match self.normalize_tag_target(&args[0]) {
+            Ok(tag) => tag,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form("TagUnset", args, error.message()));
+            }
         };
 
         match self.unset_tagged_definition(&tag, &args[1]) {

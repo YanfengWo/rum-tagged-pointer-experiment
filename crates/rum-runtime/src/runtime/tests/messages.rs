@@ -63,6 +63,27 @@ fn message_family_accepts_symbol_name_strings_and_messagename_targets() {
 }
 
 #[test]
+fn direct_set_and_setdelayed_calls_share_message_assignment_normalization() {
+    let mut session = Session::new();
+    session
+        .eval_text("Set[MessageName[\"f\", \"argx\"], \"bad arg `1`\"]")
+        .unwrap();
+    session
+        .eval_text("SetDelayed[MessageName[\"f\", \"usage\"], suffix]")
+        .unwrap();
+    session.eval_text("suffix = 7").unwrap();
+
+    assert_eq!(
+        session.eval_text("Message[f::argx, 42]").unwrap().messages[0].text,
+        "bad arg 42"
+    );
+    assert_eq!(
+        session.eval_text("Message[f::usage]").unwrap().messages[0].text,
+        "7"
+    );
+}
+
+#[test]
 fn message_templates_can_be_defined_and_formatted() {
     let mut session = Session::new();
 

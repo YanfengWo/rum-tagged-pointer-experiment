@@ -259,6 +259,61 @@ fn tag_definition_messages_distinguish_missing_tags_from_invalid_positions() {
 }
 
 #[test]
+fn string_targets_flow_through_clear_tag_and_unset_normalization() {
+    let mut session = Session::new();
+
+    session.eval_text("TagSet[\"f\", f[x_], x]").unwrap();
+    assert_eq!(session.eval_text("f[1]").unwrap().value.to_string(), "1");
+
+    session.eval_text("Unset[TagSet[\"f\", f[x_]]]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("DownValues[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+
+    session
+        .eval_text("MessageName[\"f\", \"usage\"] = \"desc\"")
+        .unwrap();
+    session
+        .eval_text("Unset[MessageName[\"f\", \"usage\"]]")
+        .unwrap();
+    assert_eq!(
+        session.eval_text("Messages[f]").unwrap().value.to_string(),
+        "List[]"
+    );
+
+    session.eval_text("f[x_] := x").unwrap();
+    session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
+    session.eval_text("f::msg = \"boom\"").unwrap();
+    session.eval_text("ClearAll[\"f\"]").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("DownValues[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Attributes[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session.eval_text("Messages[f]").unwrap().value.to_string(),
+        "List[]"
+    );
+}
+
+#[test]
 fn clear_and_clearall_manage_symbol_lifecycle_state() {
     let mut session = Session::new();
 
@@ -346,6 +401,43 @@ fn inspect_rewrite_rules_reports_normalized_rules_and_delayed_flags() {
     let expr = lower_syntax_expr(&syntax).unwrap();
 
     let rules = session.inspect_rewrite_rules(expr).unwrap().unwrap();
+
+    assert_eq!(rules.len(), 2);
+    assert_eq!(rules[0].lhs.to_string(), "Pattern[x, Blank[Integer]]");
+    assert_eq!(rules[0].rhs.to_string(), "1");
+    assert!(!rules[0].delayed);
+    assert_eq!(rules[1].lhs.to_string(), "Pattern[y, Blank[String]]");
+    assert_eq!(rules[1].rhs.to_string(), "y");
+    assert!(rules[1].delayed);
+}
+
+#[test]
+fn inspect_rewrite_rules_can_suspend_and_resume_with_host_input() {
+    let mut session = Session::new();
+    session
+        .eval_text("ruleSource[\"Alice\"] := {x_Integer -> 1, y_String :> y}")
+        .unwrap();
+    session
+        .eval_text("rules := ruleSource[InputString[\"name: \"]]")
+        .unwrap();
+    let syntax = parse_expr("rules").unwrap();
+    let expr = lower_syntax_expr(&syntax).unwrap();
+
+    let failure = session
+        .inspect_rewrite_rules(expr)
+        .expect_err("rewrite-rule inspection should suspend on InputString");
+
+    match failure {
+        EvalError::InputRequired { request } => {
+            assert_eq!(request.prompt, "name: ");
+        }
+        other => panic!("expected input-required inspection failure, got {other:?}"),
+    }
+
+    let rules = session
+        .resume_inspect_rewrite_rules_with_input("Alice")
+        .expect("resume should continue rewrite-rule inspection")
+        .expect("rule source should produce normalized rules");
 
     assert_eq!(rules.len(), 2);
     assert_eq!(rules[0].lhs.to_string(), "Pattern[x, Blank[Integer]]");

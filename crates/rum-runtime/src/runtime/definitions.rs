@@ -30,26 +30,7 @@ impl Session {
 
         let lhs = args[0].clone();
         let rhs = args[1].clone();
-
-        if let Some(key) = self.message_name_key_from_expr(&lhs) {
-            self.define_message(key, rhs, true);
-            return Ok(system_expr("Null"));
-        }
-
-        if let Some(symbol) = expr_as_symbol(&lhs).cloned() {
-            self.store_definition_target(
-                TaggedDefinitionTarget::OwnValue(symbol),
-                lhs.clone(),
-                rhs.clone(),
-                true,
-            );
-            Ok(system_expr("Null"))
-        } else if let Some(target) = classify_definition_lhs(&lhs) {
-            self.store_definition_target(target, lhs.clone(), rhs.clone(), true);
-            Ok(system_expr("Null"))
-        } else {
-            Ok(Expr::call(system_expr("SetDelayed"), vec![lhs, rhs]))
-        }
+        self.finish_definition_assignment("SetDelayed", lhs, rhs, true)
     }
 
     pub(super) fn eval_rule(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -96,28 +77,30 @@ impl Session {
     }
 
     fn resume_set_with_rhs(&mut self, lhs: Expr, rhs: Expr) -> Result<Expr, EvalError> {
-        if let Some(key) = self.message_name_key_from_expr(&lhs) {
-            self.define_message(key, rhs.clone(), false);
-            return Ok(rhs);
-        }
-
-        if let Some(symbol) = expr_as_symbol(&lhs).cloned() {
-            self.store_definition_target(
-                TaggedDefinitionTarget::OwnValue(symbol),
-                lhs.clone(),
-                rhs.clone(),
-                false,
-            );
-            Ok(rhs)
-        } else if let Some(target) = classify_definition_lhs(&lhs) {
-            self.store_definition_target(target, lhs.clone(), rhs.clone(), false);
-            Ok(rhs)
-        } else {
-            Ok(Expr::call(system_expr("Set"), vec![lhs, rhs]))
-        }
+        self.finish_definition_assignment("Set", lhs, rhs, false)
     }
 
     fn resume_rule_with_rhs(&mut self, lhs: Expr, rhs: Expr) -> Result<Expr, EvalError> {
         Ok(Expr::call(system_expr("Rule"), vec![lhs, rhs]))
+    }
+
+    fn finish_definition_assignment(
+        &mut self,
+        symbol: &str,
+        lhs: Expr,
+        rhs: Expr,
+        delayed: bool,
+    ) -> Result<Expr, EvalError> {
+        match self.normalize_definition_assignment_target(&lhs) {
+            Some(DefinitionAssignmentTarget::Message(key)) => {
+                self.define_message(key, rhs.clone(), delayed);
+                Ok(if delayed { system_expr("Null") } else { rhs })
+            }
+            Some(DefinitionAssignmentTarget::Definition(target)) => {
+                self.store_definition_target(target, lhs.clone(), rhs.clone(), delayed);
+                Ok(if delayed { system_expr("Null") } else { rhs })
+            }
+            None => Ok(Expr::call(system_expr(symbol), vec![lhs, rhs])),
+        }
     }
 }

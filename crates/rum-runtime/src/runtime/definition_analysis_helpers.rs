@@ -14,6 +14,44 @@ pub(super) enum TagDefinitionError {
     TagPositionInvalid,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) enum UnsetDefinitionTarget {
+    Message(MessageNameKey),
+    OwnValue(Symbol),
+    DownValue { symbol: Symbol, lhs: Expr },
+    SubValue { symbol: Symbol, lhs: Expr },
+    TaggedDefinition { tag: Symbol, lhs: Expr },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) enum DefinitionAssignmentTarget {
+    Message(MessageNameKey),
+    Definition(TaggedDefinitionTarget),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum DefinitionTargetNormalizationError {
+    InvalidClearTarget,
+    InvalidTagTarget,
+    InvalidUnsetTarget,
+}
+
+impl DefinitionTargetNormalizationError {
+    pub(super) fn message(self) -> &'static str {
+        match self {
+            Self::InvalidClearTarget => {
+                "expected one or more symbols, symbol-name strings, or lists of them"
+            }
+            Self::InvalidTagTarget => {
+                "expected a symbol or symbol-name string tag as the first argument"
+            }
+            Self::InvalidUnsetTarget => {
+                "expected a symbol, definition lhs, message name, or tagged definition target"
+            }
+        }
+    }
+}
+
 pub(super) fn collect_with_binding_symbols(expr: &Expr, locals: &mut BTreeSet<Symbol>) {
     let Expr::Call { head, args } = expr else {
         return;
@@ -27,6 +65,111 @@ pub(super) fn collect_with_binding_symbols(expr: &Expr, locals: &mut BTreeSet<Sy
         if let Some((symbol, _)) = parse_module_binding_item(item) {
             locals.insert(symbol);
         }
+    }
+}
+
+impl Session {
+    pub(super) fn normalize_tag_target(
+        &self,
+        expr: &Expr,
+    ) -> Result<Symbol, DefinitionTargetNormalizationError> {
+        self.lookup_attribute_target(expr, true)
+            .ok_or(DefinitionTargetNormalizationError::InvalidTagTarget)
+    }
+
+    pub(super) fn normalize_clear_targets(
+        &self,
+        args: &[Expr],
+    ) -> Result<Vec<Symbol>, DefinitionTargetNormalizationError> {
+        if args.is_empty() {
+            return Err(DefinitionTargetNormalizationError::InvalidClearTarget);
+        }
+
+        let mut symbols = Vec::new();
+
+        for arg in args {
+            self.collect_normalized_clear_targets(arg, &mut symbols)?;
+        }
+
+        Ok(symbols)
+    }
+
+    fn collect_normalized_clear_targets(
+        &self,
+        expr: &Expr,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<(), DefinitionTargetNormalizationError> {
+        match expr {
+            Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
+                for item in args {
+                    self.collect_normalized_clear_targets(item, symbols)?;
+                }
+
+                Ok(())
+            }
+            _ => {
+                symbols.push(
+                    self.lookup_attribute_target(expr, true)
+                        .ok_or(DefinitionTargetNormalizationError::InvalidClearTarget)?,
+                );
+                Ok(())
+            }
+        }
+    }
+
+    pub(super) fn normalize_unset_target(
+        &self,
+        expr: &Expr,
+    ) -> Result<UnsetDefinitionTarget, DefinitionTargetNormalizationError> {
+        if let Some(key) = self.message_name_key_from_expr(expr) {
+            return Ok(UnsetDefinitionTarget::Message(key));
+        }
+
+        if let Some(symbol) = expr_as_symbol(expr).cloned() {
+            return Ok(UnsetDefinitionTarget::OwnValue(symbol));
+        }
+
+        if let Expr::Call { head, args } = expr {
+            if is_system_symbol_name(head, "TagSet") && args.len() == 2 {
+                return Ok(UnsetDefinitionTarget::TaggedDefinition {
+                    tag: self.normalize_tag_target(&args[0])?,
+                    lhs: args[1].clone(),
+                });
+            }
+        }
+
+        if let Some(symbol) = downvalue_head_symbol(expr).cloned() {
+            return Ok(UnsetDefinitionTarget::DownValue {
+                symbol,
+                lhs: expr.clone(),
+            });
+        }
+
+        if let Some(symbol) = subvalue_base_symbol(expr).cloned() {
+            return Ok(UnsetDefinitionTarget::SubValue {
+                symbol,
+                lhs: expr.clone(),
+            });
+        }
+
+        Err(DefinitionTargetNormalizationError::InvalidUnsetTarget)
+    }
+
+    pub(super) fn normalize_definition_assignment_target(
+        &self,
+        lhs: &Expr,
+    ) -> Option<DefinitionAssignmentTarget> {
+        if let Some(key) = self.message_name_key_from_expr(lhs) {
+            return Some(DefinitionAssignmentTarget::Message(key));
+        }
+
+        if let Some(symbol) = expr_as_symbol(lhs).cloned() {
+            return Some(DefinitionAssignmentTarget::Definition(
+                TaggedDefinitionTarget::OwnValue(symbol),
+            ));
+        }
+
+        classify_definition_lhs(lhs).map(DefinitionAssignmentTarget::Definition)
     }
 }
 

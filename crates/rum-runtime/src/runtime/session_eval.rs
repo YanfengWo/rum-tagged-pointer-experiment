@@ -98,19 +98,17 @@ impl Session {
         &mut self,
         expr: Expr,
     ) -> Result<Option<Vec<RewriteRuleInfo>>, EvalError> {
-        Ok(self
-            .resolve_rewrite_rule_exprs_owned(expr)?
-            .and_then(|rule_exprs| self.compile_rewrite_rules_from_normalized_exprs(rule_exprs))
-            .map(|rules| {
-                rules
-                    .into_iter()
-                    .map(|rule| RewriteRuleInfo {
-                        lhs: rule.lhs,
-                        rhs: rule.rhs,
-                        delayed: rule.delayed,
-                    })
-                    .collect()
-            }))
+        self.resolve_rewrite_rule_infos_owned(expr)
+    }
+
+    pub fn resume_inspect_rewrite_rules_with_input(
+        &mut self,
+        input: impl Into<String>,
+    ) -> Result<Option<Vec<RewriteRuleInfo>>, EvalError> {
+        let resumed = self.resume_suspended_evaluation(input)?;
+        Ok(Option::<Vec<RewriteRuleInfo>>::from_continuation_expr(
+            resumed,
+        ))
     }
 
     pub fn eval_text(&mut self, input: &str) -> Result<EvalOutcome, EvalError> {
@@ -185,5 +183,28 @@ impl Session {
         }
 
         result
+    }
+
+    pub(super) fn resolve_rewrite_rule_infos_owned(
+        &mut self,
+        expr: Expr,
+    ) -> Result<Option<Vec<RewriteRuleInfo>>, EvalError> {
+        let normalized_rule_exprs_result = self.resolve_rewrite_rule_exprs_owned(expr);
+        self.drive_internal_value(normalized_rule_exprs_result, |session, rule_exprs| {
+            Ok(rule_exprs
+                .and_then(|rule_exprs| {
+                    session.compile_rewrite_rules_from_normalized_exprs(rule_exprs)
+                })
+                .map(|rules| {
+                    rules
+                        .into_iter()
+                        .map(|rule| RewriteRuleInfo {
+                            lhs: rule.lhs,
+                            rhs: rule.rhs,
+                            delayed: rule.delayed,
+                        })
+                        .collect()
+                }))
+        })
     }
 }

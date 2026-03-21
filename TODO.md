@@ -152,8 +152,10 @@ Reference docs for this workstream:
 - [x] Normalize raw message-selector parsing through a shared `Check` / `Quiet` helper instead of inline selector branches
 - [x] Normalize loader-spec parsing through shared `FindFile` / `Get` / `Needs` / `BeginPackage` call-config helpers
 - [x] Normalize message and definition-inspection targets through shared raw-form helpers across `Message`, `Messages`, `MessageDefinitions`, `MessageTags`, `OwnValues`, `UpValues`, `DownValues`, and `SubValues`
+- [x] Normalize definition-assignment lhs parsing through a shared raw-form helper across `Set` and `SetDelayed`
 - [x] Normalize `With` / `Module` / `Block` binding-list parsing through a shared raw-form family while preserving held/raw binding semantics
-- [ ] Continue auditing remaining raw-form normalization families such as definition-clear / tagged-target parsing so held/spec-driven builtins stop hand-rolling target parsing one by one
+- [x] Normalize definition-clear / tagged-target parsing through shared raw-form helpers across `Clear`, `ClearAll`, `Unset`, `TagSet`, `TagSetDelayed`, and `TagUnset`
+- [ ] Continue auditing any remaining held/spec-driven target families so raw-form builtins stop hand-rolling target parsing one by one
 
 ### `rum-runtime`: Attribute and Definition Semantics
 
@@ -276,5 +278,6 @@ Reference docs for this workstream:
 - [x] Add real frontend-style native ZeroMQ regressions for execute/stdin/control flows so shell, `IOPub`, and stdin routing can be exercised against the concrete backend instead of only the mock/local layers
 - [x] Add frontend-style multi-message native backend coverage that keeps a single frontend session alive across multiple execute requests, stdin resume, execution-count increments, and final shutdown handling
 - [x] Add signed native-backend end-to-end coverage, including successful signed execute / `IOPub` round-trips and rejection of tampered signed requests
-- [ ] Audit the remaining non-`Expr` inspection/debug helper paths and decide which ones should become suspension-safe next, instead of treating `InputRequired` as a plain error
+- [x] Make non-`Expr` rewrite-rule inspection suspendable through typed continuation payloads and an explicit resume path instead of treating `InputRequired` as a terminal helper error
+- [ ] Continue auditing any remaining non-`Expr` inspection/debug helper paths that still need the same suspension-safe treatment
 - [ ] Continue hardening the early kernel adapter toward more complete Jupyter transport, lifecycle, and frontend-compatibility behavior beyond the current mock/local-socket-backed layer

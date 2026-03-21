@@ -266,12 +266,20 @@ families:
   `Cases`, attribute updates, and loader calls with explicit resolved specs
 - raw-form normalization for builtins whose first argument is semantically held
   or syntax-shaped, such as `Check` / `Quiet` message selectors, message and
-  definition-inspection targets, and `With` / `Module` / `Block` binding lists
+  definition-inspection targets, definition-clear / tagged-definition targets,
+  assignment lhs classification for `Set` / `SetDelayed`, and `With` /
+  `Module` / `Block` binding lists
 
 This distinction matters because it prevents the runtime from accidentally
 evaluating syntax-shaped control inputs just to make internal dispatch code
 convenient. New evaluator work should prefer extending one of these explicit
 normalization families over adding one-off inline parsers in each builtin.
+
+The same principle now applies to non-`Expr` helper flows. When inspection or
+debug helpers need to evaluate something but ultimately return structured Rust
+data instead of an `Expr`, they should go through the typed suspension driver
+instead of collapsing `InputRequired` into an unrecoverable helper error. That
+keeps host-driven execution, stdin suspension, and direct helper APIs aligned.
 
 ## Code organization
 

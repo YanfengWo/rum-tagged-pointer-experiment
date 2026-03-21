@@ -3,17 +3,13 @@ use super::*;
 impl Session {
     pub(super) fn eval_unset(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
-            [target] => {
-                if self.unset_definition(target) {
+            [target] => match self.normalize_unset_target(target) {
+                Ok(target) => {
+                    self.unset_normalized_definition(target);
                     Ok(system_expr("Null"))
-                } else {
-                    Ok(self.invalid_call_with_arg_form(
-                        "Unset",
-                        args,
-                        "expected a symbol, definition lhs, message name, or tagged definition target",
-                    ))
                 }
-            }
+                Err(error) => Ok(self.invalid_call_with_arg_form("Unset", args, error.message())),
+            },
             _ => Ok(self.invalid_call_with_exact_arg_count("Unset", args, 1)),
         }
     }
@@ -33,12 +29,9 @@ impl Session {
         clear_attributes: bool,
         clear_messages: bool,
     ) -> Result<Expr, EvalError> {
-        let Some(symbols) = self.lookup_clear_targets(args) else {
-            return Ok(self.invalid_call_with_arg_form(
-                name,
-                args,
-                "expected one or more symbols, symbol-name strings, or lists of them",
-            ));
+        let symbols = match self.normalize_clear_targets(args) {
+            Ok(symbols) => symbols,
+            Err(error) => return Ok(self.invalid_call_with_arg_form(name, args, error.message())),
         };
 
         for symbol in symbols {
@@ -48,50 +41,33 @@ impl Session {
         Ok(system_expr("Null"))
     }
 
-    pub(super) fn unset_definition(&mut self, expr: &Expr) -> bool {
-        if let Some(key) = self.message_name_key_from_expr(expr) {
-            self.message_definitions.remove(&key);
-            return true;
-        }
-
-        if let Some(symbol) = expr_as_symbol(expr).cloned() {
-            if let Some(definition) = self.definitions.get_mut(&symbol) {
-                definition.own_value = None;
-                definition.delayed_own_value = None;
+    pub(super) fn unset_normalized_definition(&mut self, target: UnsetDefinitionTarget) {
+        match target {
+            UnsetDefinitionTarget::Message(key) => {
+                self.message_definitions.remove(&key);
             }
-
-            self.prune_definition_if_empty(&symbol);
-            return true;
-        }
-
-        if let Expr::Call { head, args } = expr {
-            if is_system_symbol_name(head, "TagSet") && args.len() == 2 {
-                if let Some(tag) = self.lookup_attribute_target(&args[0], true) {
-                    if self.unset_tagged_definition(&tag, &args[1]).is_ok() {
-                        self.prune_definition_if_empty(&tag);
-                        return true;
-                    }
-
-                    return false;
+            UnsetDefinitionTarget::OwnValue(symbol) => {
+                if let Some(definition) = self.definitions.get_mut(&symbol) {
+                    definition.own_value = None;
+                    definition.delayed_own_value = None;
                 }
 
-                return false;
+                self.prune_definition_if_empty(&symbol);
+            }
+            UnsetDefinitionTarget::DownValue { symbol, lhs } => {
+                self.remove_matching_down_values(&symbol, &lhs);
+                self.prune_definition_if_empty(&symbol);
+            }
+            UnsetDefinitionTarget::SubValue { symbol, lhs } => {
+                self.remove_matching_sub_values(&symbol, &lhs);
+                self.prune_definition_if_empty(&symbol);
+            }
+            UnsetDefinitionTarget::TaggedDefinition { tag, lhs } => {
+                if self.unset_tagged_definition(&tag, &lhs).is_ok() {
+                    self.prune_definition_if_empty(&tag);
+                }
             }
         }
-
-        if let Some(head_symbol) = downvalue_head_symbol(expr).cloned() {
-            self.remove_matching_down_values(&head_symbol, expr);
-            self.prune_definition_if_empty(&head_symbol);
-            return true;
-        }
-
-        if let Some(base_symbol) = subvalue_base_symbol(expr).cloned() {
-            self.remove_matching_sub_values(&base_symbol, expr);
-            self.prune_definition_if_empty(&base_symbol);
-            return true;
-        }
-
-        false
     }
 
     pub(super) fn unset_tagged_definition(
@@ -172,40 +148,6 @@ impl Session {
             .is_some_and(SymbolDefinition::is_empty)
         {
             self.definitions.remove(symbol);
-        }
-    }
-
-    pub(super) fn lookup_clear_targets(&self, args: &[Expr]) -> Option<Vec<Symbol>> {
-        if args.is_empty() {
-            return None;
-        }
-
-        let mut symbols = Vec::new();
-
-        for arg in args {
-            self.collect_clear_targets(arg, &mut symbols)?;
-        }
-
-        Some(symbols)
-    }
-
-    pub(super) fn collect_clear_targets(
-        &self,
-        expr: &Expr,
-        symbols: &mut Vec<Symbol>,
-    ) -> Option<()> {
-        match expr {
-            Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
-                for item in args {
-                    self.collect_clear_targets(item, symbols)?;
-                }
-
-                Some(())
-            }
-            _ => {
-                symbols.push(self.lookup_attribute_target(expr, true)?);
-                Some(())
-            }
         }
     }
 
