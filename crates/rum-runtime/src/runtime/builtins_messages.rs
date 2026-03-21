@@ -11,12 +11,11 @@ impl Session {
             ));
         };
 
-        let Some(key) = self.message_name_key_from_expr(spec) else {
-            return Ok(self.invalid_call_with_arg_form(
-                "Message",
-                args,
-                "expected the first argument to be a MessageName expression",
-            ));
+        let key = match self.normalize_message_emit_target(spec) {
+            Ok(key) => key,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form("Message", args, error.message()));
+            }
         };
 
         let rendered_text = self.render_message_text(&key, &args[1..]);
@@ -48,24 +47,22 @@ impl Session {
     pub(super) fn eval_messages(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
             [] => Ok(self.message_names_expr_for_symbol(None)),
-            [expr] => {
-                if let Some(key) = self.message_name_key_from_expr(expr) {
+            [expr] => match self.normalize_message_query_target(expr) {
+                Ok(MessageQueryTarget::Key(key)) => {
                     let items = if self.message_definitions.contains_key(&key) {
                         vec![message_name_expr(key.symbol, key.tag)]
                     } else {
                         Vec::new()
                     };
                     Ok(Expr::call(system_expr("List"), items))
-                } else if let Some(symbol) = self.lookup_message_symbol(expr) {
-                    Ok(self.message_names_expr_for_symbol(Some(&symbol)))
-                } else {
-                    Ok(self.invalid_call_with_arg_form(
-                        "Messages",
-                        args,
-                        "expected no arguments, a symbol or symbol-name string, or a MessageName expression",
-                    ))
                 }
-            }
+                Ok(MessageQueryTarget::Symbol(symbol)) => {
+                    Ok(self.message_names_expr_for_symbol(Some(&symbol)))
+                }
+                Err(error) => {
+                    Ok(self.invalid_call_with_arg_form("Messages", args, error.message()))
+                }
+            },
             _ => Ok(self.invalid_call_with_message(
                 "Messages",
                 args,
@@ -78,19 +75,17 @@ impl Session {
     pub(super) fn eval_message_definitions(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
             [] => Ok(self.message_definitions_expr_for_symbol(None)),
-            [expr] => {
-                if let Some(key) = self.message_name_key_from_expr(expr) {
-                    Ok(self.message_definitions_expr_for_key(&key))
-                } else if let Some(symbol) = self.lookup_message_symbol(expr) {
+            [expr] => match self.normalize_message_query_target(expr) {
+                Ok(MessageQueryTarget::Key(key)) => Ok(self.message_definitions_expr_for_key(&key)),
+                Ok(MessageQueryTarget::Symbol(symbol)) => {
                     Ok(self.message_definitions_expr_for_symbol(Some(&symbol)))
-                } else {
-                    Ok(self.invalid_call_with_arg_form(
-                        "MessageDefinitions",
-                        args,
-                        "expected no arguments, a symbol or symbol-name string, or a MessageName expression",
-                    ))
                 }
-            }
+                Err(error) => Ok(self.invalid_call_with_arg_form(
+                    "MessageDefinitions",
+                    args,
+                    error.message(),
+                )),
+            },
             _ => Ok(self.invalid_call_with_message(
                 "MessageDefinitions",
                 args,
@@ -103,19 +98,15 @@ impl Session {
     pub(super) fn eval_message_tags(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
             [] => Ok(self.message_tags_expr_for_symbol(None)),
-            [expr] => {
-                if let Some(key) = self.message_name_key_from_expr(expr) {
-                    Ok(self.message_tags_expr_for_key(&key))
-                } else if let Some(symbol) = self.lookup_message_symbol(expr) {
+            [expr] => match self.normalize_message_query_target(expr) {
+                Ok(MessageQueryTarget::Key(key)) => Ok(self.message_tags_expr_for_key(&key)),
+                Ok(MessageQueryTarget::Symbol(symbol)) => {
                     Ok(self.message_tags_expr_for_symbol(Some(&symbol)))
-                } else {
-                    Ok(self.invalid_call_with_arg_form(
-                        "MessageTags",
-                        args,
-                        "expected no arguments, a symbol or symbol-name string, or a MessageName expression",
-                    ))
                 }
-            }
+                Err(error) => {
+                    Ok(self.invalid_call_with_arg_form("MessageTags", args, error.message()))
+                }
+            },
             _ => Ok(self.invalid_call_with_message(
                 "MessageTags",
                 args,

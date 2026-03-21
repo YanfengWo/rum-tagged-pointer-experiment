@@ -101,6 +101,15 @@ pub(super) enum MatcherNode {
         inner: Box<MatcherNode>,
         condition: Expr,
     },
+    PatternTest {
+        inner: Box<MatcherNode>,
+        test: Expr,
+    },
+    Except {
+        excluded: Box<MatcherNode>,
+        inner: Box<MatcherNode>,
+    },
+    Alternatives(Vec<MatcherNode>),
     Call {
         head: Box<MatcherNode>,
         args: Vec<MatcherArg>,
@@ -111,14 +120,35 @@ pub(super) enum MatcherNode {
 pub(super) enum MatcherArg {
     Single(MatcherNode),
     Sequence(CompiledSequencePattern),
+    Optional(CompiledOptionalPattern),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct CompiledSequencePattern {
     pub(super) min_len: usize,
-    pub(super) head_constraint: Option<Expr>,
+    pub(super) max_len: Option<usize>,
+    pub(super) matcher: MatcherNode,
     pub(super) name: Option<Symbol>,
-    pub(super) condition: Option<Expr>,
+    pub(super) checks: Vec<SequencePatternCheck>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) enum SequencePatternCheck {
+    Condition(Expr),
+    PatternTest(Expr),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct CompiledOptionalPattern {
+    pub(super) inner: Box<MatcherArg>,
+    pub(super) default: CompiledOptionalDefault,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) enum CompiledOptionalDefault {
+    Explicit(Expr),
+    Implicit { head: Expr, position: usize },
+    UnavailableImplicit,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -132,14 +162,6 @@ pub(super) enum MessageCatalogQuery {
 pub(super) enum AttributeUpdate {
     Insert,
     Remove,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub(super) struct SequencePatternSpec<'a> {
-    pub(super) min_len: usize,
-    pub(super) head_constraint: Option<&'a Expr>,
-    pub(super) name: Option<&'a Symbol>,
-    pub(super) condition: Option<&'a Expr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

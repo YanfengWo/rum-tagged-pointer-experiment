@@ -17,6 +17,34 @@ pub(super) fn compile_matcher(expr: &Expr) -> MatcherNode {
         };
     }
 
+    if let Some((inner, test)) = pattern_test(expr) {
+        return MatcherNode::PatternTest {
+            inner: Box::new(compile_matcher(inner)),
+            test: test.clone(),
+        };
+    }
+
+    if let Some((excluded, inner)) = pattern_except(expr) {
+        return MatcherNode::Except {
+            excluded: Box::new(compile_matcher(excluded)),
+            inner: Box::new(
+                inner
+                    .map(compile_matcher)
+                    .unwrap_or_else(|| MatcherNode::Blank {
+                        head_constraint: None,
+                    }),
+            ),
+        };
+    }
+
+    if let Some((inner, _)) = pattern_optional(expr) {
+        return compile_matcher(inner);
+    }
+
+    if let Some(alternatives) = pattern_alternatives(expr) {
+        return MatcherNode::Alternatives(alternatives.iter().map(compile_matcher).collect());
+    }
+
     if let Some(blank_head) = pattern_blank_head(expr) {
         return MatcherNode::Blank {
             head_constraint: blank_head.cloned(),
@@ -27,26 +55,47 @@ pub(super) fn compile_matcher(expr: &Expr) -> MatcherNode {
         Expr::Atom(_) => MatcherNode::Exact(expr.clone()),
         Expr::Call { head, args } => MatcherNode::Call {
             head: Box::new(compile_matcher(head)),
-            args: compile_matcher_args(args),
+            args: compile_matcher_args(head.as_ref(), args),
         },
     }
 }
 
-pub(super) fn compile_matcher_args(args: &[Expr]) -> Vec<MatcherArg> {
+pub(super) fn compile_matcher_args(head: &Expr, args: &[Expr]) -> Vec<MatcherArg> {
     args.iter()
-        .map(|arg| {
-            if let Some(spec) = decompose_sequence_pattern(arg) {
-                MatcherArg::Sequence(CompiledSequencePattern {
-                    min_len: spec.min_len,
-                    head_constraint: spec.head_constraint.cloned(),
-                    name: spec.name.cloned(),
-                    condition: spec.condition.cloned(),
-                })
-            } else {
-                MatcherArg::Single(compile_matcher(arg))
-            }
+        .enumerate()
+        .map(|(index, arg)| {
+            compile_matcher_arg(
+                arg,
+                CompiledOptionalDefault::Implicit {
+                    head: head.clone(),
+                    position: index + 1,
+                },
+            )
         })
         .collect()
+}
+
+fn compile_matcher_arg(expr: &Expr, implicit_default: CompiledOptionalDefault) -> MatcherArg {
+    let expr = strip_hold_pattern(expr);
+
+    if let Some((inner, default)) = pattern_optional(expr) {
+        return MatcherArg::Optional(CompiledOptionalPattern {
+            inner: Box::new(compile_matcher_arg(
+                inner,
+                CompiledOptionalDefault::UnavailableImplicit,
+            )),
+            default: default
+                .cloned()
+                .map(CompiledOptionalDefault::Explicit)
+                .unwrap_or(implicit_default),
+        });
+    }
+
+    if let Some(spec) = decompose_sequence_pattern(expr) {
+        MatcherArg::Sequence(spec)
+    } else {
+        MatcherArg::Single(compile_matcher(expr))
+    }
 }
 
 pub(super) fn pattern_named_pattern(expr: &Expr) -> Option<(&Symbol, &Expr)> {
@@ -70,7 +119,51 @@ pub(super) fn pattern_condition(expr: &Expr) -> Option<(&Expr, &Expr)> {
     }
 }
 
-pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<SequencePatternSpec<'_>> {
+pub(super) fn pattern_test(expr: &Expr) -> Option<(&Expr, &Expr)> {
+    match expr {
+        Expr::Call { head, args }
+            if is_system_symbol_name(head, "PatternTest") && args.len() == 2 =>
+        {
+            Some((&args[0], &args[1]))
+        }
+        _ => None,
+    }
+}
+
+pub(super) fn pattern_except(expr: &Expr) -> Option<(&Expr, Option<&Expr>)> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Except") && args.len() == 1 => {
+            Some((&args[0], None))
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "Except") && args.len() == 2 => {
+            Some((&args[0], Some(&args[1])))
+        }
+        _ => None,
+    }
+}
+
+pub(super) fn pattern_optional(expr: &Expr) -> Option<(&Expr, Option<&Expr>)> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Optional") && args.len() == 1 => {
+            Some((&args[0], None))
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "Optional") && args.len() == 2 => {
+            Some((&args[0], Some(&args[1])))
+        }
+        _ => None,
+    }
+}
+
+pub(super) fn pattern_alternatives(expr: &Expr) -> Option<&[Expr]> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Alternatives") => Some(args),
+        _ => None,
+    }
+}
+
+pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<CompiledSequencePattern> {
+    let expr = strip_hold_pattern(expr);
+
     match expr {
         Expr::Call { head, args } if is_system_symbol_name(head, "Pattern") && args.len() == 2 => {
             let mut spec = decompose_sequence_pattern(&args[1])?;
@@ -80,19 +173,23 @@ pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<SequencePatternS
                 return None;
             }
 
-            spec.name = Some(name);
+            spec.name = Some(name.clone());
             Some(spec)
         }
         Expr::Call { head, args }
             if is_system_symbol_name(head, "Condition") && args.len() == 2 =>
         {
             let mut spec = decompose_sequence_pattern(&args[0])?;
-
-            if spec.condition.is_some() {
-                return None;
-            }
-
-            spec.condition = Some(&args[1]);
+            spec.checks
+                .push(SequencePatternCheck::Condition(args[1].clone()));
+            Some(spec)
+        }
+        Expr::Call { head, args }
+            if is_system_symbol_name(head, "PatternTest") && args.len() == 2 =>
+        {
+            let mut spec = decompose_sequence_pattern(&args[0])?;
+            spec.checks
+                .push(SequencePatternCheck::PatternTest(args[1].clone()));
             Some(spec)
         }
         Expr::Call { head, args } if is_system_symbol_name(head, "BlankSequence") => {
@@ -100,11 +197,14 @@ pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<SequencePatternS
                 return None;
             }
 
-            Some(SequencePatternSpec {
+            Some(CompiledSequencePattern {
                 min_len: 1,
-                head_constraint: args.first(),
+                max_len: None,
+                matcher: MatcherNode::Blank {
+                    head_constraint: args.first().cloned(),
+                },
                 name: None,
-                condition: None,
+                checks: Vec::new(),
             })
         }
         Expr::Call { head, args } if is_system_symbol_name(head, "BlankNullSequence") => {
@@ -112,12 +212,85 @@ pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<SequencePatternS
                 return None;
             }
 
-            Some(SequencePatternSpec {
+            Some(CompiledSequencePattern {
                 min_len: 0,
-                head_constraint: args.first(),
+                max_len: None,
+                matcher: MatcherNode::Blank {
+                    head_constraint: args.first().cloned(),
+                },
                 name: None,
-                condition: None,
+                checks: Vec::new(),
             })
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "Repeated") => {
+            compile_repeated_pattern(args, 1)
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "RepeatedNull") => {
+            compile_repeated_pattern(args, 0)
+        }
+        _ => None,
+    }
+}
+
+fn compile_repeated_pattern(
+    args: &[Expr],
+    default_min_len: usize,
+) -> Option<CompiledSequencePattern> {
+    let (inner, bounds_expr) = match args {
+        [inner] => (inner, None),
+        [inner, bounds] => (inner, Some(bounds)),
+        _ => return None,
+    };
+
+    let (min_len, max_len) = match bounds_expr {
+        Some(bounds) => parse_repeated_bounds(bounds)?,
+        None => (default_min_len, None),
+    };
+
+    Some(CompiledSequencePattern {
+        min_len,
+        max_len,
+        matcher: compile_matcher(inner),
+        name: None,
+        checks: Vec::new(),
+    })
+}
+
+fn parse_repeated_bounds(expr: &Expr) -> Option<(usize, Option<usize>)> {
+    if let Some(count) = expr_as_non_negative_usize(expr) {
+        return Some((count, Some(count)));
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "List") {
+        return None;
+    }
+
+    match args.as_slice() {
+        [single] => {
+            let count = expr_as_non_negative_usize(single)?;
+            Some((count, Some(count)))
+        }
+        [min, max] => {
+            let min = expr_as_non_negative_usize(min)?;
+            let max = if let Some(max) = expr_as_non_negative_usize(max) {
+                Some(max)
+            } else if is_system_symbol_name(max, "Infinity") {
+                None
+            } else {
+                return None;
+            };
+
+            if let Some(max) = max {
+                if max < min {
+                    return None;
+                }
+            }
+
+            Some((min, max))
         }
         _ => None,
     }
@@ -128,9 +301,13 @@ pub(super) fn min_required_arg_count(patterns: &[Expr]) -> usize {
     patterns
         .iter()
         .map(|pattern| {
-            decompose_sequence_pattern(pattern)
-                .map(|spec| spec.min_len)
-                .unwrap_or(1)
+            if pattern_optional(strip_hold_pattern(pattern)).is_some() {
+                0
+            } else {
+                decompose_sequence_pattern(pattern)
+                    .map(|spec| spec.min_len)
+                    .unwrap_or(1)
+            }
         })
         .sum()
 }
@@ -141,6 +318,7 @@ pub(super) fn min_required_matcher_arg_count(patterns: &[MatcherArg]) -> usize {
         .map(|pattern| match pattern {
             MatcherArg::Single(_) => 1,
             MatcherArg::Sequence(spec) => spec.min_len,
+            MatcherArg::Optional(_) => 0,
         })
         .sum()
 }

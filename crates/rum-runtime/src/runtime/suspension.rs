@@ -103,6 +103,48 @@ impl ContinuationValue for Vec<Expr> {
     }
 }
 
+impl ContinuationValue for Option<Vec<Expr>> {
+    fn into_continuation_expr(self) -> Expr {
+        match self {
+            Some(values) => Expr::call(
+                system_expr("InternalContinuationSomeVec"),
+                vec![Expr::call(system_expr("List"), values)],
+            ),
+            None => Expr::call(system_expr("InternalContinuationNone"), vec![]),
+        }
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        match expr {
+            Expr::Call { head, args }
+                if is_system_symbol_name(&head, "InternalContinuationSomeVec") =>
+            {
+                let mut items = args.into_iter();
+                let Some(list_expr) = items.next() else {
+                    return Some(Vec::new());
+                };
+                debug_assert!(
+                    items.next().is_none(),
+                    "some-vec continuation payloads use exactly one list slot"
+                );
+
+                match list_expr {
+                    Expr::Call { head, args } if is_system_symbol_name(&head, "List") => Some(args),
+                    other => Some(vec![other]),
+                }
+            }
+            Expr::Call { head, args }
+                if is_system_symbol_name(&head, "InternalContinuationNone") =>
+            {
+                debug_assert!(args.is_empty(), "none continuation payloads are empty");
+                None
+            }
+            Expr::Call { head, args } if is_system_symbol_name(&head, "List") => Some(args),
+            other => Some(vec![other]),
+        }
+    }
+}
+
 struct ClosureFrame<F> {
     resume: Option<F>,
 }

@@ -1,5 +1,34 @@
 use super::*;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) enum MessageQueryTarget {
+    Symbol(Symbol),
+    Key(MessageNameKey),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum MessageTargetNormalizationError {
+    InvalidMessageEmitTarget,
+    InvalidMessageCatalogTarget,
+    InvalidDefinitionInspectionTarget,
+}
+
+impl MessageTargetNormalizationError {
+    pub(super) fn message(self) -> &'static str {
+        match self {
+            Self::InvalidMessageEmitTarget => {
+                "expected the first argument to be a MessageName expression"
+            }
+            Self::InvalidMessageCatalogTarget => {
+                "expected no arguments, a symbol or symbol-name string, or a MessageName expression"
+            }
+            Self::InvalidDefinitionInspectionTarget => {
+                "expected a symbol or symbol-name string argument"
+            }
+        }
+    }
+}
+
 impl Session {
     pub(super) fn resolve_message_name_args(
         &self,
@@ -31,6 +60,14 @@ impl Session {
         }
 
         self.resolve_message_name_args(&args[0], &args[1])
+    }
+
+    pub(super) fn normalize_message_emit_target(
+        &self,
+        expr: &Expr,
+    ) -> Result<MessageNameKey, MessageTargetNormalizationError> {
+        self.message_name_key_from_expr(expr)
+            .ok_or(MessageTargetNormalizationError::InvalidMessageEmitTarget)
     }
 
     pub(super) fn define_message(&mut self, key: MessageNameKey, value: Expr, delayed: bool) {
@@ -92,6 +129,27 @@ impl Session {
             Expr::Atom(Atom::String(raw)) => self.resolve_symbol_name(raw, true),
             _ => None,
         }
+    }
+
+    pub(super) fn normalize_message_query_target(
+        &self,
+        expr: &Expr,
+    ) -> Result<MessageQueryTarget, MessageTargetNormalizationError> {
+        if let Some(key) = self.message_name_key_from_expr(expr) {
+            Ok(MessageQueryTarget::Key(key))
+        } else if let Some(symbol) = self.lookup_message_symbol(expr) {
+            Ok(MessageQueryTarget::Symbol(symbol))
+        } else {
+            Err(MessageTargetNormalizationError::InvalidMessageCatalogTarget)
+        }
+    }
+
+    pub(super) fn normalize_definition_inspection_target(
+        &self,
+        expr: &Expr,
+    ) -> Result<Symbol, MessageTargetNormalizationError> {
+        self.lookup_message_symbol(expr)
+            .ok_or(MessageTargetNormalizationError::InvalidDefinitionInspectionTarget)
     }
 
     pub(super) fn lookup_attribute_target(

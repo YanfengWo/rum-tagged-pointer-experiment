@@ -595,3 +595,204 @@ fn resume_eval_request_with_input_can_finish_cases_with_suspending_level_spec() 
 
     assert_eq!(response.value.to_string(), "List[1]");
 }
+
+#[test]
+fn resume_eval_request_with_input_can_finish_cases_with_suspending_heads_option_as_third_arg() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "Cases[f[g[1]], x_Symbol, If[MatchQ[InputString[\"heads: \"], \"yes\"], Heads -> True, Heads -> False]]",
+        )
+        .expect_err("Cases third-argument traversal config should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "heads: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue Cases after the third argument resolves");
+
+    assert_eq!(response.value.to_string(), "List[f, g]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_cases_with_suspending_heads_option_as_fourth_arg() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "Cases[f[1, g[2]], x_Symbol, 2, If[MatchQ[InputString[\"heads: \"], \"yes\"], Heads -> True, Heads -> False]]",
+        )
+        .expect_err("Cases fourth-argument traversal config should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "heads: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue Cases after the fourth argument resolves");
+
+    assert_eq!(response.value.to_string(), "List[g]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_patterntest_matchq() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "MatchQ[1, PatternTest[x_Integer, Function[x, MatchQ[InputString[\"cond: \"], \"yes\"]]]]",
+        )
+        .expect_err("PatternTest should suspend when its test function requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should finish PatternTest-based MatchQ");
+
+    assert_eq!(response.value.to_string(), "True");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_sequence_patterntest_matchq() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "MatchQ[f[1, 2], f[PatternTest[x__, Function[x, MatchQ[InputString[\"cond: \"], \"yes\"]]], y_]]",
+        )
+        .expect_err("sequence PatternTest should suspend when its test function requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should finish sequence PatternTest matching");
+
+    assert_eq!(response.value.to_string(), "True");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_except_matchq() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("MatchQ[a, Except[x_ /; MatchQ[InputString[\"cond: \"], \"yes\"]]]")
+        .expect_err("Except should suspend when its excluded branch requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should finish Except-based MatchQ");
+
+    assert_eq!(response.value.to_string(), "False");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_repeated_patterntest_matchq() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "MatchQ[f[1], f[Repeated[PatternTest[x_Integer, Function[x, MatchQ[InputString[\"cond: \"], \"yes\"]]]]]]",
+        )
+        .expect_err("Repeated should suspend when its element matcher requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should finish Repeated-based MatchQ");
+
+    assert_eq!(response.value.to_string(), "True");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_thread_with_suspending_arg_spec() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "Thread[f[{a, b}, {c, d}, {e, f}], List, If[MatchQ[InputString[\"spec: \"], \"yes\"], {2}, All]]",
+        )
+        .expect_err("Thread should suspend while its argument-spec expression requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "spec: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should finish Thread after the argument spec resolves");
+
+    assert_eq!(
+        response.value.to_string(),
+        "List[f[List[a, b], c, List[e, f]], f[List[a, b], d, List[e, f]]]"
+    );
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_setattributes_with_suspending_attribute_spec() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "SetAttributes[f, If[MatchQ[InputString[\"attr: \"], \"yes\"], HoldFirst, HoldRest]]",
+        )
+        .expect_err("SetAttributes should suspend while its attribute spec requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "attr: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should finish SetAttributes after the attribute spec resolves");
+
+    assert_eq!(response.value.to_string(), "Null");
+    assert_eq!(
+        session
+            .eval_text("f[Identity[1], Identity[2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[Identity[1], 2]"
+    );
+}

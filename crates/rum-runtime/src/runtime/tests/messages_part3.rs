@@ -42,6 +42,29 @@ fn beginpackage_can_load_dependencies_via_needs() {
 }
 
 #[test]
+fn beginpackage_accepts_resolved_dependency_lists() {
+    let dir = TempDirGuard::new("needs-resolved-deps");
+    dir.write(
+        "Dep.rum",
+        "BeginPackage[\"Dep`\"]\ndepValue = 7\nEndPackage[]",
+    );
+    dir.write(
+        "Main.rum",
+        "deps = {\"Dep`\"}\nBeginPackage[\"Main`\", deps]\nvalue = Dep`depValue\nEndPackage[]",
+    );
+    let mut session = Session::new();
+    session.set_package_search_paths([dir.path().to_path_buf()]);
+
+    session.eval_text("Needs[\"Main`\"]").unwrap();
+
+    assert_eq!(session.eval_text("value").unwrap().value.to_string(), "7");
+    assert_eq!(
+        session.eval_text("$Packages").unwrap().value.to_string(),
+        "List[\"Main`\", \"Dep`\"]"
+    );
+}
+
+#[test]
 fn path_builtin_reflects_package_search_roots() {
     let dir = TempDirGuard::new("path");
     let mut session = Session::new();

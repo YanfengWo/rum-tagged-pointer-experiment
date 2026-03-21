@@ -1,5 +1,30 @@
 use super::*;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct AttributeUpdateConfig {
+    targets: Vec<Symbol>,
+    attributes: AttributeSet,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum AttributeUpdateNormalizationError {
+    InvalidTargets,
+    InvalidAttributes,
+}
+
+impl AttributeUpdateNormalizationError {
+    fn message(self) -> &'static str {
+        match self {
+            Self::InvalidTargets => {
+                "expected a symbol, symbol-name string, or list of those as the first argument"
+            }
+            Self::InvalidAttributes => {
+                "expected an attribute symbol or list of attribute symbols as the second argument"
+            }
+        }
+    }
+}
+
 impl Session {
     pub(super) fn eval_attributes(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
@@ -36,12 +61,11 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count(symbol, args, 2));
         }
 
-        let Some(targets) = self.lookup_attribute_targets(&args[0], true) else {
-            return Ok(self.invalid_call_with_arg_form(
-                symbol,
-                args,
-                "expected a symbol, symbol-name string, or list of those as the first argument",
-            ));
+        let targets = match self.normalize_attribute_update_targets(&args[0]) {
+            Ok(targets) => targets,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form(symbol, args, error.message()));
+            }
         };
 
         let symbol_name = symbol.to_string();
@@ -50,7 +74,7 @@ impl Session {
             let targets = targets.clone();
             let original_args = args.to_vec();
             move |session, resolved| {
-                session.resume_update_attributes(
+                session.finish_update_attributes_after_resolved_attributes(
                     &symbol_name,
                     original_args,
                     targets,
@@ -60,10 +84,16 @@ impl Session {
             }
         })?;
 
-        self.resume_update_attributes(symbol, args.to_vec(), targets, update, resolved_attributes)
+        self.finish_update_attributes_after_resolved_attributes(
+            symbol,
+            args.to_vec(),
+            targets,
+            update,
+            resolved_attributes,
+        )
     }
 
-    fn resume_update_attributes(
+    fn finish_update_attributes_after_resolved_attributes(
         &mut self,
         symbol: &str,
         original_args: Vec<Expr>,
@@ -71,18 +101,22 @@ impl Session {
         update: AttributeUpdate,
         resolved_attributes: Expr,
     ) -> Result<Expr, EvalError> {
-        let Some(attributes) = parse_attribute_set_expr(&resolved_attributes) else {
-            return Ok(self.invalid_call_with_arg_form(
-                symbol,
-                &original_args,
-                "expected an attribute symbol or list of attribute symbols as the second argument",
-            ));
-        };
+        let config =
+            match self.compile_attribute_update_from_resolved_args(targets, &resolved_attributes) {
+                Ok(config) => config,
+                Err(error) => {
+                    return Ok(self.invalid_call_with_arg_form(
+                        symbol,
+                        &original_args,
+                        error.message(),
+                    ));
+                }
+            };
 
-        for target in targets {
+        for target in config.targets {
             let mut current = self.attribute_set_for_symbol(&target);
 
-            for attribute in attributes.attributes() {
+            for attribute in config.attributes.attributes() {
                 match update {
                     AttributeUpdate::Insert => current.insert(attribute),
                     AttributeUpdate::Remove => current.remove(attribute),
@@ -93,5 +127,27 @@ impl Session {
         }
 
         Ok(system_expr("Null"))
+    }
+
+    fn normalize_attribute_update_targets(
+        &self,
+        expr: &Expr,
+    ) -> Result<Vec<Symbol>, AttributeUpdateNormalizationError> {
+        self.lookup_attribute_targets(expr, true)
+            .ok_or(AttributeUpdateNormalizationError::InvalidTargets)
+    }
+
+    fn compile_attribute_update_from_resolved_args(
+        &self,
+        targets: Vec<Symbol>,
+        resolved_attributes: &Expr,
+    ) -> Result<AttributeUpdateConfig, AttributeUpdateNormalizationError> {
+        let attributes = parse_attribute_set_expr(resolved_attributes)
+            .ok_or(AttributeUpdateNormalizationError::InvalidAttributes)?;
+
+        Ok(AttributeUpdateConfig {
+            targets,
+            attributes,
+        })
     }
 }

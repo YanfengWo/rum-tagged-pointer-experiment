@@ -66,39 +66,26 @@ impl Session {
 
     #[allow(dead_code)]
     pub(super) fn normalize_pattern_expr(&mut self, expr: &Expr) -> Result<Expr, EvalError> {
-        let normalized = strip_hold_pattern(expr);
-        let normalized = match normalized {
-            Expr::Atom(Atom::Symbol(_)) => self.evaluate(normalized.clone()),
-            other => Ok(other.clone()),
+        self.resolve_matcher_pattern_expr_owned(expr.clone())
+    }
+
+    pub(super) fn resolve_matcher_pattern_expr_owned(
+        &mut self,
+        expr: Expr,
+    ) -> Result<Expr, EvalError> {
+        let normalized = strip_hold_pattern(&expr).clone();
+        let resolved = match normalized {
+            Expr::Atom(Atom::Symbol(_)) => self.evaluate(normalized),
+            other => Ok(other),
         }?;
 
-        Ok(self.normalize_match_expr(&normalized))
-    }
-
-    fn resolve_cases_spec_expr(&mut self, expr: Expr) -> Result<Expr, EvalError> {
-        match expr {
-            Expr::Atom(Atom::Symbol(_)) => self.evaluate(expr),
-            Expr::Call { ref head, .. }
-                if is_system_symbol_name(&head, "Rule")
-                    || is_system_symbol_name(&head, "RuleDelayed") =>
-            {
-                self.evaluate(expr)
-            }
-            other => Ok(other),
-        }
-    }
-
-    fn compile_cases_spec_from_resolved(&self, resolved: Expr) -> CasesSpec {
-        match self.compile_rewrite_rule_for_matching(&resolved) {
-            Some(rule) => CasesSpec::Rule(rule),
-            None => CasesSpec::Pattern(resolved),
-        }
+        Ok(self.normalize_match_expr(&resolved))
     }
 
     #[allow(dead_code)]
     pub(super) fn normalize_cases_spec(&mut self, expr: &Expr) -> Result<CasesSpec, EvalError> {
-        let resolved = self.resolve_cases_spec_expr(expr.clone())?;
-        Ok(self.compile_cases_spec_from_resolved(resolved))
+        let resolved = self.resolve_cases_spec_expr_for_matching_owned(expr.clone())?;
+        Ok(self.compile_cases_spec_from_resolved_expr(resolved))
     }
 
     fn resume_cases_after_target(
@@ -108,7 +95,7 @@ impl Session {
         option_exprs: Vec<Expr>,
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
-        let spec_result = self.resolve_cases_spec_expr(spec_expr.clone());
+        let spec_result = self.resolve_cases_spec_expr_for_matching_owned(spec_expr.clone());
         let resolved_spec = self.suspend_with_frame(spec_result, {
             let target = target.clone();
             let option_exprs = option_exprs.clone();
@@ -133,141 +120,40 @@ impl Session {
         option_exprs: Vec<Expr>,
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
-        let spec = self.compile_cases_spec_from_resolved(resolved_spec);
-
-        match option_exprs.as_slice() {
-            [] => self.finish_cases_with_traversal(
-                target,
-                spec,
-                CasesTraversalConfig {
-                    levels: CasesLevelSpec::all(),
-                    include_heads: false,
-                },
-            ),
-            [third] => {
-                let third_result = self.evaluate(third.clone());
-                let resolved_third = self.suspend_with_frame(third_result, {
-                    let target = target.clone();
-                    let spec = spec.clone();
-                    let call_args = call_args.clone();
-                    move |session, resolved_third| {
-                        session.resume_cases_after_third(target, spec, resolved_third, call_args)
-                    }
-                })?;
-
-                self.resume_cases_after_third(target, spec, resolved_third, call_args)
-            }
-            [third, fourth] => {
-                let third_result = self.evaluate(third.clone());
-                let resolved_third = self.suspend_with_frame(third_result, {
-                    let target = target.clone();
-                    let spec = spec.clone();
-                    let fourth = fourth.clone();
-                    let call_args = call_args.clone();
-                    move |session, resolved_third| {
-                        session.resume_cases_after_third_and_fourth(
-                            target,
-                            spec,
-                            resolved_third,
-                            fourth,
-                            call_args,
-                        )
-                    }
-                })?;
-
-                self.resume_cases_after_third_and_fourth(
-                    target,
-                    spec,
-                    resolved_third,
-                    fourth.clone(),
-                    call_args,
-                )
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    fn resume_cases_after_third(
-        &mut self,
-        target: Expr,
-        spec: CasesSpec,
-        resolved_third: Expr,
-        call_args: Vec<Expr>,
-    ) -> Result<Expr, EvalError> {
-        let traversal = if let Some(include_heads) = parse_cases_heads_option(&resolved_third) {
-            CasesTraversalConfig {
-                levels: CasesLevelSpec::all(),
-                include_heads,
-            }
-        } else if let Some(levels) = parse_cases_level_spec(&resolved_third) {
-            CasesTraversalConfig {
-                levels,
-                include_heads: false,
-            }
-        } else {
-            return Ok(self.invalid_call_with_arg_form(
-                "Cases",
-                &call_args,
-                "expected a non-negative level spec or Heads -> True/False as the third argument",
-            ));
-        };
-
-        self.finish_cases_with_traversal(target, spec, traversal)
-    }
-
-    fn resume_cases_after_third_and_fourth(
-        &mut self,
-        target: Expr,
-        spec: CasesSpec,
-        resolved_third: Expr,
-        fourth: Expr,
-        call_args: Vec<Expr>,
-    ) -> Result<Expr, EvalError> {
-        let Some(levels) = parse_cases_level_spec(&resolved_third) else {
-            return Ok(self.invalid_call_with_arg_form(
-                "Cases",
-                &call_args,
-                "expected a non-negative level spec as the third argument",
-            ));
-        };
-
-        let fourth_result = self.evaluate(fourth);
-        let resolved_fourth = self.suspend_with_frame(fourth_result, {
+        let spec = self.compile_cases_spec_from_resolved_expr(resolved_spec);
+        let resolved_option_exprs_result = self.resolve_argument_exprs_owned(option_exprs.clone());
+        self.drive_internal_value(resolved_option_exprs_result, {
             let target = target.clone();
             let spec = spec.clone();
             let call_args = call_args.clone();
-            move |session, resolved_fourth| {
-                session.resume_cases_after_fourth(target, spec, levels, resolved_fourth, call_args)
+            move |session, resolved_option_exprs| {
+                session.finish_cases_after_resolved_options(
+                    target,
+                    spec,
+                    resolved_option_exprs,
+                    call_args,
+                )
             }
-        })?;
-
-        self.resume_cases_after_fourth(target, spec, levels, resolved_fourth, call_args)
+        })
     }
 
-    fn resume_cases_after_fourth(
+    fn finish_cases_after_resolved_options(
         &mut self,
         target: Expr,
         spec: CasesSpec,
-        levels: CasesLevelSpec,
-        resolved_fourth: Expr,
+        resolved_option_exprs: Vec<Expr>,
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
-        let Some(include_heads) = parse_cases_heads_option(&resolved_fourth) else {
-            return Ok(self.invalid_call_with_arg_form(
-                "Cases",
-                &call_args,
-                "expected a Heads -> True/False option as the fourth argument",
-            ));
+        let traversal = match self
+            .compile_cases_traversal_from_resolved_exprs(&resolved_option_exprs)
+        {
+            Ok(traversal) => traversal,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form("Cases", &call_args, error.message()));
+            }
         };
 
-        self.finish_cases_with_traversal(
-            target,
-            spec,
-            CasesTraversalConfig {
-                levels,
-                include_heads,
-            },
-        )
+        self.finish_cases_with_traversal(target, spec, traversal)
     }
 
     fn finish_cases_with_traversal(
@@ -377,18 +263,11 @@ impl Session {
         pattern_expr: Expr,
         value: Expr,
     ) -> Result<Expr, EvalError> {
-        let normalized = strip_hold_pattern(&pattern_expr);
-        let pattern = match normalized {
-            Expr::Atom(Atom::Symbol(_)) => {
-                let pattern_result = self.evaluate(normalized.clone());
-                let resolved = self.suspend_with_frame(pattern_result, {
-                    let value = value.clone();
-                    move |session, resolved| session.finish_match_q_with_pattern(resolved, value)
-                })?;
-                return self.finish_match_q_with_pattern(resolved, value);
-            }
-            other => other.clone(),
-        };
+        let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
+        let pattern = self.suspend_with_frame(pattern_result, {
+            let value = value.clone();
+            move |session, resolved| session.finish_match_q_with_pattern(resolved, value)
+        })?;
 
         self.finish_match_q_with_pattern(pattern, value)
     }
@@ -398,7 +277,6 @@ impl Session {
         pattern: Expr,
         value: Expr,
     ) -> Result<Expr, EvalError> {
-        let pattern = self.normalize_match_expr(&pattern);
         let match_result = self.match_expr_owned(pattern, value, BTreeMap::new());
         self.drive_internal_value(match_result, move |_, outcome| {
             Ok(system_expr(if outcome.matched { "True" } else { "False" }))
@@ -410,35 +288,31 @@ impl Session {
         target: Expr,
         rules_expr: Expr,
     ) -> Result<Expr, EvalError> {
-        let rules_result = self.evaluate(rules_expr.clone());
-        let resolved_rules = self.suspend_with_frame(rules_result, {
-            let target = target.clone();
-            let rules_expr_for_resume = rules_expr.clone();
-            move |session, resolved_rules| {
-                session.resume_replace_all_after_rules(
-                    target,
-                    rules_expr_for_resume,
-                    resolved_rules,
-                )
-            }
-        })?;
+        let normalized_rule_exprs_result =
+            self.resolve_rewrite_rule_exprs_owned(rules_expr.clone());
+        let normalized_rule_exprs = self
+            .drive_internal_value(normalized_rule_exprs_result, |_, rule_exprs| Ok(rule_exprs))?;
 
-        self.resume_replace_all_after_rules(target, rules_expr, resolved_rules)
+        self.resume_replace_all_after_rule_exprs(target, rules_expr, normalized_rule_exprs)
     }
 
-    fn resume_replace_all_after_rules(
+    fn resume_replace_all_after_rule_exprs(
         &mut self,
         target: Expr,
-        _rules_expr: Expr,
-        resolved_rules: Expr,
+        rules_input: Expr,
+        normalized_rule_exprs: Option<Vec<Expr>>,
     ) -> Result<Expr, EvalError> {
-        let Some(rules) = self.compile_rewrite_rules_for_matching(&resolved_rules) else {
+        let Some(rule_exprs) = normalized_rule_exprs else {
             return Ok(self.invalid_call_with_arg_form(
                 "ReplaceAll",
-                &[target, resolved_rules],
+                &[target, rules_input],
                 "expected a rule or list of rules as the second argument",
             ));
         };
+
+        let rules = self
+            .compile_rewrite_rules_from_normalized_exprs(rule_exprs)
+            .expect("normalized rewrite rule expressions should recompile");
 
         let replaced = self.apply_replace_all(target, &rules, RuleApplicationSource::ReplaceAll)?;
         let replaced_result = self.evaluate(replaced);
@@ -450,35 +324,31 @@ impl Session {
         current: Expr,
         rules_expr: Expr,
     ) -> Result<Expr, EvalError> {
-        let rules_result = self.evaluate(rules_expr.clone());
-        let resolved_rules = self.suspend_with_frame(rules_result, {
-            let current = current.clone();
-            let rules_expr_for_resume = rules_expr.clone();
-            move |session, resolved_rules| {
-                session.resume_replace_repeated_after_rules(
-                    current,
-                    rules_expr_for_resume,
-                    resolved_rules,
-                )
-            }
-        })?;
+        let normalized_rule_exprs_result =
+            self.resolve_rewrite_rule_exprs_owned(rules_expr.clone());
+        let normalized_rule_exprs = self
+            .drive_internal_value(normalized_rule_exprs_result, |_, rule_exprs| Ok(rule_exprs))?;
 
-        self.resume_replace_repeated_after_rules(current, rules_expr, resolved_rules)
+        self.resume_replace_repeated_after_rule_exprs(current, rules_expr, normalized_rule_exprs)
     }
 
-    fn resume_replace_repeated_after_rules(
+    fn resume_replace_repeated_after_rule_exprs(
         &mut self,
         current: Expr,
-        resolved_rules_input: Expr,
-        resolved_rules: Expr,
+        rules_input: Expr,
+        normalized_rule_exprs: Option<Vec<Expr>>,
     ) -> Result<Expr, EvalError> {
-        let Some(rules) = self.compile_rewrite_rules_for_matching(&resolved_rules) else {
+        let Some(rule_exprs) = normalized_rule_exprs else {
             return Ok(self.invalid_call_with_arg_form(
                 "ReplaceRepeated",
-                &[current, resolved_rules_input],
+                &[current, rules_input],
                 "expected a rule or list of rules as the second argument",
             ));
         };
+
+        let rules = self
+            .compile_rewrite_rules_from_normalized_exprs(rule_exprs)
+            .expect("normalized rewrite rule expressions should recompile");
 
         self.resume_replace_repeated_loop(current, rules, 0)
     }

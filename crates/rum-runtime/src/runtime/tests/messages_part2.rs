@@ -196,6 +196,28 @@ fn quiet_accepts_selector_lists() {
 }
 
 #[test]
+fn check_and_quiet_accept_message_name_selector_forms() {
+    let mut session = Session::new();
+
+    let check_outcome = session
+        .eval_text("Check[FindFile[\"Missing`\"], 99, FindFile::notfound]")
+        .unwrap();
+    assert_eq!(check_outcome.value.to_string(), "99");
+    assert!(
+        check_outcome
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "FindFile" && message.tag == "notfound" })
+    );
+
+    let quiet_outcome = session
+        .eval_text("Quiet[Needs[\"Missing`\"], {Get::notfound, Needs::load}]")
+        .unwrap();
+    assert_eq!(quiet_outcome.value.to_string(), "$Failed");
+    assert!(quiet_outcome.messages.is_empty());
+}
+
+#[test]
 fn invalid_message_selector_specs_emit_runtime_messages() {
     let mut session = Session::new();
 

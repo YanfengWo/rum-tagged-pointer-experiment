@@ -148,6 +148,12 @@ Reference docs for this workstream:
 - [x] Refactor ordinary call evaluation around a staged dispatch model that covers special forms, argument preparation, list threading, definitions, builtins, and pure functions
 - [x] Route builtin stage selection through metadata-backed builtin specs instead of direct name-based dispatch branches
 - [x] Build call-dispatch stage plans from builtin metadata, attributes, and head traits so inactive stages are omitted instead of being no-op filtered later
+- [x] Normalize rewrite pattern / rule / traversal spec parsing through shared helpers instead of keeping separate ad hoc paths in `MatchQ`, `Cases`, `ReplaceAll`, and `ReplaceRepeated`
+- [x] Normalize raw message-selector parsing through a shared `Check` / `Quiet` helper instead of inline selector branches
+- [x] Normalize loader-spec parsing through shared `FindFile` / `Get` / `Needs` / `BeginPackage` call-config helpers
+- [x] Normalize message and definition-inspection targets through shared raw-form helpers across `Message`, `Messages`, `MessageDefinitions`, `MessageTags`, `OwnValues`, `UpValues`, `DownValues`, and `SubValues`
+- [x] Normalize `With` / `Module` / `Block` binding-list parsing through a shared raw-form family while preserving held/raw binding semantics
+- [ ] Continue auditing remaining raw-form normalization families such as definition-clear / tagged-target parsing so held/spec-driven builtins stop hand-rolling target parsing one by one
 
 ### `rum-runtime`: Attribute and Definition Semantics
 

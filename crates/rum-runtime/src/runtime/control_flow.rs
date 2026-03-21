@@ -11,17 +11,11 @@ impl Session {
             ));
         }
 
-        let selectors = if let Some(selector_expr) = args.get(2) {
-            let Some(selectors) = parse_message_selectors(selector_expr) else {
-                return Ok(self.invalid_call_with_arg_form(
-                    "Check",
-                    args,
-                    "expected the optional message selector to be a symbol, a \"symbol::tag\" string, or a list of those",
-                ));
-            };
-            Some(selectors)
-        } else {
-            None
+        let selectors = match self.normalize_optional_message_selectors(args.get(2)) {
+            Ok(selectors) => selectors,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form("Check", args, error.message()));
+            }
         };
 
         let fallback = args[1].clone();
@@ -64,17 +58,11 @@ impl Session {
             ));
         }
 
-        let selectors = if let Some(selector_expr) = args.get(1) {
-            let Some(selectors) = parse_message_selectors(selector_expr) else {
-                return Ok(self.invalid_call_with_arg_form(
-                    "Quiet",
-                    args,
-                    "expected the optional message selector to be a symbol, a \"symbol::tag\" string, or a list of those",
-                ));
-            };
-            Some(selectors)
-        } else {
-            None
+        let selectors = match self.normalize_optional_message_selectors(args.get(1)) {
+            Ok(selectors) => selectors,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form("Quiet", args, error.message()));
+            }
         };
 
         let message_checkpoint = self.messages.len();

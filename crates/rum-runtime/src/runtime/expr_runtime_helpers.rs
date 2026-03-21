@@ -68,7 +68,14 @@ pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
 
     matches!(
         name,
-        "Flat" | "Heads" | "Listable" | "OneIdentity" | "Orderless" | "SequenceHold"
+        "Alternatives"
+            | "Flat"
+            | "Heads"
+            | "Listable"
+            | "OneIdentity"
+            | "Orderless"
+            | "PatternTest"
+            | "SequenceHold"
     )
 }
 

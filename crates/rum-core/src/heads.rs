@@ -30,6 +30,13 @@ pub mod patterns {
     pub const BLANK_SEQUENCE: &str = "BlankSequence";
     pub const BLANK_NULL_SEQUENCE: &str = "BlankNullSequence";
     pub const CONDITION: &str = "Condition";
+    pub const OPTIONAL: &str = "Optional";
+    pub const EXCEPT: &str = "Except";
+    pub const PATTERN_TEST: &str = "PatternTest";
+    pub const ALTERNATIVES: &str = "Alternatives";
+    pub const REPEATED: &str = "Repeated";
+    pub const REPEATED_NULL: &str = "RepeatedNull";
+    pub const DEFAULT: &str = "Default";
 }
 
 pub mod rules {
@@ -121,6 +128,13 @@ pub const CANONICAL_CORE_HEADS: &[&str] = &[
     patterns::BLANK_SEQUENCE,
     patterns::BLANK_NULL_SEQUENCE,
     patterns::CONDITION,
+    patterns::OPTIONAL,
+    patterns::EXCEPT,
+    patterns::PATTERN_TEST,
+    patterns::ALTERNATIVES,
+    patterns::REPEATED,
+    patterns::REPEATED_NULL,
+    patterns::DEFAULT,
     rules::SET,
     rules::SET_DELAYED,
     rules::UNSET,

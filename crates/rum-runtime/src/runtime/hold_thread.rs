@@ -1,5 +1,18 @@
 use super::*;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ThreadCallConfig {
+    expr: Expr,
+    thread_head: Expr,
+    arg_spec: ThreadArgSpec,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ThreadCallNormalizationError {
+    InvalidArgCount { actual: usize },
+    InvalidArgSpec,
+}
+
 impl Session {
     pub(super) fn eval_release_hold(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 1 {
@@ -17,26 +30,25 @@ impl Session {
     }
 
     pub(super) fn eval_thread(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-        let (expr, thread_head, arg_spec) = match args {
-            [expr] => (expr.clone(), system_expr("List"), ThreadArgSpec::All),
-            [expr, thread_head] => (expr.clone(), thread_head.clone(), ThreadArgSpec::All),
-            [expr, thread_head, spec] => {
-                let Some(arg_spec) = parse_thread_arg_spec(spec) else {
-                    return Ok(self.invalid_call_with_arg_form(
-                        "Thread",
-                        args,
-                        "expected the third argument to be a standard sequence specification such as All, None, n, -n, {n}, {m, n}, or {m, n, s}",
-                    ));
-                };
-
-                (expr.clone(), thread_head.clone(), arg_spec)
-            }
-            _ => {
+        let ThreadCallConfig {
+            expr,
+            thread_head,
+            arg_spec,
+        } = match self.compile_thread_call_from_resolved_args(args) {
+            Ok(config) => config,
+            Err(ThreadCallNormalizationError::InvalidArgCount { actual }) => {
                 return Ok(self.invalid_call_with_message(
                     "Thread",
                     args,
                     "argx",
-                    format!("expected 1, 2, or 3 argument(s), got {}", args.len()),
+                    format!("expected 1, 2, or 3 argument(s), got {actual}"),
+                ));
+            }
+            Err(ThreadCallNormalizationError::InvalidArgSpec) => {
+                return Ok(self.invalid_call_with_arg_form(
+                    "Thread",
+                    args,
+                    "expected the third argument to be a standard sequence specification such as All, None, n, -n, {n}, {m, n}, or {m, n, s}",
                 ));
             }
         };
@@ -59,6 +71,36 @@ impl Session {
             ThreadingDispatch::NotApplicable => Ok(expr),
             ThreadingDispatch::Threaded(threaded) => Ok(threaded),
             ThreadingDispatch::Mismatch => Ok(Expr::call(head.clone(), args.to_vec())),
+        }
+    }
+
+    fn compile_thread_call_from_resolved_args(
+        &self,
+        args: &[Expr],
+    ) -> Result<ThreadCallConfig, ThreadCallNormalizationError> {
+        match args {
+            [expr] => Ok(ThreadCallConfig {
+                expr: expr.clone(),
+                thread_head: system_expr("List"),
+                arg_spec: ThreadArgSpec::All,
+            }),
+            [expr, thread_head] => Ok(ThreadCallConfig {
+                expr: expr.clone(),
+                thread_head: thread_head.clone(),
+                arg_spec: ThreadArgSpec::All,
+            }),
+            [expr, thread_head, spec] => {
+                let Some(arg_spec) = parse_thread_arg_spec(spec) else {
+                    return Err(ThreadCallNormalizationError::InvalidArgSpec);
+                };
+
+                Ok(ThreadCallConfig {
+                    expr: expr.clone(),
+                    thread_head: thread_head.clone(),
+                    arg_spec,
+                })
+            }
+            _ => Err(ThreadCallNormalizationError::InvalidArgCount { actual: args.len() }),
         }
     }
 }

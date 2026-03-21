@@ -1,20 +1,48 @@
 use super::*;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct WithBindingsConfig {
+    items: Vec<(Symbol, Expr)>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ScopedBindingsConfig {
+    items: Vec<(Symbol, Option<Expr>)>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ScopingBindingNormalizationError {
+    InvalidWithBindings,
+    InvalidScopedBindings,
+}
+
+impl ScopingBindingNormalizationError {
+    fn message(self) -> &'static str {
+        match self {
+            Self::InvalidWithBindings => {
+                "expected a list of symbol assignments or rules as the first argument"
+            }
+            Self::InvalidScopedBindings => {
+                "expected a list of symbols or symbol initializers as the first argument"
+            }
+        }
+    }
+}
+
 impl Session {
     pub(super) fn eval_with(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
             return Ok(self.invalid_call_with_exact_arg_count("With", args, 2));
         }
 
-        let Some(items) = parse_with_binding_items(&args[0]) else {
-            return Ok(self.invalid_call_with_arg_form(
-                "With",
-                args,
-                "expected a list of symbol assignments or rules as the first argument",
-            ));
+        let config = match self.compile_with_call_from_raw_args(args) {
+            Ok(config) => config,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form("With", args, error.message()));
+            }
         };
 
-        self.resume_with_bindings(items, args[1].clone(), BTreeMap::new(), 0)
+        self.resume_with_bindings(config.items, args[1].clone(), BTreeMap::new(), 0)
     }
 
     pub(super) fn eval_module(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -22,13 +50,13 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("Module", args, 2));
         }
 
-        let Some(items) = parse_module_binding_list(&args[0]) else {
-            return Ok(self.invalid_call_with_arg_form(
-                "Module",
-                args,
-                "expected a list of symbols or symbol initializers as the first argument",
-            ));
+        let config = match self.compile_scoped_call_from_raw_args(args) {
+            Ok(config) => config,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form("Module", args, error.message()));
+            }
         };
+        let items = config.items;
 
         let mut renames = BTreeMap::new();
 
@@ -60,13 +88,13 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("Block", args, 2));
         }
 
-        let Some(items) = parse_module_binding_list(&args[0]) else {
-            return Ok(self.invalid_call_with_arg_form(
-                "Block",
-                args,
-                "expected a list of symbols or symbol initializers as the first argument",
-            ));
+        let config = match self.compile_scoped_call_from_raw_args(args) {
+            Ok(config) => config,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form("Block", args, error.message()));
+            }
         };
+        let items = config.items;
 
         let saved_state = self.capture_block_symbol_states(
             &items
@@ -373,16 +401,24 @@ impl Session {
         self.restore_block_symbol_states(saved_state);
         outcome
     }
-}
 
-fn parse_with_binding_items(expr: &Expr) -> Option<Vec<(Symbol, Expr)>> {
-    let Expr::Call { head, args } = expr else {
-        return None;
-    };
-
-    if !is_system_symbol_name(head, "List") {
-        return None;
+    fn compile_with_call_from_raw_args(
+        &self,
+        args: &[Expr],
+    ) -> Result<WithBindingsConfig, ScopingBindingNormalizationError> {
+        Ok(WithBindingsConfig {
+            items: parse_with_binding_list(&args[0])
+                .ok_or(ScopingBindingNormalizationError::InvalidWithBindings)?,
+        })
     }
 
-    args.iter().map(parse_with_binding_item).collect()
+    fn compile_scoped_call_from_raw_args(
+        &self,
+        args: &[Expr],
+    ) -> Result<ScopedBindingsConfig, ScopingBindingNormalizationError> {
+        Ok(ScopedBindingsConfig {
+            items: parse_module_binding_list(&args[0])
+                .ok_or(ScopingBindingNormalizationError::InvalidScopedBindings)?,
+        })
+    }
 }

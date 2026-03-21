@@ -61,6 +61,36 @@ fn with_supports_rule_style_bindings_and_nested_shadowing() {
 }
 
 #[test]
+fn scoping_builtins_accept_canonical_raw_binding_lists() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("With[List[Set[x, 1], Rule[y, x]], y]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Module[List[Set[x, 1], Set[y, x]], y]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Block[List[Set[x, 1], Rule[y, x]], y]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+}
+
+#[test]
 fn with_respects_pattern_local_names_but_substitutes_pattern_metadata() {
     let mut session = Session::new();
 
@@ -228,4 +258,38 @@ fn block_supports_sequential_initializers_and_nested_shadowing() {
         "2"
     );
     assert_eq!(session.eval_text("x").unwrap().value.to_string(), "10");
+}
+
+#[test]
+fn scoping_builtins_require_raw_binding_lists_instead_of_resolved_variables() {
+    let mut session = Session::new();
+
+    session.eval_text("bindings = {x = 1}").unwrap();
+
+    let with_outcome = session.eval_text("With[bindings, x]").unwrap();
+    assert_eq!(with_outcome.value.to_string(), "With[bindings, x]");
+    assert!(
+        with_outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "With" && message.tag == "argform")
+    );
+
+    let module_outcome = session.eval_text("Module[bindings, x]").unwrap();
+    assert_eq!(module_outcome.value.to_string(), "Module[bindings, x]");
+    assert!(
+        module_outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Module" && message.tag == "argform")
+    );
+
+    let block_outcome = session.eval_text("Block[bindings, x]").unwrap();
+    assert_eq!(block_outcome.value.to_string(), "Block[bindings, x]");
+    assert!(
+        block_outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Block" && message.tag == "argform")
+    );
 }

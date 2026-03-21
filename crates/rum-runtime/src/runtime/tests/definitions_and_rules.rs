@@ -55,6 +55,50 @@ fn ownvalues_lists_immediate_and_delayed_symbol_definitions() {
         "List[]"
     );
 }
+
+#[test]
+fn definition_inspection_builtins_accept_symbol_name_strings() {
+    let mut session = Session::new();
+
+    session.eval_text("x = 42").unwrap();
+    session.eval_text("f[y_Integer] := y").unwrap();
+    session.eval_text("a /: h[a] := 1").unwrap();
+    session.eval_text("g[z_][w_Integer] := pair[z, w]").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("OwnValues[\"x\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[x, 42]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DownValues[\"f\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[f[Pattern[y, Blank[Integer]]], y]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("UpValues[\"a\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[h[a], 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SubValues[\"g\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[g[Pattern[z, Blank[]]][Pattern[w, Blank[Integer]]], pair[z, w]]]"
+    );
+}
+
 #[test]
 fn upvalues_lists_and_applies_tagged_definitions() {
     let mut session = Session::new();

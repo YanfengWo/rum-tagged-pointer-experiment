@@ -10,6 +10,25 @@ fn compiled_matcher_matches_interpreted_matcher_on_supported_subset() {
         ("f[x_Integer, y_String]", "f[7, \"hi\"]", true),
         ("f[x_Integer /; MatchQ[x, 7]]", "f[7]", true),
         ("f[x_Integer /; MatchQ[x, 8]]", "f[7]", false),
+        (
+            "PatternTest[x_Integer, Function[MatchQ[Slot[1], 7]]]",
+            "7",
+            true,
+        ),
+        (
+            "PatternTest[x_Integer, Function[MatchQ[Slot[1], 8]]]",
+            "7",
+            false,
+        ),
+        ("Except[x_Integer]", "7", false),
+        ("Except[x_Integer]", "a", true),
+        ("Except[x_String, x_Integer]", "7", true),
+        ("Alternatives[x_String, x_Integer]", "7", true),
+        ("f[Alternatives[x_String, x_Integer]]", "f[7]", true),
+        ("f[Optional[x_Integer, 0]]", "f[]", true),
+        ("f[Optional[x_Integer, 0], y_Integer]", "f[1]", true),
+        ("f[Repeated[x_Integer]]", "f[1, 2]", true),
+        ("f[Repeated[x_Integer, {2}]]", "f[1, 2]", true),
         ("f[x__, y_Integer]", "f[1, 2, 3]", true),
         ("f[x___]", "f[]", true),
     ] {
@@ -303,6 +322,174 @@ fn matchq_supports_conditions_on_sequence_patterns() {
     assert_eq!(
         session
             .eval_text("MatchQ[f[1, 2], f[x__ /; MatchQ[x, Sequence[2, 1]]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+}
+
+#[test]
+fn matchq_supports_patterntest_patterns() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("MatchQ[7, PatternTest[x_Integer, Function[MatchQ[Slot[1], 7]]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[8, PatternTest[x_Integer, Function[MatchQ[Slot[1], 7]]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+}
+
+#[test]
+fn matchq_supports_alternatives_patterns() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("MatchQ[7, Alternatives[x_String, x_Integer]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[a, Alternatives[x_String, x_Integer]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[7], f[Alternatives[x_String, x_Integer]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+}
+
+#[test]
+fn matchq_supports_except_patterns() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("MatchQ[7, Except[x_Integer]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[a, Except[x_Integer]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[7, Except[x_String, x_Integer]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+}
+
+#[test]
+fn matchq_supports_optional_patterns() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[], f[Optional[x_Integer, 0]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[1], f[Optional[x_Integer, 0], y_Integer]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[\"hi\"], f[Optional[x_Integer, 0]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+}
+
+#[test]
+fn matchq_supports_repeated_patterns() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[1, 2], f[Repeated[x_Integer]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[1], f[Repeated[x_Integer, {2}]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[], f[RepeatedNull[x_Integer]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+}
+
+#[test]
+fn matchq_supports_patterntest_on_sequence_patterns() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "MatchQ[f[1, 2], f[PatternTest[x__, Function[MatchQ[List[SlotSequence[1]], List[1, 2]]]]]]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "MatchQ[f[1, 2], f[PatternTest[x__, Function[MatchQ[List[SlotSequence[1]], List[2, 1]]]]]]",
+            )
             .unwrap()
             .value
             .to_string(),

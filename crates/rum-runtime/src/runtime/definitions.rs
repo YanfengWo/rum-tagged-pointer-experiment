@@ -3,16 +3,7 @@ use super::*;
 impl Session {
     pub(super) fn eval_normalize_rules(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
-            [expr] => {
-                let resolved_result = self.evaluate(expr.clone());
-                let resolved = self.suspend_with_frame(resolved_result, {
-                    let original = expr.clone();
-                    move |session, resolved| {
-                        session.resume_normalize_rules_with_resolved(original, resolved)
-                    }
-                })?;
-                self.resume_normalize_rules_with_resolved(expr.clone(), resolved)
-            }
+            [expr] => self.resume_normalize_rules(expr.clone()),
             _ => Ok(self.invalid_call_with_exact_arg_count("NormalizeRules", args, 1)),
         }
     }
@@ -84,13 +75,18 @@ impl Session {
         Ok(Expr::call(system_expr("RuleDelayed"), args.to_vec()))
     }
 
-    fn resume_normalize_rules_with_resolved(
-        &mut self,
-        original: Expr,
-        resolved: Expr,
-    ) -> Result<Expr, EvalError> {
-        match normalize_rewrite_rules(&resolved) {
-            Some(rules) => Ok(Self::normalized_rules_expr(&rules)),
+    fn resume_normalize_rules(&mut self, original: Expr) -> Result<Expr, EvalError> {
+        let normalized_rule_exprs_result = self.resolve_rewrite_rule_exprs_owned(original.clone());
+        let normalized_rule_exprs = self
+            .drive_internal_value(normalized_rule_exprs_result, |_, rule_exprs| Ok(rule_exprs))?;
+
+        match normalized_rule_exprs {
+            Some(rule_exprs) => {
+                let rules = self
+                    .compile_rewrite_rules_from_normalized_exprs(rule_exprs)
+                    .expect("normalized rewrite rule expressions should recompile");
+                Ok(Self::normalized_rules_expr(&rules))
+            }
             None => Ok(self.invalid_call_with_arg_form(
                 "NormalizeRules",
                 &[original],

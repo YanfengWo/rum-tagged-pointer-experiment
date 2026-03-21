@@ -1,5 +1,34 @@
 use super::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum MessageSelectorNormalizationError {
+    InvalidSelectorSpec,
+}
+
+impl MessageSelectorNormalizationError {
+    pub(super) fn message(self) -> &'static str {
+        match self {
+            Self::InvalidSelectorSpec => {
+                "expected the optional message selector to be a symbol, a \"symbol::tag\" string, or a list of those"
+            }
+        }
+    }
+}
+
+impl Session {
+    pub(super) fn normalize_optional_message_selectors(
+        &self,
+        selector_expr: Option<&Expr>,
+    ) -> Result<Option<Vec<MessageSelector>>, MessageSelectorNormalizationError> {
+        match selector_expr {
+            Some(expr) => parse_message_selectors(expr)
+                .map(Some)
+                .ok_or(MessageSelectorNormalizationError::InvalidSelectorSpec),
+            None => Ok(None),
+        }
+    }
+}
+
 pub(super) fn parse_message_selectors(expr: &Expr) -> Option<Vec<MessageSelector>> {
     match expr {
         Expr::Call { head, args } if is_system_symbol_name(head, "List") => args

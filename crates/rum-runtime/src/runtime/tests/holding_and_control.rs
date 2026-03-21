@@ -132,6 +132,34 @@ fn setattributes_accepts_symbol_lists_and_combined_hold_attributes() {
 }
 
 #[test]
+fn setattributes_accepts_resolved_attribute_specs() {
+    let mut session = Session::new();
+
+    session.eval_text("attrs = {HoldFirst, HoldRest}").unwrap();
+    session.eval_text("SetAttributes[f, attrs]").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("Attributes[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldFirst, HoldRest]"
+    );
+
+    session.eval_text("ClearAttributes[f, attrs]").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("Attributes[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+}
+
+#[test]
 fn sequencehold_prevents_sequence_splicing() {
     let mut session = Session::new();
 

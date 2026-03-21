@@ -325,6 +325,31 @@ fn thread_builtin_supports_standard_sequence_spec_subset() {
 }
 
 #[test]
+fn thread_builtin_accepts_resolved_head_and_spec_values() {
+    let mut session = Session::new();
+
+    session.eval_text("threadHead = g").unwrap();
+    session.eval_text("threadSpec = {2}").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("Thread[f[g[a, b], g[c, d]], threadHead]")
+            .unwrap()
+            .value
+            .to_string(),
+        "g[f[a, c], f[b, d]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Thread[f[{a, b}, {c, d}, {e, f}], List, threadSpec]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[List[a, b], c, List[e, f]], f[List[a, b], d, List[e, f]]]"
+    );
+}
+
+#[test]
 fn thread_evaluates_its_first_argument_before_threading() {
     let mut session = Session::new();
 

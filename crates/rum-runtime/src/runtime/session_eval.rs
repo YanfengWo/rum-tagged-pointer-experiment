@@ -98,18 +98,19 @@ impl Session {
         &mut self,
         expr: Expr,
     ) -> Result<Option<Vec<RewriteRuleInfo>>, EvalError> {
-        let resolved = self.evaluate(expr)?;
-
-        Ok(normalize_rewrite_rules(&resolved).map(|rules| {
-            rules
-                .into_iter()
-                .map(|rule| RewriteRuleInfo {
-                    lhs: rule.lhs,
-                    rhs: rule.rhs,
-                    delayed: rule.delayed,
-                })
-                .collect()
-        }))
+        Ok(self
+            .resolve_rewrite_rule_exprs_owned(expr)?
+            .and_then(|rule_exprs| self.compile_rewrite_rules_from_normalized_exprs(rule_exprs))
+            .map(|rules| {
+                rules
+                    .into_iter()
+                    .map(|rule| RewriteRuleInfo {
+                        lhs: rule.lhs,
+                        rhs: rule.rhs,
+                        delayed: rule.delayed,
+                    })
+                    .collect()
+            }))
     }
 
     pub fn eval_text(&mut self, input: &str) -> Result<EvalOutcome, EvalError> {

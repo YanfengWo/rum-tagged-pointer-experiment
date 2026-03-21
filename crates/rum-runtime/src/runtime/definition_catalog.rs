@@ -1,6 +1,135 @@
 use super::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum CasesTraversalNormalizationError {
+    InvalidThirdArgument,
+    InvalidFourthArgument,
+}
+
+impl CasesTraversalNormalizationError {
+    pub(super) fn message(self) -> &'static str {
+        match self {
+            Self::InvalidThirdArgument => {
+                "expected a non-negative level spec or Heads -> True/False as the third argument"
+            }
+            Self::InvalidFourthArgument => {
+                "expected a Heads -> True/False option as the fourth argument"
+            }
+        }
+    }
+}
+
 impl Session {
+    pub(super) fn resolve_argument_exprs_owned(
+        &mut self,
+        exprs: Vec<Expr>,
+    ) -> Result<Vec<Expr>, EvalError> {
+        let Some((first, rest)) = exprs.split_first() else {
+            return Ok(Vec::new());
+        };
+
+        let first_result = self.evaluate(first.clone());
+        let rest = rest.to_vec();
+        self.drive_evaluated_value(first_result, {
+            let rest = rest.clone();
+            move |session, first| session.resume_resolve_argument_exprs_after_first(first, rest)
+        })
+    }
+
+    pub(super) fn resolve_cases_spec_expr_for_matching_owned(
+        &mut self,
+        expr: Expr,
+    ) -> Result<Expr, EvalError> {
+        let candidate = strip_hold_pattern(&expr).clone();
+
+        if should_evaluate_single_rule_candidate(&candidate) {
+            let resolved = self.evaluate(candidate)?;
+
+            if self.compile_rewrite_rule_for_matching(&resolved).is_some() {
+                return Ok(resolved);
+            }
+
+            return Ok(self.normalize_match_expr(&resolved));
+        }
+
+        self.resolve_matcher_pattern_expr_owned(candidate)
+    }
+
+    pub(super) fn compile_cases_spec_from_resolved_expr(&self, resolved: Expr) -> CasesSpec {
+        match self.compile_rewrite_rule_for_matching(&resolved) {
+            Some(rule) => CasesSpec::Rule(rule),
+            None => CasesSpec::Pattern(resolved),
+        }
+    }
+
+    pub(super) fn compile_cases_traversal_from_resolved_exprs(
+        &self,
+        resolved: &[Expr],
+    ) -> Result<CasesTraversalConfig, CasesTraversalNormalizationError> {
+        match resolved {
+            [] => Ok(CasesTraversalConfig {
+                levels: CasesLevelSpec::all(),
+                include_heads: false,
+            }),
+            [third] => {
+                if let Some(include_heads) = parse_cases_heads_option(third) {
+                    Ok(CasesTraversalConfig {
+                        levels: CasesLevelSpec::all(),
+                        include_heads,
+                    })
+                } else if let Some(levels) = parse_cases_level_spec(third) {
+                    Ok(CasesTraversalConfig {
+                        levels,
+                        include_heads: false,
+                    })
+                } else {
+                    Err(CasesTraversalNormalizationError::InvalidThirdArgument)
+                }
+            }
+            [third, fourth] => {
+                let Some(levels) = parse_cases_level_spec(third) else {
+                    return Err(CasesTraversalNormalizationError::InvalidThirdArgument);
+                };
+                let Some(include_heads) = parse_cases_heads_option(fourth) else {
+                    return Err(CasesTraversalNormalizationError::InvalidFourthArgument);
+                };
+
+                Ok(CasesTraversalConfig {
+                    levels,
+                    include_heads,
+                })
+            }
+            _ => unreachable!("Cases arity is validated before traversal normalization"),
+        }
+    }
+
+    pub(super) fn resolve_rewrite_rule_exprs_owned(
+        &mut self,
+        expr: Expr,
+    ) -> Result<Option<Vec<Expr>>, EvalError> {
+        let resolved = self.evaluate(expr)?;
+        Ok(self.normalize_rewrite_rule_exprs_from_resolved(&resolved))
+    }
+
+    pub(super) fn normalize_rewrite_rule_exprs_from_resolved(
+        &self,
+        resolved: &Expr,
+    ) -> Option<Vec<Expr>> {
+        normalize_rewrite_rules(resolved).map(|rules| {
+            rules
+                .into_iter()
+                .map(|rule| Self::rewrite_rule_expr(&rule))
+                .collect()
+        })
+    }
+
+    pub(super) fn compile_rewrite_rules_from_normalized_exprs(
+        &self,
+        rule_exprs: Vec<Expr>,
+    ) -> Option<Vec<RewriteRule>> {
+        self.compile_rewrite_rules_for_matching(&Expr::call(system_expr("List"), rule_exprs))
+    }
+
     pub(super) fn build_definition_catalog_entries(
         &self,
         symbol: &Symbol,
@@ -168,5 +297,29 @@ impl Session {
 
     pub(super) fn compile_matcher_for_expr(&self, expr: &Expr) -> MatcherNode {
         compile_matcher(&self.normalize_match_expr(expr))
+    }
+
+    fn resume_resolve_argument_exprs_after_first(
+        &mut self,
+        first: Expr,
+        rest: Vec<Expr>,
+    ) -> Result<Vec<Expr>, EvalError> {
+        let rest_result = self.resolve_argument_exprs_owned(rest);
+        self.drive_internal_value(rest_result, move |_, mut resolved_rest| {
+            let mut resolved = Vec::with_capacity(resolved_rest.len() + 1);
+            resolved.push(first);
+            resolved.append(&mut resolved_rest);
+            Ok(resolved)
+        })
+    }
+}
+
+fn should_evaluate_single_rule_candidate(expr: &Expr) -> bool {
+    match expr {
+        Expr::Atom(Atom::Symbol(_)) => true,
+        Expr::Call { head, .. } => {
+            is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed")
+        }
+        _ => false,
     }
 }

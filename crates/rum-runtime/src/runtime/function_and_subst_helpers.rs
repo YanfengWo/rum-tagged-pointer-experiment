@@ -145,6 +145,18 @@ pub(super) fn parse_with_binding_item(expr: &Expr) -> Option<(Symbol, Expr)> {
     }
 }
 
+pub(super) fn parse_with_binding_list(expr: &Expr) -> Option<Vec<(Symbol, Expr)>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "List") {
+        return None;
+    }
+
+    args.iter().map(parse_with_binding_item).collect()
+}
+
 pub(super) fn parse_module_binding_list(expr: &Expr) -> Option<Vec<(Symbol, Option<Expr>)>> {
     let Expr::Call { head, args } = expr else {
         return None;

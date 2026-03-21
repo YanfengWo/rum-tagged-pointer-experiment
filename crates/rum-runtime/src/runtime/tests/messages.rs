@@ -22,6 +22,47 @@ fn message_name_and_message_emit_runtime_messages() {
 }
 
 #[test]
+fn message_family_accepts_symbol_name_strings_and_messagename_targets() {
+    let mut session = Session::new();
+
+    session.eval_text("f::argx = \"bad arg `1`\"").unwrap();
+    session.eval_text("f::usage = \"usage text\"").unwrap();
+
+    let emitted = session
+        .eval_text("Message[MessageName[\"f\", \"argx\"], 42]")
+        .unwrap();
+    assert_eq!(emitted.value.to_string(), "Null");
+    assert!(emitted.messages.iter().any(|message| {
+        message.symbol == "f" && message.tag == "argx" && message.text == "bad arg 42"
+    }));
+
+    assert_eq!(
+        session
+            .eval_text("Messages[\"f\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f::argx, f::usage]"
+    );
+    assert_eq!(
+        session
+            .eval_text("MessageDefinitions[MessageName[\"f\", \"argx\"]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[f::argx, \"bad arg `1`\"]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("MessageTags[MessageName[\"f\", \"argx\"]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"argx\"]"
+    );
+}
+
+#[test]
 fn message_templates_can_be_defined_and_formatted() {
     let mut session = Session::new();
 

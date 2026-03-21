@@ -257,6 +257,22 @@ the surface-syntax-to-core contract and validation boundary, then read
 `docs/runtime-evaluation-audit.md` for the later evaluator-side semantics that
 still intentionally live beyond lowering.
 
+Within that evaluator, normalization is now treated as a first-class design
+boundary instead of an incidental parsing detail. In practice there are two
+families:
+
+- resolved-argument normalization for builtins that intentionally evaluate
+  parts of their input before compiling an internal config, such as `Thread`,
+  `Cases`, attribute updates, and loader calls with explicit resolved specs
+- raw-form normalization for builtins whose first argument is semantically held
+  or syntax-shaped, such as `Check` / `Quiet` message selectors, message and
+  definition-inspection targets, and `With` / `Module` / `Block` binding lists
+
+This distinction matters because it prevents the runtime from accidentally
+evaluating syntax-shaped control inputs just to make internal dispatch code
+convenient. New evaluator work should prefer extending one of these explicit
+normalization families over adding one-off inline parsers in each builtin.
+
 ## Code organization
 
 As the runtime grows, source organization is treated as an architectural concern
