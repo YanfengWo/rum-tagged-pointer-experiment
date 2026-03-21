@@ -53,7 +53,7 @@ This roadmap intentionally uses two levels of detail:
 
 - [x] Stabilize a host-facing request/config API around `Session` and keep terminal rendering out of it
 - [x] Create an initial `rum-jupyter` crate with execute/inspect/complete/is-complete mapping, structured outputs, stdin handling, wire codecs, connection-file/bootstrap support, local socket backends, and native ZeroMQ-backed transport coverage
-- [ ] Continue hardening `rum-jupyter` from an early adapter into a fuller Jupyter-facing kernel surface with more lifecycle/frontend compatibility polish
+- [ ] Continue hardening `rum-jupyter` as an optional capability-validation adapter for the kernel, prioritizing features that prove or exercise kernel maturity over notebook-only polish
 
 ### Phase 8: String Language and Text Processing
 
@@ -64,7 +64,7 @@ This roadmap intentionally uses two levels of detail:
 
 - [ ] Build a deliberate, cross-cutting test strategy instead of relying only on feature-local regressions
 - [ ] Expand the project toward a fuller test suite covering unit behavior, boundary conditions, semantic regressions, and host-facing conformance
-- [ ] Add optional differential checking against Wolfram behavior where local `wolframscript` is available
+- [ ] Build differential checking against Wolfram behavior into the verification strategy while keeping `wolframscript` execution environment-gated rather than mandatory for every developer or CI run
 
 ## Active Workstreams
 
@@ -102,7 +102,7 @@ This roadmap intentionally uses two levels of detail:
 ### `rum-jupyter`
 
 - [ ] Keep the kernel adapter optional and layered on top of host-facing runtime APIs rather than letting protocol details leak back into `rum-runtime`
-- [ ] Continue hardening lifecycle and frontend-compatibility details beyond the current local-socket and native-ZeroMQ-backed coverage
+- [ ] Continue hardening lifecycle and frontend-compatibility details beyond the current local-socket and native-ZeroMQ-backed coverage, but prioritize work that validates or exposes kernel capabilities over notebook-only surface polish
 - [ ] Continue splitting oversized `rum-jupyter` transport/backend/test modules as part of the code-organization workstream
 
 ### Cross-Cutting Test Suites and Conformance
@@ -114,8 +114,8 @@ This roadmap intentionally uses two levels of detail:
 - [ ] Strengthen boundary and edge-case coverage for parser, lowering, evaluator, matcher, scoping, threading, loader, and message semantics
 - [ ] Add broader regression corpora and golden fixtures for syntax formatting, lowering, evaluation, runtime messages, and transport-facing APIs
 - [ ] Establish explicit coverage goals for high-risk semantic areas instead of relying only on opportunistic test growth
-- [ ] Add differential-conformance fixtures that compare selected `rum` results against Wolfram behavior for the supported subset
-- [ ] Keep Wolfram-oracle checks optional and environment-gated:
+- [ ] Add differential-conformance fixtures that compare selected `rum` results against Wolfram behavior for the supported subset, with same-name language features treated as compatibility targets by default
+- [ ] Keep Wolfram-oracle execution environment-gated even though the differential test workstream itself is required:
   - [ ] prefer local `wolframscript` when available
   - [ ] do not make default development or CI flows depend on Wolfram tooling being installed
   - [ ] record any deliberate divergences from Wolfram behavior alongside those fixtures
@@ -139,3 +139,34 @@ This roadmap intentionally uses two levels of detail:
 - [ ] Tier 4 conversions and interoperability: `CharacterCode`, `FromCharacterCode`, formatting/conversion touchpoints, file/path string conventions, and message-template compatibility
 - [ ] Add golden tests that cover evaluator behavior, round-tripping, formatting, matching, and unicode-heavy cases across the implemented string subset
 - [ ] Document supported string semantics, temporary limitations, and any deliberate divergence from Wolfram behavior as the subsystem grows
+
+### Future Workstream: Practical Mathematical Surface
+
+- [ ] After kernel stabilization and the initial string workstream, decide the practical mathematical surface needed for business, industrial, and DSL-oriented workloads
+- [ ] Prioritize exact arithmetic, symbolic manipulation, and migration-relevant same-name Wolfram behavior before broader CAS-style expansion
+
+## External Review Intake (2026-03)
+
+This section records the parts of the March 2026 external review round that are
+worth absorbing into the roadmap after comparing them against the current code
+tree. It is intentionally selective rather than a verbatim import of every
+review comment.
+
+### P0
+
+- [ ] Replace the current `rum-jupyter` wire-message signing with real Jupyter-compatible `HMAC-SHA256`, and add regression coverage for signed local/native transport paths
+
+### P1
+
+- [ ] Audit the handwritten JSON encoding/decoding in `rum-jupyter` and decide whether to keep it with stronger tests or replace it with a mature JSON library
+- [ ] Add a more explicit conformance test set for definition precedence, tag ownership, and `HoldAllComplete` blocking boundaries
+- [ ] Add a dedicated regression suite for context resolution and package/context interaction instead of leaving those semantics covered only indirectly
+- [ ] Expand `rum-stdlib` tests from installation smoke coverage toward builtin-registration, package-loading, and context-management behavior
+- [ ] Expand `rum-terminal` tests beyond the current small baseline so terminal rendering changes are protected by direct unit coverage
+- [ ] Keep splitting the oversized `rum-jupyter` transport/backend/test files called out by the review round until they fall back into the normal code-organization workflow
+
+### P2
+
+- [ ] Revisit matcher compilation/storage strategy after semantics stabilize, including whether definition insertion should cache more matcher state instead of recompiling on hot paths
+- [ ] Profile evaluator hot paths such as fixed-point iteration, heads lookup, and expression ordering before deciding whether additional low-level performance work is justified
+- [ ] Revisit ergonomics of large request/error payloads only after measurement shows that the current shapes are a real cost rather than a static-analysis curiosity

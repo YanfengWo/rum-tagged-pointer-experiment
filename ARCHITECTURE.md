@@ -10,8 +10,8 @@ but to grow a reusable language kernel that can support:
 - symbolic evaluation and rule-based programming
 - business, industrial, and DSL-oriented execution
 - CLI and REPL use
-- future GUI frontends
-- future IDE or editor integrations
+- future third-party GUI frontends
+- future third-party IDE or editor integrations
 - future protocol adapters such as Jupyter
 - future external host communication layers that may resemble WSTP-style links
 
@@ -33,6 +33,8 @@ The early product is therefore the kernel, not a notebook application.
 ### Out of scope for the early phases
 
 - full notebook or GUI products
+- project-owned GUI frontends
+- project-owned IDE/editor plugins
 - graphics and visualization
 - full CAS coverage
 - broad front-end compatibility shims
@@ -49,6 +51,13 @@ The architecture is intended to optimize for four things at once:
 That is why the project does not treat CLI, REPL, host embedding, and Jupyter
 as separate products with separate cores. They are different clients of the
 same runtime.
+
+The practical implication is:
+
+- the project should invest primarily in kernel capabilities
+- adapters matter because they validate and expose those capabilities
+- adapter-specific work should stay secondary unless it clearly strengthens the
+  kernel boundary or proves that the kernel is ready for broader host use
 
 ## Why This Is Not Overdesign
 
@@ -78,6 +87,54 @@ kernel.
 
 What *would* count as overdesign would be pushing protocol-specific details
 into the evaluator core. That boundary is deliberately avoided.
+
+## Dependency Adoption Policy
+
+`rum` is not trying to minimize dependencies at all costs.
+
+The project prefers a more selective rule:
+
+- keep core language semantics in-project
+- use mature external libraries when the problem is primarily about security,
+  protocol compliance, or standard data-format handling
+- avoid importing convenience dependencies that blur crate boundaries without
+  materially improving correctness or maintainability
+
+This policy is motivated by the same long-term goals that shape the rest of the
+architecture:
+
+- stability
+- security
+- deployability
+- predictable maintenance cost
+
+This means the architecture should continue to prefer self-implementation for:
+
+- parser and lowering behavior
+- evaluator sequencing
+- definitions, scoping, and rule application
+- matcher semantics
+- formatter layout policy
+
+Those parts define the language and are therefore part of the kernel's
+identity.
+
+By contrast, the architecture should be willing to adopt mature libraries for
+infrastructure concerns such as:
+
+- cryptographic signing and verification
+- standard protocol serialization formats
+- standard message or transport utilities when correctness depends on protocol
+  compatibility rather than custom language semantics
+
+Even when an external dependency is adopted, it should usually sit behind a
+thin project-owned boundary. For example, a Jupyter signing or JSON layer
+should remain a small `rum-jupyter` adapter surface rather than leaking library
+types or protocol details into `rum-runtime`.
+
+The goal is not "fewest crates". The goal is to spend custom implementation
+effort where `rum`'s semantics are unique, and to rely on mature libraries
+where the problem is standard, security-sensitive, or protocol-critical.
 
 ## Layering
 
@@ -184,6 +241,18 @@ Owns Jupyter-facing protocol and transport concerns:
 This crate is intentionally optional. It is a host adapter, not part of the
 core evaluator.
 
+Its architectural role is twofold:
+
+- provide a real, broadly accessible frontend that is easy to stand up across
+  platforms
+- act as a capability-validation adapter for the kernel, proving that host
+  requests, structured diagnostics, resumable input, transport-friendly
+  results, and lifecycle handling are mature enough for serious embedding
+
+In other words, `rum-jupyter` matters because it exercises the kernel in a
+general host setting, not because notebook-specific behavior is itself the main
+product.
+
 ## Architectural Principle: Kernel First, Adapters Second
 
 The central rule of this architecture is:
@@ -209,8 +278,8 @@ This boundary is intentionally host-agnostic. It is used today by:
 
 It should also be the basis for any future:
 
-- GUI frontend
-- IDE/editor integration
+- third-party GUI frontend
+- third-party IDE/editor integration
 - embedding API
 - external protocol or link layer
 
@@ -296,6 +365,27 @@ for both Wolfram-style language fidelity and practical deterministic DSL work.
 
 The current foundation is `num_bigint::BigInt` inside `rum-core::Atom::Integer`.
 Future numeric expansion should build from that exact baseline.
+
+The broader mathematical surface is intentionally a later workstream. The
+project should first stabilize the kernel semantics, then add the practical
+exact-arithmetic and symbolic math needed for business and industrial workloads
+before considering broader CAS-style expansion.
+
+## Compatibility Target
+
+For named Wolfram-language surface features, the default target is semantic
+compatibility rather than "close enough" resemblance.
+
+In practice, that means:
+
+- if `rum` ships a same-name function or form, it should aim to match Wolfram
+  behavior as closely as possible
+- deliberate divergence is acceptable only when it is documented explicitly
+- conformance should be checked with differential tests where practical rather
+  than inferred only from local intent
+
+This compatibility target is one reason the project treats conformance testing
+as a core engineering task rather than optional polish.
 
 ## String Subsystem Direction
 
