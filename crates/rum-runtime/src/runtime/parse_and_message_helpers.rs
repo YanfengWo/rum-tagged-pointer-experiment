@@ -144,33 +144,47 @@ pub(super) fn clamp_thread_position(position: isize, arg_count: usize) -> Option
 }
 
 pub(super) fn parse_cases_level_spec(expr: &Expr) -> Option<CasesLevelSpec> {
-    if let Some(level) = expr_as_non_negative_usize(expr) {
-        return Some(CasesLevelSpec::exact(level));
+    if let Some(level) = expr_as_signed_isize(expr) {
+        return Some(match level.cmp(&0) {
+            std::cmp::Ordering::Greater => CasesLevelSpec::range(1, Some(level)),
+            std::cmp::Ordering::Equal => CasesLevelSpec::exact(0),
+            std::cmp::Ordering::Less => CasesLevelSpec::range(level, Some(-1)),
+        });
     }
 
     if is_system_symbol_name(expr, "Infinity") {
-        return Some(CasesLevelSpec::all());
+        return Some(CasesLevelSpec::range(1, None));
     }
 
     let Expr::Call { head, args } = expr else {
         return None;
     };
 
-    if !is_system_symbol_name(head, "List") || args.len() != 2 {
+    if !is_system_symbol_name(head, "List") {
         return None;
     }
 
-    let min = expr_as_non_negative_usize(&args[0])?;
-
-    if let Some(max) = expr_as_non_negative_usize(&args[1]) {
-        return Some(CasesLevelSpec::range(min, Some(max)));
+    match args.as_slice() {
+        [level] => Some(CasesLevelSpec::exact(expr_as_signed_isize(level)?)),
+        [min, max] => parse_cases_level_range(min, max),
+        _ => None,
     }
+}
 
-    if is_system_symbol_name(&args[1], "Infinity") {
-        return Some(CasesLevelSpec::range(min, None));
+fn parse_cases_level_range(min: &Expr, max: &Expr) -> Option<CasesLevelSpec> {
+    let min = expr_as_signed_isize(min)?;
+
+    if let Some(max) = expr_as_signed_isize(max) {
+        (min <= max).then_some(CasesLevelSpec::range(min, Some(max)))
+    } else if is_system_symbol_name(max, "Infinity") {
+        Some(CasesLevelSpec::range(min, None))
+    } else {
+        None
     }
+}
 
-    None
+pub(super) fn parse_cases_match_limit(expr: &Expr) -> Option<usize> {
+    expr_as_non_negative_usize(expr)
 }
 
 pub(super) fn parse_cases_heads_option(expr: &Expr) -> Option<bool> {

@@ -91,10 +91,13 @@ This roadmap intentionally uses two levels of detail:
 
 ### `rum-runtime`
 
-- [ ] Continue tightening evaluator semantics where stage ordering or builtin behavior is still more ad hoc than intended
-- [ ] Continue auditing any remaining held/spec-driven target families so raw-form builtins stop hand-rolling target parsing one by one
-- [ ] Continue auditing remaining non-`Expr` inspection/debug helper paths that still need typed suspension-driver treatment
-- [ ] Continue extending matcher and traversal semantics beyond the currently implemented early subset
+- [x] Tighten `Cases` evaluator semantics to use standard default levels (`{1}`), standard integer/negative/`Infinity` levelspec handling, explicit match limits, and depth-first leaves-before-roots traversal
+- [x] Unify symbol/string raw target normalization across message, definition-inspection, attribute, and clear/tag helper families so held builtins stop hand-rolling the same parsing rules separately
+- [x] Move `Cases` traversal normalization and collection state through typed continuation payloads instead of repeatedly round-tripping that helper state through ad hoc `Expr` shapes during suspensions
+- [x] Extend matcher/traversal coverage beyond the earliest subset by giving `Cases` head-aware traversal control, exact/range/negative level support, and suspension-safe regression coverage for levels, limits, and options
+- [ ] Continue widening standard traversal semantics across future tree walkers (`Level`, `Position`, etc.) if and when those builtins land
+- [ ] Continue auditing any remaining held/spec-driven target families outside the message/definition/attribute cluster so new raw-form builtins reuse shared normalization helpers from the start
+- [ ] Continue moving remaining host-facing inspection/debug helper payloads onto typed continuation values as more non-`Expr` flows become suspendable
 
 ### `rum-repl` and `rum-cli`
 

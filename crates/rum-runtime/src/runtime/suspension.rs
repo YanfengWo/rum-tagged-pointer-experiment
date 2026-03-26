@@ -223,6 +223,181 @@ impl ContinuationValue for Option<Vec<RewriteRuleInfo>> {
     }
 }
 
+fn cases_level_spec_expr(spec: CasesLevelSpec) -> Expr {
+    Expr::call(
+        system_expr("InternalContinuationCasesLevelSpec"),
+        vec![
+            Expr::integer(BigInt::from(spec.min)),
+            spec.max
+                .map(|value| Expr::integer(BigInt::from(value)))
+                .unwrap_or_else(|| system_expr("Infinity")),
+        ],
+    )
+}
+
+fn cases_level_spec_from_expr(expr: Expr) -> CasesLevelSpec {
+    match expr {
+        Expr::Call { head, mut args }
+            if is_system_symbol_name(&head, "InternalContinuationCasesLevelSpec")
+                && args.len() == 2 =>
+        {
+            let max_expr = args.pop().expect("cases-level payload stores max");
+            let min_expr = args.pop().expect("cases-level payload stores min");
+            let min = expr_as_signed_isize(&min_expr)
+                .expect("cases-level payload min should be a signed integer");
+            let max = if is_system_symbol_name(&max_expr, "Infinity") {
+                None
+            } else {
+                Some(
+                    expr_as_signed_isize(&max_expr)
+                        .expect("cases-level payload max should be a signed integer"),
+                )
+            };
+
+            CasesLevelSpec::range(min, max)
+        }
+        other => panic!("unexpected continuation payload for CasesLevelSpec: {other:?}"),
+    }
+}
+
+impl ContinuationValue for CasesTraversalConfig {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationCasesTraversalConfig"),
+            vec![
+                cases_level_spec_expr(self.levels),
+                self.max_matches
+                    .map(|value| Expr::integer(BigInt::from(value)))
+                    .unwrap_or_else(|| system_expr("InternalContinuationNone")),
+                system_expr(if self.include_heads { "True" } else { "False" }),
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        match expr {
+            Expr::Call { head, mut args }
+                if is_system_symbol_name(&head, "InternalContinuationCasesTraversalConfig")
+                    && args.len() == 3 =>
+            {
+                let include_heads_expr = args
+                    .pop()
+                    .expect("cases-traversal payload stores include-heads");
+                let max_matches_expr = args
+                    .pop()
+                    .expect("cases-traversal payload stores max-matches");
+                let levels_expr = args.pop().expect("cases-traversal payload stores levels");
+
+                Self {
+                    levels: cases_level_spec_from_expr(levels_expr),
+                    max_matches: if is_system_symbol_name(
+                        &max_matches_expr,
+                        "InternalContinuationNone",
+                    ) {
+                        None
+                    } else {
+                        expr_as_non_negative_usize(&max_matches_expr)
+                    },
+                    include_heads: is_system_symbol_name(&include_heads_expr, "True"),
+                }
+            }
+            other => panic!("unexpected continuation payload for CasesTraversalConfig: {other:?}"),
+        }
+    }
+}
+
+impl ContinuationValue for CasesTraversalResolution {
+    fn into_continuation_expr(self) -> Expr {
+        match self {
+            CasesTraversalResolution::Valid(config) => Expr::call(
+                system_expr("InternalContinuationCasesTraversalValid"),
+                vec![config.into_continuation_expr()],
+            ),
+            CasesTraversalResolution::Invalid(error) => Expr::call(
+                system_expr("InternalContinuationCasesTraversalInvalid"),
+                vec![Expr::integer(BigInt::from(match error {
+                    CasesTraversalNormalizationError::InvalidThirdArgument => 3_i32,
+                    CasesTraversalNormalizationError::InvalidFourthArgument => 4_i32,
+                    CasesTraversalNormalizationError::InvalidFifthArgument => 5_i32,
+                }))],
+            ),
+        }
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        match expr {
+            Expr::Call { head, mut args }
+                if is_system_symbol_name(&head, "InternalContinuationCasesTraversalValid")
+                    && args.len() == 1 =>
+            {
+                let config_expr = args.pop().expect("valid cases-traversal stores config");
+                Self::Valid(CasesTraversalConfig::from_continuation_expr(config_expr))
+            }
+            Expr::Call { head, mut args }
+                if is_system_symbol_name(&head, "InternalContinuationCasesTraversalInvalid")
+                    && args.len() == 1 =>
+            {
+                let code_expr = args.pop().expect("invalid cases-traversal stores code");
+                let code = expr_as_non_negative_usize(&code_expr)
+                    .expect("invalid cases-traversal code should be an integer");
+                let error = match code {
+                    3 => CasesTraversalNormalizationError::InvalidThirdArgument,
+                    4 => CasesTraversalNormalizationError::InvalidFourthArgument,
+                    5 => CasesTraversalNormalizationError::InvalidFifthArgument,
+                    other => panic!("unexpected cases-traversal error code: {other}"),
+                };
+                Self::Invalid(error)
+            }
+            other => {
+                panic!("unexpected continuation payload for CasesTraversalResolution: {other:?}")
+            }
+        }
+    }
+}
+
+impl ContinuationValue for CasesCollectionOutcome {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationCasesCollection"),
+            vec![
+                Expr::call(system_expr("List"), self.matches),
+                Expr::integer(BigInt::from(self.depth)),
+                system_expr(if self.exhausted { "True" } else { "False" }),
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        match expr {
+            Expr::Call { head, mut args }
+                if is_system_symbol_name(&head, "InternalContinuationCasesCollection")
+                    && args.len() == 3 =>
+            {
+                let exhausted_expr = args
+                    .pop()
+                    .expect("cases-collection payload stores exhausted");
+                let depth_expr = args.pop().expect("cases-collection payload stores depth");
+                let matches_expr = args.pop().expect("cases-collection payload stores matches");
+
+                let matches = match matches_expr {
+                    Expr::Call { head, args } if is_system_symbol_name(&head, "List") => args,
+                    other => vec![other],
+                };
+
+                Self {
+                    matches,
+                    depth: expr_as_non_negative_usize(&depth_expr)
+                        .expect("cases-collection depth should be non-negative"),
+                    exhausted: is_system_symbol_name(&exhausted_expr, "True"),
+                }
+            }
+            other => {
+                panic!("unexpected continuation payload for CasesCollectionOutcome: {other:?}")
+            }
+        }
+    }
+}
+
 struct ClosureFrame<F> {
     resume: Option<F>,
 }

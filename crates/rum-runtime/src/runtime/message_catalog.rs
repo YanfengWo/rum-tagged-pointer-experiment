@@ -35,11 +35,7 @@ impl Session {
         symbol_expr: &Expr,
         tag_expr: &Expr,
     ) -> Option<MessageNameKey> {
-        let symbol = match symbol_expr {
-            Expr::Atom(Atom::Symbol(symbol)) => symbol.clone(),
-            Expr::Atom(Atom::String(raw)) => self.resolve_symbol_name(raw, true)?,
-            _ => return None,
-        };
+        let symbol = self.normalize_symbol_target_expr(symbol_expr, true)?;
 
         let tag = match tag_expr {
             Expr::Atom(Atom::String(tag)) => tag.clone(),
@@ -136,36 +132,7 @@ impl Session {
         format_message_template(&template, key, args)
     }
 
-    pub(super) fn lookup_message_symbol(&self, expr: &Expr) -> Option<Symbol> {
-        match expr {
-            Expr::Atom(Atom::Symbol(symbol)) => Some(symbol.clone()),
-            Expr::Atom(Atom::String(raw)) => self.resolve_symbol_name(raw, true),
-            _ => None,
-        }
-    }
-
-    pub(super) fn normalize_message_query_target(
-        &self,
-        expr: &Expr,
-    ) -> Result<MessageQueryTarget, MessageTargetNormalizationError> {
-        if let Some(key) = self.message_name_key_from_expr(expr) {
-            Ok(MessageQueryTarget::Key(key))
-        } else if let Some(symbol) = self.lookup_message_symbol(expr) {
-            Ok(MessageQueryTarget::Symbol(symbol))
-        } else {
-            Err(MessageTargetNormalizationError::InvalidMessageCatalogTarget)
-        }
-    }
-
-    pub(super) fn normalize_definition_inspection_target(
-        &self,
-        expr: &Expr,
-    ) -> Result<Symbol, MessageTargetNormalizationError> {
-        self.lookup_message_symbol(expr)
-            .ok_or(MessageTargetNormalizationError::InvalidDefinitionInspectionTarget)
-    }
-
-    pub(super) fn lookup_attribute_target(
+    pub(super) fn normalize_symbol_target_expr(
         &self,
         expr: &Expr,
         create_if_missing: bool,
@@ -177,7 +144,7 @@ impl Session {
         }
     }
 
-    pub(super) fn lookup_attribute_targets(
+    pub(super) fn normalize_symbol_target_exprs(
         &self,
         expr: &Expr,
         create_if_missing: bool,
@@ -185,10 +152,34 @@ impl Session {
         match expr {
             Expr::Call { head, args } if is_system_symbol_name(head, "List") => args
                 .iter()
-                .map(|item| self.lookup_attribute_target(item, create_if_missing))
-                .collect(),
-            _ => Some(vec![self.lookup_attribute_target(expr, create_if_missing)?]),
+                .map(|item| self.normalize_symbol_target_exprs(item, create_if_missing))
+                .collect::<Option<Vec<_>>>()
+                .map(|items| items.into_iter().flatten().collect()),
+            _ => Some(vec![
+                self.normalize_symbol_target_expr(expr, create_if_missing)?,
+            ]),
         }
+    }
+
+    pub(super) fn normalize_message_query_target(
+        &self,
+        expr: &Expr,
+    ) -> Result<MessageQueryTarget, MessageTargetNormalizationError> {
+        if let Some(key) = self.message_name_key_from_expr(expr) {
+            Ok(MessageQueryTarget::Key(key))
+        } else if let Some(symbol) = self.normalize_symbol_target_expr(expr, true) {
+            Ok(MessageQueryTarget::Symbol(symbol))
+        } else {
+            Err(MessageTargetNormalizationError::InvalidMessageCatalogTarget)
+        }
+    }
+
+    pub(super) fn normalize_definition_inspection_target(
+        &self,
+        expr: &Expr,
+    ) -> Result<Symbol, MessageTargetNormalizationError> {
+        self.normalize_symbol_target_expr(expr, true)
+            .ok_or(MessageTargetNormalizationError::InvalidDefinitionInspectionTarget)
     }
 
     pub(super) fn resolve_message_catalog_query(&self, query: &str) -> Option<MessageCatalogQuery> {

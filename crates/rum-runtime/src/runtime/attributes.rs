@@ -29,7 +29,7 @@ impl Session {
     pub(super) fn eval_attributes(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
             [expr] => {
-                if let Some(symbol) = self.lookup_attribute_target(expr, false) {
+                if let Some(symbol) = self.normalize_symbol_target_expr(expr, false) {
                     Ok(self.attribute_set_for_symbol(&symbol).expr())
                 } else {
                     Ok(self.invalid_call_with_arg_form(
@@ -133,7 +133,7 @@ impl Session {
         &self,
         expr: &Expr,
     ) -> Result<Vec<Symbol>, AttributeUpdateNormalizationError> {
-        self.lookup_attribute_targets(expr, true)
+        self.normalize_symbol_target_exprs(expr, true)
             .ok_or(AttributeUpdateNormalizationError::InvalidTargets)
     }
 

@@ -455,29 +455,35 @@ pub(super) enum CasesSpec {
     Pattern(Expr),
     Rule(RewriteRule),
 }
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct CasesLevelSpec {
-    pub(super) min: usize,
-    pub(super) max: Option<usize>,
+    pub(super) min: isize,
+    pub(super) max: Option<isize>,
 }
 
 impl CasesLevelSpec {
-    pub(super) fn all() -> Self {
-        Self { min: 0, max: None }
+    pub(super) fn default_cases() -> Self {
+        Self::exact(1)
     }
 
-    pub(super) fn exact(level: usize) -> Self {
+    pub(super) fn exact(level: isize) -> Self {
         Self {
             min: level,
             max: Some(level),
         }
     }
 
-    pub(super) fn range(min: usize, max: Option<usize>) -> Self {
+    pub(super) fn range(min: isize, max: Option<isize>) -> Self {
         Self { min, max }
     }
 
-    pub(super) fn contains(self, level: usize) -> bool {
+    pub(super) fn matches(self, level: usize, depth: usize) -> bool {
+        self.contains_signed(level_as_signed(level))
+            || self.contains_signed(-level_as_signed(depth))
+    }
+
+    fn contains_signed(self, level: isize) -> bool {
         level >= self.min && self.max.is_none_or(|max| level <= max)
     }
 }
@@ -485,5 +491,41 @@ impl CasesLevelSpec {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct CasesTraversalConfig {
     pub(super) levels: CasesLevelSpec,
+    pub(super) max_matches: Option<usize>,
     pub(super) include_heads: bool,
+}
+
+impl CasesTraversalConfig {
+    pub(super) fn default_cases() -> Self {
+        Self {
+            levels: CasesLevelSpec::default_cases(),
+            max_matches: None,
+            include_heads: false,
+        }
+    }
+
+    pub(super) fn limit_reached(self, current_count: usize) -> bool {
+        self.max_matches.is_some_and(|limit| current_count >= limit)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct CasesCollectionOutcome {
+    pub(super) matches: Vec<Expr>,
+    pub(super) depth: usize,
+    pub(super) exhausted: bool,
+}
+
+impl CasesCollectionOutcome {
+    pub(super) fn new(matches: Vec<Expr>, depth: usize, exhausted: bool) -> Self {
+        Self {
+            matches,
+            depth,
+            exhausted,
+        }
+    }
+}
+
+fn level_as_signed(level: usize) -> isize {
+    isize::try_from(level).unwrap_or(isize::MAX)
 }

@@ -16,8 +16,8 @@ impl Session {
     }
 
     pub(super) fn eval_cases(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if !(2..=4).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Cases", args, 2, 4));
+        if !(2..=5).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("Cases", args, 2, 5));
         }
 
         let call_args = args.to_vec();
@@ -121,34 +121,27 @@ impl Session {
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         let spec = self.compile_cases_spec_from_resolved_expr(resolved_spec);
-        let resolved_option_exprs_result = self.resolve_argument_exprs_owned(option_exprs.clone());
-        self.drive_internal_value(resolved_option_exprs_result, {
+        let traversal_result = self.resolve_cases_traversal_owned(option_exprs.clone());
+        self.drive_internal_value(traversal_result, {
             let target = target.clone();
             let spec = spec.clone();
             let call_args = call_args.clone();
-            move |session, resolved_option_exprs| {
-                session.finish_cases_after_resolved_options(
-                    target,
-                    spec,
-                    resolved_option_exprs,
-                    call_args,
-                )
+            move |session, traversal| {
+                session.finish_cases_after_resolved_traversal(target, spec, traversal, call_args)
             }
         })
     }
 
-    fn finish_cases_after_resolved_options(
+    fn finish_cases_after_resolved_traversal(
         &mut self,
         target: Expr,
         spec: CasesSpec,
-        resolved_option_exprs: Vec<Expr>,
+        traversal: CasesTraversalResolution,
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
-        let traversal = match self
-            .compile_cases_traversal_from_resolved_exprs(&resolved_option_exprs)
-        {
-            Ok(traversal) => traversal,
-            Err(error) => {
+        let traversal = match traversal {
+            CasesTraversalResolution::Valid(traversal) => traversal,
+            CasesTraversalResolution::Invalid(error) => {
                 return Ok(self.invalid_call_with_arg_form("Cases", &call_args, error.message()));
             }
         };
@@ -162,9 +155,13 @@ impl Session {
         spec: CasesSpec,
         traversal: CasesTraversalConfig,
     ) -> Result<Expr, EvalError> {
-        let matches_result = self.collect_cases_owned(target, spec, traversal, 0);
-        self.drive_internal_value(matches_result, move |_, matches| {
-            Ok(Expr::call(system_expr("List"), matches))
+        if traversal.limit_reached(0) {
+            return Ok(Expr::call(system_expr("List"), Vec::new()));
+        }
+
+        let matches_result = self.collect_cases_owned(target, spec, traversal, 0, 0);
+        self.drive_internal_value(matches_result, move |_, outcome| {
+            Ok(Expr::call(system_expr("List"), outcome.matches))
         })
     }
 
@@ -174,52 +171,124 @@ impl Session {
         spec: CasesSpec,
         traversal: CasesTraversalConfig,
         level: usize,
-    ) -> Result<Vec<Expr>, EvalError> {
-        let case_result = if traversal.levels.contains(level) {
-            self.try_collect_case_owned(expr.clone(), spec.clone())
+        seen_before: usize,
+    ) -> Result<CasesCollectionOutcome, EvalError> {
+        match expr.clone() {
+            Expr::Atom(_) => self.finish_cases_at_current_node(
+                expr,
+                spec,
+                traversal,
+                level,
+                1,
+                seen_before,
+                Vec::new(),
+            ),
+            Expr::Call { head, args } => {
+                let mut children = Vec::new();
+                if traversal.include_heads {
+                    children.push(*head);
+                }
+                children.extend(args);
+
+                self.collect_cases_children(
+                    children,
+                    expr,
+                    spec,
+                    traversal,
+                    level + 1,
+                    seen_before,
+                    Vec::new(),
+                    0,
+                )
+            }
+        }
+    }
+
+    fn finish_cases_at_current_node(
+        &mut self,
+        expr: Expr,
+        spec: CasesSpec,
+        traversal: CasesTraversalConfig,
+        level: usize,
+        depth: usize,
+        seen_before: usize,
+        mut matches: Vec<Expr>,
+    ) -> Result<CasesCollectionOutcome, EvalError> {
+        if traversal.limit_reached(seen_before + matches.len()) {
+            return Ok(CasesCollectionOutcome::new(matches, depth, true));
+        }
+
+        let case_result = if traversal.levels.matches(level, depth) {
+            self.try_collect_case_owned(expr, spec)
         } else {
             Ok(None)
         };
 
-        self.drive_internal_value(case_result, move |session, case| {
-            let mut matches = Vec::new();
+        self.drive_internal_value(case_result, move |_, case| {
             if let Some(case) = case {
                 matches.push(case);
             }
 
-            match expr {
-                Expr::Atom(_) => Ok(matches),
-                Expr::Call { head, args } => {
-                    let mut children = Vec::new();
-                    if traversal.include_heads {
-                        children.push(*head);
-                    }
-                    children.extend(args);
-
-                    session.collect_cases_children(children, spec, traversal, level + 1, matches)
-                }
-            }
+            let exhausted = traversal.limit_reached(seen_before + matches.len());
+            Ok(CasesCollectionOutcome::new(matches, depth, exhausted))
         })
     }
 
     fn collect_cases_children(
         &mut self,
         children: Vec<Expr>,
+        expr: Expr,
         spec: CasesSpec,
         traversal: CasesTraversalConfig,
         level: usize,
+        seen_before: usize,
         mut matches: Vec<Expr>,
-    ) -> Result<Vec<Expr>, EvalError> {
+        max_child_depth: usize,
+    ) -> Result<CasesCollectionOutcome, EvalError> {
         let Some((child, rest)) = children.split_first() else {
-            return Ok(matches);
+            let depth = max_child_depth.saturating_add(1);
+            return self.finish_cases_at_current_node(
+                expr,
+                spec,
+                traversal,
+                level - 1,
+                depth,
+                seen_before,
+                matches,
+            );
         };
 
-        let child_result = self.collect_cases_owned(child.clone(), spec.clone(), traversal, level);
+        let child_result = self.collect_cases_owned(
+            child.clone(),
+            spec.clone(),
+            traversal,
+            level,
+            seen_before + matches.len(),
+        );
         let rest = rest.to_vec();
 
-        self.drive_internal_value(child_result, move |session, child_matches| {
-            matches.extend(child_matches);
-            session.collect_cases_children(rest, spec, traversal, level, matches)
+        self.drive_internal_value(child_result, move |session, child_outcome| {
+            matches.extend(child_outcome.matches);
+            let next_max_child_depth = max_child_depth.max(child_outcome.depth);
+
+            if child_outcome.exhausted {
+                return Ok(CasesCollectionOutcome::new(
+                    matches,
+                    next_max_child_depth + 1,
+                    true,
+                ));
+            }
+
+            session.collect_cases_children(
+                rest,
+                expr,
+                spec,
+                traversal,
+                level,
+                seen_before,
+                matches,
+                next_max_child_depth,
+            )
         })
     }
 

@@ -73,7 +73,7 @@ impl Session {
         &self,
         expr: &Expr,
     ) -> Result<Symbol, DefinitionTargetNormalizationError> {
-        self.lookup_attribute_target(expr, true)
+        self.normalize_symbol_target_expr(expr, true)
             .ok_or(DefinitionTargetNormalizationError::InvalidTagTarget)
     }
 
@@ -88,33 +88,13 @@ impl Session {
         let mut symbols = Vec::new();
 
         for arg in args {
-            self.collect_normalized_clear_targets(arg, &mut symbols)?;
+            let targets = self
+                .normalize_symbol_target_exprs(arg, true)
+                .ok_or(DefinitionTargetNormalizationError::InvalidClearTarget)?;
+            symbols.extend(targets);
         }
 
         Ok(symbols)
-    }
-
-    fn collect_normalized_clear_targets(
-        &self,
-        expr: &Expr,
-        symbols: &mut Vec<Symbol>,
-    ) -> Result<(), DefinitionTargetNormalizationError> {
-        match expr {
-            Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
-                for item in args {
-                    self.collect_normalized_clear_targets(item, symbols)?;
-                }
-
-                Ok(())
-            }
-            _ => {
-                symbols.push(
-                    self.lookup_attribute_target(expr, true)
-                        .ok_or(DefinitionTargetNormalizationError::InvalidClearTarget)?,
-                );
-                Ok(())
-            }
-        }
     }
 
     pub(super) fn normalize_unset_target(

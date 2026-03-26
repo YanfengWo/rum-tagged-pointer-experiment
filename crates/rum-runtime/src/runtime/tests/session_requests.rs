@@ -647,7 +647,7 @@ fn resume_eval_request_with_input_can_finish_cases_with_suspending_heads_option_
         .resume_eval_request_with_input("yes")
         .expect("resume should continue Cases after the third argument resolves");
 
-    assert_eq!(response.value.to_string(), "List[f, g]");
+    assert_eq!(response.value.to_string(), "List[f]");
 }
 
 #[test]
@@ -670,6 +670,54 @@ fn resume_eval_request_with_input_can_finish_cases_with_suspending_heads_option_
     let response = session
         .resume_eval_request_with_input("yes")
         .expect("resume should continue Cases after the fourth argument resolves");
+
+    assert_eq!(response.value.to_string(), "List[f, g]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_cases_with_suspending_match_limit() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "Cases[f[g[1], 2, h[3]], _Integer, Infinity, If[MatchQ[InputString[\"n: \"], \"yes\"], 2, 0]]",
+        )
+        .expect_err("Cases match-limit evaluation should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "n: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue Cases after the match limit resolves");
+
+    assert_eq!(response.value.to_string(), "List[1, 2]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_cases_with_suspending_heads_option_as_fifth_arg() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "Cases[f[1, g[2]], x_Symbol, {2}, 1, If[MatchQ[InputString[\"heads: \"], \"yes\"], Heads -> True, Heads -> False]]",
+        )
+        .expect_err("Cases fifth-argument traversal config should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "heads: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue Cases after the fifth argument resolves");
 
     assert_eq!(response.value.to_string(), "List[g]");
 }

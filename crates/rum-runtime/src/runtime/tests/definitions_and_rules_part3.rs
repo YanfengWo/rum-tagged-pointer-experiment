@@ -244,7 +244,7 @@ fn cases_collects_nested_matches() {
             .unwrap()
             .value
             .to_string(),
-        "List[1, 2]"
+        "List[2]"
     );
 }
 
@@ -254,7 +254,7 @@ fn cases_can_match_the_root_expression() {
 
     assert_eq!(
         session
-            .eval_text("Cases[f[1], f[x_Integer]]")
+            .eval_text("Cases[f[1], f[x_Integer], 0]")
             .unwrap()
             .value
             .to_string(),
@@ -277,7 +277,7 @@ fn cases_does_not_treat_heads_as_separate_candidates() {
 }
 
 #[test]
-fn cases_supports_exact_level_specs() {
+fn cases_supports_standard_integer_level_specs() {
     let mut session = Session::new();
 
     assert_eq!(
@@ -294,7 +294,7 @@ fn cases_supports_exact_level_specs() {
             .unwrap()
             .value
             .to_string(),
-        "List[1, 3]"
+        "List[1, 2, 3]"
     );
     assert_eq!(
         session
@@ -307,16 +307,32 @@ fn cases_supports_exact_level_specs() {
 }
 
 #[test]
-fn cases_supports_range_and_infinity_level_specs() {
+fn cases_supports_exact_range_negative_and_infinity_level_specs() {
     let mut session = Session::new();
 
     assert_eq!(
         session
-            .eval_text("Cases[f[g[1], 2, h[3]], x_Integer, {1, 1}]")
+            .eval_text("Cases[f[g[1], 2, h[3]], x_Integer, {1}]")
             .unwrap()
             .value
             .to_string(),
         "List[2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Cases[f[g[1], 2, h[3]], x_Integer, {2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 3]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Cases[f[g[1], 2, h[3]], x_Integer, {-1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2, 3]"
     );
     assert_eq!(
         session
@@ -354,7 +370,7 @@ fn cases_supports_explicit_head_traversal_control() {
             .unwrap()
             .value
             .to_string(),
-        "List[f, g]"
+        "List[f]"
     );
     assert_eq!(
         session
@@ -366,11 +382,33 @@ fn cases_supports_explicit_head_traversal_control() {
     );
     assert_eq!(
         session
-            .eval_text("Cases[f[1, g[2]], x_Symbol, 2, Heads -> True]")
+            .eval_text("Cases[f[1, g[2]], x_Symbol, {2}, Heads -> True]")
             .unwrap()
             .value
             .to_string(),
         "List[g]"
+    );
+}
+
+#[test]
+fn cases_traverses_depth_first_with_leaves_before_roots_and_respects_match_limits() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Cases[f[g[1], h[2]], x_, Infinity]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, g[1], 2, h[2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Cases[f[g[1], 2, h[3]], x_Integer, Infinity, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2]"
     );
 }
 
