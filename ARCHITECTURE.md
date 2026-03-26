@@ -283,6 +283,47 @@ It should also be the basis for any future:
 - embedding API
 - external protocol or link layer
 
+## Reference Host Scenarios
+
+The architecture can keep a small number of reference host scenarios in mind
+when judging API ergonomics without turning those scenarios into product-scope
+commitments.
+
+For a future Python host, the reference scenario is AI- and data-tooling-
+oriented applications that need deterministic rule evaluation, symbolic
+normalization, structured diagnostics, and resumable execution around model,
+tool, or workflow orchestration.
+
+For a future Rust host, the reference scenario is long-running backend
+services, rule engines, and DSL-oriented infrastructure that need stable
+session lifecycles, predictable resource boundaries, transport-friendly
+outcomes, and embedding-friendly request flows.
+
+These scenarios are design pressure, not product definition. They should help
+the project choose a clean and useful host boundary, but they should not turn
+`rum` into an AI framework, a backend framework, or a family of project-owned
+host products.
+
+## API Scope Boundary
+
+The host-facing API should stay intentionally small and stable.
+
+The project should expose enough public surface for:
+
+- creating and configuring sessions
+- submitting kernel requests
+- receiving structured values, diagnostics, messages, and suspension outcomes
+- building adapters or extensions on top of that boundary
+
+It should not aim to expose every evaluator internal, normalization helper,
+matcher detail, or experimental runtime abstraction as part of the public API.
+
+The architectural goal is to make extension possible without making internals
+part of the public contract. If contributors want richer Python, Rust, GUI,
+IDE, or protocol integrations, they should be able to build them on top of a
+narrow kernel boundary or in optional extension crates rather than by expanding
+`rum-runtime` into a kitchen-sink host framework.
+
 ## What Must Stay Out Of The Kernel
 
 The following belong outside `rum-runtime`:

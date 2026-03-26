@@ -49,11 +49,14 @@ This roadmap intentionally uses two levels of detail:
 - [x] Add CLI parse/format entrypoints and formatter width overrides shared with REPL behavior
 - [ ] Continue tightening regression coverage and decide whether trace viewing belongs in the REPL surface
 
-### Phase 7: Embedding and Jupyter Preparation
+### Phase 7: Embedding and Host Adapters
 
 - [x] Stabilize a host-facing request/config API around `Session` and keep terminal rendering out of it
 - [x] Create an initial `rum-jupyter` crate with execute/inspect/complete/is-complete mapping, structured outputs, stdin handling, wire codecs, connection-file/bootstrap support, local socket backends, and native ZeroMQ-backed transport coverage
-- [ ] Continue hardening `rum-jupyter` as an optional capability-validation adapter for the kernel, prioritizing features that prove or exercise kernel maturity over notebook-only polish
+- [ ] Define and document a minimal stable host-facing public contract around sessions, requests, configuration, structured outcomes, and suspend/resume while keeping evaluator internals and experimental abstractions out of the public API
+- [ ] Add a first-class Rust host adapter or embedding crate with a narrow public surface shaped for long-running backend, rule-engine, and DSL-service embedding rather than broad internal exposure
+- [ ] Add an optional Python host adapter with a narrow public surface shaped for AI- and data-tooling-oriented integration, likely using `pyo3` behind a thin project-owned boundary instead of leaking Python-binding concerns into `rum-runtime`
+- [ ] Continue hardening `rum-jupyter` as one optional capability-validation adapter for the kernel, prioritizing features that prove or exercise kernel maturity over notebook-only polish
 
 ### Phase 8: String Language and Text Processing
 
@@ -105,11 +108,23 @@ This roadmap intentionally uses two levels of detail:
 - [ ] Continue hardening lifecycle and frontend-compatibility details beyond the current local-socket and native-ZeroMQ-backed coverage, but prioritize work that validates or exposes kernel capabilities over notebook-only surface polish
 - [ ] Continue splitting oversized `rum-jupyter` transport/backend/test modules as part of the code-organization workstream
 
+### Rust and Python Host Adapters
+
+- [ ] Treat Rust and Python host support as peer adapters to `rum-jupyter`, all layered on the same host-facing runtime API rather than becoming special cases inside `rum-runtime`
+- [ ] Use a Rust reference scenario of long-running backend services, rule engines, and DSL-oriented infrastructure to judge API ergonomics, but keep the public surface limited to kernel sessions, requests, configuration, structured outcomes, and resource-control boundaries
+- [ ] Use a Python reference scenario of AI- and data-tooling-oriented applications to judge API ergonomics, but keep the public surface general-purpose and free of AI-specific kernel features
+- [ ] Define which host-facing types and flows are stable public contract versus internal implementation detail so future adapters or wrappers can be added without freezing evaluator internals
+- [ ] Decide how much of `Expr`, diagnostics, messages, suspended input, and structured outputs should be exposed directly versus wrapped in host-friendly facades, erring on the side of a smaller stable contract
+- [ ] Provide enough extension-oriented examples and adapter seams that downstream contributors can build richer wrappers without turning `rum-runtime` into a kitchen-sink host framework
+- [ ] Add adapter-focused regression and smoke coverage for parse, eval, inspect, complete, is-complete, session lifecycle, structured failures, and resumable input from Rust and Python callers
+- [ ] Establish Python packaging and local-dev workflow only after the API shape is stable, keeping wheel/build concerns outside the kernel core
+- [ ] Let `rum-jupyter` reuse shared host-adapter pieces later where that reduces duplication, but do not make notebook protocol concerns the center of the broader host design
+
 ### Cross-Cutting Test Suites and Conformance
 
 - [ ] Define a project-wide testing pyramid that distinguishes:
   - [ ] direct unit tests for small helpers, planners, normalization logic, and matcher branches
-  - [ ] subsystem regression tests for syntax, lowering, runtime, terminal, REPL, CLI, and Jupyter adapters
+  - [ ] subsystem regression tests for syntax, lowering, runtime, terminal, REPL, CLI, Rust/Python host adapters, and Jupyter
   - [ ] end-to-end behavior tests for user-facing flows and protocol-level interactions
 - [ ] Strengthen boundary and edge-case coverage for parser, lowering, evaluator, matcher, scoping, threading, loader, and message semantics
 - [ ] Add broader regression corpora and golden fixtures for syntax formatting, lowering, evaluation, runtime messages, and transport-facing APIs
@@ -129,11 +144,12 @@ This roadmap intentionally uses two levels of detail:
 ### Post-Core Workstream: Full String Language
 
 - [ ] Treat full string support as a first-class post-foundation roadmap item rather than an incidental builtin grab bag
-- [ ] Keep string literal parsing in `rum-syntax`, the canonical string atom in `rum-core`, evaluation semantics in `rum-runtime`, and builtin registration in `rum-stdlib` for the first implementation wave
+- [ ] Keep string literal parsing in `rum-syntax`, the canonical string atom in `rum-core`, and the current first-wave evaluation semantics plus builtin registration in `rum-runtime`, revisiting any broader crate split only if the string surface later outgrows the core kernel boundary
 - [ ] Do not create a dedicated string crate yet; revisit a future `rum-string` extraction only after the builtin surface, shared helpers, and performance constraints are concrete enough to justify a new boundary
 - [ ] Audit the Wolfram core-language string surface and split it into explicit implementation tiers with documented priorities
-- [ ] Tier 0 correctness: decide the Unicode/codepoint model and lock down escape/unicode regression fixtures
-- [ ] Tier 1 basic construction and slicing: `StringJoin`, `StringLength`, `Characters`, `CharacterRange`, `StringRepeat`, `ToString`, `StringTake`, `StringDrop`, and `StringPart`
+- [x] Tier 0 correctness: lock the initial in-memory string model to Unicode code-point semantics and add basic escape/unicode regression fixtures, while leaving richer escape validation and diagnostics for later follow-up
+- [x] Tier 1 basic construction and slicing first wave: `StringJoin`, `StringLength`, `Characters`, `CharacterRange`, `ToString`, `StringTake`, `StringDrop`, and `StringPart`
+- [ ] Extend Tier 1 with the remaining near-term construction builtin `StringRepeat`, keeping the current scope focused on in-memory string values rather than host-side file or encoding IO
 - [ ] Tier 2 search and transformation: `StringContainsQ`, `StringStartsQ`, `StringEndsQ`, `StringPosition`, `StringSplit`, `StringTrim`, `StringReplace`, and `StringCases`
 - [ ] Tier 3 string patterns: `StringExpression`, alternatives, repetition forms, start/end anchors, `Shortest` / `Longest`, and `RegularExpression` interop
 - [ ] Tier 4 conversions and interoperability: `CharacterCode`, `FromCharacterCode`, formatting/conversion touchpoints, file/path string conventions, and message-template compatibility
@@ -144,29 +160,44 @@ This roadmap intentionally uses two levels of detail:
 
 - [ ] After kernel stabilization and the initial string workstream, decide the practical mathematical surface needed for business, industrial, and DSL-oriented workloads
 - [ ] Prioritize exact arithmetic, symbolic manipulation, and migration-relevant same-name Wolfram behavior before broader CAS-style expansion
+- [x] Land the first exact arithmetic layer for integers and rationals, plus an initial `Expand` pass over rational-coefficient polynomial expressions with pattern-free indeterminates
+- [x] Extend that rational-coefficient polynomial subset through `Coefficient` and `CoefficientList`, keeping them on top of the polynomial core rather than a broader rational-function layer
+- [x] Land an initial `Factor` pass for rational-coefficient multivariate polynomials over the current pattern-free indeterminate model, including common-content extraction, exact linear-factor recursion, and migration-relevant identities such as `x^3 + y^3 + z^3 - 3 x y z`
+- [x] Extend that same mathematical subset toward `Together`, including shared factor cancellation after common-denominator combination, without pulling the kernel into broader CAS-oriented scope
+- [x] Land an initial symbolic `D` for exact arithmetic, rational functions, and abstract symbol-headed functions, using held pattern-free differentiation variables whose top-level head is a symbol and emitting Mathematica-style abstract `Derivative[...]` forms when no concrete rule is built in
+- [ ] Keep the math IR layered so later work can distinguish polynomial normalization from rational-function normalization, rather than forcing negative powers or denominators directly into the polynomial core
+- [ ] Treat the current exclusion of pattern-bearing indeterminates as a first-pass safety boundary for `Expand`, not as the long-term mathematical model; leave room to support Wolfram-style cases such as `(u[i_] + u[j_])^2`
+- [ ] Defer full multivariate factorization over `Q` beyond the current linear-factor pass, including polynomial `GCD`, square-free decomposition, modular factorization, Hensel lifting, and recombination, until the broader kernel core priorities are further along
 
 ## External Review Intake (2026-03)
 
-This section records the parts of the March 2026 external review round that are
-worth absorbing into the roadmap after comparing them against the current code
-tree. It is intentionally selective rather than a verbatim import of every
-review comment.
+This section records the parts of the March 2026 external review round and the
+immediate follow-up self-review that are worth absorbing into the roadmap after
+comparing them against the current code tree. It is intentionally selective
+rather than a verbatim import of every review comment.
 
 ### P0
 
-- [ ] Replace the current `rum-jupyter` wire-message signing with real Jupyter-compatible `HMAC-SHA256`, and add regression coverage for signed local/native transport paths
+- [x] Fix definition replacement semantics so re-defining the same `DownValue`, `UpValue`, or `SubValue` replaces the older rule instead of appending a stale earlier copy that still wins during application
+- [x] Replace the current `rum-jupyter` wire-message signing with real Jupyter-compatible `HMAC-SHA256`, and add regression coverage for signed local/native transport paths
+- [x] Make `rum-jupyter` honor the connection file signature scheme explicitly instead of treating any non-empty key as an implicit custom signing mode
+- [x] Fix the handwritten `rum-jupyter` JSON parsers so request/response/connection-file strings round-trip real UTF-8 / Unicode data instead of decoding string contents byte-by-byte
+- [x] Harden `rum-jupyter` multipart frame decoding so malformed ZeroMQ/Jupyter traffic returns structured wire errors instead of panicking the kernel
 
 ### P1
 
-- [ ] Audit the handwritten JSON encoding/decoding in `rum-jupyter` and decide whether to keep it with stronger tests or replace it with a mature JSON library
-- [ ] Add a more explicit conformance test set for definition precedence, tag ownership, and `HoldAllComplete` blocking boundaries
-- [ ] Add a dedicated regression suite for context resolution and package/context interaction instead of leaving those semantics covered only indirectly
+- [x] Add a more explicit conformance test set for definition precedence, tag ownership, and `HoldAllComplete` blocking boundaries
+- [x] Add dedicated regression coverage for malformed `rum-jupyter` wire frames and non-ASCII JSON payloads so transport hardening stays protected
+- [x] Add a dedicated regression suite for context resolution and package/context interaction instead of leaving those semantics covered only indirectly
 - [ ] Expand `rum-stdlib` tests from installation smoke coverage toward builtin-registration, package-loading, and context-management behavior
 - [ ] Expand `rum-terminal` tests beyond the current small baseline so terminal rendering changes are protected by direct unit coverage
+- [ ] Fix REPL history persistence so multiline inputs survive reload as single logical entries instead of being split into fake per-line history items
+- [ ] Fix lexer unexpected-character spans so structured diagnostics report the actual offending byte range instead of zero-width placeholders
 - [ ] Keep splitting the oversized `rum-jupyter` transport/backend/test files called out by the review round until they fall back into the normal code-organization workflow
 
 ### P2
 
+- [ ] Realign runtime test file names and contents so review-critical tests live in the modules their names imply instead of drifting into misleading buckets
 - [ ] Revisit matcher compilation/storage strategy after semantics stabilize, including whether definition insertion should cache more matcher state instead of recompiling on hot paths
 - [ ] Profile evaluator hot paths such as fixed-point iteration, heads lookup, and expression ordering before deciding whether additional low-level performance work is justified
 - [ ] Revisit ergonomics of large request/error payloads only after measurement shows that the current shapes are a real cost rather than a static-analysis curiosity
