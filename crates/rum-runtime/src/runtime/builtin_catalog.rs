@@ -124,6 +124,51 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::ToString,
     ),
     BuiltinSpec::ordinary(
+        "StringRepeat",
+        "Repeats a string a non-negative number of times.",
+        BuiltinHandler::StringRepeat,
+    ),
+    BuiltinSpec::ordinary(
+        "StringContainsQ",
+        "Tests whether a string or list of strings contains an exact substring in the current first-pass string subset.",
+        BuiltinHandler::StringContainsQ,
+    ),
+    BuiltinSpec::ordinary(
+        "StringStartsQ",
+        "Tests whether a string or list of strings starts with an exact substring in the current first-pass string subset.",
+        BuiltinHandler::StringStartsQ,
+    ),
+    BuiltinSpec::ordinary(
+        "StringEndsQ",
+        "Tests whether a string or list of strings ends with an exact substring in the current first-pass string subset.",
+        BuiltinHandler::StringEndsQ,
+    ),
+    BuiltinSpec::ordinary(
+        "StringPosition",
+        "Returns 1-based inclusive positions of exact substring matches, including overlaps, in the current first-pass string subset.",
+        BuiltinHandler::StringPosition,
+    ),
+    BuiltinSpec::ordinary(
+        "StringSplit",
+        "Splits strings using whitespace or exact delimiters in the current first-pass string subset.",
+        BuiltinHandler::StringSplit,
+    ),
+    BuiltinSpec::ordinary(
+        "StringTrim",
+        "Trims whitespace or exact boundary substrings in the current first-pass string subset.",
+        BuiltinHandler::StringTrim,
+    ),
+    BuiltinSpec::ordinary(
+        "StringReplace",
+        "Replaces exact string needles using immediate string rules in the current first-pass string subset.",
+        BuiltinHandler::StringReplace,
+    ),
+    BuiltinSpec::ordinary(
+        "StringCases",
+        "Extracts non-overlapping exact string matches or immediate exact-string rule outputs in the current first-pass string subset.",
+        BuiltinHandler::StringCases,
+    ),
+    BuiltinSpec::ordinary(
         "StringTake",
         "Extracts a substring using integer counts or inclusive 1-based ranges.",
         BuiltinHandler::StringTake,

@@ -149,8 +149,10 @@ This roadmap intentionally uses two levels of detail:
 - [ ] Audit the Wolfram core-language string surface and split it into explicit implementation tiers with documented priorities
 - [x] Tier 0 correctness: lock the initial in-memory string model to Unicode code-point semantics and add basic escape/unicode regression fixtures, while leaving richer escape validation and diagnostics for later follow-up
 - [x] Tier 1 basic construction and slicing first wave: `StringJoin`, `StringLength`, `Characters`, `CharacterRange`, `ToString`, `StringTake`, `StringDrop`, and `StringPart`
-- [ ] Extend Tier 1 with the remaining near-term construction builtin `StringRepeat`, keeping the current scope focused on in-memory string values rather than host-side file or encoding IO
-- [ ] Tier 2 search and transformation: `StringContainsQ`, `StringStartsQ`, `StringEndsQ`, `StringPosition`, `StringSplit`, `StringTrim`, `StringReplace`, and `StringCases`
+- [x] Extend Tier 1 with the remaining near-term construction builtin `StringRepeat`, keeping the current scope focused on in-memory string values rather than host-side file or encoding IO
+- [x] Land the first Tier 2 exact-search wave: `StringContainsQ`, `StringStartsQ`, `StringEndsQ`, and `StringPosition` over exact string needles with Unicode code-point indexing and overlapping 1-based position ranges
+- [x] Land the corresponding Tier 2 exact-transformation wave: `StringSplit`, `StringTrim`, `StringReplace`, and `StringCases` for whitespace/default handling plus exact-string delimiters and immediate exact-string rules over in-memory string values
+- [ ] Widen the string search/transformation family from exact-string needles toward richer string-pattern and option semantics such as `StringExpression`, `IgnoreCase`, overlap controls beyond the current defaults, and delayed/string-pattern rule forms
 - [ ] Tier 3 string patterns: `StringExpression`, alternatives, repetition forms, start/end anchors, `Shortest` / `Longest`, and `RegularExpression` interop
 - [ ] Tier 4 conversions and interoperability: `CharacterCode`, `FromCharacterCode`, formatting/conversion touchpoints, file/path string conventions, and message-template compatibility
 - [ ] Add golden tests that cover evaluator behavior, round-tripping, formatting, matching, and unicode-heavy cases across the implemented string subset
