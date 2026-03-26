@@ -5,7 +5,7 @@ use rum_runtime::Session;
 use crate::{
     KernelBootstrapConfig, KernelChannel, KernelQueuedTransport, KernelSocketDriver,
     KernelSocketSession, KernelSocketSessionConfig, KernelTransport, KernelTransportBackend,
-    KernelTransportLayout, KernelWireMessage,
+    KernelTransportLayout, KernelWireError, KernelWireMessage,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -49,6 +49,7 @@ struct ZeroMqSocketState<S> {
     incoming_shell: VecDeque<KernelWireMessage>,
     incoming_control: VecDeque<KernelWireMessage>,
     incoming_stdin: VecDeque<KernelWireMessage>,
+    pending_errors: VecDeque<KernelWireError>,
     heartbeat_incoming: VecDeque<Vec<u8>>,
 }
 
@@ -66,6 +67,10 @@ impl<S> ZeroMqSocketState<S> {
     }
 
     fn has_buffered_channel(&self, channel: KernelChannel) -> bool {
+        if !self.pending_errors.is_empty() {
+            return true;
+        }
+
         match channel {
             KernelChannel::Shell => !self.incoming_shell.is_empty(),
             KernelChannel::Control => !self.incoming_control.is_empty(),
@@ -144,6 +149,7 @@ impl<S: ZeroMqSocket> ZeroMqSocketSession<S> {
                 incoming_shell: VecDeque::new(),
                 incoming_control: VecDeque::new(),
                 incoming_stdin: VecDeque::new(),
+                pending_errors: VecDeque::new(),
                 heartbeat_incoming: VecDeque::new(),
             }),
         })
@@ -163,12 +169,27 @@ impl<S: ZeroMqSocket> ZeroMqSocketSession<S> {
         };
 
         if let Some(frames) = frames {
-            let message = frames_to_wire_message(channel, &self.delimiter, frames)
-                .expect("ZeroMQ session should only surface valid Jupyter multipart frames");
-            state
-                .incoming_queue_mut(channel)
-                .expect("channel-backed incoming queues exist")
-                .push_back(message);
+            match frames_to_wire_message(channel, &self.delimiter, frames) {
+                Ok(message) => {
+                    state
+                        .incoming_queue_mut(channel)
+                        .expect("channel-backed incoming queues exist")
+                        .push_back(message);
+                }
+                Err(ZeroMqBackendError::InvalidWireFrames { channel, message }) => {
+                    state
+                        .pending_errors
+                        .push_back(KernelWireError::InvalidWireFrames { channel, message });
+                }
+                Err(other) => {
+                    state
+                        .pending_errors
+                        .push_back(KernelWireError::InvalidWireFrames {
+                            channel,
+                            message: format!("{other:?}"),
+                        });
+                }
+            }
             true
         } else {
             false
@@ -198,9 +219,17 @@ impl<S: ZeroMqSocket> KernelQueuedTransport for ZeroMqSocketSession<S> {
     }
 
     fn has_pending_incoming(&self) -> bool {
+        if !self.state.borrow().pending_errors.is_empty() {
+            return true;
+        }
+
         self.poll_channel_into_buffer(KernelChannel::Control)
             || self.poll_channel_into_buffer(KernelChannel::Shell)
             || self.poll_channel_into_buffer(KernelChannel::Stdin)
+    }
+
+    fn take_pending_error(&mut self) -> Option<KernelWireError> {
+        self.state.borrow_mut().pending_errors.pop_front()
     }
 }
 

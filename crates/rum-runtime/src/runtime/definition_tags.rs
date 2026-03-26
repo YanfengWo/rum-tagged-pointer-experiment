@@ -135,11 +135,16 @@ impl Session {
             }
             TaggedDefinitionTarget::DownValue(symbol) => {
                 let definition = self.definitions.entry(symbol.clone()).or_default();
-                definition.down_values.push(DownValue {
-                    lhs: lhs.clone(),
-                    rhs: rhs.clone(),
-                    delayed,
-                });
+                replace_or_append_definition(
+                    &mut definition.down_values,
+                    &lhs,
+                    DownValue {
+                        lhs: lhs.clone(),
+                        rhs: rhs.clone(),
+                        delayed,
+                    },
+                    |entry| &entry.lhs,
+                );
                 self.push_trace(TraceEvent::DefinitionStored {
                     symbol: symbol.to_string(),
                     kind: DefinitionKind::DownValue,
@@ -148,11 +153,16 @@ impl Session {
             }
             TaggedDefinitionTarget::SubValue(symbol) => {
                 let definition = self.definitions.entry(symbol.clone()).or_default();
-                definition.sub_values.push(SubValue {
-                    lhs: lhs.clone(),
-                    rhs: rhs.clone(),
-                    delayed,
-                });
+                replace_or_append_definition(
+                    &mut definition.sub_values,
+                    &lhs,
+                    SubValue {
+                        lhs: lhs.clone(),
+                        rhs: rhs.clone(),
+                        delayed,
+                    },
+                    |entry| &entry.lhs,
+                );
                 self.push_trace(TraceEvent::DefinitionStored {
                     symbol: symbol.to_string(),
                     kind: DefinitionKind::SubValue,
@@ -161,11 +171,16 @@ impl Session {
             }
             TaggedDefinitionTarget::UpValue(symbol) => {
                 let definition = self.definitions.entry(symbol.clone()).or_default();
-                definition.up_values.push(UpValue {
-                    lhs: lhs.clone(),
-                    rhs: rhs.clone(),
-                    delayed,
-                });
+                replace_or_append_definition(
+                    &mut definition.up_values,
+                    &lhs,
+                    UpValue {
+                        lhs: lhs.clone(),
+                        rhs: rhs.clone(),
+                        delayed,
+                    },
+                    |entry| &entry.lhs,
+                );
                 self.push_trace(TraceEvent::DefinitionStored {
                     symbol: symbol.to_string(),
                     kind: DefinitionKind::UpValue,
@@ -173,5 +188,19 @@ impl Session {
                 });
             }
         }
+    }
+}
+
+fn replace_or_append_definition<T, F>(entries: &mut Vec<T>, lhs: &Expr, new_entry: T, lhs_of: F)
+where
+    F: Fn(&T) -> &Expr,
+{
+    if let Some(index) = entries
+        .iter()
+        .position(|entry| lhs_patterns_equivalent(lhs_of(entry), lhs))
+    {
+        entries[index] = new_entry;
+    } else {
+        entries.push(new_entry);
     }
 }

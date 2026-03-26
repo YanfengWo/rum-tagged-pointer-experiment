@@ -117,6 +117,19 @@ impl Session {
         })
     }
 
+    pub(super) fn drive_rewrite_rule_exprs_owned<U, F>(
+        &mut self,
+        expr: Expr,
+        cont: F,
+    ) -> Result<U, EvalError>
+    where
+        U: ContinuationValue + 'static,
+        F: FnOnce(&mut Session, Option<Vec<Expr>>) -> Result<U, EvalError> + 'static,
+    {
+        let resolved_rule_exprs_result = self.resolve_rewrite_rule_exprs_owned(expr);
+        self.drive_internal_value(resolved_rule_exprs_result, cont)
+    }
+
     pub(super) fn normalize_rewrite_rule_exprs_from_resolved(
         &self,
         resolved: &Expr,

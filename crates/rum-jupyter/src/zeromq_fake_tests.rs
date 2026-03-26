@@ -3,6 +3,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::KernelWireError;
+
 use super::*;
 
 #[derive(Debug, Default)]
@@ -218,4 +220,27 @@ fn zeromq_backend_round_trips_execute_over_fake_router_socket() {
         }
         other => panic!("expected execute response, got {other:?}"),
     }
+}
+
+#[test]
+fn zeromq_backend_reports_malformed_shell_frames_as_structured_wire_errors() {
+    let bootstrap = test_connection();
+    let mut factory = FakeZeroMqFactory::default();
+    let mut backend = ZeroMqTransportBackend::from_factory(bootstrap, &mut factory)
+        .expect("backend should build");
+    let mut driver = backend.socket_driver(Session::new());
+
+    factory.router_sockets[0].push_incoming(vec![b"frontend".to_vec(), b"<IDS|MSG>".to_vec()]);
+
+    let error = driver
+        .pump_once(backend.transport_mut())
+        .expect_err("malformed frames should surface as a wire error");
+
+    assert_eq!(
+        error,
+        KernelWireError::InvalidWireFrames {
+            channel: KernelChannel::Shell,
+            message: "missing required signed payload frames".to_string(),
+        }
+    );
 }

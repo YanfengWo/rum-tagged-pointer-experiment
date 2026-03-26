@@ -18,7 +18,7 @@ fn function_applies_slots_positionally() {
             .unwrap()
             .value
             .to_string(),
-        "Plus[1, 2]"
+        "3"
     );
     assert_eq!(
         session
@@ -222,6 +222,7 @@ fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
             CallDispatchStage::UpValues,
             CallDispatchStage::DownValues,
             CallDispatchStage::SubValues,
+            CallDispatchStage::OrdinaryBuiltin,
         ]
     );
 

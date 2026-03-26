@@ -57,8 +57,7 @@ impl Session {
     }
 
     fn resume_normalize_rules(&mut self, original: Expr) -> Result<Expr, EvalError> {
-        let normalized_rule_exprs_result = self.resolve_rewrite_rule_exprs_owned(original.clone());
-        self.drive_internal_value(normalized_rule_exprs_result, move |session, rule_exprs| {
+        self.drive_rewrite_rule_exprs_owned(original.clone(), move |session, rule_exprs| {
             match rule_exprs {
                 Some(rule_exprs) => {
                     let rules = session

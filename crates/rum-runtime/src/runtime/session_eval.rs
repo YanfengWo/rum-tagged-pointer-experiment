@@ -189,8 +189,7 @@ impl Session {
         &mut self,
         expr: Expr,
     ) -> Result<Option<Vec<RewriteRuleInfo>>, EvalError> {
-        let normalized_rule_exprs_result = self.resolve_rewrite_rule_exprs_owned(expr);
-        self.drive_internal_value(normalized_rule_exprs_result, |session, rule_exprs| {
+        self.drive_rewrite_rule_exprs_owned(expr, |session, rule_exprs| {
             Ok(rule_exprs
                 .and_then(|rule_exprs| {
                     session.compile_rewrite_rules_from_normalized_exprs(rule_exprs)

@@ -165,6 +165,55 @@ fn bootstrap_config_derives_endpoints_and_wire_policy_from_connection_file() {
 }
 
 #[test]
+fn connection_file_signature_policy_respects_declared_signature_scheme() {
+    let connection = KernelConnectionFile::parse_json(
+        r#"{
+            "transport": "tcp",
+            "ip": "127.0.0.1",
+            "shell_port": 57503,
+            "iopub_port": 40885,
+            "stdin_port": 52597,
+            "control_port": 50160,
+            "hb_port": 42540,
+            "key": "secret",
+            "signature_scheme": "hmac-sha512"
+        }"#,
+    )
+    .expect("connection file should parse");
+
+    assert_eq!(
+        connection.signature_scheme,
+        KernelSignatureScheme::Other("hmac-sha512".to_string())
+    );
+    assert_eq!(
+        connection.signature_policy(),
+        KernelSignaturePolicy::Disabled
+    );
+}
+
+#[test]
+fn connection_file_parser_round_trips_unicode_string_fields() {
+    let connection = KernelConnectionFile::parse_json(
+        r#"{
+            "transport": "tcp",
+            "ip": "127.0.0.1",
+            "shell_port": 57503,
+            "iopub_port": 40885,
+            "stdin_port": 52597,
+            "control_port": 50160,
+            "hb_port": 42540,
+            "key": "密钥🔒",
+            "signature_scheme": "hmac-sha256",
+            "kernel_name": "若木内核"
+        }"#,
+    )
+    .expect("unicode connection file should parse");
+
+    assert_eq!(connection.key, "密钥🔒");
+    assert_eq!(connection.kernel_name.as_deref(), Some("若木内核"));
+}
+
+#[test]
 fn mock_transport_backend_exposes_bootstrap_boundary_for_future_real_transports() {
     let connection = KernelConnectionFile::parse_json(
         r#"{
@@ -1090,6 +1139,49 @@ fn signed_transport_codec_round_trips_request_messages() {
             assert!(request.store_history);
             assert!(request.allow_stdin);
         }
+        other => panic!("expected execute request, got {other:?}"),
+    }
+}
+
+#[test]
+fn transport_codec_decodes_escaped_and_utf8_unicode_request_payloads() {
+    let codec = KernelWireCodec::new(
+        KernelWireConfig::default()
+            .with_session_id("session-7u")
+            .with_signature_key("secret"),
+    );
+    let mut wire = codec
+        .encode_request_envelope(&KernelRequestEnvelope {
+            channel: KernelChannel::Shell,
+            header: KernelMessageHeader::new(
+                "client-msg-60u",
+                "session-7u",
+                "tester",
+                "execute_request",
+            ),
+            parent_header: None,
+            metadata: super::KernelMetadata::new(),
+            request: KernelRequest::Execute(KernelExecuteRequest::new("Print[\"ok\"]")),
+        })
+        .expect("request should encode");
+
+    wire.content_json =
+        "{\"code\":\"\\u4f60\\u597d 🚀\",\"store_history\":true,\"allow_stdin\":true}".to_string();
+    wire.signature = Some(crate::signature::hmac_sha256_hex(
+        "secret",
+        [
+            &wire.header_json,
+            &wire.parent_header_json,
+            &wire.metadata_json,
+            &wire.content_json,
+        ],
+    ));
+
+    let decoded = codec
+        .decode_request_message(&wire)
+        .expect("unicode request should decode");
+    match decoded.request {
+        KernelRequest::Execute(request) => assert_eq!(request.code, "你好 🚀"),
         other => panic!("expected execute request, got {other:?}"),
     }
 }

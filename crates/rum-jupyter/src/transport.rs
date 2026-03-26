@@ -3,6 +3,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::json_support::{JsonValue, parse_json_object};
+use crate::signature::hmac_sha256_hex;
 use crate::{
     KernelAdapter, KernelChannel, KernelCompleteRequest, KernelCompleteResponse,
     KernelDispatchResult, KernelDisplayOutput, KernelErrorOutput, KernelExecuteInput,
@@ -71,6 +73,10 @@ pub trait KernelTransport {
 pub trait KernelQueuedTransport: KernelTransport {
     fn pop_incoming(&mut self, channel: KernelChannel) -> Option<KernelWireMessage>;
     fn has_pending_incoming(&self) -> bool;
+
+    fn take_pending_error(&mut self) -> Option<KernelWireError> {
+        None
+    }
 }
 
 #[derive(Debug, Default)]
@@ -442,6 +448,10 @@ impl KernelWireConfig {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum KernelWireError {
+    InvalidWireFrames {
+        channel: KernelChannel,
+        message: String,
+    },
     InvalidDelimiter {
         expected: String,
         found: String,
@@ -890,7 +900,7 @@ impl KernelWireCodec {
         match &self.config.signature_policy {
             KernelSignaturePolicy::Disabled => None,
             KernelSignaturePolicy::Optional(key) | KernelSignaturePolicy::Required(key) => {
-                Some(stable_signature(
+                Some(hmac_sha256_hex(
                     key,
                     [header_json, parent_header_json, metadata_json, content_json],
                 ))
@@ -1157,6 +1167,10 @@ impl KernelEventPump {
         transport: &mut T,
         channel: KernelChannel,
     ) -> Result<bool, KernelWireError> {
+        if let Some(error) = transport.take_pending_error() {
+            return Err(error);
+        }
+
         if let Some(request) = transport.pop_incoming(channel) {
             match channel {
                 KernelChannel::Shell | KernelChannel::Control => {
@@ -1235,21 +1249,6 @@ impl KernelEventPump {
 
         Ok(report)
     }
-}
-
-fn stable_signature(key: &str, parts: [&str; 4]) -> String {
-    let mut hash: u64 = 0xcbf29ce484222325;
-
-    for byte in key.bytes().chain(std::iter::once(0)).chain(
-        parts
-            .into_iter()
-            .flat_map(|part| part.bytes().chain(std::iter::once(0))),
-    ) {
-        hash ^= u64::from(byte);
-        hash = hash.wrapping_mul(0x100000001b3);
-    }
-
-    format!("{hash:016x}")
 }
 
 fn encode_request_content(request: &KernelRequest) -> String {
@@ -1820,14 +1819,17 @@ fn parse_object(
     input: &str,
     context: &'static str,
 ) -> Result<BTreeMap<String, JsonValue>, KernelWireError> {
-    match JsonParser::parse(input)? {
-        JsonValue::Object(map) => Ok(map),
-        other => Err(KernelWireError::InvalidField {
-            context,
-            field: "<root>",
-            value: other.kind_name().to_string(),
-        }),
-    }
+    parse_json_object(input).map_err(|message| {
+        if let Some(found) = message.strip_prefix("expected top-level object, found ") {
+            KernelWireError::InvalidField {
+                context,
+                field: "<root>",
+                value: found.to_string(),
+            }
+        } else {
+            KernelWireError::InvalidJson { message }
+        }
+    })
 }
 
 fn string_field(
@@ -2264,318 +2266,6 @@ fn json_option_u64(value: Option<u64>) -> String {
     value
         .map(|value| value.to_string())
         .unwrap_or_else(|| "null".to_string())
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-enum JsonValue {
-    Null,
-    Bool(bool),
-    Number(String),
-    String(String),
-    Array(Vec<JsonValue>),
-    Object(BTreeMap<String, JsonValue>),
-}
-
-impl JsonValue {
-    fn kind_name(&self) -> &'static str {
-        match self {
-            Self::Null => "null",
-            Self::Bool(_) => "bool",
-            Self::Number(_) => "number",
-            Self::String(_) => "string",
-            Self::Array(_) => "array",
-            Self::Object(_) => "object",
-        }
-    }
-}
-
-struct JsonParser<'a> {
-    input: &'a [u8],
-    index: usize,
-}
-
-impl<'a> JsonParser<'a> {
-    fn parse(input: &'a str) -> Result<JsonValue, KernelWireError> {
-        let mut parser = Self {
-            input: input.as_bytes(),
-            index: 0,
-        };
-        let value = parser.parse_value()?;
-        parser.skip_whitespace();
-
-        if parser.index != parser.input.len() {
-            return Err(KernelWireError::InvalidJson {
-                message: "trailing characters after JSON value".to_string(),
-            });
-        }
-
-        Ok(value)
-    }
-
-    fn parse_value(&mut self) -> Result<JsonValue, KernelWireError> {
-        self.skip_whitespace();
-
-        match self.peek_byte() {
-            Some(b'{') => self.parse_object(),
-            Some(b'[') => self.parse_array(),
-            Some(b'"') => self.parse_string().map(JsonValue::String),
-            Some(b't') => {
-                self.consume_literal("true")?;
-                Ok(JsonValue::Bool(true))
-            }
-            Some(b'f') => {
-                self.consume_literal("false")?;
-                Ok(JsonValue::Bool(false))
-            }
-            Some(b'n') => {
-                self.consume_literal("null")?;
-                Ok(JsonValue::Null)
-            }
-            Some(b'-' | b'0'..=b'9') => self.parse_number().map(JsonValue::Number),
-            Some(other) => Err(KernelWireError::InvalidJson {
-                message: format!("unexpected byte `{}`", char::from(other)),
-            }),
-            None => Err(KernelWireError::InvalidJson {
-                message: "unexpected end of input".to_string(),
-            }),
-        }
-    }
-
-    fn parse_object(&mut self) -> Result<JsonValue, KernelWireError> {
-        self.expect_byte(b'{')?;
-        self.skip_whitespace();
-
-        let mut values = BTreeMap::new();
-        if self.peek_byte() == Some(b'}') {
-            self.index += 1;
-            return Ok(JsonValue::Object(values));
-        }
-
-        loop {
-            let key = self.parse_string()?;
-            self.skip_whitespace();
-            self.expect_byte(b':')?;
-            let value = self.parse_value()?;
-            values.insert(key, value);
-            self.skip_whitespace();
-
-            match self.peek_byte() {
-                Some(b',') => {
-                    self.index += 1;
-                    self.skip_whitespace();
-                }
-                Some(b'}') => {
-                    self.index += 1;
-                    break;
-                }
-                Some(other) => {
-                    return Err(KernelWireError::InvalidJson {
-                        message: format!(
-                            "unexpected byte `{}` while parsing object",
-                            char::from(other)
-                        ),
-                    });
-                }
-                None => {
-                    return Err(KernelWireError::InvalidJson {
-                        message: "unexpected end of input while parsing object".to_string(),
-                    });
-                }
-            }
-        }
-
-        Ok(JsonValue::Object(values))
-    }
-
-    fn parse_array(&mut self) -> Result<JsonValue, KernelWireError> {
-        self.expect_byte(b'[')?;
-        self.skip_whitespace();
-
-        let mut values = Vec::new();
-        if self.peek_byte() == Some(b']') {
-            self.index += 1;
-            return Ok(JsonValue::Array(values));
-        }
-
-        loop {
-            values.push(self.parse_value()?);
-            self.skip_whitespace();
-
-            match self.peek_byte() {
-                Some(b',') => {
-                    self.index += 1;
-                    self.skip_whitespace();
-                }
-                Some(b']') => {
-                    self.index += 1;
-                    break;
-                }
-                Some(other) => {
-                    return Err(KernelWireError::InvalidJson {
-                        message: format!(
-                            "unexpected byte `{}` while parsing array",
-                            char::from(other)
-                        ),
-                    });
-                }
-                None => {
-                    return Err(KernelWireError::InvalidJson {
-                        message: "unexpected end of input while parsing array".to_string(),
-                    });
-                }
-            }
-        }
-
-        Ok(JsonValue::Array(values))
-    }
-
-    fn parse_string(&mut self) -> Result<String, KernelWireError> {
-        self.expect_byte(b'"')?;
-        let mut output = String::new();
-
-        loop {
-            match self.next_byte() {
-                Some(b'"') => break,
-                Some(b'\\') => match self.next_byte() {
-                    Some(b'"') => output.push('"'),
-                    Some(b'\\') => output.push('\\'),
-                    Some(b'n') => output.push('\n'),
-                    Some(b'r') => output.push('\r'),
-                    Some(b't') => output.push('\t'),
-                    Some(b'u') => {
-                        let mut codepoint = 0u32;
-                        for _ in 0..4 {
-                            let digit =
-                                self.next_byte()
-                                    .ok_or_else(|| KernelWireError::InvalidJson {
-                                        message: "unterminated \\u escape".to_string(),
-                                    })?;
-                            codepoint = (codepoint << 4)
-                                | hex_value(digit).ok_or_else(|| KernelWireError::InvalidJson {
-                                    message: "invalid \\u escape".to_string(),
-                                })?;
-                        }
-                        let ch = char::from_u32(codepoint).ok_or_else(|| {
-                            KernelWireError::InvalidJson {
-                                message: "invalid unicode scalar value".to_string(),
-                            }
-                        })?;
-                        output.push(ch);
-                    }
-                    Some(other) => {
-                        return Err(KernelWireError::InvalidJson {
-                            message: format!(
-                                "unsupported escape sequence `\\{}`",
-                                char::from(other)
-                            ),
-                        });
-                    }
-                    None => {
-                        return Err(KernelWireError::InvalidJson {
-                            message: "unterminated escape sequence".to_string(),
-                        });
-                    }
-                },
-                Some(other) => output.push(char::from(other)),
-                None => {
-                    return Err(KernelWireError::InvalidJson {
-                        message: "unterminated string literal".to_string(),
-                    });
-                }
-            }
-        }
-
-        Ok(output)
-    }
-
-    fn parse_number(&mut self) -> Result<String, KernelWireError> {
-        let start = self.index;
-        if self.peek_byte() == Some(b'-') {
-            self.index += 1;
-        }
-
-        match self.peek_byte() {
-            Some(b'0'..=b'9') => {
-                self.index += 1;
-            }
-            _ => {
-                return Err(KernelWireError::InvalidJson {
-                    message: "invalid number literal".to_string(),
-                });
-            }
-        }
-
-        while matches!(self.peek_byte(), Some(b'0'..=b'9')) {
-            self.index += 1;
-        }
-
-        String::from_utf8(self.input[start..self.index].to_vec()).map_err(|_| {
-            KernelWireError::InvalidJson {
-                message: "number literal was not valid UTF-8".to_string(),
-            }
-        })
-    }
-
-    fn consume_literal(&mut self, literal: &str) -> Result<(), KernelWireError> {
-        for expected in literal.bytes() {
-            let found = self
-                .next_byte()
-                .ok_or_else(|| KernelWireError::InvalidJson {
-                    message: format!("unexpected end of input while parsing `{literal}`"),
-                })?;
-            if found != expected {
-                return Err(KernelWireError::InvalidJson {
-                    message: format!("expected literal `{literal}`"),
-                });
-            }
-        }
-
-        Ok(())
-    }
-
-    fn expect_byte(&mut self, expected: u8) -> Result<(), KernelWireError> {
-        match self.next_byte() {
-            Some(found) if found == expected => Ok(()),
-            Some(found) => Err(KernelWireError::InvalidJson {
-                message: format!(
-                    "expected byte `{}`, found `{}`",
-                    char::from(expected),
-                    char::from(found)
-                ),
-            }),
-            None => Err(KernelWireError::InvalidJson {
-                message: format!(
-                    "expected byte `{}`, found end of input",
-                    char::from(expected)
-                ),
-            }),
-        }
-    }
-
-    fn skip_whitespace(&mut self) {
-        while matches!(self.peek_byte(), Some(b' ' | b'\n' | b'\r' | b'\t')) {
-            self.index += 1;
-        }
-    }
-
-    fn peek_byte(&self) -> Option<u8> {
-        self.input.get(self.index).copied()
-    }
-
-    fn next_byte(&mut self) -> Option<u8> {
-        let byte = self.peek_byte()?;
-        self.index += 1;
-        Some(byte)
-    }
-}
-
-fn hex_value(byte: u8) -> Option<u32> {
-    match byte {
-        b'0'..=b'9' => Some(u32::from(byte - b'0')),
-        b'a'..=b'f' => Some(u32::from(byte - b'a' + 10)),
-        b'A'..=b'F' => Some(u32::from(byte - b'A' + 10)),
-        _ => None,
-    }
 }
 
 fn pop_front<T>(items: &mut Vec<T>) -> Option<T> {

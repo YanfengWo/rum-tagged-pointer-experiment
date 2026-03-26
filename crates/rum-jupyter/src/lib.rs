@@ -1,7 +1,9 @@
 mod adapter;
 mod bootstrap;
 mod connection;
+mod json_support;
 mod model;
+mod signature;
 mod socket;
 mod transport;
 mod zeromq;

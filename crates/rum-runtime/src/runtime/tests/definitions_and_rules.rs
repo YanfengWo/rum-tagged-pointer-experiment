@@ -149,6 +149,55 @@ fn downvalues_lists_stored_pattern_definitions_in_order() {
 }
 
 #[test]
+fn redefining_same_downvalue_replaces_the_older_rule_in_place() {
+    let mut session = Session::new();
+
+    session.eval_text("f[x_] := 1").unwrap();
+    session.eval_text("f[y_] := 2").unwrap();
+
+    assert_eq!(session.eval_text("f[a]").unwrap().value.to_string(), "2");
+    assert_eq!(
+        session
+            .eval_text("DownValues[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[f[Pattern[y, Blank[]]], 2]]"
+    );
+}
+
+#[test]
+fn redefining_same_upvalue_replaces_the_older_rule_in_place() {
+    let mut session = Session::new();
+
+    session.eval_text("f /: g[f[x_]] := 1").unwrap();
+    session.eval_text("f /: g[f[y_]] := 2").unwrap();
+
+    assert_eq!(session.eval_text("g[f[a]]").unwrap().value.to_string(), "2");
+    assert_eq!(
+        session.eval_text("UpValues[f]").unwrap().value.to_string(),
+        "List[RuleDelayed[g[f[Pattern[y, Blank[]]]], 2]]"
+    );
+}
+
+#[test]
+fn redefining_same_subvalue_replaces_the_older_rule_in_place() {
+    let mut session = Session::new();
+
+    session.eval_text("f[x_][y_] := pair[x, y]").unwrap();
+    session.eval_text("f[a_][b_] := List[a, b]").unwrap();
+
+    assert_eq!(
+        session.eval_text("f[1][2]").unwrap().value.to_string(),
+        "List[1, 2]"
+    );
+    assert_eq!(
+        session.eval_text("SubValues[f]").unwrap().value.to_string(),
+        "List[RuleDelayed[f[Pattern[a, Blank[]]][Pattern[b, Blank[]]], List[a, b]]]"
+    );
+}
+
+#[test]
 fn subvalues_list_and_apply_nested_head_definitions() {
     let mut session = Session::new();
 
@@ -181,6 +230,23 @@ fn tagged_subvalues_attach_to_the_head_symbol_not_to_upvalues() {
     assert_eq!(
         session.eval_text("SubValues[f]").unwrap().value.to_string(),
         "List[RuleDelayed[f[Pattern[x, Blank[]]][Pattern[y, Blank[]]], pair[x, y]]]"
+    );
+}
+
+#[test]
+fn tagset_preserves_tag_ownership_for_upvalues() {
+    let mut session = Session::new();
+
+    session.eval_text("g /: f[g[x_]] := x").unwrap();
+
+    assert_eq!(session.eval_text("f[g[7]]").unwrap().value.to_string(), "7");
+    assert_eq!(
+        session.eval_text("UpValues[g]").unwrap().value.to_string(),
+        "List[RuleDelayed[f[g[Pattern[x, Blank[]]]], x]]"
+    );
+    assert_eq!(
+        session.eval_text("UpValues[f]").unwrap().value.to_string(),
+        "List[]"
     );
 }
 
