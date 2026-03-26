@@ -75,6 +75,7 @@ pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
             | "OneIdentity"
             | "Orderless"
             | "PatternTest"
+            | "StringExpression"
             | "SequenceHold"
     )
 }

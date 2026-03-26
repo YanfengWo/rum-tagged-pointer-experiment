@@ -196,6 +196,75 @@ fn string_split_trim_replace_and_cases_cover_common_text_processing_flows() {
 }
 
 #[test]
+fn string_expression_and_alternatives_extend_the_current_string_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringContainsQ[\"ERROR: bad\", StringExpression[\"ERROR\", Alternatives[\": \", \" - \"]]]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringStartsQ[\"[WARN] tail\", StringExpression[\"[\", Alternatives[\"WARN\", \"ERROR\"], \"]\"]]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringEndsQ[\"prefix::warn\", StringExpression[Alternatives[\"::\", \"--\"], \"warn\"]]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringPosition[\"aba\", StringExpression[\"a\", Alternatives[\"b\", \"ba\"]]]"
+        ),
+        "List[List[1, 3]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringSplit[\"a=>b:=c\", Alternatives[\"=>\", \":=\"]]"
+        ),
+        "List[\"a\", \"b\", \"c\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringTrim[\"[[warn]]\", Alternatives[StringExpression[\"[\", \"[\"], StringExpression[\"]\", \"]\"]]]"
+        ),
+        "\"warn\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringReplace[\"error => warn := info\", Alternatives[\"=>\", \":=\"] -> \"=\"]"
+        ),
+        "\"error = warn = info\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"[ERROR][WARN]\", StringExpression[\"[\", Alternatives[\"ERROR\", \"WARN\"], \"]\"]]"
+        ),
+        "List[\"[ERROR]\", \"[WARN]\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"[ERROR][WARN]\", StringExpression[\"[\", Alternatives[\"ERROR\", \"WARN\"], \"]\"] -> \"tag\"]"
+        ),
+        "List[\"tag\", \"tag\"]"
+    );
+}
+
+#[test]
 fn string_take_drop_and_part_support_basic_integer_and_range_specs() {
     let mut session = Session::new();
 
@@ -280,5 +349,16 @@ fn string_builtins_preserve_current_boundary_for_non_string_or_invalid_specs() {
     assert_eq!(
         eval_to_string(&mut session, "StringCases[\"abc\", \"\"]"),
         "StringCases[\"abc\", \"\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringContainsQ[\"abc\", StringExpression[]]"),
+        "StringContainsQ[\"abc\", StringExpression[]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringReplace[\"abc\", StringExpression[\"a\", x] -> \"b\"]"
+        ),
+        "StringReplace[\"abc\", Rule[StringExpression[\"a\", x], \"b\"]]"
     );
 }

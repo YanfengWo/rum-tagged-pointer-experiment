@@ -153,7 +153,8 @@ This roadmap intentionally uses two levels of detail:
 - [x] Land the first Tier 2 exact-search wave: `StringContainsQ`, `StringStartsQ`, `StringEndsQ`, and `StringPosition` over exact string needles with Unicode code-point indexing and overlapping 1-based position ranges
 - [x] Land the corresponding Tier 2 exact-transformation wave: `StringSplit`, `StringTrim`, `StringReplace`, and `StringCases` for whitespace/default handling plus exact-string delimiters and immediate exact-string rules over in-memory string values
 - [ ] Widen the string search/transformation family from exact-string needles toward richer string-pattern and option semantics such as `StringExpression`, `IgnoreCase`, overlap controls beyond the current defaults, and delayed/string-pattern rule forms
-- [ ] Tier 3 string patterns: `StringExpression`, alternatives, repetition forms, start/end anchors, `Shortest` / `Longest`, and `RegularExpression` interop
+- [x] Land an initial Tier 3 string-pattern subset by teaching the current string builtins to understand `StringExpression` and `Alternatives` over exact-string leaves
+- [ ] Continue Tier 3 string patterns with repetition forms, start/end anchors, `Shortest` / `Longest`, `IgnoreCase`, delayed pattern rules, and `RegularExpression` interop
 - [ ] Tier 4 conversions and interoperability: `CharacterCode`, `FromCharacterCode`, formatting/conversion touchpoints, file/path string conventions, and message-template compatibility
 - [ ] Add golden tests that cover evaluator behavior, round-tripping, formatting, matching, and unicode-heavy cases across the implemented string subset
 - [ ] Document supported string semantics, temporary limitations, and any deliberate divergence from Wolfram behavior as the subsystem grows
