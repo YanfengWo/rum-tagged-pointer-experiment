@@ -723,6 +723,55 @@ fn resume_eval_request_with_input_can_finish_cases_with_suspending_heads_option_
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_position_with_suspending_symbol_spec() {
+    let mut session = Session::new();
+    session
+        .eval_text("p := x_Integer /; MatchQ[InputString[\"cond: \"], \"yes\"]")
+        .unwrap();
+
+    let failure = session.eval_request("Position[f[1], p]").expect_err(
+        "Position pattern evaluation should suspend when the referenced symbol requests input",
+    );
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue Position after the pattern resolves");
+
+    assert_eq!(response.value.to_string(), "List[List[1]]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_position_with_suspending_match_limit() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "Position[f[g[1], 2, h[3]], _Integer, Infinity, If[MatchQ[InputString[\"n: \"], \"yes\"], 2, 0]]",
+        )
+        .expect_err("Position match-limit evaluation should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "n: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue Position after the match limit resolves");
+
+    assert_eq!(response.value.to_string(), "List[List[1, 1], List[2]]");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_normalize_rules_after_suspending_rule_source() {
     let mut session = Session::new();
     session

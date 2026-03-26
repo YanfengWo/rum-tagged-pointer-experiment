@@ -143,7 +143,7 @@ pub(super) fn clamp_thread_position(position: isize, arg_count: usize) -> Option
     }
 }
 
-pub(super) fn parse_cases_level_spec(expr: &Expr) -> Option<CasesLevelSpec> {
+pub(super) fn parse_standard_level_spec(expr: &Expr) -> Option<CasesLevelSpec> {
     if let Some(level) = expr_as_signed_isize(expr) {
         return Some(match level.cmp(&0) {
             std::cmp::Ordering::Greater => CasesLevelSpec::range(1, Some(level)),
@@ -166,12 +166,12 @@ pub(super) fn parse_cases_level_spec(expr: &Expr) -> Option<CasesLevelSpec> {
 
     match args.as_slice() {
         [level] => Some(CasesLevelSpec::exact(expr_as_signed_isize(level)?)),
-        [min, max] => parse_cases_level_range(min, max),
+        [min, max] => parse_standard_level_range(min, max),
         _ => None,
     }
 }
 
-fn parse_cases_level_range(min: &Expr, max: &Expr) -> Option<CasesLevelSpec> {
+fn parse_standard_level_range(min: &Expr, max: &Expr) -> Option<CasesLevelSpec> {
     let min = expr_as_signed_isize(min)?;
 
     if let Some(max) = expr_as_signed_isize(max) {
@@ -183,11 +183,11 @@ fn parse_cases_level_range(min: &Expr, max: &Expr) -> Option<CasesLevelSpec> {
     }
 }
 
-pub(super) fn parse_cases_match_limit(expr: &Expr) -> Option<usize> {
+pub(super) fn parse_non_negative_match_limit(expr: &Expr) -> Option<usize> {
     expr_as_non_negative_usize(expr)
 }
 
-pub(super) fn parse_cases_heads_option(expr: &Expr) -> Option<bool> {
+pub(super) fn parse_heads_option(expr: &Expr) -> Option<bool> {
     let Expr::Call { head, args } = expr else {
         return None;
     };

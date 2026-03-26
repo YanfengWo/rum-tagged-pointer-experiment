@@ -30,6 +30,71 @@ impl CasesTraversalNormalizationError {
 }
 
 impl Session {
+    fn compile_traversal_from_resolved_exprs(
+        &self,
+        resolved: &[Expr],
+        defaults: CasesTraversalConfig,
+    ) -> Result<CasesTraversalConfig, CasesTraversalNormalizationError> {
+        match resolved {
+            [] => Ok(defaults),
+            [third] => {
+                if let Some(include_heads) = parse_heads_option(third) {
+                    Ok(CasesTraversalConfig {
+                        include_heads,
+                        ..defaults
+                    })
+                } else if let Some(levels) = parse_standard_level_spec(third) {
+                    Ok(CasesTraversalConfig {
+                        levels,
+                        max_matches: defaults.max_matches,
+                        include_heads: defaults.include_heads,
+                    })
+                } else {
+                    Err(CasesTraversalNormalizationError::InvalidThirdArgument)
+                }
+            }
+            [third, fourth] => {
+                let Some(levels) = parse_standard_level_spec(third) else {
+                    return Err(CasesTraversalNormalizationError::InvalidThirdArgument);
+                };
+
+                if let Some(include_heads) = parse_heads_option(fourth) {
+                    Ok(CasesTraversalConfig {
+                        levels,
+                        max_matches: defaults.max_matches,
+                        include_heads,
+                    })
+                } else if let Some(max_matches) = parse_non_negative_match_limit(fourth) {
+                    Ok(CasesTraversalConfig {
+                        levels,
+                        max_matches: Some(max_matches),
+                        include_heads: defaults.include_heads,
+                    })
+                } else {
+                    Err(CasesTraversalNormalizationError::InvalidFourthArgument)
+                }
+            }
+            [third, fourth, fifth] => {
+                let Some(levels) = parse_standard_level_spec(third) else {
+                    return Err(CasesTraversalNormalizationError::InvalidThirdArgument);
+                };
+                let Some(max_matches) = parse_non_negative_match_limit(fourth) else {
+                    return Err(CasesTraversalNormalizationError::InvalidFourthArgument);
+                };
+                let Some(include_heads) = parse_heads_option(fifth) else {
+                    return Err(CasesTraversalNormalizationError::InvalidFifthArgument);
+                };
+
+                Ok(CasesTraversalConfig {
+                    levels,
+                    max_matches: Some(max_matches),
+                    include_heads,
+                })
+            }
+            _ => unreachable!("traversal arity is validated before traversal normalization"),
+        }
+    }
+
     pub(super) fn resolve_argument_exprs_owned(
         &mut self,
         exprs: Vec<Expr>,
@@ -80,64 +145,17 @@ impl Session {
         &self,
         resolved: &[Expr],
     ) -> Result<CasesTraversalConfig, CasesTraversalNormalizationError> {
-        match resolved {
-            [] => Ok(CasesTraversalConfig::default_cases()),
-            [third] => {
-                if let Some(include_heads) = parse_cases_heads_option(third) {
-                    Ok(CasesTraversalConfig {
-                        include_heads,
-                        ..CasesTraversalConfig::default_cases()
-                    })
-                } else if let Some(levels) = parse_cases_level_spec(third) {
-                    Ok(CasesTraversalConfig {
-                        levels,
-                        max_matches: None,
-                        include_heads: false,
-                    })
-                } else {
-                    Err(CasesTraversalNormalizationError::InvalidThirdArgument)
-                }
-            }
-            [third, fourth] => {
-                let Some(levels) = parse_cases_level_spec(third) else {
-                    return Err(CasesTraversalNormalizationError::InvalidThirdArgument);
-                };
+        self.compile_traversal_from_resolved_exprs(resolved, CasesTraversalConfig::default_cases())
+    }
 
-                if let Some(include_heads) = parse_cases_heads_option(fourth) {
-                    Ok(CasesTraversalConfig {
-                        levels,
-                        max_matches: None,
-                        include_heads,
-                    })
-                } else if let Some(max_matches) = parse_cases_match_limit(fourth) {
-                    Ok(CasesTraversalConfig {
-                        levels,
-                        max_matches: Some(max_matches),
-                        include_heads: false,
-                    })
-                } else {
-                    Err(CasesTraversalNormalizationError::InvalidFourthArgument)
-                }
-            }
-            [third, fourth, fifth] => {
-                let Some(levels) = parse_cases_level_spec(third) else {
-                    return Err(CasesTraversalNormalizationError::InvalidThirdArgument);
-                };
-                let Some(max_matches) = parse_cases_match_limit(fourth) else {
-                    return Err(CasesTraversalNormalizationError::InvalidFourthArgument);
-                };
-                let Some(include_heads) = parse_cases_heads_option(fifth) else {
-                    return Err(CasesTraversalNormalizationError::InvalidFifthArgument);
-                };
-
-                Ok(CasesTraversalConfig {
-                    levels,
-                    max_matches: Some(max_matches),
-                    include_heads,
-                })
-            }
-            _ => unreachable!("Cases arity is validated before traversal normalization"),
-        }
+    pub(super) fn compile_position_traversal_from_resolved_exprs(
+        &self,
+        resolved: &[Expr],
+    ) -> Result<CasesTraversalConfig, CasesTraversalNormalizationError> {
+        self.compile_traversal_from_resolved_exprs(
+            resolved,
+            CasesTraversalConfig::default_position(),
+        )
     }
 
     pub(super) fn resolve_cases_traversal_owned(
@@ -148,6 +166,21 @@ impl Session {
         self.drive_internal_value(resolved_exprs_result, move |session, resolved_exprs| {
             Ok(
                 match session.compile_cases_traversal_from_resolved_exprs(&resolved_exprs) {
+                    Ok(config) => CasesTraversalResolution::Valid(config),
+                    Err(error) => CasesTraversalResolution::Invalid(error),
+                },
+            )
+        })
+    }
+
+    pub(super) fn resolve_position_traversal_owned(
+        &mut self,
+        exprs: Vec<Expr>,
+    ) -> Result<CasesTraversalResolution, EvalError> {
+        let resolved_exprs_result = self.resolve_argument_exprs_owned(exprs);
+        self.drive_internal_value(resolved_exprs_result, move |session, resolved_exprs| {
+            Ok(
+                match session.compile_position_traversal_from_resolved_exprs(&resolved_exprs) {
                     Ok(config) => CasesTraversalResolution::Valid(config),
                     Err(error) => CasesTraversalResolution::Invalid(error),
                 },

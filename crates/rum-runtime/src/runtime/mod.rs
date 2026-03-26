@@ -58,6 +58,7 @@ mod session_state;
 mod slot_substitution;
 mod strings;
 mod suspension;
+mod tree_walkers;
 
 #[allow(unused_imports)]
 use self::{
@@ -72,7 +73,7 @@ use self::{
     metadata::*, model::*, parse_and_message_helpers::*, pattern_matching::*, polynomials::*,
     resolution::*, rewrite_builtins::*, scoping::*, session_api::*, session_eval::*,
     session_helpers::*, session_requests::*, session_state::*, slot_substitution::*, strings::*,
-    suspension::*,
+    suspension::*, tree_walkers::*,
 };
 pub use self::{
     builtin_catalog::core_builtin_specs, lowering::lower_syntax_expr, metadata::*, model::*,

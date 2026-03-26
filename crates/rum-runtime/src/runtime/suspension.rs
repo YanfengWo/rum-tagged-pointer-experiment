@@ -398,6 +398,53 @@ impl ContinuationValue for CasesCollectionOutcome {
     }
 }
 
+impl ContinuationValue for PositionCollectionOutcome {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationPositionCollection"),
+            vec![
+                Expr::call(system_expr("List"), self.positions),
+                Expr::integer(BigInt::from(self.depth)),
+                system_expr(if self.exhausted { "True" } else { "False" }),
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        match expr {
+            Expr::Call { head, mut args }
+                if is_system_symbol_name(&head, "InternalContinuationPositionCollection")
+                    && args.len() == 3 =>
+            {
+                let exhausted_expr = args
+                    .pop()
+                    .expect("position-collection payload stores exhausted");
+                let depth_expr = args
+                    .pop()
+                    .expect("position-collection payload stores depth");
+                let positions_expr = args
+                    .pop()
+                    .expect("position-collection payload stores positions");
+
+                let positions = match positions_expr {
+                    Expr::Call { head, args } if is_system_symbol_name(&head, "List") => args,
+                    other => vec![other],
+                };
+
+                Self {
+                    positions,
+                    depth: expr_as_non_negative_usize(&depth_expr)
+                        .expect("position-collection depth should be non-negative"),
+                    exhausted: is_system_symbol_name(&exhausted_expr, "True"),
+                }
+            }
+            other => {
+                panic!("unexpected continuation payload for PositionCollectionOutcome: {other:?}")
+            }
+        }
+    }
+}
+
 struct ClosureFrame<F> {
     resume: Option<F>,
 }

@@ -269,6 +269,8 @@ pub enum BuiltinHandler {
     RuleDelayed,
     MatchQ,
     Cases,
+    Level,
+    Position,
     Module,
     Block,
     ReplaceAll,

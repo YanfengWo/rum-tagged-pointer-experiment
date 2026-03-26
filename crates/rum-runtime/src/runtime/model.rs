@@ -504,6 +504,14 @@ impl CasesTraversalConfig {
         }
     }
 
+    pub(super) fn default_position() -> Self {
+        Self {
+            levels: CasesLevelSpec::range(0, None),
+            max_matches: None,
+            include_heads: true,
+        }
+    }
+
     pub(super) fn limit_reached(self, current_count: usize) -> bool {
         self.max_matches.is_some_and(|limit| current_count >= limit)
     }
@@ -520,6 +528,23 @@ impl CasesCollectionOutcome {
     pub(super) fn new(matches: Vec<Expr>, depth: usize, exhausted: bool) -> Self {
         Self {
             matches,
+            depth,
+            exhausted,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct PositionCollectionOutcome {
+    pub(super) positions: Vec<Expr>,
+    pub(super) depth: usize,
+    pub(super) exhausted: bool,
+}
+
+impl PositionCollectionOutcome {
+    pub(super) fn new(positions: Vec<Expr>, depth: usize, exhausted: bool) -> Self {
+        Self {
+            positions,
             depth,
             exhausted,
         }

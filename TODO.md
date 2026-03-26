@@ -95,7 +95,8 @@ This roadmap intentionally uses two levels of detail:
 - [x] Unify symbol/string raw target normalization across message, definition-inspection, attribute, and clear/tag helper families so held builtins stop hand-rolling the same parsing rules separately
 - [x] Move `Cases` traversal normalization and collection state through typed continuation payloads instead of repeatedly round-tripping that helper state through ad hoc `Expr` shapes during suspensions
 - [x] Extend matcher/traversal coverage beyond the earliest subset by giving `Cases` head-aware traversal control, exact/range/negative level support, and suspension-safe regression coverage for levels, limits, and options
-- [ ] Continue widening standard traversal semantics across future tree walkers (`Level`, `Position`, etc.) if and when those builtins land
+- [x] Widen standard traversal semantics into first-class tree walkers by landing `Level` and `Position` on the shared standard-levelspec / head-traversal model
+- [ ] Continue widening that traversal model into future tree walkers beyond `Cases`, `Level`, and `Position` as those builtins land
 - [ ] Continue auditing any remaining held/spec-driven target families outside the message/definition/attribute cluster so new raw-form builtins reuse shared normalization helpers from the start
 - [ ] Continue moving remaining host-facing inspection/debug helper payloads onto typed continuation values as more non-`Expr` flows become suspendable
 

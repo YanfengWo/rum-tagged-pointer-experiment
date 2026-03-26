@@ -228,6 +228,16 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Collects subexpressions matching a pattern or rule.",
         BuiltinHandler::Cases,
     ),
+    BuiltinSpec::ordinary(
+        "Level",
+        "Collects subexpressions found on levels specified by a standard levelspec.",
+        BuiltinHandler::Level,
+    ),
+    BuiltinSpec::special(
+        "Position",
+        "Finds positions of subexpressions matching a pattern on levels specified by a standard levelspec.",
+        BuiltinHandler::Position,
+    ),
     BuiltinSpec::special(
         "ReplaceAll",
         "Applies rules everywhere in an expression.",
