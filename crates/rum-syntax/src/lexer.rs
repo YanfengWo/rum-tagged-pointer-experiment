@@ -183,6 +183,18 @@ impl<'a> Lexer<'a> {
                             value.push('\t');
                             self.bump_char();
                         }
+                        'r' => {
+                            value.push('\r');
+                            self.bump_char();
+                        }
+                        'u' => {
+                            if let Some(unicode) = self.try_lex_unicode_escape() {
+                                value.push(unicode);
+                            } else {
+                                value.push('u');
+                                self.bump_char();
+                            }
+                        }
                         other => {
                             value.push(other);
                             self.bump_char();
@@ -199,6 +211,31 @@ impl<'a> Lexer<'a> {
         Err(SyntaxError::UnterminatedString {
             span: Span::new(start, self.offset),
         })
+    }
+
+    fn try_lex_unicode_escape(&mut self) -> Option<char> {
+        if !self.input[self.offset..].starts_with("u{") {
+            return None;
+        }
+
+        let original_offset = self.offset;
+        self.offset += 2;
+        let digits_start = self.offset;
+
+        while matches!(self.peek_char(), Some(ch) if ch.is_ascii_hexdigit()) {
+            self.bump_char();
+        }
+
+        if self.offset == digits_start || self.peek_char() != Some('}') {
+            self.offset = original_offset;
+            return None;
+        }
+
+        let digits = &self.input[digits_start..self.offset];
+        self.bump_char();
+
+        let value = u32::from_str_radix(digits, 16).ok()?;
+        char::from_u32(value)
     }
 
     fn single(&mut self, kind: TokenKind) -> TokenKind {
@@ -437,5 +474,15 @@ mod tests {
         assert_eq!(trivia[0].kind, TriviaKind::Whitespace);
         assert_eq!(trivia[1].kind, TriviaKind::Comment);
         assert_eq!(trivia[1].text, "(* tail *)");
+    }
+
+    #[test]
+    fn lexes_string_literals_with_basic_and_unicode_escapes() {
+        let tokens = lex("\"a\\n\\r\\t\\u{1F642}\"").unwrap();
+
+        assert!(matches!(
+            &tokens[0].kind,
+            TokenKind::String(value) if value == "a\n\r\t🙂"
+        ));
     }
 }

@@ -356,6 +356,7 @@ pub(super) fn expr_has_head(value: &Expr, head_constraint: &Expr) -> bool {
 
     match value {
         Expr::Atom(Atom::Integer(_)) => expected_symbol.name() == "Integer",
+        Expr::Atom(Atom::Rational(_)) => expected_symbol.name() == "Rational",
         Expr::Atom(Atom::String(_)) => expected_symbol.name() == "String",
         Expr::Atom(Atom::Symbol(_)) => expected_symbol.name() == "Symbol",
         Expr::Call { head, .. } => expr_as_symbol(head)

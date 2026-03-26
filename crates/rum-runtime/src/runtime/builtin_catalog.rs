@@ -6,6 +6,138 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Returns its argument unchanged.",
         BuiltinHandler::Identity,
     ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Plus",
+        "Adds exact numbers and canonically combines additive expressions.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Orderless)
+            .with(Attribute::Flat)
+            .with(Attribute::OneIdentity),
+        BuiltinHandler::Plus,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Times",
+        "Multiplies exact numbers and canonically combines multiplicative expressions.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Orderless)
+            .with(Attribute::Flat)
+            .with(Attribute::OneIdentity),
+        BuiltinHandler::Times,
+    ),
+    BuiltinSpec::ordinary(
+        "Power",
+        "Raises an exact number to an integer power when possible.",
+        BuiltinHandler::Power,
+    ),
+    BuiltinSpec::ordinary(
+        "Subtract",
+        "Subtracts one exact number from another.",
+        BuiltinHandler::Subtract,
+    ),
+    BuiltinSpec::ordinary(
+        "Divide",
+        "Divides exact numbers, producing exact rationals when possible.",
+        BuiltinHandler::Divide,
+    ),
+    BuiltinSpec::ordinary(
+        "Mod",
+        "Returns the modulus of one integer with respect to another.",
+        BuiltinHandler::Mod,
+    ),
+    BuiltinSpec::ordinary(
+        "Quotient",
+        "Returns the floor-division quotient of two integers.",
+        BuiltinHandler::Quotient,
+    ),
+    BuiltinSpec::ordinary(
+        "PowerMod",
+        "Computes modular exponentiation for exact integers.",
+        BuiltinHandler::PowerMod,
+    ),
+    BuiltinSpec::ordinary(
+        "GCD",
+        "Computes the greatest common divisor of exact integers.",
+        BuiltinHandler::GCD,
+    ),
+    BuiltinSpec::ordinary(
+        "LCM",
+        "Computes the least common multiple of exact integers.",
+        BuiltinHandler::LCM,
+    ),
+    BuiltinSpec::ordinary(
+        "Expand",
+        "Expands rational-coefficient polynomial expressions over pattern-free indeterminates.",
+        BuiltinHandler::Expand,
+    ),
+    BuiltinSpec::ordinary(
+        "Coefficient",
+        "Extracts coefficients of exact monomial powers from rational-coefficient polynomial expressions.",
+        BuiltinHandler::Coefficient,
+    ),
+    BuiltinSpec::ordinary(
+        "CoefficientList",
+        "Builds coefficient arrays for rational-coefficient polynomial expressions in specified indeterminates.",
+        BuiltinHandler::CoefficientList,
+    ),
+    BuiltinSpec::ordinary(
+        "Together",
+        "Combines rational-function terms over a common polynomial denominator.",
+        BuiltinHandler::Together,
+    ),
+    BuiltinSpec::ordinary(
+        "Factor",
+        "Factors rational-coefficient polynomials over the rationals using the current polynomial kernel.",
+        BuiltinHandler::Factor,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "D",
+        "Differentiates exact arithmetic, rational-function, and abstract-function expressions with held differentiation variables.",
+        HoldAttribute::HoldRest,
+        BuiltinHandler::D,
+    ),
+    BuiltinSpec::ordinary(
+        "StringJoin",
+        "Concatenates strings or a list of strings into a single string.",
+        BuiltinHandler::StringJoin,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "StringLength",
+        "Returns the Unicode code-point length of a string.",
+        AttributeSet::from_attribute(Attribute::Listable),
+        BuiltinHandler::StringLength,
+    ),
+    BuiltinSpec::ordinary(
+        "Characters",
+        "Splits a string into a list of single-code-point strings.",
+        BuiltinHandler::Characters,
+    ),
+    BuiltinSpec::ordinary(
+        "CharacterRange",
+        "Builds an inclusive range of single-character strings between two endpoints.",
+        BuiltinHandler::CharacterRange,
+    ),
+    BuiltinSpec::ordinary(
+        "ToString",
+        "Renders an evaluated expression into the current canonical kernel text form.",
+        BuiltinHandler::ToString,
+    ),
+    BuiltinSpec::ordinary(
+        "StringTake",
+        "Extracts a substring using integer counts or inclusive 1-based ranges.",
+        BuiltinHandler::StringTake,
+    ),
+    BuiltinSpec::ordinary(
+        "StringDrop",
+        "Drops a substring using integer counts or inclusive 1-based ranges.",
+        BuiltinHandler::StringDrop,
+    ),
+    BuiltinSpec::ordinary(
+        "StringPart",
+        "Extracts individual characters by 1-based positions.",
+        BuiltinHandler::StringPart,
+    ),
     BuiltinSpec::special(
         "Set",
         "Assigns an immediate value to a symbol or pattern.",
@@ -351,14 +483,7 @@ pub(super) fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
 
     default_builtin_dispatch_spec(symbol.name())
         .map(|spec| spec.attributes)
-        .unwrap_or_else(|| match symbol.name() {
-            "Plus" | "Times" => AttributeSet::empty()
-                .with(Attribute::Listable)
-                .with(Attribute::Orderless)
-                .with(Attribute::Flat)
-                .with(Attribute::OneIdentity),
-            _ => AttributeSet::empty(),
-        })
+        .unwrap_or_else(AttributeSet::empty)
 }
 
 #[cfg(test)]

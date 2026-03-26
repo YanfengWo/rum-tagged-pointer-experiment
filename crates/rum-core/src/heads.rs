@@ -14,6 +14,7 @@ pub mod structure {
     pub const PATH_VAR: &str = "$Path";
     pub const MESSAGE_LIST_VAR: &str = "$MessageList";
     pub const INTEGER: &str = "Integer";
+    pub const RATIONAL: &str = "Rational";
     pub const STRING: &str = "String";
     pub const SYMBOL: &str = "Symbol";
 }
@@ -22,6 +23,11 @@ pub mod arithmetic {
     pub const PLUS: &str = "Plus";
     pub const TIMES: &str = "Times";
     pub const POWER: &str = "Power";
+}
+
+pub mod calculus {
+    pub const D: &str = "D";
+    pub const DERIVATIVE: &str = "Derivative";
 }
 
 pub mod patterns {
@@ -118,11 +124,14 @@ pub const CANONICAL_CORE_HEADS: &[&str] = &[
     structure::PATH_VAR,
     structure::MESSAGE_LIST_VAR,
     structure::INTEGER,
+    structure::RATIONAL,
     structure::STRING,
     structure::SYMBOL,
     arithmetic::PLUS,
     arithmetic::TIMES,
     arithmetic::POWER,
+    calculus::D,
+    calculus::DERIVATIVE,
     patterns::PATTERN,
     patterns::BLANK,
     patterns::BLANK_SEQUENCE,

@@ -55,9 +55,142 @@ impl fmt::Display for Symbol {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct Rational {
+    numerator: BigInt,
+    denominator: BigInt,
+}
+
+impl Rational {
+    pub fn new(numerator: BigInt, denominator: BigInt) -> Option<Self> {
+        if denominator == BigInt::from(0_u8) {
+            return None;
+        }
+
+        if numerator == BigInt::from(0_u8) {
+            return Some(Self {
+                numerator,
+                denominator: BigInt::from(1_u8),
+            });
+        }
+
+        let mut numerator = numerator;
+        let mut denominator = denominator;
+
+        if denominator < BigInt::from(0_u8) {
+            numerator = -numerator;
+            denominator = -denominator;
+        }
+
+        let divisor = bigint_gcd(bigint_abs(&numerator), denominator.clone());
+
+        Some(Self {
+            numerator: numerator / divisor.clone(),
+            denominator: denominator / divisor,
+        })
+    }
+
+    pub fn from_integer(value: BigInt) -> Self {
+        Self {
+            numerator: value,
+            denominator: BigInt::from(1_u8),
+        }
+    }
+
+    pub fn zero() -> Self {
+        Self::from_integer(BigInt::from(0_u8))
+    }
+
+    pub fn one() -> Self {
+        Self::from_integer(BigInt::from(1_u8))
+    }
+
+    pub fn numerator(&self) -> &BigInt {
+        &self.numerator
+    }
+
+    pub fn denominator(&self) -> &BigInt {
+        &self.denominator
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.numerator == BigInt::from(0_u8)
+    }
+
+    pub fn is_one(&self) -> bool {
+        self.numerator == BigInt::from(1_u8) && self.denominator == BigInt::from(1_u8)
+    }
+
+    pub fn is_integer(&self) -> bool {
+        self.denominator == BigInt::from(1_u8)
+    }
+
+    pub fn as_integer(&self) -> Option<&BigInt> {
+        self.is_integer().then_some(&self.numerator)
+    }
+
+    pub fn negated(&self) -> Self {
+        Self {
+            numerator: -self.numerator.clone(),
+            denominator: self.denominator.clone(),
+        }
+    }
+
+    pub fn reciprocal(&self) -> Option<Self> {
+        Self::new(self.denominator.clone(), self.numerator.clone())
+    }
+
+    pub fn add(&self, rhs: &Self) -> Self {
+        Self::new(
+            &self.numerator * &rhs.denominator + &rhs.numerator * &self.denominator,
+            &self.denominator * &rhs.denominator,
+        )
+        .expect("adding normalized rationals should keep a non-zero denominator")
+    }
+
+    pub fn sub(&self, rhs: &Self) -> Self {
+        self.add(&rhs.negated())
+    }
+
+    pub fn mul(&self, rhs: &Self) -> Self {
+        Self::new(
+            &self.numerator * &rhs.numerator,
+            &self.denominator * &rhs.denominator,
+        )
+        .expect("multiplying normalized rationals should keep a non-zero denominator")
+    }
+
+    pub fn div(&self, rhs: &Self) -> Option<Self> {
+        Some(self.mul(&rhs.reciprocal()?))
+    }
+
+    pub fn pow(&self, exponent: &BigInt) -> Option<Self> {
+        if exponent == &BigInt::from(0_u8) {
+            return (!self.is_zero()).then(Self::one);
+        }
+
+        if exponent > &BigInt::from(0_u8) {
+            return Some(Self::new(
+                pow_bigint(&self.numerator, exponent),
+                pow_bigint(&self.denominator, exponent),
+            )?);
+        }
+
+        let positive = -exponent.clone();
+        Some(self.reciprocal()?.pow(&positive)?)
+    }
+}
+
+impl fmt::Display for Rational {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}/{}", self.numerator, self.denominator)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Atom {
     Integer(BigInt),
+    Rational(Rational),
     String(String),
     Symbol(Symbol),
 }
@@ -66,6 +199,7 @@ impl fmt::Display for Atom {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Integer(value) => write!(f, "{value}"),
+            Self::Rational(value) => write!(f, "{value}"),
             Self::String(value) => write_escaped_string(f, value),
             Self::Symbol(symbol) => write!(f, "{symbol}"),
         }
@@ -103,6 +237,14 @@ impl Expr {
 
     pub fn string(value: impl Into<String>) -> Self {
         Self::Atom(Atom::String(value.into()))
+    }
+
+    pub fn rational(value: Rational) -> Self {
+        if let Some(integer) = value.as_integer() {
+            Self::integer(integer.clone())
+        } else {
+            Self::Atom(Atom::Rational(value))
+        }
     }
 
     pub fn symbol(name: impl Into<String>) -> Self {
@@ -168,6 +310,49 @@ fn format_message_name_call(head: &Expr, args: &[Expr]) -> Option<String> {
     Some(format!("{}::{}", args[0], tag))
 }
 
+fn bigint_abs(value: &BigInt) -> BigInt {
+    if value < &BigInt::from(0_u8) {
+        -value.clone()
+    } else {
+        value.clone()
+    }
+}
+
+fn bigint_gcd(mut lhs: BigInt, mut rhs: BigInt) -> BigInt {
+    let zero = BigInt::from(0_u8);
+
+    while rhs != zero {
+        let remainder = &lhs % &rhs;
+        lhs = rhs;
+        rhs = remainder;
+    }
+
+    bigint_abs(&lhs)
+}
+
+fn pow_bigint(base: &BigInt, exponent: &BigInt) -> BigInt {
+    let zero = BigInt::from(0_u8);
+    let one = BigInt::from(1_u8);
+    let two = BigInt::from(2_u8);
+    let mut result = BigInt::from(1_u8);
+    let mut factor = base.clone();
+    let mut remaining = exponent.clone();
+
+    while remaining > zero {
+        if &remaining % &two == one {
+            result *= &factor;
+        }
+
+        remaining /= &two;
+
+        if remaining > zero {
+            factor = &factor * &factor;
+        }
+    }
+
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -193,6 +378,15 @@ mod tests {
         );
 
         assert_eq!(expr.to_string(), "f[42, x]");
+    }
+
+    #[test]
+    fn normalizes_rational_atoms() {
+        let rational = Rational::new(BigInt::from(6_i32), BigInt::from(-8_i32)).unwrap();
+
+        assert_eq!(rational.numerator().to_string(), "-3");
+        assert_eq!(rational.denominator().to_string(), "4");
+        assert_eq!(Expr::rational(rational).to_string(), "-3/4");
     }
 
     #[test]

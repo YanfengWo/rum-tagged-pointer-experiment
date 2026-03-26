@@ -46,6 +46,9 @@ fn rum_path(path: &Path) -> String {
     path.display().to_string().replace('\\', "/")
 }
 
+mod arithmetic;
+mod calculus;
+mod context_and_loader;
 mod definitions_and_rules;
 mod definitions_and_rules_part2;
 mod definitions_and_rules_part3;
@@ -54,12 +57,13 @@ mod holding_and_control;
 mod holding_and_control_part2;
 mod holding_and_control_part3;
 mod lowering_and_context;
-mod lowering_and_context_part2;
 mod lowering_golden;
 mod messages;
 mod messages_part2;
 mod messages_part3;
+mod polynomials;
 mod session_config;
 mod session_requests;
+mod strings;
 mod thread_and_dispatch;
 mod thread_and_dispatch_part2;

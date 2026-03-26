@@ -129,6 +129,7 @@ pub(super) fn format_message_arg_placeholder(arg: &Expr, spec: Option<&str>) -> 
 pub(super) fn message_arg_head(expr: &Expr) -> String {
     match expr {
         Expr::Atom(Atom::Integer(_)) => "Integer".to_string(),
+        Expr::Atom(Atom::Rational(_)) => "Rational".to_string(),
         Expr::Atom(Atom::String(_)) => "String".to_string(),
         Expr::Atom(Atom::Symbol(_)) => "Symbol".to_string(),
         Expr::Call { head, .. } => head.to_string(),

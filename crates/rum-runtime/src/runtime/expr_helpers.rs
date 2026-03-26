@@ -17,6 +17,13 @@ pub(super) fn expr_as_symbol(expr: &Expr) -> Option<&Symbol> {
     }
 }
 
+pub(super) fn expr_as_string(expr: &Expr) -> Option<&str> {
+    match expr {
+        Expr::Atom(Atom::String(value)) => Some(value),
+        _ => None,
+    }
+}
+
 pub(super) fn load_spec_from_expr(expr: &Expr) -> Option<String> {
     match expr {
         Expr::Atom(Atom::String(spec)) => Some(spec.clone()),
