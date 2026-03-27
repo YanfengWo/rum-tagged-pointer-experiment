@@ -1,6 +1,82 @@
 use super::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TraversalWithoutLimitNormalizationError {
+    InvalidThirdArgument,
+    InvalidFourthArgument,
+}
+
+impl TraversalWithoutLimitNormalizationError {
+    fn message(self) -> &'static str {
+        match self {
+            Self::InvalidThirdArgument => {
+                "expected a standard levelspec or Heads -> True/False as the third argument"
+            }
+            Self::InvalidFourthArgument => {
+                "expected a Heads -> True/False option as the fourth argument"
+            }
+        }
+    }
+}
+
 impl Session {
+    pub(super) fn eval_count(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !(2..=4).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("Count", args, 2, 4));
+        }
+
+        let call_args = args.to_vec();
+        let target_result = self.evaluate(args[0].clone());
+        let target = self.suspend_with_frame(target_result, {
+            let pattern_expr = args[1].clone();
+            let option_exprs = args[2..].to_vec();
+            let call_args = call_args.clone();
+            move |session, target| {
+                session.resume_count_after_target(target, pattern_expr, option_exprs, call_args)
+            }
+        })?;
+
+        self.resume_count_after_target(target, args[1].clone(), args[2..].to_vec(), call_args)
+    }
+
+    pub(super) fn eval_member_q(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !(2..=4).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("MemberQ", args, 2, 4));
+        }
+
+        let call_args = args.to_vec();
+        let target_result = self.evaluate(args[0].clone());
+        let target = self.suspend_with_frame(target_result, {
+            let pattern_expr = args[1].clone();
+            let option_exprs = args[2..].to_vec();
+            let call_args = call_args.clone();
+            move |session, target| {
+                session.resume_member_q_after_target(target, pattern_expr, option_exprs, call_args)
+            }
+        })?;
+
+        self.resume_member_q_after_target(target, args[1].clone(), args[2..].to_vec(), call_args)
+    }
+
+    pub(super) fn eval_free_q(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !(2..=4).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("FreeQ", args, 2, 4));
+        }
+
+        let call_args = args.to_vec();
+        let target_result = self.evaluate(args[0].clone());
+        let target = self.suspend_with_frame(target_result, {
+            let pattern_expr = args[1].clone();
+            let option_exprs = args[2..].to_vec();
+            let call_args = call_args.clone();
+            move |session, target| {
+                session.resume_free_q_after_target(target, pattern_expr, option_exprs, call_args)
+            }
+        })?;
+
+        self.resume_free_q_after_target(target, args[1].clone(), args[2..].to_vec(), call_args)
+    }
+
     pub(super) fn eval_level(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         if !(2..=4).contains(&args.len()) {
             return Ok(self.invalid_call_with_arg_range("Level", args, 2, 4));
@@ -87,6 +163,155 @@ impl Session {
         self.resume_position_after_pattern(target, pattern, option_exprs, call_args)
     }
 
+    fn resume_count_after_target(
+        &mut self,
+        target: Expr,
+        pattern_expr: Expr,
+        option_exprs: Vec<Expr>,
+        call_args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
+        let pattern = self.suspend_with_frame(pattern_result, {
+            let target = target.clone();
+            let option_exprs = option_exprs.clone();
+            let call_args = call_args.clone();
+            move |session, pattern| {
+                session.resume_count_after_pattern(target, pattern, option_exprs, call_args)
+            }
+        })?;
+
+        self.resume_count_after_pattern(target, pattern, option_exprs, call_args)
+    }
+
+    fn resume_count_after_pattern(
+        &mut self,
+        target: Expr,
+        pattern: Expr,
+        option_exprs: Vec<Expr>,
+        call_args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        self.finish_count_like_after_pattern(
+            "Count",
+            target,
+            pattern,
+            option_exprs,
+            call_args,
+            CasesTraversalConfig::default_cases(),
+            |count| Expr::integer(BigInt::from(count)),
+        )
+    }
+
+    fn resume_member_q_after_target(
+        &mut self,
+        target: Expr,
+        pattern_expr: Expr,
+        option_exprs: Vec<Expr>,
+        call_args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
+        let pattern = self.suspend_with_frame(pattern_result, {
+            let target = target.clone();
+            let option_exprs = option_exprs.clone();
+            let call_args = call_args.clone();
+            move |session, pattern| {
+                session.resume_member_q_after_pattern(target, pattern, option_exprs, call_args)
+            }
+        })?;
+
+        self.resume_member_q_after_pattern(target, pattern, option_exprs, call_args)
+    }
+
+    fn resume_member_q_after_pattern(
+        &mut self,
+        target: Expr,
+        pattern: Expr,
+        option_exprs: Vec<Expr>,
+        call_args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        self.finish_count_like_after_pattern(
+            "MemberQ",
+            target,
+            pattern,
+            option_exprs,
+            call_args,
+            CasesTraversalConfig::default_member_q(),
+            |count| system_expr(if count > 0 { "True" } else { "False" }),
+        )
+    }
+
+    fn resume_free_q_after_target(
+        &mut self,
+        target: Expr,
+        pattern_expr: Expr,
+        option_exprs: Vec<Expr>,
+        call_args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
+        let pattern = self.suspend_with_frame(pattern_result, {
+            let target = target.clone();
+            let option_exprs = option_exprs.clone();
+            let call_args = call_args.clone();
+            move |session, pattern| {
+                session.resume_free_q_after_pattern(target, pattern, option_exprs, call_args)
+            }
+        })?;
+
+        self.resume_free_q_after_pattern(target, pattern, option_exprs, call_args)
+    }
+
+    fn resume_free_q_after_pattern(
+        &mut self,
+        target: Expr,
+        pattern: Expr,
+        option_exprs: Vec<Expr>,
+        call_args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        self.finish_count_like_after_pattern(
+            "FreeQ",
+            target,
+            pattern,
+            option_exprs,
+            call_args,
+            CasesTraversalConfig::default_free_q(),
+            |count| system_expr(if count == 0 { "True" } else { "False" }),
+        )
+    }
+
+    fn finish_count_like_after_pattern<F>(
+        &mut self,
+        builtin_name: &'static str,
+        target: Expr,
+        pattern: Expr,
+        option_exprs: Vec<Expr>,
+        call_args: Vec<Expr>,
+        defaults: CasesTraversalConfig,
+        finish: F,
+    ) -> Result<Expr, EvalError>
+    where
+        F: FnOnce(usize) -> Expr + 'static,
+    {
+        let resolved_option_exprs_result = self.resolve_argument_exprs_owned(option_exprs);
+        self.drive_internal_value(resolved_option_exprs_result, move |session, resolved_option_exprs| {
+            let traversal = match compile_traversal_without_limit_from_resolved_exprs(
+                &resolved_option_exprs,
+                defaults,
+            ) {
+                Ok(traversal) => traversal,
+                Err(error) => {
+                    return Ok(session.invalid_call_with_arg_form(
+                        builtin_name,
+                        &call_args,
+                        error.message(),
+                    ));
+                }
+            };
+
+            let outcome_result =
+                session.count_pattern_matches_owned(target, pattern, traversal, 0, 0);
+            session.drive_internal_value(outcome_result, move |_, outcome| Ok(finish(outcome.count)))
+        })
+    }
+
     fn resume_position_after_pattern(
         &mut self,
         target: Expr,
@@ -132,6 +357,133 @@ impl Session {
             self.collect_positions_owned(target, pattern, traversal, 0, Vec::new(), 0);
         self.drive_internal_value(positions_result, move |_, outcome| {
             Ok(Expr::call(system_expr("List"), outcome.positions))
+        })
+    }
+
+    fn count_pattern_matches_owned(
+        &mut self,
+        expr: Expr,
+        pattern: Expr,
+        traversal: CasesTraversalConfig,
+        level: usize,
+        seen_before: usize,
+    ) -> Result<TraversalCountOutcome, EvalError> {
+        match expr.clone() {
+            Expr::Atom(_) => self.finish_count_at_current_node(
+                expr,
+                pattern,
+                traversal,
+                level,
+                1,
+                seen_before,
+                0,
+            ),
+            Expr::Call { head, args } => {
+                let mut children = Vec::new();
+                if traversal.include_heads {
+                    children.push(*head);
+                }
+                children.extend(args);
+
+                self.count_pattern_children(
+                    children,
+                    expr,
+                    pattern,
+                    traversal,
+                    level + 1,
+                    seen_before,
+                    0,
+                    0,
+                )
+            }
+        }
+    }
+
+    fn finish_count_at_current_node(
+        &mut self,
+        expr: Expr,
+        pattern: Expr,
+        traversal: CasesTraversalConfig,
+        level: usize,
+        depth: usize,
+        seen_before: usize,
+        count: usize,
+    ) -> Result<TraversalCountOutcome, EvalError> {
+        if traversal.limit_reached(seen_before + count) {
+            return Ok(TraversalCountOutcome::new(count, depth, true));
+        }
+
+        let match_result = if traversal.levels.matches(level, depth) {
+            self.match_expr_owned(pattern, expr, BTreeMap::new())
+        } else {
+            Ok(CompiledMatchOutcome {
+                matched: false,
+                bindings: BTreeMap::new(),
+            })
+        };
+
+        self.drive_internal_value(match_result, move |_, outcome| {
+            let next_count = count + usize::from(outcome.matched);
+            let exhausted = traversal.limit_reached(seen_before + next_count);
+            Ok(TraversalCountOutcome::new(next_count, depth, exhausted))
+        })
+    }
+
+    fn count_pattern_children(
+        &mut self,
+        children: Vec<Expr>,
+        expr: Expr,
+        pattern: Expr,
+        traversal: CasesTraversalConfig,
+        level: usize,
+        seen_before: usize,
+        count: usize,
+        max_child_depth: usize,
+    ) -> Result<TraversalCountOutcome, EvalError> {
+        let Some((child, rest)) = children.split_first() else {
+            let depth = max_child_depth.saturating_add(1);
+            return self.finish_count_at_current_node(
+                expr,
+                pattern,
+                traversal,
+                level - 1,
+                depth,
+                seen_before,
+                count,
+            );
+        };
+
+        let child_result = self.count_pattern_matches_owned(
+            child.clone(),
+            pattern.clone(),
+            traversal,
+            level,
+            seen_before + count,
+        );
+        let rest = rest.to_vec();
+
+        self.drive_internal_value(child_result, move |session, child_outcome| {
+            let next_count = count + child_outcome.count;
+            let next_max_child_depth = max_child_depth.max(child_outcome.depth);
+
+            if child_outcome.exhausted {
+                return Ok(TraversalCountOutcome::new(
+                    next_count,
+                    next_max_child_depth + 1,
+                    true,
+                ));
+            }
+
+            session.count_pattern_children(
+                rest,
+                expr,
+                pattern,
+                traversal,
+                level,
+                seen_before,
+                next_count,
+                next_max_child_depth,
+            )
         })
     }
 
@@ -335,4 +687,40 @@ fn position_expr(path: &[usize]) -> Expr {
             .map(|index| Expr::integer(BigInt::from(*index)))
             .collect(),
     )
+}
+
+fn compile_traversal_without_limit_from_resolved_exprs(
+    resolved: &[Expr],
+    defaults: CasesTraversalConfig,
+) -> Result<CasesTraversalConfig, TraversalWithoutLimitNormalizationError> {
+    match resolved {
+        [] => Ok(defaults),
+        [third] => {
+            if let Some(include_heads) = parse_heads_option(third) {
+                Ok(CasesTraversalConfig {
+                    include_heads,
+                    ..defaults
+                })
+            } else if let Some(levels) = parse_standard_level_spec(third) {
+                Ok(CasesTraversalConfig { levels, ..defaults })
+            } else {
+                Err(TraversalWithoutLimitNormalizationError::InvalidThirdArgument)
+            }
+        }
+        [third, fourth] => {
+            let Some(levels) = parse_standard_level_spec(third) else {
+                return Err(TraversalWithoutLimitNormalizationError::InvalidThirdArgument);
+            };
+            let Some(include_heads) = parse_heads_option(fourth) else {
+                return Err(TraversalWithoutLimitNormalizationError::InvalidFourthArgument);
+            };
+
+            Ok(CasesTraversalConfig {
+                levels,
+                include_heads,
+                ..defaults
+            })
+        }
+        _ => unreachable!("count/member/free traversal arity is validated before normalization"),
+    }
 }

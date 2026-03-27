@@ -445,6 +445,45 @@ impl ContinuationValue for PositionCollectionOutcome {
     }
 }
 
+impl ContinuationValue for TraversalCountOutcome {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationTraversalCount"),
+            vec![
+                Expr::integer(BigInt::from(self.count)),
+                Expr::integer(BigInt::from(self.depth)),
+                system_expr(if self.exhausted { "True" } else { "False" }),
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        match expr {
+            Expr::Call { head, mut args }
+                if is_system_symbol_name(&head, "InternalContinuationTraversalCount")
+                    && args.len() == 3 =>
+            {
+                let exhausted_expr = args
+                    .pop()
+                    .expect("traversal-count payload stores exhausted");
+                let depth_expr = args.pop().expect("traversal-count payload stores depth");
+                let count_expr = args.pop().expect("traversal-count payload stores count");
+
+                Self {
+                    count: expr_as_non_negative_usize(&count_expr)
+                        .expect("traversal-count count should be non-negative"),
+                    depth: expr_as_non_negative_usize(&depth_expr)
+                        .expect("traversal-count depth should be non-negative"),
+                    exhausted: is_system_symbol_name(&exhausted_expr, "True"),
+                }
+            }
+            other => {
+                panic!("unexpected continuation payload for TraversalCountOutcome: {other:?}")
+            }
+        }
+    }
+}
+
 struct ClosureFrame<F> {
     resume: Option<F>,
 }

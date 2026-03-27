@@ -39,6 +39,76 @@ fn level_supports_standard_levelspecs_and_depth_first_ordering() {
 }
 
 #[test]
+fn count_memberq_and_freeq_share_standard_traversal_semantics() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Count[f[g[1], 2, h[3]], _Integer]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Count[f[g[1], 2, h[3]], _Integer, Infinity]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("Count[f[1, g[2]], x_Symbol, Infinity, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("MemberQ[f[g[1]], _Integer]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("MemberQ[f[g[1]], _Integer, Infinity]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("FreeQ[f[g[1]], _Integer]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("FreeQ[f[g[1]], _Integer, {1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("FreeQ[f[1], f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+}
+
+#[test]
 fn level_supports_heads_and_apply_head_forms() {
     let mut session = Session::new();
 

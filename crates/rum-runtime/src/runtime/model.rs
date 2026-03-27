@@ -504,6 +504,21 @@ impl CasesTraversalConfig {
         }
     }
 
+    pub(super) fn default_member_q() -> Self {
+        Self {
+            max_matches: Some(1),
+            ..Self::default_cases()
+        }
+    }
+
+    pub(super) fn default_free_q() -> Self {
+        Self {
+            levels: CasesLevelSpec::range(0, None),
+            max_matches: Some(1),
+            include_heads: true,
+        }
+    }
+
     pub(super) fn default_position() -> Self {
         Self {
             levels: CasesLevelSpec::range(0, None),
@@ -545,6 +560,23 @@ impl PositionCollectionOutcome {
     pub(super) fn new(positions: Vec<Expr>, depth: usize, exhausted: bool) -> Self {
         Self {
             positions,
+            depth,
+            exhausted,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct TraversalCountOutcome {
+    pub(super) count: usize,
+    pub(super) depth: usize,
+    pub(super) exhausted: bool,
+}
+
+impl TraversalCountOutcome {
+    pub(super) fn new(count: usize, depth: usize, exhausted: bool) -> Self {
+        Self {
+            count,
             depth,
             exhausted,
         }

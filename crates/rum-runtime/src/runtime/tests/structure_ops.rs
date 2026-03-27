@@ -70,11 +70,27 @@ fn part_supports_exact_indices_nested_paths_and_head_access() {
     );
     assert_eq!(
         session
+            .eval_text("Part[f[a, b], 0 ;; -1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[f, a, b]"
+    );
+    assert_eq!(
+        session
             .eval_text("f[g[a, b], h[c, d]][[All, 2 ;; ;; 2]]")
             .unwrap()
             .value
             .to_string(),
         "f[g[b], h[d]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], {{1, 3}, {2}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[List[a, c], List[b]]"
     );
 }
 
@@ -121,6 +137,26 @@ fn extract_consumes_exact_paths_and_position_output() {
             .value
             .to_string(),
         "List[f[b, d], g[a, b]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[a, b], {Span[0, -1]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[f, a, b]"
+    );
+    assert_eq!(
+        session.eval_text("Extract[f[a, b], {}]").unwrap().value.to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[a, b], {{}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[a, b]]"
     );
 }
 
@@ -199,6 +235,100 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
             .to_string(),
         "f[a, y, c, y]"
     );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[a, b], 0 ;; -1 -> x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x[x, x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[a, b], All -> x, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x[x, x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[a, b], 0 -> x, Heads -> False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[a, b], {} -> x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[a, b], {{}} -> x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x"
+    );
+}
+
+#[test]
+fn replacepart_supports_pattern_position_specs_and_rhs_bindings() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[a, b, c], i_ -> x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[x, x, x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[a, b, c], {i_} -> i]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[1, 2, 3]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[g[a], h[b]], {i_, 0} -> i]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[1[a], 2[b]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[g[a], h[b]], {i_, 0} -> x, Heads -> False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[g[a], h[b]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[a, b], i_ -> x, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x[x, x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[a, b], {{i_}, {0}} -> x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x[x, x]"
+    );
 }
 
 #[test]
@@ -228,5 +358,13 @@ fn replacepart_handles_duplicate_and_overlapping_targets_more_stably() {
             .value
             .to_string(),
         "f[x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[g[a], h[b]], {All, 0} -> x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[x[a], x[b]]"
     );
 }

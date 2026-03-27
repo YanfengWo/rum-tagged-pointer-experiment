@@ -772,6 +772,66 @@ fn resume_eval_request_with_input_can_finish_position_with_suspending_match_limi
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_count_with_suspending_symbol_spec() {
+    let mut session = Session::new();
+    session
+        .eval_text("p := x_Integer /; MatchQ[InputString[\"cond: \"], \"yes\"]")
+        .unwrap();
+
+    let failure = session
+        .eval_request("Count[f[g[1], 2], p, Infinity]")
+        .expect_err("Count pattern evaluation should suspend when the referenced symbol requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue Count after the pattern resolves");
+
+    assert_eq!(response.value.to_string(), "2");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_freeq_with_suspending_heads_option() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "FreeQ[f[1], x_Symbol, If[MatchQ[InputString[\"heads: \"], \"yes\"], {0, Infinity}, {1}], If[MatchQ[InputString[\"heads2: \"], \"yes\"], Heads -> True, Heads -> False]]",
+        )
+        .expect_err("FreeQ traversal option evaluation should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "heads: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let second_failure = session
+        .resume_eval_request_with_input("yes")
+        .expect_err("FreeQ should continue until the heads option also resolves");
+
+    match &second_failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "heads2: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue FreeQ after traversal options resolve");
+
+    assert_eq!(response.value.to_string(), "False");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_replacepart_with_suspending_delayed_rhs() {
     let mut session = Session::new();
 
@@ -791,6 +851,54 @@ fn resume_eval_request_with_input_can_finish_replacepart_with_suspending_delayed
         .expect("resume should continue ReplacePart after the delayed rhs resolves");
 
     assert_eq!(response.value.to_string(), "f[1, \"done\"]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_replacepart_after_suspending_pattern_position_spec() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "ReplacePart[f[a], Condition[List[Pattern[i, Blank[]]], MatchQ[InputString[\"pos: \"], \"yes\"]] -> x]",
+        )
+        .expect_err("ReplacePart should suspend when a pattern position condition requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "pos: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue ReplacePart after the pattern position resolves");
+
+    assert_eq!(response.value.to_string(), "f[x]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_replacepart_pattern_bindings_in_delayed_rhs() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "ReplacePart[f[g[a]], {1, i_} :> StringJoin[InputString[\"rhs: \"], ToString[i]]]",
+        )
+        .expect_err("ReplacePart should suspend when a delayed rhs with pattern bindings requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "rhs: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue ReplacePart after the delayed rhs resolves");
+
+    assert_eq!(response.value.to_string(), "f[g[\"done1\"]]");
 }
 
 #[test]

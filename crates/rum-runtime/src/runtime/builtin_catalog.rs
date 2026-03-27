@@ -195,7 +195,7 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "ReplacePart",
-        "Replaces structural parts via immediate or delayed rules over exact, All, and Span-based part specifications.",
+        "Replaces structural parts via immediate or delayed rules over exact, Span, and pattern-based position specifications, with Heads-aware matching.",
         BuiltinHandler::ReplacePart,
     ),
     BuiltinSpec::special(
@@ -242,6 +242,21 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Cases",
         "Collects subexpressions matching a pattern or rule.",
         BuiltinHandler::Cases,
+    ),
+    BuiltinSpec::special(
+        "Count",
+        "Counts subexpressions matching a pattern on levels specified by a standard levelspec.",
+        BuiltinHandler::Count,
+    ),
+    BuiltinSpec::special(
+        "MemberQ",
+        "Tests whether any subexpression matches a pattern on levels specified by a standard levelspec.",
+        BuiltinHandler::MemberQ,
+    ),
+    BuiltinSpec::special(
+        "FreeQ",
+        "Tests whether no subexpression matches a pattern on levels specified by a standard levelspec.",
+        BuiltinHandler::FreeQ,
     ),
     BuiltinSpec::ordinary(
         "Level",
