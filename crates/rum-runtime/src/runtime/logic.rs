@@ -1,0 +1,317 @@
+use super::*;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ComparisonRelation {
+    Equal,
+    Unequal,
+    Less,
+    Greater,
+    LessEqual,
+    GreaterEqual,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum ComparableValue {
+    Number(Rational),
+    String(String),
+}
+
+impl Session {
+    pub(super) fn eval_and(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        self.resume_and_from_index(args.to_vec(), 0, Vec::new())
+    }
+
+    pub(super) fn eval_or(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        self.resume_or_from_index(args.to_vec(), 0, Vec::new())
+    }
+
+    pub(super) fn eval_not(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [arg] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Not", args, 1));
+        };
+
+        match truthiness_symbol(arg) {
+            Some(value) => Ok(predicate_bool_expr(!value)),
+            None => Ok(Expr::call(head.clone(), args.to_vec())),
+        }
+    }
+
+    pub(super) fn eval_equal(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        Ok(self.eval_comparison_subset(head, args, ComparisonRelation::Equal))
+    }
+
+    pub(super) fn eval_unequal(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        Ok(self.eval_comparison_subset(head, args, ComparisonRelation::Unequal))
+    }
+
+    pub(super) fn eval_less(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        Ok(self.eval_comparison_subset(head, args, ComparisonRelation::Less))
+    }
+
+    pub(super) fn eval_greater(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        Ok(self.eval_comparison_subset(head, args, ComparisonRelation::Greater))
+    }
+
+    pub(super) fn eval_less_equal(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        Ok(self.eval_comparison_subset(
+            head,
+            args,
+            ComparisonRelation::LessEqual,
+        ))
+    }
+
+    pub(super) fn eval_greater_equal(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        Ok(self.eval_comparison_subset(
+            head,
+            args,
+            ComparisonRelation::GreaterEqual,
+        ))
+    }
+
+    fn resume_and_from_index(
+        &mut self,
+        args: Vec<Expr>,
+        index: usize,
+        residual: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        if index >= args.len() {
+            return Ok(finalize_logical_sequence(
+                "And",
+                residual,
+                true,
+            ));
+        }
+
+        let arg = args[index].clone();
+        if let Some(truth) = truthiness_symbol(&arg) {
+            return self.resume_and_with_value(args, index, residual, predicate_bool_expr(truth));
+        }
+
+        let suspended_args = args.clone();
+        let suspended_residual = residual.clone();
+        let result = self.evaluate(arg);
+        let value = self.suspend_with_frame(result, move |session, value| {
+            session.resume_and_with_value(suspended_args, index, suspended_residual, value)
+        })?;
+        self.resume_and_with_value(args, index, residual, value)
+    }
+
+    fn resume_and_with_value(
+        &mut self,
+        args: Vec<Expr>,
+        index: usize,
+        mut residual: Vec<Expr>,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        match truthiness_symbol(&value) {
+            Some(true) => {
+                self.resume_and_from_index(args, index + 1, residual)
+            }
+            Some(false) => Ok(system_expr(heads::structure::FALSE)),
+            None => {
+                residual.push(value);
+                self.resume_and_from_index(args, index + 1, residual)
+            }
+        }
+    }
+
+    fn resume_or_from_index(
+        &mut self,
+        args: Vec<Expr>,
+        index: usize,
+        residual: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        if index >= args.len() {
+            return Ok(finalize_logical_sequence(
+                "Or",
+                residual,
+                false,
+            ));
+        }
+
+        let arg = args[index].clone();
+        if let Some(truth) = truthiness_symbol(&arg) {
+            return self.resume_or_with_value(args, index, residual, predicate_bool_expr(truth));
+        }
+
+        let suspended_args = args.clone();
+        let suspended_residual = residual.clone();
+        let result = self.evaluate(arg);
+        let value = self.suspend_with_frame(result, move |session, value| {
+            session.resume_or_with_value(suspended_args, index, suspended_residual, value)
+        })?;
+        self.resume_or_with_value(args, index, residual, value)
+    }
+
+    fn resume_or_with_value(
+        &mut self,
+        args: Vec<Expr>,
+        index: usize,
+        mut residual: Vec<Expr>,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        match truthiness_symbol(&value) {
+            Some(true) => Ok(system_expr(heads::structure::TRUE)),
+            Some(false) => {
+                self.resume_or_from_index(args, index + 1, residual)
+            }
+            None => {
+                residual.push(value);
+                self.resume_or_from_index(args, index + 1, residual)
+            }
+        }
+    }
+
+    fn eval_comparison_subset(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+        relation: ComparisonRelation,
+    ) -> Expr {
+        if args.len() <= 1 {
+            return predicate_bool_expr(true);
+        }
+
+        if let Some(result) = comparison_result_from_expr_identity(args, relation) {
+            return predicate_bool_expr(result);
+        }
+
+        let comparable = args
+            .iter()
+            .map(comparable_value_from_expr)
+            .collect::<Option<Vec<_>>>();
+
+        match comparable.and_then(|values| compare_values(&values, relation)) {
+            Some(result) => predicate_bool_expr(result),
+            None => Expr::call(head.clone(), args.to_vec()),
+        }
+    }
+}
+
+fn comparison_result_from_expr_identity(args: &[Expr], relation: ComparisonRelation) -> Option<bool> {
+    match relation {
+        ComparisonRelation::Equal => args.windows(2).all(|pair| pair[0] == pair[1]).then_some(true),
+        ComparisonRelation::Unequal => args
+            .iter()
+            .enumerate()
+            .any(|(index, lhs)| args[index + 1..].iter().any(|rhs| lhs == rhs))
+            .then_some(false),
+        ComparisonRelation::Less => args.windows(2).any(|pair| pair[0] == pair[1]).then_some(false),
+        ComparisonRelation::Greater => {
+            args.windows(2).any(|pair| pair[0] == pair[1]).then_some(false)
+        }
+        ComparisonRelation::LessEqual => {
+            if args.windows(2).all(|pair| pair[0] == pair[1]) {
+                Some(true)
+            } else {
+                None
+            }
+        }
+        ComparisonRelation::GreaterEqual => {
+            if args.windows(2).all(|pair| pair[0] == pair[1]) {
+                Some(true)
+            } else {
+                None
+            }
+        }
+    }
+}
+
+fn comparable_value_from_expr(expr: &Expr) -> Option<ComparableValue> {
+    match expr {
+        Expr::Atom(Atom::Integer(value)) => Some(ComparableValue::Number(Rational::from_integer(
+            value.clone(),
+        ))),
+        Expr::Atom(Atom::Rational(value)) => Some(ComparableValue::Number(value.clone())),
+        Expr::Atom(Atom::String(value)) => Some(ComparableValue::String(value.clone())),
+        _ => None,
+    }
+}
+
+fn compare_values(values: &[ComparableValue], relation: ComparisonRelation) -> Option<bool> {
+    match relation {
+        ComparisonRelation::Equal => Some(values.windows(2).all(|pair| pair[0] == pair[1])),
+        ComparisonRelation::Unequal => Some(!values
+            .iter()
+            .enumerate()
+            .any(|(index, lhs)| values[index + 1..].iter().any(|rhs| lhs == rhs))),
+        ComparisonRelation::Less => compare_pair_chain(values, |ordering| {
+            ordering == std::cmp::Ordering::Less
+        }),
+        ComparisonRelation::Greater => compare_pair_chain(values, |ordering| {
+            ordering == std::cmp::Ordering::Greater
+        }),
+        ComparisonRelation::LessEqual => compare_pair_chain(values, |ordering| {
+            ordering != std::cmp::Ordering::Greater
+        }),
+        ComparisonRelation::GreaterEqual => compare_pair_chain(values, |ordering| {
+            ordering != std::cmp::Ordering::Less
+        }),
+    }
+}
+
+fn compare_pair_chain<F>(values: &[ComparableValue], predicate: F) -> Option<bool>
+where
+    F: Fn(std::cmp::Ordering) -> bool,
+{
+    let mut result = true;
+
+    for pair in values.windows(2) {
+        let ordering = compare_comparable_values(&pair[0], &pair[1])?;
+        if !predicate(ordering) {
+            result = false;
+            break;
+        }
+    }
+
+    Some(result)
+}
+
+fn compare_comparable_values(
+    lhs: &ComparableValue,
+    rhs: &ComparableValue,
+) -> Option<std::cmp::Ordering> {
+    match (lhs, rhs) {
+        (ComparableValue::Number(lhs), ComparableValue::Number(rhs)) => Some(compare_rationals(lhs, rhs)),
+        (ComparableValue::String(lhs), ComparableValue::String(rhs)) => Some(lhs.cmp(rhs)),
+        _ => None,
+    }
+}
+
+fn compare_rationals(lhs: &Rational, rhs: &Rational) -> std::cmp::Ordering {
+    let lhs_cross = lhs.numerator() * rhs.denominator();
+    let rhs_cross = rhs.numerator() * lhs.denominator();
+    lhs_cross.cmp(&rhs_cross)
+}
+
+fn finalize_logical_sequence(head_name: &str, mut residual: Vec<Expr>, identity: bool) -> Expr {
+    match residual.len() {
+        0 => predicate_bool_expr(identity),
+        1 => residual.pop().expect("single residual value"),
+        _ => Expr::call(system_expr(head_name), residual),
+    }
+}
+
+fn predicate_bool_expr(value: bool) -> Expr {
+    system_expr(if value {
+        heads::structure::TRUE
+    } else {
+        heads::structure::FALSE
+    })
+}

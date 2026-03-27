@@ -1,0 +1,478 @@
+# Core Language Support Matrix
+
+## Purpose
+
+This document is the exhaustive working matrix for the current `rum`
+core-language target.
+
+The scope is defined by the union of the official Wolfram documentation pages
+named in `ARCHITECTURE.md`:
+
+- `Core Language & Structure`
+  - `List`
+  - `Expressions`
+  - `Associations`
+  - `Variables & Functions`
+  - `Rules & Patterns`
+  - `Functional Programming`
+  - `Procedural Programming`
+  - `String Manipulation`
+  - `Package Development`
+  - `Tuning & Debugging`
+- `Language Overview`
+  - `Symbolic Expressions`
+  - `Lists & Expression Manipulation`
+  - `Associations`
+  - `Functional Operations`
+  - `Pattern Matching`
+  - `Rules & Transformations`
+  - `Definitions & Assignments`
+  - `Logic & Tests`
+  - `Scoping & Modularity`
+  - `Procedural Programming`
+  - `Error & Exception Handling`
+  - `String Manipulation`
+
+This matrix tracks both:
+
+- same-name functions and symbols explicitly pointed to by those pages
+- named language mechanisms needed to realize that surface
+
+## Status Legend
+
+- `implemented`: landed with regression coverage and no major known scope note
+  beyond ordinary follow-up polish
+- `partial`: available now, but still intentionally subsetted or known to miss
+  important Wolfram-compatible behavior
+- `planned`: inside the scoped kernel target, but not yet implemented
+- `excluded`: explicitly pointed to by the scoped pages, but intentionally out
+  of scope for the current project phase
+- `extension`: useful project-owned surface that is not itself part of the
+  official matrix defined above
+
+When a same-name item intentionally diverges from Wolfram behavior, note that
+inline next to the item rather than silently leaving it in `implemented`.
+
+## Ordering Model
+
+The groups below are ordered by intended implementation sequence, not by the
+official documentation menu hierarchy. `TODO.md` should reference these group
+IDs instead of re-enumerating every function name.
+
+- `CL-01`: expression, truth-value, and structural foundation
+- `CL-02`: definitions, attributes, assignments, and scoping
+- `CL-03`: rules, patterns, and tree walkers
+- `CL-04`: functional and list combinators
+- `CL-05`: associations and keyed data
+- `CL-06`: procedural control, exceptions, and failure flow
+- `CL-07`: string language
+- `CL-08`: package, namespace, options, and protection tooling
+- `CL-09`: tuning, debugging, and verification surface
+- `CL-X`: explicit exclusions for this project phase
+
+## Overlap Policy
+
+Many functions appear on more than one official page. Each item is listed only
+once in its primary implementation group. Other groups may mention it as
+`cross-tracked elsewhere` when that helps explain page coverage.
+
+## CL-01: Expression, Truth, and Structural Foundation
+
+### Source Pages
+
+- `Symbolic Expressions`
+- `Expressions`
+- `List`
+- `Lists & Expression Manipulation`
+- `Parts of Expressions`
+- `Logic & Tests`
+
+### Mechanisms
+
+- `implemented`: symbolic `Expr` model, atom-vs-call representation, canonical
+  heads, fixed-point evaluation core, list as a first-class expression head,
+  standard structural traversal groundwork, exact path selectors with integer /
+  `All` / `Span` / pattern-position subsets
+- `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
+  across every structural walker, general boolean/comparison evaluation
+- `planned`: richer expression introspection, broader list-manipulation
+  surface, fuller truth-value and predicate surface
+
+### Functions and Symbols
+
+  - `implemented`: `Identity`, `List`, `Head`, `Length`, `Depth`, `TrueQ`,
+    `BooleanQ`, `AtomQ`, `ListQ`, `StringQ`, `IntegerQ`, `NumberQ`, `True`,
+    `False`, `SameQ`, `UnsameQ`
+  - `partial`: `Part`, `Extract`, `ReplacePart`, `Thread`, `First`, `Last`,
+    `Rest`, `Most`, `Take`, `Drop`, `TakeDrop`, `Append`, `Prepend`, `Symbol`,
+    `Construct`, `Equal`, `Unequal`, `Less`, `Greater`, `LessEqual`,
+    `GreaterEqual`, `And`, `Or`, `Not`, `NumericQ`, `EvenQ`, `OddQ`,
+    `Positive`, `Negative`, `NonPositive`, `NonNegative`, `PossibleZeroQ`,
+    `MachineNumberQ`, `RealValuedNumberQ`, `RealValuedNumericQ`, `PrimeQ`,
+    `AlgebraicIntegerQ`, `DuplicateFreeQ`, `IntersectingQ`, `DisjointQ`,
+    `SubsetQ`, `Order`, `OrderedQ`, `ContainsAll`, `ContainsAny`,
+    `ContainsExactly`, `ContainsNone`, `ContainsOnly`, `Between`, `VectorQ`,
+    `MatrixQ`, `ArrayQ`, `AllTrue`, `AnyTrue`, `NoneTrue`, `CoprimeQ`
+  - `planned`: `FullForm`, `Insert`, `Delete`, `TakeList`,
+    `Heads`,
+    `LexicographicOrder`, `NumericalOrder`, `AlphabeticOrder`,
+    `GreaterThan`, `LessThan`, `GreaterEqualThan`, `LessEqualThan`,
+    `EqualTo`, `UnequalTo`, `NearestTo`, `SameAs`, `PolynomialQ`,
+    `PolynomialExpressionQ`, `RationalExpressionQ`, `DateObjectQ`,
+    `TimeObjectQ`
+- `cross-tracked elsewhere`: `Apply`, `Array`, `Cases`, `Count`,
+  `DeleteCases`, `FreeQ`, `Join`, `Map`, `MapAll`, `MapAt`, `MemberQ`,
+  `Outer`, `Position`, `Range`, `Select`, `Table`
+
+## CL-02: Definitions, Attributes, Assignments, and Scoping
+
+### Source Pages
+
+- `Variables & Functions`
+- `Definitions & Assignments`
+- `Scoping & Modularity`
+
+### Mechanisms
+
+- `implemented`: ownvalues / upvalues / downvalues / subvalues, lexical
+  substitution, fresh-symbol generation, dynamic rebinding, pure-function
+  parameter binding, slot lowering for `#`, `##`, and `#name`, attribute
+  storage and dispatch for the current attribute subset
+- `partial`: public attribute surface is narrower than Wolfram's full
+  attribute family, protection and option layers are still absent
+- `planned`: fuller assignment/update family, protection framework, and
+  broader definition-introspection parity
+
+### Functions and Symbols
+
+- `implemented`: `Set`, `SetDelayed`, `Unset`, `Clear`, `ClearAll`,
+  `Attributes`, `OwnValues`, `UpValues`, `DownValues`, `SubValues`,
+  `With`, `Module`, `Block`, `TagSet`, `Flat`, `HoldFirst`,
+  `Listable`, `Orderless`
+- `partial`: `Attributes`
+- `planned`: `AddTo`, `AppendTo`, `ApplyTo`, `CompoundExpression`,
+  `Decrement`, `PreDecrement`, `DefaultValues`, `DivideBy`, `Increment`,
+  `PreIncrement`, `Information`, `PrependTo`, `Protected`, `Remove`, `Save`,
+  `SubtractFrom`, `TimesBy`, `UpSet`, `ValueQ`
+- `cross-tracked elsewhere`: `Alternatives`, `BlankSequence`, `Function`,
+  `Optional`, `Check`, `Confirm`, `Enclose`, `Quiet`, `Rule`,
+  `RuleDelayed`, `WithCleanup`
+
+## CL-03: Rules, Patterns, and Tree Walkers
+
+### Source Pages
+
+- `Rules & Patterns`
+- `Pattern Matching`
+- `Pattern Matching Functions`
+- `Rules & Transformations`
+
+### Mechanisms
+
+- `implemented`: named patterns, `Pattern`, `Blank`, `BlankSequence`,
+  `BlankNullSequence`, head-constrained blanks, `Condition`, `PatternTest`,
+  `Alternatives`, `Optional`, `Except`, `Repeated`, `RepeatedNull`, matcher
+  IR, delayed-rule substitution, suspend/resume through matcher-driven flows
+- `partial`: advanced pattern language breadth, full traversal parity, richer
+  replacement-convenience family, pattern/string crossover
+- `planned`: ordered-pattern controls and remaining parity cleanup
+
+### Functions and Symbols
+
+- `implemented`: `Rule`, `RuleDelayed`, `Condition`, `Except`,
+  `Alternatives`, `Optional`, `Repeated`
+- `partial`: `MatchQ`, `ReplaceAll`, `ReplaceRepeated`, `Cases`, `Count`,
+  `MemberQ`, `FreeQ`, `Position`
+- `planned`: `DeleteCases`, `Replace`, `ReplaceAt`, `ReplaceList`,
+  `Longest`, `Shortest`, `PatternSequence`, `OrderlessPatternSequence`,
+  `Verbatim`
+- `cross-tracked elsewhere`: `Set`, `SetDelayed`, `Part`, `Extract`,
+  `ReplacePart`, `StringExpression`
+
+## CL-04: Functional and List Combinators
+
+### Source Pages
+
+- `Functional Programming`
+- `Functional Operations`
+- `Applying Functions to Lists`
+
+### Mechanisms
+
+- `implemented`: pure functions, operator-form lowering for `&`, slot forms
+  `#`, `##`, and `#name`
+- `partial`: current threading surface through `Thread` and the existing
+  `Listable` subset
+- `planned`: higher-order traversal, repeated-application families, and
+  operator/combinator convenience layers
+
+### Functions and Symbols
+
+- `implemented`: `Function`
+- `partial`: `Thread`
+- `planned`: `Map`, `Apply`, `MapApply`, `MapIndexed`, `MapThread`, `MapAt`,
+  `MapAll`, `Scan`, `BlockMap`, `SubsetMap`, `Comap`, `ComapApply`, `Nest`,
+  `NestList`, `FixedPoint`, `FixedPointList`, `Fold`, `FoldList`,
+  `FoldPair`, `FoldWhile`, `SequenceFold`, `SequenceFoldList`, `NestWhile`,
+  `NestWhileList`, `TakeWhile`, `LengthWhile`, `Through`, `Composition`,
+  `Operate`, `OperatorApplied`, `CurryApplied`, `ReverseApplied`,
+  `Accumulate`, `ArrayFilter`, `ArrayReduce`, `Inner`
+- `cross-tracked elsewhere`: `Append`, `Array`, `AssociationMap`, `Cases`,
+  `CountsBy`, `GroupBy`, `Identity`, `KeySortBy`, `Outer`, `Position`,
+  `Select`
+
+## CL-05: Associations and Keyed Data
+
+### Source Pages
+
+- `Associations`
+
+### Mechanisms
+
+- `partial`: named-slot syntax `#name` exists generically, but association
+  semantics are not available without the association core
+- `planned`: association syntax/lowering, key-value canonical form, keyed
+  part specifications via `Key`, deterministic ordering policy, key-based
+  pattern matching
+
+### Functions and Symbols
+
+- `planned`: `Association`, `AssociationQ`, `AssociationMap`,
+  `AssociationThread`, `Lookup`, `Key`, `Keys`, `Values`, `Normal`,
+  `KeyExistsQ`, `KeyTake`, `KeyDrop`, `KeySelect`, `KeyMap`, `KeyValueMap`,
+  `KeyMemberQ`, `KeyFreeQ`, `KeySort`, `KeySortBy`, `AssociateTo`,
+  `KeyDropFrom`, `KeyValuePattern`, `KeyUnion`, `KeyIntersection`,
+  `KeyComplement`, `Merge`, `Catenate`, `Counts`, `CountsBy`, `GroupBy`,
+  `PositionIndex`, `Missing`
+- `cross-tracked elsewhere`: `#name`, `DeleteDuplicates`, `Map`, `Plus`,
+  `Select`, `Sort`
+
+## CL-06: Procedural Control, Exceptions, and Failure Flow
+
+### Source Pages
+
+- `Procedural Programming`
+- `Scoping & Modularity`
+- `Error & Exception Handling`
+
+### Mechanisms
+
+- `implemented`: hold-aware branch selection, lexical and dynamic local state,
+  message interception through the current `Check` / `Quiet` model
+- `partial`: there is no full sequential-evaluation, loop, control-transfer,
+  cleanup, or failure-object framework yet
+- `planned`: broader control flow, explicit exception propagation, failure
+  values, and cleanup semantics
+
+### Functions and Symbols
+
+- `implemented`: `If`, `Which`, `Check`, `Quiet`
+- `planned`: `CompoundExpression`, `Switch`, `Do`, `While`, `Until`, `For`,
+  `Table`, `Return`, `Throw`, `Catch`, `Confirm`, `ConfirmBy`,
+  `ConfirmMatch`, `ConfirmQuiet`, `ConfirmAssert`, `Enclose`,
+  `WithCleanup`, `Failsafe`, `Failure`, `FailureQ`, `Missing`, `MissingQ`,
+  `Success`, `TerminatedEvaluation`, `Assert`, `Abort`, `AbortProtect`,
+  `CheckAbort`, `PropagateAborts`, `BlockRandom`, `Input`, `Print`, `Pause`
+- `cross-tracked elsewhere`: `Block`, `Function`, `Module`, `Rule`,
+  `RuleDelayed`, `With`
+
+## CL-07: String Language
+
+### Source Pages
+
+- `String Manipulation`
+
+### Mechanisms
+
+- `implemented`: canonical string atoms, Unicode code-point semantics, parser
+  escape support, exact-string construction and transformation core
+- `partial`: `ToString` currently targets the canonical kernel textual form,
+  and the string-pattern surface is still a first-pass subset
+- `planned`: fuller symbolic string-pattern layer, conversions, templating,
+  and nontrivial search/transformation semantics
+
+### Functions and Symbols
+
+- `implemented`: `Characters`, `StringJoin`, `StringLength`, `StringRepeat`,
+  `StringTake`, `StringDrop`, `StringPart`
+- `partial`: `ToString`, `StringContainsQ`, `StringExpression`,
+  `StringReplace`, `StringCases`, `StringPosition`, `StringSplit`
+- `planned`: `StringTakeDrop`, `StringApply`, `StringCount`,
+  `StringDelete`, `StringForm`, `StringPadLeft`, `StringRiffle`,
+  `StringTemplate`, `StringToByteArray`, `TemplateApply`,
+  `FileTemplateApply`, `TextString`, `TextWords`, `ToCharacterCode`,
+  `ToExpression`, `ToUpperCase`, `Whitespace`, `NumberString`, `LetterQ`,
+  `StringMatchQ`, `StringFreeQ`, `DigitQ`, `SyntaxQ`, `Alphabet`,
+  `AlphabeticSort`, `CharacterCounts`, `Compress`, `Diff`,
+  `EditDistance`, `Encrypt`, `Hash`, `HammingDistance`,
+  `LongestCommonSubsequence`, `Nearest`, `Pluralize`,
+  `RemoveDiacritics`, `SequenceAlignment`
+- `cross-tracked elsewhere`: `Except`, `Longest`, `Shortest`
+
+## CL-08: Package, Namespace, Options, and Protection Tooling
+
+### Source Pages
+
+- `Package Development`
+
+### Mechanisms
+
+- `implemented`: contexts, context-path management, package load tracking,
+  loader rollback on failure, message definition storage, message selection,
+  definition/message inspection
+- `partial`: options, protection, and syntax-annotation ecosystems remain
+  unimplemented
+- `planned`: broader package ergonomics and option/protection parity
+
+### Functions and Symbols
+
+- `implemented`: `$ContextPath`, `$Packages`, `Begin`, `BeginPackage`, `End`,
+  `EndPackage`, `Needs`, `Message`, `MessageName`
+- `planned`: `ArgumentsOptions`, `CheckArguments`, `DeclarePackage`,
+  `DumpSave`, `Names`, `Once`, `Options`, `OptionsPattern`,
+  `OptionValue`, `Protect`, `Save`, `SetOptions`, `SyntaxInformation`,
+  `UpSet`
+- `cross-tracked elsewhere`: `AbortProtect`, `Assert`, `Block`,
+  `BlockRandom`, `Check`, `Confirm`, `Enclose`, `Failure`, `FailureQ`,
+  `Module`, `MissingQ`, `Quiet`, `Success`, `TagSet`, `WithCleanup`
+
+## CL-09: Tuning, Debugging, and Verification Surface
+
+### Source Pages
+
+- `Tuning & Debugging`
+- `Error & Exception Handling`
+
+### Mechanisms
+
+- `implemented`: structured runtime messages, top-level message list, internal
+  structured tracing, request-level trace payloads, recursion / iteration /
+  evaluation-pass limits
+- `partial`: language-surface tracing, timing, verification, and monitoring
+  builtins are still absent even though some internal foundations exist
+- `planned`: user-facing trace/timing/resource-limit family, verification
+  surface, and debugging output controls
+
+### Functions and Symbols
+
+- `implemented`: none beyond the internal mechanisms listed above
+- `planned`: `Trace`, `TracePrint`, `Timing`, `AbsoluteTiming`,
+  `RepeatedTiming`, `TimeConstrained`, `MemoryConstrained`, `ByteCount`,
+  `MemoryInUse`, `Short`, `On`, `Off`, `Monitor`, `EvaluationMonitor`,
+  `StepMonitor`, `Sow`, `Reap`, `EvaluationData`, `Echo`, `EchoFunction`,
+  `EchoLabel`, `Assert`, `Dialog`, `TestCreate`, `TestReport`, `Stack`
+- `cross-tracked elsewhere`: `AbortProtect`, `Check`, `CheckAbort`,
+  `Failure`, `Message`, `Missing`, `PropagateAborts`, `Quiet`
+
+## CL-X: Explicit Exclusions For This Project Phase
+
+These names are explicitly pointed to by the scoped pages, but are currently
+kept outside the kernel-first project phase.
+
+### Notebook, Front-End, and UI-Specific
+
+- `TreeForm`
+- `DynamicModule`
+- `CellContext`
+- `File > New > Package (.wl)`
+- `Initialization Cell`
+- `Notebook History`
+- `CurrentNotebookImage`
+- `CurrentScreenImage`
+- `PrintTemporary`
+- `TrackedSymbols`
+- `SynchronousUpdating`
+- `UpdateInterval`
+
+### Graphics, Visualization, and Dataset UI
+
+- `ArrayPlot`
+- `Column`
+- `Grid`
+- `ListPlot`
+- `GraphPlot`
+- `WordCloud`
+- `Plot`
+- `Plot3D`
+- `NestGraph`
+- `Dataset`
+- `JoinAcross`
+
+### External Operations, Files, Web, and Deployment
+
+- `Import`
+- `Export`
+- `ImportString`
+- `ExportString`
+- `ExpandFileName`
+- `FileBaseName`
+- `FileNameSplit`
+- `FileNameTake`
+- `URLBuild`
+- `URLDecode`
+- `URLEncode`
+- `URLParse`
+- `Encode`
+- `DefineResourceFunction`
+- `ResourceFunction`
+- `ResourceSubmit`
+- `wolframscript`
+- `HostLookup`
+- `PingTime`
+- `StartWebSession`
+- `WebExecute`
+- `WebImage`
+- `NetworkPacketTrace`
+
+### AI, Semantic Services, and Knowledge-System Hooks
+
+- `Interpreter`
+- `SemanticInterpretation`
+- `DictionaryLookup`
+- `LLMResourceFunction`
+- `LLMFunction`
+- `LLMExampleFunction`
+- `LLMPrompt`
+- `LLMTool`
+- `LLMSynthesize`
+- `ExampleData`
+
+### Compiler, Parallel, and System-Scale Tooling
+
+- `Compile`
+- `FunctionCompile`
+- `Parallelize`
+- `Dispatch`
+- `DataStructure`
+- `SystemInformation`
+- `SystemOptions`
+- `RandomGeneratorState`
+- `RandomSeeding`
+
+### Mathematics Outside The Current Non-Math Core Target
+
+- `N`
+- `Sum`
+- `NDSolve`
+
+## Project-Owned Extensions Outside The Official Matrix
+
+These are useful surfaces that exist today, but they are not themselves part
+of the page-defined official matrix above.
+
+- `implemented`: `CharacterRange`, `Context`, `FindFile`, `Get`,
+  `InputString`, `Level`, `MessageDefinitions`, `MessageTags`, `Messages`,
+  `NormalizeRules`, `ReleaseHold`, `SetAttributes`, `ClearAttributes`,
+  `StringEndsQ`, `StringStartsQ`, `StringTrim`, `TagSetDelayed`, `TagUnset`,
+  `$Context`, `$Failed`, `$MessageList`, `$Path`, `File`
+
+## Maintenance Notes
+
+- Update this matrix before or alongside the implementation PR that changes a
+  same-name item in the scoped surface.
+- Keep extra helper builtins in `extension` unless they are explicitly named on
+  the scoped official pages.
+- When an item is intentionally subsetted, keep it in `partial` until the
+  remaining gap is either implemented or documented as a deliberate divergence.
+- Keep `TODO.md` aligned to the `CL-*` group IDs instead of re-listing every
+  function name there.

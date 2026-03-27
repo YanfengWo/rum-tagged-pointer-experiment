@@ -20,6 +20,19 @@ enum SpanEndpoint {
     All,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum StructuralSequenceSpec {
+    All,
+    None,
+    Count(isize),
+    Single(isize),
+    Range {
+        start: isize,
+        end: isize,
+        step: isize,
+    },
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum PartSelector {
     Single(AtomicPartSpec),
@@ -129,6 +142,308 @@ impl ContinuationValue for Vec<ReplacePartTarget> {
 }
 
 impl Session {
+    pub(super) fn eval_head(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [expr] => Ok(structural_head_expr(expr)),
+            [expr, wrapper] => Ok(Expr::call(
+                wrapper.clone(),
+                vec![structural_head_expr(expr)],
+            )),
+            _ => Ok(self.invalid_call_with_arg_range("Head", args, 1, 2)),
+        }
+    }
+
+    pub(super) fn eval_length(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Length", args, 1));
+        };
+
+        Ok(Expr::integer(BigInt::from(structural_length(expr))))
+    }
+
+    pub(super) fn eval_depth(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let (expr, include_heads) = match args {
+            [expr] => (expr, false),
+            [expr, option] => {
+                let Some(include_heads) = parse_heads_option(option) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "Depth",
+                        args,
+                        "expected a Heads -> True/False option as the second argument",
+                    ));
+                };
+                (expr, include_heads)
+            }
+            _ => return Ok(self.invalid_call_with_arg_range("Depth", args, 1, 2)),
+        };
+
+        Ok(Expr::integer(BigInt::from(structural_depth(
+            expr,
+            include_heads,
+        ))))
+    }
+
+    pub(super) fn eval_first(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [expr] => Ok(self.resolve_first_like(expr, None, "First", "first", true)),
+            [expr, default] => Ok(self.resolve_first_like(expr, Some(default), "First", "first", true)),
+            _ => Ok(self.invalid_call_with_arg_range("First", args, 1, 2)),
+        }
+    }
+
+    pub(super) fn eval_last(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [expr] => Ok(self.resolve_first_like(expr, None, "Last", "nolast", false)),
+            [expr, default] => Ok(self.resolve_first_like(expr, Some(default), "Last", "nolast", false)),
+            _ => Ok(self.invalid_call_with_arg_range("Last", args, 1, 2)),
+        }
+    }
+
+    pub(super) fn eval_rest(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Rest", args, 1));
+        };
+
+        Ok(match expr {
+            Expr::Atom(_) => self.invalid_normal_expression_call("Rest", args),
+            Expr::Call { head, args } => Expr::call(
+                head.as_ref().clone(),
+                args.iter().skip(1).cloned().collect::<Vec<_>>(),
+            ),
+        })
+    }
+
+    pub(super) fn eval_most(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Most", args, 1));
+        };
+
+        Ok(match expr {
+            Expr::Atom(_) => self.invalid_normal_expression_call("Most", args),
+            Expr::Call { head, args } => Expr::call(
+                head.as_ref().clone(),
+                args.iter()
+                    .take(args.len().saturating_sub(1))
+                    .cloned()
+                    .collect::<Vec<_>>(),
+            ),
+        })
+    }
+
+    pub(super) fn eval_take(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() < 2 {
+            return Ok(self.invalid_call_with_message(
+                "Take",
+                args,
+                "argx",
+                "expected at least 2 arguments",
+            ));
+        }
+
+        let Some(specs) = parse_structural_sequence_specs(&args[1..]) else {
+            return Ok(Expr::call(system_expr("Take"), args.to_vec()));
+        };
+
+        match apply_take_specs(&args[0], &specs) {
+            Some(result) => Ok(result),
+            None if matches!(args[0], Expr::Atom(_)) => {
+                Ok(self.invalid_normal_expression_call("Take", args))
+            }
+            None => Ok(self.invalid_take_drop_sequence_call("Take", "take", args)),
+        }
+    }
+
+    pub(super) fn eval_drop(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() < 2 {
+            return Ok(self.invalid_call_with_message(
+                "Drop",
+                args,
+                "argx",
+                "expected at least 2 arguments",
+            ));
+        }
+
+        let Some(specs) = parse_structural_sequence_specs(&args[1..]) else {
+            return Ok(Expr::call(system_expr("Drop"), args.to_vec()));
+        };
+
+        match apply_drop_specs(&args[0], &specs) {
+            Some(result) => Ok(result),
+            None if matches!(args[0], Expr::Atom(_)) => {
+                Ok(self.invalid_normal_expression_call("Drop", args))
+            }
+            None => Ok(self.invalid_take_drop_sequence_call("Drop", "drop", args)),
+        }
+    }
+
+    pub(super) fn eval_take_drop(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() < 2 {
+            return Ok(self.invalid_call_with_message(
+                "TakeDrop",
+                args,
+                "argx",
+                "expected at least 2 arguments",
+            ));
+        }
+
+        let Some(specs) = parse_structural_sequence_specs(&args[1..]) else {
+            return Ok(Expr::call(system_expr("TakeDrop"), args.to_vec()));
+        };
+
+        match (apply_take_specs(&args[0], &specs), apply_drop_specs(&args[0], &specs)) {
+            (Some(taken), Some(dropped)) => Ok(Expr::call(
+                system_expr("List"),
+                vec![taken, dropped],
+            )),
+            _ if matches!(args[0], Expr::Atom(_)) => {
+                Ok(self.invalid_normal_expression_call("TakeDrop", args))
+            }
+            _ => Ok(self.invalid_call_with_message(
+                "TakeDrop",
+                args,
+                "take",
+                format!(
+                    "Cannot apply the requested sequence specification in {}.",
+                    Expr::call(system_expr("TakeDrop"), args.to_vec())
+                ),
+            )),
+        }
+    }
+
+    pub(super) fn eval_append(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [expr, item] => Ok(match expr {
+                Expr::Atom(_) => self.invalid_normal_expression_call("Append", args),
+                Expr::Call { head, args } => {
+                    let mut new_args = args.clone();
+                    new_args.push(item.clone());
+                    Expr::call(head.as_ref().clone(), new_args)
+                }
+            }),
+            [item] => Ok(unary_operator_form("Append", item.clone())),
+            _ => Ok(self.invalid_call_with_arg_range("Append", args, 1, 2)),
+        }
+    }
+
+    pub(super) fn eval_prepend(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        match args {
+            [expr, item] => Ok(match expr {
+                Expr::Atom(_) => self.invalid_normal_expression_call("Prepend", args),
+                Expr::Call { head, args } => {
+                    let mut new_args = Vec::with_capacity(args.len() + 1);
+                    new_args.push(item.clone());
+                    new_args.extend(args.clone());
+                    Expr::call(head.as_ref().clone(), new_args)
+                }
+            }),
+            [item] => Ok(unary_operator_form("Prepend", item.clone())),
+            _ => Ok(self.invalid_call_with_arg_range("Prepend", args, 1, 2)),
+        }
+    }
+
+    pub(super) fn eval_symbol(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [name_expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Symbol", args, 1));
+        };
+
+        let Some(name) = expr_as_string(name_expr) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "Symbol",
+                args,
+                "expected a string symbol name",
+            ));
+        };
+
+        Ok(self
+            .resolve_symbol_name(name, true)
+            .map(|symbol| Expr::Atom(Atom::Symbol(symbol)))
+            .unwrap_or_else(|| Expr::call(head.clone(), args.to_vec())))
+    }
+
+    pub(super) fn eval_construct(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.is_empty() {
+            return Ok(self.invalid_call_with_message(
+                "Construct",
+                args,
+                "argx",
+                "expected at least 1 argument",
+            ));
+        }
+
+        Ok(Expr::call(args[0].clone(), args[1..].to_vec()))
+    }
+
+    fn resolve_first_like(
+        &mut self,
+        expr: &Expr,
+        default: Option<&Expr>,
+        symbol: &str,
+        empty_tag: &str,
+        take_first: bool,
+    ) -> Expr {
+        match expr {
+            Expr::Call { args, .. } if !args.is_empty() => {
+                if take_first {
+                    args[0].clone()
+                } else {
+                    args[args.len() - 1].clone()
+                }
+            }
+            Expr::Call { .. } | Expr::Atom(_) if default.is_some() => {
+                default.expect("checked above").clone()
+            }
+            Expr::Call { .. } => self.invalid_empty_structural_selection_call(symbol, empty_tag, expr),
+            Expr::Atom(_) => self.invalid_normal_expression_call(symbol, &[expr.clone()]),
+        }
+    }
+
+    fn invalid_empty_structural_selection_call(
+        &mut self,
+        symbol: &str,
+        tag: &str,
+        expr: &Expr,
+    ) -> Expr {
+        self.push_message(
+            symbol,
+            tag,
+            format!("{} has zero length and no {} element.", expr, selection_name(symbol)),
+        );
+        Expr::call(system_expr(symbol), vec![expr.clone()])
+    }
+
+    fn invalid_normal_expression_call(&mut self, symbol: &str, args: &[Expr]) -> Expr {
+        self.push_message(
+            heads::messages::GENERAL,
+            "normal",
+            format!(
+                "Nonatomic expression expected at position 1 in {}.",
+                Expr::call(system_expr(symbol), args.to_vec())
+            ),
+        );
+        Expr::call(system_expr(symbol), args.to_vec())
+    }
+
+    fn invalid_take_drop_sequence_call(&mut self, symbol: &str, tag: &str, args: &[Expr]) -> Expr {
+        self.push_message(
+            symbol,
+            tag,
+            format!("Cannot apply the requested sequence specification in {}.", Expr::call(system_expr(symbol), args.to_vec())),
+        );
+        Expr::call(system_expr(symbol), args.to_vec())
+    }
+
     pub(super) fn eval_part(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.is_empty() {
             return Ok(self.invalid_call_with_message(
@@ -948,6 +1263,206 @@ fn structural_head_expr(expr: &Expr) -> Expr {
         Expr::Atom(Atom::String(_)) => system_expr("String"),
         Expr::Atom(Atom::Symbol(_)) => system_expr("Symbol"),
         Expr::Call { head, .. } => head.as_ref().clone(),
+    }
+}
+
+fn structural_length(expr: &Expr) -> usize {
+    match expr {
+        Expr::Atom(_) => 0,
+        Expr::Call { args, .. } => args.len(),
+    }
+}
+
+fn structural_depth(expr: &Expr, include_heads: bool) -> usize {
+    match expr {
+        Expr::Atom(_) => 1,
+        Expr::Call { head, args } => {
+            let head_depth = include_heads
+                .then(|| structural_depth(head, true))
+                .unwrap_or(0);
+            let arg_depth = args
+                .iter()
+                .map(|arg| structural_depth(arg, include_heads))
+                .max()
+                .unwrap_or(0);
+            1 + head_depth.max(arg_depth)
+        }
+    }
+}
+
+fn parse_structural_sequence_specs(args: &[Expr]) -> Option<Vec<StructuralSequenceSpec>> {
+    args.iter().map(parse_structural_sequence_spec).collect()
+}
+
+fn parse_structural_sequence_spec(expr: &Expr) -> Option<StructuralSequenceSpec> {
+    if is_system_symbol_name(expr, heads::structure::ALL) {
+        return Some(StructuralSequenceSpec::All);
+    }
+
+    if is_system_symbol_name(expr, heads::structure::NONE) {
+        return Some(StructuralSequenceSpec::None);
+    }
+
+    if let Some(count) = expr_as_signed_isize(expr) {
+        return Some(StructuralSequenceSpec::Count(count));
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return None;
+    }
+
+    match args.as_slice() {
+        [index] => Some(StructuralSequenceSpec::Single(expr_as_signed_isize(index)?)),
+        [start, end] => Some(StructuralSequenceSpec::Range {
+            start: expr_as_signed_isize(start)?,
+            end: expr_as_signed_isize(end)?,
+            step: 1,
+        }),
+        [start, end, step] => Some(StructuralSequenceSpec::Range {
+            start: expr_as_signed_isize(start)?,
+            end: expr_as_signed_isize(end)?,
+            step: expr_as_signed_isize(step)?,
+        }),
+        _ => None,
+    }
+}
+
+fn apply_take_specs(expr: &Expr, specs: &[StructuralSequenceSpec]) -> Option<Expr> {
+    let Some((first, rest)) = specs.split_first() else {
+        return Some(expr.clone());
+    };
+
+    let Expr::Call { .. } = expr else {
+        return None;
+    };
+
+    let components = resolve_take_components(*first, structural_length(expr))?;
+    let selectors = vec![PartSelector::Multi(
+        components
+            .into_iter()
+            .map(|component| PartSelector::Single(AtomicPartSpec::Index(component)))
+            .collect(),
+    )];
+    let selected = apply_part_selectors(expr, &selectors)?;
+
+    if rest.is_empty() {
+        Some(selected)
+    } else {
+        apply_take_drop_rest_to_expr(selected, rest, apply_take_specs)
+    }
+}
+
+fn apply_drop_specs(expr: &Expr, specs: &[StructuralSequenceSpec]) -> Option<Expr> {
+    let Some((first, rest)) = specs.split_first() else {
+        return Some(expr.clone());
+    };
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    let dropped = resolve_take_components(*first, args.len())?
+        .into_iter()
+        .collect::<BTreeSet<_>>();
+    let kept_args = args
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| !dropped.contains(&(*index as isize + 1)))
+        .map(|(_, arg)| arg.clone())
+        .collect::<Vec<_>>();
+    let kept = Expr::call(head.as_ref().clone(), kept_args);
+
+    if rest.is_empty() {
+        Some(kept)
+    } else {
+        apply_take_drop_rest_to_expr(kept, rest, apply_drop_specs)
+    }
+}
+
+fn apply_take_drop_rest_to_expr(
+    expr: Expr,
+    rest: &[StructuralSequenceSpec],
+    recurse: fn(&Expr, &[StructuralSequenceSpec]) -> Option<Expr>,
+) -> Option<Expr> {
+    match expr {
+        Expr::Atom(_) => None,
+        Expr::Call { head, args } => Some(Expr::call(
+            head.as_ref().clone(),
+            args.iter()
+                .map(|arg| recurse(arg, rest))
+                .collect::<Option<Vec<_>>>()?,
+        )),
+    }
+}
+
+fn resolve_take_components(spec: StructuralSequenceSpec, len: usize) -> Option<Vec<isize>> {
+    match spec {
+        StructuralSequenceSpec::All => Some((1..=len).map(|index| index as isize).collect()),
+        StructuralSequenceSpec::None => Some(Vec::new()),
+        StructuralSequenceSpec::Count(0) => Some(Vec::new()),
+        StructuralSequenceSpec::Count(count) if count > 0 => {
+            let count = usize::try_from(count).ok()?;
+            (count <= len).then(|| (1..=count).map(|index| index as isize).collect())
+        }
+        StructuralSequenceSpec::Count(count) => {
+            let count = count.unsigned_abs();
+            if count > len {
+                None
+            } else {
+                Some(((len - count + 1)..=len).map(|index| index as isize).collect())
+            }
+        }
+        StructuralSequenceSpec::Single(index) => {
+            Some(vec![normalize_exact_structural_component(index, len)?])
+        }
+        StructuralSequenceSpec::Range { start, end, step } => {
+            if step == 0 {
+                return None;
+            }
+
+            let start = normalize_exact_structural_component(start, len)?;
+            let end = normalize_exact_structural_component(end, len)?;
+            let mut current = start;
+            let mut components = Vec::new();
+
+            if step > 0 {
+                while current <= end {
+                    components.push(current);
+                    current += step;
+                }
+            } else {
+                while current >= end {
+                    components.push(current);
+                    current += step;
+                }
+            }
+
+            Some(components)
+        }
+    }
+}
+
+fn normalize_exact_structural_component(position: isize, len: usize) -> Option<isize> {
+    Some(normalize_structural_arg_position(position, len)? as isize + 1)
+}
+
+fn unary_operator_form(symbol: &str, item: Expr) -> Expr {
+    let slot = Expr::call(system_expr("Slot"), vec![Expr::integer(BigInt::from(1))]);
+    Expr::call(
+        system_expr("Function"),
+        vec![Expr::call(system_expr(symbol), vec![slot, item])],
+    )
+}
+
+fn selection_name(symbol: &str) -> &'static str {
+    match symbol {
+        "First" => "first",
+        "Last" => "last",
+        _ => "requested",
     }
 }
 

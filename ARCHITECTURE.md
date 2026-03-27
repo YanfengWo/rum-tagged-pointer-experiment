@@ -428,6 +428,60 @@ In practice, that means:
 This compatibility target is one reason the project treats conformance testing
 as a core engineering task rather than optional polish.
 
+## Core Language Boundary For This Project Phase
+
+For the current project phase, `rum` defines its practical "core language"
+scope by the union of two official Wolfram documentation navigation groups:
+
+- the `Core Language & Structure` pages currently used as scope anchors:
+  - `List`
+  - `Expressions`
+  - `Associations`
+  - `Variables & Functions`
+  - `Rules & Patterns`
+  - `Functional Programming`
+  - `Procedural Programming`
+  - `String Manipulation`
+  - `Package Development`
+  - `Tuning & Debugging`
+- the `Language Overview` pages currently used as scope anchors:
+  - `Symbolic Expressions`
+  - `Lists & Expression Manipulation`
+  - `Associations`
+  - `Functional Operations`
+  - `Pattern Matching`
+  - `Rules & Transformations`
+  - `Definitions & Assignments`
+  - `Logic & Tests`
+  - `Scoping & Modularity`
+  - `Procedural Programming`
+  - `Error & Exception Handling`
+  - `String Manipulation`
+
+This definition includes both:
+
+- same-name functions explicitly called out by those pages
+- language mechanisms those pages treat as foundational, such as symbolic
+  expressions, held evaluation, attributes, pattern matching, scoping,
+  contexts, packages, messages, and debugging-oriented runtime behavior
+
+This definition does not automatically pull in every adjacent area linked from
+those pages. When a page drifts into clearly non-kernel domains such as
+front-end-only behavior, notebook UI, graphics, web/network integration,
+external-process or filesystem operations, compiler/parallel tooling, or
+numerical-algorithm monitoring features, those remain out of scope unless the
+project explicitly adopts them later.
+
+The project should therefore treat these page sets as:
+
+- the public-facing definition of the current core-language target
+- the source of truth for support-matrix and conformance-planning work
+- the default place where any unimplemented, partial, or deliberately divergent
+  same-name feature must be recorded explicitly
+
+The working support matrix for that scope lives in
+[Core Language Support Matrix](./docs/core-language-support-matrix.md).
+
 ## String Subsystem Direction
 
 Full Wolfram-style string functionality is important to the project's intended
@@ -476,4 +530,6 @@ It should stay relatively stable and answer questions such as:
 - why are some Jupyter-motivated facilities still intentionally in the kernel?
 
 For active work, open gaps, and near-term sequencing, the source of truth is
-[TODO.md](./TODO.md), not this file.
+[TODO.md](./TODO.md). For page-driven language coverage, status, and divergence
+tracking, use
+[Core Language Support Matrix](./docs/core-language-support-matrix.md).

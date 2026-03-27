@@ -184,6 +184,330 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::StringPart,
     ),
     BuiltinSpec::ordinary(
+        "Head",
+        "Returns the structural head of an expression, optionally wrapped in a second head.",
+        BuiltinHandler::Head,
+    ),
+    BuiltinSpec::ordinary(
+        "Length",
+        "Returns the number of structural elements in an expression.",
+        BuiltinHandler::Length,
+    ),
+    BuiltinSpec::ordinary(
+        "Depth",
+        "Returns the structural depth of an expression, optionally including heads.",
+        BuiltinHandler::Depth,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "First",
+        "Returns the first structural element, with an optional held default.",
+        HoldAttribute::HoldRest,
+        BuiltinHandler::First,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Last",
+        "Returns the last structural element, with an optional held default.",
+        HoldAttribute::HoldRest,
+        BuiltinHandler::Last,
+    ),
+    BuiltinSpec::ordinary(
+        "Rest",
+        "Returns an expression with its first structural element removed.",
+        BuiltinHandler::Rest,
+    ),
+    BuiltinSpec::ordinary(
+        "Most",
+        "Returns an expression with its last structural element removed.",
+        BuiltinHandler::Most,
+    ),
+    BuiltinSpec::ordinary(
+        "Take",
+        "Takes structural elements using the current standard sequence-spec subset.",
+        BuiltinHandler::Take,
+    ),
+    BuiltinSpec::ordinary(
+        "Drop",
+        "Drops structural elements using the current standard sequence-spec subset.",
+        BuiltinHandler::Drop,
+    ),
+    BuiltinSpec::ordinary(
+        "TakeDrop",
+        "Returns both the taken and dropped structural elements using the current standard sequence-spec subset.",
+        BuiltinHandler::TakeDrop,
+    ),
+    BuiltinSpec::ordinary(
+        "Append",
+        "Appends an element to the end of a normal expression, with current operator-form support.",
+        BuiltinHandler::Append,
+    ),
+    BuiltinSpec::ordinary(
+        "Prepend",
+        "Prepends an element to the front of a normal expression, with current operator-form support.",
+        BuiltinHandler::Prepend,
+    ),
+    BuiltinSpec::ordinary(
+        "Symbol",
+        "Resolves a symbol from a string name using the current context path.",
+        BuiltinHandler::Symbol,
+    ),
+    BuiltinSpec::ordinary(
+        "Construct",
+        "Constructs an expression from a head and zero or more arguments.",
+        BuiltinHandler::Construct,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "And",
+        "Evaluates a conjunction with current short-circuit boolean semantics.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::And,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Or",
+        "Evaluates a disjunction with current short-circuit boolean semantics.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Or,
+    ),
+    BuiltinSpec::ordinary(
+        "Not",
+        "Negates a boolean value in the current exact boolean subset.",
+        BuiltinHandler::Not,
+    ),
+    BuiltinSpec::ordinary(
+        "TrueQ",
+        "Tests whether an expression evaluates exactly to True.",
+        BuiltinHandler::TrueQ,
+    ),
+    BuiltinSpec::ordinary(
+        "BooleanQ",
+        "Tests whether an expression evaluates exactly to True or False.",
+        BuiltinHandler::BooleanQ,
+    ),
+    BuiltinSpec::ordinary(
+        "AtomQ",
+        "Tests whether an expression is atomic rather than a normal expression.",
+        BuiltinHandler::AtomQ,
+    ),
+    BuiltinSpec::ordinary(
+        "ListQ",
+        "Tests whether an expression has head List.",
+        BuiltinHandler::ListQ,
+    ),
+    BuiltinSpec::ordinary(
+        "StringQ",
+        "Tests whether an expression is a string atom.",
+        BuiltinHandler::StringQ,
+    ),
+    BuiltinSpec::ordinary(
+        "IntegerQ",
+        "Tests whether an expression is an exact integer atom.",
+        BuiltinHandler::IntegerQ,
+    ),
+    BuiltinSpec::ordinary(
+        "NumberQ",
+        "Tests whether an expression is an exact numeric atom in the current number subset.",
+        BuiltinHandler::NumberQ,
+    ),
+    BuiltinSpec::ordinary(
+        "NumericQ",
+        "Tests whether an expression is currently numeric in the exact-number subset.",
+        BuiltinHandler::NumericQ,
+    ),
+    BuiltinSpec::ordinary(
+        "EvenQ",
+        "Tests whether an expression is currently an even exact integer.",
+        BuiltinHandler::EvenQ,
+    ),
+    BuiltinSpec::ordinary(
+        "OddQ",
+        "Tests whether an expression is currently an odd exact integer.",
+        BuiltinHandler::OddQ,
+    ),
+    BuiltinSpec::ordinary(
+        "Positive",
+        "Tests positivity in the current exact integer/rational subset.",
+        BuiltinHandler::Positive,
+    ),
+    BuiltinSpec::ordinary(
+        "Negative",
+        "Tests negativity in the current exact integer/rational subset.",
+        BuiltinHandler::Negative,
+    ),
+    BuiltinSpec::ordinary(
+        "NonPositive",
+        "Tests non-positivity in the current exact integer/rational subset.",
+        BuiltinHandler::NonPositive,
+    ),
+    BuiltinSpec::ordinary(
+        "NonNegative",
+        "Tests non-negativity in the current exact integer/rational subset.",
+        BuiltinHandler::NonNegative,
+    ),
+    BuiltinSpec::ordinary(
+        "PossibleZeroQ",
+        "Tests exact zero in the current exact integer/rational subset.",
+        BuiltinHandler::PossibleZeroQ,
+    ),
+    BuiltinSpec::ordinary(
+        "MachineNumberQ",
+        "Tests whether an expression is a machine number; currently always False because only exact numbers exist.",
+        BuiltinHandler::MachineNumberQ,
+    ),
+    BuiltinSpec::ordinary(
+        "RealValuedNumberQ",
+        "Tests whether an expression is a real-valued number in the current exact-number subset.",
+        BuiltinHandler::RealValuedNumberQ,
+    ),
+    BuiltinSpec::ordinary(
+        "RealValuedNumericQ",
+        "Tests whether an expression is real-valued and numeric in the current exact-number subset.",
+        BuiltinHandler::RealValuedNumericQ,
+    ),
+    BuiltinSpec::ordinary(
+        "PrimeQ",
+        "Tests primality in the current exact-integer subset.",
+        BuiltinHandler::PrimeQ,
+    ),
+    BuiltinSpec::ordinary(
+        "AlgebraicIntegerQ",
+        "Tests whether an expression is an exact integer in the current algebraic-integer subset.",
+        BuiltinHandler::AlgebraicIntegerQ,
+    ),
+    BuiltinSpec::ordinary(
+        "DuplicateFreeQ",
+        "Tests whether a List has no repeated elements in the current exact structural subset.",
+        BuiltinHandler::DuplicateFreeQ,
+    ),
+    BuiltinSpec::ordinary(
+        "IntersectingQ",
+        "Tests whether two Lists share any element in the current exact structural subset.",
+        BuiltinHandler::IntersectingQ,
+    ),
+    BuiltinSpec::ordinary(
+        "DisjointQ",
+        "Tests whether two Lists share no element in the current exact structural subset.",
+        BuiltinHandler::DisjointQ,
+    ),
+    BuiltinSpec::ordinary(
+        "SubsetQ",
+        "Tests subset inclusion for Lists in the current exact structural subset.",
+        BuiltinHandler::SubsetQ,
+    ),
+    BuiltinSpec::ordinary(
+        "Order",
+        "Orders two expressions using the current canonical textual ordering subset.",
+        BuiltinHandler::Order,
+    ),
+    BuiltinSpec::ordinary(
+        "OrderedQ",
+        "Tests whether a List is nondecreasing under the current canonical textual ordering subset.",
+        BuiltinHandler::OrderedQ,
+    ),
+    BuiltinSpec::ordinary(
+        "ContainsAll",
+        "Tests whether a List contains every requested element in the current exact structural subset.",
+        BuiltinHandler::ContainsAll,
+    ),
+    BuiltinSpec::ordinary(
+        "ContainsAny",
+        "Tests whether a List contains any requested element in the current exact structural subset.",
+        BuiltinHandler::ContainsAny,
+    ),
+    BuiltinSpec::ordinary(
+        "ContainsExactly",
+        "Tests List multiset equality in the current exact structural subset.",
+        BuiltinHandler::ContainsExactly,
+    ),
+    BuiltinSpec::ordinary(
+        "ContainsNone",
+        "Tests whether a List contains none of the requested elements in the current exact structural subset.",
+        BuiltinHandler::ContainsNone,
+    ),
+    BuiltinSpec::ordinary(
+        "ContainsOnly",
+        "Tests whether every element of a List belongs to the allowed-element List in the current exact structural subset.",
+        BuiltinHandler::ContainsOnly,
+    ),
+    BuiltinSpec::ordinary(
+        "Between",
+        "Tests interval inclusion in the current exact numeric subset.",
+        BuiltinHandler::Between,
+    ),
+    BuiltinSpec::ordinary(
+        "VectorQ",
+        "Tests whether an expression is a one-dimensional List array in the current exact structural subset.",
+        BuiltinHandler::VectorQ,
+    ),
+    BuiltinSpec::ordinary(
+        "MatrixQ",
+        "Tests whether an expression is a rectangular two-dimensional List array in the current exact structural subset.",
+        BuiltinHandler::MatrixQ,
+    ),
+    BuiltinSpec::ordinary(
+        "ArrayQ",
+        "Tests whether an expression is a rectangular List array in the current exact structural subset.",
+        BuiltinHandler::ArrayQ,
+    ),
+    BuiltinSpec::ordinary(
+        "AllTrue",
+        "Tests whether all selected structural parts satisfy a criterion in the current boolean subset.",
+        BuiltinHandler::AllTrue,
+    ),
+    BuiltinSpec::ordinary(
+        "AnyTrue",
+        "Tests whether any selected structural part satisfies a criterion in the current boolean subset.",
+        BuiltinHandler::AnyTrue,
+    ),
+    BuiltinSpec::ordinary(
+        "NoneTrue",
+        "Tests whether no selected structural parts satisfy a criterion in the current boolean subset.",
+        BuiltinHandler::NoneTrue,
+    ),
+    BuiltinSpec::ordinary(
+        "CoprimeQ",
+        "Tests whether exact integers are pairwise relatively prime in the current integer subset.",
+        BuiltinHandler::CoprimeQ,
+    ),
+    BuiltinSpec::ordinary(
+        "SameQ",
+        "Tests whether all arguments are exactly identical after evaluation.",
+        BuiltinHandler::SameQ,
+    ),
+    BuiltinSpec::ordinary(
+        "UnsameQ",
+        "Tests whether no two arguments are exactly identical after evaluation.",
+        BuiltinHandler::UnsameQ,
+    ),
+    BuiltinSpec::ordinary(
+        "Equal",
+        "Tests equality in the current exact subset for numbers, strings, and obviously identical expressions.",
+        BuiltinHandler::Equal,
+    ),
+    BuiltinSpec::ordinary(
+        "Unequal",
+        "Tests inequality in the current exact subset for numbers, strings, and obviously identical expressions.",
+        BuiltinHandler::Unequal,
+    ),
+    BuiltinSpec::ordinary(
+        "Less",
+        "Tests strict increasing order in the current exact comparable subset.",
+        BuiltinHandler::Less,
+    ),
+    BuiltinSpec::ordinary(
+        "Greater",
+        "Tests strict decreasing order in the current exact comparable subset.",
+        BuiltinHandler::Greater,
+    ),
+    BuiltinSpec::ordinary(
+        "LessEqual",
+        "Tests nondecreasing order in the current exact comparable subset.",
+        BuiltinHandler::LessEqual,
+    ),
+    BuiltinSpec::ordinary(
+        "GreaterEqual",
+        "Tests nonincreasing order in the current exact comparable subset.",
+        BuiltinHandler::GreaterEqual,
+    ),
+    BuiltinSpec::ordinary(
         "Part",
         "Extracts structural parts using integer positions, All, Span, and exact nested part specifications.",
         BuiltinHandler::Part,

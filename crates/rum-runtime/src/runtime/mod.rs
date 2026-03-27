@@ -35,6 +35,7 @@ mod function_and_subst_helpers;
 mod hold_thread;
 mod lexical_substitution;
 mod listable_dispatch;
+mod logic;
 mod lowering;
 mod matcher_and_symbols;
 mod message_catalog;
@@ -47,6 +48,7 @@ mod pattern_matching;
 #[cfg(test)]
 mod pattern_matching_interpreted;
 mod polynomials;
+mod predicates;
 mod resolution;
 mod rewrite_builtins;
 mod scoping;
@@ -69,9 +71,10 @@ use self::{
     definition_analysis_helpers::*, definition_application::*, definition_catalog::*,
     definition_clear::*, definition_tags::*, definitions::*, eval_call_prepare::*, eval_core::*,
     eval_dispatch::*, expr_helpers::*, expr_runtime_helpers::*, function_and_subst_helpers::*,
-    hold_thread::*, lexical_substitution::*, listable_dispatch::*, lowering::*,
+    hold_thread::*, lexical_substitution::*, listable_dispatch::*, logic::*, lowering::*,
     matcher_and_symbols::*, message_catalog::*, message_format::*, message_selector_parsing::*,
     metadata::*, model::*, parse_and_message_helpers::*, pattern_matching::*, polynomials::*,
+    predicates::*,
     resolution::*, rewrite_builtins::*, scoping::*, session_api::*, session_eval::*,
     session_helpers::*, session_requests::*, session_state::*, slot_substitution::*, strings::*,
     structure_ops::*, suspension::*, tree_walkers::*,

@@ -674,6 +674,14 @@ fn collect_level_parts(
     }
 }
 
+pub(super) fn collect_level_parts_owned(
+    expr: &Expr,
+    traversal: CasesTraversalConfig,
+    level: usize,
+) -> Vec<Expr> {
+    collect_level_parts(expr, traversal, level).parts
+}
+
 fn extend_position(path: &[usize], next: usize) -> Vec<usize> {
     let mut extended = path.to_vec();
     extended.push(next);

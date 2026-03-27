@@ -132,6 +132,22 @@ This roadmap intentionally uses two levels of detail:
 
 ### Cross-Cutting Test Suites and Conformance
 
+- [ ] Maintain a page-driven core-language support matrix keyed to the current official Wolfram scope anchors in `Core Language & Structure` and `Language Overview`, and treat that matrix as the public-facing definition of the kernel feature target
+- [ ] For every function and mechanism tracked in that matrix, record one of: implemented, partial, planned, excluded, extension, or deliberately divergent, and keep any divergence notes explicit enough to feed later user-facing documentation
+- [ ] Use the matrix to drive page-by-page implementation sequencing through the `CL-*` group IDs defined there, while keeping clearly non-kernel areas linked from those pages out of scope unless they are explicitly adopted later
+
+### Core-Language Matrix Groups
+
+- [ ] `CL-01` Expression, truth, and structural foundation
+- [ ] `CL-02` Definitions, attributes, assignments, and scoping
+- [ ] `CL-03` Rules, patterns, and tree walkers
+- [ ] `CL-04` Functional and list combinators
+- [ ] `CL-05` Associations and keyed data
+- [ ] `CL-06` Procedural control, exceptions, and failure flow
+- [ ] `CL-07` String language
+- [ ] `CL-08` Package, namespace, options, and protection tooling
+- [ ] `CL-09` Tuning, debugging, and verification surface
+- [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:
   - [ ] direct unit tests for small helpers, planners, normalization logic, and matcher branches
   - [ ] subsystem regression tests for syntax, lowering, runtime, terminal, REPL, CLI, Rust/Python host adapters, and Jupyter
