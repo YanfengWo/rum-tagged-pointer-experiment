@@ -173,6 +173,40 @@ impl Parser {
         }
     }
 
+    pub(super) fn consume_double_lbracket(&mut self) -> Option<Span> {
+        if matches!(self.current().kind, TokenKind::DoubleLBracket) {
+            Some(self.bump())
+        } else {
+            None
+        }
+    }
+
+    pub(super) fn current_starts_double_rbracket(&self) -> bool {
+        matches!(self.current().kind, TokenKind::RBracket)
+            && self
+                .tokens
+                .get(self.index + 1)
+                .is_some_and(|next| matches!(next.kind, TokenKind::RBracket))
+    }
+
+    pub(super) fn consume_double_rbracket(&mut self) -> Option<Span> {
+        if !self.current_starts_double_rbracket() {
+            return None;
+        }
+
+        let first = self.bump();
+        let second = self.bump();
+        Some(first.merge(second))
+    }
+
+    pub(super) fn consume_span(&mut self) -> Option<Span> {
+        if matches!(self.current().kind, TokenKind::Span) {
+            Some(self.bump())
+        } else {
+            None
+        }
+    }
+
     pub(super) fn consume_blank_kind(&mut self) -> Option<(BlankKind, Span)> {
         let kind = match self.current().kind {
             TokenKind::Underscore => BlankKind::Blank,
@@ -228,6 +262,15 @@ impl Parser {
 
     pub(super) fn current_token_label(&self) -> String {
         self.current().kind.label().to_string()
+    }
+
+    pub(super) fn double_rbracket_label(&self) -> String {
+        "]]".to_string()
+    }
+
+    pub(super) fn token_starts_expression(&self) -> bool {
+        self.token_starts_primary()
+            || matches!(self.current().kind, TokenKind::Plus | TokenKind::Minus)
     }
 
     pub(super) fn current(&self) -> &Token {

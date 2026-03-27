@@ -2,6 +2,7 @@ pub mod structure {
     pub const NULL: &str = "Null";
     pub const LIST: &str = "List";
     pub const FILE: &str = "File";
+    pub const SPAN: &str = "Span";
     pub const TRUE: &str = "True";
     pub const FALSE: &str = "False";
     pub const ALL: &str = "All";
@@ -112,6 +113,7 @@ pub const CANONICAL_CORE_HEADS: &[&str] = &[
     structure::NULL,
     structure::LIST,
     structure::FILE,
+    structure::SPAN,
     structure::TRUE,
     structure::FALSE,
     structure::ALL,

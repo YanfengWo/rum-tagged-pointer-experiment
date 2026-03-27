@@ -96,7 +96,9 @@ This roadmap intentionally uses two levels of detail:
 - [x] Move `Cases` traversal normalization and collection state through typed continuation payloads instead of repeatedly round-tripping that helper state through ad hoc `Expr` shapes during suspensions
 - [x] Extend matcher/traversal coverage beyond the earliest subset by giving `Cases` head-aware traversal control, exact/range/negative level support, and suspension-safe regression coverage for levels, limits, and options
 - [x] Widen standard traversal semantics into first-class tree walkers by landing `Level` and `Position` on the shared standard-levelspec / head-traversal model
+- [x] Start the structure access/update branch on top of the shared traversal groundwork by landing first passes of `Part`, `Extract`, and `ReplacePart`, including exact paths, `All` / `Span` selectors, `[[...]]` / `;;` sugar with omitted-endpoint spans, `Position`-compatible paths, head access via `0`, more stable duplicate/overlap handling in `ReplacePart`, and delayed replacement resume coverage
 - [ ] Continue widening that traversal model into future tree walkers beyond `Cases`, `Level`, and `Position` as those builtins land
+- [ ] Continue the structure access/update family beyond the current integer / `All` / `Span` subset with additional Wolfram-compatible part specifications and any remaining edge-case parity work in `ReplacePart`
 - [ ] Continue auditing any remaining held/spec-driven target families outside the message/definition/attribute cluster so new raw-form builtins reuse shared normalization helpers from the start
 - [ ] Continue moving remaining host-facing inspection/debug helper payloads onto typed continuation values as more non-`Expr` flows become suspendable
 

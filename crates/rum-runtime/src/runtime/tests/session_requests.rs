@@ -772,6 +772,28 @@ fn resume_eval_request_with_input_can_finish_position_with_suspending_match_limi
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_replacepart_with_suspending_delayed_rhs() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("ReplacePart[f[1, 2], 2 :> InputString[\"rhs: \"]]")
+        .expect_err("ReplacePart delayed rhs should suspend when it requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "rhs: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue ReplacePart after the delayed rhs resolves");
+
+    assert_eq!(response.value.to_string(), "f[1, \"done\"]");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_normalize_rules_after_suspending_rule_source() {
     let mut session = Session::new();
     session

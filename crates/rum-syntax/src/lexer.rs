@@ -51,13 +51,29 @@ impl<'a> Lexer<'a> {
         let ch = self.peek_char().expect("checked eof above");
 
         let token = match ch {
-            '[' => self.single(TokenKind::LBracket),
+            '[' => {
+                if self.consume_str("[[") {
+                    TokenKind::DoubleLBracket
+                } else {
+                    self.single(TokenKind::LBracket)
+                }
+            }
             ']' => self.single(TokenKind::RBracket),
             '{' => self.single(TokenKind::LBrace),
             '}' => self.single(TokenKind::RBrace),
             '(' => self.single(TokenKind::LParen),
             ')' => self.single(TokenKind::RParen),
             ',' => self.single(TokenKind::Comma),
+            ';' => {
+                if self.consume_str(";;") {
+                    TokenKind::Span
+                } else {
+                    return Err(SyntaxError::UnexpectedCharacter {
+                        found: ch,
+                        span: Span::new(start, self.offset),
+                    });
+                }
+            }
             '+' => self.single(TokenKind::Plus),
             '*' => self.single(TokenKind::Star),
             '^' => self.single(TokenKind::Caret),
@@ -347,7 +363,7 @@ mod tests {
 
     #[test]
     fn lexes_multi_char_operators() {
-        let tokens = lex("x::tag := y //. z /. q -> w /; p f /: g =.").unwrap();
+        let tokens = lex("x::tag := y //. z /. q -> w /; p f /: g =. a[[1]] b;;c").unwrap();
 
         assert!(
             tokens
@@ -388,6 +404,16 @@ mod tests {
             tokens
                 .iter()
                 .any(|token| matches!(token.kind, TokenKind::Unset))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::DoubleLBracket))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Span))
         );
     }
 

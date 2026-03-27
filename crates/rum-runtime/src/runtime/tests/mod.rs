@@ -65,6 +65,7 @@ mod polynomials;
 mod session_config;
 mod session_requests;
 mod strings;
+mod structure_ops;
 mod thread_and_dispatch;
 mod thread_and_dispatch_part2;
 mod traversal;

@@ -23,6 +23,34 @@ fn parses_lists_and_nested_calls() {
 }
 
 #[test]
+fn parses_part_and_span_sugar_into_canonical_forms() {
+    assert_eq!(
+        parse_expr("expr[[1, 2]]").unwrap().to_string(),
+        "Part[expr, 1, 2]"
+    );
+    assert_eq!(
+        parse_expr("expr[[;;, 2 ;; ;; 2]]").unwrap().to_string(),
+        "Part[expr, Span[All], Span[2, All, 2]]"
+    );
+    assert_eq!(parse_expr("a ;; b").unwrap().to_string(), "Span[a, b]");
+    assert_eq!(parse_expr("a ;;").unwrap().to_string(), "Span[a, All]");
+    assert_eq!(parse_expr(";; b").unwrap().to_string(), "Span[All, b]");
+    assert_eq!(parse_expr(";;").unwrap().to_string(), "Span[All]");
+    assert_eq!(
+        parse_expr("a ;; b ;; c").unwrap().to_string(),
+        "Span[a, b, c]"
+    );
+    assert_eq!(
+        parse_expr("a ;; ;; c").unwrap().to_string(),
+        "Span[a, All, c]"
+    );
+    assert_eq!(
+        parse_expr(";; ;; c").unwrap().to_string(),
+        "Span[All, All, c]"
+    );
+}
+
+#[test]
 fn parses_expressions_with_comments_between_tokens() {
     let parsed = parse_expr("f[(* a *) x, y (* b *)]").unwrap();
     assert_eq!(parsed.to_string(), "f[x, y]");
@@ -292,6 +320,21 @@ fn reports_incomplete_call_input() {
     assert!(err.is_incomplete());
     assert_eq!(err.span(), Some(Span::point(3)));
     assert_eq!(err.related_span(), Some(Span::new(1, 2)));
+}
+
+#[test]
+fn reports_incomplete_double_bracket_input() {
+    let err = parse_expr("expr[[1").unwrap_err();
+
+    assert_eq!(
+        err,
+        SyntaxError::UnclosedDelimiter {
+            expected: "]]",
+            span: Span::point(7),
+            opening_span: Span::new(4, 6),
+            opening: "[[",
+        }
+    );
 }
 
 #[test]

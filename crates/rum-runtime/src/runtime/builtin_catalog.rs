@@ -183,6 +183,21 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Extracts individual characters by 1-based positions.",
         BuiltinHandler::StringPart,
     ),
+    BuiltinSpec::ordinary(
+        "Part",
+        "Extracts structural parts using integer positions, All, Span, and exact nested part specifications.",
+        BuiltinHandler::Part,
+    ),
+    BuiltinSpec::ordinary(
+        "Extract",
+        "Extracts parts at structural positions, optionally wrapping each result before evaluation.",
+        BuiltinHandler::Extract,
+    ),
+    BuiltinSpec::ordinary(
+        "ReplacePart",
+        "Replaces structural parts via immediate or delayed rules over exact, All, and Span-based part specifications.",
+        BuiltinHandler::ReplacePart,
+    ),
     BuiltinSpec::special(
         "Set",
         "Assigns an immediate value to a symbol or pattern.",
