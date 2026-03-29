@@ -101,6 +101,20 @@ fn applies_at_sugar_through_lowering_and_evaluation() {
 }
 
 #[test]
+fn compound_expression_sugar_flows_through_lowering_and_evaluation() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("x = 1; y = x + 1; y")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+}
+
+#[test]
 fn functional_operator_sugars_flow_through_lowering_and_first_pass_runtime() {
     let mut session = Session::new();
 

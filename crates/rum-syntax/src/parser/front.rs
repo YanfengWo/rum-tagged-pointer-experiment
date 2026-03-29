@@ -78,7 +78,12 @@ impl Parser {
                 op.precedence() + 1
             };
 
-            let rhs = self.parse_binary_expr(next_min_precedence)?;
+            let rhs =
+                if matches!(op, BinaryOp::CompoundExpression) && !self.token_starts_expression() {
+                    SyntaxExpr::symbol("Null", self.current().span)
+                } else {
+                    self.parse_binary_expr(next_min_precedence)?
+                };
             let span = lhs.span().merge(rhs.span());
             lhs = SyntaxExpr::binary(op, lhs, rhs, span);
         }

@@ -261,6 +261,103 @@ fn block_supports_sequential_initializers_and_nested_shadowing() {
 }
 
 #[test]
+fn compound_expression_evaluates_sequentially_and_returns_the_last_value() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("CompoundExpression[x = 1, y = x + 1, y]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("CompoundExpression[]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Null"
+    );
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
+    assert_eq!(session.eval_text("y").unwrap().value.to_string(), "2");
+}
+
+#[test]
+fn switch_matches_against_held_forms_and_residualizes_when_nothing_matches() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Switch[1 + 1, _String, no, _Integer, yes]")
+            .unwrap()
+            .value
+            .to_string(),
+        "yes"
+    );
+    assert_eq!(
+        session
+            .eval_text("Switch[1 + 1, _String, no]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Switch[2, Blank[String], no]"
+    );
+}
+
+#[test]
+fn catch_throw_and_return_support_first_pass_nonlocal_control_flow() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Catch[Throw[1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Catch[Throw[1, tag], tag, List]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, tag]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Function[x, CompoundExpression[0, Return[x + 1], 9]][2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session.eval_text("Return[7]").unwrap().value.to_string(),
+        "7"
+    );
+}
+
+#[test]
+fn throw_through_block_restores_dynamic_scope_before_catch_handles_it() {
+    let mut session = Session::new();
+
+    session.eval_text("x = 10").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("Catch[Block[{x = 1}, Throw[x, tag]], tag]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "10");
+}
+
+#[test]
 fn scoping_builtins_require_raw_binding_lists_instead_of_resolved_variables() {
     let mut session = Session::new();
 

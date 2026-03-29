@@ -1,6 +1,17 @@
 use super::*;
 
 impl Session {
+    pub(super) fn finalize_top_level_control_flow(
+        &mut self,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) => Ok(value),
+            Err(EvalError::Return { value }) => Ok(value),
+            Err(error) => Err(error),
+        }
+    }
+
     pub fn inspect(&self, name: &str) -> Option<SymbolInfo> {
         let symbol = self
             .resolve_symbol_name(name, false)
@@ -117,7 +128,8 @@ impl Session {
         let result = (|| {
             let syntax = parse_expr(input)?;
             let expr = self.lower_syntax_expr(&syntax)?;
-            self.evaluate(expr)
+            let result = self.evaluate(expr);
+            self.finalize_top_level_control_flow(result)
         })();
 
         match result {

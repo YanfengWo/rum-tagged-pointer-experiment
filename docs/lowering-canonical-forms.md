@@ -61,6 +61,8 @@ rewritten further. For example:
 
 ### Assignment and rewrite sugar
 
+- `a; b` -> `CompoundExpression[a, b]`
+- `a;` -> `CompoundExpression[a, Null]`
 - `lhs = rhs` -> `Set[lhs, rhs]`
 - `lhs := rhs` -> `SetDelayed[lhs, rhs]`
 - `lhs =.` -> `Unset[lhs]`

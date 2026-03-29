@@ -1044,6 +1044,7 @@ fn needs_space_after_inline_comment(current_kind: &SyntaxTokenKind) -> bool {
             | SyntaxTokenKind::RBrace
             | SyntaxTokenKind::RAssociation
             | SyntaxTokenKind::RParen
+            | SyntaxTokenKind::Semicolon
             | SyntaxTokenKind::Comma
             | SyntaxTokenKind::MessageName
             | SyntaxTokenKind::Underscore
@@ -1070,6 +1071,7 @@ fn needs_space_between(
             | SyntaxTokenKind::RBrace
             | SyntaxTokenKind::RAssociation
             | SyntaxTokenKind::RParen
+            | SyntaxTokenKind::Semicolon
             | SyntaxTokenKind::Comma
             | SyntaxTokenKind::Underscore
             | SyntaxTokenKind::DoubleUnderscore
@@ -1592,6 +1594,12 @@ mod tests {
     fn formatter_spaces_apply_sugar() {
         let formatted = format_source("f@g@x").unwrap();
         assert_eq!(formatted, "f @ g @ x");
+    }
+
+    #[test]
+    fn formatter_spaces_compound_expression_sugar() {
+        assert_eq!(format_source("a;b").unwrap(), "a; b");
+        assert_eq!(format_source("a;b;").unwrap(), "a; b;");
     }
 
     #[test]

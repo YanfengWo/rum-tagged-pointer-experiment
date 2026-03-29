@@ -110,7 +110,8 @@ impl Session {
         let expr = self
             .lower_syntax_expr(parsed.syntax())
             .map_err(|err| self.finish_request_failure(checkpoint, err))?;
-        let value = match self.evaluate(expr) {
+        let outcome = self.evaluate(expr);
+        let value = match self.finalize_top_level_control_flow(outcome) {
             Ok(value) => value,
             Err(EvalError::InputRequired { .. }) => {
                 self.pending_eval_request = Some(checkpoint.into());
@@ -157,7 +158,8 @@ impl Session {
                 trace: Vec::new(),
             })?;
 
-        let value = match self.resume_suspended_evaluation(input) {
+        let outcome = self.resume_suspended_evaluation(input);
+        let value = match self.finalize_top_level_control_flow(outcome) {
             Ok(value) => value,
             Err(EvalError::InputRequired { .. }) => {
                 self.pending_eval_request = Some(checkpoint.into());
@@ -347,6 +349,12 @@ fn session_request_error_from_eval_error_with_source(
         EvalError::EvaluationPassLimitExceeded { limit } => {
             SessionRequestError::EvaluationPassLimitExceeded { limit: *limit }
         }
+        EvalError::Return { value } => SessionRequestError::Other {
+            message: format!("uncaught top-level Return resolved to {value}"),
+        },
+        EvalError::Thrown { value, tag } => SessionRequestError::Other {
+            message: format!("uncaught throw: {value} with tag {tag}"),
+        },
         EvalError::InputRequired { request } => SessionRequestError::InputRequired {
             request: request.clone(),
         },

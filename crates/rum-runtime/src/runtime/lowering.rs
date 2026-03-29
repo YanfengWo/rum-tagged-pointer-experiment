@@ -187,6 +187,12 @@ where
     let lowered_rhs = lower_syntax_expr_with(rhs, resolve_symbol)?;
 
     match op {
+        BinaryOp::CompoundExpression => {
+            let mut items = Vec::new();
+            push_compound_expression_item(&mut items, lowered_lhs);
+            push_compound_expression_item(&mut items, lowered_rhs);
+            Ok(canonical_call("CompoundExpression", items))
+        }
         BinaryOp::MessageName => Ok(message_name_expr(
             match lowered_lhs {
                 Expr::Atom(Atom::Symbol(symbol)) => symbol,
@@ -271,6 +277,15 @@ where
             heads::arithmetic::POWER,
             vec![lowered_lhs, lowered_rhs],
         )),
+    }
+}
+
+fn push_compound_expression_item(items: &mut Vec<Expr>, expr: Expr) {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(&head, "CompoundExpression") => {
+            items.extend(args);
+        }
+        other => items.push(other),
     }
 }
 

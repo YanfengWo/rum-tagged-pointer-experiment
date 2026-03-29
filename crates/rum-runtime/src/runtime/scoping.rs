@@ -202,8 +202,25 @@ impl Session {
         };
 
         let applied_result = self.evaluate(applied);
-        self.suspend_with_frame(applied_result, |_, value| Ok(value))
-            .map(Some)
+        let outcome = self.suspend_with_result_frame(applied_result, |session, outcome| {
+            session.finish_function_application(outcome)
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.finish_function_application(outcome).map(Some),
+        }
+    }
+
+    fn finish_function_application(
+        &mut self,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) => Ok(value),
+            Err(EvalError::Return { value }) => Ok(value),
+            Err(error) => Err(error),
+        }
     }
 
     pub(super) fn allocate_fresh_symbol(&mut self, symbol: &Symbol) -> Symbol {

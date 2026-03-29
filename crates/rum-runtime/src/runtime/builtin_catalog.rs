@@ -952,6 +952,12 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Quiet,
     ),
     BuiltinSpec::ordinary_with_hold(
+        "CompoundExpression",
+        "Evaluates expressions sequentially and returns the last result.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::CompoundExpression,
+    ),
+    BuiltinSpec::ordinary_with_hold(
         "If",
         "Evaluates one of several branches conditionally.",
         HoldAttribute::HoldRest,
@@ -962,6 +968,28 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Evaluates conditions in order and returns the first matching branch.",
         HoldAttribute::HoldAll,
         BuiltinHandler::Which,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Switch",
+        "Matches one evaluated expression against held form/value pairs.",
+        HoldAttribute::HoldRest,
+        BuiltinHandler::Switch,
+    ),
+    BuiltinSpec::ordinary(
+        "Return",
+        "Exits the current function-style evaluation with an optional result.",
+        BuiltinHandler::Return,
+    ),
+    BuiltinSpec::ordinary(
+        "Throw",
+        "Propagates a nonlocal value, optionally tagged for Catch matching.",
+        BuiltinHandler::Throw,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Catch",
+        "Evaluates an expression and intercepts matching Throw values.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Catch,
     ),
     BuiltinSpec::ordinary_with_hold(
         "Function",

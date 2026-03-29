@@ -204,6 +204,10 @@ pub enum EvalError {
     IterationLimitExceeded { limit: usize },
     #[error("evaluation exceeded fixed-point pass limit ({limit})")]
     EvaluationPassLimitExceeded { limit: usize },
+    #[error("nonlocal return: {value}")]
+    Return { value: Expr },
+    #[error("uncaught throw: {value} with tag {tag}")]
+    Thrown { value: Expr, tag: Expr },
     #[error("{request}")]
     InputRequired { request: RuntimeInputRequest },
 }

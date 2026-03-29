@@ -130,8 +130,16 @@ impl Parser {
         )
     }
 
+    pub(super) fn token_starts_expression(&self) -> bool {
+        matches!(
+            self.current().kind,
+            TokenKind::Plus | TokenKind::Minus | TokenKind::Span
+        ) || self.token_starts_primary()
+    }
+
     pub(super) fn current_binary_op(&self) -> Option<BinaryOp> {
         match self.current().kind {
+            TokenKind::Semicolon => Some(BinaryOp::CompoundExpression),
             TokenKind::MessageName => Some(BinaryOp::MessageName),
             TokenKind::TagSet => Some(BinaryOp::TagSet),
             TokenKind::Set => Some(BinaryOp::Set),
@@ -272,11 +280,6 @@ impl Parser {
 
     pub(super) fn double_rbracket_label(&self) -> String {
         "]]".to_string()
-    }
-
-    pub(super) fn token_starts_expression(&self) -> bool {
-        self.token_starts_primary()
-            || matches!(self.current().kind, TokenKind::Plus | TokenKind::Minus)
     }
 
     pub(super) fn current(&self) -> &Token {

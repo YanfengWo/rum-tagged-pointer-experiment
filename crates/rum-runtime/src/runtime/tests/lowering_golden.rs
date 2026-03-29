@@ -17,6 +17,7 @@ fn lowering_golden_forms_cover_rules_patterns_slots_and_scoping() {
         ("f[a, b]", "f[a, b]"),
         ("{a, b}", "List[a, b]"),
         ("<|a -> 1, b -> 2|>", "Association[Rule[a, 1], Rule[b, 2]]"),
+        ("a; b;", "CompoundExpression[a, b, Null]"),
         ("f @ g @ x", "f[g[x]]"),
         ("f @@ expr", "Apply[f, expr]"),
         ("f @@@ expr", "MapApply[f, expr]"),

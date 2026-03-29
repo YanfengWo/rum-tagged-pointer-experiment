@@ -192,6 +192,7 @@ pub enum PrefixOp {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BinaryOp {
+    CompoundExpression,
     MessageName,
     TagSet,
     Set,
@@ -245,6 +246,7 @@ impl PrefixOp {
 impl BinaryOp {
     pub fn token(self) -> &'static str {
         match self {
+            Self::CompoundExpression => ";",
             Self::MessageName => "::",
             Self::TagSet => "/:",
             Self::Set => "=",
@@ -269,6 +271,7 @@ impl BinaryOp {
 
     pub(crate) fn precedence(self) -> u8 {
         match self {
+            Self::CompoundExpression => 3,
             Self::MessageName => 75,
             Self::TagSet => 5,
             Self::Set | Self::SetDelayed => 10,
@@ -286,7 +289,8 @@ impl BinaryOp {
     pub(crate) fn is_right_associative(self) -> bool {
         matches!(
             self,
-            Self::TagSet
+            Self::CompoundExpression
+                | Self::TagSet
                 | Self::Set
                 | Self::SetDelayed
                 | Self::Rule
@@ -392,7 +396,11 @@ fn format_expr(
             let rhs_precedence = op.precedence() + u8::from(!op.is_right_associative());
 
             format_expr(lhs, f, lhs_precedence)?;
-            write!(f, " {} ", op.token())?;
+            if matches!(op, BinaryOp::CompoundExpression) {
+                write!(f, "{} ", op.token())?;
+            } else {
+                write!(f, " {} ", op.token())?;
+            }
             format_expr(rhs, f, rhs_precedence)?;
         }
         SyntaxExprKind::Postfix { op, expr } => {

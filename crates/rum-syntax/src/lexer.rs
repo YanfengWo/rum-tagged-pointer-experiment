@@ -88,10 +88,7 @@ impl<'a> Lexer<'a> {
                 if self.consume_str(";;") {
                     TokenKind::Span
                 } else {
-                    return Err(SyntaxError::UnexpectedCharacter {
-                        found: ch,
-                        span: Span::new(start, self.offset),
-                    });
+                    self.single(TokenKind::Semicolon)
                 }
             }
             '@' => {

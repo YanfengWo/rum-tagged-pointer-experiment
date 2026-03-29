@@ -285,16 +285,18 @@ once in its primary implementation group. Other groups may mention it as
 
 - `implemented`: hold-aware branch selection, lexical and dynamic local state,
   message interception through the current `Check` / `Quiet` model
-- `partial`: there is no full sequential-evaluation, loop, control-transfer,
-  cleanup, or failure-object framework yet
+- `partial`: sequential evaluation plus first-pass `Switch` / `Throw` /
+  `Catch` / `Return` now work, but there is still no full loop, cleanup, or
+  failure-object framework
 - `planned`: broader control flow, explicit exception propagation, failure
   values, and cleanup semantics
 
 ### Functions and Symbols
 
-- `implemented`: `If`, `Which`, `Check`, `Quiet`
-- `planned`: `CompoundExpression`, `Switch`, `Do`, `While`, `Until`, `For`,
-  `Table`, `Return`, `Throw`, `Catch`, `Confirm`, `ConfirmBy`,
+- `implemented`: `If`, `Which`, `Check`, `Quiet`, `CompoundExpression`,
+  `Switch`
+- `partial`: `Return`, `Throw`, `Catch` in the current first-pass subset
+- `planned`: `Do`, `While`, `Until`, `For`, `Table`, `Confirm`, `ConfirmBy`,
   `ConfirmMatch`, `ConfirmQuiet`, `ConfirmAssert`, `Enclose`,
   `WithCleanup`, `Failsafe`, `Failure`, `FailureQ`, `Missing`, `MissingQ`,
   `Success`, `TerminatedEvaluation`, `Assert`, `Abort`, `AbortProtect`,

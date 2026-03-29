@@ -50,6 +50,27 @@ fn parses_right_associative_apply_sugar() {
 }
 
 #[test]
+fn parses_compound_expression_sugar() {
+    let parsed = parse_expr("a; b;").unwrap();
+    assert_eq!(parsed.to_string(), "a; b; Null");
+
+    assert_eq!(
+        parsed,
+        SyntaxExpr::binary(
+            BinaryOp::CompoundExpression,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::CompoundExpression,
+                SyntaxExpr::symbol("b", z()),
+                SyntaxExpr::symbol("Null", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+}
+
+#[test]
 fn parses_apply_and_composition_operator_precedence() {
     let parsed = parse_expr("f @* g @ x").unwrap();
     assert_eq!(parsed.to_string(), "f @* g @ x");

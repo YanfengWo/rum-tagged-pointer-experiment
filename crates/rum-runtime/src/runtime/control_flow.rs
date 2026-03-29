@@ -91,6 +91,10 @@ impl Session {
         }
     }
 
+    pub(super) fn eval_compound_expression(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        self.resume_compound_expression_from_index(args.to_vec(), 0)
+    }
+
     pub(super) fn eval_if(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if !(2..=4).contains(&args.len()) {
             return Ok(self.invalid_call_with_arg_range("If", args, 2, 4));
@@ -122,6 +126,70 @@ impl Session {
         }
 
         self.resume_which_from_index(args.to_vec(), 0)
+    }
+
+    pub(super) fn eval_switch(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() < 3 || args.len() % 2 == 0 {
+            return Ok(self.invalid_call_with_arg_form(
+                "Switch",
+                args,
+                "expected an expression followed by one or more form/value pairs",
+            ));
+        }
+
+        let subject_result = self.evaluate(args[0].clone());
+        let subject = self.suspend_with_frame(subject_result, {
+            let args = args.to_vec();
+            move |session, subject| session.resume_switch_after_subject(args, subject)
+        })?;
+
+        self.resume_switch_after_subject(args.to_vec(), subject)
+    }
+
+    pub(super) fn eval_return(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [] => Err(EvalError::Return {
+                value: system_expr("Null"),
+            }),
+            [value] => Err(EvalError::Return {
+                value: value.clone(),
+            }),
+            _ => Ok(self.invalid_call_with_arg_range("Return", args, 0, 1)),
+        }
+    }
+
+    pub(super) fn eval_throw(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [value] => Err(EvalError::Thrown {
+                value: value.clone(),
+                tag: system_expr("None"),
+            }),
+            [value, tag] => Err(EvalError::Thrown {
+                value: value.clone(),
+                tag: tag.clone(),
+            }),
+            _ => Ok(self.invalid_call_with_arg_range("Throw", args, 1, 2)),
+        }
+    }
+
+    pub(super) fn eval_catch(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !(1..=3).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("Catch", args, 1, 3));
+        }
+
+        let form = args.get(1).cloned();
+        let handler = args.get(2).cloned();
+        let body_result = self.evaluate(args[0].clone());
+        let outcome = self.suspend_with_result_frame(body_result, {
+            let form = form.clone();
+            let handler = handler.clone();
+            move |session, outcome| session.resume_catch_after_body(form, handler, outcome)
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.resume_catch_after_body(form, handler, outcome),
+        }
     }
 
     fn resume_check_after_primary(
@@ -217,6 +285,42 @@ impl Session {
         }
     }
 
+    fn resume_compound_expression_from_index(
+        &mut self,
+        args: Vec<Expr>,
+        index: usize,
+    ) -> Result<Expr, EvalError> {
+        let Some(current) = args.get(index).cloned() else {
+            return Ok(system_expr("Null"));
+        };
+
+        let current_result = self.evaluate(current);
+        let outcome = self.suspend_with_result_frame(current_result, {
+            let args = args.clone();
+            move |session, outcome| {
+                session.resume_compound_expression_after_item(args, index, outcome)
+            }
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.resume_compound_expression_after_item(args, index, outcome),
+        }
+    }
+
+    fn resume_compound_expression_after_item(
+        &mut self,
+        args: Vec<Expr>,
+        index: usize,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) if index + 1 >= args.len() => Ok(value),
+            Ok(_) => self.resume_compound_expression_from_index(args, index + 1),
+            Err(error) => Err(error),
+        }
+    }
+
     fn resume_which_from_index(
         &mut self,
         args: Vec<Expr>,
@@ -249,6 +353,87 @@ impl Session {
                 residual[index] = condition;
                 Ok(Expr::call(system_expr("Which"), residual))
             }
+        }
+    }
+
+    fn resume_switch_after_subject(
+        &mut self,
+        args: Vec<Expr>,
+        subject: Expr,
+    ) -> Result<Expr, EvalError> {
+        self.resume_switch_from_index(args, subject, 1)
+    }
+
+    fn resume_switch_from_index(
+        &mut self,
+        args: Vec<Expr>,
+        subject: Expr,
+        index: usize,
+    ) -> Result<Expr, EvalError> {
+        if index >= args.len() {
+            let mut residual = args;
+            residual[0] = subject;
+            return Ok(Expr::call(system_expr("Switch"), residual));
+        }
+
+        let pattern = args[index].clone();
+        let branch = args[index + 1].clone();
+        let match_result = self.match_expr_owned(pattern, subject.clone(), BTreeMap::new());
+
+        self.drive_internal_value(match_result, move |session, outcome| {
+            if outcome.matched {
+                session.evaluate(branch)
+            } else {
+                session.resume_switch_from_index(args, subject, index + 2)
+            }
+        })
+    }
+
+    fn resume_catch_after_body(
+        &mut self,
+        form: Option<Expr>,
+        handler: Option<Expr>,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) => Ok(value),
+            Err(EvalError::Thrown { value, tag }) => {
+                self.resume_catch_for_throw(form, handler, value, tag)
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn resume_catch_for_throw(
+        &mut self,
+        form: Option<Expr>,
+        handler: Option<Expr>,
+        value: Expr,
+        tag: Expr,
+    ) -> Result<Expr, EvalError> {
+        let Some(form) = form else {
+            return self.finish_catch_match(handler, value, tag);
+        };
+
+        let match_result = self.match_expr_owned(form, tag.clone(), BTreeMap::new());
+        self.drive_internal_value(match_result, move |session, outcome| {
+            if outcome.matched {
+                session.finish_catch_match(handler, value, tag)
+            } else {
+                Err(EvalError::Thrown { value, tag })
+            }
+        })
+    }
+
+    fn finish_catch_match(
+        &mut self,
+        handler: Option<Expr>,
+        value: Expr,
+        tag: Expr,
+    ) -> Result<Expr, EvalError> {
+        match handler {
+            Some(handler) => self.evaluate(Expr::call(handler, vec![value, tag])),
+            None => Ok(value),
         }
     }
 }
