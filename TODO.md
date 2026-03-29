@@ -60,7 +60,8 @@ This roadmap intentionally uses two levels of detail:
 
 ### Phase 8: String Language and Text Processing
 
-- [ ] Build toward full Wolfram core-language string support for business, industrial, and DLS-oriented workloads
+- [x] Land a substantial `CL-07` string-language surface covering exact-string manipulation, first-pass string-pattern semantics, templating, conversions, text analysis, similarity/diff helpers, and current byte-array/hash/compress/encrypt/nearest/pluralization subsets
+- [ ] Keep tightening `CL-07` deep parity around fuller symbolic string-pattern semantics, richer conversions/formatting, byte-array and crypto compatibility, nearest-neighbor semantics, and language-data-backed pluralization
 - [ ] Decide when the string subsystem is large and stable enough to justify a dedicated crate boundary
 
 ### Phase 9: Verification, Coverage, and Conformance
@@ -75,12 +76,21 @@ This roadmap intentionally uses two levels of detail:
 
 - [ ] Keep turning large branch-heavy functions into smaller helpers when that makes important policy or normalization behavior reachable from direct unit tests
 - [ ] Keep separating pure planning/normalization logic from state mutation and rendering paths when that improves testability without creating micro-modules
-- [ ] Split active files that have already grown well past the `10k` warning threshold, starting with:
+- [ ] Split active files that are already in explicit large-file debt under the code-organization rules, starting with:
+  - [ ] `crates/rum-runtime/src/runtime/functional_ops.rs`
+  - [ ] `crates/rum-runtime/src/runtime/strings.rs`
+  - [ ] `crates/rum-runtime/src/runtime/control_flow.rs`
+  - [ ] `crates/rum-runtime/src/runtime/structure_ops.rs`
+  - [ ] `crates/rum-runtime/src/runtime/builtin_catalog.rs`
+  - [ ] `crates/rum-runtime/src/runtime/polynomials.rs`
+  - [ ] `crates/rum-runtime/src/runtime/associations.rs`
   - [ ] `crates/rum-jupyter/src/transport.rs`
   - [ ] `crates/rum-jupyter/src/tests.rs`
   - [ ] `crates/rum-jupyter/src/zeromq.rs`
   - [ ] `crates/rum-jupyter/src/adapter.rs`
   - [ ] `crates/rum-syntax/src/formatter.rs`
+  - [ ] `crates/rum-runtime/src/runtime/tests/strings.rs`
+  - [ ] `crates/rum-runtime/src/runtime/tests/functional_ops.rs`
   - [ ] `crates/rum-runtime/src/runtime/pattern_matching.rs`
   - [ ] `crates/rum-runtime/src/runtime/tests/session_requests.rs`
 
@@ -179,11 +189,11 @@ This roadmap intentionally uses two levels of detail:
   - [ ] rules, patterns, replacement, and traversal behavior
   - [ ] scoping and held-evaluation constructs
   - [ ] messages, attributes, and definition precedence
-  - [ ] string semantics once the string workstream begins landing
+  - [ ] string semantics now that the `CL-07` surface is substantial
 
-### Post-Core Workstream: Full String Language
+### Active Workstream: Full String Language Parity
 
-- [ ] Treat full string support as a first-class post-foundation roadmap item rather than an incidental builtin grab bag
+- [x] Treat full string support as a first-class roadmap item rather than an incidental builtin grab bag
 - [ ] Keep string literal parsing in `rum-syntax`, the canonical string atom in `rum-core`, and the current first-wave evaluation semantics plus builtin registration in `rum-runtime`, revisiting any broader crate split only if the string surface later outgrows the core kernel boundary
 - [ ] Do not create a dedicated string crate yet; revisit a future `rum-string` extraction only after the builtin surface, shared helpers, and performance constraints are concrete enough to justify a new boundary
 - [ ] Audit the Wolfram core-language string surface and split it into explicit implementation tiers with documented priorities
@@ -192,10 +202,11 @@ This roadmap intentionally uses two levels of detail:
 - [x] Extend Tier 1 with the remaining near-term construction builtin `StringRepeat`, keeping the current scope focused on in-memory string values rather than host-side file or encoding IO
 - [x] Land the first Tier 2 exact-search wave: `StringContainsQ`, `StringStartsQ`, `StringEndsQ`, and `StringPosition` over exact string needles with Unicode code-point indexing and overlapping 1-based position ranges
 - [x] Land the corresponding Tier 2 exact-transformation wave: `StringSplit`, `StringTrim`, `StringReplace`, and `StringCases` for whitespace/default handling plus exact-string delimiters and immediate exact-string rules over in-memory string values
-- [ ] Widen the string search/transformation family from exact-string needles toward richer string-pattern and option semantics such as `StringExpression`, `IgnoreCase`, overlap controls beyond the current defaults, and delayed/string-pattern rule forms
+- [x] Widen the string search/transformation family from exact-string needles toward richer string-pattern and option semantics such as `StringExpression`, `IgnoreCase`, and overlap controls beyond the earliest defaults
 - [x] Land an initial Tier 3 string-pattern subset by teaching the current string builtins to understand `StringExpression` and `Alternatives` over exact-string leaves
-- [ ] Continue Tier 3 string patterns with repetition forms, start/end anchors, `Shortest` / `Longest`, `IgnoreCase`, delayed pattern rules, and `RegularExpression` interop
-- [ ] Tier 4 conversions and interoperability: `CharacterCode`, `FromCharacterCode`, formatting/conversion touchpoints, file/path string conventions, and message-template compatibility
+- [x] Continue Tier 3 string patterns through repetition forms, start/end anchors, `Shortest` / `Longest`, bounded repetition, `Except`, and broader zero-length/match-edge handling
+- [ ] Continue Tier 3 string patterns through delayed pattern rules, `RegularExpression` interop, and any remaining symbolic string-pattern parity cleanup
+- [ ] Continue Tier 4 conversions and interoperability beyond the now-landed `StringForm`, `StringTemplate`, `TemplateApply`, `TextWords`, `ToCharacterCode`, `ToExpression`, `SyntaxQ`, `TextString`, `FileTemplateApply`, `CharacterCounts`, `RemoveDiacritics`, `Alphabet`, `AlphabeticSort`, `EditDistance`, `HammingDistance`, `LongestCommonSubsequence`, `SequenceAlignment`, `Diff`, `StringToByteArray`, `Hash`, `Compress`, `Encrypt`, `Nearest`, and `Pluralize`
 - [ ] Add golden tests that cover evaluator behavior, round-tripping, formatting, matching, and unicode-heavy cases across the implemented string subset
 - [ ] Document supported string semantics, temporary limitations, and any deliberate divergence from Wolfram behavior as the subsystem grows
 

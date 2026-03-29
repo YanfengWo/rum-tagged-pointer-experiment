@@ -41,6 +41,13 @@ enum StringSplitLimit {
     All,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum NearestResultSpec {
+    BestTies,
+    Count(usize),
+    All,
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct StringPatternMatchConfig {
     ignore_case: bool,
@@ -418,8 +425,16 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        if args.len() != 1 {
-            return Ok(self.invalid_call_with_exact_arg_count("StringToByteArray", args, 1));
+        if !(1..=2).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("StringToByteArray", args, 1, 2));
+        }
+
+        if let Some(encoding) = args.get(1).and_then(expr_as_string) {
+            if encoding != "UTF8" {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            }
+        } else if args.len() == 2 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
         }
 
         if let Some(value) = expr_as_string(&args[0]) {
@@ -492,28 +507,38 @@ impl Session {
     }
 
     pub(super) fn eval_nearest(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-        if !(2..=3).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Nearest", args, 2, 3));
+        match args {
+            [data] => {
+                return Ok(Expr::call(
+                    system_expr("Function"),
+                    vec![Expr::call(
+                        system_expr("Nearest"),
+                        vec![data.clone(), string_slot_expr()],
+                    )],
+                ));
+            }
+            [_, _] | [_, _, _] => {}
+            _ => return Ok(self.invalid_call_with_arg_range("Nearest", args, 1, 3)),
         }
 
-        let count = match args.get(2) {
+        let result_spec = match args.get(2) {
             Some(expr) => {
-                let Some(value) = expr_as_non_negative_usize(expr) else {
+                let Some(spec) = parse_nearest_result_spec(expr) else {
                     return Ok(Expr::call(head.clone(), args.to_vec()));
                 };
-                Some(value)
+                spec
             }
-            None => None,
+            None => NearestResultSpec::BestTies,
         };
 
         if let Some(target) = expr_as_string(&args[1]) {
             if let Some(values) = expr_as_string_list(&args[0]) {
-                return Ok(string_list_expr(nearest_strings(&values, target, count)));
+                return Ok(string_list_expr(nearest_strings(&values, target, result_spec)));
             }
 
             if let Some((keys, values)) = parse_string_rule_dataset(&args[0]) {
                 return Ok(list_expr(nearest_values_for_strings(
-                    &keys, &values, target, count,
+                    &keys, &values, target, result_spec,
                 )));
             }
         }
@@ -521,7 +546,7 @@ impl Session {
         if let Some(target) = expr_as_exact_rational(&args[1]) {
             if let Some((keys, values)) = parse_numeric_dataset(&args[0]) {
                 return Ok(list_expr(nearest_values_for_numbers(
-                    &keys, &values, &target, count,
+                    &keys, &values, &target, result_spec,
                 )));
             }
         }
@@ -1913,6 +1938,9 @@ fn parse_string_repetition_bounds(expr: &Expr) -> Option<(usize, Option<usize>)>
         }
         [min, max] => {
             let min = expr_as_non_negative_usize(min)?;
+            if is_system_symbol_name(max, "Infinity") {
+                return Some((min, None));
+            }
             let max = expr_as_non_negative_usize(max)?;
             (min <= max).then_some((min, Some(max)))
         }
@@ -2386,7 +2414,15 @@ fn parse_nearest_rule_pairs(expr: &Expr) -> Option<(Vec<Expr>, Vec<Expr>)> {
     }
 }
 
-fn nearest_strings(values: &[String], target: &str, count: Option<usize>) -> Vec<String> {
+fn parse_nearest_result_spec(expr: &Expr) -> Option<NearestResultSpec> {
+    if is_system_symbol_name(expr, heads::structure::ALL) {
+        return Some(NearestResultSpec::All);
+    }
+
+    expr_as_non_negative_usize(expr).map(NearestResultSpec::Count)
+}
+
+fn nearest_strings(values: &[String], target: &str, spec: NearestResultSpec) -> Vec<String> {
     let target_chars = target.chars().collect::<Vec<_>>();
     let distances = values
         .iter()
@@ -2395,7 +2431,7 @@ fn nearest_strings(values: &[String], target: &str, count: Option<usize>) -> Vec
             levenshtein_distance(&value_chars, &target_chars)
         })
         .collect::<Vec<_>>();
-    select_nearest_indices_by_usize(&distances, count)
+    select_nearest_indices_by_usize(&distances, spec)
         .into_iter()
         .map(|index| values[index].clone())
         .collect()
@@ -2405,7 +2441,7 @@ fn nearest_values_for_strings(
     keys: &[String],
     values: &[Expr],
     target: &str,
-    count: Option<usize>,
+    spec: NearestResultSpec,
 ) -> Vec<Expr> {
     let target_chars = target.chars().collect::<Vec<_>>();
     let distances = keys
@@ -2415,7 +2451,7 @@ fn nearest_values_for_strings(
             levenshtein_distance(&value_chars, &target_chars)
         })
         .collect::<Vec<_>>();
-    select_nearest_indices_by_usize(&distances, count)
+    select_nearest_indices_by_usize(&distances, spec)
         .into_iter()
         .map(|index| values[index].clone())
         .collect()
@@ -2425,28 +2461,33 @@ fn nearest_values_for_numbers(
     keys: &[Rational],
     values: &[Expr],
     target: &Rational,
-    count: Option<usize>,
+    spec: NearestResultSpec,
 ) -> Vec<Expr> {
     let distances = keys
         .iter()
         .map(|value| rational_abs_difference(value, target))
         .collect::<Vec<_>>();
-    select_nearest_indices_by_rational(&distances, count)
+    select_nearest_indices_by_rational(&distances, spec)
         .into_iter()
         .map(|index| values[index].clone())
         .collect()
 }
 
-fn select_nearest_indices_by_usize(distances: &[usize], count: Option<usize>) -> Vec<usize> {
-    match count {
-        Some(0) => Vec::new(),
-        Some(limit) => {
+fn select_nearest_indices_by_usize(distances: &[usize], spec: NearestResultSpec) -> Vec<usize> {
+    match spec {
+        NearestResultSpec::Count(0) => Vec::new(),
+        NearestResultSpec::Count(limit) => {
             let mut indices = (0..distances.len()).collect::<Vec<_>>();
             indices.sort_by_key(|index| (distances[*index], *index));
             indices.truncate(limit.min(indices.len()));
             indices
         }
-        None => {
+        NearestResultSpec::All => {
+            let mut indices = (0..distances.len()).collect::<Vec<_>>();
+            indices.sort_by_key(|index| (distances[*index], *index));
+            indices
+        }
+        NearestResultSpec::BestTies => {
             let Some(best) = distances.iter().copied().min() else {
                 return Vec::new();
             };
@@ -2459,10 +2500,13 @@ fn select_nearest_indices_by_usize(distances: &[usize], count: Option<usize>) ->
     }
 }
 
-fn select_nearest_indices_by_rational(distances: &[Rational], count: Option<usize>) -> Vec<usize> {
-    match count {
-        Some(0) => Vec::new(),
-        Some(limit) => {
+fn select_nearest_indices_by_rational(
+    distances: &[Rational],
+    spec: NearestResultSpec,
+) -> Vec<usize> {
+    match spec {
+        NearestResultSpec::Count(0) => Vec::new(),
+        NearestResultSpec::Count(limit) => {
             let mut indices = (0..distances.len()).collect::<Vec<_>>();
             indices.sort_by(|lhs, rhs| {
                 compare_rationals_local(&distances[*lhs], &distances[*rhs]).then(lhs.cmp(rhs))
@@ -2470,7 +2514,14 @@ fn select_nearest_indices_by_rational(distances: &[Rational], count: Option<usiz
             indices.truncate(limit.min(indices.len()));
             indices
         }
-        None => {
+        NearestResultSpec::All => {
+            let mut indices = (0..distances.len()).collect::<Vec<_>>();
+            indices.sort_by(|lhs, rhs| {
+                compare_rationals_local(&distances[*lhs], &distances[*rhs]).then(lhs.cmp(rhs))
+            });
+            indices
+        }
+        NearestResultSpec::BestTies => {
             let Some((best_index, _)) = distances
                 .iter()
                 .enumerate()

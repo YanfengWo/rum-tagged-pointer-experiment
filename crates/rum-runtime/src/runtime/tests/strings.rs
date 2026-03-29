@@ -790,6 +790,27 @@ fn bounded_repetition_and_except_extend_string_patterns() {
         ),
         "List[\"a\", \"c\"]"
     );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"aaaa\", Repeated[\"a\", {2, Infinity}]]"
+        ),
+        "List[\"aaaa\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringMatchQ[\"aaa\", Repeated[\"a\", {2, Infinity}]]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"aaa\", RepeatedNull[\"a\", {1, Infinity}]]"
+        ),
+        "List[\"aaa\"]"
+    );
 }
 
 #[test]
@@ -916,6 +937,10 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "ByteArray[\"YWJj\"]"
     );
     assert_eq!(
+        eval_to_string(&mut session, "StringToByteArray[\"abc\", \"UTF8\"]"),
+        "ByteArray[\"YWJj\"]"
+    );
+    assert_eq!(
         eval_to_string(&mut session, "StringToByteArray[\"🙂\"]"),
         "ByteArray[\"8J+Zgg==\"]"
     );
@@ -926,6 +951,10 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
     assert_eq!(
         eval_to_string(&mut session, "Hash[\"abc\", \"SHA256\", \"HexString\"]"),
         "\"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Hash[\"abc\", \"SHA256\", \"ByteArray\"]"),
+        "ByteArray[\"ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0=\"]"
     );
     assert_eq!(
         eval_to_string(&mut session, "Hash[\"abc\", \"SHA256\", \"DecimalString\"]"),
@@ -952,7 +981,19 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "List[2, 1]"
     );
     assert_eq!(
+        eval_to_string(&mut session, "Nearest[{1, 2, 5}, 3, All]"),
+        "List[2, 1, 5]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Nearest[{1, 2, 5}][3]"),
+        "List[2]"
+    );
+    assert_eq!(
         eval_to_string(&mut session, "Nearest[{1, 2, 5} -> {a, b, c}, 3]"),
+        "List[b]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Nearest[{1, 2, 5} -> {a, b, c}][3]"),
         "List[b]"
     );
     assert_eq!(
@@ -960,6 +1001,14 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
             &mut session,
             "Nearest[{\"cat\", \"cot\", \"dog\"}, \"cut\"]"
         ),
+        "List[\"cat\", \"cot\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Nearest[{\"cat\", \"cot\", \"dog\"}, \"cut\", All]"),
+        "List[\"cat\", \"cot\", \"dog\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Nearest[{\"cat\", \"cot\", \"dog\"}][\"cut\"]"),
         "List[\"cat\", \"cot\"]"
     );
     assert_eq!(

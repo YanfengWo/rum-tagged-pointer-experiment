@@ -353,7 +353,8 @@ once in its primary implementation group. Other groups may mention it as
   `Repeated`, `RepeatedNull`, bounded repetition, `Shortest`, `Longest`,
   `Except`, and current zero-length/match-edge handling
 - `planned`: deeper byte-array/crypto compatibility, richer nearest-neighbor
-  semantics, and fuller linguistic-data-backed pluralization parity
+  distance/radius semantics, fuller compression/encryption compatibility,
+  and fuller linguistic-data-backed pluralization parity
 
 ## CL-08: Package, Namespace, Options, and Protection Tooling
 

@@ -73,11 +73,13 @@ The repository is a Cargo workspace with these top-level crates:
 - `rum-repl`: interactive shell layer
 - `rum-cli`: command-line entry point
 - `rum-jupyter`: optional Jupyter-facing adapter and transport work
+- `rum-difftest`: optional differential/conformance runner and fixture work
 
 ## Documentation
 
 - [Architecture](./ARCHITECTURE.md)
 - [TODO / Roadmap](./TODO.md)
+- [Core-Language Support Matrix](./docs/core-language-support-matrix.md)
 - [Lowering Canonical Forms](./docs/lowering-canonical-forms.md)
 - [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md)
 - [Formatter Style Notes](./docs/formatter-style.md)
@@ -133,11 +135,12 @@ cargo run -p rum-cli -- --format "f[x(* note *)+y]"
 
 ## Current Priorities
 
-Near-term work is concentrated in three areas:
+Near-term work is concentrated in four areas:
 
 - further tightening evaluator semantics where behavior is still somewhat ad hoc
 - continuing to expand the rule / matcher language
-- preparing the later full string-language workstream
+- pushing the active `CL-07` string-language workstream through deep-parity cleanup
+- splitting oversized runtime and adapter modules back into healthier boundaries
 
 `rum-jupyter` remains useful and actively maintained, but it is not the primary
 driver of the core language roadmap.
