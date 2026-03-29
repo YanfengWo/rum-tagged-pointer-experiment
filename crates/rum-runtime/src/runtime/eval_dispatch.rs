@@ -164,6 +164,15 @@ impl Session {
             BuiltinHandler::FileTemplateApply => self.eval_file_template_apply(head, args),
             BuiltinHandler::CharacterCounts => self.eval_character_counts(head, args),
             BuiltinHandler::RemoveDiacritics => self.eval_remove_diacritics(head, args),
+            BuiltinHandler::Alphabet => self.eval_alphabet(head, args),
+            BuiltinHandler::AlphabeticSort => self.eval_alphabetic_sort(head, args),
+            BuiltinHandler::EditDistance => self.eval_edit_distance(head, args),
+            BuiltinHandler::HammingDistance => self.eval_hamming_distance(head, args),
+            BuiltinHandler::LongestCommonSubsequence => {
+                self.eval_longest_common_subsequence(head, args)
+            }
+            BuiltinHandler::SequenceAlignment => self.eval_sequence_alignment(head, args),
+            BuiltinHandler::Diff => self.eval_diff(head, args),
             BuiltinHandler::Characters => self.eval_characters(head, args),
             BuiltinHandler::CharacterRange => self.eval_character_range(head, args),
             BuiltinHandler::ToString => self.eval_to_string(head, args),

@@ -181,6 +181,41 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::RemoveDiacritics,
     ),
     BuiltinSpec::ordinary(
+        "Alphabet",
+        "Returns the current English lowercase alphabet subset.",
+        BuiltinHandler::Alphabet,
+    ),
+    BuiltinSpec::ordinary(
+        "AlphabeticSort",
+        "Sorts strings using the current English alphabet subset with simple diacritic folding.",
+        BuiltinHandler::AlphabeticSort,
+    ),
+    BuiltinSpec::ordinary(
+        "EditDistance",
+        "Computes unit-cost Levenshtein distance for strings or lists in the current first-pass subset.",
+        BuiltinHandler::EditDistance,
+    ),
+    BuiltinSpec::ordinary(
+        "HammingDistance",
+        "Computes mismatch counts for equal-length strings or lists in the current first-pass subset.",
+        BuiltinHandler::HammingDistance,
+    ),
+    BuiltinSpec::ordinary(
+        "LongestCommonSubsequence",
+        "Finds the longest common contiguous substring or sublist in the current first-pass subset.",
+        BuiltinHandler::LongestCommonSubsequence,
+    ),
+    BuiltinSpec::ordinary(
+        "SequenceAlignment",
+        "Builds a simple global alignment summary for strings or lists in the current first-pass subset.",
+        BuiltinHandler::SequenceAlignment,
+    ),
+    BuiltinSpec::ordinary(
+        "Diff",
+        "Builds a simple DiffObject for strings or lists in the current first-pass subset.",
+        BuiltinHandler::Diff,
+    ),
+    BuiltinSpec::ordinary(
         "Characters",
         "Splits a string into a list of single-code-point strings.",
         BuiltinHandler::Characters,
@@ -253,6 +288,10 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::new(
         "TemplateObject",
         "Represents the current simple template object wrapper returned by StringTemplate.",
+    ),
+    BuiltinSpec::new(
+        "DiffObject",
+        "Represents the current diff result object returned by Diff.",
     ),
     BuiltinSpec::new(
         "InputForm",

@@ -342,16 +342,15 @@ once in its primary implementation group. Other groups may mention it as
   `StringApply`, `StringDelete`, `StringForm`, `StringPadLeft`,
   `StringRiffle`, `StringTemplate`, `TemplateApply`, `TextWords`,
   `ToCharacterCode`, `ToExpression`, `SyntaxQ`, `TextString`,
-  `FileTemplateApply`, `CharacterCounts`, `RemoveDiacritics`
+  `FileTemplateApply`, `CharacterCounts`, `RemoveDiacritics`,
+  `Alphabet`, `AlphabeticSort`, `EditDistance`, `HammingDistance`,
+  `LongestCommonSubsequence`, `SequenceAlignment`, `Diff`
 - `partial richer string-pattern parity`: `StartOfString`, `EndOfString`,
   `Repeated`, `RepeatedNull`, bounded repetition, `Shortest`, `Longest`,
   `Except`, and current zero-length/match-edge handling
 - `planned`: `StringToByteArray`,
-  `Alphabet`,
-  `AlphabeticSort`, `Compress`, `Diff`,
-  `EditDistance`, `Encrypt`, `Hash`, `HammingDistance`,
-  `LongestCommonSubsequence`, `Nearest`, `Pluralize`,
-  `SequenceAlignment`
+  `Compress`,
+  `Encrypt`, `Hash`, `Nearest`, `Pluralize`
 
 ## CL-08: Package, Namespace, Options, and Protection Tooling
 
