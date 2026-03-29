@@ -291,9 +291,11 @@ once in its primary implementation group. Other groups may mention it as
   subset includes `WithCleanup`, `Abort`, `CheckAbort`, `PropagateAborts`,
   `AbortProtect`, and callable `Failsafe`; the current status-object and
   basic I/O subset also includes `MissingQ`, `Success`,
-  `TerminatedEvaluation`, `Input`, `Print`, `Pause`, and `BlockRandom`, but
-  richer abort-protection, assertion, print transport, and failure/status
-  parity are still pending
+  `TerminatedEvaluation`, `Input`, `Print`, `Pause`, and `BlockRandom`.
+  Recent follow-up work tightened protected-abort catching, session-config
+  assertion enablement, `Success[...]` property extraction, and request-level
+  print transport, but richer held/cleanup corners and deeper status parity
+  are still pending
 - `planned`: broader failure values, abort-protection parity, external
   interaction builtins, and deeper cleanup/exception compatibility
 
@@ -308,8 +310,9 @@ once in its primary implementation group. Other groups may mention it as
   `Abort`, `CheckAbort`, `PropagateAborts`, `AbortProtect`, `Assert`,
   `BlockRandom`, `Input`, `Print`, `Pause` in the current first-pass subset
 - `planned`: deeper `WithCleanup` / `Failsafe` / `CheckAbort` /
-  `AbortProtect` parity, richer `Assert` controls, more complete
-  `Success` / `TerminatedEvaluation` behavior, and fuller host-I/O semantics
+  `AbortProtect` parity, richer `Assert` controls beyond the current session
+  flag, more complete `TerminatedEvaluation` behavior, and fuller host-I/O
+  semantics
 - `cross-tracked elsewhere`: `Block`, `Function`, `Module`, `Rule`,
   `RuleDelayed`, `With`
 

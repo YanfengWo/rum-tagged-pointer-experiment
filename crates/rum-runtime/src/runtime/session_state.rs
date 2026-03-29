@@ -210,6 +210,8 @@ pub enum EvalError {
     Thrown { value: Expr, tag: Expr },
     #[error("uncaught Abort[]")]
     Abort,
+    #[error("uncaught protected Abort[]")]
+    ProtectedAbort,
     #[error("uncaught Break[]")]
     Break,
     #[error("uncaught Continue[]")]
@@ -241,6 +243,7 @@ impl Default for Session {
             prints: Vec::new(),
             last_message_list: Vec::new(),
             handled_non_loader_eval_errors: Vec::new(),
+            asserts_enabled: false,
             abort_protect_depth: 0,
             abort_protect_pending: 0,
             queued_input_responses: VecDeque::new(),

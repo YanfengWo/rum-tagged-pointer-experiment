@@ -14,6 +14,24 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
         "rescued"
     );
     assert_eq!(session.eval_text("x").unwrap().value.to_string(), "2");
+    assert_eq!(
+        session
+            .eval_text("AbortProtect[CheckAbort[Abort[], rescued]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "rescued"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "CheckAbort[AbortProtect[CheckAbort[Abort[], rescued, PropagateAborts -> True]], outer]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "outer"
+    );
 
     assert_eq!(
         session
@@ -24,6 +42,21 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
         "Null"
     );
     assert!(session.pending_input_request().is_none());
+
+    session.enable_asserts(true);
+    let asserted = session.eval_text("Assert[Equal[1, 2], tag]").unwrap();
+    assert_eq!(asserted.value.to_string(), "Null");
+    assert_eq!(asserted.messages.len(), 1);
+    assert_eq!(asserted.messages[0].symbol, "Assert");
+    assert_eq!(asserted.messages[0].tag, "fail");
+    assert!(asserted.messages[0].text.contains("tag"));
+    match session
+        .eval_text("Assert[InputString[\"now: \"]]")
+        .expect_err("enabled Assert should evaluate its test and suspend when input is needed")
+    {
+        EvalError::InputRequired { request } => assert_eq!(request.prompt, "now: "),
+        other => panic!("expected input-required error, got {other:?}"),
+    }
 
     assert_eq!(
         session
@@ -87,6 +120,46 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
             .value
             .to_string(),
         "Success[\"ok\", Association[Rule[\"Code\", 200]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Success[\"ok\", {\"Code\" -> 200, \"Body\" -> 7}][\"Code\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "200"
+    );
+    assert_eq!(
+        session
+            .eval_text("Success[\"ok\", {\"Code\" -> 200, \"Body\" -> 7}][{\"Body\", \"Missing\"}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[7, Missing[\"KeyAbsent\", \"Missing\"]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Success[\"ok\", {\"Code\" -> 200, \"Body\" -> 7}][\"Properties\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"Code\", \"Body\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("FailureQ[$Aborted]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("FailureQ[$Failed]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
     );
     assert_eq!(
         session

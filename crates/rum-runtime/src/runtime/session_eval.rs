@@ -8,7 +8,7 @@ impl Session {
         match outcome {
             Ok(value) => Ok(value),
             Err(EvalError::Return { value }) => Ok(value),
-            Err(EvalError::Abort) => Ok(system_expr("$Aborted")),
+            Err(EvalError::Abort | EvalError::ProtectedAbort) => Ok(system_expr("$Aborted")),
             Err(error) => Err(error),
         }
     }

@@ -18,6 +18,7 @@ impl Session {
             context_path: self.context_path.clone(),
             package_search_paths: self.package_search_paths.clone(),
             tracing_enabled: self.tracing_enabled,
+            asserts_enabled: self.asserts_enabled,
         }
     }
 
@@ -28,6 +29,7 @@ impl Session {
         self.context_path = config.context_path;
         self.package_search_paths = config.package_search_paths;
         self.tracing_enabled = config.tracing_enabled;
+        self.asserts_enabled = config.asserts_enabled;
     }
 
     pub fn set_recursion_limit(&mut self, limit: usize) {
@@ -52,6 +54,14 @@ impl Session {
 
     pub fn enable_tracing(&mut self, enabled: bool) {
         self.tracing_enabled = enabled;
+    }
+
+    pub fn enable_asserts(&mut self, enabled: bool) {
+        self.asserts_enabled = enabled;
+    }
+
+    pub fn asserts_enabled(&self) -> bool {
+        self.asserts_enabled
     }
 
     pub fn trace(&self) -> &[TraceEvent] {

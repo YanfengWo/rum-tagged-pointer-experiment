@@ -246,18 +246,29 @@ impl Session {
             Ok(mode) => mode,
             Err(detail) => return Ok(self.invalid_call_with_arg_form("CheckAbort", args, detail)),
         };
+        let pending_checkpoint = self.abort_protect_pending;
 
         let primary_result = self.evaluate(args[0].clone());
         let outcome = self.suspend_with_result_frame(primary_result, {
             let args = args.to_vec();
             move |session, outcome| {
-                session.resume_check_abort_after_primary(args, propagate, outcome)
+                session.resume_check_abort_after_primary(
+                    args,
+                    propagate,
+                    pending_checkpoint,
+                    outcome,
+                )
             }
         });
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => self.resume_check_abort_after_primary(args.to_vec(), propagate, outcome),
+            outcome => self.resume_check_abort_after_primary(
+                args.to_vec(),
+                propagate,
+                pending_checkpoint,
+                outcome,
+            ),
         }
     }
 
@@ -318,8 +329,47 @@ impl Session {
 
     pub(super) fn eval_assert(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
-            [_test] => Ok(system_expr("Null")),
-            [_test, _tag] => Ok(system_expr("Null")),
+            [test] => {
+                if !self.asserts_enabled {
+                    return Ok(system_expr("Null"));
+                }
+
+                let test_result = self.evaluate(test.clone());
+                let outcome = self.suspend_with_result_frame(test_result, {
+                    let test = test.clone();
+                    move |session, outcome| session.resume_assert_after_test(test, None, outcome)
+                });
+
+                match outcome {
+                    Err(EvalError::InputRequired { request }) => {
+                        Err(EvalError::InputRequired { request })
+                    }
+                    outcome => self.resume_assert_after_test(test.clone(), None, outcome),
+                }
+            }
+            [test, tag] => {
+                if !self.asserts_enabled {
+                    return Ok(system_expr("Null"));
+                }
+
+                let test_result = self.evaluate(test.clone());
+                let outcome = self.suspend_with_result_frame(test_result, {
+                    let test = test.clone();
+                    let tag = tag.clone();
+                    move |session, outcome| {
+                        session.resume_assert_after_test(test, Some(tag), outcome)
+                    }
+                });
+
+                match outcome {
+                    Err(EvalError::InputRequired { request }) => {
+                        Err(EvalError::InputRequired { request })
+                    }
+                    outcome => {
+                        self.resume_assert_after_test(test.clone(), Some(tag.clone()), outcome)
+                    }
+                }
+            }
             _ => Ok(self.invalid_call_with_arg_range("Assert", args, 1, 2)),
         }
     }
@@ -472,7 +522,7 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("FailureQ", args, 1));
         };
 
-        Ok(system_expr(if is_failure_expr(expr) {
+        Ok(system_expr(if is_failure_q_expr(expr) {
             "True"
         } else {
             "False"
@@ -1216,15 +1266,20 @@ impl Session {
         &mut self,
         args: Vec<Expr>,
         propagate: PropagateAbortsMode,
+        pending_checkpoint: usize,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
         match outcome {
-            Ok(value) => Ok(value),
-            Err(EvalError::Abort) => {
+            Ok(_value) if self.abort_protect_pending > pending_checkpoint => {
                 let fallback_result = self.evaluate(args[1].clone());
                 let outcome = self.suspend_with_result_frame(fallback_result, {
                     move |session, outcome| {
-                        session.resume_check_abort_after_fallback(propagate, outcome)
+                        session.resume_check_abort_after_fallback(
+                            propagate,
+                            true,
+                            pending_checkpoint,
+                            outcome,
+                        )
                     }
                 });
 
@@ -1232,7 +1287,39 @@ impl Session {
                     Err(EvalError::InputRequired { request }) => {
                         Err(EvalError::InputRequired { request })
                     }
-                    outcome => self.resume_check_abort_after_fallback(propagate, outcome),
+                    outcome => self.resume_check_abort_after_fallback(
+                        propagate,
+                        true,
+                        pending_checkpoint,
+                        outcome,
+                    ),
+                }
+            }
+            Ok(value) => Ok(value),
+            Err(error @ (EvalError::Abort | EvalError::ProtectedAbort)) => {
+                let protected = matches!(error, EvalError::ProtectedAbort);
+                let fallback_result = self.evaluate(args[1].clone());
+                let outcome = self.suspend_with_result_frame(fallback_result, {
+                    move |session, outcome| {
+                        session.resume_check_abort_after_fallback(
+                            propagate,
+                            protected,
+                            pending_checkpoint,
+                            outcome,
+                        )
+                    }
+                });
+
+                match outcome {
+                    Err(EvalError::InputRequired { request }) => {
+                        Err(EvalError::InputRequired { request })
+                    }
+                    outcome => self.resume_check_abort_after_fallback(
+                        propagate,
+                        protected,
+                        pending_checkpoint,
+                        outcome,
+                    ),
                 }
             }
             Err(error) => Err(error),
@@ -1242,17 +1329,33 @@ impl Session {
     fn resume_check_abort_after_fallback(
         &mut self,
         propagate: PropagateAbortsMode,
+        protected: bool,
+        pending_checkpoint: usize,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
         match outcome {
             Ok(value) => {
+                if protected && propagate != PropagateAbortsMode::True {
+                    self.abort_protect_pending = pending_checkpoint;
+                }
+
                 if propagate == PropagateAbortsMode::True {
-                    Err(EvalError::Abort)
+                    Err(if protected {
+                        EvalError::ProtectedAbort
+                    } else {
+                        EvalError::Abort
+                    })
                 } else {
                     Ok(value)
                 }
             }
-            Err(error) => Err(error),
+            Err(error) => {
+                if protected {
+                    self.abort_protect_pending = pending_checkpoint;
+                }
+
+                Err(error)
+            }
         }
     }
 
@@ -1266,7 +1369,7 @@ impl Session {
         }
 
         let delayed_abort = self.abort_protect_pending > pending_checkpoint
-            || matches!(outcome, Err(EvalError::Abort));
+            || matches!(outcome, Err(EvalError::Abort | EvalError::ProtectedAbort));
         self.abort_protect_pending = pending_checkpoint;
 
         match outcome {
@@ -1277,7 +1380,28 @@ impl Session {
                     Ok(value)
                 }
             }
+            Err(EvalError::ProtectedAbort) => Err(EvalError::Abort),
             Err(EvalError::Abort) => Err(EvalError::Abort),
+            Err(error) => Err(error),
+        }
+    }
+
+    fn resume_assert_after_test(
+        &mut self,
+        test: Expr,
+        tag: Option<Expr>,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) if is_system_symbol_name(&value, "True") => Ok(system_expr("Null")),
+            Ok(value) => {
+                self.push_message(
+                    "Assert",
+                    "fail",
+                    render_assert_failure_message(&test, tag.as_ref(), &value),
+                );
+                Ok(system_expr("Null"))
+            }
             Err(error) => Err(error),
         }
     }
@@ -1817,14 +1941,22 @@ fn build_failsafe_failure(function: Expr, test: Expr, args: Vec<Expr>) -> Expr {
     )
 }
 
-fn is_failure_expr(expr: &Expr) -> bool {
+pub(super) fn is_failure_expr(expr: &Expr) -> bool {
     matches!(expr, Expr::Call { head, args } if is_system_symbol_name(head, "Failure") && args.len() == 2)
 }
 
-fn is_confirmation_failure_like(expr: &Expr) -> bool {
+pub(super) fn is_success_expr(expr: &Expr) -> bool {
+    matches!(expr, Expr::Call { head, args } if is_system_symbol_name(head, "Success") && args.len() == 2)
+}
+
+fn is_failure_q_expr(expr: &Expr) -> bool {
     is_failure_expr(expr)
         || is_system_symbol_name(expr, "$Failed")
         || is_system_symbol_name(expr, "$Aborted")
+}
+
+fn is_confirmation_failure_like(expr: &Expr) -> bool {
+    is_failure_q_expr(expr)
         || is_system_symbol_name(expr, "$Canceled")
         || matches!(expr, Expr::Call { head, args } if is_system_symbol_name(head, "Missing") && !args.is_empty())
 }
@@ -1855,26 +1987,80 @@ fn normalize_status_details_expr(expr: &Expr) -> Option<Expr> {
 }
 
 fn failure_property_value(failure: &Expr, property: &str) -> Expr {
-    let Expr::Call { head, args } = failure else {
-        return Expr::call(
-            system_expr("Missing"),
-            vec![Expr::string("KeyAbsent"), Expr::string(property)],
-        );
-    };
-
-    if !is_system_symbol_name(head, "Failure") || args.len() != 2 {
-        return Expr::call(
-            system_expr("Missing"),
-            vec![Expr::string("KeyAbsent"), Expr::string(property)],
-        );
-    }
-
-    association_value_by_key(&args[1], &Expr::string(property)).unwrap_or_else(|| {
+    status_object_property_value(failure, property).unwrap_or_else(|| {
         Expr::call(
             system_expr("Missing"),
             vec![Expr::string("KeyAbsent"), Expr::string(property)],
         )
     })
+}
+
+pub(super) fn apply_status_object_to_args(head: &Expr, args: &[Expr]) -> Option<Expr> {
+    if !is_failure_expr(head) && !is_success_expr(head) {
+        return None;
+    }
+
+    match args {
+        [Expr::Atom(Atom::String(property))] => Some(failure_property_value(head, property)),
+        [Expr::Call {
+            head: list_head,
+            args: properties,
+        }] if is_system_symbol_name(list_head, heads::structure::LIST) => {
+            let values = properties
+                .iter()
+                .map(|property| match property {
+                    Expr::Atom(Atom::String(property)) => failure_property_value(head, property),
+                    other => Expr::call(head.clone(), vec![other.clone()]),
+                })
+                .collect();
+            Some(Expr::call(system_expr("List"), values))
+        }
+        _ => None,
+    }
+}
+
+fn status_object_property_value(status: &Expr, property: &str) -> Option<Expr> {
+    let (_, details) = status_object_parts(status)?;
+
+    if property == "Properties" {
+        let properties = association_entries_from_expr(details)?
+            .into_iter()
+            .map(|(key, _)| key)
+            .collect::<Vec<_>>();
+        return Some(Expr::call(system_expr("List"), properties));
+    }
+
+    Some(
+        association_value_by_key(details, &Expr::string(property)).unwrap_or_else(|| {
+            Expr::call(
+                system_expr("Missing"),
+                vec![Expr::string("KeyAbsent"), Expr::string(property)],
+            )
+        }),
+    )
+}
+
+fn status_object_parts(status: &Expr) -> Option<(&Expr, &Expr)> {
+    let Expr::Call { head, args } = status else {
+        return None;
+    };
+
+    if !(is_system_symbol_name(head, "Failure") || is_system_symbol_name(head, "Success")) {
+        return None;
+    }
+
+    let [tag, details] = args.as_slice() else {
+        return None;
+    };
+
+    Some((tag, details))
+}
+
+fn render_assert_failure_message(test: &Expr, tag: Option<&Expr>, value: &Expr) -> String {
+    match tag {
+        Some(tag) => format!("assertion `{tag}` failed: {test} evaluated to {value}"),
+        None => format!("assertion failed: {test} evaluated to {value}"),
+    }
 }
 
 fn rewrite_untagged_confirms(expr: Expr, tag: &Expr) -> Expr {

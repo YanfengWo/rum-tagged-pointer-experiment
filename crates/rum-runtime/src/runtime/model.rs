@@ -24,6 +24,7 @@ pub struct SessionConfig {
     pub context_path: Vec<String>,
     pub package_search_paths: Vec<PathBuf>,
     pub tracing_enabled: bool,
+    pub asserts_enabled: bool,
 }
 
 impl Default for SessionConfig {
@@ -34,6 +35,7 @@ impl Default for SessionConfig {
             context_path: vec![SYSTEM_CONTEXT.to_string(), GLOBAL_CONTEXT.to_string()],
             package_search_paths: vec![PathBuf::from(".")],
             tracing_enabled: false,
+            asserts_enabled: false,
         }
     }
 }
@@ -69,6 +71,11 @@ impl SessionConfig {
 
     pub fn with_tracing(mut self, enabled: bool) -> Self {
         self.tracing_enabled = enabled;
+        self
+    }
+
+    pub fn with_asserts_enabled(mut self, enabled: bool) -> Self {
+        self.asserts_enabled = enabled;
         self
     }
 
@@ -257,6 +264,7 @@ pub struct Session {
     pub(super) prints: Vec<String>,
     pub(super) last_message_list: Vec<RuntimeMessage>,
     pub(super) handled_non_loader_eval_errors: Vec<RuntimeMessage>,
+    pub(super) asserts_enabled: bool,
     pub(super) abort_protect_depth: usize,
     pub(super) abort_protect_pending: usize,
     pub(super) queued_input_responses: VecDeque<String>,

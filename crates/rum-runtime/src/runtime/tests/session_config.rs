@@ -21,7 +21,8 @@ fn session_with_config_normalizes_contexts_paths_and_limits() {
         .with_current_context("Rules")
         .with_context_path(["System", "Rules", "Global", "Rules"])
         .with_package_search_paths(["./pkg-a", "./pkg-a", "./pkg-b"])
-        .with_tracing(true);
+        .with_tracing(true)
+        .with_asserts_enabled(true);
     let session = Session::with_config(config);
 
     assert_eq!(session.current_context(), "Rules`");
@@ -46,6 +47,7 @@ fn session_with_config_normalizes_contexts_paths_and_limits() {
         }
     );
     assert!(session.configuration().tracing_enabled);
+    assert!(session.configuration().asserts_enabled);
 }
 
 #[test]
@@ -59,6 +61,7 @@ fn apply_config_updates_host_settings_without_clearing_existing_definitions() {
             .with_context_path(["System", "Global"])
             .with_package_search_paths(["./packages"])
             .with_tracing(true)
+            .with_asserts_enabled(true)
             .with_resource_limits(ResourceLimits {
                 recursion_limit: 9,
                 replace_repeated_limit: 10,
@@ -85,4 +88,5 @@ fn apply_config_updates_host_settings_without_clearing_existing_definitions() {
         }
     );
     assert!(session.configuration().tracing_enabled);
+    assert!(session.configuration().asserts_enabled);
 }

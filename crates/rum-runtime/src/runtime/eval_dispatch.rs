@@ -34,6 +34,8 @@ impl Session {
 
         if parse_function(head).is_some()
             || parse_composition(head).is_some()
+            || is_failure_expr(head)
+            || is_success_expr(head)
             || is_callable_operator_wrapper(head)
             || is_callable_failsafe_wrapper(head)
         {

@@ -1170,3 +1170,30 @@ fn resume_eval_request_with_input_can_finish_setattributes_with_suspending_attri
         "f[Identity[1], 2]"
     );
 }
+
+#[test]
+fn eval_request_reports_prints_on_failure_and_across_input_resume() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("Print[\"before\"]; Throw[1]")
+        .expect_err("uncaught Throw should fail the request");
+    assert_eq!(failure.prints, vec!["before"]);
+
+    let suspended = session
+        .eval_request("Print[\"pre\"]; Input[\"expr: \"]; Print[\"post\"]")
+        .expect_err("Input should suspend the request");
+    match &suspended.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "expr: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    assert_eq!(suspended.prints, vec!["pre"]);
+
+    let resumed = session
+        .resume_eval_request_with_input("2 + 3")
+        .expect("resume should keep both pre- and post-input prints");
+    assert_eq!(resumed.value.to_string(), "Null");
+    assert_eq!(resumed.prints, vec!["pre", "post"]);
+}
