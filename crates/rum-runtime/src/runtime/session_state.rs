@@ -93,6 +93,7 @@ pub(super) enum MatcherNode {
     Blank {
         head_constraint: Option<Expr>,
     },
+    KeyValuePattern(Vec<(MatcherNode, MatcherNode)>),
     Named {
         name: Symbol,
         inner: Box<MatcherNode>,

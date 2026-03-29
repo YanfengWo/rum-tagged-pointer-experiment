@@ -5,21 +5,47 @@ fn head_length_and_depth_cover_atoms_calls_and_compound_heads() {
     let mut session = Session::new();
 
     assert_eq!(
+        session
+            .eval_text("FullForm[1 + 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"Plus[1, 2]\""
+    );
+    assert_eq!(
         session.eval_text("Head[1 + 2]").unwrap().value.to_string(),
         "Integer"
     );
     assert_eq!(
-        session.eval_text("Head[f[a], Hold]").unwrap().value.to_string(),
+        session
+            .eval_text("Head[f[a], Hold]")
+            .unwrap()
+            .value
+            .to_string(),
         "Hold[f]"
     );
-    assert_eq!(session.eval_text("Length[5]").unwrap().value.to_string(), "0");
     assert_eq!(
-        session.eval_text("Length[f[a, b, c]]").unwrap().value.to_string(),
+        session.eval_text("Length[5]").unwrap().value.to_string(),
+        "0"
+    );
+    assert_eq!(
+        session
+            .eval_text("Length[f[a, b, c]]")
+            .unwrap()
+            .value
+            .to_string(),
         "3"
     );
-    assert_eq!(session.eval_text("Depth[5]").unwrap().value.to_string(), "1");
     assert_eq!(
-        session.eval_text("Depth[f[a, g[b]]]").unwrap().value.to_string(),
+        session.eval_text("Depth[5]").unwrap().value.to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Depth[f[a, g[b]]]")
+            .unwrap()
+            .value
+            .to_string(),
         "3"
     );
     assert_eq!(
@@ -56,7 +82,11 @@ fn first_last_rest_and_most_support_defaults_and_empty_calls() {
     );
     assert_eq!(session.eval_text("n").unwrap().value.to_string(), "3");
     assert_eq!(
-        session.eval_text("Last[f[a, b]]").unwrap().value.to_string(),
+        session
+            .eval_text("Last[f[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
         "b"
     );
     assert_eq!(
@@ -64,15 +94,29 @@ fn first_last_rest_and_most_support_defaults_and_empty_calls() {
         "x"
     );
     assert_eq!(
-        session.eval_text("Rest[f[a, b, c]]").unwrap().value.to_string(),
+        session
+            .eval_text("Rest[f[a, b, c]]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[b, c]"
     );
     assert_eq!(
-        session.eval_text("Most[f[a, b, c]]").unwrap().value.to_string(),
+        session
+            .eval_text("Most[f[a, b, c]]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, b]"
     );
-    assert_eq!(session.eval_text("Rest[f[]]").unwrap().value.to_string(), "f[]");
-    assert_eq!(session.eval_text("Most[f[]]").unwrap().value.to_string(), "f[]");
+    assert_eq!(
+        session.eval_text("Rest[f[]]").unwrap().value.to_string(),
+        "f[]"
+    );
+    assert_eq!(
+        session.eval_text("Most[f[]]").unwrap().value.to_string(),
+        "f[]"
+    );
 }
 
 #[test]
@@ -113,15 +157,27 @@ fn take_drop_append_and_prepend_cover_current_structural_subset() {
     let mut session = Session::new();
 
     assert_eq!(
-        session.eval_text("Take[f[a, b, c, d], 2]").unwrap().value.to_string(),
+        session
+            .eval_text("Take[f[a, b, c, d], 2]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, b]"
     );
     assert_eq!(
-        session.eval_text("Take[f[a, b, c, d], -2]").unwrap().value.to_string(),
+        session
+            .eval_text("Take[f[a, b, c, d], -2]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[c, d]"
     );
     assert_eq!(
-        session.eval_text("Take[f[a, b, c, d], {2}]").unwrap().value.to_string(),
+        session
+            .eval_text("Take[f[a, b, c, d], {2}]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[b]"
     );
     assert_eq!(
@@ -141,16 +197,28 @@ fn take_drop_append_and_prepend_cover_current_structural_subset() {
         "f[g[b], h[d]]"
     );
     assert_eq!(
-        session.eval_text("Take[f[a, b], None]").unwrap().value.to_string(),
+        session
+            .eval_text("Take[f[a, b], None]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[]"
     );
 
     assert_eq!(
-        session.eval_text("Drop[f[a, b, c, d], 2]").unwrap().value.to_string(),
+        session
+            .eval_text("Drop[f[a, b, c, d], 2]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[c, d]"
     );
     assert_eq!(
-        session.eval_text("Drop[f[a, b, c, d], -2]").unwrap().value.to_string(),
+        session
+            .eval_text("Drop[f[a, b, c, d], -2]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, b]"
     );
     assert_eq!(
@@ -177,37 +245,143 @@ fn take_drop_append_and_prepend_cover_current_structural_subset() {
             .to_string(),
         "List[f[a, b], f[c, d]]"
     );
+    assert_eq!(
+        session
+            .eval_text("Insert[f[a, b, c], x, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, x, b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Insert[f[a, b, c], x, -1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b, c, x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Delete[f[a, b, c, d], {2, -1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("TakeList[f[a, b, c, d], {1, 2, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[a], f[b, c], f[d]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[Association[a -> 1, b -> Association[c -> 3]], Key[b], Key[c]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[Association[a -> 1, b -> 2], {Key[b], Key[a]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[Association[a -> 1, b -> Association[c -> 3]], {Key[b], Key[c]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[Association[a -> 1, b -> Association[c -> 3]], {{Key[b], Key[c]}, {Key[a]}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[3, 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "ReplacePart[Association[a -> 1, b -> Association[c -> 3]], {Key[b], Key[c]} -> 9]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1], Rule[b, Association[Rule[c, 9]]]]"
+    );
 
     assert_eq!(
-        session.eval_text("Append[f[a, b], x]").unwrap().value.to_string(),
+        session
+            .eval_text("Append[f[a, b], x]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, b, x]"
     );
     assert_eq!(
-        session.eval_text("Prepend[f[a, b], x]").unwrap().value.to_string(),
+        session
+            .eval_text("Prepend[f[a, b], x]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[x, a, b]"
     );
     assert_eq!(
-        session.eval_text("Append[x][f[a, b]]").unwrap().value.to_string(),
+        session
+            .eval_text("Append[x][f[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, b, x]"
     );
     assert_eq!(
-        session.eval_text("Prepend[x][f[a, b]]").unwrap().value.to_string(),
+        session
+            .eval_text("Prepend[x][f[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[x, a, b]"
     );
     assert_eq!(
-        session.eval_text("Symbol[\"x\"]").unwrap().value.to_string(),
+        session
+            .eval_text("Symbol[\"x\"]")
+            .unwrap()
+            .value
+            .to_string(),
         "x"
     );
     assert_eq!(
-        session.eval_text("Symbol[\"List\"]").unwrap().value.to_string(),
+        session
+            .eval_text("Symbol[\"List\"]")
+            .unwrap()
+            .value
+            .to_string(),
         "List"
     );
     assert_eq!(
-        session.eval_text("Construct[f, a, b]").unwrap().value.to_string(),
+        session
+            .eval_text("Construct[f, a, b]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, b]"
     );
     assert_eq!(
-        session.eval_text("Construct[Plus, 1, 2]").unwrap().value.to_string(),
+        session
+            .eval_text("Construct[Plus, 1, 2]")
+            .unwrap()
+            .value
+            .to_string(),
         "3"
     );
 }
@@ -243,6 +417,15 @@ fn take_drop_append_and_prepend_report_current_invalid_boundaries() {
         .messages
         .iter()
         .any(|message| message.symbol == "General" && message.tag == "normal"));
+
+    let outcome = session.eval_text("Insert[f[a], x, 0]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Insert[f[a], x, 0]");
+
+    let outcome = session.eval_text("Delete[f[a], 2]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Delete[f[a], 2]");
+
+    let outcome = session.eval_text("TakeList[f[a], {2}]").unwrap();
+    assert_eq!(outcome.value.to_string(), "TakeList[f[a], List[2]]");
 }
 
 #[test]
@@ -392,7 +575,11 @@ fn extract_consumes_exact_paths_and_position_output() {
         "f[f, a, b]"
     );
     assert_eq!(
-        session.eval_text("Extract[f[a, b], {}]").unwrap().value.to_string(),
+        session
+            .eval_text("Extract[f[a, b], {}]")
+            .unwrap()
+            .value
+            .to_string(),
         "List[]"
     );
     assert_eq!(

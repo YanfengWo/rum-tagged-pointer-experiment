@@ -21,6 +21,7 @@ where
         SyntaxExprKind::String(value) => Ok(Expr::string(value.clone())),
         SyntaxExprKind::Symbol(value) => Ok(lower_symbol(value, resolve_symbol)),
         SyntaxExprKind::List(items) => lower_list_sugar(items, resolve_symbol),
+        SyntaxExprKind::Association(items) => lower_association_sugar(items, resolve_symbol),
         SyntaxExprKind::Slot(spec) => lower_slot_sugar(spec),
         SyntaxExprKind::Blank { kind, head } => {
             lower_blank_sugar(*kind, head.as_deref(), resolve_symbol)
@@ -81,6 +82,19 @@ where
 {
     Ok(canonical_call(
         heads::structure::LIST,
+        lower_syntax_args(items, resolve_symbol)?,
+    ))
+}
+
+fn lower_association_sugar<F>(
+    items: &[SyntaxExpr],
+    resolve_symbol: &mut F,
+) -> Result<Expr, EvalError>
+where
+    F: FnMut(&str) -> Option<Symbol>,
+{
+    Ok(canonical_call(
+        "Association",
         lower_syntax_args(items, resolve_symbol)?,
     ))
 }
@@ -212,6 +226,17 @@ where
         )),
         BinaryOp::Condition => Ok(canonical_call(
             heads::patterns::CONDITION,
+            vec![lowered_lhs, lowered_rhs],
+        )),
+        BinaryOp::Apply => Ok(Expr::call(lowered_lhs, vec![lowered_rhs])),
+        BinaryOp::ApplyHead => Ok(canonical_call("Apply", vec![lowered_lhs, lowered_rhs])),
+        BinaryOp::MapApply => Ok(canonical_call("MapApply", vec![lowered_lhs, lowered_rhs])),
+        BinaryOp::Composition => Ok(canonical_call(
+            "Composition",
+            vec![lowered_lhs, lowered_rhs],
+        )),
+        BinaryOp::RightComposition => Ok(canonical_call(
+            "RightComposition",
             vec![lowered_lhs, lowered_rhs],
         )),
         BinaryOp::Add => Ok(canonical_call(

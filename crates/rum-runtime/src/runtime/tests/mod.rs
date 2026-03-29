@@ -47,12 +47,14 @@ fn rum_path(path: &Path) -> String {
 }
 
 mod arithmetic;
+mod associations;
 mod calculus;
 mod context_and_loader;
 mod definitions_and_rules;
 mod definitions_and_rules_part2;
 mod definitions_and_rules_part3;
 mod definitions_and_rules_part4;
+mod functional_ops;
 mod holding_and_control;
 mod holding_and_control_part2;
 mod holding_and_control_part3;

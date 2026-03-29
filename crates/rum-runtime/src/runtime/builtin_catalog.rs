@@ -183,6 +183,12 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Extracts individual characters by 1-based positions.",
         BuiltinHandler::StringPart,
     ),
+    BuiltinSpec::ordinary_with_hold(
+        "FullForm",
+        "Renders the held argument as a canonical structural-form string in the current core expression subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::FullForm,
+    ),
     BuiltinSpec::ordinary(
         "Head",
         "Returns the structural head of an expression, optionally wrapped in a second head.",
@@ -234,6 +240,21 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "TakeDrop",
         "Returns both the taken and dropped structural elements using the current standard sequence-spec subset.",
         BuiltinHandler::TakeDrop,
+    ),
+    BuiltinSpec::ordinary(
+        "Insert",
+        "Inserts an element at a top-level structural position in the current first-pass subset.",
+        BuiltinHandler::Insert,
+    ),
+    BuiltinSpec::ordinary(
+        "Delete",
+        "Deletes one or more top-level structural positions in the current first-pass subset.",
+        BuiltinHandler::Delete,
+    ),
+    BuiltinSpec::ordinary(
+        "TakeList",
+        "Splits a normal expression into sequential chunks by non-negative counts.",
+        BuiltinHandler::TakeList,
     ),
     BuiltinSpec::ordinary(
         "Append",
@@ -466,6 +487,166 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "CoprimeQ",
         "Tests whether exact integers are pairwise relatively prime in the current integer subset.",
         BuiltinHandler::CoprimeQ,
+    ),
+    BuiltinSpec::ordinary(
+        "Association",
+        "Builds an association from Rule/RuleDelayed entries in the current first-pass subset.",
+        BuiltinHandler::Association,
+    ),
+    BuiltinSpec::ordinary(
+        "AssociationQ",
+        "Tests whether an expression is an Association with rule entries.",
+        BuiltinHandler::AssociationQ,
+    ),
+    BuiltinSpec::ordinary(
+        "Lookup",
+        "Looks up a key in an association in the current first-pass subset.",
+        BuiltinHandler::Lookup,
+    ),
+    BuiltinSpec::ordinary(
+        "Key",
+        "Represents a keyed selector in the current first-pass association subset.",
+        BuiltinHandler::Key,
+    ),
+    BuiltinSpec::ordinary(
+        "Keys",
+        "Returns association keys in structural order.",
+        BuiltinHandler::Keys,
+    ),
+    BuiltinSpec::ordinary(
+        "Values",
+        "Returns association values in structural order.",
+        BuiltinHandler::Values,
+    ),
+    BuiltinSpec::ordinary(
+        "KeyExistsQ",
+        "Tests whether an association contains a given key in the current first-pass subset.",
+        BuiltinHandler::KeyExistsQ,
+    ),
+    BuiltinSpec::ordinary(
+        "KeyTake",
+        "Keeps selected keys from an association in the current first-pass subset.",
+        BuiltinHandler::KeyTake,
+    ),
+    BuiltinSpec::ordinary(
+        "KeyDrop",
+        "Drops selected keys from an association in the current first-pass subset.",
+        BuiltinHandler::KeyDrop,
+    ),
+    BuiltinSpec::ordinary(
+        "KeyMap",
+        "Maps a function over association keys in the current first-pass subset.",
+        BuiltinHandler::KeyMap,
+    ),
+    BuiltinSpec::ordinary(
+        "KeyValueMap",
+        "Maps a binary function over association key-value pairs in the current first-pass subset.",
+        BuiltinHandler::KeyValueMap,
+    ),
+    BuiltinSpec::ordinary(
+        "KeySelect",
+        "Selects association entries whose keys satisfy a criterion in the current first-pass subset.",
+        BuiltinHandler::KeySelect,
+    ),
+    BuiltinSpec::ordinary(
+        "KeyMemberQ",
+        "Tests whether an association contains a key in the current first-pass subset.",
+        BuiltinHandler::KeyMemberQ,
+    ),
+    BuiltinSpec::ordinary(
+        "KeyFreeQ",
+        "Tests whether an association does not contain a key in the current first-pass subset.",
+        BuiltinHandler::KeyFreeQ,
+    ),
+    BuiltinSpec::ordinary(
+        "KeySort",
+        "Sorts association entries by key in the current canonical ordering subset.",
+        BuiltinHandler::KeySort,
+    ),
+    BuiltinSpec::ordinary(
+        "KeySortBy",
+        "Sorts association entries by transformed keys in the current first-pass subset.",
+        BuiltinHandler::KeySortBy,
+    ),
+    BuiltinSpec::ordinary(
+        "AssociationMap",
+        "Builds an association by mapping a function over keys in the current first-pass subset.",
+        BuiltinHandler::AssociationMap,
+    ),
+    BuiltinSpec::ordinary(
+        "AssociationThread",
+        "Threads key and value lists into an association in the current first-pass subset.",
+        BuiltinHandler::AssociationThread,
+    ),
+    BuiltinSpec::ordinary(
+        "KeyUnion",
+        "Builds a key-union association in the current first-pass subset.",
+        BuiltinHandler::KeyUnion,
+    ),
+    BuiltinSpec::ordinary(
+        "KeyIntersection",
+        "Builds a key-intersection association in the current first-pass subset.",
+        BuiltinHandler::KeyIntersection,
+    ),
+    BuiltinSpec::ordinary(
+        "KeyComplement",
+        "Builds a key-complement association in the current first-pass subset.",
+        BuiltinHandler::KeyComplement,
+    ),
+    BuiltinSpec::ordinary(
+        "Normal",
+        "Converts an association into a list of rules in the current first-pass subset.",
+        BuiltinHandler::Normal,
+    ),
+    BuiltinSpec::ordinary(
+        "AssociateTo",
+        "Adds or replaces association entries in the current first-pass subset.",
+        BuiltinHandler::AssociateTo,
+    ),
+    BuiltinSpec::ordinary(
+        "KeyDropFrom",
+        "Drops keys from an association in the current first-pass subset.",
+        BuiltinHandler::KeyDropFrom,
+    ),
+    BuiltinSpec::ordinary(
+        "KeyValuePattern",
+        "Represents an association key/value pattern specification in the current first-pass subset.",
+        BuiltinHandler::KeyValuePattern,
+    ),
+    BuiltinSpec::ordinary(
+        "Merge",
+        "Merges associations by key using a combiner in the current first-pass subset.",
+        BuiltinHandler::Merge,
+    ),
+    BuiltinSpec::ordinary(
+        "Catenate",
+        "Concatenates a list of associations into a single association in the current first-pass subset.",
+        BuiltinHandler::Catenate,
+    ),
+    BuiltinSpec::ordinary(
+        "Counts",
+        "Counts repeated elements and returns an association in the current first-pass subset.",
+        BuiltinHandler::Counts,
+    ),
+    BuiltinSpec::ordinary(
+        "CountsBy",
+        "Counts transformed elements and returns an association in the current first-pass subset.",
+        BuiltinHandler::CountsBy,
+    ),
+    BuiltinSpec::ordinary(
+        "GroupBy",
+        "Groups list elements by transformed keys in the current first-pass subset.",
+        BuiltinHandler::GroupBy,
+    ),
+    BuiltinSpec::ordinary(
+        "PositionIndex",
+        "Builds an association from elements to 1-based position lists in the current first-pass subset.",
+        BuiltinHandler::PositionIndex,
+    ),
+    BuiltinSpec::ordinary(
+        "Missing",
+        "Represents missing-data markers in the current first-pass subset.",
+        BuiltinHandler::Missing,
     ),
     BuiltinSpec::ordinary(
         "SameQ",
@@ -787,6 +968,197 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Creates a pure function.",
         HoldAttribute::HoldAll,
         BuiltinHandler::HoldLiteral,
+    ),
+    BuiltinSpec::ordinary(
+        "BlockMap",
+        "Maps a function over contiguous blocks in the current first-pass subset.",
+        BuiltinHandler::BlockMap,
+    ),
+    BuiltinSpec::ordinary(
+        "SubsetMap",
+        "Replaces selected exact parts using a mapped subset result in the current first-pass subset.",
+        BuiltinHandler::SubsetMap,
+    ),
+    BuiltinSpec::ordinary(
+        "Comap",
+        "Applies selected parts of a function collection to a common expression in the current first-pass subset.",
+        BuiltinHandler::Comap,
+    ),
+    BuiltinSpec::ordinary(
+        "ComapApply",
+        "Applies selected parts of a function collection as heads of a common expression in the current first-pass subset.",
+        BuiltinHandler::ComapApply,
+    ),
+    BuiltinSpec::ordinary(
+        "Accumulate",
+        "Returns running totals in the current first-pass subset.",
+        BuiltinHandler::Accumulate,
+    ),
+    BuiltinSpec::ordinary(
+        "MapIndexed",
+        "Applies a function to parts together with their positions in the current first-pass subset.",
+        BuiltinHandler::MapIndexed,
+    ),
+    BuiltinSpec::ordinary(
+        "Map",
+        "Applies a function over selected levels of an expression in the current first-pass subset.",
+        BuiltinHandler::Map,
+    ),
+    BuiltinSpec::ordinary(
+        "MapAll",
+        "Applies a function to every subexpression in the current first-pass subset.",
+        BuiltinHandler::MapAll,
+    ),
+    BuiltinSpec::ordinary(
+        "MapAt",
+        "Applies a function at exact part specifications in the current first-pass subset.",
+        BuiltinHandler::MapAt,
+    ),
+    BuiltinSpec::ordinary(
+        "Scan",
+        "Evaluates a function across selected levels for side effects in the current first-pass subset.",
+        BuiltinHandler::Scan,
+    ),
+    BuiltinSpec::ordinary(
+        "MapThread",
+        "Threads corresponding elements from multiple expressions in the current first-pass subset.",
+        BuiltinHandler::MapThread,
+    ),
+    BuiltinSpec::ordinary(
+        "TakeWhile",
+        "Takes the longest prefix satisfying a criterion in the current first-pass subset.",
+        BuiltinHandler::TakeWhile,
+    ),
+    BuiltinSpec::ordinary(
+        "LengthWhile",
+        "Counts the longest prefix satisfying a criterion in the current first-pass subset.",
+        BuiltinHandler::LengthWhile,
+    ),
+    BuiltinSpec::ordinary(
+        "Inner",
+        "Combines matching tensor dimensions in the current first-pass subset.",
+        BuiltinHandler::Inner,
+    ),
+    BuiltinSpec::ordinary(
+        "Fold",
+        "Accumulates over elements in the current first-pass subset.",
+        BuiltinHandler::Fold,
+    ),
+    BuiltinSpec::ordinary(
+        "FoldList",
+        "Returns successive accumulator states in the current first-pass subset.",
+        BuiltinHandler::FoldList,
+    ),
+    BuiltinSpec::ordinary(
+        "FoldPair",
+        "Accumulates pair-valued state transitions in the current first-pass subset.",
+        BuiltinHandler::FoldPair,
+    ),
+    BuiltinSpec::ordinary(
+        "FoldWhile",
+        "Accumulates while a test stays True in the current first-pass subset.",
+        BuiltinHandler::FoldWhile,
+    ),
+    BuiltinSpec::ordinary(
+        "SequenceFold",
+        "Folds a sequence with a sliding history in the current first-pass subset.",
+        BuiltinHandler::SequenceFold,
+    ),
+    BuiltinSpec::ordinary(
+        "SequenceFoldList",
+        "Returns the running history of a sequence fold in the current first-pass subset.",
+        BuiltinHandler::SequenceFoldList,
+    ),
+    BuiltinSpec::ordinary(
+        "Nest",
+        "Applies a function repeatedly a fixed number of times.",
+        BuiltinHandler::Nest,
+    ),
+    BuiltinSpec::ordinary(
+        "NestWhile",
+        "Repeatedly applies a function while a test stays True in the current first-pass subset.",
+        BuiltinHandler::NestWhile,
+    ),
+    BuiltinSpec::ordinary(
+        "NestList",
+        "Returns repeated applications of a function in the current first-pass subset.",
+        BuiltinHandler::NestList,
+    ),
+    BuiltinSpec::ordinary(
+        "NestWhileList",
+        "Returns repeated applications while a test stays True in the current first-pass subset.",
+        BuiltinHandler::NestWhileList,
+    ),
+    BuiltinSpec::ordinary(
+        "FixedPoint",
+        "Repeatedly applies a function until the result stops changing in the current first-pass subset.",
+        BuiltinHandler::FixedPoint,
+    ),
+    BuiltinSpec::ordinary(
+        "FixedPointList",
+        "Returns successive repeated applications until a fixed point in the current first-pass subset.",
+        BuiltinHandler::FixedPointList,
+    ),
+    BuiltinSpec::ordinary(
+        "Apply",
+        "Replaces the head of an expression in the current first-pass subset.",
+        BuiltinHandler::Apply,
+    ),
+    BuiltinSpec::ordinary(
+        "MapApply",
+        "Applies head replacement one level down in the current first-pass subset.",
+        BuiltinHandler::MapApply,
+    ),
+    BuiltinSpec::ordinary(
+        "OperatorApplied",
+        "Represents a curried operator wrapper in the current first-pass subset.",
+        BuiltinHandler::OperatorApplied,
+    ),
+    BuiltinSpec::ordinary(
+        "CurryApplied",
+        "Represents a left-to-right curried operator wrapper in the current first-pass subset.",
+        BuiltinHandler::CurryApplied,
+    ),
+    BuiltinSpec::ordinary(
+        "ReverseApplied",
+        "Represents a wrapper that reverses current call arguments before application in the current first-pass subset.",
+        BuiltinHandler::ReverseApplied,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Composition",
+        "Represents a left composition of functions in the current first-pass subset.",
+        AttributeSet::empty()
+            .with(Attribute::Flat)
+            .with(Attribute::OneIdentity),
+        BuiltinHandler::Composition,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "RightComposition",
+        "Represents a right composition of functions in the current first-pass subset.",
+        AttributeSet::empty()
+            .with(Attribute::Flat)
+            .with(Attribute::OneIdentity),
+        BuiltinHandler::RightComposition,
+    ),
+    BuiltinSpec::ordinary(
+        "Through",
+        "Threads arguments through a functional head in the current first-pass subset.",
+        BuiltinHandler::Through,
+    ),
+    BuiltinSpec::ordinary(
+        "Operate",
+        "Applies an operator to heads in the head chain of an expression in the current first-pass subset.",
+        BuiltinHandler::Operate,
+    ),
+    BuiltinSpec::ordinary(
+        "ArrayFilter",
+        "Applies a function to local list-array neighborhoods in the current first-pass subset.",
+        BuiltinHandler::ArrayFilter,
+    ),
+    BuiltinSpec::ordinary(
+        "ArrayReduce",
+        "Reduces rectangular list arrays across selected dimensions in the current first-pass subset.",
+        BuiltinHandler::ArrayReduce,
     ),
     BuiltinSpec::ordinary_with_hold(
         "With",

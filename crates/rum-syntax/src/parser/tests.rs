@@ -23,6 +23,92 @@ fn parses_lists_and_nested_calls() {
 }
 
 #[test]
+fn parses_association_literals() {
+    let parsed = parse_expr("<|a -> 1, b -> <|c -> 3|>|>").unwrap();
+    assert_eq!(parsed.to_string(), "<|a -> 1, b -> <|c -> 3|>|>");
+}
+
+#[test]
+fn parses_right_associative_apply_sugar() {
+    let parsed = parse_expr("f @ g @ x").unwrap();
+    assert_eq!(parsed.to_string(), "f @ g @ x");
+
+    assert_eq!(
+        parsed,
+        SyntaxExpr::binary(
+            BinaryOp::Apply,
+            SyntaxExpr::symbol("f", z()),
+            SyntaxExpr::binary(
+                BinaryOp::Apply,
+                SyntaxExpr::symbol("g", z()),
+                SyntaxExpr::symbol("x", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+}
+
+#[test]
+fn parses_apply_and_composition_operator_precedence() {
+    let parsed = parse_expr("f @* g @ x").unwrap();
+    assert_eq!(parsed.to_string(), "f @* g @ x");
+
+    assert_eq!(
+        parsed,
+        SyntaxExpr::binary(
+            BinaryOp::Apply,
+            SyntaxExpr::binary(
+                BinaryOp::Composition,
+                SyntaxExpr::symbol("f", z()),
+                SyntaxExpr::symbol("g", z()),
+                z(),
+            ),
+            SyntaxExpr::symbol("x", z()),
+            z(),
+        )
+    );
+
+    let right = parse_expr("f /* g @ x").unwrap();
+    assert_eq!(right.to_string(), "f /* g @ x");
+    assert_eq!(
+        right,
+        SyntaxExpr::binary(
+            BinaryOp::Apply,
+            SyntaxExpr::binary(
+                BinaryOp::RightComposition,
+                SyntaxExpr::symbol("f", z()),
+                SyntaxExpr::symbol("g", z()),
+                z(),
+            ),
+            SyntaxExpr::symbol("x", z()),
+            z(),
+        )
+    );
+}
+
+#[test]
+fn parses_apply_level_operators_as_right_associative() {
+    let parsed = parse_expr("f @@ g @@@ x").unwrap();
+    assert_eq!(parsed.to_string(), "f @@ g @@@ x");
+
+    assert_eq!(
+        parsed,
+        SyntaxExpr::binary(
+            BinaryOp::ApplyHead,
+            SyntaxExpr::symbol("f", z()),
+            SyntaxExpr::binary(
+                BinaryOp::MapApply,
+                SyntaxExpr::symbol("g", z()),
+                SyntaxExpr::symbol("x", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+}
+
+#[test]
 fn parses_part_and_span_sugar_into_canonical_forms() {
     assert_eq!(
         parse_expr("expr[[1, 2]]").unwrap().to_string(),
@@ -444,4 +530,20 @@ fn distinguishes_empty_input_from_incomplete_input() {
     assert_eq!(err, SyntaxError::EmptyInput);
     assert!(!err.is_incomplete());
     assert_eq!(err.span(), None);
+}
+
+#[test]
+fn reports_incomplete_association_input() {
+    let err = parse_expr("<|a -> 1").unwrap_err();
+
+    assert_eq!(
+        err,
+        SyntaxError::UnclosedDelimiter {
+            expected: "|>",
+            span: Span::point(8),
+            opening_span: Span::new(0, 2),
+            opening: "<|",
+        }
+    );
+    assert!(err.is_incomplete());
 }

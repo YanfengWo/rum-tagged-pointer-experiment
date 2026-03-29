@@ -172,29 +172,33 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Option<Expr>, EvalError> {
-        let Some(function) = parse_function(head) else {
-            return Ok(None);
-        };
+        let applied = if let Some(function) = parse_function(head) {
+            match function {
+                FunctionSpec::SlotBased { body, .. } => substitute_slots(body, args),
+                FunctionSpec::Explicit { params, body, .. } => {
+                    if params.len() != args.len() {
+                        self.push_message(
+                            "Function",
+                            "argx",
+                            format!(
+                                "expected exactly {} argument(s), got {}",
+                                params.len(),
+                                args.len()
+                            ),
+                        );
+                        return Ok(Some(Expr::call(head.clone(), args.to_vec())));
+                    }
 
-        let applied = match function {
-            FunctionSpec::SlotBased { body, .. } => substitute_slots(body, args),
-            FunctionSpec::Explicit { params, body, .. } => {
-                if params.len() != args.len() {
-                    self.push_message(
-                        "Function",
-                        "argx",
-                        format!(
-                            "expected exactly {} argument(s), got {}",
-                            params.len(),
-                            args.len()
-                        ),
-                    );
-                    return Ok(Some(Expr::call(head.clone(), args.to_vec())));
+                    let bindings = params.into_iter().zip(args.iter().cloned()).collect();
+                    substitute_lexical_bindings(body, &bindings, &BTreeSet::new())
                 }
-
-                let bindings = params.into_iter().zip(args.iter().cloned()).collect();
-                substitute_lexical_bindings(body, &bindings, &BTreeSet::new())
             }
+        } else if let Some(composition) = parse_composition(head) {
+            apply_composition_to_args(&composition, args)
+        } else if let Some(wrapper) = apply_callable_operator_wrapper_to_args(head, args) {
+            wrapper
+        } else {
+            return Ok(None);
         };
 
         let applied_result = self.evaluate(applied);

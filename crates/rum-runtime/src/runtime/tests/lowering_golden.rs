@@ -16,6 +16,12 @@ fn lowering_golden_forms_cover_rules_patterns_slots_and_scoping() {
     let cases = [
         ("f[a, b]", "f[a, b]"),
         ("{a, b}", "List[a, b]"),
+        ("<|a -> 1, b -> 2|>", "Association[Rule[a, 1], Rule[b, 2]]"),
+        ("f @ g @ x", "f[g[x]]"),
+        ("f @@ expr", "Apply[f, expr]"),
+        ("f @@@ expr", "MapApply[f, expr]"),
+        ("f @* g @ x", "Composition[f, g][x]"),
+        ("f /* g @ x", "RightComposition[f, g][x]"),
         (
             "x_Integer := f[x]",
             "SetDelayed[Pattern[x, Blank[Integer]], f[x]]",

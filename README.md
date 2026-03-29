@@ -85,47 +85,50 @@ The repository is a Cargo workspace with these top-level crates:
 
 ## Development Environment
 
-This repository currently lives inside a larger portable toolchain workspace.
-For this local setup, do not assume global `cargo`, `git`, `python`, or `node`
-should be used directly. Prefer the parent portable environment:
+Primary day-to-day development happens in WSL2 under:
 
-```powershell
-cmd /c "call ..\scripts\activate.cmd && cargo test --workspace"
+- `/home/fft/src/rum`
+
+Use the WSL-installed toolchain directly (`git`, `cargo`, `rustc`, etc.).
+Do not run the old Windows portable wrapper flow from `C:\...` / `/mnt/c/...`
+for normal development.
+
+```bash
+cargo test --workspace
 ```
 
-The same rule applies to `git`, `cargo fmt`, and other routine development
-commands.
+The same rule applies to `git`, `cargo fmt`, and other routine commands.
 
 ## Quick Start
 
 Run the full test suite:
 
-```powershell
-cmd /c "call ..\scripts\activate.cmd && cargo test --workspace"
+```bash
+cargo test --workspace
 ```
 
 Run the CLI REPL:
 
-```powershell
-cmd /c "call ..\scripts\activate.cmd && cargo run -p rum-cli"
+```bash
+cargo run -p rum-cli
 ```
 
 Evaluate a single expression:
 
-```powershell
-cmd /c "call ..\scripts\activate.cmd && cargo run -p rum-cli -- --eval \"Identity[123]\""
+```bash
+cargo run -p rum-cli -- --eval "Identity[123]"
 ```
 
 Inspect parser output:
 
-```powershell
-cmd /c "call ..\scripts\activate.cmd && cargo run -p rum-cli -- --parse \"f[1 2]\""
+```bash
+cargo run -p rum-cli -- --parse "f[1 2]"
 ```
 
 Format an expression:
 
-```powershell
-cmd /c "call ..\scripts\activate.cmd && cargo run -p rum-cli -- --format \"f[x(* note *)+y]\""
+```bash
+cargo run -p rum-cli -- --format "f[x(* note *)+y]"
 ```
 
 ## Current Priorities

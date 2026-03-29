@@ -29,6 +29,10 @@ impl SyntaxExpr {
         Self::new(SyntaxExprKind::List(items), span)
     }
 
+    pub fn association(items: Vec<Self>, span: Span) -> Self {
+        Self::new(SyntaxExprKind::Association(items), span)
+    }
+
     pub fn slot(spec: SlotSpec, span: Span) -> Self {
         Self::new(SyntaxExprKind::Slot(spec), span)
     }
@@ -115,6 +119,7 @@ impl SyntaxExpr {
             | SyntaxExprKind::String(_)
             | SyntaxExprKind::Symbol(_)
             | SyntaxExprKind::List(_)
+            | SyntaxExprKind::Association(_)
             | SyntaxExprKind::Slot(_) => 95,
         }
     }
@@ -134,6 +139,7 @@ pub enum SyntaxExprKind {
     String(String),
     Symbol(String),
     List(Vec<SyntaxExpr>),
+    Association(Vec<SyntaxExpr>),
     Slot(SlotSpec),
     Blank {
         kind: BlankKind,
@@ -195,6 +201,11 @@ pub enum BinaryOp {
     Rule,
     RuleDelayed,
     Condition,
+    Apply,
+    ApplyHead,
+    MapApply,
+    Composition,
+    RightComposition,
     Add,
     Subtract,
     Times,
@@ -243,6 +254,11 @@ impl BinaryOp {
             Self::Rule => "->",
             Self::RuleDelayed => ":>",
             Self::Condition => "/;",
+            Self::Apply => "@",
+            Self::ApplyHead => "@@",
+            Self::MapApply => "@@@",
+            Self::Composition => "@*",
+            Self::RightComposition => "/*",
             Self::Add => "+",
             Self::Subtract => "-",
             Self::Times => "*",
@@ -259,6 +275,8 @@ impl BinaryOp {
             Self::ReplaceAll | Self::ReplaceRepeated => 20,
             Self::Rule | Self::RuleDelayed => 30,
             Self::Condition => 40,
+            Self::Apply | Self::ApplyHead | Self::MapApply => 72,
+            Self::Composition | Self::RightComposition => 73,
             Self::Add | Self::Subtract => 50,
             Self::Times | Self::Divide => 60,
             Self::Power => 70,
@@ -274,6 +292,10 @@ impl BinaryOp {
                 | Self::Rule
                 | Self::RuleDelayed
                 | Self::Condition
+                | Self::Apply
+                | Self::ApplyHead
+                | Self::MapApply
+                | Self::Composition
                 | Self::Power
         )
     }
@@ -329,6 +351,19 @@ fn format_expr(
             }
 
             f.write_str("}")?;
+        }
+        SyntaxExprKind::Association(items) => {
+            f.write_str("<|")?;
+
+            for (index, item) in items.iter().enumerate() {
+                if index > 0 {
+                    f.write_str(", ")?;
+                }
+
+                format_expr(item, f, 0)?;
+            }
+
+            f.write_str("|>")?;
         }
         SyntaxExprKind::Slot(spec) => match spec {
             SlotSpec::Anonymous => f.write_str("#")?,

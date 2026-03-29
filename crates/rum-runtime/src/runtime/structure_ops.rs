@@ -36,6 +36,7 @@ enum StructuralSequenceSpec {
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum PartSelector {
     Single(AtomicPartSpec),
+    Key(Expr),
     Multi(Vec<PartSelector>),
 }
 
@@ -183,10 +184,24 @@ impl Session {
         ))))
     }
 
+    pub(super) fn eval_full_form(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("FullForm", args, 1));
+        };
+
+        Ok(Expr::string(expr.to_string()))
+    }
+
     pub(super) fn eval_first(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
             [expr] => Ok(self.resolve_first_like(expr, None, "First", "first", true)),
-            [expr, default] => Ok(self.resolve_first_like(expr, Some(default), "First", "first", true)),
+            [expr, default] => {
+                Ok(self.resolve_first_like(expr, Some(default), "First", "first", true))
+            }
             _ => Ok(self.invalid_call_with_arg_range("First", args, 1, 2)),
         }
     }
@@ -194,7 +209,9 @@ impl Session {
     pub(super) fn eval_last(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
             [expr] => Ok(self.resolve_first_like(expr, None, "Last", "nolast", false)),
-            [expr, default] => Ok(self.resolve_first_like(expr, Some(default), "Last", "nolast", false)),
+            [expr, default] => {
+                Ok(self.resolve_first_like(expr, Some(default), "Last", "nolast", false))
+            }
             _ => Ok(self.invalid_call_with_arg_range("Last", args, 1, 2)),
         }
     }
@@ -294,11 +311,13 @@ impl Session {
             return Ok(Expr::call(system_expr("TakeDrop"), args.to_vec()));
         };
 
-        match (apply_take_specs(&args[0], &specs), apply_drop_specs(&args[0], &specs)) {
-            (Some(taken), Some(dropped)) => Ok(Expr::call(
-                system_expr("List"),
-                vec![taken, dropped],
-            )),
+        match (
+            apply_take_specs(&args[0], &specs),
+            apply_drop_specs(&args[0], &specs),
+        ) {
+            (Some(taken), Some(dropped)) => {
+                Ok(Expr::call(system_expr("List"), vec![taken, dropped]))
+            }
             _ if matches!(args[0], Expr::Atom(_)) => {
                 Ok(self.invalid_normal_expression_call("TakeDrop", args))
             }
@@ -312,6 +331,79 @@ impl Session {
                 ),
             )),
         }
+    }
+
+    pub(super) fn eval_insert(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [expr, item, position] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Insert", args, 3));
+        };
+
+        let Some(position) = expr_as_signed_isize(position) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let Expr::Call {
+            head: expr_head,
+            args: expr_args,
+        } = expr
+        else {
+            return Ok(self.invalid_normal_expression_call("Insert", args));
+        };
+
+        let Some(index) = normalize_insert_arg_position(position, expr_args.len()) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let mut inserted = expr_args.clone();
+        inserted.insert(index, item.clone());
+        Ok(Expr::call(expr_head.as_ref().clone(), inserted))
+    }
+
+    pub(super) fn eval_delete(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [expr, positions_expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Delete", args, 2));
+        };
+
+        let Expr::Call {
+            head: expr_head,
+            args: expr_args,
+        } = expr
+        else {
+            return Ok(self.invalid_normal_expression_call("Delete", args));
+        };
+
+        let Some(positions) = parse_delete_positions(positions_expr, expr_args.len()) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let dropped = positions.into_iter().collect::<BTreeSet<_>>();
+        let kept = expr_args
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| !dropped.contains(index))
+            .map(|(_, arg)| arg.clone())
+            .collect::<Vec<_>>();
+        Ok(Expr::call(expr_head.as_ref().clone(), kept))
+    }
+
+    pub(super) fn eval_take_list(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [expr, counts] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("TakeList", args, 2));
+        };
+
+        let Expr::Call { .. } = expr else {
+            return Ok(self.invalid_normal_expression_call("TakeList", args));
+        };
+
+        let Some(counts) = parse_take_list_counts(counts) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let Some(chunks) = apply_take_list_counts(expr, &counts) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        Ok(Expr::call(system_expr("List"), chunks))
     }
 
     pub(super) fn eval_append(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -329,11 +421,7 @@ impl Session {
         }
     }
 
-    pub(super) fn eval_prepend(
-        &mut self,
-        _head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_prepend(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
             [expr, item] => Ok(match expr {
                 Expr::Atom(_) => self.invalid_normal_expression_call("Prepend", args),
@@ -404,7 +492,9 @@ impl Session {
             Expr::Call { .. } | Expr::Atom(_) if default.is_some() => {
                 default.expect("checked above").clone()
             }
-            Expr::Call { .. } => self.invalid_empty_structural_selection_call(symbol, empty_tag, expr),
+            Expr::Call { .. } => {
+                self.invalid_empty_structural_selection_call(symbol, empty_tag, expr)
+            }
             Expr::Atom(_) => self.invalid_normal_expression_call(symbol, &[expr.clone()]),
         }
     }
@@ -418,7 +508,11 @@ impl Session {
         self.push_message(
             symbol,
             tag,
-            format!("{} has zero length and no {} element.", expr, selection_name(symbol)),
+            format!(
+                "{} has zero length and no {} element.",
+                expr,
+                selection_name(symbol)
+            ),
         );
         Expr::call(system_expr(symbol), vec![expr.clone()])
     }
@@ -439,7 +533,10 @@ impl Session {
         self.push_message(
             symbol,
             tag,
-            format!("Cannot apply the requested sequence specification in {}.", Expr::call(system_expr(symbol), args.to_vec())),
+            format!(
+                "Cannot apply the requested sequence specification in {}.",
+                Expr::call(system_expr(symbol), args.to_vec())
+            ),
         );
         Expr::call(system_expr(symbol), args.to_vec())
     }
@@ -695,11 +792,7 @@ impl Session {
         let rest_targets = rest_targets.to_vec();
         self.drive_evaluated_value::<Expr, Expr, _>(rhs_result, move |session, rhs| {
             let updated = replace_exact_path(expr, &first_path, rhs);
-            session.apply_delayed_replace_targets_owned(
-                updated,
-                rest_targets,
-                remaining_rules,
-            )
+            session.apply_delayed_replace_targets_owned(updated, rest_targets, remaining_rules)
         })
     }
 
@@ -753,8 +846,8 @@ fn parse_part_selectors(exprs: &[Expr]) -> Option<Vec<PartSelector>> {
 }
 
 fn parse_part_selector(expr: &Expr) -> Option<PartSelector> {
-    if let Some(spec) = parse_atomic_part_spec(expr) {
-        return Some(PartSelector::Single(spec));
+    if let Some(selector) = parse_scalar_part_selector(expr) {
+        return Some(selector);
     }
 
     let Expr::Call { head, args } = expr else {
@@ -766,8 +859,30 @@ fn parse_part_selector(expr: &Expr) -> Option<PartSelector> {
     }
 
     Some(PartSelector::Multi(
-        args.iter().map(parse_part_selector).collect::<Option<Vec<_>>>()?,
+        args.iter()
+            .map(parse_part_selector)
+            .collect::<Option<Vec<_>>>()?,
     ))
+}
+
+fn parse_scalar_part_selector(expr: &Expr) -> Option<PartSelector> {
+    if let Some(spec) = parse_atomic_part_spec(expr) {
+        return Some(PartSelector::Single(spec));
+    }
+
+    parse_key_part_selector(expr).map(PartSelector::Key)
+}
+
+fn parse_key_part_selector(expr: &Expr) -> Option<Expr> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "Key") || args.len() != 1 {
+        return None;
+    }
+
+    Some(args[0].clone())
 }
 
 fn parse_atomic_part_spec(expr: &Expr) -> Option<AtomicPartSpec> {
@@ -839,9 +954,34 @@ fn apply_part_selectors(expr: &Expr, selectors: &[PartSelector]) -> Option<Expr>
         SelectedPartShape::Leaf(selected) => apply_part_selectors(&selected, rest),
         SelectedPartShape::Branch(selected) => Some(selected_shape_to_expr(
             SelectedPartShape::Branch(apply_part_selectors_to_shape(selected, rest)?),
-            Some(structural_head_expr(expr)),
+            Some(selected_shape_head_for_expr(expr, first)),
         )),
     }
+}
+
+fn selected_shape_head_for_expr(expr: &Expr, selector: &PartSelector) -> Expr {
+    if association_entries_from_expr(expr).is_some() && selector_contains_key(selector) {
+        system_expr("List")
+    } else {
+        structural_head_expr(expr)
+    }
+}
+
+fn selector_contains_key(selector: &PartSelector) -> bool {
+    match selector {
+        PartSelector::Single(_) => false,
+        PartSelector::Key(_) => true,
+        PartSelector::Multi(specs) => specs.iter().any(selector_contains_key),
+    }
+}
+
+fn position_spec_contains_key(selectors: &[PartSelector]) -> bool {
+    selectors.iter().any(selector_contains_key)
+}
+
+pub(super) fn apply_keyed_part_spec(expr: &Expr, spec_expr: &Expr) -> Option<Expr> {
+    let selectors = parse_single_position_spec(spec_expr)?;
+    position_spec_contains_key(&selectors).then(|| apply_part_selectors(expr, &selectors))?
 }
 
 fn apply_part_selectors_to_shape(
@@ -897,14 +1037,21 @@ fn select_parts_for_selector(expr: &Expr, selector: &PartSelector) -> Option<Sel
                     .collect(),
             )),
         },
+        PartSelector::Key(key) => association_value_by_key(expr, key).map(SelectedPartShape::Leaf),
         PartSelector::Multi(specs) => {
             let mut selected = Vec::new();
             for spec in specs {
                 match (spec, select_parts_for_selector(expr, spec)?) {
-                    (PartSelector::Single(_), SelectedPartShape::Leaf(expr)) => {
+                    (
+                        PartSelector::Single(_) | PartSelector::Key(_),
+                        SelectedPartShape::Leaf(expr),
+                    ) => {
                         selected.push(SelectedPartShape::Leaf(expr));
                     }
-                    (PartSelector::Single(_), SelectedPartShape::Branch(children)) => {
+                    (
+                        PartSelector::Single(_) | PartSelector::Key(_),
+                        SelectedPartShape::Branch(children),
+                    ) => {
                         selected.extend(children);
                     }
                     (PartSelector::Multi(_), shape) => selected.push(shape),
@@ -961,14 +1108,22 @@ fn resolve_span_endpoint(
             let len = isize::try_from(len).ok()?;
             Some(if step > 0 {
                 if is_start {
-                    if include_head { 0 } else { 1 }
+                    if include_head {
+                        0
+                    } else {
+                        1
+                    }
                 } else {
                     len
                 }
             } else if is_start {
                 len
             } else {
-                if include_head { 0 } else { 1 }
+                if include_head {
+                    0
+                } else {
+                    1
+                }
             })
         }
         SpanEndpoint::Index(0) if include_head => Some(0),
@@ -1020,7 +1175,11 @@ fn part_span_includes_head(spec: PartSpanSpec) -> bool {
     matches!(spec.start, SpanEndpoint::Index(0)) || matches!(spec.end, SpanEndpoint::Index(0))
 }
 
-fn resolve_span_components(spec: PartSpanSpec, len: usize, include_head: bool) -> Option<Vec<isize>> {
+fn resolve_span_components(
+    spec: PartSpanSpec,
+    len: usize,
+    include_head: bool,
+) -> Option<Vec<isize>> {
     let start = resolve_span_endpoint(spec.start, len, spec.step, include_head, true)?;
     let end = resolve_span_endpoint(spec.end, len, spec.step, include_head, false)?;
     let mut current = start;
@@ -1090,8 +1249,8 @@ fn parse_extract_position_spec(expr: &Expr) -> Option<ExtractPositionSpec> {
 }
 
 fn parse_single_position_spec(expr: &Expr) -> Option<Vec<PartSelector>> {
-    if let Some(spec) = parse_atomic_part_spec(expr) {
-        return Some(vec![PartSelector::Single(spec)]);
+    if let Some(selector) = parse_scalar_part_selector(expr) {
+        return Some(vec![selector]);
     }
 
     let Expr::Call { head, args } = expr else {
@@ -1111,6 +1270,38 @@ fn parse_single_position_spec(expr: &Expr) -> Option<Vec<PartSelector>> {
     }
 
     args.iter().map(parse_part_selector).collect()
+}
+
+pub(super) fn exact_position_paths_from_expr(
+    expr: &Expr,
+    spec_expr: &Expr,
+) -> Option<Vec<Vec<isize>>> {
+    if let Some(position_spec) = parse_single_position_spec(spec_expr) {
+        return Some(collect_exact_paths_for_position_spec(
+            expr,
+            &position_spec,
+            ReplacePartHeadsMode::Automatic,
+        ));
+    }
+
+    let Expr::Call { head, args } = spec_expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return None;
+    }
+
+    let mut paths = Vec::new();
+    for item in args {
+        let position_spec = parse_single_position_spec(item)?;
+        paths.extend(collect_exact_paths_for_position_spec(
+            expr,
+            &position_spec,
+            ReplacePartHeadsMode::Automatic,
+        ));
+    }
+    Some(paths)
 }
 
 fn is_plain_list_expr(expr: &Expr) -> bool {
@@ -1413,7 +1604,11 @@ fn resolve_take_components(spec: StructuralSequenceSpec, len: usize) -> Option<V
             if count > len {
                 None
             } else {
-                Some(((len - count + 1)..=len).map(|index| index as isize).collect())
+                Some(
+                    ((len - count + 1)..=len)
+                        .map(|index| index as isize)
+                        .collect(),
+                )
             }
         }
         StructuralSequenceSpec::Single(index) => {
@@ -1448,6 +1643,83 @@ fn resolve_take_components(spec: StructuralSequenceSpec, len: usize) -> Option<V
 
 fn normalize_exact_structural_component(position: isize, len: usize) -> Option<isize> {
     Some(normalize_structural_arg_position(position, len)? as isize + 1)
+}
+
+fn normalize_insert_arg_position(position: isize, len: usize) -> Option<usize> {
+    let len = isize::try_from(len).ok()?;
+    if position > 0 {
+        if position <= len + 1 {
+            return Some((position - 1) as usize);
+        }
+        return None;
+    }
+
+    if position < 0 {
+        let normalized = len + position + 1;
+        if (0..=len).contains(&normalized) {
+            return Some(normalized as usize);
+        }
+    }
+
+    None
+}
+
+fn parse_delete_positions(positions_expr: &Expr, len: usize) -> Option<Vec<usize>> {
+    if let Some(position) = expr_as_signed_isize(positions_expr) {
+        return Some(vec![normalize_structural_arg_position(position, len)?]);
+    }
+
+    let Expr::Call { head, args } = positions_expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) || args.is_empty() {
+        return None;
+    }
+
+    args.iter()
+        .map(|expr| normalize_structural_arg_position(expr_as_signed_isize(expr)?, len))
+        .collect()
+}
+
+fn parse_take_list_counts(counts_expr: &Expr) -> Option<Vec<usize>> {
+    let Expr::Call { head, args } = counts_expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return None;
+    }
+
+    args.iter()
+        .map(|arg| {
+            let count = expr_as_signed_isize(arg)?;
+            (count >= 0).then_some(count as usize)
+        })
+        .collect()
+}
+
+fn apply_take_list_counts(expr: &Expr, counts: &[usize]) -> Option<Vec<Expr>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    let mut offset = 0_usize;
+    let mut chunks = Vec::with_capacity(counts.len());
+    for count in counts {
+        let end = offset.checked_add(*count)?;
+        if end > args.len() {
+            return None;
+        }
+
+        chunks.push(Expr::call(
+            head.as_ref().clone(),
+            args[offset..end].to_vec(),
+        ));
+        offset = end;
+    }
+
+    Some(chunks)
 }
 
 fn unary_operator_form(symbol: &str, item: Expr) -> Expr {
@@ -1498,9 +1770,10 @@ fn resolve_conflicting_replace_part_targets(
     let mut kept = Vec::new();
 
     'next_target: for target in targets {
-        if let Some(existing_index) = kept.iter().position(|existing: &ReplacePartTarget| {
-            existing.path == target.path
-        }) {
+        if let Some(existing_index) = kept
+            .iter()
+            .position(|existing: &ReplacePartTarget| existing.path == target.path)
+        {
             kept.remove(existing_index);
             kept.push(target);
             continue;
@@ -1644,9 +1917,9 @@ fn collect_exact_paths_for_position_spec(
     };
 
     let mut paths = Vec::new();
-    for (component, value) in selected {
+    for (prefix, value) in selected {
         for mut tail in collect_exact_paths_for_position_spec(&value, rest, heads) {
-            let mut path = vec![component];
+            let mut path = prefix.clone();
             path.append(&mut tail);
             paths.push(path);
         }
@@ -1658,11 +1931,16 @@ fn select_positioned_parts_for_selector(
     expr: &Expr,
     selector: &PartSelector,
     heads: ReplacePartHeadsMode,
-) -> Option<Vec<(isize, Expr)>> {
+) -> Option<Vec<(Vec<isize>, Expr)>> {
     match selector {
-        PartSelector::Single(spec) => {
-            select_positioned_parts_for_atomic_spec_with_heads(expr, spec, heads)
-        }
+        PartSelector::Single(spec) => Some(
+            select_positioned_parts_for_atomic_spec_with_heads(expr, spec, heads)?
+                .into_iter()
+                .map(|(component, value)| (vec![component], value))
+                .collect(),
+        ),
+        PartSelector::Key(key) => association_position_and_value_by_key(expr, key)
+            .map(|(component, value)| vec![(vec![component, 2], value)]),
         PartSelector::Multi(specs) => {
             let mut selected = Vec::new();
             for spec in specs {
@@ -1722,8 +2000,10 @@ fn replace_part_span_includes_heads(spec: PartSpanSpec, heads: ReplacePartHeadsM
     match heads {
         ReplacePartHeadsMode::Include => true,
         ReplacePartHeadsMode::Exclude => false,
-        ReplacePartHeadsMode::Automatic => matches!(spec.start, SpanEndpoint::Index(0))
-            || matches!(spec.end, SpanEndpoint::Index(0)),
+        ReplacePartHeadsMode::Automatic => {
+            matches!(spec.start, SpanEndpoint::Index(0))
+                || matches!(spec.end, SpanEndpoint::Index(0))
+        }
     }
 }
 
@@ -1734,7 +2014,7 @@ fn parse_replace_part_heads_option(expr: &Expr) -> Option<ReplacePartHeadsMode> 
     }
 }
 
-fn replace_exact_path(expr: Expr, path: &[isize], rhs: Expr) -> Expr {
+pub(super) fn replace_exact_path(expr: Expr, path: &[isize], rhs: Expr) -> Expr {
     let Some((first, rest)) = path.split_first() else {
         return rhs;
     };

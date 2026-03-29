@@ -126,6 +126,7 @@ impl Parser {
                 | TokenKind::TripleUnderscore
                 | TokenKind::LParen
                 | TokenKind::LBrace
+                | TokenKind::LAssociation
         )
     }
 
@@ -140,10 +141,15 @@ impl Parser {
             TokenKind::Arrow => Some(BinaryOp::Rule),
             TokenKind::RuleDelayed => Some(BinaryOp::RuleDelayed),
             TokenKind::Condition => Some(BinaryOp::Condition),
+            TokenKind::At => Some(BinaryOp::Apply),
+            TokenKind::AtAt => Some(BinaryOp::ApplyHead),
+            TokenKind::AtAtAt => Some(BinaryOp::MapApply),
+            TokenKind::AtStar => Some(BinaryOp::Composition),
             TokenKind::Plus => Some(BinaryOp::Add),
             TokenKind::Minus => Some(BinaryOp::Subtract),
             TokenKind::Star => Some(BinaryOp::Times),
             TokenKind::Slash => Some(BinaryOp::Divide),
+            TokenKind::SlashStar => Some(BinaryOp::RightComposition),
             TokenKind::Caret => Some(BinaryOp::Power),
             _ => None,
         }

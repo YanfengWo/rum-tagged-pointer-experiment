@@ -232,6 +232,17 @@ impl Session {
             );
         }
 
+        if let Some(entries) = pattern_key_value_pattern_entries(&pattern) {
+            return self.match_compiled_key_value_pattern_owned(
+                entries
+                    .into_iter()
+                    .map(|(key, item)| (compile_matcher(&key), compile_matcher(&item)))
+                    .collect(),
+                value,
+                bindings,
+            );
+        }
+
         if let Some((inner, condition)) = pattern_condition(&pattern) {
             return self.match_condition_interpreted_owned(
                 inner.clone(),

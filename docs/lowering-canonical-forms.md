@@ -33,6 +33,7 @@ surface that lowering itself is responsible for producing or preserving.
 ### Structure
 
 - `{a, b}` -> `List[a, b]`
+- `<|a -> 1, b -> 2|>` -> `Association[Rule[a, 1], Rule[b, 2]]`
 - `File["demo.rum"]` -> `File["demo.rum"]`
 
 ### Patterns and slots
@@ -73,6 +74,11 @@ rewritten further. For example:
 
 ### Arithmetic normalization
 
+- `f @ x` -> `f[x]`
+- `f @@ expr` -> `Apply[f, expr]`
+- `f @@@ expr` -> `MapApply[f, expr]`
+- `f @* g` -> `Composition[f, g]`
+- `f /* g` -> `RightComposition[f, g]`
 - `a + b` -> `Plus[a, b]`
 - `a - b` -> `Plus[a, Times[-1, b]]`
 - `a * b` -> `Times[a, b]`

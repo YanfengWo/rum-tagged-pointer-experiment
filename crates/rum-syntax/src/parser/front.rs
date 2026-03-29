@@ -309,6 +309,12 @@ impl Parser {
                     self.parse_expression_list(TokenKind::RBrace, "}", token.span, "{")?;
                 Ok(SyntaxExpr::list(items, token.span.merge(close_span)))
             }
+            TokenKind::LAssociation => {
+                self.bump();
+                let (items, close_span) =
+                    self.parse_expression_list(TokenKind::RAssociation, "|>", token.span, "<|")?;
+                Ok(SyntaxExpr::association(items, token.span.merge(close_span)))
+            }
             TokenKind::End => Err(SyntaxError::Incomplete {
                 expected: "expression",
                 span: token.span,

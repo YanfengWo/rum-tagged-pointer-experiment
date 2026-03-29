@@ -62,12 +62,10 @@ fn lowering_preserves_tagset_shape_for_runtime_semantic_validation() {
     let mut session = Session::new();
     let outcome = session.eval_text("f /: g[h[f[x_]]] := 1").unwrap();
 
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "TagSetDelayed" && message.tag == "tagpos")
-    );
+    assert!(outcome
+        .messages
+        .iter()
+        .any(|message| message.symbol == "TagSetDelayed" && message.tag == "tagpos"));
 }
 
 #[test]
@@ -78,6 +76,86 @@ fn evaluates_identity_call() {
         .unwrap();
 
     assert_eq!(outcome.value.to_string(), "123456789012345678901234567890");
+}
+
+#[test]
+fn applies_at_sugar_through_lowering_and_evaluation() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Length @ f[a, b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Length @ Identity @ f[a, b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+}
+
+#[test]
+fn functional_operator_sugars_flow_through_lowering_and_first_pass_runtime() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session.eval_text("f @@ {a, b}").unwrap().value.to_string(),
+        "f[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("f @@@ {{a, b}, {c, d}}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[a, b], f[c, d]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Length @* Identity @ f[a, b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Length /* Identity @ f[a, b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Composition[]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Identity"
+    );
+    assert_eq!(
+        session
+            .eval_text("Composition[Identity, f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f"
+    );
+    assert_eq!(
+        session
+            .eval_text("RightComposition[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f"
+    );
 }
 
 #[test]

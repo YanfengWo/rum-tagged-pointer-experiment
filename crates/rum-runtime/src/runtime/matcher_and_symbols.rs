@@ -3,6 +3,15 @@ use super::*;
 pub(super) fn compile_matcher(expr: &Expr) -> MatcherNode {
     let expr = strip_hold_pattern(expr);
 
+    if let Some(entries) = pattern_key_value_pattern_entries(expr) {
+        return MatcherNode::KeyValuePattern(
+            entries
+                .into_iter()
+                .map(|(key, value)| (compile_matcher(&key), compile_matcher(&value)))
+                .collect(),
+        );
+    }
+
     if let Some((name, inner)) = pattern_named_pattern(expr) {
         return MatcherNode::Named {
             name: name.clone(),
@@ -152,6 +161,34 @@ pub(super) fn pattern_optional(expr: &Expr) -> Option<(&Expr, Option<&Expr>)> {
         }
         _ => None,
     }
+}
+
+pub(super) fn pattern_key_value_pattern_entries(expr: &Expr) -> Option<Vec<(Expr, Expr)>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "KeyValuePattern") || args.len() != 1 {
+        return None;
+    }
+
+    let normalized_spec = normalize_key_value_pattern_spec(&args[0])?;
+    let Expr::Call {
+        head: list_head,
+        args: items,
+    } = normalized_spec
+    else {
+        return None;
+    };
+
+    if !is_system_symbol_name(&list_head, heads::structure::LIST) {
+        return None;
+    }
+
+    items
+        .into_iter()
+        .map(|item| parse_association_entry(&item))
+        .collect()
 }
 
 pub(super) fn pattern_alternatives(expr: &Expr) -> Option<&[Expr]> {

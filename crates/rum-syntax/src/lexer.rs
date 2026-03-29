@@ -61,6 +61,26 @@ impl<'a> Lexer<'a> {
             ']' => self.single(TokenKind::RBracket),
             '{' => self.single(TokenKind::LBrace),
             '}' => self.single(TokenKind::RBrace),
+            '<' => {
+                if self.consume_str("<|") {
+                    TokenKind::LAssociation
+                } else {
+                    return Err(SyntaxError::UnexpectedCharacter {
+                        found: ch,
+                        span: Span::new(start, self.offset),
+                    });
+                }
+            }
+            '|' => {
+                if self.consume_str("|>") {
+                    TokenKind::RAssociation
+                } else {
+                    return Err(SyntaxError::UnexpectedCharacter {
+                        found: ch,
+                        span: Span::new(start, self.offset),
+                    });
+                }
+            }
             '(' => self.single(TokenKind::LParen),
             ')' => self.single(TokenKind::RParen),
             ',' => self.single(TokenKind::Comma),
@@ -72,6 +92,17 @@ impl<'a> Lexer<'a> {
                         found: ch,
                         span: Span::new(start, self.offset),
                     });
+                }
+            }
+            '@' => {
+                if self.consume_str("@@@") {
+                    TokenKind::AtAtAt
+                } else if self.consume_str("@@") {
+                    TokenKind::AtAt
+                } else if self.consume_str("@*") {
+                    TokenKind::AtStar
+                } else {
+                    self.single(TokenKind::At)
                 }
             }
             '+' => self.single(TokenKind::Plus),
@@ -116,6 +147,8 @@ impl<'a> Lexer<'a> {
                     TokenKind::TagSet
                 } else if self.consume_str("/;") {
                     TokenKind::Condition
+                } else if self.consume_str("/*") {
+                    TokenKind::SlashStar
                 } else {
                     self.single(TokenKind::Slash)
                 }
@@ -363,58 +396,62 @@ mod tests {
 
     #[test]
     fn lexes_multi_char_operators() {
-        let tokens = lex("x::tag := y //. z /. q -> w /; p f /: g =. a[[1]] b;;c").unwrap();
+        let tokens = lex(
+            "x::tag := y //. z /. q -> w /; p f /: g =. a[[1]] b;;c <|d -> e|> h@i j@@k l@@@m n@*o p/*q",
+        )
+        .unwrap();
 
-        assert!(
-            tokens
-                .iter()
-                .any(|token| matches!(token.kind, TokenKind::MessageName))
-        );
-        assert!(
-            tokens
-                .iter()
-                .any(|token| matches!(token.kind, TokenKind::SetDelayed))
-        );
-        assert!(
-            tokens
-                .iter()
-                .any(|token| matches!(token.kind, TokenKind::ReplaceRepeated))
-        );
-        assert!(
-            tokens
-                .iter()
-                .any(|token| matches!(token.kind, TokenKind::ReplaceAll))
-        );
-        assert!(
-            tokens
-                .iter()
-                .any(|token| matches!(token.kind, TokenKind::Arrow))
-        );
-        assert!(
-            tokens
-                .iter()
-                .any(|token| matches!(token.kind, TokenKind::Condition))
-        );
-        assert!(
-            tokens
-                .iter()
-                .any(|token| matches!(token.kind, TokenKind::TagSet))
-        );
-        assert!(
-            tokens
-                .iter()
-                .any(|token| matches!(token.kind, TokenKind::Unset))
-        );
-        assert!(
-            tokens
-                .iter()
-                .any(|token| matches!(token.kind, TokenKind::DoubleLBracket))
-        );
-        assert!(
-            tokens
-                .iter()
-                .any(|token| matches!(token.kind, TokenKind::Span))
-        );
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::MessageName)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::SetDelayed)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::ReplaceRepeated)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::ReplaceAll)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::Arrow)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::Condition)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::TagSet)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::Unset)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::DoubleLBracket)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::Span)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::LAssociation)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::RAssociation)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::At)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::AtAt)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::AtAtAt)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::AtStar)));
+        assert!(tokens
+            .iter()
+            .any(|token| matches!(token.kind, TokenKind::SlashStar)));
     }
 
     #[test]

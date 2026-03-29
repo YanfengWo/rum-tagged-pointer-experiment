@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    ParsedSource, SyntaxError, SyntaxExpr, SyntaxExprKind, SyntaxTokenKind, TriviaKind,
-    parse_with_diagnostics,
+    parse_with_diagnostics, ParsedSource, SyntaxError, SyntaxExpr, SyntaxExprKind, SyntaxTokenKind,
+    TriviaKind,
 };
 
 const INDENT_WIDTH: usize = 2;
@@ -308,6 +308,28 @@ fn collect_container_group_plans(
                 plans,
             );
         }
+        SyntaxExprKind::Association(items) => {
+            for item in items {
+                collect_container_group_plans(
+                    parsed,
+                    item,
+                    token_index_by_start,
+                    token_index_by_end,
+                    plans,
+                );
+            }
+
+            maybe_collect_container_group_plan(
+                parsed,
+                expr,
+                items,
+                expr.span.end,
+                SyntaxTokenKind::RAssociation,
+                token_index_by_start,
+                token_index_by_end,
+                plans,
+            );
+        }
         SyntaxExprKind::Pattern { name, pattern } => {
             collect_container_group_plans(
                 parsed,
@@ -529,7 +551,7 @@ fn collect_binary_group_plans(
                 );
             }
         }
-        SyntaxExprKind::List(items) => {
+        SyntaxExprKind::Association(items) | SyntaxExprKind::List(items) => {
             for item in items {
                 collect_binary_group_plans(
                     parsed,
@@ -981,14 +1003,20 @@ fn update_nesting_depth(nesting_depth: &mut usize, kind: &SyntaxTokenKind) {
 fn is_opening_delimiter(kind: &SyntaxTokenKind) -> bool {
     matches!(
         kind,
-        SyntaxTokenKind::LBracket | SyntaxTokenKind::LBrace | SyntaxTokenKind::LParen
+        SyntaxTokenKind::LBracket
+            | SyntaxTokenKind::LBrace
+            | SyntaxTokenKind::LAssociation
+            | SyntaxTokenKind::LParen
     )
 }
 
 fn is_closing_delimiter(kind: &SyntaxTokenKind) -> bool {
     matches!(
         kind,
-        SyntaxTokenKind::RBracket | SyntaxTokenKind::RBrace | SyntaxTokenKind::RParen
+        SyntaxTokenKind::RBracket
+            | SyntaxTokenKind::RBrace
+            | SyntaxTokenKind::RAssociation
+            | SyntaxTokenKind::RParen
     )
 }
 
@@ -998,6 +1026,7 @@ fn needs_space_before_inline_comment(previous_kind: Option<&SyntaxTokenKind>) ->
         None | Some(
             SyntaxTokenKind::LBracket
                 | SyntaxTokenKind::LBrace
+                | SyntaxTokenKind::LAssociation
                 | SyntaxTokenKind::LParen
                 | SyntaxTokenKind::MessageName
                 | SyntaxTokenKind::Hash
@@ -1013,6 +1042,7 @@ fn needs_space_after_inline_comment(current_kind: &SyntaxTokenKind) -> bool {
         current_kind,
         SyntaxTokenKind::RBracket
             | SyntaxTokenKind::RBrace
+            | SyntaxTokenKind::RAssociation
             | SyntaxTokenKind::RParen
             | SyntaxTokenKind::Comma
             | SyntaxTokenKind::MessageName
@@ -1038,6 +1068,7 @@ fn needs_space_between(
         SyntaxTokenKind::LBracket
             | SyntaxTokenKind::RBracket
             | SyntaxTokenKind::RBrace
+            | SyntaxTokenKind::RAssociation
             | SyntaxTokenKind::RParen
             | SyntaxTokenKind::Comma
             | SyntaxTokenKind::Underscore
@@ -1051,6 +1082,7 @@ fn needs_space_between(
         previous,
         SyntaxTokenKind::LBracket
             | SyntaxTokenKind::LBrace
+            | SyntaxTokenKind::LAssociation
             | SyntaxTokenKind::LParen
             | SyntaxTokenKind::Underscore
             | SyntaxTokenKind::DoubleUnderscore
@@ -1096,6 +1128,7 @@ fn is_prefix_position(previous: &SyntaxTokenKind) -> bool {
         previous,
         SyntaxTokenKind::LBracket
             | SyntaxTokenKind::LBrace
+            | SyntaxTokenKind::LAssociation
             | SyntaxTokenKind::LParen
             | SyntaxTokenKind::Comma
             | SyntaxTokenKind::Set
@@ -1130,6 +1163,7 @@ fn is_prefix_operator(
                 | SyntaxTokenKind::TripleUnderscore
                 | SyntaxTokenKind::LParen
                 | SyntaxTokenKind::LBrace
+                | SyntaxTokenKind::LAssociation
         )
 }
 
@@ -1480,8 +1514,8 @@ mod tests {
     }
 
     #[test]
-    fn formatter_handles_multiline_comments_in_parenthesized_binary_expressions_with_inline_comments()
-     {
+    fn formatter_handles_multiline_comments_in_parenthesized_binary_expressions_with_inline_comments(
+    ) {
         let formatted = format_source(
             "f[(x (* left inline *) +\n(* rhs block *) g[y, (* arg inline *) z]), u]",
         )
@@ -1546,6 +1580,26 @@ mod tests {
     fn formatter_actively_expands_long_list_literals() {
         let formatted = format_source("f[{a, b, c, d}, z]").unwrap();
         assert_eq!(formatted, "f[{\n    a,\n    b,\n    c,\n    d\n  }, z]");
+    }
+
+    #[test]
+    fn formatter_handles_association_literals() {
+        let formatted = format_source("<|a->1,b-><|c->3,d->4|>|>").unwrap();
+        assert_eq!(formatted, "<|a -> 1, b -> <|c -> 3, d -> 4|>|>");
+    }
+
+    #[test]
+    fn formatter_spaces_apply_sugar() {
+        let formatted = format_source("f@g@x").unwrap();
+        assert_eq!(formatted, "f @ g @ x");
+    }
+
+    #[test]
+    fn formatter_spaces_functional_operator_sugars() {
+        assert_eq!(format_source("f@@g").unwrap(), "f @@ g");
+        assert_eq!(format_source("f@@@xs").unwrap(), "f @@@ xs");
+        assert_eq!(format_source("f@*g@x").unwrap(), "f @* g @ x");
+        assert_eq!(format_source("f/*g@x").unwrap(), "f /* g @ x");
     }
 
     #[test]

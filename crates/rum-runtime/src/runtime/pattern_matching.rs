@@ -315,6 +315,105 @@ impl Session {
         }
     }
 
+    pub(super) fn match_compiled_key_value_pattern_owned(
+        &mut self,
+        entries: Vec<(MatcherNode, MatcherNode)>,
+        value: Expr,
+        bindings: BTreeMap<Symbol, Expr>,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let Some(candidates) = association_entries_from_expr(&value) else {
+            return Ok(match_outcome(false, bindings));
+        };
+
+        self.match_compiled_key_value_pattern_entries_owned(entries, candidates, bindings)
+    }
+
+    fn match_compiled_key_value_pattern_entries_owned(
+        &mut self,
+        entries: Vec<(MatcherNode, MatcherNode)>,
+        candidates: Vec<(Expr, Expr)>,
+        bindings: BTreeMap<Symbol, Expr>,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let Some((key_pattern, value_pattern)) = entries.first().cloned() else {
+            return Ok(match_outcome(true, bindings));
+        };
+
+        self.match_compiled_key_value_pattern_choice_owned(
+            key_pattern,
+            value_pattern,
+            entries.into_iter().skip(1).collect(),
+            candidates,
+            bindings,
+            0,
+        )
+    }
+
+    fn match_compiled_key_value_pattern_choice_owned(
+        &mut self,
+        key_pattern: MatcherNode,
+        value_pattern: MatcherNode,
+        remaining_entries: Vec<(MatcherNode, MatcherNode)>,
+        candidates: Vec<(Expr, Expr)>,
+        bindings: BTreeMap<Symbol, Expr>,
+        candidate_index: usize,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let Some((candidate_key, candidate_value)) = candidates.get(candidate_index).cloned()
+        else {
+            return Ok(match_outcome(false, bindings));
+        };
+
+        let snapshot = bindings.clone();
+        let candidates_for_retry = candidates.clone();
+        let remaining_entries_for_retry = remaining_entries.clone();
+        let key_pattern_for_retry = key_pattern.clone();
+        let value_pattern_for_retry = value_pattern.clone();
+        let candidates_for_success = candidates.clone();
+        let remaining_entries_for_success = remaining_entries.clone();
+
+        let key_result = self.match_compiled_owned(key_pattern, candidate_key, bindings);
+        self.drive_internal_value(key_result, move |session, key_outcome| {
+            if !key_outcome.matched {
+                return session.match_compiled_key_value_pattern_choice_owned(
+                    key_pattern_for_retry,
+                    value_pattern_for_retry,
+                    remaining_entries_for_retry,
+                    candidates_for_retry,
+                    snapshot,
+                    candidate_index + 1,
+                );
+            }
+
+            let snapshot_for_value_failure = snapshot.clone();
+            let candidates_for_value_failure = candidates_for_success.clone();
+            let remaining_entries_for_value_failure = remaining_entries_for_success.clone();
+            let key_pattern_for_value_failure = key_pattern_for_retry.clone();
+            let value_pattern_for_value_failure = value_pattern_for_retry.clone();
+
+            let value_result =
+                session.match_compiled_owned(value_pattern, candidate_value, key_outcome.bindings);
+            session.drive_internal_value(value_result, move |session, value_outcome| {
+                if !value_outcome.matched {
+                    return session.match_compiled_key_value_pattern_choice_owned(
+                        key_pattern_for_value_failure,
+                        value_pattern_for_value_failure,
+                        remaining_entries_for_value_failure,
+                        candidates_for_value_failure,
+                        snapshot_for_value_failure,
+                        candidate_index + 1,
+                    );
+                }
+
+                let mut remaining_candidates = candidates_for_success;
+                remaining_candidates.remove(candidate_index);
+                session.match_compiled_key_value_pattern_entries_owned(
+                    remaining_entries_for_success,
+                    remaining_candidates,
+                    value_outcome.bindings,
+                )
+            })
+        })
+    }
+
     pub(super) fn evaluate_sequence_pattern_checks_owned(
         &mut self,
         checks: Vec<SequencePatternCheck>,
@@ -391,6 +490,9 @@ impl Session {
                 match_blank(head_constraint.as_ref(), &value),
                 bindings,
             )),
+            MatcherNode::KeyValuePattern(entries) => {
+                self.match_compiled_key_value_pattern_owned(entries, value, bindings)
+            }
             MatcherNode::Named { name, inner } => {
                 self.match_compiled_named_owned(name, *inner, value, bindings)
             }

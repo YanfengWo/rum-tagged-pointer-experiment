@@ -104,8 +104,9 @@ once in its primary implementation group. Other groups may mention it as
     `BooleanQ`, `AtomQ`, `ListQ`, `StringQ`, `IntegerQ`, `NumberQ`, `True`,
     `False`, `SameQ`, `UnsameQ`
   - `partial`: `Part`, `Extract`, `ReplacePart`, `Thread`, `First`, `Last`,
-    `Rest`, `Most`, `Take`, `Drop`, `TakeDrop`, `Append`, `Prepend`, `Symbol`,
-    `Construct`, `Equal`, `Unequal`, `Less`, `Greater`, `LessEqual`,
+    `Rest`, `Most`, `Take`, `Drop`, `TakeDrop`, `Insert`, `Delete`,
+    `TakeList`, `Append`, `Prepend`, `FullForm`, `Symbol`, `Construct`,
+    `Equal`, `Unequal`, `Less`, `Greater`, `LessEqual`,
     `GreaterEqual`, `And`, `Or`, `Not`, `NumericQ`, `EvenQ`, `OddQ`,
     `Positive`, `Negative`, `NonPositive`, `NonNegative`, `PossibleZeroQ`,
     `MachineNumberQ`, `RealValuedNumberQ`, `RealValuedNumericQ`, `PrimeQ`,
@@ -113,8 +114,7 @@ once in its primary implementation group. Other groups may mention it as
     `SubsetQ`, `Order`, `OrderedQ`, `ContainsAll`, `ContainsAny`,
     `ContainsExactly`, `ContainsNone`, `ContainsOnly`, `Between`, `VectorQ`,
     `MatrixQ`, `ArrayQ`, `AllTrue`, `AnyTrue`, `NoneTrue`, `CoprimeQ`
-  - `planned`: `FullForm`, `Insert`, `Delete`, `TakeList`,
-    `Heads`,
+  - `planned`: `Heads`,
     `LexicographicOrder`, `NumericalOrder`, `AlphabeticOrder`,
     `GreaterThan`, `LessThan`, `GreaterEqualThan`, `LessEqualThan`,
     `EqualTo`, `UnequalTo`, `NearestTo`, `SameAs`, `PolynomialQ`,
@@ -199,24 +199,44 @@ once in its primary implementation group. Other groups may mention it as
 
 ### Mechanisms
 
-- `implemented`: pure functions, operator-form lowering for `&`, slot forms
-  `#`, `##`, and `#name`
-- `partial`: current threading surface through `Thread` and the existing
-  `Listable` subset
+- `implemented`: pure functions, operator-form lowering for `&`, application
+  sugar `@`, `@@`, `@@@`, composition sugar `@*`, `/*`, and slot forms `#`,
+  `##`, and `#name`
+- `partial`: current threading surface through `Thread`, the existing
+  `Listable` subset, first-pass runtime support for `BlockMap`, `SubsetMap`,
+  `Comap`, `ComapApply`, `Accumulate`, `MapIndexed`, `Map`, `MapAll`,
+  `MapAt`, `Scan`, `MapThread`, `TakeWhile`, `LengthWhile`, `Inner`, `Fold`,
+  `FoldList`, `FoldPair`, `FoldWhile`, `SequenceFold`, `SequenceFoldList`,
+  `Nest`, `NestWhile`, `NestList`, `NestWhileList`, `FixedPoint`,
+  `FixedPointList`, `Apply`, `MapApply`, `OperatorApplied`, `CurryApplied`,
+  `ReverseApplied`, `Composition`, `RightComposition`, `Through`, `Operate`,
+  `ArrayFilter`, and `ArrayReduce`, plus current `levelspec` / `Heads`
+  support for the `Apply`, `Map`, and `Comap` families, current
+  callable-wrapper support for `OperatorApplied` / `CurryApplied` /
+  `ReverseApplied`, operator-form `Heads` parity for the `Apply` family,
+  current `Operate[..., 0]` and `Operate[p, n]` parity, current
+  post-transform evaluation parity for `Through` / `Operate`, current
+  rectangular-list radius/template support with `Padding -> None`,
+  `Padding -> "Fixed"`, `Padding -> "Periodic"`, and constant-padding forms
+  for `ArrayFilter`, and current dimension-spec plus grouped-dimension
+  support for `ArrayReduce`
 - `planned`: higher-order traversal, repeated-application families, and
-  operator/combinator convenience layers
+  remaining operator/combinator convenience layers
 
 ### Functions and Symbols
 
 - `implemented`: `Function`
-- `partial`: `Thread`
-- `planned`: `Map`, `Apply`, `MapApply`, `MapIndexed`, `MapThread`, `MapAt`,
-  `MapAll`, `Scan`, `BlockMap`, `SubsetMap`, `Comap`, `ComapApply`, `Nest`,
-  `NestList`, `FixedPoint`, `FixedPointList`, `Fold`, `FoldList`,
-  `FoldPair`, `FoldWhile`, `SequenceFold`, `SequenceFoldList`, `NestWhile`,
-  `NestWhileList`, `TakeWhile`, `LengthWhile`, `Through`, `Composition`,
-  `Operate`, `OperatorApplied`, `CurryApplied`, `ReverseApplied`,
-  `Accumulate`, `ArrayFilter`, `ArrayReduce`, `Inner`
+- `partial`: `Thread`, `BlockMap`, `SubsetMap`, `Comap`, `ComapApply`,
+  `Accumulate`, `MapIndexed`, `Map`, `MapAll`, `MapAt`, `Scan`, `MapThread`,
+  `TakeWhile`, `LengthWhile`, `Inner`, `Fold`, `FoldList`, `FoldPair`,
+  `FoldWhile`, `SequenceFold`, `SequenceFoldList`, `Nest`, `NestWhile`,
+  `NestList`, `NestWhileList`, `FixedPoint`, `FixedPointList`, `Apply`,
+  `MapApply`, `OperatorApplied`, `CurryApplied`, `ReverseApplied`, `Through`,
+  `Operate`, `ArrayFilter`, `ArrayReduce`, `Composition`,
+  `RightComposition`
+- `planned`: advanced `ArrayFilter` padding-list/sparse-array parity,
+  any remaining even-template anchoring decisions, and exotic held/head-chain
+  compatibility corners for `Through` / `Operate`
 - `cross-tracked elsewhere`: `Append`, `Array`, `AssociationMap`, `Cases`,
   `CountsBy`, `GroupBy`, `Identity`, `KeySortBy`, `Outer`, `Position`,
   `Select`
@@ -229,21 +249,26 @@ once in its primary implementation group. Other groups may mention it as
 
 ### Mechanisms
 
-- `partial`: named-slot syntax `#name` exists generically, but association
-  semantics are not available without the association core
-- `planned`: association syntax/lowering, key-value canonical form, keyed
-  part specifications via `Key`, deterministic ordering policy, key-based
-  pattern matching
+- `partial`: named-slot syntax `#name` exists generically, and the current
+  first-pass association subset now includes association syntax/lowering,
+  key-value canonicalization, keyed part specifications via `Key`,
+  deterministic ordering for canonical association rendering, and key-based
+  pattern matching through `KeyValuePattern`
+- `planned`: held in-place mutation parity for `AssociateTo` / `KeyDropFrom`,
+  fuller `Lookup` threading and multi-key parity, broader key-spec parity
+  across key-manipulation helpers, richer `Missing` semantics, and `KeySortBy`
+  option/comparer parity
 
 ### Functions and Symbols
 
-- `planned`: `Association`, `AssociationQ`, `AssociationMap`,
-  `AssociationThread`, `Lookup`, `Key`, `Keys`, `Values`, `Normal`,
-  `KeyExistsQ`, `KeyTake`, `KeyDrop`, `KeySelect`, `KeyMap`, `KeyValueMap`,
-  `KeyMemberQ`, `KeyFreeQ`, `KeySort`, `KeySortBy`, `AssociateTo`,
-  `KeyDropFrom`, `KeyValuePattern`, `KeyUnion`, `KeyIntersection`,
-  `KeyComplement`, `Merge`, `Catenate`, `Counts`, `CountsBy`, `GroupBy`,
-  `PositionIndex`, `Missing`
+- `partial`: `Association`, `AssociationQ`, `Lookup`, `Key`, `Keys`, `Values`,
+  `KeyExistsQ`, `KeyTake`, `KeyDrop`, `KeyMap`, `KeyValueMap`, `KeySelect`,
+  `KeyMemberQ`, `KeyFreeQ`, `KeySort`, `KeySortBy`, `AssociationMap`,
+  `AssociationThread`, `KeyUnion`, `KeyIntersection`, `KeyComplement`,
+  `Normal`, `AssociateTo`, `KeyDropFrom`, `KeyValuePattern`, `Merge`,
+  `Catenate`, `Counts`, `CountsBy`, `GroupBy`, `PositionIndex`, `Missing`
+- `planned`: `KeySortBy` option parity, keyed part-spec parity, and remaining
+  deep association semantics beyond the current first-pass subset
 - `cross-tracked elsewhere`: `#name`, `DeleteDuplicates`, `Map`, `Plus`,
   `Select`, `Sort`
 
