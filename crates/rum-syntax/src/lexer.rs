@@ -398,57 +398,91 @@ mod tests {
         )
         .unwrap();
 
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::MessageName)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::SetDelayed)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::ReplaceRepeated)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::ReplaceAll)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::Arrow)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::Condition)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::TagSet)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::Unset)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::DoubleLBracket)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::Span)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::LAssociation)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::RAssociation)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::At)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::AtAt)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::AtAtAt)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::AtStar)));
-        assert!(tokens
-            .iter()
-            .any(|token| matches!(token.kind, TokenKind::SlashStar)));
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::MessageName))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::SetDelayed))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::ReplaceRepeated))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::ReplaceAll))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Arrow))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Condition))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::TagSet))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Unset))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::DoubleLBracket))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Span))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::LAssociation))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::RAssociation))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::At))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::AtAt))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::AtAtAt))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::AtStar))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::SlashStar))
+        );
     }
 
     #[test]

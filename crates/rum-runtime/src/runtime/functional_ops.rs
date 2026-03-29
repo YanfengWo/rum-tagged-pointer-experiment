@@ -1259,7 +1259,7 @@ impl Session {
                 return CommonArgMapNormalization::Immediate(Expr::call(
                     head.clone(),
                     args.to_vec(),
-                ))
+                ));
             }
         };
 
@@ -1318,7 +1318,7 @@ impl Session {
                 return CommonArgMapNormalization::Immediate(Expr::call(
                     head.clone(),
                     args.to_vec(),
-                ))
+                ));
             }
         };
 
@@ -1921,11 +1921,7 @@ fn through_expression(expr: &Expr, target: Option<&Expr>) -> Expr {
         return expr.clone();
     };
 
-    if matched {
-        transformed
-    } else {
-        expr.clone()
-    }
+    if matched { transformed } else { expr.clone() }
 }
 
 fn through_head_expression(

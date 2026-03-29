@@ -156,7 +156,7 @@ impl Session {
                 .collect::<Option<Vec<_>>>()
                 .map(|items| items.into_iter().flatten().collect()),
             _ => Some(vec![
-                self.normalize_symbol_target_expr(expr, create_if_missing)?
+                self.normalize_symbol_target_expr(expr, create_if_missing)?,
             ]),
         }
     }

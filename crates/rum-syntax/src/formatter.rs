@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    parse_with_diagnostics, ParsedSource, SyntaxError, SyntaxExpr, SyntaxExprKind, SyntaxTokenKind,
-    TriviaKind,
+    ParsedSource, SyntaxError, SyntaxExpr, SyntaxExprKind, SyntaxTokenKind, TriviaKind,
+    parse_with_diagnostics,
 };
 
 const INDENT_WIDTH: usize = 2;
@@ -1516,8 +1516,8 @@ mod tests {
     }
 
     #[test]
-    fn formatter_handles_multiline_comments_in_parenthesized_binary_expressions_with_inline_comments(
-    ) {
+    fn formatter_handles_multiline_comments_in_parenthesized_binary_expressions_with_inline_comments()
+     {
         let formatted = format_source(
             "f[(x (* left inline *) +\n(* rhs block *) g[y, (* arg inline *) z]), u]",
         )

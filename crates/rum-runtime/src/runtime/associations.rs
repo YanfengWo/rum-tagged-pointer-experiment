@@ -7,10 +7,12 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let source_items = match args {
-            [Expr::Call {
-                head: list_head,
-                args: items,
-            }] if is_system_symbol_name(list_head, heads::structure::LIST) => items.clone(),
+            [
+                Expr::Call {
+                    head: list_head,
+                    args: items,
+                },
+            ] if is_system_symbol_name(list_head, heads::structure::LIST) => items.clone(),
             _ => args.to_vec(),
         };
 

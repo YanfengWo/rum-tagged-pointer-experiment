@@ -5,7 +5,7 @@ use rum_runtime::Session;
 use rum_stdlib::install_core;
 use rum_terminal::{render_request_failure, render_runtime_message};
 
-use crate::fixtures::{golden_dir, load_text, parse_golden_file, GoldenEntry};
+use crate::fixtures::{GoldenEntry, golden_dir, load_text, parse_golden_file};
 use crate::oracle::{Oracle, OracleError};
 
 #[derive(Clone, Debug, PartialEq, Eq)]

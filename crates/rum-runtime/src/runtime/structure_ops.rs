@@ -1108,22 +1108,14 @@ fn resolve_span_endpoint(
             let len = isize::try_from(len).ok()?;
             Some(if step > 0 {
                 if is_start {
-                    if include_head {
-                        0
-                    } else {
-                        1
-                    }
+                    if include_head { 0 } else { 1 }
                 } else {
                     len
                 }
             } else if is_start {
                 len
             } else {
-                if include_head {
-                    0
-                } else {
-                    1
-                }
+                if include_head { 0 } else { 1 }
             })
         }
         SpanEndpoint::Index(0) if include_head => Some(0),

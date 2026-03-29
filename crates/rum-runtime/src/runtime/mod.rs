@@ -3,10 +3,10 @@ use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use rum_core::{heads, Atom, BigInt, Expr, Rational, Symbol, GLOBAL_CONTEXT, SYSTEM_CONTEXT};
+use rum_core::{Atom, BigInt, Expr, GLOBAL_CONTEXT, Rational, SYSTEM_CONTEXT, Symbol, heads};
 use rum_syntax::{
-    parse_expr, parse_with_diagnostics, BinaryOp, BlankKind, ParsedSource, PostfixOp, PrefixOp,
-    SlotSpec, StructuredSourceDiagnostic, SyntaxError, SyntaxExpr, SyntaxExprKind,
+    BinaryOp, BlankKind, ParsedSource, PostfixOp, PrefixOp, SlotSpec, StructuredSourceDiagnostic,
+    SyntaxError, SyntaxExpr, SyntaxExprKind, parse_expr, parse_with_diagnostics,
 };
 
 mod arithmetic;
