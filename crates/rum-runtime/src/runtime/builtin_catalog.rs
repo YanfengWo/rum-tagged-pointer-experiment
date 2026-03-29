@@ -999,6 +999,48 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
         BuiltinHandler::For,
     ),
+    BuiltinSpec::ordinary_with_hold(
+        "Table",
+        "Generates lists using the current first-pass iterator subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Table,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Enclose",
+        "Evaluates an expression and catches confirmation failures in the current first-pass subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Enclose,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Confirm",
+        "Confirms that an expression does not evaluate to a failure-like result in the current first-pass subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Confirm,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "ConfirmBy",
+        "Confirms that a test function returns True for an expression in the current first-pass subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::ConfirmBy,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "ConfirmMatch",
+        "Confirms that an expression matches a held pattern in the current first-pass subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::ConfirmMatch,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "ConfirmQuiet",
+        "Confirms that an evaluation emits no matching messages in the current first-pass subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::ConfirmQuiet,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "ConfirmAssert",
+        "Confirms that a test evaluates to True in the current first-pass subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::ConfirmAssert,
+    ),
     BuiltinSpec::ordinary(
         "Return",
         "Exits the current function-style evaluation with an optional result.",
@@ -1024,6 +1066,16 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Evaluates an expression and intercepts matching Throw values.",
         HoldAttribute::HoldAll,
         BuiltinHandler::Catch,
+    ),
+    BuiltinSpec::ordinary(
+        "Failure",
+        "Represents a failure object with associated details in the current first-pass subset.",
+        BuiltinHandler::Failure,
+    ),
+    BuiltinSpec::ordinary(
+        "FailureQ",
+        "Tests whether an expression is a Failure object.",
+        BuiltinHandler::FailureQ,
     ),
     BuiltinSpec::ordinary_with_hold(
         "Function",

@@ -286,8 +286,9 @@ once in its primary implementation group. Other groups may mention it as
 - `implemented`: hold-aware branch selection, lexical and dynamic local state,
   message interception through the current `Check` / `Quiet` model
 - `partial`: sequential evaluation plus first-pass `Switch` / `Do` /
-  `While` / `Until` / `For` / `Throw` / `Catch` / `Return` now work, but
-  cleanup, table-building, and failure-object semantics are still missing
+  `While` / `Until` / `For` / `Table` / `Throw` / `Catch` / `Return` and
+  `Enclose` / `Confirm*` / `Failure` now work, but cleanup, abort handling,
+  and richer failure-object semantics are still missing
 - `planned`: broader control flow, explicit exception propagation, failure
   values, and cleanup semantics
 
@@ -296,12 +297,12 @@ once in its primary implementation group. Other groups may mention it as
 - `implemented`: `If`, `Which`, `Check`, `Quiet`, `CompoundExpression`,
   `Switch`
 - `partial`: `Do`, `While`, `Until`, `For`, `Break`, `Continue`, `Return`,
-  `Throw`, `Catch` in the current first-pass subset
-- `planned`: `Table`, `Confirm`, `ConfirmBy`, `ConfirmMatch`,
-  `ConfirmQuiet`, `ConfirmAssert`, `Enclose`,
-  `WithCleanup`, `Failsafe`, `Failure`, `FailureQ`, `Missing`, `MissingQ`,
-  `Success`, `TerminatedEvaluation`, `Assert`, `Abort`, `AbortProtect`,
-  `CheckAbort`, `PropagateAborts`, `BlockRandom`, `Input`, `Print`, `Pause`
+  `Throw`, `Catch`, `Table`, `Enclose`, `Confirm`, `ConfirmBy`,
+  `ConfirmMatch`, `ConfirmQuiet`, `ConfirmAssert`, `Failure`, `FailureQ` in
+  the current first-pass subset
+- `planned`: `WithCleanup`, `Failsafe`, `Missing`, `MissingQ`, `Success`,
+  `TerminatedEvaluation`, `Assert`, `Abort`, `AbortProtect`, `CheckAbort`,
+  `PropagateAborts`, `BlockRandom`, `Input`, `Print`, `Pause`
 - `cross-tracked elsewhere`: `Block`, `Function`, `Module`, `Rule`,
   `RuleDelayed`, `With`
 
