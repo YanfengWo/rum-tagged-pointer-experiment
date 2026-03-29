@@ -327,7 +327,9 @@ once in its primary implementation group. Other groups may mention it as
 - `implemented`: canonical string atoms, Unicode code-point semantics, parser
   escape support, exact-string construction and transformation core
 - `partial`: `ToString` currently targets the canonical kernel textual form,
-  and the string-pattern surface is still a first-pass subset
+  the string-pattern surface is still a first-pass subset, and the
+  byte-array/hash/compress/encrypt/nearest/pluralization layer is still a
+  current subset rather than full Wolfram parity
 - `planned`: fuller symbolic string-pattern layer, conversions, templating,
   and nontrivial search/transformation semantics
 
@@ -344,13 +346,14 @@ once in its primary implementation group. Other groups may mention it as
   `ToCharacterCode`, `ToExpression`, `SyntaxQ`, `TextString`,
   `FileTemplateApply`, `CharacterCounts`, `RemoveDiacritics`,
   `Alphabet`, `AlphabeticSort`, `EditDistance`, `HammingDistance`,
-  `LongestCommonSubsequence`, `SequenceAlignment`, `Diff`
+  `LongestCommonSubsequence`, `SequenceAlignment`, `Diff`,
+  `StringToByteArray`, `Hash`, `Compress`, `Encrypt`, `Nearest`,
+  `Pluralize`
 - `partial richer string-pattern parity`: `StartOfString`, `EndOfString`,
   `Repeated`, `RepeatedNull`, bounded repetition, `Shortest`, `Longest`,
   `Except`, and current zero-length/match-edge handling
-- `planned`: `StringToByteArray`,
-  `Compress`,
-  `Encrypt`, `Hash`, `Nearest`, `Pluralize`
+- `planned`: deeper byte-array/crypto compatibility, richer nearest-neighbor
+  semantics, and fuller linguistic-data-backed pluralization parity
 
 ## CL-08: Package, Namespace, Options, and Protection Tooling
 

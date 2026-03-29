@@ -906,3 +906,76 @@ fn alphabet_distance_alignment_and_diff_extend_cl07() {
         "DiffObject[1, \"Elements\", Association[Rule[\"Changes\", List[List[Rule[List[1, 1], List[a]]], List[Rule[2, List[b]], Rule[2, List[x]]], List[Rule[List[3, 3], List[c]]]]], Rule[\"View\", List[Automatic]]]]"
     );
 }
+
+#[test]
+fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "StringToByteArray[\"abc\"]"),
+        "ByteArray[\"YWJj\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringToByteArray[\"🙂\"]"),
+        "ByteArray[\"8J+Zgg==\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Hash[\"abc\"]"),
+        "84342368487090800366523834928142263660104883695016514377462985829716817089965"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Hash[\"abc\", \"SHA256\", \"HexString\"]"),
+        "\"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Hash[\"abc\", \"SHA256\", \"DecimalString\"]"),
+        "\"084342368487090800366523834928142263660104883695016514377462985829716817089965\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Compress[1 + 1]"),
+        "\"rum:1:e:Mg==\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Compress[\"abc\"]"),
+        "\"rum:1:s:YWJj\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Head[Encrypt[\"secret\", \"abc\"]]"),
+        "EncryptedObject"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Nearest[{1, 2, 5}, 3]"),
+        "List[2]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Nearest[{1, 2, 5}, 3, 2]"),
+        "List[2, 1]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Nearest[{1, 2, 5} -> {a, b, c}, 3]"),
+        "List[b]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Nearest[{\"cat\", \"cot\", \"dog\"}, \"cut\"]"
+        ),
+        "List[\"cat\", \"cot\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"cat\"]"),
+        "\"cats\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"cat\", 1]"),
+        "\"cat\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"city\", 2]"),
+        "\"cities\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"box\", 2]"),
+        "\"boxes\""
+    );
+}

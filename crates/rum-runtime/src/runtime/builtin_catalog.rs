@@ -156,6 +156,36 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::ToExpression,
     ),
     BuiltinSpec::ordinary(
+        "StringToByteArray",
+        "Converts strings to ByteArray objects using the current UTF-8 subset.",
+        BuiltinHandler::StringToByteArray,
+    ),
+    BuiltinSpec::ordinary(
+        "Hash",
+        "Computes SHA256 hashes over the current string/expression subset.",
+        BuiltinHandler::Hash,
+    ),
+    BuiltinSpec::ordinary(
+        "Compress",
+        "Encodes expressions into the current project-local compressed string envelope.",
+        BuiltinHandler::Compress,
+    ),
+    BuiltinSpec::ordinary(
+        "Encrypt",
+        "Wraps values in the current first-pass encrypted object subset using string keys.",
+        BuiltinHandler::Encrypt,
+    ),
+    BuiltinSpec::ordinary(
+        "Nearest",
+        "Finds nearest strings or exact numeric values in the current first-pass subset.",
+        BuiltinHandler::Nearest,
+    ),
+    BuiltinSpec::ordinary(
+        "Pluralize",
+        "Applies a simple English pluralization subset.",
+        BuiltinHandler::Pluralize,
+    ),
+    BuiltinSpec::ordinary(
         "SyntaxQ",
         "Tests whether a string parses successfully in the current syntax subset.",
         BuiltinHandler::SyntaxQ,
@@ -292,6 +322,14 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::new(
         "DiffObject",
         "Represents the current diff result object returned by Diff.",
+    ),
+    BuiltinSpec::new(
+        "ByteArray",
+        "Represents raw byte payloads using base64 text in the current first-pass subset.",
+    ),
+    BuiltinSpec::new(
+        "EncryptedObject",
+        "Represents the current first-pass encrypted object envelope returned by Encrypt.",
     ),
     BuiltinSpec::new(
         "InputForm",
