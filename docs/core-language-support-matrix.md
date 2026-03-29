@@ -341,16 +341,17 @@ once in its primary implementation group. Other groups may mention it as
   `ToUpperCase`, `Whitespace`, `NumberString`, `LetterQ`, `DigitQ`,
   `StringApply`, `StringDelete`, `StringForm`, `StringPadLeft`,
   `StringRiffle`, `StringTemplate`, `TemplateApply`, `TextWords`,
-  `ToCharacterCode`, `ToExpression`
+  `ToCharacterCode`, `ToExpression`, `SyntaxQ`, `TextString`,
+  `FileTemplateApply`, `CharacterCounts`, `RemoveDiacritics`
 - `partial richer string-pattern parity`: `StartOfString`, `EndOfString`,
   `Repeated`, `RepeatedNull`, bounded repetition, `Shortest`, `Longest`,
   `Except`, and current zero-length/match-edge handling
 - `planned`: `StringToByteArray`,
-  `FileTemplateApply`, `TextString`, `SyntaxQ`, `Alphabet`,
-  `AlphabeticSort`, `CharacterCounts`, `Compress`, `Diff`,
+  `Alphabet`,
+  `AlphabeticSort`, `Compress`, `Diff`,
   `EditDistance`, `Encrypt`, `Hash`, `HammingDistance`,
   `LongestCommonSubsequence`, `Nearest`, `Pluralize`,
-  `RemoveDiacritics`, `SequenceAlignment`
+  `SequenceAlignment`
 
 ## CL-08: Package, Namespace, Options, and Protection Tooling
 

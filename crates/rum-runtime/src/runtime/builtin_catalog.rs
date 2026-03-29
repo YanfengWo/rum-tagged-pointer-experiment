@@ -156,6 +156,31 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::ToExpression,
     ),
     BuiltinSpec::ordinary(
+        "SyntaxQ",
+        "Tests whether a string parses successfully in the current syntax subset.",
+        BuiltinHandler::SyntaxQ,
+    ),
+    BuiltinSpec::ordinary(
+        "TextString",
+        "Converts expressions to the current canonical text subset, leaving raw strings unquoted.",
+        BuiltinHandler::TextString,
+    ),
+    BuiltinSpec::ordinary(
+        "FileTemplateApply",
+        "Applies a simple file-backed string template and writes the rendered result to a temporary file in the current first-pass subset.",
+        BuiltinHandler::FileTemplateApply,
+    ),
+    BuiltinSpec::ordinary(
+        "CharacterCounts",
+        "Counts code-point occurrences in a string and returns an association in the current first-pass subset.",
+        BuiltinHandler::CharacterCounts,
+    ),
+    BuiltinSpec::ordinary(
+        "RemoveDiacritics",
+        "Removes common Latin diacritics from strings in the current first-pass subset.",
+        BuiltinHandler::RemoveDiacritics,
+    ),
+    BuiltinSpec::ordinary(
         "Characters",
         "Splits a string into a list of single-code-point strings.",
         BuiltinHandler::Characters,

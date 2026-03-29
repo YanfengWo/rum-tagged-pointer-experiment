@@ -407,6 +407,113 @@ impl Session {
         Ok(value)
     }
 
+    pub(super) fn eval_syntax_q(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("SyntaxQ", args, 1));
+        }
+
+        let Some(source) = expr_as_string(&args[0]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        Ok(bool_expr(parse_expr(source).is_ok()))
+    }
+
+    pub(super) fn eval_text_string(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("TextString", args, 1));
+        }
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(Expr::string(value.to_string()));
+        }
+
+        Ok(Expr::string(args[0].to_string()))
+    }
+
+    pub(super) fn eval_file_template_apply(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        match args {
+            [template_path] => Ok(Expr::call(
+                system_expr("Function"),
+                vec![Expr::call(
+                    system_expr("FileTemplateApply"),
+                    vec![template_path.clone(), string_slot_expr()],
+                )],
+            )),
+            [template_path, data] => {
+                let Some(path) = expr_as_string(template_path) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
+
+                let template_source = fs::read_to_string(path).map_err(|source| EvalError::Io {
+                    path: path.to_string(),
+                    source,
+                })?;
+                let Some(rendered) = template_apply_value(&template_source, data) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
+
+                let output_path = temp_rendered_template_path(Path::new(path));
+                fs::write(&output_path, rendered).map_err(|source| EvalError::Io {
+                    path: output_path.display().to_string(),
+                    source,
+                })?;
+
+                Ok(Expr::string(output_path.display().to_string()))
+            }
+            _ => Ok(self.invalid_call_with_arg_range("FileTemplateApply", args, 1, 2)),
+        }
+    }
+
+    pub(super) fn eval_character_counts(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("CharacterCounts", args, 1));
+        }
+
+        let Some(value) = expr_as_string(&args[0]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        Ok(character_counts_expr(value))
+    }
+
+    pub(super) fn eval_remove_diacritics(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("RemoveDiacritics", args, 1));
+        }
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(Expr::string(remove_diacritics_value(value)));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(string_list_expr(
+                values
+                    .into_iter()
+                    .map(|value| remove_diacritics_value(&value))
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
     pub(super) fn eval_characters(
         &mut self,
         head: &Expr,
@@ -1778,6 +1885,19 @@ fn template_fragment_value(expr: &Expr) -> String {
     }
 }
 
+fn temp_rendered_template_path(source_path: &Path) -> PathBuf {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system clock should be after unix epoch")
+        .as_nanos();
+    let mut filename = format!("template-{}-{nanos}", std::process::id());
+    if let Some(extension) = source_path.extension().and_then(|ext| ext.to_str()) {
+        filename.push('.');
+        filename.push_str(extension);
+    }
+    std::env::temp_dir().join(filename)
+}
+
 fn string_pad_left_value(value: &str, width: usize, padding: &str) -> String {
     let value_len = value.chars().count();
     if value_len >= width {
@@ -1820,6 +1940,95 @@ fn character_code_expr(value: &str) -> Expr {
             .map(|ch| Expr::integer(BigInt::from(ch as u32)))
             .collect(),
     )
+}
+
+fn character_counts_expr(value: &str) -> Expr {
+    let mut counts = BTreeMap::<String, usize>::new();
+    for ch in value.chars() {
+        *counts.entry(ch.to_string()).or_insert(0) += 1;
+    }
+
+    let mut entries = counts.into_iter().collect::<Vec<_>>();
+    entries.sort_by(|(lhs_key, lhs_count), (rhs_key, rhs_count)| {
+        rhs_count.cmp(lhs_count).then_with(|| rhs_key.cmp(lhs_key))
+    });
+
+    render_association(
+        entries
+            .into_iter()
+            .map(|(key, count)| (Expr::string(key), Expr::integer(BigInt::from(count as u64))))
+            .collect(),
+    )
+}
+
+fn remove_diacritics_value(value: &str) -> String {
+    let mut output = String::new();
+    for ch in value.chars() {
+        output.push_str(&strip_diacritic_char(ch));
+    }
+    output
+}
+
+fn strip_diacritic_char(ch: char) -> String {
+    match ch {
+        'À' | 'Á' | 'Â' | 'Ã' | 'Ä' | 'Å' | 'Ā' | 'Ă' | 'Ą' | 'Ǎ' | 'Ȁ' | 'Ȃ' => {
+            "A".into()
+        }
+        'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' | 'ā' | 'ă' | 'ą' | 'ǎ' | 'ȁ' | 'ȃ' => {
+            "a".into()
+        }
+        'Ç' | 'Ć' | 'Ĉ' | 'Ċ' | 'Č' => "C".into(),
+        'ç' | 'ć' | 'ĉ' | 'ċ' | 'č' => "c".into(),
+        'Ð' | 'Ď' | 'Đ' => "D".into(),
+        'ð' | 'ď' | 'đ' => "d".into(),
+        'È' | 'É' | 'Ê' | 'Ë' | 'Ē' | 'Ĕ' | 'Ė' | 'Ę' | 'Ě' | 'Ȅ' | 'Ȇ' => "E".into(),
+        'è' | 'é' | 'ê' | 'ë' | 'ē' | 'ĕ' | 'ė' | 'ę' | 'ě' | 'ȅ' | 'ȇ' => "e".into(),
+        'Ĝ' | 'Ğ' | 'Ġ' | 'Ģ' => "G".into(),
+        'ĝ' | 'ğ' | 'ġ' | 'ģ' => "g".into(),
+        'Ĥ' | 'Ħ' => "H".into(),
+        'ĥ' | 'ħ' => "h".into(),
+        'Ì' | 'Í' | 'Î' | 'Ï' | 'Ĩ' | 'Ī' | 'Ĭ' | 'Į' | 'İ' | 'Ǐ' | 'Ȉ' | 'Ȋ' => {
+            "I".into()
+        }
+        'ì' | 'í' | 'î' | 'ï' | 'ĩ' | 'ī' | 'ĭ' | 'į' | 'ı' | 'ǐ' | 'ȉ' | 'ȋ' => {
+            "i".into()
+        }
+        'Ĵ' => "J".into(),
+        'ĵ' => "j".into(),
+        'Ķ' => "K".into(),
+        'ķ' => "k".into(),
+        'Ĺ' | 'Ļ' | 'Ľ' | 'Ŀ' | 'Ł' => "L".into(),
+        'ĺ' | 'ļ' | 'ľ' | 'ŀ' | 'ł' => "l".into(),
+        'Ñ' | 'Ń' | 'Ņ' | 'Ň' => "N".into(),
+        'ñ' | 'ń' | 'ņ' | 'ň' => "n".into(),
+        'Ò' | 'Ó' | 'Ô' | 'Õ' | 'Ö' | 'Ø' | 'Ō' | 'Ŏ' | 'Ő' | 'Ǒ' | 'Ȍ' | 'Ȏ' => {
+            "O".into()
+        }
+        'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'ø' | 'ō' | 'ŏ' | 'ő' | 'ǒ' | 'ȍ' | 'ȏ' => {
+            "o".into()
+        }
+        'Ŕ' | 'Ŗ' | 'Ř' => "R".into(),
+        'ŕ' | 'ŗ' | 'ř' => "r".into(),
+        'Ś' | 'Ŝ' | 'Ş' | 'Š' => "S".into(),
+        'ś' | 'ŝ' | 'ş' | 'š' => "s".into(),
+        'Ţ' | 'Ť' | 'Ŧ' => "T".into(),
+        'ţ' | 'ť' | 'ŧ' => "t".into(),
+        'Ù' | 'Ú' | 'Û' | 'Ü' | 'Ũ' | 'Ū' | 'Ŭ' | 'Ů' | 'Ű' | 'Ų' | 'Ǔ' | 'Ȕ' | 'Ȗ' => {
+            "U".into()
+        }
+        'ù' | 'ú' | 'û' | 'ü' | 'ũ' | 'ū' | 'ŭ' | 'ů' | 'ű' | 'ų' | 'ǔ' | 'ȕ' | 'ȗ' => {
+            "u".into()
+        }
+        'Ý' | 'Ÿ' | 'Ŷ' => "Y".into(),
+        'ý' | 'ÿ' | 'ŷ' => "y".into(),
+        'Ź' | 'Ż' | 'Ž' => "Z".into(),
+        'ź' | 'ż' | 'ž' => "z".into(),
+        'Æ' => "AE".into(),
+        'æ' => "ae".into(),
+        'Œ' => "OE".into(),
+        'œ' => "oe".into(),
+        _ => ch.to_string(),
+    }
 }
 
 fn bool_expr(value: bool) -> Expr {

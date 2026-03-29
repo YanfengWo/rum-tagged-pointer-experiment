@@ -1,4 +1,5 @@
 use super::*;
+use std::fs;
 
 fn eval_to_string(session: &mut Session, input: &str) -> String {
     session.eval_text(input).unwrap().value.to_string()
@@ -789,4 +790,54 @@ fn bounded_repetition_and_except_extend_string_patterns() {
         ),
         "List[\"a\", \"c\"]"
     );
+}
+
+#[test]
+fn syntaxq_textstring_filetemplateapply_charactercounts_and_removediacritics_extend_cl07() {
+    let mut session = Session::new();
+
+    assert_eq!(eval_to_string(&mut session, "SyntaxQ[\"1+2\"]"), "True");
+    assert_eq!(eval_to_string(&mut session, "SyntaxQ[\"1+\"]"), "False");
+    assert_eq!(eval_to_string(&mut session, "TextString[123]"), "\"123\"");
+    assert_eq!(
+        eval_to_string(&mut session, "TextString[{1, 2}]"),
+        "\"List[1, 2]\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "CharacterCounts[\"abca\"]"),
+        "Association[Rule[\"a\", 2], Rule[\"c\", 1], Rule[\"b\", 1]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "CharacterCounts[\"中中a\"]"),
+        "Association[Rule[\"中\", 2], Rule[\"a\", 1]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "RemoveDiacritics[\"café naïve façade\"]"),
+        "\"cafe naive facade\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "RemoveDiacritics[{\"café\", \"São\", \"Žižek\"}]"
+        ),
+        "List[\"cafe\", \"Sao\", \"Zizek\"]"
+    );
+
+    let source_path =
+        std::env::temp_dir().join(format!("rum-file-template-{}.txt", std::process::id()));
+    fs::write(&source_path, "Hello, `name`!").unwrap();
+
+    let expr = format!(
+        "FileTemplateApply[\"{}\", <|\"name\" -> \"Alice\"|>]",
+        source_path.display()
+    );
+    let output = session.eval_text(&expr).unwrap().value;
+    let Expr::Atom(Atom::String(output_path)) = output else {
+        panic!("FileTemplateApply should return a path string");
+    };
+
+    assert_eq!(fs::read_to_string(&output_path).unwrap(), "Hello, Alice!");
+
+    fs::remove_file(&source_path).unwrap();
+    fs::remove_file(&output_path).unwrap();
 }
