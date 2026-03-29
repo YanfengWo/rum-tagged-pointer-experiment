@@ -975,10 +975,44 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldRest,
         BuiltinHandler::Switch,
     ),
+    BuiltinSpec::ordinary_with_hold(
+        "Do",
+        "Evaluates an expression repeatedly in the current first-pass iterator subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Do,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "While",
+        "Evaluates a body while its test yields True.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::While,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Until",
+        "Evaluates a body until its test yields True.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Until,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "For",
+        "Evaluates start, test, increment, and body in the current first-pass procedural subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::For,
+    ),
     BuiltinSpec::ordinary(
         "Return",
         "Exits the current function-style evaluation with an optional result.",
         BuiltinHandler::Return,
+    ),
+    BuiltinSpec::ordinary(
+        "Break",
+        "Exits the nearest enclosing loop.",
+        BuiltinHandler::Break,
+    ),
+    BuiltinSpec::ordinary(
+        "Continue",
+        "Skips to the next iteration of the nearest enclosing loop.",
+        BuiltinHandler::Continue,
     ),
     BuiltinSpec::ordinary(
         "Throw",

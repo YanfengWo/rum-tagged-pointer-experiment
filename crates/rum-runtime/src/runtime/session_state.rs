@@ -208,6 +208,10 @@ pub enum EvalError {
     Return { value: Expr },
     #[error("uncaught throw: {value} with tag {tag}")]
     Thrown { value: Expr, tag: Expr },
+    #[error("uncaught Break[]")]
+    Break,
+    #[error("uncaught Continue[]")]
+    Continue,
     #[error("{request}")]
     InputRequired { request: RuntimeInputRequest },
 }

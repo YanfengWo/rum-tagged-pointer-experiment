@@ -58,6 +58,7 @@ mod functional_ops;
 mod holding_and_control;
 mod holding_and_control_part2;
 mod holding_and_control_part3;
+mod holding_and_control_part4;
 mod logic;
 mod lowering_and_context;
 mod lowering_golden;
