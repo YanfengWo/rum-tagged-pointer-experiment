@@ -40,11 +40,7 @@ impl Session {
         Ok(self.eval_comparison_subset(head, args, ComparisonRelation::Equal))
     }
 
-    pub(super) fn eval_unequal(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_unequal(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         Ok(self.eval_comparison_subset(head, args, ComparisonRelation::Unequal))
     }
 
@@ -52,11 +48,7 @@ impl Session {
         Ok(self.eval_comparison_subset(head, args, ComparisonRelation::Less))
     }
 
-    pub(super) fn eval_greater(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_greater(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         Ok(self.eval_comparison_subset(head, args, ComparisonRelation::Greater))
     }
 
@@ -65,11 +57,7 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        Ok(self.eval_comparison_subset(
-            head,
-            args,
-            ComparisonRelation::LessEqual,
-        ))
+        Ok(self.eval_comparison_subset(head, args, ComparisonRelation::LessEqual))
     }
 
     pub(super) fn eval_greater_equal(
@@ -77,11 +65,7 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        Ok(self.eval_comparison_subset(
-            head,
-            args,
-            ComparisonRelation::GreaterEqual,
-        ))
+        Ok(self.eval_comparison_subset(head, args, ComparisonRelation::GreaterEqual))
     }
 
     fn resume_and_from_index(
@@ -91,11 +75,7 @@ impl Session {
         residual: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         if index >= args.len() {
-            return Ok(finalize_logical_sequence(
-                "And",
-                residual,
-                true,
-            ));
+            return Ok(finalize_logical_sequence("And", residual, true));
         }
 
         let arg = args[index].clone();
@@ -120,9 +100,7 @@ impl Session {
         value: Expr,
     ) -> Result<Expr, EvalError> {
         match truthiness_symbol(&value) {
-            Some(true) => {
-                self.resume_and_from_index(args, index + 1, residual)
-            }
+            Some(true) => self.resume_and_from_index(args, index + 1, residual),
             Some(false) => Ok(system_expr(heads::structure::FALSE)),
             None => {
                 residual.push(value);
@@ -138,11 +116,7 @@ impl Session {
         residual: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         if index >= args.len() {
-            return Ok(finalize_logical_sequence(
-                "Or",
-                residual,
-                false,
-            ));
+            return Ok(finalize_logical_sequence("Or", residual, false));
         }
 
         let arg = args[index].clone();
@@ -168,9 +142,7 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         match truthiness_symbol(&value) {
             Some(true) => Ok(system_expr(heads::structure::TRUE)),
-            Some(false) => {
-                self.resume_or_from_index(args, index + 1, residual)
-            }
+            Some(false) => self.resume_or_from_index(args, index + 1, residual),
             None => {
                 residual.push(value);
                 self.resume_or_from_index(args, index + 1, residual)
@@ -204,18 +176,28 @@ impl Session {
     }
 }
 
-fn comparison_result_from_expr_identity(args: &[Expr], relation: ComparisonRelation) -> Option<bool> {
+fn comparison_result_from_expr_identity(
+    args: &[Expr],
+    relation: ComparisonRelation,
+) -> Option<bool> {
     match relation {
-        ComparisonRelation::Equal => args.windows(2).all(|pair| pair[0] == pair[1]).then_some(true),
+        ComparisonRelation::Equal => args
+            .windows(2)
+            .all(|pair| pair[0] == pair[1])
+            .then_some(true),
         ComparisonRelation::Unequal => args
             .iter()
             .enumerate()
             .any(|(index, lhs)| args[index + 1..].iter().any(|rhs| lhs == rhs))
             .then_some(false),
-        ComparisonRelation::Less => args.windows(2).any(|pair| pair[0] == pair[1]).then_some(false),
-        ComparisonRelation::Greater => {
-            args.windows(2).any(|pair| pair[0] == pair[1]).then_some(false)
-        }
+        ComparisonRelation::Less => args
+            .windows(2)
+            .any(|pair| pair[0] == pair[1])
+            .then_some(false),
+        ComparisonRelation::Greater => args
+            .windows(2)
+            .any(|pair| pair[0] == pair[1])
+            .then_some(false),
         ComparisonRelation::LessEqual => {
             if args.windows(2).all(|pair| pair[0] == pair[1]) {
                 Some(true)
@@ -247,22 +229,24 @@ fn comparable_value_from_expr(expr: &Expr) -> Option<ComparableValue> {
 fn compare_values(values: &[ComparableValue], relation: ComparisonRelation) -> Option<bool> {
     match relation {
         ComparisonRelation::Equal => Some(values.windows(2).all(|pair| pair[0] == pair[1])),
-        ComparisonRelation::Unequal => Some(!values
-            .iter()
-            .enumerate()
-            .any(|(index, lhs)| values[index + 1..].iter().any(|rhs| lhs == rhs))),
-        ComparisonRelation::Less => compare_pair_chain(values, |ordering| {
-            ordering == std::cmp::Ordering::Less
-        }),
-        ComparisonRelation::Greater => compare_pair_chain(values, |ordering| {
-            ordering == std::cmp::Ordering::Greater
-        }),
-        ComparisonRelation::LessEqual => compare_pair_chain(values, |ordering| {
-            ordering != std::cmp::Ordering::Greater
-        }),
-        ComparisonRelation::GreaterEqual => compare_pair_chain(values, |ordering| {
-            ordering != std::cmp::Ordering::Less
-        }),
+        ComparisonRelation::Unequal => Some(
+            !values
+                .iter()
+                .enumerate()
+                .any(|(index, lhs)| values[index + 1..].iter().any(|rhs| lhs == rhs)),
+        ),
+        ComparisonRelation::Less => {
+            compare_pair_chain(values, |ordering| ordering == std::cmp::Ordering::Less)
+        }
+        ComparisonRelation::Greater => {
+            compare_pair_chain(values, |ordering| ordering == std::cmp::Ordering::Greater)
+        }
+        ComparisonRelation::LessEqual => {
+            compare_pair_chain(values, |ordering| ordering != std::cmp::Ordering::Greater)
+        }
+        ComparisonRelation::GreaterEqual => {
+            compare_pair_chain(values, |ordering| ordering != std::cmp::Ordering::Less)
+        }
     }
 }
 
@@ -288,7 +272,9 @@ fn compare_comparable_values(
     rhs: &ComparableValue,
 ) -> Option<std::cmp::Ordering> {
     match (lhs, rhs) {
-        (ComparableValue::Number(lhs), ComparableValue::Number(rhs)) => Some(compare_rationals(lhs, rhs)),
+        (ComparableValue::Number(lhs), ComparableValue::Number(rhs)) => {
+            Some(compare_rationals(lhs, rhs))
+        }
         (ComparableValue::String(lhs), ComparableValue::String(rhs)) => Some(lhs.cmp(rhs)),
         _ => None,
     }

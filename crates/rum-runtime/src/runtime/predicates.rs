@@ -49,16 +49,15 @@ impl Session {
         ))
     }
 
-    pub(super) fn eval_string_q(
-        &mut self,
-        _head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_string_q(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let [expr] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("StringQ", args, 1));
         };
 
-        Ok(predicate_bool_expr(matches!(expr, Expr::Atom(Atom::String(_)))))
+        Ok(predicate_bool_expr(matches!(
+            expr,
+            Expr::Atom(Atom::String(_))
+        )))
     }
 
     pub(super) fn eval_integer_q(
@@ -70,14 +69,13 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("IntegerQ", args, 1));
         };
 
-        Ok(predicate_bool_expr(matches!(expr, Expr::Atom(Atom::Integer(_)))))
+        Ok(predicate_bool_expr(matches!(
+            expr,
+            Expr::Atom(Atom::Integer(_))
+        )))
     }
 
-    pub(super) fn eval_number_q(
-        &mut self,
-        _head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_number_q(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let [expr] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("NumberQ", args, 1));
         };
@@ -126,21 +124,13 @@ impl Session {
         Ok(predicate_bool_expr(is_odd))
     }
 
-    pub(super) fn eval_positive(
-        &mut self,
-        _head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_positive(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         self.eval_exact_numeric_sign_predicate("Positive", args, |value| {
             value.numerator() > &BigInt::from(0_u8)
         })
     }
 
-    pub(super) fn eval_negative(
-        &mut self,
-        _head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_negative(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         self.eval_exact_numeric_sign_predicate("Negative", args, |value| {
             value.numerator() < &BigInt::from(0_u8)
         })
@@ -210,11 +200,7 @@ impl Session {
         Ok(predicate_bool_expr(exact_numeric_value(expr).is_some()))
     }
 
-    pub(super) fn eval_prime_q(
-        &mut self,
-        _head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_prime_q(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let [expr] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("PrimeQ", args, 1));
         };
@@ -273,7 +259,9 @@ impl Session {
         };
 
         let rhs_set = expr_set(rhs);
-        Ok(predicate_bool_expr(lhs.iter().any(|item| rhs_set.contains(item))))
+        Ok(predicate_bool_expr(
+            lhs.iter().any(|item| rhs_set.contains(item)),
+        ))
     }
 
     pub(super) fn eval_disjoint_q(
@@ -290,14 +278,12 @@ impl Session {
         };
 
         let rhs_set = expr_set(rhs);
-        Ok(predicate_bool_expr(!lhs.iter().any(|item| rhs_set.contains(item))))
+        Ok(predicate_bool_expr(
+            !lhs.iter().any(|item| rhs_set.contains(item)),
+        ))
     }
 
-    pub(super) fn eval_subset_q(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_subset_q(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let Some((lhs, rhs)) = two_list_args(args) else {
             return Ok(if args.len() == 2 {
                 Expr::call(head.clone(), args.to_vec())
@@ -308,7 +294,9 @@ impl Session {
 
         let rhs_set = expr_set(rhs);
         Ok(predicate_bool_expr(
-            expr_set(lhs).into_iter().all(|item| rhs_set.contains(&item)),
+            expr_set(lhs)
+                .into_iter()
+                .all(|item| rhs_set.contains(&item)),
         ))
     }
 
@@ -327,11 +315,7 @@ impl Session {
         Ok(Expr::integer(BigInt::from(value)))
     }
 
-    pub(super) fn eval_ordered_q(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_ordered_q(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let [expr] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("OrderedQ", args, 1));
         };
@@ -340,11 +324,9 @@ impl Session {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        Ok(predicate_bool_expr(
-            items
-                .windows(2)
-                .all(|pair| compare_expr_canonical(&pair[0], &pair[1]) != std::cmp::Ordering::Greater),
-        ))
+        Ok(predicate_bool_expr(items.windows(2).all(|pair| {
+            compare_expr_canonical(&pair[0], &pair[1]) != std::cmp::Ordering::Greater
+        })))
     }
 
     pub(super) fn eval_contains_all(
@@ -354,7 +336,9 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         self.eval_list_containment_relation(head, "ContainsAll", args, |lhs, rhs| {
             let lhs_set = expr_set(lhs);
-            expr_set(rhs).into_iter().all(|item| lhs_set.contains(&item))
+            expr_set(rhs)
+                .into_iter()
+                .all(|item| lhs_set.contains(&item))
         })
     }
 
@@ -365,7 +349,9 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         self.eval_list_containment_relation(head, "ContainsAny", args, |lhs, rhs| {
             let lhs_set = expr_set(lhs);
-            expr_set(rhs).into_iter().any(|item| lhs_set.contains(&item))
+            expr_set(rhs)
+                .into_iter()
+                .any(|item| lhs_set.contains(&item))
         })
     }
 
@@ -386,7 +372,9 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         self.eval_list_containment_relation(head, "ContainsNone", args, |lhs, rhs| {
             let lhs_set = expr_set(lhs);
-            expr_set(rhs).into_iter().all(|item| !lhs_set.contains(&item))
+            expr_set(rhs)
+                .into_iter()
+                .all(|item| !lhs_set.contains(&item))
         })
     }
 
@@ -401,11 +389,7 @@ impl Session {
         })
     }
 
-    pub(super) fn eval_between(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_between(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let [value_expr, interval_expr] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("Between", args, 2));
         };
@@ -435,11 +419,7 @@ impl Session {
         ))
     }
 
-    pub(super) fn eval_vector_q(
-        &mut self,
-        _head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_vector_q(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let [expr] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("VectorQ", args, 1));
         };
@@ -449,11 +429,7 @@ impl Session {
         ))
     }
 
-    pub(super) fn eval_matrix_q(
-        &mut self,
-        _head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_matrix_q(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let [expr] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("MatrixQ", args, 1));
         };
@@ -463,11 +439,7 @@ impl Session {
         ))
     }
 
-    pub(super) fn eval_array_q(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_array_q(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         if !(1..=2).contains(&args.len()) {
             return Ok(self.invalid_call_with_arg_range("ArrayQ", args, 1, 2));
         }
@@ -487,35 +459,19 @@ impl Session {
         Ok(predicate_bool_expr(shape.len() == rank))
     }
 
-    pub(super) fn eval_all_true(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_all_true(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         self.eval_truth_aggregate(head, args, TruthAggregateKind::All)
     }
 
-    pub(super) fn eval_any_true(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_any_true(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         self.eval_truth_aggregate(head, args, TruthAggregateKind::Any)
     }
 
-    pub(super) fn eval_none_true(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_none_true(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         self.eval_truth_aggregate(head, args, TruthAggregateKind::None)
     }
 
-    pub(super) fn eval_coprime_q(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_coprime_q(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let Some(values) = args
             .iter()
             .map(exact_integer_value)
@@ -542,11 +498,7 @@ impl Session {
         ))
     }
 
-    pub(super) fn eval_unsame_q(
-        &mut self,
-        _head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    pub(super) fn eval_unsame_q(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         for (index, lhs) in args.iter().enumerate() {
             if args[index + 1..].iter().any(|rhs| lhs == rhs) {
                 return Ok(predicate_bool_expr(false));
@@ -713,8 +665,8 @@ impl Session {
             },
             Some(false) => match kind {
                 TruthAggregateKind::All => Ok(system_expr(heads::structure::FALSE)),
-                TruthAggregateKind::Any | TruthAggregateKind::None => {
-                    self.resume_truth_aggregate_from_index(
+                TruthAggregateKind::Any | TruthAggregateKind::None => self
+                    .resume_truth_aggregate_from_index(
                         kind,
                         head,
                         call_args,
@@ -722,8 +674,7 @@ impl Session {
                         criterion,
                         index + 1,
                         saw_unknown,
-                    )
-                }
+                    ),
             },
             None => self.resume_truth_aggregate_from_index(
                 kind,

@@ -47,22 +47,18 @@ fn is_complete_request_distinguishes_complete_incomplete_and_invalid_input() {
     let incomplete = session.is_complete_request("f[\n  1");
     assert_eq!(incomplete.status, SessionCompletenessStatus::Incomplete);
     assert_eq!(incomplete.indent.as_deref(), Some("    "));
-    assert!(
-        incomplete
-            .diagnostic
-            .as_ref()
-            .is_some_and(|diagnostic| diagnostic.is_incomplete)
-    );
+    assert!(incomplete
+        .diagnostic
+        .as_ref()
+        .is_some_and(|diagnostic| diagnostic.is_incomplete));
 
     let invalid = session.is_complete_request("f[1 2]");
     assert_eq!(invalid.status, SessionCompletenessStatus::Invalid);
     assert!(invalid.indent.is_none());
-    assert!(
-        invalid
-            .diagnostic
-            .as_ref()
-            .is_some_and(|diagnostic| !diagnostic.is_incomplete)
-    );
+    assert!(invalid
+        .diagnostic
+        .as_ref()
+        .is_some_and(|diagnostic| !diagnostic.is_incomplete));
 }
 
 #[test]
@@ -108,12 +104,10 @@ fn eval_request_returns_transport_friendly_failure_data() {
             ..
         } if input == "f[1]" || input == "g[1]"
     )));
-    assert!(
-        failure
-            .messages
-            .iter()
-            .any(|message| message.symbol == "General" && message.tag == "cycle")
-    );
+    assert!(failure
+        .messages
+        .iter()
+        .any(|message| message.symbol == "General" && message.tag == "cycle"));
 }
 
 #[test]
@@ -780,7 +774,9 @@ fn resume_eval_request_with_input_can_finish_count_with_suspending_symbol_spec()
 
     let failure = session
         .eval_request("Count[f[g[1], 2], p, Infinity]")
-        .expect_err("Count pattern evaluation should suspend when the referenced symbol requests input");
+        .expect_err(
+            "Count pattern evaluation should suspend when the referenced symbol requests input",
+        );
 
     match &failure.error {
         SessionRequestError::InputRequired { request } => {
@@ -947,7 +943,9 @@ fn resume_eval_request_with_input_can_finish_replacepart_pattern_bindings_in_del
         .eval_request(
             "ReplacePart[f[g[a]], {1, i_} :> StringJoin[InputString[\"rhs: \"], ToString[i]]]",
         )
-        .expect_err("ReplacePart should suspend when a delayed rhs with pattern bindings requests input");
+        .expect_err(
+            "ReplacePart should suspend when a delayed rhs with pattern bindings requests input",
+        );
 
     match &failure.error {
         SessionRequestError::InputRequired { request } => {

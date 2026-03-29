@@ -202,12 +202,10 @@ fn listable_mismatched_lengths_emit_thread_message_and_leave_call_unevaluated() 
     let outcome = session.eval_text("f[{a, b}, {c}]").unwrap();
 
     assert_eq!(outcome.value.to_string(), "f[List[a, b], List[c]]");
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "Thread" && message.tag == "tdlen")
-    );
+    assert!(outcome
+        .messages
+        .iter()
+        .any(|message| message.symbol == "Thread" && message.tag == "tdlen"));
     assert_eq!(
         session
             .eval_text("Check[f[{a, b}, {c}], fallback, Thread]")

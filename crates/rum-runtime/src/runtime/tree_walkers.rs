@@ -291,25 +291,30 @@ impl Session {
         F: FnOnce(usize) -> Expr + 'static,
     {
         let resolved_option_exprs_result = self.resolve_argument_exprs_owned(option_exprs);
-        self.drive_internal_value(resolved_option_exprs_result, move |session, resolved_option_exprs| {
-            let traversal = match compile_traversal_without_limit_from_resolved_exprs(
-                &resolved_option_exprs,
-                defaults,
-            ) {
-                Ok(traversal) => traversal,
-                Err(error) => {
-                    return Ok(session.invalid_call_with_arg_form(
-                        builtin_name,
-                        &call_args,
-                        error.message(),
-                    ));
-                }
-            };
+        self.drive_internal_value(
+            resolved_option_exprs_result,
+            move |session, resolved_option_exprs| {
+                let traversal = match compile_traversal_without_limit_from_resolved_exprs(
+                    &resolved_option_exprs,
+                    defaults,
+                ) {
+                    Ok(traversal) => traversal,
+                    Err(error) => {
+                        return Ok(session.invalid_call_with_arg_form(
+                            builtin_name,
+                            &call_args,
+                            error.message(),
+                        ));
+                    }
+                };
 
-            let outcome_result =
-                session.count_pattern_matches_owned(target, pattern, traversal, 0, 0);
-            session.drive_internal_value(outcome_result, move |_, outcome| Ok(finish(outcome.count)))
-        })
+                let outcome_result =
+                    session.count_pattern_matches_owned(target, pattern, traversal, 0, 0);
+                session.drive_internal_value(outcome_result, move |_, outcome| {
+                    Ok(finish(outcome.count))
+                })
+            },
+        )
     }
 
     fn resume_position_after_pattern(

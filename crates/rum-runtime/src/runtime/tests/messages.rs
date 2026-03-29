@@ -12,12 +12,10 @@ fn message_name_and_message_emit_runtime_messages() {
 
     let outcome = session.eval_text("Message[FindFile::notfound, 7]").unwrap();
     assert_eq!(outcome.value.to_string(), "Null");
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "FindFile" && message.tag == "notfound")
-    );
+    assert!(outcome
+        .messages
+        .iter()
+        .any(|message| message.symbol == "FindFile" && message.tag == "notfound"));
     assert!(outcome.messages.iter().any(|message| message.text == "7"));
 }
 
@@ -91,18 +89,14 @@ fn message_templates_can_be_defined_and_formatted() {
     let outcome = session.eval_text("Message[f::argx, 42]").unwrap();
 
     assert_eq!(outcome.value.to_string(), "Null");
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "f" && message.tag == "argx")
-    );
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.text == "bad arg 42")
-    );
+    assert!(outcome
+        .messages
+        .iter()
+        .any(|message| message.symbol == "f" && message.tag == "argx"));
+    assert!(outcome
+        .messages
+        .iter()
+        .any(|message| message.text == "bad arg 42"));
 }
 #[test]
 fn message_templates_support_message_name_and_all_args_placeholders() {
@@ -147,12 +141,10 @@ fn message_templates_leave_unknown_placeholders_unchanged() {
         .unwrap();
     let outcome = session.eval_text("Message[f::argx, 1]").unwrap();
 
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| { message.text == "missing=`3`; literal=`name`" })
-    );
+    assert!(outcome
+        .messages
+        .iter()
+        .any(|message| { message.text == "missing=`3`; literal=`name`" }));
 }
 
 #[test]
@@ -164,12 +156,10 @@ fn message_templates_leave_unsupported_format_specs_unchanged() {
         .unwrap();
     let outcome = session.eval_text("Message[f::argx, 7]").unwrap();
 
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| { message.text == "ctx=`1:context`; bad=`*:head`; nope=`1:nope`" })
-    );
+    assert!(outcome
+        .messages
+        .iter()
+        .any(|message| { message.text == "ctx=`1:context`; bad=`*:head`; nope=`1:nope`" }));
 }
 
 #[test]
@@ -334,12 +324,10 @@ fn invalid_message_name_form_emits_runtime_message() {
     let outcome = session.eval_text("MessageName[1, 2]").unwrap();
 
     assert_eq!(outcome.value.to_string(), "MessageName[1, 2]");
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "MessageName" && message.tag == "argform")
-    );
+    assert!(outcome
+        .messages
+        .iter()
+        .any(|message| message.symbol == "MessageName" && message.tag == "argform"));
 }
 
 #[test]
@@ -348,28 +336,22 @@ fn invalid_builtin_argument_shapes_emit_runtime_messages() {
 
     let with_outcome = session.eval_text("With[x, x]").unwrap();
     assert_eq!(with_outcome.value.to_string(), "With[x, x]");
-    assert!(
-        with_outcome
-            .messages
-            .iter()
-            .any(|message| { message.symbol == "With" && message.tag == "argform" })
-    );
+    assert!(with_outcome
+        .messages
+        .iter()
+        .any(|message| { message.symbol == "With" && message.tag == "argform" }));
 
     let replace_outcome = session.eval_text("7 /. 1").unwrap();
     assert_eq!(replace_outcome.value.to_string(), "ReplaceAll[7, 1]");
-    assert!(
-        replace_outcome
-            .messages
-            .iter()
-            .any(|message| { message.symbol == "ReplaceAll" && message.tag == "argform" })
-    );
+    assert!(replace_outcome
+        .messages
+        .iter()
+        .any(|message| { message.symbol == "ReplaceAll" && message.tag == "argform" }));
 
     let get_outcome = session.eval_text("Get[1]").unwrap();
     assert_eq!(get_outcome.value.to_string(), "Get[1]");
-    assert!(
-        get_outcome
-            .messages
-            .iter()
-            .any(|message| { message.symbol == "Get" && message.tag == "argform" })
-    );
+    assert!(get_outcome
+        .messages
+        .iter()
+        .any(|message| { message.symbol == "Get" && message.tag == "argform" }));
 }
