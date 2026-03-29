@@ -197,6 +197,8 @@ impl Session {
             apply_composition_to_args(&composition, args)
         } else if let Some(wrapper) = apply_callable_operator_wrapper_to_args(head, args) {
             wrapper
+        } else if let Some(wrapper) = apply_callable_failsafe_wrapper_to_args(head, args) {
+            wrapper
         } else {
             return Ok(None);
         };

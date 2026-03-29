@@ -12,6 +12,13 @@ enum ConfirmQuietSelectors {
     Exact(Vec<MessageSelector>),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PropagateAbortsMode {
+    Automatic,
+    False,
+    True,
+}
+
 impl Session {
     pub(super) fn eval_check(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if !(2..=3).contains(&args.len()) {
@@ -215,6 +222,75 @@ impl Session {
         }
 
         self.resume_table_after_spec_eval(args.to_vec(), 0)
+    }
+
+    pub(super) fn eval_abort(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !args.is_empty() {
+            return Ok(self.invalid_call_with_exact_arg_count("Abort", args, 0));
+        }
+
+        Err(EvalError::Abort)
+    }
+
+    pub(super) fn eval_check_abort(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !(2..=3).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("CheckAbort", args, 2, 3));
+        }
+
+        let propagate = match parse_check_abort_propagation(args.get(2)) {
+            Ok(mode) => mode,
+            Err(detail) => return Ok(self.invalid_call_with_arg_form("CheckAbort", args, detail)),
+        };
+
+        let primary_result = self.evaluate(args[0].clone());
+        let outcome = self.suspend_with_result_frame(primary_result, {
+            let args = args.to_vec();
+            move |session, outcome| {
+                session.resume_check_abort_after_primary(args, propagate, outcome)
+            }
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.resume_check_abort_after_primary(args.to_vec(), propagate, outcome),
+        }
+    }
+
+    pub(super) fn eval_with_cleanup(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [expr, cleanup] => {
+                let primary_result = self.evaluate(expr.clone());
+                self.resume_with_cleanup_after_primary(cleanup.clone(), primary_result)
+            }
+            [init, expr, cleanup] => {
+                let init_result = self.evaluate(init.clone());
+                let outcome = self.suspend_with_result_frame(init_result, {
+                    let expr = expr.clone();
+                    let cleanup = cleanup.clone();
+                    move |session, outcome| {
+                        session.resume_with_cleanup_after_init(expr, cleanup, outcome)
+                    }
+                });
+
+                match outcome {
+                    Err(EvalError::InputRequired { request }) => {
+                        Err(EvalError::InputRequired { request })
+                    }
+                    outcome => {
+                        self.resume_with_cleanup_after_init(expr.clone(), cleanup.clone(), outcome)
+                    }
+                }
+            }
+            _ => Ok(self.invalid_call_with_arg_range("WithCleanup", args, 2, 3)),
+        }
+    }
+
+    pub(super) fn eval_failsafe(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !(1..=3).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("Failsafe", args, 1, 3));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
     }
 
     pub(super) fn eval_enclose(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -1072,6 +1148,94 @@ impl Session {
         }
     }
 
+    fn resume_check_abort_after_primary(
+        &mut self,
+        args: Vec<Expr>,
+        propagate: PropagateAbortsMode,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) => Ok(value),
+            Err(EvalError::Abort) => {
+                let fallback_result = self.evaluate(args[1].clone());
+                let outcome = self.suspend_with_result_frame(fallback_result, {
+                    move |session, outcome| {
+                        session.resume_check_abort_after_fallback(propagate, outcome)
+                    }
+                });
+
+                match outcome {
+                    Err(EvalError::InputRequired { request }) => {
+                        Err(EvalError::InputRequired { request })
+                    }
+                    outcome => self.resume_check_abort_after_fallback(propagate, outcome),
+                }
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn resume_check_abort_after_fallback(
+        &mut self,
+        propagate: PropagateAbortsMode,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) => {
+                if propagate == PropagateAbortsMode::True {
+                    Err(EvalError::Abort)
+                } else {
+                    Ok(value)
+                }
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn resume_with_cleanup_after_init(
+        &mut self,
+        expr: Expr,
+        cleanup: Expr,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(_) => {
+                let primary_result = self.evaluate(expr);
+                self.resume_with_cleanup_after_primary(cleanup, primary_result)
+            }
+            Err(error) => self.resume_with_cleanup_after_primary(cleanup, Err(error)),
+        }
+    }
+
+    fn resume_with_cleanup_after_primary(
+        &mut self,
+        cleanup: Expr,
+        primary_outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        let cleanup_result = self.evaluate(cleanup.clone());
+        match cleanup_result {
+            Ok(value) => self.resume_with_cleanup_after_cleanup(primary_outcome, Ok(value)),
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(move |session, cleanup_outcome| {
+                    session.resume_with_cleanup_after_cleanup(primary_outcome, cleanup_outcome)
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => self.resume_with_cleanup_after_cleanup(primary_outcome, Err(error)),
+        }
+    }
+
+    fn resume_with_cleanup_after_cleanup(
+        &mut self,
+        primary_outcome: Result<Expr, EvalError>,
+        cleanup_outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match cleanup_outcome {
+            Ok(_) => primary_outcome,
+            Err(error) => Err(error),
+        }
+    }
+
     fn resume_quiet_after_primary(
         &mut self,
         selectors: Option<Vec<MessageSelector>>,
@@ -1546,6 +1710,23 @@ fn build_confirmation_failure(fields: Vec<(&str, Expr)>) -> Expr {
     )
 }
 
+fn build_failsafe_failure(function: Expr, test: Expr, args: Vec<Expr>) -> Expr {
+    Expr::call(
+        system_expr("Failure"),
+        vec![
+            Expr::string("FailsafeFailure"),
+            render_association(vec![
+                (Expr::string("Function"), function),
+                (Expr::string("Test"), test),
+                (
+                    Expr::string("Arguments"),
+                    Expr::call(system_expr("List"), args),
+                ),
+            ]),
+        ],
+    )
+}
+
 fn is_failure_expr(expr: &Expr) -> bool {
     matches!(expr, Expr::Call { head, args } if is_system_symbol_name(head, "Failure") && args.len() == 2)
 }
@@ -1556,6 +1737,10 @@ fn is_confirmation_failure_like(expr: &Expr) -> bool {
         || is_system_symbol_name(expr, "$Aborted")
         || is_system_symbol_name(expr, "$Canceled")
         || matches!(expr, Expr::Call { head, args } if is_system_symbol_name(head, "Missing") && !args.is_empty())
+}
+
+fn is_failsafe_failure_like(expr: &Expr) -> bool {
+    is_confirmation_failure_like(expr)
 }
 
 fn normalize_failure_details_expr(expr: &Expr) -> Option<Expr> {
@@ -1692,5 +1877,105 @@ fn rewrite_untagged_confirms(expr: Expr, tag: &Expr) -> Expr {
             }
         }
         other => other,
+    }
+}
+
+fn parse_check_abort_propagation(
+    option_expr: Option<&Expr>,
+) -> Result<PropagateAbortsMode, &'static str> {
+    let Some(option_expr) = option_expr else {
+        return Ok(PropagateAbortsMode::Automatic);
+    };
+
+    let Expr::Call { head, args } = option_expr else {
+        return Err(
+            "expected PropagateAborts -> True|False|Automatic as the optional third argument",
+        );
+    };
+
+    if !is_system_symbol_name(head, "Rule") || args.len() != 2 {
+        return Err(
+            "expected PropagateAborts -> True|False|Automatic as the optional third argument",
+        );
+    }
+
+    if !is_system_symbol_name(&args[0], "PropagateAborts") {
+        return Err(
+            "expected PropagateAborts -> True|False|Automatic as the optional third argument",
+        );
+    }
+
+    if is_system_symbol_name(&args[1], "True") {
+        Ok(PropagateAbortsMode::True)
+    } else if is_system_symbol_name(&args[1], "False") {
+        Ok(PropagateAbortsMode::False)
+    } else if is_system_symbol_name(&args[1], "Automatic") {
+        Ok(PropagateAbortsMode::Automatic)
+    } else {
+        Err("expected PropagateAborts -> True|False|Automatic as the optional third argument")
+    }
+}
+
+pub(super) fn apply_callable_failsafe_wrapper_to_args(head: &Expr, args: &[Expr]) -> Option<Expr> {
+    let spec = parse_failsafe_wrapper(head)?;
+
+    if spec.test.is_none() {
+        return Some(
+            args.iter()
+                .find(|arg| is_failsafe_failure_like(arg))
+                .cloned()
+                .unwrap_or_else(|| Expr::call(spec.function.clone(), args.to_vec())),
+        );
+    }
+
+    let test = spec.test?.clone();
+    let success = Expr::call(spec.function.clone(), args.to_vec());
+    let fallback = match spec.fail_function {
+        Some(fail_function) => Expr::call(fail_function.clone(), args.to_vec()),
+        None => build_failsafe_failure(spec.function.clone(), test.clone(), args.to_vec()),
+    };
+
+    Some(Expr::call(
+        system_expr("If"),
+        vec![Expr::call(test, args.to_vec()), success, fallback],
+    ))
+}
+
+pub(super) fn is_callable_failsafe_wrapper(expr: &Expr) -> bool {
+    parse_failsafe_wrapper(expr).is_some()
+}
+
+struct FailsafeWrapperSpec<'a> {
+    function: &'a Expr,
+    test: Option<&'a Expr>,
+    fail_function: Option<&'a Expr>,
+}
+
+fn parse_failsafe_wrapper(expr: &Expr) -> Option<FailsafeWrapperSpec<'_>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "Failsafe") {
+        return None;
+    }
+
+    match args.as_slice() {
+        [function] => Some(FailsafeWrapperSpec {
+            function,
+            test: None,
+            fail_function: None,
+        }),
+        [function, test] => Some(FailsafeWrapperSpec {
+            function,
+            test: Some(test),
+            fail_function: None,
+        }),
+        [function, test, fail_function] => Some(FailsafeWrapperSpec {
+            function,
+            test: Some(test),
+            fail_function: Some(fail_function),
+        }),
+        _ => None,
     }
 }

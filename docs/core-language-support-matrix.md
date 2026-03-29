@@ -287,10 +287,12 @@ once in its primary implementation group. Other groups may mention it as
   message interception through the current `Check` / `Quiet` model
 - `partial`: sequential evaluation plus first-pass `Switch` / `Do` /
   `While` / `Until` / `For` / `Table` / `Throw` / `Catch` / `Return` and
-  `Enclose` / `Confirm*` / `Failure` now work, but cleanup, abort handling,
-  and richer failure-object semantics are still missing
-- `planned`: broader control flow, explicit exception propagation, failure
-  values, and cleanup semantics
+  `Enclose` / `Confirm*` / `Failure` now work, and the current cleanup/abort
+  subset includes `WithCleanup`, `Abort`, `CheckAbort`, `PropagateAborts`,
+  and callable `Failsafe`; richer abort-protection and failure-object parity
+  are still pending
+- `planned`: broader failure values, abort-protection parity, external
+  interaction builtins, and deeper cleanup/exception compatibility
 
 ### Functions and Symbols
 
@@ -298,11 +300,12 @@ once in its primary implementation group. Other groups may mention it as
   `Switch`
 - `partial`: `Do`, `While`, `Until`, `For`, `Break`, `Continue`, `Return`,
   `Throw`, `Catch`, `Table`, `Enclose`, `Confirm`, `ConfirmBy`,
-  `ConfirmMatch`, `ConfirmQuiet`, `ConfirmAssert`, `Failure`, `FailureQ` in
-  the current first-pass subset
-- `planned`: `WithCleanup`, `Failsafe`, `Missing`, `MissingQ`, `Success`,
-  `TerminatedEvaluation`, `Assert`, `Abort`, `AbortProtect`, `CheckAbort`,
-  `PropagateAborts`, `BlockRandom`, `Input`, `Print`, `Pause`
+  `ConfirmMatch`, `ConfirmQuiet`, `ConfirmAssert`, `Failure`, `FailureQ`,
+  `WithCleanup`, `Failsafe`, `Abort`, `CheckAbort`, `PropagateAborts` in the
+  current first-pass subset
+- `planned`: `MissingQ`, `Success`, `TerminatedEvaluation`, `Assert`,
+  `AbortProtect`, `BlockRandom`, `Input`, `Print`, `Pause`, and deeper
+  `WithCleanup` / `Failsafe` / `CheckAbort` parity
 - `cross-tracked elsewhere`: `Block`, `Function`, `Module`, `Rule`,
   `RuleDelayed`, `With`
 

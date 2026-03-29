@@ -797,6 +797,10 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "$ContextPath",
         "Evaluates to the active context search path as a list of strings.",
     ),
+    BuiltinSpec::new(
+        "$Aborted",
+        "Represents a computation aborted by Abort or an external interrupt.",
+    ),
     BuiltinSpec::new("$Failed", "Represents a failed operation."),
     BuiltinSpec::new(
         "$MessageList",
@@ -1004,6 +1008,32 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Generates lists using the current first-pass iterator subset.",
         HoldAttribute::HoldAll,
         BuiltinHandler::Table,
+    ),
+    BuiltinSpec::ordinary(
+        "Abort",
+        "Generates an abort that terminates the current evaluation unless caught.",
+        BuiltinHandler::Abort,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "CheckAbort",
+        "Evaluates an expression and substitutes a fallback if an Abort occurs.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::CheckAbort,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "WithCleanup",
+        "Evaluates cleanup code even when the main expression exits abnormally in the current first-pass subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::WithCleanup,
+    ),
+    BuiltinSpec::ordinary(
+        "Failsafe",
+        "Creates a callable wrapper that preserves failure-like inputs in the current first-pass subset.",
+        BuiltinHandler::Failsafe,
+    ),
+    BuiltinSpec::new(
+        "PropagateAborts",
+        "Represents the current first-pass CheckAbort option for rethrowing caught aborts.",
     ),
     BuiltinSpec::ordinary_with_hold(
         "Enclose",

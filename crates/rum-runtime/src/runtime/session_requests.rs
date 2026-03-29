@@ -355,6 +355,9 @@ fn session_request_error_from_eval_error_with_source(
         EvalError::Thrown { value, tag } => SessionRequestError::Other {
             message: format!("uncaught throw: {value} with tag {tag}"),
         },
+        EvalError::Abort => SessionRequestError::Other {
+            message: "uncaught Abort[]".to_string(),
+        },
         EvalError::Break => SessionRequestError::Other {
             message: "uncaught Break[]".to_string(),
         },

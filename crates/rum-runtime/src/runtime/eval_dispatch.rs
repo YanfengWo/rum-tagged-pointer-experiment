@@ -35,6 +35,7 @@ impl Session {
         if parse_function(head).is_some()
             || parse_composition(head).is_some()
             || is_callable_operator_wrapper(head)
+            || is_callable_failsafe_wrapper(head)
         {
             stages.push(CallDispatchStage::Function);
         }
@@ -318,6 +319,10 @@ impl Session {
             BuiltinHandler::Until => self.eval_until(args),
             BuiltinHandler::For => self.eval_for(args),
             BuiltinHandler::Table => self.eval_table(args),
+            BuiltinHandler::Abort => self.eval_abort(head, args),
+            BuiltinHandler::CheckAbort => self.eval_check_abort(args),
+            BuiltinHandler::WithCleanup => self.eval_with_cleanup(args),
+            BuiltinHandler::Failsafe => self.eval_failsafe(head, args),
             BuiltinHandler::Enclose => self.eval_enclose(args),
             BuiltinHandler::Confirm => self.eval_confirm(args),
             BuiltinHandler::ConfirmBy => self.eval_confirm_by(args),
