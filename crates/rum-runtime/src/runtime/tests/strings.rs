@@ -293,6 +293,18 @@ fn string_take_drop_and_part_support_basic_integer_and_range_specs() {
         "\"aef\""
     );
     assert_eq!(
+        eval_to_string(&mut session, "StringTakeDrop[\"abcdef\", 2]"),
+        "List[\"ab\", \"cdef\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringTakeDrop[\"abcdef\", {2, 4}]"),
+        "List[\"bcd\", \"aef\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringTakeDrop[{\"abcd\", \"wxyz\"}, -1]"),
+        "List[List[\"d\", \"abc\"], List[\"z\", \"wxy\"]]"
+    );
+    assert_eq!(
         eval_to_string(&mut session, "StringPart[\"abcdef\", 2]"),
         "\"b\""
     );
@@ -313,6 +325,10 @@ fn string_builtins_preserve_current_boundary_for_non_string_or_invalid_specs() {
     assert_eq!(
         eval_to_string(&mut session, "StringTake[\"abc\", x]"),
         "StringTake[\"abc\", x]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringTakeDrop[\"abc\", x]"),
+        "StringTakeDrop[\"abc\", x]"
     );
     assert_eq!(
         eval_to_string(&mut session, "StringPart[\"abc\", 0]"),
@@ -351,8 +367,20 @@ fn string_builtins_preserve_current_boundary_for_non_string_or_invalid_specs() {
         "StringCases[\"abc\", \"\"]"
     );
     assert_eq!(
+        eval_to_string(&mut session, "StringCount[\"abc\", StringExpression[]]"),
+        "StringCount[\"abc\", StringExpression[]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringMatchQ[\"abc\", StringExpression[]]"),
+        "StringMatchQ[\"abc\", StringExpression[]]"
+    );
+    assert_eq!(
         eval_to_string(&mut session, "StringContainsQ[\"abc\", StringExpression[]]"),
         "StringContainsQ[\"abc\", StringExpression[]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringFreeQ[\"abc\", x]"),
+        "StringFreeQ[\"abc\", x]"
     );
     assert_eq!(
         eval_to_string(
@@ -360,5 +388,308 @@ fn string_builtins_preserve_current_boundary_for_non_string_or_invalid_specs() {
             "StringReplace[\"abc\", StringExpression[\"a\", x] -> \"b\"]"
         ),
         "StringReplace[\"abc\", Rule[StringExpression[\"a\", x], \"b\"]]"
+    );
+}
+
+#[test]
+fn string_count_matchq_and_freeq_extend_current_pattern_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "StringCount[\"bananarama\", \"ana\"]"),
+        "1"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCount[\"a=>b:=c\", Alternatives[\"=>\", \":=\"]]"
+        ),
+        "2"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCount[{\"abc\", \"aba\", \"zzz\"}, StringExpression[\"a\", Alternatives[\"b\", \"ba\"]]]"
+        ),
+        "List[1, 1, 0]"
+    );
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringMatchQ[\"[WARN]\", StringExpression[\"[\", Alternatives[\"WARN\", \"ERROR\"], \"]\"]]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringMatchQ[{\"warn\", \"warning\"}, Alternatives[\"warn\", \"error\"]]"
+        ),
+        "List[True, False]"
+    );
+
+    assert_eq!(
+        eval_to_string(&mut session, "StringFreeQ[\"kernel.err\", \".log\"]"),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringFreeQ[\"error => warn\", Alternatives[\"=>\", \":=\"]]"
+        ),
+        "False"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringFreeQ[{\"alpha\", \"beta\"}, StringExpression[\"a\", Alternatives[\"l\", \"z\"]]]"
+        ),
+        "List[False, True]"
+    );
+}
+
+#[test]
+fn string_character_classes_and_case_mapping_extend_the_string_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "ToUpperCase[\"ab🙂c\"]"),
+        "\"AB🙂C\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToUpperCase[{\"alpha\", \"Beta\"}]"),
+        "List[\"ALPHA\", \"BETA\"]"
+    );
+
+    assert_eq!(eval_to_string(&mut session, "LetterQ[\"\"]"), "True");
+    assert_eq!(eval_to_string(&mut session, "LetterQ[\"abc\"]"), "True");
+    assert_eq!(eval_to_string(&mut session, "LetterQ[\"ab1\"]"), "False");
+    assert_eq!(
+        eval_to_string(&mut session, "LetterQ[{\"abc\", \"123\"}]"),
+        "List[True, False]"
+    );
+
+    assert_eq!(eval_to_string(&mut session, "DigitQ[\"\"]"), "True");
+    assert_eq!(eval_to_string(&mut session, "DigitQ[\"123\"]"), "True");
+    assert_eq!(eval_to_string(&mut session, "DigitQ[\"12a\"]"), "False");
+    assert_eq!(
+        eval_to_string(&mut session, "DigitQ[{\"123\", \"1a\"}]"),
+        "List[True, False]"
+    );
+
+    assert_eq!(
+        eval_to_string(&mut session, "StringMatchQ[\" \\t\", Whitespace]"),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringFreeQ[\"abc\", Whitespace]"),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"x=-1.5 y=.25 z=1e3\", NumberString]"
+        ),
+        "List[\"-1.5\", \".25\", \"1\", \"3\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringMatchQ[{\"123\", \".5\", \"1e3\"}, NumberString]"
+        ),
+        "List[True, True, False]"
+    );
+}
+
+#[test]
+fn string_formatting_padding_and_riffle_cover_the_next_surface_wave() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "StringForm[\"a``b``\", 1, x]"),
+        "\"a1bx\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringRiffle[{\"a\", \"b\", \"c\"}]"),
+        "\"a b c\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringRiffle[{{\"a\", \"b\"}, {\"c\", \"d\"}}, \",\", \";\"]"
+        ),
+        "\"a,b;c,d\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringPadLeft[\"7\", 3]"),
+        "\"  7\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringPadLeft[{\"7\", \"88\"}, 3, \"0\"]"),
+        "List[\"007\", \"088\"]"
+    );
+}
+
+#[test]
+fn repeated_anchors_and_shortest_longest_extend_string_patterns() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "StringMatchQ[\"aaa\", Repeated[\"a\"]]"),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringMatchQ[\"\", RepeatedNull[\"a\"]]"),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringMatchQ[\"warn\", StringExpression[StartOfString, \"wa\", Repeated[\"r\"], \"n\", EndOfString]]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringContainsQ[\"baaa\", StringExpression[StartOfString, \"a\"]]"
+        ),
+        "False"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringPosition[\"aaa\", Repeated[\"a\"]]"),
+        "List[List[1, 3], List[2, 3], List[3, 3]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"aaab\", Shortest[Repeated[\"a\"]]]"
+        ),
+        "List[\"a\", \"a\", \"a\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"aaab\", Longest[Repeated[\"a\"]]]"
+        ),
+        "List[\"aaa\"]"
+    );
+}
+
+#[test]
+fn string_apply_delete_and_count_options_cover_the_next_wave() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringApply[Function[StringJoin[Rest[#]]], \"abc\"]"
+        ),
+        "\"bc\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringApply[Function[StringJoin[Rest[#]]], {\"ab\", \"cd\"}]"
+        ),
+        "List[\"b\", \"d\"]"
+    );
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringDelete[\"a=>b:=c\", Alternatives[\"=>\", \":=\"]]"
+        ),
+        "\"abc\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringDelete[{\"abba\", \"beta\"}, \"b\"]"),
+        "List[\"aa\", \"eta\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringDelete[\"AbBa\", \"b\", IgnoreCase -> True]"
+        ),
+        "\"Aa\""
+    );
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCount[\"aaaa\", \"aa\", Overlaps -> True]"
+        ),
+        "3"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCount[\"aaaa\", \"aa\", Overlaps -> All]"
+        ),
+        "3"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCount[\"abAB\", \"a\", IgnoreCase -> True]"
+        ),
+        "2"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringContainsQ[\"AbC\", \"a\", IgnoreCase -> True]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringStartsQ[\"AbC\", \"a\", IgnoreCase -> True]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringEndsQ[\"xyAB\", \"ab\", IgnoreCase -> True]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringMatchQ[\"Ab\", \"aB\", IgnoreCase -> True]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringFreeQ[\"AbC\", \"a\", IgnoreCase -> True]"
+        ),
+        "False"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringReplace[\"AbBa\", \"b\" -> \"x\", IgnoreCase -> True]"
+        ),
+        "\"Axxa\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"AbBa\", \"b\", IgnoreCase -> True]"
+        ),
+        "List[\"b\", \"B\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringPosition[\"AbBa\", \"b\", IgnoreCase -> True]"
+        ),
+        "List[List[2, 2], List[3, 3]]"
     );
 }

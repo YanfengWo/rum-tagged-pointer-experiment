@@ -336,13 +336,15 @@ once in its primary implementation group. Other groups may mention it as
 - `implemented`: `Characters`, `StringJoin`, `StringLength`, `StringRepeat`,
   `StringTake`, `StringDrop`, `StringPart`
 - `partial`: `ToString`, `StringContainsQ`, `StringExpression`,
-  `StringReplace`, `StringCases`, `StringPosition`, `StringSplit`
-- `planned`: `StringTakeDrop`, `StringApply`, `StringCount`,
-  `StringDelete`, `StringForm`, `StringPadLeft`, `StringRiffle`,
-  `StringTemplate`, `StringToByteArray`, `TemplateApply`,
+  `StringReplace`, `StringCases`, `StringPosition`, `StringSplit`,
+  `StringTakeDrop`, `StringCount`, `StringMatchQ`, `StringFreeQ`,
+  `ToUpperCase`, `Whitespace`, `NumberString`, `LetterQ`, `DigitQ`,
+  `StringApply`, `StringDelete`, `StringForm`, `StringPadLeft`,
+  `StringRiffle`
+- `planned`: `StringTemplate`,
+  `StringToByteArray`, `TemplateApply`,
   `FileTemplateApply`, `TextString`, `TextWords`, `ToCharacterCode`,
-  `ToExpression`, `ToUpperCase`, `Whitespace`, `NumberString`, `LetterQ`,
-  `StringMatchQ`, `StringFreeQ`, `DigitQ`, `SyntaxQ`, `Alphabet`,
+  `ToExpression`, `SyntaxQ`, `Alphabet`,
   `AlphabeticSort`, `CharacterCounts`, `Compress`, `Diff`,
   `EditDistance`, `Encrypt`, `Hash`, `HammingDistance`,
   `LongestCommonSubsequence`, `Nearest`, `Pluralize`,

@@ -9,6 +9,16 @@ enum StringTakeDropSpec {
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum StringPattern {
     Literal(Vec<char>),
+    Whitespace,
+    NumberString,
+    StartOfString,
+    EndOfString,
+    Repeated {
+        pattern: Box<StringPattern>,
+        min: usize,
+    },
+    Shortest(Box<StringPattern>),
+    Longest(Box<StringPattern>),
     Sequence(Vec<StringPattern>),
     Alternatives(Vec<StringPattern>),
 }
@@ -24,6 +34,34 @@ enum StringSplitLimit {
     Unlimited,
     MaxSubstrings(usize),
     All,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct StringPatternMatchConfig {
+    ignore_case: bool,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct StringDeleteConfig {
+    ignore_case: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum StringCountOverlaps {
+    NonOverlapping,
+    Overlapping,
+}
+
+impl Default for StringCountOverlaps {
+    fn default() -> Self {
+        Self::NonOverlapping
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct StringCountConfig {
+    ignore_case: bool,
+    overlaps: StringCountOverlaps,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -89,6 +127,142 @@ impl Session {
         };
 
         Ok(Expr::integer(BigInt::from(value.chars().count() as u64)))
+    }
+
+    pub(super) fn eval_to_upper_case(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("ToUpperCase", args, 1));
+        }
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(Expr::string(
+                value
+                    .chars()
+                    .flat_map(char::to_uppercase)
+                    .collect::<String>(),
+            ));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(string_list_expr(
+                values
+                    .into_iter()
+                    .map(|value| value.chars().flat_map(char::to_uppercase).collect())
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(super) fn eval_string_form(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.is_empty() {
+            return Ok(self.invalid_call_with_arg_range("StringForm", args, 1, usize::MAX));
+        }
+
+        let Some(template) = expr_as_string(&args[0]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        Ok(Expr::string(string_form_value(template, &args[1..])))
+    }
+
+    pub(super) fn eval_string_riffle(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !(1..=3).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("StringRiffle", args, 1, 3));
+        }
+
+        if let Some(items) = expr_as_string_list(&args[0]) {
+            let separator = match args.get(1) {
+                Some(expr) => expr_as_string(expr).map(str::to_string),
+                None => Some(" ".to_string()),
+            };
+            let Some(separator) = separator else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
+            if args.len() == 3 {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            }
+            return Ok(Expr::string(items.join(&separator)));
+        }
+
+        if let Some(rows) = expr_as_nested_string_list(&args[0]) {
+            let (item_separator, row_separator) = match args {
+                [_] => (" ".to_string(), "\n".to_string()),
+                [_, item_separator] => {
+                    let Some(separator) = expr_as_string(item_separator) else {
+                        return Ok(Expr::call(head.clone(), args.to_vec()));
+                    };
+                    (separator.to_string(), separator.to_string())
+                }
+                [_, item_separator, row_separator] => {
+                    let (Some(item_separator), Some(row_separator)) = (
+                        expr_as_string(item_separator),
+                        expr_as_string(row_separator),
+                    ) else {
+                        return Ok(Expr::call(head.clone(), args.to_vec()));
+                    };
+                    (item_separator.to_string(), row_separator.to_string())
+                }
+                _ => unreachable!(),
+            };
+
+            let riffled_rows = rows
+                .into_iter()
+                .map(|row| row.join(&item_separator))
+                .collect::<Vec<_>>();
+            return Ok(Expr::string(riffled_rows.join(&row_separator)));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(super) fn eval_string_pad_left(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !(2..=3).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("StringPadLeft", args, 2, 3));
+        }
+
+        let Some(width) = expr_as_non_negative_usize(&args[1]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let padding = match args.get(2) {
+            Some(expr) => expr_as_string(expr).filter(|value| !value.is_empty()),
+            None => Some(" "),
+        };
+        let Some(padding) = padding else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(Expr::string(string_pad_left_value(value, width, padding)));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(string_list_expr(
+                values
+                    .into_iter()
+                    .map(|value| string_pad_left_value(&value, width, padding))
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
     }
 
     pub(super) fn eval_characters(
@@ -203,32 +377,27 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        if !(2..=3).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("StringPosition", args, 2, 3));
+        if !(2..=4).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("StringPosition", args, 2, 4));
         }
 
         let Some(pattern) = parse_string_pattern(&args[1]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let max_results = if args.len() == 3 {
-            let Some(value) = expr_as_non_negative_usize(&args[2]) else {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
-            };
-            Some(value)
-        } else {
-            None
+        let Some((max_results, config)) = parse_string_position_args(&args[2..]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
         if let Some(value) = expr_as_string(&args[0]) {
-            return Ok(string_position_expr(value, &pattern, max_results));
+            return Ok(string_position_expr(value, &pattern, max_results, config));
         }
 
         if let Some(values) = expr_as_string_list(&args[0]) {
             return Ok(list_expr(
                 values
                     .into_iter()
-                    .map(|value| string_position_expr(&value, &pattern, max_results))
+                    .map(|value| string_position_expr(&value, &pattern, max_results, config))
                     .collect(),
             ));
         }
@@ -321,18 +490,15 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        if !(2..=3).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("StringReplace", args, 2, 3));
+        if !(2..=4).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("StringReplace", args, 2, 4));
         }
 
         let Some(rules) = parse_exact_string_replacement_rules(&args[1]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        let max_replacements = match args.get(2) {
-            Some(expr) => expr_as_non_negative_usize(expr),
-            None => Some(usize::MAX),
-        };
-        let Some(max_replacements) = max_replacements else {
+        let Some((max_replacements, config)) = parse_string_match_limit_and_options(&args[2..])
+        else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -341,6 +507,7 @@ impl Session {
                 value,
                 &rules,
                 max_replacements,
+                config,
             )));
         }
 
@@ -348,7 +515,7 @@ impl Session {
             return Ok(string_list_expr(
                 values
                     .into_iter()
-                    .map(|value| replace_string_value(&value, &rules, max_replacements))
+                    .map(|value| replace_string_value(&value, &rules, max_replacements, config))
                     .collect(),
             ));
         }
@@ -361,30 +528,33 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        if !(2..=3).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("StringCases", args, 2, 3));
+        if !(2..=4).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("StringCases", args, 2, 4));
         }
 
         let Some(spec) = parse_exact_string_case_spec(&args[1]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        let max_matches = match args.get(2) {
-            Some(expr) => expr_as_non_negative_usize(expr),
-            None => Some(usize::MAX),
-        };
-        let Some(max_matches) = max_matches else {
+        let Some((max_matches, config)) = parse_string_match_limit_and_options(&args[2..]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
         if let Some(value) = expr_as_string(&args[0]) {
-            return Ok(list_expr(collect_string_cases(value, &spec, max_matches)));
+            return Ok(list_expr(collect_string_cases(
+                value,
+                &spec,
+                max_matches,
+                config,
+            )));
         }
 
         if let Some(values) = expr_as_string_list(&args[0]) {
             return Ok(list_expr(
                 values
                     .into_iter()
-                    .map(|value| list_expr(collect_string_cases(&value, &spec, max_matches)))
+                    .map(|value| {
+                        list_expr(collect_string_cases(&value, &spec, max_matches, config))
+                    })
                     .collect(),
             ));
         }
@@ -487,24 +657,209 @@ impl Session {
         Ok(Expr::string(output))
     }
 
+    pub(super) fn eval_letter_q(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        Ok(
+            self.eval_string_value_predicate(head, args, "LetterQ", |value| {
+                value.chars().all(char::is_alphabetic)
+            }),
+        )
+    }
+
+    pub(super) fn eval_digit_q(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        Ok(
+            self.eval_string_value_predicate(head, args, "DigitQ", |value| {
+                value.chars().all(|ch| ch.is_ascii_digit())
+            }),
+        )
+    }
+
+    pub(super) fn eval_string_take_drop(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(self.invalid_call_with_exact_arg_count("StringTakeDrop", args, 2));
+        }
+
+        let Some(spec) = parse_string_take_drop_spec(&args[1]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            let (taken, dropped) = string_take_drop_value(value, spec);
+            return Ok(list_expr(vec![Expr::string(taken), Expr::string(dropped)]));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(list_expr(
+                values
+                    .into_iter()
+                    .map(|value| {
+                        let (taken, dropped) = string_take_drop_value(&value, spec);
+                        list_expr(vec![Expr::string(taken), Expr::string(dropped)])
+                    })
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(super) fn eval_string_count(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() < 2 {
+            return Ok(self.invalid_call_with_arg_range("StringCount", args, 2, 4));
+        }
+
+        let Some(patterns) = parse_string_patterns(&args[1]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let Some(config) = parse_string_count_options(&args[2..]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(Expr::integer(BigInt::from(
+                string_count_matches(value, &patterns, config) as u64,
+            )));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(list_expr(
+                values
+                    .into_iter()
+                    .map(|value| {
+                        Expr::integer(BigInt::from(
+                            string_count_matches(&value, &patterns, config) as u64,
+                        ))
+                    })
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(super) fn eval_string_delete(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() == 1 {
+            return Ok(string_unary_operator_form_slot_first(
+                "StringDelete",
+                &args[0],
+            ));
+        }
+        if args.len() < 2 {
+            return Ok(self.invalid_call_with_arg_range("StringDelete", args, 1, 3));
+        }
+
+        let Some(patterns) = parse_string_patterns(&args[1]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let Some(config) = parse_string_delete_options(&args[2..]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(Expr::string(string_delete_matches(
+                value, &patterns, config,
+            )));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(string_list_expr(
+                values
+                    .into_iter()
+                    .map(|value| string_delete_matches(&value, &patterns, config))
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(super) fn eval_string_apply(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        match args {
+            [operator] => Ok(string_unary_operator_form("StringApply", operator)),
+            [operator, input] => {
+                if let Some(value) = expr_as_string(input) {
+                    return string_apply_value(
+                        self,
+                        operator,
+                        value,
+                        Expr::call(head.clone(), args.to_vec()),
+                    );
+                }
+
+                if let Some(values) = expr_as_string_list(input) {
+                    let mut outputs = Vec::with_capacity(values.len());
+                    for value in values {
+                        outputs.push(string_apply_value(
+                            self,
+                            operator,
+                            &value,
+                            Expr::call(
+                                head.clone(),
+                                vec![operator.clone(), Expr::string(value.clone())],
+                            ),
+                        )?);
+                    }
+                    return Ok(list_expr(outputs));
+                }
+
+                Ok(Expr::call(head.clone(), args.to_vec()))
+            }
+            _ => Ok(self.invalid_call_with_arg_range("StringApply", args, 1, 2)),
+        }
+    }
+
+    pub(super) fn eval_string_match_q(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        Ok(self.eval_string_patterns_predicate(head, args, "StringMatchQ", string_match_q))
+    }
+
+    pub(super) fn eval_string_free_q(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        Ok(self.eval_string_patterns_predicate(head, args, "StringFreeQ", string_free_q))
+    }
+
     fn eval_string_pattern_predicate(
         &mut self,
         head: &Expr,
         args: &[Expr],
         symbol: &str,
-        predicate: fn(&[char], &StringPattern) -> bool,
+        predicate: fn(&[char], &StringPattern, StringPatternMatchConfig) -> bool,
     ) -> Expr {
-        if args.len() != 2 {
-            return self.invalid_call_with_exact_arg_count(symbol, args, 2);
+        if !(2..=3).contains(&args.len()) {
+            return self.invalid_call_with_arg_range(symbol, args, 2, 3);
         }
 
         let Some(pattern) = parse_string_pattern(&args[1]) else {
             return Expr::call(head.clone(), args.to_vec());
         };
+        let Some(config) = parse_string_match_config(&args[2..]) else {
+            return Expr::call(head.clone(), args.to_vec());
+        };
 
         if let Some(value) = expr_as_string(&args[0]) {
             let chars = value.chars().collect::<Vec<_>>();
-            return bool_expr(predicate(&chars, &pattern));
+            return bool_expr(predicate(&chars, &pattern, config));
         }
 
         if let Some(values) = expr_as_string_list(&args[0]) {
@@ -513,8 +868,73 @@ impl Session {
                     .into_iter()
                     .map(|value| {
                         let chars = value.chars().collect::<Vec<_>>();
-                        bool_expr(predicate(&chars, &pattern))
+                        bool_expr(predicate(&chars, &pattern, config))
                     })
+                    .collect(),
+            );
+        }
+
+        Expr::call(head.clone(), args.to_vec())
+    }
+
+    fn eval_string_patterns_predicate(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+        symbol: &str,
+        predicate: fn(&[char], &[StringPattern], StringPatternMatchConfig) -> bool,
+    ) -> Expr {
+        if !(2..=3).contains(&args.len()) {
+            return self.invalid_call_with_arg_range(symbol, args, 2, 3);
+        }
+
+        let Some(patterns) = parse_string_patterns(&args[1]) else {
+            return Expr::call(head.clone(), args.to_vec());
+        };
+        let Some(config) = parse_string_match_config(&args[2..]) else {
+            return Expr::call(head.clone(), args.to_vec());
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            let chars = value.chars().collect::<Vec<_>>();
+            return bool_expr(predicate(&chars, &patterns, config));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return list_expr(
+                values
+                    .into_iter()
+                    .map(|value| {
+                        let chars = value.chars().collect::<Vec<_>>();
+                        bool_expr(predicate(&chars, &patterns, config))
+                    })
+                    .collect(),
+            );
+        }
+
+        Expr::call(head.clone(), args.to_vec())
+    }
+
+    fn eval_string_value_predicate(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+        symbol: &str,
+        predicate: fn(&str) -> bool,
+    ) -> Expr {
+        if args.len() != 1 {
+            return self.invalid_call_with_exact_arg_count(symbol, args, 1);
+        }
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return bool_expr(predicate(value));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return list_expr(
+                values
+                    .into_iter()
+                    .map(|value| bool_expr(predicate(&value)))
                     .collect(),
             );
         }
@@ -593,9 +1013,51 @@ fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
         return Some(StringPattern::Literal(chars));
     }
 
+    if is_system_symbol_name(expr, "Whitespace") {
+        return Some(StringPattern::Whitespace);
+    }
+
+    if is_system_symbol_name(expr, "NumberString") {
+        return Some(StringPattern::NumberString);
+    }
+
+    if is_system_symbol_name(expr, "StartOfString") {
+        return Some(StringPattern::StartOfString);
+    }
+
+    if is_system_symbol_name(expr, "EndOfString") {
+        return Some(StringPattern::EndOfString);
+    }
+
     let Expr::Call { head, args } = expr else {
         return None;
     };
+
+    if is_system_symbol_name(head, "Repeated") && args.len() == 1 {
+        return Some(StringPattern::Repeated {
+            pattern: Box::new(parse_string_pattern(&args[0])?),
+            min: 1,
+        });
+    }
+
+    if is_system_symbol_name(head, "RepeatedNull") && args.len() == 1 {
+        return Some(StringPattern::Repeated {
+            pattern: Box::new(parse_string_pattern(&args[0])?),
+            min: 0,
+        });
+    }
+
+    if is_system_symbol_name(head, "Shortest") && args.len() == 1 {
+        return Some(StringPattern::Shortest(Box::new(parse_string_pattern(
+            &args[0],
+        )?)));
+    }
+
+    if is_system_symbol_name(head, "Longest") && args.len() == 1 {
+        return Some(StringPattern::Longest(Box::new(parse_string_pattern(
+            &args[0],
+        )?)));
+    }
 
     if is_system_symbol_name(head, "StringExpression") && !args.is_empty() {
         return args
@@ -694,9 +1156,155 @@ fn parse_exact_string_case_rule(expr: &Expr) -> Option<ExactStringCaseRule> {
     })
 }
 
+fn parse_string_delete_options(options: &[Expr]) -> Option<StringDeleteConfig> {
+    let mut config = StringDeleteConfig::default();
+
+    for option in options {
+        let Expr::Call { head, args } = option else {
+            return None;
+        };
+        if !is_system_symbol_name(head, "Rule") || args.len() != 2 {
+            return None;
+        }
+
+        if is_system_symbol_name(&args[0], "IgnoreCase") {
+            config.ignore_case = truthiness_symbol(&args[1])?;
+            continue;
+        }
+
+        return None;
+    }
+
+    Some(config)
+}
+
+fn parse_string_match_config(options: &[Expr]) -> Option<StringPatternMatchConfig> {
+    let mut config = StringPatternMatchConfig::default();
+
+    for option in options {
+        let Expr::Call { head, args } = option else {
+            return None;
+        };
+        if !is_system_symbol_name(head, "Rule") || args.len() != 2 {
+            return None;
+        }
+
+        if is_system_symbol_name(&args[0], "IgnoreCase") {
+            config.ignore_case = truthiness_symbol(&args[1])?;
+            continue;
+        }
+
+        return None;
+    }
+
+    Some(config)
+}
+
+fn parse_string_match_limit_and_options(
+    extras: &[Expr],
+) -> Option<(usize, StringPatternMatchConfig)> {
+    let mut limit = usize::MAX;
+    let mut config = StringPatternMatchConfig::default();
+
+    for extra in extras {
+        if let Some(value) = expr_as_non_negative_usize(extra) {
+            if limit != usize::MAX {
+                return None;
+            }
+            limit = value;
+            continue;
+        }
+
+        let Expr::Call { head, args } = extra else {
+            return None;
+        };
+        if !is_system_symbol_name(head, "Rule") || args.len() != 2 {
+            return None;
+        }
+        if is_system_symbol_name(&args[0], "IgnoreCase") {
+            config.ignore_case = truthiness_symbol(&args[1])?;
+            continue;
+        }
+        return None;
+    }
+
+    Some((limit, config))
+}
+
+fn parse_string_position_args(
+    extras: &[Expr],
+) -> Option<(Option<usize>, StringPatternMatchConfig)> {
+    let mut max_results = None;
+    let mut config = StringPatternMatchConfig::default();
+
+    for extra in extras {
+        if let Some(value) = expr_as_non_negative_usize(extra) {
+            if max_results.is_some() {
+                return None;
+            }
+            max_results = Some(value);
+            continue;
+        }
+
+        let Expr::Call { head, args } = extra else {
+            return None;
+        };
+        if !is_system_symbol_name(head, "Rule") || args.len() != 2 {
+            return None;
+        }
+        if is_system_symbol_name(&args[0], "IgnoreCase") {
+            config.ignore_case = truthiness_symbol(&args[1])?;
+            continue;
+        }
+        return None;
+    }
+
+    Some((max_results, config))
+}
+
+fn parse_string_count_options(options: &[Expr]) -> Option<StringCountConfig> {
+    let mut config = StringCountConfig::default();
+
+    for option in options {
+        let Expr::Call { head, args } = option else {
+            return None;
+        };
+        if !is_system_symbol_name(head, "Rule") || args.len() != 2 {
+            return None;
+        }
+
+        if is_system_symbol_name(&args[0], "IgnoreCase") {
+            config.ignore_case = truthiness_symbol(&args[1])?;
+            continue;
+        }
+
+        if is_system_symbol_name(&args[0], "Overlaps") {
+            config.overlaps = if is_system_symbol_name(&args[1], heads::structure::ALL)
+                || matches!(truthiness_symbol(&args[1]), Some(true))
+            {
+                StringCountOverlaps::Overlapping
+            } else if matches!(truthiness_symbol(&args[1]), Some(false)) {
+                StringCountOverlaps::NonOverlapping
+            } else {
+                return None;
+            };
+            continue;
+        }
+
+        return None;
+    }
+
+    Some(config)
+}
+
 fn expr_as_non_empty_char_vec(expr: &Expr) -> Option<Vec<char>> {
     let chars = expr_as_string(expr)?.chars().collect::<Vec<_>>();
     (!chars.is_empty()).then_some(chars)
+}
+
+fn expr_as_nested_string_list(expr: &Expr) -> Option<Vec<Vec<String>>> {
+    let items = call_items_with_head(expr, &system_expr("List"))?;
+    items.iter().map(expr_as_string_list).collect()
 }
 
 fn single_code_point_string(expr: &Expr) -> Option<char> {
@@ -779,6 +1387,63 @@ fn drop_chars_by_count(chars: &[char], count: isize) -> String {
     }
 }
 
+fn string_take_drop_value(value: &str, spec: StringTakeDropSpec) -> (String, String) {
+    let chars = value.chars().collect::<Vec<_>>();
+    match spec {
+        StringTakeDropSpec::Count(count) => (
+            take_chars_by_count(&chars, count),
+            drop_chars_by_count(&chars, count),
+        ),
+        StringTakeDropSpec::InclusiveRange(start, end) => {
+            let Some((start, end)) = normalize_clamped_inclusive_range(start, end, chars.len())
+            else {
+                return (String::new(), value.to_string());
+            };
+
+            let taken = chars[start..=end].iter().collect::<String>();
+            let mut dropped = String::new();
+            dropped.extend(chars[..start].iter());
+            dropped.extend(chars[end + 1..].iter());
+            (taken, dropped)
+        }
+    }
+}
+
+fn string_form_value(template: &str, args: &[Expr]) -> String {
+    let mut remaining = template;
+    let mut output = String::new();
+    let mut replacements = args.iter();
+
+    while let Some(index) = remaining.find("``") {
+        output.push_str(&remaining[..index]);
+        if let Some(arg) = replacements.next() {
+            output.push_str(&arg.to_string());
+        } else {
+            output.push_str("``");
+        }
+        remaining = &remaining[index + 2..];
+    }
+
+    output.push_str(remaining);
+    output
+}
+
+fn string_pad_left_value(value: &str, width: usize, padding: &str) -> String {
+    let value_len = value.chars().count();
+    if value_len >= width {
+        return value.to_string();
+    }
+
+    let needed = width - value_len;
+    let pad_chars = padding.chars().collect::<Vec<_>>();
+    let mut prefix = String::new();
+    for index in 0..needed {
+        prefix.push(pad_chars[index % pad_chars.len()]);
+    }
+    prefix.push_str(value);
+    prefix
+}
+
 fn bool_expr(value: bool) -> Expr {
     system_expr(if value {
         heads::structure::TRUE
@@ -787,17 +1452,109 @@ fn bool_expr(value: bool) -> Expr {
     })
 }
 
-fn string_contains_q(haystack: &[char], pattern: &StringPattern) -> bool {
-    (0..haystack.len()).any(|start| best_pattern_match_end(pattern, haystack, start).is_some())
-}
-
-fn string_starts_q(haystack: &[char], pattern: &StringPattern) -> bool {
-    best_pattern_match_end(pattern, haystack, 0).is_some()
-}
-
-fn string_ends_q(haystack: &[char], pattern: &StringPattern) -> bool {
+fn string_contains_q(
+    haystack: &[char],
+    pattern: &StringPattern,
+    config: StringPatternMatchConfig,
+) -> bool {
     (0..haystack.len())
-        .any(|start| best_pattern_match_end(pattern, haystack, start) == Some(haystack.len()))
+        .any(|start| best_pattern_match_end(pattern, haystack, start, config).is_some())
+}
+
+fn string_starts_q(
+    haystack: &[char],
+    pattern: &StringPattern,
+    config: StringPatternMatchConfig,
+) -> bool {
+    best_pattern_match_end(pattern, haystack, 0, config).is_some()
+}
+
+fn string_ends_q(
+    haystack: &[char],
+    pattern: &StringPattern,
+    config: StringPatternMatchConfig,
+) -> bool {
+    (0..haystack.len()).any(|start| {
+        best_pattern_match_end(pattern, haystack, start, config) == Some(haystack.len())
+    })
+}
+
+fn string_match_q(
+    haystack: &[char],
+    patterns: &[StringPattern],
+    config: StringPatternMatchConfig,
+) -> bool {
+    best_pattern_match_at(patterns, haystack, 0, config)
+        .is_some_and(|(_, end)| end == haystack.len())
+}
+
+fn string_free_q(
+    haystack: &[char],
+    patterns: &[StringPattern],
+    config: StringPatternMatchConfig,
+) -> bool {
+    (0..haystack.len())
+        .all(|start| best_pattern_match_at(patterns, haystack, start, config).is_none())
+}
+
+fn string_count_matches(
+    value: &str,
+    patterns: &[StringPattern],
+    config: StringCountConfig,
+) -> usize {
+    let chars = value.chars().collect::<Vec<_>>();
+    let mut index = 0usize;
+    let mut matches = 0usize;
+    let match_config = StringPatternMatchConfig {
+        ignore_case: config.ignore_case,
+    };
+
+    while index < chars.len() {
+        if let Some((_, end)) = best_pattern_match_at(patterns, &chars, index, match_config) {
+            matches += 1;
+            index = if end == index {
+                index + 1
+            } else {
+                match config.overlaps {
+                    StringCountOverlaps::NonOverlapping => end,
+                    StringCountOverlaps::Overlapping => index + 1,
+                }
+            };
+        } else {
+            index += 1;
+        }
+    }
+
+    matches
+}
+
+fn string_delete_matches(
+    value: &str,
+    patterns: &[StringPattern],
+    config: StringDeleteConfig,
+) -> String {
+    let chars = value.chars().collect::<Vec<_>>();
+    let mut output = String::new();
+    let mut index = 0usize;
+    let match_config = StringPatternMatchConfig {
+        ignore_case: config.ignore_case,
+    };
+
+    while index < chars.len() {
+        if let Some((_, end)) = best_pattern_match_at(patterns, &chars, index, match_config) {
+            if end == index {
+                output.push(chars[index]);
+                index += 1;
+            } else {
+                index = end;
+            }
+        } else {
+            output.push(chars[index]);
+            index += 1;
+        }
+    }
+
+    output
 }
 
 fn split_string_value(
@@ -824,6 +1581,7 @@ fn replace_string_value(
     value: &str,
     rules: &[ExactStringReplacementRule],
     max_replacements: usize,
+    config: StringPatternMatchConfig,
 ) -> String {
     if max_replacements == 0 {
         return value.to_string();
@@ -841,10 +1599,15 @@ fn replace_string_value(
         }
 
         if let Some((rule, end)) = rules.iter().find_map(|rule| {
-            best_pattern_match_end(&rule.pattern, &chars, index).map(|end| (rule, end))
+            best_pattern_match_end(&rule.pattern, &chars, index, config).map(|end| (rule, end))
         }) {
             output.push_str(&rule.replacement);
-            index = end;
+            if end == index {
+                output.push(chars[index]);
+                index += 1;
+            } else {
+                index = end;
+            }
             replacements += 1;
         } else {
             output.push(chars[index]);
@@ -855,7 +1618,12 @@ fn replace_string_value(
     output
 }
 
-fn collect_string_cases(value: &str, spec: &ExactStringCaseSpec, max_matches: usize) -> Vec<Expr> {
+fn collect_string_cases(
+    value: &str,
+    spec: &ExactStringCaseSpec,
+    max_matches: usize,
+    config: StringPatternMatchConfig,
+) -> Vec<Expr> {
     if max_matches == 0 {
         return Vec::new();
     }
@@ -867,20 +1635,22 @@ fn collect_string_cases(value: &str, spec: &ExactStringCaseSpec, max_matches: us
     while index < chars.len() && matches.len() < max_matches {
         match spec {
             ExactStringCaseSpec::Patterns(patterns) => {
-                if let Some((_pattern_index, end)) = best_pattern_match_at(patterns, &chars, index)
+                if let Some((_pattern_index, end)) =
+                    best_pattern_match_at(patterns, &chars, index, config)
                 {
                     matches.push(Expr::string(pattern_match_text(&chars[index..end])));
-                    index = end;
+                    index = if end == index { index + 1 } else { end };
                 } else {
                     index += 1;
                 }
             }
             ExactStringCaseSpec::Rules(rules) => {
                 if let Some((rule, end)) = rules.iter().find_map(|rule| {
-                    best_pattern_match_end(&rule.pattern, &chars, index).map(|end| (rule, end))
+                    best_pattern_match_end(&rule.pattern, &chars, index, config)
+                        .map(|end| (rule, end))
                 }) {
                     matches.push(rule.output.clone());
-                    index = end;
+                    index = if end == index { index + 1 } else { end };
                 } else {
                     index += 1;
                 }
@@ -891,9 +1661,14 @@ fn collect_string_cases(value: &str, spec: &ExactStringCaseSpec, max_matches: us
     matches
 }
 
-fn string_position_expr(value: &str, pattern: &StringPattern, max_results: Option<usize>) -> Expr {
+fn string_position_expr(
+    value: &str,
+    pattern: &StringPattern,
+    max_results: Option<usize>,
+    config: StringPatternMatchConfig,
+) -> Expr {
     let haystack = value.chars().collect::<Vec<_>>();
-    let positions = string_pattern_positions(&haystack, pattern, max_results)
+    let positions = string_pattern_positions(&haystack, pattern, max_results, config)
         .map(|(start, end)| {
             list_expr(vec![
                 Expr::integer(BigInt::from(start)),
@@ -908,6 +1683,7 @@ fn string_pattern_positions<'a>(
     haystack: &'a [char],
     pattern: &'a StringPattern,
     max_results: Option<usize>,
+    config: StringPatternMatchConfig,
 ) -> impl Iterator<Item = (usize, usize)> + 'a {
     let max_results = max_results.unwrap_or(usize::MAX);
 
@@ -917,7 +1693,7 @@ fn string_pattern_positions<'a>(
 
     let mut positions = Vec::new();
     for start in 0..haystack.len() {
-        if let Some(end) = best_pattern_match_end(pattern, haystack, start) {
+        if let Some(end) = best_pattern_match_end(pattern, haystack, start, config) {
             positions.push((start + 1, end));
             if positions.len() >= max_results {
                 break;
@@ -1004,10 +1780,18 @@ fn split_by_string_patterns(
             break;
         }
 
-        let Some(end) = best_pattern_match_at(patterns, chars, index).map(|(_, end)| end) else {
+        let Some(end) =
+            best_pattern_match_at(patterns, chars, index, StringPatternMatchConfig::default())
+                .map(|(_, end)| end)
+        else {
             index += 1;
             continue;
         };
+
+        if end == index {
+            index += 1;
+            continue;
+        }
 
         let segment = chars[segment_start..index].iter().collect::<String>();
         if include_edge_empties || !segment.is_empty() || !parts.is_empty() {
@@ -1045,9 +1829,13 @@ fn trim_string_patterns(chars: &[char], patterns: &[StringPattern]) -> String {
     let mut end = chars.len();
 
     while start < end {
-        let Some(match_end) =
-            best_pattern_match_at(patterns, &chars[..end], start).map(|(_, end)| end)
-        else {
+        let Some(match_end) = best_pattern_match_at(
+            patterns,
+            &chars[..end],
+            start,
+            StringPatternMatchConfig::default(),
+        )
+        .map(|(_, end)| end) else {
             break;
         };
         start = match_end;
@@ -1073,12 +1861,13 @@ fn best_pattern_match_at(
     patterns: &[StringPattern],
     chars: &[char],
     start: usize,
+    config: StringPatternMatchConfig,
 ) -> Option<(usize, usize)> {
     patterns
         .iter()
         .enumerate()
         .filter_map(|(index, pattern)| {
-            best_pattern_match_end(pattern, chars, start).map(|end| (index, end))
+            best_pattern_match_end(pattern, chars, start, config).map(|end| (index, end))
         })
         .max_by_key(|(index, end)| (*end, usize::MAX - *index))
 }
@@ -1087,41 +1876,63 @@ fn best_pattern_suffix_start(patterns: &[StringPattern], chars: &[char]) -> Opti
     let end = chars.len();
     (0..end)
         .filter(|start| {
-            patterns
-                .iter()
-                .any(|pattern| best_pattern_match_end(pattern, chars, *start) == Some(end))
+            patterns.iter().any(|pattern| {
+                best_pattern_match_end(pattern, chars, *start, StringPatternMatchConfig::default())
+                    == Some(end)
+            })
         })
         .min()
 }
 
-fn best_pattern_match_end(pattern: &StringPattern, chars: &[char], start: usize) -> Option<usize> {
-    pattern_match_end_positions(pattern, chars, start)
-        .into_iter()
-        .max()
+fn best_pattern_match_end(
+    pattern: &StringPattern,
+    chars: &[char],
+    start: usize,
+    config: StringPatternMatchConfig,
+) -> Option<usize> {
+    let positions = pattern_match_end_positions(pattern, chars, start, config);
+    if pattern_prefers_shortest(pattern) {
+        positions.into_iter().min()
+    } else {
+        positions.into_iter().max()
+    }
 }
 
 fn pattern_match_end_positions(
     pattern: &StringPattern,
     chars: &[char],
     start: usize,
+    config: StringPatternMatchConfig,
 ) -> Vec<usize> {
     if start > chars.len() {
         return Vec::new();
     }
 
     match pattern {
-        StringPattern::Literal(literal) => chars[start..]
-            .starts_with(literal.as_slice())
-            .then_some(start + literal.len())
+        StringPattern::Literal(literal) => literal_match_end(chars, literal, start, config)
             .into_iter()
             .collect(),
+        StringPattern::Whitespace => whitespace_match_end_positions(chars, start),
+        StringPattern::NumberString => number_string_match_end_positions(chars, start),
+        StringPattern::StartOfString => (start == 0).then_some(start).into_iter().collect(),
+        StringPattern::EndOfString => (start == chars.len())
+            .then_some(start)
+            .into_iter()
+            .collect(),
+        StringPattern::Repeated { pattern, min } => {
+            repeated_pattern_end_positions(pattern, chars, start, *min, config)
+        }
+        StringPattern::Shortest(inner) | StringPattern::Longest(inner) => {
+            pattern_match_end_positions(inner, chars, start, config)
+        }
         StringPattern::Sequence(parts) => {
             let mut positions = vec![start];
 
             for part in parts {
                 let mut next_positions = Vec::new();
                 for position in positions {
-                    next_positions.extend(pattern_match_end_positions(part, chars, position));
+                    next_positions
+                        .extend(pattern_match_end_positions(part, chars, position, config));
                 }
                 next_positions.sort_unstable();
                 next_positions.dedup();
@@ -1136,12 +1947,210 @@ fn pattern_match_end_positions(
         StringPattern::Alternatives(alternatives) => {
             let mut positions = Vec::new();
             for alternative in alternatives {
-                positions.extend(pattern_match_end_positions(alternative, chars, start));
+                positions.extend(pattern_match_end_positions(
+                    alternative,
+                    chars,
+                    start,
+                    config,
+                ));
             }
             positions.sort_unstable();
             positions.dedup();
             positions
         }
+    }
+}
+
+fn pattern_prefers_shortest(pattern: &StringPattern) -> bool {
+    matches!(pattern, StringPattern::Shortest(_))
+}
+
+fn repeated_pattern_end_positions(
+    pattern: &StringPattern,
+    chars: &[char],
+    start: usize,
+    min: usize,
+    config: StringPatternMatchConfig,
+) -> Vec<usize> {
+    let mut frontier = vec![start];
+    let mut positions = if min == 0 { vec![start] } else { Vec::new() };
+    let mut steps = 0usize;
+
+    loop {
+        let mut next = Vec::new();
+        for position in frontier {
+            for end in pattern_match_end_positions(pattern, chars, position, config) {
+                if end > position {
+                    next.push(end);
+                }
+            }
+        }
+        next.sort_unstable();
+        next.dedup();
+
+        if next.is_empty() {
+            break;
+        }
+
+        steps += 1;
+        if steps >= min {
+            positions.extend(next.iter().copied());
+        }
+        frontier = next;
+    }
+
+    positions.sort_unstable();
+    positions.dedup();
+    positions
+}
+
+fn literal_match_end(
+    chars: &[char],
+    literal: &[char],
+    start: usize,
+    config: StringPatternMatchConfig,
+) -> Option<usize> {
+    if chars.len().saturating_sub(start) < literal.len() {
+        return None;
+    }
+
+    for (offset, expected) in literal.iter().enumerate() {
+        let actual = chars[start + offset];
+        let matches = if config.ignore_case {
+            actual.to_lowercase().to_string() == expected.to_lowercase().to_string()
+        } else {
+            actual == *expected
+        };
+        if !matches {
+            return None;
+        }
+    }
+
+    Some(start + literal.len())
+}
+
+fn whitespace_match_end_positions(chars: &[char], start: usize) -> Vec<usize> {
+    if start >= chars.len() || !is_string_whitespace(chars[start]) {
+        return Vec::new();
+    }
+
+    let mut end = start;
+    let mut positions = Vec::new();
+    while end < chars.len() && is_string_whitespace(chars[end]) {
+        end += 1;
+        positions.push(end);
+    }
+    positions
+}
+
+fn number_string_match_end_positions(chars: &[char], start: usize) -> Vec<usize> {
+    if start >= chars.len() {
+        return Vec::new();
+    }
+
+    let mut positions = Vec::new();
+    let mut index = start;
+
+    if matches!(chars.get(index), Some(&'+') | Some(&'-')) {
+        index += 1;
+    }
+
+    let integer_start = index;
+    while index < chars.len() && chars[index].is_ascii_digit() {
+        index += 1;
+        positions.push(index);
+    }
+    let integer_end = index;
+
+    if chars.get(index) == Some(&'.') {
+        index += 1;
+        if integer_end > integer_start {
+            positions.push(index);
+        }
+
+        let fraction_start = index;
+        while index < chars.len() && chars[index].is_ascii_digit() {
+            index += 1;
+            positions.push(index);
+        }
+
+        if integer_end == integer_start && fraction_start == index {
+            return Vec::new();
+        }
+    }
+
+    positions
+}
+
+fn string_slot_expr() -> Expr {
+    Expr::call(system_expr("Slot"), vec![Expr::integer(BigInt::from(1_u8))])
+}
+
+fn string_unary_operator_form(symbol: &str, operator: &Expr) -> Expr {
+    Expr::call(
+        system_expr("Function"),
+        vec![Expr::call(
+            system_expr(symbol),
+            vec![operator.clone(), string_slot_expr()],
+        )],
+    )
+}
+
+fn string_unary_operator_form_slot_first(symbol: &str, tail: &Expr) -> Expr {
+    Expr::call(
+        system_expr("Function"),
+        vec![Expr::call(
+            system_expr(symbol),
+            vec![string_slot_expr(), tail.clone()],
+        )],
+    )
+}
+
+fn string_apply_value(
+    session: &mut Session,
+    operator: &Expr,
+    value: &str,
+    fallback: Expr,
+) -> Result<Expr, EvalError> {
+    let applied = Expr::call(
+        operator.clone(),
+        vec![list_expr(
+            value
+                .chars()
+                .map(|ch| Expr::string(ch.to_string()))
+                .collect(),
+        )],
+    );
+    let evaluated = session.evaluate(applied)?;
+    Ok(string_apply_output_expr(evaluated).unwrap_or(fallback))
+}
+
+fn string_apply_output_expr(expr: Expr) -> Option<Expr> {
+    match expr {
+        Expr::Atom(Atom::String(_)) => Some(expr),
+        Expr::Call { head, args } if is_system_symbol_name(&head, "List") => {
+            if args
+                .iter()
+                .all(|item| matches!(item, Expr::Atom(Atom::String(_))))
+            {
+                let joined = args
+                    .into_iter()
+                    .filter_map(|item| match item {
+                        Expr::Atom(Atom::String(value)) => Some(value),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+                    .concat();
+                return Some(Expr::string(joined));
+            }
+
+            let converted = args
+                .into_iter()
+                .map(string_apply_output_expr)
+                .collect::<Option<Vec<_>>>()?;
+            Some(list_expr(converted))
+        }
+        _ => None,
     }
 }
 

@@ -109,6 +109,26 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::StringLength,
     ),
     BuiltinSpec::ordinary(
+        "ToUpperCase",
+        "Converts a string or list of strings to uppercase using the current Unicode-aware subset.",
+        BuiltinHandler::ToUpperCase,
+    ),
+    BuiltinSpec::ordinary(
+        "StringForm",
+        "Formats a template string using the current simple `` placeholder subset.",
+        BuiltinHandler::StringForm,
+    ),
+    BuiltinSpec::ordinary(
+        "StringRiffle",
+        "Riffles strings together using the current flat and nested-list separator subset.",
+        BuiltinHandler::StringRiffle,
+    ),
+    BuiltinSpec::ordinary(
+        "StringPadLeft",
+        "Pads strings on the left to a target width using the current simple padding subset.",
+        BuiltinHandler::StringPadLeft,
+    ),
+    BuiltinSpec::ordinary(
         "Characters",
         "Splits a string into a list of single-code-point strings.",
         BuiltinHandler::Characters,
@@ -127,6 +147,56 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "StringRepeat",
         "Repeats a string a non-negative number of times.",
         BuiltinHandler::StringRepeat,
+    ),
+    BuiltinSpec::ordinary(
+        "LetterQ",
+        "Tests whether all characters in a string belong to the current letter subset.",
+        BuiltinHandler::LetterQ,
+    ),
+    BuiltinSpec::ordinary(
+        "DigitQ",
+        "Tests whether all characters in a string belong to the current digit subset.",
+        BuiltinHandler::DigitQ,
+    ),
+    BuiltinSpec::new(
+        "Whitespace",
+        "Represents the current string-pattern atom for one or more whitespace characters.",
+    ),
+    BuiltinSpec::new(
+        "NumberString",
+        "Represents the current string-pattern atom for decimal-style numeric text.",
+    ),
+    BuiltinSpec::new(
+        "IgnoreCase",
+        "Represents the current option symbol for case-insensitive string matching.",
+    ),
+    BuiltinSpec::new(
+        "Overlaps",
+        "Represents the current option symbol for overlapping string-match counting.",
+    ),
+    BuiltinSpec::new(
+        "StartOfString",
+        "Represents the current string-pattern anchor for the start of a string.",
+    ),
+    BuiltinSpec::new(
+        "EndOfString",
+        "Represents the current string-pattern anchor for the end of a string.",
+    ),
+    BuiltinSpec::new(
+        "Repeated",
+        "Represents the current string-pattern repetition head for one or more matches.",
+    ),
+    BuiltinSpec::new(
+        "RepeatedNull",
+        "Represents the current string-pattern repetition head for zero or more matches.",
+    ),
+    BuiltinSpec::new(
+        "Shortest",
+        "Represents the current string-pattern wrapper that prefers the shortest match.",
+    ),
+    BuiltinSpec::new(
+        "Longest",
+        "Represents the current string-pattern wrapper that prefers the longest match.",
     ),
     BuiltinSpec::ordinary(
         "StringContainsQ",
@@ -169,6 +239,16 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::StringCases,
     ),
     BuiltinSpec::ordinary(
+        "StringApply",
+        "Applies a list-oriented function to string code points and reassembles string output in the current first-pass subset.",
+        BuiltinHandler::StringApply,
+    ),
+    BuiltinSpec::ordinary(
+        "StringDelete",
+        "Deletes exact or current string-pattern matches from strings in the current first-pass subset.",
+        BuiltinHandler::StringDelete,
+    ),
+    BuiltinSpec::ordinary(
         "StringTake",
         "Extracts a substring using integer counts or inclusive 1-based ranges.",
         BuiltinHandler::StringTake,
@@ -179,9 +259,29 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::StringDrop,
     ),
     BuiltinSpec::ordinary(
+        "StringTakeDrop",
+        "Returns both the taken and dropped substrings using the current StringTake/StringDrop spec subset.",
+        BuiltinHandler::StringTakeDrop,
+    ),
+    BuiltinSpec::ordinary(
         "StringPart",
         "Extracts individual characters by 1-based positions.",
         BuiltinHandler::StringPart,
+    ),
+    BuiltinSpec::ordinary(
+        "StringCount",
+        "Counts exact or current string-pattern matches, including the current IgnoreCase and Overlaps option subset.",
+        BuiltinHandler::StringCount,
+    ),
+    BuiltinSpec::ordinary(
+        "StringMatchQ",
+        "Tests whether a whole string matches an exact or current string-pattern spec.",
+        BuiltinHandler::StringMatchQ,
+    ),
+    BuiltinSpec::ordinary(
+        "StringFreeQ",
+        "Tests whether a string is free of exact or current string-pattern matches.",
+        BuiltinHandler::StringFreeQ,
     ),
     BuiltinSpec::ordinary_with_hold(
         "FullForm",
