@@ -39,6 +39,10 @@ impl Session {
         });
     }
 
+    pub(super) fn push_print(&mut self, text: impl Into<String>) {
+        self.prints.push(text.into());
+    }
+
     pub(super) fn runtime_message_for_non_loader_eval_error(
         error: &EvalError,
     ) -> Option<RuntimeMessage> {

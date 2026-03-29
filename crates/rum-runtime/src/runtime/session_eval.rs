@@ -125,6 +125,7 @@ impl Session {
 
     pub fn eval_text(&mut self, input: &str) -> Result<EvalOutcome, EvalError> {
         let message_checkpoint = self.messages.len();
+        let print_checkpoint = self.prints.len();
         let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
         let result = (|| {
             let syntax = parse_expr(input)?;
@@ -136,10 +137,15 @@ impl Session {
         match result {
             Ok(value) => {
                 let messages = self.messages.split_off(message_checkpoint);
+                let prints = self.prints.split_off(print_checkpoint);
                 self.last_message_list = messages.clone();
                 self.handled_non_loader_eval_errors
                     .truncate(handled_error_checkpoint);
-                Ok(EvalOutcome { value, messages })
+                Ok(EvalOutcome {
+                    value,
+                    messages,
+                    prints,
+                })
             }
             Err(err) => {
                 self.emit_non_loader_eval_message(handled_error_checkpoint, &err);
@@ -153,21 +159,28 @@ impl Session {
 
     pub fn eval_script(&mut self, source: &str) -> Result<EvalOutcome, EvalError> {
         let message_checkpoint = self.messages.len();
+        let print_checkpoint = self.prints.len();
         let forms = split_script_into_forms(source)?;
         let mut value = system_expr("Null");
         let mut messages = Vec::new();
+        let mut prints = Vec::new();
 
         for form in forms {
             match self.eval_text(&form) {
                 Ok(outcome) => {
                     value = outcome.value;
                     messages.extend(outcome.messages);
+                    prints.extend(outcome.prints);
                 }
                 Err(err) => {
                     if !messages.is_empty() {
                         self.messages
                             .splice(message_checkpoint..message_checkpoint, messages);
                         self.last_message_list = self.messages[message_checkpoint..].to_vec();
+                    }
+                    if !prints.is_empty() {
+                        self.prints
+                            .splice(print_checkpoint..print_checkpoint, prints);
                     }
 
                     return Err(err);
@@ -176,7 +189,11 @@ impl Session {
         }
 
         self.last_message_list = messages.clone();
-        Ok(EvalOutcome { value, messages })
+        Ok(EvalOutcome {
+            value,
+            messages,
+            prints,
+        })
     }
 
     pub fn eval_file(&mut self, path: impl AsRef<Path>) -> Result<EvalOutcome, EvalError> {

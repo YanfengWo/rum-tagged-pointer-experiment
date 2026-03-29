@@ -321,8 +321,10 @@ impl Session {
             BuiltinHandler::Table => self.eval_table(args),
             BuiltinHandler::Abort => self.eval_abort(head, args),
             BuiltinHandler::CheckAbort => self.eval_check_abort(args),
+            BuiltinHandler::AbortProtect => self.eval_abort_protect(args),
             BuiltinHandler::WithCleanup => self.eval_with_cleanup(args),
             BuiltinHandler::Failsafe => self.eval_failsafe(head, args),
+            BuiltinHandler::Assert => self.eval_assert(args),
             BuiltinHandler::Enclose => self.eval_enclose(args),
             BuiltinHandler::Confirm => self.eval_confirm(args),
             BuiltinHandler::ConfirmBy => self.eval_confirm_by(args),
@@ -336,6 +338,9 @@ impl Session {
             BuiltinHandler::Catch => self.eval_catch(args),
             BuiltinHandler::Failure => self.eval_failure(head, args),
             BuiltinHandler::FailureQ => self.eval_failure_q(head, args),
+            BuiltinHandler::Success => self.eval_success(head, args),
+            BuiltinHandler::TerminatedEvaluation => self.eval_terminated_evaluation(head, args),
+            BuiltinHandler::MissingQ => self.eval_missing_q(head, args),
             BuiltinHandler::With => self.eval_with(args),
             BuiltinHandler::BlockMap => self.eval_block_map(head, args),
             BuiltinHandler::SubsetMap => self.eval_subset_map(head, args),
@@ -390,6 +395,10 @@ impl Session {
             BuiltinHandler::Sequence => Ok(sequence_expr(args.to_vec())),
             BuiltinHandler::Thread => self.eval_thread(head, args),
             BuiltinHandler::InputString => self.eval_input_string(args),
+            BuiltinHandler::Input => self.eval_input(args),
+            BuiltinHandler::Print => self.eval_print(args),
+            BuiltinHandler::Pause => self.eval_pause(args),
+            BuiltinHandler::BlockRandom => self.eval_block_random(args),
         }
     }
 }

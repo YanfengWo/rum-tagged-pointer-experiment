@@ -418,8 +418,10 @@ pub enum BuiltinHandler {
     Table,
     Abort,
     CheckAbort,
+    AbortProtect,
     WithCleanup,
     Failsafe,
+    Assert,
     Enclose,
     Confirm,
     ConfirmBy,
@@ -433,6 +435,9 @@ pub enum BuiltinHandler {
     Catch,
     Failure,
     FailureQ,
+    Success,
+    TerminatedEvaluation,
+    MissingQ,
     With,
     BlockMap,
     SubsetMap,
@@ -477,7 +482,11 @@ pub enum BuiltinHandler {
     Evaluate,
     Sequence,
     Thread,
+    Input,
     InputString,
+    Print,
+    Pause,
+    BlockRandom,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BuiltinSpec {

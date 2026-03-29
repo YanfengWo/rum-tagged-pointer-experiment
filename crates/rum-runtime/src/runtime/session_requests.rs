@@ -3,6 +3,7 @@ use super::*;
 #[derive(Clone, Copy, Debug)]
 struct RequestCheckpoint {
     message_checkpoint: usize,
+    print_checkpoint: usize,
     handled_error_checkpoint: usize,
     trace_checkpoint: usize,
 }
@@ -11,6 +12,7 @@ impl RequestCheckpoint {
     fn new(session: &Session) -> Self {
         Self {
             message_checkpoint: session.messages.len(),
+            print_checkpoint: session.prints.len(),
             handled_error_checkpoint: session.handled_non_loader_eval_errors.len(),
             trace_checkpoint: session.trace_events.len(),
         }
@@ -21,6 +23,7 @@ impl From<RequestCheckpoint> for PendingEvalRequest {
     fn from(checkpoint: RequestCheckpoint) -> Self {
         Self {
             message_checkpoint: checkpoint.message_checkpoint,
+            print_checkpoint: checkpoint.print_checkpoint,
             handled_error_checkpoint: checkpoint.handled_error_checkpoint,
             trace_checkpoint: checkpoint.trace_checkpoint,
         }
@@ -31,6 +34,7 @@ impl From<PendingEvalRequest> for RequestCheckpoint {
     fn from(state: PendingEvalRequest) -> Self {
         Self {
             message_checkpoint: state.message_checkpoint,
+            print_checkpoint: state.print_checkpoint,
             handled_error_checkpoint: state.handled_error_checkpoint,
             trace_checkpoint: state.trace_checkpoint,
         }
@@ -129,6 +133,7 @@ impl Session {
         };
 
         let messages = self.messages.split_off(checkpoint.message_checkpoint);
+        let prints = self.prints.split_off(checkpoint.print_checkpoint);
         let trace = self.trace_events[checkpoint.trace_checkpoint..].to_vec();
         self.last_message_list = messages.clone();
         self.handled_non_loader_eval_errors
@@ -138,6 +143,7 @@ impl Session {
         Ok(SessionEvalResponse {
             value,
             messages,
+            prints,
             trace,
         })
     }
@@ -155,6 +161,7 @@ impl Session {
                     message: "no suspended evaluation is waiting for host input".to_string(),
                 },
                 messages: Vec::new(),
+                prints: Vec::new(),
                 trace: Vec::new(),
             })?;
 
@@ -177,6 +184,7 @@ impl Session {
         };
 
         let messages = self.messages.split_off(checkpoint.message_checkpoint);
+        let prints = self.prints.split_off(checkpoint.print_checkpoint);
         let trace = self.trace_events[checkpoint.trace_checkpoint..].to_vec();
         self.last_message_list = messages.clone();
         self.handled_non_loader_eval_errors
@@ -185,6 +193,7 @@ impl Session {
         Ok(SessionEvalResponse {
             value,
             messages,
+            prints,
             trace,
         })
     }
@@ -199,6 +208,7 @@ impl Session {
             Ok(outcome) => Ok(SessionEvalResponse {
                 value: outcome.value,
                 messages: outcome.messages,
+                prints: outcome.prints,
                 trace: self.trace_events[checkpoint.trace_checkpoint..].to_vec(),
             }),
             Err(err) => Err(self.finish_completed_request_failure(checkpoint, Some(source), err)),
@@ -216,6 +226,7 @@ impl Session {
             Ok(outcome) => Ok(SessionEvalResponse {
                 value: outcome.value,
                 messages: outcome.messages,
+                prints: outcome.prints,
                 trace: self.trace_events[checkpoint.trace_checkpoint..].to_vec(),
             }),
             Err(err) => {
@@ -249,6 +260,7 @@ impl Session {
         self.emit_non_loader_eval_message(checkpoint.handled_error_checkpoint, &err);
 
         let messages = self.messages[checkpoint.message_checkpoint..].to_vec();
+        let prints = self.prints[checkpoint.print_checkpoint..].to_vec();
         let trace = self.trace_events[checkpoint.trace_checkpoint..].to_vec();
         self.last_message_list = messages.clone();
         self.handled_non_loader_eval_errors
@@ -257,6 +269,7 @@ impl Session {
         SessionRequestFailure {
             error: session_request_error_from_eval_error(&err),
             messages,
+            prints,
             trace,
         }
     }
@@ -268,6 +281,7 @@ impl Session {
         err: EvalError,
     ) -> SessionRequestFailure {
         let messages = self.messages[checkpoint.message_checkpoint..].to_vec();
+        let prints = self.prints[checkpoint.print_checkpoint..].to_vec();
         let trace = self.trace_events[checkpoint.trace_checkpoint..].to_vec();
         self.last_message_list = messages.clone();
         self.handled_non_loader_eval_errors
@@ -276,6 +290,7 @@ impl Session {
         SessionRequestFailure {
             error: session_request_error_from_eval_error_with_source(&err, source),
             messages,
+            prints,
             trace,
         }
     }
@@ -285,6 +300,7 @@ fn request_syntax_failure(diagnostic: rum_syntax::SourceDiagnostic) -> SessionRe
     SessionRequestFailure {
         error: SessionRequestError::Syntax(diagnostic.structured()),
         messages: Vec::new(),
+        prints: Vec::new(),
         trace: Vec::new(),
     }
 }

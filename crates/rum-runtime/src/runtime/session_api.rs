@@ -70,6 +70,14 @@ impl Session {
         std::mem::take(&mut self.messages)
     }
 
+    pub fn prints(&self) -> &[String] {
+        &self.prints
+    }
+
+    pub fn take_prints(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.prints)
+    }
+
     pub fn pending_input_request(&self) -> Option<&RuntimeInputRequest> {
         self.pending_input_request.as_ref()
     }

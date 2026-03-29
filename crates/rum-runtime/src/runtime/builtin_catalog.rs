@@ -649,6 +649,11 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Missing,
     ),
     BuiltinSpec::ordinary(
+        "MissingQ",
+        "Tests whether an expression is a Missing object.",
+        BuiltinHandler::MissingQ,
+    ),
+    BuiltinSpec::ordinary(
         "SameQ",
         "Tests whether all arguments are exactly identical after evaluation.",
         BuiltinHandler::SameQ,
@@ -1021,6 +1026,12 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::CheckAbort,
     ),
     BuiltinSpec::ordinary_with_hold(
+        "AbortProtect",
+        "Evaluates an expression while delaying any abort until the protected region exits in the current first-pass subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::AbortProtect,
+    ),
+    BuiltinSpec::ordinary_with_hold(
         "WithCleanup",
         "Evaluates cleanup code even when the main expression exits abnormally in the current first-pass subset.",
         HoldAttribute::HoldAll,
@@ -1030,6 +1041,12 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "Failsafe",
         "Creates a callable wrapper that preserves failure-like inputs in the current first-pass subset.",
         BuiltinHandler::Failsafe,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Assert",
+        "Represents an assertion site and currently acts as an inert assertion unless richer assertion controls are added.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Assert,
     ),
     BuiltinSpec::new(
         "PropagateAborts",
@@ -1106,6 +1123,16 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "FailureQ",
         "Tests whether an expression is a Failure object.",
         BuiltinHandler::FailureQ,
+    ),
+    BuiltinSpec::ordinary(
+        "Success",
+        "Represents a success object with associated details in the current first-pass subset.",
+        BuiltinHandler::Success,
+    ),
+    BuiltinSpec::ordinary(
+        "TerminatedEvaluation",
+        "Represents a terminated evaluation object in the current first-pass subset.",
+        BuiltinHandler::TerminatedEvaluation,
     ),
     BuiltinSpec::ordinary_with_hold(
         "Function",
@@ -1390,6 +1417,27 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         "InputString",
         "Requests one line of host-provided text and returns it as a string.",
         BuiltinHandler::InputString,
+    ),
+    BuiltinSpec::ordinary(
+        "Input",
+        "Requests one line of host-provided text, parses it as Wolfram input, and evaluates the resulting expression in the current first-pass subset.",
+        BuiltinHandler::Input,
+    ),
+    BuiltinSpec::ordinary(
+        "Print",
+        "Emits a line of plain print output through the runtime print stream.",
+        BuiltinHandler::Print,
+    ),
+    BuiltinSpec::ordinary(
+        "Pause",
+        "Pauses for at least a nonnegative exact number of seconds in the current first-pass subset.",
+        BuiltinHandler::Pause,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "BlockRandom",
+        "Evaluates an expression with localized random state in the current first-pass subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::BlockRandom,
     ),
 ];
 

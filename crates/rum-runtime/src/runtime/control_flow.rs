@@ -229,6 +229,11 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("Abort", args, 0));
         }
 
+        if self.abort_protect_depth > 0 {
+            self.abort_protect_pending += 1;
+            return Ok(system_expr("$Aborted"));
+        }
+
         Err(EvalError::Abort)
     }
 
@@ -253,6 +258,24 @@ impl Session {
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
             outcome => self.resume_check_abort_after_primary(args.to_vec(), propagate, outcome),
+        }
+    }
+
+    pub(super) fn eval_abort_protect(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [body] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("AbortProtect", args, 1));
+        };
+
+        let pending_checkpoint = self.abort_protect_pending;
+        self.abort_protect_depth += 1;
+        let body_result = self.evaluate(body.clone());
+        let outcome = self.suspend_with_result_frame(body_result, move |session, outcome| {
+            session.resume_abort_protect_after_body(pending_checkpoint, outcome)
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.resume_abort_protect_after_body(pending_checkpoint, outcome),
         }
     }
 
@@ -291,6 +314,14 @@ impl Session {
         }
 
         Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(super) fn eval_assert(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [_test] => Ok(system_expr("Null")),
+            [_test, _tag] => Ok(system_expr("Null")),
+            _ => Ok(self.invalid_call_with_arg_range("Assert", args, 1, 2)),
+        }
     }
 
     pub(super) fn eval_enclose(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -425,7 +456,7 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("Failure", args, 2));
         };
 
-        let Some(details) = normalize_failure_details_expr(details) else {
+        let Some(details) = normalize_status_details_expr(details) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -446,6 +477,30 @@ impl Session {
         } else {
             "False"
         }))
+    }
+
+    pub(super) fn eval_success(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [tag, details] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Success", args, 2));
+        };
+
+        let Some(details) = normalize_status_details_expr(details) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        Ok(Expr::call(head.clone(), vec![tag.clone(), details]))
+    }
+
+    pub(super) fn eval_terminated_evaluation(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [reason] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("TerminatedEvaluation", args, 1));
+        };
+
+        Ok(Expr::call(head.clone(), vec![reason.clone()]))
     }
 
     pub(super) fn eval_return(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -508,6 +563,15 @@ impl Session {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
             outcome => self.resume_catch_after_body(form, handler, outcome),
         }
+    }
+
+    pub(super) fn eval_block_random(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !(1..=2).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("BlockRandom", args, 1, 2));
+        }
+
+        let body_result = self.evaluate(args[0].clone());
+        self.suspend_with_frame(body_result, |_, value| Ok(value))
     }
 
     fn resume_do_after_spec_eval(
@@ -1192,6 +1256,32 @@ impl Session {
         }
     }
 
+    fn resume_abort_protect_after_body(
+        &mut self,
+        pending_checkpoint: usize,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        if self.abort_protect_depth > 0 {
+            self.abort_protect_depth -= 1;
+        }
+
+        let delayed_abort = self.abort_protect_pending > pending_checkpoint
+            || matches!(outcome, Err(EvalError::Abort));
+        self.abort_protect_pending = pending_checkpoint;
+
+        match outcome {
+            Ok(value) => {
+                if delayed_abort {
+                    Err(EvalError::Abort)
+                } else {
+                    Ok(value)
+                }
+            }
+            Err(EvalError::Abort) => Err(EvalError::Abort),
+            Err(error) => Err(error),
+        }
+    }
+
     fn resume_with_cleanup_after_init(
         &mut self,
         expr: Expr,
@@ -1743,7 +1833,7 @@ fn is_failsafe_failure_like(expr: &Expr) -> bool {
     is_confirmation_failure_like(expr)
 }
 
-fn normalize_failure_details_expr(expr: &Expr) -> Option<Expr> {
+fn normalize_status_details_expr(expr: &Expr) -> Option<Expr> {
     if association_entries_from_expr(expr).is_some() {
         return Some(expr.clone());
     }

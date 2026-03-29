@@ -60,6 +60,21 @@ impl Session {
         )))
     }
 
+    pub(super) fn eval_missing_q(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("MissingQ", args, 1));
+        };
+
+        Ok(predicate_bool_expr(matches!(
+            expr,
+            Expr::Call { head, args } if is_system_symbol_name(head, "Missing") && !args.is_empty()
+        )))
+    }
+
     pub(super) fn eval_integer_q(
         &mut self,
         _head: &Expr,

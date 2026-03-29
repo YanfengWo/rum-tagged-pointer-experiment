@@ -254,8 +254,11 @@ pub struct Session {
     pub(super) tracing_enabled: bool,
     pub(super) trace_events: Vec<TraceEvent>,
     pub(super) messages: Vec<RuntimeMessage>,
+    pub(super) prints: Vec<String>,
     pub(super) last_message_list: Vec<RuntimeMessage>,
     pub(super) handled_non_loader_eval_errors: Vec<RuntimeMessage>,
+    pub(super) abort_protect_depth: usize,
+    pub(super) abort_protect_pending: usize,
     pub(super) queued_input_responses: VecDeque<String>,
     pub(super) pending_input_request: Option<RuntimeInputRequest>,
     pub(super) pending_eval_request: Option<PendingEvalRequest>,
@@ -266,6 +269,7 @@ pub struct Session {
 pub struct EvalOutcome {
     pub value: Expr,
     pub messages: Vec<RuntimeMessage>,
+    pub prints: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -302,6 +306,7 @@ pub struct SessionLowerResponse {
 pub struct SessionEvalResponse {
     pub value: Expr,
     pub messages: Vec<RuntimeMessage>,
+    pub prints: Vec<String>,
     pub trace: Vec<TraceEvent>,
 }
 
@@ -350,12 +355,14 @@ pub enum SessionRequestError {
 pub struct SessionRequestFailure {
     pub error: SessionRequestError,
     pub messages: Vec<RuntimeMessage>,
+    pub prints: Vec<String>,
     pub trace: Vec<TraceEvent>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct PendingEvalRequest {
     pub(super) message_checkpoint: usize,
+    pub(super) print_checkpoint: usize,
     pub(super) handled_error_checkpoint: usize,
     pub(super) trace_checkpoint: usize,
 }
