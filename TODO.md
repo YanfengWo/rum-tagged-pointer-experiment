@@ -76,23 +76,25 @@ This roadmap intentionally uses two levels of detail:
 
 - [ ] Keep turning large branch-heavy functions into smaller helpers when that makes important policy or normalization behavior reachable from direct unit tests
 - [ ] Keep separating pure planning/normalization logic from state mutation and rendering paths when that improves testability without creating micro-modules
-- [ ] Split active files that are already in explicit large-file debt under the code-organization rules, starting with:
-  - [ ] `crates/rum-runtime/src/runtime/functional_ops.rs`
-  - [ ] `crates/rum-runtime/src/runtime/strings.rs`
-  - [ ] `crates/rum-runtime/src/runtime/control_flow.rs`
-  - [ ] `crates/rum-runtime/src/runtime/structure_ops.rs`
-  - [ ] `crates/rum-runtime/src/runtime/builtin_catalog.rs`
-  - [ ] `crates/rum-runtime/src/runtime/polynomials.rs`
-  - [ ] `crates/rum-runtime/src/runtime/associations.rs`
-  - [ ] `crates/rum-jupyter/src/transport.rs`
-  - [ ] `crates/rum-jupyter/src/tests.rs`
-  - [ ] `crates/rum-jupyter/src/zeromq.rs`
-  - [ ] `crates/rum-jupyter/src/adapter.rs`
-  - [ ] `crates/rum-syntax/src/formatter.rs`
-  - [ ] `crates/rum-runtime/src/runtime/tests/strings.rs`
-  - [ ] `crates/rum-runtime/src/runtime/tests/functional_ops.rs`
-  - [ ] `crates/rum-runtime/src/runtime/pattern_matching.rs`
-  - [ ] `crates/rum-runtime/src/runtime/tests/session_requests.rs`
+- [x] Split the old `functional_ops` and `strings` implementation/test monoliths into feature-oriented directory modules:
+  - [x] `crates/rum-runtime/src/runtime/functional_ops.rs` -> `crates/rum-runtime/src/runtime/functional_ops/`
+  - [x] `crates/rum-runtime/src/runtime/tests/functional_ops.rs` -> `crates/rum-runtime/src/runtime/tests/functional_ops/`
+  - [x] `crates/rum-runtime/src/runtime/strings.rs` -> `crates/rum-runtime/src/runtime/strings/`
+  - [x] `crates/rum-runtime/src/runtime/tests/strings.rs` -> `crates/rum-runtime/src/runtime/tests/strings/`
+- [ ] Continue paying down the remaining explicit large-file debt under the code-organization rules, starting with the biggest live files as of 2026-03-29:
+  - [ ] `crates/rum-jupyter/src/transport.rs` (`2277` lines)
+  - [ ] `crates/rum-runtime/src/runtime/control_flow.rs` (`2257` lines)
+  - [ ] `crates/rum-jupyter/src/tests.rs` (`2168` lines)
+  - [ ] `crates/rum-runtime/src/runtime/structure_ops.rs` (`2034` lines)
+  - [ ] `crates/rum-runtime/src/runtime/strings/patterns.rs` (`1825` lines)
+  - [ ] `crates/rum-jupyter/src/zeromq.rs` (`1765` lines)
+  - [ ] `crates/rum-runtime/src/runtime/builtin_catalog.rs` (`1730` lines)
+  - [ ] `crates/rum-syntax/src/formatter.rs` (`1673` lines)
+  - [ ] `crates/rum-runtime/src/runtime/polynomials.rs` (`1390` lines)
+  - [ ] `crates/rum-runtime/src/runtime/tests/session_requests.rs` (`1199` lines)
+  - [ ] `crates/rum-runtime/src/runtime/associations.rs` (`1196` lines)
+  - [ ] `crates/rum-jupyter/src/adapter.rs` (`1075` lines)
+  - [ ] `crates/rum-runtime/src/runtime/pattern_matching.rs` (`823` lines but still dense enough to keep under review)
 
 ### `rum-syntax`
 
