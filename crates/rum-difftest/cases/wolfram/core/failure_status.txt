@@ -1,0 +1,14 @@
+# Curated Lane A file: failure and status
+# Format: input ||| expected_output
+MissingQ[Missing["KeyAbsent"]] ||| True
+MissingQ[1] ||| False
+FailureQ[Failure["oops", <||>]] ||| True
+FailureQ[$Failed] ||| True
+CheckAbort[Abort[], rescued] ||| rescued
+x = 0; WithCleanup[x = 1, x = 2]; x ||| 2
+Success["ok", <|"Code" -> 200, "Body" -> 7|>]["Code"] ||| 200
+Success["ok", <|"Code" -> 200, "Body" -> 7|>][{"Body", "Missing"}] ||| {7, Missing["KeyAbsent", "Missing"]}
+Success["ok", <|"Code" -> 200, "Body" -> 7|>]["Properties"] ||| {"Code", "Body"}
+Enclose[Confirm[$Failed, info], "Information"] ||| info
+Enclose[ConfirmBy[2, IntegerQ]] ||| 2
+Enclose[ConfirmMatch[2, _Integer]] ||| 2

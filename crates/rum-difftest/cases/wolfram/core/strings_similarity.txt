@@ -1,0 +1,8 @@
+# Curated Lane A file: strings similarity
+# Format: input ||| expected_output
+EditDistance["kitten", "sitting"] ||| 3
+HammingDistance["karolin", "kathrin"] ||| 3
+AlphabeticSort[{"z", "a", "ä"}] ||| {"a", "ä", "z"}
+Nearest[{1, 2, 5}, 3, All] ||| {2, 1, 5}
+Nearest[{"cat", "cot", "dog"}, "cut"] ||| {"cat", "cot"}
+Hash["abc", "SHA256", "HexString"] ||| "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"

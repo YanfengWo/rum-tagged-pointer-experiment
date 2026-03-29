@@ -1,0 +1,13 @@
+# Curated Lane A file: strings surface
+# Format: input ||| expected_output
+StringLength["rum"] ||| 3
+StringJoin["ru", "m"] ||| "rum"
+StringRepeat["ha", 3] ||| "hahaha"
+CharacterRange["x", "z"] ||| {"x", "y", "z"}
+ToUpperCase["miXeD"] ||| "MIXED"
+StringTake["kernel", 3] ||| "ker"
+StringDrop["kernel", -2] ||| "kern"
+ToCharacterCode["Ab"] ||| {65, 98}
+TextWords["alpha beta,gamma"] ||| {"alpha", "beta", "gamma"}
+SyntaxQ["1+2"] ||| True
+RemoveDiacritics["café naïve façade"] ||| "cafe naive facade"

@@ -198,4 +198,27 @@ mod tests {
         assert_eq!(timing[0].category.as_deref(), Some("trivial"));
         assert_eq!(memory[0].category.as_deref(), Some("minimal"));
     }
+
+    #[test]
+    fn parses_curated_lane_a_smoke_fixtures() {
+        let core_dir = crate_root().join("cases/wolfram/core");
+        let mut files = fs::read_dir(core_dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("txt"))
+            .collect::<Vec<_>>();
+        files.sort();
+
+        assert!(files.len() >= 4);
+
+        for file in files {
+            let text = load_text(&file).unwrap();
+            let entries = parse_golden_file(&text).unwrap();
+            assert!(
+                !entries.is_empty(),
+                "curated fixture should not be empty: {}",
+                file.display()
+            );
+        }
+    }
 }

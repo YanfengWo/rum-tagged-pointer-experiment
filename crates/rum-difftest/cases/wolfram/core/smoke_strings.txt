@@ -1,0 +1,9 @@
+# Curated Lane A smoke file: strings
+# Format: input ||| expected_output
+StringLength["rum"] ||| 3
+StringJoin["ru", "m"] ||| rum
+StringTake["kernel", 3] ||| ker
+StringDrop["kernel", -2] ||| kern
+ToUpperCase["miXeD"] ||| MIXED
+Characters["abc"] ||| {a, b, c}
+TextWords["alpha beta,gamma"] ||| {alpha, beta, gamma}

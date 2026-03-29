@@ -1,0 +1,17 @@
+# Curated Lane A file: associations core
+# Format: input ||| expected_output
+Normal[Association[a -> 1, b -> 2, a -> 3]] ||| {a -> 3, b -> 2}
+AssociationQ[<|a -> 1|>] ||| True
+Normal[<|a -> 1, b -> 2|>] ||| {a -> 1, b -> 2}
+Lookup[<|a -> 1, b -> 2|>, b] ||| 2
+Lookup[<|a -> 1|>, b, 99] ||| 99
+Lookup[<|a -> <|b -> 2|>|>, {Key[a], Key[b]}] ||| 2
+Keys[<|a -> 1, b -> 2|>] ||| {a, b}
+Values[<|a -> 1, b -> 2|>] ||| {1, 2}
+KeyExistsQ[<|a -> 1, b -> 2|>, b] ||| True
+Normal[KeyTake[<|a -> 1, b -> 2, c -> 3|>, {b, a}]] ||| {a -> 1, b -> 2}
+Normal[KeyDrop[<|a -> 1, b -> 2, c -> 3|>, b]] ||| {a -> 1, c -> 3}
+Normal[KeySelect[<|a -> 1, b -> 2, c -> 3|>, MatchQ[#, Alternatives[a, c]] &]] ||| {a -> 1, c -> 3}
+Normal[KeySort[<|b -> 2, a -> 1, c -> 3|>]] ||| {a -> 1, b -> 2, c -> 3}
+Missing["KeyAbsent", b] ||| Missing["KeyAbsent", b]
+Part[<|a -> 1, b -> <|c -> 3|>|>, Key[b], Key[c]] ||| 3

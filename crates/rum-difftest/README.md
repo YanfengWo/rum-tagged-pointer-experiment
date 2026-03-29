@@ -74,9 +74,18 @@ Start here:
 Layout:
 
 - `seed/`: imported or historical assets kept intact as input material
-- `cases/`: future `rum`-owned curated fixtures
+- `cases/`: `rum`-owned curated fixtures layered on top of the imported seeds
 - `divergences/`: future checked known-difference ledgers
 - `perf/`: future performance baseline material
+
+The first curated Lane A files now live under
+[cases/wolfram/core](./cases/wolfram/core/README.md). They currently cover:
+
+- arithmetic and structural smoke checks
+- loops, control objects, and failure/status flows
+- associations and keyed-data basics
+- CL-04 functional combinators
+- CL-07 string surface/pattern/template/similarity subsets
 
 The original imported staging README is preserved in
 [README.imported.md](./README.imported.md).

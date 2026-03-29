@@ -1,4 +1,38 @@
 # Wolfram Core Cases
 
-Future Lane A fixtures should live here once imported seed cases are curated
-into `rum`-owned single-expression differential checks.
+This directory now holds the first `rum`-owned Lane A curated fixtures.
+
+These files intentionally use the same first-pass golden format as the imported
+seed pack:
+
+- `input ||| expected_output`
+- `input !!! id=name | type=... | reason=...`
+
+That keeps them compatible with the current `lane-a` runner without inventing a
+second fixture grammar too early.
+
+You can run one of these files directly with:
+
+```bash
+cargo run -p rum-difftest -- lane-a \
+  --oracle-kernel /path/to/WolframKernel \
+  --fixture crates/rum-difftest/cases/wolfram/core/smoke_arithmetic.txt
+```
+
+Current curated files are meant to be small, stable suites that are easy to
+inspect and extend. They should prefer:
+
+- same-name Wolfram semantics
+- single-expression checks
+- low-surprise formatting
+- compact coverage over exhaustive duplication of the imported seed corpus
+
+The current first pass includes:
+
+- small cross-domain smoke suites
+- association and keyed-data smoke coverage
+- dedicated loop/procedural and control-object suites
+- a focused functional-combinator suite covering current CL-04 operator and iteration subsets
+- a failure/status suite covering stable CL-06 confirmation and status-object checks
+- focused string-language suites for surface operations, string-patterns,
+  templating, and similarity helpers

@@ -46,6 +46,14 @@ Current implementation status:
 - it drives a local kernel executable directly and stores generated oracle
   inputs/wrappers only in a temporary run directory
 - it does not yet claim full message/output/top-level display parity
+- a first pass of `rum`-owned curated Lane A files now exists under
+  [cases/wolfram/core](./cases/wolfram/core/README.md)
+- that curated set currently covers arithmetic/structures, loops/control,
+  associations, functional combinators, failure/status, and multiple string
+  subfamilies
+- the current `lane-a` comparison is still display-sensitive, so curated files
+  should prefer scalar/list/plain-call results over outputs whose main
+  difference is just `rum` canonical form vs Wolfram `InputForm`
 
 ### Lane A: Single-Expression Wolfram Diff
 
@@ -166,8 +174,10 @@ Raw counts:
 ## Immediate Work Queue
 
 1. Keep the imported `ham` corpus intact under `seed/`.
-2. Create `rum`-owned fixture directories under a future `cases/` tree.
-3. Normalize output conventions from `ham` format to `rum` format.
+2. Continue extending the curated `cases/wolfram/core/` tree page by page from
+   the matrix-guided kernel priorities.
+3. Normalize output conventions further so Lane A can compare more than today's
+   scalar/list/plain-call-friendly subset.
 4. Extend the first single-expression oracle runner beyond value-only checks.
 5. Design and implement the stateful session fixture format.
 6. Add a checked known-difference ledger.

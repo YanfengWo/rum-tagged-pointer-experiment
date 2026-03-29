@@ -1,0 +1,17 @@
+# Curated Lane A file: functional combinators
+# Format: input ||| expected_output
+Plus @@ {1, 2, 3} ||| 6
+Length @* Identity @ f[a, b] ||| 2
+ReverseApplied[f][a, b, c] ||| f[c, b, a]
+Apply[f, p[q][x], 1, Heads -> True] ||| f[q][x]
+Last[MapApply[f, {{a, b}, {c, d}}]] ||| f[c, d]
+Operate[q, p[f][x], 2] ||| q[p][f][x]
+Length[TakeWhile[{1, 2, -1, 3}, Positive]] ||| 2
+LengthWhile[<|a -> 1, b -> 2, c -> -1|>, Positive] ||| 2
+Last[FoldList[f, x, {a, b}]] ||| f[f[x, a], b]
+SequenceFold[Plus, {1}, {2, 3}] ||| 6
+Nest[f, x, 2] ||| f[f[x]]
+Last[NestList[f, x, 2]] ||| f[f[x]]
+FixedPoint[Identity, f[x]] ||| f[x]
+First[MapThread[f][{{a, b}, {c, d}}]] ||| f[a, c]
+Part[MapAt[f, {{a, b}, {c, d}}, {All, 2}], 2, 2] ||| f[d]

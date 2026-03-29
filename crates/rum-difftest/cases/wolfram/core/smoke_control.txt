@@ -1,0 +1,9 @@
+# Curated Lane A smoke file: control
+# Format: input ||| expected_output
+If[True, yes, no] ||| yes
+Which[False, 1, True, 2] ||| 2
+Switch[2, _String, bad, _Integer, ok] ||| ok
+Function[x, x + 1][2] ||| 3
+Catch[Throw[5]] ||| 5
+x = 1; y = x + 1; y ||| 2
+Module[{x = 2}, x + 3] ||| 5

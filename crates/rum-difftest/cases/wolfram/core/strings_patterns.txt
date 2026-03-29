@@ -1,0 +1,11 @@
+# Curated Lane A file: strings patterns
+# Format: input ||| expected_output
+StringContainsQ["error.log", ".log"] ||| True
+StringStartsQ["alpha", "a"] ||| True
+StringEndsQ["kernel.err", ".err"] ||| True
+StringPosition["banana", "an"] ||| {{2, 3}, {4, 5}}
+StringSplit["a=>b:=c", Alternatives["=>", ":="]] ||| {"a", "b", "c"}
+StringCount["a=>b:=c", Alternatives["=>", ":="]] ||| 2
+StringCases["aaaa", Repeated["a", {2}]] ||| {"aa", "aa"}
+StringCases["abc", Except["b"]] ||| {"a", "c"}
+StringMatchQ["warn", StringExpression[StartOfString, "wa", Repeated["r"], "n", EndOfString]] ||| True

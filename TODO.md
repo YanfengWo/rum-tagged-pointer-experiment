@@ -172,6 +172,7 @@ This roadmap intentionally uses two levels of detail:
 - [ ] Keep `rum-difftest` split into explicit lanes instead of one monolithic diff bucket:
   - [ ] Lane A: single-expression Wolfram diff fixtures and runner
   - [x] Land a first-pass Lane A runner that accepts a user-provided kernel path via CLI or config and keeps oracle artifacts transient
+  - [x] Land a first curated `cases/wolfram/core/` fixture set covering arithmetic/structures, strings, associations, loops/control objects, functional combinators, and failure/status smoke checks
   - [ ] Lane B: stateful session fixture format and runner
   - [ ] Lane C: checked known-difference ledger
   - [ ] Lane D: performance baseline inputs and runners
@@ -187,11 +188,11 @@ This roadmap intentionally uses two levels of detail:
   - [ ] allow oracle runs against non-pinned user versions as a compatibility check, not only against one project-standard Wolfram release
   - [ ] record any deliberate divergences from Wolfram behavior alongside those fixtures
 - [ ] Prioritize oracle-style checks for the most semantics-sensitive areas first:
-  - [ ] arithmetic normalization and exact-integer behavior
+  - [x] arithmetic normalization and exact-integer behavior now have an initial curated Lane A foothold
   - [ ] rules, patterns, replacement, and traversal behavior
-  - [ ] scoping and held-evaluation constructs
+  - [x] scoping and held-evaluation constructs now have an initial curated Lane A foothold through loops/control/function cases
   - [ ] messages, attributes, and definition precedence
-  - [ ] string semantics now that the `CL-07` surface is substantial
+  - [x] string semantics now have an initial curated Lane A foothold that covers multiple CL-07 subfamilies
 
 ### Active Workstream: Full String Language Parity
 

@@ -1,0 +1,9 @@
+# Curated Lane A file: control objects
+# Format: input ||| expected_output
+1; 2; 3 ||| 3
+Function[x, x + 1][2] ||| 3
+Switch[2, _String, bad, _Integer, ok] ||| ok
+Catch[Throw[5]] ||| 5
+Catch[Throw[1, tag], tag, List] ||| {1, tag}
+x = 1; y = x + 1; y ||| 2
+Module[{x = 2}, x + 3] ||| 5
