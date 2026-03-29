@@ -519,7 +519,7 @@ fn string_formatting_padding_and_riffle_cover_the_next_surface_wave() {
             &mut session,
             "StringRiffle[{{\"a\", \"b\"}, {\"c\", \"d\"}}, \",\", \";\"]"
         ),
-        "\"a,b;c,d\""
+        "\"a;b,c;d\""
     );
     assert_eq!(
         eval_to_string(&mut session, "StringPadLeft[\"7\", 3]"),
@@ -574,6 +574,30 @@ fn repeated_anchors_and_shortest_longest_extend_string_patterns() {
             "StringCases[\"aaab\", Longest[Repeated[\"a\"]]]"
         ),
         "List[\"aaa\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringCases[\"\", RepeatedNull[\"a\"]]"),
+        "List[\"\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringPosition[\"\", RepeatedNull[\"a\"]]"),
+        "List[List[1, 0]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringPosition[\"abc\", EndOfString]"),
+        "List[List[4, 3]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringCount[\"abc\", RepeatedNull[\"a\"]]"),
+        "4"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringContainsQ[\"abc\", EndOfString]"),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringFreeQ[\"abc\", EndOfString]"),
+        "False"
     );
 }
 
@@ -691,5 +715,78 @@ fn string_apply_delete_and_count_options_cover_the_next_wave() {
             "StringPosition[\"AbBa\", \"b\", IgnoreCase -> True]"
         ),
         "List[List[2, 2], List[3, 3]]"
+    );
+}
+
+#[test]
+fn templates_text_words_codes_and_to_expression_extend_cl07() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "StringTemplate[\"Hello, `name`!\"]"),
+        "TemplateObject[\"Hello, `name`!\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "TemplateApply[StringTemplate[\"Hello, `name`!\"], <|\"name\" -> \"Alice\"|>]"
+        ),
+        "\"Hello, Alice!\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "TemplateApply[\"x = ``\", 7]"),
+        "\"x = 7\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "TextWords[\"alpha, beta 123 gamma\"]"),
+        "List[\"alpha\", \"beta\", \"123\", \"gamma\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToCharacterCode[\"Ab\"]"),
+        "List[65, 98]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToCharacterCode[{\"Ab\", \"中\"}]"),
+        "List[List[65, 98], List[20013]]"
+    );
+    assert_eq!(eval_to_string(&mut session, "ToExpression[\"1+2\"]"), "3");
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "ToExpression[\"1+2\", InputForm, HoldAllComplete]"
+        ),
+        "HoldAllComplete[3]"
+    );
+}
+
+#[test]
+fn bounded_repetition_and_except_extend_string_patterns() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "StringCases[\"aaaa\", Repeated[\"a\", {2}]]"),
+        "List[\"aa\", \"aa\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"aaaa\", Repeated[\"a\", {2, 3}]]"
+        ),
+        "List[\"aaa\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringCases[\"abc\", Except[\"b\"]]"),
+        "List[\"a\", \"c\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringCases[\"abc\", Except[\"b\", \"c\"]]"),
+        "List[\"c\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"abc\", Repeated[Except[\"b\"]]]"
+        ),
+        "List[\"a\", \"c\"]"
     );
 }

@@ -340,16 +340,17 @@ once in its primary implementation group. Other groups may mention it as
   `StringTakeDrop`, `StringCount`, `StringMatchQ`, `StringFreeQ`,
   `ToUpperCase`, `Whitespace`, `NumberString`, `LetterQ`, `DigitQ`,
   `StringApply`, `StringDelete`, `StringForm`, `StringPadLeft`,
-  `StringRiffle`
-- `planned`: `StringTemplate`,
-  `StringToByteArray`, `TemplateApply`,
-  `FileTemplateApply`, `TextString`, `TextWords`, `ToCharacterCode`,
-  `ToExpression`, `SyntaxQ`, `Alphabet`,
+  `StringRiffle`, `StringTemplate`, `TemplateApply`, `TextWords`,
+  `ToCharacterCode`, `ToExpression`
+- `partial richer string-pattern parity`: `StartOfString`, `EndOfString`,
+  `Repeated`, `RepeatedNull`, bounded repetition, `Shortest`, `Longest`,
+  `Except`, and current zero-length/match-edge handling
+- `planned`: `StringToByteArray`,
+  `FileTemplateApply`, `TextString`, `SyntaxQ`, `Alphabet`,
   `AlphabeticSort`, `CharacterCounts`, `Compress`, `Diff`,
   `EditDistance`, `Encrypt`, `Hash`, `HammingDistance`,
   `LongestCommonSubsequence`, `Nearest`, `Pluralize`,
   `RemoveDiacritics`, `SequenceAlignment`
-- `cross-tracked elsewhere`: `Except`, `Longest`, `Shortest`
 
 ## CL-08: Package, Namespace, Options, and Protection Tooling
 

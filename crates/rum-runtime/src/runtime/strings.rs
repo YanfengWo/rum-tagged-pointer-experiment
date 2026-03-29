@@ -11,11 +11,16 @@ enum StringPattern {
     Literal(Vec<char>),
     Whitespace,
     NumberString,
+    Except {
+        excluded: Box<StringPattern>,
+        inner: Option<Box<StringPattern>>,
+    },
     StartOfString,
     EndOfString,
     Repeated {
         pattern: Box<StringPattern>,
         min: usize,
+        max: Option<usize>,
     },
     Shortest(Box<StringPattern>),
     Longest(Box<StringPattern>),
@@ -80,6 +85,13 @@ struct ExactStringCaseRule {
 enum ExactStringCaseSpec {
     Patterns(Vec<StringPattern>),
     Rules(Vec<ExactStringCaseRule>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum TemplateSegment {
+    Text(String),
+    PositionalSlot,
+    NamedSlot(String),
 }
 
 impl Session {
@@ -199,7 +211,7 @@ impl Session {
         }
 
         if let Some(rows) = expr_as_nested_string_list(&args[0]) {
-            let (item_separator, row_separator) = match args {
+            let (within_row_separator, between_rows_separator) = match args {
                 [_] => (" ".to_string(), "\n".to_string()),
                 [_, item_separator] => {
                     let Some(separator) = expr_as_string(item_separator) else {
@@ -207,23 +219,26 @@ impl Session {
                     };
                     (separator.to_string(), separator.to_string())
                 }
-                [_, item_separator, row_separator] => {
-                    let (Some(item_separator), Some(row_separator)) = (
-                        expr_as_string(item_separator),
-                        expr_as_string(row_separator),
+                [_, between_rows_separator, within_row_separator] => {
+                    let (Some(between_rows_separator), Some(within_row_separator)) = (
+                        expr_as_string(between_rows_separator),
+                        expr_as_string(within_row_separator),
                     ) else {
                         return Ok(Expr::call(head.clone(), args.to_vec()));
                     };
-                    (item_separator.to_string(), row_separator.to_string())
+                    (
+                        within_row_separator.to_string(),
+                        between_rows_separator.to_string(),
+                    )
                 }
                 _ => unreachable!(),
             };
 
             let riffled_rows = rows
                 .into_iter()
-                .map(|row| row.join(&item_separator))
+                .map(|row| row.join(&within_row_separator))
                 .collect::<Vec<_>>();
-            return Ok(Expr::string(riffled_rows.join(&row_separator)));
+            return Ok(Expr::string(riffled_rows.join(&between_rows_separator)));
         }
 
         Ok(Expr::call(head.clone(), args.to_vec()))
@@ -263,6 +278,133 @@ impl Session {
         }
 
         Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(super) fn eval_string_template(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("StringTemplate", args, 1));
+        }
+
+        let Some(template) = expr_as_string(&args[0]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        Ok(render_template_object(template))
+    }
+
+    pub(super) fn eval_template_apply(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        match args {
+            [template] => Ok(Expr::call(
+                system_expr("Function"),
+                vec![Expr::call(
+                    system_expr("TemplateApply"),
+                    vec![template.clone(), string_slot_expr()],
+                )],
+            )),
+            [template, data] => {
+                let Some(template) = expr_as_template_source(template) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
+                let Some(rendered) = template_apply_value(template, data) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
+                Ok(Expr::string(rendered))
+            }
+            _ => Ok(self.invalid_call_with_arg_range("TemplateApply", args, 1, 2)),
+        }
+    }
+
+    pub(super) fn eval_text_words(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("TextWords", args, 1));
+        }
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(string_list_expr(text_words_value(value)));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(list_expr(
+                values
+                    .into_iter()
+                    .map(|value| string_list_expr(text_words_value(&value)))
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(super) fn eval_to_character_code(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("ToCharacterCode", args, 1));
+        }
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(character_code_expr(value));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(list_expr(
+                values
+                    .into_iter()
+                    .map(|value| character_code_expr(&value))
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(super) fn eval_to_expression(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !(1..=3).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("ToExpression", args, 1, 3));
+        }
+
+        let Some(source) = expr_as_string(&args[0]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if let Some(format) = args.get(1) {
+            let supported = is_system_symbol_name(format, "InputForm")
+                || is_system_symbol_name(format, "StandardForm");
+            if !supported {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            }
+        }
+
+        let syntax = parse_expr(source)?;
+        let lowered = self.lower_syntax_expr(&syntax)?;
+        let evaluated = self.evaluate(lowered);
+        let value = self.suspend_with_frame(evaluated, |_, value| Ok(value))?;
+
+        if let Some(wrapper) = args.get(2) {
+            let wrapped = Expr::call(wrapper.clone(), vec![value]);
+            let wrapped_result = self.evaluate(wrapped);
+            return self.suspend_with_frame(wrapped_result, |_, value| Ok(value));
+        }
+
+        Ok(value)
     }
 
     pub(super) fn eval_characters(
@@ -1021,6 +1163,10 @@ fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
         return Some(StringPattern::NumberString);
     }
 
+    if is_system_symbol_name(expr, "Except") {
+        return None;
+    }
+
     if is_system_symbol_name(expr, "StartOfString") {
         return Some(StringPattern::StartOfString);
     }
@@ -1033,17 +1179,43 @@ fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
         return None;
     };
 
-    if is_system_symbol_name(head, "Repeated") && args.len() == 1 {
-        return Some(StringPattern::Repeated {
-            pattern: Box::new(parse_string_pattern(&args[0])?),
-            min: 1,
+    if is_system_symbol_name(head, "Except") && args.len() == 1 {
+        return Some(StringPattern::Except {
+            excluded: Box::new(parse_string_pattern(&args[0])?),
+            inner: None,
         });
     }
 
-    if is_system_symbol_name(head, "RepeatedNull") && args.len() == 1 {
+    if is_system_symbol_name(head, "Except") && args.len() == 2 {
+        return Some(StringPattern::Except {
+            excluded: Box::new(parse_string_pattern(&args[0])?),
+            inner: Some(Box::new(parse_string_pattern(&args[1])?)),
+        });
+    }
+
+    if is_system_symbol_name(head, "Repeated") && (args.len() == 1 || args.len() == 2) {
+        let (min, max) = if let Some(bounds) = args.get(1) {
+            parse_string_repetition_bounds(bounds)?
+        } else {
+            (1, None)
+        };
         return Some(StringPattern::Repeated {
             pattern: Box::new(parse_string_pattern(&args[0])?),
-            min: 0,
+            min,
+            max,
+        });
+    }
+
+    if is_system_symbol_name(head, "RepeatedNull") && (args.len() == 1 || args.len() == 2) {
+        let (min, max) = if let Some(bounds) = args.get(1) {
+            parse_string_repetition_bounds(bounds)?
+        } else {
+            (0, None)
+        };
+        return Some(StringPattern::Repeated {
+            pattern: Box::new(parse_string_pattern(&args[0])?),
+            min,
+            max,
         });
     }
 
@@ -1297,6 +1469,23 @@ fn parse_string_count_options(options: &[Expr]) -> Option<StringCountConfig> {
     Some(config)
 }
 
+fn parse_string_repetition_bounds(expr: &Expr) -> Option<(usize, Option<usize>)> {
+    let items = call_items_with_head(expr, &system_expr("List"))?;
+
+    match items {
+        [count] => {
+            let count = expr_as_non_negative_usize(count)?;
+            Some((count, Some(count)))
+        }
+        [min, max] => {
+            let min = expr_as_non_negative_usize(min)?;
+            let max = expr_as_non_negative_usize(max)?;
+            (min <= max).then_some((min, Some(max)))
+        }
+        _ => None,
+    }
+}
+
 fn expr_as_non_empty_char_vec(expr: &Expr) -> Option<Vec<char>> {
     let chars = expr_as_string(expr)?.chars().collect::<Vec<_>>();
     (!chars.is_empty()).then_some(chars)
@@ -1428,6 +1617,167 @@ fn string_form_value(template: &str, args: &[Expr]) -> String {
     output
 }
 
+fn render_template_object(template: &str) -> Expr {
+    Expr::call(
+        system_expr("TemplateObject"),
+        vec![Expr::string(template.to_string())],
+    )
+}
+
+fn expr_as_template_source(expr: &Expr) -> Option<&str> {
+    if let Some(template) = expr_as_string(expr) {
+        return Some(template);
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "TemplateObject") || args.len() != 1 {
+        return None;
+    }
+
+    expr_as_string(&args[0])
+}
+
+fn template_apply_value(template: &str, data: &Expr) -> Option<String> {
+    let segments = parse_template_segments(template)?;
+    let named_slots = template_named_slot_values(data);
+    let positional_slots = template_positional_slot_values(data)?;
+    let mut positional_index = 0usize;
+    let mut output = String::new();
+
+    for segment in segments {
+        match segment {
+            TemplateSegment::Text(text) => output.push_str(&text),
+            TemplateSegment::PositionalSlot => {
+                let value = positional_slots.get(positional_index)?;
+                output.push_str(value);
+                positional_index += 1;
+            }
+            TemplateSegment::NamedSlot(name) => {
+                let value = named_slots.get(&name)?;
+                output.push_str(value);
+            }
+        }
+    }
+
+    Some(output)
+}
+
+fn parse_template_segments(template: &str) -> Option<Vec<TemplateSegment>> {
+    let chars = template.chars().collect::<Vec<_>>();
+    let mut segments = Vec::new();
+    let mut start = 0usize;
+    let mut index = 0usize;
+
+    while index < chars.len() {
+        if chars[index] != '`' {
+            index += 1;
+            continue;
+        }
+
+        let closing = chars[index + 1..]
+            .iter()
+            .position(|ch| *ch == '`')
+            .map(|offset| index + 1 + offset)?;
+
+        if start < index {
+            segments.push(TemplateSegment::Text(chars[start..index].iter().collect()));
+        }
+
+        let slot_name = chars[index + 1..closing].iter().collect::<String>();
+        if slot_name.is_empty() {
+            segments.push(TemplateSegment::PositionalSlot);
+        } else {
+            segments.push(TemplateSegment::NamedSlot(slot_name));
+        }
+
+        index = closing + 1;
+        start = index;
+    }
+
+    if start < chars.len() {
+        segments.push(TemplateSegment::Text(chars[start..].iter().collect()));
+    }
+
+    Some(segments)
+}
+
+fn template_named_slot_values(data: &Expr) -> BTreeMap<String, String> {
+    let mut named = BTreeMap::new();
+
+    if let Some(entries) = association_entries_from_expr(data) {
+        for (key, value) in entries {
+            if let Some(name) = template_slot_name_from_expr(&key) {
+                named.insert(name, template_fragment_value(&value));
+            }
+        }
+        return named;
+    }
+
+    if let Some(rules) = template_rule_entries(data) {
+        for (key, value) in rules {
+            if let Some(name) = template_slot_name_from_expr(&key) {
+                named.insert(name, template_fragment_value(&value));
+            }
+        }
+    }
+
+    named
+}
+
+fn template_positional_slot_values(data: &Expr) -> Option<Vec<String>> {
+    if let Some(items) = call_items_with_head(data, &system_expr("List")) {
+        if items.iter().all(|item| parse_template_rule(item).is_some()) {
+            return Some(Vec::new());
+        }
+        return Some(items.iter().map(template_fragment_value).collect());
+    }
+
+    if association_entries_from_expr(data).is_some() || template_rule_entries(data).is_some() {
+        return Some(Vec::new());
+    }
+
+    Some(vec![template_fragment_value(data)])
+}
+
+fn template_rule_entries(expr: &Expr) -> Option<Vec<(Expr, Expr)>> {
+    if let Some(rule) = parse_template_rule(expr) {
+        return Some(vec![rule]);
+    }
+
+    let items = call_items_with_head(expr, &system_expr("List"))?;
+    items.iter().map(parse_template_rule).collect()
+}
+
+fn parse_template_rule(expr: &Expr) -> Option<(Expr, Expr)> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "Rule") || args.len() != 2 {
+        return None;
+    }
+
+    Some((args[0].clone(), args[1].clone()))
+}
+
+fn template_slot_name_from_expr(expr: &Expr) -> Option<String> {
+    if let Some(value) = expr_as_string(expr) {
+        return Some(value.to_string());
+    }
+
+    expr_as_symbol(expr).map(|symbol| symbol.name().to_string())
+}
+
+fn template_fragment_value(expr: &Expr) -> String {
+    match expr {
+        Expr::Atom(Atom::String(value)) => value.clone(),
+        _ => expr.to_string(),
+    }
+}
+
 fn string_pad_left_value(value: &str, width: usize, padding: &str) -> String {
     let value_len = value.chars().count();
     if value_len >= width {
@@ -1444,6 +1794,34 @@ fn string_pad_left_value(value: &str, width: usize, padding: &str) -> String {
     prefix
 }
 
+fn text_words_value(value: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut current = String::new();
+
+    for ch in value.chars() {
+        if ch.is_alphanumeric() {
+            current.push(ch);
+        } else if !current.is_empty() {
+            words.push(std::mem::take(&mut current));
+        }
+    }
+
+    if !current.is_empty() {
+        words.push(current);
+    }
+
+    words
+}
+
+fn character_code_expr(value: &str) -> Expr {
+    list_expr(
+        value
+            .chars()
+            .map(|ch| Expr::integer(BigInt::from(ch as u32)))
+            .collect(),
+    )
+}
+
 fn bool_expr(value: bool) -> Expr {
     system_expr(if value {
         heads::structure::TRUE
@@ -1457,7 +1835,7 @@ fn string_contains_q(
     pattern: &StringPattern,
     config: StringPatternMatchConfig,
 ) -> bool {
-    (0..haystack.len())
+    (0..=haystack.len())
         .any(|start| best_pattern_match_end(pattern, haystack, start, config).is_some())
 }
 
@@ -1474,7 +1852,7 @@ fn string_ends_q(
     pattern: &StringPattern,
     config: StringPatternMatchConfig,
 ) -> bool {
-    (0..haystack.len()).any(|start| {
+    (0..=haystack.len()).any(|start| {
         best_pattern_match_end(pattern, haystack, start, config) == Some(haystack.len())
     })
 }
@@ -1493,7 +1871,7 @@ fn string_free_q(
     patterns: &[StringPattern],
     config: StringPatternMatchConfig,
 ) -> bool {
-    (0..haystack.len())
+    (0..=haystack.len())
         .all(|start| best_pattern_match_at(patterns, haystack, start, config).is_none())
 }
 
@@ -1509,10 +1887,13 @@ fn string_count_matches(
         ignore_case: config.ignore_case,
     };
 
-    while index < chars.len() {
+    while index <= chars.len() {
         if let Some((_, end)) = best_pattern_match_at(patterns, &chars, index, match_config) {
             matches += 1;
             index = if end == index {
+                if index == chars.len() {
+                    break;
+                }
                 index + 1
             } else {
                 match config.overlaps {
@@ -1521,6 +1902,9 @@ fn string_count_matches(
                 }
             };
         } else {
+            if index == chars.len() {
+                break;
+            }
             index += 1;
         }
     }
@@ -1632,15 +2016,25 @@ fn collect_string_cases(
     let mut index = 0;
     let mut matches = Vec::new();
 
-    while index < chars.len() && matches.len() < max_matches {
+    while index <= chars.len() && matches.len() < max_matches {
         match spec {
             ExactStringCaseSpec::Patterns(patterns) => {
                 if let Some((_pattern_index, end)) =
                     best_pattern_match_at(patterns, &chars, index, config)
                 {
                     matches.push(Expr::string(pattern_match_text(&chars[index..end])));
-                    index = if end == index { index + 1 } else { end };
+                    index = if end == index {
+                        if index == chars.len() {
+                            break;
+                        }
+                        index + 1
+                    } else {
+                        end
+                    };
                 } else {
+                    if index == chars.len() {
+                        break;
+                    }
                     index += 1;
                 }
             }
@@ -1650,8 +2044,18 @@ fn collect_string_cases(
                         .map(|end| (rule, end))
                 }) {
                     matches.push(rule.output.clone());
-                    index = if end == index { index + 1 } else { end };
+                    index = if end == index {
+                        if index == chars.len() {
+                            break;
+                        }
+                        index + 1
+                    } else {
+                        end
+                    };
                 } else {
+                    if index == chars.len() {
+                        break;
+                    }
                     index += 1;
                 }
             }
@@ -1687,12 +2091,12 @@ fn string_pattern_positions<'a>(
 ) -> impl Iterator<Item = (usize, usize)> + 'a {
     let max_results = max_results.unwrap_or(usize::MAX);
 
-    if haystack.is_empty() || max_results == 0 {
+    if max_results == 0 {
         return Vec::new().into_iter();
     }
 
     let mut positions = Vec::new();
-    for start in 0..haystack.len() {
+    for start in 0..=haystack.len() {
         if let Some(end) = best_pattern_match_end(pattern, haystack, start, config) {
             positions.push((start + 1, end));
             if positions.len() >= max_results {
@@ -1914,13 +2318,26 @@ fn pattern_match_end_positions(
             .collect(),
         StringPattern::Whitespace => whitespace_match_end_positions(chars, start),
         StringPattern::NumberString => number_string_match_end_positions(chars, start),
+        StringPattern::Except { excluded, inner } => {
+            let candidates = match inner {
+                Some(inner) => pattern_match_end_positions(inner, chars, start, config),
+                None => any_character_match_end_positions(chars, start),
+            };
+
+            candidates
+                .into_iter()
+                .filter(|end| {
+                    !pattern_match_end_positions(excluded, chars, start, config).contains(end)
+                })
+                .collect()
+        }
         StringPattern::StartOfString => (start == 0).then_some(start).into_iter().collect(),
         StringPattern::EndOfString => (start == chars.len())
             .then_some(start)
             .into_iter()
             .collect(),
-        StringPattern::Repeated { pattern, min } => {
-            repeated_pattern_end_positions(pattern, chars, start, *min, config)
+        StringPattern::Repeated { pattern, min, max } => {
+            repeated_pattern_end_positions(pattern, chars, start, *min, *max, config)
         }
         StringPattern::Shortest(inner) | StringPattern::Longest(inner) => {
             pattern_match_end_positions(inner, chars, start, config)
@@ -1970,6 +2387,7 @@ fn repeated_pattern_end_positions(
     chars: &[char],
     start: usize,
     min: usize,
+    max: Option<usize>,
     config: StringPatternMatchConfig,
 ) -> Vec<usize> {
     let mut frontier = vec![start];
@@ -1977,6 +2395,9 @@ fn repeated_pattern_end_positions(
     let mut steps = 0usize;
 
     loop {
+        if max.is_some_and(|max| steps >= max) {
+            break;
+        }
         let mut next = Vec::new();
         for position in frontier {
             for end in pattern_match_end_positions(pattern, chars, position, config) {
@@ -2002,6 +2423,13 @@ fn repeated_pattern_end_positions(
     positions.sort_unstable();
     positions.dedup();
     positions
+}
+
+fn any_character_match_end_positions(chars: &[char], start: usize) -> Vec<usize> {
+    (start < chars.len())
+        .then_some(start + 1)
+        .into_iter()
+        .collect()
 }
 
 fn literal_match_end(

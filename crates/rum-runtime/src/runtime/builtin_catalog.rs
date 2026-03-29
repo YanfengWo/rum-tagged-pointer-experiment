@@ -129,6 +129,33 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::StringPadLeft,
     ),
     BuiltinSpec::ordinary(
+        "StringTemplate",
+        "Builds a simple TemplateObject wrapper from a template string in the current first-pass subset.",
+        BuiltinHandler::StringTemplate,
+    ),
+    BuiltinSpec::ordinary(
+        "TemplateApply",
+        "Applies a simple named or positional string template in the current first-pass subset.",
+        BuiltinHandler::TemplateApply,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "TextWords",
+        "Splits text into alphanumeric word runs in the current first-pass subset.",
+        AttributeSet::from_attribute(Attribute::Listable),
+        BuiltinHandler::TextWords,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "ToCharacterCode",
+        "Returns Unicode scalar values for strings in the current first-pass subset.",
+        AttributeSet::from_attribute(Attribute::Listable),
+        BuiltinHandler::ToCharacterCode,
+    ),
+    BuiltinSpec::ordinary(
+        "ToExpression",
+        "Parses and evaluates input strings using the current InputForm/StandardForm-compatible subset.",
+        BuiltinHandler::ToExpression,
+    ),
+    BuiltinSpec::ordinary(
         "Characters",
         "Splits a string into a list of single-code-point strings.",
         BuiltinHandler::Characters,
@@ -197,6 +224,18 @@ const CORE_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::new(
         "Longest",
         "Represents the current string-pattern wrapper that prefers the longest match.",
+    ),
+    BuiltinSpec::new(
+        "TemplateObject",
+        "Represents the current simple template object wrapper returned by StringTemplate.",
+    ),
+    BuiltinSpec::new(
+        "InputForm",
+        "Represents the current formatting symbol accepted by the current ToExpression subset.",
+    ),
+    BuiltinSpec::new(
+        "StandardForm",
+        "Represents the current formatting symbol accepted by the current ToExpression subset.",
     ),
     BuiltinSpec::ordinary(
         "StringContainsQ",
