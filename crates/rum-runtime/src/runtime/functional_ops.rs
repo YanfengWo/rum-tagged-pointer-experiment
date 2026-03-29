@@ -921,19 +921,10 @@ impl Session {
         _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let (operator, array, radius_spec, padding) = match args {
-            [operator, array, radius_spec] => {
-                (operator, array, radius_spec, ArrayFilterPadding::Fixed)
-            }
+        let (operator, array, radius_spec, padding_expr) = match args {
+            [operator, array, radius_spec] => (operator, array, radius_spec, None),
             [operator, array, radius_spec, padding_expr] => {
-                let Some(padding) = parse_array_filter_padding(padding_expr) else {
-                    return Ok(self.invalid_call_with_arg_form(
-                        "ArrayFilter",
-                        args,
-                        "expected Padding -> value, Padding -> None, Padding -> \"Fixed\", or Padding -> \"Periodic\" as the fourth argument",
-                    ));
-                };
-                (operator, array, radius_spec, padding)
+                (operator, array, radius_spec, Some(padding_expr))
             }
             _ => return Ok(self.invalid_call_with_arg_range("ArrayFilter", args, 3, 4)),
         };
@@ -951,6 +942,19 @@ impl Session {
                 args,
                 "expected a non-negative integer radius, a matching list of non-negative integer radii, or a matching rectangular 0/1 template array as the third argument",
             ));
+        };
+        let padding = match padding_expr {
+            None => ArrayFilterPadding::Uniform(ArrayFilterPaddingLeaf::Fixed),
+            Some(padding_expr) => {
+                let Some(parsed) = parse_array_filter_padding(padding_expr, shape.len()) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "ArrayFilter",
+                        args,
+                        "expected Padding -> value, Padding -> None, Padding -> \"Fixed\", Padding -> \"Periodic\", a cyclic padding list, or matching per-axis padding pairs as the fourth argument",
+                    ));
+                };
+                parsed
+            }
         };
 
         apply_array_filter(self, operator, &shape, &flat, &spec, &padding)
@@ -1553,10 +1557,23 @@ enum TensorNode {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum ArrayFilterPadding {
+    Uniform(ArrayFilterPaddingLeaf),
+    PerAxis(Vec<ArrayFilterAxisPadding>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ArrayFilterAxisPadding {
+    before: ArrayFilterPaddingLeaf,
+    after: ArrayFilterPaddingLeaf,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum ArrayFilterPaddingLeaf {
     Fixed,
     Periodic,
     Constant(Expr),
     None,
+    Cycle(Vec<Expr>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -1975,7 +1992,7 @@ fn operate_on_head_level(expr: &Expr, operator: &Expr, level: usize) -> Expr {
     }
 }
 
-fn parse_array_filter_padding(expr: &Expr) -> Option<ArrayFilterPadding> {
+fn parse_array_filter_padding(expr: &Expr, rank: usize) -> Option<ArrayFilterPadding> {
     let Expr::Call { head, args } = expr else {
         return None;
     };
@@ -1990,15 +2007,64 @@ fn parse_array_filter_padding(expr: &Expr) -> Option<ArrayFilterPadding> {
         return None;
     }
 
-    match &args[1] {
+    if let Some(per_axis) = parse_array_filter_per_axis_padding(&args[1], rank) {
+        return Some(ArrayFilterPadding::PerAxis(per_axis));
+    }
+
+    parse_array_filter_padding_leaf(&args[1]).map(ArrayFilterPadding::Uniform)
+}
+
+fn parse_array_filter_per_axis_padding(
+    expr: &Expr,
+    rank: usize,
+) -> Option<Vec<ArrayFilterAxisPadding>> {
+    let items = call_items_with_head(expr, &system_expr("List"))?;
+    if items.len() != rank {
+        return None;
+    }
+    if !items
+        .iter()
+        .any(|item| call_items_with_head(item, &system_expr("List")).is_some())
+    {
+        return None;
+    }
+
+    let mut paddings = Vec::with_capacity(rank);
+    for item in items {
+        let side_items = call_items_with_head(item, &system_expr("List"))?;
+        let axis_padding = match side_items {
+            [leaf] => {
+                let leaf = parse_array_filter_padding_leaf(leaf)?;
+                ArrayFilterAxisPadding {
+                    before: leaf.clone(),
+                    after: leaf,
+                }
+            }
+            [before, after] => ArrayFilterAxisPadding {
+                before: parse_array_filter_padding_leaf(before)?,
+                after: parse_array_filter_padding_leaf(after)?,
+            },
+            _ => return None,
+        };
+        paddings.push(axis_padding);
+    }
+
+    Some(paddings)
+}
+
+fn parse_array_filter_padding_leaf(expr: &Expr) -> Option<ArrayFilterPaddingLeaf> {
+    match expr {
         value if expr_as_symbol(value).is_some_and(|symbol| symbol.name() == "None") => {
-            Some(ArrayFilterPadding::None)
+            Some(ArrayFilterPaddingLeaf::None)
         }
-        Expr::Atom(Atom::String(value)) if value == "Fixed" => Some(ArrayFilterPadding::Fixed),
+        Expr::Atom(Atom::String(value)) if value == "Fixed" => Some(ArrayFilterPaddingLeaf::Fixed),
         Expr::Atom(Atom::String(value)) if value == "Periodic" => {
-            Some(ArrayFilterPadding::Periodic)
+            Some(ArrayFilterPaddingLeaf::Periodic)
         }
-        other => Some(ArrayFilterPadding::Constant(other.clone())),
+        Expr::Call { head, args } if is_system_symbol_name(head, "List") && !args.is_empty() => {
+            Some(ArrayFilterPaddingLeaf::Cycle(args.clone()))
+        }
+        other => Some(ArrayFilterPaddingLeaf::Constant(other.clone())),
     }
 }
 
@@ -2046,6 +2112,8 @@ fn parse_array_filter_template(expr: &Expr, rank: usize) -> Option<ArrayFilterTe
             _ => None,
         })
         .collect::<Option<Vec<_>>>()?;
+    // For even-sized templates, Wolfram anchors neighborhoods with maximal
+    // overhang at the beginning side, which corresponds to floor(len/2).
     let center = shape.iter().map(|len| len / 2).collect();
 
     Some(ArrayFilterTemplate {
@@ -2160,6 +2228,50 @@ fn array_filter_window_center(spec: &ArrayFilterSpec) -> Vec<usize> {
         ArrayFilterSpec::Radii(radii) => radii.clone(),
         ArrayFilterSpec::Template(template) => template.center.clone(),
     }
+}
+
+fn array_filter_padding_leaf<'a>(
+    padding: &'a ArrayFilterPadding,
+    axis: usize,
+    before: bool,
+) -> &'a ArrayFilterPaddingLeaf {
+    match padding {
+        ArrayFilterPadding::Uniform(leaf) => leaf,
+        ArrayFilterPadding::PerAxis(axis_paddings) => {
+            let axis_padding = &axis_paddings[axis];
+            if before {
+                &axis_padding.before
+            } else {
+                &axis_padding.after
+            }
+        }
+    }
+}
+
+fn array_filter_axis_trim(
+    padding: &ArrayFilterPadding,
+    axis: usize,
+    window_len: usize,
+    center: usize,
+) -> (usize, usize) {
+    let before_trim = if matches!(
+        array_filter_padding_leaf(padding, axis, true),
+        ArrayFilterPaddingLeaf::None
+    ) {
+        center
+    } else {
+        0
+    };
+    let after_trim = if matches!(
+        array_filter_padding_leaf(padding, axis, false),
+        ArrayFilterPaddingLeaf::None
+    ) {
+        window_len.saturating_sub(center + 1)
+    } else {
+        0
+    };
+
+    (before_trim, after_trim)
 }
 
 fn array_filter_template_includes(spec: &ArrayFilterSpec, window_index: &[usize]) -> bool {
@@ -2774,33 +2886,32 @@ fn apply_array_filter(
     let list_head = system_expr("List");
     let window_shape = array_filter_window_shape(spec);
     let window_center = array_filter_window_center(spec);
-    let output_shape = match padding {
-        ArrayFilterPadding::None => shape
-            .iter()
-            .zip(window_shape.iter().zip(window_center.iter()))
-            .map(|(len, (window_len, center))| {
-                let left = *center;
-                let right = window_len.saturating_sub(left + 1);
-                let required = left + right + 1;
-                if *len >= required {
-                    len - left - right
-                } else {
-                    0
-                }
-            })
-            .collect::<Vec<_>>(),
-        _ => shape.to_vec(),
-    };
+    let axis_trims = window_shape
+        .iter()
+        .zip(window_center.iter())
+        .enumerate()
+        .map(|(axis, (window_len, center))| {
+            array_filter_axis_trim(padding, axis, *window_len, *center)
+        })
+        .collect::<Vec<_>>();
+    let output_shape = shape
+        .iter()
+        .zip(axis_trims.iter())
+        .map(|(len, (before_trim, after_trim))| {
+            if *len >= before_trim + after_trim {
+                len - before_trim - after_trim
+            } else {
+                0
+            }
+        })
+        .collect::<Vec<_>>();
 
     let mut outputs = Vec::new();
     for output_index in enumerate_indices(&output_shape) {
         let center = output_index
             .iter()
-            .zip(window_center.iter())
-            .map(|(index, center)| match padding {
-                ArrayFilterPadding::None => index + center,
-                _ => *index,
-            })
+            .zip(axis_trims.iter())
+            .map(|(index, (before_trim, _after_trim))| index + before_trim)
             .collect::<Vec<_>>();
         let mut window_index = Vec::with_capacity(shape.len());
         let block = build_array_filter_block(
@@ -2880,39 +2991,74 @@ fn array_filter_scalar_at(
     padding: &ArrayFilterPadding,
 ) -> Option<Expr> {
     let mut normalized = Vec::with_capacity(index.len());
-    for (axis, raw_index) in index.iter().enumerate() {
-        let len = *shape.get(axis)?;
-        let len_isize = isize::try_from(len).ok()?;
-        let in_bounds = (0..len_isize).contains(raw_index);
-        match padding {
-            ArrayFilterPadding::None => {
-                if !in_bounds {
-                    return None;
-                }
-                normalized.push(usize::try_from(*raw_index).ok()?);
-            }
-            ArrayFilterPadding::Fixed => {
-                if len == 0 {
-                    return None;
-                }
-                let clamped = (*raw_index).clamp(0, len_isize - 1);
-                normalized.push(usize::try_from(clamped).ok()?);
-            }
-            ArrayFilterPadding::Periodic => {
-                if len == 0 {
-                    return None;
-                }
-                let periodic = raw_index.rem_euclid(len_isize);
-                normalized.push(usize::try_from(periodic).ok()?);
-            }
-            ArrayFilterPadding::Constant(expr) if !in_bounds => return Some(expr.clone()),
-            ArrayFilterPadding::Constant(_) => {
-                normalized.push(usize::try_from(*raw_index).ok()?);
-            }
-        }
+    array_filter_scalar_at_recursive(flat, shape, index, padding, 0, &mut normalized)
+}
+
+fn array_filter_scalar_at_recursive(
+    flat: &[Expr],
+    shape: &[usize],
+    index: &[isize],
+    padding: &ArrayFilterPadding,
+    axis: usize,
+    normalized: &mut Vec<usize>,
+) -> Option<Expr> {
+    if axis == index.len() {
+        return tensor_scalar_at(flat, shape, normalized).cloned();
     }
 
-    tensor_scalar_at(flat, shape, &normalized).cloned()
+    let len = *shape.get(axis)?;
+    let len_isize = isize::try_from(len).ok()?;
+    let raw_index = *index.get(axis)?;
+    let in_bounds = (0..len_isize).contains(&raw_index);
+    let leaf = array_filter_padding_leaf(padding, axis, raw_index < 0);
+
+    let maybe_value = match leaf {
+        ArrayFilterPaddingLeaf::None => {
+            if !in_bounds {
+                return None;
+            }
+            Some(usize::try_from(raw_index).ok()?)
+        }
+        ArrayFilterPaddingLeaf::Fixed => {
+            if len == 0 {
+                return None;
+            }
+            let clamped = raw_index.clamp(0, len_isize - 1);
+            Some(usize::try_from(clamped).ok()?)
+        }
+        ArrayFilterPaddingLeaf::Periodic => {
+            if len == 0 {
+                return None;
+            }
+            let periodic = raw_index.rem_euclid(len_isize);
+            Some(usize::try_from(periodic).ok()?)
+        }
+        ArrayFilterPaddingLeaf::Constant(expr) if !in_bounds => return Some(expr.clone()),
+        ArrayFilterPaddingLeaf::Constant(_) => Some(usize::try_from(raw_index).ok()?),
+        ArrayFilterPaddingLeaf::Cycle(values) if !in_bounds => {
+            return Some(array_filter_cycle_value(values, raw_index, len_isize)?);
+        }
+        ArrayFilterPaddingLeaf::Cycle(_) => Some(usize::try_from(raw_index).ok()?),
+    };
+
+    normalized.push(maybe_value?);
+    let value = array_filter_scalar_at_recursive(flat, shape, index, padding, axis + 1, normalized);
+    normalized.pop();
+    value
+}
+
+fn array_filter_cycle_value(values: &[Expr], raw_index: isize, len_isize: isize) -> Option<Expr> {
+    if values.is_empty() {
+        return None;
+    }
+
+    let offset = if raw_index < 0 {
+        usize::try_from(-raw_index - 1).ok()?
+    } else {
+        usize::try_from(raw_index - len_isize).ok()?
+    };
+
+    Some(values[offset % values.len()].clone())
 }
 
 fn apply_array_reduce(

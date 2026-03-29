@@ -217,9 +217,10 @@ once in its primary implementation group. Other groups may mention it as
   current `Operate[..., 0]` and `Operate[p, n]` parity, current
   post-transform evaluation parity for `Through` / `Operate`, current
   rectangular-list radius/template support with `Padding -> None`,
-  `Padding -> "Fixed"`, `Padding -> "Periodic"`, and constant-padding forms
-  for `ArrayFilter`, and current dimension-spec plus grouped-dimension
-  support for `ArrayReduce`
+  `Padding -> "Fixed"`, `Padding -> "Periodic"`, constant-padding forms,
+  cyclic padding lists, matching per-axis asymmetric padding pairs, and
+  explicit even-template anchoring for `ArrayFilter`, and current
+  dimension-spec plus grouped-dimension support for `ArrayReduce`
 - `planned`: higher-order traversal, repeated-application families, and
   remaining operator/combinator convenience layers
 
@@ -234,9 +235,9 @@ once in its primary implementation group. Other groups may mention it as
   `MapApply`, `OperatorApplied`, `CurryApplied`, `ReverseApplied`, `Through`,
   `Operate`, `ArrayFilter`, `ArrayReduce`, `Composition`,
   `RightComposition`
-- `planned`: advanced `ArrayFilter` padding-list/sparse-array parity,
-  any remaining even-template anchoring decisions, and exotic held/head-chain
-  compatibility corners for `Through` / `Operate`
+- `planned`: `ArrayFilter` / `ArrayReduce` sparse-array parity and any future
+  broader ArrayPad-style padding or storage compatibility layers beyond the
+  current dense-array subset
 - `cross-tracked elsewhere`: `Append`, `Array`, `AssociationMap`, `Cases`,
   `CountsBy`, `GroupBy`, `Identity`, `KeySortBy`, `Outer`, `Position`,
   `Select`

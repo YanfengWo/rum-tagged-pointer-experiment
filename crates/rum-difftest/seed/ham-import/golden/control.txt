@@ -1,0 +1,39 @@
+# Golden file: control.txt
+# Format:  input ||| expected_output
+# If
+If[True, yes, no] ||| yes
+If[False, yes, no] ||| no
+If[1 > 2, big, small] ||| small
+If[3 > 2, big, small] ||| big
+# Which
+Which[False, a, True, b, True, c] ||| b
+Which[1 > 2, a, 2 > 1, b] ||| b
+# Switch
+Switch[2, 1, a, 2, b, 3, c] ||| b
+Switch[4, 1, a, 2, b, _, other] ||| other
+# Boolean operators
+True && True ||| True
+True && False ||| False
+False || True ||| True
+False || False ||| False
+!True ||| False
+!False ||| True
+And[True, True, True] ||| True
+And[True, False, True] ||| False
+Or[False, False, True] ||| True
+# Comparison
+3 == 3 ||| True
+3 == 4 ||| False
+3 != 4 ||| True
+3 < 4 ||| True
+4 < 3 ||| False
+3 <= 3 ||| True
+4 >= 4 ||| True
+SameQ[a, a] ||| True
+SameQ[a, b] ||| False
+SameQ[1, 1, 1] ||| True
+SameQ[1, 1, 2] ||| False
+# Do / Table
+Table[i, {i, 1, 5}] ||| {1, 2, 3, 4, 5}
+Sum[i, {i, 1, 10}] ||| 55
+Product[i, {i, 1, 5}] ||| 120

@@ -52,6 +52,14 @@ fn through_threads_arguments_through_current_head_subset() {
             .to_string(),
         "p[f[List[1, 2], 2], k]"
     );
+    assert_eq!(
+        session
+            .eval_text("Through[p[q[f, g], r][x], q]")
+            .unwrap()
+            .value
+            .to_string(),
+        "p[q[f[x], g[x]], r]"
+    );
 }
 
 #[test]
@@ -113,6 +121,14 @@ fn operate_supports_head_chain_updates_and_operator_form() {
             .value
             .to_string(),
         "q[f[x]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Operate[q, p[r[f]][x], 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "q[p][r[f]][x]"
     );
 }
 
@@ -403,11 +419,45 @@ fn map_scan_and_mapthread_cover_current_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("ArrayFilter[f, {a, b, c}, 1, Padding -> {{left, right}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[List[left, a, b]], f[List[a, b, c]], f[List[b, c, right]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ArrayFilter[f, {a, b, c}, 2, Padding -> {left, right}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[List[right, left, a, b, c]], f[List[left, a, b, c, left]], f[List[a, b, c, left, right]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("ArrayFilter[f, {a, b, c, d}, {1, 0, 1}, Padding -> None]")
             .unwrap()
             .value
             .to_string(),
         "List[f[List[a, Missing[], c]], f[List[b, Missing[], d]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "ArrayFilter[f, {{a, b, c}, {d, e, f}, {g, h, i}}, {1, 1}, Padding -> {{None, None}, {left, right}}]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[f[List[List[left, a, b], List[left, d, e], List[left, g, h]]], f[List[List[a, b, c], List[d, e, f], List[g, h, i]]], f[List[List[b, c, right], List[e, f, right], List[h, i, right]]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ArrayFilter[Identity, {a, b, c, d}, {1, 1, 1, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a, a, a, b], List[a, a, b, c], List[a, b, c, d], List[b, c, d, d]]"
     );
     assert_eq!(
         session

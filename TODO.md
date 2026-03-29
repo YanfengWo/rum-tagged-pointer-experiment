@@ -156,9 +156,23 @@ This roadmap intentionally uses two levels of detail:
 - [ ] Add broader regression corpora and golden fixtures for syntax formatting, lowering, evaluation, runtime messages, and transport-facing APIs
 - [ ] Establish explicit coverage goals for high-risk semantic areas instead of relying only on opportunistic test growth
 - [ ] Add differential-conformance fixtures that compare selected `rum` results against Wolfram behavior for the supported subset, with same-name language features treated as compatibility targets by default
+- [x] Create a dedicated `rum-difftest` crate and ingest the imported `ham` seed pack plus handoff docs as a first-class conformance workstream input
+- [ ] Keep `rum-difftest` split into explicit lanes instead of one monolithic diff bucket:
+  - [ ] Lane A: single-expression Wolfram diff fixtures and runner
+  - [x] Land a first-pass Lane A runner that accepts a user-provided kernel path via CLI or config and keeps oracle artifacts transient
+  - [ ] Lane B: stateful session fixture format and runner
+  - [ ] Lane C: checked known-difference ledger
+  - [ ] Lane D: performance baseline inputs and runners
+  - [ ] Lane E: keep host-contract tests in `rum`-native crate-local suites rather than Wolfram diff
+  - [ ] Lane F: keep adapter/protocol tests in adapter-native suites rather than Wolfram diff
+- [ ] Keep `rum`-specific kernel extensions and runtime/session semantics in crate-local suites unless they also have a meaningful Wolfram-oracle-comparable same-name surface
 - [ ] Keep Wolfram-oracle execution environment-gated even though the differential test workstream itself is required:
-  - [ ] prefer local `wolframscript` when available
+  - [ ] accept a user-configured local oracle command such as `wolframscript`, `WolframKernel`, or `MathKernel`
+  - [ ] treat the oracle environment and license as user-provided rather than project-provided
   - [ ] do not make default development or CI flows depend on Wolfram tooling being installed
+  - [ ] do not commit oracle-generated expected outputs into the repository
+  - [ ] regenerate oracle comparison material on each diff run rather than relying on checked-in snapshots
+  - [ ] allow oracle runs against non-pinned user versions as a compatibility check, not only against one project-standard Wolfram release
   - [ ] record any deliberate divergences from Wolfram behavior alongside those fixtures
 - [ ] Prioritize oracle-style checks for the most semantics-sensitive areas first:
   - [ ] arithmetic normalization and exact-integer behavior

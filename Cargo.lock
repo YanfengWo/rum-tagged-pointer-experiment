@@ -520,6 +520,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rum-difftest"
+version = "0.1.0"
+dependencies = [
+ "rum-runtime",
+ "rum-stdlib",
+ "rum-terminal",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "rum-jupyter"
 version = "0.1.0"
 dependencies = [

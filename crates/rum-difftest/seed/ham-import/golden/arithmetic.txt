@@ -1,0 +1,44 @@
+# Golden file: arithmetic.txt
+# Format:  input ||| expected_output
+# Basic arithmetic
+2 + 3 ||| 5
+10 - 4 ||| 6
+3 * 7 ||| 21
+10 / 4 ||| 5/2
+10 / 5 ||| 2
+2^10 ||| 1024
+2^0 ||| 1
+(-1)^3 ||| -1
+(-2)^4 ||| 16
+# Integer arithmetic
+Mod[17, 5] ||| 2
+Mod[-3, 5] ||| 2
+Quotient[17, 5] ||| 3
+GCD[12, 8] ||| 4
+LCM[4, 6] ||| 12
+# Large integers
+Factorial[10] ||| 3628800
+Factorial[20] ||| 2432902008176640000
+2^64 ||| 18446744073709551616
+# Rational arithmetic
+1/2 + 1/3 ||| 5/6
+3/4 - 1/4 ||| 1/2
+(2/3) * (3/4) ||| 1/2
+(1/2) / (1/4) ||| 2
+# Abs, Sign
+Abs[-5] ||| 5
+Abs[3] ||| 3
+Sign[-7] ||| -1
+Sign[0] ||| 0
+Sign[4] ||| 1
+# Min, Max
+Min[3, 1, 4, 1, 5] ||| 1
+Max[3, 1, 4, 1, 5] ||| 5
+Min[1/2, 2/3] ||| 1/2
+Max[1/2, 2/3] ||| 2/3
+# Power edge cases
+0^1 ||| 0
+1^0 ||| 1
+(-1)^0 ||| 1
+# Known differences
+0^0 !!! id=pow_zero_zero | type=intentional | ham=1 | wolfram=Indeterminate | reason=Ham returns 1; Mathematica returns Indeterminate with Power::indet message. Needs message system.

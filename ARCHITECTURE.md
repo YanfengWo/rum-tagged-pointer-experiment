@@ -253,6 +253,41 @@ In other words, `rum-jupyter` matters because it exercises the kernel in a
 general host setting, not because notebook-specific behavior is itself the main
 product.
 
+### `rum-difftest`
+
+Owns differential and conformance-testing assets that are broader than any one
+crate-local unit suite:
+
+- imported seed corpora
+- future `rum`-owned curated fixture trees
+- fixture parsers and normalization helpers
+- future user-configured Wolfram/Mathematica oracle runners
+- divergence ledgers and fixture metadata
+- performance baseline inputs
+
+This crate is not part of the evaluator dependency chain. It exists so
+conformance work can grow as a first-class workstream without turning
+`rum-runtime` tests into one undifferentiated bucket of local regressions,
+oracle checks, performance baselines, and adapter-contract assertions.
+
+This crate is also intentionally optional and environment-gated. `rum` does
+not ship a Wolfram license, a bundled oracle binary, or checked-in
+oracle-generated expected outputs. If a contributor has access to a usable
+Wolfram environment of their own, `rum-difftest` should help them run
+differential checks against that local installation. If not, the rest of the
+project should remain fully buildable and testable without it.
+
+That boundary is useful for more than licensing. A user may diff `rum`
+against an older or otherwise non-project-standard Wolfram installation, so
+the oracle lane is also a compatibility probe against real preexisting user
+environments rather than only a check against one pinned project version.
+
+Just as importantly, `rum-difftest` is not the home for every kernel-facing
+test. If a behavior is specific to `rum`'s own runtime model, host-facing
+session APIs, suspension/resume mechanics, structured diagnostics, or any
+adapter/protocol contract, its primary tests should stay near the owning crate
+instead of being pulled into the oracle workstream.
+
 ## Architectural Principle: Kernel First, Adapters Second
 
 The central rule of this architecture is:
@@ -427,6 +462,57 @@ In practice, that means:
 
 This compatibility target is one reason the project treats conformance testing
 as a core engineering task rather than optional polish.
+
+## Conformance Strategy
+
+Conformance work should not be treated as one monolithic test bucket. Different
+questions need different oracles.
+
+The intended split is:
+
+- Lane A: single-expression Wolfram diff for one-shot kernel semantics
+- Lane B: stateful session diff for multi-step evaluation behavior
+- Lane C: a known-difference ledger tracked as data rather than hidden in
+  comments
+- Lane D: performance regression suites whose oracle is `rum`'s own baseline,
+  not Wolfram
+- Lane E: host-contract tests for runtime session APIs, suspend/resume, and
+  structured outcomes
+- Lane F: adapter/protocol tests for Jupyter and future protocol layers
+
+`rum-difftest` should own the imported seed packs, future curated fixture
+directories, and the runners/helpers for the Wolfram-diff and divergence-ledger
+lanes. By contrast, host-contract and adapter/protocol tests should stay near
+the crates whose public contracts they validate.
+
+For the Wolfram-oracle lanes, the runner policy should stay explicit:
+
+- differential execution is optional and uses the contributor's own
+  Wolfram/Mathematica installation and license
+- the runner should accept a user-configured local oracle command such as
+  `wolframscript`, `WolframKernel`, or `MathKernel`
+- oracle-generated result files are transient run artifacts, not checked-in
+  repository assets
+- each oracle run should regenerate fresh comparison material rather than rely
+  on project-owned committed snapshots
+- version variance is expected and useful; a diff run can validate both `rum`
+  semantics and compatibility with the user's existing Wolfram environment
+
+The corresponding negative rule should also stay explicit:
+
+- same-name kernel semantics that a Wolfram oracle can judge belong in
+  `rum-difftest`
+- `rum`-specific kernel extensions, runtime inspection helpers, suspend/resume
+  flows, host-facing request/response contracts, and adapter/protocol behavior
+  do not
+- those `rum`-native tests should remain in crate-local unit, regression, and
+  integration suites where the owning contract is defined
+
+That split preserves the project's main architectural boundary:
+
+- Wolfram is the oracle for same-name kernel semantics where practical
+- `rum` itself is the oracle for host APIs, suspension payloads, and protocol
+  behavior
 
 ## Core Language Boundary For This Project Phase
 

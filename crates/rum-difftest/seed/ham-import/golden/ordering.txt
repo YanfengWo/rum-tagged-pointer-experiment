@@ -1,0 +1,20 @@
+# Golden file: ordering.txt
+# Format:  input ||| expected_output
+# Tests canonical ordering, set semantics, and Order function.
+# Sort
+Sort[{b, a, c}] ||| {a, b, c}
+Sort[{3, 1, 4, 1, 5}] ||| {1, 1, 3, 4, 5}
+# Union
+Union[{b, a, b}] ||| {a, b}
+Union[{1, 2, 2, 3}] ||| {1, 2, 3}
+# Intersection
+Intersection[{3, 1, 2}, {2, 3, 4}] ||| {2, 3}
+Intersection[{1, 2, 3}, {2, 3, 4}] ||| {2, 3}
+# Complement
+Complement[{c, a, b}, {b}] ||| {a, c}
+Complement[{1, 2, 3, 4}, {2, 4}] ||| {1, 3}
+# Order
+Order[1, 2] ||| 1
+Order[2, 1] ||| -1
+Order[a, b] ||| 1
+Order[b, a] ||| -1

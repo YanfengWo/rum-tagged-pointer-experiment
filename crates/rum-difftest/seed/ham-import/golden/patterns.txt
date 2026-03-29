@@ -1,0 +1,25 @@
+# Golden file: patterns.txt
+# Format:  input ||| expected_output
+# MatchQ
+MatchQ[5, _Integer] ||| True
+MatchQ[5, _String] ||| False
+MatchQ[f[1, 2], f[__]] ||| True
+MatchQ[{1, 2, 3}, {_, _, _}] ||| True
+MatchQ[{1, 2}, {_, _, _}] ||| False
+# ReplaceAll (/.)
+f[x] /. f[y_] -> y + 1 ||| 1 + x
+{1, 2, 3} /. x_Integer -> x^2 ||| {1, 4, 9}
+f[a, b] /. f[x_, y_] -> x + y ||| a + b
+# ReplaceRepeated (//.)
+x /. {x -> y, y -> z} ||| y
+x //. {x -> y, y -> z} ||| z
+# Cases / Select via pattern
+Cases[{1, 2, a, b, 3}, _Integer] ||| {1, 2, 3}
+Cases[{f[1], g[2], f[3]}, f[_]] ||| {f[1], f[3]}
+# Pattern conditions
+Cases[Range[10], x_ /; OddQ[x]] ||| {1, 3, 5, 7, 9}
+Cases[Range[10], x_ /; x > 5] ||| {6, 7, 8, 9, 10}
+# Function application
+(# + 1 &)[5] ||| 6
+(#1 + #2 &)[3, 4] ||| 7
+Map[# * 2 &, {1, 2, 3}] ||| {2, 4, 6}

@@ -1,0 +1,17 @@
+# Golden file: strings.txt
+# Format:  input ||| expected_output
+StringLength["hello"] ||| 5
+StringLength[""] ||| 0
+StringJoin["foo", "bar"] ||| foobar
+StringJoin["a", "b", "c"] ||| abc
+StringReverse["hello"] ||| olleh
+ToUpperCase["hello"] ||| HELLO
+ToLowerCase["HELLO"] ||| hello
+StringTake["hello", 3] ||| hel
+StringDrop["hello", 3] ||| lo
+StringTake["hello", -2] ||| lo
+Characters["abc"] ||| {a, b, c}
+StringQ["hi"] ||| True
+StringQ[42] ||| False
+ToString[42] ||| 42
+ToString[{1, 2, 3}] ||| {1, 2, 3}
