@@ -462,9 +462,16 @@ impl KernelAdapter {
         parent_header: KernelMessageHeader,
         response: KernelResponse,
     ) -> KernelDispatchResult {
+        self.execution_state = KernelExecutionState::Busy;
+        let mut iopub = vec![self.status_iopub(&parent_header, KernelExecutionState::Busy)];
+        self.execution_state = KernelExecutionState::Idle;
+
         KernelDispatchResult {
             reply: Some(self.response_envelope(channel, &parent_header, response)),
-            iopub: Vec::new(),
+            iopub: {
+                iopub.push(self.status_iopub(&parent_header, KernelExecutionState::Idle));
+                iopub
+            },
             stdin: Vec::new(),
         }
     }

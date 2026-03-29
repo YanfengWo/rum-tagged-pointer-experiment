@@ -827,6 +827,41 @@ fn dispatch_request_emits_iopub_status_execute_input_and_execute_result() {
 }
 
 #[test]
+fn dispatch_request_emits_busy_and_idle_status_for_kernel_info() {
+    let session = Session::new();
+    let mut adapter = KernelAdapter::new(session);
+
+    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+        channel: KernelChannel::Shell,
+        header: KernelMessageHeader::new(
+            "client-msg-kinfo-1",
+            "session-kinfo",
+            "tester",
+            "kernel_info_request",
+        ),
+        parent_header: None,
+        metadata: super::KernelMetadata::new(),
+        request: KernelRequest::KernelInfo(KernelInfoRequest),
+    });
+
+    assert_eq!(dispatch.iopub.len(), 2);
+    match &dispatch.iopub[0].payload {
+        KernelIoPubPayload::Status(status) => {
+            assert_eq!(status.execution_state, KernelExecutionState::Busy);
+            assert_eq!(status.lifecycle_state, KernelLifecycleState::Running);
+        }
+        other => panic!("expected busy status payload, got {other:?}"),
+    }
+    match &dispatch.iopub[1].payload {
+        KernelIoPubPayload::Status(status) => {
+            assert_eq!(status.execution_state, KernelExecutionState::Idle);
+            assert_eq!(status.lifecycle_state, KernelLifecycleState::Running);
+        }
+        other => panic!("expected idle status payload, got {other:?}"),
+    }
+}
+
+#[test]
 fn shell_request_envelope_dispatches_kernel_info_and_shutdown() {
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);
@@ -959,7 +994,27 @@ fn control_request_interrupt_updates_lifecycle_state() {
         .expect("interrupt should reply immediately");
 
     assert_eq!(reply.channel, KernelChannel::Control);
-    assert!(dispatch.iopub.is_empty());
+    assert_eq!(dispatch.iopub.len(), 2);
+    match &dispatch.iopub[0].payload {
+        KernelIoPubPayload::Status(status) => {
+            assert_eq!(status.execution_state, KernelExecutionState::Busy);
+            assert_eq!(
+                status.lifecycle_state,
+                KernelLifecycleState::InterruptRequested
+            );
+        }
+        other => panic!("expected busy status payload, got {other:?}"),
+    }
+    match &dispatch.iopub[1].payload {
+        KernelIoPubPayload::Status(status) => {
+            assert_eq!(status.execution_state, KernelExecutionState::Idle);
+            assert_eq!(
+                status.lifecycle_state,
+                KernelLifecycleState::InterruptRequested
+            );
+        }
+        other => panic!("expected idle status payload, got {other:?}"),
+    }
     assert_eq!(reply.header.msg_type, "interrupt_reply");
     assert_eq!(
         reply.metadata.get("lifecycle_state"),

@@ -253,6 +253,62 @@ In other words, `rum-jupyter` matters because it exercises the kernel in a
 general host setting, not because notebook-specific behavior is itself the main
 product.
 
+For development, `rum-jupyter` now also has a minimal launcher binary and a
+temporary-kernelspec smoke path so we can validate real Jupyter-client
+round-trips without installing a global kernelspec or keeping a long-lived
+notebook service around.
+
+### `rum-host` (planned)
+
+`rum-host` is the planned first-class Rust embedding crate.
+
+Its role is to sit between `rum-runtime` and future long-running Rust hosts,
+providing a narrower and more stable public surface than exposing broad
+runtime internals directly.
+
+It should own:
+
+- host-oriented session construction
+- stable host-facing configuration facades
+- eval / resume / inspect / complete / is-complete helpers
+- transport-friendly outcome, failure, message, and input-request types
+- small embedding-oriented helper layers that future adapters can share
+
+It should not own:
+
+- language semantics
+- terminal rendering
+- Jupyter protocol concerns
+- broad evaluator internals
+- Python-binding-specific policy
+
+The design intent is for `rum-host` to become the primary Rust embedding
+boundary, with future Python support layered on top of it rather than binding
+directly to a broad `rum-runtime` surface.
+
+### `rum-python` (planned)
+
+`rum-python` is the planned optional Python adapter crate.
+
+Its role is to provide a thin Python-facing layer on top of `rum-host` for
+evaluation, suspend/resume, and editor-style request flows in Python
+applications.
+
+It should:
+
+- wrap the stable `rum-host` boundary
+- keep Python packaging and binding concerns isolated
+- expose host-friendly Python objects rather than broad evaluator internals
+
+It should not:
+
+- bind directly to large portions of `rum-runtime`
+- make Python the primary architectural driver for the kernel
+- absorb notebook protocol behavior that belongs in `rum-jupyter`
+
+The design intent is for Python support to remain optional and downstream of
+the Rust host boundary, not a second path around it.
+
 ### `rum-difftest`
 
 Owns differential and conformance-testing assets that are broader than any one
@@ -318,6 +374,11 @@ It should also be the basis for any future:
 - embedding API
 - external protocol or link layer
 
+The planned Rust realization of that boundary is documented in
+[Host Adapter Plan](./docs/host-adapter-plan.md).
+The planned Python layer above it is documented in
+[Python Adapter Plan](./docs/python-adapter-plan.md).
+
 ## Reference Host Scenarios
 
 The architecture can keep a small number of reference host scenarios in mind
@@ -358,6 +419,9 @@ part of the public contract. If contributors want richer Python, Rust, GUI,
 IDE, or protocol integrations, they should be able to build them on top of a
 narrow kernel boundary or in optional extension crates rather than by expanding
 `rum-runtime` into a kitchen-sink host framework.
+
+The current plan is to realize that boundary through a dedicated `rum-host`
+crate rather than by making `rum-runtime` itself the long-term embedding API.
 
 ## What Must Stay Out Of The Kernel
 

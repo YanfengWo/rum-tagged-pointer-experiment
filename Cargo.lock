@@ -536,6 +536,8 @@ dependencies = [
  "bytes",
  "futures",
  "rum-runtime",
+ "rum-stdlib",
+ "thiserror 2.0.18",
  "tokio",
  "zeromq",
 ]

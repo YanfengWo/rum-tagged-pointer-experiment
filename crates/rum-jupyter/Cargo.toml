@@ -8,5 +8,7 @@ rust-version.workspace = true
 bytes = "1"
 futures = "0.3"
 rum-runtime = { path = "../rum-runtime" }
+rum-stdlib = { path = "../rum-stdlib" }
+thiserror.workspace = true
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "time"] }
 zeromq = "0.5"

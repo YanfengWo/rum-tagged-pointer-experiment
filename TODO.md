@@ -53,6 +53,8 @@ This roadmap intentionally uses two levels of detail:
 
 - [x] Stabilize a host-facing request/config API around `Session` and keep terminal rendering out of it
 - [x] Create an initial `rum-jupyter` crate with execute/inspect/complete/is-complete mapping, structured outputs, stdin handling, wire codecs, connection-file/bootstrap support, local socket backends, and native ZeroMQ-backed transport coverage
+- [x] Document a first-pass `rum-host` design so Rust embedding can be implemented against an explicit crate boundary instead of growing ad hoc from `rum-runtime`
+- [x] Document a first-pass Python adapter design so the eventual binding layer has an explicit `rum-host`-first boundary before implementation starts
 - [ ] Define and document a minimal stable host-facing public contract around sessions, requests, configuration, structured outcomes, and suspend/resume while keeping evaluator internals and experimental abstractions out of the public API
 - [ ] Add a first-class Rust host adapter or embedding crate with a narrow public surface shaped for long-running backend, rule-engine, and DSL-service embedding rather than broad internal exposure
 - [ ] Add an optional Python host adapter with a narrow public surface shaped for AI- and data-tooling-oriented integration, likely using `pyo3` behind a thin project-owned boundary instead of leaking Python-binding concerns into `rum-runtime`
@@ -127,16 +129,21 @@ This roadmap intentionally uses two levels of detail:
 ### `rum-jupyter`
 
 - [ ] Keep the kernel adapter optional and layered on top of host-facing runtime APIs rather than letting protocol details leak back into `rum-runtime`
+- [x] Add a minimal `rum-jupyter-kernel` launcher plus temporary-kernelspec and one-shot smoke scripts so the adapter can be exercised against a real local Jupyter client without global installation
 - [ ] Continue hardening lifecycle and frontend-compatibility details beyond the current local-socket and native-ZeroMQ-backed coverage, but prioritize work that validates or exposes kernel capabilities over notebook-only surface polish
 - [ ] Continue splitting oversized `rum-jupyter` transport/backend/test modules as part of the code-organization workstream
 
 ### Rust and Python Host Adapters
 
+- [x] Write a first-pass `rum-host` plan in [docs/host-adapter-plan.md](./docs/host-adapter-plan.md) that fixes the intended crate boundary, goals, non-goals, and Rust-first / Python-second rollout order
+- [x] Write a first-pass Python adapter plan in [docs/python-adapter-plan.md](./docs/python-adapter-plan.md) that fixes the intended crate boundary, Python-facing API bias, and `rum-host` dependency rule
 - [ ] Treat Rust and Python host support as peer adapters to `rum-jupyter`, all layered on the same host-facing runtime API rather than becoming special cases inside `rum-runtime`
 - [ ] Use a Rust reference scenario of long-running backend services, rule engines, and DSL-oriented infrastructure to judge API ergonomics, but keep the public surface limited to kernel sessions, requests, configuration, structured outcomes, and resource-control boundaries
 - [ ] Use a Python reference scenario of AI- and data-tooling-oriented applications to judge API ergonomics, but keep the public surface general-purpose and free of AI-specific kernel features
 - [ ] Define which host-facing types and flows are stable public contract versus internal implementation detail so future adapters or wrappers can be added without freezing evaluator internals
 - [ ] Decide how much of `Expr`, diagnostics, messages, suspended input, and structured outputs should be exposed directly versus wrapped in host-friendly facades, erring on the side of a smaller stable contract
+- [ ] Create the `rum-host` crate as the primary Rust embedding boundary before starting project-owned Python bindings
+- [ ] Keep the Python adapter downstream of `rum-host` even if early experiments make direct `rum-runtime` binding look tempting
 - [ ] Provide enough extension-oriented examples and adapter seams that downstream contributors can build richer wrappers without turning `rum-runtime` into a kitchen-sink host framework
 - [ ] Add adapter-focused regression and smoke coverage for parse, eval, inspect, complete, is-complete, session lifecycle, structured failures, and resumable input from Rust and Python callers
 - [ ] Establish Python packaging and local-dev workflow only after the API shape is stable, keeping wheel/build concerns outside the kernel core

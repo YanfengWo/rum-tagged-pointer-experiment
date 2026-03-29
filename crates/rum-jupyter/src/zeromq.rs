@@ -454,10 +454,13 @@ mod tests {
         KernelRequest, KernelRequestEnvelope, KernelResponse, decode_response_message,
     };
 
-    #[path = "../../zeromq_fake_tests.rs"]
-    mod fake;
-    #[path = "../../zeromq_native_test_support.rs"]
-    mod support;
+    mod fake {
+        include!("zeromq_fake_tests.rs");
+    }
+
+    mod support {
+        include!("zeromq_native_test_support.rs");
+    }
 
     use self::support::{
         loopback_connection, signed_loopback_connection, test_runtime, wait_for_next_socket_event,
