@@ -73,6 +73,15 @@ impl Session {
             }
         }
 
+        if self.declared_stubs.contains(&symbol)
+            && !self
+                .loaded_packages
+                .iter()
+                .any(|loaded| loaded == symbol.context())
+        {
+            let _ = self.eval_needs(&[Expr::string(symbol.context().to_string())])?;
+        }
+
         let definition = self.definitions.get(&symbol).cloned();
 
         match definition {

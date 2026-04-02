@@ -66,6 +66,8 @@ enum RegexQuantifier {
     ZeroOrMore,
     OneOrMore,
     ZeroOrOne,
+    Exact(usize),
+    Range { min: usize, max: Option<usize> },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -187,6 +189,16 @@ impl Session {
         Ok(resolved.clone())
     }
 
+    pub(super) fn resolve_names_matching_expr(&self, expr: &Expr) -> Option<Vec<Symbol>> {
+        let (patterns, explicit_context) = self.compile_names_patterns(expr)?;
+        Some(
+            self.names_matching_patterns(&patterns, explicit_context)
+                .into_iter()
+                .filter_map(|name| self.resolve_symbol_name(&name, false))
+                .collect(),
+        )
+    }
+
     fn compile_names_patterns(&self, expr: &Expr) -> Option<(Vec<NamesPattern>, bool)> {
         if let Some(pattern) = compile_names_pattern(expr) {
             return Some((vec![pattern], names_pattern_mentions_context(expr)));
@@ -259,6 +271,7 @@ impl Session {
         symbols.extend(self.attributes.keys().cloned());
         symbols.extend(self.options.keys().cloned());
         symbols.extend(self.syntax_information.keys().cloned());
+        symbols.extend(self.declared_stubs.iter().cloned());
         symbols.extend(
             self.message_definitions
                 .keys()
@@ -297,6 +310,14 @@ fn blank_null_sequence_expr() -> Expr {
     Expr::call(system_expr("BlankNullSequence"), Vec::new())
 }
 
+fn blank_sequence_expr() -> Expr {
+    Expr::call(system_expr("BlankSequence"), Vec::new())
+}
+
+fn optional_blank_expr() -> Expr {
+    Expr::call(system_expr("Optional"), vec![blank_expr()])
+}
+
 fn optional_blank_association_expr() -> Expr {
     Expr::call(
         system_expr("Optional"),
@@ -329,6 +350,52 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
         "UpSet" | "UpSetDelayed" => {
             vec![syntax_argument_pattern(vec![blank_expr(), blank_expr()])]
         }
+        "DeclarePackage" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            Expr::call(system_expr("List"), vec![blank_sequence_expr()]),
+        ])],
+        "Save" => vec![
+            syntax_argument_pattern(vec![
+                blank_expr(),
+                blank_expr(),
+                system_expr("OptionsPattern"),
+            ]),
+            syntax_rule(
+                "OptionNames",
+                string_list_expr(vec![
+                    "ExcludedContexts".to_string(),
+                    "IncludedContexts".to_string(),
+                ]),
+            ),
+        ],
+        "DumpSave" => vec![
+            syntax_argument_pattern(vec![
+                blank_expr(),
+                blank_expr(),
+                system_expr("OptionsPattern"),
+            ]),
+            syntax_rule(
+                "OptionNames",
+                string_list_expr(vec![
+                    "CompressionLevel".to_string(),
+                    "SymbolAttributes".to_string(),
+                ]),
+            ),
+        ],
+        "Once" => vec![
+            syntax_argument_pattern(vec![
+                blank_expr(),
+                optional_blank_expr(),
+                system_expr("OptionsPattern"),
+            ]),
+            syntax_rule(
+                "OptionNames",
+                string_list_expr(vec![
+                    "ExpirationDate".to_string(),
+                    "PersistenceTime".to_string(),
+                ]),
+            ),
+        ],
         _ => Vec::new(),
     };
 
@@ -489,25 +556,7 @@ fn compile_names_regex_pattern(raw: &str) -> Option<RegexPattern> {
 
     while index < chars.len() {
         let atom = parse_regex_atom(&chars, &mut index)?;
-        let quantifier = if index < chars.len() {
-            match chars[index] {
-                '*' => {
-                    index += 1;
-                    RegexQuantifier::ZeroOrMore
-                }
-                '+' => {
-                    index += 1;
-                    RegexQuantifier::OneOrMore
-                }
-                '?' => {
-                    index += 1;
-                    RegexQuantifier::ZeroOrOne
-                }
-                _ => RegexQuantifier::One,
-            }
-        } else {
-            RegexQuantifier::One
-        };
+        let quantifier = parse_regex_quantifier(&chars, &mut index)?;
 
         tokens.push(RegexToken { atom, quantifier });
     }
@@ -540,6 +589,73 @@ fn parse_regex_atom(chars: &[char], index: &mut usize) -> Option<RegexAtom> {
         '(' | ')' | '|' | '{' | '}' | '*' | '+' | '?' => None,
         _ => Some(RegexAtom::Literal(ch)),
     }
+}
+
+fn parse_regex_quantifier(chars: &[char], index: &mut usize) -> Option<RegexQuantifier> {
+    let Some(ch) = chars.get(*index).copied() else {
+        return Some(RegexQuantifier::One);
+    };
+
+    match ch {
+        '*' => {
+            *index += 1;
+            Some(RegexQuantifier::ZeroOrMore)
+        }
+        '+' => {
+            *index += 1;
+            Some(RegexQuantifier::OneOrMore)
+        }
+        '?' => {
+            *index += 1;
+            Some(RegexQuantifier::ZeroOrOne)
+        }
+        '{' => parse_regex_braced_quantifier(chars, index),
+        _ => Some(RegexQuantifier::One),
+    }
+}
+
+fn parse_regex_braced_quantifier(chars: &[char], index: &mut usize) -> Option<RegexQuantifier> {
+    *index += 1;
+    let min = parse_regex_usize(chars, index)?;
+
+    match chars.get(*index).copied()? {
+        '}' => {
+            *index += 1;
+            Some(RegexQuantifier::Exact(min))
+        }
+        ',' => {
+            *index += 1;
+
+            if chars.get(*index) == Some(&'}') {
+                *index += 1;
+                return Some(RegexQuantifier::Range { min, max: None });
+            }
+
+            let max = parse_regex_usize(chars, index)?;
+            if chars.get(*index) != Some(&'}') || max < min {
+                return None;
+            }
+            *index += 1;
+
+            Some(RegexQuantifier::Range {
+                min,
+                max: Some(max),
+            })
+        }
+        _ => None,
+    }
+}
+
+fn parse_regex_usize(chars: &[char], index: &mut usize) -> Option<usize> {
+    let start = *index;
+
+    while chars.get(*index).is_some_and(char::is_ascii_digit) {
+        *index += 1;
+    }
+
+    (start != *index)
+        .then(|| chars[start..*index].iter().collect::<String>().parse().ok())
+        .flatten()
 }
 
 fn parse_regex_escape(chars: &[char], index: &mut usize) -> Option<RegexAtom> {
@@ -629,60 +745,46 @@ fn regex_pattern_matches(pattern: &RegexPattern, haystack: &[char]) -> bool {
             hay_index == haystack.len()
         } else {
             let token = &tokens[token_index];
-            match token.quantifier {
-                RegexQuantifier::One => {
-                    hay_index < haystack.len()
-                        && regex_atom_matches(&token.atom, haystack[hay_index])
-                        && recur(tokens, token_index + 1, haystack, hay_index + 1, memo)
-                }
-                RegexQuantifier::ZeroOrOne => {
-                    recur(tokens, token_index + 1, haystack, hay_index, memo)
-                        || (hay_index < haystack.len()
-                            && regex_atom_matches(&token.atom, haystack[hay_index])
-                            && recur(tokens, token_index + 1, haystack, hay_index + 1, memo))
-                }
-                RegexQuantifier::ZeroOrMore => {
-                    if recur(tokens, token_index + 1, haystack, hay_index, memo) {
-                        true
-                    } else {
-                        let mut end = hay_index;
-                        let mut matched = false;
+            let (min, max) = regex_quantifier_bounds(token.quantifier);
+            let available = haystack.len().saturating_sub(hay_index);
+            let max = max.unwrap_or(available).min(available);
 
-                        while end < haystack.len() && regex_atom_matches(&token.atom, haystack[end])
-                        {
-                            matched = true;
-                            end += 1;
-
-                            if recur(tokens, token_index + 1, haystack, end, memo) {
-                                break;
-                            }
-                        }
-
-                        matched && recur(tokens, token_index + 1, haystack, end, memo)
+            if min > max {
+                false
+            } else {
+                let mut end = hay_index;
+                for _ in 0..min {
+                    if !regex_atom_matches(&token.atom, haystack[end]) {
+                        return memo
+                            .insert((token_index, hay_index), false)
+                            .map(|_| false)
+                            .unwrap_or(false);
                     }
+                    end += 1;
                 }
-                RegexQuantifier::OneOrMore => {
-                    if hay_index >= haystack.len()
-                        || !regex_atom_matches(&token.atom, haystack[hay_index])
+
+                if recur(tokens, token_index + 1, haystack, end, memo) {
+                    true
+                } else {
+                    let mut repeats = min;
+                    let mut current_end = end;
+
+                    while repeats < max
+                        && current_end < haystack.len()
+                        && regex_atom_matches(&token.atom, haystack[current_end])
                     {
-                        false
-                    } else {
-                        let mut end = hay_index + 1;
+                        current_end += 1;
+                        repeats += 1;
 
-                        loop {
-                            if recur(tokens, token_index + 1, haystack, end, memo) {
-                                break true;
-                            }
-
-                            if end >= haystack.len()
-                                || !regex_atom_matches(&token.atom, haystack[end])
-                            {
-                                break false;
-                            }
-
-                            end += 1;
+                        if recur(tokens, token_index + 1, haystack, current_end, memo) {
+                            return memo
+                                .insert((token_index, hay_index), true)
+                                .map(|_| true)
+                                .unwrap_or(true);
                         }
                     }
+
+                    false
                 }
             }
         };
@@ -693,6 +795,17 @@ fn regex_pattern_matches(pattern: &RegexPattern, haystack: &[char]) -> bool {
 
     let mut memo = BTreeMap::new();
     recur(&pattern.tokens, 0, haystack, 0, &mut memo)
+}
+
+fn regex_quantifier_bounds(quantifier: RegexQuantifier) -> (usize, Option<usize>) {
+    match quantifier {
+        RegexQuantifier::One => (1, Some(1)),
+        RegexQuantifier::ZeroOrMore => (0, None),
+        RegexQuantifier::OneOrMore => (1, None),
+        RegexQuantifier::ZeroOrOne => (0, Some(1)),
+        RegexQuantifier::Exact(count) => (count, Some(count)),
+        RegexQuantifier::Range { min, max } => (min, max),
+    }
 }
 
 fn regex_atom_matches(atom: &RegexAtom, ch: char) -> bool {

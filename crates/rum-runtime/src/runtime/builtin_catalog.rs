@@ -541,6 +541,29 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         "Ends a package context and leaves it on the restored context path.",
         BuiltinHandler::EndPackage,
     ),
+    BuiltinSpec::ordinary(
+        "DeclarePackage",
+        "Declares stub names for a package context and prepends that context to the search path.",
+        BuiltinHandler::DeclarePackage,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Save",
+        "Appends a textual first-pass serialization of selected symbols to a file.",
+        HoldAttribute::HoldRest,
+        BuiltinHandler::Save,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "DumpSave",
+        "Writes a textual first-pass dump of selected symbols to a file and returns the saved symbol list.",
+        HoldAttribute::HoldRest,
+        BuiltinHandler::DumpSave,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Once",
+        "Evaluates an expression at most once per session-local cache key in the current first-pass subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Once,
+    ),
     BuiltinSpec::ordinary_with_hold(
         "Message",
         "Emits a message described by a MessageName expression.",

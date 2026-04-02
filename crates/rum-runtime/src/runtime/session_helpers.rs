@@ -6,6 +6,8 @@ impl Session {
             attributes: self.attributes.clone(),
             options: self.options.clone(),
             syntax_information: self.syntax_information.clone(),
+            declared_stubs: self.declared_stubs.clone(),
+            once_values: self.once_values.clone(),
             current_context: self.current_context.clone(),
             context_path: self.context_path.clone(),
             context_stack: self.context_stack.clone(),
@@ -23,6 +25,8 @@ impl Session {
         self.attributes = snapshot.attributes;
         self.options = snapshot.options;
         self.syntax_information = snapshot.syntax_information;
+        self.declared_stubs = snapshot.declared_stubs;
+        self.once_values = snapshot.once_values;
         self.current_context = snapshot.current_context;
         self.context_path = snapshot.context_path;
         self.context_stack = snapshot.context_stack;

@@ -77,6 +77,7 @@ impl Session {
 
     pub(super) fn symbol_exists(&self, symbol: &Symbol) -> bool {
         self.definitions.contains_key(symbol)
+            || self.declared_stubs.contains(symbol)
             || self
                 .attributes
                 .get(symbol)

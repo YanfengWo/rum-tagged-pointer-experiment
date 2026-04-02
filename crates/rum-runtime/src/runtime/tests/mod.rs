@@ -70,6 +70,7 @@ mod messages_part2;
 mod messages_part3;
 mod names_and_syntax_information;
 mod options_and_protection;
+mod package_tools;
 mod polynomials;
 mod predicates;
 mod session_config;

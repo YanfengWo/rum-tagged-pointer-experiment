@@ -1143,6 +1143,21 @@ pub(super) fn default_system_options(symbol: &Symbol) -> SymbolOptions {
             "PropagateAborts",
             system_expr("Automatic"),
         )],
+        "Save" => vec![
+            system_rule_option("ExcludedContexts", system_expr("Automatic")),
+            system_rule_option("IncludedContexts", system_expr("All")),
+        ],
+        "DumpSave" => vec![
+            system_rule_option(
+                "CompressionLevel",
+                Expr::Atom(Atom::Integer(BigInt::from(1))),
+            ),
+            system_rule_option("SymbolAttributes", bool_option(true)),
+        ],
+        "Once" => vec![
+            system_rule_option("ExpirationDate", system_expr("None")),
+            system_rule_option("PersistenceTime", system_expr("None")),
+        ],
         "StringContainsQ" | "StringStartsQ" | "StringEndsQ" | "StringMatchQ" | "StringFreeQ"
         | "StringDelete" | "StringReplace" | "StringCases" | "StringPosition" => {
             vec![system_rule_option("IgnoreCase", bool_option(false))]

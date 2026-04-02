@@ -6,6 +6,9 @@ fn names_supports_current_first_pass_string_patterns() {
 
     session.eval_text("pkg`alpha = 1").unwrap();
     session.eval_text("pkg`beta = 2").unwrap();
+    session.eval_text("pkg`local = 4").unwrap();
+    session.eval_text("pkg`llocal = 5").unwrap();
+    session.eval_text("pkg`lllocal = 6").unwrap();
     session.eval_text("local = 3").unwrap();
 
     assert_eq!(
@@ -47,6 +50,14 @@ fn names_supports_current_first_pass_string_patterns() {
             .value
             .to_string(),
         "List[\"pkg`alpha\", \"pkg`beta\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[RegularExpression[\"^pkg`l{1,2}ocal$\"]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"pkg`llocal\", \"pkg`local\"]"
     );
 }
 
@@ -239,6 +250,38 @@ fn syntax_information_includes_current_system_default_subset() {
             .value
             .to_string(),
         "List[Rule[\"ArgumentsPattern\", List[Blank[], Blank[], Optional[Blank[Association]]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[DeclarePackage]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], List[BlankSequence[]]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Save]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Blank[], OptionsPattern]], Rule[\"OptionNames\", List[\"ExcludedContexts\", \"IncludedContexts\"]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[DumpSave]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Blank[], OptionsPattern]], Rule[\"OptionNames\", List[\"CompressionLevel\", \"SymbolAttributes\"]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Once]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]], OptionsPattern]], Rule[\"OptionNames\", List[\"ExpirationDate\", \"PersistenceTime\"]]]"
     );
 }
 

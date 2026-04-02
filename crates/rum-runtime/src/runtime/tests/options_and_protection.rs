@@ -237,6 +237,30 @@ fn system_default_options_cover_current_first_pass_subset() {
             .to_string(),
         "List[Rule[Padding, \"Fixed\"]]"
     );
+    assert_eq!(
+        session
+            .eval_text("Options[Save]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[ExcludedContexts, Automatic], Rule[IncludedContexts, All]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[DumpSave]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[CompressionLevel, 1], Rule[SymbolAttributes, True]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[Once]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[ExpirationDate, None], Rule[PersistenceTime, None]]"
+    );
 }
 
 #[test]
