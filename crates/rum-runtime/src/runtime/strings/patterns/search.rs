@@ -1,0 +1,431 @@
+use super::matcher::{
+    collect_string_cases, replace_string_value, split_string_value, string_contains_q,
+    string_count_matches, string_delete_matches, string_ends_q, string_free_q, string_match_q,
+    string_position_expr, string_starts_q, trim_string_value,
+};
+use super::*;
+
+impl Session {
+    pub(in crate::runtime) fn eval_string_contains_q(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        Ok(self.eval_string_pattern_predicate(head, args, "StringContainsQ", string_contains_q))
+    }
+
+    pub(in crate::runtime) fn eval_string_starts_q(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        Ok(self.eval_string_pattern_predicate(head, args, "StringStartsQ", string_starts_q))
+    }
+
+    pub(in crate::runtime) fn eval_string_ends_q(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        Ok(self.eval_string_pattern_predicate(head, args, "StringEndsQ", string_ends_q))
+    }
+
+    pub(in crate::runtime) fn eval_string_position(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !(2..=4).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("StringPosition", args, 2, 4));
+        }
+
+        let Some(pattern) = parse_string_pattern(&args[1]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let Some((max_results, config)) = parse_string_position_args(&args[2..]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(string_position_expr(value, &pattern, max_results, config));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(list_expr(
+                values
+                    .into_iter()
+                    .map(|value| string_position_expr(&value, &pattern, max_results, config))
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(in crate::runtime) fn eval_string_split(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !(1..=3).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("StringSplit", args, 1, 3));
+        }
+
+        let delimiter_spec = match args.get(1) {
+            Some(expr) => parse_string_boundary_spec(expr),
+            None => Some(StringBoundarySpec::Whitespace),
+        };
+        let Some(delimiter_spec) = delimiter_spec else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let limit = match args.get(2) {
+            Some(expr) => parse_string_split_limit(expr),
+            None => Some(StringSplitLimit::Unlimited),
+        };
+        let Some(limit) = limit else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(string_list_expr(split_string_value(
+                value,
+                &delimiter_spec,
+                limit,
+            )));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(list_expr(
+                values
+                    .into_iter()
+                    .map(|value| {
+                        string_list_expr(split_string_value(&value, &delimiter_spec, limit))
+                    })
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(in crate::runtime) fn eval_string_trim(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !(1..=2).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("StringTrim", args, 1, 2));
+        }
+
+        let trim_spec = match args.get(1) {
+            Some(expr) => parse_string_boundary_spec(expr),
+            None => Some(StringBoundarySpec::Whitespace),
+        };
+        let Some(trim_spec) = trim_spec else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(Expr::string(trim_string_value(value, &trim_spec)));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(string_list_expr(
+                values
+                    .into_iter()
+                    .map(|value| trim_string_value(&value, &trim_spec))
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(in crate::runtime) fn eval_string_replace(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !(2..=4).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("StringReplace", args, 2, 4));
+        }
+
+        let Some(rules) = parse_exact_string_replacement_rules(&args[1]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let Some((max_replacements, config)) = parse_string_match_limit_and_options(&args[2..])
+        else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(Expr::string(replace_string_value(
+                value,
+                &rules,
+                max_replacements,
+                config,
+            )));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(string_list_expr(
+                values
+                    .into_iter()
+                    .map(|value| replace_string_value(&value, &rules, max_replacements, config))
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(in crate::runtime) fn eval_string_cases(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !(2..=4).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("StringCases", args, 2, 4));
+        }
+
+        let Some(spec) = parse_exact_string_case_spec(&args[1]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let Some((max_matches, config)) = parse_string_match_limit_and_options(&args[2..]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(list_expr(collect_string_cases(
+                value,
+                &spec,
+                max_matches,
+                config,
+            )));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(list_expr(
+                values
+                    .into_iter()
+                    .map(|value| {
+                        list_expr(collect_string_cases(&value, &spec, max_matches, config))
+                    })
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(in crate::runtime) fn eval_string_count(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() < 2 {
+            return Ok(self.invalid_call_with_arg_range("StringCount", args, 2, 4));
+        }
+
+        let Some(patterns) = parse_string_patterns(&args[1]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let Some(config) = parse_string_count_options(&args[2..]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(Expr::integer(BigInt::from(
+                string_count_matches(value, &patterns, config) as u64,
+            )));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(list_expr(
+                values
+                    .into_iter()
+                    .map(|value| {
+                        Expr::integer(BigInt::from(
+                            string_count_matches(&value, &patterns, config) as u64,
+                        ))
+                    })
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(in crate::runtime) fn eval_string_delete(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() == 1 {
+            return Ok(string_unary_operator_form_slot_first(
+                "StringDelete",
+                &args[0],
+            ));
+        }
+        if args.len() < 2 {
+            return Ok(self.invalid_call_with_arg_range("StringDelete", args, 1, 3));
+        }
+
+        let Some(patterns) = parse_string_patterns(&args[1]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let Some(config) = parse_string_delete_options(&args[2..]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            return Ok(Expr::string(string_delete_matches(
+                value, &patterns, config,
+            )));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return Ok(string_list_expr(
+                values
+                    .into_iter()
+                    .map(|value| string_delete_matches(&value, &patterns, config))
+                    .collect(),
+            ));
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    pub(in crate::runtime) fn eval_string_apply(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        match args {
+            [operator] => Ok(string_unary_operator_form("StringApply", operator)),
+            [operator, input] => {
+                if let Some(value) = expr_as_string(input) {
+                    return string_apply_value(
+                        self,
+                        operator,
+                        value,
+                        Expr::call(head.clone(), args.to_vec()),
+                    );
+                }
+
+                if let Some(values) = expr_as_string_list(input) {
+                    let mut outputs = Vec::with_capacity(values.len());
+                    for value in values {
+                        outputs.push(string_apply_value(
+                            self,
+                            operator,
+                            &value,
+                            Expr::call(
+                                head.clone(),
+                                vec![operator.clone(), Expr::string(value.clone())],
+                            ),
+                        )?);
+                    }
+                    return Ok(list_expr(outputs));
+                }
+
+                Ok(Expr::call(head.clone(), args.to_vec()))
+            }
+            _ => Ok(self.invalid_call_with_arg_range("StringApply", args, 1, 2)),
+        }
+    }
+
+    pub(in crate::runtime) fn eval_string_match_q(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        Ok(self.eval_string_patterns_predicate(head, args, "StringMatchQ", string_match_q))
+    }
+
+    pub(in crate::runtime) fn eval_string_free_q(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        Ok(self.eval_string_patterns_predicate(head, args, "StringFreeQ", string_free_q))
+    }
+
+    fn eval_string_pattern_predicate(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+        symbol: &str,
+        predicate: fn(&[char], &StringPattern, StringPatternMatchConfig) -> bool,
+    ) -> Expr {
+        if !(2..=3).contains(&args.len()) {
+            return self.invalid_call_with_arg_range(symbol, args, 2, 3);
+        }
+
+        let Some(pattern) = parse_string_pattern(&args[1]) else {
+            return Expr::call(head.clone(), args.to_vec());
+        };
+        let Some(config) = parse_string_match_config(&args[2..]) else {
+            return Expr::call(head.clone(), args.to_vec());
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            let chars = value.chars().collect::<Vec<_>>();
+            return bool_expr(predicate(&chars, &pattern, config));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return list_expr(
+                values
+                    .into_iter()
+                    .map(|value| {
+                        let chars = value.chars().collect::<Vec<_>>();
+                        bool_expr(predicate(&chars, &pattern, config))
+                    })
+                    .collect(),
+            );
+        }
+
+        Expr::call(head.clone(), args.to_vec())
+    }
+
+    fn eval_string_patterns_predicate(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+        symbol: &str,
+        predicate: fn(&[char], &[StringPattern], StringPatternMatchConfig) -> bool,
+    ) -> Expr {
+        if !(2..=3).contains(&args.len()) {
+            return self.invalid_call_with_arg_range(symbol, args, 2, 3);
+        }
+
+        let Some(patterns) = parse_string_patterns(&args[1]) else {
+            return Expr::call(head.clone(), args.to_vec());
+        };
+        let Some(config) = parse_string_match_config(&args[2..]) else {
+            return Expr::call(head.clone(), args.to_vec());
+        };
+
+        if let Some(value) = expr_as_string(&args[0]) {
+            let chars = value.chars().collect::<Vec<_>>();
+            return bool_expr(predicate(&chars, &patterns, config));
+        }
+
+        if let Some(values) = expr_as_string_list(&args[0]) {
+            return list_expr(
+                values
+                    .into_iter()
+                    .map(|value| {
+                        let chars = value.chars().collect::<Vec<_>>();
+                        bool_expr(predicate(&chars, &patterns, config))
+                    })
+                    .collect(),
+            );
+        }
+
+        Expr::call(head.clone(), args.to_vec())
+    }
+}
