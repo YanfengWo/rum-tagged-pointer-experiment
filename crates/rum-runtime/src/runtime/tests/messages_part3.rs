@@ -10,10 +10,12 @@ fn check_can_catch_iteration_limit_messages_from_replace_repeated() {
         .unwrap();
 
     assert_eq!(outcome.value.to_string(), "99");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| { message.symbol == "General" && message.tag == "iterlim" }));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "General" && message.tag == "iterlim" })
+    );
 }
 
 #[test]

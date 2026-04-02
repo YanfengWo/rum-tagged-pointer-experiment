@@ -365,22 +365,28 @@ fn scoping_builtins_require_raw_binding_lists_instead_of_resolved_variables() {
 
     let with_outcome = session.eval_text("With[bindings, x]").unwrap();
     assert_eq!(with_outcome.value.to_string(), "With[bindings, x]");
-    assert!(with_outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "With" && message.tag == "argform"));
+    assert!(
+        with_outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "With" && message.tag == "argform")
+    );
 
     let module_outcome = session.eval_text("Module[bindings, x]").unwrap();
     assert_eq!(module_outcome.value.to_string(), "Module[bindings, x]");
-    assert!(module_outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Module" && message.tag == "argform"));
+    assert!(
+        module_outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Module" && message.tag == "argform")
+    );
 
     let block_outcome = session.eval_text("Block[bindings, x]").unwrap();
     assert_eq!(block_outcome.value.to_string(), "Block[bindings, x]");
-    assert!(block_outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Block" && message.tag == "argform"));
+    assert!(
+        block_outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Block" && message.tag == "argform")
+    );
 }

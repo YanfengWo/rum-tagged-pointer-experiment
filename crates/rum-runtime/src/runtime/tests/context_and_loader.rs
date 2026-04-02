@@ -275,10 +275,12 @@ fn eval_script_preserves_messages_emitted_before_a_later_error() {
         error,
         EvalError::EvaluationCycleDetected { ref expr } if expr == "self"
     ));
-    assert!(session
-        .take_messages()
-        .iter()
-        .any(|message| message.symbol == "FindFile" && message.tag == "notfound"));
+    assert!(
+        session
+            .take_messages()
+            .iter()
+            .any(|message| message.symbol == "FindFile" && message.tag == "notfound")
+    );
 }
 
 #[test]
@@ -295,14 +297,18 @@ fn get_rolls_back_loader_side_effects_and_collapses_failed_file_messages() {
         .unwrap();
 
     assert_eq!(outcome.value.to_string(), "$Failed");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Get" && message.tag == "load"));
-    assert!(!outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "FindFile" && message.tag == "notfound"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Get" && message.tag == "load")
+    );
+    assert!(
+        !outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "FindFile" && message.tag == "notfound")
+    );
     assert_eq!(
         session.eval_text("$Packages").unwrap().value.to_string(),
         "List[]"
@@ -433,10 +439,12 @@ fn missing_findfile_emits_runtime_message() {
     let outcome = session.eval_text("FindFile[\"Missing`\"]").unwrap();
 
     assert_eq!(outcome.value.to_string(), "$Failed");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "FindFile" && message.tag == "notfound"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "FindFile" && message.tag == "notfound")
+    );
 }
 
 #[test]
@@ -502,12 +510,16 @@ fn missing_needs_returns_failed_and_emits_messages() {
     let outcome = session.eval_text("Needs[\"Missing`\"]").unwrap();
 
     assert_eq!(outcome.value.to_string(), "$Failed");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Get" && message.tag == "notfound"));
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Needs" && message.tag == "load"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Get" && message.tag == "notfound")
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Needs" && message.tag == "load")
+    );
 }

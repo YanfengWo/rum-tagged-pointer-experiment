@@ -62,10 +62,12 @@ fn lowering_preserves_tagset_shape_for_runtime_semantic_validation() {
     let mut session = Session::new();
     let outcome = session.eval_text("f /: g[h[f[x_]]] := 1").unwrap();
 
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "TagSetDelayed" && message.tag == "tagpos"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "TagSetDelayed" && message.tag == "tagpos")
+    );
 }
 
 #[test]

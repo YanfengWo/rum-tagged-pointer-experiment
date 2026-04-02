@@ -134,30 +134,36 @@ fn array_functional_builtins_report_current_argument_forms() {
 
     let inner = session.eval_text("Inner[f, a]").unwrap();
     assert_eq!(inner.value.to_string(), "Inner[f, a]");
-    assert!(inner
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Inner" && message.tag == "argtu"));
+    assert!(
+        inner
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Inner" && message.tag == "argtu")
+    );
 
     let array_filter = session.eval_text("ArrayFilter[f, {a, b}, bad]").unwrap();
     assert_eq!(
         array_filter.value.to_string(),
         "ArrayFilter[f, List[a, b], bad]"
     );
-    assert!(array_filter
-        .messages
-        .iter()
-        .any(|message| message.symbol == "ArrayFilter" && message.tag == "argform"));
+    assert!(
+        array_filter
+            .messages
+            .iter()
+            .any(|message| message.symbol == "ArrayFilter" && message.tag == "argform")
+    );
 
     let array_reduce = session.eval_text("ArrayReduce[f, {a, b}, bad]").unwrap();
     assert_eq!(
         array_reduce.value.to_string(),
         "ArrayReduce[f, List[a, b], bad]"
     );
-    assert!(array_reduce
-        .messages
-        .iter()
-        .any(|message| message.symbol == "ArrayReduce" && message.tag == "argform"));
+    assert!(
+        array_reduce
+            .messages
+            .iter()
+            .any(|message| message.symbol == "ArrayReduce" && message.tag == "argform")
+    );
 
     let array_reduce_grouped = session
         .eval_text("ArrayReduce[f, {{a, b}, {c, d}}, {{1}, {1}}]")
@@ -166,8 +172,10 @@ fn array_functional_builtins_report_current_argument_forms() {
         array_reduce_grouped.value.to_string(),
         "ArrayReduce[f, List[List[a, b], List[c, d]], List[List[1], List[1]]]"
     );
-    assert!(array_reduce_grouped
-        .messages
-        .iter()
-        .any(|message| message.symbol == "ArrayReduce" && message.tag == "argform"));
+    assert!(
+        array_reduce_grouped
+            .messages
+            .iter()
+            .any(|message| message.symbol == "ArrayReduce" && message.tag == "argform")
+    );
 }

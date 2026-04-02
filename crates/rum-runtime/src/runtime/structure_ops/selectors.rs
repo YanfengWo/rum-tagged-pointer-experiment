@@ -40,7 +40,11 @@ struct ExtractPositionSpec {
 }
 
 impl Session {
-    pub(in crate::runtime) fn eval_part(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+    pub(in crate::runtime) fn eval_part(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
         if args.is_empty() {
             return Ok(self.invalid_call_with_message(
                 "Part",
@@ -58,7 +62,11 @@ impl Session {
             .unwrap_or_else(|| Expr::call(head.clone(), args.to_vec())))
     }
 
-    pub(in crate::runtime) fn eval_extract(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+    pub(in crate::runtime) fn eval_extract(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
         if !(2..=3).contains(&args.len()) {
             return Ok(self.invalid_call_with_arg_range("Extract", args, 2, 3));
         }
@@ -355,11 +363,7 @@ fn resolve_span_endpoint(
             let len = isize::try_from(len).ok()?;
             Some(if step > 0 {
                 if is_start {
-                    if include_head {
-                        0
-                    } else {
-                        1
-                    }
+                    if include_head { 0 } else { 1 }
                 } else {
                     len
                 }

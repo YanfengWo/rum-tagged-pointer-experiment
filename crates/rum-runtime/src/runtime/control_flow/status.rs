@@ -113,10 +113,12 @@ pub(in crate::runtime) fn apply_status_object_to_args(head: &Expr, args: &[Expr]
 
     match args {
         [Expr::Atom(Atom::String(property))] => Some(failure_property_value(head, property)),
-        [Expr::Call {
-            head: list_head,
-            args: properties,
-        }] if is_system_symbol_name(list_head, heads::structure::LIST) => {
+        [
+            Expr::Call {
+                head: list_head,
+                args: properties,
+            },
+        ] if is_system_symbol_name(list_head, heads::structure::LIST) => {
             let values = properties
                 .iter()
                 .map(|property| match property {

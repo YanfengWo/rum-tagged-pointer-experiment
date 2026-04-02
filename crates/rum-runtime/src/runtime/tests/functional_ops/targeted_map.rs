@@ -54,22 +54,28 @@ fn targeted_mapping_builtins_report_current_argument_forms() {
 
     let map_at = session.eval_text("MapAt[f, expr, bad]").unwrap();
     assert_eq!(map_at.value.to_string(), "MapAt[f, expr, bad]");
-    assert!(map_at
-        .messages
-        .iter()
-        .any(|message| message.symbol == "MapAt" && message.tag == "argform"));
+    assert!(
+        map_at
+            .messages
+            .iter()
+            .any(|message| message.symbol == "MapAt" && message.tag == "argform")
+    );
 
     let map_thread = session.eval_text("MapThread[f, expr, 0]").unwrap();
     assert_eq!(map_thread.value.to_string(), "MapThread[f, expr, 0]");
-    assert!(map_thread
-        .messages
-        .iter()
-        .any(|message| message.symbol == "MapThread" && message.tag == "argform"));
+    assert!(
+        map_thread
+            .messages
+            .iter()
+            .any(|message| message.symbol == "MapThread" && message.tag == "argform")
+    );
 
     let subset_map = session.eval_text("SubsetMap[f, expr, bad]").unwrap();
     assert_eq!(subset_map.value.to_string(), "SubsetMap[f, expr, bad]");
-    assert!(subset_map
-        .messages
-        .iter()
-        .any(|message| message.symbol == "SubsetMap" && message.tag == "argform"));
+    assert!(
+        subset_map
+            .messages
+            .iter()
+            .any(|message| message.symbol == "SubsetMap" && message.tag == "argform")
+    );
 }

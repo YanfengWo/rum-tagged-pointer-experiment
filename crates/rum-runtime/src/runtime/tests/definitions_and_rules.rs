@@ -300,22 +300,28 @@ fn tag_definition_messages_distinguish_missing_tags_from_invalid_positions() {
     let mut session = Session::new();
 
     let missing = session.eval_text("f /: g[x_] := 1").unwrap();
-    assert!(missing
-        .messages
-        .iter()
-        .any(|message| message.symbol == "TagSetDelayed" && message.tag == "tagnf"));
+    assert!(
+        missing
+            .messages
+            .iter()
+            .any(|message| message.symbol == "TagSetDelayed" && message.tag == "tagnf")
+    );
 
     let invalid_position = session.eval_text("f /: g[h[f[x_]]] := 1").unwrap();
-    assert!(invalid_position
-        .messages
-        .iter()
-        .any(|message| message.symbol == "TagSetDelayed" && message.tag == "tagpos"));
+    assert!(
+        invalid_position
+            .messages
+            .iter()
+            .any(|message| message.symbol == "TagSetDelayed" && message.tag == "tagpos")
+    );
 
     let invalid_unset = session.eval_text("TagUnset[f, g[h[f[x_]]]]").unwrap();
-    assert!(invalid_unset
-        .messages
-        .iter()
-        .any(|message| message.symbol == "TagUnset" && message.tag == "tagpos"));
+    assert!(
+        invalid_unset
+            .messages
+            .iter()
+            .any(|message| message.symbol == "TagUnset" && message.tag == "tagpos")
+    );
 }
 
 #[test]

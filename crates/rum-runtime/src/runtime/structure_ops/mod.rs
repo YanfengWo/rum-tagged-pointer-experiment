@@ -1,9 +1,9 @@
 use super::*;
 
-mod sequence;
 mod exact_paths;
 mod replace;
 mod selectors;
+mod sequence;
 mod surface;
 
 use exact_paths::{
@@ -12,8 +12,8 @@ use exact_paths::{
 };
 use replace::ReplacePartHeadsMode;
 use selectors::{
-    apply_part_selectors, parse_single_position_spec, select_positioned_parts_for_span,
-    AtomicPartSpec, PartSelector, PartSpanSpec, SpanEndpoint,
+    AtomicPartSpec, PartSelector, PartSpanSpec, SpanEndpoint, apply_part_selectors,
+    parse_single_position_spec, select_positioned_parts_for_span,
 };
 
 pub(super) fn apply_keyed_part_spec(expr: &Expr, spec_expr: &Expr) -> Option<Expr> {

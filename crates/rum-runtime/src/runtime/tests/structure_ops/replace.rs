@@ -26,15 +26,27 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
     session.eval_text("n = 2").unwrap();
 
     assert_eq!(
-        session.eval_text("ReplacePart[f[a, b], immediate]").unwrap().value.to_string(),
+        session
+            .eval_text("ReplacePart[f[a, b], immediate]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, 1]"
     );
     assert_eq!(
-        session.eval_text("ReplacePart[f[a, b], delayed]").unwrap().value.to_string(),
+        session
+            .eval_text("ReplacePart[f[a, b], delayed]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, 2]"
     );
     assert_eq!(
-        session.eval_text("ReplacePart[f[a, b], {0} -> g]").unwrap().value.to_string(),
+        session
+            .eval_text("ReplacePart[f[a, b], {0} -> g]")
+            .unwrap()
+            .value
+            .to_string(),
         "g[a, b]"
     );
     assert_eq!(
@@ -80,7 +92,11 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
         "f[a, y, c, y]"
     );
     assert_eq!(
-        session.eval_text("ReplacePart[f[a, b], 0 ;; -1 -> x]").unwrap().value.to_string(),
+        session
+            .eval_text("ReplacePart[f[a, b], 0 ;; -1 -> x]")
+            .unwrap()
+            .value
+            .to_string(),
         "x[x, x]"
     );
     assert_eq!(
@@ -100,11 +116,19 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
         "f[a, b]"
     );
     assert_eq!(
-        session.eval_text("ReplacePart[f[a, b], {} -> x]").unwrap().value.to_string(),
+        session
+            .eval_text("ReplacePart[f[a, b], {} -> x]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, b]"
     );
     assert_eq!(
-        session.eval_text("ReplacePart[f[a, b], {{}} -> x]").unwrap().value.to_string(),
+        session
+            .eval_text("ReplacePart[f[a, b], {{}} -> x]")
+            .unwrap()
+            .value
+            .to_string(),
         "x"
     );
 }
@@ -114,11 +138,19 @@ fn replacepart_supports_pattern_position_specs_and_rhs_bindings() {
     let mut session = Session::new();
 
     assert_eq!(
-        session.eval_text("ReplacePart[f[a, b, c], i_ -> x]").unwrap().value.to_string(),
+        session
+            .eval_text("ReplacePart[f[a, b, c], i_ -> x]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[x, x, x]"
     );
     assert_eq!(
-        session.eval_text("ReplacePart[f[a, b, c], {i_} -> i]").unwrap().value.to_string(),
+        session
+            .eval_text("ReplacePart[f[a, b, c], {i_} -> i]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[1, 2, 3]"
     );
     assert_eq!(
@@ -160,7 +192,11 @@ fn replacepart_handles_duplicate_and_overlapping_targets_more_stably() {
     let mut session = Session::new();
 
     assert_eq!(
-        session.eval_text("ReplacePart[f[a], {1 -> x, 1 -> y}]").unwrap().value.to_string(),
+        session
+            .eval_text("ReplacePart[f[a], {1 -> x, 1 -> y}]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[y]"
     );
     assert_eq!(

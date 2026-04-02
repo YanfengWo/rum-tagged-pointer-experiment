@@ -213,57 +213,71 @@ fn apply_map_family_reports_current_argument_forms() {
 
     let map_indexed = session.eval_text("MapIndexed[f, expr, bad]").unwrap();
     assert_eq!(map_indexed.value.to_string(), "MapIndexed[f, expr, bad]");
-    assert!(map_indexed
-        .messages
-        .iter()
-        .any(|message| message.symbol == "MapIndexed" && message.tag == "argform"));
+    assert!(
+        map_indexed
+            .messages
+            .iter()
+            .any(|message| message.symbol == "MapIndexed" && message.tag == "argform")
+    );
 
     let map = session.eval_text("Map[f, expr, bad]").unwrap();
     assert_eq!(map.value.to_string(), "Map[f, expr, bad]");
-    assert!(map
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Map" && message.tag == "argform"));
+    assert!(
+        map.messages
+            .iter()
+            .any(|message| message.symbol == "Map" && message.tag == "argform")
+    );
 
     let map_all = session.eval_text("MapAll[f, expr, bad]").unwrap();
     assert_eq!(map_all.value.to_string(), "MapAll[f, expr, bad]");
-    assert!(map_all
-        .messages
-        .iter()
-        .any(|message| message.symbol == "MapAll" && message.tag == "argform"));
+    assert!(
+        map_all
+            .messages
+            .iter()
+            .any(|message| message.symbol == "MapAll" && message.tag == "argform")
+    );
 
     let scan = session.eval_text("Scan[f, expr, bad]").unwrap();
     assert_eq!(scan.value.to_string(), "Scan[f, expr, bad]");
-    assert!(scan
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Scan" && message.tag == "argform"));
+    assert!(
+        scan.messages
+            .iter()
+            .any(|message| message.symbol == "Scan" && message.tag == "argform")
+    );
 
     let apply = session.eval_text("Apply[f, expr, bad]").unwrap();
     assert_eq!(apply.value.to_string(), "Apply[f, expr, bad]");
-    assert!(apply
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Apply" && message.tag == "argform"));
+    assert!(
+        apply
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Apply" && message.tag == "argform")
+    );
 
     let map_apply = session.eval_text("MapApply[f, expr, bad]").unwrap();
     assert_eq!(map_apply.value.to_string(), "MapApply[f, expr, bad]");
-    assert!(map_apply
-        .messages
-        .iter()
-        .any(|message| message.symbol == "MapApply" && message.tag == "argform"));
+    assert!(
+        map_apply
+            .messages
+            .iter()
+            .any(|message| message.symbol == "MapApply" && message.tag == "argform")
+    );
 
     let comap = session.eval_text("Comap[fs, x, bad]").unwrap();
     assert_eq!(comap.value.to_string(), "Comap[fs, x, bad]");
-    assert!(comap
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Comap" && message.tag == "argform"));
+    assert!(
+        comap
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Comap" && message.tag == "argform")
+    );
 
     let comap_apply = session.eval_text("ComapApply[fs, x, bad]").unwrap();
     assert_eq!(comap_apply.value.to_string(), "ComapApply[fs, x, bad]");
-    assert!(comap_apply
-        .messages
-        .iter()
-        .any(|message| message.symbol == "ComapApply" && message.tag == "argform"));
+    assert!(
+        comap_apply
+            .messages
+            .iter()
+            .any(|message| message.symbol == "ComapApply" && message.tag == "argform")
+    );
 }

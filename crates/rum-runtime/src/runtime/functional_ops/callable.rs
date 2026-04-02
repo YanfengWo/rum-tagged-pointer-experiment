@@ -484,11 +484,7 @@ fn through_expression(expr: &Expr, target: Option<&Expr>) -> Expr {
         return expr.clone();
     };
 
-    if matched {
-        transformed
-    } else {
-        expr.clone()
-    }
+    if matched { transformed } else { expr.clone() }
 }
 
 fn through_head_expression(

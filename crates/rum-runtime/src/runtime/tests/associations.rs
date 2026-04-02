@@ -527,62 +527,78 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
 
     let outcome = session.eval_text("Key[]").unwrap();
     assert_eq!(outcome.value.to_string(), "Key[]");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Key" && message.tag == "argx"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Key" && message.tag == "argx")
+    );
 
     let outcome = session.eval_text("KeyExistsQ[a]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyExistsQ[a]");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "KeyExistsQ" && message.tag == "argx"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyExistsQ" && message.tag == "argx")
+    );
 
     let outcome = session.eval_text("KeyMemberQ[a]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyMemberQ[a]");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "KeyMemberQ" && message.tag == "argx"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyMemberQ" && message.tag == "argx")
+    );
 
     let outcome = session.eval_text("KeyFreeQ[a]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyFreeQ[a]");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "KeyFreeQ" && message.tag == "argx"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyFreeQ" && message.tag == "argx")
+    );
 
     let outcome = session.eval_text("KeySelect[a]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeySelect[a]");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "KeySelect" && message.tag == "argx"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeySelect" && message.tag == "argx")
+    );
 
     let outcome = session.eval_text("KeySortBy[a]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeySortBy[a]");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "KeySortBy" && message.tag == "argx"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeySortBy" && message.tag == "argx")
+    );
 
     let outcome = session.eval_text("AssociationThread[a]").unwrap();
     assert_eq!(outcome.value.to_string(), "AssociationThread[a]");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "AssociationThread" && message.tag == "argx"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociationThread" && message.tag == "argx")
+    );
 
     let outcome = session.eval_text("KeyUnion[Association[a -> 1]]").unwrap();
     assert_eq!(
         outcome.value.to_string(),
         "KeyUnion[Association[Rule[a, 1]]]"
     );
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "KeyUnion" && message.tag == "argx"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyUnion" && message.tag == "argx")
+    );
 
     let outcome = session
         .eval_text("KeyIntersection[Association[a -> 1]]")
@@ -591,10 +607,12 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
         outcome.value.to_string(),
         "KeyIntersection[Association[Rule[a, 1]]]"
     );
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "KeyIntersection" && message.tag == "argx"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyIntersection" && message.tag == "argx")
+    );
 
     let outcome = session
         .eval_text("KeyComplement[Association[a -> 1]]")
@@ -603,15 +621,19 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
         outcome.value.to_string(),
         "KeyComplement[Association[Rule[a, 1]]]"
     );
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "KeyComplement" && message.tag == "argx"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyComplement" && message.tag == "argx")
+    );
 
     let outcome = session.eval_text("Missing[]").unwrap();
     assert_eq!(outcome.value.to_string(), "Missing[]");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Missing" && message.tag == "argx"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Missing" && message.tag == "argx")
+    );
 }

@@ -2,9 +2,9 @@ use std::sync::OnceLock;
 
 use super::*;
 
+mod associations;
 mod strings;
 mod structure;
-mod associations;
 
 const CORE_BUILTINS_PREFIX: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary(

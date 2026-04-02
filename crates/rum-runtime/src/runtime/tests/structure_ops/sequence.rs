@@ -5,15 +5,27 @@ fn take_drop_insert_delete_and_take_list_cover_current_structural_subset() {
     let mut session = Session::new();
 
     assert_eq!(
-        session.eval_text("Take[f[a, b, c, d], 2]").unwrap().value.to_string(),
+        session
+            .eval_text("Take[f[a, b, c, d], 2]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, b]"
     );
     assert_eq!(
-        session.eval_text("Take[f[a, b, c, d], -2]").unwrap().value.to_string(),
+        session
+            .eval_text("Take[f[a, b, c, d], -2]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[c, d]"
     );
     assert_eq!(
-        session.eval_text("Take[f[a, b, c, d], {2}]").unwrap().value.to_string(),
+        session
+            .eval_text("Take[f[a, b, c, d], {2}]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[b]"
     );
     assert_eq!(
@@ -33,20 +45,36 @@ fn take_drop_insert_delete_and_take_list_cover_current_structural_subset() {
         "f[g[b], h[d]]"
     );
     assert_eq!(
-        session.eval_text("Take[f[a, b], None]").unwrap().value.to_string(),
+        session
+            .eval_text("Take[f[a, b], None]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[]"
     );
 
     assert_eq!(
-        session.eval_text("Drop[f[a, b, c, d], 2]").unwrap().value.to_string(),
+        session
+            .eval_text("Drop[f[a, b, c, d], 2]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[c, d]"
     );
     assert_eq!(
-        session.eval_text("Drop[f[a, b, c, d], -2]").unwrap().value.to_string(),
+        session
+            .eval_text("Drop[f[a, b, c, d], -2]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, b]"
     );
     assert_eq!(
-        session.eval_text("Drop[f[a, b, c, d], {2, 3}]").unwrap().value.to_string(),
+        session
+            .eval_text("Drop[f[a, b, c, d], {2, 3}]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, d]"
     );
     assert_eq!(
@@ -58,19 +86,35 @@ fn take_drop_insert_delete_and_take_list_cover_current_structural_subset() {
         "f[g[b], h[d]]"
     );
     assert_eq!(
-        session.eval_text("TakeDrop[f[a, b, c, d], 2]").unwrap().value.to_string(),
+        session
+            .eval_text("TakeDrop[f[a, b, c, d], 2]")
+            .unwrap()
+            .value
+            .to_string(),
         "List[f[a, b], f[c, d]]"
     );
     assert_eq!(
-        session.eval_text("Insert[f[a, b, c], x, 2]").unwrap().value.to_string(),
+        session
+            .eval_text("Insert[f[a, b, c], x, 2]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, x, b, c]"
     );
     assert_eq!(
-        session.eval_text("Insert[f[a, b, c], x, -1]").unwrap().value.to_string(),
+        session
+            .eval_text("Insert[f[a, b, c], x, -1]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, b, c, x]"
     );
     assert_eq!(
-        session.eval_text("Delete[f[a, b, c, d], {2, -1}]").unwrap().value.to_string(),
+        session
+            .eval_text("Delete[f[a, b, c, d], {2, -1}]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[a, c]"
     );
     assert_eq!(
@@ -89,31 +133,39 @@ fn take_drop_append_and_prepend_report_current_invalid_boundaries() {
 
     let outcome = session.eval_text("Take[f[a], 2]").unwrap();
     assert_eq!(outcome.value.to_string(), "Take[f[a], 2]");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Take" && message.tag == "take"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Take" && message.tag == "take")
+    );
 
     let outcome = session.eval_text("Drop[f[a], 2]").unwrap();
     assert_eq!(outcome.value.to_string(), "Drop[f[a], 2]");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Drop" && message.tag == "drop"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Drop" && message.tag == "drop")
+    );
 
     let outcome = session.eval_text("Append[5, x]").unwrap();
     assert_eq!(outcome.value.to_string(), "Append[5, x]");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "General" && message.tag == "normal"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "normal")
+    );
 
     let outcome = session.eval_text("Prepend[5, x]").unwrap();
     assert_eq!(outcome.value.to_string(), "Prepend[5, x]");
-    assert!(outcome
-        .messages
-        .iter()
-        .any(|message| message.symbol == "General" && message.tag == "normal"));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "normal")
+    );
 
     let outcome = session.eval_text("Insert[f[a], x, 0]").unwrap();
     assert_eq!(outcome.value.to_string(), "Insert[f[a], x, 0]");

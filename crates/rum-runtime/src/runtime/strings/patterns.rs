@@ -457,4 +457,3 @@ fn expr_as_non_empty_char_vec(expr: &Expr) -> Option<Vec<char>> {
     let chars = expr_as_string(expr)?.chars().collect::<Vec<_>>();
     (!chars.is_empty()).then_some(chars)
 }
-

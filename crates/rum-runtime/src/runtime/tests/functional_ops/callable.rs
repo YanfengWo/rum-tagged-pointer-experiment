@@ -195,29 +195,37 @@ fn callable_functional_builtins_report_current_argument_forms() {
         operator_applied.value.to_string(),
         "OperatorApplied[f, bad]"
     );
-    assert!(operator_applied
-        .messages
-        .iter()
-        .any(|message| message.symbol == "OperatorApplied" && message.tag == "argform"));
+    assert!(
+        operator_applied
+            .messages
+            .iter()
+            .any(|message| message.symbol == "OperatorApplied" && message.tag == "argform")
+    );
 
     let curry_applied = session.eval_text("CurryApplied[f, bad]").unwrap();
     assert_eq!(curry_applied.value.to_string(), "CurryApplied[f, bad]");
-    assert!(curry_applied
-        .messages
-        .iter()
-        .any(|message| message.symbol == "CurryApplied" && message.tag == "argform"));
+    assert!(
+        curry_applied
+            .messages
+            .iter()
+            .any(|message| message.symbol == "CurryApplied" && message.tag == "argform")
+    );
 
     let reverse_applied = session.eval_text("ReverseApplied[f, bad]").unwrap();
     assert_eq!(reverse_applied.value.to_string(), "ReverseApplied[f, bad]");
-    assert!(reverse_applied
-        .messages
-        .iter()
-        .any(|message| message.symbol == "ReverseApplied" && message.tag == "argform"));
+    assert!(
+        reverse_applied
+            .messages
+            .iter()
+            .any(|message| message.symbol == "ReverseApplied" && message.tag == "argform")
+    );
 
     let operate = session.eval_text("Operate[f, expr, bad]").unwrap();
     assert_eq!(operate.value.to_string(), "Operate[f, expr, bad]");
-    assert!(operate
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Operate" && message.tag == "argform"));
+    assert!(
+        operate
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Operate" && message.tag == "argform")
+    );
 }

@@ -159,9 +159,11 @@ fn select_positioned_parts_for_atomic_spec_with_heads(
                 Some(parts)
             }
         },
-        AtomicPartSpec::Span(span) => {
-            select_positioned_parts_for_span(expr, *span, replace_part_span_includes_heads(*span, heads))
-        }
+        AtomicPartSpec::Span(span) => select_positioned_parts_for_span(
+            expr,
+            *span,
+            replace_part_span_includes_heads(*span, heads),
+        ),
     }
 }
 

@@ -4,7 +4,10 @@ use super::*;
 fn alphabet_distance_alignment_and_diff_extend_cl07() {
     let mut session = Session::new();
 
-    assert_eq!(eval_to_string(&mut session, "Alphabet[]"), "List[\"a\", \"b\", \"c\", \"d\", \"e\", \"f\", \"g\", \"h\", \"i\", \"j\", \"k\", \"l\", \"m\", \"n\", \"o\", \"p\", \"q\", \"r\", \"s\", \"t\", \"u\", \"v\", \"w\", \"x\", \"y\", \"z\"]");
+    assert_eq!(
+        eval_to_string(&mut session, "Alphabet[]"),
+        "List[\"a\", \"b\", \"c\", \"d\", \"e\", \"f\", \"g\", \"h\", \"i\", \"j\", \"k\", \"l\", \"m\", \"n\", \"o\", \"p\", \"q\", \"r\", \"s\", \"t\", \"u\", \"v\", \"w\", \"x\", \"y\", \"z\"]"
+    );
     assert_eq!(
         eval_to_string(&mut session, "Alphabet[\"English\"]"),
         "List[\"a\", \"b\", \"c\", \"d\", \"e\", \"f\", \"g\", \"h\", \"i\", \"j\", \"k\", \"l\", \"m\", \"n\", \"o\", \"p\", \"q\", \"r\", \"s\", \"t\", \"u\", \"v\", \"w\", \"x\", \"y\", \"z\"]"

@@ -131,32 +131,39 @@ fn iteration_builtins_report_current_argument_forms() {
 
     let nest = session.eval_text("Nest[f, expr, bad]").unwrap();
     assert_eq!(nest.value.to_string(), "Nest[f, expr, bad]");
-    assert!(nest
-        .messages
-        .iter()
-        .any(|message| message.symbol == "Nest" && message.tag == "argform"));
+    assert!(
+        nest.messages
+            .iter()
+            .any(|message| message.symbol == "Nest" && message.tag == "argform")
+    );
 
     let nest_while = session.eval_text("NestWhile[f, expr, test, 0]").unwrap();
     assert_eq!(nest_while.value.to_string(), "NestWhile[f, expr, test, 0]");
-    assert!(nest_while
-        .messages
-        .iter()
-        .any(|message| message.symbol == "NestWhile" && message.tag == "argform"));
+    assert!(
+        nest_while
+            .messages
+            .iter()
+            .any(|message| message.symbol == "NestWhile" && message.tag == "argform")
+    );
 
     let fixed_point = session.eval_text("FixedPoint[f, expr, bad]").unwrap();
     assert_eq!(fixed_point.value.to_string(), "FixedPoint[f, expr, bad]");
-    assert!(fixed_point
-        .messages
-        .iter()
-        .any(|message| message.symbol == "FixedPoint" && message.tag == "argform"));
+    assert!(
+        fixed_point
+            .messages
+            .iter()
+            .any(|message| message.symbol == "FixedPoint" && message.tag == "argform")
+    );
 
     let fixed_point_list = session.eval_text("FixedPointList[f, expr, bad]").unwrap();
     assert_eq!(
         fixed_point_list.value.to_string(),
         "FixedPointList[f, expr, bad]"
     );
-    assert!(fixed_point_list
-        .messages
-        .iter()
-        .any(|message| message.symbol == "FixedPointList" && message.tag == "argform"));
+    assert!(
+        fixed_point_list
+            .messages
+            .iter()
+            .any(|message| message.symbol == "FixedPointList" && message.tag == "argform")
+    );
 }
