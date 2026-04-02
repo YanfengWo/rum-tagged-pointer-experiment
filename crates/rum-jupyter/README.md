@@ -22,6 +22,10 @@ By default the script uses `~/.venv-jupyter/bin/python`, builds the local
 one `jupyter_client` execute round-trip, and then cleans up the temporary
 directories.
 
+For a fuller hand-driven `jupyter-console` walkthrough and a curated set of
+manual expressions, see
+[Jupyter Console Manual Smoke](../../docs/jupyter-console-manual.md).
+
 ## Minimal Local Smoke Test
 
 1. Build the development kernel launcher:

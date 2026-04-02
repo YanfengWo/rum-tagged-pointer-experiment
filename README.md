@@ -84,6 +84,7 @@ The repository is a Cargo workspace with these top-level crates:
 - [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md)
 - [Formatter Style Notes](./docs/formatter-style.md)
 - [Code Organization Guidelines](./docs/code-organization-guidelines.md)
+- [Jupyter Console Manual Smoke](./docs/jupyter-console-manual.md)
 
 ## Development Environment
 
