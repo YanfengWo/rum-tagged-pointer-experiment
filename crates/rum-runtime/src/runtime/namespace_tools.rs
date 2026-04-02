@@ -143,11 +143,11 @@ impl Session {
         self.syntax_information
             .get(symbol)
             .cloned()
-            .unwrap_or_else(empty_list_expr)
+            .unwrap_or_else(|| default_system_syntax_information(symbol))
     }
 
     pub(super) fn set_syntax_information_for_symbol(&mut self, symbol: Symbol, syntax: Expr) {
-        if syntax == empty_list_expr() {
+        if syntax == default_system_syntax_information(&symbol) {
             self.syntax_information.remove(&symbol);
         } else {
             self.syntax_information.insert(symbol, syntax);
@@ -279,6 +279,64 @@ impl Session {
 
 fn empty_list_expr() -> Expr {
     Expr::call(system_expr("List"), Vec::new())
+}
+
+fn syntax_rule(name: &str, value: Expr) -> Expr {
+    Expr::call(system_expr("Rule"), vec![Expr::string(name), value])
+}
+
+fn syntax_argument_pattern(items: Vec<Expr>) -> Expr {
+    syntax_rule("ArgumentsPattern", Expr::call(system_expr("List"), items))
+}
+
+fn blank_expr() -> Expr {
+    Expr::call(system_expr("Blank"), Vec::new())
+}
+
+fn blank_null_sequence_expr() -> Expr {
+    Expr::call(system_expr("BlankNullSequence"), Vec::new())
+}
+
+fn optional_blank_association_expr() -> Expr {
+    Expr::call(
+        system_expr("Optional"),
+        vec![Expr::call(
+            system_expr("Blank"),
+            vec![system_expr("Association")],
+        )],
+    )
+}
+
+fn default_system_syntax_information(symbol: &Symbol) -> Expr {
+    if symbol.context() != SYSTEM_CONTEXT {
+        return empty_list_expr();
+    }
+
+    let rules = match symbol.name() {
+        "Options" | "Names" | "SyntaxInformation" | "Protect" | "Unprotect" => {
+            vec![syntax_argument_pattern(vec![blank_expr()])]
+        }
+        "SetOptions" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            blank_null_sequence_expr(),
+        ])],
+        "OptionValue" => vec![syntax_argument_pattern(vec![blank_null_sequence_expr()])],
+        "ArgumentsOptions" | "CheckArguments" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            blank_expr(),
+            optional_blank_association_expr(),
+        ])],
+        "UpSet" | "UpSetDelayed" => {
+            vec![syntax_argument_pattern(vec![blank_expr(), blank_expr()])]
+        }
+        _ => Vec::new(),
+    };
+
+    if rules.is_empty() {
+        empty_list_expr()
+    } else {
+        Expr::call(system_expr("List"), rules)
+    }
 }
 
 fn string_list_expr(items: Vec<String>) -> Expr {

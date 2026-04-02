@@ -121,7 +121,9 @@ impl Session {
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         let spec = self.compile_cases_spec_from_resolved_expr(resolved_spec);
-        let traversal_result = self.resolve_cases_traversal_owned(option_exprs.clone());
+        let mut defaults = CasesTraversalConfig::default_cases();
+        defaults.include_heads = self.system_option_bool("Cases", "Heads", false);
+        let traversal_result = self.resolve_cases_traversal_owned(option_exprs.clone(), defaults);
         self.drive_internal_value(traversal_result, {
             let target = target.clone();
             let spec = spec.clone();

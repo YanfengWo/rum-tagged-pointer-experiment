@@ -202,7 +202,8 @@ This roadmap intentionally uses two levels of detail:
   - [x] land first-pass symbol-level `Options` / `SetOptions` / `OptionValue` storage and query semantics, including `Options[f] = {...}` and `Unset[Options[f]]`, before tackling `OptionsPattern`
   - [x] deepen option parity with current system default options and first-pass `OptionsPattern` / one-argument `OptionValue[...]` support inside matching definitions
   - [x] land first-pass `Names` and `SyntaxInformation`, including direct assignment / `Unset`, `Block` / loader snapshot participation, and current visible-context name matching
-  - [ ] continue with broader system default coverage, deeper `Names` parity beyond the current wildcard / `RegularExpression` subset, and richer `SyntaxInformation` semantics now that `SetOptions` target lists and list-valued `OptionValue[...]` queries are in place
+  - [x] extend the current package/tooling layer through broader system default option coverage for the existing `Heads` family, system default `SyntaxInformation` metadata, and first-pass `ArgumentsOptions` / `CheckArguments` / direct builtin `UpSet` support
+  - [ ] continue with deeper `Names` parity beyond the current wildcard / `RegularExpression` subset, richer `SyntaxInformation` property coverage, fuller `OptionValue` / `SetOptions` forms, and the remaining package-development surface such as `DeclarePackage`, `DumpSave`, and `Once`
 - [ ] `CL-09` Tuning, debugging, and verification surface
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:

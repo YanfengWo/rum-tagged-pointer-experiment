@@ -33,8 +33,9 @@ impl Session {
         _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
+        let default_include_heads = self.system_option_bool("Depth", "Heads", false);
         let (expr, include_heads) = match args {
-            [expr] => (expr, false),
+            [expr] => (expr, default_include_heads),
             [expr, option] => {
                 let Some(include_heads) = parse_heads_option(option) else {
                     return Ok(self.invalid_call_with_arg_form(

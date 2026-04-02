@@ -191,6 +191,30 @@ fn system_default_options_cover_current_first_pass_subset() {
 
     assert_eq!(
         session
+            .eval_text("Options[Cases]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[Heads, False]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[FreeQ]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[Heads, True]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[Position]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[Heads, True]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Options[StringCount]")
             .unwrap()
             .value
@@ -357,5 +381,129 @@ fn optionvalue_accepts_lists_of_option_names() {
     assert_eq!(
         session.eval_text("f[7, a -> 9]").unwrap().value.to_string(),
         "List[List[9, 2], List[9, 2]]"
+    );
+}
+
+#[test]
+fn setoptions_updates_system_heads_defaults_for_cases_position_and_depth() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Cases[f[x], f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    session
+        .eval_text("SetOptions[Cases, Heads -> True]")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("Cases[f[x], f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f]"
+    );
+
+    assert_eq!(
+        session
+            .eval_text("Position[f[x], f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[0]]"
+    );
+    session
+        .eval_text("SetOptions[Position, Heads -> False]")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("Position[f[x], f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+
+    assert_eq!(
+        session
+            .eval_text("Depth[f[g][x]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    session
+        .eval_text("SetOptions[Depth, Heads -> True]")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("Depth[f[g][x]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+}
+
+#[test]
+fn argumentsoptions_and_checkarguments_cover_current_first_pass_subset() {
+    let mut session = Session::new();
+
+    session.eval_text("Options[f] = {a -> 1, b -> 2}").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("ArgumentsOptions[f[x, a -> 9, b -> 8], 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[x], List[Rule[a, 9], Rule[b, 8]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ArgumentsOptions[f[x, y, a -> 9], {1, 2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[x, y], List[Rule[a, 9]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("CheckArguments[f[x, a -> 9], 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+
+    let bad_unknown = session
+        .eval_text("ArgumentsOptions[f[x, c -> 9], 1]")
+        .unwrap();
+    assert!(
+        bad_unknown
+            .value
+            .to_string()
+            .starts_with("Failure[\"optx\",")
+    );
+    assert!(
+        bad_unknown
+            .messages
+            .iter()
+            .any(|message| message.symbol == "f" && message.tag == "optx")
+    );
+
+    let bad_nonopt = session
+        .eval_text("CheckArguments[f[x, y], {0, 1}]")
+        .unwrap();
+    assert_eq!(bad_nonopt.value.to_string(), "False");
+    assert!(
+        bad_nonopt
+            .messages
+            .iter()
+            .any(|message| message.symbol == "f" && message.tag == "nonopt")
     );
 }

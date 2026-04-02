@@ -144,28 +144,29 @@ impl Session {
     pub(super) fn compile_cases_traversal_from_resolved_exprs(
         &self,
         resolved: &[Expr],
+        defaults: CasesTraversalConfig,
     ) -> Result<CasesTraversalConfig, CasesTraversalNormalizationError> {
-        self.compile_traversal_from_resolved_exprs(resolved, CasesTraversalConfig::default_cases())
+        self.compile_traversal_from_resolved_exprs(resolved, defaults)
     }
 
     pub(super) fn compile_position_traversal_from_resolved_exprs(
         &self,
         resolved: &[Expr],
+        defaults: CasesTraversalConfig,
     ) -> Result<CasesTraversalConfig, CasesTraversalNormalizationError> {
-        self.compile_traversal_from_resolved_exprs(
-            resolved,
-            CasesTraversalConfig::default_position(),
-        )
+        self.compile_traversal_from_resolved_exprs(resolved, defaults)
     }
 
     pub(super) fn resolve_cases_traversal_owned(
         &mut self,
         exprs: Vec<Expr>,
+        defaults: CasesTraversalConfig,
     ) -> Result<CasesTraversalResolution, EvalError> {
         let resolved_exprs_result = self.resolve_argument_exprs_owned(exprs);
         self.drive_internal_value(resolved_exprs_result, move |session, resolved_exprs| {
             Ok(
-                match session.compile_cases_traversal_from_resolved_exprs(&resolved_exprs) {
+                match session.compile_cases_traversal_from_resolved_exprs(&resolved_exprs, defaults)
+                {
                     Ok(config) => CasesTraversalResolution::Valid(config),
                     Err(error) => CasesTraversalResolution::Invalid(error),
                 },
@@ -176,11 +177,14 @@ impl Session {
     pub(super) fn resolve_position_traversal_owned(
         &mut self,
         exprs: Vec<Expr>,
+        defaults: CasesTraversalConfig,
     ) -> Result<CasesTraversalResolution, EvalError> {
         let resolved_exprs_result = self.resolve_argument_exprs_owned(exprs);
         self.drive_internal_value(resolved_exprs_result, move |session, resolved_exprs| {
             Ok(
-                match session.compile_position_traversal_from_resolved_exprs(&resolved_exprs) {
+                match session
+                    .compile_position_traversal_from_resolved_exprs(&resolved_exprs, defaults)
+                {
                     Ok(config) => CasesTraversalResolution::Valid(config),
                     Err(error) => CasesTraversalResolution::Invalid(error),
                 },

@@ -294,6 +294,65 @@ pub(super) fn collect_upvalue_candidate_symbols(args: &[Expr]) -> Vec<Symbol> {
     symbols
 }
 
+pub(super) fn collect_upset_target_symbols(lhs: &Expr) -> Vec<Symbol> {
+    let mut symbols = Vec::new();
+    collect_upset_target_symbols_from_lhs(strip_hold_pattern(lhs), &mut symbols);
+    symbols
+}
+
+fn collect_upset_target_symbols_from_lhs(expr: &Expr, symbols: &mut Vec<Symbol>) {
+    if let Expr::Call { head, args } = expr {
+        if is_system_symbol_name(head, "Condition") && !args.is_empty() {
+            collect_upset_target_symbols_from_lhs(&args[0], symbols);
+            return;
+        }
+
+        for arg in args {
+            collect_upset_target_symbol_from_arg(arg, symbols);
+        }
+    }
+}
+
+fn collect_upset_target_symbol_from_arg(expr: &Expr, symbols: &mut Vec<Symbol>) {
+    if let Some((_, inner)) = pattern_named_pattern(expr) {
+        collect_upset_target_symbol_from_arg(inner, symbols);
+        return;
+    }
+
+    if let Some((inner, _)) = pattern_condition(expr) {
+        collect_upset_target_symbol_from_arg(inner, symbols);
+        return;
+    }
+
+    if let Some((inner, _)) = pattern_optional(expr) {
+        collect_upset_target_symbol_from_arg(inner, symbols);
+        return;
+    }
+
+    if pattern_blank_head(expr).is_some() {
+        return;
+    }
+
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => push_unique_upset_target(symbols, symbol.clone()),
+        Expr::Call { head, .. }
+            if is_system_symbol_name(head, "BlankSequence")
+                || is_system_symbol_name(head, "BlankNullSequence") => {}
+        Expr::Call { head, .. } => {
+            if let Some(symbol) = expr_as_symbol(head) {
+                push_unique_upset_target(symbols, symbol.clone());
+            }
+        }
+        Expr::Atom(_) => {}
+    }
+}
+
+fn push_unique_upset_target(symbols: &mut Vec<Symbol>, symbol: Symbol) {
+    if !symbols.iter().any(|existing| existing == &symbol) {
+        symbols.push(symbol);
+    }
+}
+
 pub(super) fn collect_expr_symbols_unique(expr: &Expr, symbols: &mut Vec<Symbol>) {
     match expr {
         Expr::Atom(Atom::Symbol(symbol)) => {

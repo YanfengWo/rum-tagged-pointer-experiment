@@ -211,3 +211,62 @@ fn protect_blocks_direct_syntax_information_assignment_and_unset() {
         "List[Rule[\"ArgumentsPattern\", List[Blank[]]]]"
     );
 }
+
+#[test]
+fn syntax_information_includes_current_system_default_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Options]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[SetOptions]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], BlankNullSequence[]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[ArgumentsOptions]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Blank[], Optional[Blank[Association]]]]]"
+    );
+}
+
+#[test]
+fn unsetting_system_syntax_information_reverts_to_default_rules() {
+    let mut session = Session::new();
+
+    session
+        .eval_text("SyntaxInformation[Options] = {\"LocalVariables\" -> {x}}")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Options]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"LocalVariables\", List[x]]]"
+    );
+
+    session
+        .eval_text("Unset[SyntaxInformation[Options]]")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Options]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[]]]]"
+    );
+}

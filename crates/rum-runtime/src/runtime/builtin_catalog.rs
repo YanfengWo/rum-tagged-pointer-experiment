@@ -387,6 +387,16 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::SetDelayed,
     ),
     BuiltinSpec::special(
+        "UpSet",
+        "Stores an immediate upvalue definition on one or more tag symbols inferred from the lhs arguments.",
+        BuiltinHandler::UpSet,
+    ),
+    BuiltinSpec::special(
+        "UpSetDelayed",
+        "Stores a delayed upvalue definition on one or more tag symbols inferred from the lhs arguments.",
+        BuiltinHandler::UpSetDelayed,
+    ),
+    BuiltinSpec::special(
         "TagSet",
         "Stores an immediate tagged definition, including upvalues when the tag appears in an argument position.",
         BuiltinHandler::TagSet,
@@ -608,6 +618,18 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         "Looks up an option value from explicit rules or a symbol's defaults.",
         HoldAttribute::HoldAll,
         BuiltinHandler::OptionValue,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "ArgumentsOptions",
+        "Partitions a held call into positional arguments and trailing option rules.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::ArgumentsOptions,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "CheckArguments",
+        "Checks whether a held call has an allowed positional argument count and valid trailing options.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::CheckArguments,
     ),
     BuiltinSpec::ordinary_with_hold(
         "SetAttributes",

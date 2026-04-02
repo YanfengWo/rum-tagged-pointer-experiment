@@ -82,6 +82,7 @@ impl Session {
             return Ok(self.invalid_call_with_arg_range("Level", args, 2, 4));
         }
 
+        let default_include_heads = self.system_option_bool("Level", "Heads", false);
         let Some(levels) = parse_standard_level_spec(&args[1]) else {
             return Ok(self.invalid_call_with_arg_form(
                 "Level",
@@ -95,7 +96,7 @@ impl Session {
                 if let Some(include_heads) = parse_heads_option(third) {
                     (None, include_heads)
                 } else {
-                    (Some(third.clone()), false)
+                    (Some(third.clone()), default_include_heads)
                 }
             }
             [_, _, third, fourth] => {
@@ -109,7 +110,7 @@ impl Session {
 
                 (Some(third.clone()), include_heads)
             }
-            _ => (None, false),
+            _ => (None, default_include_heads),
         };
 
         let traversal = CasesTraversalConfig {
@@ -196,7 +197,10 @@ impl Session {
             pattern,
             option_exprs,
             call_args,
-            CasesTraversalConfig::default_cases(),
+            CasesTraversalConfig {
+                include_heads: self.system_option_bool("Count", "Heads", false),
+                ..CasesTraversalConfig::default_cases()
+            },
             |count| Expr::integer(BigInt::from(count)),
         )
     }
@@ -234,7 +238,10 @@ impl Session {
             pattern,
             option_exprs,
             call_args,
-            CasesTraversalConfig::default_member_q(),
+            CasesTraversalConfig {
+                include_heads: self.system_option_bool("MemberQ", "Heads", false),
+                ..CasesTraversalConfig::default_member_q()
+            },
             |count| system_expr(if count > 0 { "True" } else { "False" }),
         )
     }
@@ -272,7 +279,10 @@ impl Session {
             pattern,
             option_exprs,
             call_args,
-            CasesTraversalConfig::default_free_q(),
+            CasesTraversalConfig {
+                include_heads: self.system_option_bool("FreeQ", "Heads", true),
+                ..CasesTraversalConfig::default_free_q()
+            },
             |count| system_expr(if count == 0 { "True" } else { "False" }),
         )
     }
@@ -324,7 +334,9 @@ impl Session {
         option_exprs: Vec<Expr>,
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
-        let traversal_result = self.resolve_position_traversal_owned(option_exprs);
+        let mut defaults = CasesTraversalConfig::default_position();
+        defaults.include_heads = self.system_option_bool("Position", "Heads", true);
+        let traversal_result = self.resolve_position_traversal_owned(option_exprs, defaults);
         self.drive_internal_value(traversal_result, {
             let target = target.clone();
             let pattern = pattern.clone();

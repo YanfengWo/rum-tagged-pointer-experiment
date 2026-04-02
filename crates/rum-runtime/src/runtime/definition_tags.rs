@@ -1,6 +1,31 @@
 use super::*;
 
 impl Session {
+    pub(super) fn eval_up_set(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(self.invalid_call_with_exact_arg_count("UpSet", args, 2));
+        }
+
+        let lhs = args[0].clone();
+        let rhs_result = self.evaluate(args[1].clone());
+        let rhs = self.suspend_with_frame(rhs_result, {
+            let lhs = lhs.clone();
+            move |session, rhs| session.finish_up_set_assignment("UpSet", lhs, rhs, false)
+        })?;
+
+        self.finish_up_set_assignment("UpSet", lhs, rhs, false)
+    }
+
+    pub(super) fn eval_up_set_delayed(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(self.invalid_call_with_exact_arg_count("UpSetDelayed", args, 2));
+        }
+
+        let lhs = args[0].clone();
+        let rhs = args[1].clone();
+        self.finish_up_set_assignment("UpSetDelayed", lhs, rhs, true)
+    }
+
     pub(super) fn eval_tag_set(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 3 {
             return Ok(self.invalid_call_with_exact_arg_count("TagSet", args, 3));
@@ -109,6 +134,39 @@ impl Session {
             }
             Err(error) => Ok(self.invalid_tagged_definition_call(symbol, args, error)),
         }
+    }
+
+    fn finish_up_set_assignment(
+        &mut self,
+        symbol: &str,
+        lhs: Expr,
+        rhs: Expr,
+        delayed: bool,
+    ) -> Result<Expr, EvalError> {
+        let targets = collect_upset_target_symbols(&lhs);
+        if targets.is_empty() {
+            self.push_message(
+                symbol,
+                "nosym",
+                format!("No valid tag symbol occurs in the assignment lhs {}.", lhs),
+            );
+            return Ok(if delayed { system_expr("Null") } else { rhs });
+        }
+
+        for target in targets {
+            if !self.ensure_symbol_not_protected_for_write(symbol, &target) {
+                continue;
+            }
+
+            self.store_definition_target(
+                TaggedDefinitionTarget::UpValue(target),
+                lhs.clone(),
+                rhs.clone(),
+                delayed,
+            );
+        }
+
+        Ok(if delayed { system_expr("Null") } else { rhs })
     }
 
     pub(super) fn store_definition_target(

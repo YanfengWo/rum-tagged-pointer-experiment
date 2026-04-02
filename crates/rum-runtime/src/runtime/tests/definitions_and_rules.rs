@@ -604,3 +604,56 @@ fn inspect_rewrite_rules_can_suspend_and_resume_with_host_input() {
     assert_eq!(rules[1].rhs.to_string(), "y");
     assert!(rules[1].delayed);
 }
+
+#[test]
+fn upset_stores_immediate_upvalues_on_inferred_argument_heads() {
+    let mut session = Session::new();
+
+    session.eval_text("UpSet[f[g[x_]], 1]").unwrap();
+
+    assert_eq!(session.eval_text("f[g[a]]").unwrap().value.to_string(), "1");
+    assert_eq!(
+        session.eval_text("UpValues[g]").unwrap().value.to_string(),
+        "List[Rule[f[g[Pattern[x, Blank[]]]], 1]]"
+    );
+}
+
+#[test]
+fn upsetdelayed_can_store_on_multiple_inferred_tag_symbols() {
+    let mut session = Session::new();
+
+    session
+        .eval_text("UpSetDelayed[f[g[x_], h[y_]], pair[x, y]]")
+        .unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("f[g[a], h[b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "pair[a, b]"
+    );
+    assert_eq!(
+        session.eval_text("UpValues[g]").unwrap().value.to_string(),
+        "List[RuleDelayed[f[g[Pattern[x, Blank[]]], h[Pattern[y, Blank[]]]], pair[x, y]]]"
+    );
+    assert_eq!(
+        session.eval_text("UpValues[h]").unwrap().value.to_string(),
+        "List[RuleDelayed[f[g[Pattern[x, Blank[]]], h[Pattern[y, Blank[]]]], pair[x, y]]]"
+    );
+}
+
+#[test]
+fn upset_emits_nosym_when_no_valid_argument_tag_symbol_exists() {
+    let mut session = Session::new();
+
+    let outcome = session.eval_text("UpSet[f[x_], 1]").unwrap();
+    assert_eq!(outcome.value.to_string(), "1");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "UpSet" && message.tag == "nosym")
+    );
+}
