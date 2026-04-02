@@ -19,5 +19,4 @@ pub use transport::*;
 pub use zeromq::*;
 
 #[cfg(test)]
-#[path = "tests.rs"]
 mod tests;
