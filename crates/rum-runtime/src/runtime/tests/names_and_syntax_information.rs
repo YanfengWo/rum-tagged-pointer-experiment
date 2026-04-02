@@ -61,6 +61,14 @@ fn names_supports_current_first_pass_string_patterns() {
     );
     assert_eq!(
         session
+            .eval_text("Names[RegularExpression[\"^pkg`(alpha|beta)$\"]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"pkg`alpha\", \"pkg`beta\"]"
+    );
+    assert_eq!(
+        session
             .eval_text("Names[RegularExpression[\"^pkg`l{1,2}ocal$\"]]")
             .unwrap()
             .value
@@ -322,6 +330,46 @@ fn syntax_information_includes_current_system_default_subset() {
             .value
             .to_string(),
         "List[Rule[\"ArgumentsPattern\", List[BlankSequence[]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Module]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[List[BlankSequence[]], Blank[]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Block]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[List[BlankSequence[]], Blank[]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Function]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]], Optional[Blank[]]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Table]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], BlankSequence[]]], Rule[\"LocalVariables\", List[\"Table\", List[2, Infinity]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Do]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], BlankSequence[]]], Rule[\"LocalVariables\", List[\"Table\", List[2, Infinity]]]]"
     );
     assert_eq!(
         session

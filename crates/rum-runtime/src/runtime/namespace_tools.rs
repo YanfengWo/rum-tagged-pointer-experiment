@@ -45,6 +45,7 @@ enum RegexAtom {
     Digit,
     Word,
     Whitespace,
+    Group(Box<RegexPattern>),
     Class {
         negated: bool,
         items: Vec<RegexClassItem>,
@@ -362,6 +363,34 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
             blank_expr(),
             optional_blank_expr(),
         ])],
+        "Module" | "Block" => vec![syntax_argument_pattern(vec![
+            Expr::call(system_expr("List"), vec![blank_sequence_expr()]),
+            blank_expr(),
+        ])],
+        "Function" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            optional_blank_expr(),
+            optional_blank_expr(),
+        ])],
+        "Table" | "Do" => vec![
+            syntax_argument_pattern(vec![blank_expr(), blank_sequence_expr()]),
+            syntax_rule(
+                "LocalVariables",
+                Expr::call(
+                    system_expr("List"),
+                    vec![
+                        Expr::string("Table"),
+                        Expr::call(
+                            system_expr("List"),
+                            vec![
+                                Expr::integer(BigInt::from(2)),
+                                system_expr("Infinity"),
+                            ],
+                        ),
+                    ],
+                ),
+            ),
+        ],
         "DeclarePackage" => vec![syntax_argument_pattern(vec![
             blank_expr(),
             Expr::call(system_expr("List"), vec![blank_sequence_expr()]),
@@ -592,6 +621,7 @@ fn split_regex_branches(raw: &str) -> Option<Vec<String>> {
     let mut index = 0;
     let mut in_class = false;
     let mut brace_depth = 0_usize;
+    let mut paren_depth = 0_usize;
 
     while index < chars.len() {
         let ch = chars[index];
@@ -615,6 +645,17 @@ fn split_regex_branches(raw: &str) -> Option<Vec<String>> {
                 in_class = false;
                 current.push(ch);
             }
+            '(' if !in_class => {
+                paren_depth += 1;
+                current.push(ch);
+            }
+            ')' if !in_class => {
+                if paren_depth == 0 {
+                    return None;
+                }
+                paren_depth -= 1;
+                current.push(ch);
+            }
             '{' if !in_class => {
                 brace_depth += 1;
                 current.push(ch);
@@ -626,7 +667,7 @@ fn split_regex_branches(raw: &str) -> Option<Vec<String>> {
                 brace_depth -= 1;
                 current.push(ch);
             }
-            '|' if !in_class && brace_depth == 0 => {
+            '|' if !in_class && brace_depth == 0 && paren_depth == 0 => {
                 branches.push(current);
                 current = String::new();
             }
@@ -636,7 +677,7 @@ fn split_regex_branches(raw: &str) -> Option<Vec<String>> {
         index += 1;
     }
 
-    if in_class || brace_depth != 0 {
+    if in_class || brace_depth != 0 || paren_depth != 0 {
         return None;
     }
 
@@ -667,9 +708,55 @@ fn parse_regex_atom(chars: &[char], index: &mut usize) -> Option<RegexAtom> {
         '.' => Some(RegexAtom::AnyChar),
         '\\' => parse_regex_escape(chars, index),
         '[' => parse_regex_class(chars, index),
-        '(' | ')' | '|' | '{' | '}' | '*' | '+' | '?' => None,
+        '(' => parse_regex_group(chars, index),
+        ')' | '|' | '{' | '}' | '*' | '+' | '?' => None,
         _ => Some(RegexAtom::Literal(ch)),
     }
+}
+
+fn parse_regex_group(chars: &[char], index: &mut usize) -> Option<RegexAtom> {
+    let mut raw = String::new();
+    let mut depth = 1_usize;
+    let mut in_class = false;
+
+    while *index < chars.len() {
+        let ch = chars[*index];
+        *index += 1;
+
+        if ch == '\\' {
+            raw.push(ch);
+            let next = *chars.get(*index)?;
+            raw.push(next);
+            *index += 1;
+            continue;
+        }
+
+        match ch {
+            '[' if !in_class => {
+                in_class = true;
+                raw.push(ch);
+            }
+            ']' if in_class => {
+                in_class = false;
+                raw.push(ch);
+            }
+            '(' if !in_class => {
+                depth += 1;
+                raw.push(ch);
+            }
+            ')' if !in_class => {
+                depth -= 1;
+                if depth == 0 {
+                    return compile_names_regex_pattern(&raw)
+                        .map(|pattern| RegexAtom::Group(Box::new(pattern)));
+                }
+                raw.push(ch);
+            }
+            _ => raw.push(ch),
+        }
+    }
+
+    None
 }
 
 fn parse_regex_quantifier(chars: &[char], index: &mut usize) -> Option<RegexQuantifier> {
@@ -818,71 +905,103 @@ fn regex_pattern_matches(pattern: &RegexPattern, haystack: &[char]) -> bool {
 }
 
 fn regex_branch_matches(tokens: &[RegexToken], haystack: &[char]) -> bool {
+    regex_branch_match_ends(tokens, haystack, 0)
+        .into_iter()
+        .any(|end| end == haystack.len())
+}
+
+fn regex_pattern_match_ends(pattern: &RegexPattern, haystack: &[char], start: usize) -> Vec<usize> {
+    let mut ends = Vec::new();
+
+    for branch in &pattern.branches {
+        ends.extend(regex_branch_match_ends(branch, haystack, start));
+    }
+
+    ends.sort_unstable();
+    ends.dedup();
+    ends
+}
+
+fn regex_branch_match_ends(tokens: &[RegexToken], haystack: &[char], start: usize) -> Vec<usize> {
     fn recur(
         tokens: &[RegexToken],
         token_index: usize,
         haystack: &[char],
         hay_index: usize,
-        memo: &mut BTreeMap<(usize, usize), bool>,
-    ) -> bool {
+        memo: &mut BTreeMap<(usize, usize), Vec<usize>>,
+    ) -> Vec<usize> {
         if let Some(cached) = memo.get(&(token_index, hay_index)) {
-            return *cached;
+            return cached.clone();
         }
 
         let result = if token_index == tokens.len() {
-            hay_index == haystack.len()
+            vec![hay_index]
         } else {
             let token = &tokens[token_index];
-            let (min, max) = regex_quantifier_bounds(token.quantifier);
-            let available = haystack.len().saturating_sub(hay_index);
-            let max = max.unwrap_or(available).min(available);
+            let mut ends = regex_token_match_ends(token, haystack, hay_index);
+            let mut result = Vec::new();
 
-            if min > max {
-                false
-            } else {
-                let mut end = hay_index;
-                for _ in 0..min {
-                    if !regex_atom_matches(&token.atom, haystack[end]) {
-                        return memo
-                            .insert((token_index, hay_index), false)
-                            .map(|_| false)
-                            .unwrap_or(false);
-                    }
-                    end += 1;
-                }
-
-                if recur(tokens, token_index + 1, haystack, end, memo) {
-                    true
-                } else {
-                    let mut repeats = min;
-                    let mut current_end = end;
-
-                    while repeats < max
-                        && current_end < haystack.len()
-                        && regex_atom_matches(&token.atom, haystack[current_end])
-                    {
-                        current_end += 1;
-                        repeats += 1;
-
-                        if recur(tokens, token_index + 1, haystack, current_end, memo) {
-                            return memo
-                                .insert((token_index, hay_index), true)
-                                .map(|_| true)
-                                .unwrap_or(true);
-                        }
-                    }
-
-                    false
-                }
+            for end in ends.drain(..) {
+                result.extend(recur(tokens, token_index + 1, haystack, end, memo));
             }
+
+            result.sort_unstable();
+            result.dedup();
+            result
         };
 
-        memo.insert((token_index, hay_index), result);
+        memo.insert((token_index, hay_index), result.clone());
         result
     }
 
     let mut memo = BTreeMap::new();
-    recur(tokens, 0, haystack, 0, &mut memo)
+    recur(tokens, 0, haystack, start, &mut memo)
+}
+
+fn regex_token_match_ends(token: &RegexToken, haystack: &[char], start: usize) -> Vec<usize> {
+    fn recur(
+        atom: &RegexAtom,
+        haystack: &[char],
+        current: usize,
+        repeats: usize,
+        min: usize,
+        max: Option<usize>,
+        ends: &mut Vec<usize>,
+    ) {
+        if repeats >= min {
+            ends.push(current);
+        }
+
+        if max.is_some_and(|bound| repeats >= bound) {
+            return;
+        }
+
+        for next in regex_atom_match_ends(atom, haystack, current) {
+            if next == current {
+                continue;
+            }
+            recur(atom, haystack, next, repeats + 1, min, max, ends);
+        }
+    }
+
+    let (min, max) = regex_quantifier_bounds(token.quantifier);
+    let mut ends = Vec::new();
+    recur(&token.atom, haystack, start, 0, min, max, &mut ends);
+    ends.sort_unstable();
+    ends.dedup();
+    ends
+}
+
+fn regex_atom_match_ends(atom: &RegexAtom, haystack: &[char], start: usize) -> Vec<usize> {
+    match atom {
+        RegexAtom::Group(pattern) => regex_pattern_match_ends(pattern, haystack, start),
+        _ => haystack
+            .get(start)
+            .copied()
+            .filter(|ch| regex_atom_matches(atom, *ch))
+            .map(|_| vec![start + 1])
+            .unwrap_or_default(),
+    }
 }
 
 fn regex_quantifier_bounds(quantifier: RegexQuantifier) -> (usize, Option<usize>) {
@@ -903,6 +1022,7 @@ fn regex_atom_matches(atom: &RegexAtom, ch: char) -> bool {
         RegexAtom::Digit => ch.is_ascii_digit(),
         RegexAtom::Word => ch.is_ascii_alphanumeric() || ch == '_',
         RegexAtom::Whitespace => ch.is_whitespace(),
+        RegexAtom::Group(_) => false,
         RegexAtom::Class { negated, items } => {
             let matched = items.iter().any(|item| regex_class_item_matches(item, ch));
             if *negated { !matched } else { matched }
