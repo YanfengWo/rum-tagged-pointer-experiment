@@ -7,6 +7,20 @@ struct DeclarePackageSpec {
     names: Vec<String>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum PersistContextSelection {
+    All,
+    None,
+    Automatic,
+    Explicit(BTreeSet<String>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct PersistContextFilters {
+    included: PersistContextSelection,
+    excluded: PersistContextSelection,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum PackageToolNormalizationError {
     InvalidContext,
@@ -142,6 +156,12 @@ impl Session {
             ));
         };
 
+        let context_filters = match self.compile_persist_context_filters(explicit_options.as_ref())
+        {
+            Ok(filters) => filters,
+            Err(message) => return Ok(self.invalid_call_with_arg_form(operator, args, message)),
+        };
+
         let path = self.resolve_output_path(&path_spec);
         let symbols = match self.compile_save_symbols_from_expr(objects_expr) {
             Ok(symbols) => symbols,
@@ -149,6 +169,7 @@ impl Session {
                 return Ok(self.invalid_call_with_arg_form(operator, args, error.message()));
             }
         };
+        let symbols = self.filter_persist_symbols_by_contexts(symbols, &context_filters);
 
         let include_attributes = if overwrite {
             self.dump_save_include_attributes(explicit_options.as_ref())
@@ -377,9 +398,95 @@ impl Session {
         let default = default_system_options(&Symbol::system("DumpSave"));
 
         explicit
-            .and_then(|options| options.get(&Symbol::system("SymbolAttributes")))
+            .and_then(|options| options.get_by_name("SymbolAttributes"))
             .or_else(|| default.get(&Symbol::system("SymbolAttributes")))
             .map(|value| is_system_symbol_name(value, "True"))
             .unwrap_or(true)
+    }
+
+    fn compile_persist_context_filters(
+        &self,
+        explicit: Option<&SymbolOptions>,
+    ) -> Result<PersistContextFilters, &'static str> {
+        let default = default_system_options(&Symbol::system("Save"));
+        let included = explicit
+            .and_then(|options| options.get_by_name("IncludedContexts"))
+            .or_else(|| default.get(&Symbol::system("IncludedContexts")))
+            .and_then(|value| self.parse_persist_context_selection(value))
+            .ok_or(
+                "expected IncludedContexts to be All, Automatic, None, a context-name string, or a list of context-name strings",
+            )?;
+        let excluded = explicit
+            .and_then(|options| options.get_by_name("ExcludedContexts"))
+            .or_else(|| default.get(&Symbol::system("ExcludedContexts")))
+            .and_then(|value| self.parse_persist_context_selection(value))
+            .ok_or(
+                "expected ExcludedContexts to be All, Automatic, None, a context-name string, or a list of context-name strings",
+            )?;
+
+        Ok(PersistContextFilters { included, excluded })
+    }
+
+    fn parse_persist_context_selection(&self, value: &Expr) -> Option<PersistContextSelection> {
+        if is_system_symbol_name(value, "All") {
+            return Some(PersistContextSelection::All);
+        }
+        if is_system_symbol_name(value, "None") {
+            return Some(PersistContextSelection::None);
+        }
+        if is_system_symbol_name(value, "Automatic") {
+            return Some(PersistContextSelection::Automatic);
+        }
+        if let Expr::Atom(Atom::String(context)) = value {
+            return Some(PersistContextSelection::Explicit(BTreeSet::from([
+                expand_context_spec(context, &self.current_context),
+            ])));
+        }
+
+        expr_as_string_list(value).map(|contexts| {
+            PersistContextSelection::Explicit(
+                contexts
+                    .into_iter()
+                    .map(|context| expand_context_spec(&context, &self.current_context))
+                    .collect(),
+            )
+        })
+    }
+
+    fn filter_persist_symbols_by_contexts(
+        &self,
+        symbols: Vec<Symbol>,
+        filters: &PersistContextFilters,
+    ) -> Vec<Symbol> {
+        symbols
+            .into_iter()
+            .filter(|symbol| self.persist_context_is_included(symbol.context(), filters))
+            .collect()
+    }
+
+    fn persist_context_is_included(&self, context: &str, filters: &PersistContextFilters) -> bool {
+        self.persist_context_matches_selection(context, &filters.included, true)
+            && !self.persist_context_matches_selection(context, &filters.excluded, false)
+    }
+
+    fn persist_context_matches_selection(
+        &self,
+        context: &str,
+        selection: &PersistContextSelection,
+        include_mode: bool,
+    ) -> bool {
+        match selection {
+            PersistContextSelection::All => true,
+            PersistContextSelection::None => false,
+            PersistContextSelection::Automatic => {
+                if include_mode {
+                    self.context_path.iter().any(|entry| entry == context)
+                        || self.current_context == context
+                } else {
+                    context == SYSTEM_CONTEXT
+                }
+            }
+            PersistContextSelection::Explicit(contexts) => contexts.contains(context),
+        }
     }
 }

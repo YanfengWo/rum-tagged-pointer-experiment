@@ -387,8 +387,10 @@ once in its primary implementation group. Other groups may mention it as
   `DeclarePackage` now installs stub-like declared symbols, updates
   `$ContextPath`, and auto-`Needs` the declared context on first symbol use;
   `Save` / `DumpSave` now provide a textual first-pass serialization layer
-  that can round-trip through `Get`, and `Once` now provides session-local
-  memoization keyed by held expression plus location;
+  that can round-trip through `Get`, with current `IncludedContexts` /
+  `ExcludedContexts` filtering and `DumpSave` `SymbolAttributes` handling,
+  and `Once` now provides session-local memoization keyed by held expression
+  plus location;
   `ArgumentsOptions` / `CheckArguments` now cover the current held-call and
   trailing-options subset, and direct builtin `UpSet` / `UpSetDelayed` now
   cover first-pass inferred upvalue tags
@@ -403,7 +405,8 @@ once in its primary implementation group. Other groups may mention it as
   `ArgumentsOptions`, `CheckArguments`, `UpSet`, `UpSetDelayed`,
   `DeclarePackage`, `DumpSave`, `Once`, `Save`
 - `planned`: deeper `DeclarePackage` / `Save` / `DumpSave` / `Once` parity,
-  richer `Names` regex coverage, and broader `SyntaxInformation` properties
+  richer `Names` regex coverage beyond the current wildcard / bounded /
+  alternation subset, and broader `SyntaxInformation` properties
 - `cross-tracked elsewhere`: `AbortProtect`, `Assert`, `Block`,
   `BlockRandom`, `Check`, `Confirm`, `Enclose`, `Failure`, `FailureQ`,
   `Module`, `MissingQ`, `Quiet`, `Success`, `TagSet`, `WithCleanup`

@@ -29,7 +29,7 @@ enum NamesPattern {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct RegexPattern {
-    tokens: Vec<RegexToken>,
+    branches: Vec<Vec<RegexToken>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -334,9 +334,15 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
     }
 
     let rules = match symbol.name() {
-        "Options" | "Names" | "SyntaxInformation" | "Protect" | "Unprotect" => {
+        "Begin" | "FindFile" | "Get" | "Names" | "Options" | "Protect" | "SyntaxInformation"
+        | "Unprotect" => {
             vec![syntax_argument_pattern(vec![blank_expr()])]
         }
+        "BeginPackage" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            blank_null_sequence_expr(),
+        ])],
+        "End" | "EndPackage" => vec![syntax_argument_pattern(Vec::new())],
         "SetOptions" => vec![syntax_argument_pattern(vec![
             blank_expr(),
             blank_null_sequence_expr(),
@@ -350,6 +356,12 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
         "UpSet" | "UpSetDelayed" => {
             vec![syntax_argument_pattern(vec![blank_expr(), blank_expr()])]
         }
+        "MessageName" => vec![syntax_argument_pattern(vec![blank_expr(), blank_expr()])],
+        "Message" => vec![syntax_argument_pattern(vec![blank_sequence_expr()])],
+        "Needs" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            optional_blank_expr(),
+        ])],
         "DeclarePackage" => vec![syntax_argument_pattern(vec![
             blank_expr(),
             Expr::call(system_expr("List"), vec![blank_sequence_expr()]),
@@ -550,18 +562,13 @@ fn wildcard_match_ends(pattern: &str, haystack: &[char], start: usize) -> Vec<us
 }
 
 fn compile_names_regex_pattern(raw: &str) -> Option<RegexPattern> {
-    let chars = strip_full_match_anchors(raw).chars().collect::<Vec<_>>();
-    let mut tokens = Vec::new();
-    let mut index = 0;
+    let stripped = strip_full_match_anchors(raw);
+    let branches = split_regex_branches(&stripped)?
+        .into_iter()
+        .map(|branch| compile_names_regex_branch(&branch))
+        .collect::<Option<Vec<_>>>()?;
 
-    while index < chars.len() {
-        let atom = parse_regex_atom(&chars, &mut index)?;
-        let quantifier = parse_regex_quantifier(&chars, &mut index)?;
-
-        tokens.push(RegexToken { atom, quantifier });
-    }
-
-    Some(RegexPattern { tokens })
+    Some(RegexPattern { branches })
 }
 
 fn strip_full_match_anchors(raw: &str) -> String {
@@ -576,6 +583,80 @@ fn strip_full_match_anchors(raw: &str) -> String {
     }
 
     chars.into_iter().collect()
+}
+
+fn split_regex_branches(raw: &str) -> Option<Vec<String>> {
+    let chars = raw.chars().collect::<Vec<_>>();
+    let mut branches = Vec::new();
+    let mut current = String::new();
+    let mut index = 0;
+    let mut in_class = false;
+    let mut brace_depth = 0_usize;
+
+    while index < chars.len() {
+        let ch = chars[index];
+
+        if ch == '\\' {
+            current.push(ch);
+            index += 1;
+            if let Some(next) = chars.get(index) {
+                current.push(*next);
+                index += 1;
+            }
+            continue;
+        }
+
+        match ch {
+            '[' if !in_class => {
+                in_class = true;
+                current.push(ch);
+            }
+            ']' if in_class => {
+                in_class = false;
+                current.push(ch);
+            }
+            '{' if !in_class => {
+                brace_depth += 1;
+                current.push(ch);
+            }
+            '}' if !in_class => {
+                if brace_depth == 0 {
+                    return None;
+                }
+                brace_depth -= 1;
+                current.push(ch);
+            }
+            '|' if !in_class && brace_depth == 0 => {
+                branches.push(current);
+                current = String::new();
+            }
+            _ => current.push(ch),
+        }
+
+        index += 1;
+    }
+
+    if in_class || brace_depth != 0 {
+        return None;
+    }
+
+    branches.push(current);
+    Some(branches)
+}
+
+fn compile_names_regex_branch(raw: &str) -> Option<Vec<RegexToken>> {
+    let chars = raw.chars().collect::<Vec<_>>();
+    let mut tokens = Vec::new();
+    let mut index = 0;
+
+    while index < chars.len() {
+        let atom = parse_regex_atom(&chars, &mut index)?;
+        let quantifier = parse_regex_quantifier(&chars, &mut index)?;
+
+        tokens.push(RegexToken { atom, quantifier });
+    }
+
+    Some(tokens)
 }
 
 fn parse_regex_atom(chars: &[char], index: &mut usize) -> Option<RegexAtom> {
@@ -730,6 +811,13 @@ fn parse_regex_class_item(chars: &[char], index: &mut usize) -> Option<RegexClas
 }
 
 fn regex_pattern_matches(pattern: &RegexPattern, haystack: &[char]) -> bool {
+    pattern
+        .branches
+        .iter()
+        .any(|branch| regex_branch_matches(branch, haystack))
+}
+
+fn regex_branch_matches(tokens: &[RegexToken], haystack: &[char]) -> bool {
     fn recur(
         tokens: &[RegexToken],
         token_index: usize,
@@ -794,7 +882,7 @@ fn regex_pattern_matches(pattern: &RegexPattern, haystack: &[char]) -> bool {
     }
 
     let mut memo = BTreeMap::new();
-    recur(&pattern.tokens, 0, haystack, 0, &mut memo)
+    recur(tokens, 0, haystack, 0, &mut memo)
 }
 
 fn regex_quantifier_bounds(quantifier: RegexQuantifier) -> (usize, Option<usize>) {

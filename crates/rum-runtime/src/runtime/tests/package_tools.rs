@@ -140,6 +140,39 @@ fn dump_save_overwrites_file_and_returns_saved_symbols() {
 }
 
 #[test]
+fn save_and_dumpsave_honor_current_context_filter_and_attribute_options_subset() {
+    let dir = TempDirGuard::new("save-filters");
+    let save_file = dir.path().join("filtered.wl");
+    let dump_file = dir.path().join("filtered.mx");
+    let mut session = Session::new();
+
+    session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
+    session.eval_text("f[x_] := x + 1").unwrap();
+    session.eval_text("Hidden`helper[y_] := y + 10").unwrap();
+
+    session
+        .eval_text(&format!(
+            "Save[File[\"{}\"], {{f, Hidden`helper}}, {{IncludedContexts -> {{\"Global`\"}}, ExcludedContexts -> None}}]",
+            rum_path(&save_file)
+        ))
+        .unwrap();
+
+    let saved = fs::read_to_string(&save_file).unwrap();
+    assert!(saved.contains("SetDelayed[f[Pattern[x, Blank[]]]"));
+    assert!(!saved.contains("Hidden`helper"));
+
+    session
+        .eval_text(&format!(
+            "DumpSave[File[\"{}\"], f, {{SymbolAttributes -> False}}]",
+            rum_path(&dump_file)
+        ))
+        .unwrap();
+    let dumped = fs::read_to_string(&dump_file).unwrap();
+    assert!(!dumped.contains("SetAttributes[f"));
+    assert!(dumped.contains("SetDelayed[f[Pattern[x, Blank[]]]"));
+}
+
+#[test]
 fn once_caches_per_session_and_per_location_key() {
     let mut session = Session::new();
 

@@ -21,6 +21,13 @@ impl SymbolOptions {
             .map(|(_, value)| value)
     }
 
+    pub(super) fn get_by_name(&self, key: &str) -> Option<&Expr> {
+        self.entries
+            .iter()
+            .find(|(name, _)| name.name() == key)
+            .map(|(_, value)| value)
+    }
+
     pub(super) fn set_existing(&mut self, key: &Symbol, value: Expr) -> bool {
         if let Some((_, current)) = self.entries.iter_mut().find(|(name, _)| name == key) {
             *current = value;

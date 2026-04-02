@@ -53,6 +53,14 @@ fn names_supports_current_first_pass_string_patterns() {
     );
     assert_eq!(
         session
+            .eval_text("Names[RegularExpression[\"pkg`alpha|pkg`beta\"]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"pkg`alpha\", \"pkg`beta\"]"
+    );
+    assert_eq!(
+        session
             .eval_text("Names[RegularExpression[\"^pkg`l{1,2}ocal$\"]]")
             .unwrap()
             .value
@@ -258,6 +266,62 @@ fn syntax_information_includes_current_system_default_subset() {
             .value
             .to_string(),
         "List[Rule[\"ArgumentsPattern\", List[Blank[], List[BlankSequence[]]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Begin]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[BeginPackage]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], BlankNullSequence[]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[End]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[EndPackage]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Needs]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[MessageName]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Blank[]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Message]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[BlankSequence[]]]]"
     );
     assert_eq!(
         session

@@ -204,6 +204,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] land first-pass `Names` and `SyntaxInformation`, including direct assignment / `Unset`, `Block` / loader snapshot participation, and current visible-context name matching
   - [x] extend the current package/tooling layer through broader system default option coverage for the existing `Heads` family, system default `SyntaxInformation` metadata, and first-pass `ArgumentsOptions` / `CheckArguments` / direct builtin `UpSet` support
   - [x] land first-pass package-development persistence and stub tooling through `DeclarePackage`, textual `Save` / `DumpSave` round-trips, and session-local `Once`
+  - [x] deepen the current package/tooling subset with `Save` / `DumpSave` context-filter handling, `DumpSave` attribute-suppression handling, richer `Names[RegularExpression[...]]` coverage through alternation and bounded repetition, and broader package/context default `SyntaxInformation`
   - [ ] continue with deeper `Names` parity beyond the current wildcard / current `RegularExpression` subset, richer `SyntaxInformation` property coverage beyond the current package/tooling defaults, fuller `OptionValue` / `SetOptions` forms, and deeper `DeclarePackage` / `Save` / `DumpSave` / `Once` compatibility
 - [ ] `CL-09` Tuning, debugging, and verification surface
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
