@@ -81,9 +81,15 @@ impl Session {
     }
 
     pub(super) fn eval_once_builtin(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let (expr, location, _options) = match args {
+        let (expr, location, options) = match args {
             [expr] => (expr.clone(), None, None),
-            [expr, location] => (expr.clone(), Some(location.clone()), None),
+            [expr, second] => {
+                if let Some(options) = self.try_compile_package_tool_options(second) {
+                    (expr.clone(), None, Some(options))
+                } else {
+                    (expr.clone(), Some(second.clone()), None)
+                }
+            }
             [expr, location, options_expr] => {
                 let options = match self.compile_assigned_options_from_resolved(options_expr) {
                     Ok(options) => options,
@@ -95,6 +101,12 @@ impl Session {
             }
             _ => return Ok(self.invalid_call_with_arg_range("Once", args, 1, 3)),
         };
+
+        self.report_unknown_package_tool_options("Once", &options);
+        let should_cache = self.once_should_cache(options.as_ref());
+        if !should_cache {
+            return self.evaluate(expr);
+        }
 
         let cache_key = self.once_cache_key(&expr, location.as_ref());
 
@@ -161,6 +173,19 @@ impl Session {
             Ok(filters) => filters,
             Err(message) => return Ok(self.invalid_call_with_arg_form(operator, args, message)),
         };
+        if let Some(invalid) =
+            self.first_unknown_package_tool_option(operator, explicit_options.as_ref())
+        {
+            self.push_message(
+                operator,
+                "optx",
+                format!(
+                    "Unknown option {invalid} in {}.",
+                    Expr::call(system_expr(operator), args.to_vec())
+                ),
+            );
+            return Ok(self.invalid_call(operator, args));
+        }
 
         let path = self.resolve_output_path(&path_spec);
         let symbols = match self.compile_save_symbols_from_expr(objects_expr) {
@@ -392,6 +417,62 @@ impl Session {
             .map(ToString::to_string)
             .unwrap_or_else(|| "KernelSession".to_string());
         format!("{location}\u{1f}{}", expr)
+    }
+
+    fn try_compile_package_tool_options(&self, expr: &Expr) -> Option<SymbolOptions> {
+        self.compile_assigned_options_from_resolved(expr).ok()
+    }
+
+    fn first_unknown_package_tool_option(
+        &self,
+        operator: &str,
+        explicit: Option<&SymbolOptions>,
+    ) -> Option<Symbol> {
+        let explicit = explicit?;
+        let defaults = default_system_options(&Symbol::system(operator));
+        explicit
+            .iter()
+            .find(|(name, _)| {
+                !defaults
+                    .iter()
+                    .any(|(default_name, _)| default_name.name() == name.name())
+            })
+            .map(|(name, _)| name.clone())
+    }
+
+    fn report_unknown_package_tool_options(
+        &mut self,
+        operator: &str,
+        explicit: &Option<SymbolOptions>,
+    ) {
+        let Some(explicit) = explicit.as_ref() else {
+            return;
+        };
+
+        let defaults = default_system_options(&Symbol::system(operator));
+        for (name, _) in explicit.iter() {
+            if !defaults
+                .iter()
+                .any(|(default_name, _)| default_name.name() == name.name())
+            {
+                self.push_message(
+                    "OptionValue",
+                    "nodef",
+                    format!("Unknown option {name} for {operator}."),
+                );
+            }
+        }
+    }
+
+    fn once_should_cache(&self, explicit: Option<&SymbolOptions>) -> bool {
+        let Some(explicit) = explicit else {
+            return true;
+        };
+
+        !matches!(
+            explicit.get_by_name("PersistenceTime"),
+            Some(Expr::Atom(Atom::Integer(value))) if *value == BigInt::from(0)
+        )
     }
 
     fn dump_save_include_attributes(&self, explicit: Option<&SymbolOptions>) -> bool {

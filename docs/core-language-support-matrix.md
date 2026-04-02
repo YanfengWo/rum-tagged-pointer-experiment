@@ -380,9 +380,15 @@ once in its primary implementation group. Other groups may mention it as
   symbol target lists and `OptionValue[...]` now accepts lists of option
   names; `Names` now covers `Names[]`, string `*` wildcards, first-pass
   `RegularExpression[...]`, `StringExpression`, `Alternatives`, and
-  pattern-list unions over current visible contexts or explicit contexts;
+  pattern-list unions over current visible contexts or explicit contexts,
+  including the current bounded / alternation / grouping /
+  non-capturing-group regex subset; `Save` now rejects unknown options in
+  the current package-tooling subset, and `Once` now accepts option rules in
+  second position, reports unknown option names, and honors
+  `PersistenceTime -> 0` as a no-cache subset;
   `SyntaxInformation` now covers direct query, assignment, `Unset`,
-  system-default metadata for the current package/tooling subset,
+  system-default metadata for the current package/tooling subset plus a
+  broader current slice of optioned string/traversal/package helpers,
   `Protected` barriers, and `Block` / loader snapshot participation;
   `DeclarePackage` now installs stub-like declared symbols, updates
   `$ContextPath`, and auto-`Needs` the declared context on first symbol use;
@@ -394,7 +400,10 @@ once in its primary implementation group. Other groups may mention it as
   `ArgumentsOptions` / `CheckArguments` now cover the current held-call and
   trailing-options subset, and direct builtin `UpSet` / `UpSetDelayed` now
   cover first-pass inferred upvalue tags
-- `planned`: broader package ergonomics and deeper option/protection parity
+- `planned`: broader package ergonomics, deeper `DeclarePackage` /
+  `Save` / `DumpSave` / `Once` compatibility, richer `Names` regex parity
+  beyond the current wildcard/grouping subset, and broader
+  `SyntaxInformation` properties
 
 ### Functions and Symbols
 

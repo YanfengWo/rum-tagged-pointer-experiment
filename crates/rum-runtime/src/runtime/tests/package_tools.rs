@@ -214,3 +214,80 @@ fn once_caches_per_session_and_per_location_key() {
     );
     assert_eq!(session.eval_text("count").unwrap().value.to_string(), "2");
 }
+
+#[test]
+fn once_accepts_option_rules_in_second_position_and_respects_zero_persistence_subset() {
+    let mut session = Session::new();
+
+    session.eval_text("count = 0").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("Once[count = count + 1, PersistenceTime -> None]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Once[count = count + 1, PersistenceTime -> None]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(session.eval_text("count").unwrap().value.to_string(), "1");
+
+    assert_eq!(
+        session
+            .eval_text("Once[count = count + 1, {PersistenceTime -> 0}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Once[count = count + 1, {PersistenceTime -> 0}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(session.eval_text("count").unwrap().value.to_string(), "3");
+}
+
+#[test]
+fn save_rejects_unknown_options_and_once_reports_unknown_option_names() {
+    let dir = TempDirGuard::new("save-unknown-option");
+    let save_file = dir.path().join("unknown.wl");
+    let mut session = Session::new();
+
+    let save = session
+        .eval_text(&format!(
+            "Save[File[\"{}\"], f, Bogus -> 1]",
+            rum_path(&save_file)
+        ))
+        .unwrap();
+    assert_eq!(
+        save.value.to_string(),
+        format!(
+            "Save[File[\"{}\"], f, Rule[Bogus, 1]]",
+            rum_path(&save_file)
+        )
+    );
+    assert!(
+        save.messages
+            .iter()
+            .any(|message| message.symbol == "Save" && message.tag == "optx")
+    );
+
+    let once = session.eval_text("Once[1 + 1, Bogus -> 1]").unwrap();
+    assert_eq!(once.value.to_string(), "2");
+    assert!(
+        once.messages
+            .iter()
+            .any(|message| message.symbol == "OptionValue" && message.tag == "nodef")
+    );
+}

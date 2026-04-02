@@ -354,6 +354,52 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
             blank_expr(),
             optional_blank_association_expr(),
         ])],
+        "StringCount" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            blank_expr(),
+            system_expr("OptionsPattern"),
+        ])],
+        "StringDelete" | "StringContainsQ" | "StringStartsQ" | "StringEndsQ" | "StringMatchQ"
+        | "StringFreeQ" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            optional_blank_expr(),
+            system_expr("OptionsPattern"),
+        ])],
+        "StringPosition" | "StringCases" | "StringReplace" | "Cases" | "Count" | "MemberQ"
+        | "FreeQ" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            optional_blank_expr(),
+            optional_blank_expr(),
+            system_expr("OptionsPattern"),
+        ])],
+        "Position" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            optional_blank_expr(),
+            optional_blank_expr(),
+            optional_blank_expr(),
+            system_expr("OptionsPattern"),
+        ])],
+        "Level" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            blank_expr(),
+            optional_blank_expr(),
+            system_expr("OptionsPattern"),
+        ])],
+        "Depth" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            system_expr("OptionsPattern"),
+        ])],
+        "CheckAbort" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            blank_expr(),
+            system_expr("OptionsPattern"),
+        ])],
+        "ArrayFilter" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            blank_expr(),
+            blank_expr(),
+            system_expr("OptionsPattern"),
+        ])],
         "UpSet" | "UpSetDelayed" => {
             vec![syntax_argument_pattern(vec![blank_expr(), blank_expr()])]
         }
@@ -382,10 +428,7 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
                         Expr::string("Table"),
                         Expr::call(
                             system_expr("List"),
-                            vec![
-                                Expr::integer(BigInt::from(2)),
-                                system_expr("Infinity"),
-                            ],
+                            vec![Expr::integer(BigInt::from(2)), system_expr("Infinity")],
                         ),
                     ],
                 ),
@@ -718,6 +761,12 @@ fn parse_regex_group(chars: &[char], index: &mut usize) -> Option<RegexAtom> {
     let mut raw = String::new();
     let mut depth = 1_usize;
     let mut in_class = false;
+    let mut saw_group_prefix = false;
+
+    if chars.get(*index) == Some(&'?') && chars.get(*index + 1) == Some(&':') {
+        *index += 2;
+        saw_group_prefix = true;
+    }
 
     while *index < chars.len() {
         let ch = chars[*index];
@@ -747,6 +796,10 @@ fn parse_regex_group(chars: &[char], index: &mut usize) -> Option<RegexAtom> {
             ')' if !in_class => {
                 depth -= 1;
                 if depth == 0 {
+                    if saw_group_prefix {
+                        // Non-capturing groups do not affect matching shape in the current
+                        // names-pattern subset; we lower them to ordinary nested branches.
+                    }
                     return compile_names_regex_pattern(&raw)
                         .map(|pattern| RegexAtom::Group(Box::new(pattern)));
                 }

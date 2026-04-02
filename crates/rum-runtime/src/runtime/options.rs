@@ -56,6 +56,10 @@ impl SymbolOptions {
         }
     }
 
+    pub(super) fn iter(&self) -> impl Iterator<Item = &(Symbol, Expr)> {
+        self.entries.iter()
+    }
+
     pub(super) fn rule_exprs(&self) -> Vec<Expr> {
         self.entries
             .iter()
