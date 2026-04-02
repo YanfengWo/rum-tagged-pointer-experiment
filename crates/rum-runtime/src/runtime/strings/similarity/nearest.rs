@@ -68,7 +68,11 @@ pub(super) fn parse_nearest_result_spec(expr: &Expr) -> Option<NearestResultSpec
     expr_as_non_negative_usize(expr).map(NearestResultSpec::Count)
 }
 
-pub(super) fn nearest_strings(values: &[String], target: &str, spec: NearestResultSpec) -> Vec<String> {
+pub(super) fn nearest_strings(
+    values: &[String],
+    target: &str,
+    spec: NearestResultSpec,
+) -> Vec<String> {
     let target_chars = target.chars().collect::<Vec<_>>();
     let distances = values
         .iter()
@@ -119,7 +123,10 @@ pub(super) fn nearest_values_for_numbers(
         .collect()
 }
 
-pub(super) fn select_nearest_indices_by_usize(distances: &[usize], spec: NearestResultSpec) -> Vec<usize> {
+pub(super) fn select_nearest_indices_by_usize(
+    distances: &[usize],
+    spec: NearestResultSpec,
+) -> Vec<usize> {
     match spec {
         NearestResultSpec::Count(0) => Vec::new(),
         NearestResultSpec::Count(limit) => {

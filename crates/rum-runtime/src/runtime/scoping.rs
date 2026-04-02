@@ -105,6 +105,7 @@ impl Session {
         for (symbol, _) in &items {
             self.definitions.remove(symbol);
             self.attributes.remove(symbol);
+            self.options.remove(symbol);
             self.message_definitions
                 .retain(|key, _| key.symbol != *symbol);
         }
@@ -124,6 +125,7 @@ impl Session {
                 .or_insert_with(|| BlockSymbolState {
                     definition: self.definitions.get(symbol).cloned(),
                     attributes: self.attributes.get(symbol).copied(),
+                    options: self.options.get(symbol).cloned(),
                     messages: self
                         .message_definitions
                         .iter()
@@ -156,6 +158,15 @@ impl Session {
                 }
                 None => {
                     self.attributes.remove(&symbol);
+                }
+            }
+
+            match state.options {
+                Some(options) => {
+                    self.options.insert(symbol.clone(), options);
+                }
+                None => {
+                    self.options.remove(&symbol);
                 }
             }
 

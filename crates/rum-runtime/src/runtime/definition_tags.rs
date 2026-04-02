@@ -55,6 +55,10 @@ impl Session {
             }
         };
 
+        if !self.ensure_symbol_not_protected_for_write("TagUnset", &tag) {
+            return Ok(system_expr("Null"));
+        }
+
         match self.unset_tagged_definition(&tag, &args[1]) {
             Ok(_) => {
                 self.prune_definition_if_empty(&tag);
@@ -97,6 +101,9 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         match classify_tagged_definition(&tag, &lhs) {
             Ok(target) => {
+                if !self.ensure_symbol_not_protected_for_write(symbol, target.symbol()) {
+                    return Ok(if delayed { system_expr("Null") } else { rhs });
+                }
                 self.store_definition_target(target, lhs, rhs.clone(), delayed);
                 Ok(if delayed { system_expr("Null") } else { rhs })
             }

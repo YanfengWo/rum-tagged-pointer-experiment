@@ -587,6 +587,18 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::Attributes,
     ),
     BuiltinSpec::ordinary_with_hold(
+        "Options",
+        "Lists the current default option rules for a symbol.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::Options,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "OptionValue",
+        "Looks up an option value from explicit rules or a symbol's defaults.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::OptionValue,
+    ),
+    BuiltinSpec::ordinary_with_hold(
         "SetAttributes",
         "Adds attributes to one or more symbols.",
         HoldAttribute::HoldFirst,
@@ -597,6 +609,24 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         "Removes attributes from one or more symbols.",
         HoldAttribute::HoldFirst,
         BuiltinHandler::ClearAttributes,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "SetOptions",
+        "Updates known default options for a symbol.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::SetOptions,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Protect",
+        "Adds the Protected attribute to one or more symbols.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Protect,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Unprotect",
+        "Removes the Protected attribute from one or more symbols.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Unprotect,
     ),
     BuiltinSpec::ordinary_with_hold(
         "Unset",

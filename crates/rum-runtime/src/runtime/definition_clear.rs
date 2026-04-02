@@ -5,7 +5,9 @@ impl Session {
         match args {
             [target] => match self.normalize_unset_target(target) {
                 Ok(target) => {
-                    self.unset_normalized_definition(target);
+                    if self.ensure_symbol_not_protected_for_write("Unset", target.symbol()) {
+                        self.unset_normalized_definition(target);
+                    }
                     Ok(system_expr("Null"))
                 }
                 Err(error) => Ok(self.invalid_call_with_arg_form("Unset", args, error.message())),
@@ -15,11 +17,11 @@ impl Session {
     }
 
     pub(super) fn eval_clear(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        self.eval_clear_like("Clear", args, false, false)
+        self.eval_clear_like("Clear", args, false, false, false)
     }
 
     pub(super) fn eval_clear_all(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        self.eval_clear_like("ClearAll", args, true, true)
+        self.eval_clear_like("ClearAll", args, true, true, true)
     }
 
     pub(super) fn eval_clear_like(
@@ -28,6 +30,7 @@ impl Session {
         args: &[Expr],
         clear_attributes: bool,
         clear_messages: bool,
+        clear_options: bool,
     ) -> Result<Expr, EvalError> {
         let symbols = match self.normalize_clear_targets(args) {
             Ok(symbols) => symbols,
@@ -35,7 +38,9 @@ impl Session {
         };
 
         for symbol in symbols {
-            self.clear_symbol_state(&symbol, clear_attributes, clear_messages);
+            if self.ensure_symbol_not_protected_for_write(name, &symbol) {
+                self.clear_symbol_state(&symbol, clear_attributes, clear_messages, clear_options);
+            }
         }
 
         Ok(system_expr("Null"))
@@ -45,6 +50,9 @@ impl Session {
         match target {
             UnsetDefinitionTarget::Message(key) => {
                 self.message_definitions.remove(&key);
+            }
+            UnsetDefinitionTarget::Options(symbol) => {
+                self.options.remove(&symbol);
             }
             UnsetDefinitionTarget::OwnValue(symbol) => {
                 if let Some(definition) = self.definitions.get_mut(&symbol) {
@@ -156,6 +164,7 @@ impl Session {
         symbol: &Symbol,
         clear_attributes: bool,
         clear_messages: bool,
+        clear_options: bool,
     ) {
         self.definitions.remove(symbol);
 
@@ -166,6 +175,10 @@ impl Session {
         if clear_messages {
             self.message_definitions
                 .retain(|key, _| key.symbol != *symbol);
+        }
+
+        if clear_options {
+            self.options.remove(symbol);
         }
     }
 }

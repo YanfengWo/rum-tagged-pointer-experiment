@@ -47,18 +47,22 @@ fn is_complete_request_distinguishes_complete_incomplete_and_invalid_input() {
     let incomplete = session.is_complete_request("f[\n  1");
     assert_eq!(incomplete.status, SessionCompletenessStatus::Incomplete);
     assert_eq!(incomplete.indent.as_deref(), Some("    "));
-    assert!(incomplete
-        .diagnostic
-        .as_ref()
-        .is_some_and(|diagnostic| diagnostic.is_incomplete));
+    assert!(
+        incomplete
+            .diagnostic
+            .as_ref()
+            .is_some_and(|diagnostic| diagnostic.is_incomplete)
+    );
 
     let invalid = session.is_complete_request("f[1 2]");
     assert_eq!(invalid.status, SessionCompletenessStatus::Invalid);
     assert!(invalid.indent.is_none());
-    assert!(invalid
-        .diagnostic
-        .as_ref()
-        .is_some_and(|diagnostic| !diagnostic.is_incomplete));
+    assert!(
+        invalid
+            .diagnostic
+            .as_ref()
+            .is_some_and(|diagnostic| !diagnostic.is_incomplete)
+    );
 }
 
 #[test]
@@ -104,10 +108,12 @@ fn eval_request_returns_transport_friendly_failure_data() {
             ..
         } if input == "f[1]" || input == "g[1]"
     )));
-    assert!(failure
-        .messages
-        .iter()
-        .any(|message| message.symbol == "General" && message.tag == "cycle"));
+    assert!(
+        failure
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "cycle")
+    );
 }
 
 #[test]

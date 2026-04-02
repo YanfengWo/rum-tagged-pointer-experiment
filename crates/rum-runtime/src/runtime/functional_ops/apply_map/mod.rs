@@ -5,11 +5,8 @@ mod traversal;
 
 use self::normalize::*;
 use self::traversal::{
-    apply_heads_with_config,
-    collect_scan_parts_with_config,
-    map_indexed_parts_with_config,
-    map_parts_with_config,
-    map_parts_with_mode,
+    apply_heads_with_config, collect_scan_parts_with_config, map_indexed_parts_with_config,
+    map_parts_with_config, map_parts_with_mode,
 };
 
 impl Session {

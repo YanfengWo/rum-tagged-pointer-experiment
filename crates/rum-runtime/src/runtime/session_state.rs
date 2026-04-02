@@ -69,12 +69,14 @@ pub(super) enum ThreadingDispatch {
 pub(super) struct BlockSymbolState {
     pub(super) definition: Option<SymbolDefinition>,
     pub(super) attributes: Option<AttributeSet>,
+    pub(super) options: Option<SymbolOptions>,
     pub(super) messages: Vec<(MessageNameKey, MessageDefinition)>,
 }
 
 #[derive(Clone, Debug)]
 pub(super) struct LoaderSnapshot {
     pub(super) attributes: BTreeMap<Symbol, AttributeSet>,
+    pub(super) options: BTreeMap<Symbol, SymbolOptions>,
     pub(super) current_context: String,
     pub(super) context_path: Vec<String>,
     pub(super) context_stack: Vec<ContextFrame>,
@@ -225,6 +227,7 @@ impl Default for Session {
         Self {
             builtins: BTreeMap::new(),
             attributes: BTreeMap::new(),
+            options: BTreeMap::new(),
             current_context: GLOBAL_CONTEXT.to_string(),
             context_path: vec![SYSTEM_CONTEXT.to_string(), GLOBAL_CONTEXT.to_string()],
             context_stack: Vec::new(),

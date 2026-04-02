@@ -219,7 +219,11 @@ pub(super) fn flatten_tensor_scalars_into(node: &TensorNode, flat: &mut Vec<Expr
     }
 }
 
-pub(super) fn tensor_scalar_at<'a>(flat: &'a [Expr], shape: &[usize], index: &[usize]) -> Option<&'a Expr> {
+pub(super) fn tensor_scalar_at<'a>(
+    flat: &'a [Expr],
+    shape: &[usize],
+    index: &[usize],
+) -> Option<&'a Expr> {
     let offset = tensor_flat_offset(shape, index)?;
     flat.get(offset)
 }

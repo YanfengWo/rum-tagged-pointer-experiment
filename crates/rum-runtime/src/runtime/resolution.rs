@@ -82,6 +82,10 @@ impl Session {
                 .get(symbol)
                 .copied()
                 .is_some_and(|attributes| !attributes.is_empty())
+            || self
+                .options
+                .get(symbol)
+                .is_some_and(|options| !options.is_empty())
             || self.builtin_spec_for_symbol(symbol).is_some()
             || is_known_system_symbol(symbol)
     }

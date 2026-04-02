@@ -250,7 +250,11 @@ impl Session {
         }
     }
 
-    pub(super) fn normalize_map_all_call(&mut self, head: &Expr, args: &[Expr]) -> MapLikeNormalization {
+    pub(super) fn normalize_map_all_call(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> MapLikeNormalization {
         if !(1..=3).contains(&args.len()) {
             return MapLikeNormalization::Immediate(
                 self.invalid_call_with_arg_range("MapAll", args, 1, 3),
@@ -294,7 +298,11 @@ impl Session {
         }
     }
 
-    pub(super) fn normalize_comap_call(&mut self, head: &Expr, args: &[Expr]) -> CommonArgMapNormalization {
+    pub(super) fn normalize_comap_call(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> CommonArgMapNormalization {
         if !(1..=4).contains(&args.len()) {
             return CommonArgMapNormalization::Immediate(
                 self.invalid_call_with_arg_range("Comap", args, 1, 4),

@@ -51,6 +51,14 @@ impl Session {
         self.eval_update_attributes("ClearAttributes", args, AttributeUpdate::Remove)
     }
 
+    pub(super) fn eval_protect(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        self.eval_protect_like("Protect", args, AttributeUpdate::Insert)
+    }
+
+    pub(super) fn eval_unprotect(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        self.eval_protect_like("Unprotect", args, AttributeUpdate::Remove)
+    }
+
     pub(super) fn eval_update_attributes(
         &mut self,
         symbol: &str,
@@ -129,6 +137,37 @@ impl Session {
         Ok(system_expr("Null"))
     }
 
+    fn eval_protect_like(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        update: AttributeUpdate,
+    ) -> Result<Expr, EvalError> {
+        let targets = match self.normalize_multi_symbol_targets(args) {
+            Ok(targets) => targets,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form(symbol, args, error.message()));
+            }
+        };
+
+        for target in &targets {
+            let mut current = self.attribute_set_for_symbol(target);
+            match update {
+                AttributeUpdate::Insert => current.insert(Attribute::Protected),
+                AttributeUpdate::Remove => current.remove(Attribute::Protected),
+            }
+            self.set_attribute_set_for_symbol(target.clone(), current);
+        }
+
+        Ok(Expr::call(
+            system_expr("List"),
+            targets
+                .into_iter()
+                .map(|symbol| Expr::string(symbol.name().to_string()))
+                .collect(),
+        ))
+    }
+
     fn normalize_attribute_update_targets(
         &self,
         expr: &Expr,
@@ -149,5 +188,34 @@ impl Session {
             targets,
             attributes,
         })
+    }
+
+    pub(super) fn normalize_multi_symbol_targets(
+        &self,
+        args: &[Expr],
+    ) -> Result<Vec<Symbol>, DefinitionTargetNormalizationError> {
+        self.normalize_clear_targets(args)
+    }
+
+    pub(super) fn symbol_is_protected(&self, symbol: &Symbol) -> bool {
+        self.attribute_set_for_symbol(symbol)
+            .contains(Attribute::Protected)
+    }
+
+    pub(super) fn push_protected_write_message(&mut self, operator: &str, symbol: &Symbol) {
+        self.push_message(operator, "wrsym", format!("Symbol {symbol} is Protected."));
+    }
+
+    pub(super) fn ensure_symbol_not_protected_for_write(
+        &mut self,
+        operator: &str,
+        symbol: &Symbol,
+    ) -> bool {
+        if self.symbol_is_protected(symbol) {
+            self.push_protected_write_message(operator, symbol);
+            false
+        } else {
+            true
+        }
     }
 }

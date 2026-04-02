@@ -4,6 +4,7 @@ impl Session {
     pub(super) fn capture_loader_snapshot(&self) -> LoaderSnapshot {
         LoaderSnapshot {
             attributes: self.attributes.clone(),
+            options: self.options.clone(),
             current_context: self.current_context.clone(),
             context_path: self.context_path.clone(),
             context_stack: self.context_stack.clone(),
@@ -19,6 +20,7 @@ impl Session {
 
     pub(super) fn restore_loader_snapshot(&mut self, snapshot: LoaderSnapshot) {
         self.attributes = snapshot.attributes;
+        self.options = snapshot.options;
         self.current_context = snapshot.current_context;
         self.context_path = snapshot.context_path;
         self.context_stack = snapshot.context_stack;

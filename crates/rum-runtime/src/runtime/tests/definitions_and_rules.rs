@@ -434,6 +434,97 @@ fn clear_and_clearall_manage_symbol_lifecycle_state() {
 }
 
 #[test]
+fn protected_symbols_block_definition_and_clear_writes() {
+    let mut session = Session::new();
+
+    session.eval_text("Protect[f]").unwrap();
+
+    let set = session.eval_text("f = 1").unwrap();
+    assert_eq!(set.value.to_string(), "1");
+    assert!(set.messages.iter().any(|message| {
+        message.symbol == "Set" && message.tag == "wrsym" && message.text.contains("Protected")
+    }));
+    assert_eq!(
+        session.eval_text("OwnValues[f]").unwrap().value.to_string(),
+        "List[]"
+    );
+
+    let delayed = session.eval_text("f[x_] := x").unwrap();
+    assert_eq!(delayed.value.to_string(), "Null");
+    assert!(
+        delayed
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "SetDelayed" && message.tag == "wrsym" })
+    );
+    assert_eq!(
+        session
+            .eval_text("DownValues[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+
+    let tagged = session.eval_text("f /: g[f[x_]] := x").unwrap();
+    assert_eq!(tagged.value.to_string(), "Null");
+    assert!(
+        tagged
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "TagSetDelayed" && message.tag == "wrsym" })
+    );
+    assert_eq!(
+        session.eval_text("UpValues[f]").unwrap().value.to_string(),
+        "List[]"
+    );
+
+    let usage = session.eval_text("f::usage = \"desc\"").unwrap();
+    assert_eq!(usage.value.to_string(), "\"desc\"");
+    assert!(
+        usage
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "Set" && message.tag == "wrsym" })
+    );
+    assert_eq!(
+        session.eval_text("Messages[f]").unwrap().value.to_string(),
+        "List[]"
+    );
+
+    let cleared = session.eval_text("ClearAll[f]").unwrap();
+    assert_eq!(cleared.value.to_string(), "Null");
+    assert!(
+        cleared
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "ClearAll" && message.tag == "wrsym" })
+    );
+
+    let unset = session.eval_text("Unset[f]").unwrap();
+    assert_eq!(unset.value.to_string(), "Null");
+    assert!(
+        unset
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "Unset" && message.tag == "wrsym" })
+    );
+
+    let tag_unset = session.eval_text("TagUnset[f, g[f[x_]]]").unwrap();
+    assert_eq!(tag_unset.value.to_string(), "Null");
+    assert!(
+        tag_unset
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "TagUnset" && message.tag == "wrsym" })
+    );
+
+    session.eval_text("Unprotect[f]").unwrap();
+    session.eval_text("f = 1").unwrap();
+    assert_eq!(session.eval_text("f").unwrap().value.to_string(), "1");
+}
+
+#[test]
 fn normalize_rules_lists_single_rules_rule_lists_and_preserves_delayedness() {
     let mut session = Session::new();
 

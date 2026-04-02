@@ -258,7 +258,11 @@ pub(super) fn parse_array_reduce_span(expr: &Expr, rank: usize) -> Option<Vec<us
     (start <= end).then(|| ((start - 1)..end).collect())
 }
 
-pub(super) fn parse_array_reduce_span_endpoint(expr: &Expr, all_value: usize, rank: usize) -> Option<usize> {
+pub(super) fn parse_array_reduce_span_endpoint(
+    expr: &Expr,
+    all_value: usize,
+    rank: usize,
+) -> Option<usize> {
     if is_system_symbol_name(expr, "All") {
         return Some(all_value);
     }
@@ -328,7 +332,10 @@ pub(super) fn array_filter_axis_trim(
     (before_trim, after_trim)
 }
 
-pub(super) fn array_filter_template_includes(spec: &ArrayFilterSpec, window_index: &[usize]) -> bool {
+pub(super) fn array_filter_template_includes(
+    spec: &ArrayFilterSpec,
+    window_index: &[usize],
+) -> bool {
     match spec {
         ArrayFilterSpec::Radii(_) => true,
         ArrayFilterSpec::Template(template) => {

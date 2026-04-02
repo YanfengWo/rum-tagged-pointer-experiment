@@ -367,18 +367,24 @@ once in its primary implementation group. Other groups may mention it as
 - `implemented`: contexts, context-path management, package load tracking,
   loader rollback on failure, message definition storage, message selection,
   definition/message inspection
-- `partial`: options, protection, and syntax-annotation ecosystems remain
-  unimplemented
+- `partial`: explicit `Protect` / `Unprotect` now work on top of the shared
+  attribute model, `Protected` participates in `Attributes[...]`, and current
+  definition/message/clear write paths honor a first-pass protected-symbol
+  barrier; symbol-level option storage and lookup now cover explicit
+  `Options[...]`, `SetOptions[...]`, `OptionValue[...]`, `Options[f] = {...}`,
+  and `Unset[Options[f]]`, while system default options, `Names`, and
+  syntax-annotation ecosystems are still pending
 - `planned`: broader package ergonomics and option/protection parity
 
 ### Functions and Symbols
 
 - `implemented`: `$ContextPath`, `$Packages`, `Begin`, `BeginPackage`, `End`,
   `EndPackage`, `Needs`, `Message`, `MessageName`
+- `partial`: `Protect`, `Unprotect`, `Protected`, `Options`, `SetOptions`,
+  `OptionValue`
 - `planned`: `ArgumentsOptions`, `CheckArguments`, `DeclarePackage`,
-  `DumpSave`, `Names`, `Once`, `Options`, `OptionsPattern`,
-  `OptionValue`, `Protect`, `Save`, `SetOptions`, `SyntaxInformation`,
-  `UpSet`
+  `DumpSave`, `Names`, `Once`, `OptionsPattern`, `Save`,
+  `SyntaxInformation`, `UpSet`
 - `cross-tracked elsewhere`: `AbortProtect`, `Assert`, `Block`,
   `BlockRandom`, `Check`, `Confirm`, `Enclose`, `Failure`, `FailureQ`,
   `Module`, `MissingQ`, `Quiet`, `Success`, `TagSet`, `WithCleanup`

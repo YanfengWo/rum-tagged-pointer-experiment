@@ -172,7 +172,11 @@ pub(super) fn array_filter_scalar_at_recursive(
     value
 }
 
-pub(super) fn array_filter_cycle_value(values: &[Expr], raw_index: isize, len_isize: isize) -> Option<Expr> {
+pub(super) fn array_filter_cycle_value(
+    values: &[Expr],
+    raw_index: isize,
+    len_isize: isize,
+) -> Option<Expr> {
     if values.is_empty() {
         return None;
     }

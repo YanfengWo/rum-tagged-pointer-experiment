@@ -6,7 +6,7 @@ mod factorization;
 mod rational_function;
 
 use self::{
-    core::{parse_coefficient_list_monomials, Monomial, Polynomial},
+    core::{Monomial, Polynomial, parse_coefficient_list_monomials},
     factorization::PolynomialFactorization,
     rational_function::RationalFunction,
 };

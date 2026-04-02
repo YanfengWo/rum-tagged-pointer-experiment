@@ -89,12 +89,40 @@ impl Session {
         rhs: Expr,
         delayed: bool,
     ) -> Result<Expr, EvalError> {
+        if !delayed {
+            if let Some(target) = self.normalize_options_target_expr(&lhs) {
+                if !self.ensure_symbol_not_protected_for_write(symbol, &target) {
+                    return Ok(rhs);
+                }
+
+                let options = match self.compile_assigned_options_from_resolved(&rhs) {
+                    Ok(options) => options,
+                    Err(error) => {
+                        return Ok(self.invalid_call_with_arg_form(
+                            symbol,
+                            &[lhs, rhs],
+                            error.message(),
+                        ));
+                    }
+                };
+
+                self.set_options_for_symbol(target, options);
+                return Ok(rhs);
+            }
+        }
+
         match self.normalize_definition_assignment_target(&lhs) {
             Some(DefinitionAssignmentTarget::Message(key)) => {
+                if !self.ensure_symbol_not_protected_for_write(symbol, &key.symbol) {
+                    return Ok(if delayed { system_expr("Null") } else { rhs });
+                }
                 self.define_message(key, rhs.clone(), delayed);
                 Ok(if delayed { system_expr("Null") } else { rhs })
             }
             Some(DefinitionAssignmentTarget::Definition(target)) => {
+                if !self.ensure_symbol_not_protected_for_write(symbol, target.symbol()) {
+                    return Ok(if delayed { system_expr("Null") } else { rhs });
+                }
                 self.store_definition_target(target, lhs.clone(), rhs.clone(), delayed);
                 Ok(if delayed { system_expr("Null") } else { rhs })
             }

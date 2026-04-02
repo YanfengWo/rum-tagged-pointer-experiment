@@ -185,7 +185,10 @@ pub(super) fn collect_linear_candidate_vectors(
     }
 }
 
-pub(super) fn normalized_linear_vector(values: &[BigInt], variable_count: usize) -> Option<Vec<BigInt>> {
+pub(super) fn normalized_linear_vector(
+    values: &[BigInt],
+    variable_count: usize,
+) -> Option<Vec<BigInt>> {
     if values[..variable_count]
         .iter()
         .all(|value| *value == BigInt::from(0_u8))
@@ -216,7 +219,10 @@ pub(super) fn normalized_linear_vector(values: &[BigInt], variable_count: usize)
     Some(normalized)
 }
 
-pub(super) fn linear_polynomial_from_vector(variables: &[Expr], vector: &[BigInt]) -> Option<Polynomial> {
+pub(super) fn linear_polynomial_from_vector(
+    variables: &[Expr],
+    vector: &[BigInt],
+) -> Option<Polynomial> {
     let mut polynomial = Polynomial::zero();
 
     for (variable, coefficient) in variables.iter().zip(vector.iter()) {

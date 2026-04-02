@@ -59,7 +59,10 @@ pub(super) fn longest_common_contiguous_slice<T: Clone + Eq>(lhs: &[T], rhs: &[T
     lhs[best_end.saturating_sub(best_len)..best_end].to_vec()
 }
 
-pub(super) fn global_alignment_blocks<T: Clone + Eq>(lhs: &[T], rhs: &[T]) -> Vec<AlignmentBlock<T>> {
+pub(super) fn global_alignment_blocks<T: Clone + Eq>(
+    lhs: &[T],
+    rhs: &[T],
+) -> Vec<AlignmentBlock<T>> {
     let m = lhs.len();
     let n = rhs.len();
     let mut scores = vec![vec![0isize; n + 1]; m + 1];

@@ -198,6 +198,9 @@ This roadmap intentionally uses two levels of detail:
 - [ ] `CL-06` Procedural control, exceptions, and failure flow
 - [ ] `CL-07` String language
 - [ ] `CL-08` Package, namespace, options, and protection tooling
+  - [x] land first-pass `Protected` state on top of the shared attribute model, including `Protect` / `Unprotect` and protected-symbol write barriers across definition/message/clear paths
+  - [x] land first-pass symbol-level `Options` / `SetOptions` / `OptionValue` storage and query semantics, including `Options[f] = {...}` and `Unset[Options[f]]`, before tackling `OptionsPattern`
+  - [ ] deepen option parity with system default options, richer `SetOptions` / `OptionValue` forms, and `OptionsPattern`
 - [ ] `CL-09` Tuning, debugging, and verification surface
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:

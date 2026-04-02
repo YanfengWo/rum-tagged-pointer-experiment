@@ -160,6 +160,51 @@ fn setattributes_accepts_resolved_attribute_specs() {
 }
 
 #[test]
+fn protect_and_unprotect_round_trip_and_leave_attribute_updates_available() {
+    let mut session = Session::new();
+
+    let protected = session.eval_text("Protect[{f, \"g\"}]").unwrap();
+    assert_eq!(protected.value.to_string(), "List[\"f\", \"g\"]");
+    assert_eq!(
+        session
+            .eval_text("Attributes[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Protected]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Attributes[g]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Protected]"
+    );
+
+    session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("Attributes[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldFirst, Protected]"
+    );
+
+    let unprotected = session.eval_text("Unprotect[f]").unwrap();
+    assert_eq!(unprotected.value.to_string(), "List[\"f\"]");
+    assert_eq!(
+        session
+            .eval_text("Attributes[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldFirst]"
+    );
+}
+
+#[test]
 fn sequencehold_prevents_sequence_splicing() {
     let mut session = Session::new();
 

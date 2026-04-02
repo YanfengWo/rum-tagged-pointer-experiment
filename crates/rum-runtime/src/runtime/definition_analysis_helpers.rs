@@ -17,6 +17,7 @@ pub(super) enum TagDefinitionError {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum UnsetDefinitionTarget {
     Message(MessageNameKey),
+    Options(Symbol),
     OwnValue(Symbol),
     DownValue { symbol: Symbol, lhs: Expr },
     SubValue { symbol: Symbol, lhs: Expr },
@@ -27,6 +28,30 @@ pub(super) enum UnsetDefinitionTarget {
 pub(super) enum DefinitionAssignmentTarget {
     Message(MessageNameKey),
     Definition(TaggedDefinitionTarget),
+}
+
+impl TaggedDefinitionTarget {
+    pub(super) fn symbol(&self) -> &Symbol {
+        match self {
+            Self::OwnValue(symbol)
+            | Self::DownValue(symbol)
+            | Self::SubValue(symbol)
+            | Self::UpValue(symbol) => symbol,
+        }
+    }
+}
+
+impl UnsetDefinitionTarget {
+    pub(super) fn symbol(&self) -> &Symbol {
+        match self {
+            Self::Message(key) => &key.symbol,
+            Self::Options(symbol) => symbol,
+            Self::OwnValue(symbol)
+            | Self::DownValue { symbol, .. }
+            | Self::SubValue { symbol, .. }
+            | Self::TaggedDefinition { tag: symbol, .. } => symbol,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -105,6 +130,10 @@ impl Session {
             return Ok(UnsetDefinitionTarget::Message(key));
         }
 
+        if let Some(symbol) = self.normalize_options_target_expr(expr) {
+            return Ok(UnsetDefinitionTarget::Options(symbol));
+        }
+
         if let Some(symbol) = expr_as_symbol(expr).cloned() {
             return Ok(UnsetDefinitionTarget::OwnValue(symbol));
         }
@@ -150,6 +179,18 @@ impl Session {
         }
 
         classify_definition_lhs(lhs).map(DefinitionAssignmentTarget::Definition)
+    }
+
+    pub(super) fn normalize_options_target_expr(&self, expr: &Expr) -> Option<Symbol> {
+        let Expr::Call { head, args } = expr else {
+            return None;
+        };
+
+        if !is_system_symbol_name(head, "Options") || args.len() != 1 {
+            return None;
+        }
+
+        self.normalize_symbol_target_expr(&args[0], true)
     }
 }
 

@@ -34,6 +34,7 @@ pub enum Attribute {
     Orderless,
     Flat,
     OneIdentity,
+    Protected,
 }
 
 impl Attribute {
@@ -48,6 +49,7 @@ impl Attribute {
             Self::Orderless => 1 << 6,
             Self::Flat => 1 << 7,
             Self::OneIdentity => 1 << 8,
+            Self::Protected => 1 << 9,
         }
     }
 
@@ -62,6 +64,7 @@ impl Attribute {
             Self::Orderless => "Orderless",
             Self::Flat => "Flat",
             Self::OneIdentity => "OneIdentity",
+            Self::Protected => "Protected",
         }
     }
 
@@ -86,6 +89,7 @@ impl Attribute {
             "Orderless" => Some(Self::Orderless),
             "Flat" => Some(Self::Flat),
             "OneIdentity" => Some(Self::OneIdentity),
+            "Protected" => Some(Self::Protected),
             _ => None,
         }
     }
@@ -191,7 +195,7 @@ impl AttributeSet {
     }
 }
 
-pub(super) const ALL_ATTRIBUTES: [Attribute; 9] = [
+pub(super) const ALL_ATTRIBUTES: [Attribute; 10] = [
     Attribute::HoldAllComplete,
     Attribute::HoldAll,
     Attribute::HoldFirst,
@@ -201,6 +205,7 @@ pub(super) const ALL_ATTRIBUTES: [Attribute; 9] = [
     Attribute::Orderless,
     Attribute::Flat,
     Attribute::OneIdentity,
+    Attribute::Protected,
 ];
 
 pub(super) fn parse_attribute_set_expr(expr: &Expr) -> Option<AttributeSet> {
@@ -434,8 +439,13 @@ pub enum BuiltinHandler {
     DownValues,
     SubValues,
     Attributes,
+    Options,
+    OptionValue,
     SetAttributes,
     ClearAttributes,
+    SetOptions,
+    Protect,
+    Unprotect,
     Unset,
     Clear,
     ClearAll,

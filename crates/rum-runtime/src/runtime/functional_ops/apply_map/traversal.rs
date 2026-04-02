@@ -89,7 +89,11 @@ pub(super) fn apply_heads_on_standard_call(
     }
 }
 
-pub(super) fn map_parts_with_config(expr: &Expr, operator: &Expr, config: TraversalConfig) -> (Expr, usize) {
+pub(super) fn map_parts_with_config(
+    expr: &Expr,
+    operator: &Expr,
+    config: TraversalConfig,
+) -> (Expr, usize) {
     map_parts_with_mode(expr, operator, config, MapTraversalFlavor::Map)
 }
 
