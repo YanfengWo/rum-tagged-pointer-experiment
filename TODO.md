@@ -170,6 +170,18 @@ This roadmap intentionally uses two levels of detail:
 - [ ] Establish Python packaging and local-dev workflow only after the API shape is stable, keeping wheel/build concerns outside the kernel core
 - [ ] Let `rum-jupyter` reuse shared host-adapter pieces later where that reduces duplication, but do not make notebook protocol concerns the center of the broader host design
 
+### Samples and Showcase Packages
+
+- [ ] Prepare a small, polished sample set once the core kernel and host-adapter surfaces are stable enough to demonstrate end-to-end value rather than isolated builtin checklists
+- [ ] Add a Python-host sample that shows `rum` embedded from Python for an AI-adjacent workflow, such as structured symbolic preprocessing, rule-driven tool orchestration, or controllable prompt-side helper logic layered on top of the future `rum-python` adapter
+- [ ] Add a Rust-host sample that shows `rum` embedded for system/ops or backend-style automation, such as policy-driven maintenance flows, config inspection/transformation, or rule-engine style control logic layered on top of the future `rum-host` adapter
+- [ ] Explore a pure-Wolfram-language object/class showcase package as a sample of how much higher-level abstraction `rum` can support without new runtime mechanisms:
+  - [ ] first survey existing Wolfram-language object/class implementations such as `Wolfram/Class`, `KirillBelov/Objects`, and older closure/message-passing packages from the Mathematica ecosystem
+  - [ ] record the tradeoffs of reusing an existing package versus writing a project-owned sample package tuned to `rum`'s supported subset and showcase goals
+  - [ ] prefer a representative OOP-style sample over a bare “class syntax demo”, so the result illustrates practical package-level encapsulation, method dispatch, and state management rather than only the mechanism itself
+  - [ ] use a static-site-generator style package as the default class/object showcase candidate, keeping workflow/state-machine style samples as strong backups if that proves a better fit for the supported subset
+  - [ ] keep this as a package/library sample first, not as a `CL-08` core-language feature, unless later experience shows a real missing runtime mechanism
+
 ### Cross-Cutting Test Suites and Conformance
 
 - [ ] Maintain a page-driven core-language support matrix keyed to the current official Wolfram scope anchors in `Core Language & Structure` and `Language Overview`, and treat that matrix as the public-facing definition of the kernel feature target
