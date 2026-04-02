@@ -1,0 +1,150 @@
+use super::*;
+
+#[test]
+fn part_supports_exact_indices_nested_paths_and_head_access() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session.eval_text("Part[f[a, b, c], 2]").unwrap().value.to_string(),
+        "b"
+    );
+    assert_eq!(
+        session.eval_text("Part[f[g[a], h[b]], 2, 1]").unwrap().value.to_string(),
+        "b"
+    );
+    assert_eq!(
+        session.eval_text("Part[f[a, b, c], {1, -1}]").unwrap().value.to_string(),
+        "f[a, c]"
+    );
+    assert_eq!(session.eval_text("Part[f[a, b], 0]").unwrap().value.to_string(), "f");
+    assert_eq!(session.eval_text("Part[f[a, b], {}]").unwrap().value.to_string(), "f[]");
+    assert_eq!(
+        session.eval_text("Part[f[g[a, b], h[c, d]], All, 2]").unwrap().value.to_string(),
+        "f[b, d]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c, d], Span[2, All, 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[b, d]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], {Span[1, All, 2], -1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, c, c]"
+    );
+    assert_eq!(
+        session.eval_text("Part[f[a, b], 0 ;; -1]").unwrap().value.to_string(),
+        "f[f, a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("f[g[a, b], h[c, d]][[All, 2 ;; ;; 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[g[b], h[d]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], {{1, 3}, {2}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[List[a, c], List[b]]"
+    );
+}
+
+#[test]
+fn keyed_part_and_extract_cover_association_paths() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Part[Association[a -> 1, b -> Association[c -> 3]], Key[b], Key[c]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[Association[a -> 1, b -> 2], {Key[b], Key[a]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[Association[a -> 1, b -> Association[c -> 3]], {Key[b], Key[c]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[Association[a -> 1, b -> Association[c -> 3]], {{Key[b], Key[c]}, {Key[a]}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[3, 1]"
+    );
+}
+
+#[test]
+fn extract_consumes_exact_paths_and_position_output() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session.eval_text("Extract[f[g[a], b, h[c]], {1, 1}]").unwrap().value.to_string(),
+        "a"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[g[a], b, h[c]], Position[f[g[a], b, h[c]], _Symbol, Infinity, Heads -> False]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[a, b], {{1}, {2}}, List]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a], List[b]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[g[a, b], h[c, d]], {All, 2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[b, d]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[g[a, b], h[c, d]], {{All, 2}, {1, Span[1, All]}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[b, d], g[a, b]]"
+    );
+    assert_eq!(
+        session.eval_text("Extract[f[a, b], {Span[0, -1]}]").unwrap().value.to_string(),
+        "f[f, a, b]"
+    );
+    assert_eq!(session.eval_text("Extract[f[a, b], {}]").unwrap().value.to_string(), "List[]");
+    assert_eq!(
+        session.eval_text("Extract[f[a, b], {{}}]").unwrap().value.to_string(),
+        "List[f[a, b]]"
+    );
+}
