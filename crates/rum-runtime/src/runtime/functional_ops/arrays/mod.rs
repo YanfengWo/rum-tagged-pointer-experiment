@@ -1,0 +1,100 @@
+use super::*;
+
+mod filter;
+mod spec;
+mod tensor;
+
+use self::filter::*;
+use self::spec::*;
+use self::tensor::*;
+
+impl Session {
+    pub(in crate::runtime) fn eval_inner(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let (f, left, right, g) = match args {
+            [f, left, right] => (f, left, right, system_expr("Plus")),
+            [f, left, right, g] => (f, left, right, g.clone()),
+            _ => return Ok(self.invalid_call_with_arg_range("Inner", args, 3, 4)),
+        };
+
+        let Some(result) = compute_inner(self, f, left, right, &g)? else {
+            return Ok(Expr::call(system_expr("Inner"), args.to_vec()));
+        };
+
+        Ok(result)
+    }
+
+    pub(in crate::runtime) fn eval_array_filter(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let (operator, array, radius_spec, padding_expr) = match args {
+            [operator, array, radius_spec] => (operator, array, radius_spec, None),
+            [operator, array, radius_spec, padding_expr] => {
+                (operator, array, radius_spec, Some(padding_expr))
+            }
+            _ => return Ok(self.invalid_call_with_arg_range("ArrayFilter", args, 3, 4)),
+        };
+
+        let Some((shape, flat)) = parse_rectangular_list_array(array) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "ArrayFilter",
+                args,
+                "expected a rectangular List array as the second argument",
+            ));
+        };
+        let Some(spec) = parse_array_filter_spec(radius_spec, shape.len()) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "ArrayFilter",
+                args,
+                "expected a non-negative integer radius, a matching list of non-negative integer radii, or a matching rectangular 0/1 template array as the third argument",
+            ));
+        };
+        let padding = match padding_expr {
+            None => ArrayFilterPadding::Uniform(ArrayFilterPaddingLeaf::Fixed),
+            Some(padding_expr) => {
+                let Some(parsed) = parse_array_filter_padding(padding_expr, shape.len()) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "ArrayFilter",
+                        args,
+                        "expected Padding -> value, Padding -> None, Padding -> \"Fixed\", Padding -> \"Periodic\", a cyclic padding list, or matching per-axis padding pairs as the fourth argument",
+                    ));
+                };
+                parsed
+            }
+        };
+
+        apply_array_filter(self, operator, &shape, &flat, &spec, &padding)
+    }
+
+    pub(in crate::runtime) fn eval_array_reduce(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [operator, array, dims_spec] = args else {
+            return Ok(self.invalid_call_with_arg_range("ArrayReduce", args, 3, 3));
+        };
+
+        let Some((shape, flat)) = parse_rectangular_list_array(array) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "ArrayReduce",
+                args,
+                "expected a rectangular List array as the second argument",
+            ));
+        };
+        let Some(spec) = parse_array_reduce_spec(dims_spec, shape.len()) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "ArrayReduce",
+                args,
+                "expected a positive integer dimension, a dimension Span, a list of dimensions, or a grouped dimension list as the third argument",
+            ));
+        };
+
+        apply_array_reduce(self, operator, &shape, &flat, &spec)
+    }
+}

@@ -83,20 +83,41 @@ This roadmap intentionally uses two levels of detail:
   - [x] `crates/rum-runtime/src/runtime/tests/functional_ops.rs` -> `crates/rum-runtime/src/runtime/tests/functional_ops/`
   - [x] `crates/rum-runtime/src/runtime/strings.rs` -> `crates/rum-runtime/src/runtime/strings/`
   - [x] `crates/rum-runtime/src/runtime/tests/strings.rs` -> `crates/rum-runtime/src/runtime/tests/strings/`
-- [ ] Continue paying down the remaining explicit large-file debt under the code-organization rules, starting with the biggest live files as of 2026-03-29:
-  - [ ] `crates/rum-jupyter/src/transport.rs` (`2277` lines)
-  - [ ] `crates/rum-runtime/src/runtime/control_flow.rs` (`2257` lines)
-  - [ ] `crates/rum-jupyter/src/tests.rs` (`2168` lines)
-  - [ ] `crates/rum-runtime/src/runtime/structure_ops.rs` (`2034` lines)
-  - [ ] `crates/rum-runtime/src/runtime/strings/patterns.rs` (`1825` lines)
-  - [ ] `crates/rum-jupyter/src/zeromq.rs` (`1765` lines)
-  - [ ] `crates/rum-runtime/src/runtime/builtin_catalog.rs` (`1730` lines)
-  - [ ] `crates/rum-syntax/src/formatter.rs` (`1673` lines)
-  - [ ] `crates/rum-runtime/src/runtime/polynomials.rs` (`1390` lines)
-  - [ ] `crates/rum-runtime/src/runtime/tests/session_requests.rs` (`1199` lines)
-  - [ ] `crates/rum-runtime/src/runtime/associations.rs` (`1196` lines)
-  - [ ] `crates/rum-jupyter/src/adapter.rs` (`1075` lines)
-  - [ ] `crates/rum-runtime/src/runtime/pattern_matching.rs` (`823` lines but still dense enough to keep under review)
+- [x] Complete the first major large-file refactor wave across the most painful runtime, syntax, and Jupyter monoliths:
+  - [x] `crates/rum-runtime/src/runtime/control_flow.rs` -> `crates/rum-runtime/src/runtime/control_flow/`
+  - [x] `crates/rum-runtime/src/runtime/structure_ops.rs` -> `crates/rum-runtime/src/runtime/structure_ops/`
+  - [x] `crates/rum-runtime/src/runtime/pattern_matching.rs` -> `crates/rum-runtime/src/runtime/pattern_matching/`
+  - [x] `crates/rum-runtime/src/runtime/functional_ops/arrays.rs` -> `crates/rum-runtime/src/runtime/functional_ops/arrays/`
+  - [x] `crates/rum-runtime/src/runtime/strings/patterns.rs` -> `crates/rum-runtime/src/runtime/strings/patterns/`
+  - [x] `crates/rum-runtime/src/runtime/strings/similarity.rs` -> `crates/rum-runtime/src/runtime/strings/similarity/`
+  - [x] `crates/rum-runtime/src/runtime/eval_dispatch.rs` -> `crates/rum-runtime/src/runtime/eval_dispatch/`
+  - [x] `crates/rum-runtime/src/runtime/builtin_catalog.rs` partially sliced into feature-oriented submodules
+  - [x] `crates/rum-runtime/src/runtime/polynomials.rs` -> `crates/rum-runtime/src/runtime/polynomials/`
+  - [x] `crates/rum-runtime/src/runtime/associations.rs` -> `crates/rum-runtime/src/runtime/associations/`
+  - [x] `crates/rum-runtime/src/runtime/tests/session_requests.rs` -> `crates/rum-runtime/src/runtime/tests/session_requests/`
+  - [x] `crates/rum-runtime/src/runtime/tests/structure_ops.rs` -> `crates/rum-runtime/src/runtime/tests/structure_ops/`
+  - [x] `crates/rum-jupyter/src/transport.rs` -> `crates/rum-jupyter/src/transport/`
+  - [x] `crates/rum-jupyter/src/tests.rs` -> `crates/rum-jupyter/src/tests/`
+  - [x] `crates/rum-jupyter/src/zeromq.rs` split into a smaller core plus `zeromq/tests/`
+  - [x] `crates/rum-jupyter/src/zeromq/tests/native/frontend.rs` -> `crates/rum-jupyter/src/zeromq/tests/native/frontend/`
+  - [x] `crates/rum-jupyter/src/adapter.rs` -> `crates/rum-jupyter/src/adapter/`
+  - [x] `crates/rum-syntax/src/formatter.rs` -> `crates/rum-syntax/src/formatter/`
+- [ ] Keep the remaining `20k+` files under active review and only continue the large-file workstream when one of these files is touched enough to justify the next conceptual split:
+  - [ ] `crates/rum-runtime/src/runtime/predicates.rs` (`25943` bytes)
+  - [ ] `crates/rum-jupyter/src/zeromq_native.rs` (`25373` bytes)
+  - [ ] `crates/rum-runtime/src/runtime/control_flow/branching_loops.rs` (`25237` bytes)
+  - [ ] `crates/rum-runtime/src/runtime/control_flow/confirmation.rs` (`24919` bytes)
+  - [ ] `crates/rum-runtime/src/runtime/suspension.rs` (`24874` bytes)
+  - [ ] `crates/rum-runtime/src/runtime/builtin_catalog.rs` (`24421` bytes)
+  - [ ] `crates/rum-jupyter/src/transport/json/parse.rs` (`24369` bytes)
+  - [ ] `crates/rum-runtime/src/runtime/tree_walkers.rs` (`24253` bytes)
+  - [ ] `crates/rum-runtime/src/runtime/functional_ops/sequence.rs` (`23386` bytes)
+  - [ ] `crates/rum-jupyter/src/transport/codec.rs` (`23115` bytes)
+  - [ ] `crates/rum-jupyter/src/adapter/mod.rs` (`23007` bytes)
+  - [ ] `crates/rum-runtime/src/runtime/control_flow/mod.rs` (`22282` bytes)
+  - [ ] `crates/rum-runtime/src/runtime/polynomials/core.rs` (`21551` bytes)
+  - [ ] `docs/core-language-support-matrix.md` (`20475` bytes)
+  - [ ] `crates/rum-jupyter/src/tests/adapter.rs` (`20336` bytes)
 
 ### `rum-syntax`
 
