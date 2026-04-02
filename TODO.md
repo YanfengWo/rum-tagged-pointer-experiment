@@ -201,7 +201,8 @@ This roadmap intentionally uses two levels of detail:
   - [x] land first-pass `Protected` state on top of the shared attribute model, including `Protect` / `Unprotect` and protected-symbol write barriers across definition/message/clear paths
   - [x] land first-pass symbol-level `Options` / `SetOptions` / `OptionValue` storage and query semantics, including `Options[f] = {...}` and `Unset[Options[f]]`, before tackling `OptionsPattern`
   - [x] deepen option parity with current system default options and first-pass `OptionsPattern` / one-argument `OptionValue[...]` support inside matching definitions
-  - [ ] continue with richer `SetOptions` / `OptionValue` forms, broader system default coverage, `Names`, and `SyntaxInformation`
+  - [x] land first-pass `Names` and `SyntaxInformation`, including direct assignment / `Unset`, `Block` / loader snapshot participation, and current visible-context name matching
+  - [ ] continue with broader system default coverage, deeper `Names` parity beyond the current wildcard / `RegularExpression` subset, and richer `SyntaxInformation` semantics now that `SetOptions` target lists and list-valued `OptionValue[...]` queries are in place
 - [ ] `CL-09` Tuning, debugging, and verification surface
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:

@@ -375,8 +375,13 @@ once in its primary implementation group. Other groups may mention it as
   and `Unset[Options[f]]`; current system default options now cover the
   first-pass subset already consumed by `ArrayFilter`, `CheckAbort`, and the
   current string-option family, and `OptionsPattern[...]` now integrates with
-  one-argument `OptionValue[...]` inside matching definitions, while `Names`
-  and syntax-annotation ecosystems are still pending
+  one-argument `OptionValue[...]` inside matching definitions; `SetOptions`
+  now accepts symbol target lists and `OptionValue[...]` now accepts lists of
+  option names; `Names` now covers `Names[]`, string `*` wildcards,
+  first-pass `RegularExpression[...]`, `StringExpression`, `Alternatives`,
+  and pattern-list unions over current visible contexts or explicit contexts;
+  `SyntaxInformation` now covers direct query, assignment, `Unset`,
+  `Protected` barriers, and `Block` / loader snapshot participation
 - `planned`: broader package ergonomics and option/protection parity
 
 ### Functions and Symbols
@@ -384,9 +389,9 @@ once in its primary implementation group. Other groups may mention it as
 - `implemented`: `$ContextPath`, `$Packages`, `Begin`, `BeginPackage`, `End`,
   `EndPackage`, `Needs`, `Message`, `MessageName`
 - `partial`: `Protect`, `Unprotect`, `Protected`, `Options`, `SetOptions`,
-  `OptionValue`, `OptionsPattern`
+  `OptionValue`, `OptionsPattern`, `Names`, `SyntaxInformation`
 - `planned`: `ArgumentsOptions`, `CheckArguments`, `DeclarePackage`,
-  `DumpSave`, `Names`, `Once`, `Save`, `SyntaxInformation`, `UpSet`
+  `DumpSave`, `Once`, `Save`, `UpSet`
 - `cross-tracked elsewhere`: `AbortProtect`, `Assert`, `Block`,
   `BlockRandom`, `Check`, `Confirm`, `Enclose`, `Failure`, `FailureQ`,
   `Module`, `MissingQ`, `Quiet`, `Success`, `TagSet`, `WithCleanup`

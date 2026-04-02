@@ -247,6 +247,7 @@ pub struct Session {
     pub(super) builtins: BTreeMap<String, BuiltinSpec>,
     pub(super) attributes: BTreeMap<Symbol, AttributeSet>,
     pub(super) options: BTreeMap<Symbol, SymbolOptions>,
+    pub(super) syntax_information: BTreeMap<Symbol, Expr>,
     pub(super) option_value_scopes: Vec<OptionValueScope>,
     pub(super) current_context: String,
     pub(super) context_path: Vec<String>,

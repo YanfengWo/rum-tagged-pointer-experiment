@@ -299,3 +299,63 @@ fn optionspattern_can_use_an_explicit_target_symbol() {
         "List[7, 9]"
     );
 }
+
+#[test]
+fn setoptions_accepts_target_lists_and_returns_per_target_results() {
+    let mut session = Session::new();
+
+    session.eval_text("Options[f] = {a -> 0, b -> 2}").unwrap();
+    session.eval_text("Options[g] = {a -> 1, b -> 3}").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("SetOptions[{f, g}, {a -> 9, b -> 8}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Rule[a, 9], Rule[b, 8]], List[Rule[a, 9], Rule[b, 8]]]"
+    );
+    assert_eq!(
+        session.eval_text("Options[f]").unwrap().value.to_string(),
+        "List[Rule[a, 9], Rule[b, 8]]"
+    );
+    assert_eq!(
+        session.eval_text("Options[g]").unwrap().value.to_string(),
+        "List[Rule[a, 9], Rule[b, 8]]"
+    );
+}
+
+#[test]
+fn optionvalue_accepts_lists_of_option_names() {
+    let mut session = Session::new();
+
+    session.eval_text("Options[f] = {a -> 1, b -> 2}").unwrap();
+    session
+        .eval_text("f[x_, OptionsPattern[]] := {OptionValue[{a, b}], OptionValue[{\"a\", \"b\"}]}")
+        .unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("OptionValue[f, {a -> 9, b -> 8}, {a, b}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[9, 8]"
+    );
+    assert_eq!(
+        session
+            .eval_text("OptionValue[f, {a -> 9, b -> 8}, {\"a\", \"b\"}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[9, 8]"
+    );
+    assert_eq!(
+        session.eval_text("f[7]").unwrap().value.to_string(),
+        "List[List[1, 2], List[1, 2]]"
+    );
+    assert_eq!(
+        session.eval_text("f[7, a -> 9]").unwrap().value.to_string(),
+        "List[List[9, 2], List[9, 2]]"
+    );
+}

@@ -106,6 +106,7 @@ impl Session {
             self.definitions.remove(symbol);
             self.attributes.remove(symbol);
             self.options.remove(symbol);
+            self.syntax_information.remove(symbol);
             self.message_definitions
                 .retain(|key, _| key.symbol != *symbol);
         }
@@ -126,6 +127,7 @@ impl Session {
                     definition: self.definitions.get(symbol).cloned(),
                     attributes: self.attributes.get(symbol).copied(),
                     options: self.options.get(symbol).cloned(),
+                    syntax_information: self.syntax_information.get(symbol).cloned(),
                     messages: self
                         .message_definitions
                         .iter()
@@ -167,6 +169,16 @@ impl Session {
                 }
                 None => {
                     self.options.remove(&symbol);
+                }
+            }
+
+            match state.syntax_information {
+                Some(syntax_information) => {
+                    self.syntax_information
+                        .insert(symbol.clone(), syntax_information);
+                }
+                None => {
+                    self.syntax_information.remove(&symbol);
                 }
             }
 

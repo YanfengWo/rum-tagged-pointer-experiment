@@ -72,6 +72,12 @@ pub(super) struct OptionValueScope {
     explicit: SymbolOptions,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum OptionValueQuery {
+    Single { original: Expr, name: Symbol },
+    Many(Vec<(Expr, Symbol)>),
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum OptionsNormalizationError {
     InvalidTarget,
@@ -120,48 +126,58 @@ impl Session {
             return Ok(self.invalid_call_with_arg_range("SetOptions", args, 2, usize::MAX));
         }
 
-        let Some(target) = self.normalize_symbol_target_expr(&args[0], true) else {
+        let Some(targets) = self.normalize_symbol_target_exprs(&args[0], true) else {
             return Ok(self.invalid_call_with_arg_form(
                 "SetOptions",
                 args,
                 OptionsNormalizationError::InvalidTarget.message(),
             ));
         };
+        let preserve_target_list_shape =
+            matches!(&args[0], Expr::Call { head, .. } if is_system_symbol_name(head, "List"));
 
         let tail = Expr::call(system_expr("List"), args[1..].to_vec());
         let original_args = args.to_vec();
         let resolved_result = self.evaluate(tail);
         let resolved = self.suspend_with_frame(resolved_result, {
-            let target = target.clone();
+            let targets = targets.clone();
             let original_args = original_args.clone();
             move |session, resolved| {
-                session.finish_set_options_from_resolved(target, original_args, resolved)
+                session.finish_set_options_from_resolved(
+                    targets,
+                    preserve_target_list_shape,
+                    original_args,
+                    resolved,
+                )
             }
         })?;
 
-        self.finish_set_options_from_resolved(target, original_args, resolved)
+        self.finish_set_options_from_resolved(
+            targets,
+            preserve_target_list_shape,
+            original_args,
+            resolved,
+        )
     }
 
     pub(super) fn eval_option_value(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
             [option_expr] => {
-                let Some(option_name) = self.normalize_symbol_target_expr(option_expr, true) else {
-                    return Ok(self.invalid_call_with_arg_form(
-                        "OptionValue",
-                        args,
-                        OptionsNormalizationError::InvalidOptionName.message(),
-                    ));
+                let query = match self.parse_option_value_query(option_expr) {
+                    Ok(query) => query,
+                    Err(error) => {
+                        return Ok(self.invalid_call_with_arg_form(
+                            "OptionValue",
+                            args,
+                            error.message(),
+                        ));
+                    }
                 };
                 let Some(scope) = self.option_value_scopes.last().cloned() else {
                     return Ok(self.invalid_call_with_arg_range("OptionValue", args, 2, 3));
                 };
 
-                Ok(self.resolve_option_value(
-                    scope.target,
-                    Some(scope.explicit),
-                    option_expr.clone(),
-                    option_name,
-                ))
+                Ok(self.resolve_option_value_query(scope.target, Some(scope.explicit), query))
             }
             [target_expr, option_expr] => {
                 let Some(target) = self.normalize_symbol_target_expr(target_expr, true) else {
@@ -171,15 +187,18 @@ impl Session {
                         OptionsNormalizationError::InvalidTarget.message(),
                     ));
                 };
-                let Some(option_name) = self.normalize_symbol_target_expr(option_expr, true) else {
-                    return Ok(self.invalid_call_with_arg_form(
-                        "OptionValue",
-                        args,
-                        OptionsNormalizationError::InvalidOptionName.message(),
-                    ));
+                let query = match self.parse_option_value_query(option_expr) {
+                    Ok(query) => query,
+                    Err(error) => {
+                        return Ok(self.invalid_call_with_arg_form(
+                            "OptionValue",
+                            args,
+                            error.message(),
+                        ));
+                    }
                 };
 
-                Ok(self.resolve_option_value(target, None, option_expr.clone(), option_name))
+                Ok(self.resolve_option_value_query(target, None, query))
             }
             [target_expr, explicit_expr, option_expr] => {
                 let Some(target) = self.normalize_symbol_target_expr(target_expr, true) else {
@@ -189,39 +208,34 @@ impl Session {
                         OptionsNormalizationError::InvalidTarget.message(),
                     ));
                 };
-                let Some(option_name) = self.normalize_symbol_target_expr(option_expr, true) else {
-                    return Ok(self.invalid_call_with_arg_form(
-                        "OptionValue",
-                        args,
-                        OptionsNormalizationError::InvalidOptionName.message(),
-                    ));
+                let query = match self.parse_option_value_query(option_expr) {
+                    Ok(query) => query,
+                    Err(error) => {
+                        return Ok(self.invalid_call_with_arg_form(
+                            "OptionValue",
+                            args,
+                            error.message(),
+                        ));
+                    }
                 };
 
                 let original_args = args.to_vec();
                 let explicit_result = self.evaluate(explicit_expr.clone());
                 let explicit = self.suspend_with_frame(explicit_result, {
                     let target = target.clone();
-                    let option_name = option_name.clone();
-                    let option_expr = option_expr.clone();
+                    let query = query.clone();
                     let original_args = original_args.clone();
                     move |session, resolved| {
                         session.finish_option_value_from_explicit(
                             target,
-                            option_name,
-                            option_expr,
+                            query,
                             original_args,
                             resolved,
                         )
                     }
                 })?;
 
-                self.finish_option_value_from_explicit(
-                    target,
-                    option_name,
-                    option_expr.clone(),
-                    original_args,
-                    explicit,
-                )
+                self.finish_option_value_from_explicit(target, query, original_args, explicit)
             }
             _ => Ok(self.invalid_call_with_arg_range("OptionValue", args, 1, 3)),
         }
@@ -369,7 +383,8 @@ impl Session {
 
     fn finish_set_options_from_resolved(
         &mut self,
-        target: Symbol,
+        targets: Vec<Symbol>,
+        preserve_target_list_shape: bool,
         original_args: Vec<Expr>,
         resolved: Expr,
     ) -> Result<Expr, EvalError> {
@@ -384,32 +399,52 @@ impl Session {
             }
         };
 
-        let mut current = self.options_for_symbol(&target);
+        let results = targets
+            .into_iter()
+            .map(|target| self.apply_set_options_updates(&target, &original_args, &updates))
+            .collect::<Vec<_>>();
 
-        for (name, _) in &updates {
+        if preserve_target_list_shape {
+            Ok(Expr::call(system_expr("List"), results))
+        } else {
+            Ok(results
+                .into_iter()
+                .next()
+                .unwrap_or_else(|| self.invalid_call("SetOptions", &original_args)))
+        }
+    }
+
+    fn apply_set_options_updates(
+        &mut self,
+        target: &Symbol,
+        original_args: &[Expr],
+        updates: &[(Symbol, Expr)],
+    ) -> Expr {
+        let mut current = self.options_for_symbol(target);
+
+        for (name, _) in updates {
             if !current.contains_key(name) {
                 self.push_message(
                     "SetOptions",
                     "optnf",
                     format!("{name} is not a known option for {target}."),
                 );
-                return Ok(self.invalid_call("SetOptions", &original_args));
+                return self.invalid_call("SetOptions", original_args);
             }
         }
 
         for (name, value) in updates {
-            let _ = current.set_existing(&name, value);
+            let _ = current.set_existing(name, value.clone());
         }
 
-        self.set_options_for_symbol(target, current.clone());
-        Ok(current.expr())
+        self.set_options_for_symbol(target.clone(), current.clone());
+        current.expr()
     }
 
     fn finish_option_value_from_explicit(
         &mut self,
         target: Symbol,
-        option_name: Symbol,
-        original_option_expr: Expr,
+        query: OptionValueQuery,
         original_args: Vec<Expr>,
         explicit_resolved: Expr,
     ) -> Result<Expr, EvalError> {
@@ -424,10 +459,37 @@ impl Session {
             }
         };
 
-        Ok(self.resolve_option_value(target, Some(explicit), original_option_expr, option_name))
+        Ok(self.resolve_option_value_query(target, Some(explicit), query))
     }
 
-    fn resolve_option_value(
+    fn resolve_option_value_query(
+        &mut self,
+        target: Symbol,
+        explicit: Option<SymbolOptions>,
+        query: OptionValueQuery,
+    ) -> Expr {
+        match query {
+            OptionValueQuery::Single { original, name } => {
+                self.resolve_option_value_scalar(target, explicit, original, name)
+            }
+            OptionValueQuery::Many(items) => Expr::call(
+                system_expr("List"),
+                items
+                    .into_iter()
+                    .map(|(original, name)| {
+                        self.resolve_option_value_scalar(
+                            target.clone(),
+                            explicit.clone(),
+                            original,
+                            name,
+                        )
+                    })
+                    .collect(),
+            ),
+        }
+    }
+
+    fn resolve_option_value_scalar(
         &mut self,
         target: Symbol,
         explicit: Option<SymbolOptions>,
@@ -459,6 +521,37 @@ impl Session {
             );
             original_option_expr
         }
+    }
+
+    fn parse_option_value_query(
+        &self,
+        expr: &Expr,
+    ) -> Result<OptionValueQuery, OptionsNormalizationError> {
+        if let Some(name) = self.normalize_symbol_target_expr(expr, true) {
+            return Ok(OptionValueQuery::Single {
+                original: expr.clone(),
+                name,
+            });
+        }
+
+        let Expr::Call { head, args } = expr else {
+            return Err(OptionsNormalizationError::InvalidOptionName);
+        };
+
+        if !is_system_symbol_name(head, "List") {
+            return Err(OptionsNormalizationError::InvalidOptionName);
+        }
+
+        let mut names = Vec::with_capacity(args.len());
+
+        for item in args {
+            let Some(name) = self.normalize_symbol_target_expr(item, true) else {
+                return Err(OptionsNormalizationError::InvalidOptionName);
+            };
+            names.push((item.clone(), name));
+        }
+
+        Ok(OptionValueQuery::Many(names))
     }
 
     fn parse_option_entries_from_resolved_set_options(

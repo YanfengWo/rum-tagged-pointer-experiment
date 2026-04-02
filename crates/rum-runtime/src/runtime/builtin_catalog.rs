@@ -490,6 +490,11 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         HoldAttribute::HoldFirst,
         BuiltinHandler::Context,
     ),
+    BuiltinSpec::ordinary(
+        "Names",
+        "Lists symbol names matching a current first-pass name pattern subset.",
+        BuiltinHandler::Names,
+    ),
     BuiltinSpec::new("File", "Represents an explicit file specification."),
     BuiltinSpec::ordinary(
         "FindFile",
@@ -585,6 +590,12 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         "Lists the currently active attributes for a symbol.",
         HoldAttribute::HoldFirst,
         BuiltinHandler::Attributes,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "SyntaxInformation",
+        "Lists the current syntax-information metadata rules for a symbol.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::SyntaxInformation,
     ),
     BuiltinSpec::ordinary_with_hold(
         "Options",

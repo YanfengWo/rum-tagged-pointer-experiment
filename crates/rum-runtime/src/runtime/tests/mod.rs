@@ -68,6 +68,7 @@ mod lowering_golden;
 mod messages;
 mod messages_part2;
 mod messages_part3;
+mod names_and_syntax_information;
 mod options_and_protection;
 mod polynomials;
 mod predicates;

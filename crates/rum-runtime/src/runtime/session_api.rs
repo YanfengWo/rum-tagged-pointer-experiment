@@ -172,6 +172,10 @@ impl Session {
             self.insert_completion_candidate(&mut candidates, symbol, prefix, explicit_context);
         }
 
+        for symbol in self.syntax_information.keys() {
+            self.insert_completion_candidate(&mut candidates, symbol, prefix, explicit_context);
+        }
+
         for key in self.message_definitions.keys() {
             self.insert_completion_candidate(
                 &mut candidates,

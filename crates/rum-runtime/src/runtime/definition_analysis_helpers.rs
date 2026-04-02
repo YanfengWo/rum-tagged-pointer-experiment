@@ -18,6 +18,7 @@ pub(super) enum TagDefinitionError {
 pub(super) enum UnsetDefinitionTarget {
     Message(MessageNameKey),
     Options(Symbol),
+    SyntaxInformation(Symbol),
     OwnValue(Symbol),
     DownValue { symbol: Symbol, lhs: Expr },
     SubValue { symbol: Symbol, lhs: Expr },
@@ -27,6 +28,7 @@ pub(super) enum UnsetDefinitionTarget {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum DefinitionAssignmentTarget {
     Message(MessageNameKey),
+    SyntaxInformation(Symbol),
     Definition(TaggedDefinitionTarget),
 }
 
@@ -46,6 +48,7 @@ impl UnsetDefinitionTarget {
         match self {
             Self::Message(key) => &key.symbol,
             Self::Options(symbol) => symbol,
+            Self::SyntaxInformation(symbol) => symbol,
             Self::OwnValue(symbol)
             | Self::DownValue { symbol, .. }
             | Self::SubValue { symbol, .. }
@@ -134,6 +137,10 @@ impl Session {
             return Ok(UnsetDefinitionTarget::Options(symbol));
         }
 
+        if let Some(symbol) = self.normalize_syntax_information_target_expr(expr) {
+            return Ok(UnsetDefinitionTarget::SyntaxInformation(symbol));
+        }
+
         if let Some(symbol) = expr_as_symbol(expr).cloned() {
             return Ok(UnsetDefinitionTarget::OwnValue(symbol));
         }
@@ -172,6 +179,10 @@ impl Session {
             return Some(DefinitionAssignmentTarget::Message(key));
         }
 
+        if let Some(symbol) = self.normalize_syntax_information_target_expr(lhs) {
+            return Some(DefinitionAssignmentTarget::SyntaxInformation(symbol));
+        }
+
         if let Some(symbol) = expr_as_symbol(lhs).cloned() {
             return Some(DefinitionAssignmentTarget::Definition(
                 TaggedDefinitionTarget::OwnValue(symbol),
@@ -187,6 +198,18 @@ impl Session {
         };
 
         if !is_system_symbol_name(head, "Options") || args.len() != 1 {
+            return None;
+        }
+
+        self.normalize_symbol_target_expr(&args[0], true)
+    }
+
+    pub(super) fn normalize_syntax_information_target_expr(&self, expr: &Expr) -> Option<Symbol> {
+        let Expr::Call { head, args } = expr else {
+            return None;
+        };
+
+        if !is_system_symbol_name(head, "SyntaxInformation") || args.len() != 1 {
             return None;
         }
 

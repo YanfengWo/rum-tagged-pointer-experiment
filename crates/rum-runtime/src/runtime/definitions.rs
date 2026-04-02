@@ -109,6 +109,27 @@ impl Session {
                 self.set_options_for_symbol(target, options);
                 return Ok(rhs);
             }
+
+            if let Some(target) = self.normalize_syntax_information_target_expr(&lhs) {
+                if !self.ensure_symbol_not_protected_for_write(symbol, &target) {
+                    return Ok(rhs);
+                }
+
+                let syntax_information =
+                    match self.compile_assigned_syntax_information_from_resolved(&rhs) {
+                        Ok(syntax_information) => syntax_information,
+                        Err(error) => {
+                            return Ok(self.invalid_call_with_arg_form(
+                                symbol,
+                                &[lhs, rhs],
+                                error.message(),
+                            ));
+                        }
+                    };
+
+                self.set_syntax_information_for_symbol(target, syntax_information);
+                return Ok(rhs);
+            }
         }
 
         match self.normalize_definition_assignment_target(&lhs) {
@@ -118,6 +139,12 @@ impl Session {
                 }
                 self.define_message(key, rhs.clone(), delayed);
                 Ok(if delayed { system_expr("Null") } else { rhs })
+            }
+            Some(DefinitionAssignmentTarget::SyntaxInformation(target)) => {
+                if !self.ensure_symbol_not_protected_for_write(symbol, &target) {
+                    return Ok(if delayed { system_expr("Null") } else { rhs });
+                }
+                Ok(Expr::call(system_expr(symbol), vec![lhs, rhs]))
             }
             Some(DefinitionAssignmentTarget::Definition(target)) => {
                 if !self.ensure_symbol_not_protected_for_write(symbol, target.symbol()) {

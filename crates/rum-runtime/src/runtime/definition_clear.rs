@@ -17,11 +17,11 @@ impl Session {
     }
 
     pub(super) fn eval_clear(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        self.eval_clear_like("Clear", args, false, false, false)
+        self.eval_clear_like("Clear", args, false, false, false, false)
     }
 
     pub(super) fn eval_clear_all(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        self.eval_clear_like("ClearAll", args, true, true, true)
+        self.eval_clear_like("ClearAll", args, true, true, true, true)
     }
 
     pub(super) fn eval_clear_like(
@@ -31,6 +31,7 @@ impl Session {
         clear_attributes: bool,
         clear_messages: bool,
         clear_options: bool,
+        clear_syntax_information: bool,
     ) -> Result<Expr, EvalError> {
         let symbols = match self.normalize_clear_targets(args) {
             Ok(symbols) => symbols,
@@ -39,7 +40,13 @@ impl Session {
 
         for symbol in symbols {
             if self.ensure_symbol_not_protected_for_write(name, &symbol) {
-                self.clear_symbol_state(&symbol, clear_attributes, clear_messages, clear_options);
+                self.clear_symbol_state(
+                    &symbol,
+                    clear_attributes,
+                    clear_messages,
+                    clear_options,
+                    clear_syntax_information,
+                );
             }
         }
 
@@ -53,6 +60,9 @@ impl Session {
             }
             UnsetDefinitionTarget::Options(symbol) => {
                 self.options.remove(&symbol);
+            }
+            UnsetDefinitionTarget::SyntaxInformation(symbol) => {
+                self.syntax_information.remove(&symbol);
             }
             UnsetDefinitionTarget::OwnValue(symbol) => {
                 if let Some(definition) = self.definitions.get_mut(&symbol) {
@@ -165,6 +175,7 @@ impl Session {
         clear_attributes: bool,
         clear_messages: bool,
         clear_options: bool,
+        clear_syntax_information: bool,
     ) {
         self.definitions.remove(symbol);
 
@@ -179,6 +190,10 @@ impl Session {
 
         if clear_options {
             self.options.remove(symbol);
+        }
+
+        if clear_syntax_information {
+            self.syntax_information.remove(symbol);
         }
     }
 }

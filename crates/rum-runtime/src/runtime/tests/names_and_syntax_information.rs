@@ -1,0 +1,213 @@
+use super::*;
+
+#[test]
+fn names_supports_current_first_pass_string_patterns() {
+    let mut session = Session::new();
+
+    session.eval_text("pkg`alpha = 1").unwrap();
+    session.eval_text("pkg`beta = 2").unwrap();
+    session.eval_text("local = 3").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("Names[\"local\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"local\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[\"pkg`a*\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"pkg`alpha\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[StringExpression[\"pkg`\", Alternatives[\"a*\", \"b*\"]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"pkg`alpha\", \"pkg`beta\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[{\"pkg`a*\", \"pkg`b*\"}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"pkg`alpha\", \"pkg`beta\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[RegularExpression[\"^pkg`[ab].*$\"]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"pkg`alpha\", \"pkg`beta\"]"
+    );
+}
+
+#[test]
+fn names_without_explicit_context_only_sees_visible_contexts() {
+    let mut session = Session::new();
+
+    session.eval_text("Hidden`local = 1").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("Names[\"local\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[\"Hidden`local\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"Hidden`local\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[RegularExpression[\"Hidden`l.*\"]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"Hidden`local\"]"
+    );
+}
+
+#[test]
+fn syntax_information_defaults_assignment_and_unset_cover_current_first_pass_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+
+    let assigned = session
+        .eval_text("SyntaxInformation[f] = {\"ArgumentsPattern\" -> {_, OptionsPattern[]}}")
+        .unwrap();
+    assert_eq!(
+        assigned.value.to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], OptionsPattern[]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], OptionsPattern[]]]]"
+    );
+
+    session.eval_text("Unset[SyntaxInformation[f]]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+}
+
+#[test]
+fn syntax_information_participates_in_block_and_clearall() {
+    let mut session = Session::new();
+
+    session
+        .eval_text("SyntaxInformation[f] = {\"LocalVariables\" -> {x}}")
+        .unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("Block[{f}, SyntaxInformation[f] = {\"ArgumentsPattern\" -> {_}}; SyntaxInformation[f]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"LocalVariables\", List[x]]]"
+    );
+
+    session.eval_text("Clear[f]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"LocalVariables\", List[x]]]"
+    );
+
+    session.eval_text("ClearAll[f]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+}
+
+#[test]
+fn protect_blocks_direct_syntax_information_assignment_and_unset() {
+    let mut session = Session::new();
+
+    session
+        .eval_text("SyntaxInformation[f] = {\"ArgumentsPattern\" -> {_}}")
+        .unwrap();
+    session.eval_text("Protect[f]").unwrap();
+
+    let assigned = session
+        .eval_text("SyntaxInformation[f] = {\"ArgumentsPattern\" -> {_, _}}")
+        .unwrap();
+    assert!(
+        assigned
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Set" && message.tag == "wrsym")
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[]]]]"
+    );
+
+    let unset = session.eval_text("Unset[SyntaxInformation[f]]").unwrap();
+    assert!(
+        unset
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Unset" && message.tag == "wrsym")
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[]]]]"
+    );
+}

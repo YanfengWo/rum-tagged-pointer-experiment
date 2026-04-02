@@ -70,6 +70,7 @@ pub(super) struct BlockSymbolState {
     pub(super) definition: Option<SymbolDefinition>,
     pub(super) attributes: Option<AttributeSet>,
     pub(super) options: Option<SymbolOptions>,
+    pub(super) syntax_information: Option<Expr>,
     pub(super) messages: Vec<(MessageNameKey, MessageDefinition)>,
 }
 
@@ -77,6 +78,7 @@ pub(super) struct BlockSymbolState {
 pub(super) struct LoaderSnapshot {
     pub(super) attributes: BTreeMap<Symbol, AttributeSet>,
     pub(super) options: BTreeMap<Symbol, SymbolOptions>,
+    pub(super) syntax_information: BTreeMap<Symbol, Expr>,
     pub(super) current_context: String,
     pub(super) context_path: Vec<String>,
     pub(super) context_stack: Vec<ContextFrame>,
@@ -228,6 +230,7 @@ impl Default for Session {
             builtins: BTreeMap::new(),
             attributes: BTreeMap::new(),
             options: BTreeMap::new(),
+            syntax_information: BTreeMap::new(),
             option_value_scopes: Vec::new(),
             current_context: GLOBAL_CONTEXT.to_string(),
             context_path: vec![SYSTEM_CONTEXT.to_string(), GLOBAL_CONTEXT.to_string()],
