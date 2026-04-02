@@ -1,4 +1,4 @@
-use super::{Doc, INDENT_WIDTH};
+use super::{doc::Doc, INDENT_WIDTH};
 
 pub(super) fn render_doc(doc: &Doc, line_width: usize) -> String {
     render_doc_mode(doc, line_width, RenderMode::Broken)
