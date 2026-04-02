@@ -259,6 +259,7 @@ pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<CompiledSequence
                 checks: Vec::new(),
             })
         }
+        expr if is_options_pattern_expr(expr) => Some(options_pattern_sequence_matcher()),
         Expr::Call { head, args } if is_system_symbol_name(head, "Repeated") => {
             compile_repeated_pattern(args, 1)
         }

@@ -372,8 +372,11 @@ once in its primary implementation group. Other groups may mention it as
   definition/message/clear write paths honor a first-pass protected-symbol
   barrier; symbol-level option storage and lookup now cover explicit
   `Options[...]`, `SetOptions[...]`, `OptionValue[...]`, `Options[f] = {...}`,
-  and `Unset[Options[f]]`, while system default options, `Names`, and
-  syntax-annotation ecosystems are still pending
+  and `Unset[Options[f]]`; current system default options now cover the
+  first-pass subset already consumed by `ArrayFilter`, `CheckAbort`, and the
+  current string-option family, and `OptionsPattern[...]` now integrates with
+  one-argument `OptionValue[...]` inside matching definitions, while `Names`
+  and syntax-annotation ecosystems are still pending
 - `planned`: broader package ergonomics and option/protection parity
 
 ### Functions and Symbols
@@ -381,10 +384,9 @@ once in its primary implementation group. Other groups may mention it as
 - `implemented`: `$ContextPath`, `$Packages`, `Begin`, `BeginPackage`, `End`,
   `EndPackage`, `Needs`, `Message`, `MessageName`
 - `partial`: `Protect`, `Unprotect`, `Protected`, `Options`, `SetOptions`,
-  `OptionValue`
+  `OptionValue`, `OptionsPattern`
 - `planned`: `ArgumentsOptions`, `CheckArguments`, `DeclarePackage`,
-  `DumpSave`, `Names`, `Once`, `OptionsPattern`, `Save`,
-  `SyntaxInformation`, `UpSet`
+  `DumpSave`, `Names`, `Once`, `Save`, `SyntaxInformation`, `UpSet`
 - `cross-tracked elsewhere`: `AbortProtect`, `Assert`, `Block`,
   `BlockRandom`, `Check`, `Confirm`, `Enclose`, `Failure`, `FailureQ`,
   `Module`, `MissingQ`, `Quiet`, `Success`, `TagSet`, `WithCleanup`

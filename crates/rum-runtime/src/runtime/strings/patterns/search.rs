@@ -43,7 +43,8 @@ impl Session {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let Some((max_results, config)) = parse_string_position_args(&args[2..]) else {
+        let option_exprs = self.merged_option_exprs_for_system_symbol("StringPosition", &args[2..]);
+        let Some((max_results, config)) = parse_string_position_args(&option_exprs) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -155,7 +156,8 @@ impl Session {
         let Some(rules) = parse_exact_string_replacement_rules(&args[1]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        let Some((max_replacements, config)) = parse_string_match_limit_and_options(&args[2..])
+        let option_exprs = self.merged_option_exprs_for_system_symbol("StringReplace", &args[2..]);
+        let Some((max_replacements, config)) = parse_string_match_limit_and_options(&option_exprs)
         else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
@@ -193,7 +195,9 @@ impl Session {
         let Some(spec) = parse_exact_string_case_spec(&args[1]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        let Some((max_matches, config)) = parse_string_match_limit_and_options(&args[2..]) else {
+        let option_exprs = self.merged_option_exprs_for_system_symbol("StringCases", &args[2..]);
+        let Some((max_matches, config)) = parse_string_match_limit_and_options(&option_exprs)
+        else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -232,7 +236,8 @@ impl Session {
         let Some(patterns) = parse_string_patterns(&args[1]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        let Some(config) = parse_string_count_options(&args[2..]) else {
+        let option_exprs = self.merged_option_exprs_for_system_symbol("StringCount", &args[2..]);
+        let Some(config) = parse_string_count_options(&option_exprs) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -276,7 +281,8 @@ impl Session {
         let Some(patterns) = parse_string_patterns(&args[1]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        let Some(config) = parse_string_delete_options(&args[2..]) else {
+        let option_exprs = self.merged_option_exprs_for_system_symbol("StringDelete", &args[2..]);
+        let Some(config) = parse_string_delete_options(&option_exprs) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -367,7 +373,8 @@ impl Session {
         let Some(pattern) = parse_string_pattern(&args[1]) else {
             return Expr::call(head.clone(), args.to_vec());
         };
-        let Some(config) = parse_string_match_config(&args[2..]) else {
+        let option_exprs = self.merged_option_exprs_for_system_symbol(symbol, &args[2..]);
+        let Some(config) = parse_string_match_config(&option_exprs) else {
             return Expr::call(head.clone(), args.to_vec());
         };
 
@@ -405,7 +412,8 @@ impl Session {
         let Some(patterns) = parse_string_patterns(&args[1]) else {
             return Expr::call(head.clone(), args.to_vec());
         };
-        let Some(config) = parse_string_match_config(&args[2..]) else {
+        let option_exprs = self.merged_option_exprs_for_system_symbol(symbol, &args[2..]);
+        let Some(config) = parse_string_match_config(&option_exprs) else {
             return Expr::call(head.clone(), args.to_vec());
         };
 

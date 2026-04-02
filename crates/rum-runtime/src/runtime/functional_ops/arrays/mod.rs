@@ -54,7 +54,13 @@ impl Session {
                 "expected a non-negative integer radius, a matching list of non-negative integer radii, or a matching rectangular 0/1 template array as the third argument",
             ));
         };
-        let padding = match padding_expr {
+        let effective_padding_expr = padding_expr.cloned().or_else(|| {
+            self.option_rule_expr_for_symbol(
+                &Symbol::system("ArrayFilter"),
+                &Symbol::system("Padding"),
+            )
+        });
+        let padding = match effective_padding_expr.as_ref() {
             None => ArrayFilterPadding::Uniform(ArrayFilterPaddingLeaf::Fixed),
             Some(padding_expr) => {
                 let Some(parsed) = parse_array_filter_padding(padding_expr, shape.len()) else {

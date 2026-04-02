@@ -228,6 +228,7 @@ impl Default for Session {
             builtins: BTreeMap::new(),
             attributes: BTreeMap::new(),
             options: BTreeMap::new(),
+            option_value_scopes: Vec::new(),
             current_context: GLOBAL_CONTEXT.to_string(),
             context_path: vec![SYSTEM_CONTEXT.to_string(), GLOBAL_CONTEXT.to_string()],
             context_stack: Vec::new(),

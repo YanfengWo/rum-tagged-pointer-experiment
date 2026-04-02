@@ -130,7 +130,13 @@ impl Session {
             return Ok(self.invalid_call_with_arg_range("CheckAbort", args, 2, 3));
         }
 
-        let propagate = match parse_check_abort_propagation(args.get(2)) {
+        let propagate_expr = args.get(2).cloned().or_else(|| {
+            self.option_rule_expr_for_symbol(
+                &Symbol::system("CheckAbort"),
+                &Symbol::system("PropagateAborts"),
+            )
+        });
+        let propagate = match parse_check_abort_propagation(propagate_expr.as_ref()) {
             Ok(mode) => mode,
             Err(detail) => return Ok(self.invalid_call_with_arg_form("CheckAbort", args, detail)),
         };

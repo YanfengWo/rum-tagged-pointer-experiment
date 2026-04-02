@@ -184,3 +184,118 @@ fn block_localizes_options_alongside_other_symbol_state() {
         "0"
     );
 }
+
+#[test]
+fn system_default_options_cover_current_first_pass_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Options[StringCount]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[IgnoreCase, False], Rule[Overlaps, False]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[CheckAbort]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[PropagateAborts, Automatic]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[ArrayFilter]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[Padding, \"Fixed\"]]"
+    );
+}
+
+#[test]
+fn setoptions_updates_current_system_default_subset_behavior() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("SetOptions[StringContainsQ, IgnoreCase -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[IgnoreCase, True]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("StringContainsQ[\"Ab\", \"a\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("StringContainsQ[\"Ab\", \"a\", IgnoreCase -> False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+
+    assert_eq!(
+        session
+            .eval_text("SetOptions[StringCount, Overlaps -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[IgnoreCase, False], Rule[Overlaps, True]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("StringCount[\"aaaa\", \"aa\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+}
+
+#[test]
+fn optionspattern_and_one_arg_optionvalue_cover_current_first_pass_subset() {
+    let mut session = Session::new();
+
+    session.eval_text("Options[f] = {a -> 1, b -> 2}").unwrap();
+    session
+        .eval_text("f[x_, OptionsPattern[]] := {x, OptionValue[a], OptionValue[b]}")
+        .unwrap();
+
+    assert_eq!(
+        session.eval_text("f[7]").unwrap().value.to_string(),
+        "List[7, 1, 2]"
+    );
+    assert_eq!(
+        session.eval_text("f[7, a -> 9]").unwrap().value.to_string(),
+        "List[7, 9, 2]"
+    );
+}
+
+#[test]
+fn optionspattern_can_use_an_explicit_target_symbol() {
+    let mut session = Session::new();
+
+    session.eval_text("Options[f] = {a -> 1}").unwrap();
+    session
+        .eval_text("g[x_, OptionsPattern[f]] := {x, OptionValue[a]}")
+        .unwrap();
+
+    assert_eq!(
+        session.eval_text("g[7]").unwrap().value.to_string(),
+        "List[7, 1]"
+    );
+    assert_eq!(
+        session.eval_text("g[7, a -> 9]").unwrap().value.to_string(),
+        "List[7, 9]"
+    );
+}

@@ -51,13 +51,16 @@ impl Session {
             }
 
             let substituted = substitute_rule_bindings(&down_value.rhs, &outcome.bindings);
+            let option_scope =
+                session.option_value_scope_for_definition(&down_value.lhs, &candidate);
             session.push_trace(TraceEvent::RuleApplied {
                 source: RuleApplicationSource::DownValue,
                 input: candidate.to_string(),
                 rule: down_value.lhs.to_string(),
                 result: substituted.to_string(),
             });
-            let substituted_result = session.evaluate(substituted);
+            let substituted_result =
+                session.evaluate_with_option_value_scope(option_scope, substituted);
             session
                 .suspend_with_frame(substituted_result, |_, value| Ok(value))
                 .map(Some)
@@ -109,13 +112,15 @@ impl Session {
             }
 
             let substituted = substitute_rule_bindings(&up_value.rhs, &outcome.bindings);
+            let option_scope = session.option_value_scope_for_definition(&up_value.lhs, &candidate);
             session.push_trace(TraceEvent::RuleApplied {
                 source: RuleApplicationSource::UpValue,
                 input: candidate.to_string(),
                 rule: up_value.lhs.to_string(),
                 result: substituted.to_string(),
             });
-            let substituted_result = session.evaluate(substituted);
+            let substituted_result =
+                session.evaluate_with_option_value_scope(option_scope, substituted);
             session
                 .suspend_with_frame(substituted_result, |_, value| Ok(value))
                 .map(Some)
@@ -172,13 +177,16 @@ impl Session {
             }
 
             let substituted = substitute_rule_bindings(&sub_value.rhs, &outcome.bindings);
+            let option_scope =
+                session.option_value_scope_for_definition(&sub_value.lhs, &candidate);
             session.push_trace(TraceEvent::RuleApplied {
                 source: RuleApplicationSource::SubValue,
                 input: candidate.to_string(),
                 rule: sub_value.lhs.to_string(),
                 result: substituted.to_string(),
             });
-            let substituted_result = session.evaluate(substituted);
+            let substituted_result =
+                session.evaluate_with_option_value_scope(option_scope, substituted);
             session
                 .suspend_with_frame(substituted_result, |_, value| Ok(value))
                 .map(Some)
