@@ -409,6 +409,113 @@ fn optionvalue_accepts_lists_of_option_names() {
 }
 
 #[test]
+fn delayed_option_rules_are_preserved_and_evaluated_on_lookup() {
+    let mut session = Session::new();
+
+    session.eval_text("x = 1").unwrap();
+    session.eval_text("Options[f] = {a :> x = x + 1}").unwrap();
+
+    assert_eq!(
+        session.eval_text("Options[f]").unwrap().value.to_string(),
+        "List[RuleDelayed[a, Set[x, Plus[x, 1]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("OptionValue[f, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("OptionValue[f, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+
+    assert_eq!(
+        session
+            .eval_text("SetOptions[f, a :> x = x + 10]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[a, Set[x, Plus[x, 10]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("OptionValue[f, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "13"
+    );
+}
+
+#[test]
+fn delayed_system_default_options_feed_current_builtin_consumers() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("SetOptions[StringContainsQ, IgnoreCase :> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[IgnoreCase, True]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("StringContainsQ[\"Ab\", \"a\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+
+    assert_eq!(
+        session
+            .eval_text("SetOptions[Depth, Heads :> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[Heads, True]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Depth[f[g][x]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+}
+
+#[test]
+fn setoptions_and_optionvalue_match_known_system_options_by_name() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("SetOptions[Save, IncludedContexts -> None]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[ExcludedContexts, Automatic], Rule[IncludedContexts, None]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("OptionValue[Save, IncludedContexts]")
+            .unwrap()
+            .value
+            .to_string(),
+        "None"
+    );
+}
+
+#[test]
 fn setoptions_updates_system_heads_defaults_for_cases_position_and_depth() {
     let mut session = Session::new();
 

@@ -432,12 +432,12 @@ impl Session {
         let defaults = default_system_options(&Symbol::system(operator));
         explicit
             .iter()
-            .find(|(name, _)| {
+            .find(|(name, _, _)| {
                 !defaults
                     .iter()
-                    .any(|(default_name, _)| default_name.name() == name.name())
+                    .any(|(default_name, _, _)| default_name.name() == name.name())
             })
-            .map(|(name, _)| name.clone())
+            .map(|(name, _, _)| name.clone())
     }
 
     fn report_unknown_package_tool_options(
@@ -450,10 +450,10 @@ impl Session {
         };
 
         let defaults = default_system_options(&Symbol::system(operator));
-        for (name, _) in explicit.iter() {
+        for (name, _, _) in explicit.iter() {
             if !defaults
                 .iter()
-                .any(|(default_name, _)| default_name.name() == name.name())
+                .any(|(default_name, _, _)| default_name.name() == name.name())
             {
                 self.push_message(
                     "OptionValue",

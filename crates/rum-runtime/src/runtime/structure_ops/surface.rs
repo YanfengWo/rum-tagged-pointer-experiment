@@ -33,7 +33,7 @@ impl Session {
         _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let default_include_heads = self.system_option_bool("Depth", "Heads", false);
+        let default_include_heads = self.system_option_bool("Depth", "Heads", false)?;
         let (expr, include_heads) = match args {
             [expr] => (expr, default_include_heads),
             [expr, option] => {

@@ -72,10 +72,11 @@ impl Parser {
 
             self.bump();
 
-            let next_min_precedence = if op.is_right_associative() {
-                op.precedence()
-            } else {
-                op.precedence() + 1
+            let next_min_precedence = match op {
+                BinaryOp::ReplaceAll | BinaryOp::ReplaceRepeated => BinaryOp::Rule.precedence(),
+                BinaryOp::Rule | BinaryOp::RuleDelayed => BinaryOp::Set.precedence(),
+                _ if op.is_right_associative() => op.precedence(),
+                _ => op.precedence() + 1,
             };
 
             let rhs =

@@ -1,8 +1,15 @@
 use super::*;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct SymbolOptionEntry {
+    name: Symbol,
+    value: Expr,
+    delayed: bool,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(super) struct SymbolOptions {
-    entries: Vec<(Symbol, Expr)>,
+    entries: Vec<SymbolOptionEntry>,
 }
 
 impl SymbolOptions {
@@ -11,43 +18,64 @@ impl SymbolOptions {
     }
 
     pub(super) fn contains_key(&self, key: &Symbol) -> bool {
-        self.entries.iter().any(|(name, _)| name == key)
+        self.entries.iter().any(|entry| entry.name == *key)
+    }
+
+    pub(super) fn contains_name(&self, key: &str) -> bool {
+        self.entries.iter().any(|entry| entry.name.name() == key)
     }
 
     pub(super) fn get(&self, key: &Symbol) -> Option<&Expr> {
-        self.entries
-            .iter()
-            .find(|(name, _)| name == key)
-            .map(|(_, value)| value)
+        self.entry(key).map(|entry| &entry.value)
     }
 
     pub(super) fn get_by_name(&self, key: &str) -> Option<&Expr> {
-        self.entries
-            .iter()
-            .find(|(name, _)| name.name() == key)
-            .map(|(_, value)| value)
+        self.entry_by_name(key).map(|entry| &entry.value)
     }
 
-    pub(super) fn set_existing(&mut self, key: &Symbol, value: Expr) -> bool {
-        if let Some((_, current)) = self.entries.iter_mut().find(|(name, _)| name == key) {
-            *current = value;
+    fn entry(&self, key: &Symbol) -> Option<&SymbolOptionEntry> {
+        self.entries.iter().find(|entry| entry.name == *key)
+    }
+
+    fn entry_by_name(&self, key: &str) -> Option<&SymbolOptionEntry> {
+        self.entries.iter().find(|entry| entry.name.name() == key)
+    }
+
+    fn set_existing(&mut self, key: &Symbol, value: Expr, delayed: bool) -> bool {
+        if let Some(current) = self.entries.iter_mut().find(|entry| entry.name == *key) {
+            current.value = value;
+            current.delayed = delayed;
             true
         } else {
             false
         }
     }
 
-    pub(super) fn from_entries(entries: Vec<(Symbol, Expr)>) -> Self {
+    fn set_existing_by_name(&mut self, key: &str, value: Expr, delayed: bool) -> bool {
+        if let Some(current) = self
+            .entries
+            .iter_mut()
+            .find(|entry| entry.name.name() == key)
+        {
+            current.value = value;
+            current.delayed = delayed;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub(super) fn from_entries(entries: Vec<SymbolOptionEntry>) -> Self {
         let mut normalized = Vec::new();
 
-        for (name, value) in entries {
-            if let Some((_, existing_value)) = normalized
+        for entry in entries {
+            if let Some(existing) = normalized
                 .iter_mut()
-                .find(|(existing_name, _)| *existing_name == name)
+                .find(|existing: &&mut SymbolOptionEntry| existing.name == entry.name)
             {
-                *existing_value = value;
+                *existing = entry;
             } else {
-                normalized.push((name, value));
+                normalized.push(entry);
             }
         }
 
@@ -56,17 +84,22 @@ impl SymbolOptions {
         }
     }
 
-    pub(super) fn iter(&self) -> impl Iterator<Item = &(Symbol, Expr)> {
-        self.entries.iter()
+    pub(super) fn iter(&self) -> impl Iterator<Item = (&Symbol, &Expr, bool)> {
+        self.entries
+            .iter()
+            .map(|entry| (&entry.name, &entry.value, entry.delayed))
     }
 
     pub(super) fn rule_exprs(&self) -> Vec<Expr> {
         self.entries
             .iter()
-            .map(|(name, value)| {
+            .map(|entry| {
                 Expr::call(
-                    system_expr("Rule"),
-                    vec![Expr::Atom(Atom::Symbol(name.clone())), value.clone()],
+                    system_expr(if entry.delayed { "RuleDelayed" } else { "Rule" }),
+                    vec![
+                        Expr::Atom(Atom::Symbol(entry.name.clone())),
+                        entry.value.clone(),
+                    ],
                 )
             })
             .collect()
@@ -116,14 +149,18 @@ enum OptionsPatternTarget {
 
 impl Session {
     pub(super) fn system_option_bool(
-        &self,
+        &mut self,
         symbol_name: &str,
         option_name: &str,
         fallback: bool,
-    ) -> bool {
-        self.option_value_for_symbol(&Symbol::system(symbol_name), &Symbol::system(option_name))
-            .map(|value| is_system_symbol_name(&value, "True"))
-            .unwrap_or(fallback)
+    ) -> Result<bool, EvalError> {
+        let Some(value) = self
+            .option_value_for_symbol(&Symbol::system(symbol_name), &Symbol::system(option_name))?
+        else {
+            return Ok(fallback);
+        };
+
+        Ok(is_system_symbol_name(&value, "True"))
     }
 
     pub(super) fn eval_options(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -199,7 +236,7 @@ impl Session {
                     return Ok(self.invalid_call_with_arg_range("OptionValue", args, 2, 3));
                 };
 
-                Ok(self.resolve_option_value_query(scope.target, Some(scope.explicit), query))
+                self.resolve_option_value_query(scope.target, Some(scope.explicit), query)
             }
             [target_expr, option_expr] => {
                 let Some(target) = self.normalize_symbol_target_expr(target_expr, true) else {
@@ -220,7 +257,7 @@ impl Session {
                     }
                 };
 
-                Ok(self.resolve_option_value_query(target, None, query))
+                self.resolve_option_value_query(target, None, query)
             }
             [target_expr, explicit_expr, option_expr] => {
                 let Some(target) = self.normalize_symbol_target_expr(target_expr, true) else {
@@ -377,21 +414,42 @@ impl Session {
         }
     }
 
-    pub(super) fn option_value_for_symbol(&self, symbol: &Symbol, option: &Symbol) -> Option<Expr> {
-        self.options_for_symbol(symbol).get(option).cloned()
+    pub(super) fn option_value_for_symbol(
+        &mut self,
+        symbol: &Symbol,
+        option: &Symbol,
+    ) -> Result<Option<Expr>, EvalError> {
+        let options = self.options_for_symbol(symbol);
+        let entry = options
+            .entry(option)
+            .or_else(|| options.entry_by_name(option.name()))
+            .cloned();
+
+        match entry {
+            Some(entry) => self.resolve_option_entry_value(&entry).map(Some),
+            None => Ok(None),
+        }
     }
 
     pub(super) fn option_rule_expr_for_symbol(
-        &self,
+        &mut self,
         symbol: &Symbol,
         option: &Symbol,
-    ) -> Option<Expr> {
-        self.option_value_for_symbol(symbol, option).map(|value| {
-            Expr::call(
-                system_expr("Rule"),
-                vec![Expr::Atom(Atom::Symbol(option.clone())), value],
-            )
-        })
+    ) -> Result<Option<Expr>, EvalError> {
+        let options = self.options_for_symbol(symbol);
+        let entry = options
+            .entry(option)
+            .or_else(|| options.entry_by_name(option.name()))
+            .cloned();
+
+        let Some(entry) = entry else {
+            return Ok(None);
+        };
+        let value = self.resolve_option_entry_value(&entry)?;
+        Ok(Some(Expr::call(
+            system_expr("Rule"),
+            vec![Expr::Atom(Atom::Symbol(option.clone())), value],
+        )))
     }
 
     pub(super) fn option_rule_exprs_for_symbol(&self, symbol: &Symbol) -> Vec<Expr> {
@@ -399,20 +457,25 @@ impl Session {
     }
 
     pub(super) fn merged_option_exprs_for_symbol(
-        &self,
+        &mut self,
         symbol: &Symbol,
         explicit: &[Expr],
-    ) -> Vec<Expr> {
-        let mut merged = self.option_rule_exprs_for_symbol(symbol);
-        merged.extend(explicit.iter().cloned());
-        merged
+    ) -> Result<Vec<Expr>, EvalError> {
+        let mut merged = Vec::new();
+        for expr in self.option_rule_exprs_for_symbol(symbol) {
+            merged.push(self.evaluate_runtime_option_expr(&expr)?);
+        }
+        for expr in explicit {
+            merged.push(self.evaluate_runtime_option_expr(expr)?);
+        }
+        Ok(merged)
     }
 
     pub(super) fn merged_option_exprs_for_system_symbol(
-        &self,
+        &mut self,
         symbol_name: &str,
         explicit: &[Expr],
-    ) -> Vec<Expr> {
+    ) -> Result<Vec<Expr>, EvalError> {
         self.merged_option_exprs_for_symbol(&Symbol::system(symbol_name), explicit)
     }
 
@@ -422,6 +485,30 @@ impl Session {
     ) -> Result<SymbolOptions, OptionsNormalizationError> {
         let entries = self.parse_option_entries_from_resolved(resolved)?;
         Ok(SymbolOptions::from_entries(entries))
+    }
+
+    fn resolve_option_entry_value(&mut self, entry: &SymbolOptionEntry) -> Result<Expr, EvalError> {
+        if entry.delayed {
+            self.evaluate(entry.value.clone())
+        } else {
+            Ok(entry.value.clone())
+        }
+    }
+
+    fn evaluate_runtime_option_expr(&mut self, expr: &Expr) -> Result<Expr, EvalError> {
+        let Expr::Call { head, args } = expr else {
+            return Ok(expr.clone());
+        };
+
+        if is_system_symbol_name(head, "RuleDelayed") && args.len() == 2 {
+            let value = self.evaluate(args[1].clone())?;
+            Ok(Expr::call(
+                system_expr("Rule"),
+                vec![args[0].clone(), value],
+            ))
+        } else {
+            Ok(expr.clone())
+        }
     }
 
     pub(super) fn evaluate_with_option_value_scope(
@@ -537,23 +624,30 @@ impl Session {
         &mut self,
         target: &Symbol,
         original_args: &[Expr],
-        updates: &[(Symbol, Expr)],
+        updates: &[SymbolOptionEntry],
     ) -> Expr {
         let mut current = self.options_for_symbol(target);
 
-        for (name, _) in updates {
-            if !current.contains_key(name) {
+        for update in updates {
+            if !current.contains_key(&update.name) && !current.contains_name(update.name.name()) {
                 self.push_message(
                     "SetOptions",
                     "optnf",
-                    format!("{name} is not a known option for {target}."),
+                    format!("{} is not a known option for {target}.", update.name),
                 );
                 return self.invalid_call("SetOptions", original_args);
             }
         }
 
-        for (name, value) in updates {
-            let _ = current.set_existing(name, value.clone());
+        for update in updates {
+            let replaced = current.set_existing(&update.name, update.value.clone(), update.delayed);
+            if !replaced {
+                let _ = current.set_existing_by_name(
+                    update.name.name(),
+                    update.value.clone(),
+                    update.delayed,
+                );
+            }
         }
 
         self.set_options_for_symbol(target.clone(), current.clone());
@@ -578,7 +672,7 @@ impl Session {
             }
         };
 
-        Ok(self.resolve_option_value_query(target, Some(explicit), query))
+        self.resolve_option_value_query(target, Some(explicit), query)
     }
 
     fn resolve_option_value_query(
@@ -586,25 +680,23 @@ impl Session {
         target: Symbol,
         explicit: Option<SymbolOptions>,
         query: OptionValueQuery,
-    ) -> Expr {
+    ) -> Result<Expr, EvalError> {
         match query {
             OptionValueQuery::Single { original, name } => {
                 self.resolve_option_value_scalar(target, explicit, original, name)
             }
-            OptionValueQuery::Many(items) => Expr::call(
-                system_expr("List"),
-                items
-                    .into_iter()
-                    .map(|(original, name)| {
-                        self.resolve_option_value_scalar(
-                            target.clone(),
-                            explicit.clone(),
-                            original,
-                            name,
-                        )
-                    })
-                    .collect(),
-            ),
+            OptionValueQuery::Many(items) => {
+                let mut values = Vec::with_capacity(items.len());
+                for (original, name) in items {
+                    values.push(self.resolve_option_value_scalar(
+                        target.clone(),
+                        explicit.clone(),
+                        original,
+                        name,
+                    )?);
+                }
+                Ok(Expr::call(system_expr("List"), values))
+            }
         }
     }
 
@@ -614,31 +706,41 @@ impl Session {
         explicit: Option<SymbolOptions>,
         original_option_expr: Expr,
         option_name: Symbol,
-    ) -> Expr {
+    ) -> Result<Expr, EvalError> {
         let defaults = self.options_for_symbol(&target);
 
         if let Some(explicit) = explicit {
-            if let Some(value) = explicit.get(&option_name).cloned() {
-                if !defaults.contains_key(&option_name) {
+            if let Some(entry) = explicit
+                .entry(&option_name)
+                .or_else(|| explicit.entry_by_name(option_name.name()))
+                .cloned()
+            {
+                if !defaults.contains_key(&option_name)
+                    && !defaults.contains_name(option_name.name())
+                {
                     self.push_message(
                         "OptionValue",
                         "nodef",
                         format!("Unknown option {option_name} for {target}."),
                     );
                 }
-                return value;
+                return self.resolve_option_entry_value(&entry);
             }
         }
 
-        if let Some(value) = defaults.get(&option_name).cloned() {
-            value
+        if let Some(entry) = defaults
+            .entry(&option_name)
+            .or_else(|| defaults.entry_by_name(option_name.name()))
+            .cloned()
+        {
+            self.resolve_option_entry_value(&entry)
         } else {
             self.push_message(
                 "OptionValue",
                 "optnf",
                 format!("Option name {option_name} not found in defaults for {target}."),
             );
-            original_option_expr
+            Ok(original_option_expr)
         }
     }
 
@@ -676,7 +778,7 @@ impl Session {
     fn parse_option_entries_from_resolved_set_options(
         &self,
         expr: &Expr,
-    ) -> Result<Vec<(Symbol, Expr)>, OptionsNormalizationError> {
+    ) -> Result<Vec<SymbolOptionEntry>, OptionsNormalizationError> {
         let Expr::Call { head, args } = expr else {
             return Err(OptionsNormalizationError::InvalidRules);
         };
@@ -701,7 +803,7 @@ impl Session {
     fn parse_option_entries_from_resolved(
         &self,
         expr: &Expr,
-    ) -> Result<Vec<(Symbol, Expr)>, OptionsNormalizationError> {
+    ) -> Result<Vec<SymbolOptionEntry>, OptionsNormalizationError> {
         match expr {
             Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
                 let mut entries = Vec::new();
@@ -710,11 +812,19 @@ impl Session {
                 }
                 Ok(entries)
             }
-            Expr::Call { head, args } if is_system_symbol_name(head, "Rule") && args.len() == 2 => {
+            Expr::Call { head, args }
+                if (is_system_symbol_name(head, "Rule")
+                    || is_system_symbol_name(head, "RuleDelayed"))
+                    && args.len() == 2 =>
+            {
                 let Some(name) = self.normalize_symbol_target_expr(&args[0], true) else {
                     return Err(OptionsNormalizationError::InvalidRules);
                 };
-                Ok(vec![(name, args[1].clone())])
+                Ok(vec![SymbolOptionEntry {
+                    name,
+                    value: args[1].clone(),
+                    delayed: is_system_symbol_name(head, "RuleDelayed"),
+                }])
             }
             _ => Err(OptionsNormalizationError::InvalidRules),
         }
@@ -831,8 +941,8 @@ impl Session {
 }
 
 pub(super) fn options_pattern_sequence_matcher() -> CompiledSequencePattern {
-    let rule_matcher = MatcherNode::Call {
-        head: Box::new(MatcherNode::Exact(system_expr("Rule"))),
+    let option_rule_matcher = |head_name: &str| MatcherNode::Call {
+        head: Box::new(MatcherNode::Exact(system_expr(head_name))),
         args: vec![
             MatcherArg::Single(MatcherNode::Blank {
                 head_constraint: None,
@@ -846,7 +956,10 @@ pub(super) fn options_pattern_sequence_matcher() -> CompiledSequencePattern {
     CompiledSequencePattern {
         min_len: 0,
         max_len: None,
-        matcher: rule_matcher,
+        matcher: MatcherNode::Alternatives(vec![
+            option_rule_matcher("Rule"),
+            option_rule_matcher("RuleDelayed"),
+        ]),
         name: None,
         checks: Vec::new(),
     }
@@ -881,8 +994,12 @@ fn automatic_options_pattern_target(candidate: &Expr) -> Option<Symbol> {
         .or_else(|| expr_as_symbol(head).cloned())
 }
 
-fn system_rule_option(name: &str, value: Expr) -> (Symbol, Expr) {
-    (Symbol::system(name), value)
+fn system_rule_option(name: &str, value: Expr) -> SymbolOptionEntry {
+    SymbolOptionEntry {
+        name: Symbol::system(name),
+        value,
+        delayed: false,
+    }
 }
 
 fn bool_option(value: bool) -> Expr {
@@ -976,14 +1093,18 @@ fn classify_option_expr(
     known_options: &SymbolOptions,
 ) -> Option<Result<Vec<Expr>, Symbol>> {
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "Rule") && args.len() == 2 => {
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "Rule")
+                || is_system_symbol_name(head, "RuleDelayed"))
+                && args.len() == 2 =>
+        {
             let name = match &args[0] {
                 Expr::Atom(Atom::Symbol(symbol)) => symbol.clone(),
                 Expr::Atom(Atom::String(name)) => resolve_unqualified_symbol(name)?,
                 _ => return None,
             };
 
-            if known_options.contains_key(&name) {
+            if known_options.contains_key(&name) || known_options.contains_name(name.name()) {
                 Some(Ok(vec![expr.clone()]))
             } else {
                 Some(Err(name))

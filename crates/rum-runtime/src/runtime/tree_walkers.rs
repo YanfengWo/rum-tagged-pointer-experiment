@@ -82,7 +82,7 @@ impl Session {
             return Ok(self.invalid_call_with_arg_range("Level", args, 2, 4));
         }
 
-        let default_include_heads = self.system_option_bool("Level", "Heads", false);
+        let default_include_heads = self.system_option_bool("Level", "Heads", false)?;
         let Some(levels) = parse_standard_level_spec(&args[1]) else {
             return Ok(self.invalid_call_with_arg_form(
                 "Level",
@@ -191,6 +191,7 @@ impl Session {
         option_exprs: Vec<Expr>,
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
+        let include_heads = self.system_option_bool("Count", "Heads", false)?;
         self.finish_count_like_after_pattern(
             "Count",
             target,
@@ -198,7 +199,7 @@ impl Session {
             option_exprs,
             call_args,
             CasesTraversalConfig {
-                include_heads: self.system_option_bool("Count", "Heads", false),
+                include_heads,
                 ..CasesTraversalConfig::default_cases()
             },
             |count| Expr::integer(BigInt::from(count)),
@@ -232,6 +233,7 @@ impl Session {
         option_exprs: Vec<Expr>,
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
+        let include_heads = self.system_option_bool("MemberQ", "Heads", false)?;
         self.finish_count_like_after_pattern(
             "MemberQ",
             target,
@@ -239,7 +241,7 @@ impl Session {
             option_exprs,
             call_args,
             CasesTraversalConfig {
-                include_heads: self.system_option_bool("MemberQ", "Heads", false),
+                include_heads,
                 ..CasesTraversalConfig::default_member_q()
             },
             |count| system_expr(if count > 0 { "True" } else { "False" }),
@@ -273,6 +275,7 @@ impl Session {
         option_exprs: Vec<Expr>,
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
+        let include_heads = self.system_option_bool("FreeQ", "Heads", true)?;
         self.finish_count_like_after_pattern(
             "FreeQ",
             target,
@@ -280,7 +283,7 @@ impl Session {
             option_exprs,
             call_args,
             CasesTraversalConfig {
-                include_heads: self.system_option_bool("FreeQ", "Heads", true),
+                include_heads,
                 ..CasesTraversalConfig::default_free_q()
             },
             |count| system_expr(if count == 0 { "True" } else { "False" }),
@@ -335,7 +338,7 @@ impl Session {
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         let mut defaults = CasesTraversalConfig::default_position();
-        defaults.include_heads = self.system_option_bool("Position", "Heads", true);
+        defaults.include_heads = self.system_option_bool("Position", "Heads", true)?;
         let traversal_result = self.resolve_position_traversal_owned(option_exprs, defaults);
         self.drive_internal_value(traversal_result, {
             let target = target.clone();

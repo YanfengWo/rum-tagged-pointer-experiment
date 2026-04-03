@@ -197,7 +197,7 @@ This roadmap intentionally uses two levels of detail:
 - [ ] `CL-05` Associations and keyed data
 - [ ] `CL-06` Procedural control, exceptions, and failure flow
 - [ ] `CL-07` String language
-- [ ] `CL-08` Package, namespace, options, and protection tooling
+- [x] `CL-08` Package, namespace, options, and protection tooling
   - [x] land first-pass `Protected` state on top of the shared attribute model, including `Protect` / `Unprotect` and protected-symbol write barriers across definition/message/clear paths
   - [x] land first-pass symbol-level `Options` / `SetOptions` / `OptionValue` storage and query semantics, including `Options[f] = {...}` and `Unset[Options[f]]`, before tackling `OptionsPattern`
   - [x] deepen option parity with current system default options and first-pass `OptionsPattern` / one-argument `OptionValue[...]` support inside matching definitions
@@ -206,7 +206,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] land first-pass package-development persistence and stub tooling through `DeclarePackage`, textual `Save` / `DumpSave` round-trips, and session-local `Once`
   - [x] deepen the current package/tooling subset with `Save` / `DumpSave` context-filter handling, `DumpSave` attribute-suppression handling, richer `Names[RegularExpression[...]]` coverage through alternation and bounded repetition, and broader package/context default `SyntaxInformation`
   - [x] deepen the current package/tooling subset with `Once` option-form parsing in second position, current `PersistenceTime -> 0` no-cache handling, `Save` unknown-option rejection, `Once` unknown-option reporting, non-capturing-group support in `Names[RegularExpression[...]]`, and broader `SyntaxInformation` defaults for optioned traversal/string/package helpers
-  - [ ] continue with deeper `Names` parity beyond the current wildcard / current `RegularExpression` subset, richer `SyntaxInformation` property coverage beyond the current current builtins/defaults, fuller `OptionValue` / `SetOptions` forms, and deeper `DeclarePackage` / `Save` / `DumpSave` / `Once` compatibility
+  - [x] close the current CL-08 mainline with delayed option-rule support, richer current `SetOptions` / `OptionValue` forms, and a stable current package-tooling subset; treat any remaining deeper `Names` regex corners, broader `SyntaxInformation` properties, and fuller `DeclarePackage` / `Save` / `DumpSave` / `Once` parity as non-blocking long-tail polish rather than active mainline blockers
 - [ ] `CL-09` Tuning, debugging, and verification surface
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:

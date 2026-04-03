@@ -356,6 +356,54 @@ fn parses_tagset_before_assignment_rhs() {
 }
 
 #[test]
+fn parses_rule_rhs_before_assignment_rhs() {
+    let parsed = parse_expr("a -> x = x + 1").unwrap();
+    assert_eq!(
+        parsed,
+        SyntaxExpr::binary(
+            BinaryOp::Rule,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::Set,
+                SyntaxExpr::symbol("x", z()),
+                SyntaxExpr::binary(
+                    BinaryOp::Add,
+                    SyntaxExpr::symbol("x", z()),
+                    SyntaxExpr::integer("1", z()),
+                    z(),
+                ),
+                z(),
+            ),
+            z(),
+        )
+    );
+}
+
+#[test]
+fn parses_rule_delayed_rhs_before_assignment_rhs() {
+    let parsed = parse_expr("a :> x = x + 1").unwrap();
+    assert_eq!(
+        parsed,
+        SyntaxExpr::binary(
+            BinaryOp::RuleDelayed,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::Set,
+                SyntaxExpr::symbol("x", z()),
+                SyntaxExpr::binary(
+                    BinaryOp::Add,
+                    SyntaxExpr::symbol("x", z()),
+                    SyntaxExpr::integer("1", z()),
+                    z(),
+                ),
+                z(),
+            ),
+            z(),
+        )
+    );
+}
+
+#[test]
 fn parses_unset_postfix() {
     let parsed = parse_expr("f[x_] =.").unwrap();
     assert_eq!(

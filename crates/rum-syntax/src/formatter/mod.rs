@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    parse_with_diagnostics, ParsedSource, SyntaxError, SyntaxExpr, SyntaxExprKind, SyntaxTokenKind,
-    TriviaKind,
+    ParsedSource, SyntaxError, SyntaxExpr, SyntaxExprKind, SyntaxTokenKind, TriviaKind,
+    parse_with_diagnostics,
 };
 
 mod doc;
@@ -13,7 +13,7 @@ mod tests;
 mod trivia;
 
 use self::{
-    doc::{append_softline, Doc},
+    doc::{Doc, append_softline},
     planning::build_formatting_context,
     render::render_doc,
     trivia::build_document,

@@ -11,7 +11,7 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        Ok(self.eval_string_pattern_predicate(head, args, "StringContainsQ", string_contains_q))
+        self.eval_string_pattern_predicate(head, args, "StringContainsQ", string_contains_q)
     }
 
     pub(in crate::runtime) fn eval_string_starts_q(
@@ -19,7 +19,7 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        Ok(self.eval_string_pattern_predicate(head, args, "StringStartsQ", string_starts_q))
+        self.eval_string_pattern_predicate(head, args, "StringStartsQ", string_starts_q)
     }
 
     pub(in crate::runtime) fn eval_string_ends_q(
@@ -27,7 +27,7 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        Ok(self.eval_string_pattern_predicate(head, args, "StringEndsQ", string_ends_q))
+        self.eval_string_pattern_predicate(head, args, "StringEndsQ", string_ends_q)
     }
 
     pub(in crate::runtime) fn eval_string_position(
@@ -43,7 +43,8 @@ impl Session {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let option_exprs = self.merged_option_exprs_for_system_symbol("StringPosition", &args[2..]);
+        let option_exprs =
+            self.merged_option_exprs_for_system_symbol("StringPosition", &args[2..])?;
         let Some((max_results, config)) = parse_string_position_args(&option_exprs) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
@@ -156,7 +157,8 @@ impl Session {
         let Some(rules) = parse_exact_string_replacement_rules(&args[1]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        let option_exprs = self.merged_option_exprs_for_system_symbol("StringReplace", &args[2..]);
+        let option_exprs =
+            self.merged_option_exprs_for_system_symbol("StringReplace", &args[2..])?;
         let Some((max_replacements, config)) = parse_string_match_limit_and_options(&option_exprs)
         else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
@@ -195,7 +197,7 @@ impl Session {
         let Some(spec) = parse_exact_string_case_spec(&args[1]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        let option_exprs = self.merged_option_exprs_for_system_symbol("StringCases", &args[2..]);
+        let option_exprs = self.merged_option_exprs_for_system_symbol("StringCases", &args[2..])?;
         let Some((max_matches, config)) = parse_string_match_limit_and_options(&option_exprs)
         else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
@@ -236,7 +238,7 @@ impl Session {
         let Some(patterns) = parse_string_patterns(&args[1]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        let option_exprs = self.merged_option_exprs_for_system_symbol("StringCount", &args[2..]);
+        let option_exprs = self.merged_option_exprs_for_system_symbol("StringCount", &args[2..])?;
         let Some(config) = parse_string_count_options(&option_exprs) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
@@ -281,7 +283,8 @@ impl Session {
         let Some(patterns) = parse_string_patterns(&args[1]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        let option_exprs = self.merged_option_exprs_for_system_symbol("StringDelete", &args[2..]);
+        let option_exprs =
+            self.merged_option_exprs_for_system_symbol("StringDelete", &args[2..])?;
         let Some(config) = parse_string_delete_options(&option_exprs) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
@@ -348,7 +351,7 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        Ok(self.eval_string_patterns_predicate(head, args, "StringMatchQ", string_match_q))
+        self.eval_string_patterns_predicate(head, args, "StringMatchQ", string_match_q)
     }
 
     pub(in crate::runtime) fn eval_string_free_q(
@@ -356,7 +359,7 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        Ok(self.eval_string_patterns_predicate(head, args, "StringFreeQ", string_free_q))
+        self.eval_string_patterns_predicate(head, args, "StringFreeQ", string_free_q)
     }
 
     fn eval_string_pattern_predicate(
@@ -365,26 +368,26 @@ impl Session {
         args: &[Expr],
         symbol: &str,
         predicate: fn(&[char], &StringPattern, StringPatternMatchConfig) -> bool,
-    ) -> Expr {
+    ) -> Result<Expr, EvalError> {
         if !(2..=3).contains(&args.len()) {
-            return self.invalid_call_with_arg_range(symbol, args, 2, 3);
+            return Ok(self.invalid_call_with_arg_range(symbol, args, 2, 3));
         }
 
         let Some(pattern) = parse_string_pattern(&args[1]) else {
-            return Expr::call(head.clone(), args.to_vec());
+            return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        let option_exprs = self.merged_option_exprs_for_system_symbol(symbol, &args[2..]);
+        let option_exprs = self.merged_option_exprs_for_system_symbol(symbol, &args[2..])?;
         let Some(config) = parse_string_match_config(&option_exprs) else {
-            return Expr::call(head.clone(), args.to_vec());
+            return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
         if let Some(value) = expr_as_string(&args[0]) {
             let chars = value.chars().collect::<Vec<_>>();
-            return bool_expr(predicate(&chars, &pattern, config));
+            return Ok(bool_expr(predicate(&chars, &pattern, config)));
         }
 
         if let Some(values) = expr_as_string_list(&args[0]) {
-            return list_expr(
+            return Ok(list_expr(
                 values
                     .into_iter()
                     .map(|value| {
@@ -392,10 +395,10 @@ impl Session {
                         bool_expr(predicate(&chars, &pattern, config))
                     })
                     .collect(),
-            );
+            ));
         }
 
-        Expr::call(head.clone(), args.to_vec())
+        Ok(Expr::call(head.clone(), args.to_vec()))
     }
 
     fn eval_string_patterns_predicate(
@@ -404,26 +407,26 @@ impl Session {
         args: &[Expr],
         symbol: &str,
         predicate: fn(&[char], &[StringPattern], StringPatternMatchConfig) -> bool,
-    ) -> Expr {
+    ) -> Result<Expr, EvalError> {
         if !(2..=3).contains(&args.len()) {
-            return self.invalid_call_with_arg_range(symbol, args, 2, 3);
+            return Ok(self.invalid_call_with_arg_range(symbol, args, 2, 3));
         }
 
         let Some(patterns) = parse_string_patterns(&args[1]) else {
-            return Expr::call(head.clone(), args.to_vec());
+            return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        let option_exprs = self.merged_option_exprs_for_system_symbol(symbol, &args[2..]);
+        let option_exprs = self.merged_option_exprs_for_system_symbol(symbol, &args[2..])?;
         let Some(config) = parse_string_match_config(&option_exprs) else {
-            return Expr::call(head.clone(), args.to_vec());
+            return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
         if let Some(value) = expr_as_string(&args[0]) {
             let chars = value.chars().collect::<Vec<_>>();
-            return bool_expr(predicate(&chars, &patterns, config));
+            return Ok(bool_expr(predicate(&chars, &patterns, config)));
         }
 
         if let Some(values) = expr_as_string_list(&args[0]) {
-            return list_expr(
+            return Ok(list_expr(
                 values
                     .into_iter()
                     .map(|value| {
@@ -431,9 +434,9 @@ impl Session {
                         bool_expr(predicate(&chars, &patterns, config))
                     })
                     .collect(),
-            );
+            ));
         }
 
-        Expr::call(head.clone(), args.to_vec())
+        Ok(Expr::call(head.clone(), args.to_vec()))
     }
 }

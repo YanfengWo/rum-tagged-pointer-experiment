@@ -377,8 +377,9 @@ once in its primary implementation group. Other groups may mention it as
   current string-option family, and the current `Heads`-aware tree-walker
   family, and `OptionsPattern[...]` now integrates with one-argument
   `OptionValue[...]` inside matching definitions; `SetOptions` now accepts
-  symbol target lists and `OptionValue[...]` now accepts lists of option
-  names; `Names` now covers `Names[]`, string `*` wildcards, first-pass
+  symbol target lists, delayed option rules, and name-fallback option
+  matching, and `OptionValue[...]` now accepts lists of option names while
+  evaluating delayed option values at lookup time; `Names` now covers `Names[]`, string `*` wildcards, first-pass
   `RegularExpression[...]`, `StringExpression`, `Alternatives`, and
   pattern-list unions over current visible contexts or explicit contexts,
   including the current bounded / alternation / grouping /
@@ -400,10 +401,10 @@ once in its primary implementation group. Other groups may mention it as
   `ArgumentsOptions` / `CheckArguments` now cover the current held-call and
   trailing-options subset, and direct builtin `UpSet` / `UpSetDelayed` now
   cover first-pass inferred upvalue tags
-- `planned`: broader package ergonomics, deeper `DeclarePackage` /
-  `Save` / `DumpSave` / `Once` compatibility, richer `Names` regex parity
-  beyond the current wildcard/grouping subset, and broader
-  `SyntaxInformation` properties
+- `planned`: non-blocking long-tail package ergonomics, deeper
+  `DeclarePackage` / `Save` / `DumpSave` / `Once` compatibility, richer
+  `Names` regex parity beyond the current wildcard/grouping subset, and
+  broader `SyntaxInformation` properties
 
 ### Functions and Symbols
 
@@ -413,9 +414,9 @@ once in its primary implementation group. Other groups may mention it as
   `OptionValue`, `OptionsPattern`, `Names`, `SyntaxInformation`,
   `ArgumentsOptions`, `CheckArguments`, `UpSet`, `UpSetDelayed`,
   `DeclarePackage`, `DumpSave`, `Once`, `Save`
-- `planned`: deeper `DeclarePackage` / `Save` / `DumpSave` / `Once` parity,
-  richer `Names` regex coverage beyond the current wildcard / bounded /
-  alternation subset, and broader `SyntaxInformation` properties
+- `planned`: long-tail `DeclarePackage` / `Save` / `DumpSave` / `Once`
+  parity, richer `Names` regex coverage beyond the current wildcard /
+  bounded / alternation subset, and broader `SyntaxInformation` properties
 - `cross-tracked elsewhere`: `AbortProtect`, `Assert`, `Block`,
   `BlockRandom`, `Check`, `Confirm`, `Enclose`, `Failure`, `FailureQ`,
   `Module`, `MissingQ`, `Quiet`, `Success`, `TagSet`, `WithCleanup`
