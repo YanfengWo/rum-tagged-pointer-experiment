@@ -61,6 +61,23 @@ fn timing_and_absolute_timing_return_elapsed_and_value() {
             .to_string(),
         "True"
     );
+
+    assert_eq!(
+        session
+            .eval_text("Part[RepeatedTiming[1 + 1], 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("NumberQ[Part[RepeatedTiming[1 + 1], 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
 }
 
 #[test]
@@ -103,5 +120,76 @@ fn byte_count_uses_the_current_canonical_text_proxy_subset() {
             .value
             .to_string(),
         "1"
+    );
+}
+
+#[test]
+fn short_uses_the_current_canonical_text_truncation_subset() {
+    let mut session = Session::new();
+
+    let shortened = session.eval_text("Short[\"abcdef\", 16]").unwrap();
+    assert_eq!(shortened.value.to_string(), "\"abcdef\"");
+
+    let long_form = session.eval_text("Short[Table[i, {i, 20}], 18]").unwrap();
+    assert!(long_form.value.to_string().contains("..."));
+}
+
+#[test]
+fn on_and_off_gate_matching_messages_at_session_scope() {
+    let mut session = Session::new();
+
+    session.eval_text("Off[FindFile::notfound]").unwrap();
+    let suppressed = session.eval_text("Message[FindFile::notfound]").unwrap();
+    assert!(suppressed.messages.is_empty());
+
+    session.eval_text("On[FindFile]").unwrap();
+    let restored = session.eval_text("Message[FindFile::notfound]").unwrap();
+    assert!(
+        restored
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "FindFile" && message.tag == "notfound" })
+    );
+}
+
+#[test]
+fn sow_and_reap_collect_by_tag_and_optional_handler() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session.eval_text("Reap[Sow[1]]").unwrap().value.to_string(),
+        "List[1, List[List[1]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Reap[Sow[1, a], a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, List[List[1]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Reap[Sow[1, a], b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, List[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Reap[Sow[1, a], _, List]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, List[List[a, List[1]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Reap[Sow[1, a], {_Symbol}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, List[List[List[1]]]]"
     );
 }

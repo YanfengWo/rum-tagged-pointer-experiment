@@ -89,8 +89,23 @@ pub(super) struct LoaderSnapshot {
     pub(super) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
     pub(super) next_generated_symbol_id: u64,
     pub(super) trace_events: Vec<TraceEvent>,
+    pub(super) disabled_message_selectors: Vec<MessageSelector>,
     pub(super) messages: Vec<RuntimeMessage>,
     pub(super) last_message_list: Vec<RuntimeMessage>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct ReapBucket {
+    pub(super) tag: Expr,
+    pub(super) values: Vec<Expr>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct ReapScope {
+    pub(super) patterns: Vec<Expr>,
+    pub(super) pattern_list_form: bool,
+    pub(super) handler: Option<Expr>,
+    pub(super) buckets_by_pattern: Vec<Vec<ReapBucket>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -250,10 +265,12 @@ impl Default for Session {
             evaluation_stack: Vec::new(),
             tracing_enabled: false,
             trace_events: Vec::new(),
+            disabled_message_selectors: Vec::new(),
             messages: Vec::new(),
             prints: Vec::new(),
             last_message_list: Vec::new(),
             handled_non_loader_eval_errors: Vec::new(),
+            reap_scopes: Vec::new(),
             asserts_enabled: false,
             abort_protect_depth: 0,
             abort_protect_pending: 0,

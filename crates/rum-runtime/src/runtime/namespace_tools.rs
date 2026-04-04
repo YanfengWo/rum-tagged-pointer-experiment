@@ -354,6 +354,21 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
             blank_expr(),
             optional_blank_association_expr(),
         ])],
+        "RepeatedTiming" => vec![syntax_argument_pattern(vec![blank_expr()])],
+        "Short" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            optional_blank_expr(),
+        ])],
+        "On" | "Off" => vec![syntax_argument_pattern(vec![blank_sequence_expr()])],
+        "Sow" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            optional_blank_expr(),
+        ])],
+        "Reap" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            optional_blank_expr(),
+            optional_blank_expr(),
+        ])],
         "StringCount" => vec![syntax_argument_pattern(vec![
             blank_expr(),
             blank_expr(),

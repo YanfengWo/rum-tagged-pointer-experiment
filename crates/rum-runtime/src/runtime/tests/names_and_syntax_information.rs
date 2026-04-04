@@ -553,3 +553,41 @@ fn unsetting_system_syntax_information_reverts_to_default_rules() {
         "List[Rule[\"ArgumentsPattern\", List[Blank[]]]]"
     );
 }
+
+#[test]
+fn syntax_information_covers_current_cl09_debugging_surface_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[RepeatedTiming]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Short]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[On]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[BlankSequence[]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Reap]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]], Optional[Blank[]]]]]"
+    );
+}

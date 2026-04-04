@@ -241,6 +241,13 @@ impl MessageSelector {
                 .as_ref()
                 .map_or(true, |tag| message.tag.as_str() == tag.as_str())
     }
+
+    pub(super) fn covers(&self, other: &MessageSelector) -> bool {
+        self.symbol == other.symbol
+            && self.tag.as_ref().map_or(true, |tag| {
+                other.tag.as_ref().is_some_and(|other| other == tag)
+            })
+    }
 }
 
 pub struct Session {
@@ -265,10 +272,12 @@ pub struct Session {
     pub(super) evaluation_stack: Vec<Expr>,
     pub(super) tracing_enabled: bool,
     pub(super) trace_events: Vec<TraceEvent>,
+    pub(super) disabled_message_selectors: Vec<MessageSelector>,
     pub(super) messages: Vec<RuntimeMessage>,
     pub(super) prints: Vec<String>,
     pub(super) last_message_list: Vec<RuntimeMessage>,
     pub(super) handled_non_loader_eval_errors: Vec<RuntimeMessage>,
+    pub(super) reap_scopes: Vec<ReapScope>,
     pub(super) asserts_enabled: bool,
     pub(super) abort_protect_depth: usize,
     pub(super) abort_protect_pending: usize,

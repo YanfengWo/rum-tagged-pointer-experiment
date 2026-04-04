@@ -25,6 +25,19 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
         BuiltinHandler::AbsoluteTiming,
     ),
+    BuiltinSpec::ordinary_with_attributes(
+        "RepeatedTiming",
+        "Evaluates an expression multiple times and returns {elapsed, value} in the current fixed-sample wall-clock subset.",
+        AttributeSet::empty()
+            .with(Attribute::HoldFirst)
+            .with(Attribute::SequenceHold),
+        BuiltinHandler::RepeatedTiming,
+    ),
+    BuiltinSpec::ordinary(
+        "Short",
+        "Returns the current canonical-text shortened display subset for an expression.",
+        BuiltinHandler::Short,
+    ),
     BuiltinSpec::ordinary(
         "Echo",
         "Prints a value through the runtime print stream and returns it.",
@@ -44,5 +57,28 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
         "ByteCount",
         "Returns the current canonical-text byte count for an expression in the first-pass resource subset.",
         BuiltinHandler::ByteCount,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "On",
+        "Enables session-level emission of matching messages in the current selector subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::On,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Off",
+        "Disables session-level emission of matching messages in the current selector subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Off,
+    ),
+    BuiltinSpec::ordinary(
+        "Sow",
+        "Collects a value for enclosing Reap in the current first-pass tag-and-group subset.",
+        BuiltinHandler::Sow,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Reap",
+        "Evaluates an expression and collects values emitted by Sow in the current first-pass grouping subset.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::Reap,
     ),
 ];

@@ -16,6 +16,7 @@ impl Session {
             message_definitions: self.message_definitions.clone(),
             next_generated_symbol_id: self.next_generated_symbol_id,
             trace_events: self.trace_events.clone(),
+            disabled_message_selectors: self.disabled_message_selectors.clone(),
             messages: self.messages.clone(),
             last_message_list: self.last_message_list.clone(),
         }
@@ -35,11 +36,28 @@ impl Session {
         self.message_definitions = snapshot.message_definitions;
         self.next_generated_symbol_id = snapshot.next_generated_symbol_id;
         self.trace_events = snapshot.trace_events;
+        self.disabled_message_selectors = snapshot.disabled_message_selectors;
         self.messages = snapshot.messages;
         self.last_message_list = snapshot.last_message_list;
     }
 
+    pub(super) fn message_enabled(&self, symbol: &str, tag: &str) -> bool {
+        let candidate = MessageSelector {
+            symbol: symbol.to_string(),
+            tag: Some(tag.to_string()),
+        };
+
+        !self
+            .disabled_message_selectors
+            .iter()
+            .any(|selector| selector.covers(&candidate))
+    }
+
     pub(super) fn push_message(&mut self, symbol: &str, tag: &str, text: impl Into<String>) {
+        if !self.message_enabled(symbol, tag) {
+            return;
+        }
+
         self.messages.push(RuntimeMessage {
             symbol: symbol.to_string(),
             tag: tag.to_string(),
@@ -86,7 +104,9 @@ impl Session {
         }
 
         self.handled_non_loader_eval_errors.push(message.clone());
-        self.messages.push(message);
+        if self.message_enabled(&message.symbol, &message.tag) {
+            self.messages.push(message);
+        }
         true
     }
 

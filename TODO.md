@@ -209,7 +209,8 @@ This roadmap intentionally uses two levels of detail:
   - [x] close the current CL-08 mainline with delayed option-rule support, richer current `SetOptions` / `OptionValue` forms, and a stable current package-tooling subset; treat any remaining deeper `Names` regex corners, broader `SyntaxInformation` properties, and fuller `DeclarePackage` / `Save` / `DumpSave` / `Once` parity as non-blocking long-tail polish rather than active mainline blockers
 - [ ] `CL-09` Tuning, debugging, and verification surface
   - [x] land a first CL-09 debugging wave through flat held-expression `Trace`, print-stream `TracePrint`, exact-rational `Timing` / `AbsoluteTiming`, echo-style debugging helpers, and a current canonical-text-proxy `ByteCount` subset
-  - [ ] continue with richer tracing structure/filter forms, `RepeatedTiming`, resource-limit wrappers, verification/reporting builtins, `On` / `Off`, `Sow` / `Reap`, monitor hooks, and fuller resource/accounting parity
+  - [x] deepen the first CL-09 surface with fixed-sample `RepeatedTiming`, session-level `On` / `Off` message gating, tag-aware `Sow` / `Reap`, and a current canonical-text `Short` subset
+  - [ ] continue with richer tracing structure/filter forms, resource-limit wrappers, verification/reporting builtins, monitor hooks, and fuller resource/accounting parity
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:
   - [ ] direct unit tests for small helpers, planners, normalization logic, and matcher branches
