@@ -1,14 +1,14 @@
 use super::*;
 
 #[test]
-fn trace_returns_a_first_pass_flat_expression_list_without_leaking_session_trace_state() {
+fn trace_returns_a_first_pass_structured_expression_list_without_leaking_session_trace_state() {
     let mut session = Session::new();
     session.eval_text("f[x_] := x + 1").unwrap();
 
     let traced = session.eval_text("Trace[f[1]]").unwrap();
     assert_eq!(
         traced.value.to_string(),
-        "List[Hold[f[1]], Hold[Plus[1, 1]], Hold[2], Hold[f[1]], Hold[2]]"
+        "List[Hold[f[1]], List[Hold[Plus[1, 1]], Hold[2]], Hold[2]]"
     );
     assert!(session.take_trace().is_empty());
 

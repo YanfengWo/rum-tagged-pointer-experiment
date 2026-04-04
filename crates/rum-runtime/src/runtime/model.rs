@@ -279,6 +279,7 @@ pub struct Session {
     pub(super) evaluation_stack: Vec<Expr>,
     pub(super) tracing_enabled: bool,
     pub(super) trace_events: Vec<TraceEvent>,
+    pub(super) trace_event_depths: Vec<usize>,
     pub(super) disabled_message_selectors: Vec<MessageSelector>,
     pub(super) messages: Vec<RuntimeMessage>,
     pub(super) prints: Vec<String>,

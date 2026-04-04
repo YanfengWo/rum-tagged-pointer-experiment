@@ -16,6 +16,7 @@ impl Session {
             message_definitions: self.message_definitions.clone(),
             next_generated_symbol_id: self.next_generated_symbol_id,
             trace_events: self.trace_events.clone(),
+            trace_event_depths: self.trace_event_depths.clone(),
             disabled_message_selectors: self.disabled_message_selectors.clone(),
             messages: self.messages.clone(),
             last_message_list: self.last_message_list.clone(),
@@ -36,6 +37,7 @@ impl Session {
         self.message_definitions = snapshot.message_definitions;
         self.next_generated_symbol_id = snapshot.next_generated_symbol_id;
         self.trace_events = snapshot.trace_events;
+        self.trace_event_depths = snapshot.trace_event_depths;
         self.disabled_message_selectors = snapshot.disabled_message_selectors;
         self.messages = snapshot.messages;
         self.last_message_list = snapshot.last_message_list;

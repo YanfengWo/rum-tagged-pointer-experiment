@@ -433,11 +433,11 @@ once in its primary implementation group. Other groups may mention it as
 - `implemented`: structured runtime messages, top-level message list, internal
   structured tracing, request-level trace payloads, recursion / iteration /
   evaluation-pass limits
-- `partial`: a first language-surface debugging layer now exists through flat
-  held-expression `Trace[...]`, filtered current `Trace[..., patt]` /
-  `TracePrint[..., patt]` forms plus current list-pattern filtering and
-  current flat-subset levelspec filtering plus current `Heads -> True|False`
-  support, exact-rational wall-clock
+- `partial`: a first language-surface debugging layer now exists through a
+  structured default `Trace[expr]` tree model, filtered current
+  `Trace[..., patt]` / `TracePrint[..., patt]` forms plus current
+  list-pattern filtering and current flat-subset levelspec filtering plus
+  current `Heads -> True|False` support, exact-rational wall-clock
   `Timing[...]` / `AbsoluteTiming[...]`, fixed-sample
   `RepeatedTiming[...]`, echo-style debugging output, session-level `On` /
   `Off` message gating, `Sow` / `Reap` tag collection, a current
@@ -466,9 +466,11 @@ once in its primary implementation group. Other groups may mention it as
   `EchoLabel`, `On`, `Off`, `Sow`, `Reap`, `TimeConstrained`,
   `MemoryConstrained`, `MemoryInUse`, `Monitor`, `EvaluationMonitor`,
   `StepMonitor`, `EvaluationData`, `TestCreate`, `TestReport`, `Stack` in
-  the current first-pass subset, including filtered trace forms plus current
-  flat-subset levelspec and `Heads` filtering, current structural byte/memory
-  proxy semantics, and current report/property metadata matching
+  the current first-pass subset, including a structured default
+  `Trace[expr]` model plus filtered trace forms with the current
+  flat-subset levelspec and `Heads` filtering, current structural
+  byte/memory proxy semantics, and current report/property metadata
+  matching
 - `planned`: `Assert`, `Dialog`, plus deeper trace/resource/monitor/test
   parity
 - `cross-tracked elsewhere`: `AbortProtect`, `Check`, `CheckAbort`,

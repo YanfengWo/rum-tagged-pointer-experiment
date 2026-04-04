@@ -305,8 +305,19 @@ impl Session {
     }
 
     pub(super) fn push_trace(&mut self, event: TraceEvent) {
+        let depth = self.evaluation_stack.len().saturating_sub(2);
+        self.push_trace_with_depth(event, depth);
+    }
+
+    pub(super) fn push_trace_transition(&mut self, event: TraceEvent) {
+        let depth = self.evaluation_stack.len();
+        self.push_trace_with_depth(event, depth);
+    }
+
+    fn push_trace_with_depth(&mut self, event: TraceEvent, depth: usize) {
         if self.tracing_enabled {
             self.trace_events.push(event.clone());
+            self.trace_event_depths.push(depth);
         }
 
         self.handle_monitor_trace_event(&event);

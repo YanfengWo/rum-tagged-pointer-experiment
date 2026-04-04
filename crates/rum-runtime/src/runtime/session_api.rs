@@ -69,6 +69,7 @@ impl Session {
     }
 
     pub fn take_trace(&mut self) -> Vec<TraceEvent> {
+        self.trace_event_depths.clear();
         std::mem::take(&mut self.trace_events)
     }
 

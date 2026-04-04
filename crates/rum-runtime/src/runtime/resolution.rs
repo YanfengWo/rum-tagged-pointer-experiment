@@ -208,7 +208,7 @@ impl Session {
                 return Ok(next);
             }
 
-            self.push_trace(TraceEvent::EvaluationPass {
+            self.push_trace_transition(TraceEvent::EvaluationPass {
                 before: current.to_string(),
                 after: next.to_string(),
             });
@@ -227,7 +227,7 @@ impl Session {
             return Ok(next);
         }
 
-        self.push_trace(TraceEvent::EvaluationPass {
+        self.push_trace_transition(TraceEvent::EvaluationPass {
             before: current.to_string(),
             after: next.to_string(),
         });
@@ -260,7 +260,7 @@ impl Session {
                 return Ok(next);
             }
 
-            self.push_trace(TraceEvent::EvaluationPass {
+            self.push_trace_transition(TraceEvent::EvaluationPass {
                 before: current.to_string(),
                 after: next.to_string(),
             });

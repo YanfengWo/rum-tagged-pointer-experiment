@@ -7,8 +7,12 @@ const DEFAULT_SHORT_LIMIT: usize = 72;
 
 impl Session {
     pub(super) fn eval_trace(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if let [expr] = args {
+            let (_value, trace) = self.eval_with_structured_trace_capture(expr.clone())?;
+            return Ok(trace);
+        }
+
         let (expr, pattern, levels, include_heads) = match args {
-            [expr] => (expr, None, None, false),
             [expr, pattern] => (expr, Some(pattern.clone()), None, false),
             [expr, pattern, third] => {
                 if let Some(include_heads) = parse_heads_option(third) {
@@ -41,7 +45,7 @@ impl Session {
                 };
                 (expr, Some(pattern.clone()), Some(levels), include_heads)
             }
-            _ => return Ok(self.invalid_call_with_arg_range("Trace", args, 1, 4)),
+            _ => return Ok(self.invalid_call_with_arg_range("Trace", args, 2, 4)),
         };
 
         let (_value, trace_exprs) =
@@ -708,47 +712,8 @@ impl Session {
         levels: Option<CasesLevelSpec>,
         include_heads: bool,
     ) -> Result<(Expr, Vec<Expr>), EvalError> {
-        let prior_enabled = self.tracing_enabled;
-        let trace_checkpoint = self.trace_events.len();
-        self.tracing_enabled = true;
-
-        let value = match self.evaluate(expr.clone()) {
-            Ok(value) => value,
-            Err(error) => {
-                self.restore_trace_capture_on_error(trace_checkpoint, prior_enabled);
-                return Err(error);
-            }
-        };
-
-        self.finish_trace_capture(
-            expr,
-            trace_checkpoint,
-            prior_enabled,
-            value,
-            pattern,
-            levels,
-            include_heads,
-        )
-    }
-
-    fn finish_trace_capture(
-        &mut self,
-        original: Expr,
-        trace_checkpoint: usize,
-        prior_enabled: bool,
-        value: Expr,
-        pattern: Option<Expr>,
-        levels: Option<CasesLevelSpec>,
-        include_heads: bool,
-    ) -> Result<(Expr, Vec<Expr>), EvalError> {
-        let events = self.trace_events[trace_checkpoint..].to_vec();
-        self.tracing_enabled = prior_enabled;
-
-        if !prior_enabled {
-            self.trace_events.truncate(trace_checkpoint);
-        }
-
-        let mut trace_exprs = self.trace_exprs_from_events(&original, &events);
+        let (value, events, _depths) = self.capture_trace_events(expr.clone())?;
+        let mut trace_exprs = self.trace_exprs_from_events(&expr, &events);
         match (pattern, levels) {
             (Some(pattern), Some(levels)) => {
                 trace_exprs =
@@ -774,11 +739,63 @@ impl Session {
         Ok((value, trace_exprs))
     }
 
+    fn eval_with_structured_trace_capture(
+        &mut self,
+        expr: Expr,
+    ) -> Result<(Expr, Expr), EvalError> {
+        let (value, events, _depths) = self.capture_trace_events(expr.clone())?;
+        Ok((
+            value,
+            self.structured_trace_expr_from_events(&expr, &events),
+        ))
+    }
+
+    fn capture_trace_events(
+        &mut self,
+        expr: Expr,
+    ) -> Result<(Expr, Vec<TraceEvent>, Vec<usize>), EvalError> {
+        let prior_enabled = self.tracing_enabled;
+        let trace_checkpoint = self.trace_events.len();
+        self.tracing_enabled = true;
+
+        let value = match self.evaluate(expr) {
+            Ok(value) => value,
+            Err(error) => {
+                self.restore_trace_capture_on_error(trace_checkpoint, prior_enabled);
+                return Err(error);
+            }
+        };
+
+        self.finish_trace_event_capture(trace_checkpoint, prior_enabled, value)
+    }
+
+    fn finish_trace_event_capture(
+        &mut self,
+        trace_checkpoint: usize,
+        prior_enabled: bool,
+        value: Expr,
+    ) -> Result<(Expr, Vec<TraceEvent>, Vec<usize>), EvalError> {
+        let events = self.trace_events[trace_checkpoint..].to_vec();
+        let depths = self.trace_event_depths[trace_checkpoint..].to_vec();
+        self.tracing_enabled = prior_enabled;
+
+        if !prior_enabled {
+            self.truncate_trace_from(trace_checkpoint);
+        }
+
+        Ok((value, events, depths))
+    }
+
     fn restore_trace_capture_on_error(&mut self, trace_checkpoint: usize, prior_enabled: bool) {
         self.tracing_enabled = prior_enabled;
         if !prior_enabled {
-            self.trace_events.truncate(trace_checkpoint);
+            self.truncate_trace_from(trace_checkpoint);
         }
+    }
+
+    fn truncate_trace_from(&mut self, trace_checkpoint: usize) {
+        self.trace_events.truncate(trace_checkpoint);
+        self.trace_event_depths.truncate(trace_checkpoint);
     }
 
     fn trace_exprs_from_events(&self, original: &Expr, events: &[TraceEvent]) -> Vec<Expr> {
@@ -802,6 +819,47 @@ impl Session {
         }
 
         trace
+    }
+
+    fn structured_trace_expr_from_events(&self, original: &Expr, events: &[TraceEvent]) -> Expr {
+        let mut builder = StructuredTraceBuilder::new();
+        builder.push_expr(0, original.clone());
+        let mut active_exprs = vec![original.clone()];
+
+        for event in events {
+            match event {
+                TraceEvent::EvaluationPass { before, after } => {
+                    let before_expr = self.trace_expr_from_text(before);
+                    let after_expr = self.trace_expr_from_text(after);
+                    let depth = trace_expr_path_depth(&active_exprs, &before_expr)
+                        .unwrap_or_else(|| active_exprs.len().saturating_sub(1));
+                    active_exprs.truncate(depth + 1);
+                    builder.push_expr(depth, before_expr);
+                    builder.push_expr(depth, after_expr.clone());
+                    if let Some(current) = active_exprs.get_mut(depth) {
+                        *current = after_expr;
+                    }
+                }
+                TraceEvent::DefinitionStored { value, .. } => {
+                    builder.push_expr(
+                        active_exprs.len().saturating_sub(1),
+                        self.trace_expr_from_text(value),
+                    );
+                }
+                TraceEvent::RuleApplied { input, result, .. } => {
+                    let input_expr = self.trace_expr_from_text(input);
+                    let result_expr = self.trace_expr_from_text(result);
+                    let depth = trace_expr_path_depth(&active_exprs, &input_expr)
+                        .unwrap_or_else(|| active_exprs.len().saturating_sub(1));
+                    active_exprs.truncate(depth + 1);
+                    builder.push_expr(depth, input_expr);
+                    builder.push_expr(depth.saturating_add(1), result_expr.clone());
+                    active_exprs.push(result_expr);
+                }
+            }
+        }
+
+        builder.finish()
     }
 
     fn trace_expr_from_text(&self, text: &str) -> Expr {
@@ -1048,6 +1106,11 @@ impl Session {
                 .map(render_trace_event_memory_proxy_bytes)
                 .sum::<usize>(),
         );
+        total = total.saturating_add(
+            self.trace_event_depths
+                .len()
+                .saturating_mul(std::mem::size_of::<usize>()),
+        );
 
         total = total.saturating_add(
             self.handled_non_loader_eval_errors
@@ -1190,7 +1253,7 @@ impl Session {
         let events = self.trace_events[checkpoint.trace_checkpoint..].to_vec();
 
         if !prior_tracing {
-            self.trace_events.truncate(checkpoint.trace_checkpoint);
+            self.truncate_trace_from(checkpoint.trace_checkpoint);
         }
 
         let elapsed = elapsed_duration_expr(started.elapsed());
@@ -1893,6 +1956,68 @@ impl DebugCaptureCheckpoint {
             trace_checkpoint: session.trace_events.len(),
         }
     }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct StructuredTraceBuilder {
+    containers: Vec<Vec<Expr>>,
+    current_exprs: Vec<Option<Expr>>,
+}
+
+impl StructuredTraceBuilder {
+    fn new() -> Self {
+        Self {
+            containers: vec![Vec::new()],
+            current_exprs: Vec::new(),
+        }
+    }
+
+    fn push_expr(&mut self, depth: usize, expr: Expr) {
+        self.close_to_depth(depth);
+
+        while self.containers.len() <= depth {
+            self.containers.push(Vec::new());
+        }
+        if self.current_exprs.len() <= depth {
+            self.current_exprs.resize(depth + 1, None);
+        }
+
+        let duplicate = self.current_exprs[depth]
+            .as_ref()
+            .is_some_and(|current| current == &expr);
+        self.current_exprs.truncate(depth + 1);
+        if duplicate {
+            return;
+        }
+
+        self.containers[depth].push(Expr::call(system_expr("Hold"), vec![expr.clone()]));
+        self.current_exprs[depth] = Some(expr);
+    }
+
+    fn finish(mut self) -> Expr {
+        self.close_to_depth(0);
+        Expr::call(
+            system_expr("List"),
+            self.containers.pop().unwrap_or_default(),
+        )
+    }
+
+    fn close_to_depth(&mut self, depth: usize) {
+        while self.containers.len() > depth + 1 {
+            let child = self.containers.pop().unwrap_or_default();
+            if let Some(parent) = self.containers.last_mut() {
+                parent.push(Expr::call(system_expr("List"), child));
+            }
+        }
+    }
+}
+
+fn trace_expr_path_depth(active_exprs: &[Expr], target: &Expr) -> Option<usize> {
+    active_exprs
+        .iter()
+        .enumerate()
+        .rev()
+        .find_map(|(depth, expr)| (expr == target).then_some(depth))
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
