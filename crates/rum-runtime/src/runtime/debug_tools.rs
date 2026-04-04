@@ -22,7 +22,7 @@ impl Session {
                         return Ok(self.invalid_call_with_arg_form(
                             "Trace",
                             args,
-                            "expected a standard levelspec or Heads -> True|False in the current flat-trace subset",
+                            "expected a standard levelspec or Heads -> True|False in the current structured-trace subset",
                         ));
                     };
                     (expr, Some(pattern.clone()), Some(levels), false)
@@ -33,14 +33,14 @@ impl Session {
                     return Ok(self.invalid_call_with_arg_form(
                         "Trace",
                         args,
-                        "expected a standard levelspec as the third argument in the current flat-trace subset",
+                        "expected a standard levelspec as the third argument in the current structured-trace subset",
                     ));
                 };
                 let Some(include_heads) = parse_heads_option(option) else {
                     return Ok(self.invalid_call_with_arg_form(
                         "Trace",
                         args,
-                        "expected Heads -> True|False as the optional fourth argument in the current flat-trace subset",
+                        "expected Heads -> True|False as the optional fourth argument in the current structured-trace subset",
                     ));
                 };
                 (expr, Some(pattern.clone()), Some(levels), include_heads)
@@ -71,7 +71,7 @@ impl Session {
                         return Ok(self.invalid_call_with_arg_form(
                             "TracePrint",
                             args,
-                            "expected a standard levelspec or Heads -> True|False in the current flat-trace subset",
+                            "expected a standard levelspec or Heads -> True|False in the current structured-trace subset",
                         ));
                     };
                     (expr, Some(pattern.clone()), Some(levels), false)
@@ -82,14 +82,14 @@ impl Session {
                     return Ok(self.invalid_call_with_arg_form(
                         "TracePrint",
                         args,
-                        "expected a standard levelspec as the third argument in the current flat-trace subset",
+                        "expected a standard levelspec as the third argument in the current structured-trace subset",
                     ));
                 };
                 let Some(include_heads) = parse_heads_option(option) else {
                     return Ok(self.invalid_call_with_arg_form(
                         "TracePrint",
                         args,
-                        "expected Heads -> True|False as the optional fourth argument in the current flat-trace subset",
+                        "expected Heads -> True|False as the optional fourth argument in the current structured-trace subset",
                     ));
                 };
                 (expr, Some(pattern.clone()), Some(levels), include_heads)
@@ -718,10 +718,10 @@ impl Session {
         &mut self,
         expr: Expr,
     ) -> Result<(Expr, Expr), EvalError> {
-        let (value, events, _depths) = self.capture_trace_events(expr.clone())?;
+        let (value, events, depths) = self.capture_trace_events(expr.clone())?;
         Ok((
             value,
-            self.structured_trace_expr_from_events(&expr, &events),
+            self.structured_trace_expr_from_events(&expr, &events, &depths),
         ))
     }
 
@@ -773,40 +773,51 @@ impl Session {
         self.trace_event_depths.truncate(trace_checkpoint);
     }
 
-    fn structured_trace_expr_from_events(&self, original: &Expr, events: &[TraceEvent]) -> Expr {
+    fn structured_trace_expr_from_events(
+        &self,
+        original: &Expr,
+        events: &[TraceEvent],
+        depths: &[usize],
+    ) -> Expr {
         let mut builder = StructuredTraceBuilder::new();
         builder.push_expr(0, original.clone());
         let mut active_exprs = vec![original.clone()];
 
-        for event in events {
+        for (event, raw_depth) in events.iter().zip(depths.iter().copied()) {
             match event {
                 TraceEvent::EvaluationPass { before, after } => {
                     let before_expr = self.trace_expr_from_text(before);
                     let after_expr = self.trace_expr_from_text(after);
-                    let depth = trace_expr_path_depth(&active_exprs, &before_expr)
-                        .unwrap_or_else(|| active_exprs.len().saturating_sub(1));
+                    let depth =
+                        trace_expr_path_depth(&active_exprs, &before_expr).unwrap_or(raw_depth);
                     active_exprs.truncate(depth + 1);
-                    builder.push_expr(depth, before_expr);
-                    builder.push_expr(depth, after_expr.clone());
-                    if let Some(current) = active_exprs.get_mut(depth) {
-                        *current = after_expr;
+                    builder.push_evaluation_pass(depth, before_expr, after_expr.clone());
+                    if active_exprs.len() <= depth {
+                        active_exprs.resize(depth + 1, original.clone());
                     }
+                    active_exprs[depth] = after_expr;
                 }
                 TraceEvent::DefinitionStored { value, .. } => {
-                    builder.push_expr(
-                        active_exprs.len().saturating_sub(1),
-                        self.trace_expr_from_text(value),
-                    );
+                    let depth = raw_depth;
+                    builder.push_expr(depth, self.trace_expr_from_text(value));
                 }
                 TraceEvent::RuleApplied { input, result, .. } => {
                     let input_expr = self.trace_expr_from_text(input);
                     let result_expr = self.trace_expr_from_text(result);
-                    let depth = trace_expr_path_depth(&active_exprs, &input_expr)
-                        .unwrap_or_else(|| active_exprs.len().saturating_sub(1));
+                    let depth = raw_depth;
                     active_exprs.truncate(depth + 1);
+                    if active_exprs.len() <= depth {
+                        active_exprs.resize(depth + 1, original.clone());
+                    }
+                    active_exprs[depth] = input_expr.clone();
                     builder.push_expr(depth, input_expr);
                     builder.push_expr(depth.saturating_add(1), result_expr.clone());
-                    active_exprs.push(result_expr);
+                    if active_exprs.len() <= depth + 1 {
+                        active_exprs.push(result_expr);
+                    } else {
+                        active_exprs.truncate(depth + 2);
+                        active_exprs[depth + 1] = result_expr;
+                    }
                 }
             }
         }
@@ -857,6 +868,14 @@ impl Session {
                     let nested =
                         self.filter_structured_trace_items(args, pattern, levels, include_heads)?;
                     if !nested.is_empty() {
+                        if nested.len() == 1 {
+                            if let Expr::Call { head, args } = &nested[0] {
+                                if is_system_symbol_name(head, "List") {
+                                    filtered.push(Expr::call(system_expr("List"), args.clone()));
+                                    continue;
+                                }
+                            }
+                        }
                         filtered.push(Expr::call(system_expr("List"), nested));
                     }
                 }
@@ -1347,7 +1366,8 @@ impl Session {
         let messages = self.messages.split_off(checkpoint.message_checkpoint);
         let prints = self.prints.split_off(checkpoint.print_checkpoint);
         let events = self.trace_events[checkpoint.trace_checkpoint..].to_vec();
-        let trace_root = self.structured_trace_expr_from_events(input_expr, &events);
+        let depths = self.trace_event_depths[checkpoint.trace_checkpoint..].to_vec();
+        let trace_root = self.structured_trace_expr_from_events(input_expr, &events, &depths);
 
         if !prior_tracing {
             self.truncate_trace_from(checkpoint.trace_checkpoint);
@@ -2058,6 +2078,15 @@ impl StructuredTraceBuilder {
         self.current_exprs[depth] = Some(expr);
     }
 
+    fn push_evaluation_pass(&mut self, depth: usize, before: Expr, after: Expr) {
+        self.close_to_depth(depth);
+
+        if !self.container_root_matches(depth, &before) {
+            self.push_expr(depth, before);
+        }
+        self.push_expr(depth, after);
+    }
+
     fn finish(mut self) -> Expr {
         self.close_to_depth(0);
         Expr::call(
@@ -2073,6 +2102,17 @@ impl StructuredTraceBuilder {
                 parent.push(Expr::call(system_expr("List"), child));
             }
         }
+    }
+
+    fn container_root_matches(&self, depth: usize, target: &Expr) -> bool {
+        self.containers.get(depth).and_then(|items| {
+            items.iter().find_map(|item| match item {
+                Expr::Call { head, args } if is_system_symbol_name(head, "Hold") => {
+                    args.first().cloned()
+                }
+                _ => None,
+            })
+        }) == Some(target.clone())
     }
 }
 

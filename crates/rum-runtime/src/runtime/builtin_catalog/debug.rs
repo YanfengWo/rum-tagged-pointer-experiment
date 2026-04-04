@@ -3,13 +3,13 @@ use super::*;
 pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary_with_hold(
         "Trace",
-        "Evaluates an expression and returns a first-pass flat trace of current evaluation events.",
+        "Evaluates an expression and returns a first-pass structured trace of current evaluation events.",
         HoldAttribute::HoldAll,
         BuiltinHandler::Trace,
     ),
     BuiltinSpec::ordinary_with_hold(
         "TracePrint",
-        "Evaluates an expression, emits its current first-pass flat trace through the print stream, and returns the result.",
+        "Evaluates an expression, emits its current first-pass structured trace through the print stream, and returns the result.",
         HoldAttribute::HoldAll,
         BuiltinHandler::TracePrint,
     ),

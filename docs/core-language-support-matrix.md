@@ -437,7 +437,9 @@ once in its primary implementation group. Other groups may mention it as
   structured `Trace[...]` tree subset, including current filtered
   `Trace[..., patt]` forms, current list-pattern filtering, current
   structured levelspec filtering, and current `Heads -> True|False`
-  support, plus an indented structured `TracePrint[...]` subset; exact-rational wall-clock
+  support, now with depth-aware nested branches and more stable compact
+  filtered shells, plus an indented structured `TracePrint[...]` subset;
+  exact-rational wall-clock
   `Timing[...]` / `AbsoluteTiming[...]`, fixed-sample
   `RepeatedTiming[...]`, echo-style debugging output, session-level `On` /
   `Off` message gating, `Sow` / `Reap` tag collection, a current
@@ -471,7 +473,7 @@ once in its primary implementation group. Other groups may mention it as
   `StepMonitor`, `EvaluationData`, `TestCreate`, `TestReport`, `Stack` in
   the current first-pass subset, including a structured default
   `Trace[expr]` model plus structured filtered trace forms with the current
-  levelspec and `Heads` filtering, an indented structured
+  levelspec and `Heads` filtering, depth-aware nested branch shaping, an indented structured
   `TracePrint[...]` subset, current structural byte/memory proxy
   semantics, and current report/property metadata
   matching

@@ -43,6 +43,30 @@ fn trace_returns_a_first_pass_structured_expression_list_without_leaking_session
 }
 
 #[test]
+fn trace_uses_recorded_depths_to_keep_nested_branches_stable() {
+    let mut session = Session::new();
+    session.eval_text("f[x_] := x + 1").unwrap();
+    session.eval_text("g[x_] := f[x] + 10").unwrap();
+
+    let traced = session.eval_text("Trace[g[1]]").unwrap();
+    assert_eq!(
+        traced.value.to_string(),
+        "List[Hold[g[1]], List[Hold[Plus[f[1], 10]], List[Hold[f[1]], List[Hold[Plus[1, 1]], Hold[2]], Hold[2]], Hold[12]], Hold[12]]"
+    );
+
+    let filtered = session.eval_text("Trace[g[1], _Plus]").unwrap();
+    assert_eq!(
+        filtered.value.to_string(),
+        "List[List[Hold[Plus[f[1], 10]], List[Hold[Plus[1, 1]]]]]"
+    );
+
+    let via_eval_data = session
+        .eval_text("EvaluationData[g[1], \"Trace\"]")
+        .unwrap();
+    assert_eq!(via_eval_data.value.to_string(), traced.value.to_string());
+}
+
+#[test]
 fn trace_print_emits_trace_lines_and_returns_the_underlying_value() {
     let mut session = Session::new();
     session.eval_text("f[x_] := x + 1").unwrap();
@@ -73,6 +97,17 @@ fn trace_print_emits_trace_lines_and_returns_the_underlying_value() {
         .unwrap();
     assert_eq!(with_heads.value.to_string(), "2");
     assert_eq!(with_heads.prints, vec!["f", "  Plus"]);
+}
+
+#[test]
+fn trace_print_uses_the_same_nested_structure_for_deeper_trace_branches() {
+    let mut session = Session::new();
+    session.eval_text("f[x_] := x + 1").unwrap();
+    session.eval_text("g[x_] := f[x] + 10").unwrap();
+
+    let traced = session.eval_text("TracePrint[g[1], _Plus]").unwrap();
+    assert_eq!(traced.value.to_string(), "12");
+    assert_eq!(traced.prints, vec!["Plus[f[1], 10]", "  Plus[1, 1]"]);
 }
 
 #[test]
