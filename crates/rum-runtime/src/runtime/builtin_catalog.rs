@@ -4,6 +4,7 @@ use super::*;
 
 mod associations;
 mod control;
+mod debug;
 mod functional;
 mod scoping;
 mod strings;
@@ -726,6 +727,7 @@ pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
                     + strings::STRING_BUILTINS.len()
                     + structure::STRUCTURE_BUILTINS.len()
                     + associations::ASSOCIATION_BUILTINS.len()
+                    + debug::DEBUG_BUILTINS.len()
                     + control::CONTROL_BUILTINS.len()
                     + functional::FUNCTIONAL_BUILTINS.len()
                     + scoping::SCOPING_BUILTINS.len()
@@ -735,6 +737,7 @@ pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
             specs.extend_from_slice(strings::STRING_BUILTINS);
             specs.extend_from_slice(structure::STRUCTURE_BUILTINS);
             specs.extend_from_slice(associations::ASSOCIATION_BUILTINS);
+            specs.extend_from_slice(debug::DEBUG_BUILTINS);
             specs.extend_from_slice(control::CONTROL_BUILTINS);
             specs.extend_from_slice(functional::FUNCTIONAL_BUILTINS);
             specs.extend_from_slice(scoping::SCOPING_BUILTINS);

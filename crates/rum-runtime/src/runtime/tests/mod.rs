@@ -50,6 +50,7 @@ mod arithmetic;
 mod associations;
 mod calculus;
 mod context_and_loader;
+mod debug_tools;
 mod definitions_and_rules;
 mod definitions_and_rules_part2;
 mod definitions_and_rules_part3;

@@ -433,19 +433,25 @@ once in its primary implementation group. Other groups may mention it as
 - `implemented`: structured runtime messages, top-level message list, internal
   structured tracing, request-level trace payloads, recursion / iteration /
   evaluation-pass limits
-- `partial`: language-surface tracing, timing, verification, and monitoring
-  builtins are still absent even though some internal foundations exist
+- `partial`: a first language-surface debugging layer now exists through flat
+  held-expression `Trace[...]`, print-stream `TracePrint[...]`, exact-rational
+  wall-clock `Timing[...]` / `AbsoluteTiming[...]`, echo-style debugging
+  output, and a current canonical-text-proxy `ByteCount[...]` subset; richer
+  verification, monitoring, and resource-limit surface builtins are still
+  pending even though the internal tracing/message foundations are already in
+  place
 - `planned`: user-facing trace/timing/resource-limit family, verification
   surface, and debugging output controls
 
 ### Functions and Symbols
 
 - `implemented`: none beyond the internal mechanisms listed above
-- `planned`: `Trace`, `TracePrint`, `Timing`, `AbsoluteTiming`,
-  `RepeatedTiming`, `TimeConstrained`, `MemoryConstrained`, `ByteCount`,
+- `partial`: `Trace`, `TracePrint`, `Timing`, `AbsoluteTiming`, `ByteCount`,
+  `Echo`, `EchoFunction`, `EchoLabel` in the current first-pass subset
+- `planned`: `RepeatedTiming`, `TimeConstrained`, `MemoryConstrained`,
   `MemoryInUse`, `Short`, `On`, `Off`, `Monitor`, `EvaluationMonitor`,
-  `StepMonitor`, `Sow`, `Reap`, `EvaluationData`, `Echo`, `EchoFunction`,
-  `EchoLabel`, `Assert`, `Dialog`, `TestCreate`, `TestReport`, `Stack`
+  `StepMonitor`, `Sow`, `Reap`, `EvaluationData`, `Assert`, `Dialog`,
+  `TestCreate`, `TestReport`, `Stack`
 - `cross-tracked elsewhere`: `AbortProtect`, `Check`, `CheckAbort`,
   `Failure`, `Message`, `Missing`, `PropagateAborts`, `Quiet`
 
