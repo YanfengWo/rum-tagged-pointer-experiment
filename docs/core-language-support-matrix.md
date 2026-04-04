@@ -435,8 +435,8 @@ once in its primary implementation group. Other groups may mention it as
   evaluation-pass limits
 - `partial`: a first language-surface debugging layer now exists through flat
   held-expression `Trace[...]`, filtered current `Trace[..., patt]` /
-  `TracePrint[..., patt]` forms plus current list-pattern filtering,
-  exact-rational wall-clock
+  `TracePrint[..., patt]` forms plus current list-pattern filtering and
+  current flat-subset levelspec filtering, exact-rational wall-clock
   `Timing[...]` / `AbsoluteTiming[...]`, fixed-sample
   `RepeatedTiming[...]`, echo-style debugging output, session-level `On` /
   `Off` message gating, `Sow` / `Reap` tag collection, a current
@@ -445,11 +445,13 @@ once in its primary implementation group. Other groups may mention it as
   `TimeConstrained[...]` / `MemoryConstrained[...]` wrappers, a session
   structural memory-proxy `MemoryInUse[]` subset, `Monitor[...]` hooks with
   current `EvaluationMonitor` / `StepMonitor` option symbols plus stable
-  initial/final display refreshes, `EvaluationData[...]` property projection,
-  and
+  initial/final display refreshes and default-option coverage,
+  `EvaluationData[...]` property projection through current string/list/All
+  forms plus `"Properties"`, and
   first-pass `TestCreate[...]` / `TestReport[...]` metadata through
-  `TestID`, `SameTest`, and expected-message matching, alongside `Stack[]`;
-  richer verification, monitoring, and resource-accounting parity is still
+  `TestID`, `SameTest`, and expected-message matching with current
+  `TestReport[..., prop]` projection, alongside `Stack[]`; richer
+  verification, monitoring, and resource-accounting parity is still
   pending even though the internal tracing/message
   foundations are already in place
 - `planned`: user-facing trace/timing/resource-limit family, verification
@@ -463,8 +465,9 @@ once in its primary implementation group. Other groups may mention it as
   `EchoLabel`, `On`, `Off`, `Sow`, `Reap`, `TimeConstrained`,
   `MemoryConstrained`, `MemoryInUse`, `Monitor`, `EvaluationMonitor`,
   `StepMonitor`, `EvaluationData`, `TestCreate`, `TestReport`, `Stack` in
-  the current first-pass subset, including filtered trace forms, current
-  structural byte/memory proxy semantics, and current report metadata matching
+  the current first-pass subset, including filtered trace forms plus current
+  flat-subset levelspec filtering, current structural byte/memory proxy
+  semantics, and current report/property metadata matching
 - `planned`: `Assert`, `Dialog`, plus deeper trace/resource/monitor/test
   parity
 - `cross-tracked elsewhere`: `AbortProtect`, `Check`, `CheckAbort`,

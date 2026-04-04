@@ -17,6 +17,15 @@ fn trace_returns_a_first_pass_flat_expression_list_without_leaking_session_trace
 
     let multi = session.eval_text("Trace[f[1], {_Plus, _Integer}]").unwrap();
     assert_eq!(multi.value.to_string(), "List[Hold[Plus[1, 1]], Hold[2]]");
+
+    let leveled = session.eval_text("Trace[f[1], _Integer, {-1}]").unwrap();
+    assert_eq!(
+        leveled.value.to_string(),
+        "List[Hold[1], Hold[2], Hold[1], Hold[2]]"
+    );
+
+    let top_level_only = session.eval_text("Trace[f[1], _Integer, 0]").unwrap();
+    assert_eq!(top_level_only.value.to_string(), "List[Hold[2]]");
 }
 
 #[test]
@@ -38,6 +47,12 @@ fn trace_print_emits_trace_lines_and_returns_the_underlying_value() {
         .unwrap();
     assert_eq!(multi.value.to_string(), "2");
     assert_eq!(multi.prints, vec!["Plus[1, 1]", "2"]);
+
+    let leveled = session
+        .eval_text("TracePrint[f[1], _Integer, {-1}]")
+        .unwrap();
+    assert_eq!(leveled.value.to_string(), "2");
+    assert_eq!(leveled.prints, vec!["1", "2", "1", "2"]);
 }
 
 #[test]
@@ -144,12 +159,46 @@ fn byte_count_and_memory_in_use_use_the_current_structural_proxy_subset() {
         "True"
     );
 
+    let small_int = session.eval_text("ByteCount[1]").unwrap().value;
+    let large_int = session.eval_text("ByteCount[10^80]").unwrap().value;
+    assert_eq!(
+        session
+            .evaluate(Expr::call(system_expr("Less"), vec![small_int, large_int]))
+            .unwrap()
+            .to_string(),
+        "True"
+    );
+
     let before = session.eval_text("MemoryInUse[]").unwrap().value;
     session.eval_text("byteProbe = Table[i, {i, 200}]").unwrap();
     let after = session.eval_text("MemoryInUse[]").unwrap().value;
     assert_eq!(
         session
             .evaluate(Expr::call(system_expr("Less"), vec![before, after]))
+            .unwrap()
+            .to_string(),
+        "True"
+    );
+
+    let before_off = session.eval_text("MemoryInUse[]").unwrap().value;
+    session.eval_text("Off[FindFile::notfound]").unwrap();
+    let after_off = session.eval_text("MemoryInUse[]").unwrap().value;
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Less"),
+                vec![before_off.clone(), after_off.clone()]
+            ))
+            .unwrap()
+            .to_string(),
+        "True"
+    );
+
+    session.eval_text("On[FindFile::notfound]").unwrap();
+    let after_on = session.eval_text("MemoryInUse[]").unwrap().value;
+    assert_eq!(
+        session
+            .evaluate(Expr::call(system_expr("Less"), vec![after_on, after_off]))
             .unwrap()
             .to_string(),
         "True"
@@ -273,6 +322,15 @@ fn monitor_runs_current_display_and_callback_subset() {
     let changing = session.eval_text("x = 0; Monitor[(x = 1; x), x]").unwrap();
     assert_eq!(changing.value.to_string(), "1");
     assert_eq!(changing.prints, vec!["0", "1"]);
+
+    session
+        .eval_text("SetOptions[Monitor, StepMonitor :> Sow[stepDefault]]")
+        .unwrap();
+    let defaulted = session.eval_text("Reap[Monitor[1 + 1, progress]]").unwrap();
+    assert_eq!(
+        defaulted.value.to_string(),
+        "List[2, List[List[stepDefault]]]"
+    );
 }
 
 #[test]
@@ -358,6 +416,34 @@ fn evaluation_data_captures_result_messages_prints_and_failure_type_without_leak
             .to_string(),
         "True"
     );
+
+    let properties = session
+        .eval_text("EvaluationData[3, \"Properties\"]")
+        .unwrap();
+    assert!(properties.value.to_string().contains("\"Result\""));
+    assert!(properties.value.to_string().contains("\"Trace\""));
+
+    let all_projection = session.eval_text("EvaluationData[3, All]").unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Head"),
+                vec![all_projection.value.clone()]
+            ))
+            .unwrap()
+            .to_string(),
+        "Association"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![all_projection.value, Expr::string("Result")],
+            ))
+            .unwrap()
+            .to_string(),
+        "3"
+    );
 }
 
 #[test]
@@ -430,6 +516,21 @@ fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
             .to_string(),
         "True"
     );
+    assert_eq!(
+        session
+            .eval_text(
+                "TestReport[{TestCreate[1 + 1, 2], TestCreate[1 + 1, 3]}, \"TestsRunCount\"]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    let properties = session
+        .eval_text("TestReport[{TestCreate[1 + 1, 2]}, \"Properties\"]")
+        .unwrap();
+    assert!(properties.value.to_string().contains("\"TestsRunCount\""));
+    assert!(properties.value.to_string().contains("\"TestResults\""));
     assert!(session.take_messages().is_empty());
 
     let stack = session

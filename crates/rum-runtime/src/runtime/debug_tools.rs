@@ -7,13 +7,23 @@ const DEFAULT_SHORT_LIMIT: usize = 72;
 
 impl Session {
     pub(super) fn eval_trace(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let (expr, pattern) = match args {
-            [expr] => (expr, None),
-            [expr, pattern] => (expr, Some(pattern.clone())),
-            _ => return Ok(self.invalid_call_with_arg_range("Trace", args, 1, 2)),
+        let (expr, pattern, levels) = match args {
+            [expr] => (expr, None, None),
+            [expr, pattern] => (expr, Some(pattern.clone()), None),
+            [expr, pattern, levels_expr] => {
+                let Some(levels) = parse_standard_level_spec(levels_expr) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "Trace",
+                        args,
+                        "expected a standard levelspec as the optional third argument in the current flat-trace subset",
+                    ));
+                };
+                (expr, Some(pattern.clone()), Some(levels))
+            }
+            _ => return Ok(self.invalid_call_with_arg_range("Trace", args, 1, 3)),
         };
 
-        let (_value, trace_exprs) = self.eval_with_trace_capture(expr.clone(), pattern)?;
+        let (_value, trace_exprs) = self.eval_with_trace_capture(expr.clone(), pattern, levels)?;
         Ok(Expr::call(
             system_expr("List"),
             trace_exprs
@@ -24,13 +34,23 @@ impl Session {
     }
 
     pub(super) fn eval_trace_print(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let (expr, pattern) = match args {
-            [expr] => (expr, None),
-            [expr, pattern] => (expr, Some(pattern.clone())),
-            _ => return Ok(self.invalid_call_with_arg_range("TracePrint", args, 1, 2)),
+        let (expr, pattern, levels) = match args {
+            [expr] => (expr, None, None),
+            [expr, pattern] => (expr, Some(pattern.clone()), None),
+            [expr, pattern, levels_expr] => {
+                let Some(levels) = parse_standard_level_spec(levels_expr) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "TracePrint",
+                        args,
+                        "expected a standard levelspec as the optional third argument in the current flat-trace subset",
+                    ));
+                };
+                (expr, Some(pattern.clone()), Some(levels))
+            }
+            _ => return Ok(self.invalid_call_with_arg_range("TracePrint", args, 1, 3)),
         };
 
-        let (value, trace_exprs) = self.eval_with_trace_capture(expr.clone(), pattern)?;
+        let (value, trace_exprs) = self.eval_with_trace_capture(expr.clone(), pattern, levels)?;
         for item in trace_exprs {
             self.push_print(render_echo_fragment(&item));
         }
@@ -467,8 +487,10 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [tests_expr] = args else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+        let (tests_expr, properties) = match args {
+            [tests_expr] => (tests_expr, None),
+            [tests_expr, properties] => (tests_expr, Some(properties.clone())),
+            _ => return Ok(Expr::call(head.clone(), args.to_vec())),
         };
 
         let tests = match parse_test_case_exprs(tests_expr) {
@@ -565,7 +587,7 @@ impl Session {
             rendered_results.push(render_association(entries));
         }
 
-        Ok(render_association(vec![
+        let report = render_association(vec![
             (
                 Expr::string("TestsRunCount"),
                 Expr::integer(BigInt::from(rendered_results.len() as u64)),
@@ -582,7 +604,14 @@ impl Session {
                 Expr::string("TestResults"),
                 Expr::call(system_expr("List"), rendered_results),
             ),
-        ]))
+        ]);
+
+        self.project_association_properties(
+            "TestReport",
+            &[Expr::string("<omitted>")],
+            report,
+            properties,
+        )
     }
 
     pub(super) fn eval_stack(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -632,6 +661,7 @@ impl Session {
         &mut self,
         expr: Expr,
         pattern: Option<Expr>,
+        levels: Option<CasesLevelSpec>,
     ) -> Result<(Expr, Vec<Expr>), EvalError> {
         let prior_enabled = self.tracing_enabled;
         let trace_checkpoint = self.trace_events.len();
@@ -645,7 +675,14 @@ impl Session {
             }
         };
 
-        self.finish_trace_capture(expr, trace_checkpoint, prior_enabled, value, pattern)
+        self.finish_trace_capture(
+            expr,
+            trace_checkpoint,
+            prior_enabled,
+            value,
+            pattern,
+            levels,
+        )
     }
 
     fn finish_trace_capture(
@@ -655,6 +692,7 @@ impl Session {
         prior_enabled: bool,
         value: Expr,
         pattern: Option<Expr>,
+        levels: Option<CasesLevelSpec>,
     ) -> Result<(Expr, Vec<Expr>), EvalError> {
         let events = self.trace_events[trace_checkpoint..].to_vec();
         self.tracing_enabled = prior_enabled;
@@ -664,8 +702,17 @@ impl Session {
         }
 
         let mut trace_exprs = self.trace_exprs_from_events(&original, &events);
-        if let Some(pattern) = pattern {
-            trace_exprs = self.filter_trace_exprs(pattern, trace_exprs)?;
+        match (pattern, levels) {
+            (Some(pattern), Some(levels)) => {
+                trace_exprs = self.filter_trace_exprs_on_levels(pattern, levels, trace_exprs)?;
+            }
+            (Some(pattern), None) => {
+                trace_exprs = self.filter_trace_exprs(pattern, trace_exprs)?;
+            }
+            (None, Some(levels)) => {
+                trace_exprs = self.select_trace_exprs_on_levels(levels, trace_exprs);
+            }
+            (None, None) => {}
         }
         Ok((value, trace_exprs))
     }
@@ -822,6 +869,28 @@ impl Session {
     fn current_memory_proxy_bytes(&self) -> usize {
         let mut total = 0usize;
 
+        total = total.saturating_add(self.current_context.len());
+        total = total.saturating_add(self.context_path.iter().map(String::len).sum::<usize>());
+        total = total.saturating_add(
+            self.context_stack
+                .iter()
+                .map(render_context_frame_memory_proxy_bytes)
+                .sum::<usize>(),
+        );
+        total = total.saturating_add(
+            self.package_search_paths
+                .iter()
+                .map(|path| path.as_os_str().len())
+                .sum::<usize>(),
+        );
+        total = total.saturating_add(self.loaded_packages.iter().map(String::len).sum::<usize>());
+        total = total.saturating_add(
+            self.load_stack
+                .iter()
+                .map(|path| path.as_os_str().len())
+                .sum::<usize>(),
+        );
+
         total = total.saturating_add(
             self.evaluation_stack
                 .iter()
@@ -876,6 +945,13 @@ impl Session {
         );
 
         total = total.saturating_add(
+            self.disabled_message_selectors
+                .iter()
+                .map(render_message_selector_memory_proxy_bytes)
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
             self.message_definitions
                 .iter()
                 .map(|(key, definition)| {
@@ -896,7 +972,7 @@ impl Session {
         total = total.saturating_add(
             self.messages
                 .iter()
-                .map(|message| message.symbol.len() + message.tag.len() + message.text.len())
+                .map(render_runtime_message_memory_proxy_bytes)
                 .sum::<usize>(),
         );
 
@@ -907,6 +983,44 @@ impl Session {
                 .iter()
                 .map(render_trace_event_memory_proxy_bytes)
                 .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.handled_non_loader_eval_errors
+                .iter()
+                .map(render_runtime_message_memory_proxy_bytes)
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.reap_scopes
+                .iter()
+                .map(render_reap_scope_memory_proxy_bytes)
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.monitor_scopes
+                .iter()
+                .map(render_monitor_scope_memory_proxy_bytes)
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.queued_input_responses
+                .iter()
+                .map(String::len)
+                .sum::<usize>(),
+        );
+        total = total.saturating_add(
+            self.pending_input_request
+                .as_ref()
+                .map_or(0, render_input_request_memory_proxy_bytes),
+        );
+        total = total.saturating_add(
+            self.pending_suspension
+                .as_ref()
+                .map_or(0, render_suspended_evaluation_memory_proxy_bytes),
         );
 
         total
@@ -1148,6 +1262,60 @@ impl Session {
         Ok(filtered)
     }
 
+    fn filter_trace_exprs_on_levels(
+        &mut self,
+        pattern: Expr,
+        levels: CasesLevelSpec,
+        trace_exprs: Vec<Expr>,
+    ) -> Result<Vec<Expr>, EvalError> {
+        let patterns = normalize_trace_patterns(&pattern);
+        let traversal = CasesTraversalConfig {
+            levels,
+            max_matches: None,
+            include_heads: false,
+        };
+        let mut filtered = Vec::new();
+
+        for expr in trace_exprs {
+            let candidates = collect_level_parts_owned(&expr, traversal, 0);
+            for candidate in candidates {
+                let mut matched = false;
+                for pattern in &patterns {
+                    let outcome =
+                        self.match_expr_owned(pattern.clone(), candidate.clone(), BTreeMap::new())?;
+                    if outcome.matched {
+                        matched = true;
+                        break;
+                    }
+                }
+                if matched {
+                    push_unique_trace_expr(&mut filtered, candidate);
+                }
+            }
+        }
+
+        Ok(filtered)
+    }
+
+    fn select_trace_exprs_on_levels(
+        &mut self,
+        levels: CasesLevelSpec,
+        trace_exprs: Vec<Expr>,
+    ) -> Vec<Expr> {
+        let traversal = CasesTraversalConfig {
+            levels,
+            max_matches: None,
+            include_heads: false,
+        };
+        let mut filtered = Vec::new();
+        for expr in trace_exprs {
+            for candidate in collect_level_parts_owned(&expr, traversal, 0) {
+                push_unique_trace_expr(&mut filtered, candidate);
+            }
+        }
+        filtered
+    }
+
     fn refresh_monitor_scope_display(&mut self, index: usize) {
         let Some(display_expr) = self
             .monitor_scopes
@@ -1184,46 +1352,12 @@ impl Session {
         data: Expr,
         properties: Option<Expr>,
     ) -> Result<Expr, EvalError> {
-        let Some(properties) = properties else {
-            return Ok(data);
-        };
-
-        match properties {
-            Expr::Atom(Atom::String(key)) => Ok(association_property_by_name(&data, &key)
-                .unwrap_or_else(|| {
-                    Expr::call(
-                        system_expr("Missing"),
-                        vec![Expr::string("KeyAbsent"), Expr::string(key)],
-                    )
-                })),
-            other => {
-                let Some(keys) = list_items(&other) else {
-                    return Ok(self.invalid_call_with_arg_form(
-                        "EvaluationData",
-                        &[Expr::string("<omitted>"), other],
-                        "expected the optional second argument to be a property string or list of property strings",
-                    ));
-                };
-                let mut entries = Vec::new();
-                for key_expr in keys {
-                    let Expr::Atom(Atom::String(key)) = key_expr else {
-                        return Ok(self.invalid_call_with_arg_form(
-                            "EvaluationData",
-                            &[Expr::string("<omitted>"), other.clone()],
-                            "expected the optional second argument to be a property string or list of property strings",
-                        ));
-                    };
-                    let value = association_property_by_name(&data, key).unwrap_or_else(|| {
-                        Expr::call(
-                            system_expr("Missing"),
-                            vec![Expr::string("KeyAbsent"), Expr::string(key.clone())],
-                        )
-                    });
-                    entries.push((Expr::string(key.clone()), value));
-                }
-                Ok(render_association(entries))
-            }
-        }
+        self.project_association_properties(
+            "EvaluationData",
+            &[Expr::string("<omitted>")],
+            data,
+            properties,
+        )
     }
 
     fn render_test_outcome(
@@ -1286,6 +1420,66 @@ impl Session {
             }));
         }
         Ok(Some(normalized))
+    }
+
+    fn project_association_properties(
+        &mut self,
+        head_name: &str,
+        call_prefix: &[Expr],
+        data: Expr,
+        properties: Option<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let Some(properties) = properties else {
+            return Ok(data);
+        };
+
+        if is_system_symbol_name(&properties, "All") {
+            return Ok(data);
+        }
+
+        match properties {
+            Expr::Atom(Atom::String(key)) if key == "Properties" => {
+                Ok(render_association_properties(&data))
+            }
+            Expr::Atom(Atom::String(key)) => Ok(association_property_by_name(&data, &key)
+                .unwrap_or_else(|| {
+                    Expr::call(
+                        system_expr("Missing"),
+                        vec![Expr::string("KeyAbsent"), Expr::string(key)],
+                    )
+                })),
+            other => {
+                let Some(keys) = list_items(&other) else {
+                    let mut call = call_prefix.to_vec();
+                    call.push(other);
+                    return Ok(self.invalid_call_with_arg_form(
+                        head_name,
+                        &call,
+                        "expected the optional property argument to be All, \"Properties\", a property string, or a list of property strings",
+                    ));
+                };
+                let mut entries = Vec::new();
+                for key_expr in keys {
+                    let Expr::Atom(Atom::String(key)) = key_expr else {
+                        let mut call = call_prefix.to_vec();
+                        call.push(other.clone());
+                        return Ok(self.invalid_call_with_arg_form(
+                            head_name,
+                            &call,
+                            "expected the optional property argument to be All, \"Properties\", a property string, or a list of property strings",
+                        ));
+                    };
+                    let value = association_property_by_name(&data, key).unwrap_or_else(|| {
+                        Expr::call(
+                            system_expr("Missing"),
+                            vec![Expr::string("KeyAbsent"), Expr::string(key.clone())],
+                        )
+                    });
+                    entries.push((Expr::string(key.clone()), value));
+                }
+                Ok(render_association(entries))
+            }
+        }
     }
 }
 
@@ -1484,6 +1678,85 @@ fn render_symbol_options_memory_proxy_bytes(options: &SymbolOptions) -> usize {
         .sum()
 }
 
+fn render_context_frame_memory_proxy_bytes(frame: &ContextFrame) -> usize {
+    frame
+        .previous_context
+        .len()
+        .saturating_add(
+            frame
+                .previous_context_path
+                .iter()
+                .map(String::len)
+                .sum::<usize>(),
+        )
+        .saturating_add(frame.opened_context.len())
+        .saturating_add(8)
+}
+
+fn render_message_selector_memory_proxy_bytes(selector: &MessageSelector) -> usize {
+    selector
+        .symbol
+        .len()
+        .saturating_add(selector.tag.as_ref().map_or(0, String::len))
+}
+
+fn render_runtime_message_memory_proxy_bytes(message: &RuntimeMessage) -> usize {
+    message
+        .symbol
+        .len()
+        .saturating_add(message.tag.len())
+        .saturating_add(message.text.len())
+}
+
+fn render_reap_scope_memory_proxy_bytes(scope: &ReapScope) -> usize {
+    let patterns = scope
+        .patterns
+        .iter()
+        .map(expr_memory_proxy_bytes)
+        .sum::<usize>();
+    let handler = scope.handler.as_ref().map_or(0, expr_memory_proxy_bytes);
+    let buckets = scope
+        .buckets_by_pattern
+        .iter()
+        .map(|group| {
+            group
+                .iter()
+                .map(|bucket| {
+                    expr_memory_proxy_bytes(&bucket.tag).saturating_add(
+                        bucket
+                            .values
+                            .iter()
+                            .map(expr_memory_proxy_bytes)
+                            .sum::<usize>(),
+                    )
+                })
+                .sum::<usize>()
+        })
+        .sum::<usize>();
+
+    patterns
+        .saturating_add(handler)
+        .saturating_add(buckets)
+        .saturating_add(8)
+}
+
+fn render_monitor_scope_memory_proxy_bytes(scope: &MonitorScope) -> usize {
+    expr_memory_proxy_bytes(&scope.display_expr)
+        .saturating_add(
+            scope
+                .evaluation_monitor
+                .as_ref()
+                .map_or(0, expr_memory_proxy_bytes),
+        )
+        .saturating_add(
+            scope
+                .step_monitor
+                .as_ref()
+                .map_or(0, expr_memory_proxy_bytes),
+        )
+        .saturating_add(scope.last_display.as_ref().map_or(0, String::len))
+}
+
 fn render_trace_event_memory_proxy_bytes(event: &TraceEvent) -> usize {
     match event {
         TraceEvent::EvaluationPass { before, after } => before.len().saturating_add(after.len()),
@@ -1504,6 +1777,34 @@ fn render_trace_event_memory_proxy_bytes(event: &TraceEvent) -> usize {
 
 fn bigint_memory_proxy_bytes(value: &BigInt) -> usize {
     value.to_signed_bytes_le().len().max(1)
+}
+
+fn render_input_request_memory_proxy_bytes(request: &RuntimeInputRequest) -> usize {
+    request.prompt.len().saturating_add(1)
+}
+
+fn render_suspended_evaluation_memory_proxy_bytes(suspended: &SuspendedEvaluation) -> usize {
+    suspended
+        .active_stack
+        .iter()
+        .map(expr_memory_proxy_bytes)
+        .sum::<usize>()
+        .saturating_add(suspended.frames.len().saturating_mul(16))
+}
+
+fn render_association_properties(expr: &Expr) -> Expr {
+    let properties = association_entries_from_expr(expr)
+        .map(|entries| {
+            entries
+                .iter()
+                .map(|(key, _)| match key {
+                    Expr::Atom(Atom::String(text)) => Expr::string(text.clone()),
+                    other => Expr::string(other.to_string()),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    Expr::call(system_expr("List"), properties)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
