@@ -153,7 +153,7 @@ impl Session {
         };
 
         Ok(Expr::integer(BigInt::from(
-            render_canonical_byte_count(expr) as u64,
+            expr_memory_proxy_bytes(expr) as u64
         )))
     }
 
@@ -810,7 +810,7 @@ impl Session {
         if let Some(limit) = self.current_memory_limit {
             let projected = self
                 .current_memory_proxy_bytes()
-                .saturating_add(render_canonical_byte_count(expr));
+                .saturating_add(expr_memory_proxy_bytes(expr));
             if projected > limit {
                 return Err(EvalError::MemoryConstraintExceeded { limit });
             }
@@ -825,7 +825,7 @@ impl Session {
         total = total.saturating_add(
             self.evaluation_stack
                 .iter()
-                .map(render_canonical_byte_count)
+                .map(expr_memory_proxy_bytes)
                 .sum::<usize>(),
         );
 
@@ -857,7 +857,7 @@ impl Session {
         total = total.saturating_add(
             self.syntax_information
                 .iter()
-                .map(|(symbol, expr)| symbol.to_string().len() + render_canonical_byte_count(expr))
+                .map(|(symbol, expr)| symbol.to_string().len() + expr_memory_proxy_bytes(expr))
                 .sum::<usize>(),
         );
 
@@ -871,7 +871,7 @@ impl Session {
         total = total.saturating_add(
             self.once_values
                 .iter()
-                .map(|(key, value)| key.len() + render_canonical_byte_count(value))
+                .map(|(key, value)| key.len() + expr_memory_proxy_bytes(value))
                 .sum::<usize>(),
         );
 
@@ -884,11 +884,11 @@ impl Session {
                         + definition
                             .immediate
                             .as_ref()
-                            .map_or(0, render_canonical_byte_count)
+                            .map_or(0, expr_memory_proxy_bytes)
                         + definition
                             .delayed
                             .as_ref()
-                            .map_or(0, render_canonical_byte_count)
+                            .map_or(0, expr_memory_proxy_bytes)
                 })
                 .sum::<usize>(),
         );
@@ -1129,10 +1129,19 @@ impl Session {
         pattern: Expr,
         trace_exprs: Vec<Expr>,
     ) -> Result<Vec<Expr>, EvalError> {
+        let patterns = normalize_trace_patterns(&pattern);
         let mut filtered = Vec::new();
         for expr in trace_exprs {
-            let outcome = self.match_expr_owned(pattern.clone(), expr.clone(), BTreeMap::new())?;
-            if outcome.matched {
+            let mut matched = false;
+            for pattern in &patterns {
+                let outcome =
+                    self.match_expr_owned(pattern.clone(), expr.clone(), BTreeMap::new())?;
+                if outcome.matched {
+                    matched = true;
+                    break;
+                }
+            }
+            if matched {
                 push_unique_trace_expr(&mut filtered, expr);
             }
         }
@@ -1291,8 +1300,26 @@ fn render_echo_fragment(expr: &Expr) -> String {
     }
 }
 
-fn render_canonical_byte_count(expr: &Expr) -> usize {
-    render_echo_fragment(expr).len()
+fn expr_memory_proxy_bytes(expr: &Expr) -> usize {
+    match expr {
+        Expr::Atom(Atom::Integer(value)) => 8usize.saturating_add(bigint_memory_proxy_bytes(value)),
+        Expr::Atom(Atom::Rational(value)) => 12usize
+            .saturating_add(bigint_memory_proxy_bytes(value.numerator()))
+            .saturating_add(bigint_memory_proxy_bytes(value.denominator())),
+        Expr::Atom(Atom::String(value)) => 8usize.saturating_add(value.len()),
+        Expr::Atom(Atom::Symbol(symbol)) => {
+            8usize.saturating_add(symbol.context().len() + symbol.name().len())
+        }
+        Expr::Call { head, args } => {
+            let mut total = 16usize
+                .saturating_add(expr_memory_proxy_bytes(head))
+                .saturating_add(args.len().saturating_mul(8));
+            for arg in args {
+                total = total.saturating_add(expr_memory_proxy_bytes(arg));
+            }
+            total
+        }
+    }
 }
 
 fn debug_bool_expr(value: bool) -> Expr {
@@ -1348,6 +1375,13 @@ fn normalize_message_switch_selectors(args: &[Expr]) -> Option<Vec<MessageSelect
     Some(selectors)
 }
 
+fn normalize_trace_patterns(expr: &Expr) -> Vec<Expr> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "List") => args.clone(),
+        other => vec![other.clone()],
+    }
+}
+
 fn normalize_reap_patterns(expr: Option<&Expr>) -> (Vec<Expr>, bool) {
     match expr {
         None => (vec![Expr::call(system_expr("Blank"), vec![])], false),
@@ -1397,12 +1431,12 @@ fn render_definition_memory_proxy_bytes(definition: &SymbolDefinition) -> usize 
     definition
         .own_value
         .as_ref()
-        .map_or(0, render_canonical_byte_count)
+        .map_or(0, expr_memory_proxy_bytes)
         .saturating_add(
             definition
                 .delayed_own_value
                 .as_ref()
-                .map_or(0, render_canonical_byte_count),
+                .map_or(0, expr_memory_proxy_bytes),
         )
         .saturating_add(
             definition
@@ -1428,15 +1462,15 @@ fn render_definition_memory_proxy_bytes(definition: &SymbolDefinition) -> usize 
 }
 
 fn render_upvalue_memory_proxy_bytes(value: &UpValue) -> usize {
-    render_canonical_byte_count(&value.lhs).saturating_add(render_canonical_byte_count(&value.rhs))
+    expr_memory_proxy_bytes(&value.lhs).saturating_add(expr_memory_proxy_bytes(&value.rhs))
 }
 
 fn render_downvalue_memory_proxy_bytes(value: &DownValue) -> usize {
-    render_canonical_byte_count(&value.lhs).saturating_add(render_canonical_byte_count(&value.rhs))
+    expr_memory_proxy_bytes(&value.lhs).saturating_add(expr_memory_proxy_bytes(&value.rhs))
 }
 
 fn render_subvalue_memory_proxy_bytes(value: &SubValue) -> usize {
-    render_canonical_byte_count(&value.lhs).saturating_add(render_canonical_byte_count(&value.rhs))
+    expr_memory_proxy_bytes(&value.lhs).saturating_add(expr_memory_proxy_bytes(&value.rhs))
 }
 
 fn render_symbol_options_memory_proxy_bytes(options: &SymbolOptions) -> usize {
@@ -1445,7 +1479,7 @@ fn render_symbol_options_memory_proxy_bytes(options: &SymbolOptions) -> usize {
         .map(|(name, value, _)| {
             name.to_string()
                 .len()
-                .saturating_add(render_canonical_byte_count(value))
+                .saturating_add(expr_memory_proxy_bytes(value))
         })
         .sum()
 }
@@ -1466,6 +1500,10 @@ fn render_trace_event_memory_proxy_bytes(event: &TraceEvent) -> usize {
             .saturating_add(rule.len())
             .saturating_add(result.len()),
     }
+}
+
+fn bigint_memory_proxy_bytes(value: &BigInt) -> usize {
+    value.to_signed_bytes_le().len().max(1)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

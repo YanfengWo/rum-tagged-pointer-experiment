@@ -14,6 +14,9 @@ fn trace_returns_a_first_pass_flat_expression_list_without_leaking_session_trace
 
     let filtered = session.eval_text("Trace[f[1], _Plus]").unwrap();
     assert_eq!(filtered.value.to_string(), "List[Hold[Plus[1, 1]]]");
+
+    let multi = session.eval_text("Trace[f[1], {_Plus, _Integer}]").unwrap();
+    assert_eq!(multi.value.to_string(), "List[Hold[Plus[1, 1]], Hold[2]]");
 }
 
 #[test]
@@ -29,6 +32,12 @@ fn trace_print_emits_trace_lines_and_returns_the_underlying_value() {
     let filtered = session.eval_text("TracePrint[f[1], _Plus]").unwrap();
     assert_eq!(filtered.value.to_string(), "2");
     assert_eq!(filtered.prints, vec!["Plus[1, 1]"]);
+
+    let multi = session
+        .eval_text("TracePrint[f[1], {_Plus, _Integer}]")
+        .unwrap();
+    assert_eq!(multi.value.to_string(), "2");
+    assert_eq!(multi.prints, vec!["Plus[1, 1]", "2"]);
 }
 
 #[test]
@@ -109,24 +118,41 @@ fn echo_family_prints_and_returns_values_in_the_current_first_pass_subset() {
 }
 
 #[test]
-fn byte_count_uses_the_current_canonical_text_proxy_subset() {
+fn byte_count_and_memory_in_use_use_the_current_structural_proxy_subset() {
     let mut session = Session::new();
+
+    let string_small = session.eval_text("ByteCount[\"abc\"]").unwrap().value;
+    let string_large = session.eval_text("ByteCount[\"abcdefgh\"]").unwrap().value;
+    let atom = session.eval_text("ByteCount[1]").unwrap().value;
+    let call = session.eval_text("ByteCount[f[1, 2, 3]]").unwrap().value;
 
     assert_eq!(
         session
-            .eval_text("ByteCount[\"abc\"]")
+            .evaluate(Expr::call(
+                system_expr("Less"),
+                vec![string_small.clone(), string_large]
+            ))
             .unwrap()
-            .value
             .to_string(),
-        "3"
+        "True"
     );
     assert_eq!(
         session
-            .eval_text("ByteCount[1 + 1]")
+            .evaluate(Expr::call(system_expr("Less"), vec![atom, call]))
             .unwrap()
-            .value
             .to_string(),
-        "1"
+        "True"
+    );
+
+    let before = session.eval_text("MemoryInUse[]").unwrap().value;
+    session.eval_text("byteProbe = Table[i, {i, 200}]").unwrap();
+    let after = session.eval_text("MemoryInUse[]").unwrap().value;
+    assert_eq!(
+        session
+            .evaluate(Expr::call(system_expr("Less"), vec![before, after]))
+            .unwrap()
+            .to_string(),
+        "True"
     );
 }
 
