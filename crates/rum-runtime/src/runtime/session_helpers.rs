@@ -75,6 +75,8 @@ impl Session {
         let tag = match error {
             EvalError::EvaluationCycleDetected { .. } => "cycle",
             EvalError::RecursionLimitExceeded { .. } => "reclim",
+            EvalError::TimeConstraintExceeded => "timelim",
+            EvalError::MemoryConstraintExceeded { .. } => "memlim",
             EvalError::IterationLimitExceeded { .. } => "iterlim",
             EvalError::EvaluationPassLimitExceeded { .. } => "passlim",
             _ => return None,

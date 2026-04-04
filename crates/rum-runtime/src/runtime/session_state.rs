@@ -109,6 +109,14 @@ pub(super) struct ReapScope {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct MonitorScope {
+    pub(super) display_expr: Expr,
+    pub(super) evaluation_monitor: Option<Expr>,
+    pub(super) step_monitor: Option<Expr>,
+    pub(super) last_display: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum MatcherNode {
     Exact(Expr),
     Blank {
@@ -221,6 +229,10 @@ pub enum EvalError {
     EvaluationCycleDetected { expr: String },
     #[error("evaluation exceeded recursion limit ({limit})")]
     RecursionLimitExceeded { limit: usize },
+    #[error("evaluation exceeded TimeConstrained limit")]
+    TimeConstraintExceeded,
+    #[error("evaluation exceeded MemoryConstrained limit ({limit})")]
+    MemoryConstraintExceeded { limit: usize },
     #[error("ReplaceRepeated exceeded iteration limit ({limit})")]
     IterationLimitExceeded { limit: usize },
     #[error("evaluation exceeded fixed-point pass limit ({limit})")]
@@ -271,6 +283,10 @@ impl Default for Session {
             last_message_list: Vec::new(),
             handled_non_loader_eval_errors: Vec::new(),
             reap_scopes: Vec::new(),
+            monitor_scopes: Vec::new(),
+            monitor_callbacks_enabled: true,
+            current_time_deadline: None,
+            current_memory_limit: None,
             asserts_enabled: false,
             abort_protect_depth: 0,
             abort_protect_pending: 0,

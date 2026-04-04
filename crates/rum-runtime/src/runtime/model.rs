@@ -1,4 +1,5 @@
 use super::*;
+use std::time::Instant;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ResourceLimits {
@@ -221,6 +222,12 @@ impl fmt::Display for SessionRequestError {
             Self::RecursionLimitExceeded { limit } => {
                 write!(f, "evaluation exceeded recursion limit ({limit})")
             }
+            Self::TimeConstraintExceeded => {
+                f.write_str("evaluation exceeded TimeConstrained limit")
+            }
+            Self::MemoryConstraintExceeded { limit } => {
+                write!(f, "evaluation exceeded MemoryConstrained limit ({limit})")
+            }
             Self::IterationLimitExceeded { limit } => {
                 write!(f, "ReplaceRepeated exceeded iteration limit ({limit})")
             }
@@ -278,6 +285,10 @@ pub struct Session {
     pub(super) last_message_list: Vec<RuntimeMessage>,
     pub(super) handled_non_loader_eval_errors: Vec<RuntimeMessage>,
     pub(super) reap_scopes: Vec<ReapScope>,
+    pub(super) monitor_scopes: Vec<MonitorScope>,
+    pub(super) monitor_callbacks_enabled: bool,
+    pub(super) current_time_deadline: Option<Instant>,
+    pub(super) current_memory_limit: Option<usize>,
     pub(super) asserts_enabled: bool,
     pub(super) abort_protect_depth: usize,
     pub(super) abort_protect_pending: usize,
@@ -357,6 +368,10 @@ pub enum SessionRequestError {
         expr: String,
     },
     RecursionLimitExceeded {
+        limit: usize,
+    },
+    TimeConstraintExceeded,
+    MemoryConstraintExceeded {
         limit: usize,
     },
     IterationLimitExceeded {

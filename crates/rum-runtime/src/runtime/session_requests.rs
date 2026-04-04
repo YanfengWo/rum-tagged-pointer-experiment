@@ -359,6 +359,10 @@ fn session_request_error_from_eval_error_with_source(
         EvalError::RecursionLimitExceeded { limit } => {
             SessionRequestError::RecursionLimitExceeded { limit: *limit }
         }
+        EvalError::TimeConstraintExceeded => SessionRequestError::TimeConstraintExceeded,
+        EvalError::MemoryConstraintExceeded { limit } => {
+            SessionRequestError::MemoryConstraintExceeded { limit: *limit }
+        }
         EvalError::IterationLimitExceeded { limit } => {
             SessionRequestError::IterationLimitExceeded { limit: *limit }
         }

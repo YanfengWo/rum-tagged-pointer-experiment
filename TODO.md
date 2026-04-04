@@ -210,7 +210,8 @@ This roadmap intentionally uses two levels of detail:
 - [ ] `CL-09` Tuning, debugging, and verification surface
   - [x] land a first CL-09 debugging wave through flat held-expression `Trace`, print-stream `TracePrint`, exact-rational `Timing` / `AbsoluteTiming`, echo-style debugging helpers, and a current canonical-text-proxy `ByteCount` subset
   - [x] deepen the first CL-09 surface with fixed-sample `RepeatedTiming`, session-level `On` / `Off` message gating, tag-aware `Sow` / `Reap`, and a current canonical-text `Short` subset
-  - [ ] continue with richer tracing structure/filter forms, resource-limit wrappers, verification/reporting builtins, monitor hooks, and fuller resource/accounting parity
+  - [x] land a first resource/monitor/reporting wave through cooperative `TimeConstrained` / `MemoryConstrained` / `MemoryInUse`, monitor hooks with `EvaluationMonitor` / `StepMonitor` option symbols, and first-pass `EvaluationData` / `TestCreate` / `TestReport` / `Stack`
+  - [ ] continue with richer tracing structure/filter forms, deeper monitor/report parity, and fuller resource/accounting semantics
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:
   - [ ] direct unit tests for small helpers, planners, normalization logic, and matcher branches

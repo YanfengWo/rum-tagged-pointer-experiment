@@ -3,6 +3,7 @@ use super::*;
 const EXTRA_SYSTEM_NAME_SYMBOLS: &[&str] = &[
     "Alternatives",
     "Flat",
+    "EvaluationMonitor",
     "Heads",
     "HoldAll",
     "HoldAllComplete",
@@ -16,6 +17,7 @@ const EXTRA_SYSTEM_NAME_SYMBOLS: &[&str] = &[
     "Protected",
     "RegularExpression",
     "SequenceHold",
+    "StepMonitor",
     "StringExpression",
 ];
 
@@ -369,6 +371,33 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
             optional_blank_expr(),
             optional_blank_expr(),
         ])],
+        "TimeConstrained" | "MemoryConstrained" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            blank_expr(),
+            optional_blank_expr(),
+        ])],
+        "MemoryInUse" | "Stack" => vec![syntax_argument_pattern(Vec::new())],
+        "Monitor" => vec![
+            syntax_argument_pattern(vec![
+                blank_expr(),
+                blank_expr(),
+                system_expr("OptionsPattern"),
+            ]),
+            syntax_rule(
+                "OptionNames",
+                string_list_expr(vec![
+                    "EvaluationMonitor".to_string(),
+                    "StepMonitor".to_string(),
+                ]),
+            ),
+        ],
+        "EvaluationData" => vec![syntax_argument_pattern(vec![blank_expr()])],
+        "TestCreate" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            blank_expr(),
+            optional_blank_expr(),
+        ])],
+        "TestReport" => vec![syntax_argument_pattern(vec![blank_expr()])],
         "StringCount" => vec![syntax_argument_pattern(vec![
             blank_expr(),
             blank_expr(),

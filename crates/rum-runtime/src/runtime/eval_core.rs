@@ -2,6 +2,8 @@ use super::*;
 
 impl Session {
     pub(super) fn evaluate_once(&mut self, expr: Expr) -> Result<Expr, EvalError> {
+        self.enforce_active_resource_limits_for_expr(&expr)?;
+
         if self.evaluation_stack.iter().any(|active| active == &expr) {
             return Err(EvalError::EvaluationCycleDetected {
                 expr: expr.to_string(),
@@ -19,7 +21,13 @@ impl Session {
         let result = self.evaluate_inner(expr);
         self.evaluation_depth -= 1;
         self.evaluation_stack.pop();
-        result
+        match result {
+            Ok(value) => {
+                self.enforce_active_resource_limits_for_expr(&value)?;
+                Ok(value)
+            }
+            Err(error) => Err(error),
+        }
     }
 
     pub(super) fn evaluate_inner(&mut self, expr: Expr) -> Result<Expr, EvalError> {

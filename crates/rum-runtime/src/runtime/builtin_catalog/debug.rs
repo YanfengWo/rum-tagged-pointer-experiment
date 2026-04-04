@@ -81,4 +81,50 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldFirst,
         BuiltinHandler::Reap,
     ),
+    BuiltinSpec::ordinary_with_hold(
+        "TimeConstrained",
+        "Evaluates an expression under the current cooperative exact-numeric timeout subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::TimeConstrained,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "MemoryConstrained",
+        "Evaluates an expression under the current cooperative memory-proxy limit subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::MemoryConstrained,
+    ),
+    BuiltinSpec::ordinary(
+        "MemoryInUse",
+        "Returns the current session memory-proxy byte count subset.",
+        BuiltinHandler::MemoryInUse,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Monitor",
+        "Evaluates an expression while exposing the current first-pass monitor display and callback subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Monitor,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "EvaluationData",
+        "Evaluates an expression and returns a first-pass association of result and diagnostics.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::EvaluationData,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "TestCreate",
+        "Builds a first-pass symbolic test specification.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::TestCreate,
+    ),
+    BuiltinSpec::ordinary(
+        "TestReport",
+        "Runs one or more first-pass symbolic tests and returns an association summary.",
+        BuiltinHandler::TestReport,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Stack",
+        "Returns the current evaluation stack in the first-pass held-expression subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Stack,
+    ),
 ];

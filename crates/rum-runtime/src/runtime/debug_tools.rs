@@ -216,6 +216,296 @@ impl Session {
         }
     }
 
+    pub(super) fn eval_time_constrained(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let (body, limit_expr, fallback) = match args {
+            [body, limit] => (body.clone(), limit, None),
+            [body, limit, fallback] => (body.clone(), limit, Some(fallback.clone())),
+            _ => {
+                return Ok(self.invalid_call_with_arg_range("TimeConstrained", args, 2, 3));
+            }
+        };
+
+        let resolved_limit = self.evaluate(limit_expr.clone())?;
+        let Some(limit) = parse_time_constraint_duration(&resolved_limit) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "TimeConstrained",
+                args,
+                "expected the timeout argument to be a non-negative exact number in the current first-pass subset",
+            ));
+        };
+
+        let prior_deadline = self.current_time_deadline;
+        let next_deadline = combine_time_deadlines(prior_deadline, limit);
+        self.current_time_deadline = Some(next_deadline);
+
+        let body_result = self.evaluate(body);
+        let outcome = self.suspend_with_result_frame(body_result, {
+            let fallback = fallback.clone();
+            move |session, outcome| {
+                session.finish_time_constrained(outcome, prior_deadline, fallback)
+            }
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.finish_time_constrained(outcome, prior_deadline, fallback),
+        }
+    }
+
+    pub(super) fn eval_memory_constrained(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let (body, limit_expr, fallback) = match args {
+            [body, limit] => (body.clone(), limit, None),
+            [body, limit, fallback] => (body.clone(), limit, Some(fallback.clone())),
+            _ => {
+                return Ok(self.invalid_call_with_arg_range("MemoryConstrained", args, 2, 3));
+            }
+        };
+
+        let resolved_limit = self.evaluate(limit_expr.clone())?;
+        let Some(limit) = expr_as_non_negative_usize(&resolved_limit) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "MemoryConstrained",
+                args,
+                "expected the memory limit argument to be a non-negative exact integer",
+            ));
+        };
+
+        let prior_limit = self.current_memory_limit;
+        self.current_memory_limit = Some(prior_limit.map_or(limit, |current| current.min(limit)));
+
+        let body_result = self.evaluate(body);
+        let outcome = self.suspend_with_result_frame(body_result, {
+            let fallback = fallback.clone();
+            move |session, outcome| {
+                session.finish_memory_constrained(outcome, prior_limit, fallback)
+            }
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.finish_memory_constrained(outcome, prior_limit, fallback),
+        }
+    }
+
+    pub(super) fn eval_memory_in_use(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !args.is_empty() {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
+
+        Ok(Expr::integer(BigInt::from(
+            self.current_memory_proxy_bytes() as u64,
+        )))
+    }
+
+    pub(super) fn eval_monitor(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() < 2 {
+            return Ok(self.invalid_call_with_arg_range("Monitor", args, 2, usize::MAX));
+        }
+
+        let explicit_options = if args.len() > 2 {
+            let resolved = self.evaluate(Expr::call(system_expr("List"), args[2..].to_vec()))?;
+            let options = match self.compile_assigned_options_from_resolved(&resolved) {
+                Ok(options) => options,
+                Err(_) => {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "Monitor",
+                        args,
+                        "expected the optional third argument to be a rule or list of rules in the current first-pass subset",
+                    ));
+                }
+            };
+            Some(options)
+        } else {
+            None
+        };
+
+        if let Some(options) = explicit_options.as_ref() {
+            for (name, _, _) in options.iter() {
+                if !matches!(name.name(), "EvaluationMonitor" | "StepMonitor") {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "Monitor",
+                        args,
+                        "expected only EvaluationMonitor and StepMonitor option rules in the current first-pass subset",
+                    ));
+                }
+            }
+        }
+
+        let evaluation_monitor =
+            self.monitor_option_expr(explicit_options.as_ref(), "EvaluationMonitor")?;
+        let step_monitor = self.monitor_option_expr(explicit_options.as_ref(), "StepMonitor")?;
+
+        self.monitor_scopes.push(MonitorScope {
+            display_expr: args[1].clone(),
+            evaluation_monitor,
+            step_monitor,
+            last_display: None,
+        });
+
+        let body_result = self.evaluate(args[0].clone());
+        let outcome = self.suspend_with_result_frame(body_result, |session, outcome| {
+            session.finish_monitor(outcome)
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.finish_monitor(outcome),
+        }
+    }
+
+    pub(super) fn eval_evaluation_data(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("EvaluationData", args, 1));
+        };
+
+        let checkpoint = DebugCaptureCheckpoint::new(self);
+        let prior_tracing = self.tracing_enabled;
+        self.tracing_enabled = true;
+        let started = Instant::now();
+        let input_string = expr.to_string();
+
+        let body_result = self.evaluate(expr.clone());
+        let outcome = self.suspend_with_result_frame(body_result, {
+            let input_string = input_string.clone();
+            move |session, outcome| {
+                session.finish_evaluation_data_capture(
+                    checkpoint,
+                    prior_tracing,
+                    started,
+                    &input_string,
+                    outcome,
+                )
+            }
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.finish_evaluation_data_capture(
+                checkpoint,
+                prior_tracing,
+                started,
+                &input_string,
+                outcome,
+            ),
+        }
+    }
+
+    pub(super) fn eval_test_create(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let (input, expected, test_id) = match args {
+            [input, expected] => (input.clone(), expected.clone(), None),
+            [input, expected, test_id] => (input.clone(), expected.clone(), Some(test_id.clone())),
+            _ => return Ok(Expr::call(head.clone(), args.to_vec())),
+        };
+
+        let mut entries = vec![
+            (
+                Expr::string("Input"),
+                Expr::call(system_expr("HoldComplete"), vec![input]),
+            ),
+            (
+                Expr::string("ExpectedOutput"),
+                Expr::call(system_expr("HoldComplete"), vec![expected]),
+            ),
+        ];
+
+        if let Some(test_id) = test_id {
+            entries.push((Expr::string("TestID"), test_id));
+        }
+
+        Ok(render_association(entries))
+    }
+
+    pub(super) fn eval_test_report(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [tests_expr] = args else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let tests = match parse_test_case_exprs(tests_expr) {
+            Some(tests) => tests,
+            None => return Ok(Expr::call(head.clone(), args.to_vec())),
+        };
+
+        let mut successes = 0usize;
+        let mut failures = 0usize;
+        let mut rendered_results = Vec::with_capacity(tests.len());
+
+        for test_expr in tests {
+            let Some(test_case) = parse_test_case(&test_expr) else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
+
+            let actual = self.evaluate(test_case.input.clone())?;
+            let success = actual == test_case.expected;
+            if success {
+                successes += 1;
+            } else {
+                failures += 1;
+            }
+
+            let mut entries = vec![
+                (Expr::string("Success"), debug_bool_expr(success)),
+                (Expr::string("ActualOutput"), actual),
+                (
+                    Expr::string("ExpectedOutput"),
+                    Expr::call(system_expr("HoldComplete"), vec![test_case.expected]),
+                ),
+            ];
+
+            if let Some(test_id) = test_case.test_id {
+                entries.push((Expr::string("TestID"), test_id));
+            }
+
+            rendered_results.push(render_association(entries));
+        }
+
+        Ok(render_association(vec![
+            (
+                Expr::string("TestsRunCount"),
+                Expr::integer(BigInt::from(rendered_results.len() as u64)),
+            ),
+            (
+                Expr::string("TestsSucceededCount"),
+                Expr::integer(BigInt::from(successes as u64)),
+            ),
+            (
+                Expr::string("TestsFailedCount"),
+                Expr::integer(BigInt::from(failures as u64)),
+            ),
+            (
+                Expr::string("TestResults"),
+                Expr::call(system_expr("List"), rendered_results),
+            ),
+        ]))
+    }
+
+    pub(super) fn eval_stack(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !args.is_empty() {
+            return Ok(self.invalid_call_with_exact_arg_count("Stack", args, 0));
+        }
+
+        let items = self
+            .evaluation_stack
+            .iter()
+            .take(self.evaluation_stack.len().saturating_sub(1))
+            .cloned()
+            .map(|expr| Expr::call(system_expr("Hold"), vec![expr]))
+            .collect();
+
+        Ok(Expr::call(system_expr("List"), items))
+    }
+
     fn eval_timing_like(&mut self, symbol: &str, args: &[Expr]) -> Result<Expr, EvalError> {
         let [expr] = args else {
             return Ok(self.invalid_call_with_exact_arg_count(symbol, args, 1));
@@ -403,6 +693,350 @@ impl Session {
         }
         Ok(Expr::call(system_expr("List"), rendered))
     }
+
+    pub(super) fn enforce_active_resource_limits_for_expr(
+        &self,
+        expr: &Expr,
+    ) -> Result<(), EvalError> {
+        if let Some(deadline) = self.current_time_deadline {
+            if Instant::now() >= deadline {
+                return Err(EvalError::TimeConstraintExceeded);
+            }
+        }
+
+        if let Some(limit) = self.current_memory_limit {
+            let projected = self
+                .current_memory_proxy_bytes()
+                .saturating_add(render_canonical_byte_count(expr));
+            if projected > limit {
+                return Err(EvalError::MemoryConstraintExceeded { limit });
+            }
+        }
+
+        Ok(())
+    }
+
+    fn current_memory_proxy_bytes(&self) -> usize {
+        let mut total = 0usize;
+
+        total = total.saturating_add(
+            self.evaluation_stack
+                .iter()
+                .map(render_canonical_byte_count)
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.definitions
+                .iter()
+                .map(|(symbol, definition)| {
+                    symbol.to_string().len() + render_definition_memory_proxy_bytes(definition)
+                })
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.attributes
+                .keys()
+                .map(|symbol| symbol.to_string().len())
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.options
+                .iter()
+                .map(|(symbol, options)| {
+                    symbol.to_string().len() + render_symbol_options_memory_proxy_bytes(options)
+                })
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.syntax_information
+                .iter()
+                .map(|(symbol, expr)| symbol.to_string().len() + render_canonical_byte_count(expr))
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.declared_stubs
+                .iter()
+                .map(|symbol| symbol.to_string().len())
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.once_values
+                .iter()
+                .map(|(key, value)| key.len() + render_canonical_byte_count(value))
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.message_definitions
+                .iter()
+                .map(|(key, definition)| {
+                    key.symbol.to_string().len()
+                        + key.tag.len()
+                        + definition
+                            .immediate
+                            .as_ref()
+                            .map_or(0, render_canonical_byte_count)
+                        + definition
+                            .delayed
+                            .as_ref()
+                            .map_or(0, render_canonical_byte_count)
+                })
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.messages
+                .iter()
+                .map(|message| message.symbol.len() + message.tag.len() + message.text.len())
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(self.prints.iter().map(String::len).sum::<usize>());
+
+        total = total.saturating_add(
+            self.trace_events
+                .iter()
+                .map(render_trace_event_memory_proxy_bytes)
+                .sum::<usize>(),
+        );
+
+        total
+    }
+
+    fn finish_time_constrained(
+        &mut self,
+        outcome: Result<Expr, EvalError>,
+        prior_deadline: Option<Instant>,
+        fallback: Option<Expr>,
+    ) -> Result<Expr, EvalError> {
+        self.current_time_deadline = prior_deadline;
+
+        match outcome {
+            Ok(value) => Ok(value),
+            Err(EvalError::TimeConstraintExceeded) => match fallback {
+                Some(expr) => self.evaluate(expr),
+                None => Ok(system_expr("$Aborted")),
+            },
+            Err(error) => Err(error),
+        }
+    }
+
+    fn finish_memory_constrained(
+        &mut self,
+        outcome: Result<Expr, EvalError>,
+        prior_limit: Option<usize>,
+        fallback: Option<Expr>,
+    ) -> Result<Expr, EvalError> {
+        self.current_memory_limit = prior_limit;
+
+        match outcome {
+            Ok(value) => Ok(value),
+            Err(EvalError::MemoryConstraintExceeded { .. }) => match fallback {
+                Some(expr) => self.evaluate(expr),
+                None => Ok(system_expr("$Aborted")),
+            },
+            Err(error) => Err(error),
+        }
+    }
+
+    fn monitor_option_expr(
+        &mut self,
+        explicit: Option<&SymbolOptions>,
+        name: &str,
+    ) -> Result<Option<Expr>, EvalError> {
+        if let Some((value, delayed)) =
+            explicit.and_then(|options| option_entry_by_name(options, name))
+        {
+            return self.resolve_monitor_option_expr(value, delayed);
+        }
+
+        let defaults = self.options_for_symbol(&Symbol::system("Monitor"));
+        if let Some((value, delayed)) = option_entry_by_name(&defaults, name) {
+            return self.resolve_monitor_option_expr(value, delayed);
+        }
+
+        Ok(None)
+    }
+
+    fn resolve_monitor_option_expr(
+        &mut self,
+        value: Expr,
+        delayed: bool,
+    ) -> Result<Option<Expr>, EvalError> {
+        let resolved = if delayed {
+            value
+        } else {
+            self.evaluate(value)?
+        };
+
+        if is_system_symbol_name(&resolved, "None") {
+            Ok(None)
+        } else {
+            Ok(Some(resolved))
+        }
+    }
+
+    fn finish_monitor(&mut self, outcome: Result<Expr, EvalError>) -> Result<Expr, EvalError> {
+        let _ = self.monitor_scopes.pop();
+        outcome
+    }
+
+    fn finish_evaluation_data_capture(
+        &mut self,
+        checkpoint: DebugCaptureCheckpoint,
+        prior_tracing: bool,
+        started: Instant,
+        input_string: &str,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        self.tracing_enabled = prior_tracing;
+
+        let messages = self.messages.split_off(checkpoint.message_checkpoint);
+        let prints = self.prints.split_off(checkpoint.print_checkpoint);
+        let events = self.trace_events[checkpoint.trace_checkpoint..].to_vec();
+
+        if !prior_tracing {
+            self.trace_events.truncate(checkpoint.trace_checkpoint);
+        }
+
+        let elapsed = elapsed_duration_expr(started.elapsed());
+        let (result_expr, success, failure_type) = match outcome {
+            Ok(value) => (value, true, system_expr("None")),
+            Err(EvalError::Abort | EvalError::ProtectedAbort) => {
+                (system_expr("$Aborted"), false, Expr::string("Abort"))
+            }
+            Err(EvalError::TimeConstraintExceeded) => (
+                system_expr("$Aborted"),
+                false,
+                Expr::string("TimeConstraint"),
+            ),
+            Err(EvalError::MemoryConstraintExceeded { .. }) => (
+                system_expr("$Aborted"),
+                false,
+                Expr::string("MemoryConstraint"),
+            ),
+            Err(EvalError::Break) => (system_expr("$Failed"), false, Expr::string("Break")),
+            Err(EvalError::Continue) => (system_expr("$Failed"), false, Expr::string("Continue")),
+            Err(EvalError::Return { .. }) => {
+                (system_expr("$Failed"), false, Expr::string("Return"))
+            }
+            Err(EvalError::Thrown { .. }) => (system_expr("$Failed"), false, Expr::string("Throw")),
+            Err(EvalError::InputRequired { request }) => {
+                return Err(EvalError::InputRequired { request });
+            }
+            Err(_) => (system_expr("$Failed"), false, Expr::string("Error")),
+        };
+
+        let trace_exprs =
+            self.trace_exprs_from_events(&Expr::string(input_string.to_string()), &events);
+        Ok(render_association(vec![
+            (Expr::string("Result"), result_expr),
+            (Expr::string("Success"), debug_bool_expr(success)),
+            (Expr::string("FailureType"), failure_type),
+            (
+                Expr::string("Messages"),
+                Expr::call(
+                    system_expr("List"),
+                    messages
+                        .iter()
+                        .cloned()
+                        .map(runtime_message_name_expr)
+                        .collect(),
+                ),
+            ),
+            (
+                Expr::string("MessagesText"),
+                Expr::call(
+                    system_expr("List"),
+                    messages
+                        .iter()
+                        .map(|message| Expr::string(message.text.clone()))
+                        .collect(),
+                ),
+            ),
+            (
+                Expr::string("OutputLog"),
+                Expr::call(
+                    system_expr("List"),
+                    prints.into_iter().map(Expr::string).collect(),
+                ),
+            ),
+            (
+                Expr::string("Trace"),
+                Expr::call(
+                    system_expr("List"),
+                    trace_exprs
+                        .into_iter()
+                        .map(|item| Expr::call(system_expr("Hold"), vec![item]))
+                        .collect(),
+                ),
+            ),
+            (Expr::string("Timing"), elapsed.clone()),
+            (Expr::string("AbsoluteTiming"), elapsed),
+            (
+                Expr::string("InputString"),
+                Expr::string(input_string.to_string()),
+            ),
+        ]))
+    }
+
+    pub(super) fn handle_monitor_trace_event(&mut self, event: &TraceEvent) {
+        if self.monitor_scopes.is_empty() || !self.monitor_callbacks_enabled {
+            return;
+        }
+
+        let scopes = self.monitor_scopes.clone();
+        self.monitor_callbacks_enabled = false;
+
+        for (index, scope) in scopes.into_iter().enumerate() {
+            match self.evaluate(scope.display_expr.clone()) {
+                Ok(value) => {
+                    let rendered = render_echo_fragment(&value);
+                    let should_emit = self
+                        .monitor_scopes
+                        .get(index)
+                        .and_then(|current| current.last_display.as_ref())
+                        .map_or(true, |current| current != &rendered);
+
+                    if should_emit {
+                        self.push_print(rendered.clone());
+                    }
+
+                    if let Some(current) = self.monitor_scopes.get_mut(index) {
+                        current.last_display = Some(rendered);
+                    }
+                }
+                Err(EvalError::InputRequired { .. }) => self.clear_suspension_state(),
+                Err(_) => {}
+            }
+
+            if let Some(callback) = scope.step_monitor {
+                self.run_monitor_callback_best_effort(callback);
+            }
+
+            if matches!(event, TraceEvent::EvaluationPass { .. }) {
+                if let Some(callback) = scope.evaluation_monitor {
+                    self.run_monitor_callback_best_effort(callback);
+                }
+            }
+        }
+
+        self.monitor_callbacks_enabled = true;
+    }
+
+    fn run_monitor_callback_best_effort(&mut self, callback: Expr) {
+        match self.evaluate(callback) {
+            Ok(_) => {}
+            Err(EvalError::InputRequired { .. }) => self.clear_suspension_state(),
+            Err(_) => {}
+        }
+    }
 }
 
 fn debug_slot_expr() -> Expr {
@@ -418,6 +1052,14 @@ fn render_echo_fragment(expr: &Expr) -> String {
 
 fn render_canonical_byte_count(expr: &Expr) -> usize {
     render_echo_fragment(expr).len()
+}
+
+fn debug_bool_expr(value: bool) -> Expr {
+    if value {
+        system_expr("True")
+    } else {
+        system_expr("False")
+    }
 }
 
 fn short_canonical_fragment(expr: &Expr, limit: usize) -> String {
@@ -485,4 +1127,180 @@ fn record_sown_value(buckets: &mut Vec<ReapBucket>, tag: Expr, value: Expr) {
         tag,
         values: vec![value],
     });
+}
+
+fn parse_time_constraint_duration(expr: &Expr) -> Option<Duration> {
+    let rational = expr_as_exact_rational(expr)?;
+    if rational.numerator() < &BigInt::from(0) {
+        return None;
+    }
+
+    let nanos_numerator = rational.numerator().clone() * BigInt::from(1_000_000_000_u64);
+    let nanos = nanos_numerator / rational.denominator().clone();
+    let nanos = nanos
+        .to_string()
+        .parse::<u64>()
+        .unwrap_or(u64::MAX.saturating_sub(1));
+
+    Some(Duration::from_nanos(nanos))
+}
+
+fn combine_time_deadlines(prior: Option<Instant>, limit: Duration) -> Instant {
+    let candidate = Instant::now()
+        .checked_add(limit)
+        .unwrap_or_else(Instant::now);
+    prior.map_or(candidate, |current| current.min(candidate))
+}
+
+fn render_definition_memory_proxy_bytes(definition: &SymbolDefinition) -> usize {
+    definition
+        .own_value
+        .as_ref()
+        .map_or(0, render_canonical_byte_count)
+        .saturating_add(
+            definition
+                .delayed_own_value
+                .as_ref()
+                .map_or(0, render_canonical_byte_count),
+        )
+        .saturating_add(
+            definition
+                .up_values
+                .iter()
+                .map(render_upvalue_memory_proxy_bytes)
+                .sum::<usize>(),
+        )
+        .saturating_add(
+            definition
+                .down_values
+                .iter()
+                .map(render_downvalue_memory_proxy_bytes)
+                .sum::<usize>(),
+        )
+        .saturating_add(
+            definition
+                .sub_values
+                .iter()
+                .map(render_subvalue_memory_proxy_bytes)
+                .sum::<usize>(),
+        )
+}
+
+fn render_upvalue_memory_proxy_bytes(value: &UpValue) -> usize {
+    render_canonical_byte_count(&value.lhs).saturating_add(render_canonical_byte_count(&value.rhs))
+}
+
+fn render_downvalue_memory_proxy_bytes(value: &DownValue) -> usize {
+    render_canonical_byte_count(&value.lhs).saturating_add(render_canonical_byte_count(&value.rhs))
+}
+
+fn render_subvalue_memory_proxy_bytes(value: &SubValue) -> usize {
+    render_canonical_byte_count(&value.lhs).saturating_add(render_canonical_byte_count(&value.rhs))
+}
+
+fn render_symbol_options_memory_proxy_bytes(options: &SymbolOptions) -> usize {
+    options
+        .iter()
+        .map(|(name, value, _)| {
+            name.to_string()
+                .len()
+                .saturating_add(render_canonical_byte_count(value))
+        })
+        .sum()
+}
+
+fn render_trace_event_memory_proxy_bytes(event: &TraceEvent) -> usize {
+    match event {
+        TraceEvent::EvaluationPass { before, after } => before.len().saturating_add(after.len()),
+        TraceEvent::DefinitionStored { symbol, value, .. } => {
+            symbol.len().saturating_add(value.len())
+        }
+        TraceEvent::RuleApplied {
+            input,
+            rule,
+            result,
+            ..
+        } => input
+            .len()
+            .saturating_add(rule.len())
+            .saturating_add(result.len()),
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct DebugCaptureCheckpoint {
+    message_checkpoint: usize,
+    print_checkpoint: usize,
+    trace_checkpoint: usize,
+}
+
+impl DebugCaptureCheckpoint {
+    fn new(session: &Session) -> Self {
+        Self {
+            message_checkpoint: session.messages.len(),
+            print_checkpoint: session.prints.len(),
+            trace_checkpoint: session.trace_events.len(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct TestCaseSpec {
+    input: Expr,
+    expected: Expr,
+    test_id: Option<Expr>,
+}
+
+fn option_entry_by_name(options: &SymbolOptions, name: &str) -> Option<(Expr, bool)> {
+    options
+        .iter()
+        .find(|(current, _, _)| current.name() == name)
+        .map(|(_, value, delayed)| (value.clone(), delayed))
+}
+
+fn parse_test_case_exprs(expr: &Expr) -> Option<Vec<Expr>> {
+    if association_entries_from_expr(expr).is_some() {
+        return Some(vec![expr.clone()]);
+    }
+
+    list_items(expr).map(|items| items.to_vec())
+}
+
+fn parse_test_case(expr: &Expr) -> Option<TestCaseSpec> {
+    let entries = association_entries_from_expr(expr)?;
+    let mut input = None;
+    let mut expected = None;
+    let mut test_id = None;
+
+    for (key, value) in entries {
+        match key {
+            Expr::Atom(Atom::String(name)) if name == "Input" => {
+                input = unwrap_hold_complete(&value);
+            }
+            Expr::Atom(Atom::String(name)) if name == "ExpectedOutput" => {
+                expected = unwrap_hold_complete(&value);
+            }
+            Expr::Atom(Atom::String(name)) if name == "TestID" => {
+                test_id = Some(value);
+            }
+            _ => {}
+        }
+    }
+
+    Some(TestCaseSpec {
+        input: input?,
+        expected: expected?,
+        test_id,
+    })
+}
+
+fn unwrap_hold_complete(expr: &Expr) -> Option<Expr> {
+    match expr {
+        Expr::Call { head, args }
+            if is_system_symbol_name(head, "HoldComplete") && args.len() == 1 =>
+        {
+            Some(args[0].clone())
+        }
+        _ => None,
+    }
 }

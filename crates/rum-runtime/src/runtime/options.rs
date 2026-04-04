@@ -1275,6 +1275,10 @@ pub(super) fn default_system_options(symbol: &Symbol) -> SymbolOptions {
             "PropagateAborts",
             system_expr("Automatic"),
         )],
+        "Monitor" => vec![
+            system_rule_option("EvaluationMonitor", system_expr("None")),
+            system_rule_option("StepMonitor", system_expr("None")),
+        ],
         "Save" => vec![
             system_rule_option("ExcludedContexts", system_expr("Automatic")),
             system_rule_option("IncludedContexts", system_expr("All")),

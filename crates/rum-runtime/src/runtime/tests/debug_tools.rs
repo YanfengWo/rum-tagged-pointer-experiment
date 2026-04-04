@@ -193,3 +193,158 @@ fn sow_and_reap_collect_by_tag_and_optional_handler() {
         "List[1, List[List[List[1]]]]"
     );
 }
+
+#[test]
+fn time_and_memory_constraints_cover_current_first_pass_resource_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("TimeConstrained[Pause[1/100]; 7, 1/1000, timeout]")
+            .unwrap()
+            .value
+            .to_string(),
+        "timeout"
+    );
+    assert_eq!(
+        session
+            .eval_text("MemoryConstrained[Range[100], 20, memfail]")
+            .unwrap()
+            .value
+            .to_string(),
+        "memfail"
+    );
+    assert_eq!(
+        session
+            .eval_text("IntegerQ[MemoryInUse[]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+}
+
+#[test]
+fn monitor_runs_current_display_and_callback_subset() {
+    let mut session = Session::new();
+
+    let outcome = session
+        .eval_text(
+            "Reap[Monitor[1 + 1, progress, {StepMonitor :> Sow[step], EvaluationMonitor :> Sow[eval]}]]",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[2, List[List[step, eval]]]");
+    assert_eq!(outcome.prints, vec!["progress"]);
+}
+
+#[test]
+fn evaluation_data_captures_result_messages_prints_and_failure_type_without_leaking_streams() {
+    let mut session = Session::new();
+
+    let success = session.eval_text("EvaluationData[Echo[1 + 1]; 3]").unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![success.value.clone(), Expr::string("Result")],
+            ))
+            .unwrap()
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![success.value.clone(), Expr::string("Success")],
+            ))
+            .unwrap()
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![success.value.clone(), Expr::string("OutputLog")],
+            ))
+            .unwrap()
+            .to_string(),
+        "List[\"2\"]"
+    );
+    assert!(session.take_messages().is_empty());
+    assert!(session.take_prints().is_empty());
+
+    let failure = session.eval_text("EvaluationData[Abort[]]").unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![failure.value.clone(), Expr::string("FailureType")],
+            ))
+            .unwrap()
+            .to_string(),
+        "\"Abort\""
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![failure.value, Expr::string("Result")],
+            ))
+            .unwrap()
+            .to_string(),
+        "$Aborted"
+    );
+}
+
+#[test]
+fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Head[TestCreate[1 + 1, 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "Lookup[TestReport[{TestCreate[1 + 1, 2], TestCreate[1 + 1, 3]}], \"TestsRunCount\"]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "Lookup[TestReport[{TestCreate[1 + 1, 2], TestCreate[1 + 1, 3]}], \"TestsSucceededCount\"]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "Lookup[TestReport[{TestCreate[1 + 1, 2], TestCreate[1 + 1, 3]}], \"TestsFailedCount\"]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+
+    let stack = session
+        .eval_text("stackFrame[] := Stack[]; stackFrame[]")
+        .unwrap();
+    let rendered = stack.value.to_string();
+    assert!(rendered.contains("Hold[stackFrame[]]"));
+}

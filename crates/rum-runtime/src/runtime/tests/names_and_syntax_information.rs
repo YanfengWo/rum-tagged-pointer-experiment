@@ -590,4 +590,28 @@ fn syntax_information_covers_current_cl09_debugging_surface_subset() {
             .to_string(),
         "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]], Optional[Blank[]]]]]"
     );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[TimeConstrained]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Blank[], Optional[Blank[]]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Monitor]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Blank[], OptionsPattern]], Rule[\"OptionNames\", List[\"EvaluationMonitor\", \"StepMonitor\"]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[TestReport]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[]]]]"
+    );
 }

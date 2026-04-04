@@ -306,7 +306,9 @@ impl Session {
 
     pub(super) fn push_trace(&mut self, event: TraceEvent) {
         if self.tracing_enabled {
-            self.trace_events.push(event);
+            self.trace_events.push(event.clone());
         }
+
+        self.handle_monitor_trace_event(&event);
     }
 }

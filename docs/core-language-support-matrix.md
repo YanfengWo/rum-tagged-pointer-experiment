@@ -438,10 +438,15 @@ once in its primary implementation group. Other groups may mention it as
   wall-clock `Timing[...]` / `AbsoluteTiming[...]`, fixed-sample
   `RepeatedTiming[...]`, echo-style debugging output, session-level `On` /
   `Off` message gating, `Sow` / `Reap` tag collection, a current
-  canonical-text `Short[...]` display subset, and a current
-  canonical-text-proxy `ByteCount[...]` subset; richer verification,
-  monitoring, and resource-limit surface builtins are still pending even
-  though the internal tracing/message foundations are already in place
+  canonical-text `Short[...]` display subset, a current
+  canonical-text-proxy `ByteCount[...]` subset, cooperative
+  `TimeConstrained[...]` / `MemoryConstrained[...]` wrappers, a session
+  memory-proxy `MemoryInUse[]` subset, `Monitor[...]` hooks with current
+  `EvaluationMonitor` / `StepMonitor` option symbols, and first-pass
+  `EvaluationData[...]` / `TestCreate[...]` / `TestReport[...]` /
+  `Stack[]`; richer verification, monitoring, and resource-accounting
+  parity is still pending even though the internal tracing/message
+  foundations are already in place
 - `planned`: user-facing trace/timing/resource-limit family, verification
   surface, and debugging output controls
 
@@ -450,10 +455,12 @@ once in its primary implementation group. Other groups may mention it as
 - `implemented`: none beyond the internal mechanisms listed above
 - `partial`: `Trace`, `TracePrint`, `Timing`, `AbsoluteTiming`,
   `RepeatedTiming`, `ByteCount`, `Short`, `Echo`, `EchoFunction`,
-  `EchoLabel`, `On`, `Off`, `Sow`, `Reap` in the current first-pass subset
-- `planned`: `TimeConstrained`, `MemoryConstrained`, `MemoryInUse`,
-  `Monitor`, `EvaluationMonitor`, `StepMonitor`, `EvaluationData`, `Assert`, `Dialog`,
-  `TestCreate`, `TestReport`, `Stack`
+  `EchoLabel`, `On`, `Off`, `Sow`, `Reap`, `TimeConstrained`,
+  `MemoryConstrained`, `MemoryInUse`, `Monitor`, `EvaluationMonitor`,
+  `StepMonitor`, `EvaluationData`, `TestCreate`, `TestReport`, `Stack` in
+  the current first-pass subset
+- `planned`: `Assert`, `Dialog`, plus deeper trace/resource/monitor/test
+  parity
 - `cross-tracked elsewhere`: `AbortProtect`, `Check`, `CheckAbort`,
   `Failure`, `Message`, `Missing`, `PropagateAborts`, `Quiet`
 

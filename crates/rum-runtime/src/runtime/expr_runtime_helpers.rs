@@ -77,11 +77,13 @@ pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
             | "HoldRest"
             | "Listable"
             | "OptionsPattern"
+            | "EvaluationMonitor"
             | "OneIdentity"
             | "Orderless"
             | "PatternTest"
             | "Protected"
             | "RegularExpression"
+            | "StepMonitor"
             | "StringExpression"
             | "SequenceHold"
     )
