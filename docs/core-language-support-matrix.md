@@ -437,8 +437,7 @@ once in its primary implementation group. Other groups may mention it as
   structured `Trace[...]` tree subset, including current filtered
   `Trace[..., patt]` forms, current list-pattern filtering, current
   structured levelspec filtering, and current `Heads -> True|False`
-  support, while `TracePrint[...]` remains in the current flat print-stream
-  subset; exact-rational wall-clock
+  support, plus an indented structured `TracePrint[...]` subset; exact-rational wall-clock
   `Timing[...]` / `AbsoluteTiming[...]`, fixed-sample
   `RepeatedTiming[...]`, echo-style debugging output, session-level `On` /
   `Off` message gating, `Sow` / `Reap` tag collection, a current
@@ -447,13 +446,15 @@ once in its primary implementation group. Other groups may mention it as
   `TimeConstrained[...]` / `MemoryConstrained[...]` wrappers, a session
   structural memory-proxy `MemoryInUse[]` subset, `Monitor[...]` hooks with
   current `EvaluationMonitor` / `StepMonitor` option symbols plus stable
-  initial/final display refreshes and broader default-option coverage,
+  initial/final display refreshes, broader default-option coverage, and
+  explicit `None` callback overrides,
   `EvaluationData[...]` property projection through current string/list/All
-  forms plus `"Properties"` with a matching structured `"Trace"` payload,
-  and
-  first-pass `TestCreate[...]` / `TestReport[...]` metadata through
+  forms plus `"Properties"` with matching structured `"Trace"` and held
+  `"Input"` payloads, and first-pass `TestCreate[...]` / `TestReport[...]`
+  metadata through
   `TestID`, `SameTest`, and expected-message matching with current
-  `TestReport[..., prop]` projection, alongside `Stack[]`; richer
+  `TestReport[..., prop]` projection plus report-level `"Success"` and
+  held per-test `"Input"`, alongside `Stack[]`; richer
   verification, monitoring, and resource-accounting parity is still
   pending even though the internal tracing/message
   foundations are already in place
@@ -470,9 +471,9 @@ once in its primary implementation group. Other groups may mention it as
   `StepMonitor`, `EvaluationData`, `TestCreate`, `TestReport`, `Stack` in
   the current first-pass subset, including a structured default
   `Trace[expr]` model plus structured filtered trace forms with the current
-  levelspec and `Heads` filtering, a current flat `TracePrint[...]`
-  filtering subset, current structural byte/memory proxy semantics, and
-  current report/property metadata
+  levelspec and `Heads` filtering, an indented structured
+  `TracePrint[...]` subset, current structural byte/memory proxy
+  semantics, and current report/property metadata
   matching
 - `planned`: `Assert`, `Dialog`, plus deeper trace/resource/monitor/test
   parity

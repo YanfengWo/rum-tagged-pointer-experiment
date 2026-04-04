@@ -28,7 +28,10 @@ fn trace_returns_a_first_pass_structured_expression_list_without_leaking_session
     );
 
     let top_level_only = session.eval_text("Trace[f[1], _Integer, 0]").unwrap();
-    assert_eq!(top_level_only.value.to_string(), "List[List[Hold[2]], Hold[2]]");
+    assert_eq!(
+        top_level_only.value.to_string(),
+        "List[List[Hold[2]], Hold[2]]"
+    );
 
     let with_heads = session
         .eval_text("Trace[f[1], _Symbol, Heads -> True]")
@@ -46,7 +49,7 @@ fn trace_print_emits_trace_lines_and_returns_the_underlying_value() {
 
     let traced = session.eval_text("TracePrint[f[1]]").unwrap();
     assert_eq!(traced.value.to_string(), "2");
-    assert_eq!(traced.prints, vec!["f[1]", "Plus[1, 1]", "2", "f[1]", "2"]);
+    assert_eq!(traced.prints, vec!["f[1]", "  Plus[1, 1]", "  2", "2"]);
     assert!(session.take_trace().is_empty());
 
     let filtered = session.eval_text("TracePrint[f[1], _Plus]").unwrap();
@@ -57,19 +60,19 @@ fn trace_print_emits_trace_lines_and_returns_the_underlying_value() {
         .eval_text("TracePrint[f[1], {_Plus, _Integer}]")
         .unwrap();
     assert_eq!(multi.value.to_string(), "2");
-    assert_eq!(multi.prints, vec!["Plus[1, 1]", "2"]);
+    assert_eq!(multi.prints, vec!["  Plus[1, 1]", "  2", "2"]);
 
     let leveled = session
         .eval_text("TracePrint[f[1], _Integer, {-1}]")
         .unwrap();
     assert_eq!(leveled.value.to_string(), "2");
-    assert_eq!(leveled.prints, vec!["1", "2", "1", "2"]);
+    assert_eq!(leveled.prints, vec!["1", "  1", "  2", "2"]);
 
     let with_heads = session
         .eval_text("TracePrint[f[1], _Symbol, Heads -> True]")
         .unwrap();
     assert_eq!(with_heads.value.to_string(), "2");
-    assert_eq!(with_heads.prints, vec!["f", "Plus", "f"]);
+    assert_eq!(with_heads.prints, vec!["f", "  Plus"]);
 }
 
 #[test]
@@ -357,6 +360,13 @@ fn monitor_runs_current_display_and_callback_subset() {
         default_eval.value.to_string(),
         "List[2, List[List[stepDefault, evalDefault]]]"
     );
+
+    let disabled_defaults = session
+        .eval_text(
+            "Reap[Monitor[1 + 1, progress, {StepMonitor :> None, EvaluationMonitor :> None}]]",
+        )
+        .unwrap();
+    assert_eq!(disabled_defaults.value.to_string(), "List[2, List[]]");
 }
 
 #[test]
@@ -393,6 +403,16 @@ fn evaluation_data_captures_result_messages_prints_and_failure_type_without_leak
             .unwrap()
             .to_string(),
         "List[\"2\"]"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![success.value.clone(), Expr::string("Input")],
+            ))
+            .unwrap()
+            .to_string(),
+        "Hold[CompoundExpression[Echo[Plus[1, 1]], 3]]"
     );
     assert!(session.take_messages().is_empty());
     assert!(session.take_prints().is_empty());
@@ -534,6 +554,16 @@ fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
     assert_eq!(
         session
             .eval_text(
+                "Lookup[TestReport[{TestCreate[1 + 1, 2], TestCreate[1 + 1, 3]}], \"Success\"]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text(
                 "Lookup[TestReport[{TestCreate[1 + 1, 1, {SameTest -> Greater}], TestCreate[Message[FindFile::notfound], Null, {ExpectedMessages -> {FindFile::notfound}}]}], \"TestsSucceededCount\"]",
             )
             .unwrap()
@@ -550,6 +580,16 @@ fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
             .value
             .to_string(),
         "True"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "Lookup[Part[Lookup[TestReport[{TestCreate[1 + 1, 2]}], \"TestResults\"], 1], \"Input\"]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[Plus[1, 1]]"
     );
     assert_eq!(
         session

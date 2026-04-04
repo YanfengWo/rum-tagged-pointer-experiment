@@ -53,8 +53,15 @@ impl Session {
     }
 
     pub(super) fn eval_trace_print(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if let [expr] = args {
+            let (value, trace) = self.eval_with_structured_trace_capture(expr.clone())?;
+            for line in render_structured_trace_lines(&trace) {
+                self.push_print(line);
+            }
+            return Ok(value);
+        }
+
         let (expr, pattern, levels, include_heads) = match args {
-            [expr] => (expr, None, None, false),
             [expr, pattern] => (expr, Some(pattern.clone()), None, false),
             [expr, pattern, third] => {
                 if let Some(include_heads) = parse_heads_option(third) {
@@ -87,13 +94,13 @@ impl Session {
                 };
                 (expr, Some(pattern.clone()), Some(levels), include_heads)
             }
-            _ => return Ok(self.invalid_call_with_arg_range("TracePrint", args, 1, 4)),
+            _ => return Ok(self.invalid_call_with_arg_range("TracePrint", args, 2, 4)),
         };
 
-        let (value, trace_exprs) =
-            self.eval_with_trace_capture(expr.clone(), pattern, levels, include_heads)?;
-        for item in trace_exprs {
-            self.push_print(render_echo_fragment(&item));
+        let (value, trace) = self.eval_with_structured_trace_capture(expr.clone())?;
+        let trace = self.filter_structured_trace_expr(trace, pattern, levels, include_heads)?;
+        for line in render_structured_trace_lines(&trace) {
+            self.push_print(line);
         }
         Ok(value)
     }
@@ -436,15 +443,18 @@ impl Session {
         self.tracing_enabled = true;
         let started = Instant::now();
         let input_string = expr.to_string();
+        let input_expr = expr.clone();
 
         let body_result = self.evaluate(expr.clone());
         let outcome = self.suspend_with_result_frame(body_result, {
             let input_string = input_string.clone();
+            let input_expr = input_expr.clone();
             move |session, outcome| {
                 session.finish_evaluation_data_capture(
                     checkpoint,
                     prior_tracing,
                     started,
+                    &input_expr,
                     &input_string,
                     outcome,
                 )
@@ -458,6 +468,7 @@ impl Session {
                     checkpoint,
                     prior_tracing,
                     started,
+                    &input_expr,
                     &input_string,
                     outcome,
                 )?;
@@ -591,6 +602,10 @@ impl Session {
             }
 
             let mut entries = vec![
+                (
+                    Expr::string("Input"),
+                    Expr::call(system_expr("Hold"), vec![test_case.input.clone()]),
+                ),
                 (Expr::string("Success"), debug_bool_expr(success)),
                 (Expr::string("ActualOutput"), actual),
                 (
@@ -629,6 +644,7 @@ impl Session {
         }
 
         let report = render_association(vec![
+            (Expr::string("Success"), debug_bool_expr(failures == 0)),
             (
                 Expr::string("TestsRunCount"),
                 Expr::integer(BigInt::from(rendered_results.len() as u64)),
@@ -698,40 +714,6 @@ impl Session {
         ))
     }
 
-    fn eval_with_trace_capture(
-        &mut self,
-        expr: Expr,
-        pattern: Option<Expr>,
-        levels: Option<CasesLevelSpec>,
-        include_heads: bool,
-    ) -> Result<(Expr, Vec<Expr>), EvalError> {
-        let (value, events, _depths) = self.capture_trace_events(expr.clone())?;
-        let mut trace_exprs = self.trace_exprs_from_events(&expr, &events);
-        match (pattern, levels) {
-            (Some(pattern), Some(levels)) => {
-                trace_exprs =
-                    self.filter_trace_exprs_on_levels(pattern, levels, include_heads, trace_exprs)?;
-            }
-            (Some(pattern), None) => {
-                trace_exprs = if include_heads {
-                    self.filter_trace_exprs_on_levels(
-                        pattern,
-                        CasesLevelSpec::range(0, None),
-                        true,
-                        trace_exprs,
-                    )?
-                } else {
-                    self.filter_trace_exprs(pattern, trace_exprs)?
-                };
-            }
-            (None, Some(levels)) => {
-                trace_exprs = self.select_trace_exprs_on_levels(levels, include_heads, trace_exprs);
-            }
-            (None, None) => {}
-        }
-        Ok((value, trace_exprs))
-    }
-
     fn eval_with_structured_trace_capture(
         &mut self,
         expr: Expr,
@@ -789,29 +771,6 @@ impl Session {
     fn truncate_trace_from(&mut self, trace_checkpoint: usize) {
         self.trace_events.truncate(trace_checkpoint);
         self.trace_event_depths.truncate(trace_checkpoint);
-    }
-
-    fn trace_exprs_from_events(&self, original: &Expr, events: &[TraceEvent]) -> Vec<Expr> {
-        let mut trace = Vec::new();
-        push_unique_trace_expr(&mut trace, original.clone());
-
-        for event in events {
-            match event {
-                TraceEvent::EvaluationPass { before, after } => {
-                    push_unique_trace_expr(&mut trace, self.trace_expr_from_text(before));
-                    push_unique_trace_expr(&mut trace, self.trace_expr_from_text(after));
-                }
-                TraceEvent::DefinitionStored { value, .. } => {
-                    push_unique_trace_expr(&mut trace, self.trace_expr_from_text(value));
-                }
-                TraceEvent::RuleApplied { input, result, .. } => {
-                    push_unique_trace_expr(&mut trace, self.trace_expr_from_text(input));
-                    push_unique_trace_expr(&mut trace, self.trace_expr_from_text(result));
-                }
-            }
-        }
-
-        trace
     }
 
     fn structured_trace_expr_from_events(&self, original: &Expr, events: &[TraceEvent]) -> Expr {
@@ -874,8 +833,12 @@ impl Session {
             return Ok(Expr::call(head.as_ref().clone(), args));
         }
 
-        let filtered =
-            self.filter_structured_trace_items(args, pattern.as_ref(), levels.as_ref(), include_heads)?;
+        let filtered = self.filter_structured_trace_items(
+            args,
+            pattern.as_ref(),
+            levels.as_ref(),
+            include_heads,
+        )?;
         Ok(Expr::call(system_expr("List"), filtered))
     }
 
@@ -891,23 +854,16 @@ impl Session {
         for item in items {
             match item {
                 Expr::Call { head, args } if is_system_symbol_name(&head, "List") => {
-                    let nested = self.filter_structured_trace_items(
-                        args,
-                        pattern,
-                        levels,
-                        include_heads,
-                    )?;
+                    let nested =
+                        self.filter_structured_trace_items(args, pattern, levels, include_heads)?;
                     if !nested.is_empty() {
                         filtered.push(Expr::call(system_expr("List"), nested));
                     }
                 }
                 other => {
-                    for held in self.filter_structured_trace_leaf(
-                        other,
-                        pattern,
-                        levels,
-                        include_heads,
-                    )? {
+                    for held in
+                        self.filter_structured_trace_leaf(other, pattern, levels, include_heads)?
+                    {
                         push_unique_trace_item(&mut filtered, held);
                     }
                 }
@@ -941,8 +897,11 @@ impl Session {
                 for candidate in collect_level_parts_owned(&expr, traversal, 0) {
                     let mut is_match = false;
                     for pattern in &patterns {
-                        let outcome =
-                            self.match_expr_owned(pattern.clone(), candidate.clone(), BTreeMap::new())?;
+                        let outcome = self.match_expr_owned(
+                            pattern.clone(),
+                            candidate.clone(),
+                            BTreeMap::new(),
+                        )?;
                         if outcome.matched {
                             is_match = true;
                             break;
@@ -1379,6 +1338,7 @@ impl Session {
         checkpoint: DebugCaptureCheckpoint,
         prior_tracing: bool,
         started: Instant,
+        input_expr: &Expr,
         input_string: &str,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
@@ -1387,8 +1347,7 @@ impl Session {
         let messages = self.messages.split_off(checkpoint.message_checkpoint);
         let prints = self.prints.split_off(checkpoint.print_checkpoint);
         let events = self.trace_events[checkpoint.trace_checkpoint..].to_vec();
-        let trace_root =
-            self.structured_trace_expr_from_events(&self.trace_expr_from_text(input_string), &events);
+        let trace_root = self.structured_trace_expr_from_events(input_expr, &events);
 
         if !prior_tracing {
             self.truncate_trace_from(checkpoint.trace_checkpoint);
@@ -1423,6 +1382,10 @@ impl Session {
         };
 
         Ok(render_association(vec![
+            (
+                Expr::string("Input"),
+                Expr::call(system_expr("Hold"), vec![input_expr.clone()]),
+            ),
             (Expr::string("Result"), result_expr),
             (Expr::string("Success"), debug_bool_expr(success)),
             (Expr::string("FailureType"), failure_type),
@@ -1454,10 +1417,7 @@ impl Session {
                     prints.into_iter().map(Expr::string).collect(),
                 ),
             ),
-            (
-                Expr::string("Trace"),
-                trace_root,
-            ),
+            (Expr::string("Trace"), trace_root),
             (Expr::string("Timing"), elapsed.clone()),
             (Expr::string("AbsoluteTiming"), elapsed),
             (
@@ -1498,86 +1458,6 @@ impl Session {
             Err(EvalError::InputRequired { .. }) => self.clear_suspension_state(),
             Err(_) => {}
         }
-    }
-
-    fn filter_trace_exprs(
-        &mut self,
-        pattern: Expr,
-        trace_exprs: Vec<Expr>,
-    ) -> Result<Vec<Expr>, EvalError> {
-        let patterns = normalize_trace_patterns(&pattern);
-        let mut filtered = Vec::new();
-        for expr in trace_exprs {
-            let mut matched = false;
-            for pattern in &patterns {
-                let outcome =
-                    self.match_expr_owned(pattern.clone(), expr.clone(), BTreeMap::new())?;
-                if outcome.matched {
-                    matched = true;
-                    break;
-                }
-            }
-            if matched {
-                push_unique_trace_expr(&mut filtered, expr);
-            }
-        }
-        Ok(filtered)
-    }
-
-    fn filter_trace_exprs_on_levels(
-        &mut self,
-        pattern: Expr,
-        levels: CasesLevelSpec,
-        include_heads: bool,
-        trace_exprs: Vec<Expr>,
-    ) -> Result<Vec<Expr>, EvalError> {
-        let patterns = normalize_trace_patterns(&pattern);
-        let traversal = CasesTraversalConfig {
-            levels,
-            max_matches: None,
-            include_heads,
-        };
-        let mut filtered = Vec::new();
-
-        for expr in trace_exprs {
-            let candidates = collect_level_parts_owned(&expr, traversal, 0);
-            for candidate in candidates {
-                let mut matched = false;
-                for pattern in &patterns {
-                    let outcome =
-                        self.match_expr_owned(pattern.clone(), candidate.clone(), BTreeMap::new())?;
-                    if outcome.matched {
-                        matched = true;
-                        break;
-                    }
-                }
-                if matched {
-                    push_unique_trace_expr(&mut filtered, candidate);
-                }
-            }
-        }
-
-        Ok(filtered)
-    }
-
-    fn select_trace_exprs_on_levels(
-        &mut self,
-        levels: CasesLevelSpec,
-        include_heads: bool,
-        trace_exprs: Vec<Expr>,
-    ) -> Vec<Expr> {
-        let traversal = CasesTraversalConfig {
-            levels,
-            max_matches: None,
-            include_heads,
-        };
-        let mut filtered = Vec::new();
-        for expr in trace_exprs {
-            for candidate in collect_level_parts_owned(&expr, traversal, 0) {
-                push_unique_trace_expr(&mut filtered, candidate);
-            }
-        }
-        filtered
     }
 
     fn refresh_monitor_scope_display(&mut self, index: usize) {
@@ -1836,6 +1716,44 @@ fn unwrap_trace_hold(expr: &Expr) -> Option<Expr> {
             Some(args[0].clone())
         }
         _ => None,
+    }
+}
+
+fn render_structured_trace_lines(trace: &Expr) -> Vec<String> {
+    let mut lines = Vec::new();
+    collect_structured_trace_lines(trace, 0, &mut lines);
+    let min_depth = lines.iter().map(|(depth, _)| *depth).min().unwrap_or(0);
+    lines
+        .into_iter()
+        .map(|(depth, line)| format!("{}{}", "  ".repeat(depth.saturating_sub(min_depth)), line))
+        .collect()
+}
+
+fn collect_structured_trace_lines(trace: &Expr, depth: usize, lines: &mut Vec<(usize, String)>) {
+    match trace {
+        Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
+            for item in args {
+                match item {
+                    Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
+                        collect_structured_trace_lines(item, depth + 1, lines);
+                    }
+                    other => {
+                        if let Some(expr) = unwrap_trace_hold(other) {
+                            lines.push((depth, render_echo_fragment(&expr)));
+                        } else {
+                            lines.push((depth, render_echo_fragment(other)));
+                        }
+                    }
+                }
+            }
+        }
+        other => {
+            if let Some(expr) = unwrap_trace_hold(other) {
+                lines.push((depth, render_echo_fragment(&expr)));
+            } else {
+                lines.push((depth, render_echo_fragment(other)));
+            }
+        }
     }
 }
 
