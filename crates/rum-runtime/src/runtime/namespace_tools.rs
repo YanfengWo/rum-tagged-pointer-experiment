@@ -356,6 +356,10 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
             blank_expr(),
             optional_blank_association_expr(),
         ])],
+        "Trace" | "TracePrint" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            optional_blank_expr(),
+        ])],
         "RepeatedTiming" => vec![syntax_argument_pattern(vec![blank_expr()])],
         "Short" => vec![syntax_argument_pattern(vec![
             blank_expr(),
@@ -391,7 +395,10 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
                 ]),
             ),
         ],
-        "EvaluationData" => vec![syntax_argument_pattern(vec![blank_expr()])],
+        "EvaluationData" => vec![syntax_argument_pattern(vec![
+            blank_expr(),
+            optional_blank_expr(),
+        ])],
         "TestCreate" => vec![syntax_argument_pattern(vec![
             blank_expr(),
             blank_expr(),

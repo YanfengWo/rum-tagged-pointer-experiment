@@ -560,6 +560,14 @@ fn syntax_information_covers_current_cl09_debugging_surface_subset() {
 
     assert_eq!(
         session
+            .eval_text("SyntaxInformation[Trace]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]]]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("SyntaxInformation[RepeatedTiming]")
             .unwrap()
             .value
@@ -605,6 +613,14 @@ fn syntax_information_covers_current_cl09_debugging_surface_subset() {
             .value
             .to_string(),
         "List[Rule[\"ArgumentsPattern\", List[Blank[], Blank[], OptionsPattern]], Rule[\"OptionNames\", List[\"EvaluationMonitor\", \"StepMonitor\"]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[EvaluationData]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]]]]]"
     );
     assert_eq!(
         session

@@ -11,6 +11,9 @@ fn trace_returns_a_first_pass_flat_expression_list_without_leaking_session_trace
         "List[Hold[f[1]], Hold[Plus[1, 1]], Hold[2], Hold[f[1]], Hold[2]]"
     );
     assert!(session.take_trace().is_empty());
+
+    let filtered = session.eval_text("Trace[f[1], _Plus]").unwrap();
+    assert_eq!(filtered.value.to_string(), "List[Hold[Plus[1, 1]]]");
 }
 
 #[test]
@@ -22,6 +25,10 @@ fn trace_print_emits_trace_lines_and_returns_the_underlying_value() {
     assert_eq!(traced.value.to_string(), "2");
     assert_eq!(traced.prints, vec!["f[1]", "Plus[1, 1]", "2", "f[1]", "2"]);
     assert!(session.take_trace().is_empty());
+
+    let filtered = session.eval_text("TracePrint[f[1], _Plus]").unwrap();
+    assert_eq!(filtered.value.to_string(), "2");
+    assert_eq!(filtered.prints, vec!["Plus[1, 1]"]);
 }
 
 #[test]
@@ -236,6 +243,10 @@ fn monitor_runs_current_display_and_callback_subset() {
 
     assert_eq!(outcome.value.to_string(), "List[2, List[List[step, eval]]]");
     assert_eq!(outcome.prints, vec!["progress"]);
+
+    let changing = session.eval_text("x = 0; Monitor[(x = 1; x), x]").unwrap();
+    assert_eq!(changing.value.to_string(), "1");
+    assert_eq!(changing.prints, vec!["0", "1"]);
 }
 
 #[test]
@@ -297,6 +308,30 @@ fn evaluation_data_captures_result_messages_prints_and_failure_type_without_leak
             .to_string(),
         "$Aborted"
     );
+
+    let projected = session
+        .eval_text("EvaluationData[Echo[1 + 1]; 3, {\"Result\", \"Success\"}]")
+        .unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![projected.value.clone(), Expr::string("Result")],
+            ))
+            .unwrap()
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![projected.value, Expr::string("Success")],
+            ))
+            .unwrap()
+            .to_string(),
+        "True"
+    );
 }
 
 #[test]
@@ -310,6 +345,14 @@ fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
             .value
             .to_string(),
         "Association"
+    );
+    assert_eq!(
+        session
+            .eval_text("Lookup[TestCreate[1 + 1, 2, {TestID -> \"sum\"}], \"TestID\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"sum\""
     );
     assert_eq!(
         session
@@ -341,6 +384,27 @@ fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
             .to_string(),
         "1"
     );
+    assert_eq!(
+        session
+            .eval_text(
+                "Lookup[TestReport[{TestCreate[1 + 1, 1, {SameTest -> Greater}], TestCreate[Message[FindFile::notfound], Null, {ExpectedMessages -> {FindFile::notfound}}]}], \"TestsSucceededCount\"]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "Lookup[Part[Lookup[TestReport[{TestCreate[Message[FindFile::notfound], Null, {ExpectedMessages -> {FindFile::notfound}}]}], \"TestResults\"], 1], \"MessagesMatch\"]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert!(session.take_messages().is_empty());
 
     let stack = session
         .eval_text("stackFrame[] := Stack[]; stackFrame[]")

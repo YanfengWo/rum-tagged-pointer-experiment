@@ -7,11 +7,13 @@ const DEFAULT_SHORT_LIMIT: usize = 72;
 
 impl Session {
     pub(super) fn eval_trace(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("Trace", args, 1));
+        let (expr, pattern) = match args {
+            [expr] => (expr, None),
+            [expr, pattern] => (expr, Some(pattern.clone())),
+            _ => return Ok(self.invalid_call_with_arg_range("Trace", args, 1, 2)),
         };
 
-        let (_value, trace_exprs) = self.eval_with_trace_capture(expr.clone())?;
+        let (_value, trace_exprs) = self.eval_with_trace_capture(expr.clone(), pattern)?;
         Ok(Expr::call(
             system_expr("List"),
             trace_exprs
@@ -22,11 +24,13 @@ impl Session {
     }
 
     pub(super) fn eval_trace_print(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("TracePrint", args, 1));
+        let (expr, pattern) = match args {
+            [expr] => (expr, None),
+            [expr, pattern] => (expr, Some(pattern.clone())),
+            _ => return Ok(self.invalid_call_with_arg_range("TracePrint", args, 1, 2)),
         };
 
-        let (value, trace_exprs) = self.eval_with_trace_capture(expr.clone())?;
+        let (value, trace_exprs) = self.eval_with_trace_capture(expr.clone(), pattern)?;
         for item in trace_exprs {
             self.push_print(render_echo_fragment(&item));
         }
@@ -345,6 +349,8 @@ impl Session {
             step_monitor,
             last_display: None,
         });
+        let last_index = self.monitor_scopes.len().saturating_sub(1);
+        self.refresh_monitor_scope_display(last_index);
 
         let body_result = self.evaluate(args[0].clone());
         let outcome = self.suspend_with_result_frame(body_result, |session, outcome| {
@@ -358,8 +364,10 @@ impl Session {
     }
 
     pub(super) fn eval_evaluation_data(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("EvaluationData", args, 1));
+        let (expr, properties) = match args {
+            [expr] => (expr, None),
+            [expr, properties] => (expr, Some(properties)),
+            _ => return Ok(self.invalid_call_with_arg_range("EvaluationData", args, 1, 2)),
         };
 
         let checkpoint = DebugCaptureCheckpoint::new(self);
@@ -384,13 +392,16 @@ impl Session {
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => self.finish_evaluation_data_capture(
-                checkpoint,
-                prior_tracing,
-                started,
-                &input_string,
-                outcome,
-            ),
+            outcome => {
+                let data = self.finish_evaluation_data_capture(
+                    checkpoint,
+                    prior_tracing,
+                    started,
+                    &input_string,
+                    outcome,
+                )?;
+                self.project_evaluation_data_properties(data, properties.cloned())
+            }
         }
     }
 
@@ -399,25 +410,53 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let (input, expected, test_id) = match args {
+        let (input, expected, options_expr) = match args {
             [input, expected] => (input.clone(), expected.clone(), None),
-            [input, expected, test_id] => (input.clone(), expected.clone(), Some(test_id.clone())),
+            [input, expected, third] => (input.clone(), expected.clone(), Some(third.clone())),
             _ => return Ok(Expr::call(head.clone(), args.to_vec())),
         };
+
+        let mut test_id = None;
+        let mut expected_messages = None;
+        let mut same_test = None;
+
+        if let Some(options_expr) = options_expr {
+            if let Some(options) = parse_test_create_options(&options_expr) {
+                for (name, value) in options {
+                    match name.as_str() {
+                        "TestID" => test_id = Some(value),
+                        "ExpectedMessages" => expected_messages = Some(value),
+                        "SameTest" => same_test = Some(value),
+                        _ => return Ok(Expr::call(head.clone(), args.to_vec())),
+                    }
+                }
+            } else {
+                test_id = Some(options_expr);
+            }
+        }
 
         let mut entries = vec![
             (
                 Expr::string("Input"),
-                Expr::call(system_expr("HoldComplete"), vec![input]),
+                Expr::call(system_expr("Hold"), vec![input]),
             ),
             (
                 Expr::string("ExpectedOutput"),
-                Expr::call(system_expr("HoldComplete"), vec![expected]),
+                Expr::call(system_expr("Hold"), vec![expected]),
             ),
         ];
 
         if let Some(test_id) = test_id {
             entries.push((Expr::string("TestID"), test_id));
+        }
+        if let Some(expected_messages) = expected_messages {
+            entries.push((
+                Expr::string("ExpectedMessages"),
+                Expr::call(system_expr("Hold"), vec![expected_messages]),
+            ));
+        }
+        if let Some(same_test) = same_test {
+            entries.push((Expr::string("SameTest"), same_test));
         }
 
         Ok(render_association(entries))
@@ -445,9 +484,43 @@ impl Session {
             let Some(test_case) = parse_test_case(&test_expr) else {
                 return Ok(Expr::call(head.clone(), args.to_vec()));
             };
+            let expected_messages =
+                self.normalize_expected_message_exprs(test_case.expected_messages.clone())?;
 
-            let actual = self.evaluate(test_case.input.clone())?;
-            let success = actual == test_case.expected;
+            let input_text = test_case.input.to_string();
+            let (actual, failure_type, messages_exprs) = match self.eval_text(&input_text) {
+                Ok(outcome) => (
+                    outcome.value,
+                    None,
+                    outcome
+                        .messages
+                        .into_iter()
+                        .map(runtime_message_name_expr)
+                        .collect(),
+                ),
+                Err(error) => {
+                    let (value, failure_type) = self.render_test_outcome(Err(error))?;
+                    let messages: Vec<Expr> = self
+                        .last_message_list
+                        .clone()
+                        .into_iter()
+                        .map(runtime_message_name_expr)
+                        .collect();
+                    (value, failure_type.map(str::to_string), messages)
+                }
+            };
+
+            let messages_match = expected_messages
+                .as_ref()
+                .map_or(messages_exprs.is_empty(), |expected| {
+                    *expected == messages_exprs
+                });
+            let output_match = self.test_case_output_matches(
+                &test_case,
+                actual.clone(),
+                test_case.expected.clone(),
+            )?;
+            let success = output_match && messages_match && failure_type.is_none();
             if success {
                 successes += 1;
             } else {
@@ -459,10 +532,32 @@ impl Session {
                 (Expr::string("ActualOutput"), actual),
                 (
                     Expr::string("ExpectedOutput"),
-                    Expr::call(system_expr("HoldComplete"), vec![test_case.expected]),
+                    Expr::call(system_expr("Hold"), vec![test_case.expected]),
+                ),
+                (
+                    Expr::string("ActualMessages"),
+                    Expr::call(system_expr("List"), messages_exprs.clone()),
+                ),
+                (
+                    Expr::string("ExpectedMessages"),
+                    Expr::call(
+                        system_expr("List"),
+                        expected_messages.clone().unwrap_or_default(),
+                    ),
+                ),
+                (
+                    Expr::string("MessagesMatch"),
+                    debug_bool_expr(messages_match),
+                ),
+                (
+                    Expr::string("Outcome"),
+                    Expr::string(if success { "Success" } else { "Failure" }),
                 ),
             ];
 
+            if let Some(failure_type) = failure_type {
+                entries.push((Expr::string("FailureType"), Expr::string(failure_type)));
+            }
             if let Some(test_id) = test_case.test_id {
                 entries.push((Expr::string("TestID"), test_id));
             }
@@ -533,7 +628,11 @@ impl Session {
         ))
     }
 
-    fn eval_with_trace_capture(&mut self, expr: Expr) -> Result<(Expr, Vec<Expr>), EvalError> {
+    fn eval_with_trace_capture(
+        &mut self,
+        expr: Expr,
+        pattern: Option<Expr>,
+    ) -> Result<(Expr, Vec<Expr>), EvalError> {
         let prior_enabled = self.tracing_enabled;
         let trace_checkpoint = self.trace_events.len();
         self.tracing_enabled = true;
@@ -546,7 +645,7 @@ impl Session {
             }
         };
 
-        self.finish_trace_capture(expr, trace_checkpoint, prior_enabled, value)
+        self.finish_trace_capture(expr, trace_checkpoint, prior_enabled, value, pattern)
     }
 
     fn finish_trace_capture(
@@ -555,6 +654,7 @@ impl Session {
         trace_checkpoint: usize,
         prior_enabled: bool,
         value: Expr,
+        pattern: Option<Expr>,
     ) -> Result<(Expr, Vec<Expr>), EvalError> {
         let events = self.trace_events[trace_checkpoint..].to_vec();
         self.tracing_enabled = prior_enabled;
@@ -563,7 +663,10 @@ impl Session {
             self.trace_events.truncate(trace_checkpoint);
         }
 
-        let trace_exprs = self.trace_exprs_from_events(&original, &events);
+        let mut trace_exprs = self.trace_exprs_from_events(&original, &events);
+        if let Some(pattern) = pattern {
+            trace_exprs = self.filter_trace_exprs(pattern, trace_exprs)?;
+        }
         Ok((value, trace_exprs))
     }
 
@@ -883,6 +986,8 @@ impl Session {
     }
 
     fn finish_monitor(&mut self, outcome: Result<Expr, EvalError>) -> Result<Expr, EvalError> {
+        let last_index = self.monitor_scopes.len().saturating_sub(1);
+        self.refresh_monitor_scope_display(last_index);
         let _ = self.monitor_scopes.pop();
         outcome
     }
@@ -995,26 +1100,7 @@ impl Session {
         self.monitor_callbacks_enabled = false;
 
         for (index, scope) in scopes.into_iter().enumerate() {
-            match self.evaluate(scope.display_expr.clone()) {
-                Ok(value) => {
-                    let rendered = render_echo_fragment(&value);
-                    let should_emit = self
-                        .monitor_scopes
-                        .get(index)
-                        .and_then(|current| current.last_display.as_ref())
-                        .map_or(true, |current| current != &rendered);
-
-                    if should_emit {
-                        self.push_print(rendered.clone());
-                    }
-
-                    if let Some(current) = self.monitor_scopes.get_mut(index) {
-                        current.last_display = Some(rendered);
-                    }
-                }
-                Err(EvalError::InputRequired { .. }) => self.clear_suspension_state(),
-                Err(_) => {}
-            }
+            self.refresh_monitor_scope_display(index);
 
             if let Some(callback) = scope.step_monitor {
                 self.run_monitor_callback_best_effort(callback);
@@ -1036,6 +1122,161 @@ impl Session {
             Err(EvalError::InputRequired { .. }) => self.clear_suspension_state(),
             Err(_) => {}
         }
+    }
+
+    fn filter_trace_exprs(
+        &mut self,
+        pattern: Expr,
+        trace_exprs: Vec<Expr>,
+    ) -> Result<Vec<Expr>, EvalError> {
+        let mut filtered = Vec::new();
+        for expr in trace_exprs {
+            let outcome = self.match_expr_owned(pattern.clone(), expr.clone(), BTreeMap::new())?;
+            if outcome.matched {
+                push_unique_trace_expr(&mut filtered, expr);
+            }
+        }
+        Ok(filtered)
+    }
+
+    fn refresh_monitor_scope_display(&mut self, index: usize) {
+        let Some(display_expr) = self
+            .monitor_scopes
+            .get(index)
+            .map(|scope| scope.display_expr.clone())
+        else {
+            return;
+        };
+
+        match self.evaluate(display_expr) {
+            Ok(value) => {
+                let rendered = render_echo_fragment(&value);
+                let should_emit = self
+                    .monitor_scopes
+                    .get(index)
+                    .and_then(|current| current.last_display.as_ref())
+                    .map_or(true, |current| current != &rendered);
+
+                if should_emit {
+                    self.push_print(rendered.clone());
+                }
+
+                if let Some(current) = self.monitor_scopes.get_mut(index) {
+                    current.last_display = Some(rendered);
+                }
+            }
+            Err(EvalError::InputRequired { .. }) => self.clear_suspension_state(),
+            Err(_) => {}
+        }
+    }
+
+    fn project_evaluation_data_properties(
+        &mut self,
+        data: Expr,
+        properties: Option<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let Some(properties) = properties else {
+            return Ok(data);
+        };
+
+        match properties {
+            Expr::Atom(Atom::String(key)) => Ok(association_property_by_name(&data, &key)
+                .unwrap_or_else(|| {
+                    Expr::call(
+                        system_expr("Missing"),
+                        vec![Expr::string("KeyAbsent"), Expr::string(key)],
+                    )
+                })),
+            other => {
+                let Some(keys) = list_items(&other) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "EvaluationData",
+                        &[Expr::string("<omitted>"), other],
+                        "expected the optional second argument to be a property string or list of property strings",
+                    ));
+                };
+                let mut entries = Vec::new();
+                for key_expr in keys {
+                    let Expr::Atom(Atom::String(key)) = key_expr else {
+                        return Ok(self.invalid_call_with_arg_form(
+                            "EvaluationData",
+                            &[Expr::string("<omitted>"), other.clone()],
+                            "expected the optional second argument to be a property string or list of property strings",
+                        ));
+                    };
+                    let value = association_property_by_name(&data, key).unwrap_or_else(|| {
+                        Expr::call(
+                            system_expr("Missing"),
+                            vec![Expr::string("KeyAbsent"), Expr::string(key.clone())],
+                        )
+                    });
+                    entries.push((Expr::string(key.clone()), value));
+                }
+                Ok(render_association(entries))
+            }
+        }
+    }
+
+    fn render_test_outcome(
+        &mut self,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<(Expr, Option<&'static str>), EvalError> {
+        match outcome {
+            Ok(value) => Ok((value, None)),
+            Err(EvalError::Abort | EvalError::ProtectedAbort) => {
+                Ok((system_expr("$Aborted"), Some("Abort")))
+            }
+            Err(EvalError::TimeConstraintExceeded) => {
+                Ok((system_expr("$Aborted"), Some("TimeConstraint")))
+            }
+            Err(EvalError::MemoryConstraintExceeded { .. }) => {
+                Ok((system_expr("$Aborted"), Some("MemoryConstraint")))
+            }
+            Err(EvalError::Break) => Ok((system_expr("$Failed"), Some("Break"))),
+            Err(EvalError::Continue) => Ok((system_expr("$Failed"), Some("Continue"))),
+            Err(EvalError::Return { .. }) => Ok((system_expr("$Failed"), Some("Return"))),
+            Err(EvalError::Thrown { .. }) => Ok((system_expr("$Failed"), Some("Throw"))),
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            Err(_) => Ok((system_expr("$Failed"), Some("Error"))),
+        }
+    }
+
+    fn test_case_output_matches(
+        &mut self,
+        test_case: &TestCaseSpec,
+        actual: Expr,
+        expected: Expr,
+    ) -> Result<bool, EvalError> {
+        let same_test = test_case
+            .same_test
+            .clone()
+            .unwrap_or_else(|| system_expr("SameQ"));
+        let applied = Expr::call(same_test, vec![actual, expected]);
+        let resolved = self.evaluate(applied)?;
+        Ok(is_system_symbol_name(&resolved, "True"))
+    }
+
+    fn normalize_expected_message_exprs(
+        &mut self,
+        expected: Option<Vec<Expr>>,
+    ) -> Result<Option<Vec<Expr>>, EvalError> {
+        let Some(expected) = expected else {
+            return Ok(None);
+        };
+
+        let mut normalized = Vec::with_capacity(expected.len());
+        for expr in expected {
+            let key = match self.normalize_message_emit_target(&expr) {
+                Ok(key) => key,
+                Err(_) => return Ok(None),
+            };
+            normalized.push(runtime_message_name_expr(RuntimeMessage {
+                symbol: key.symbol.to_string(),
+                tag: key.tag,
+                text: String::new(),
+            }));
+        }
+        Ok(Some(normalized))
     }
 }
 
@@ -1249,6 +1490,8 @@ struct TestCaseSpec {
     input: Expr,
     expected: Expr,
     test_id: Option<Expr>,
+    expected_messages: Option<Vec<Expr>>,
+    same_test: Option<Expr>,
 }
 
 fn option_entry_by_name(options: &SymbolOptions, name: &str) -> Option<(Expr, bool)> {
@@ -1271,6 +1514,8 @@ fn parse_test_case(expr: &Expr) -> Option<TestCaseSpec> {
     let mut input = None;
     let mut expected = None;
     let mut test_id = None;
+    let mut expected_messages = None;
+    let mut same_test = None;
 
     for (key, value) in entries {
         match key {
@@ -1283,6 +1528,16 @@ fn parse_test_case(expr: &Expr) -> Option<TestCaseSpec> {
             Expr::Atom(Atom::String(name)) if name == "TestID" => {
                 test_id = Some(value);
             }
+            Expr::Atom(Atom::String(name)) if name == "ExpectedMessages" => {
+                expected_messages = unwrap_hold_complete(&value).map(|held| {
+                    list_items(&held)
+                        .map(|items| items.to_vec())
+                        .unwrap_or_else(|| vec![held])
+                });
+            }
+            Expr::Atom(Atom::String(name)) if name == "SameTest" => {
+                same_test = Some(value);
+            }
             _ => {}
         }
     }
@@ -1291,16 +1546,58 @@ fn parse_test_case(expr: &Expr) -> Option<TestCaseSpec> {
         input: input?,
         expected: expected?,
         test_id,
+        expected_messages,
+        same_test,
     })
 }
 
 fn unwrap_hold_complete(expr: &Expr) -> Option<Expr> {
     match expr {
         Expr::Call { head, args }
-            if is_system_symbol_name(head, "HoldComplete") && args.len() == 1 =>
+            if (is_system_symbol_name(head, "Hold")
+                || is_system_symbol_name(head, "HoldComplete")
+                || is_system_symbol_name(head, "HoldForm"))
+                && args.len() == 1 =>
         {
             Some(args[0].clone())
         }
         _ => None,
     }
+}
+
+fn parse_test_create_options(expr: &Expr) -> Option<Vec<(String, Expr)>> {
+    let items = if let Some(items) = list_items(expr) {
+        items.to_vec()
+    } else {
+        vec![expr.clone()]
+    };
+
+    let mut options = Vec::new();
+    for item in items {
+        match item {
+            Expr::Call { head, args }
+                if (is_system_symbol_name(&head, "Rule")
+                    || is_system_symbol_name(&head, "RuleDelayed"))
+                    && args.len() == 2 =>
+            {
+                let name = match &args[0] {
+                    Expr::Atom(Atom::Symbol(symbol)) => symbol.name().to_string(),
+                    Expr::Atom(Atom::String(name)) => name.clone(),
+                    _ => return None,
+                };
+                options.push((name, args[1].clone()));
+            }
+            _ => return None,
+        }
+    }
+    Some(options)
+}
+
+fn association_property_by_name(expr: &Expr, name: &str) -> Option<Expr> {
+    association_entries_from_expr(expr)?
+        .into_iter()
+        .find_map(|(key, value)| match key {
+            Expr::Atom(Atom::String(current)) if current == name => Some(value),
+            _ => None,
+        })
 }

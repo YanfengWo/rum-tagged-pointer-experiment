@@ -211,6 +211,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] land a first CL-09 debugging wave through flat held-expression `Trace`, print-stream `TracePrint`, exact-rational `Timing` / `AbsoluteTiming`, echo-style debugging helpers, and a current canonical-text-proxy `ByteCount` subset
   - [x] deepen the first CL-09 surface with fixed-sample `RepeatedTiming`, session-level `On` / `Off` message gating, tag-aware `Sow` / `Reap`, and a current canonical-text `Short` subset
   - [x] land a first resource/monitor/reporting wave through cooperative `TimeConstrained` / `MemoryConstrained` / `MemoryInUse`, monitor hooks with `EvaluationMonitor` / `StepMonitor` option symbols, and first-pass `EvaluationData` / `TestCreate` / `TestReport` / `Stack`
+  - [x] deepen the current CL-09 subset with filtered `Trace` / `TracePrint` forms, more stable `Monitor` display behavior, `EvaluationData` property projection, and broader `TestCreate` / `TestReport` metadata through `TestID`, `SameTest`, and expected-message matching in the current first-pass subset
   - [ ] continue with richer tracing structure/filter forms, deeper monitor/report parity, and fuller resource/accounting semantics
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:
