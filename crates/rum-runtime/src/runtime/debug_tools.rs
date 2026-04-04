@@ -7,23 +7,45 @@ const DEFAULT_SHORT_LIMIT: usize = 72;
 
 impl Session {
     pub(super) fn eval_trace(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let (expr, pattern, levels) = match args {
-            [expr] => (expr, None, None),
-            [expr, pattern] => (expr, Some(pattern.clone()), None),
-            [expr, pattern, levels_expr] => {
+        let (expr, pattern, levels, include_heads) = match args {
+            [expr] => (expr, None, None, false),
+            [expr, pattern] => (expr, Some(pattern.clone()), None, false),
+            [expr, pattern, third] => {
+                if let Some(include_heads) = parse_heads_option(third) {
+                    (expr, Some(pattern.clone()), None, include_heads)
+                } else {
+                    let Some(levels) = parse_standard_level_spec(third) else {
+                        return Ok(self.invalid_call_with_arg_form(
+                            "Trace",
+                            args,
+                            "expected a standard levelspec or Heads -> True|False in the current flat-trace subset",
+                        ));
+                    };
+                    (expr, Some(pattern.clone()), Some(levels), false)
+                }
+            }
+            [expr, pattern, levels_expr, option] => {
                 let Some(levels) = parse_standard_level_spec(levels_expr) else {
                     return Ok(self.invalid_call_with_arg_form(
                         "Trace",
                         args,
-                        "expected a standard levelspec as the optional third argument in the current flat-trace subset",
+                        "expected a standard levelspec as the third argument in the current flat-trace subset",
                     ));
                 };
-                (expr, Some(pattern.clone()), Some(levels))
+                let Some(include_heads) = parse_heads_option(option) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "Trace",
+                        args,
+                        "expected Heads -> True|False as the optional fourth argument in the current flat-trace subset",
+                    ));
+                };
+                (expr, Some(pattern.clone()), Some(levels), include_heads)
             }
-            _ => return Ok(self.invalid_call_with_arg_range("Trace", args, 1, 3)),
+            _ => return Ok(self.invalid_call_with_arg_range("Trace", args, 1, 4)),
         };
 
-        let (_value, trace_exprs) = self.eval_with_trace_capture(expr.clone(), pattern, levels)?;
+        let (_value, trace_exprs) =
+            self.eval_with_trace_capture(expr.clone(), pattern, levels, include_heads)?;
         Ok(Expr::call(
             system_expr("List"),
             trace_exprs
@@ -34,23 +56,45 @@ impl Session {
     }
 
     pub(super) fn eval_trace_print(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let (expr, pattern, levels) = match args {
-            [expr] => (expr, None, None),
-            [expr, pattern] => (expr, Some(pattern.clone()), None),
-            [expr, pattern, levels_expr] => {
+        let (expr, pattern, levels, include_heads) = match args {
+            [expr] => (expr, None, None, false),
+            [expr, pattern] => (expr, Some(pattern.clone()), None, false),
+            [expr, pattern, third] => {
+                if let Some(include_heads) = parse_heads_option(third) {
+                    (expr, Some(pattern.clone()), None, include_heads)
+                } else {
+                    let Some(levels) = parse_standard_level_spec(third) else {
+                        return Ok(self.invalid_call_with_arg_form(
+                            "TracePrint",
+                            args,
+                            "expected a standard levelspec or Heads -> True|False in the current flat-trace subset",
+                        ));
+                    };
+                    (expr, Some(pattern.clone()), Some(levels), false)
+                }
+            }
+            [expr, pattern, levels_expr, option] => {
                 let Some(levels) = parse_standard_level_spec(levels_expr) else {
                     return Ok(self.invalid_call_with_arg_form(
                         "TracePrint",
                         args,
-                        "expected a standard levelspec as the optional third argument in the current flat-trace subset",
+                        "expected a standard levelspec as the third argument in the current flat-trace subset",
                     ));
                 };
-                (expr, Some(pattern.clone()), Some(levels))
+                let Some(include_heads) = parse_heads_option(option) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "TracePrint",
+                        args,
+                        "expected Heads -> True|False as the optional fourth argument in the current flat-trace subset",
+                    ));
+                };
+                (expr, Some(pattern.clone()), Some(levels), include_heads)
             }
-            _ => return Ok(self.invalid_call_with_arg_range("TracePrint", args, 1, 3)),
+            _ => return Ok(self.invalid_call_with_arg_range("TracePrint", args, 1, 4)),
         };
 
-        let (value, trace_exprs) = self.eval_with_trace_capture(expr.clone(), pattern, levels)?;
+        let (value, trace_exprs) =
+            self.eval_with_trace_capture(expr.clone(), pattern, levels, include_heads)?;
         for item in trace_exprs {
             self.push_print(render_echo_fragment(&item));
         }
@@ -662,6 +706,7 @@ impl Session {
         expr: Expr,
         pattern: Option<Expr>,
         levels: Option<CasesLevelSpec>,
+        include_heads: bool,
     ) -> Result<(Expr, Vec<Expr>), EvalError> {
         let prior_enabled = self.tracing_enabled;
         let trace_checkpoint = self.trace_events.len();
@@ -682,6 +727,7 @@ impl Session {
             value,
             pattern,
             levels,
+            include_heads,
         )
     }
 
@@ -693,6 +739,7 @@ impl Session {
         value: Expr,
         pattern: Option<Expr>,
         levels: Option<CasesLevelSpec>,
+        include_heads: bool,
     ) -> Result<(Expr, Vec<Expr>), EvalError> {
         let events = self.trace_events[trace_checkpoint..].to_vec();
         self.tracing_enabled = prior_enabled;
@@ -704,13 +751,23 @@ impl Session {
         let mut trace_exprs = self.trace_exprs_from_events(&original, &events);
         match (pattern, levels) {
             (Some(pattern), Some(levels)) => {
-                trace_exprs = self.filter_trace_exprs_on_levels(pattern, levels, trace_exprs)?;
+                trace_exprs =
+                    self.filter_trace_exprs_on_levels(pattern, levels, include_heads, trace_exprs)?;
             }
             (Some(pattern), None) => {
-                trace_exprs = self.filter_trace_exprs(pattern, trace_exprs)?;
+                trace_exprs = if include_heads {
+                    self.filter_trace_exprs_on_levels(
+                        pattern,
+                        CasesLevelSpec::range(0, None),
+                        true,
+                        trace_exprs,
+                    )?
+                } else {
+                    self.filter_trace_exprs(pattern, trace_exprs)?
+                };
             }
             (None, Some(levels)) => {
-                trace_exprs = self.select_trace_exprs_on_levels(levels, trace_exprs);
+                trace_exprs = self.select_trace_exprs_on_levels(levels, include_heads, trace_exprs);
             }
             (None, None) => {}
         }
@@ -976,6 +1033,13 @@ impl Session {
                 .sum::<usize>(),
         );
 
+        total = total.saturating_add(
+            self.last_message_list
+                .iter()
+                .map(render_runtime_message_memory_proxy_bytes)
+                .sum::<usize>(),
+        );
+
         total = total.saturating_add(self.prints.iter().map(String::len).sum::<usize>());
 
         total = total.saturating_add(
@@ -1016,6 +1080,11 @@ impl Session {
             self.pending_input_request
                 .as_ref()
                 .map_or(0, render_input_request_memory_proxy_bytes),
+        );
+        total = total.saturating_add(
+            self.pending_eval_request
+                .as_ref()
+                .map_or(0, |_| std::mem::size_of::<PendingEvalRequest>()),
         );
         total = total.saturating_add(
             self.pending_suspension
@@ -1266,13 +1335,14 @@ impl Session {
         &mut self,
         pattern: Expr,
         levels: CasesLevelSpec,
+        include_heads: bool,
         trace_exprs: Vec<Expr>,
     ) -> Result<Vec<Expr>, EvalError> {
         let patterns = normalize_trace_patterns(&pattern);
         let traversal = CasesTraversalConfig {
             levels,
             max_matches: None,
-            include_heads: false,
+            include_heads,
         };
         let mut filtered = Vec::new();
 
@@ -1300,12 +1370,13 @@ impl Session {
     fn select_trace_exprs_on_levels(
         &mut self,
         levels: CasesLevelSpec,
+        include_heads: bool,
         trace_exprs: Vec<Expr>,
     ) -> Vec<Expr> {
         let traversal = CasesTraversalConfig {
             levels,
             max_matches: None,
-            include_heads: false,
+            include_heads,
         };
         let mut filtered = Vec::new();
         for expr in trace_exprs {

@@ -214,7 +214,9 @@ This roadmap intentionally uses two levels of detail:
   - [x] deepen the current CL-09 subset with filtered `Trace` / `TracePrint` forms, more stable `Monitor` display behavior, `EvaluationData` property projection, and broader `TestCreate` / `TestReport` metadata through `TestID`, `SameTest`, and expected-message matching in the current first-pass subset
   - [x] deepen the current CL-09 subset with structural-proxy `ByteCount` / `MemoryInUse` semantics and list-pattern `Trace[..., {...}]` / `TracePrint[..., {...}]` filtering
   - [x] deepen the current CL-09 subset with current flat-trace levelspec forms, `EvaluationData` / `TestReport` property projection through `All` and `"Properties"`, default-option coverage for `Monitor`, and broader session-state accounting in the current `MemoryInUse[]` proxy
+  - [x] deepen the current CL-09 subset with `Heads -> True|False` trace filtering in the flat-trace forms, stronger default-option coverage for `Monitor`, and broader message/request state accounting in the current `MemoryInUse[]` proxy
   - [ ] continue with richer tracing structure/filter forms, deeper monitor/report parity, and fuller resource/accounting semantics
+- [ ] Defer reviewing the local `WLBuiltin/` workspace until the `CL-01` through `CL-09` mainline is complete; keep it ignored for now so it does not disrupt the active kernel roadmap
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:
   - [ ] direct unit tests for small helpers, planners, normalization logic, and matcher branches

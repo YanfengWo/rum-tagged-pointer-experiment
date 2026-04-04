@@ -26,6 +26,14 @@ fn trace_returns_a_first_pass_flat_expression_list_without_leaking_session_trace
 
     let top_level_only = session.eval_text("Trace[f[1], _Integer, 0]").unwrap();
     assert_eq!(top_level_only.value.to_string(), "List[Hold[2]]");
+
+    let with_heads = session
+        .eval_text("Trace[f[1], _Symbol, Heads -> True]")
+        .unwrap();
+    assert_eq!(
+        with_heads.value.to_string(),
+        "List[Hold[f], Hold[Plus], Hold[f]]"
+    );
 }
 
 #[test]
@@ -53,6 +61,12 @@ fn trace_print_emits_trace_lines_and_returns_the_underlying_value() {
         .unwrap();
     assert_eq!(leveled.value.to_string(), "2");
     assert_eq!(leveled.prints, vec!["1", "2", "1", "2"]);
+
+    let with_heads = session
+        .eval_text("TracePrint[f[1], _Symbol, Heads -> True]")
+        .unwrap();
+    assert_eq!(with_heads.value.to_string(), "2");
+    assert_eq!(with_heads.prints, vec!["f", "Plus", "f"]);
 }
 
 #[test]
@@ -331,6 +345,15 @@ fn monitor_runs_current_display_and_callback_subset() {
         defaulted.value.to_string(),
         "List[2, List[List[stepDefault]]]"
     );
+
+    session
+        .eval_text("SetOptions[Monitor, EvaluationMonitor :> Sow[evalDefault]]")
+        .unwrap();
+    let default_eval = session.eval_text("Reap[Monitor[1 + 1, progress]]").unwrap();
+    assert_eq!(
+        default_eval.value.to_string(),
+        "List[2, List[List[stepDefault, evalDefault]]]"
+    );
 }
 
 #[test]
@@ -531,6 +554,29 @@ fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
         .unwrap();
     assert!(properties.value.to_string().contains("\"TestsRunCount\""));
     assert!(properties.value.to_string().contains("\"TestResults\""));
+    let all_report = session
+        .eval_text("TestReport[{TestCreate[1 + 1, 2]}, All]")
+        .unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Head"),
+                vec![all_report.value.clone()]
+            ))
+            .unwrap()
+            .to_string(),
+        "Association"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![all_report.value, Expr::string("TestsSucceededCount")],
+            ))
+            .unwrap()
+            .to_string(),
+        "1"
+    );
     assert!(session.take_messages().is_empty());
 
     let stack = session
