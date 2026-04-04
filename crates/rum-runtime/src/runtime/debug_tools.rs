@@ -48,15 +48,8 @@ impl Session {
             _ => return Ok(self.invalid_call_with_arg_range("Trace", args, 2, 4)),
         };
 
-        let (_value, trace_exprs) =
-            self.eval_with_trace_capture(expr.clone(), pattern, levels, include_heads)?;
-        Ok(Expr::call(
-            system_expr("List"),
-            trace_exprs
-                .into_iter()
-                .map(|item| Expr::call(system_expr("Hold"), vec![item]))
-                .collect(),
-        ))
+        let (_value, trace) = self.eval_with_structured_trace_capture(expr.clone())?;
+        self.filter_structured_trace_expr(trace, pattern, levels, include_heads)
     }
 
     pub(super) fn eval_trace_print(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -867,6 +860,149 @@ impl Session {
             .unwrap_or_else(|_| Expr::string(text.to_string()))
     }
 
+    fn filter_structured_trace_expr(
+        &mut self,
+        trace: Expr,
+        pattern: Option<Expr>,
+        levels: Option<CasesLevelSpec>,
+        include_heads: bool,
+    ) -> Result<Expr, EvalError> {
+        let Expr::Call { head, args } = trace else {
+            return Ok(trace);
+        };
+        if !is_system_symbol_name(&head, "List") {
+            return Ok(Expr::call(head.as_ref().clone(), args));
+        }
+
+        let filtered =
+            self.filter_structured_trace_items(args, pattern.as_ref(), levels.as_ref(), include_heads)?;
+        Ok(Expr::call(system_expr("List"), filtered))
+    }
+
+    fn filter_structured_trace_items(
+        &mut self,
+        items: Vec<Expr>,
+        pattern: Option<&Expr>,
+        levels: Option<&CasesLevelSpec>,
+        include_heads: bool,
+    ) -> Result<Vec<Expr>, EvalError> {
+        let mut filtered = Vec::new();
+
+        for item in items {
+            match item {
+                Expr::Call { head, args } if is_system_symbol_name(&head, "List") => {
+                    let nested = self.filter_structured_trace_items(
+                        args,
+                        pattern,
+                        levels,
+                        include_heads,
+                    )?;
+                    if !nested.is_empty() {
+                        filtered.push(Expr::call(system_expr("List"), nested));
+                    }
+                }
+                other => {
+                    for held in self.filter_structured_trace_leaf(
+                        other,
+                        pattern,
+                        levels,
+                        include_heads,
+                    )? {
+                        push_unique_trace_item(&mut filtered, held);
+                    }
+                }
+            }
+        }
+
+        Ok(filtered)
+    }
+
+    fn filter_structured_trace_leaf(
+        &mut self,
+        item: Expr,
+        pattern: Option<&Expr>,
+        levels: Option<&CasesLevelSpec>,
+        include_heads: bool,
+    ) -> Result<Vec<Expr>, EvalError> {
+        let Some(expr) = unwrap_trace_hold(&item) else {
+            return Ok(vec![item]);
+        };
+
+        match (pattern, levels) {
+            (Some(pattern), Some(levels)) => {
+                let patterns = normalize_trace_patterns(pattern);
+                let traversal = CasesTraversalConfig {
+                    levels: levels.clone(),
+                    max_matches: None,
+                    include_heads,
+                };
+                let mut matched = Vec::new();
+
+                for candidate in collect_level_parts_owned(&expr, traversal, 0) {
+                    let mut is_match = false;
+                    for pattern in &patterns {
+                        let outcome =
+                            self.match_expr_owned(pattern.clone(), candidate.clone(), BTreeMap::new())?;
+                        if outcome.matched {
+                            is_match = true;
+                            break;
+                        }
+                    }
+                    if is_match {
+                        push_unique_trace_expr(&mut matched, candidate);
+                    }
+                }
+
+                Ok(matched
+                    .into_iter()
+                    .map(|candidate| Expr::call(system_expr("Hold"), vec![candidate]))
+                    .collect())
+            }
+            (Some(pattern), None) => {
+                if include_heads {
+                    let all_levels = CasesLevelSpec::range(0, None);
+                    self.filter_structured_trace_leaf(
+                        Expr::call(system_expr("Hold"), vec![expr]),
+                        Some(pattern),
+                        Some(&all_levels),
+                        true,
+                    )
+                } else {
+                    let mut is_match = false;
+                    for pattern in normalize_trace_patterns(pattern) {
+                        let outcome =
+                            self.match_expr_owned(pattern, expr.clone(), BTreeMap::new())?;
+                        if outcome.matched {
+                            is_match = true;
+                            break;
+                        }
+                    }
+                    Ok(if is_match {
+                        vec![Expr::call(system_expr("Hold"), vec![expr])]
+                    } else {
+                        Vec::new()
+                    })
+                }
+            }
+            (None, Some(levels)) => {
+                let traversal = CasesTraversalConfig {
+                    levels: levels.clone(),
+                    max_matches: None,
+                    include_heads,
+                };
+                let mut selected = Vec::new();
+                for candidate in collect_level_parts_owned(&expr, traversal, 0) {
+                    push_unique_trace_expr(&mut selected, candidate);
+                }
+                Ok(selected
+                    .into_iter()
+                    .map(|candidate| Expr::call(system_expr("Hold"), vec![candidate]))
+                    .collect())
+            }
+            (None, None) => Ok(vec![Expr::call(system_expr("Hold"), vec![expr])]),
+        }
+    }
+
     fn eval_message_switch(
         &mut self,
         symbol: &str,
@@ -1251,6 +1387,8 @@ impl Session {
         let messages = self.messages.split_off(checkpoint.message_checkpoint);
         let prints = self.prints.split_off(checkpoint.print_checkpoint);
         let events = self.trace_events[checkpoint.trace_checkpoint..].to_vec();
+        let trace_root =
+            self.structured_trace_expr_from_events(&self.trace_expr_from_text(input_string), &events);
 
         if !prior_tracing {
             self.truncate_trace_from(checkpoint.trace_checkpoint);
@@ -1284,8 +1422,6 @@ impl Session {
             Err(_) => (system_expr("$Failed"), false, Expr::string("Error")),
         };
 
-        let trace_exprs =
-            self.trace_exprs_from_events(&Expr::string(input_string.to_string()), &events);
         Ok(render_association(vec![
             (Expr::string("Result"), result_expr),
             (Expr::string("Success"), debug_bool_expr(success)),
@@ -1320,13 +1456,7 @@ impl Session {
             ),
             (
                 Expr::string("Trace"),
-                Expr::call(
-                    system_expr("List"),
-                    trace_exprs
-                        .into_iter()
-                        .map(|item| Expr::call(system_expr("Hold"), vec![item]))
-                        .collect(),
-                ),
+                trace_root,
             ),
             (Expr::string("Timing"), elapsed.clone()),
             (Expr::string("AbsoluteTiming"), elapsed),
@@ -1691,6 +1821,22 @@ fn push_unique_trace_expr(trace: &mut Vec<Expr>, expr: Expr) {
         return;
     }
     trace.push(expr);
+}
+
+fn push_unique_trace_item(items: &mut Vec<Expr>, item: Expr) {
+    if items.last().is_some_and(|current| current == &item) {
+        return;
+    }
+    items.push(item);
+}
+
+fn unwrap_trace_hold(expr: &Expr) -> Option<Expr> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Hold") && args.len() == 1 => {
+            Some(args[0].clone())
+        }
+        _ => None,
+    }
 }
 
 fn normalize_message_switch_selectors(args: &[Expr]) -> Option<Vec<MessageSelector>> {

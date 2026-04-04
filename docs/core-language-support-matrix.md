@@ -434,10 +434,11 @@ once in its primary implementation group. Other groups may mention it as
   structured tracing, request-level trace payloads, recursion / iteration /
   evaluation-pass limits
 - `partial`: a first language-surface debugging layer now exists through a
-  structured default `Trace[expr]` tree model, filtered current
-  `Trace[..., patt]` / `TracePrint[..., patt]` forms plus current
-  list-pattern filtering and current flat-subset levelspec filtering plus
-  current `Heads -> True|False` support, exact-rational wall-clock
+  structured `Trace[...]` tree subset, including current filtered
+  `Trace[..., patt]` forms, current list-pattern filtering, current
+  structured levelspec filtering, and current `Heads -> True|False`
+  support, while `TracePrint[...]` remains in the current flat print-stream
+  subset; exact-rational wall-clock
   `Timing[...]` / `AbsoluteTiming[...]`, fixed-sample
   `RepeatedTiming[...]`, echo-style debugging output, session-level `On` /
   `Off` message gating, `Sow` / `Reap` tag collection, a current
@@ -448,7 +449,8 @@ once in its primary implementation group. Other groups may mention it as
   current `EvaluationMonitor` / `StepMonitor` option symbols plus stable
   initial/final display refreshes and broader default-option coverage,
   `EvaluationData[...]` property projection through current string/list/All
-  forms plus `"Properties"`, and
+  forms plus `"Properties"` with a matching structured `"Trace"` payload,
+  and
   first-pass `TestCreate[...]` / `TestReport[...]` metadata through
   `TestID`, `SameTest`, and expected-message matching with current
   `TestReport[..., prop]` projection, alongside `Stack[]`; richer
@@ -467,9 +469,10 @@ once in its primary implementation group. Other groups may mention it as
   `MemoryConstrained`, `MemoryInUse`, `Monitor`, `EvaluationMonitor`,
   `StepMonitor`, `EvaluationData`, `TestCreate`, `TestReport`, `Stack` in
   the current first-pass subset, including a structured default
-  `Trace[expr]` model plus filtered trace forms with the current
-  flat-subset levelspec and `Heads` filtering, current structural
-  byte/memory proxy semantics, and current report/property metadata
+  `Trace[expr]` model plus structured filtered trace forms with the current
+  levelspec and `Heads` filtering, a current flat `TracePrint[...]`
+  filtering subset, current structural byte/memory proxy semantics, and
+  current report/property metadata
   matching
 - `planned`: `Assert`, `Dialog`, plus deeper trace/resource/monitor/test
   parity

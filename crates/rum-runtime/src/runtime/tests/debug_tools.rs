@@ -13,26 +13,29 @@ fn trace_returns_a_first_pass_structured_expression_list_without_leaking_session
     assert!(session.take_trace().is_empty());
 
     let filtered = session.eval_text("Trace[f[1], _Plus]").unwrap();
-    assert_eq!(filtered.value.to_string(), "List[Hold[Plus[1, 1]]]");
+    assert_eq!(filtered.value.to_string(), "List[List[Hold[Plus[1, 1]]]]");
 
     let multi = session.eval_text("Trace[f[1], {_Plus, _Integer}]").unwrap();
-    assert_eq!(multi.value.to_string(), "List[Hold[Plus[1, 1]], Hold[2]]");
+    assert_eq!(
+        multi.value.to_string(),
+        "List[List[Hold[Plus[1, 1]], Hold[2]], Hold[2]]"
+    );
 
     let leveled = session.eval_text("Trace[f[1], _Integer, {-1}]").unwrap();
     assert_eq!(
         leveled.value.to_string(),
-        "List[Hold[1], Hold[2], Hold[1], Hold[2]]"
+        "List[Hold[1], List[Hold[1], Hold[2]], Hold[2]]"
     );
 
     let top_level_only = session.eval_text("Trace[f[1], _Integer, 0]").unwrap();
-    assert_eq!(top_level_only.value.to_string(), "List[Hold[2]]");
+    assert_eq!(top_level_only.value.to_string(), "List[List[Hold[2]], Hold[2]]");
 
     let with_heads = session
         .eval_text("Trace[f[1], _Symbol, Heads -> True]")
         .unwrap();
     assert_eq!(
         with_heads.value.to_string(),
-        "List[Hold[f], Hold[Plus], Hold[f]]"
+        "List[Hold[f], List[Hold[Plus]]]"
     );
 }
 
@@ -466,6 +469,15 @@ fn evaluation_data_captures_result_messages_prints_and_failure_type_without_leak
             .unwrap()
             .to_string(),
         "3"
+    );
+
+    session.eval_text("f[x_] := x + 1").unwrap();
+    let trace_projection = session
+        .eval_text("EvaluationData[f[1], \"Trace\"]")
+        .unwrap();
+    assert_eq!(
+        trace_projection.value.to_string(),
+        "List[Hold[f[1]], List[Hold[Plus[1, 1]], Hold[2]], Hold[2]]"
     );
 }
 

@@ -215,8 +215,9 @@ This roadmap intentionally uses two levels of detail:
   - [x] deepen the current CL-09 subset with structural-proxy `ByteCount` / `MemoryInUse` semantics and list-pattern `Trace[..., {...}]` / `TracePrint[..., {...}]` filtering
   - [x] deepen the current CL-09 subset with current flat-trace levelspec forms, `EvaluationData` / `TestReport` property projection through `All` and `"Properties"`, default-option coverage for `Monitor`, and broader session-state accounting in the current `MemoryInUse[]` proxy
   - [x] deepen the current CL-09 subset with `Heads -> True|False` trace filtering in the flat-trace forms, stronger default-option coverage for `Monitor`, and broader message/request state accounting in the current `MemoryInUse[]` proxy
-  - [x] deepen the current CL-09 subset with a structured default `Trace[expr]` tree model while keeping the richer `Trace[..., patt]` / `Trace[..., levelspec]` / `Trace[..., Heads -> ...]` forms in the current flat-filter subset
-  - [ ] continue with deeper structured-trace filter parity, deeper monitor/report parity, and fuller resource/accounting semantics
+  - [x] deepen the current CL-09 subset with a structured default `Trace[expr]` tree model
+  - [x] deepen the current CL-09 subset by carrying `Trace[..., patt]`, `Trace[..., levelspec]`, and `Trace[..., Heads -> ...]` onto the same structured tree model, and by aligning `EvaluationData["Trace"]` with that structured representation
+  - [ ] continue with deeper structured-trace parity beyond the current tree/filter subset, deeper monitor/report parity, and fuller resource/accounting semantics
 - [ ] Defer reviewing the local `WLBuiltin/` workspace until the `CL-01` through `CL-09` mainline is complete; keep it ignored for now so it does not disrupt the active kernel roadmap
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:
