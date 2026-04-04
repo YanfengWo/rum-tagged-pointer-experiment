@@ -258,6 +258,22 @@ fn byte_count_and_memory_in_use_use_the_current_structural_proxy_subset() {
             .to_string(),
         "True"
     );
+
+    let before_once = session.eval_text("MemoryInUse[]").unwrap().value;
+    session
+        .eval_text("Once[Table[i, {i, 50}], \"memory-probe\"]")
+        .unwrap();
+    let after_once = session.eval_text("MemoryInUse[]").unwrap().value;
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Less"),
+                vec![before_once, after_once]
+            ))
+            .unwrap()
+            .to_string(),
+        "True"
+    );
 }
 
 #[test]
@@ -498,11 +514,39 @@ fn evaluation_data_captures_result_messages_prints_and_failure_type_without_leak
         "True"
     );
 
+    let symbol_projected = session
+        .eval_text("EvaluationData[Echo[1 + 1]; 3, {Result, \"Success\"}]")
+        .unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![symbol_projected.value.clone(), Expr::string("Result")],
+            ))
+            .unwrap()
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![symbol_projected.value, Expr::string("Success")],
+            ))
+            .unwrap()
+            .to_string(),
+        "True"
+    );
+
     let properties = session
         .eval_text("EvaluationData[3, \"Properties\"]")
         .unwrap();
     assert!(properties.value.to_string().contains("\"Result\""));
     assert!(properties.value.to_string().contains("\"Trace\""));
+
+    let symbol_properties = session.eval_text("EvaluationData[3, Properties]").unwrap();
+    assert!(symbol_properties.value.to_string().contains("\"Result\""));
+    assert!(symbol_properties.value.to_string().contains("\"Trace\""));
 
     let all_projection = session.eval_text("EvaluationData[3, All]").unwrap();
     assert_eq!(
@@ -636,11 +680,34 @@ fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
             .to_string(),
         "2"
     );
+    assert_eq!(
+        session
+            .eval_text("TestReport[{TestCreate[1 + 1, 2], TestCreate[1 + 1, 3]}, TestsRunCount]",)
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
     let properties = session
         .eval_text("TestReport[{TestCreate[1 + 1, 2]}, \"Properties\"]")
         .unwrap();
     assert!(properties.value.to_string().contains("\"TestsRunCount\""));
     assert!(properties.value.to_string().contains("\"TestResults\""));
+    let symbol_properties = session
+        .eval_text("TestReport[{TestCreate[1 + 1, 2]}, Properties]")
+        .unwrap();
+    assert!(
+        symbol_properties
+            .value
+            .to_string()
+            .contains("\"TestsRunCount\"")
+    );
+    assert!(
+        symbol_properties
+            .value
+            .to_string()
+            .contains("\"TestResults\"")
+    );
     let all_report = session
         .eval_text("TestReport[{TestCreate[1 + 1, 2]}, All]")
         .unwrap();
@@ -663,6 +730,32 @@ fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
             .unwrap()
             .to_string(),
         "1"
+    );
+    let mixed_projection = session
+        .eval_text("TestReport[{TestCreate[1 + 1, 2]}, {TestsRunCount, \"Success\"}]")
+        .unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![
+                    mixed_projection.value.clone(),
+                    Expr::string("TestsRunCount")
+                ],
+            ))
+            .unwrap()
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![mixed_projection.value, Expr::string("Success")],
+            ))
+            .unwrap()
+            .to_string(),
+        "True"
     );
     assert!(session.take_messages().is_empty());
 

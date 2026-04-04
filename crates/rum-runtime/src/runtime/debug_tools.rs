@@ -1601,39 +1601,38 @@ impl Session {
             return Ok(data);
         }
 
-        match properties {
-            Expr::Atom(Atom::String(key)) if key == "Properties" => {
-                Ok(render_association_properties(&data))
-            }
-            Expr::Atom(Atom::String(key)) => Ok(association_property_by_name(&data, &key)
-                .unwrap_or_else(|| {
+        match property_name_string(&properties) {
+            Some(key) if key == "Properties" => Ok(render_association_properties(&data)),
+            Some(key) => Ok(
+                association_property_by_name(&data, &key).unwrap_or_else(|| {
                     Expr::call(
                         system_expr("Missing"),
                         vec![Expr::string("KeyAbsent"), Expr::string(key)],
                     )
-                })),
-            other => {
-                let Some(keys) = list_items(&other) else {
+                }),
+            ),
+            None => {
+                let Some(keys) = list_items(&properties) else {
                     let mut call = call_prefix.to_vec();
-                    call.push(other);
+                    call.push(properties.clone());
                     return Ok(self.invalid_call_with_arg_form(
                         head_name,
                         &call,
-                        "expected the optional property argument to be All, \"Properties\", a property string, or a list of property strings",
+                        "expected the optional property argument to be All, Properties, a property string or symbol, or a list of property strings or symbols",
                     ));
                 };
                 let mut entries = Vec::new();
                 for key_expr in keys {
-                    let Expr::Atom(Atom::String(key)) = key_expr else {
+                    let Some(key) = property_name_string(key_expr) else {
                         let mut call = call_prefix.to_vec();
-                        call.push(other.clone());
+                        call.push(properties.clone());
                         return Ok(self.invalid_call_with_arg_form(
                             head_name,
                             &call,
-                            "expected the optional property argument to be All, \"Properties\", a property string, or a list of property strings",
+                            "expected the optional property argument to be All, Properties, a property string or symbol, or a list of property strings or symbols",
                         ));
                     };
-                    let value = association_property_by_name(&data, key).unwrap_or_else(|| {
+                    let value = association_property_by_name(&data, &key).unwrap_or_else(|| {
                         Expr::call(
                             system_expr("Missing"),
                             vec![Expr::string("KeyAbsent"), Expr::string(key.clone())],
@@ -1649,6 +1648,14 @@ impl Session {
 
 fn debug_slot_expr() -> Expr {
     Expr::call(system_expr("Slot"), vec![Expr::integer(BigInt::from(1_u8))])
+}
+
+fn property_name_string(expr: &Expr) -> Option<String> {
+    match expr {
+        Expr::Atom(Atom::String(name)) => Some(name.clone()),
+        Expr::Atom(Atom::Symbol(symbol)) => Some(symbol.name().to_string()),
+        _ => None,
+    }
 }
 
 fn render_echo_fragment(expr: &Expr) -> String {

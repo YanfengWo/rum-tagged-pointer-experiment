@@ -450,13 +450,14 @@ once in its primary implementation group. Other groups may mention it as
   current `EvaluationMonitor` / `StepMonitor` option symbols plus stable
   initial/final display refreshes, broader default-option coverage, and
   explicit `None` callback overrides,
-  `EvaluationData[...]` property projection through current string/list/All
-  forms plus `"Properties"` with matching structured `"Trace"` and held
-  `"Input"` payloads, and first-pass `TestCreate[...]` / `TestReport[...]`
+  `EvaluationData[...]` property projection through current string-or-symbol,
+  list, and `All` forms plus `"Properties"` with matching structured `"Trace"`
+  and held `"Input"` payloads, including current input-resume coverage, and
+  first-pass `TestCreate[...]` / `TestReport[...]`
   metadata through
   `TestID`, `SameTest`, and expected-message matching with current
-  `TestReport[..., prop]` projection plus report-level `"Success"` and
-  held per-test `"Input"`, alongside `Stack[]`; richer
+  `TestReport[..., prop]` string-or-symbol projection plus report-level
+  `"Success"` and held per-test `"Input"`, alongside `Stack[]`; richer
   verification, monitoring, and resource-accounting parity is still
   pending even though the internal tracing/message
   foundations are already in place
@@ -475,7 +476,8 @@ once in its primary implementation group. Other groups may mention it as
   `Trace[expr]` model plus structured filtered trace forms with the current
   levelspec and `Heads` filtering, depth-aware nested branch shaping, an indented structured
   `TracePrint[...]` subset, current structural byte/memory proxy
-  semantics, and current report/property metadata
+  semantics, current symbol-or-string report/property projection,
+  and current input-resume coverage for `EvaluationData` / `Monitor`
   matching
 - `planned`: `Assert`, `Dialog`, plus deeper trace/resource/monitor/test
   parity

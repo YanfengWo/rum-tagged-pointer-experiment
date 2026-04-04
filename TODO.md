@@ -219,6 +219,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] deepen the current CL-09 subset by carrying `Trace[..., patt]`, `Trace[..., levelspec]`, and `Trace[..., Heads -> ...]` onto the same structured tree model, and by aligning `EvaluationData["Trace"]` with that structured representation
   - [x] deepen the current CL-09 subset with indented structured `TracePrint[...]`, explicit-`None` callback overrides for `Monitor`, and broader `EvaluationData` / `TestReport` metadata through held `"Input"` plus report-level `"Success"`
   - [x] deepen the current CL-09 subset with depth-aware structured `Trace[...]` branching, more stable nested filtered-trace shells, matching nested `TracePrint[...]`, and aligned `EvaluationData["Trace"]` trees for the current structured subset
+  - [x] deepen the current CL-09 subset with symbol-or-string property projection for `EvaluationData[...]` / `TestReport[...]`, input-resume coverage for `EvaluationData[...]` and `Monitor[...]`, and broader `MemoryInUse[]` growth coverage through persisted `Once[...]` state
   - [ ] continue with deeper monitor/report parity and fuller resource/accounting semantics, plus any remaining long-tail structured-trace shape corners
 - [ ] Defer reviewing the local `WLBuiltin/` workspace until the `CL-01` through `CL-09` mainline is complete; keep it ignored for now so it does not disrupt the active kernel roadmap
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
