@@ -451,13 +451,17 @@ once in its primary implementation group. Other groups may mention it as
   initial/final display refreshes, broader default-option coverage, and
   explicit `None` callback overrides,
   `EvaluationData[...]` property projection through current string-or-symbol,
-  list, and `All` forms plus `"Properties"` with matching structured `"Trace"`
-  and held `"Input"` payloads, including current input-resume coverage, and
+  list, and `All` forms plus `"Properties"` with matching structured `"Trace"`,
+  held `"Input"`, and held `"MessagesExpressions"` payloads, including current
+  input-resume coverage, and
   first-pass `TestCreate[...]` / `TestReport[...]`
   metadata through
   `TestID`, `SameTest`, and expected-message matching with current
   `TestReport[..., prop]` string-or-symbol projection plus report-level
-  `"Success"` and held per-test `"Input"`, alongside `Stack[]`; richer
+  `"Success"`, held per-test `"Input"`, current merging of
+  `{report_1, report_2, ...}`, and current report-level
+  `SameTest` / `TimeConstraint` / `MemoryConstraint` options, alongside
+  `Stack[]`; richer
   verification, monitoring, and resource-accounting parity is still
   pending even though the internal tracing/message
   foundations are already in place
@@ -477,9 +481,11 @@ once in its primary implementation group. Other groups may mention it as
   levelspec and `Heads` filtering, depth-aware nested branch shaping, an indented structured
   `TracePrint[...]` subset, current structural byte/memory proxy
   semantics, current symbol-or-string report/property projection,
-  and current input-resume coverage for `EvaluationData` / `Monitor`
+  held message-expression payloads, current report merging plus
+  current report-level `SameTest` / `TimeConstraint` / `MemoryConstraint`
+  options, and current input-resume coverage for `EvaluationData` / `Monitor`
   matching
-- `planned`: `Assert`, `Dialog`, plus deeper trace/resource/monitor/test
+- `planned`: `Dialog`, plus deeper trace/resource/monitor/test
   parity
 - `cross-tracked elsewhere`: `AbortProtect`, `Check`, `CheckAbort`,
   `Failure`, `Message`, `Missing`, `PropagateAborts`, `Quiet`

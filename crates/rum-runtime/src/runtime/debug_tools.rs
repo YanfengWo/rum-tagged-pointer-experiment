@@ -539,16 +539,38 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let (tests_expr, properties) = match args {
-            [tests_expr] => (tests_expr, None),
-            [tests_expr, properties] => (tests_expr, Some(properties.clone())),
+        let (tests_expr, properties, options) = match args {
+            [tests_expr] => (tests_expr, None, None),
+            [tests_expr, second] => {
+                if let Some(options) = self.parse_test_report_options(second)? {
+                    (tests_expr, None, Some(options))
+                } else {
+                    (tests_expr, Some(second.clone()), None)
+                }
+            }
+            [tests_expr, properties, options_expr] => {
+                let Some(options) = self.parse_test_report_options(options_expr)? else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
+                (tests_expr, Some(properties.clone()), Some(options))
+            }
             _ => return Ok(Expr::call(head.clone(), args.to_vec())),
         };
+
+        if let Some(report) = self.merge_test_report_objects(tests_expr) {
+            return self.project_association_properties(
+                "TestReport",
+                &[Expr::string("<omitted>")],
+                report,
+                properties,
+            );
+        }
 
         let tests = match parse_test_case_exprs(tests_expr) {
             Some(tests) => tests,
             None => return Ok(Expr::call(head.clone(), args.to_vec())),
         };
+        let options = options.unwrap_or_default();
 
         let mut successes = 0usize;
         let mut failures = 0usize;
@@ -561,28 +583,15 @@ impl Session {
             let expected_messages =
                 self.normalize_expected_message_exprs(test_case.expected_messages.clone())?;
 
-            let input_text = test_case.input.to_string();
-            let (actual, failure_type, messages_exprs) = match self.eval_text(&input_text) {
-                Ok(outcome) => (
-                    outcome.value,
-                    None,
-                    outcome
-                        .messages
-                        .into_iter()
-                        .map(runtime_message_name_expr)
-                        .collect(),
-                ),
-                Err(error) => {
-                    let (value, failure_type) = self.render_test_outcome(Err(error))?;
-                    let messages: Vec<Expr> = self
-                        .last_message_list
-                        .clone()
-                        .into_iter()
-                        .map(runtime_message_name_expr)
-                        .collect();
-                    (value, failure_type.map(str::to_string), messages)
-                }
-            };
+            let evaluation = self.evaluate_test_case_input(test_case.input.clone(), &options)?;
+            let actual = evaluation.value;
+            let failure_type = evaluation.failure_type.map(str::to_string);
+            let messages_exprs: Vec<Expr> = evaluation
+                .messages
+                .iter()
+                .cloned()
+                .map(runtime_message_name_expr)
+                .collect();
 
             let messages_match = expected_messages
                 .as_ref()
@@ -591,6 +600,7 @@ impl Session {
                 });
             let output_match = self.test_case_output_matches(
                 &test_case,
+                options.same_test.clone(),
                 actual.clone(),
                 test_case.expected.clone(),
             )?;
@@ -615,6 +625,17 @@ impl Session {
                 (
                     Expr::string("ActualMessages"),
                     Expr::call(system_expr("List"), messages_exprs.clone()),
+                ),
+                (
+                    Expr::string("ActualMessagesExpressions"),
+                    Expr::call(
+                        system_expr("List"),
+                        evaluation
+                            .messages
+                            .into_iter()
+                            .map(runtime_message_emit_expr)
+                            .collect(),
+                    ),
                 ),
                 (
                     Expr::string("ExpectedMessages"),
@@ -1421,6 +1442,17 @@ impl Session {
                 ),
             ),
             (
+                Expr::string("MessagesExpressions"),
+                Expr::call(
+                    system_expr("List"),
+                    messages
+                        .iter()
+                        .cloned()
+                        .map(runtime_message_emit_expr)
+                        .collect(),
+                ),
+            ),
+            (
                 Expr::string("MessagesText"),
                 Expr::call(
                     system_expr("List"),
@@ -1551,12 +1583,14 @@ impl Session {
     fn test_case_output_matches(
         &mut self,
         test_case: &TestCaseSpec,
+        report_same_test: Option<Expr>,
         actual: Expr,
         expected: Expr,
     ) -> Result<bool, EvalError> {
         let same_test = test_case
             .same_test
             .clone()
+            .or(report_same_test)
             .unwrap_or_else(|| system_expr("SameQ"));
         let applied = Expr::call(same_test, vec![actual, expected]);
         let resolved = self.evaluate(applied)?;
@@ -1643,6 +1677,197 @@ impl Session {
                 Ok(render_association(entries))
             }
         }
+    }
+
+    fn parse_test_report_options(
+        &mut self,
+        expr: &Expr,
+    ) -> Result<Option<TestReportOptions>, EvalError> {
+        let options = match self.compile_assigned_options_from_resolved(expr) {
+            Ok(options) => options,
+            Err(_) => return Ok(None),
+        };
+
+        for (name, _, _) in options.iter() {
+            if !matches!(
+                name.name(),
+                "SameTest" | "TimeConstraint" | "MemoryConstraint"
+            ) {
+                return Ok(None);
+            }
+        }
+
+        let defaults = self.options_for_symbol(&Symbol::system("TestReport"));
+        let same_test = if let Some((value, delayed)) = option_entry_by_name(&options, "SameTest")
+            .or_else(|| option_entry_by_name(&defaults, "SameTest"))
+        {
+            if delayed {
+                value
+            } else {
+                self.evaluate(value)?
+            }
+        } else {
+            system_expr("SameQ")
+        };
+
+        let time_constraint = self.test_report_time_constraint_expr(&options, &defaults)?;
+        let memory_constraint = self.test_report_memory_constraint_expr(&options, &defaults)?;
+
+        Ok(Some(TestReportOptions {
+            same_test: Some(same_test),
+            time_constraint,
+            memory_constraint,
+        }))
+    }
+
+    fn test_report_time_constraint_expr(
+        &mut self,
+        explicit: &SymbolOptions,
+        defaults: &SymbolOptions,
+    ) -> Result<Option<Expr>, EvalError> {
+        let Some((value, delayed)) = option_entry_by_name(explicit, "TimeConstraint")
+            .or_else(|| option_entry_by_name(defaults, "TimeConstraint"))
+        else {
+            return Ok(None);
+        };
+
+        let resolved = if delayed {
+            value
+        } else {
+            self.evaluate(value)?
+        };
+        Ok((!is_system_symbol_name(&resolved, "Infinity")).then_some(resolved))
+    }
+
+    fn test_report_memory_constraint_expr(
+        &mut self,
+        explicit: &SymbolOptions,
+        defaults: &SymbolOptions,
+    ) -> Result<Option<Expr>, EvalError> {
+        let Some((value, delayed)) = option_entry_by_name(explicit, "MemoryConstraint")
+            .or_else(|| option_entry_by_name(defaults, "MemoryConstraint"))
+        else {
+            return Ok(None);
+        };
+
+        let resolved = if delayed {
+            value
+        } else {
+            self.evaluate(value)?
+        };
+        Ok((!is_system_symbol_name(&resolved, "Infinity")).then_some(resolved))
+    }
+
+    fn evaluate_test_case_input(
+        &mut self,
+        input: Expr,
+        options: &TestReportOptions,
+    ) -> Result<EvalCapturedOutcome, EvalError> {
+        let wrapped = wrap_test_case_with_constraints(input, options);
+        let outcome = self.eval_expr_with_stream_capture(wrapped)?;
+
+        if outcome.value == test_report_time_constraint_sentinel() {
+            return Ok(EvalCapturedOutcome {
+                value: system_expr("$Aborted"),
+                failure_type: Some("TimeConstraint"),
+                messages: outcome.messages,
+                prints: outcome.prints,
+            });
+        }
+
+        if outcome.value == test_report_memory_constraint_sentinel() {
+            return Ok(EvalCapturedOutcome {
+                value: system_expr("$Aborted"),
+                failure_type: Some("MemoryConstraint"),
+                messages: outcome.messages,
+                prints: outcome.prints,
+            });
+        }
+
+        Ok(EvalCapturedOutcome {
+            value: outcome.value,
+            failure_type: None,
+            messages: outcome.messages,
+            prints: outcome.prints,
+        })
+    }
+
+    fn eval_expr_with_stream_capture(
+        &mut self,
+        expr: Expr,
+    ) -> Result<EvalCapturedOutcome, EvalError> {
+        let message_checkpoint = self.messages.len();
+        let print_checkpoint = self.prints.len();
+        let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
+        let evaluated = self.evaluate(expr);
+        let result = self.finalize_top_level_control_flow(evaluated);
+
+        match result {
+            Ok(value) => {
+                let messages = self.messages.split_off(message_checkpoint);
+                let prints = self.prints.split_off(print_checkpoint);
+                self.last_message_list = messages.clone();
+                self.handled_non_loader_eval_errors
+                    .truncate(handled_error_checkpoint);
+                Ok(EvalCapturedOutcome {
+                    value,
+                    failure_type: None,
+                    messages,
+                    prints,
+                })
+            }
+            Err(err) => {
+                self.emit_non_loader_eval_message(handled_error_checkpoint, &err);
+                let messages = self.messages[message_checkpoint..].to_vec();
+                let prints = self.prints[print_checkpoint..].to_vec();
+                self.last_message_list = messages.clone();
+                self.handled_non_loader_eval_errors
+                    .truncate(handled_error_checkpoint);
+
+                let (value, failure_type) = self.render_test_outcome(Err(err))?;
+                Ok(EvalCapturedOutcome {
+                    value,
+                    failure_type,
+                    messages,
+                    prints,
+                })
+            }
+        }
+    }
+
+    fn merge_test_report_objects(&self, expr: &Expr) -> Option<Expr> {
+        let reports = parse_test_report_objects(expr)?;
+        let mut tests_run = 0usize;
+        let mut tests_succeeded = 0usize;
+        let mut tests_failed = 0usize;
+        let mut merged_results = Vec::new();
+
+        for report in reports {
+            tests_run = tests_run.saturating_add(report.tests_run);
+            tests_succeeded = tests_succeeded.saturating_add(report.tests_succeeded);
+            tests_failed = tests_failed.saturating_add(report.tests_failed);
+            merged_results.extend(report.test_results);
+        }
+
+        Some(render_association(vec![
+            (Expr::string("Success"), debug_bool_expr(tests_failed == 0)),
+            (
+                Expr::string("TestsRunCount"),
+                Expr::integer(BigInt::from(tests_run as u64)),
+            ),
+            (
+                Expr::string("TestsSucceededCount"),
+                Expr::integer(BigInt::from(tests_succeeded as u64)),
+            ),
+            (
+                Expr::string("TestsFailedCount"),
+                Expr::integer(BigInt::from(tests_failed as u64)),
+            ),
+            (
+                Expr::string("TestResults"),
+                Expr::call(system_expr("List"), merged_results),
+            ),
+        ]))
     }
 }
 
@@ -2140,6 +2365,29 @@ struct TestCaseSpec {
     same_test: Option<Expr>,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct TestReportOptions {
+    same_test: Option<Expr>,
+    time_constraint: Option<Expr>,
+    memory_constraint: Option<Expr>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ParsedTestReportObject {
+    tests_run: usize,
+    tests_succeeded: usize,
+    tests_failed: usize,
+    test_results: Vec<Expr>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct EvalCapturedOutcome {
+    value: Expr,
+    failure_type: Option<&'static str>,
+    messages: Vec<RuntimeMessage>,
+    prints: Vec<String>,
+}
+
 fn option_entry_by_name(options: &SymbolOptions, name: &str) -> Option<(Expr, bool)> {
     options
         .iter()
@@ -2197,6 +2445,33 @@ fn parse_test_case(expr: &Expr) -> Option<TestCaseSpec> {
     })
 }
 
+fn parse_test_report_objects(expr: &Expr) -> Option<Vec<ParsedTestReportObject>> {
+    if let Some(report) = parse_test_report_object(expr) {
+        return Some(vec![report]);
+    }
+
+    let items = list_items(expr)?;
+    items.iter().map(parse_test_report_object).collect()
+}
+
+fn parse_test_report_object(expr: &Expr) -> Option<ParsedTestReportObject> {
+    let tests_run = association_property_by_name(expr, "TestsRunCount")
+        .and_then(|value| expr_as_non_negative_usize(&value))?;
+    let tests_succeeded = association_property_by_name(expr, "TestsSucceededCount")
+        .and_then(|value| expr_as_non_negative_usize(&value))?;
+    let tests_failed = association_property_by_name(expr, "TestsFailedCount")
+        .and_then(|value| expr_as_non_negative_usize(&value))?;
+    let test_results = association_property_by_name(expr, "TestResults")
+        .and_then(|value| list_items(&value).map(|items| items.to_vec()))?;
+
+    Some(ParsedTestReportObject {
+        tests_run,
+        tests_succeeded,
+        tests_failed,
+        test_results,
+    })
+}
+
 fn unwrap_hold_complete(expr: &Expr) -> Option<Expr> {
     match expr {
         Expr::Call { head, args }
@@ -2246,4 +2521,48 @@ fn association_property_by_name(expr: &Expr, name: &str) -> Option<Expr> {
             Expr::Atom(Atom::String(current)) if current == name => Some(value),
             _ => None,
         })
+}
+
+fn runtime_message_emit_expr(message: RuntimeMessage) -> Expr {
+    Expr::call(
+        system_expr("Hold"),
+        vec![Expr::call(
+            system_expr("Message"),
+            vec![runtime_message_name_expr(message)],
+        )],
+    )
+}
+
+fn wrap_test_case_with_constraints(input: Expr, options: &TestReportOptions) -> Expr {
+    let mut wrapped = input;
+
+    if let Some(limit) = options.time_constraint.clone() {
+        wrapped = Expr::call(
+            system_expr("TimeConstrained"),
+            vec![wrapped, limit, test_report_time_constraint_sentinel()],
+        );
+    }
+
+    if let Some(limit) = options.memory_constraint.clone() {
+        wrapped = Expr::call(
+            system_expr("MemoryConstrained"),
+            vec![wrapped, limit, test_report_memory_constraint_sentinel()],
+        );
+    }
+
+    wrapped
+}
+
+fn test_report_time_constraint_sentinel() -> Expr {
+    Expr::call(
+        system_expr("HoldComplete"),
+        vec![Expr::string("__RumTestReportTimeConstraint__")],
+    )
+}
+
+fn test_report_memory_constraint_sentinel() -> Expr {
+    Expr::call(
+        system_expr("HoldComplete"),
+        vec![Expr::string("__RumTestReportMemoryConstraint__")],
+    )
 }

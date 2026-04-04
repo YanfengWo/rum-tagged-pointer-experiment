@@ -578,6 +578,14 @@ fn evaluation_data_captures_result_messages_prints_and_failure_type_without_leak
         trace_projection.value.to_string(),
         "List[Hold[f[1]], List[Hold[Plus[1, 1]], Hold[2]], Hold[2]]"
     );
+
+    let message_exprs = session
+        .eval_text("EvaluationData[Message[FindFile::notfound], \"MessagesExpressions\"]")
+        .unwrap();
+    assert_eq!(
+        message_exprs.value.to_string(),
+        "List[Hold[Message[FindFile::notfound]]]"
+    );
 }
 
 #[test]
@@ -764,4 +772,108 @@ fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
         .unwrap();
     let rendered = stack.value.to_string();
     assert!(rendered.contains("Hold[stackFrame[]]"));
+}
+
+#[test]
+fn testreport_merges_existing_reports_and_accepts_report_level_options() {
+    let mut session = Session::new();
+
+    let merged = session
+        .eval_text(
+            "TestReport[{TestReport[{TestCreate[1 + 1, 2]}], TestReport[{TestCreate[2 + 2, 5]}]}]",
+        )
+        .unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![merged.value.clone(), Expr::string("TestsRunCount")],
+            ))
+            .unwrap()
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![merged.value, Expr::string("TestsSucceededCount")],
+            ))
+            .unwrap()
+            .to_string(),
+        "1"
+    );
+
+    let same_test = session
+        .eval_text("TestReport[{TestCreate[1 + 1, 1]}, {SameTest -> Greater}]")
+        .unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![same_test.value, Expr::string("TestsSucceededCount")],
+            ))
+            .unwrap()
+            .to_string(),
+        "1"
+    );
+
+    let projected = session
+        .eval_text(
+            "TestReport[{TestCreate[1 + 1, 1]}, \"TestsSucceededCount\", {SameTest -> Greater}]",
+        )
+        .unwrap();
+    assert_eq!(projected.value.to_string(), "1");
+
+    let time_limited = session
+        .eval_text(
+            "Part[Lookup[TestReport[{TestCreate[Pause[1/50], 1]}, {TimeConstraint -> 1/100}], \"TestResults\"], 1]",
+        )
+        .unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![time_limited.value.clone(), Expr::string("FailureType")],
+            ))
+            .unwrap()
+            .to_string(),
+        "\"TimeConstraint\""
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![time_limited.value, Expr::string("Outcome")],
+            ))
+            .unwrap()
+            .to_string(),
+        "\"Failure\""
+    );
+
+    let memory_limited = session
+        .eval_text(
+            "Part[Lookup[TestReport[{TestCreate[Range[100], Range[100]]}, {MemoryConstraint -> 20}], \"TestResults\"], 1]",
+        )
+        .unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![memory_limited.value.clone(), Expr::string("FailureType")],
+            ))
+            .unwrap()
+            .to_string(),
+        "\"MemoryConstraint\""
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![memory_limited.value, Expr::string("Outcome")],
+            ))
+            .unwrap()
+            .to_string(),
+        "\"Failure\""
+    );
 }

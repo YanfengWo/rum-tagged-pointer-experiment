@@ -628,6 +628,6 @@ fn syntax_information_covers_current_cl09_debugging_surface_subset() {
             .unwrap()
             .value
             .to_string(),
-        "List[Rule[\"ArgumentsPattern\", List[Blank[]]]]"
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]], OptionsPattern]], Rule[\"OptionNames\", List[\"SameTest\", \"TimeConstraint\", \"MemoryConstraint\"]]]"
     );
 }

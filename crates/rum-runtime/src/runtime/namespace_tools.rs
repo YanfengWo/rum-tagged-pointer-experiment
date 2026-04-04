@@ -404,7 +404,21 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
             blank_expr(),
             optional_blank_expr(),
         ])],
-        "TestReport" => vec![syntax_argument_pattern(vec![blank_expr()])],
+        "TestReport" => vec![
+            syntax_argument_pattern(vec![
+                blank_expr(),
+                optional_blank_expr(),
+                system_expr("OptionsPattern"),
+            ]),
+            syntax_rule(
+                "OptionNames",
+                string_list_expr(vec![
+                    "SameTest".to_string(),
+                    "TimeConstraint".to_string(),
+                    "MemoryConstraint".to_string(),
+                ]),
+            ),
+        ],
         "StringCount" => vec![syntax_argument_pattern(vec![
             blank_expr(),
             blank_expr(),
