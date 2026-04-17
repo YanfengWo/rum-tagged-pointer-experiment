@@ -273,3 +273,26 @@ fn string_count_matchq_and_freeq_extend_current_pattern_subset() {
         "List[False, True]"
     );
 }
+
+#[test]
+fn delayed_string_rules_evaluate_at_application_time() {
+    let mut session = Session::new();
+
+    session.eval_text("x = \"first\"").unwrap();
+    assert_eq!(
+        eval_to_string(&mut session, "StringReplace[\"aa\", \"a\" :> x]"),
+        "\"firstfirst\""
+    );
+
+    session.eval_text("x = \"second\"").unwrap();
+    assert_eq!(
+        eval_to_string(&mut session, "StringReplace[\"aa\", \"a\" :> x]"),
+        "\"secondsecond\""
+    );
+
+    session.eval_text("i = 0").unwrap();
+    assert_eq!(
+        eval_to_string(&mut session, "StringCases[\"aaa\", \"a\" :> (i = i + 1)]"),
+        "List[1, 2, 3]"
+    );
+}

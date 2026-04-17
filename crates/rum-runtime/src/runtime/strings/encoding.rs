@@ -110,6 +110,8 @@ fn byte_array_expr(bytes: &[u8]) -> Expr {
 fn hash_input_bytes(expr: &Expr) -> Vec<u8> {
     if let Some(value) = expr_as_string(expr) {
         value.as_bytes().to_vec()
+    } else if let Some(bytes) = expr_as_byte_array_bytes(expr) {
+        bytes
     } else {
         expr.to_string().into_bytes()
     }
@@ -130,6 +132,8 @@ fn compress_envelope(expr: &Expr) -> String {
     let (payload, original_form) = expr_transport_bytes(expr);
     let kind = if is_system_symbol_name(&original_form, "String") {
         "s"
+    } else if is_system_symbol_name(&original_form, "ByteArray") {
+        "b"
     } else {
         "e"
     };
@@ -139,9 +143,22 @@ fn compress_envelope(expr: &Expr) -> String {
 fn expr_transport_bytes(expr: &Expr) -> (Vec<u8>, Expr) {
     if let Some(value) = expr_as_string(expr) {
         (value.as_bytes().to_vec(), system_expr("String"))
+    } else if let Some(bytes) = expr_as_byte_array_bytes(expr) {
+        (bytes, system_expr("ByteArray"))
     } else {
         (expr.to_string().into_bytes(), system_expr("InputForm"))
     }
+}
+
+fn expr_as_byte_array_bytes(expr: &Expr) -> Option<Vec<u8>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    if !is_system_symbol_name(head, "ByteArray") || args.len() != 1 {
+        return None;
+    }
+    let encoded = expr_as_string(&args[0])?;
+    base64_decode(encoded)
 }
 
 fn encrypted_object_expr(ciphertext: &[u8], key_hash: &[u8], original_form: Expr) -> Expr {
@@ -209,6 +226,59 @@ fn base64_encode(bytes: &[u8]) -> String {
     }
 
     rendered
+}
+
+fn base64_decode(encoded: &str) -> Option<Vec<u8>> {
+    let bytes = encoded.as_bytes();
+    if bytes.len() % 4 != 0 {
+        return None;
+    }
+
+    let mut output = Vec::with_capacity(bytes.len() / 4 * 3);
+    let mut index = 0;
+    while index < bytes.len() {
+        let a = decode_base64_nibble(bytes[index])?;
+        let b = decode_base64_nibble(bytes[index + 1])?;
+        let c = bytes[index + 2];
+        let d = bytes[index + 3];
+
+        let c_value = if c == b'=' {
+            0
+        } else {
+            decode_base64_nibble(c)?
+        };
+        let d_value = if d == b'=' {
+            0
+        } else {
+            decode_base64_nibble(d)?
+        };
+
+        let chunk =
+            ((a as u32) << 18) | ((b as u32) << 12) | ((c_value as u32) << 6) | (d_value as u32);
+
+        output.push(((chunk >> 16) & 0xff) as u8);
+        if c != b'=' {
+            output.push(((chunk >> 8) & 0xff) as u8);
+        }
+        if d != b'=' {
+            output.push((chunk & 0xff) as u8);
+        }
+
+        index += 4;
+    }
+
+    Some(output)
+}
+
+fn decode_base64_nibble(byte: u8) -> Option<u8> {
+    match byte {
+        b'A'..=b'Z' => Some(byte - b'A'),
+        b'a'..=b'z' => Some(byte - b'a' + 26),
+        b'0'..=b'9' => Some(byte - b'0' + 52),
+        b'+' => Some(62),
+        b'/' => Some(63),
+        _ => None,
+    }
 }
 
 fn bytes_to_hex(bytes: &[u8]) -> String {

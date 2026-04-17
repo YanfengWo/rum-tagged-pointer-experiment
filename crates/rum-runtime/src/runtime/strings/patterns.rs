@@ -77,13 +77,25 @@ struct StringCountConfig {
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ExactStringReplacementRule {
     pattern: StringPattern,
-    replacement: String,
+    replacement: ExactStringReplacementValue,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum ExactStringReplacementValue {
+    Immediate(String),
+    Delayed(Expr),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ExactStringCaseRule {
     pattern: StringPattern,
-    output: Expr,
+    output: ExactStringCaseOutput,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum ExactStringCaseOutput {
+    Immediate(Expr),
+    Delayed(Expr),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -266,13 +278,21 @@ fn parse_exact_string_replacement_rule(expr: &Expr) -> Option<ExactStringReplace
         return None;
     };
 
-    if !is_system_symbol_name(head, "Rule") || args.len() != 2 {
+    if args.len() != 2 {
         return None;
     }
 
+    let replacement = if is_system_symbol_name(head, "Rule") {
+        ExactStringReplacementValue::Immediate(expr_as_string(&args[1])?.to_string())
+    } else if is_system_symbol_name(head, "RuleDelayed") {
+        ExactStringReplacementValue::Delayed(args[1].clone())
+    } else {
+        return None;
+    };
+
     Some(ExactStringReplacementRule {
         pattern: parse_string_pattern(&args[0])?,
-        replacement: expr_as_string(&args[1])?.to_string(),
+        replacement,
     })
 }
 
@@ -311,13 +331,21 @@ fn parse_exact_string_case_rule(expr: &Expr) -> Option<ExactStringCaseRule> {
         return None;
     };
 
-    if !is_system_symbol_name(head, "Rule") || args.len() != 2 {
+    if args.len() != 2 {
         return None;
     }
 
+    let output = if is_system_symbol_name(head, "Rule") {
+        ExactStringCaseOutput::Immediate(args[1].clone())
+    } else if is_system_symbol_name(head, "RuleDelayed") {
+        ExactStringCaseOutput::Delayed(args[1].clone())
+    } else {
+        return None;
+    };
+
     Some(ExactStringCaseRule {
         pattern: parse_string_pattern(&args[0])?,
-        output: args[1].clone(),
+        output,
     })
 }
 

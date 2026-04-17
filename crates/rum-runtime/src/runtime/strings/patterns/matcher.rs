@@ -155,7 +155,13 @@ pub(super) fn replace_string_value(
         if let Some((rule, end)) = rules.iter().find_map(|rule| {
             best_pattern_match_end(&rule.pattern, &chars, index, config).map(|end| (rule, end))
         }) {
-            output.push_str(&rule.replacement);
+            let ExactStringReplacementValue::Immediate(replacement) = &rule.replacement else {
+                output.extend(chars[index..end].iter());
+                index = if end == index { index + 1 } else { end };
+                replacements += 1;
+                continue;
+            };
+            output.push_str(replacement);
             if end == index {
                 output.push(chars[index]);
                 index += 1;
@@ -213,7 +219,13 @@ pub(super) fn collect_string_cases(
                     best_pattern_match_end(&rule.pattern, &chars, index, config)
                         .map(|end| (rule, end))
                 }) {
-                    matches.push(rule.output.clone());
+                    let output = match &rule.output {
+                        ExactStringCaseOutput::Immediate(expr) => expr.clone(),
+                        ExactStringCaseOutput::Delayed(_) => {
+                            Expr::string(pattern_match_text(&chars[index..end]))
+                        }
+                    };
+                    matches.push(output);
                     index = if end == index {
                         if index == chars.len() {
                             break;
@@ -427,11 +439,11 @@ fn trim_string_patterns(chars: &[char], patterns: &[StringPattern]) -> String {
     chars[start..end].iter().collect()
 }
 
-fn pattern_match_text(chars: &[char]) -> String {
+pub(super) fn pattern_match_text(chars: &[char]) -> String {
     chars.iter().collect()
 }
 
-fn best_pattern_match_at(
+pub(super) fn best_pattern_match_at(
     patterns: &[StringPattern],
     chars: &[char],
     start: usize,
@@ -458,7 +470,7 @@ fn best_pattern_suffix_start(patterns: &[StringPattern], chars: &[char]) -> Opti
         .min()
 }
 
-fn best_pattern_match_end(
+pub(super) fn best_pattern_match_end(
     pattern: &StringPattern,
     chars: &[char],
     start: usize,

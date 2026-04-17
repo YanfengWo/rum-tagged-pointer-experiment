@@ -117,17 +117,35 @@ pub(super) fn parse_nearest_result_spec(expr: &Expr) -> Option<NearestResultSpec
     expr_as_non_negative_usize(expr).map(NearestResultSpec::Count)
 }
 
+pub(super) fn parse_nearest_selection_spec(expr: &Expr) -> Option<NearestSelectionSpec> {
+    if let Some(spec) = parse_nearest_result_spec(expr) {
+        return Some(NearestSelectionSpec::Results(spec));
+    }
+
+    let items = call_items_with_head(expr, &system_expr("List"))?;
+    if items.len() != 2 {
+        return None;
+    }
+
+    let results = parse_nearest_result_spec(&items[0])?;
+    Some(NearestSelectionSpec::ResultsWithin {
+        results,
+        max_distance: items[1].clone(),
+    })
+}
+
 pub(super) fn nearest_strings(
     values: &[String],
     target: &str,
-    spec: NearestResultSpec,
+    spec: NearestSelectionSpec,
     distance_function: NearestDistanceFunction,
 ) -> Option<Vec<String>> {
     let distances = string_distances(values, target, distance_function)?;
+    let filtered = filter_usize_distances(distances, &spec)?;
     Some(
-        select_nearest_indices_by_usize(&distances, spec)
+        select_nearest_indices_by_usize(&filtered, nearest_result_spec(&spec))
             .into_iter()
-            .map(|index| values[index].clone())
+            .map(|index| values[filtered[index].0].clone())
             .collect(),
     )
 }
@@ -158,14 +176,15 @@ pub(super) fn nearest_values_for_strings(
     keys: &[String],
     values: &[Expr],
     target: &str,
-    spec: NearestResultSpec,
+    spec: NearestSelectionSpec,
     distance_function: NearestDistanceFunction,
 ) -> Option<Vec<Expr>> {
     let distances = string_distances(keys, target, distance_function)?;
+    let filtered = filter_usize_distances(distances, &spec)?;
     Some(
-        select_nearest_indices_by_usize(&distances, spec)
+        select_nearest_indices_by_usize(&filtered, nearest_result_spec(&spec))
             .into_iter()
-            .map(|index| values[index].clone())
+            .map(|index| values[filtered[index].0].clone())
             .collect(),
     )
 }
@@ -174,50 +193,53 @@ pub(super) fn nearest_values_for_numbers(
     keys: &[Rational],
     values: &[Expr],
     target: &Rational,
-    spec: NearestResultSpec,
+    spec: NearestSelectionSpec,
 ) -> Vec<Expr> {
     let distances = keys
         .iter()
         .map(|value| rational_abs_difference(value, target))
         .collect::<Vec<_>>();
-    select_nearest_indices_by_rational(&distances, spec)
+    let Some(filtered) = filter_rational_distances(distances, &spec) else {
+        return Vec::new();
+    };
+    select_nearest_indices_by_rational(&filtered, nearest_result_spec(&spec))
         .into_iter()
-        .map(|index| values[index].clone())
+        .map(|index| values[filtered[index].0].clone())
         .collect()
 }
 
 pub(super) fn select_nearest_indices_by_usize(
-    distances: &[usize],
+    distances: &[(usize, usize)],
     spec: NearestResultSpec,
 ) -> Vec<usize> {
     match spec {
         NearestResultSpec::Count(0) => Vec::new(),
         NearestResultSpec::Count(limit) => {
             let mut indices = (0..distances.len()).collect::<Vec<_>>();
-            indices.sort_by_key(|index| (distances[*index], *index));
+            indices.sort_by_key(|index| (distances[*index].1, distances[*index].0));
             indices.truncate(limit.min(indices.len()));
             indices
         }
         NearestResultSpec::All => {
             let mut indices = (0..distances.len()).collect::<Vec<_>>();
-            indices.sort_by_key(|index| (distances[*index], *index));
+            indices.sort_by_key(|index| (distances[*index].1, distances[*index].0));
             indices
         }
         NearestResultSpec::BestTies => {
-            let Some(best) = distances.iter().copied().min() else {
+            let Some(best) = distances.iter().map(|(_, distance)| *distance).min() else {
                 return Vec::new();
             };
             distances
                 .iter()
                 .enumerate()
-                .filter_map(|(index, distance)| (*distance == best).then_some(index))
+                .filter_map(|(index, (_, distance))| (*distance == best).then_some(index))
                 .collect()
         }
     }
 }
 
 pub(super) fn select_nearest_indices_by_rational(
-    distances: &[Rational],
+    distances: &[(usize, Rational)],
     spec: NearestResultSpec,
 ) -> Vec<usize> {
     match spec {
@@ -225,7 +247,8 @@ pub(super) fn select_nearest_indices_by_rational(
         NearestResultSpec::Count(limit) => {
             let mut indices = (0..distances.len()).collect::<Vec<_>>();
             indices.sort_by(|lhs, rhs| {
-                compare_rationals_local(&distances[*lhs], &distances[*rhs]).then(lhs.cmp(rhs))
+                compare_rationals_local(&distances[*lhs].1, &distances[*rhs].1)
+                    .then(distances[*lhs].0.cmp(&distances[*rhs].0))
             });
             indices.truncate(limit.min(indices.len()));
             indices
@@ -233,7 +256,8 @@ pub(super) fn select_nearest_indices_by_rational(
         NearestResultSpec::All => {
             let mut indices = (0..distances.len()).collect::<Vec<_>>();
             indices.sort_by(|lhs, rhs| {
-                compare_rationals_local(&distances[*lhs], &distances[*rhs]).then(lhs.cmp(rhs))
+                compare_rationals_local(&distances[*lhs].1, &distances[*rhs].1)
+                    .then(distances[*lhs].0.cmp(&distances[*rhs].0))
             });
             indices
         }
@@ -241,7 +265,7 @@ pub(super) fn select_nearest_indices_by_rational(
             let Some((best_index, _)) = distances
                 .iter()
                 .enumerate()
-                .min_by(|(_, lhs), (_, rhs)| compare_rationals_local(lhs, rhs))
+                .min_by(|(_, lhs), (_, rhs)| compare_rationals_local(&lhs.1, &rhs.1))
             else {
                 return Vec::new();
             };
@@ -249,13 +273,64 @@ pub(super) fn select_nearest_indices_by_rational(
                 .iter()
                 .enumerate()
                 .filter_map(|(index, distance)| {
-                    (compare_rationals_local(distance, &distances[best_index])
+                    (compare_rationals_local(&distance.1, &distances[best_index].1)
                         == std::cmp::Ordering::Equal)
                         .then_some(index)
                 })
                 .collect()
         }
     }
+}
+
+fn nearest_result_spec(spec: &NearestSelectionSpec) -> NearestResultSpec {
+    match spec {
+        NearestSelectionSpec::Results(results)
+        | NearestSelectionSpec::ResultsWithin { results, .. } => *results,
+    }
+}
+
+fn filter_usize_distances(
+    distances: Vec<usize>,
+    spec: &NearestSelectionSpec,
+) -> Option<Vec<(usize, usize)>> {
+    let max_distance = match spec {
+        NearestSelectionSpec::Results(_) => None,
+        NearestSelectionSpec::ResultsWithin { max_distance, .. } => {
+            Some(expr_as_non_negative_usize(max_distance)?)
+        }
+    };
+
+    Some(
+        distances
+            .into_iter()
+            .enumerate()
+            .filter(|(_, distance)| max_distance.is_none_or(|bound| *distance <= bound))
+            .collect(),
+    )
+}
+
+fn filter_rational_distances(
+    distances: Vec<Rational>,
+    spec: &NearestSelectionSpec,
+) -> Option<Vec<(usize, Rational)>> {
+    let max_distance = match spec {
+        NearestSelectionSpec::Results(_) => None,
+        NearestSelectionSpec::ResultsWithin { max_distance, .. } => {
+            Some(expr_as_exact_rational(max_distance)?)
+        }
+    };
+
+    Some(
+        distances
+            .into_iter()
+            .enumerate()
+            .filter(|(_, distance)| {
+                max_distance.as_ref().is_none_or(|bound| {
+                    compare_rationals_local(distance, bound) != std::cmp::Ordering::Greater
+                })
+            })
+            .collect(),
+    )
 }
 
 pub(super) fn rational_abs_difference(lhs: &Rational, rhs: &Rational) -> Rational {

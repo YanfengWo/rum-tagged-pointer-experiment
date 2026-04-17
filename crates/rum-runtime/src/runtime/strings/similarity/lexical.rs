@@ -26,11 +26,38 @@ pub(super) fn pluralize_english_word(word: &str) -> String {
         }
     }
 
+    if lower.ends_with("fe") {
+        let stem = &lower[..lower.len() - 2];
+        if matches!(stem, "kni" | "wi") {
+            let original_stem = &word[..word.len() - 2];
+            return format!("{original_stem}ves");
+        }
+    }
+
+    if lower.ends_with('f') {
+        let stem = &lower[..lower.len() - 1];
+        if matches!(stem, "lea" | "wol") {
+            let original_stem = &word[..word.len() - 1];
+            return format!("{original_stem}ves");
+        }
+    }
+
+    if lower.ends_with('o')
+        && matches!(
+            lower.as_str(),
+            "hero" | "potato" | "tomato" | "echo" | "torpedo"
+        )
+    {
+        return format!("{word}es");
+    }
+
     format!("{word}s")
 }
 
 fn english_irregular_plural(lower: &str) -> Option<&'static str> {
     match lower {
+        "analysis" => Some("analyses"),
+        "basis" => Some("bases"),
         "child" => Some("children"),
         "man" => Some("men"),
         "woman" => Some("women"),

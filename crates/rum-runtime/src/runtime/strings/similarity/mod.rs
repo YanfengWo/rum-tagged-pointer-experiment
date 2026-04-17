@@ -15,6 +15,15 @@ enum NearestResultSpec {
     All,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum NearestSelectionSpec {
+    Results(NearestResultSpec),
+    ResultsWithin {
+        results: NearestResultSpec,
+        max_distance: Expr,
+    },
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum NearestDistanceFunction {
     Automatic,
@@ -56,20 +65,23 @@ impl Session {
 
         let (result_spec, distance_function) = match args {
             [_, _] => (
-                NearestResultSpec::BestTies,
+                NearestSelectionSpec::Results(NearestResultSpec::BestTies),
                 NearestDistanceFunction::Automatic,
             ),
             [_, _, third] => {
-                if let Some(spec) = parse_nearest_result_spec(third) {
+                if let Some(spec) = parse_nearest_selection_spec(third) {
                     (spec, NearestDistanceFunction::Automatic)
                 } else if let Some(options) = parse_nearest_options(std::slice::from_ref(third)) {
-                    (NearestResultSpec::BestTies, options.distance_function)
+                    (
+                        NearestSelectionSpec::Results(NearestResultSpec::BestTies),
+                        options.distance_function,
+                    )
                 } else {
                     return Ok(Expr::call(head.clone(), args.to_vec()));
                 }
             }
             [_, _, third, fourth] => {
-                let Some(spec) = parse_nearest_result_spec(third) else {
+                let Some(spec) = parse_nearest_selection_spec(third) else {
                     return Ok(Expr::call(head.clone(), args.to_vec()));
                 };
                 let Some(options) = parse_nearest_options(std::slice::from_ref(fourth)) else {
