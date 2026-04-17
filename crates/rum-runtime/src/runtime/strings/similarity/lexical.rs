@@ -2,6 +2,10 @@ use super::super::text::remove_diacritics_value;
 
 pub(super) fn pluralize_english_word(word: &str) -> String {
     let lower = word.to_ascii_lowercase();
+    if let Some(irregular) = english_irregular_plural(&lower) {
+        return apply_plural_case(word, irregular);
+    }
+
     if lower.ends_with("ch")
         || lower.ends_with("sh")
         || lower.ends_with('s')
@@ -23,6 +27,49 @@ pub(super) fn pluralize_english_word(word: &str) -> String {
     }
 
     format!("{word}s")
+}
+
+fn english_irregular_plural(lower: &str) -> Option<&'static str> {
+    match lower {
+        "child" => Some("children"),
+        "man" => Some("men"),
+        "woman" => Some("women"),
+        "person" => Some("people"),
+        "mouse" => Some("mice"),
+        "goose" => Some("geese"),
+        "tooth" => Some("teeth"),
+        "foot" => Some("feet"),
+        "sheep" => Some("sheep"),
+        "deer" => Some("deer"),
+        _ => None,
+    }
+}
+
+fn apply_plural_case(original: &str, plural_lower: &str) -> String {
+    if original
+        .chars()
+        .all(|ch| !ch.is_alphabetic() || ch.is_uppercase())
+    {
+        return plural_lower.to_ascii_uppercase();
+    }
+
+    let is_title_case = original.chars().next().is_some_and(char::is_uppercase)
+        && original
+            .chars()
+            .skip(1)
+            .all(|ch| !ch.is_alphabetic() || ch.is_lowercase());
+
+    if is_title_case {
+        let mut chars = plural_lower.chars();
+        let mut rendered = String::new();
+        if let Some(first) = chars.next() {
+            rendered.extend(first.to_uppercase());
+        }
+        rendered.extend(chars);
+        return rendered;
+    }
+
+    plural_lower.to_string()
 }
 
 pub(super) fn english_alphabet() -> Vec<String> {

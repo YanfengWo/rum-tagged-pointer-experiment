@@ -64,6 +64,8 @@ This roadmap intentionally uses two levels of detail:
 
 - [x] Land a substantial `CL-07` string-language surface covering exact-string manipulation, first-pass string-pattern semantics, templating, conversions, text analysis, similarity/diff helpers, and current byte-array/hash/compress/encrypt/nearest/pluralization subsets
 - [ ] Keep tightening `CL-07` deep parity around fuller symbolic string-pattern semantics, richer conversions/formatting, byte-array and crypto compatibility, nearest-neighbor semantics, and language-data-backed pluralization
+  - [x] extend the current string-pattern subset with character-class atoms such as `LetterCharacter`, `DigitCharacter`, `WordCharacter`, and `WhitespaceCharacter` so the existing string builtins gain broader shared matcher coverage
+  - [x] extend the current string-pattern subset with `RegularExpression[...]` interop plus a first richer `ToString` form-argument subset and a current `Nearest` / `Pluralize` parity bump through `DistanceFunction -> EditDistance|HammingDistance` and common irregular English plurals
 - [ ] Decide when the string subsystem is large and stable enough to justify a dedicated crate boundary
 
 ### Phase 9: Verification, Coverage, and Conformance
@@ -226,6 +228,27 @@ This roadmap intentionally uses two levels of detail:
   - [x] deepen the current CL-09 subset with default `Heads` option support for filtered `Trace[...]` / `TracePrint[...]`, plus broader per-test `TestReport` metadata through `ActualMessagesText`, `OutputLog`, and `Timing`
   - [x] close the current CL-09 mainline with payload-aware `ByteArray` accounting inside the layout-aware `ByteCount[]` / `MemoryInUse[]` subset plus the current structured trace/report shape coverage; treat any remaining deeper real-memory parity or trace/report edge-case polish as non-blocking long-tail work rather than active mainline blockers
 - [ ] Defer reviewing the local `WLBuiltin/` workspace until the `CL-01` through `CL-09` mainline is complete; keep it ignored for now so it does not disrupt the active kernel roadmap
+
+### Post-Mainline Long-Tail Priorities
+
+- [ ] Work through the remaining `CL-01` through `CL-09` long-tail in explicit waves instead of reopening every matrix group at once:
+  - [ ] Wave 1: `CL-07` deep parity
+    - [ ] fuller symbolic string-pattern semantics
+    - [ ] richer conversions / formatting parity
+    - [ ] deeper byte-array and crypto compatibility
+    - [ ] richer `Nearest` semantics
+    - [ ] language-data-backed `Pluralize` parity
+  - [ ] Wave 2: `CL-03` and `CL-05`
+    - [ ] `CL-03`: remaining rule/pattern/traversal convenience surface such as `DeleteCases`, `Replace`, `ReplaceAt`, `ReplaceList`, `PatternSequence`, `OrderlessPatternSequence`, `Verbatim`, and deeper traversal parity
+    - [ ] `CL-05`: held association mutation parity, richer `Lookup` threading/multi-key behavior, fuller `Missing` semantics, and `KeySortBy` option/comparer parity
+  - [ ] Wave 3: `CL-06` and `CL-01`
+    - [ ] `CL-06`: deeper `WithCleanup` / `Failsafe` / `CheckAbort` / `AbortProtect` parity, richer failure/status behavior, and fuller host-I/O semantics
+    - [ ] `CL-01`: remaining part-spec / `Heads` parity and deeper truth/comparison breadth
+  - [ ] Wave 4: polish pass across `CL-04`, `CL-08`, and `CL-09`
+    - [ ] `CL-04`: remaining threading / higher-order traversal / sparse array parity
+    - [ ] `CL-08`: broader `Names` regex, `SyntaxInformation` properties, and package-tooling compatibility polish
+    - [ ] `CL-09`: deeper real-memory accounting and trace/report edge-case polish
+  - [ ] finish with a roadmap/docs cleanup pass that re-syncs the top-level `CL-01` through `CL-07` checklist state and any stale matrix wording with the now-completed mainlines
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:
   - [ ] direct unit tests for small helpers, planners, normalization logic, and matcher branches
@@ -275,8 +298,8 @@ This roadmap intentionally uses two levels of detail:
 - [x] Widen the string search/transformation family from exact-string needles toward richer string-pattern and option semantics such as `StringExpression`, `IgnoreCase`, and overlap controls beyond the earliest defaults
 - [x] Land an initial Tier 3 string-pattern subset by teaching the current string builtins to understand `StringExpression` and `Alternatives` over exact-string leaves
 - [x] Continue Tier 3 string patterns through repetition forms, start/end anchors, `Shortest` / `Longest`, bounded repetition, `Except`, and broader zero-length/match-edge handling
-- [ ] Continue Tier 3 string patterns through delayed pattern rules, `RegularExpression` interop, and any remaining symbolic string-pattern parity cleanup
-- [ ] Continue Tier 4 conversions and interoperability beyond the now-landed `StringForm`, `StringTemplate`, `TemplateApply`, `TextWords`, `ToCharacterCode`, `ToExpression`, `SyntaxQ`, `TextString`, `FileTemplateApply`, `CharacterCounts`, `RemoveDiacritics`, `Alphabet`, `AlphabeticSort`, `EditDistance`, `HammingDistance`, `LongestCommonSubsequence`, `SequenceAlignment`, `Diff`, `StringToByteArray`, `Hash`, `Compress`, `Encrypt`, `Nearest`, and `Pluralize`
+- [ ] Continue Tier 3 string patterns through delayed pattern rules and any remaining symbolic string-pattern parity cleanup beyond the now-landed `RegularExpression[...]` interop
+- [ ] Continue Tier 4 conversions and interoperability beyond the now-landed `StringForm`, `StringTemplate`, `TemplateApply`, `TextWords`, `ToCharacterCode`, `ToExpression`, `SyntaxQ`, `TextString`, `FileTemplateApply`, `CharacterCounts`, `RemoveDiacritics`, `Alphabet`, `AlphabeticSort`, `EditDistance`, `HammingDistance`, `LongestCommonSubsequence`, `SequenceAlignment`, `Diff`, `StringToByteArray`, `Hash`, `Compress`, `Encrypt`, `Nearest`, and `Pluralize`, including richer `ToString` formatting, deeper nearest-neighbor semantics, fuller byte-array/crypto compatibility, and language-data-backed pluralization
 - [ ] Add golden tests that cover evaluator behavior, round-tripping, formatting, matching, and unicode-heavy cases across the implemented string subset
 - [ ] Document supported string semantics, temporary limitations, and any deliberate divergence from Wolfram behavior as the subsystem grows
 

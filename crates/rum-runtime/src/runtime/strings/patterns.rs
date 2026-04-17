@@ -1,12 +1,20 @@
 use super::*;
 mod matcher;
 mod parts;
+mod regex;
 mod search;
+
+use self::regex::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum StringPattern {
     Literal(Vec<char>),
     Whitespace,
+    WhitespaceCharacter,
+    LetterCharacter,
+    DigitCharacter,
+    WordCharacter,
+    RegularExpression(RegexPattern),
     NumberString,
     Except {
         excluded: Box<StringPattern>,
@@ -123,6 +131,22 @@ fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
         return Some(StringPattern::Whitespace);
     }
 
+    if is_system_symbol_name(expr, "WhitespaceCharacter") {
+        return Some(StringPattern::WhitespaceCharacter);
+    }
+
+    if is_system_symbol_name(expr, "LetterCharacter") {
+        return Some(StringPattern::LetterCharacter);
+    }
+
+    if is_system_symbol_name(expr, "DigitCharacter") {
+        return Some(StringPattern::DigitCharacter);
+    }
+
+    if is_system_symbol_name(expr, "WordCharacter") {
+        return Some(StringPattern::WordCharacter);
+    }
+
     if is_system_symbol_name(expr, "NumberString") {
         return Some(StringPattern::NumberString);
     }
@@ -201,6 +225,11 @@ fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
             .map(parse_string_pattern)
             .collect::<Option<Vec<_>>>()
             .map(StringPattern::Sequence);
+    }
+
+    if is_system_symbol_name(head, "RegularExpression") && args.len() == 1 {
+        let pattern = expr_as_string(&args[0])?;
+        return compile_string_regex_pattern(pattern).map(StringPattern::RegularExpression);
     }
 
     if is_system_symbol_name(head, "Alternatives") && !args.is_empty() {

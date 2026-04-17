@@ -487,6 +487,21 @@ fn pattern_match_end_positions(
             .into_iter()
             .collect(),
         StringPattern::Whitespace => whitespace_match_end_positions(chars, start),
+        StringPattern::WhitespaceCharacter => {
+            single_char_match_end_positions(chars, start, is_string_whitespace)
+        }
+        StringPattern::LetterCharacter => {
+            single_char_match_end_positions(chars, start, char::is_alphabetic)
+        }
+        StringPattern::DigitCharacter => {
+            single_char_match_end_positions(chars, start, |ch| ch.is_ascii_digit())
+        }
+        StringPattern::WordCharacter => single_char_match_end_positions(chars, start, |ch| {
+            ch.is_alphabetic() || ch.is_ascii_digit() || ch == '_'
+        }),
+        StringPattern::RegularExpression(pattern) => {
+            regex_pattern_match_ends(pattern, chars, start)
+        }
         StringPattern::NumberString => number_string_match_end_positions(chars, start),
         StringPattern::Except { excluded, inner } => {
             let candidates = match inner {
@@ -639,6 +654,18 @@ fn whitespace_match_end_positions(chars: &[char], start: usize) -> Vec<usize> {
         positions.push(end);
     }
     positions
+}
+
+fn single_char_match_end_positions(
+    chars: &[char],
+    start: usize,
+    predicate: fn(char) -> bool,
+) -> Vec<usize> {
+    if start >= chars.len() || !predicate(chars[start]) {
+        return Vec::new();
+    }
+
+    vec![start + 1]
 }
 
 fn number_string_match_end_positions(chars: &[char], start: usize) -> Vec<usize> {

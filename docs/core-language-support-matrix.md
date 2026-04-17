@@ -326,8 +326,10 @@ once in its primary implementation group. Other groups may mention it as
 
 - `implemented`: canonical string atoms, Unicode code-point semantics, parser
   escape support, exact-string construction and transformation core
-- `partial`: `ToString` currently targets the canonical kernel textual form,
-  the string-pattern surface is still a first-pass subset, and the
+- `partial`: `ToString` currently accepts the common `InputForm` /
+  `OutputForm` / `StandardForm` / `FullForm` forms but still renders through
+  the current canonical kernel textual subset, the string-pattern surface is
+  still a first-pass subset, and the
   byte-array/hash/compress/encrypt/nearest/pluralization layer is still a
   current subset rather than full Wolfram parity
 - `planned`: fuller symbolic string-pattern layer, conversions, templating,
@@ -351,7 +353,13 @@ once in its primary implementation group. Other groups may mention it as
   `Pluralize`
 - `partial richer string-pattern parity`: `StartOfString`, `EndOfString`,
   `Repeated`, `RepeatedNull`, bounded repetition, `Shortest`, `Longest`,
-  `Except`, and current zero-length/match-edge handling
+  `Except`, `LetterCharacter`, `DigitCharacter`, `WordCharacter`,
+  `WhitespaceCharacter`, `RegularExpression[...]` interop, and current
+  zero-length/match-edge handling
+- `partial richer nearest/pluralize parity`: `Nearest` now supports the
+  current `DistanceFunction -> EditDistance|HammingDistance` subset over
+  strings, and `Pluralize` now covers a current irregular-English subset in
+  addition to the earlier rule-based forms
 - `planned`: deeper byte-array/crypto compatibility, richer nearest-neighbor
   distance/radius semantics, fuller compression/encryption compatibility,
   and fuller linguistic-data-backed pluralization parity

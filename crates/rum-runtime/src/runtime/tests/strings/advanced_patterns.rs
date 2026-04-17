@@ -122,3 +122,72 @@ fn bounded_repetition_and_except_extend_string_patterns() {
         "List[\"aaa\"]"
     );
 }
+
+#[test]
+fn character_class_pattern_atoms_extend_the_current_string_pattern_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"a1_ \", {LetterCharacter, DigitCharacter, WordCharacter, WhitespaceCharacter}]"
+        ),
+        "List[\"a\", \"1\", \"_\", \" \"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringMatchQ[\"a1_\", StringExpression[LetterCharacter, DigitCharacter, WordCharacter]]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringReplace[\"ab12\", DigitCharacter -> \"#\"]"
+        ),
+        "\"ab##\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringContainsQ[\"abc\", WordCharacter]"),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringCases[\" \\t\", WhitespaceCharacter]"),
+        "List[\" \", \"\\t\"]"
+    );
+}
+
+#[test]
+fn regular_expression_patterns_extend_the_current_string_pattern_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"ab12cd345\", RegularExpression[\"\\\\d+\"]]"
+        ),
+        "List[\"12\", \"345\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringMatchQ[\"ab12\", RegularExpression[\"[a-z]+\\\\d+\"]]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringReplace[\"ab12cd34\", RegularExpression[\"\\\\d+\"] -> \"#\"]"
+        ),
+        "\"ab#cd#\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"foo bar\", RegularExpression[\"(foo|bar)\"]]"
+        ),
+        "List[\"foo\", \"bar\"]"
+    );
+}

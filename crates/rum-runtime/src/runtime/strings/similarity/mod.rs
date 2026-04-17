@@ -15,56 +15,99 @@ enum NearestResultSpec {
     All,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum NearestDistanceFunction {
+    Automatic,
+    EditDistance,
+    HammingDistance,
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_nearest(
         &mut self,
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        match args {
-            [data] => {
+        if let [data] = args {
+            return Ok(Expr::call(
+                system_expr("Function"),
+                vec![Expr::call(
+                    system_expr("Nearest"),
+                    vec![data.clone(), string_slot_expr()],
+                )],
+            ));
+        }
+
+        if let [data, option_expr] = args {
+            if parse_nearest_options(std::slice::from_ref(option_expr)).is_some() {
                 return Ok(Expr::call(
                     system_expr("Function"),
                     vec![Expr::call(
                         system_expr("Nearest"),
-                        vec![data.clone(), string_slot_expr()],
+                        vec![data.clone(), string_slot_expr(), option_expr.clone()],
                     )],
                 ));
             }
-            [_, _] | [_, _, _] => {}
-            _ => return Ok(self.invalid_call_with_arg_range("Nearest", args, 1, 3)),
         }
 
-        let result_spec = match args.get(2) {
-            Some(expr) => {
-                let Some(spec) = parse_nearest_result_spec(expr) else {
+        if !(2..=4).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("Nearest", args, 1, 4));
+        }
+
+        let (result_spec, distance_function) = match args {
+            [_, _] => (
+                NearestResultSpec::BestTies,
+                NearestDistanceFunction::Automatic,
+            ),
+            [_, _, third] => {
+                if let Some(spec) = parse_nearest_result_spec(third) {
+                    (spec, NearestDistanceFunction::Automatic)
+                } else if let Some(options) = parse_nearest_options(std::slice::from_ref(third)) {
+                    (NearestResultSpec::BestTies, options.distance_function)
+                } else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                }
+            }
+            [_, _, third, fourth] => {
+                let Some(spec) = parse_nearest_result_spec(third) else {
                     return Ok(Expr::call(head.clone(), args.to_vec()));
                 };
-                spec
+                let Some(options) = parse_nearest_options(std::slice::from_ref(fourth)) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
+                (spec, options.distance_function)
             }
-            None => NearestResultSpec::BestTies,
+            _ => unreachable!(),
         };
 
         if let Some(target) = expr_as_string(&args[1]) {
             if let Some(values) = expr_as_string_list(&args[0]) {
-                return Ok(string_list_expr(nearest_strings(
-                    &values,
-                    target,
-                    result_spec,
-                )));
+                let Some(results) =
+                    nearest_strings(&values, target, result_spec, distance_function)
+                else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
+                return Ok(string_list_expr(results));
             }
 
             if let Some((keys, values)) = parse_string_rule_dataset(&args[0]) {
-                return Ok(list_expr(nearest_values_for_strings(
+                let Some(results) = nearest_values_for_strings(
                     &keys,
                     &values,
                     target,
                     result_spec,
-                )));
+                    distance_function,
+                ) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
+                return Ok(list_expr(results));
             }
         }
 
         if let Some(target) = expr_as_exact_rational(&args[1]) {
+            if distance_function != NearestDistanceFunction::Automatic {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            }
             if let Some((keys, values)) = parse_numeric_dataset(&args[0]) {
                 return Ok(list_expr(nearest_values_for_numbers(
                     &keys,

@@ -69,6 +69,7 @@ pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
     matches!(
         name,
         "Alternatives"
+            | "DistanceFunction"
             | "Flat"
             | "Heads"
             | "HoldAll"
@@ -78,6 +79,8 @@ pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
             | "Listable"
             | "OptionsPattern"
             | "EvaluationMonitor"
+            | "DigitCharacter"
+            | "LetterCharacter"
             | "OneIdentity"
             | "Orderless"
             | "PatternTest"
@@ -85,6 +88,8 @@ pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
             | "RegularExpression"
             | "StepMonitor"
             | "StringExpression"
+            | "WhitespaceCharacter"
+            | "WordCharacter"
             | "SequenceHold"
     )
 }

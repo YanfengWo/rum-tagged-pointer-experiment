@@ -40,6 +40,14 @@ fn characters_character_range_and_tostring_cover_basic_text_flows() {
         "\"Plus[1/2, x]\""
     );
     assert_eq!(
+        eval_to_string(&mut session, "ToString[1/2 + x, InputForm]"),
+        "\"Plus[1/2, x]\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[1/2 + x, FullForm]"),
+        "\"Plus[1/2, x]\""
+    );
+    assert_eq!(
         eval_to_string(&mut session, "ToString[\"line\\n\"]"),
         "\"\\\"line\\\\n\\\"\""
     );

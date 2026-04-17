@@ -90,6 +90,20 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "List[\"cat\", \"cot\"]"
     );
     assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Nearest[{\"cat\", \"cot\", \"cut\"}, \"cut\", DistanceFunction -> HammingDistance]"
+        ),
+        "List[\"cut\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Nearest[{\"cat\", \"cot\", \"cut\"}, \"cut\", 2, DistanceFunction -> HammingDistance]"
+        ),
+        "List[\"cut\", \"cat\"]"
+    );
+    assert_eq!(
         eval_to_string(&mut session, "Pluralize[\"cat\"]"),
         "\"cats\""
     );
@@ -104,5 +118,17 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
     assert_eq!(
         eval_to_string(&mut session, "Pluralize[\"box\", 2]"),
         "\"boxes\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"child\", 2]"),
+        "\"children\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"person\", 2]"),
+        "\"people\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"sheep\", 2]"),
+        "\"sheep\""
     );
 }

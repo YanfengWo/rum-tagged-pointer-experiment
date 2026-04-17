@@ -1,4 +1,53 @@
 use super::*;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct NearestOptions {
+    pub(super) distance_function: NearestDistanceFunction,
+}
+
+pub(super) fn parse_nearest_options(options: &[Expr]) -> Option<NearestOptions> {
+    let mut parsed = NearestOptions {
+        distance_function: NearestDistanceFunction::Automatic,
+    };
+
+    for option in options {
+        let option_items = if let Some(items) = call_items_with_head(option, &system_expr("List")) {
+            items.to_vec()
+        } else {
+            vec![option.clone()]
+        };
+
+        for item in option_items {
+            let Expr::Call { head, args } = item else {
+                return None;
+            };
+            if !is_system_symbol_name(&head, "Rule") || args.len() != 2 {
+                return None;
+            }
+
+            if !is_system_symbol_name(&args[0], "DistanceFunction") {
+                return None;
+            }
+
+            parsed.distance_function = parse_nearest_distance_function(&args[1])?;
+        }
+    }
+
+    Some(parsed)
+}
+
+fn parse_nearest_distance_function(expr: &Expr) -> Option<NearestDistanceFunction> {
+    if is_system_symbol_name(expr, "Automatic") {
+        return Some(NearestDistanceFunction::Automatic);
+    }
+    if is_system_symbol_name(expr, "EditDistance") {
+        return Some(NearestDistanceFunction::EditDistance);
+    }
+    if is_system_symbol_name(expr, "HammingDistance") {
+        return Some(NearestDistanceFunction::HammingDistance);
+    }
+    None
+}
 pub(super) fn parse_string_rule_dataset(expr: &Expr) -> Option<(Vec<String>, Vec<Expr>)> {
     let (keys, values) = parse_nearest_rule_pairs(expr)?;
     Some((
@@ -72,19 +121,37 @@ pub(super) fn nearest_strings(
     values: &[String],
     target: &str,
     spec: NearestResultSpec,
-) -> Vec<String> {
+    distance_function: NearestDistanceFunction,
+) -> Option<Vec<String>> {
+    let distances = string_distances(values, target, distance_function)?;
+    Some(
+        select_nearest_indices_by_usize(&distances, spec)
+            .into_iter()
+            .map(|index| values[index].clone())
+            .collect(),
+    )
+}
+
+fn string_distances(
+    values: &[String],
+    target: &str,
+    distance_function: NearestDistanceFunction,
+) -> Option<Vec<usize>> {
     let target_chars = target.chars().collect::<Vec<_>>();
-    let distances = values
+    values
         .iter()
         .map(|value| {
             let value_chars = value.chars().collect::<Vec<_>>();
-            levenshtein_distance(&value_chars, &target_chars)
+            match distance_function {
+                NearestDistanceFunction::Automatic | NearestDistanceFunction::EditDistance => {
+                    Some(levenshtein_distance(&value_chars, &target_chars))
+                }
+                NearestDistanceFunction::HammingDistance => {
+                    hamming_distance(&value_chars, &target_chars)
+                }
+            }
         })
-        .collect::<Vec<_>>();
-    select_nearest_indices_by_usize(&distances, spec)
-        .into_iter()
-        .map(|index| values[index].clone())
-        .collect()
+        .collect::<Option<Vec<_>>>()
 }
 
 pub(super) fn nearest_values_for_strings(
@@ -92,19 +159,15 @@ pub(super) fn nearest_values_for_strings(
     values: &[Expr],
     target: &str,
     spec: NearestResultSpec,
-) -> Vec<Expr> {
-    let target_chars = target.chars().collect::<Vec<_>>();
-    let distances = keys
-        .iter()
-        .map(|value| {
-            let value_chars = value.chars().collect::<Vec<_>>();
-            levenshtein_distance(&value_chars, &target_chars)
-        })
-        .collect::<Vec<_>>();
-    select_nearest_indices_by_usize(&distances, spec)
-        .into_iter()
-        .map(|index| values[index].clone())
-        .collect()
+    distance_function: NearestDistanceFunction,
+) -> Option<Vec<Expr>> {
+    let distances = string_distances(keys, target, distance_function)?;
+    Some(
+        select_nearest_indices_by_usize(&distances, spec)
+            .into_iter()
+            .map(|index| values[index].clone())
+            .collect(),
+    )
 }
 
 pub(super) fn nearest_values_for_numbers(

@@ -382,11 +382,21 @@ impl Session {
 
     pub(in crate::runtime) fn eval_to_string(
         &mut self,
-        _head: &Expr,
+        head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        if args.len() != 1 {
-            return Ok(self.invalid_call_with_exact_arg_count("ToString", args, 1));
+        if !(1..=2).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("ToString", args, 1, 2));
+        }
+
+        if let Some(form) = args.get(1) {
+            let supported = is_system_symbol_name(form, "InputForm")
+                || is_system_symbol_name(form, "OutputForm")
+                || is_system_symbol_name(form, "StandardForm")
+                || is_system_symbol_name(form, "FullForm");
+            if !supported {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            }
         }
 
         Ok(Expr::string(args[0].to_string()))
