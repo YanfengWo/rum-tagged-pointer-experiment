@@ -17,6 +17,14 @@ impl SymbolOptions {
         self.entries.is_empty()
     }
 
+    pub(super) fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub(super) fn capacity(&self) -> usize {
+        self.entries.capacity()
+    }
+
     pub(super) fn contains_key(&self, key: &Symbol) -> bool {
         self.entries.iter().any(|entry| entry.name == *key)
     }
@@ -114,6 +122,16 @@ impl SymbolOptions {
 pub(super) struct OptionValueScope {
     target: Symbol,
     explicit: SymbolOptions,
+}
+
+impl OptionValueScope {
+    pub(super) fn target(&self) -> &Symbol {
+        &self.target
+    }
+
+    pub(super) fn explicit(&self) -> &SymbolOptions {
+        &self.explicit
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -1270,6 +1288,7 @@ pub(super) fn default_system_options(symbol: &Symbol) -> SymbolOptions {
         "Cases" | "Count" | "MemberQ" | "Level" | "Depth" => {
             vec![system_rule_option("Heads", bool_option(false))]
         }
+        "Trace" | "TracePrint" => vec![system_rule_option("Heads", bool_option(false))],
         "FreeQ" | "Position" => vec![system_rule_option("Heads", bool_option(true))],
         "CheckAbort" => vec![system_rule_option(
             "PropagateAborts",

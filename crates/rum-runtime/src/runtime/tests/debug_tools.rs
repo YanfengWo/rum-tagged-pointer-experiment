@@ -40,6 +40,15 @@ fn trace_returns_a_first_pass_structured_expression_list_without_leaking_session
         with_heads.value.to_string(),
         "List[Hold[f], List[Hold[Plus]]]"
     );
+
+    session
+        .eval_text("SetOptions[Trace, Heads -> True]")
+        .unwrap();
+    let default_heads = session.eval_text("Trace[f[1], _Symbol]").unwrap();
+    assert_eq!(
+        default_heads.value.to_string(),
+        "List[Hold[f], List[Hold[Plus]]]"
+    );
 }
 
 #[test]
@@ -97,6 +106,13 @@ fn trace_print_emits_trace_lines_and_returns_the_underlying_value() {
         .unwrap();
     assert_eq!(with_heads.value.to_string(), "2");
     assert_eq!(with_heads.prints, vec!["f", "  Plus"]);
+
+    session
+        .eval_text("SetOptions[TracePrint, Heads -> True]")
+        .unwrap();
+    let default_heads = session.eval_text("TracePrint[f[1], _Symbol]").unwrap();
+    assert_eq!(default_heads.value.to_string(), "2");
+    assert_eq!(default_heads.prints, vec!["f", "  Plus"]);
 }
 
 #[test]
@@ -195,6 +211,14 @@ fn byte_count_and_memory_in_use_use_the_current_structural_proxy_subset() {
     let string_large = session.eval_text("ByteCount[\"abcdefgh\"]").unwrap().value;
     let atom = session.eval_text("ByteCount[1]").unwrap().value;
     let call = session.eval_text("ByteCount[f[1, 2, 3]]").unwrap().value;
+    let byte_array_small = session
+        .eval_text("ByteCount[StringToByteArray[\"abc\"]]")
+        .unwrap()
+        .value;
+    let byte_array_large = session
+        .eval_text("ByteCount[StringToByteArray[\"abcdefgh\"]]")
+        .unwrap()
+        .value;
 
     assert_eq!(
         session
@@ -209,6 +233,16 @@ fn byte_count_and_memory_in_use_use_the_current_structural_proxy_subset() {
     assert_eq!(
         session
             .evaluate(Expr::call(system_expr("Less"), vec![atom, call]))
+            .unwrap()
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Less"),
+                vec![byte_array_small, byte_array_large]
+            ))
             .unwrap()
             .to_string(),
         "True"
@@ -269,6 +303,27 @@ fn byte_count_and_memory_in_use_use_the_current_structural_proxy_subset() {
             .evaluate(Expr::call(
                 system_expr("Less"),
                 vec![before_once, after_once]
+            ))
+            .unwrap()
+            .to_string(),
+        "True"
+    );
+
+    session
+        .eval_text(
+            "Options[memoryScoped] = {alpha -> 1, beta -> 2}; memoryScoped[OptionsPattern[]] := {MemoryInUse[], OptionValue[{alpha, beta}]}; memoryBaseline[] := MemoryInUse[]",
+        )
+        .unwrap();
+    let scoped_baseline = session.eval_text("memoryBaseline[]").unwrap().value;
+    let scoped_memory = session
+        .eval_text("Part[memoryScoped[alpha -> 10, beta -> 20], 1]")
+        .unwrap()
+        .value;
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Less"),
+                vec![scoped_baseline, scoped_memory]
             ))
             .unwrap()
             .to_string(),
@@ -714,12 +769,42 @@ fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
     assert_eq!(
         session
             .eval_text(
+                "Lookup[Part[Lookup[TestReport[{TestCreate[Message[FindFile::notfound], Null, {ExpectedMessages -> {FindFile::notfound}}]}], \"TestResults\"], 1], \"ActualMessagesText\"]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"message emitted\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
                 "Lookup[Part[Lookup[TestReport[{TestCreate[1 + 1, 2]}], \"TestResults\"], 1], \"Input\"]",
             )
             .unwrap()
             .value
             .to_string(),
         "Hold[Plus[1, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "Lookup[Part[Lookup[TestReport[{TestCreate[Echo[1 + 1], 2]}], \"TestResults\"], 1], \"OutputLog\"]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"2\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "NumberQ[Lookup[Part[Lookup[TestReport[{TestCreate[Echo[1 + 1], 2]}], \"TestResults\"], 1], \"Timing\"]]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
     );
     assert_eq!(
         session

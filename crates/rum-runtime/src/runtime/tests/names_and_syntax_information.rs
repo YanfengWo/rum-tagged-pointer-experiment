@@ -564,7 +564,31 @@ fn syntax_information_covers_current_cl09_debugging_surface_subset() {
             .unwrap()
             .value
             .to_string(),
-        "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]]]]]"
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]]]], Rule[\"OptionNames\", List[\"Heads\"]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[Trace]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[Heads, False]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[TracePrint]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]]]], Rule[\"OptionNames\", List[\"Heads\"]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[TracePrint]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[Heads, False]]"
     );
     assert_eq!(
         session

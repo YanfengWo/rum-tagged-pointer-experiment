@@ -444,9 +444,10 @@ once in its primary implementation group. Other groups may mention it as
   `RepeatedTiming[...]`, echo-style debugging output, session-level `On` /
   `Off` message gating, `Sow` / `Reap` tag collection, a current
   canonical-text `Short[...]` display subset, a current
-  structural-proxy `ByteCount[...]` subset, cooperative
+  layout-aware structural `ByteCount[...]` subset with payload-aware
+  `ByteArray[...]` accounting, cooperative
   `TimeConstrained[...]` / `MemoryConstrained[...]` wrappers, a session
-  structural memory-proxy `MemoryInUse[]` subset, `Monitor[...]` hooks with
+  layout-aware structural memory-proxy `MemoryInUse[]` subset, `Monitor[...]` hooks with
   current `EvaluationMonitor` / `StepMonitor` option symbols plus stable
   initial/final display refreshes, broader default-option coverage, and
   explicit `None` callback overrides, a first-pass `Dialog[...]` subset with
@@ -461,7 +462,8 @@ once in its primary implementation group. Other groups may mention it as
   `TestID`, `SameTest`, and expected-message matching with current
   `TestReport[..., prop]` string-or-symbol projection plus report-level
   `"Success"`, held per-test `"Input"`, current merging of
-  `{report_1, report_2, ...}`, and current report-level
+  `{report_1, report_2, ...}`, broader per-test `ActualMessagesText` /
+  `OutputLog` / `Timing` payloads, and current report-level
   `SameTest` / `TimeConstraint` / `MemoryConstraint` options, alongside
   `Stack[]`; richer
   verification, monitoring, and resource-accounting parity is still
@@ -481,15 +483,20 @@ once in its primary implementation group. Other groups may mention it as
   `TestReport`, `Stack` in
   the current first-pass subset, including a structured default
   `Trace[expr]` model plus structured filtered trace forms with the current
-  levelspec and `Heads` filtering, depth-aware nested branch shaping, an indented structured
-  `TracePrint[...]` subset, current structural byte/memory proxy
-  semantics, current symbol-or-string report/property projection,
+  levelspec and `Heads` filtering, current default `Heads` option support
+  for filtered `Trace[...]` / `TracePrint[...]`, depth-aware nested branch
+  shaping, an indented structured `TracePrint[...]` subset, current
+  layout-aware structural byte/memory accounting with payload-aware
+  `ByteArray[...]` handling, current symbol-or-string report/property projection,
   held message-expression payloads, current report merging plus
   current report-level `SameTest` / `TimeConstraint` / `MemoryConstraint`
-  options, current input-resume coverage for `EvaluationData` / `Monitor`,
+  options, broader per-test `ActualMessagesText` / `OutputLog` / `Timing`
+  payloads, current input-resume coverage for `EvaluationData` / `Monitor`,
   and a first-pass `Dialog[...]` / `Dialog[]` one-shot subset with current
-  `DialogProlog` / `DialogSymbols` handling
-- `planned`: deeper trace/resource/monitor/test parity
+  `DialogProlog` / `DialogSymbols` handling; treat any remaining deeper
+  real-memory accounting or trace/report edge-case parity as long-tail polish
+  rather than active mainline blockers
+- `planned`: deeper real-memory accounting and trace/report edge-case polish
 - `cross-tracked elsewhere`: `AbortProtect`, `Check`, `CheckAbort`,
   `Failure`, `Message`, `Missing`, `PropagateAborts`, `Quiet`
 
