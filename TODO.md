@@ -221,7 +221,8 @@ This roadmap intentionally uses two levels of detail:
   - [x] deepen the current CL-09 subset with depth-aware structured `Trace[...]` branching, more stable nested filtered-trace shells, matching nested `TracePrint[...]`, and aligned `EvaluationData["Trace"]` trees for the current structured subset
   - [x] deepen the current CL-09 subset with symbol-or-string property projection for `EvaluationData[...]` / `TestReport[...]`, input-resume coverage for `EvaluationData[...]` and `Monitor[...]`, and broader `MemoryInUse[]` growth coverage through persisted `Once[...]` state
   - [x] deepen the current CL-09 subset with held `EvaluationData["MessagesExpressions"]`, `TestReport` merging for `{report1, report2, ...}`, current report-level `SameTest` / `TimeConstraint` / `MemoryConstraint` options, and matching `SyntaxInformation` / default-option coverage
-  - [ ] finish the remaining CL-09 long tail around `Dialog`, fuller non-proxy resource/accounting semantics, and any last structured-trace/report shape corners
+  - [x] land a first-pass `Dialog` subset with `Return`-sensitive evaluation boundaries, `DialogProlog` / `DialogSymbols` option plumbing, and input-resume coverage through the existing host-input suspension model
+  - [ ] finish the remaining CL-09 long tail around fuller non-proxy resource/accounting semantics and any last structured-trace/report shape corners
 - [ ] Defer reviewing the local `WLBuiltin/` workspace until the `CL-01` through `CL-09` mainline is complete; keep it ignored for now so it does not disrupt the active kernel roadmap
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:

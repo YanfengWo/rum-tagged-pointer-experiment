@@ -559,6 +559,7 @@ pub enum BuiltinHandler {
     Evaluate,
     Sequence,
     Thread,
+    Dialog,
     Input,
     InputString,
     Print,

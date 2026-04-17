@@ -92,6 +92,7 @@ impl Session {
             }),
             BuiltinHandler::Sequence => Ok(sequence_expr(args.to_vec())),
             BuiltinHandler::Thread => self.eval_thread(head, args),
+            BuiltinHandler::Dialog => self.eval_dialog(args),
             BuiltinHandler::InputString => self.eval_input_string(args),
             BuiltinHandler::Input => self.eval_input(args),
             BuiltinHandler::Print => self.eval_print(args),

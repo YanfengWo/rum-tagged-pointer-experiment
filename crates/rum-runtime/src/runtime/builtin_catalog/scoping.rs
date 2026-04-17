@@ -83,6 +83,12 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
         "Threads an expression over arguments that share a common head.",
         BuiltinHandler::Thread,
     ),
+    BuiltinSpec::ordinary_with_hold(
+        "Dialog",
+        "Runs the current first-pass dialog subset with Return-sensitive evaluation and host-input suspension.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Dialog,
+    ),
     BuiltinSpec::ordinary(
         "InputString",
         "Requests one line of host-provided text and returns it as a string.",

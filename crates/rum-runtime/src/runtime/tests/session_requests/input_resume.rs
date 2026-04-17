@@ -248,6 +248,28 @@ fn resume_eval_request_with_input_keeps_monitor_display_and_finishes_the_body() 
 }
 
 #[test]
+fn resume_eval_request_with_input_finishes_dialog_subsets() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("Dialog[InputString[\"name: \"]]")
+        .expect_err("Dialog body should suspend when it reaches InputString");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "name: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("Alice")
+        .expect("resume should finish the suspended Dialog body");
+
+    assert_eq!(response.value.to_string(), "\"Alice\"");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_delayed_message_templates() {
     let mut session = Session::new();
     session

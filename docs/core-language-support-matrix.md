@@ -449,7 +449,9 @@ once in its primary implementation group. Other groups may mention it as
   structural memory-proxy `MemoryInUse[]` subset, `Monitor[...]` hooks with
   current `EvaluationMonitor` / `StepMonitor` option symbols plus stable
   initial/final display refreshes, broader default-option coverage, and
-  explicit `None` callback overrides,
+  explicit `None` callback overrides, a first-pass `Dialog[...]` subset with
+  `Return`-sensitive evaluation boundaries plus current `DialogProlog` /
+  `DialogSymbols` handling and host-input resume support,
   `EvaluationData[...]` property projection through current string-or-symbol,
   list, and `All` forms plus `"Properties"` with matching structured `"Trace"`,
   held `"Input"`, and held `"MessagesExpressions"` payloads, including current
@@ -474,8 +476,9 @@ once in its primary implementation group. Other groups may mention it as
 - `partial`: `Trace`, `TracePrint`, `Timing`, `AbsoluteTiming`,
   `RepeatedTiming`, `ByteCount`, `Short`, `Echo`, `EchoFunction`,
   `EchoLabel`, `On`, `Off`, `Sow`, `Reap`, `TimeConstrained`,
-  `MemoryConstrained`, `MemoryInUse`, `Monitor`, `EvaluationMonitor`,
-  `StepMonitor`, `EvaluationData`, `TestCreate`, `TestReport`, `Stack` in
+  `MemoryConstrained`, `MemoryInUse`, `Monitor`, `Dialog`,
+  `EvaluationMonitor`, `StepMonitor`, `EvaluationData`, `TestCreate`,
+  `TestReport`, `Stack` in
   the current first-pass subset, including a structured default
   `Trace[expr]` model plus structured filtered trace forms with the current
   levelspec and `Heads` filtering, depth-aware nested branch shaping, an indented structured
@@ -483,10 +486,10 @@ once in its primary implementation group. Other groups may mention it as
   semantics, current symbol-or-string report/property projection,
   held message-expression payloads, current report merging plus
   current report-level `SameTest` / `TimeConstraint` / `MemoryConstraint`
-  options, and current input-resume coverage for `EvaluationData` / `Monitor`
-  matching
-- `planned`: `Dialog`, plus deeper trace/resource/monitor/test
-  parity
+  options, current input-resume coverage for `EvaluationData` / `Monitor`,
+  and a first-pass `Dialog[...]` / `Dialog[]` one-shot subset with current
+  `DialogProlog` / `DialogSymbols` handling
+- `planned`: deeper trace/resource/monitor/test parity
 - `cross-tracked elsewhere`: `AbortProtect`, `Check`, `CheckAbort`,
   `Failure`, `Message`, `Missing`, `PropagateAborts`, `Quiet`
 

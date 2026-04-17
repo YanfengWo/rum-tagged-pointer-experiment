@@ -3,7 +3,67 @@ use std::time::Duration;
 
 use super::*;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct DialogConfig {
+    body: Option<Expr>,
+    prolog: Expr,
+    symbols: Vec<(Symbol, Option<Expr>)>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DialogNormalizationError {
+    InvalidOptions,
+    InvalidSymbols,
+}
+
+impl DialogNormalizationError {
+    fn message(self) -> &'static str {
+        match self {
+            Self::InvalidOptions => {
+                "expected only DialogProlog and DialogSymbols option rules in the current first-pass subset"
+            }
+            Self::InvalidSymbols => {
+                "expected DialogSymbols to be a list of symbols or symbol initializers in the current first-pass subset"
+            }
+        }
+    }
+}
+
 impl Session {
+    pub(super) fn eval_dialog(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let config = match self.compile_dialog_call(args) {
+            Ok(config) => config,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form("Dialog", args, error.message()));
+            }
+        };
+
+        let body = self.dialog_body_expr(config.body);
+        let body = if is_system_symbol_name(&config.prolog, "Null") {
+            body
+        } else {
+            Expr::call(system_expr("CompoundExpression"), vec![config.prolog, body])
+        };
+        let body = if config.symbols.is_empty() {
+            body
+        } else {
+            Expr::call(
+                system_expr("Block"),
+                vec![render_dialog_symbols_bindings(&config.symbols), body],
+            )
+        };
+
+        let body_result = self.evaluate(body);
+        let outcome = self.suspend_with_result_frame(body_result, |session, outcome| {
+            session.finish_dialog_body(outcome)
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.finish_dialog_body(outcome),
+        }
+    }
+
     pub(super) fn eval_input_string(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let prompt = match args {
             [] => String::new(),
@@ -75,6 +135,85 @@ impl Session {
         Ok(system_expr("Null"))
     }
 
+    fn compile_dialog_call(
+        &mut self,
+        args: &[Expr],
+    ) -> Result<DialogConfig, DialogNormalizationError> {
+        let (body, option_exprs) = split_dialog_body_and_options(args);
+        let explicit_options = if option_exprs.is_empty() {
+            None
+        } else {
+            let options = self
+                .compile_assigned_options_from_resolved(&Expr::call(
+                    system_expr("List"),
+                    option_exprs.to_vec(),
+                ))
+                .map_err(|_| DialogNormalizationError::InvalidOptions)?;
+            Some(options)
+        };
+
+        if let Some(options) = explicit_options.as_ref() {
+            for (name, _, _) in options.iter() {
+                if !matches!(name.name(), "DialogProlog" | "DialogSymbols") {
+                    return Err(DialogNormalizationError::InvalidOptions);
+                }
+            }
+        }
+
+        let prolog = self.dialog_option_raw_expr(explicit_options.as_ref(), "DialogProlog")?;
+        let symbols_expr =
+            self.dialog_option_raw_expr(explicit_options.as_ref(), "DialogSymbols")?;
+        let symbols = match symbols_expr {
+            Some((expr, _delayed)) => {
+                parse_module_binding_list(&expr).ok_or(DialogNormalizationError::InvalidSymbols)?
+            }
+            None => Vec::new(),
+        };
+
+        Ok(DialogConfig {
+            body: body.cloned(),
+            prolog: prolog
+                .map(|(expr, _delayed)| expr)
+                .unwrap_or_else(|| system_expr("Null")),
+            symbols,
+        })
+    }
+
+    fn dialog_body_expr(&self, body: Option<Expr>) -> Expr {
+        body.unwrap_or_else(|| Expr::call(system_expr("Input"), vec![Expr::string("")]))
+    }
+
+    fn dialog_option_raw_expr(
+        &mut self,
+        explicit: Option<&SymbolOptions>,
+        option_name: &str,
+    ) -> Result<Option<(Expr, bool)>, DialogNormalizationError> {
+        if let Some(options) = explicit {
+            for (name, value, delayed) in options.iter() {
+                if name.name() == option_name {
+                    return Ok(Some((value.clone(), delayed)));
+                }
+            }
+        }
+
+        let defaults = self.options_for_symbol(&Symbol::system("Dialog"));
+        for (name, value, delayed) in defaults.iter() {
+            if name.name() == option_name {
+                return Ok(Some((value.clone(), delayed)));
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn finish_dialog_body(&mut self, outcome: Result<Expr, EvalError>) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) => Ok(value),
+            Err(EvalError::Return { value }) => Ok(value),
+            Err(error) => Err(error),
+        }
+    }
+
     fn resume_input_after_text(&mut self, text: Expr) -> Result<Expr, EvalError> {
         let Expr::Atom(Atom::String(source)) = text else {
             return Ok(text);
@@ -85,6 +224,50 @@ impl Session {
         let evaluated = self.evaluate(expr);
         self.suspend_with_frame(evaluated, |_, value| Ok(value))
     }
+}
+
+fn split_dialog_body_and_options(args: &[Expr]) -> (Option<&Expr>, &[Expr]) {
+    match args {
+        [] => (None, &[]),
+        [first, rest @ ..] if is_dialog_option_expr(first) => (None, args),
+        [first, rest @ ..] => (Some(first), rest),
+    }
+}
+
+fn is_dialog_option_expr(expr: &Expr) -> bool {
+    let Expr::Call { head, args } = expr else {
+        return false;
+    };
+
+    if !(is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
+        || args.len() != 2
+    {
+        return false;
+    }
+
+    matches!(
+        &args[0],
+        Expr::Atom(Atom::Symbol(name)) if matches!(name.name(), "DialogProlog" | "DialogSymbols")
+    ) || matches!(
+        &args[0],
+        Expr::Atom(Atom::String(name)) if matches!(name.as_str(), "DialogProlog" | "DialogSymbols")
+    )
+}
+
+fn render_dialog_symbols_bindings(items: &[(Symbol, Option<Expr>)]) -> Expr {
+    Expr::call(
+        system_expr("List"),
+        items
+            .iter()
+            .map(|(symbol, init)| match init {
+                Some(init) => Expr::call(
+                    system_expr("Rule"),
+                    vec![Expr::Atom(Atom::Symbol(symbol.clone())), init.clone()],
+                ),
+                None => Expr::Atom(Atom::Symbol(symbol.clone())),
+            })
+            .collect(),
+    )
 }
 
 fn render_print_fragment(expr: &Expr) -> String {

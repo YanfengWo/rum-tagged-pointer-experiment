@@ -2,6 +2,8 @@ use super::*;
 
 const EXTRA_SYSTEM_NAME_SYMBOLS: &[&str] = &[
     "Alternatives",
+    "DialogProlog",
+    "DialogSymbols",
     "Flat",
     "EvaluationMonitor",
     "Heads",
@@ -380,6 +382,16 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
             blank_expr(),
             optional_blank_expr(),
         ])],
+        "Dialog" => vec![
+            syntax_argument_pattern(vec![optional_blank_expr(), system_expr("OptionsPattern")]),
+            syntax_rule(
+                "OptionNames",
+                string_list_expr(vec![
+                    "DialogProlog".to_string(),
+                    "DialogSymbols".to_string(),
+                ]),
+            ),
+        ],
         "MemoryInUse" | "Stack" => vec![syntax_argument_pattern(Vec::new())],
         "Monitor" => vec![
             syntax_argument_pattern(vec![

@@ -1279,6 +1279,10 @@ pub(super) fn default_system_options(symbol: &Symbol) -> SymbolOptions {
             system_rule_option("EvaluationMonitor", system_expr("None")),
             system_rule_option("StepMonitor", system_expr("None")),
         ],
+        "Dialog" => vec![
+            system_rule_option("DialogProlog", system_expr("Null")),
+            system_rule_option("DialogSymbols", Expr::call(system_expr("List"), Vec::new())),
+        ],
         "TestReport" => vec![
             system_rule_option("SameTest", system_expr("SameQ")),
             system_rule_option("TimeConstraint", system_expr("Infinity")),
