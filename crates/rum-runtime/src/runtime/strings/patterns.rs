@@ -9,6 +9,14 @@ use self::regex::*;
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum StringPattern {
     Literal(Vec<char>),
+    AnyCharacter,
+    AnySequence {
+        min: usize,
+    },
+    Capture {
+        symbol: Symbol,
+        inner: Box<StringPattern>,
+    },
     Whitespace,
     WhitespaceCharacter,
     LetterCharacter,
@@ -82,7 +90,7 @@ struct ExactStringReplacementRule {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum ExactStringReplacementValue {
-    Immediate(String),
+    Immediate(Expr),
     Delayed(Expr),
 }
 
@@ -139,6 +147,18 @@ fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
         return Some(StringPattern::Literal(chars));
     }
 
+    if is_system_symbol_name(expr, "Blank") {
+        return Some(StringPattern::AnyCharacter);
+    }
+
+    if is_system_symbol_name(expr, "BlankSequence") {
+        return Some(StringPattern::AnySequence { min: 1 });
+    }
+
+    if is_system_symbol_name(expr, "BlankNullSequence") {
+        return Some(StringPattern::AnySequence { min: 0 });
+    }
+
     if is_system_symbol_name(expr, "Whitespace") {
         return Some(StringPattern::Whitespace);
     }
@@ -178,6 +198,45 @@ fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
     let Expr::Call { head, args } = expr else {
         return None;
     };
+
+    if is_system_symbol_name(head, "Pattern") && args.len() == 2 {
+        return Some(StringPattern::Capture {
+            symbol: expr_as_symbol(&args[0])?.clone(),
+            inner: Box::new(parse_string_pattern(&args[1])?),
+        });
+    }
+
+    if is_system_symbol_name(head, "Blank") && args.is_empty() {
+        return Some(StringPattern::AnyCharacter);
+    }
+
+    if is_system_symbol_name(head, "Blank") && args.len() == 1 {
+        return parse_string_pattern(&args[0]);
+    }
+
+    if is_system_symbol_name(head, "BlankSequence") && args.is_empty() {
+        return Some(StringPattern::AnySequence { min: 1 });
+    }
+
+    if is_system_symbol_name(head, "BlankSequence") && args.len() == 1 {
+        return Some(StringPattern::Repeated {
+            pattern: Box::new(parse_string_pattern(&args[0])?),
+            min: 1,
+            max: None,
+        });
+    }
+
+    if is_system_symbol_name(head, "BlankNullSequence") && args.is_empty() {
+        return Some(StringPattern::AnySequence { min: 0 });
+    }
+
+    if is_system_symbol_name(head, "BlankNullSequence") && args.len() == 1 {
+        return Some(StringPattern::Repeated {
+            pattern: Box::new(parse_string_pattern(&args[0])?),
+            min: 0,
+            max: None,
+        });
+    }
 
     if is_system_symbol_name(head, "Except") && args.len() == 1 {
         return Some(StringPattern::Except {
@@ -283,7 +342,7 @@ fn parse_exact_string_replacement_rule(expr: &Expr) -> Option<ExactStringReplace
     }
 
     let replacement = if is_system_symbol_name(head, "Rule") {
-        ExactStringReplacementValue::Immediate(expr_as_string(&args[1])?.to_string())
+        ExactStringReplacementValue::Immediate(args[1].clone())
     } else if is_system_symbol_name(head, "RuleDelayed") {
         ExactStringReplacementValue::Delayed(args[1].clone())
     } else {

@@ -191,3 +191,25 @@ fn regular_expression_patterns_extend_the_current_string_pattern_subset() {
         "List[\"foo\", \"bar\"]"
     );
 }
+
+#[test]
+fn symbolic_blank_patterns_extend_the_current_string_pattern_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "StringMatchQ[\"a\", _]"),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringMatchQ[\"ab\", __]"),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringMatchQ[\"\", ___]"),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringContainsQ[\"abc\", __]"),
+        "True"
+    );
+}

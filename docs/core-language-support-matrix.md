@@ -354,8 +354,9 @@ once in its primary implementation group. Other groups may mention it as
 - `partial richer string-pattern parity`: `StartOfString`, `EndOfString`,
   `Repeated`, `RepeatedNull`, bounded repetition, `Shortest`, `Longest`,
   `Except`, `LetterCharacter`, `DigitCharacter`, `WordCharacter`,
-  `WhitespaceCharacter`, `RegularExpression[...]` interop, delayed
-  `RuleDelayed` handling for current string replace/case rules, and current
+  `WhitespaceCharacter`, `RegularExpression[...]` interop, `_` / `__` /
+  `___`, named `Pattern[x, ...]` capture bindings, current `Rule` /
+  `RuleDelayed` substitution for string replace/case rules, and current
   zero-length/match-edge handling
 - `partial richer nearest/pluralize parity`: `Nearest` now supports the
   current `DistanceFunction -> EditDistance|HammingDistance` subset over

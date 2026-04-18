@@ -296,3 +296,34 @@ fn delayed_string_rules_evaluate_at_application_time() {
         "List[1, 2, 3]"
     );
 }
+
+#[test]
+fn symbolic_string_patterns_bind_named_captures_in_rules() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringReplace[\"ab\", x_ :> StringJoin[\"<\", x, \">\"]]"
+        ),
+        "\"<a><b>\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringReplace[\"ab\", x_ -> x]"),
+        "\"ab\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"ab12\", StringExpression[Pattern[letters, Repeated[LetterCharacter]], Pattern[digits, Repeated[DigitCharacter]]] -> {letters, digits}]"
+        ),
+        "List[List[\"ab\", \"12\"]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"ab12\", StringExpression[Pattern[letters, Repeated[LetterCharacter]], Pattern[digits, Repeated[DigitCharacter]]] :> StringJoin[digits, \"-\", letters]]"
+        ),
+        "List[\"12-ab\"]"
+    );
+}

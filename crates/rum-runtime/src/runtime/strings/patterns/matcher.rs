@@ -1,5 +1,11 @@
 use super::*;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct StringPatternMatchState {
+    pub(super) end: usize,
+    pub(super) bindings: BTreeMap<Symbol, Expr>,
+}
+
 pub(super) fn string_contains_q(
     haystack: &[char],
     pattern: &StringPattern,
@@ -129,53 +135,6 @@ pub(super) fn trim_string_value(value: &str, spec: &StringBoundarySpec) -> Strin
         StringBoundarySpec::Whitespace => trim_whitespace_chars(&chars),
         StringBoundarySpec::Patterns(patterns) => trim_string_patterns(&chars, patterns),
     }
-}
-
-pub(super) fn replace_string_value(
-    value: &str,
-    rules: &[ExactStringReplacementRule],
-    max_replacements: usize,
-    config: StringPatternMatchConfig,
-) -> String {
-    if max_replacements == 0 {
-        return value.to_string();
-    }
-
-    let chars = value.chars().collect::<Vec<_>>();
-    let mut output = String::new();
-    let mut index = 0;
-    let mut replacements = 0usize;
-
-    while index < chars.len() {
-        if replacements >= max_replacements {
-            output.extend(chars[index..].iter());
-            break;
-        }
-
-        if let Some((rule, end)) = rules.iter().find_map(|rule| {
-            best_pattern_match_end(&rule.pattern, &chars, index, config).map(|end| (rule, end))
-        }) {
-            let ExactStringReplacementValue::Immediate(replacement) = &rule.replacement else {
-                output.extend(chars[index..end].iter());
-                index = if end == index { index + 1 } else { end };
-                replacements += 1;
-                continue;
-            };
-            output.push_str(replacement);
-            if end == index {
-                output.push(chars[index]);
-                index += 1;
-            } else {
-                index = end;
-            }
-            replacements += 1;
-        } else {
-            output.push(chars[index]);
-            index += 1;
-        }
-    }
-
-    output
 }
 
 pub(super) fn collect_string_cases(
@@ -484,6 +443,20 @@ pub(super) fn best_pattern_match_end(
     }
 }
 
+pub(super) fn best_pattern_match_state(
+    pattern: &StringPattern,
+    chars: &[char],
+    start: usize,
+    config: StringPatternMatchConfig,
+) -> Option<StringPatternMatchState> {
+    let states = pattern_match_states(pattern, chars, start, config);
+    if pattern_prefers_shortest(pattern) {
+        states.into_iter().min_by_key(|state| state.end)
+    } else {
+        states.into_iter().max_by_key(|state| state.end)
+    }
+}
+
 fn pattern_match_end_positions(
     pattern: &StringPattern,
     chars: &[char],
@@ -498,6 +471,11 @@ fn pattern_match_end_positions(
         StringPattern::Literal(literal) => literal_match_end(chars, literal, start, config)
             .into_iter()
             .collect(),
+        StringPattern::AnyCharacter => any_character_match_end_positions(chars, start),
+        StringPattern::AnySequence { min } => any_sequence_match_end_positions(chars, start, *min),
+        StringPattern::Capture { inner, .. } => {
+            pattern_match_end_positions(inner, chars, start, config)
+        }
         StringPattern::Whitespace => whitespace_match_end_positions(chars, start),
         StringPattern::WhitespaceCharacter => {
             single_char_match_end_positions(chars, start, is_string_whitespace)
@@ -579,6 +557,90 @@ fn pattern_prefers_shortest(pattern: &StringPattern) -> bool {
     matches!(pattern, StringPattern::Shortest(_))
 }
 
+fn pattern_match_states(
+    pattern: &StringPattern,
+    chars: &[char],
+    start: usize,
+    config: StringPatternMatchConfig,
+) -> Vec<StringPatternMatchState> {
+    if start > chars.len() {
+        return Vec::new();
+    }
+
+    match pattern {
+        StringPattern::Literal(_)
+        | StringPattern::AnyCharacter
+        | StringPattern::AnySequence { .. }
+        | StringPattern::Whitespace
+        | StringPattern::WhitespaceCharacter
+        | StringPattern::LetterCharacter
+        | StringPattern::DigitCharacter
+        | StringPattern::WordCharacter
+        | StringPattern::RegularExpression(_)
+        | StringPattern::NumberString
+        | StringPattern::Except { .. }
+        | StringPattern::StartOfString
+        | StringPattern::EndOfString => pattern_match_end_positions(pattern, chars, start, config)
+            .into_iter()
+            .map(empty_match_state)
+            .collect(),
+        StringPattern::Capture { symbol, inner } => {
+            pattern_match_states(inner, chars, start, config)
+                .into_iter()
+                .filter_map(|state| {
+                    let binding = Expr::string(pattern_match_text(&chars[start..state.end]));
+                    let bindings = merge_symbol_binding(&state.bindings, symbol, binding)?;
+                    Some(StringPatternMatchState {
+                        end: state.end,
+                        bindings,
+                    })
+                })
+                .collect()
+        }
+        StringPattern::Repeated { pattern, min, max } => {
+            repeated_pattern_match_states(pattern, chars, start, *min, *max, config)
+        }
+        StringPattern::Shortest(inner) | StringPattern::Longest(inner) => {
+            pattern_match_states(inner, chars, start, config)
+        }
+        StringPattern::Sequence(parts) => {
+            let mut states = vec![empty_match_state(start)];
+            for part in parts {
+                let mut next_states = Vec::new();
+                for state in states {
+                    for part_state in pattern_match_states(part, chars, state.end, config) {
+                        if let Some(bindings) =
+                            merge_match_bindings(&state.bindings, &part_state.bindings)
+                        {
+                            push_unique_match_state(
+                                &mut next_states,
+                                StringPatternMatchState {
+                                    end: part_state.end,
+                                    bindings,
+                                },
+                            );
+                        }
+                    }
+                }
+                if next_states.is_empty() {
+                    return Vec::new();
+                }
+                states = next_states;
+            }
+            states
+        }
+        StringPattern::Alternatives(alternatives) => {
+            let mut states = Vec::new();
+            for alternative in alternatives {
+                for state in pattern_match_states(alternative, chars, start, config) {
+                    push_unique_match_state(&mut states, state);
+                }
+            }
+            states
+        }
+    }
+}
+
 fn repeated_pattern_end_positions(
     pattern: &StringPattern,
     chars: &[char],
@@ -622,11 +684,75 @@ fn repeated_pattern_end_positions(
     positions
 }
 
+fn repeated_pattern_match_states(
+    pattern: &StringPattern,
+    chars: &[char],
+    start: usize,
+    min: usize,
+    max: Option<usize>,
+    config: StringPatternMatchConfig,
+) -> Vec<StringPatternMatchState> {
+    let mut frontier = vec![empty_match_state(start)];
+    let mut states = if min == 0 {
+        vec![empty_match_state(start)]
+    } else {
+        Vec::new()
+    };
+    let mut steps = 0usize;
+
+    loop {
+        if max.is_some_and(|max| steps >= max) {
+            break;
+        }
+
+        let mut next = Vec::new();
+        for state in frontier {
+            for part_state in pattern_match_states(pattern, chars, state.end, config) {
+                if part_state.end <= state.end {
+                    continue;
+                }
+                if let Some(bindings) = merge_match_bindings(&state.bindings, &part_state.bindings)
+                {
+                    push_unique_match_state(
+                        &mut next,
+                        StringPatternMatchState {
+                            end: part_state.end,
+                            bindings,
+                        },
+                    );
+                }
+            }
+        }
+
+        if next.is_empty() {
+            break;
+        }
+
+        steps += 1;
+        if steps >= min {
+            for state in next.iter().cloned() {
+                push_unique_match_state(&mut states, state);
+            }
+        }
+        frontier = next;
+    }
+
+    states
+}
+
 fn any_character_match_end_positions(chars: &[char], start: usize) -> Vec<usize> {
     (start < chars.len())
         .then_some(start + 1)
         .into_iter()
         .collect()
+}
+
+fn any_sequence_match_end_positions(chars: &[char], start: usize, min: usize) -> Vec<usize> {
+    let start = start.saturating_add(min);
+    if start > chars.len() {
+        return Vec::new();
+    }
+    (start..=chars.len()).collect()
 }
 
 fn literal_match_end(
@@ -717,4 +843,53 @@ fn number_string_match_end_positions(chars: &[char], start: usize) -> Vec<usize>
     }
 
     positions
+}
+
+fn empty_match_state(end: usize) -> StringPatternMatchState {
+    StringPatternMatchState {
+        end,
+        bindings: BTreeMap::new(),
+    }
+}
+
+fn merge_symbol_binding(
+    bindings: &BTreeMap<Symbol, Expr>,
+    symbol: &Symbol,
+    value: Expr,
+) -> Option<BTreeMap<Symbol, Expr>> {
+    let mut merged = bindings.clone();
+    if let Some(existing) = merged.get(symbol) {
+        if existing != &value {
+            return None;
+        }
+    } else {
+        merged.insert(symbol.clone(), value);
+    }
+    Some(merged)
+}
+
+fn merge_match_bindings(
+    left: &BTreeMap<Symbol, Expr>,
+    right: &BTreeMap<Symbol, Expr>,
+) -> Option<BTreeMap<Symbol, Expr>> {
+    let mut merged = left.clone();
+    for (symbol, value) in right {
+        if let Some(existing) = merged.get(symbol) {
+            if existing != value {
+                return None;
+            }
+        } else {
+            merged.insert(symbol.clone(), value.clone());
+        }
+    }
+    Some(merged)
+}
+
+fn push_unique_match_state(
+    states: &mut Vec<StringPatternMatchState>,
+    candidate: StringPatternMatchState,
+) {
+    if !states.contains(&candidate) {
+        states.push(candidate);
+    }
 }

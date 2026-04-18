@@ -1,8 +1,8 @@
 use super::matcher::{
-    best_pattern_match_at, best_pattern_match_end, collect_string_cases, pattern_match_text,
-    replace_string_value, split_string_value, string_contains_q, string_count_matches,
-    string_delete_matches, string_ends_q, string_free_q, string_match_q, string_position_expr,
-    string_starts_q, trim_string_value,
+    best_pattern_match_at, best_pattern_match_state, collect_string_cases, pattern_match_text,
+    split_string_value, string_contains_q, string_count_matches, string_delete_matches,
+    string_ends_q, string_free_q, string_match_q, string_position_expr, string_starts_q,
+    trim_string_value,
 };
 use super::*;
 
@@ -165,46 +165,25 @@ impl Session {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let has_delayed_rules = rules
-            .iter()
-            .any(|rule| matches!(rule.replacement, ExactStringReplacementValue::Delayed(_)));
-
         if let Some(value) = expr_as_string(&args[0]) {
-            return Ok(if has_delayed_rules {
-                Expr::string(self.replace_string_value_with_delayed_rules(
-                    value,
-                    &rules,
-                    max_replacements,
-                    config,
-                )?)
-            } else {
-                Expr::string(replace_string_value(
-                    value,
-                    &rules,
-                    max_replacements,
-                    config,
-                ))
-            });
+            return Ok(Expr::string(self.replace_string_value_with_rules(
+                value,
+                &rules,
+                max_replacements,
+                config,
+            )?));
         }
 
         if let Some(values) = expr_as_string_list(&args[0]) {
-            let rendered = if has_delayed_rules {
-                let mut outputs = Vec::with_capacity(values.len());
-                for value in values {
-                    outputs.push(self.replace_string_value_with_delayed_rules(
-                        &value,
-                        &rules,
-                        max_replacements,
-                        config,
-                    )?);
-                }
-                outputs
-            } else {
-                values
-                    .into_iter()
-                    .map(|value| replace_string_value(&value, &rules, max_replacements, config))
-                    .collect()
-            };
+            let mut rendered = Vec::with_capacity(values.len());
+            for value in values {
+                rendered.push(self.replace_string_value_with_rules(
+                    &value,
+                    &rules,
+                    max_replacements,
+                    config,
+                )?);
+            }
             return Ok(string_list_expr(rendered));
         }
 
@@ -229,17 +208,9 @@ impl Session {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let has_delayed_rules = matches!(
-            &spec,
-            ExactStringCaseSpec::Rules(rules)
-                if rules
-                    .iter()
-                    .any(|rule| matches!(rule.output, ExactStringCaseOutput::Delayed(_)))
-        );
-
         if let Some(value) = expr_as_string(&args[0]) {
-            return Ok(if has_delayed_rules {
-                list_expr(self.collect_string_cases_with_delayed_rules(
+            return Ok(if matches!(&spec, ExactStringCaseSpec::Rules(_)) {
+                list_expr(self.collect_string_cases_with_rule_evaluation(
                     value,
                     &spec,
                     max_matches,
@@ -253,8 +224,8 @@ impl Session {
         if let Some(values) = expr_as_string_list(&args[0]) {
             let mut outputs = Vec::with_capacity(values.len());
             for value in values {
-                let items = if has_delayed_rules {
-                    self.collect_string_cases_with_delayed_rules(
+                let items = if matches!(&spec, ExactStringCaseSpec::Rules(_)) {
+                    self.collect_string_cases_with_rule_evaluation(
                         &value,
                         &spec,
                         max_matches,
@@ -485,7 +456,7 @@ impl Session {
         Ok(Expr::call(head.clone(), args.to_vec()))
     }
 
-    fn replace_string_value_with_delayed_rules(
+    fn replace_string_value_with_rules(
         &mut self,
         value: &str,
         rules: &[ExactStringReplacementRule],
@@ -507,28 +478,27 @@ impl Session {
                 break;
             }
 
-            if let Some((rule, end)) = rules.iter().find_map(|rule| {
-                best_pattern_match_end(&rule.pattern, &chars, index, config).map(|end| (rule, end))
+            if let Some((rule, state)) = rules.iter().find_map(|rule| {
+                best_pattern_match_state(&rule.pattern, &chars, index, config)
+                    .map(|state| (rule, state))
             }) {
-                let rendered = match &rule.replacement {
-                    ExactStringReplacementValue::Immediate(replacement) => replacement.clone(),
-                    ExactStringReplacementValue::Delayed(expr) => {
-                        let evaluated = self.evaluate(expr.clone())?;
-                        let value =
-                            self.suspend_with_frame(Ok(evaluated), |_, value| Ok(value))?;
-                        let Some(rendered) = expr_as_string(&value) else {
-                            return Ok(value.to_string());
-                        };
-                        rendered.to_string()
-                    }
-                };
+                let rendered_expr = self.evaluate_string_rule_output_expr(
+                    match &rule.replacement {
+                        ExactStringReplacementValue::Immediate(expr)
+                        | ExactStringReplacementValue::Delayed(expr) => expr,
+                    },
+                    &state.bindings,
+                )?;
+                let rendered = expr_as_string(&rendered_expr)
+                    .map(str::to_owned)
+                    .unwrap_or_else(|| rendered_expr.to_string());
 
                 output.push_str(&rendered);
-                if end == index {
+                if state.end == index {
                     output.push(chars[index]);
                     index += 1;
                 } else {
-                    index = end;
+                    index = state.end;
                 }
                 replacements += 1;
             } else {
@@ -540,7 +510,7 @@ impl Session {
         Ok(output)
     }
 
-    fn collect_string_cases_with_delayed_rules(
+    fn collect_string_cases_with_rule_evaluation(
         &mut self,
         value: &str,
         spec: &ExactStringCaseSpec,
@@ -578,25 +548,25 @@ impl Session {
                     }
                 }
                 ExactStringCaseSpec::Rules(rules) => {
-                    if let Some((rule, end)) = rules.iter().find_map(|rule| {
-                        best_pattern_match_end(&rule.pattern, &chars, index, config)
-                            .map(|end| (rule, end))
+                    if let Some((rule, state)) = rules.iter().find_map(|rule| {
+                        best_pattern_match_state(&rule.pattern, &chars, index, config)
+                            .map(|state| (rule, state))
                     }) {
-                        let output = match &rule.output {
-                            ExactStringCaseOutput::Immediate(expr) => expr.clone(),
-                            ExactStringCaseOutput::Delayed(expr) => {
-                                let evaluated = self.evaluate(expr.clone())?;
-                                self.suspend_with_frame(Ok(evaluated), |_, value| Ok(value))?
-                            }
-                        };
+                        let output = self.evaluate_string_rule_output_expr(
+                            match &rule.output {
+                                ExactStringCaseOutput::Immediate(expr)
+                                | ExactStringCaseOutput::Delayed(expr) => expr,
+                            },
+                            &state.bindings,
+                        )?;
                         matches.push(output);
-                        index = if end == index {
+                        index = if state.end == index {
                             if index == chars.len() {
                                 break;
                             }
                             index + 1
                         } else {
-                            end
+                            state.end
                         };
                     } else {
                         if index == chars.len() {
@@ -609,5 +579,19 @@ impl Session {
         }
 
         Ok(matches)
+    }
+
+    fn evaluate_string_rule_output_expr(
+        &mut self,
+        expr: &Expr,
+        bindings: &BTreeMap<Symbol, Expr>,
+    ) -> Result<Expr, EvalError> {
+        let substituted = if bindings.is_empty() {
+            expr.clone()
+        } else {
+            substitute_lexical_bindings(expr, bindings, &BTreeSet::new())
+        };
+        let evaluated = self.evaluate(substituted)?;
+        self.suspend_with_frame(Ok(evaluated), |_, value| Ok(value))
     }
 }
