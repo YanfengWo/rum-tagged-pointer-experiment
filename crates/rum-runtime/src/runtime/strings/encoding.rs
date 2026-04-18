@@ -86,15 +86,15 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("Encrypt", args, 2));
         }
 
-        let Some(key) = expr_as_string(&args[0]) else {
+        let Some(key) = encryption_key_bytes(&args[0]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
         let (payload, original_form) = expr_transport_bytes(&args[1]);
-        let ciphertext = xor_with_sha256_keystream(key.as_bytes(), &payload);
+        let ciphertext = xor_with_sha256_keystream(&key, &payload);
         Ok(encrypted_object_expr(
             &ciphertext,
-            &sha256_bytes(key.as_bytes()),
+            &sha256_bytes(&key),
             original_form,
         ))
     }
@@ -147,6 +147,14 @@ fn expr_transport_bytes(expr: &Expr) -> (Vec<u8>, Expr) {
         (bytes, system_expr("ByteArray"))
     } else {
         (expr.to_string().into_bytes(), system_expr("InputForm"))
+    }
+}
+
+fn encryption_key_bytes(expr: &Expr) -> Option<Vec<u8>> {
+    if let Some(value) = expr_as_string(expr) {
+        Some(value.as_bytes().to_vec())
+    } else {
+        expr_as_byte_array_bytes(expr)
     }
 }
 

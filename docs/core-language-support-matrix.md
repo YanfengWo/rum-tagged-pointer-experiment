@@ -356,16 +356,19 @@ once in its primary implementation group. Other groups may mention it as
   `Except`, `LetterCharacter`, `DigitCharacter`, `WordCharacter`,
   `WhitespaceCharacter`, `RegularExpression[...]` interop, `_` / `__` /
   `___`, named `Pattern[x, ...]` capture bindings, current `Rule` /
-  `RuleDelayed` substitution for string replace/case rules, and current
+  `RuleDelayed` substitution for string replace/case rules, repeated named
+  capture consistency across predicate/query paths, and current
   zero-length/match-edge handling
 - `partial richer nearest/pluralize parity`: `Nearest` now supports the
   current `DistanceFunction -> EditDistance|HammingDistance` subset over
-  strings plus a current `{resultSpec, radius}` form, and `Pluralize` now
-  covers a wider irregular/common-ending English subset in addition to the
-  earlier rule-based forms
+  strings plus a current `{resultSpec, radius}` / `{resultSpec, Infinity}`
+  form, and `Pluralize` now covers a wider case-preserving
+  irregular/common-ending English subset in addition to the earlier
+  rule-based forms
 - `partial deeper byte-array/crypto compatibility`: `Hash`, `Compress`, and
   `Encrypt` now consume `ByteArray[...]` payloads through the current base64
-  transport subset rather than only falling back to textual expression forms
+  transport subset, and `Encrypt` also accepts `ByteArray[...]` keys rather
+  than only textual expression forms
 - `planned`: deeper nearest-neighbor semantics, fuller
   compression/encryption compatibility, and fuller linguistic-data-backed
   pluralization parity

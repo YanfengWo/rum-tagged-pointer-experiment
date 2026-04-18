@@ -326,4 +326,32 @@ fn symbolic_string_patterns_bind_named_captures_in_rules() {
         ),
         "List[\"12-ab\"]"
     );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringMatchQ[\"aa\", StringExpression[Pattern[x, LetterCharacter], Pattern[x, LetterCharacter]]]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringMatchQ[\"ab\", StringExpression[Pattern[x, LetterCharacter], Pattern[x, LetterCharacter]]]"
+        ),
+        "False"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"foo bar\", Pattern[word, BlankSequence[LetterCharacter]] :> word]"
+        ),
+        "List[\"foo\", \"bar\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"ab12\", Pattern[digits, RegularExpression[\"\\\\d+\"]] :> digits]"
+        ),
+        "List[\"12\"]"
+    );
 }

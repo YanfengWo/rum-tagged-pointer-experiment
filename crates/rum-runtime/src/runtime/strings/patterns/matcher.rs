@@ -11,8 +11,7 @@ pub(super) fn string_contains_q(
     pattern: &StringPattern,
     config: StringPatternMatchConfig,
 ) -> bool {
-    (0..=haystack.len())
-        .any(|start| best_pattern_match_end(pattern, haystack, start, config).is_some())
+    (0..=haystack.len()).any(|start| best_pattern_match_state(pattern, haystack, start, config).is_some())
 }
 
 pub(super) fn string_starts_q(
@@ -20,7 +19,7 @@ pub(super) fn string_starts_q(
     pattern: &StringPattern,
     config: StringPatternMatchConfig,
 ) -> bool {
-    best_pattern_match_end(pattern, haystack, 0, config).is_some()
+    best_pattern_match_state(pattern, haystack, 0, config).is_some()
 }
 
 pub(super) fn string_ends_q(
@@ -29,7 +28,8 @@ pub(super) fn string_ends_q(
     config: StringPatternMatchConfig,
 ) -> bool {
     (0..=haystack.len()).any(|start| {
-        best_pattern_match_end(pattern, haystack, start, config) == Some(haystack.len())
+        best_pattern_match_state(pattern, haystack, start, config)
+            .is_some_and(|state| state.end == haystack.len())
     })
 }
 
@@ -38,8 +38,8 @@ pub(super) fn string_match_q(
     patterns: &[StringPattern],
     config: StringPatternMatchConfig,
 ) -> bool {
-    best_pattern_match_at(patterns, haystack, 0, config)
-        .is_some_and(|(_, end)| end == haystack.len())
+    best_pattern_match_at_with_bindings(patterns, haystack, 0, config)
+        .is_some_and(|(_, state)| state.end == haystack.len())
 }
 
 pub(super) fn string_free_q(
@@ -47,8 +47,9 @@ pub(super) fn string_free_q(
     patterns: &[StringPattern],
     config: StringPatternMatchConfig,
 ) -> bool {
-    (0..=haystack.len())
-        .all(|start| best_pattern_match_at(patterns, haystack, start, config).is_none())
+    (0..=haystack.len()).all(|start| {
+        best_pattern_match_at_with_bindings(patterns, haystack, start, config).is_none()
+    })
 }
 
 pub(super) fn string_count_matches(
@@ -64,16 +65,18 @@ pub(super) fn string_count_matches(
     };
 
     while index <= chars.len() {
-        if let Some((_, end)) = best_pattern_match_at(patterns, &chars, index, match_config) {
+        if let Some((_, state)) =
+            best_pattern_match_at_with_bindings(patterns, &chars, index, match_config)
+        {
             matches += 1;
-            index = if end == index {
+            index = if state.end == index {
                 if index == chars.len() {
                     break;
                 }
                 index + 1
             } else {
                 match config.overlaps {
-                    StringCountOverlaps::NonOverlapping => end,
+                    StringCountOverlaps::NonOverlapping => state.end,
                     StringCountOverlaps::Overlapping => index + 1,
                 }
             };
@@ -101,12 +104,14 @@ pub(super) fn string_delete_matches(
     };
 
     while index < chars.len() {
-        if let Some((_, end)) = best_pattern_match_at(patterns, &chars, index, match_config) {
-            if end == index {
+        if let Some((_, state)) =
+            best_pattern_match_at_with_bindings(patterns, &chars, index, match_config)
+        {
+            if state.end == index {
                 output.push(chars[index]);
                 index += 1;
             } else {
-                index = end;
+                index = state.end;
             }
         } else {
             output.push(chars[index]);
@@ -238,8 +243,8 @@ fn string_pattern_positions<'a>(
 
     let mut positions = Vec::new();
     for start in 0..=haystack.len() {
-        if let Some(end) = best_pattern_match_end(pattern, haystack, start, config) {
-            positions.push((start + 1, end));
+        if let Some(state) = best_pattern_match_state(pattern, haystack, start, config) {
+            positions.push((start + 1, state.end));
             if positions.len() >= max_results {
                 break;
             }
@@ -326,8 +331,13 @@ fn split_by_string_patterns(
         }
 
         let Some(end) =
-            best_pattern_match_at(patterns, chars, index, StringPatternMatchConfig::default())
-                .map(|(_, end)| end)
+            best_pattern_match_at_with_bindings(
+                patterns,
+                chars,
+                index,
+                StringPatternMatchConfig::default(),
+            )
+            .map(|(_, state)| state.end)
         else {
             index += 1;
             continue;
@@ -374,13 +384,13 @@ fn trim_string_patterns(chars: &[char], patterns: &[StringPattern]) -> String {
     let mut end = chars.len();
 
     while start < end {
-        let Some(match_end) = best_pattern_match_at(
+        let Some(match_end) = best_pattern_match_at_with_bindings(
             patterns,
             &chars[..end],
             start,
             StringPatternMatchConfig::default(),
         )
-        .map(|(_, end)| end) else {
+        .map(|(_, state)| state.end) else {
             break;
         };
         start = match_end;
@@ -417,13 +427,28 @@ pub(super) fn best_pattern_match_at(
         .max_by_key(|(index, end)| (*end, usize::MAX - *index))
 }
 
+pub(super) fn best_pattern_match_at_with_bindings(
+    patterns: &[StringPattern],
+    chars: &[char],
+    start: usize,
+    config: StringPatternMatchConfig,
+) -> Option<(usize, StringPatternMatchState)> {
+    patterns
+        .iter()
+        .enumerate()
+        .filter_map(|(index, pattern)| {
+            best_pattern_match_state(pattern, chars, start, config).map(|state| (index, state))
+        })
+        .max_by_key(|(index, state)| (state.end, usize::MAX - *index))
+}
+
 fn best_pattern_suffix_start(patterns: &[StringPattern], chars: &[char]) -> Option<usize> {
     let end = chars.len();
     (0..end)
         .filter(|start| {
             patterns.iter().any(|pattern| {
-                best_pattern_match_end(pattern, chars, *start, StringPatternMatchConfig::default())
-                    == Some(end)
+                best_pattern_match_state(pattern, chars, *start, StringPatternMatchConfig::default())
+                    .is_some_and(|state| state.end == end)
             })
         })
         .min()

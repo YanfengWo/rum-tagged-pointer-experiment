@@ -296,7 +296,11 @@ fn filter_usize_distances(
     let max_distance = match spec {
         NearestSelectionSpec::Results(_) => None,
         NearestSelectionSpec::ResultsWithin { max_distance, .. } => {
-            Some(expr_as_non_negative_usize(max_distance)?)
+            if is_system_symbol_name(max_distance, "Infinity") {
+                None
+            } else {
+                Some(expr_as_non_negative_usize(max_distance)?)
+            }
         }
     };
 
@@ -316,7 +320,11 @@ fn filter_rational_distances(
     let max_distance = match spec {
         NearestSelectionSpec::Results(_) => None,
         NearestSelectionSpec::ResultsWithin { max_distance, .. } => {
-            Some(expr_as_exact_rational(max_distance)?)
+            if is_system_symbol_name(max_distance, "Infinity") {
+                None
+            } else {
+                Some(expr_as_exact_rational(max_distance)?)
+            }
         }
     };
 

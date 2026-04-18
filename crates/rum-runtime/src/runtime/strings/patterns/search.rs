@@ -1,8 +1,8 @@
 use super::matcher::{
-    best_pattern_match_at, best_pattern_match_state, collect_string_cases, pattern_match_text,
-    split_string_value, string_contains_q, string_count_matches, string_delete_matches,
-    string_ends_q, string_free_q, string_match_q, string_position_expr, string_starts_q,
-    trim_string_value,
+    best_pattern_match_at_with_bindings, best_pattern_match_state, collect_string_cases,
+    pattern_match_text, split_string_value, string_contains_q, string_count_matches,
+    string_delete_matches, string_ends_q, string_free_q, string_match_q, string_position_expr,
+    string_starts_q, trim_string_value,
 };
 use super::*;
 
@@ -528,17 +528,17 @@ impl Session {
         while index <= chars.len() && matches.len() < max_matches {
             match spec {
                 ExactStringCaseSpec::Patterns(patterns) => {
-                    if let Some((_pattern_index, end)) =
-                        best_pattern_match_at(patterns, &chars, index, config)
+                    if let Some((_pattern_index, state)) =
+                        best_pattern_match_at_with_bindings(patterns, &chars, index, config)
                     {
-                        matches.push(Expr::string(pattern_match_text(&chars[index..end])));
-                        index = if end == index {
+                        matches.push(Expr::string(pattern_match_text(&chars[index..state.end])));
+                        index = if state.end == index {
                             if index == chars.len() {
                                 break;
                             }
                             index + 1
                         } else {
-                            end
+                            state.end
                         };
                     } else {
                         if index == chars.len() {

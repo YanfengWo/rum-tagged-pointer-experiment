@@ -6,67 +6,84 @@ pub(super) fn pluralize_english_word(word: &str) -> String {
         return apply_plural_case(word, irregular);
     }
 
-    if lower.ends_with("ch")
+    let plural_lower = if lower.ends_with("ch")
         || lower.ends_with("sh")
         || lower.ends_with('s')
         || lower.ends_with('x')
-        || lower.ends_with('z')
     {
-        return format!("{word}es");
-    }
-
-    if lower.ends_with('y') {
-        let mut chars = word.chars().collect::<Vec<_>>();
+        format!("{lower}es")
+    } else if lower.ends_with('z') {
+        if lower == "quiz" {
+            "quizzes".to_string()
+        } else {
+            format!("{lower}es")
+        }
+    } else if lower.ends_with('y') {
+        let chars = lower.chars().collect::<Vec<_>>();
         if chars.len() >= 2 {
-            let previous = chars[chars.len() - 2].to_ascii_lowercase();
+            let previous = chars[chars.len() - 2];
             if !matches!(previous, 'a' | 'e' | 'i' | 'o' | 'u') {
-                chars.pop();
-                return format!("{}ies", chars.into_iter().collect::<String>());
+                format!("{}ies", &lower[..lower.len() - 1])
+            } else {
+                format!("{lower}s")
             }
+        } else {
+            format!("{lower}s")
         }
-    }
-
-    if lower.ends_with("fe") {
+    } else if lower.ends_with("fe") {
         let stem = &lower[..lower.len() - 2];
-        if matches!(stem, "kni" | "wi") {
-            let original_stem = &word[..word.len() - 2];
-            return format!("{original_stem}ves");
+        if matches!(stem, "kni" | "wi" | "li") {
+            format!("{stem}ves")
+        } else {
+            format!("{lower}s")
         }
-    }
-
-    if lower.ends_with('f') {
+    } else if lower.ends_with('f') {
         let stem = &lower[..lower.len() - 1];
-        if matches!(stem, "lea" | "wol") {
-            let original_stem = &word[..word.len() - 1];
-            return format!("{original_stem}ves");
+        if matches!(stem, "lea" | "wol" | "hal" | "cal" | "sel" | "loa") {
+            format!("{stem}ves")
+        } else {
+            format!("{lower}s")
         }
-    }
-
-    if lower.ends_with('o')
+    } else if lower.ends_with('o')
         && matches!(
             lower.as_str(),
             "hero" | "potato" | "tomato" | "echo" | "torpedo"
         )
     {
-        return format!("{word}es");
-    }
+        format!("{lower}es")
+    } else {
+        format!("{lower}s")
+    };
 
-    format!("{word}s")
+    apply_plural_case(word, &plural_lower)
 }
 
 fn english_irregular_plural(lower: &str) -> Option<&'static str> {
     match lower {
         "analysis" => Some("analyses"),
+        "appendix" => Some("appendices"),
+        "axis" => Some("axes"),
+        "bacterium" => Some("bacteria"),
         "basis" => Some("bases"),
+        "cactus" => Some("cacti"),
         "child" => Some("children"),
+        "criterion" => Some("criteria"),
+        "crisis" => Some("crises"),
+        "datum" => Some("data"),
+        "diagnosis" => Some("diagnoses"),
         "man" => Some("men"),
+        "matrix" => Some("matrices"),
         "woman" => Some("women"),
         "person" => Some("people"),
         "mouse" => Some("mice"),
         "goose" => Some("geese"),
         "tooth" => Some("teeth"),
         "foot" => Some("feet"),
+        "index" => Some("indices"),
+        "phenomenon" => Some("phenomena"),
         "sheep" => Some("sheep"),
+        "thesis" => Some("theses"),
+        "vertex" => Some("vertices"),
         "deer" => Some("deer"),
         _ => None,
     }

@@ -63,6 +63,13 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "True"
     );
     assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Head[Encrypt[StringToByteArray[\"secret\"], StringToByteArray[\"abc\"]]]"
+        ),
+        "EncryptedObject"
+    );
+    assert_eq!(
         eval_to_string(&mut session, "Nearest[{1, 2, 5}, 3]"),
         "List[2]"
     );
@@ -126,11 +133,22 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "List[2]"
     );
     assert_eq!(
+        eval_to_string(&mut session, "Nearest[{1, 2, 5}, 3, {All, Infinity}]"),
+        "List[2, 1, 5]"
+    );
+    assert_eq!(
         eval_to_string(
             &mut session,
             "Nearest[{\"cat\", \"cot\", \"dog\"}, \"cut\", {All, 1}, DistanceFunction -> EditDistance]"
         ),
         "List[\"cat\", \"cot\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Nearest[{\"cat\", \"cot\", \"dog\"}, \"cut\", {All, Infinity}, DistanceFunction -> EditDistance]"
+        ),
+        "List[\"cat\", \"cot\", \"dog\"]"
     );
     assert_eq!(
         eval_to_string(&mut session, "Pluralize[\"cat\"]"),
@@ -171,5 +189,21 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
     assert_eq!(
         eval_to_string(&mut session, "Pluralize[\"analysis\", 2]"),
         "\"analyses\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"QUIZ\", 2]"),
+        "\"QUIZZES\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"Knife\", 2]"),
+        "\"Knives\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"cactus\", 2]"),
+        "\"cacti\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"phenomenon\", 2]"),
+        "\"phenomena\""
     );
 }
