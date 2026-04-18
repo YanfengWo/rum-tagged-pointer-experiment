@@ -140,7 +140,8 @@ Near-term work is concentrated in four areas:
 
 - further tightening evaluator semantics where behavior is still somewhat ad hoc
 - continuing to expand the rule / matcher language
-- pushing the active `CL-07` string-language workstream through deep-parity cleanup
+- advancing the active `Wave 2` backlog across `CL-03` and `CL-05`, especially
+  replacement/traversal and association-parity gaps
 - splitting oversized runtime and adapter modules back into healthier boundaries
 
 `rum-jupyter` remains useful and actively maintained, but it is not the primary

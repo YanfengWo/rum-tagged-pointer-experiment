@@ -192,4 +192,3 @@ fn native_zeromq_backend_frontend_style_stdin_round_trip_emits_iopub_and_shell_r
             if status.execution_state == crate::KernelExecutionState::Idle
     )));
 }
-

@@ -158,4 +158,3 @@ fn native_zeromq_backend_frontend_style_execute_preserves_headers_and_iopub_meta
                 && status.lifecycle_state == crate::KernelLifecycleState::Running
     )));
 }
-

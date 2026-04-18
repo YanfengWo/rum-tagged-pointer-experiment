@@ -130,6 +130,77 @@ fn resume_eval_request_with_input_can_finish_replaceall_after_suspending_rule_so
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_target() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("DeleteCases[f[InputString[\"target: \"], 2], _String]")
+        .expect_err("DeleteCases should suspend when its target requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "target: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue DeleteCases after the target resolves");
+
+    assert_eq!(response.value.to_string(), "f[2]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_pattern_symbol() {
+    let mut session = Session::new();
+    session
+        .eval_text("p := x_Integer /; MatchQ[InputString[\"cond: \"], \"yes\"]")
+        .unwrap();
+
+    let failure = session
+        .eval_request("DeleteCases[f[g[1], 2], p, Infinity]")
+        .expect_err("DeleteCases should suspend when a referenced pattern symbol requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue DeleteCases after the pattern resolves");
+
+    assert_eq!(response.value.to_string(), "f[g[]]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_match_limit() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "DeleteCases[f[g[1], 2, h[3]], _Integer, Infinity, If[MatchQ[InputString[\"n: \"], \"yes\"], 2, 0]]",
+        )
+        .expect_err("DeleteCases should suspend when its match limit requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "n: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue DeleteCases after the match limit resolves");
+
+    assert_eq!(response.value.to_string(), "f[g[], h[3]]");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_patterntest_matchq() {
     let mut session = Session::new();
 

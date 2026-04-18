@@ -251,6 +251,7 @@ mod tests {
                 tag: "notfound".to_string(),
                 text: "missing".to_string(),
             }],
+            prints: Vec::new(),
             trace: Vec::new(),
         };
 

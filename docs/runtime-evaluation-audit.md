@@ -212,8 +212,9 @@ core slice rather than a fully mature scoping system.
 
 Known gaps include:
 
-- `Block` localizes currently supported categories, but broader categories such
-  as options/format-like state are still absent
+- `Block` now localizes the currently covered symbol-state slice, including the
+  current option / syntax-information subset, but broader state categories are
+  still not exhaustive
 - `Module` freshness is much better than before, but supporting machinery such
   as `$ModuleNumber` is still absent
 - deeper interactions among scoping, held patterns, and future attribute-driven

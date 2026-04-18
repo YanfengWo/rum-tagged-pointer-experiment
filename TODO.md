@@ -113,6 +113,8 @@ This roadmap intentionally uses two levels of detail:
   - [x] `crates/rum-jupyter/src/adapter.rs` -> `crates/rum-jupyter/src/adapter/`
   - [x] `crates/rum-syntax/src/formatter.rs` -> `crates/rum-syntax/src/formatter/`
 - [ ] Keep the remaining `20k+` files under active review and only continue the large-file workstream when one of these files is touched enough to justify the next conceptual split:
+  - [ ] `crates/rum-runtime/src/runtime/options.rs` (`44003` bytes)
+  - [ ] `crates/rum-runtime/src/runtime/rewrite_builtins.rs` (`38341` bytes)
   - [ ] `crates/rum-runtime/src/runtime/predicates.rs` (`25943` bytes)
   - [ ] `crates/rum-jupyter/src/zeromq_native.rs` (`25373` bytes)
   - [ ] `crates/rum-runtime/src/runtime/control_flow/branching_loops.rs` (`25237` bytes)
@@ -291,7 +293,7 @@ This roadmap intentionally uses two levels of detail:
   - [ ] messages, attributes, and definition precedence
   - [x] string semantics now have an initial curated Lane A foothold that covers multiple CL-07 subfamilies
 
-### Active Workstream: Full String Language Parity
+### Long-Tail Workstream: Full String Language Parity
 
 - [x] Treat full string support as a first-class roadmap item rather than an incidental builtin grab bag
 - [ ] Keep string literal parsing in `rum-syntax`, the canonical string atom in `rum-core`, and the current first-wave evaluation semantics plus builtin registration in `rum-runtime`, revisiting any broader crate split only if the string surface later outgrows the core kernel boundary

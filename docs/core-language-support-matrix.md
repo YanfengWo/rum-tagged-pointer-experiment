@@ -139,9 +139,10 @@ once in its primary implementation group. Other groups may mention it as
   parameter binding, slot lowering for `#`, `##`, and `#name`, attribute
   storage and dispatch for the current attribute subset
 - `partial`: public attribute surface is narrower than Wolfram's full
-  attribute family, protection and option layers are still absent
-- `planned`: fuller assignment/update family, protection framework, and
-  broader definition-introspection parity
+  attribute family, while the broader protection / option / package-tooling
+  layers are cross-tracked in `CL-08`
+- `planned`: fuller assignment/update family and broader
+  definition-introspection parity
 
 ### Functions and Symbols
 
@@ -150,13 +151,14 @@ once in its primary implementation group. Other groups may mention it as
   `With`, `Module`, `Block`, `TagSet`, `Flat`, `HoldFirst`,
   `Listable`, `Orderless`
 - `partial`: `Attributes`
-- `planned`: `AddTo`, `AppendTo`, `ApplyTo`, `CompoundExpression`,
-  `Decrement`, `PreDecrement`, `DefaultValues`, `DivideBy`, `Increment`,
-  `PreIncrement`, `Information`, `PrependTo`, `Protected`, `Remove`, `Save`,
-  `SubtractFrom`, `TimesBy`, `UpSet`, `ValueQ`
+- `planned`: `AddTo`, `AppendTo`, `ApplyTo`, `Decrement`, `PreDecrement`,
+  `DefaultValues`, `DivideBy`, `Increment`, `PreIncrement`, `Information`,
+  `PrependTo`, `Remove`, `SubtractFrom`, `TimesBy`, `ValueQ`
 - `cross-tracked elsewhere`: `Alternatives`, `BlankSequence`, `Function`,
-  `Optional`, `Check`, `Confirm`, `Enclose`, `Quiet`, `Rule`,
-  `RuleDelayed`, `WithCleanup`
+  `Optional`, `Check`, `Confirm`, `CompoundExpression`, `Enclose`, `OptionValue`,
+  `Options`, `OptionsPattern`, `Protect`, `Protected`, `Quiet`, `Rule`,
+  `RuleDelayed`, `Save`, `SetOptions`, `Unprotect`, `UpSet`,
+  `UpSetDelayed`, `WithCleanup`
 
 ## CL-03: Rules, Patterns, and Tree Walkers
 

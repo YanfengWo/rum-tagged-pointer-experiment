@@ -125,6 +125,10 @@ fn error_output(failure: &SessionRequestFailure) -> KernelErrorOutput {
         SessionRequestError::RecursionLimitExceeded { .. } => {
             ("RecursionLimitExceeded".to_string(), None)
         }
+        SessionRequestError::TimeConstraintExceeded => ("TimeConstraintExceeded".to_string(), None),
+        SessionRequestError::MemoryConstraintExceeded { .. } => {
+            ("MemoryConstraintExceeded".to_string(), None)
+        }
         SessionRequestError::IterationLimitExceeded { .. } => {
             ("IterationLimitExceeded".to_string(), None)
         }
@@ -190,6 +194,81 @@ fn trace_metadata() -> KernelMetadata {
     metadata.insert("output_type", "display_data");
     metadata.insert("bundle_kind", "trace");
     metadata
+}
+
+#[cfg(test)]
+mod tests {
+    use rum_runtime::SessionRequestFailure;
+
+    use super::*;
+
+    #[test]
+    fn error_output_covers_time_constraint_failures() {
+        let outcome = KernelExecuteOutcome::Failure(SessionRequestFailure {
+            error: SessionRequestError::TimeConstraintExceeded,
+            messages: Vec::new(),
+            prints: Vec::new(),
+            trace: Vec::new(),
+        });
+
+        let response = build_execute_response(Some(1), outcome);
+
+        assert_eq!(response.status, KernelReplyStatus::Error);
+        assert_eq!(response.outputs.len(), 1);
+        assert_eq!(
+            response
+                .error
+                .as_ref()
+                .map(|error| error.error_name.as_str()),
+            Some("TimeConstraintExceeded")
+        );
+
+        match &response.outputs[0] {
+            KernelOutput::Error(output) => {
+                assert_eq!(output.error_name, "TimeConstraintExceeded");
+                assert!(
+                    output.error_value.contains("TimeConstrained limit"),
+                    "unexpected error text: {}",
+                    output.error_value
+                );
+            }
+            other => panic!("expected error output, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn error_output_covers_memory_constraint_failures() {
+        let outcome = KernelExecuteOutcome::Failure(SessionRequestFailure {
+            error: SessionRequestError::MemoryConstraintExceeded { limit: 20 },
+            messages: Vec::new(),
+            prints: Vec::new(),
+            trace: Vec::new(),
+        });
+
+        let response = build_execute_response(Some(1), outcome);
+
+        assert_eq!(response.status, KernelReplyStatus::Error);
+        assert_eq!(response.outputs.len(), 1);
+        assert_eq!(
+            response
+                .error
+                .as_ref()
+                .map(|error| error.error_name.as_str()),
+            Some("MemoryConstraintExceeded")
+        );
+
+        match &response.outputs[0] {
+            KernelOutput::Error(output) => {
+                assert_eq!(output.error_name, "MemoryConstraintExceeded");
+                assert!(
+                    output.error_value.contains("MemoryConstrained limit (20)"),
+                    "unexpected error text: {}",
+                    output.error_value
+                );
+            }
+            other => panic!("expected error output, got {other:?}"),
+        }
+    }
 }
 
 pub(super) fn inspect_metadata(target: Option<&str>, found: bool) -> KernelMetadata {
