@@ -569,6 +569,15 @@ fn render_to_string_expr_with_precedence(
                 return wrap_rendered(rendered, PREC_RULE, parent_precedence);
             }
 
+            if (is_system_symbol_name(head, "HoldForm")
+                || is_system_symbol_name(head, "HoldCompleteForm")
+                || is_system_symbol_name(head, "Defer")
+                || is_system_symbol_name(head, "Unevaluated"))
+                && args.len() == 1
+            {
+                return render_to_string_expr_with_precedence(&args[0], format, parent_precedence);
+            }
+
             if is_system_symbol_name(head, "Part") && args.len() >= 2 {
                 let rendered = format!(
                     "{}[[{}]]",
@@ -704,6 +713,22 @@ fn render_to_string_expr_with_precedence(
                 );
             }
 
+            if is_system_symbol_name(head, "Repeated") && args.len() == 1 {
+                let rendered = format!(
+                    "{}..",
+                    render_to_string_expr_with_precedence(&args[0], format, PREC_CALL)
+                );
+                return wrap_rendered(rendered, PREC_CALL, parent_precedence);
+            }
+
+            if is_system_symbol_name(head, "RepeatedNull") && args.len() == 1 {
+                let rendered = format!(
+                    "{}...",
+                    render_to_string_expr_with_precedence(&args[0], format, PREC_CALL)
+                );
+                return wrap_rendered(rendered, PREC_CALL, parent_precedence);
+            }
+
             if is_system_symbol_name(head, heads::patterns::CONDITION) && args.len() == 2 {
                 let rendered = format!(
                     "{} /; {}",
@@ -711,6 +736,15 @@ fn render_to_string_expr_with_precedence(
                     render_to_string_expr_with_precedence(&args[1], format, PREC_RULE)
                 );
                 return wrap_rendered(rendered, PREC_RULE, parent_precedence);
+            }
+
+            if is_system_symbol_name(head, heads::patterns::PATTERN_TEST) && args.len() == 2 {
+                let rendered = format!(
+                    "{}?{}",
+                    render_to_string_expr_with_precedence(&args[0], format, PREC_CALL),
+                    render_to_string_expr_with_precedence(&args[1], format, PREC_CALL)
+                );
+                return wrap_rendered(rendered, PREC_CALL, parent_precedence);
             }
 
             if is_system_symbol_name(head, heads::patterns::PATTERN) && args.len() == 2 {
@@ -728,6 +762,19 @@ fn render_to_string_expr_with_precedence(
 
             if let Some(blank) = render_blank_pattern(head, args, format) {
                 return blank;
+            }
+
+            if is_system_symbol_name(head, heads::patterns::OPTIONAL) && !args.is_empty() {
+                let pattern = render_to_string_expr_with_precedence(&args[0], format, PREC_CALL);
+                let rendered = match args.as_slice() {
+                    [_] => format!("{pattern}."),
+                    [_, default] => format!(
+                        "{pattern} : {}",
+                        render_to_string_expr_with_precedence(default, format, PREC_RULE + 1)
+                    ),
+                    _ => expr.to_string(),
+                };
+                return wrap_rendered(rendered, PREC_RULE, parent_precedence);
             }
 
             if is_system_symbol_name(head, heads::rules::RULE_DELAYED) && args.len() == 2 {

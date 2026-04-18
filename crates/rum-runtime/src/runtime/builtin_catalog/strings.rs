@@ -75,6 +75,11 @@ pub(super) const STRING_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Compress,
     ),
     BuiltinSpec::ordinary(
+        "Uncompress",
+        "Recovers values from the current project-local compressed string envelope.",
+        BuiltinHandler::Uncompress,
+    ),
+    BuiltinSpec::ordinary(
         "Encrypt",
         "Wraps values in the current first-pass encrypted object subset using string keys.",
         BuiltinHandler::Encrypt,

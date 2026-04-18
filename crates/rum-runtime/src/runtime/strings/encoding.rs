@@ -78,6 +78,33 @@ impl Session {
         Ok(Expr::string(compress_envelope(&args[0])))
     }
 
+    pub(in crate::runtime) fn eval_uncompress(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !(1..=2).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("Uncompress", args, 1, 2));
+        }
+
+        let Some(source) = expr_as_string(&args[0]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let Some((payload, original_form)) = parse_compress_envelope(source) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let Some(restored) = self.restore_transport_expr(&payload, original_form) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if let Some(wrapper) = args.get(1) {
+            let wrapped_result = self.evaluate(Expr::call(wrapper.clone(), vec![restored]));
+            return self.suspend_with_frame(wrapped_result, |_, value| Ok(value));
+        }
+
+        Ok(restored)
+    }
+
     pub(in crate::runtime) fn eval_encrypt(
         &mut self,
         head: &Expr,
@@ -121,18 +148,13 @@ impl Session {
         }
 
         let decrypted = xor_with_sha256_keystream(&key, &ciphertext);
-        let Some(restored) = self.restore_decrypted_transport_expr(&decrypted, original_form)
-        else {
+        let Some(restored) = self.restore_transport_expr(&decrypted, original_form) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
         Ok(restored)
     }
 
-    fn restore_decrypted_transport_expr(
-        &self,
-        payload: &[u8],
-        original_form: Expr,
-    ) -> Option<Expr> {
+    fn restore_transport_expr(&self, payload: &[u8], original_form: Expr) -> Option<Expr> {
         if is_system_symbol_name(&original_form, "String") {
             return Some(Expr::string(std::str::from_utf8(payload).ok()?.to_string()));
         }
@@ -187,6 +209,19 @@ fn compress_envelope(expr: &Expr) -> String {
         "e"
     };
     format!("rum:1:{kind}:{}", base64_encode(&payload))
+}
+
+fn parse_compress_envelope(source: &str) -> Option<(Vec<u8>, Expr)> {
+    let rest = source.strip_prefix("rum:1:")?;
+    let (kind, encoded) = rest.split_once(':')?;
+    let payload = base64_decode(encoded)?;
+    let original_form = match kind {
+        "s" => system_expr("String"),
+        "b" => system_expr("ByteArray"),
+        "e" => system_expr("InputForm"),
+        _ => return None,
+    };
+    Some((payload, original_form))
 }
 
 fn expr_transport_bytes(expr: &Expr) -> (Vec<u8>, Expr) {

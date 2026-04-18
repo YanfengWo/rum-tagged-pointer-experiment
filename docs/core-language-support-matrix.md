@@ -326,17 +326,19 @@ once in its primary implementation group. Other groups may mention it as
 
 - `implemented`: canonical string atoms, Unicode code-point semantics, parser
   escape support, exact-string construction and transformation core
-- `partial`: `ToString` and `TextString` now share a current input-like
-  textual subset for common arithmetic and structural expressions, and the
-  common `InputForm` / `OutputForm` / `StandardForm` / `TraditionalForm` /
-  `FullForm` symbols are recognized; the current renderer also covers slots,
-  one-argument pure functions, assignment/replacement syntax, and a first
-  symbolic pattern notation subset plus current `Part` / `Map` / `Apply` /
-  `MapApply` syntax, but the string-pattern surface is still a first-pass
-  subset and the byte-array/hash/compress/encrypt/nearest/
-  pluralization layer is still a current subset rather than full Wolfram parity
-- `planned`: fuller symbolic string-pattern layer, conversions, templating,
-  and nontrivial search/transformation semantics
+- `implemented`: `ToString` and `TextString` now share a current input-like
+  textual subset for common arithmetic and structural expressions; the
+  recognized form-family includes `InputForm` / `OutputForm` /
+  `StandardForm` / `TraditionalForm` / `FullForm`, and the renderer now
+  covers slots, one-argument pure functions, assignment/replacement syntax,
+  current symbolic pattern notation including `PatternTest` / `Optional` and
+  one-argument `Repeated` / `RepeatedNull`, plus `Part` / `Map` / `Apply` /
+  `MapApply` syntax; the current byte-array/hash/compress/uncompress/encrypt/
+  decrypt/nearest/pluralization layer is also mainline-complete for the
+  project-owned subset
+- `partial`: fuller language-data-backed pluralization, broader crypto
+  envelope interop, and unicode-heavy golden coverage remain non-blocking
+  polish rather than active mainline blockers
 
 ### Functions and Symbols
 
@@ -352,8 +354,8 @@ once in its primary implementation group. Other groups may mention it as
   `FileTemplateApply`, `CharacterCounts`, `RemoveDiacritics`,
   `Alphabet`, `AlphabeticSort`, `EditDistance`, `HammingDistance`,
   `LongestCommonSubsequence`, `SequenceAlignment`, `Diff`,
-  `StringToByteArray`, `Hash`, `Compress`, `Encrypt`, `Nearest`,
-  `Pluralize`
+  `StringToByteArray`, `Hash`, `Compress`, `Uncompress`, `Encrypt`,
+  `Decrypt`, `Nearest`, `Pluralize`
 - `partial richer string-pattern parity`: `StartOfString`, `EndOfString`,
   `Repeated`, `RepeatedNull`, bounded repetition, `Shortest`, `Longest`,
   `Except`, `LetterCharacter`, `DigitCharacter`, `WordCharacter`,
@@ -365,9 +367,10 @@ once in its primary implementation group. Other groups may mention it as
 - `partial richer nearest/pluralize parity`: `Nearest` now supports the
   current `DistanceFunction -> EditDistance|HammingDistance` subset over
   strings plus a current `{resultSpec, radius}` / `{resultSpec, Infinity}`
-  form, and `Pluralize` now covers a wider case-preserving
-  irregular/common-ending English subset in addition to the earlier
-  rule-based forms
+  form, singleton `Rule[key, value]` datasets, and `Pluralize` now covers a
+  wider case-preserving irregular/common-ending English subset plus current
+  phrase-level pluralization of the final English word in simple multiword
+  strings
 - `partial deeper byte-array/crypto compatibility`: `Hash`, `Compress`, and
   `Encrypt` now consume `ByteArray[...]` payloads through the current base64
   transport subset, `Encrypt` also accepts `ByteArray[...]` keys rather than

@@ -262,6 +262,7 @@ pub enum BuiltinHandler {
     StringToByteArray,
     Hash,
     Compress,
+    Uncompress,
     Encrypt,
     Decrypt,
     Nearest,

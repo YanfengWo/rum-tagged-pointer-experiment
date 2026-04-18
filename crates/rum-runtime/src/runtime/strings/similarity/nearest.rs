@@ -87,9 +87,14 @@ pub(super) fn parse_nearest_rule_pairs(expr: &Expr) -> Option<(Vec<Expr>, Vec<Ex
 
     match expr {
         Expr::Call { head, args } if is_system_symbol_name(head, "Rule") && args.len() == 2 => {
-            let keys = call_items_with_head(&args[0], &system_expr("List"))?.to_vec();
-            let values = call_items_with_head(&args[1], &system_expr("List"))?.to_vec();
-            (keys.len() == values.len()).then_some((keys, values))
+            if let (Some(keys), Some(values)) = (
+                call_items_with_head(&args[0], &system_expr("List")),
+                call_items_with_head(&args[1], &system_expr("List")),
+            ) {
+                return (keys.len() == values.len()).then_some((keys.to_vec(), values.to_vec()));
+            }
+
+            Some((vec![args[0].clone()], vec![args[1].clone()]))
         }
         Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
             let mut keys = Vec::with_capacity(args.len());

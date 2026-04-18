@@ -63,7 +63,7 @@ This roadmap intentionally uses two levels of detail:
 ### Phase 8: String Language and Text Processing
 
 - [x] Land a substantial `CL-07` string-language surface covering exact-string manipulation, first-pass string-pattern semantics, templating, conversions, text analysis, similarity/diff helpers, and current byte-array/hash/compress/encrypt/nearest/pluralization subsets
-- [ ] Keep tightening `CL-07` deep parity around fuller symbolic string-pattern semantics, richer conversions/formatting, byte-array and crypto compatibility, nearest-neighbor semantics, and language-data-backed pluralization
+- [x] Close the current `CL-07` mainline with a substantially richer symbolic string-pattern subset, input-like `ToString` / `TextString` rendering, first-pass `Compress` / `Uncompress` / `Encrypt` / `Decrypt` round-tripping, broader `Nearest` dataset/result support, and a wider English `Pluralize` subset; treat any remaining language-data-backed pluralization, fuller crypto envelope compatibility, and unicode-heavy golden polish as non-blocking long-tail work
   - [x] extend the current string-pattern subset with character-class atoms such as `LetterCharacter`, `DigitCharacter`, `WordCharacter`, and `WhitespaceCharacter` so the existing string builtins gain broader shared matcher coverage
   - [x] extend the current string-pattern subset with `RegularExpression[...]` interop plus a first richer `ToString` form-argument subset and a current `Nearest` / `Pluralize` parity bump through `DistanceFunction -> EditDistance|HammingDistance` and common irregular English plurals
   - [x] extend the current string-pattern replacement/query subset with `RuleDelayed` handling, deepen the byte-array/crypto layer so `Hash` / `Compress` / `Encrypt` consume `ByteArray[...]` payloads rather than only textual proxies, and widen the current `Nearest` / `Pluralize` subset through radius-style list specs plus more common English irregular and word-ending forms
@@ -73,6 +73,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] align `TextString` with the current input-like renderer and extend the formatting-symbol subset through `TraditionalForm`
   - [x] deepen the current input-like renderer through slots, one-argument pure functions, assignment / replacement syntax, `Pattern` / `Blank*` / `Condition` / `Alternatives`, improve generic-expression byte-array / crypto transport to use the same renderer, and surface `Nearest[..., Automatic]` plus a broader irregular-`Pluralize` subset
   - [x] extend the current input-like renderer with `Part` / `Map` / `Apply` / `MapApply` syntax, add first-pass `Decrypt`, let `Nearest` consume `Association[...]` datasets, and widen the current irregular-`Pluralize` subset again
+  - [x] deepen the current formatting/interoperability layer with `PatternTest` / `Optional` renderer syntax, current `Decrypt` round-trips for richer parseable input-form payloads, singleton-rule `Nearest` datasets, and phrase-level `Pluralize` over the final English word in simple multiword strings
 - [ ] Decide when the string subsystem is large and stable enough to justify a dedicated crate boundary
 
 ### Phase 9: Verification, Coverage, and Conformance
@@ -205,7 +206,7 @@ This roadmap intentionally uses two levels of detail:
 - [ ] `CL-04` Functional and list combinators
 - [ ] `CL-05` Associations and keyed data
 - [ ] `CL-06` Procedural control, exceptions, and failure flow
-- [ ] `CL-07` String language
+- [x] `CL-07` String language
 - [x] `CL-08` Package, namespace, options, and protection tooling
   - [x] land first-pass `Protected` state on top of the shared attribute model, including `Protect` / `Unprotect` and protected-symbol write barriers across definition/message/clear paths
   - [x] land first-pass symbol-level `Options` / `SetOptions` / `OptionValue` storage and query semantics, including `Options[f] = {...}` and `Unset[Options[f]]`, before tackling `OptionsPattern`
@@ -240,11 +241,10 @@ This roadmap intentionally uses two levels of detail:
 
 - [ ] Work through the remaining `CL-01` through `CL-09` long-tail in explicit waves instead of reopening every matrix group at once:
   - [ ] Wave 1: `CL-07` deep parity
-    - [ ] fuller symbolic string-pattern semantics
-    - [ ] richer conversions / formatting parity
-    - [ ] deeper byte-array and crypto compatibility
-    - [ ] richer `Nearest` semantics
-    - [ ] language-data-backed `Pluralize` parity
+    - [ ] non-blocking unicode-heavy / golden regression coverage
+    - [ ] fuller project-owned crypto envelope compatibility if later interop work demands it
+    - [ ] richer `Nearest` long-tail semantics only if concrete callers need them
+    - [ ] language-data-backed `Pluralize` parity only if higher-fidelity lexical behavior becomes user-visible enough to justify the data dependency
   - [ ] Wave 2: `CL-03` and `CL-05`
     - [ ] `CL-03`: remaining rule/pattern/traversal convenience surface such as `DeleteCases`, `Replace`, `ReplaceAt`, `ReplaceList`, `PatternSequence`, `OrderlessPatternSequence`, `Verbatim`, and deeper traversal parity
     - [ ] `CL-05`: held association mutation parity, richer `Lookup` threading/multi-key behavior, fuller `Missing` semantics, and `KeySortBy` option/comparer parity

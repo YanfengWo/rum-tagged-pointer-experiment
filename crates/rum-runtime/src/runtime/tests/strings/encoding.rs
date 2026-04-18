@@ -56,6 +56,29 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "\"rum:1:b:YWJj\""
     );
     assert_eq!(
+        eval_to_string(&mut session, "Uncompress[Compress[\"abc\"]]"),
+        "\"abc\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Uncompress[Compress[StringToByteArray[\"🙂\"]]]"
+        ),
+        "ByteArray[\"8J+Zgg==\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Uncompress[Compress[\"🙂中\"]]"),
+        "\"🙂中\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[Uncompress[Compress[f[x_]]]]"),
+        "\"f[x_]\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[Uncompress[Compress[1 + 1], Hold]]"),
+        "\"Hold[2]\""
+    );
+    assert_eq!(
         eval_to_string(&mut session, "Head[Encrypt[\"secret\", \"abc\"]]"),
         "EncryptedObject"
     );
@@ -101,6 +124,35 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         ),
         "\"f[x_]\""
     );
+    let structured_expr = Expr::call(
+        system_expr("f"),
+        vec![Expr::call(
+            system_expr("Condition"),
+            vec![
+                Expr::call(
+                    system_expr("Pattern"),
+                    vec![system_expr("x"), Expr::call(system_expr("Blank"), vec![])],
+                ),
+                system_expr("True"),
+            ],
+        )],
+    );
+    let decrypted = session
+        .evaluate(Expr::call(
+            system_expr("Decrypt"),
+            vec![
+                Expr::string("abc"),
+                Expr::call(
+                    system_expr("Encrypt"),
+                    vec![Expr::string("abc"), structured_expr.clone()],
+                ),
+            ],
+        ))
+        .unwrap();
+    assert_eq!(
+        crate::runtime::strings::render_input_like_expr(&decrypted),
+        "f[x_ /; True]"
+    );
     assert_eq!(
         eval_to_string(&mut session, "Nearest[{1, 2, 5}, 3]"),
         "List[2]"
@@ -130,11 +182,25 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "List[b]"
     );
     assert_eq!(
+        eval_to_string(&mut session, "Nearest[1 -> a, 3]"),
+        "List[a]"
+    );
+    assert_eq!(eval_to_string(&mut session, "Nearest[5, 3]"), "List[5]");
+    assert_eq!(eval_to_string(&mut session, "Nearest[5][3]"), "List[5]");
+    assert_eq!(
         eval_to_string(
             &mut session,
             "Nearest[{\"cat\", \"cot\", \"dog\"}, \"cut\"]"
         ),
         "List[\"cat\", \"cot\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Nearest[\"cat\", \"cut\"]"),
+        "List[\"cat\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Nearest[\"cat\"][\"cut\"]"),
+        "List[\"cat\"]"
     );
     assert_eq!(
         eval_to_string(
@@ -202,8 +268,19 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "List[1, 2]"
     );
     assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Nearest[\"cat\" -> 1, \"cut\", DistanceFunction -> EditDistance]"
+        ),
+        "List[1]"
+    );
+    assert_eq!(
         eval_to_string(&mut session, "Pluralize[\"cat\"]"),
         "\"cats\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"red box\"]"),
+        "\"red boxes\""
     );
     assert_eq!(
         eval_to_string(&mut session, "Pluralize[\"cat\", 1]"),
@@ -280,5 +357,37 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
     assert_eq!(
         eval_to_string(&mut session, "Pluralize[\"Matrix\", 2]"),
         "\"Matrices\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"happy child\", 2]"),
+        "\"happy children\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"red box\", 2]"),
+        "\"red boxes\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"city bus\", 2]"),
+        "\"city buses\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"radius\", 2]"),
+        "\"radii\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"curriculum\", 2]"),
+        "\"curricula\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"Ox\", 2]"),
+        "\"Oxen\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"happy child!\", 2]"),
+        "\"happy children!\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"city bus?\", 2]"),
+        "\"city buses?\""
     );
 }

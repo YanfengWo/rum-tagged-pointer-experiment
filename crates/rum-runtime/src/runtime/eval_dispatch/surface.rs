@@ -43,6 +43,7 @@ impl Session {
             BuiltinHandler::StringToByteArray => self.eval_string_to_byte_array(head, args),
             BuiltinHandler::Hash => self.eval_hash(head, args),
             BuiltinHandler::Compress => self.eval_compress(head, args),
+            BuiltinHandler::Uncompress => self.eval_uncompress(head, args),
             BuiltinHandler::Encrypt => self.eval_encrypt(head, args),
             BuiltinHandler::Decrypt => self.eval_decrypt(head, args),
             BuiltinHandler::Nearest => self.eval_nearest(head, args),

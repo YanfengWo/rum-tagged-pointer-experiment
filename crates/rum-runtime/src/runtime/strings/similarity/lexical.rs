@@ -58,6 +58,23 @@ pub(super) fn pluralize_english_word(word: &str) -> String {
     apply_plural_case(word, &plural_lower)
 }
 
+pub(super) fn pluralize_english_phrase(word: &str) -> String {
+    let Some((start, end)) = last_ascii_alpha_run(word) else {
+        return word.to_string();
+    };
+
+    if start == 0 && end == word.len() {
+        return pluralize_english_word(word);
+    }
+
+    format!(
+        "{}{}{}",
+        &word[..start],
+        pluralize_english_word(&word[start..end]),
+        &word[end..]
+    )
+}
+
 fn english_irregular_plural(lower: &str) -> Option<&'static str> {
     match lower {
         "analysis" => Some("analyses"),
@@ -67,6 +84,7 @@ fn english_irregular_plural(lower: &str) -> Option<&'static str> {
         "bacterium" => Some("bacteria"),
         "basis" => Some("bases"),
         "cactus" => Some("cacti"),
+        "curriculum" => Some("curricula"),
         "focus" => Some("foci"),
         "fungus" => Some("fungi"),
         "child" => Some("children"),
@@ -74,9 +92,13 @@ fn english_irregular_plural(lower: &str) -> Option<&'static str> {
         "crisis" => Some("crises"),
         "datum" => Some("data"),
         "diagnosis" => Some("diagnoses"),
+        "memorandum" => Some("memoranda"),
         "man" => Some("men"),
         "matrix" => Some("matrices"),
         "nucleus" => Some("nuclei"),
+        "ox" => Some("oxen"),
+        "radius" => Some("radii"),
+        "stratum" => Some("strata"),
         "woman" => Some("women"),
         "person" => Some("people"),
         "mouse" => Some("mice"),
@@ -119,6 +141,22 @@ fn apply_plural_case(original: &str, plural_lower: &str) -> String {
     }
 
     plural_lower.to_string()
+}
+
+fn last_ascii_alpha_run(value: &str) -> Option<(usize, usize)> {
+    let mut current_start = None;
+    let mut last_run = None;
+
+    for (index, ch) in value.char_indices() {
+        if ch.is_ascii_alphabetic() {
+            current_start.get_or_insert(index);
+            last_run = Some((current_start.unwrap(), index + ch.len_utf8()));
+        } else {
+            current_start = None;
+        }
+    }
+
+    last_run
 }
 
 pub(super) fn english_alphabet() -> Vec<String> {

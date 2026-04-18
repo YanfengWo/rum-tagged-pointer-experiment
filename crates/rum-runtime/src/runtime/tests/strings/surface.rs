@@ -154,6 +154,84 @@ fn input_like_renderer_uses_part_and_map_family_syntax() {
         crate::runtime::strings::render_input_like_expr(&map_apply),
         "k @@@ xss"
     );
+
+    let pattern_test = Expr::call(
+        system_expr("PatternTest"),
+        vec![
+            Expr::call(
+                system_expr("Pattern"),
+                vec![system_expr("x"), Expr::call(system_expr("Blank"), vec![])],
+            ),
+            system_expr("NumberQ"),
+        ],
+    );
+    assert_eq!(
+        crate::runtime::strings::render_input_like_expr(&pattern_test),
+        "x_?NumberQ"
+    );
+
+    let optional = Expr::call(
+        system_expr("Optional"),
+        vec![Expr::call(
+            system_expr("Pattern"),
+            vec![system_expr("y"), Expr::call(system_expr("Blank"), vec![])],
+        )],
+    );
+    assert_eq!(
+        crate::runtime::strings::render_input_like_expr(&optional),
+        "y_."
+    );
+
+    let held = Expr::call(
+        system_expr("HoldForm"),
+        vec![Expr::call(
+            system_expr("Plus"),
+            vec![
+                Expr::integer(BigInt::from(1_u8)),
+                Expr::integer(BigInt::from(2_u8)),
+            ],
+        )],
+    );
+    assert_eq!(
+        crate::runtime::strings::render_input_like_expr(&held),
+        "1 + 2"
+    );
+
+    let deferred = Expr::call(
+        system_expr("Defer"),
+        vec![Expr::call(
+            system_expr("Map"),
+            vec![
+                system_expr("f"),
+                Expr::call(
+                    system_expr("List"),
+                    vec![Expr::string("🙂"), Expr::string("中")],
+                ),
+            ],
+        )],
+    );
+    assert_eq!(
+        crate::runtime::strings::render_input_like_expr(&deferred),
+        "f /@ {\"🙂\", \"中\"}"
+    );
+
+    let repeated = Expr::call(
+        system_expr("Repeated"),
+        vec![Expr::call(
+            system_expr("Pattern"),
+            vec![system_expr("x"), Expr::call(system_expr("Blank"), vec![])],
+        )],
+    );
+    assert_eq!(
+        crate::runtime::strings::render_input_like_expr(&repeated),
+        "x_.."
+    );
+
+    let repeated_null = Expr::call(system_expr("RepeatedNull"), vec![Expr::string("🙂")]);
+    assert_eq!(
+        crate::runtime::strings::render_input_like_expr(&repeated_null),
+        "\"🙂\"..."
+    );
 }
 
 #[test]
@@ -301,6 +379,36 @@ fn syntaxq_textstring_filetemplateapply_charactercounts_and_removediacritics_ext
     assert_eq!(
         eval_to_string(&mut session, "TextString[y_ -> y]"),
         "\"y_ -> y\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "TextString[\"🙂 café 中\"]"),
+        "\"🙂 café 中\""
+    );
+    let rendered_expr = Expr::call(
+        system_expr("f"),
+        vec![
+            Expr::call(
+                system_expr("PatternTest"),
+                vec![
+                    Expr::call(
+                        system_expr("Pattern"),
+                        vec![system_expr("x"), Expr::call(system_expr("Blank"), vec![])],
+                    ),
+                    system_expr("NumberQ"),
+                ],
+            ),
+            Expr::call(
+                system_expr("Optional"),
+                vec![Expr::call(
+                    system_expr("Pattern"),
+                    vec![system_expr("y"), Expr::call(system_expr("Blank"), vec![])],
+                )],
+            ),
+        ],
+    );
+    assert_eq!(
+        crate::runtime::strings::render_input_like_expr(&rendered_expr),
+        "f[x_?NumberQ, y_.]"
     );
     assert_eq!(
         eval_to_string(&mut session, "CharacterCounts[\"abca\"]"),

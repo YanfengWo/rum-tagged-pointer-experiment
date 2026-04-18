@@ -93,6 +93,15 @@ impl Session {
         };
 
         if let Some(target) = expr_as_string(&args[1]) {
+            if let Some(value) = expr_as_string(&args[0]) {
+                let Some(results) =
+                    nearest_strings(&[value.to_string()], target, result_spec, distance_function)
+                else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
+                return Ok(string_list_expr(results));
+            }
+
             if let Some(values) = expr_as_string_list(&args[0]) {
                 let Some(results) =
                     nearest_strings(&values, target, result_spec, distance_function)
@@ -120,6 +129,14 @@ impl Session {
             if distance_function != NearestDistanceFunction::Automatic {
                 return Ok(Expr::call(head.clone(), args.to_vec()));
             }
+            if let Some(value) = expr_as_exact_rational(&args[0]) {
+                return Ok(list_expr(nearest_values_for_numbers(
+                    &[value],
+                    std::slice::from_ref(&args[0]),
+                    &target,
+                    result_spec,
+                )));
+            }
             if let Some((keys, values)) = parse_numeric_dataset(&args[0]) {
                 return Ok(list_expr(nearest_values_for_numbers(
                     &keys,
@@ -143,7 +160,7 @@ impl Session {
                 let Some(word) = expr_as_string(word_expr) else {
                     return Ok(Expr::call(head.clone(), args.to_vec()));
                 };
-                Ok(Expr::string(pluralize_english_word(word)))
+                Ok(Expr::string(pluralize_english_phrase(word)))
             }
             [word_expr, count_expr] => {
                 let Some(word) = expr_as_string(word_expr) else {
@@ -155,7 +172,7 @@ impl Session {
                 if count == Rational::one() {
                     Ok(Expr::string(word.to_string()))
                 } else {
-                    Ok(Expr::string(pluralize_english_word(word)))
+                    Ok(Expr::string(pluralize_english_phrase(word)))
                 }
             }
             _ => Ok(self.invalid_call_with_arg_range("Pluralize", args, 1, 2)),
