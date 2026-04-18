@@ -240,11 +240,11 @@ This roadmap intentionally uses two levels of detail:
 ### Post-Mainline Long-Tail Priorities
 
 - [ ] Work through the remaining `CL-01` through `CL-09` long-tail in explicit waves instead of reopening every matrix group at once:
-  - [ ] Wave 1: `CL-07` deep parity
-    - [ ] non-blocking unicode-heavy / golden regression coverage
-    - [ ] fuller project-owned crypto envelope compatibility if later interop work demands it
-    - [ ] richer `Nearest` long-tail semantics only if concrete callers need them
-    - [ ] language-data-backed `Pluralize` parity only if higher-fidelity lexical behavior becomes user-visible enough to justify the data dependency
+  - [x] Wave 1: `CL-07` deep parity
+    - [ ] leave unicode-heavy / golden regression expansion as non-blocking polish
+    - [ ] leave fuller project-owned crypto envelope compatibility for future interop-driven work
+    - [ ] leave richer `Nearest` long-tail semantics for concrete caller demand
+    - [ ] leave language-data-backed `Pluralize` parity for a future data-backed lexical layer if user-visible need justifies it
   - [ ] Wave 2: `CL-03` and `CL-05`
     - [ ] `CL-03`: remaining rule/pattern/traversal convenience surface such as `Replace`, `ReplaceAt`, `ReplaceList`, `PatternSequence`, `OrderlessPatternSequence`, `Verbatim`, and deeper traversal parity
     - [ ] `CL-05`: held association mutation parity, richer `Lookup` threading/multi-key behavior, fuller `Missing` semantics, and `KeySortBy` option/comparer parity

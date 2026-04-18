@@ -486,6 +486,7 @@ enum ToStringFormat {
 
 const PREC_LOWEST: u8 = 0;
 const PREC_RULE: u8 = 10;
+const PREC_STRING_EXPRESSION: u8 = 15;
 const PREC_PLUS: u8 = 20;
 const PREC_TIMES: u8 = 30;
 const PREC_POWER: u8 = 40;
@@ -709,6 +710,23 @@ fn render_to_string_expr_with_precedence(
                         .collect::<Vec<_>>()
                         .join(" | "),
                     PREC_RULE,
+                    parent_precedence,
+                );
+            }
+
+            if is_system_symbol_name(head, "StringExpression") && !args.is_empty() {
+                return wrap_rendered(
+                    args.iter()
+                        .map(|arg| {
+                            render_to_string_expr_with_precedence(
+                                arg,
+                                format,
+                                PREC_STRING_EXPRESSION,
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" ~~ "),
+                    PREC_STRING_EXPRESSION,
                     parent_precedence,
                 );
             }

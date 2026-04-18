@@ -333,10 +333,10 @@ once in its primary implementation group. Other groups may mention it as
   `StandardForm` / `TraditionalForm` / `FullForm`, and the renderer now
   covers slots, one-argument pure functions, assignment/replacement syntax,
   current symbolic pattern notation including `PatternTest` / `Optional` and
-  one-argument `Repeated` / `RepeatedNull`, plus `Part` / `Map` / `Apply` /
-  `MapApply` syntax; the current byte-array/hash/compress/uncompress/encrypt/
-  decrypt/nearest/pluralization layer is also mainline-complete for the
-  project-owned subset
+  one-argument `Repeated` / `RepeatedNull`, infix `StringExpression` (`~~`),
+  plus `Part` / `Map` / `Apply` / `MapApply` syntax; the current
+  byte-array/hash/compress/uncompress/encrypt/decrypt/nearest/pluralization
+  layer is also mainline-complete for the project-owned subset
 - `partial`: fuller language-data-backed pluralization, broader crypto
   envelope interop, and unicode-heavy golden coverage remain non-blocking
   polish rather than active mainline blockers

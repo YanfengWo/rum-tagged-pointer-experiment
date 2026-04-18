@@ -101,6 +101,13 @@ fn characters_character_range_and_tostring_cover_basic_text_flows() {
         "\"y_ | z__\""
     );
     assert_eq!(
+        eval_to_string(
+            &mut session,
+            "ToString[StringExpression[\"a\", Pattern[x, BlankSequence[]], EndOfString]]"
+        ),
+        "\"\\\"a\\\" ~~ x__ ~~ EndOfString\""
+    );
+    assert_eq!(
         eval_to_string(&mut session, "ToString[Span[All, 3]]"),
         "\";; 3\""
     );
@@ -375,6 +382,13 @@ fn syntaxq_textstring_filetemplateapply_charactercounts_and_removediacritics_ext
     assert_eq!(
         eval_to_string(&mut session, "TextString[<|a -> 1, b -> 2|>]"),
         "\"<|a -> 1, b -> 2|>\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "TextString[StringExpression[\"a\", Pattern[x, BlankSequence[]], EndOfString]]"
+        ),
+        "\"\\\"a\\\" ~~ x__ ~~ EndOfString\""
     );
     assert_eq!(
         eval_to_string(&mut session, "TextString[y_ -> y]"),

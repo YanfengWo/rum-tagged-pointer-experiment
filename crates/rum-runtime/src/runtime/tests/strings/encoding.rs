@@ -75,6 +75,13 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "\"f[x_]\""
     );
     assert_eq!(
+        eval_to_string(
+            &mut session,
+            "ToString[Uncompress[Compress[<|a -> 1, b -> 2|>]]]"
+        ),
+        "\"<|a -> 1, b -> 2|>\""
+    );
+    assert_eq!(
         eval_to_string(&mut session, "ToString[Uncompress[Compress[1 + 1], Hold]]"),
         "\"Hold[2]\""
     );
@@ -123,6 +130,13 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
             "ToString[Decrypt[\"abc\", Encrypt[\"abc\", f[x_]]]]"
         ),
         "\"f[x_]\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "ToString[Decrypt[\"abc\", Encrypt[\"abc\", <|a -> 1, b -> 2|>]]]"
+        ),
+        "\"<|a -> 1, b -> 2|>\""
     );
     let structured_expr = Expr::call(
         system_expr("f"),
@@ -179,6 +193,10 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
     );
     assert_eq!(
         eval_to_string(&mut session, "Nearest[<|1 -> a, 2 -> b, 5 -> c|>, 3]"),
+        "List[b]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Nearest[<|1 -> a, 2 -> b, 5 -> c|>][3]"),
         "List[b]"
     );
     assert_eq!(
@@ -357,6 +375,14 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
     assert_eq!(
         eval_to_string(&mut session, "Pluralize[\"Matrix\", 2]"),
         "\"Matrices\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"criterion\", 2]"),
+        "\"criteria\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"Vertex\", 2]"),
+        "\"Vertices\""
     );
     assert_eq!(
         eval_to_string(&mut session, "Pluralize[\"happy child\", 2]"),
