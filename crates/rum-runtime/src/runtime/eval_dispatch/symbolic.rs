@@ -104,6 +104,7 @@ impl Session {
             BuiltinHandler::RuleDelayed => self.eval_rule_delayed(args),
             BuiltinHandler::MatchQ => self.eval_match_q(args),
             BuiltinHandler::Cases => self.eval_cases(args),
+            BuiltinHandler::DeleteCases => self.eval_delete_cases(args),
             BuiltinHandler::Count => self.eval_count(args),
             BuiltinHandler::MemberQ => self.eval_member_q(args),
             BuiltinHandler::FreeQ => self.eval_free_q(args),

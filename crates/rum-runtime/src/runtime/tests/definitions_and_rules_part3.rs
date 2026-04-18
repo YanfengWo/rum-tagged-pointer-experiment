@@ -548,6 +548,64 @@ fn cases_rule_rhs_splices_named_blanksequence_matches() {
 }
 
 #[test]
+fn deletecases_deletes_top_level_matches_by_default() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("DeleteCases[f[g[1], 2, \"hi\"], x_Integer]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[g[1], \"hi\"]"
+    );
+}
+
+#[test]
+fn deletecases_supports_standard_levelspecs_and_limits() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("DeleteCases[f[g[1], 2, h[3]], x_Integer, Infinity]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[g[], h[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DeleteCases[f[g[1], 2, h[3]], x_Integer, Infinity, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[g[], h[3]]"
+    );
+}
+
+#[test]
+fn deletecases_can_delete_heads_and_association_values() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("DeleteCases[f[1, g[2]], x_Symbol, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Sequence[1, g[2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DeleteCases[<|a -> 1, b -> x, c -> 2|>, _Integer]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[b, x]]"
+    );
+}
+
+#[test]
 fn replaceall_honors_condition_patterns() {
     let mut session = Session::new();
 

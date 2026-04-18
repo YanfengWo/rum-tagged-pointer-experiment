@@ -449,6 +449,16 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
             optional_blank_expr(),
             system_expr("OptionsPattern"),
         ])],
+        "DeleteCases" => vec![
+            syntax_argument_pattern(vec![
+                blank_expr(),
+                optional_blank_expr(),
+                optional_blank_expr(),
+                optional_blank_expr(),
+                system_expr("OptionsPattern"),
+            ]),
+            syntax_rule("OptionNames", string_list_expr(vec!["Heads".to_string()])),
+        ],
         "Position" => vec![syntax_argument_pattern(vec![
             blank_expr(),
             optional_blank_expr(),

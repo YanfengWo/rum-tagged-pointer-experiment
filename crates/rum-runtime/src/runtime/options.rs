@@ -1285,7 +1285,7 @@ pub(super) fn default_system_options(symbol: &Symbol) -> SymbolOptions {
 
     let entries = match symbol.name() {
         "ArrayFilter" => vec![system_rule_option("Padding", Expr::string("Fixed"))],
-        "Cases" | "Count" | "MemberQ" | "Level" | "Depth" => {
+        "Cases" | "DeleteCases" | "Count" | "MemberQ" | "Level" | "Depth" => {
             vec![system_rule_option("Heads", bool_option(false))]
         }
         "Trace" | "TracePrint" => vec![system_rule_option("Heads", bool_option(false))],

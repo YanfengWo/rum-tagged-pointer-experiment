@@ -46,25 +46,12 @@ impl Session {
             return Ok(self.invalid_call_with_arg_range("Lookup", args, 2, 3));
         }
 
-        if let Some(value) = apply_keyed_part_spec(&args[0], &args[1]) {
-            return Ok(value);
-        }
-
-        let Some(entries) = association_entries_from_expr(&args[0]) else {
+        let default = args.get(2).cloned();
+        let Some(value) = lookup_value(&args[0], &args[1], default) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let key = &args[1];
-        if let Some((_, value)) = entries.into_iter().find(|(entry_key, _)| entry_key == key) {
-            return Ok(value);
-        }
-
-        Ok(args.get(2).cloned().unwrap_or_else(|| {
-            Expr::call(
-                system_expr("Missing"),
-                vec![Expr::string("KeyAbsent"), key.clone()],
-            )
-        }))
+        Ok(value)
     }
 
     pub(in crate::runtime) fn eval_key(
@@ -273,4 +260,49 @@ impl Session {
 
         Ok(Expr::call(head.clone(), args.to_vec()))
     }
+}
+
+fn lookup_value(data: &Expr, key_spec: &Expr, default: Option<Expr>) -> Option<Expr> {
+    if let Some(value) = apply_keyed_part_spec(data, key_spec) {
+        return Some(value);
+    }
+
+    if let Some(items) = call_items_with_head(data, &system_expr("List")) {
+        if items
+            .iter()
+            .all(|item| association_entries_from_expr(item).is_some())
+        {
+            return Some(Expr::call(
+                system_expr("List"),
+                items
+                    .iter()
+                    .map(|item| lookup_value(item, key_spec, default.clone()))
+                    .collect::<Option<Vec<_>>>()?,
+            ));
+        }
+    }
+
+    if let Some(keys) = call_items_with_head(key_spec, &system_expr("List")) {
+        return Some(Expr::call(
+            system_expr("List"),
+            keys.iter()
+                .map(|key| lookup_value(data, key, default.clone()))
+                .collect::<Option<Vec<_>>>()?,
+        ));
+    }
+
+    let entries = association_entries_from_expr(data)?;
+    if let Some((_, value)) = entries
+        .into_iter()
+        .find(|(entry_key, _)| entry_key == key_spec)
+    {
+        return Some(value);
+    }
+
+    Some(default.unwrap_or_else(|| {
+        Expr::call(
+            system_expr("Missing"),
+            vec![Expr::string("KeyAbsent"), key_spec.clone()],
+        )
+    }))
 }

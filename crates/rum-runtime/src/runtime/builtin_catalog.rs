@@ -433,6 +433,11 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::Cases,
     ),
     BuiltinSpec::special(
+        "DeleteCases",
+        "Deletes subexpressions matching a pattern on levels specified by a standard levelspec.",
+        BuiltinHandler::DeleteCases,
+    ),
+    BuiltinSpec::special(
         "Count",
         "Counts subexpressions matching a pattern on levels specified by a standard levelspec.",
         BuiltinHandler::Count,

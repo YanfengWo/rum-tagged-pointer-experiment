@@ -108,6 +108,48 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
     );
     assert_eq!(
         session
+            .eval_text("Lookup[Association[a -> 1, b -> 2], {b, a, c}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 1, Missing[\"KeyAbsent\", c]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Lookup[Association[a -> 1], {a, b}, 99]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 99]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Lookup[{Association[a -> 1], Association[a -> 2, b -> 3]}, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Lookup[{Association[a -> 1], Association[b -> 2]}, a, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 0]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "Lookup[{Association[a -> Association[b -> 2]], Association[a -> Association[b -> 3]]}, {Key[a], Key[b]}]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 3]"
+    );
+    assert_eq!(
+        session
             .eval_text("Keys[Association[a -> 1, b -> 2]]")
             .unwrap()
             .value

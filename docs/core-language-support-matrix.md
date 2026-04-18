@@ -183,7 +183,8 @@ once in its primary implementation group. Other groups may mention it as
   `Alternatives`, `Optional`, `Repeated`
 - `partial`: `MatchQ`, `ReplaceAll`, `ReplaceRepeated`, `Cases`, `Count`,
   `MemberQ`, `FreeQ`, `Position`
-- `planned`: `DeleteCases`, `Replace`, `ReplaceAt`, `ReplaceList`,
+- `partial`: `DeleteCases`
+- `planned`: `Replace`, `ReplaceAt`, `ReplaceList`,
   `Longest`, `Shortest`, `PatternSequence`, `OrderlessPatternSequence`,
   `Verbatim`
 - `cross-tracked elsewhere`: `Set`, `SetDelayed`, `Part`, `Extract`,

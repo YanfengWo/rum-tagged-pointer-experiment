@@ -416,6 +416,7 @@ pub enum BuiltinHandler {
     RuleDelayed,
     MatchQ,
     Cases,
+    DeleteCases,
     Count,
     MemberQ,
     FreeQ,
