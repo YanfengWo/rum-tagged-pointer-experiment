@@ -72,6 +72,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] upgrade `ToString` so the default / `InputForm` / `OutputForm` / `StandardForm` path renders a current input-like textual subset for common arithmetic and structural expressions instead of always falling back to canonical `FullForm` text
   - [x] align `TextString` with the current input-like renderer and extend the formatting-symbol subset through `TraditionalForm`
   - [x] deepen the current input-like renderer through slots, one-argument pure functions, assignment / replacement syntax, `Pattern` / `Blank*` / `Condition` / `Alternatives`, improve generic-expression byte-array / crypto transport to use the same renderer, and surface `Nearest[..., Automatic]` plus a broader irregular-`Pluralize` subset
+  - [x] extend the current input-like renderer with `Part` / `Map` / `Apply` / `MapApply` syntax, add first-pass `Decrypt`, let `Nearest` consume `Association[...]` datasets, and widen the current irregular-`Pluralize` subset again
 - [ ] Decide when the string subsystem is large and stable enough to justify a dedicated crate boundary
 
 ### Phase 9: Verification, Coverage, and Conformance

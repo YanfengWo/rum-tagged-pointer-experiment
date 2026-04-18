@@ -99,6 +99,54 @@ impl Session {
             original_form,
         ))
     }
+
+    pub(in crate::runtime) fn eval_decrypt(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() != 2 {
+            return Ok(self.invalid_call_with_exact_arg_count("Decrypt", args, 2));
+        }
+
+        let Some(key) = encryption_key_bytes(&args[0]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let Some((ciphertext, key_hash, original_form)) = encrypted_object_payload(&args[1]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if sha256_bytes(&key).as_slice() != key_hash.as_slice() {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
+
+        let decrypted = xor_with_sha256_keystream(&key, &ciphertext);
+        let Some(restored) = self.restore_decrypted_transport_expr(&decrypted, original_form)
+        else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        Ok(restored)
+    }
+
+    fn restore_decrypted_transport_expr(
+        &self,
+        payload: &[u8],
+        original_form: Expr,
+    ) -> Option<Expr> {
+        if is_system_symbol_name(&original_form, "String") {
+            return Some(Expr::string(std::str::from_utf8(payload).ok()?.to_string()));
+        }
+        if is_system_symbol_name(&original_form, "ByteArray") {
+            return Some(byte_array_expr(payload));
+        }
+        if is_system_symbol_name(&original_form, "InputForm") {
+            let source = std::str::from_utf8(payload).ok()?;
+            let syntax = parse_expr(source).ok()?;
+            return self.lower_syntax_expr(&syntax).ok();
+        }
+
+        None
+    }
 }
 
 fn byte_array_expr(bytes: &[u8]) -> Expr {
@@ -147,7 +195,10 @@ fn expr_transport_bytes(expr: &Expr) -> (Vec<u8>, Expr) {
     } else if let Some(bytes) = expr_as_byte_array_bytes(expr) {
         (bytes, system_expr("ByteArray"))
     } else {
-        (render_input_like_expr(expr).into_bytes(), system_expr("InputForm"))
+        (
+            render_input_like_expr(expr).into_bytes(),
+            system_expr("InputForm"),
+        )
     }
 }
 
@@ -180,6 +231,35 @@ fn encrypted_object_expr(ciphertext: &[u8], key_hash: &[u8], original_form: Expr
             (Expr::string("OriginalForm"), original_form),
         ])],
     )
+}
+
+fn encrypted_object_payload(expr: &Expr) -> Option<(Vec<u8>, Vec<u8>, Expr)> {
+    let payload_items = call_items_with_head(expr, &system_expr("EncryptedObject"))?;
+    if payload_items.len() != 1 {
+        return None;
+    }
+    let entries = association_entries_from_expr(&payload_items[0])?;
+    let data = entries
+        .iter()
+        .find(|(key, _)| expr_as_string(key).is_some_and(|name| name == "Data"))?
+        .1
+        .clone();
+    let key_hash = entries
+        .iter()
+        .find(|(key, _)| expr_as_string(key).is_some_and(|name| name == "KeyHash"))?
+        .1
+        .clone();
+    let original_form = entries
+        .iter()
+        .find(|(key, _)| expr_as_string(key).is_some_and(|name| name == "OriginalForm"))?
+        .1
+        .clone();
+
+    Some((
+        expr_as_byte_array_bytes(&data)?,
+        expr_as_byte_array_bytes(&key_hash)?,
+        original_form,
+    ))
 }
 
 const SHA256_OUTPUT_LEN: usize = 32;

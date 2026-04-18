@@ -75,10 +75,7 @@ fn characters_character_range_and_tostring_cover_basic_text_flows() {
         eval_to_string(&mut session, "ToString[<|a -> 1, b -> 2|>]"),
         "\"<|a -> 1, b -> 2|>\""
     );
-    assert_eq!(
-        eval_to_string(&mut session, "ToString[x_]"),
-        "\"x_\""
-    );
+    assert_eq!(eval_to_string(&mut session, "ToString[x_]"), "\"x_\"");
     assert_eq!(
         eval_to_string(&mut session, "ToString[x_Integer]"),
         "\"x_Integer\""
@@ -110,6 +107,52 @@ fn characters_character_range_and_tostring_cover_basic_text_flows() {
     assert_eq!(
         eval_to_string(&mut session, "ToString[Span[All, All, 2]]"),
         "\";; ;; 2\""
+    );
+}
+
+#[test]
+fn input_like_renderer_uses_part_and_map_family_syntax() {
+    let part = Expr::call(
+        system_expr("Part"),
+        vec![
+            system_expr("f"),
+            Expr::integer(BigInt::from(1_u8)),
+            Expr::call(
+                system_expr("Span"),
+                vec![Expr::integer(BigInt::from(2_u8)), system_expr("All")],
+            ),
+        ],
+    );
+    assert_eq!(
+        crate::runtime::strings::render_input_like_expr(&part),
+        "f[[1, 2 ;;]]"
+    );
+
+    let map = Expr::call(
+        system_expr("Map"),
+        vec![system_expr("g"), system_expr("xs")],
+    );
+    assert_eq!(
+        crate::runtime::strings::render_input_like_expr(&map),
+        "g /@ xs"
+    );
+
+    let apply = Expr::call(
+        system_expr("Apply"),
+        vec![system_expr("h"), system_expr("xs")],
+    );
+    assert_eq!(
+        crate::runtime::strings::render_input_like_expr(&apply),
+        "h @@ xs"
+    );
+
+    let map_apply = Expr::call(
+        system_expr("MapApply"),
+        vec![system_expr("k"), system_expr("xss")],
+    );
+    assert_eq!(
+        crate::runtime::strings::render_input_like_expr(&map_apply),
+        "k @@@ xss"
     );
 }
 
@@ -243,7 +286,10 @@ fn syntaxq_textstring_filetemplateapply_charactercounts_and_removediacritics_ext
     assert_eq!(eval_to_string(&mut session, "SyntaxQ[\"1+2\"]"), "True");
     assert_eq!(eval_to_string(&mut session, "SyntaxQ[\"1+\"]"), "False");
     assert_eq!(eval_to_string(&mut session, "TextString[123]"), "\"123\"");
-    assert_eq!(eval_to_string(&mut session, "TextString[1/2 + x]"), "\"1/2 + x\"");
+    assert_eq!(
+        eval_to_string(&mut session, "TextString[1/2 + x]"),
+        "\"1/2 + x\""
+    );
     assert_eq!(
         eval_to_string(&mut session, "TextString[{1, 2}]"),
         "\"{1, 2}\""

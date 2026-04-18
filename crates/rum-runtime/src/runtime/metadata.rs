@@ -263,6 +263,7 @@ pub enum BuiltinHandler {
     Hash,
     Compress,
     Encrypt,
+    Decrypt,
     Nearest,
     Pluralize,
     SyntaxQ,

@@ -11,7 +11,8 @@ pub(super) fn string_contains_q(
     pattern: &StringPattern,
     config: StringPatternMatchConfig,
 ) -> bool {
-    (0..=haystack.len()).any(|start| best_pattern_match_state(pattern, haystack, start, config).is_some())
+    (0..=haystack.len())
+        .any(|start| best_pattern_match_state(pattern, haystack, start, config).is_some())
 }
 
 pub(super) fn string_starts_q(
@@ -330,15 +331,13 @@ fn split_by_string_patterns(
             break;
         }
 
-        let Some(end) =
-            best_pattern_match_at_with_bindings(
-                patterns,
-                chars,
-                index,
-                StringPatternMatchConfig::default(),
-            )
-            .map(|(_, state)| state.end)
-        else {
+        let Some(end) = best_pattern_match_at_with_bindings(
+            patterns,
+            chars,
+            index,
+            StringPatternMatchConfig::default(),
+        )
+        .map(|(_, state)| state.end) else {
             index += 1;
             continue;
         };
@@ -447,8 +446,13 @@ fn best_pattern_suffix_start(patterns: &[StringPattern], chars: &[char]) -> Opti
     (0..end)
         .filter(|start| {
             patterns.iter().any(|pattern| {
-                best_pattern_match_state(pattern, chars, *start, StringPatternMatchConfig::default())
-                    .is_some_and(|state| state.end == end)
+                best_pattern_match_state(
+                    pattern,
+                    chars,
+                    *start,
+                    StringPatternMatchConfig::default(),
+                )
+                .is_some_and(|state| state.end == end)
             })
         })
         .min()

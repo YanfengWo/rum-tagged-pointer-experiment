@@ -331,8 +331,9 @@ once in its primary implementation group. Other groups may mention it as
   common `InputForm` / `OutputForm` / `StandardForm` / `TraditionalForm` /
   `FullForm` symbols are recognized; the current renderer also covers slots,
   one-argument pure functions, assignment/replacement syntax, and a first
-  symbolic pattern notation subset, but the string-pattern surface is still a
-  first-pass subset and the byte-array/hash/compress/encrypt/nearest/
+  symbolic pattern notation subset plus current `Part` / `Map` / `Apply` /
+  `MapApply` syntax, but the string-pattern surface is still a first-pass
+  subset and the byte-array/hash/compress/encrypt/nearest/
   pluralization layer is still a current subset rather than full Wolfram parity
 - `planned`: fuller symbolic string-pattern layer, conversions, templating,
   and nontrivial search/transformation semantics
@@ -369,8 +370,13 @@ once in its primary implementation group. Other groups may mention it as
   rule-based forms
 - `partial deeper byte-array/crypto compatibility`: `Hash`, `Compress`, and
   `Encrypt` now consume `ByteArray[...]` payloads through the current base64
-  transport subset, and `Encrypt` also accepts `ByteArray[...]` keys rather
-  than only textual expression forms
+  transport subset, `Encrypt` also accepts `ByteArray[...]` keys rather than
+  only textual expression forms, and `Decrypt` now round-trips the current
+  encrypted-object subset for strings, byte arrays, and current parseable
+  input-form expression payloads
+- `partial association-aware nearest parity`: `Nearest` now also accepts
+  `Association[...]` datasets in addition to rule lists for the current
+  numeric and string-distance subsets
 - `planned`: deeper nearest-neighbor semantics, fuller
   compression/encryption compatibility, and fuller linguistic-data-backed
   pluralization parity

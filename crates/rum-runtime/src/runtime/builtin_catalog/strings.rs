@@ -80,6 +80,11 @@ pub(super) const STRING_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Encrypt,
     ),
     BuiltinSpec::ordinary(
+        "Decrypt",
+        "Decrypts the current first-pass encrypted object subset using string or ByteArray keys.",
+        BuiltinHandler::Decrypt,
+    ),
+    BuiltinSpec::ordinary(
         "Nearest",
         "Finds nearest strings or exact numeric values in the current first-pass subset.",
         BuiltinHandler::Nearest,

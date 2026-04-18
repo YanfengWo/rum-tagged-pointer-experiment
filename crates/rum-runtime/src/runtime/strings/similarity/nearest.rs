@@ -80,6 +80,11 @@ pub(super) fn parse_numeric_dataset(expr: &Expr) -> Option<(Vec<Rational>, Vec<E
 }
 
 pub(super) fn parse_nearest_rule_pairs(expr: &Expr) -> Option<(Vec<Expr>, Vec<Expr>)> {
+    if let Some(entries) = association_entries_from_expr(expr) {
+        let (keys, values): (Vec<_>, Vec<_>) = entries.into_iter().unzip();
+        return Some((keys, values));
+    }
+
     match expr {
         Expr::Call { head, args } if is_system_symbol_name(head, "Rule") && args.len() == 2 => {
             let keys = call_items_with_head(&args[0], &system_expr("List"))?.to_vec();

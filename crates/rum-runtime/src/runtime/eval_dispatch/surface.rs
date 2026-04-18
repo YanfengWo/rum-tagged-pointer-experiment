@@ -44,6 +44,7 @@ impl Session {
             BuiltinHandler::Hash => self.eval_hash(head, args),
             BuiltinHandler::Compress => self.eval_compress(head, args),
             BuiltinHandler::Encrypt => self.eval_encrypt(head, args),
+            BuiltinHandler::Decrypt => self.eval_decrypt(head, args),
             BuiltinHandler::Nearest => self.eval_nearest(head, args),
             BuiltinHandler::Pluralize => self.eval_pluralize(head, args),
             BuiltinHandler::SyntaxQ => self.eval_syntax_q(head, args),

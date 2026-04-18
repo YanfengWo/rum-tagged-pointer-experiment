@@ -522,16 +522,8 @@ fn render_to_string_expr_with_precedence(
                         .iter()
                         .map(|(key, value)| format!(
                             "{} -> {}",
-                            render_to_string_expr_with_precedence(
-                                key,
-                                format,
-                                PREC_RULE + 1
-                            ),
-                            render_to_string_expr_with_precedence(
-                                value,
-                                format,
-                                PREC_RULE + 1
-                            )
+                            render_to_string_expr_with_precedence(key, format, PREC_RULE + 1),
+                            render_to_string_expr_with_precedence(value, format, PREC_RULE + 1)
                         ))
                         .collect::<Vec<_>>()
                         .join(", ")
@@ -575,6 +567,19 @@ fn render_to_string_expr_with_precedence(
                     render_to_string_expr_with_precedence(&args[0], format, PREC_RULE)
                 );
                 return wrap_rendered(rendered, PREC_RULE, parent_precedence);
+            }
+
+            if is_system_symbol_name(head, "Part") && args.len() >= 2 {
+                let rendered = format!(
+                    "{}[[{}]]",
+                    render_to_string_expr_with_precedence(&args[0], format, PREC_CALL),
+                    args[1..]
+                        .iter()
+                        .map(|arg| render_to_string_expr_with_precedence(arg, format, PREC_LOWEST))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+                return wrap_rendered(rendered, PREC_CALL, parent_precedence);
             }
 
             if is_system_symbol_name(head, heads::arithmetic::PLUS) && !args.is_empty() {
@@ -639,6 +644,33 @@ fn render_to_string_expr_with_precedence(
                     "{} -> {}",
                     render_to_string_expr_with_precedence(&args[0], format, PREC_RULE + 1),
                     render_to_string_expr_with_precedence(&args[1], format, PREC_RULE + 1)
+                );
+                return wrap_rendered(rendered, PREC_RULE, parent_precedence);
+            }
+
+            if is_system_symbol_name(head, "Map") && args.len() == 2 {
+                let rendered = format!(
+                    "{} /@ {}",
+                    render_to_string_expr_with_precedence(&args[0], format, PREC_RULE),
+                    render_to_string_expr_with_precedence(&args[1], format, PREC_RULE)
+                );
+                return wrap_rendered(rendered, PREC_RULE, parent_precedence);
+            }
+
+            if is_system_symbol_name(head, "Apply") && args.len() == 2 {
+                let rendered = format!(
+                    "{} @@ {}",
+                    render_to_string_expr_with_precedence(&args[0], format, PREC_RULE),
+                    render_to_string_expr_with_precedence(&args[1], format, PREC_RULE)
+                );
+                return wrap_rendered(rendered, PREC_RULE, parent_precedence);
+            }
+
+            if is_system_symbol_name(head, "MapApply") && args.len() == 2 {
+                let rendered = format!(
+                    "{} @@@ {}",
+                    render_to_string_expr_with_precedence(&args[0], format, PREC_RULE),
+                    render_to_string_expr_with_precedence(&args[1], format, PREC_RULE)
                 );
                 return wrap_rendered(rendered, PREC_RULE, parent_precedence);
             }

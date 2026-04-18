@@ -40,10 +40,7 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "\"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\""
     );
     assert_eq!(
-        eval_to_string(
-            &mut session,
-            "Hash[1/2 + x, \"SHA256\", \"HexString\"]"
-        ),
+        eval_to_string(&mut session, "Hash[1/2 + x, \"SHA256\", \"HexString\"]"),
         "\"e697c4f396641d09562ff62b6d49d4de1d6e852d0101b44f8c2959542984dbb5\""
     );
     assert_eq!(
@@ -77,6 +74,34 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "EncryptedObject"
     );
     assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Decrypt[\"abc\", Encrypt[\"abc\", \"secret\"]]"
+        ),
+        "\"secret\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Decrypt[StringToByteArray[\"abc\"], Encrypt[StringToByteArray[\"abc\"], StringToByteArray[\"secret\"]]]"
+        ),
+        "ByteArray[\"c2VjcmV0\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "ToString[Decrypt[\"abc\", Encrypt[\"abc\", 1/2 + x]]]"
+        ),
+        "\"1/2 + x\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "ToString[Decrypt[\"abc\", Encrypt[\"abc\", f[x_]]]]"
+        ),
+        "\"f[x_]\""
+    );
+    assert_eq!(
         eval_to_string(&mut session, "Nearest[{1, 2, 5}, 3]"),
         "List[2]"
     );
@@ -98,6 +123,10 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
     );
     assert_eq!(
         eval_to_string(&mut session, "Nearest[{1, 2, 5} -> {a, b, c}][3]"),
+        "List[b]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Nearest[<|1 -> a, 2 -> b, 5 -> c|>, 3]"),
         "List[b]"
     );
     assert_eq!(
@@ -166,6 +195,13 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "List[\"cat\", \"cot\", \"dog\"]"
     );
     assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Nearest[<|\"cat\" -> 1, \"cot\" -> 2, \"dog\" -> 3|>, \"cut\", {All, 1}, DistanceFunction -> EditDistance]"
+        ),
+        "List[1, 2]"
+    );
+    assert_eq!(
         eval_to_string(&mut session, "Pluralize[\"cat\"]"),
         "\"cats\""
     );
@@ -232,5 +268,17 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
     assert_eq!(
         eval_to_string(&mut session, "Pluralize[\"nucleus\", 2]"),
         "\"nuclei\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"Appendix\", 2]"),
+        "\"Appendices\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"thesis\", 2]"),
+        "\"theses\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"Matrix\", 2]"),
+        "\"Matrices\""
     );
 }

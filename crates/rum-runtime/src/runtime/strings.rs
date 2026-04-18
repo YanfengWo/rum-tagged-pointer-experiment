@@ -5,6 +5,11 @@ mod similarity;
 mod template;
 mod text;
 
+#[cfg(test)]
+pub(in crate::runtime) fn render_input_like_expr(expr: &Expr) -> String {
+    text::render_input_like_expr(expr)
+}
+
 fn bool_expr(value: bool) -> Expr {
     system_expr(if value {
         heads::structure::TRUE
