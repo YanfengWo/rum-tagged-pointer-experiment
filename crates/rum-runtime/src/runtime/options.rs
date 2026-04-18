@@ -497,6 +497,41 @@ impl Session {
         self.merged_option_exprs_for_symbol(&Symbol::system(symbol_name), explicit)
     }
 
+    pub(super) fn raw_option_value_for_symbol(
+        &self,
+        explicit: Option<&SymbolOptions>,
+        target: &Symbol,
+        option_name: &str,
+    ) -> Option<(Expr, bool)> {
+        explicit
+            .and_then(|options| options.entry_by_name(option_name).cloned())
+            .or_else(|| {
+                self.options_for_symbol(target)
+                    .entry_by_name(option_name)
+                    .cloned()
+            })
+            .map(|entry| (entry.value, entry.delayed))
+    }
+
+    pub(super) fn runtime_option_expr_for_symbol(
+        &mut self,
+        explicit: Option<&SymbolOptions>,
+        target: &Symbol,
+        option_name: &str,
+    ) -> Result<Option<Expr>, EvalError> {
+        let Some((value, delayed)) =
+            self.raw_option_value_for_symbol(explicit, target, option_name)
+        else {
+            return Ok(None);
+        };
+
+        if delayed {
+            Ok(Some(value))
+        } else {
+            self.evaluate(value).map(Some)
+        }
+    }
+
     pub(super) fn compile_assigned_options_from_resolved(
         &self,
         resolved: &Expr,

@@ -1386,36 +1386,13 @@ impl Session {
         explicit: Option<&SymbolOptions>,
         name: &str,
     ) -> Result<Option<Expr>, EvalError> {
-        if let Some((value, delayed)) =
-            explicit.and_then(|options| option_entry_by_name(options, name))
-        {
-            return self.resolve_monitor_option_expr(value, delayed);
-        }
+        let resolved =
+            self.runtime_option_expr_for_symbol(explicit, &Symbol::system("Monitor"), name)?;
 
-        let defaults = self.options_for_symbol(&Symbol::system("Monitor"));
-        if let Some((value, delayed)) = option_entry_by_name(&defaults, name) {
-            return self.resolve_monitor_option_expr(value, delayed);
-        }
-
-        Ok(None)
-    }
-
-    fn resolve_monitor_option_expr(
-        &mut self,
-        value: Expr,
-        delayed: bool,
-    ) -> Result<Option<Expr>, EvalError> {
-        let resolved = if delayed {
-            value
-        } else {
-            self.evaluate(value)?
-        };
-
-        if is_system_symbol_name(&resolved, "None") {
-            Ok(None)
-        } else {
-            Ok(Some(resolved))
-        }
+        Ok(match resolved {
+            Some(expr) if is_system_symbol_name(&expr, "None") => None,
+            other => other,
+        })
     }
 
     fn finish_monitor(&mut self, outcome: Result<Expr, EvalError>) -> Result<Expr, EvalError> {
@@ -1749,21 +1726,19 @@ impl Session {
             }
         }
 
-        let defaults = self.options_for_symbol(&Symbol::system("TestReport"));
-        let same_test = if let Some((value, delayed)) = option_entry_by_name(&options, "SameTest")
-            .or_else(|| option_entry_by_name(&defaults, "SameTest"))
-        {
-            if delayed {
-                value
-            } else {
-                self.evaluate(value)?
-            }
+        let same_test = if let Some(value) = self.runtime_option_expr_for_symbol(
+            Some(&options),
+            &Symbol::system("TestReport"),
+            "SameTest",
+        )? {
+            value
         } else {
             system_expr("SameQ")
         };
 
-        let time_constraint = self.test_report_time_constraint_expr(&options, &defaults)?;
-        let memory_constraint = self.test_report_memory_constraint_expr(&options, &defaults)?;
+        let time_constraint = self.test_report_constraint_expr(Some(&options), "TimeConstraint")?;
+        let memory_constraint =
+            self.test_report_constraint_expr(Some(&options), "MemoryConstraint")?;
 
         Ok(Some(TestReportOptions {
             same_test: Some(same_test),
@@ -1772,41 +1747,20 @@ impl Session {
         }))
     }
 
-    fn test_report_time_constraint_expr(
+    fn test_report_constraint_expr(
         &mut self,
-        explicit: &SymbolOptions,
-        defaults: &SymbolOptions,
+        explicit: Option<&SymbolOptions>,
+        option_name: &str,
     ) -> Result<Option<Expr>, EvalError> {
-        let Some((value, delayed)) = option_entry_by_name(explicit, "TimeConstraint")
-            .or_else(|| option_entry_by_name(defaults, "TimeConstraint"))
+        let Some(resolved) = self.runtime_option_expr_for_symbol(
+            explicit,
+            &Symbol::system("TestReport"),
+            option_name,
+        )?
         else {
             return Ok(None);
         };
 
-        let resolved = if delayed {
-            value
-        } else {
-            self.evaluate(value)?
-        };
-        Ok((!is_system_symbol_name(&resolved, "Infinity")).then_some(resolved))
-    }
-
-    fn test_report_memory_constraint_expr(
-        &mut self,
-        explicit: &SymbolOptions,
-        defaults: &SymbolOptions,
-    ) -> Result<Option<Expr>, EvalError> {
-        let Some((value, delayed)) = option_entry_by_name(explicit, "MemoryConstraint")
-            .or_else(|| option_entry_by_name(defaults, "MemoryConstraint"))
-        else {
-            return Ok(None);
-        };
-
-        let resolved = if delayed {
-            value
-        } else {
-            self.evaluate(value)?
-        };
         Ok((!is_system_symbol_name(&resolved, "Infinity")).then_some(resolved))
     }
 
@@ -2582,13 +2536,6 @@ struct EvalCapturedOutcome {
     messages: Vec<RuntimeMessage>,
     prints: Vec<String>,
     timing: Expr,
-}
-
-fn option_entry_by_name(options: &SymbolOptions, name: &str) -> Option<(Expr, bool)> {
-    options
-        .iter()
-        .find(|(current, _, _)| current.name() == name)
-        .map(|(_, value, delayed)| (value.clone(), delayed))
 }
 
 fn parse_test_case_exprs(expr: &Expr) -> Option<Vec<Expr>> {

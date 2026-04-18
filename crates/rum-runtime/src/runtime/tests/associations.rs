@@ -332,6 +332,47 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .to_string(),
         "Association[Rule[b, 2]]"
     );
+    session.eval_text("assoc = Association[a -> 1]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("AssociateTo[assoc, b -> 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1], Rule[b, 2]]"
+    );
+    assert_eq!(
+        session.eval_text("assoc").unwrap().value.to_string(),
+        "Association[Rule[a, 1], Rule[b, 2]]"
+    );
+    session
+        .eval_text("assoc = Association[a -> 1, b -> 2, c -> 3]")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("KeyDropFrom[assoc, {a, c}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[b, 2]]"
+    );
+    assert_eq!(
+        session.eval_text("assoc").unwrap().value.to_string(),
+        "Association[Rule[b, 2]]"
+    );
+    session.eval_text("Protect[assoc]").unwrap();
+    let blocked = session.eval_text("AssociateTo[assoc, c -> 9]").unwrap();
+    assert_eq!(blocked.value.to_string(), "AssociateTo[assoc, Rule[c, 9]]");
+    assert!(
+        blocked
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "AssociateTo" && message.tag == "wrsym" })
+    );
+    assert_eq!(
+        session.eval_text("assoc").unwrap().value.to_string(),
+        "Association[Rule[b, 2]]"
+    );
     assert_eq!(
         session
             .eval_text("KeyValuePattern[a -> _]")

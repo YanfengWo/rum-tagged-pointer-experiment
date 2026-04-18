@@ -176,19 +176,19 @@ once in its primary implementation group. Other groups may mention it as
   `Alternatives`, `Optional`, `Except`, `Repeated`, `RepeatedNull`, matcher
   IR, delayed-rule substitution, suspend/resume through matcher-driven flows
 - `partial`: advanced pattern language breadth, full traversal parity, richer
-  replacement-convenience family, pattern/string crossover
+  replacement-convenience family including the current `Replace` first pass,
+  pattern/string crossover
 - `planned`: ordered-pattern controls and remaining parity cleanup
 
 ### Functions and Symbols
 
 - `implemented`: `Rule`, `RuleDelayed`, `Condition`, `Except`,
   `Alternatives`, `Optional`, `Repeated`
-- `partial`: `MatchQ`, `ReplaceAll`, `ReplaceRepeated`, `Cases`, `Count`,
-  `MemberQ`, `FreeQ`, `Position`
+- `partial`: `MatchQ`, `Replace`, `ReplaceAll`, `ReplaceRepeated`, `Cases`,
+  `Count`, `MemberQ`, `FreeQ`, `Position`
 - `partial`: `DeleteCases`
-- `planned`: `Replace`, `ReplaceAt`, `ReplaceList`,
-  `Longest`, `Shortest`, `PatternSequence`, `OrderlessPatternSequence`,
-  `Verbatim`
+- `planned`: `ReplaceAt`, `ReplaceList`, `Longest`, `Shortest`,
+  `PatternSequence`, `OrderlessPatternSequence`, `Verbatim`
 - `cross-tracked elsewhere`: `Set`, `SetDelayed`, `Part`, `Extract`,
   `ReplacePart`, `StringExpression`
 
@@ -256,12 +256,12 @@ once in its primary implementation group. Other groups may mention it as
 - `partial`: named-slot syntax `#name` exists generically, and the current
   first-pass association subset now includes association syntax/lowering,
   key-value canonicalization, keyed part specifications via `Key`,
-  deterministic ordering for canonical association rendering, and key-based
-  pattern matching through `KeyValuePattern`
-- `planned`: held in-place mutation parity for `AssociateTo` / `KeyDropFrom`,
-  fuller `Lookup` threading and multi-key parity, broader key-spec parity
-  across key-manipulation helpers, richer `Missing` semantics, and `KeySortBy`
-  option/comparer parity
+  deterministic ordering for canonical association rendering, key-based
+  pattern matching through `KeyValuePattern`, richer `Lookup`
+  threading/multi-key behavior, and held symbol-mutation first passes for
+  `AssociateTo` / `KeyDropFrom`
+- `planned`: broader key-spec parity across key-manipulation helpers, richer
+  `Missing` semantics, and `KeySortBy` option/comparer parity
 
 ### Functions and Symbols
 

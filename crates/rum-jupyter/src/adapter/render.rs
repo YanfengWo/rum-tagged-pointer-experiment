@@ -269,6 +269,14 @@ mod tests {
             other => panic!("expected error output, got {other:?}"),
         }
     }
+
+    #[test]
+    fn render_rule_application_source_covers_replace() {
+        assert_eq!(
+            render_rule_application_source(RuleApplicationSource::Replace),
+            "replace"
+        );
+    }
 }
 
 pub(super) fn inspect_metadata(target: Option<&str>, found: bool) -> KernelMetadata {
@@ -450,6 +458,7 @@ fn render_rule_application_source(source: RuleApplicationSource) -> &'static str
         RuleApplicationSource::UpValue => "upvalue",
         RuleApplicationSource::DownValue => "downvalue",
         RuleApplicationSource::SubValue => "subvalue",
+        RuleApplicationSource::Replace => "replace",
         RuleApplicationSource::ReplaceAll => "replace-all",
         RuleApplicationSource::ReplaceRepeated => "replace-repeated",
     }

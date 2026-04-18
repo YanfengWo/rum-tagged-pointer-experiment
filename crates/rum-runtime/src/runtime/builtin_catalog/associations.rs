@@ -111,14 +111,16 @@ pub(super) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
         "Converts an association into a list of rules in the current first-pass subset.",
         BuiltinHandler::Normal,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_hold(
         "AssociateTo",
-        "Adds or replaces association entries in the current first-pass subset.",
+        "Adds or replaces association entries, including held symbol mutation in the current first-pass subset.",
+        HoldAttribute::HoldFirst,
         BuiltinHandler::AssociateTo,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_hold(
         "KeyDropFrom",
-        "Drops keys from an association in the current first-pass subset.",
+        "Drops keys from an association, including held symbol mutation in the current first-pass subset.",
+        HoldAttribute::HoldFirst,
         BuiltinHandler::KeyDropFrom,
     ),
     BuiltinSpec::ordinary(

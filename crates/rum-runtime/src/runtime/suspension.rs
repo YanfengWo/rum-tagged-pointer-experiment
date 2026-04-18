@@ -260,6 +260,39 @@ fn cases_level_spec_from_expr(expr: Expr) -> CasesLevelSpec {
     }
 }
 
+impl ContinuationValue for Option<CasesLevelSpec> {
+    fn into_continuation_expr(self) -> Expr {
+        match self {
+            Some(spec) => Expr::call(
+                system_expr("InternalContinuationSomeCasesLevelSpec"),
+                vec![cases_level_spec_expr(spec)],
+            ),
+            None => Expr::call(system_expr("InternalContinuationNone"), vec![]),
+        }
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        match expr {
+            Expr::Call { head, mut args }
+                if is_system_symbol_name(&head, "InternalContinuationSomeCasesLevelSpec")
+                    && args.len() == 1 =>
+            {
+                let spec_expr = args
+                    .pop()
+                    .expect("some-cases-level-spec payload stores one item");
+                Some(cases_level_spec_from_expr(spec_expr))
+            }
+            Expr::Call { head, args }
+                if is_system_symbol_name(&head, "InternalContinuationNone") =>
+            {
+                debug_assert!(args.is_empty(), "none continuation payloads are empty");
+                None
+            }
+            other => Some(cases_level_spec_from_expr(other)),
+        }
+    }
+}
+
 impl ContinuationValue for CasesTraversalConfig {
     fn into_continuation_expr(self) -> Expr {
         Expr::call(

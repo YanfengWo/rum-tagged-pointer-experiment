@@ -13,6 +13,18 @@ pub(super) enum CasesTraversalResolution {
     Invalid(CasesTraversalNormalizationError),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum TraversalWithoutLimitNormalizationError {
+    InvalidThirdArgument,
+    InvalidFourthArgument,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum TraversalWithoutLimitResolution {
+    Valid(CasesTraversalConfig),
+    Invalid(TraversalWithoutLimitNormalizationError),
+}
+
 impl CasesTraversalNormalizationError {
     pub(super) fn message(self) -> &'static str {
         match self {
@@ -25,6 +37,74 @@ impl CasesTraversalNormalizationError {
             Self::InvalidFifthArgument => {
                 "expected a Heads -> True/False option as the fifth argument"
             }
+        }
+    }
+}
+
+impl TraversalWithoutLimitNormalizationError {
+    pub(super) fn message(self) -> &'static str {
+        match self {
+            Self::InvalidThirdArgument => {
+                "expected a standard levelspec or Heads -> True/False as the third argument"
+            }
+            Self::InvalidFourthArgument => {
+                "expected a Heads -> True/False option as the fourth argument"
+            }
+        }
+    }
+}
+
+impl ContinuationValue for TraversalWithoutLimitResolution {
+    fn into_continuation_expr(self) -> Expr {
+        match self {
+            Self::Valid(config) => Expr::call(
+                system_expr("InternalContinuationTraversalWithoutLimitValid"),
+                vec![config.into_continuation_expr()],
+            ),
+            Self::Invalid(error) => Expr::call(
+                system_expr("InternalContinuationTraversalWithoutLimitInvalid"),
+                vec![Expr::integer(BigInt::from(match error {
+                    TraversalWithoutLimitNormalizationError::InvalidThirdArgument => 3_i32,
+                    TraversalWithoutLimitNormalizationError::InvalidFourthArgument => 4_i32,
+                }))],
+            ),
+        }
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        match expr {
+            Expr::Call { head, mut args }
+                if is_system_symbol_name(
+                    &head,
+                    "InternalContinuationTraversalWithoutLimitValid",
+                ) && args.len() == 1 =>
+            {
+                let config_expr = args
+                    .pop()
+                    .expect("valid traversal-without-limit stores config");
+                Self::Valid(CasesTraversalConfig::from_continuation_expr(config_expr))
+            }
+            Expr::Call { head, mut args }
+                if is_system_symbol_name(
+                    &head,
+                    "InternalContinuationTraversalWithoutLimitInvalid",
+                ) && args.len() == 1 =>
+            {
+                let code_expr = args
+                    .pop()
+                    .expect("invalid traversal-without-limit stores code");
+                let code = expr_as_non_negative_usize(&code_expr)
+                    .expect("invalid traversal-without-limit code should be an integer");
+                let error = match code {
+                    3 => TraversalWithoutLimitNormalizationError::InvalidThirdArgument,
+                    4 => TraversalWithoutLimitNormalizationError::InvalidFourthArgument,
+                    other => panic!("unexpected traversal-without-limit error code: {other}"),
+                };
+                Self::Invalid(error)
+            }
+            other => panic!(
+                "unexpected continuation payload for TraversalWithoutLimitResolution: {other:?}"
+            ),
         }
     }
 }
@@ -92,6 +172,45 @@ impl Session {
                 })
             }
             _ => unreachable!("traversal arity is validated before traversal normalization"),
+        }
+    }
+
+    fn compile_traversal_without_limit_from_resolved_exprs(
+        &self,
+        resolved: &[Expr],
+        defaults: CasesTraversalConfig,
+    ) -> Result<CasesTraversalConfig, TraversalWithoutLimitNormalizationError> {
+        match resolved {
+            [] => Ok(defaults),
+            [third] => {
+                if let Some(include_heads) = parse_heads_option(third) {
+                    Ok(CasesTraversalConfig {
+                        include_heads,
+                        ..defaults
+                    })
+                } else if let Some(levels) = parse_standard_level_spec(third) {
+                    Ok(CasesTraversalConfig { levels, ..defaults })
+                } else {
+                    Err(TraversalWithoutLimitNormalizationError::InvalidThirdArgument)
+                }
+            }
+            [third, fourth] => {
+                let Some(levels) = parse_standard_level_spec(third) else {
+                    return Err(TraversalWithoutLimitNormalizationError::InvalidThirdArgument);
+                };
+                let Some(include_heads) = parse_heads_option(fourth) else {
+                    return Err(TraversalWithoutLimitNormalizationError::InvalidFourthArgument);
+                };
+
+                Ok(CasesTraversalConfig {
+                    levels,
+                    include_heads,
+                    ..defaults
+                })
+            }
+            _ => {
+                unreachable!("count/member/free traversal arity is validated before normalization")
+            }
         }
     }
 
@@ -187,6 +306,24 @@ impl Session {
                 {
                     Ok(config) => CasesTraversalResolution::Valid(config),
                     Err(error) => CasesTraversalResolution::Invalid(error),
+                },
+            )
+        })
+    }
+
+    pub(super) fn resolve_traversal_without_limit_owned(
+        &mut self,
+        exprs: Vec<Expr>,
+        defaults: CasesTraversalConfig,
+    ) -> Result<TraversalWithoutLimitResolution, EvalError> {
+        let resolved_exprs_result = self.resolve_argument_exprs_owned(exprs);
+        self.drive_internal_value(resolved_exprs_result, move |session, resolved_exprs| {
+            Ok(
+                match session
+                    .compile_traversal_without_limit_from_resolved_exprs(&resolved_exprs, defaults)
+                {
+                    Ok(config) => TraversalWithoutLimitResolution::Valid(config),
+                    Err(error) => TraversalWithoutLimitResolution::Invalid(error),
                 },
             )
         })

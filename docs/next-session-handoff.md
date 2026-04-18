@@ -85,27 +85,27 @@ git diff --stat HEAD~1..HEAD
 
 如果继续当前主线，建议优先顺序：
 
-1. `CL-03: Replace`
-   - 先做 `Replace` first-pass
-   - 再按情况推进 `ReplaceList` / `ReplaceAt`
-2. `CL-05`
-   - `AssociateTo` / `KeyDropFrom` held mutation parity
+1. `CL-05`
    - richer `Missing` semantics
    - `KeySortBy` option/comparer parity
+   - broader keyed-data compatibility polish
+2. `CL-03`
+   - `ReplaceList`
+   - `ReplaceAt`
 3. `CL-03` deeper parity
    - `PatternSequence`
    - `OrderlessPatternSequence`
    - `Verbatim`
    - deeper traversal parity
 
-如果只开一刀，推荐：
+当前已补上的 Wave 2 关键切口：
 
-- **先做 `CL-03: Replace`**
-
-原因：
-
-- 它能直接复用现有 rewrite/matcher/traversal 基础设施
-- 对 `ReplaceList / ReplaceAt` 是自然前置
+- `DeleteCases`
+- richer `Lookup` parity
+- `Replace` first-pass
+- `AssociateTo` / `KeyDropFrom` held mutation parity
+- shared raw-option lookup cleanup for `Dialog` / `Monitor` / `TestReport`
+- shared no-limit traversal normalization reuse for `Count` / `MemberQ` / `FreeQ`
 
 ## 关键文档
 
@@ -181,5 +181,4 @@ cargo test -p rum-runtime associations
 
 如果新会话要无缝接手，可以直接从这句话开始：
 
-> 先按 `docs/next-session-handoff.md` 和最近几条 git 记录对齐状态；当前 `CL-07/08/09` 主线已完成，`Wave 2` 已经开了第一刀（`DeleteCases` + richer `Lookup`），下一步优先做 `CL-03: Replace` first-pass。
-
+> 先按 `docs/next-session-handoff.md` 和最近几条 git 记录对齐状态；当前 `CL-07/08/09` 主线已完成，`Wave 2` 已经推进到 `DeleteCases`、richer `Lookup`、`Replace` first-pass 和 held `AssociateTo` / `KeyDropFrom`，下一步优先补 `CL-05` 的 `Missing` / `KeySortBy`，再回到 `ReplaceList` / `ReplaceAt`。

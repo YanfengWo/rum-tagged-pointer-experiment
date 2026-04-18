@@ -188,22 +188,7 @@ impl Session {
         explicit: Option<&SymbolOptions>,
         option_name: &str,
     ) -> Result<Option<(Expr, bool)>, DialogNormalizationError> {
-        if let Some(options) = explicit {
-            for (name, value, delayed) in options.iter() {
-                if name.name() == option_name {
-                    return Ok(Some((value.clone(), delayed)));
-                }
-            }
-        }
-
-        let defaults = self.options_for_symbol(&Symbol::system("Dialog"));
-        for (name, value, delayed) in defaults.iter() {
-            if name.name() == option_name {
-                return Ok(Some((value.clone(), delayed)));
-            }
-        }
-
-        Ok(None)
+        Ok(self.raw_option_value_for_symbol(explicit, &Symbol::system("Dialog"), option_name))
     }
 
     fn finish_dialog_body(&mut self, outcome: Result<Expr, EvalError>) -> Result<Expr, EvalError> {

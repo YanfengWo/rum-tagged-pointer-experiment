@@ -110,6 +110,7 @@ impl Session {
             BuiltinHandler::FreeQ => self.eval_free_q(args),
             BuiltinHandler::Level => self.eval_level(head, args),
             BuiltinHandler::Position => self.eval_position(args),
+            BuiltinHandler::Replace => self.eval_replace(args),
             BuiltinHandler::Module => self.eval_module(args),
             BuiltinHandler::Block => self.eval_block(args),
             BuiltinHandler::ReplaceAll => self.eval_replace_all(args),

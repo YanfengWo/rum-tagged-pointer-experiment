@@ -463,6 +463,11 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::Position,
     ),
     BuiltinSpec::special(
+        "Replace",
+        "Applies rules at the current first-pass Replace levelspec subset.",
+        BuiltinHandler::Replace,
+    ),
+    BuiltinSpec::special(
         "ReplaceAll",
         "Applies rules everywhere in an expression.",
         BuiltinHandler::ReplaceAll,

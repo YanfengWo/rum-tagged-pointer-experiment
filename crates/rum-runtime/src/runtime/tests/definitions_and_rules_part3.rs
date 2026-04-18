@@ -57,6 +57,66 @@ fn replaceall_splices_named_blanksequence_into_rhs_calls() {
 }
 
 #[test]
+fn replace_defaults_to_the_root_level() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Replace[f[1], f[x_Integer] :> x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Replace[f[1], x_Integer :> x + 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[1]"
+    );
+}
+
+#[test]
+fn replace_supports_levelspecs_and_rule_lists() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Replace[f[g[1], 2], x_Integer :> h[x], {1, Infinity}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[g[h[1]], h[2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Replace[f[a], {x_String :> 0, f[x_] :> g[x]}, {0}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "g[a]"
+    );
+}
+
+#[test]
+fn replace_rewrites_association_values_without_touching_keys() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "Replace[Association[a -> 1, b -> f[2]], x_Integer :> x + 10, {1, Infinity}]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 11], Rule[b, f[12]]]"
+    );
+}
+
+#[test]
 fn replacerepeated_reaches_a_fixed_point() {
     let mut session = Session::new();
 

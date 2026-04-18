@@ -1,24 +1,5 @@
 use super::*;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum TraversalWithoutLimitNormalizationError {
-    InvalidThirdArgument,
-    InvalidFourthArgument,
-}
-
-impl TraversalWithoutLimitNormalizationError {
-    fn message(self) -> &'static str {
-        match self {
-            Self::InvalidThirdArgument => {
-                "expected a standard levelspec or Heads -> True/False as the third argument"
-            }
-            Self::InvalidFourthArgument => {
-                "expected a Heads -> True/False option as the fourth argument"
-            }
-        }
-    }
-}
-
 impl Session {
     pub(super) fn eval_count(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if !(2..=4).contains(&args.len()) {
@@ -303,31 +284,24 @@ impl Session {
     where
         F: FnOnce(usize) -> Expr + 'static,
     {
-        let resolved_option_exprs_result = self.resolve_argument_exprs_owned(option_exprs);
-        self.drive_internal_value(
-            resolved_option_exprs_result,
-            move |session, resolved_option_exprs| {
-                let traversal = match compile_traversal_without_limit_from_resolved_exprs(
-                    &resolved_option_exprs,
-                    defaults,
-                ) {
-                    Ok(traversal) => traversal,
-                    Err(error) => {
-                        return Ok(session.invalid_call_with_arg_form(
-                            builtin_name,
-                            &call_args,
-                            error.message(),
-                        ));
-                    }
-                };
+        let traversal_result = self.resolve_traversal_without_limit_owned(option_exprs, defaults);
+        self.drive_internal_value(traversal_result, move |session, traversal| {
+            let traversal = match traversal {
+                TraversalWithoutLimitResolution::Valid(traversal) => traversal,
+                TraversalWithoutLimitResolution::Invalid(error) => {
+                    return Ok(session.invalid_call_with_arg_form(
+                        builtin_name,
+                        &call_args,
+                        error.message(),
+                    ));
+                }
+            };
 
-                let outcome_result =
-                    session.count_pattern_matches_owned(target, pattern, traversal, 0, 0);
-                session.drive_internal_value(outcome_result, move |_, outcome| {
-                    Ok(finish(outcome.count))
-                })
-            },
-        )
+            let outcome_result =
+                session.count_pattern_matches_owned(target, pattern, traversal, 0, 0);
+            session
+                .drive_internal_value(outcome_result, move |_, outcome| Ok(finish(outcome.count)))
+        })
     }
 
     fn resume_position_after_pattern(
@@ -715,40 +689,4 @@ fn position_expr(path: &[usize]) -> Expr {
             .map(|index| Expr::integer(BigInt::from(*index)))
             .collect(),
     )
-}
-
-fn compile_traversal_without_limit_from_resolved_exprs(
-    resolved: &[Expr],
-    defaults: CasesTraversalConfig,
-) -> Result<CasesTraversalConfig, TraversalWithoutLimitNormalizationError> {
-    match resolved {
-        [] => Ok(defaults),
-        [third] => {
-            if let Some(include_heads) = parse_heads_option(third) {
-                Ok(CasesTraversalConfig {
-                    include_heads,
-                    ..defaults
-                })
-            } else if let Some(levels) = parse_standard_level_spec(third) {
-                Ok(CasesTraversalConfig { levels, ..defaults })
-            } else {
-                Err(TraversalWithoutLimitNormalizationError::InvalidThirdArgument)
-            }
-        }
-        [third, fourth] => {
-            let Some(levels) = parse_standard_level_spec(third) else {
-                return Err(TraversalWithoutLimitNormalizationError::InvalidThirdArgument);
-            };
-            let Some(include_heads) = parse_heads_option(fourth) else {
-                return Err(TraversalWithoutLimitNormalizationError::InvalidFourthArgument);
-            };
-
-            Ok(CasesTraversalConfig {
-                levels,
-                include_heads,
-                ..defaults
-            })
-        }
-        _ => unreachable!("count/member/free traversal arity is validated before normalization"),
-    }
 }

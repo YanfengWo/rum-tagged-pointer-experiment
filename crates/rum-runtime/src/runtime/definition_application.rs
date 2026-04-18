@@ -202,6 +202,16 @@ impl Session {
         self.apply_replace_all_owned(expr, rules.to_vec(), source)
     }
 
+    pub(super) fn try_apply_rewrite_rules_once_owned(
+        &mut self,
+        expr: Expr,
+        rules: Vec<RewriteRule>,
+        source: RuleApplicationSource,
+    ) -> Result<Option<Expr>, EvalError> {
+        let normalized_expr = self.normalize_match_expr(&expr);
+        self.apply_rules_once_from_list(expr, normalized_expr, rules, source, 0)
+    }
+
     fn apply_replace_all_owned(
         &mut self,
         expr: Expr,

@@ -130,6 +130,52 @@ fn resume_eval_request_with_input_can_finish_replaceall_after_suspending_rule_so
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_replace_after_suspending_target() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("Replace[InputString[\"target: \"], _String -> ok]")
+        .expect_err("Replace should suspend when its target requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "target: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue Replace after the target resolves");
+
+    assert_eq!(response.value.to_string(), "ok");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_replace_after_suspending_levelspec() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "Replace[f[1, g[2]], _Integer -> x, If[MatchQ[InputString[\"lvl: \"], \"yes\"], Infinity, 0]]",
+        )
+        .expect_err("Replace should suspend when its levelspec requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "lvl: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue Replace after the levelspec resolves");
+
+    assert_eq!(response.value.to_string(), "f[x, g[x]]");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_target() {
     let mut session = Session::new();
 
@@ -174,6 +220,38 @@ fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_patter
         .expect("resume should continue DeleteCases after the pattern resolves");
 
     assert_eq!(response.value.to_string(), "f[g[]]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_associateto_after_suspending_symbol_value() {
+    let mut session = Session::new();
+    session
+        .eval_text("assoc := Association[a -> InputString[\"value: \"]]")
+        .unwrap();
+
+    let failure = session
+        .eval_request("AssociateTo[assoc, b -> 2]")
+        .expect_err("AssociateTo should suspend when the held target value requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "value: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue AssociateTo after the held target resolves");
+
+    assert_eq!(
+        response.value.to_string(),
+        "Association[Rule[a, \"done\"], Rule[b, 2]]"
+    );
+    assert_eq!(
+        session.eval_request("assoc").unwrap().value.to_string(),
+        "Association[Rule[a, \"done\"], Rule[b, 2]]"
+    );
 }
 
 #[test]

@@ -123,6 +123,7 @@ pub enum RuleApplicationSource {
     UpValue,
     DownValue,
     SubValue,
+    Replace,
     ReplaceAll,
     ReplaceRepeated,
 }

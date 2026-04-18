@@ -422,6 +422,7 @@ pub enum BuiltinHandler {
     FreeQ,
     Level,
     Position,
+    Replace,
     Module,
     Block,
     ReplaceAll,
