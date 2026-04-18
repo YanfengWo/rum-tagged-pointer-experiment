@@ -110,6 +110,9 @@ pub(super) fn parse_nearest_rule_pairs(expr: &Expr) -> Option<(Vec<Expr>, Vec<Ex
 }
 
 pub(super) fn parse_nearest_result_spec(expr: &Expr) -> Option<NearestResultSpec> {
+    if is_system_symbol_name(expr, "Automatic") {
+        return Some(NearestResultSpec::BestTies);
+    }
     if is_system_symbol_name(expr, heads::structure::ALL) {
         return Some(NearestResultSpec::All);
     }

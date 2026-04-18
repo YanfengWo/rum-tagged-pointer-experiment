@@ -326,12 +326,14 @@ once in its primary implementation group. Other groups may mention it as
 
 - `implemented`: canonical string atoms, Unicode code-point semantics, parser
   escape support, exact-string construction and transformation core
-- `partial`: `ToString` currently accepts the common `InputForm` /
-  `OutputForm` / `StandardForm` / `FullForm` forms but still renders through
-  the current canonical kernel textual subset, the string-pattern surface is
-  still a first-pass subset, and the
-  byte-array/hash/compress/encrypt/nearest/pluralization layer is still a
-  current subset rather than full Wolfram parity
+- `partial`: `ToString` and `TextString` now share a current input-like
+  textual subset for common arithmetic and structural expressions, and the
+  common `InputForm` / `OutputForm` / `StandardForm` / `TraditionalForm` /
+  `FullForm` symbols are recognized; the current renderer also covers slots,
+  one-argument pure functions, assignment/replacement syntax, and a first
+  symbolic pattern notation subset, but the string-pattern surface is still a
+  first-pass subset and the byte-array/hash/compress/encrypt/nearest/
+  pluralization layer is still a current subset rather than full Wolfram parity
 - `planned`: fuller symbolic string-pattern layer, conversions, templating,
   and nontrivial search/transformation semantics
 

@@ -69,6 +69,9 @@ This roadmap intentionally uses two levels of detail:
   - [x] extend the current string-pattern replacement/query subset with `RuleDelayed` handling, deepen the byte-array/crypto layer so `Hash` / `Compress` / `Encrypt` consume `ByteArray[...]` payloads rather than only textual proxies, and widen the current `Nearest` / `Pluralize` subset through radius-style list specs plus more common English irregular and word-ending forms
   - [x] extend the symbolic string-pattern subset with `_` / `__` / `___`, `Pattern[x, ...]` capture bindings, and current `Rule` / `RuleDelayed` substitution over string-pattern matches
   - [x] tighten the symbolic matcher and string-interoperability layer with repeated named-capture consistency in predicate/query paths, `Encrypt` support for `ByteArray[...]` keys, `Nearest[..., {spec, Infinity}]`, and broader case-preserving / irregular `Pluralize` coverage
+  - [x] upgrade `ToString` so the default / `InputForm` / `OutputForm` / `StandardForm` path renders a current input-like textual subset for common arithmetic and structural expressions instead of always falling back to canonical `FullForm` text
+  - [x] align `TextString` with the current input-like renderer and extend the formatting-symbol subset through `TraditionalForm`
+  - [x] deepen the current input-like renderer through slots, one-argument pure functions, assignment / replacement syntax, `Pattern` / `Blank*` / `Condition` / `Alternatives`, improve generic-expression byte-array / crypto transport to use the same renderer, and surface `Nearest[..., Automatic]` plus a broader irregular-`Pluralize` subset
 - [ ] Decide when the string subsystem is large and stable enough to justify a dedicated crate boundary
 
 ### Phase 9: Verification, Coverage, and Conformance

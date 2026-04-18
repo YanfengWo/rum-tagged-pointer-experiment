@@ -240,8 +240,20 @@ pub(super) const STRING_BUILTINS: &[BuiltinSpec] = &[
         "Represents the current formatting symbol accepted by the current ToExpression subset.",
     ),
     BuiltinSpec::new(
+        "OutputForm",
+        "Represents the current formatting symbol accepted by the current ToString subset.",
+    ),
+    BuiltinSpec::new(
         "StandardForm",
         "Represents the current formatting symbol accepted by the current ToExpression subset.",
+    ),
+    BuiltinSpec::new(
+        "TraditionalForm",
+        "Represents the current formatting symbol accepted by the current ToString subset.",
+    ),
+    BuiltinSpec::new(
+        "Automatic",
+        "Represents the current default-specifier symbol shared by several first-pass string and tooling subsets.",
     ),
     BuiltinSpec::ordinary(
         "StringContainsQ",

@@ -37,11 +37,23 @@ fn characters_character_range_and_tostring_cover_basic_text_flows() {
     );
     assert_eq!(
         eval_to_string(&mut session, "ToString[1/2 + x]"),
-        "\"Plus[1/2, x]\""
+        "\"1/2 + x\""
     );
     assert_eq!(
         eval_to_string(&mut session, "ToString[1/2 + x, InputForm]"),
-        "\"Plus[1/2, x]\""
+        "\"1/2 + x\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[1/2 + x, OutputForm]"),
+        "\"1/2 + x\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[1/2 + x, StandardForm]"),
+        "\"1/2 + x\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[1/2 + x, TraditionalForm]"),
+        "\"1/2 + x\""
     );
     assert_eq!(
         eval_to_string(&mut session, "ToString[1/2 + x, FullForm]"),
@@ -50,6 +62,54 @@ fn characters_character_range_and_tostring_cover_basic_text_flows() {
     assert_eq!(
         eval_to_string(&mut session, "ToString[\"line\\n\"]"),
         "\"\\\"line\\\\n\\\"\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[(a + b)^2, InputForm]"),
+        "\"(a + b) ^ 2\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[{a, b -> c}]"),
+        "\"{a, b -> c}\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[<|a -> 1, b -> 2|>]"),
+        "\"<|a -> 1, b -> 2|>\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[x_]"),
+        "\"x_\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[x_Integer]"),
+        "\"x_Integer\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[# + #2 &]"),
+        "\"# + #2 &\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[y_ -> y]"),
+        "\"y_ -> y\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[y_ :> y]"),
+        "\"y_ :> y\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[f[x_ /; True]]"),
+        "\"f[x_ /; True]\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[Alternatives[y_, z__]]"),
+        "\"y_ | z__\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[Span[All, 3]]"),
+        "\";; 3\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[Span[All, All, 2]]"),
+        "\";; ;; 2\""
     );
 }
 
@@ -183,9 +243,18 @@ fn syntaxq_textstring_filetemplateapply_charactercounts_and_removediacritics_ext
     assert_eq!(eval_to_string(&mut session, "SyntaxQ[\"1+2\"]"), "True");
     assert_eq!(eval_to_string(&mut session, "SyntaxQ[\"1+\"]"), "False");
     assert_eq!(eval_to_string(&mut session, "TextString[123]"), "\"123\"");
+    assert_eq!(eval_to_string(&mut session, "TextString[1/2 + x]"), "\"1/2 + x\"");
     assert_eq!(
         eval_to_string(&mut session, "TextString[{1, 2}]"),
-        "\"List[1, 2]\""
+        "\"{1, 2}\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "TextString[<|a -> 1, b -> 2|>]"),
+        "\"<|a -> 1, b -> 2|>\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "TextString[y_ -> y]"),
+        "\"y_ -> y\""
     );
     assert_eq!(
         eval_to_string(&mut session, "CharacterCounts[\"abca\"]"),

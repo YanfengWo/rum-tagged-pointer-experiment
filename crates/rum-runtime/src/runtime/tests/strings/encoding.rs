@@ -40,6 +40,13 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "\"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\""
     );
     assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Hash[1/2 + x, \"SHA256\", \"HexString\"]"
+        ),
+        "\"e697c4f396641d09562ff62b6d49d4de1d6e852d0101b44f8c2959542984dbb5\""
+    );
+    assert_eq!(
         eval_to_string(&mut session, "Compress[1 + 1]"),
         "\"rum:1:e:Mg==\""
     );
@@ -137,6 +144,14 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         "List[2, 1, 5]"
     );
     assert_eq!(
+        eval_to_string(&mut session, "Nearest[{1, 2, 5}, 3, Automatic]"),
+        "List[2]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Nearest[{1, 2, 5}, 3, {Automatic, Infinity}]"),
+        "List[2]"
+    );
+    assert_eq!(
         eval_to_string(
             &mut session,
             "Nearest[{\"cat\", \"cot\", \"dog\"}, \"cut\", {All, 1}, DistanceFunction -> EditDistance]"
@@ -205,5 +220,17 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
     assert_eq!(
         eval_to_string(&mut session, "Pluralize[\"phenomenon\", 2]"),
         "\"phenomena\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"Focus\", 2]"),
+        "\"Foci\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"ALUMNUS\", 2]"),
+        "\"ALUMNI\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Pluralize[\"nucleus\", 2]"),
+        "\"nuclei\""
     );
 }

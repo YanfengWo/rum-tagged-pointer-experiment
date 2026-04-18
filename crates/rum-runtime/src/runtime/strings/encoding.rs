@@ -1,3 +1,4 @@
+use super::text::render_input_like_expr;
 use super::*;
 
 impl Session {
@@ -113,7 +114,7 @@ fn hash_input_bytes(expr: &Expr) -> Vec<u8> {
     } else if let Some(bytes) = expr_as_byte_array_bytes(expr) {
         bytes
     } else {
-        expr.to_string().into_bytes()
+        render_input_like_expr(expr).into_bytes()
     }
 }
 
@@ -146,7 +147,7 @@ fn expr_transport_bytes(expr: &Expr) -> (Vec<u8>, Expr) {
     } else if let Some(bytes) = expr_as_byte_array_bytes(expr) {
         (bytes, system_expr("ByteArray"))
     } else {
-        (expr.to_string().into_bytes(), system_expr("InputForm"))
+        (render_input_like_expr(expr).into_bytes(), system_expr("InputForm"))
     }
 }
 
