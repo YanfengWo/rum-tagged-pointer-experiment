@@ -378,6 +378,11 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::ReplacePart,
     ),
     BuiltinSpec::special(
+        "ReplaceAt",
+        "Applies rules at exact structural positions, with the current operator-form and exact-position first-pass subset.",
+        BuiltinHandler::ReplaceAt,
+    ),
+    BuiltinSpec::special(
         "Set",
         "Assigns an immediate value to a symbol or pattern.",
         BuiltinHandler::Set,
@@ -466,6 +471,11 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         "Replace",
         "Applies rules at the current first-pass Replace levelspec subset.",
         BuiltinHandler::Replace,
+    ),
+    BuiltinSpec::special(
+        "ReplaceList",
+        "Returns the current first-pass root replacement results across a rule list, with optional max-result limiting.",
+        BuiltinHandler::ReplaceList,
     ),
     BuiltinSpec::special(
         "ReplaceAll",

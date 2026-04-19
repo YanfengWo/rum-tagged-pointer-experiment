@@ -176,18 +176,18 @@ once in its primary implementation group. Other groups may mention it as
   `Alternatives`, `Optional`, `Except`, `Repeated`, `RepeatedNull`, matcher
   IR, delayed-rule substitution, suspend/resume through matcher-driven flows
 - `partial`: advanced pattern language breadth, full traversal parity, richer
-  replacement-convenience family including the current `Replace` first pass,
-  pattern/string crossover
+  replacement-convenience family including the current `Replace`,
+  `ReplaceList`, and `ReplaceAt` first passes, pattern/string crossover
 - `planned`: ordered-pattern controls and remaining parity cleanup
 
 ### Functions and Symbols
 
 - `implemented`: `Rule`, `RuleDelayed`, `Condition`, `Except`,
   `Alternatives`, `Optional`, `Repeated`
-- `partial`: `MatchQ`, `Replace`, `ReplaceAll`, `ReplaceRepeated`, `Cases`,
-  `Count`, `MemberQ`, `FreeQ`, `Position`
+- `partial`: `MatchQ`, `Replace`, `ReplaceList`, `ReplaceAt`, `ReplaceAll`,
+  `ReplaceRepeated`, `Cases`, `Count`, `MemberQ`, `FreeQ`, `Position`
 - `partial`: `DeleteCases`
-- `planned`: `ReplaceAt`, `ReplaceList`, `Longest`, `Shortest`,
+- `planned`: `Longest`, `Shortest`,
   `PatternSequence`, `OrderlessPatternSequence`, `Verbatim`
 - `cross-tracked elsewhere`: `Set`, `SetDelayed`, `Part`, `Extract`,
   `ReplacePart`, `StringExpression`

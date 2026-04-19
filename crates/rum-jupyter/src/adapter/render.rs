@@ -276,6 +276,14 @@ mod tests {
             render_rule_application_source(RuleApplicationSource::Replace),
             "replace"
         );
+        assert_eq!(
+            render_rule_application_source(RuleApplicationSource::ReplaceList),
+            "replace-list"
+        );
+        assert_eq!(
+            render_rule_application_source(RuleApplicationSource::ReplaceAt),
+            "replace-at"
+        );
     }
 }
 
@@ -459,6 +467,8 @@ fn render_rule_application_source(source: RuleApplicationSource) -> &'static str
         RuleApplicationSource::DownValue => "downvalue",
         RuleApplicationSource::SubValue => "subvalue",
         RuleApplicationSource::Replace => "replace",
+        RuleApplicationSource::ReplaceList => "replace-list",
+        RuleApplicationSource::ReplaceAt => "replace-at",
         RuleApplicationSource::ReplaceAll => "replace-all",
         RuleApplicationSource::ReplaceRepeated => "replace-repeated",
     }

@@ -27,6 +27,10 @@ pub(super) fn exact_position_paths_from_expr(
     exact_paths::exact_position_paths_from_expr(expr, spec_expr)
 }
 
+pub(super) fn exact_expr_at_path(expr: &Expr, path: &[isize]) -> Option<Expr> {
+    exact_paths::exact_expr_at_path(expr, path)
+}
+
 pub(super) fn replace_exact_path(expr: Expr, path: &[isize], rhs: Expr) -> Expr {
     exact_paths::replace_exact_path(expr, path, rhs)
 }

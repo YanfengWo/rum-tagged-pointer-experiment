@@ -176,6 +176,74 @@ fn resume_eval_request_with_input_can_finish_replace_after_suspending_levelspec(
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_replacelist_after_suspending_delayed_rhs() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("ReplaceList[f[1], f[x_Integer] :> InputString[\"rhs: \"]]")
+        .expect_err("ReplaceList should suspend when a delayed rhs requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "rhs: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue ReplaceList after the delayed rhs resolves");
+
+    assert_eq!(response.value.to_string(), "List[\"done\"]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_replaceat_after_suspending_position_spec() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "ReplaceAt[f[a, b], x_ -> y, If[MatchQ[InputString[\"pos: \"], \"yes\"], 2, 1]]",
+        )
+        .expect_err("ReplaceAt should suspend when its position specification requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "pos: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue ReplaceAt after the position resolves");
+
+    assert_eq!(response.value.to_string(), "f[a, y]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_replaceat_after_suspending_delayed_rhs() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("ReplaceAt[f[1], x_Integer :> InputString[\"rhs: \"], 1]")
+        .expect_err("ReplaceAt should suspend when its delayed rhs requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "rhs: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue ReplaceAt after the delayed rhs resolves");
+
+    assert_eq!(response.value.to_string(), "f[\"done\"]");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_target() {
     let mut session = Session::new();
 

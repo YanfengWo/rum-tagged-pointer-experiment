@@ -117,6 +117,36 @@ fn replace_rewrites_association_values_without_touching_keys() {
 }
 
 #[test]
+fn replacelist_supports_operator_form_rule_order_and_max_results() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("ReplaceList[f[x_] :> x][f[a]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplaceList[f[a, b], {f[x_, y_] :> x, f[x_, y_] :> y}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplaceList[f[a, b], {f[x_, y_] :> x, f[x_, y_] :> y}, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a]"
+    );
+}
+
+#[test]
 fn replacerepeated_reaches_a_fixed_point() {
     let mut session = Session::new();
 

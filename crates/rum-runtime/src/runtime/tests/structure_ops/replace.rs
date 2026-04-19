@@ -224,3 +224,71 @@ fn replacepart_handles_duplicate_and_overlapping_targets_more_stably() {
         "f[x[a], x[b]]"
     );
 }
+
+#[test]
+fn replaceat_supports_exact_positions_operator_form_and_rule_lists() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("ReplaceAt[f[a, b], x_ -> y, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, y]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplaceAt[x_ -> y, 2][f[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, y]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplaceAt[f[1], {x_String -> z, x_Integer -> y}, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[y]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplaceAt[f[a, b], x_ -> y, {}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "y"
+    );
+}
+
+#[test]
+fn replaceat_supports_sequential_paths_all_and_keyed_positions() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("ReplaceAt[f[a], x_ :> h[x], {{1}, {1}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[h[h[a]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplaceAt[f[g[a, b], h[c, d]], x_ :> q[x], {All, 2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[g[a, q[b]], h[c, q[d]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplaceAt[Association[a -> 1, b -> Association[c -> 3]], _Integer -> z, {Key[b], Key[c]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1], Rule[b, Association[Rule[c, z]]]]"
+    );
+}

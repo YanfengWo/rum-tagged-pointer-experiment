@@ -140,7 +140,7 @@ impl Session {
         let mut current = expr;
 
         for path in paths {
-            let Some(part) = exact_part_at_path(&current, &path) else {
+            let Some(part) = exact_expr_at_path(&current, &path) else {
                 continue;
             };
 
@@ -234,51 +234,6 @@ fn map_thread_inputs(
     )))
 }
 
-fn exact_part_at_path(expr: &Expr, path: &[isize]) -> Option<Expr> {
-    let Some((first, rest)) = path.split_first() else {
-        return Some(expr.clone());
-    };
-
-    if *first == 0 {
-        return exact_part_at_path(&functional_structural_head_expr(expr), rest);
-    }
-
-    match expr {
-        Expr::Atom(_) => None,
-        Expr::Call { args, .. } => {
-            let index = normalize_exact_path_component(*first, args.len())?;
-            exact_part_at_path(&args[index], rest)
-        }
-    }
-}
-
-fn normalize_exact_path_component(component: isize, len: usize) -> Option<usize> {
-    if component == 0 {
-        return None;
-    }
-
-    let len = isize::try_from(len).ok()?;
-    let normalized = if component > 0 {
-        component - 1
-    } else {
-        len + component
-    };
-
-    (0..len)
-        .contains(&normalized)
-        .then_some(normalized as usize)
-}
-
-fn functional_structural_head_expr(expr: &Expr) -> Expr {
-    match expr {
-        Expr::Atom(Atom::Integer(_)) => system_expr("Integer"),
-        Expr::Atom(Atom::Rational(_)) => system_expr("Rational"),
-        Expr::Atom(Atom::String(_)) => system_expr("String"),
-        Expr::Atom(Atom::Symbol(_)) => system_expr("Symbol"),
-        Expr::Call { head, .. } => head.as_ref().clone(),
-    }
-}
-
 fn subset_map_paths_are_compatible(paths: &[Vec<isize>]) -> bool {
     for (index, path) in paths.iter().enumerate() {
         for other in paths.iter().skip(index + 1) {
@@ -323,7 +278,7 @@ fn apply_subset_map(
 ) -> Result<Expr, EvalError> {
     let Some(parts) = paths
         .iter()
-        .map(|path| exact_part_at_path(expr, path))
+        .map(|path| exact_expr_at_path(expr, path))
         .collect::<Option<Vec<_>>>()
     else {
         return Ok(Expr::call(head.clone(), raw_args.to_vec()));

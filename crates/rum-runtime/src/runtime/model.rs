@@ -124,6 +124,8 @@ pub enum RuleApplicationSource {
     DownValue,
     SubValue,
     Replace,
+    ReplaceList,
+    ReplaceAt,
     ReplaceAll,
     ReplaceRepeated,
 }

@@ -12,11 +12,11 @@
 
 ## 最近关键提交
 
-- `9551e12` `Close CL-07 deep parity wave`
-- `ade3fad` `Add DeleteCases and richer association lookup parity`
-- `9427ecd` `Finish CL-07 string mainline`
-- `8483a33` `Finish CL-09 debugging and verification mainline`
-- `dc6fbbd` `Finish CL-08 package tooling mainline`
+- `da9920a` `Finish CL-05 key access and sorting parity`
+- `4afe391` `Advance CL-05 keyed data parity`
+- `b49054c` `Advance Wave 2 replace and association parity`
+- `ec757dc` `Fix workspace regressions and sync roadmap docs`
+- `0e70b4d` `Add next-session handoff note`
 
 如果要复原最近几步的真实时间线，优先用：
 
@@ -86,16 +86,14 @@ git diff --stat HEAD~1..HEAD
 如果继续当前主线，建议优先顺序：
 
 1. `CL-03`
-   - `ReplaceList`
-   - `ReplaceAt`
-2. `CL-05` long tail
-   - broader keyed-helper operator/rule-list compatibility polish
-   - deeper association semantics
-3. `CL-03` deeper parity
+   - fuller `ReplaceList` backtracking parity
    - `PatternSequence`
    - `OrderlessPatternSequence`
    - `Verbatim`
    - deeper traversal parity
+2. `CL-05` long tail
+   - broader keyed-helper operator/rule-list compatibility polish
+   - deeper association semantics
 
 当前已补上的 Wave 2 关键切口：
 
@@ -108,6 +106,8 @@ git diff --stat HEAD~1..HEAD
 - `KeySortBy` rule-list + operator-form parity
 - callable `Key[key][assoc]`
 - `Replace` first-pass
+- `ReplaceList` first-pass
+- `ReplaceAt` exact-position first-pass
 - `AssociateTo` / `KeyDropFrom` held mutation parity
 - shared raw-option lookup cleanup for `Dialog` / `Monitor` / `TestReport`
 - shared no-limit traversal normalization reuse for `Count` / `MemberQ` / `FreeQ`
@@ -186,4 +186,4 @@ cargo test -p rum-runtime associations
 
 如果新会话要无缝接手，可以直接从这句话开始：
 
-> 先按 `docs/next-session-handoff.md` 和最近几条 git 记录对齐状态；当前 `CL-07/08/09` 主线已完成，`Wave 2` 已经推进到 `DeleteCases`、richer `Lookup`、fuller `Missing`、custom `KeySort` comparer、`KeySortBy` rule-list/operator form、callable `Key[key][assoc]`、`Replace` first-pass 和 held `AssociateTo` / `KeyDropFrom`，下一步优先回到 `ReplaceList` / `ReplaceAt`，再看 `CL-05` long tail。
+> 先按 `docs/next-session-handoff.md` 和最近几条 git 记录对齐状态；当前 `CL-07/08/09` 主线已完成，`Wave 2` 已经推进到 `DeleteCases`、richer `Lookup`、fuller `Missing`、custom `KeySort` comparer、`KeySortBy` rule-list/operator form、callable `Key[key][assoc]`、`Replace` / `ReplaceList` / `ReplaceAt` first-pass 和 held `AssociateTo` / `KeyDropFrom`，下一步优先看 `CL-03` 的 fuller `ReplaceList` parity、`PatternSequence`、`OrderlessPatternSequence`、`Verbatim` 与 deeper traversal parity，再看 `CL-05` long tail。

@@ -32,6 +32,15 @@ pub(super) fn exact_position_paths_from_expr(
     Some(paths)
 }
 
+pub(super) fn exact_expr_at_path(expr: &Expr, path: &[isize]) -> Option<Expr> {
+    let Some((first, rest)) = path.split_first() else {
+        return Some(expr.clone());
+    };
+
+    let selected = select_exact_part(expr, *first)?;
+    exact_expr_at_path(&selected, rest)
+}
+
 pub(super) fn select_exact_part(expr: &Expr, index: isize) -> Option<Expr> {
     if index == 0 {
         return Some(structural_head_expr(expr));
