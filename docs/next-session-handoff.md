@@ -86,9 +86,9 @@ git diff --stat HEAD~1..HEAD
 如果继续当前主线，建议优先顺序：
 
 1. `CL-05`
-   - richer `Missing` semantics
-   - `KeySortBy` option/comparer parity
-   - broader keyed-data compatibility polish
+   - custom `KeySort` comparers
+   - callable `Key[key][assoc]` extraction parity
+   - broader keyed-helper operator/rule-list compatibility polish
 2. `CL-03`
    - `ReplaceList`
    - `ReplaceAt`
@@ -102,6 +102,10 @@ git diff --stat HEAD~1..HEAD
 
 - `DeleteCases`
 - richer `Lookup` parity
+- fuller `Missing` surface plus `Lookup[..., default, h]`
+- `Keys` / `Values` rule-list + wrapper/threading parity
+- spec-ordered and threaded/rule-list `KeyTake` / `KeyDrop`
+- `KeySortBy` rule-list + operator-form parity
 - `Replace` first-pass
 - `AssociateTo` / `KeyDropFrom` held mutation parity
 - shared raw-option lookup cleanup for `Dialog` / `Monitor` / `TestReport`
@@ -181,4 +185,4 @@ cargo test -p rum-runtime associations
 
 如果新会话要无缝接手，可以直接从这句话开始：
 
-> 先按 `docs/next-session-handoff.md` 和最近几条 git 记录对齐状态；当前 `CL-07/08/09` 主线已完成，`Wave 2` 已经推进到 `DeleteCases`、richer `Lookup`、`Replace` first-pass 和 held `AssociateTo` / `KeyDropFrom`，下一步优先补 `CL-05` 的 `Missing` / `KeySortBy`，再回到 `ReplaceList` / `ReplaceAt`。
+> 先按 `docs/next-session-handoff.md` 和最近几条 git 记录对齐状态；当前 `CL-07/08/09` 主线已完成，`Wave 2` 已经推进到 `DeleteCases`、richer `Lookup`、fuller `Missing`、`KeySortBy` rule-list/operator form、`Replace` first-pass 和 held `AssociateTo` / `KeyDropFrom`，下一步优先补 `CL-05` 里剩下的 `KeySort` comparer / callable `Key[...]`，再回到 `ReplaceList` / `ReplaceAt`。

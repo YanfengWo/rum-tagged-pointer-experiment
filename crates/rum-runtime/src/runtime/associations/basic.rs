@@ -42,12 +42,13 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        if !(2..=3).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Lookup", args, 2, 3));
+        if !(2..=4).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("Lookup", args, 2, 4));
         }
 
         let default = args.get(2).cloned();
-        let Some(value) = lookup_value(&args[0], &args[1], default) else {
+        let wrapper = args.get(3);
+        let Some(value) = lookup_value(&args[0], &args[1], default, wrapper) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -71,18 +72,16 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("Keys", args, 1));
+        if !(1..=2).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("Keys", args, 1, 2));
         };
 
-        let Some(entries) = association_entries_from_expr(expr) else {
+        let wrapper = args.get(1);
+        let Some(value) = keys_result_for_expr(&args[0], wrapper) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        Ok(Expr::call(
-            system_expr("List"),
-            entries.into_iter().map(|(key, _)| key).collect(),
-        ))
+        Ok(value)
     }
 
     pub(in crate::runtime) fn eval_values(
@@ -90,18 +89,16 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("Values", args, 1));
+        if !(1..=2).contains(&args.len()) {
+            return Ok(self.invalid_call_with_arg_range("Values", args, 1, 2));
         };
 
-        let Some(entries) = association_entries_from_expr(expr) else {
+        let wrapper = args.get(1);
+        let Some(value) = values_result_for_expr(&args[0], wrapper) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        Ok(Expr::call(
-            system_expr("List"),
-            entries.into_iter().map(|(_, value)| value).collect(),
-        ))
+        Ok(value)
     }
 
     pub(in crate::runtime) fn eval_key_exists_q(
@@ -127,23 +124,18 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr, key_spec] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("KeyTake", args, 2));
-        };
+        match args {
+            [key_spec] => Ok(keyed_operator_form_slot_first("KeyTake", key_spec.clone())),
+            [expr, key_spec] => {
+                let Some(value) = keyed_take_drop_result_for_expr("KeyTake", expr, key_spec, true)
+                else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
 
-        let Some(entries) = association_entries_from_expr(expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-        let Some(selected_keys) = parse_key_spec(key_spec) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        Ok(render_association(
-            entries
-                .into_iter()
-                .filter(|(key, _)| selected_keys.iter().any(|candidate| candidate == key))
-                .collect(),
-        ))
+                Ok(value)
+            }
+            _ => Ok(self.invalid_call_with_arg_range("KeyTake", args, 1, 2)),
+        }
     }
 
     pub(in crate::runtime) fn eval_key_drop(
@@ -151,23 +143,18 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr, key_spec] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("KeyDrop", args, 2));
-        };
+        match args {
+            [key_spec] => Ok(keyed_operator_form_slot_first("KeyDrop", key_spec.clone())),
+            [expr, key_spec] => {
+                let Some(value) = keyed_take_drop_result_for_expr("KeyDrop", expr, key_spec, false)
+                else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
 
-        let Some(entries) = association_entries_from_expr(expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-        let Some(selected_keys) = parse_key_spec(key_spec) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        Ok(render_association(
-            entries
-                .into_iter()
-                .filter(|(key, _)| !selected_keys.iter().any(|candidate| candidate == key))
-                .collect(),
-        ))
+                Ok(value)
+            }
+            _ => Ok(self.invalid_call_with_arg_range("KeyDrop", args, 1, 2)),
+        }
     }
 
     pub(in crate::runtime) fn eval_key_member_q(
@@ -249,22 +236,22 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        if args.is_empty() {
-            return Ok(self.invalid_call_with_message(
-                "Missing",
-                args,
-                "argx",
-                "expected at least 1 argument",
-            ));
+        if args.len() > 2 {
+            return Ok(self.invalid_call_with_arg_range("Missing", args, 0, 2));
         }
 
         Ok(Expr::call(head.clone(), args.to_vec()))
     }
 }
 
-fn lookup_value(data: &Expr, key_spec: &Expr, default: Option<Expr>) -> Option<Expr> {
+fn lookup_value(
+    data: &Expr,
+    key_spec: &Expr,
+    default: Option<Expr>,
+    wrapper: Option<&Expr>,
+) -> Option<Expr> {
     if let Some(value) = apply_keyed_part_spec(data, key_spec) {
-        return Some(value);
+        return Some(wrap_keyed_result(value, wrapper));
     }
 
     if let Some(items) = call_items_with_head(data, &system_expr("List")) {
@@ -276,7 +263,7 @@ fn lookup_value(data: &Expr, key_spec: &Expr, default: Option<Expr>) -> Option<E
                 system_expr("List"),
                 items
                     .iter()
-                    .map(|item| lookup_value(item, key_spec, default.clone()))
+                    .map(|item| lookup_value(item, key_spec, default.clone(), wrapper))
                     .collect::<Option<Vec<_>>>()?,
             ));
         }
@@ -286,7 +273,7 @@ fn lookup_value(data: &Expr, key_spec: &Expr, default: Option<Expr>) -> Option<E
         return Some(Expr::call(
             system_expr("List"),
             keys.iter()
-                .map(|key| lookup_value(data, key, default.clone()))
+                .map(|key| lookup_value(data, key, default.clone(), wrapper))
                 .collect::<Option<Vec<_>>>()?,
         ));
     }
@@ -296,13 +283,150 @@ fn lookup_value(data: &Expr, key_spec: &Expr, default: Option<Expr>) -> Option<E
         .into_iter()
         .find(|(entry_key, _)| entry_key == key_spec)
     {
-        return Some(value);
+        return Some(wrap_keyed_result(value, wrapper));
     }
 
-    Some(default.unwrap_or_else(|| {
-        Expr::call(
-            system_expr("Missing"),
-            vec![Expr::string("KeyAbsent"), key_spec.clone()],
-        )
-    }))
+    Some(wrap_keyed_result(
+        default.unwrap_or_else(|| {
+            Expr::call(
+                system_expr("Missing"),
+                vec![Expr::string("KeyAbsent"), key_spec.clone()],
+            )
+        }),
+        wrapper,
+    ))
+}
+
+fn wrap_keyed_result(value: Expr, wrapper: Option<&Expr>) -> Expr {
+    match wrapper.cloned() {
+        Some(head) => Expr::call(head, vec![value]),
+        None => value,
+    }
+}
+
+fn keys_result_for_expr(expr: &Expr, wrapper: Option<&Expr>) -> Option<Expr> {
+    if let Some((key, _)) = parse_association_entry(expr) {
+        return Some(wrap_keyed_result(key, wrapper));
+    }
+
+    if let Some(keyed) = keyed_entries_from_expr(expr) {
+        return Some(Expr::call(
+            system_expr("List"),
+            keyed
+                .entries
+                .into_iter()
+                .map(|(key, _)| wrap_keyed_result(key, wrapper))
+                .collect(),
+        ));
+    }
+
+    let items = list_items(expr)?;
+    if parse_association_entries(items).is_some() {
+        return None;
+    }
+
+    Some(Expr::call(
+        system_expr("List"),
+        items
+            .iter()
+            .map(|item| {
+                keys_result_for_expr(item, wrapper).unwrap_or_else(|| {
+                    build_keyed_fallback_call("Keys", item.clone(), wrapper.cloned())
+                })
+            })
+            .collect(),
+    ))
+}
+
+fn values_result_for_expr(expr: &Expr, wrapper: Option<&Expr>) -> Option<Expr> {
+    if let Some((_, value)) = parse_association_entry(expr) {
+        return Some(wrap_keyed_result(value, wrapper));
+    }
+
+    if let Some(keyed) = keyed_entries_from_expr(expr) {
+        return Some(Expr::call(
+            system_expr("List"),
+            keyed
+                .entries
+                .into_iter()
+                .map(|(_, value)| wrap_keyed_result(value, wrapper))
+                .collect(),
+        ));
+    }
+
+    let items = list_items(expr)?;
+    if parse_association_entries(items).is_some() {
+        return None;
+    }
+
+    Some(Expr::call(
+        system_expr("List"),
+        items
+            .iter()
+            .map(|item| {
+                values_result_for_expr(item, wrapper).unwrap_or_else(|| {
+                    build_keyed_fallback_call("Values", item.clone(), wrapper.cloned())
+                })
+            })
+            .collect(),
+    ))
+}
+
+fn keyed_take_drop_result_for_expr(
+    symbol: &'static str,
+    expr: &Expr,
+    key_spec: &Expr,
+    keep_selected: bool,
+) -> Option<Expr> {
+    let selected_keys = parse_key_spec(key_spec)?;
+
+    if let Some(keyed) = keyed_entries_from_expr(expr) {
+        let filtered = if keep_selected {
+            let mut taken = Vec::new();
+            for selected_key in &selected_keys {
+                taken.extend(
+                    keyed
+                        .entries
+                        .iter()
+                        .filter(|(key, _)| key == selected_key)
+                        .cloned(),
+                );
+            }
+            taken
+        } else {
+            keyed
+                .entries
+                .into_iter()
+                .filter(|(key, _)| !selected_keys.iter().any(|candidate| candidate == key))
+                .collect()
+        };
+
+        return Some(render_keyed_entries(keyed.kind, filtered));
+    }
+
+    let items = list_items(expr)?;
+    if parse_association_entries(items).is_some() {
+        return None;
+    }
+
+    Some(Expr::call(
+        system_expr("List"),
+        items
+            .iter()
+            .map(|item| {
+                keyed_take_drop_result_for_expr(symbol, item, key_spec, keep_selected)
+                    .unwrap_or_else(|| {
+                        Expr::call(system_expr(symbol), vec![item.clone(), key_spec.clone()])
+                    })
+            })
+            .collect(),
+    ))
+}
+
+fn build_keyed_fallback_call(symbol: &str, expr: Expr, wrapper: Option<Expr>) -> Expr {
+    let mut args = vec![expr];
+    if let Some(wrapper) = wrapper {
+        args.push(wrapper);
+    }
+    Expr::call(system_expr(symbol), args)
 }

@@ -53,12 +53,14 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("KeySort", args, 1));
         };
 
-        let Some(mut entries) = association_entries_from_expr(expr) else {
+        let Some(mut keyed) = keyed_entries_from_expr(expr) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        entries.sort_by(|lhs, rhs| compare_expr_canonical(&lhs.0, &rhs.0));
-        Ok(render_association(entries))
+        keyed
+            .entries
+            .sort_by(|lhs, rhs| compare_expr_canonical(&lhs.0, &rhs.0));
+        Ok(render_keyed_entries(keyed.kind, keyed.entries))
     }
 
     pub(in crate::runtime) fn eval_association_thread(

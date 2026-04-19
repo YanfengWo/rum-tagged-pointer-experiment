@@ -29,22 +29,28 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr, function] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("KeySortBy", args, 2));
-        };
+        match args {
+            [function] => Ok(keyed_operator_form_slot_first(
+                "KeySortBy",
+                function.clone(),
+            )),
+            [expr, function] => {
+                let Some(keyed) = keyed_entries_from_expr(expr) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
 
-        let Some(entries) = association_entries_from_expr(expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        self.resume_key_sort_by_from_index(
-            head.clone(),
-            args.to_vec(),
-            function.clone(),
-            entries,
-            0,
-            Vec::new(),
-        )
+                self.resume_key_sort_by_from_index(
+                    head.clone(),
+                    args.to_vec(),
+                    function.clone(),
+                    keyed.kind,
+                    keyed.entries,
+                    0,
+                    Vec::new(),
+                )
+            }
+            _ => Ok(self.invalid_call_with_arg_range("KeySortBy", args, 1, 2)),
+        }
     }
 
     pub(in crate::runtime) fn eval_association_map(
@@ -229,13 +235,15 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         function: Expr,
+        kind: KeyedCollectionKind,
         entries: Vec<(Expr, Expr)>,
         index: usize,
         mut decorated: Vec<(Expr, Expr, Expr)>,
     ) -> Result<Expr, EvalError> {
         let Some((key, value)) = entries.get(index).cloned() else {
             decorated.sort_by(|lhs, rhs| compare_expr_canonical(&lhs.2, &rhs.2));
-            return Ok(render_association(
+            return Ok(render_keyed_entries(
+                kind,
                 decorated
                     .into_iter()
                     .map(|(key, value, _)| (key, value))
@@ -247,6 +255,7 @@ impl Session {
         let suspended_head = head.clone();
         let suspended_call_args = call_args.clone();
         let suspended_function = function.clone();
+        let suspended_kind = kind;
         let suspended_entries = entries.clone();
         let suspended_decorated = decorated.clone();
         let suspended_key = key.clone();
@@ -256,6 +265,7 @@ impl Session {
                 suspended_head,
                 suspended_call_args,
                 suspended_function,
+                suspended_kind,
                 suspended_entries,
                 index,
                 suspended_decorated,
@@ -266,7 +276,7 @@ impl Session {
         })?;
 
         self.resume_key_sort_by_with_value(
-            head, call_args, function, entries, index, decorated, key, value, sort_key,
+            head, call_args, function, kind, entries, index, decorated, key, value, sort_key,
         )
     }
 
@@ -276,6 +286,7 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         function: Expr,
+        kind: KeyedCollectionKind,
         entries: Vec<(Expr, Expr)>,
         index: usize,
         mut decorated: Vec<(Expr, Expr, Expr)>,
@@ -284,7 +295,15 @@ impl Session {
         sort_key: Expr,
     ) -> Result<Expr, EvalError> {
         decorated.push((key, value, sort_key));
-        self.resume_key_sort_by_from_index(head, call_args, function, entries, index + 1, decorated)
+        self.resume_key_sort_by_from_index(
+            head,
+            call_args,
+            function,
+            kind,
+            entries,
+            index + 1,
+            decorated,
+        )
     }
 
     fn resume_association_map_from_index(

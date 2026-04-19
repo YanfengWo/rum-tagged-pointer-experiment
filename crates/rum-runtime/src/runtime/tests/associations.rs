@@ -124,6 +124,14 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
     );
     assert_eq!(
         session
+            .eval_text("Lookup[Association[a -> 1], b, 99, Hold]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[99]"
+    );
+    assert_eq!(
+        session
             .eval_text("Lookup[{Association[a -> 1], Association[a -> 2, b -> 3]}, a]")
             .unwrap()
             .value
@@ -137,6 +145,14 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
             .value
             .to_string(),
         "List[1, 0]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Lookup[{Association[a -> 1], Association[b -> 2]}, a, 0, Hold]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Hold[1], Hold[0]]"
     );
     assert_eq!(
         session
@@ -158,11 +174,35 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
     );
     assert_eq!(
         session
+            .eval_text("Keys[List[a -> 1, b -> 2], Hold]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Hold[a], Hold[b]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Keys[{Association[a -> 1], {b -> 2}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a], List[b]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Values[Association[a -> 1, b -> 2]]")
             .unwrap()
             .value
             .to_string(),
         "List[1, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Values[{Association[a -> 1], {b -> 2}}, Hold]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Hold[1]], List[Hold[2]]]"
     );
     assert_eq!(
         session.eval_text("Key[a]").unwrap().value.to_string(),
@@ -196,7 +236,7 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .unwrap()
             .value
             .to_string(),
-        "Association[Rule[a, 1], Rule[b, 2]]"
+        "Association[Rule[b, 2], Rule[a, 1]]"
     );
     assert_eq!(
         session
@@ -205,6 +245,22 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .value
             .to_string(),
         "Association[Rule[a, 1], Rule[c, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyTake[{Association[a -> 1, b -> 2], {a -> 3, c -> 4}}, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[a, 1]], List[Rule[a, 3]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyDrop[{Association[a -> 1, b -> 2], {a -> 3, c -> 4}}, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[b, 2]], List[Rule[c, 4]]]"
     );
     assert_eq!(
         session
@@ -258,6 +314,14 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("KeySort[List[b -> 2, a -> 1, c -> 3]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[a, 1], Rule[b, 2], Rule[c, 3]]"
+    );
+    assert_eq!(
+        session
             .eval_text(
                 "KeySortBy[Association[a -> 1, bb -> 2, ccc -> 3], StringLength[ToString[#]] &]"
             )
@@ -265,6 +329,22 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .value
             .to_string(),
         "Association[Rule[a, 1], Rule[bb, 2], Rule[ccc, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeySortBy[List[bb -> 2, a -> 1, ccc -> 3], StringLength[ToString[#]] &]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[a, 1], Rule[bb, 2], Rule[ccc, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeySortBy[StringLength[ToString[#]] &][Association[bb -> 2, a -> 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1], Rule[bb, 2]]"
     );
     assert_eq!(
         session
@@ -489,7 +569,7 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .unwrap()
             .value
             .to_string(),
-        "Keys[List[Rule[a, 1]]]"
+        "List[a]"
     );
     assert_eq!(
         session
@@ -497,7 +577,7 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .unwrap()
             .value
             .to_string(),
-        "Values[List[Rule[a, 1]]]"
+        "List[1]"
     );
     assert_eq!(
         session
@@ -505,7 +585,7 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .unwrap()
             .value
             .to_string(),
-        "KeyTake[List[Rule[a, 1]], a]"
+        "List[Rule[a, 1]]"
     );
     assert_eq!(
         session
@@ -529,7 +609,7 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .unwrap()
             .value
             .to_string(),
-        "KeySort[List[Rule[a, 1]]]"
+        "List[Rule[a, 1]]"
     );
     assert_eq!(
         session
@@ -654,12 +734,9 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
     );
 
     let outcome = session.eval_text("KeySortBy[a]").unwrap();
-    assert_eq!(outcome.value.to_string(), "KeySortBy[a]");
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "KeySortBy" && message.tag == "argx")
+    assert_eq!(
+        outcome.value.to_string(),
+        "Function[rum$keyedArg, KeySortBy[rum$keyedArg, a]]"
     );
 
     let outcome = session.eval_text("AssociationThread[a]").unwrap();
@@ -713,10 +790,14 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
 
     let outcome = session.eval_text("Missing[]").unwrap();
     assert_eq!(outcome.value.to_string(), "Missing[]");
+    assert!(outcome.messages.is_empty());
+
+    let outcome = session.eval_text("Missing[a, b, c]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Missing[a, b, c]");
     assert!(
         outcome
             .messages
             .iter()
-            .any(|message| message.symbol == "Missing" && message.tag == "argx")
+            .any(|message| message.symbol == "Missing" && message.tag == "argtu")
     );
 }

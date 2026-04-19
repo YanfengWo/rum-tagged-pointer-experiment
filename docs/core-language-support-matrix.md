@@ -258,10 +258,15 @@ once in its primary implementation group. Other groups may mention it as
   key-value canonicalization, keyed part specifications via `Key`,
   deterministic ordering for canonical association rendering, key-based
   pattern matching through `KeyValuePattern`, richer `Lookup`
-  threading/multi-key behavior, and held symbol-mutation first passes for
-  `AssociateTo` / `KeyDropFrom`
-- `planned`: broader key-spec parity across key-manipulation helpers, richer
-  `Missing` semantics, and `KeySortBy` option/comparer parity
+  threading/multi-key behavior including `Lookup[..., default, h]`, rule-list
+  plus wrapper/threading support for `Keys` / `Values`, spec-ordered and
+  threaded/rule-list `KeyTake` / `KeyDrop`, `KeySortBy` operator/rule-list
+  parity, basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
+  forms, and held symbol-mutation first passes for `AssociateTo` /
+  `KeyDropFrom`
+- `planned`: custom `KeySort` comparer parity, callable `Key[key][assoc]`
+  extraction parity, and broader keyed-helper compatibility beyond the
+  current first-pass subset
 
 ### Functions and Symbols
 
@@ -271,8 +276,8 @@ once in its primary implementation group. Other groups may mention it as
   `AssociationThread`, `KeyUnion`, `KeyIntersection`, `KeyComplement`,
   `Normal`, `AssociateTo`, `KeyDropFrom`, `KeyValuePattern`, `Merge`,
   `Catenate`, `Counts`, `CountsBy`, `GroupBy`, `PositionIndex`, `Missing`
-- `planned`: `KeySortBy` option parity, keyed part-spec parity, and remaining
-  deep association semantics beyond the current first-pass subset
+- `planned`: custom `KeySort` comparers, callable `Key[...]` extraction, and
+  remaining deep association semantics beyond the current first-pass subset
 - `cross-tracked elsewhere`: `#name`, `DeleteDuplicates`, `Map`, `Plus`,
   `Select`, `Sort`
 

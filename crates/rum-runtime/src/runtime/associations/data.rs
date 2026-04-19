@@ -1,5 +1,17 @@
 use super::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::runtime) enum KeyedCollectionKind {
+    Association,
+    RuleList,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) struct KeyedEntries {
+    pub(in crate::runtime) kind: KeyedCollectionKind,
+    pub(in crate::runtime) entries: Vec<(Expr, Expr)>,
+}
+
 pub(in crate::runtime) fn association_entries_from_expr(expr: &Expr) -> Option<Vec<(Expr, Expr)>> {
     let Expr::Call { head, args } = expr else {
         return None;
@@ -12,6 +24,32 @@ pub(in crate::runtime) fn association_entries_from_expr(expr: &Expr) -> Option<V
     Some(canonicalize_association_entries(parse_association_entries(
         args,
     )?))
+}
+
+pub(in crate::runtime) fn rule_list_entries_from_expr(expr: &Expr) -> Option<Vec<(Expr, Expr)>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return None;
+    }
+
+    parse_association_entries(args)
+}
+
+pub(in crate::runtime) fn keyed_entries_from_expr(expr: &Expr) -> Option<KeyedEntries> {
+    if let Some(entries) = association_entries_from_expr(expr) {
+        return Some(KeyedEntries {
+            kind: KeyedCollectionKind::Association,
+            entries,
+        });
+    }
+
+    rule_list_entries_from_expr(expr).map(|entries| KeyedEntries {
+        kind: KeyedCollectionKind::RuleList,
+        entries,
+    })
 }
 
 pub(in crate::runtime) fn parse_association_entries(items: &[Expr]) -> Option<Vec<(Expr, Expr)>> {
@@ -27,6 +65,26 @@ pub(in crate::runtime) fn render_association(entries: Vec<(Expr, Expr)>) -> Expr
             .map(|(key, value)| Expr::call(system_expr("Rule"), vec![key, value]))
             .collect(),
     )
+}
+
+pub(in crate::runtime) fn render_rule_list(entries: Vec<(Expr, Expr)>) -> Expr {
+    Expr::call(
+        system_expr(heads::structure::LIST),
+        entries
+            .into_iter()
+            .map(|(key, value)| Expr::call(system_expr("Rule"), vec![key, value]))
+            .collect(),
+    )
+}
+
+pub(in crate::runtime) fn render_keyed_entries(
+    kind: KeyedCollectionKind,
+    entries: Vec<(Expr, Expr)>,
+) -> Expr {
+    match kind {
+        KeyedCollectionKind::Association => render_association(entries),
+        KeyedCollectionKind::RuleList => render_rule_list(entries),
+    }
 }
 
 pub(in crate::runtime) fn association_value_by_key(expr: &Expr, key: &Expr) -> Option<Expr> {
@@ -164,4 +222,15 @@ pub(in crate::runtime) fn predicate_bool_expr(value: bool) -> Expr {
     } else {
         heads::structure::FALSE
     })
+}
+
+pub(in crate::runtime) fn keyed_operator_form_slot_first(symbol: &str, tail: Expr) -> Expr {
+    let parameter = Expr::symbol("rum$keyedArg");
+    Expr::call(
+        system_expr("Function"),
+        vec![
+            parameter.clone(),
+            Expr::call(system_expr(symbol), vec![parameter, tail]),
+        ],
+    )
 }
