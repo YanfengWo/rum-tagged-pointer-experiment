@@ -249,7 +249,7 @@ This roadmap intentionally uses two levels of detail:
     - [ ] leave language-data-backed `Pluralize` parity for a future data-backed lexical layer if user-visible need justifies it
   - [ ] Wave 2: `CL-03` and `CL-05`
     - [ ] `CL-03`: remaining rule/pattern/traversal convenience surface such as `ReplaceAt`, `ReplaceList`, `PatternSequence`, `OrderlessPatternSequence`, `Verbatim`, and deeper traversal parity after the new `Replace` first pass
-    - [ ] `CL-05`: remaining keyed-data polish such as custom `KeySort` comparers, callable `Key[key][assoc]` extraction, and broader keyed-helper operator/rule-list compatibility after landing fuller `Missing`, `KeySortBy` operator/rule-list parity, `Keys` / `Values` wrapper-threading, `KeyTake` / `KeyDrop` threading plus key-spec order, held association mutation parity, and richer `Lookup` threading/multi-key behavior
+    - [ ] `CL-05`: remaining keyed-data long-tail polish such as broader keyed-helper operator/rule-list compatibility and deeper association semantics after landing custom `KeySort` comparers, callable `Key[key][assoc]` extraction, fuller `Missing`, `KeySortBy` operator/rule-list parity, `Keys` / `Values` wrapper-threading, `KeyTake` / `KeyDrop` threading plus key-spec order, held association mutation parity, and richer `Lookup` threading/multi-key behavior
   - [ ] Wave 3: `CL-06` and `CL-01`
     - [ ] `CL-06`: deeper `WithCleanup` / `Failsafe` / `CheckAbort` / `AbortProtect` parity, richer failure/status behavior, and fuller host-I/O semantics
     - [ ] `CL-01`: remaining part-spec / `Heads` parity and deeper truth/comparison breadth

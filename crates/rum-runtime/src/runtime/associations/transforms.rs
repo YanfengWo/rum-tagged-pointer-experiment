@@ -49,18 +49,34 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("KeySort", args, 1));
-        };
+        match args {
+            [expr] => {
+                let Some(mut keyed) = keyed_entries_from_expr(expr) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
 
-        let Some(mut keyed) = keyed_entries_from_expr(expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
+                keyed
+                    .entries
+                    .sort_by(|lhs, rhs| compare_expr_canonical(&lhs.0, &rhs.0));
+                Ok(render_keyed_entries(keyed.kind, keyed.entries))
+            }
+            [expr, ordering] => {
+                let Some(keyed) = keyed_entries_from_expr(expr) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
 
-        keyed
-            .entries
-            .sort_by(|lhs, rhs| compare_expr_canonical(&lhs.0, &rhs.0));
-        Ok(render_keyed_entries(keyed.kind, keyed.entries))
+                self.resume_key_sort_with_ordering_from_index(
+                    head.clone(),
+                    args.to_vec(),
+                    keyed.kind,
+                    ordering.clone(),
+                    keyed.entries,
+                    0,
+                    Vec::new(),
+                )
+            }
+            _ => Ok(self.invalid_call_with_arg_range("KeySort", args, 1, 2)),
+        }
     }
 
     pub(in crate::runtime) fn eval_association_thread(

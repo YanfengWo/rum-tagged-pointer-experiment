@@ -1,5 +1,11 @@
 use super::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum KeySortOrderingDecision {
+    InsertBefore,
+    KeepScanning,
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_key_select(
         &mut self,
@@ -50,6 +56,134 @@ impl Session {
                 )
             }
             _ => Ok(self.invalid_call_with_arg_range("KeySortBy", args, 1, 2)),
+        }
+    }
+
+    pub(in crate::runtime) fn resume_key_sort_with_ordering_from_index(
+        &mut self,
+        head: Expr,
+        call_args: Vec<Expr>,
+        kind: KeyedCollectionKind,
+        ordering: Expr,
+        entries: Vec<(Expr, Expr)>,
+        index: usize,
+        sorted: Vec<(Expr, Expr)>,
+    ) -> Result<Expr, EvalError> {
+        let Some(candidate) = entries.get(index).cloned() else {
+            return Ok(render_keyed_entries(kind, sorted));
+        };
+
+        self.resume_key_sort_with_ordering_insert(
+            head, call_args, kind, ordering, entries, index, sorted, candidate, 0,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn resume_key_sort_with_ordering_insert(
+        &mut self,
+        head: Expr,
+        call_args: Vec<Expr>,
+        kind: KeyedCollectionKind,
+        ordering: Expr,
+        entries: Vec<(Expr, Expr)>,
+        index: usize,
+        sorted: Vec<(Expr, Expr)>,
+        candidate: (Expr, Expr),
+        insert_index: usize,
+    ) -> Result<Expr, EvalError> {
+        let Some((existing_key, _)) = sorted.get(insert_index).cloned() else {
+            let mut next_sorted = sorted;
+            next_sorted.push(candidate);
+            return self.resume_key_sort_with_ordering_from_index(
+                head,
+                call_args,
+                kind,
+                ordering,
+                entries,
+                index + 1,
+                next_sorted,
+            );
+        };
+
+        let compare_result = self.evaluate(Expr::call(
+            ordering.clone(),
+            vec![candidate.0.clone(), existing_key],
+        ));
+        let suspended_head = head.clone();
+        let suspended_call_args = call_args.clone();
+        let suspended_ordering = ordering.clone();
+        let suspended_entries = entries.clone();
+        let suspended_sorted = sorted.clone();
+        let suspended_candidate = candidate.clone();
+        let compare_value =
+            self.suspend_with_frame(compare_result, move |session, compare_value| {
+                session.resume_key_sort_with_ordering_after_compare(
+                    suspended_head,
+                    suspended_call_args,
+                    kind,
+                    suspended_ordering,
+                    suspended_entries,
+                    index,
+                    suspended_sorted,
+                    suspended_candidate,
+                    insert_index,
+                    compare_value,
+                )
+            })?;
+
+        self.resume_key_sort_with_ordering_after_compare(
+            head,
+            call_args,
+            kind,
+            ordering,
+            entries,
+            index,
+            sorted,
+            candidate,
+            insert_index,
+            compare_value,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn resume_key_sort_with_ordering_after_compare(
+        &mut self,
+        head: Expr,
+        call_args: Vec<Expr>,
+        kind: KeyedCollectionKind,
+        ordering: Expr,
+        entries: Vec<(Expr, Expr)>,
+        index: usize,
+        sorted: Vec<(Expr, Expr)>,
+        candidate: (Expr, Expr),
+        insert_index: usize,
+        compare_value: Expr,
+    ) -> Result<Expr, EvalError> {
+        match key_sort_ordering_decision(&compare_value) {
+            KeySortOrderingDecision::InsertBefore => {
+                let mut next_sorted = sorted;
+                next_sorted.insert(insert_index, candidate);
+                self.resume_key_sort_with_ordering_from_index(
+                    head,
+                    call_args,
+                    kind,
+                    ordering,
+                    entries,
+                    index + 1,
+                    next_sorted,
+                )
+            }
+            KeySortOrderingDecision::KeepScanning => self.resume_key_sort_with_ordering_insert(
+                head,
+                call_args,
+                kind,
+                ordering,
+                entries,
+                index,
+                sorted,
+                candidate,
+                insert_index + 1,
+            ),
         }
     }
 
@@ -531,5 +665,23 @@ impl Session {
         }
 
         self.resume_group_by_from_index(head, call_args, function, items, index + 1, grouped)
+    }
+}
+
+fn key_sort_ordering_decision(value: &Expr) -> KeySortOrderingDecision {
+    match value {
+        Expr::Atom(Atom::Integer(integer)) if integer == &BigInt::from(1_i8) => {
+            KeySortOrderingDecision::InsertBefore
+        }
+        Expr::Atom(Atom::Integer(integer))
+            if integer == &BigInt::from(0_i8) || integer == &BigInt::from(-1_i8) =>
+        {
+            KeySortOrderingDecision::KeepScanning
+        }
+        _ => match truthiness_symbol(value) {
+            Some(true) => KeySortOrderingDecision::InsertBefore,
+            Some(false) => KeySortOrderingDecision::KeepScanning,
+            None => KeySortOrderingDecision::InsertBefore,
+        },
     }
 }

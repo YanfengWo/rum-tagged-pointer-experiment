@@ -208,6 +208,30 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
         session.eval_text("Key[a]").unwrap().value.to_string(),
         "Key[a]"
     );
+    assert_eq!(
+        session
+            .eval_text("Key[a][Association[a -> 1, b -> 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Key[b][Association[a -> 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Key[2][Association[2 -> \"two\", 1 -> \"one\"]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"two\""
+    );
 }
 
 #[test]
@@ -319,6 +343,26 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .value
             .to_string(),
         "List[Rule[a, 1], Rule[b, 2], Rule[c, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "KeySort[Association[bb -> 2, a -> 1, ccc -> 3], Function[Less[StringLength[ToString[Slot[1]]], StringLength[ToString[Slot[2]]]]]]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1], Rule[bb, 2], Rule[ccc, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "KeySort[List[bb -> 2, a -> 1], Function[Less[StringLength[ToString[Slot[1]]], StringLength[ToString[Slot[2]]]]]]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[a, 1], Rule[bb, 2]]"
     );
     assert_eq!(
         session

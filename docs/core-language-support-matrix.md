@@ -260,13 +260,13 @@ once in its primary implementation group. Other groups may mention it as
   pattern matching through `KeyValuePattern`, richer `Lookup`
   threading/multi-key behavior including `Lookup[..., default, h]`, rule-list
   plus wrapper/threading support for `Keys` / `Values`, spec-ordered and
-  threaded/rule-list `KeyTake` / `KeyDrop`, `KeySortBy` operator/rule-list
-  parity, basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
-  forms, and held symbol-mutation first passes for `AssociateTo` /
+  threaded/rule-list `KeyTake` / `KeyDrop`, custom `KeySort` comparers,
+  `KeySortBy` operator/rule-list parity, callable `Key[key][assoc]`
+  extraction, basic `Missing[]` / `Missing["reason"]` / `Missing["reason",
+  expr]` forms, and held symbol-mutation first passes for `AssociateTo` /
   `KeyDropFrom`
-- `planned`: custom `KeySort` comparer parity, callable `Key[key][assoc]`
-  extraction parity, and broader keyed-helper compatibility beyond the
-  current first-pass subset
+- `planned`: broader keyed-helper operator/rule-list breadth and deeper
+  association semantics beyond the current first-pass subset
 
 ### Functions and Symbols
 
@@ -276,7 +276,7 @@ once in its primary implementation group. Other groups may mention it as
   `AssociationThread`, `KeyUnion`, `KeyIntersection`, `KeyComplement`,
   `Normal`, `AssociateTo`, `KeyDropFrom`, `KeyValuePattern`, `Merge`,
   `Catenate`, `Counts`, `CountsBy`, `GroupBy`, `PositionIndex`, `Missing`
-- `planned`: custom `KeySort` comparers, callable `Key[...]` extraction, and
+- `planned`: broader keyed-helper operator/rule-list compatibility and
   remaining deep association semantics beyond the current first-pass subset
 - `cross-tracked elsewhere`: `#name`, `DeleteDuplicates`, `Map`, `Plus`,
   `Select`, `Sort`

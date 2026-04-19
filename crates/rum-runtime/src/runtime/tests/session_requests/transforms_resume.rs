@@ -279,6 +279,30 @@ fn resume_eval_request_with_input_can_finish_keysortby_after_suspending_sort_key
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_keysort_after_suspending_comparer() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "KeySort[{bb -> 2, a -> 1}, Function[If[SameQ[Slot[1], a], MatchQ[InputString[\"cmp: \"], \"yes\"], True]]]",
+        )
+        .expect_err("KeySort should suspend when its custom comparer requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cmp: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should continue KeySort after the custom comparer resolves");
+
+    assert_eq!(response.value.to_string(), "List[Rule[a, 1], Rule[bb, 2]]");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_match_limit() {
     let mut session = Session::new();
 

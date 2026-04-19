@@ -91,7 +91,9 @@ pub(in crate::runtime) fn apply_composition_to_args(
 }
 
 pub(in crate::runtime) fn is_callable_operator_wrapper(expr: &Expr) -> bool {
-    parse_curried_operator(expr).is_some() || parse_reverse_applied_wrapper(expr).is_some()
+    parse_curried_operator(expr).is_some()
+        || parse_reverse_applied_wrapper(expr).is_some()
+        || parse_key_wrapper(expr).is_some()
 }
 
 pub(in crate::runtime) fn apply_callable_operator_wrapper_to_args(
@@ -102,7 +104,23 @@ pub(in crate::runtime) fn apply_callable_operator_wrapper_to_args(
         return Some(apply_curried_operator_to_args(&spec, args));
     }
 
-    parse_reverse_applied_wrapper(head).map(|spec| apply_reverse_applied_to_args(&spec, args))
+    if let Some(spec) = parse_reverse_applied_wrapper(head) {
+        return Some(apply_reverse_applied_to_args(&spec, args));
+    }
+
+    let [expr] = args else {
+        return None;
+    };
+
+    let key = parse_key_wrapper(head)?;
+    apply_keyed_part_spec(expr, head).or_else(|| {
+        association_entries_from_expr(expr).map(|_| {
+            Expr::call(
+                system_expr("Missing"),
+                vec![Expr::string("KeyAbsent"), key.clone()],
+            )
+        })
+    })
 }
 
 impl Session {
@@ -355,6 +373,16 @@ fn expr_as_index_list(expr: &Expr) -> Option<Vec<usize>> {
 
 fn parse_callable_wrapper_accumulated(expr: &Expr) -> Option<Vec<Expr>> {
     call_items_with_head(expr, &system_expr("List")).map(|items| items.to_vec())
+}
+
+fn parse_key_wrapper(expr: &Expr) -> Option<&Expr> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Key") => match args.as_slice() {
+            [key] => Some(key),
+            _ => None,
+        },
+        _ => None,
+    }
 }
 
 fn parse_reverse_applied_wrapper(expr: &Expr) -> Option<ReverseAppliedSpec<'_>> {
