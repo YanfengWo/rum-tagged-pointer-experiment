@@ -161,12 +161,19 @@ pub(super) struct CompiledSequencePattern {
     pub(super) matcher: MatcherNode,
     pub(super) name: Option<Symbol>,
     pub(super) checks: Vec<SequencePatternCheck>,
+    pub(super) greediness: SequenceGreediness,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum SequencePatternCheck {
     Condition(Expr),
     PatternTest(Expr),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum SequenceGreediness {
+    Shortest,
+    Longest,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

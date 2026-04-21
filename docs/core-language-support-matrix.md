@@ -173,8 +173,9 @@ once in its primary implementation group. Other groups may mention it as
 
 - `implemented`: named patterns, `Pattern`, `Blank`, `BlankSequence`,
   `BlankNullSequence`, head-constrained blanks, `Condition`, `PatternTest`,
-  `Alternatives`, `Optional`, `Except`, `Repeated`, `RepeatedNull`, matcher
-  IR, delayed-rule substitution, suspend/resume through matcher-driven flows
+  `Alternatives`, `Optional`, `Except`, `Repeated`, `RepeatedNull`,
+  `PatternSequence`, `Verbatim`, `Longest`, `Shortest`, matcher IR,
+  delayed-rule substitution, suspend/resume through matcher-driven flows
 - `partial`: advanced pattern language breadth, full traversal parity, richer
   replacement-convenience family including the current `Replace`,
   `ReplaceList`, and `ReplaceAt` first passes, pattern/string crossover
@@ -183,12 +184,12 @@ once in its primary implementation group. Other groups may mention it as
 ### Functions and Symbols
 
 - `implemented`: `Rule`, `RuleDelayed`, `Condition`, `Except`,
-  `Alternatives`, `Optional`, `Repeated`
+  `Alternatives`, `Optional`, `Repeated`, `PatternSequence`, `Verbatim`,
+  `Longest`, `Shortest`
 - `partial`: `MatchQ`, `Replace`, `ReplaceList`, `ReplaceAt`, `ReplaceAll`,
   `ReplaceRepeated`, `Cases`, `Count`, `MemberQ`, `FreeQ`, `Position`
 - `partial`: `DeleteCases`
-- `planned`: `Longest`, `Shortest`,
-  `PatternSequence`, `OrderlessPatternSequence`, `Verbatim`
+- `planned`: `OrderlessPatternSequence`
 - `cross-tracked elsewhere`: `Set`, `SetDelayed`, `Part`, `Extract`,
   `ReplacePart`, `StringExpression`
 

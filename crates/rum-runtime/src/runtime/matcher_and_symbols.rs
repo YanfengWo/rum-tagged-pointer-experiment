@@ -3,6 +3,10 @@ use super::*;
 pub(super) fn compile_matcher(expr: &Expr) -> MatcherNode {
     let expr = strip_hold_pattern(expr);
 
+    if let Some(inner) = pattern_verbatim_inner(expr) {
+        return MatcherNode::Exact(inner.clone());
+    }
+
     if let Some(entries) = pattern_key_value_pattern_entries(expr) {
         return MatcherNode::KeyValuePattern(
             entries
@@ -70,18 +74,14 @@ pub(super) fn compile_matcher(expr: &Expr) -> MatcherNode {
 }
 
 pub(super) fn compile_matcher_args(head: &Expr, args: &[Expr]) -> Vec<MatcherArg> {
-    args.iter()
-        .enumerate()
-        .map(|(index, arg)| {
-            compile_matcher_arg(
-                arg,
-                CompiledOptionalDefault::Implicit {
-                    head: head.clone(),
-                    position: index + 1,
-                },
-            )
-        })
-        .collect()
+    let mut compiled = Vec::new();
+    let mut position = 1;
+
+    for arg in args {
+        compile_matcher_arg_items(head, arg, &mut position, &mut compiled);
+    }
+
+    compiled
 }
 
 fn compile_matcher_arg(expr: &Expr, implicit_default: CompiledOptionalDefault) -> MatcherArg {
@@ -105,6 +105,31 @@ fn compile_matcher_arg(expr: &Expr, implicit_default: CompiledOptionalDefault) -
     } else {
         MatcherArg::Single(compile_matcher(expr))
     }
+}
+
+fn compile_matcher_arg_items(
+    head: &Expr,
+    expr: &Expr,
+    position: &mut usize,
+    compiled: &mut Vec<MatcherArg>,
+) {
+    let expr = strip_hold_pattern(expr);
+
+    if let Some(items) = pattern_sequence_items(expr) {
+        for item in items {
+            compile_matcher_arg_items(head, item, position, compiled);
+        }
+        return;
+    }
+
+    compiled.push(compile_matcher_arg(
+        expr,
+        CompiledOptionalDefault::Implicit {
+            head: head.clone(),
+            position: *position,
+        },
+    ));
+    *position += 1;
 }
 
 pub(super) fn pattern_named_pattern(expr: &Expr) -> Option<(&Symbol, &Expr)> {
@@ -198,6 +223,22 @@ pub(super) fn pattern_alternatives(expr: &Expr) -> Option<&[Expr]> {
     }
 }
 
+pub(super) fn pattern_sequence_items(expr: &Expr) -> Option<&[Expr]> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "PatternSequence") => Some(args),
+        _ => None,
+    }
+}
+
+pub(super) fn pattern_verbatim_inner(expr: &Expr) -> Option<&Expr> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Verbatim") && args.len() == 1 => {
+            Some(&args[0])
+        }
+        _ => None,
+    }
+}
+
 pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<CompiledSequencePattern> {
     let expr = strip_hold_pattern(expr);
 
@@ -221,6 +262,16 @@ pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<CompiledSequence
                 .push(SequencePatternCheck::Condition(args[1].clone()));
             Some(spec)
         }
+        Expr::Call { head, args } if is_system_symbol_name(head, "Longest") && args.len() == 1 => {
+            let mut spec = decompose_sequence_pattern(&args[0])?;
+            spec.greediness = SequenceGreediness::Longest;
+            Some(spec)
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "Shortest") && args.len() == 1 => {
+            let mut spec = decompose_sequence_pattern(&args[0])?;
+            spec.greediness = SequenceGreediness::Shortest;
+            Some(spec)
+        }
         Expr::Call { head, args }
             if is_system_symbol_name(head, "PatternTest") && args.len() == 2 =>
         {
@@ -242,6 +293,7 @@ pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<CompiledSequence
                 },
                 name: None,
                 checks: Vec::new(),
+                greediness: SequenceGreediness::Shortest,
             })
         }
         Expr::Call { head, args } if is_system_symbol_name(head, "BlankNullSequence") => {
@@ -257,6 +309,7 @@ pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<CompiledSequence
                 },
                 name: None,
                 checks: Vec::new(),
+                greediness: SequenceGreediness::Shortest,
             })
         }
         expr if is_options_pattern_expr(expr) => Some(options_pattern_sequence_matcher()),
@@ -291,6 +344,7 @@ fn compile_repeated_pattern(
         matcher: compile_matcher(inner),
         name: None,
         checks: Vec::new(),
+        greediness: SequenceGreediness::Shortest,
     })
 }
 

@@ -1015,6 +1015,7 @@ pub(super) fn options_pattern_sequence_matcher() -> CompiledSequencePattern {
         ]),
         name: None,
         checks: Vec::new(),
+        greediness: SequenceGreediness::Shortest,
     }
 }
 

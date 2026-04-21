@@ -15,10 +15,13 @@ const EXTRA_SYSTEM_NAME_SYMBOLS: &[&str] = &[
     "OneIdentity",
     "OptionsPattern",
     "Orderless",
+    "OrderlessPatternSequence",
     "PatternTest",
+    "PatternSequence",
     "Protected",
     "RegularExpression",
     "SequenceHold",
+    "Verbatim",
     "StepMonitor",
     "StringExpression",
 ];

@@ -35,7 +35,11 @@ impl Session {
     ) -> Result<CompiledMatchOutcome, EvalError> {
         match pattern {
             MatcherArg::Sequence(spec) => {
-                let start = spec.min_len;
+                let Some(start) = initial_sequence_consume(&spec, &rest_patterns, &value_args)
+                else {
+                    return Ok(match_outcome(false, bindings));
+                };
+
                 self.match_compiled_sequence_choices(
                     spec,
                     rest_patterns,
@@ -173,16 +177,10 @@ impl Session {
         consume: usize,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let min_rest = min_required_matcher_arg_count(&rest_patterns);
-
-        if value_args.len() < spec.min_len + min_rest {
+        let Some(max_len) = max_sequence_consume(&spec, min_rest, value_args.len()) else {
             return Ok(match_outcome(false, bindings));
-        }
-
-        let max_len = spec
-            .max_len
-            .map(|limit| limit.min(value_args.len().saturating_sub(min_rest)))
-            .unwrap_or_else(|| value_args.len().saturating_sub(min_rest));
-        if consume > max_len {
+        };
+        if !(spec.min_len..=max_len).contains(&consume) {
             return Ok(match_outcome(false, bindings));
         }
 
@@ -200,12 +198,21 @@ impl Session {
             self.match_compiled_sequence_pattern_owned(spec, consumed_values, bindings);
         self.drive_internal_value(sequence_result, move |session, sequence_outcome| {
             if !sequence_outcome.matched {
+                let Some(next_consume) = next_sequence_consume(
+                    spec_for_retry.greediness,
+                    consume,
+                    spec_for_retry.min_len,
+                    max_len,
+                ) else {
+                    return Ok(match_outcome(false, snapshot_for_retry));
+                };
+
                 return session.match_compiled_sequence_choices(
                     spec_for_retry,
                     rest_patterns_for_retry,
                     value_args_for_retry,
                     snapshot_for_retry,
-                    consume + 1,
+                    next_consume,
                 );
             }
 
@@ -223,12 +230,21 @@ impl Session {
                 if rest_outcome.matched {
                     Ok(rest_outcome)
                 } else {
+                    let Some(next_consume) = next_sequence_consume(
+                        spec_for_retry.greediness,
+                        consume,
+                        spec_for_retry.min_len,
+                        max_len,
+                    ) else {
+                        return Ok(match_outcome(false, snapshot_for_retry));
+                    };
+
                     session.match_compiled_sequence_choices(
                         spec_for_retry,
                         rest_patterns_for_retry,
                         value_args_for_retry,
                         snapshot_for_retry,
-                        consume + 1,
+                        next_consume,
                     )
                 }
             })
@@ -312,5 +328,47 @@ impl Session {
 
             Ok(match_outcome(true, bindings))
         })
+    }
+}
+
+fn initial_sequence_consume(
+    spec: &CompiledSequencePattern,
+    rest_patterns: &[MatcherArg],
+    value_args: &[Expr],
+) -> Option<usize> {
+    let min_rest = min_required_matcher_arg_count(rest_patterns);
+    let max_len = max_sequence_consume(spec, min_rest, value_args.len())?;
+
+    Some(match spec.greediness {
+        SequenceGreediness::Shortest => spec.min_len,
+        SequenceGreediness::Longest => max_len,
+    })
+}
+
+fn max_sequence_consume(
+    spec: &CompiledSequencePattern,
+    min_rest: usize,
+    value_len: usize,
+) -> Option<usize> {
+    if value_len < spec.min_len + min_rest {
+        return None;
+    }
+
+    Some(
+        spec.max_len
+            .map(|limit| limit.min(value_len.saturating_sub(min_rest)))
+            .unwrap_or_else(|| value_len.saturating_sub(min_rest)),
+    )
+}
+
+fn next_sequence_consume(
+    greediness: SequenceGreediness,
+    current: usize,
+    min_len: usize,
+    max_len: usize,
+) -> Option<usize> {
+    match greediness {
+        SequenceGreediness::Shortest => (current < max_len).then_some(current + 1),
+        SequenceGreediness::Longest => (current > min_len).then_some(current - 1),
     }
 }

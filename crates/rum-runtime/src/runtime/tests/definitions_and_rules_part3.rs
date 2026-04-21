@@ -624,6 +624,121 @@ fn cases_honors_optional_and_repeated_patterns() {
 }
 
 #[test]
+fn patternsequence_flattens_argument_patterns_in_matching_rules_and_definitions() {
+    let mut session = Session::new();
+    session
+        .eval_text("pair[PatternSequence[x_, y_]] := List[x, y]")
+        .unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[a, b], f[PatternSequence[x_, y_]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[], f[PatternSequence[]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session.eval_text("pair[a, b]").unwrap().value.to_string(),
+        "List[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("f[a, b] /. f[PatternSequence[x_, y_]] :> List[x, y]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, b]"
+    );
+}
+
+#[test]
+fn verbatim_matches_literal_pattern_language_forms() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("MatchQ[Blank[], Verbatim[Blank[]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[7, Verbatim[Blank[]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("Cases[List[Blank[], a, BlankSequence[]], Verbatim[Blank[]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Blank[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("f[Blank[]] /. f[Verbatim[Blank[]]] -> ok")
+            .unwrap()
+            .value
+            .to_string(),
+        "ok"
+    );
+}
+
+#[test]
+fn longest_and_shortest_control_sequence_pattern_greediness() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("f[a, b, c] /. f[x__, y__] :> List[List[x], List[y]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a], List[b, c]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("f[a, b, c] /. f[Longest[x__], y__] :> List[List[x], List[y]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a, b], List[c]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("f[a, b, c] /. f[Shortest[x__], y__] :> List[List[x], List[y]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a], List[b, c]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "f[a, b, c, d] /. f[x__, Longest[y__], z__] :> List[List[x], List[y], List[z]]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a], List[b, c], List[d]]"
+    );
+}
+
+#[test]
 fn cases_rule_rhs_splices_named_blanksequence_matches() {
     let mut session = Session::new();
 
