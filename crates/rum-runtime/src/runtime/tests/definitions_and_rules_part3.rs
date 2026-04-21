@@ -661,6 +661,66 @@ fn patternsequence_flattens_argument_patterns_in_matching_rules_and_definitions(
 }
 
 #[test]
+fn orderless_heads_backtrack_across_exact_and_patternsequence_groups() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("a + b + c /. Plus[b, x_, y_] :> List[x, y]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("a + b + c /. Plus[PatternSequence[a, x_], b] :> x")
+            .unwrap()
+            .value
+            .to_string(),
+        "c"
+    );
+    assert_eq!(
+        session
+            .eval_text("a + b + c /. Plus[PatternSequence[x_, y_], z_] :> List[x, y, z]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[b, c, a]"
+    );
+}
+
+#[test]
+fn orderlesspatternsequence_uses_orderless_group_matching_inside_orderless_heads() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[a, b], f[OrderlessPatternSequence[x_, y_]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("a + b + c /. Plus[OrderlessPatternSequence[a, x_], b] :> x")
+            .unwrap()
+            .value
+            .to_string(),
+        "c"
+    );
+    assert_eq!(
+        session
+            .eval_text("a + b + c /. Plus[OrderlessPatternSequence[x_, y_], z_] :> List[x, y, z]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, b, c]"
+    );
+}
+
+#[test]
 fn verbatim_matches_literal_pattern_language_forms() {
     let mut session = Session::new();
 

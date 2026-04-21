@@ -87,8 +87,8 @@ git diff --stat HEAD~1..HEAD
 
 1. `CL-03`
    - fuller `ReplaceList` backtracking parity
-   - `OrderlessPatternSequence`
    - deeper traversal parity
+   - remaining orderless/flat pattern edge cleanup
 2. `CL-05` long tail
    - broader keyed-helper operator/rule-list compatibility polish
    - deeper association semantics
@@ -107,6 +107,7 @@ git diff --stat HEAD~1..HEAD
 - `ReplaceList` first-pass
 - `ReplaceAt` exact-position first-pass
 - `PatternSequence`
+- `OrderlessPatternSequence`
 - `Verbatim`
 - `Longest` / `Shortest`
 - `AssociateTo` / `KeyDropFrom` held mutation parity
@@ -187,4 +188,4 @@ cargo test -p rum-runtime associations
 
 如果新会话要无缝接手，可以直接从这句话开始：
 
-> 先按 `docs/next-session-handoff.md` 和最近几条 git 记录对齐状态；当前 `CL-07/08/09` 主线已完成，`Wave 2` 已经推进到 `DeleteCases`、richer `Lookup`、fuller `Missing`、custom `KeySort` comparer、`KeySortBy` rule-list/operator form、callable `Key[key][assoc]`、`Replace` / `ReplaceList` / `ReplaceAt` first-pass、`PatternSequence` / `Verbatim` / `Longest` / `Shortest` 和 held `AssociateTo` / `KeyDropFrom`，下一步优先看 `CL-03` 的 fuller `ReplaceList` parity、`OrderlessPatternSequence` 与 deeper traversal parity，再看 `CL-05` long tail。
+> 先按 `docs/next-session-handoff.md` 和最近几条 git 记录对齐状态；当前 `CL-07/08/09` 主线已完成，`Wave 2` 已经推进到 `DeleteCases`、richer `Lookup`、fuller `Missing`、custom `KeySort` comparer、`KeySortBy` rule-list/operator form、callable `Key[key][assoc]`、`Replace` / `ReplaceList` / `ReplaceAt` first-pass、`PatternSequence` / `OrderlessPatternSequence` / `Verbatim` / `Longest` / `Shortest` 和 held `AssociateTo` / `KeyDropFrom`，下一步优先看 `CL-03` 的 fuller `ReplaceList` parity、deeper traversal parity 和剩余的 orderless/flat pattern edge cleanup，再看 `CL-05` long tail。

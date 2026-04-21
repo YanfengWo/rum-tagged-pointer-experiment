@@ -152,6 +152,8 @@ pub(super) enum MatcherArg {
     Single(MatcherNode),
     Sequence(CompiledSequencePattern),
     Optional(CompiledOptionalPattern),
+    PatternSequenceGroup(Vec<MatcherArg>),
+    OrderlessPatternSequenceGroup(Vec<MatcherArg>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

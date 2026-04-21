@@ -160,6 +160,30 @@ fn resume_eval_request_with_input_can_finish_conditioned_replace_all() {
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_orderless_patternsequence_group_matching() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "MatchQ[a + b + c, Plus[PatternSequence[a, x_ /; MatchQ[InputString[\"cond: \"], \"yes\"]], b]]",
+        )
+        .expect_err("orderless PatternSequence group matching should suspend when its condition requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cond: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("resume should finish orderless PatternSequence group matching");
+
+    assert_eq!(response.value.to_string(), "True");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_conditioned_cases() {
     let mut session = Session::new();
 

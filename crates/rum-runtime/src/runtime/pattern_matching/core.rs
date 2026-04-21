@@ -198,6 +198,7 @@ impl Session {
         bindings: BTreeMap<Symbol, Expr>,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let one_identity = matcher_head_has_attribute(&head, self, Attribute::OneIdentity);
+        let orderless = matcher_head_has_attribute(&head, self, Attribute::Orderless);
 
         match value {
             Expr::Call {
@@ -210,7 +211,15 @@ impl Session {
                         return Ok(outcome);
                     }
 
-                    session.match_compiled_args_owned(args, value_args, outcome.bindings)
+                    if orderless {
+                        session.match_compiled_orderless_args_owned(
+                            args,
+                            value_args,
+                            outcome.bindings,
+                        )
+                    } else {
+                        session.match_compiled_args_owned(args, value_args, outcome.bindings)
+                    }
                 })
             }
             other if one_identity => match args.as_slice() {

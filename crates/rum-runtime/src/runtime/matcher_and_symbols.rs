@@ -116,9 +116,16 @@ fn compile_matcher_arg_items(
     let expr = strip_hold_pattern(expr);
 
     if let Some(items) = pattern_sequence_items(expr) {
-        for item in items {
-            compile_matcher_arg_items(head, item, position, compiled);
-        }
+        compiled.push(MatcherArg::PatternSequenceGroup(
+            compile_matcher_group_items(head, items, position),
+        ));
+        return;
+    }
+
+    if let Some(items) = pattern_orderless_sequence_items(expr) {
+        compiled.push(MatcherArg::OrderlessPatternSequenceGroup(
+            compile_matcher_group_items(head, items, position),
+        ));
         return;
     }
 
@@ -130,6 +137,20 @@ fn compile_matcher_arg_items(
         },
     ));
     *position += 1;
+}
+
+fn compile_matcher_group_items(
+    head: &Expr,
+    items: &[Expr],
+    position: &mut usize,
+) -> Vec<MatcherArg> {
+    let mut compiled = Vec::new();
+
+    for item in items {
+        compile_matcher_arg_items(head, item, position, &mut compiled);
+    }
+
+    compiled
 }
 
 pub(super) fn pattern_named_pattern(expr: &Expr) -> Option<(&Symbol, &Expr)> {
@@ -226,6 +247,15 @@ pub(super) fn pattern_alternatives(expr: &Expr) -> Option<&[Expr]> {
 pub(super) fn pattern_sequence_items(expr: &Expr) -> Option<&[Expr]> {
     match expr {
         Expr::Call { head, args } if is_system_symbol_name(head, "PatternSequence") => Some(args),
+        _ => None,
+    }
+}
+
+pub(super) fn pattern_orderless_sequence_items(expr: &Expr) -> Option<&[Expr]> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "OrderlessPatternSequence") => {
+            Some(args)
+        }
         _ => None,
     }
 }
@@ -411,8 +441,34 @@ pub(super) fn min_required_matcher_arg_count(patterns: &[MatcherArg]) -> usize {
             MatcherArg::Single(_) => 1,
             MatcherArg::Sequence(spec) => spec.min_len,
             MatcherArg::Optional(_) => 0,
+            MatcherArg::PatternSequenceGroup(items)
+            | MatcherArg::OrderlessPatternSequenceGroup(items) => {
+                min_required_matcher_arg_count(items)
+            }
         })
         .sum()
+}
+
+pub(super) fn max_possible_matcher_arg_count(patterns: &[MatcherArg]) -> Option<usize> {
+    let mut total = 0usize;
+
+    for pattern in patterns {
+        let count = match pattern {
+            MatcherArg::Single(_) => Some(1),
+            MatcherArg::Sequence(spec) => spec.max_len,
+            MatcherArg::Optional(spec) => {
+                max_possible_matcher_arg_count(std::slice::from_ref(spec.inner.as_ref()))
+            }
+            MatcherArg::PatternSequenceGroup(items)
+            | MatcherArg::OrderlessPatternSequenceGroup(items) => {
+                max_possible_matcher_arg_count(items)
+            }
+        }?;
+
+        total = total.checked_add(count)?;
+    }
+
+    Some(total)
 }
 
 pub(super) fn pattern_blank_head(expr: &Expr) -> Option<Option<&Expr>> {

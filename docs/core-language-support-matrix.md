@@ -174,22 +174,23 @@ once in its primary implementation group. Other groups may mention it as
 - `implemented`: named patterns, `Pattern`, `Blank`, `BlankSequence`,
   `BlankNullSequence`, head-constrained blanks, `Condition`, `PatternTest`,
   `Alternatives`, `Optional`, `Except`, `Repeated`, `RepeatedNull`,
-  `PatternSequence`, `Verbatim`, `Longest`, `Shortest`, matcher IR,
-  delayed-rule substitution, suspend/resume through matcher-driven flows
+  `PatternSequence`, `OrderlessPatternSequence`, `Verbatim`, `Longest`,
+  `Shortest`, matcher IR, delayed-rule substitution, suspend/resume through
+  matcher-driven flows
 - `partial`: advanced pattern language breadth, full traversal parity, richer
   replacement-convenience family including the current `Replace`,
-  `ReplaceList`, and `ReplaceAt` first passes, pattern/string crossover
+  `ReplaceList`, and `ReplaceAt` first passes, pattern/string crossover,
+  remaining orderless/flat edge parity
 - `planned`: ordered-pattern controls and remaining parity cleanup
 
 ### Functions and Symbols
 
 - `implemented`: `Rule`, `RuleDelayed`, `Condition`, `Except`,
-  `Alternatives`, `Optional`, `Repeated`, `PatternSequence`, `Verbatim`,
-  `Longest`, `Shortest`
+  `Alternatives`, `Optional`, `Repeated`, `PatternSequence`,
+  `OrderlessPatternSequence`, `Verbatim`, `Longest`, `Shortest`
 - `partial`: `MatchQ`, `Replace`, `ReplaceList`, `ReplaceAt`, `ReplaceAll`,
   `ReplaceRepeated`, `Cases`, `Count`, `MemberQ`, `FreeQ`, `Position`
 - `partial`: `DeleteCases`
-- `planned`: `OrderlessPatternSequence`
 - `cross-tracked elsewhere`: `Set`, `SetDelayed`, `Part`, `Extract`,
   `ReplacePart`, `StringExpression`
 
