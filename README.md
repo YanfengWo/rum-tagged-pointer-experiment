@@ -93,6 +93,8 @@ Primary day-to-day development should happen in a native local workspace for
 the current machine, using the locally installed toolchain directly (`git`,
 `cargo`, `rustc`, etc.).
 
+The current workspace expects Rust `1.85.x` as declared in `Cargo.toml`.
+
 On Windows, prefer a real WSL checkout over the old `C:\...` / `/mnt/c/...`
 portable-wrapper flow. On macOS and Linux, use the normal local checkout and
 native toolchain directly.
@@ -102,6 +104,17 @@ cargo test --workspace
 ```
 
 The same rule applies to `git`, `cargo fmt`, and other routine commands.
+
+For Wolfram-oracle checks, prefer a local kernel binary such as
+`WolframKernel` or `MathKernel`. Connector-based or MCP-wrapped Mathematica
+instances can still be useful for tiny spot checks, but they may impose extra
+security, time, or memory limits and should not be treated as the primary
+semantic oracle.
+
+When running through sandboxed agent tooling, loopback proxies such as
+`127.0.0.1:10808` may be unavailable even when they work fine in a normal
+shell. Networked `cargo` or oracle commands may therefore need unsandboxed
+execution on this machine.
 
 ## Quick Start
 

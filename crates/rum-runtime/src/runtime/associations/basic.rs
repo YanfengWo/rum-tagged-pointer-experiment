@@ -110,7 +110,7 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("KeyExistsQ", args, 2));
         };
 
-        let Some(entries) = association_entries_from_expr(expr) else {
+        let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -166,7 +166,7 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("KeyMemberQ", args, 2));
         };
 
-        let Some(entries) = association_entries_from_expr(expr) else {
+        let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -184,7 +184,7 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("KeyFreeQ", args, 2));
         };
 
-        let Some(entries) = association_entries_from_expr(expr) else {
+        let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -401,7 +401,7 @@ fn keyed_take_drop_result_for_expr(
                 .collect()
         };
 
-        return Some(render_keyed_entries(keyed.kind, filtered));
+        return Some(render_association(filtered));
     }
 
     let items = list_items(expr)?;

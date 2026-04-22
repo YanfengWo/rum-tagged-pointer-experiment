@@ -80,7 +80,7 @@ This roadmap intentionally uses two levels of detail:
 
 - [ ] Build a deliberate, cross-cutting test strategy instead of relying only on feature-local regressions
 - [ ] Expand the project toward a fuller test suite covering unit behavior, boundary conditions, semantic regressions, and host-facing conformance
-- [ ] Build differential checking against Wolfram behavior into the verification strategy while keeping `wolframscript` execution environment-gated rather than mandatory for every developer or CI run
+- [ ] Build differential checking against Wolfram behavior into the verification strategy while keeping local Wolfram-kernel execution environment-gated rather than mandatory for every developer or CI run
 
 ## Active Workstreams
 
@@ -249,7 +249,7 @@ This roadmap intentionally uses two levels of detail:
     - [ ] leave language-data-backed `Pluralize` parity for a future data-backed lexical layer if user-visible need justifies it
   - [ ] Wave 2: `CL-03` and `CL-05`
     - [x] `CL-03`: close the current Wave 2 rule/pattern/traversal convenience sweep through association-aware `Cases` / `DeleteCases` / `Level` / `Count` / `MemberQ` / `FreeQ` / `Position`, the remaining `ReplaceList` root long-tail needed beyond the earlier backtracking subset, and current `Flat` / `Orderless` regrouping parity for `MatchQ` / `ReplaceAll` / `ReplaceList`; leave deeper pattern/string crossover and any remaining advanced matcher breadth as non-blocking long-tail
-    - [ ] `CL-05`: remaining keyed-data long-tail polish such as broader keyed-helper operator/rule-list compatibility and deeper association semantics beyond the current `Missing` / `KeySort` / `KeySortBy` / callable `Key[key][assoc]` / held-mutation first-pass subset
+    - [ ] `CL-05`: remaining keyed-data long-tail polish such as deeper association semantics beyond the current broader keyed-helper operator-form sweep, rule-list-normalizing keyed predicates/transforms, mixed keyed `Merge`, `Missing` forms, callable `Key[key][assoc]`, list-form `KeyUnion`-`KeyIntersection`-`KeyComplement`, and held-mutation first-pass subset
   - [ ] Wave 3: `CL-06` and `CL-01`
     - [ ] `CL-06`: deeper `WithCleanup` / `Failsafe` / `CheckAbort` / `AbortProtect` parity, richer failure/status behavior, and fuller host-I/O semantics
     - [ ] `CL-01`: remaining part-spec / `Heads` parity and deeper truth/comparison breadth
@@ -281,6 +281,7 @@ This roadmap intentionally uses two levels of detail:
 - [ ] Keep Wolfram-oracle execution environment-gated even though the differential test workstream itself is required:
   - [ ] accept a user-configured local oracle command such as `wolframscript`, `WolframKernel`, or `MathKernel`
   - [ ] treat the oracle environment and license as user-provided rather than project-provided
+  - [ ] treat connector- or MCP-wrapped Wolfram access as an optional convenience for small spot checks rather than the baseline oracle path
   - [ ] do not make default development or CI flows depend on Wolfram tooling being installed
   - [ ] do not commit oracle-generated expected outputs into the repository
   - [ ] regenerate oracle comparison material on each diff run rather than relying on checked-in snapshots

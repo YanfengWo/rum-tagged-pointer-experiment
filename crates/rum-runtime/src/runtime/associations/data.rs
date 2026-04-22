@@ -67,26 +67,6 @@ pub(in crate::runtime) fn render_association(entries: Vec<(Expr, Expr)>) -> Expr
     )
 }
 
-pub(in crate::runtime) fn render_rule_list(entries: Vec<(Expr, Expr)>) -> Expr {
-    Expr::call(
-        system_expr(heads::structure::LIST),
-        entries
-            .into_iter()
-            .map(|(key, value)| Expr::call(system_expr("Rule"), vec![key, value]))
-            .collect(),
-    )
-}
-
-pub(in crate::runtime) fn render_keyed_entries(
-    kind: KeyedCollectionKind,
-    entries: Vec<(Expr, Expr)>,
-) -> Expr {
-    match kind {
-        KeyedCollectionKind::Association => render_association(entries),
-        KeyedCollectionKind::RuleList => render_rule_list(entries),
-    }
-}
-
 pub(in crate::runtime) fn association_value_by_key(expr: &Expr, key: &Expr) -> Option<Expr> {
     association_entries_from_expr(expr)?
         .into_iter()
@@ -166,15 +146,14 @@ pub(in crate::runtime) fn list_items(expr: &Expr) -> Option<&[Expr]> {
     }
 }
 
-pub(in crate::runtime) fn parse_association_args(args: &[Expr]) -> Option<Vec<Vec<(Expr, Expr)>>> {
-    args.iter().map(association_entries_from_expr).collect()
-}
-
-pub(in crate::runtime) fn parse_association_list_expr(
+pub(in crate::runtime) fn parse_keyed_entries_list_expr(
     expr: &Expr,
 ) -> Option<Vec<Vec<(Expr, Expr)>>> {
     let items = list_items(expr)?;
-    items.iter().map(association_entries_from_expr).collect()
+    items
+        .iter()
+        .map(|item| keyed_entries_from_expr(item).map(|keyed| keyed.entries))
+        .collect()
 }
 
 pub(in crate::runtime) fn increment_count(counts: &mut Vec<(Expr, usize)>, key: Expr) {
@@ -231,6 +210,17 @@ pub(in crate::runtime) fn keyed_operator_form_slot_first(symbol: &str, tail: Exp
         vec![
             parameter.clone(),
             Expr::call(system_expr(symbol), vec![parameter, tail]),
+        ],
+    )
+}
+
+pub(in crate::runtime) fn keyed_operator_form_slot_second(symbol: &str, head_arg: Expr) -> Expr {
+    let parameter = Expr::symbol("rum$keyedArg");
+    Expr::call(
+        system_expr("Function"),
+        vec![
+            parameter.clone(),
+            Expr::call(system_expr(symbol), vec![head_arg, parameter]),
         ],
     )
 }

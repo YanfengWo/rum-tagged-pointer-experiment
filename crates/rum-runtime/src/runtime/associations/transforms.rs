@@ -6,20 +6,22 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [function, expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("KeyMap", args, 2));
-        };
+        match args {
+            [function] => Ok(keyed_operator_form_slot_second("KeyMap", function.clone())),
+            [function, expr] => {
+                let Some(entries) = association_entries_from_expr(expr) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
 
-        let Some(entries) = association_entries_from_expr(expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        Ok(render_association(
-            entries
-                .into_iter()
-                .map(|(key, value)| (Expr::call(function.clone(), vec![key]), value))
-                .collect(),
-        ))
+                Ok(render_association(
+                    entries
+                        .into_iter()
+                        .map(|(key, value)| (Expr::call(function.clone(), vec![key]), value))
+                        .collect(),
+                ))
+            }
+            _ => Ok(self.invalid_call_with_arg_range("KeyMap", args, 1, 2)),
+        }
     }
 
     pub(in crate::runtime) fn eval_key_value_map(
@@ -27,21 +29,26 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [function, expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("KeyValueMap", args, 2));
-        };
+        match args {
+            [function] => Ok(keyed_operator_form_slot_second(
+                "KeyValueMap",
+                function.clone(),
+            )),
+            [function, expr] => {
+                let Some(entries) = association_entries_from_expr(expr) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
 
-        let Some(entries) = association_entries_from_expr(expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        Ok(Expr::call(
-            system_expr("List"),
-            entries
-                .into_iter()
-                .map(|(key, value)| Expr::call(function.clone(), vec![key, value]))
-                .collect(),
-        ))
+                Ok(Expr::call(
+                    system_expr("List"),
+                    entries
+                        .into_iter()
+                        .map(|(key, value)| Expr::call(function.clone(), vec![key, value]))
+                        .collect(),
+                ))
+            }
+            _ => Ok(self.invalid_call_with_arg_range("KeyValueMap", args, 1, 2)),
+        }
     }
 
     pub(in crate::runtime) fn eval_key_sort(
@@ -58,7 +65,7 @@ impl Session {
                 keyed
                     .entries
                     .sort_by(|lhs, rhs| compare_expr_canonical(&lhs.0, &rhs.0));
-                Ok(render_keyed_entries(keyed.kind, keyed.entries))
+                Ok(render_association(keyed.entries))
             }
             [expr, ordering] => {
                 let Some(keyed) = keyed_entries_from_expr(expr) else {
@@ -68,7 +75,6 @@ impl Session {
                 self.resume_key_sort_with_ordering_from_index(
                     head.clone(),
                     args.to_vec(),
-                    keyed.kind,
                     ordering.clone(),
                     keyed.entries,
                     0,
@@ -108,30 +114,50 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        if args.len() < 2 {
-            return Ok(self.invalid_call_with_message(
-                "KeyUnion",
-                args,
-                "argx",
-                "expected at least 2 association arguments",
-            ));
-        }
-
-        let Some(associations) = parse_association_args(args) else {
+        let [collections_expr] = args else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let mut seen = std::collections::HashSet::new();
-        let mut entries = Vec::new();
-        for association in associations {
-            for (key, value) in association {
-                if seen.insert(key.clone()) {
-                    entries.push((key, value));
+        let Some(collections) = parse_keyed_entries_list_expr(collections_expr) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let mut union_keys = Vec::new();
+        for entries in &collections {
+            for (key, _) in entries {
+                if !union_keys.iter().any(|existing| existing == key) {
+                    union_keys.push(key.clone());
                 }
             }
         }
 
-        Ok(render_association(entries))
+        Ok(Expr::call(
+            system_expr("List"),
+            collections
+                .into_iter()
+                .map(|entries| {
+                    render_association(
+                        union_keys
+                            .iter()
+                            .cloned()
+                            .map(|key| {
+                                let value = entries
+                                    .iter()
+                                    .find(|(entry_key, _)| entry_key == &key)
+                                    .map(|(_, value)| value.clone())
+                                    .unwrap_or_else(|| {
+                                        Expr::call(
+                                            system_expr("Missing"),
+                                            vec![Expr::string("KeyAbsent"), key.clone()],
+                                        )
+                                    });
+                                (key, value)
+                            })
+                            .collect(),
+                    )
+                })
+                .collect(),
+        ))
     }
 
     pub(in crate::runtime) fn eval_key_intersection(
@@ -139,34 +165,45 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        if args.len() < 2 {
-            return Ok(self.invalid_call_with_message(
-                "KeyIntersection",
-                args,
-                "argx",
-                "expected at least 2 association arguments",
-            ));
-        }
-
-        let Some(mut associations) = parse_association_args(args) else {
+        let [collections_expr] = args else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let first = associations.remove(0);
-        let other_key_sets = associations
-            .into_iter()
-            .map(|entries| {
-                entries
-                    .into_iter()
-                    .map(|(key, _)| key)
-                    .collect::<std::collections::HashSet<_>>()
+        let Some(collections) = parse_keyed_entries_list_expr(collections_expr) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let Some(first) = collections.first() else {
+            return Ok(Expr::call(system_expr("List"), vec![]));
+        };
+
+        let intersection_keys = first
+            .iter()
+            .filter(|(key, _)| {
+                collections[1..]
+                    .iter()
+                    .all(|entries| entries.iter().any(|(entry_key, _)| entry_key == key))
             })
+            .map(|(key, _)| key.clone())
             .collect::<Vec<_>>();
 
-        Ok(render_association(
-            first
+        Ok(Expr::call(
+            system_expr("List"),
+            collections
                 .into_iter()
-                .filter(|(key, _)| other_key_sets.iter().all(|set| set.contains(key)))
+                .map(|entries| {
+                    render_association(
+                        intersection_keys
+                            .iter()
+                            .filter_map(|key| {
+                                entries
+                                    .iter()
+                                    .find(|(entry_key, _)| entry_key == key)
+                                    .map(|(_, value)| (key.clone(), value.clone()))
+                            })
+                            .collect(),
+                    )
+                })
                 .collect(),
         ))
     }
@@ -176,29 +213,28 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        if args.len() < 2 {
-            return Ok(self.invalid_call_with_message(
-                "KeyComplement",
-                args,
-                "argx",
-                "expected at least 2 association arguments",
-            ));
-        }
-
-        let Some(mut associations) = parse_association_args(args) else {
+        let [collections_expr] = args else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let first = associations.remove(0);
-        let excluded = associations
-            .into_iter()
-            .flat_map(|entries| entries.into_iter().map(|(key, _)| key))
+        let Some(collections) = parse_keyed_entries_list_expr(collections_expr) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let Some((first, rest)) = collections.split_first() else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let excluded = rest
+            .iter()
+            .flat_map(|entries| entries.iter().map(|(key, _)| key.clone()))
             .collect::<std::collections::HashSet<_>>();
 
         Ok(render_association(
             first
-                .into_iter()
+                .iter()
                 .filter(|(key, _)| !excluded.contains(key))
+                .cloned()
                 .collect(),
         ))
     }
@@ -373,7 +409,7 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("Catenate", args, 1));
         };
 
-        let Some(associations) = parse_association_list_expr(associations_expr) else {
+        let Some(associations) = parse_keyed_entries_list_expr(associations_expr) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 

@@ -265,13 +265,18 @@ once in its primary implementation group. Other groups may mention it as
   deterministic ordering for canonical association rendering, key-based
   pattern matching through `KeyValuePattern`, richer `Lookup`
   threading/multi-key behavior including `Lookup[..., default, h]`, rule-list
-  plus wrapper/threading support for `Keys` / `Values`, spec-ordered and
-  threaded/rule-list `KeyTake` / `KeyDrop`, custom `KeySort` comparers,
-  `KeySortBy` operator/rule-list parity, callable `Key[key][assoc]`
-  extraction, basic `Missing[]` / `Missing["reason"]` / `Missing["reason",
-  expr]` forms, and held symbol-mutation first passes for `AssociateTo` /
-  `KeyDropFrom`
-- `planned`: broader keyed-helper operator/rule-list breadth and deeper
+  plus wrapper/threading support for `Keys` / `Values`, rule-list-aware keyed
+  predicates through `KeyExistsQ` / `KeyMemberQ` / `KeyFreeQ`, spec-ordered
+  and threaded rule-list-normalizing `KeyTake` / `KeyDrop`, broader
+  keyed-helper operator-form parity across `KeyMap` / `KeyValueMap` /
+  `KeySelect` / `AssociationMap` / `Merge` / `CountsBy` / `GroupBy`,
+  rule-list-normalizing `KeySelect` / `KeySort` / `KeySortBy`, mixed
+  association/rule-list `Merge`, current list-form `KeyUnion` /
+  `KeyIntersection` / `KeyComplement` semantics over keyed collections,
+  callable `Key[key][assoc]` extraction, custom `KeySort` comparers, basic
+  `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]` forms, and
+  held symbol-mutation first passes for `AssociateTo` / `KeyDropFrom`
+- `planned`: any remaining keyed-helper rule-list breadth and deeper
   association semantics beyond the current first-pass subset
 
 ### Functions and Symbols
@@ -282,8 +287,8 @@ once in its primary implementation group. Other groups may mention it as
   `AssociationThread`, `KeyUnion`, `KeyIntersection`, `KeyComplement`,
   `Normal`, `AssociateTo`, `KeyDropFrom`, `KeyValuePattern`, `Merge`,
   `Catenate`, `Counts`, `CountsBy`, `GroupBy`, `PositionIndex`, `Missing`
-- `planned`: broader keyed-helper operator/rule-list compatibility and
-  remaining deep association semantics beyond the current first-pass subset
+- `planned`: any remaining keyed-helper rule-list compatibility and
+  deeper association semantics beyond the current first-pass subset
 - `cross-tracked elsewhere`: `#name`, `DeleteDuplicates`, `Map`, `Plus`,
   `Select`, `Sort`
 

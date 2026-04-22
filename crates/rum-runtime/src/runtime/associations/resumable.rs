@@ -12,22 +12,27 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr, criterion] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("KeySelect", args, 2));
-        };
+        match args {
+            [criterion] => Ok(keyed_operator_form_slot_first(
+                "KeySelect",
+                criterion.clone(),
+            )),
+            [expr, criterion] => {
+                let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
 
-        let Some(entries) = association_entries_from_expr(expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        self.resume_key_select_from_index(
-            head.clone(),
-            args.to_vec(),
-            entries,
-            criterion.clone(),
-            0,
-            Vec::new(),
-        )
+                self.resume_key_select_from_index(
+                    head.clone(),
+                    args.to_vec(),
+                    entries,
+                    criterion.clone(),
+                    0,
+                    Vec::new(),
+                )
+            }
+            _ => Ok(self.invalid_call_with_arg_range("KeySelect", args, 1, 2)),
+        }
     }
 
     pub(in crate::runtime) fn eval_key_sort_by(
@@ -49,7 +54,6 @@ impl Session {
                     head.clone(),
                     args.to_vec(),
                     function.clone(),
-                    keyed.kind,
                     keyed.entries,
                     0,
                     Vec::new(),
@@ -63,18 +67,17 @@ impl Session {
         &mut self,
         head: Expr,
         call_args: Vec<Expr>,
-        kind: KeyedCollectionKind,
         ordering: Expr,
         entries: Vec<(Expr, Expr)>,
         index: usize,
         sorted: Vec<(Expr, Expr)>,
     ) -> Result<Expr, EvalError> {
         let Some(candidate) = entries.get(index).cloned() else {
-            return Ok(render_keyed_entries(kind, sorted));
+            return Ok(render_association(sorted));
         };
 
         self.resume_key_sort_with_ordering_insert(
-            head, call_args, kind, ordering, entries, index, sorted, candidate, 0,
+            head, call_args, ordering, entries, index, sorted, candidate, 0,
         )
     }
 
@@ -83,7 +86,6 @@ impl Session {
         &mut self,
         head: Expr,
         call_args: Vec<Expr>,
-        kind: KeyedCollectionKind,
         ordering: Expr,
         entries: Vec<(Expr, Expr)>,
         index: usize,
@@ -97,7 +99,6 @@ impl Session {
             return self.resume_key_sort_with_ordering_from_index(
                 head,
                 call_args,
-                kind,
                 ordering,
                 entries,
                 index + 1,
@@ -120,7 +121,6 @@ impl Session {
                 session.resume_key_sort_with_ordering_after_compare(
                     suspended_head,
                     suspended_call_args,
-                    kind,
                     suspended_ordering,
                     suspended_entries,
                     index,
@@ -134,7 +134,6 @@ impl Session {
         self.resume_key_sort_with_ordering_after_compare(
             head,
             call_args,
-            kind,
             ordering,
             entries,
             index,
@@ -150,7 +149,6 @@ impl Session {
         &mut self,
         head: Expr,
         call_args: Vec<Expr>,
-        kind: KeyedCollectionKind,
         ordering: Expr,
         entries: Vec<(Expr, Expr)>,
         index: usize,
@@ -166,7 +164,6 @@ impl Session {
                 self.resume_key_sort_with_ordering_from_index(
                     head,
                     call_args,
-                    kind,
                     ordering,
                     entries,
                     index + 1,
@@ -176,7 +173,6 @@ impl Session {
             KeySortOrderingDecision::KeepScanning => self.resume_key_sort_with_ordering_insert(
                 head,
                 call_args,
-                kind,
                 ordering,
                 entries,
                 index,
@@ -192,26 +188,31 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [function, source] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("AssociationMap", args, 2));
-        };
+        match args {
+            [function] => Ok(keyed_operator_form_slot_second(
+                "AssociationMap",
+                function.clone(),
+            )),
+            [function, source] => {
+                let keys = if let Some(items) = list_items(source) {
+                    items.to_vec()
+                } else if let Some(entries) = association_entries_from_expr(source) {
+                    entries.into_iter().map(|(key, _)| key).collect()
+                } else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
 
-        let keys = if let Some(items) = list_items(source) {
-            items.to_vec()
-        } else if let Some(entries) = association_entries_from_expr(source) {
-            entries.into_iter().map(|(key, _)| key).collect()
-        } else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        self.resume_association_map_from_index(
-            head.clone(),
-            args.to_vec(),
-            function.clone(),
-            keys,
-            0,
-            Vec::new(),
-        )
+                self.resume_association_map_from_index(
+                    head.clone(),
+                    args.to_vec(),
+                    function.clone(),
+                    keys,
+                    0,
+                    Vec::new(),
+                )
+            }
+            _ => Ok(self.invalid_call_with_arg_range("AssociationMap", args, 1, 2)),
+        }
     }
 
     pub(in crate::runtime) fn eval_merge(
@@ -219,34 +220,37 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [associations_expr, combiner] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("Merge", args, 2));
-        };
+        match args {
+            [combiner] => Ok(keyed_operator_form_slot_first("Merge", combiner.clone())),
+            [associations_expr, combiner] => {
+                let Some(associations) = parse_keyed_entries_list_expr(associations_expr) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
 
-        let Some(associations) = parse_association_list_expr(associations_expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        let mut grouped: Vec<(Expr, Vec<Expr>)> = Vec::new();
-        for association in associations {
-            for (key, value) in association {
-                if let Some((_, values)) = grouped.iter_mut().find(|(existing, _)| existing == &key)
-                {
-                    values.push(value);
-                } else {
-                    grouped.push((key, vec![value]));
+                let mut grouped: Vec<(Expr, Vec<Expr>)> = Vec::new();
+                for association in associations {
+                    for (key, value) in association {
+                        if let Some((_, values)) =
+                            grouped.iter_mut().find(|(existing, _)| existing == &key)
+                        {
+                            values.push(value);
+                        } else {
+                            grouped.push((key, vec![value]));
+                        }
+                    }
                 }
-            }
-        }
 
-        self.resume_merge_from_index(
-            head.clone(),
-            args.to_vec(),
-            combiner.clone(),
-            grouped,
-            0,
-            Vec::new(),
-        )
+                self.resume_merge_from_index(
+                    head.clone(),
+                    args.to_vec(),
+                    combiner.clone(),
+                    grouped,
+                    0,
+                    Vec::new(),
+                )
+            }
+            _ => Ok(self.invalid_call_with_arg_range("Merge", args, 1, 2)),
+        }
     }
 
     pub(in crate::runtime) fn eval_counts_by(
@@ -254,22 +258,24 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr, function] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("CountsBy", args, 2));
-        };
+        match args {
+            [function] => Ok(keyed_operator_form_slot_first("CountsBy", function.clone())),
+            [expr, function] => {
+                let Some(items) = list_items(expr) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
 
-        let Some(items) = list_items(expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        self.resume_counts_by_from_index(
-            head.clone(),
-            args.to_vec(),
-            function.clone(),
-            items.to_vec(),
-            0,
-            Vec::new(),
-        )
+                self.resume_counts_by_from_index(
+                    head.clone(),
+                    args.to_vec(),
+                    function.clone(),
+                    items.to_vec(),
+                    0,
+                    Vec::new(),
+                )
+            }
+            _ => Ok(self.invalid_call_with_arg_range("CountsBy", args, 1, 2)),
+        }
     }
 
     pub(in crate::runtime) fn eval_group_by(
@@ -277,22 +283,24 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr, function] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("GroupBy", args, 2));
-        };
+        match args {
+            [function] => Ok(keyed_operator_form_slot_first("GroupBy", function.clone())),
+            [expr, function] => {
+                let Some(items) = list_items(expr) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
 
-        let Some(items) = list_items(expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        self.resume_group_by_from_index(
-            head.clone(),
-            args.to_vec(),
-            function.clone(),
-            items.to_vec(),
-            0,
-            Vec::new(),
-        )
+                self.resume_group_by_from_index(
+                    head.clone(),
+                    args.to_vec(),
+                    function.clone(),
+                    items.to_vec(),
+                    0,
+                    Vec::new(),
+                )
+            }
+            _ => Ok(self.invalid_call_with_arg_range("GroupBy", args, 1, 2)),
+        }
     }
 
     fn resume_key_select_from_index(
@@ -369,15 +377,13 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         function: Expr,
-        kind: KeyedCollectionKind,
         entries: Vec<(Expr, Expr)>,
         index: usize,
         mut decorated: Vec<(Expr, Expr, Expr)>,
     ) -> Result<Expr, EvalError> {
         let Some((key, value)) = entries.get(index).cloned() else {
             decorated.sort_by(|lhs, rhs| compare_expr_canonical(&lhs.2, &rhs.2));
-            return Ok(render_keyed_entries(
-                kind,
+            return Ok(render_association(
                 decorated
                     .into_iter()
                     .map(|(key, value, _)| (key, value))
@@ -389,7 +395,6 @@ impl Session {
         let suspended_head = head.clone();
         let suspended_call_args = call_args.clone();
         let suspended_function = function.clone();
-        let suspended_kind = kind;
         let suspended_entries = entries.clone();
         let suspended_decorated = decorated.clone();
         let suspended_key = key.clone();
@@ -399,7 +404,6 @@ impl Session {
                 suspended_head,
                 suspended_call_args,
                 suspended_function,
-                suspended_kind,
                 suspended_entries,
                 index,
                 suspended_decorated,
@@ -410,7 +414,7 @@ impl Session {
         })?;
 
         self.resume_key_sort_by_with_value(
-            head, call_args, function, kind, entries, index, decorated, key, value, sort_key,
+            head, call_args, function, entries, index, decorated, key, value, sort_key,
         )
     }
 
@@ -420,7 +424,6 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         function: Expr,
-        kind: KeyedCollectionKind,
         entries: Vec<(Expr, Expr)>,
         index: usize,
         mut decorated: Vec<(Expr, Expr, Expr)>,
@@ -429,15 +432,7 @@ impl Session {
         sort_key: Expr,
     ) -> Result<Expr, EvalError> {
         decorated.push((key, value, sort_key));
-        self.resume_key_sort_by_from_index(
-            head,
-            call_args,
-            function,
-            kind,
-            entries,
-            index + 1,
-            decorated,
-        )
+        self.resume_key_sort_by_from_index(head, call_args, function, entries, index + 1, decorated)
     }
 
     fn resume_association_map_from_index(

@@ -400,7 +400,10 @@ fn resume_eval_request_with_input_can_finish_keysortby_after_suspending_sort_key
         .resume_eval_request_with_input("xxxx")
         .expect("resume should continue KeySortBy after the transformed sort key resolves");
 
-    assert_eq!(response.value.to_string(), "List[Rule[a, 1], Rule[bb, 2]]");
+    assert_eq!(
+        response.value.to_string(),
+        "Association[Rule[a, 1], Rule[bb, 2]]"
+    );
 }
 
 #[test]
@@ -424,7 +427,10 @@ fn resume_eval_request_with_input_can_finish_keysort_after_suspending_comparer()
         .resume_eval_request_with_input("yes")
         .expect("resume should continue KeySort after the custom comparer resolves");
 
-    assert_eq!(response.value.to_string(), "List[Rule[a, 1], Rule[bb, 2]]");
+    assert_eq!(
+        response.value.to_string(),
+        "Association[Rule[a, 1], Rule[bb, 2]]"
+    );
 }
 
 #[test]
