@@ -199,12 +199,14 @@ impl Session {
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let one_identity = matcher_head_has_attribute(&head, self, Attribute::OneIdentity);
         let orderless = matcher_head_has_attribute(&head, self, Attribute::Orderless);
+        let flat = matcher_head_has_attribute(&head, self, Attribute::Flat);
 
         match value {
             Expr::Call {
                 head: value_head,
                 args: value_args,
             } => {
+                let flat_head = (*value_head).clone();
                 let head_result = self.match_compiled_owned(head, *value_head, bindings);
                 self.drive_internal_value(head_result, move |session, outcome| {
                     if !outcome.matched {
@@ -212,10 +214,26 @@ impl Session {
                     }
 
                     if orderless {
-                        session.match_compiled_orderless_args_owned(
+                        if flat {
+                            session.match_compiled_orderless_args_with_flat_head_owned(
+                                args,
+                                value_args,
+                                outcome.bindings,
+                                flat_head,
+                            )
+                        } else {
+                            session.match_compiled_orderless_args_owned(
+                                args,
+                                value_args,
+                                outcome.bindings,
+                            )
+                        }
+                    } else if flat {
+                        session.match_compiled_args_with_flat_head_owned(
                             args,
                             value_args,
                             outcome.bindings,
+                            flat_head,
                         )
                     } else {
                         session.match_compiled_args_owned(args, value_args, outcome.bindings)

@@ -47,19 +47,26 @@ git diff --stat HEAD~1..HEAD
 
 已做：
 
-- `DeleteCases` first-pass
-  - 默认 level `{1}`
-  - 支持 `levelspec`
-  - 支持第四参 `n`
-  - 支持 `Heads -> True|False`
-  - `Association` 中按 value 删除整条 entry
+- 当前 Wave 2 `CL-03` sweep 已闭环
+  - `Replace` / `ReplaceList` / `ReplaceAt` first-pass
+  - `ReplaceList` root backtracking parity
+  - `PatternSequence` / `OrderlessPatternSequence` / `Verbatim` / `Longest` / `Shortest`
+  - association-aware `Cases` / `DeleteCases` / `Level` / `Count` / `MemberQ` / `FreeQ` / `Position`
+  - `Flat` / `Orderless` regrouping parity for `MatchQ` / `ReplaceAll` / `ReplaceList`
+  - deeper pattern/string crossover and any remaining advanced matcher breadth 现在视为非阻塞 long-tail
 
 对应提交：
 
-- `ade3fad`
+- `41806a1`
+- `a83ea97`
+- `141ebef`
+- `6be6312`
+- `9888d87`
 
 关键文件：
 
+- [sequence.rs](/home/fft/src/rum/crates/rum-runtime/src/runtime/pattern_matching/sequence.rs)
+- [core.rs](/home/fft/src/rum/crates/rum-runtime/src/runtime/pattern_matching/core.rs)
 - [rewrite_builtins.rs](/home/fft/src/rum/crates/rum-runtime/src/runtime/rewrite_builtins.rs)
 - [definitions_and_rules_part3.rs](/home/fft/src/rum/crates/rum-runtime/src/runtime/tests/definitions_and_rules_part3.rs)
 
@@ -85,13 +92,12 @@ git diff --stat HEAD~1..HEAD
 
 如果继续当前主线，建议优先顺序：
 
-1. `CL-03`
-   - remaining `ReplaceList` long-tail beyond the current root backtracking subset
-   - broader tree-walker parity beyond the current association-aware `Cases` / `DeleteCases` / `Level` / `Count` / `MemberQ` / `FreeQ` / `Position` subset
-   - remaining orderless/flat pattern edge cleanup
-2. `CL-05` long tail
+1. `CL-05` long tail
    - broader keyed-helper operator/rule-list compatibility polish
    - deeper association semantics
+2. `Wave 3`
+   - `CL-06`: deeper `WithCleanup` / `Failsafe` / `CheckAbort` / `AbortProtect` parity
+   - `CL-01`: remaining part-spec / `Heads` parity and deeper truth/comparison breadth
 
 当前已补上的 Wave 2 关键切口：
 
@@ -111,6 +117,7 @@ git diff --stat HEAD~1..HEAD
 - `OrderlessPatternSequence`
 - `Verbatim`
 - `Longest` / `Shortest`
+- `Flat` / `Orderless` regrouping parity for `MatchQ` / `ReplaceAll` / `ReplaceList`
 - `AssociateTo` / `KeyDropFrom` held mutation parity
 - shared raw-option lookup cleanup for `Dialog` / `Monitor` / `TestReport`
 - shared no-limit traversal normalization reuse for `Count` / `MemberQ` / `FreeQ`
@@ -185,10 +192,10 @@ cargo test -p rum-runtime associations
 
 - `WLBuiltin/` 目录已经在 `.gitignore` 中
 - 它是下一阶段候选输入，不要在当前主线里顺手卷进来
-- 除非用户明确要求，否则先继续 `CL-03 / CL-05`
+- 除非用户明确要求，否则优先 `CL-05`，再切 `Wave 3`
 
 ## 推荐开场提示
 
 如果新会话要无缝接手，可以直接从这句话开始：
 
-> 先按 `docs/next-session-handoff.md` 和最近几条 git 记录对齐状态；当前 `CL-07/08/09` 主线已完成，`Wave 2` 已经推进到 `DeleteCases`、richer `Lookup`、fuller `Missing`、custom `KeySort` comparer、`KeySortBy` rule-list/operator form、callable `Key[key][assoc]`、`Replace` / `ReplaceList` / `ReplaceAt` first-pass、`ReplaceList` root backtracking parity、`PatternSequence` / `OrderlessPatternSequence` / `Verbatim` / `Longest` / `Shortest`、association-aware `Cases` / `DeleteCases` / `Level` / `Count` / `MemberQ` / `FreeQ` / `Position` 语义，以及 held `AssociateTo` / `KeyDropFrom`，下一步优先看 `CL-03` 的剩余 `ReplaceList` long-tail、broader tree-walker parity 和剩余的 orderless/flat pattern edge cleanup，再看 `CL-05` long tail。
+> 先按 `docs/next-session-handoff.md` 和最近几条 git 记录对齐状态；当前 `CL-07/08/09` 主线已完成，`Wave 2` 里 `CL-03` 的当前 sweep 已经闭环，补到了 `Replace` / `ReplaceList` / `ReplaceAt` first-pass、`ReplaceList` root backtracking、`PatternSequence` / `OrderlessPatternSequence` / `Verbatim` / `Longest` / `Shortest`、association-aware `Cases` / `DeleteCases` / `Level` / `Count` / `MemberQ` / `FreeQ` / `Position`，以及 `Flat` / `Orderless` regrouping parity for `MatchQ` / `ReplaceAll` / `ReplaceList`；接下来优先看 `CL-05` long tail，再切 `Wave 3` 的 `CL-06` / `CL-01`。

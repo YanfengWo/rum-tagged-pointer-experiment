@@ -1308,12 +1308,14 @@ impl Session {
             MatcherNode::Call { head, args } => {
                 let one_identity = matcher_head_has_attribute(&head, self, Attribute::OneIdentity);
                 let orderless = matcher_head_has_attribute(&head, self, Attribute::Orderless);
+                let flat = matcher_head_has_attribute(&head, self, Attribute::Flat);
 
                 match normalized_target {
                     Expr::Call {
                         head: value_head,
                         args: value_args,
                     } => {
+                        let flat_head = (*value_head).clone();
                         let head_result =
                             self.match_compiled_owned(*head, *value_head, BTreeMap::new());
                         self.drive_internal_value(head_result, move |session, outcome| {
@@ -1322,17 +1324,29 @@ impl Session {
                             }
 
                             if orderless {
-                                session.collect_compiled_orderless_arg_matches_owned(
+                                if flat {
+                                    session.collect_compiled_orderless_arg_matches_with_flat_head_owned(
+                                        args,
+                                        value_args,
+                                        outcome.bindings,
+                                        flat_head,
+                                    )
+                                } else {
+                                    session.collect_compiled_orderless_arg_matches_owned(
+                                        args,
+                                        value_args,
+                                        outcome.bindings,
+                                    )
+                                }
+                            } else if flat {
+                                session.collect_compiled_args_matches_with_flat_head_owned(
                                     args,
                                     value_args,
                                     outcome.bindings,
+                                    flat_head,
                                 )
                             } else {
-                                session.collect_compiled_args_matches_owned(
-                                    args,
-                                    value_args,
-                                    outcome.bindings,
-                                )
+                                session.collect_compiled_args_matches_owned(args, value_args, outcome.bindings)
                             }
                         })
                     }

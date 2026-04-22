@@ -169,6 +169,70 @@ fn replacelist_collects_multiple_backtracking_matches_for_sequence_patterns() {
 }
 
 #[test]
+fn flat_and_orderless_flat_heads_regroup_for_match_replace_and_replacelist() {
+    let mut session = Session::new();
+
+    session.eval_text("SetAttributes[f, Flat]").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[a, b, c], f[x_, y_]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("f[a, b, c] /. f[x_, y_] :> List[x, y]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, f[b, c]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplaceList[f[a, b, c], f[x_, y_] :> List[x, y]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a, f[b, c]], List[f[a, b], c]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[a + b + c, Plus[x_, y_]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("a + b + c /. Plus[x_, y_] :> List[x, y]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, Plus[b, c]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplaceList[a + b + c, Plus[x_, y_] :> List[x, y]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a, Plus[b, c]], List[b, Plus[a, c]], List[c, Plus[a, b]], List[Plus[a, b], c], List[Plus[a, c], b], List[Plus[b, c], a]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Cases[List[a + b + c], Plus[x_, y_] :> List[x, y], Infinity]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a, Plus[b, c]]]"
+    );
+}
+
+#[test]
 fn replacerepeated_reaches_a_fixed_point() {
     let mut session = Session::new();
 
