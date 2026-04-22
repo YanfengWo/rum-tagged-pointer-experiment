@@ -3,14 +3,19 @@ use super::*;
 impl Session {
     pub(in crate::runtime) fn eval_key_map(
         &mut self,
-        head: &Expr,
+        _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         match args {
             [function] => Ok(keyed_operator_form_slot_second("KeyMap", function.clone())),
             [function, expr] => {
                 let Some(entries) = association_entries_from_expr(expr) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                    return Ok(self.invalid_call_with_message(
+                        "KeyMap",
+                        args,
+                        "invak",
+                        invalid_association_message(expr),
+                    ));
                 };
 
                 Ok(render_association(
@@ -26,7 +31,7 @@ impl Session {
 
     pub(in crate::runtime) fn eval_key_value_map(
         &mut self,
-        head: &Expr,
+        _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         match args {
@@ -36,7 +41,12 @@ impl Session {
             )),
             [function, expr] => {
                 let Some(entries) = association_entries_from_expr(expr) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                    return Ok(self.invalid_call_with_message(
+                        "KeyValueMap",
+                        args,
+                        "invak",
+                        invalid_association_message(expr),
+                    ));
                 };
 
                 Ok(Expr::call(
@@ -59,7 +69,12 @@ impl Session {
         match args {
             [expr] => {
                 let Some(mut keyed) = keyed_entries_from_expr(expr) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                    return Ok(self.invalid_call_with_message(
+                        "KeySort",
+                        args,
+                        "invrl",
+                        invalid_association_or_rule_list_message(expr),
+                    ));
                 };
 
                 keyed
@@ -69,7 +84,12 @@ impl Session {
             }
             [expr, ordering] => {
                 let Some(keyed) = keyed_entries_from_expr(expr) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                    return Ok(self.invalid_call_with_message(
+                        "KeySort",
+                        args,
+                        "invrl",
+                        invalid_association_or_rule_list_message(expr),
+                    ));
                 };
 
                 self.resume_key_sort_with_ordering_from_index(
@@ -248,6 +268,15 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("AssociateTo", args, 2));
         };
 
+        if parse_association_update_spec(spec).is_none() {
+            return Ok(self.invalid_call_with_message(
+                "AssociateTo",
+                args,
+                "invlb",
+                invalid_association_update_spec_message(spec),
+            ));
+        }
+
         if let Some(target) = self.normalize_symbol_target_expr(target_expr, true) {
             return self.eval_held_association_mutation(
                 "AssociateTo",
@@ -257,6 +286,20 @@ impl Session {
                 Self::apply_associate_to_value,
             );
         };
+
+        if association_entries_from_expr(target_expr).is_some()
+            || rule_list_entries_from_expr(target_expr).is_some()
+        {
+            if let Expr::Call {
+                head: target_head, ..
+            } = target_expr
+            {
+                if let Some(target_symbol) = expr_as_symbol(target_head) {
+                    self.push_protected_write_message("AssociateTo", target_symbol);
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                }
+            }
+        }
 
         let target_result = self.evaluate(target_expr.clone());
         let expr = self.suspend_with_frame(target_result, {
@@ -314,6 +357,24 @@ impl Session {
             );
         };
 
+        if association_entries_from_expr(target_expr).is_some() {
+            let updated = Self::apply_key_drop_from_value(target_expr.clone(), key_spec.clone())
+                .expect("association literal should be droppable");
+            if let Some(message) = protected_tag_write_message(target_expr) {
+                self.push_message("Set", "write", message);
+            }
+            return Ok(updated);
+        }
+
+        if rule_list_entries_from_expr(target_expr).is_some() {
+            return Ok(self.invalid_call_with_message(
+                "KeyDropFrom",
+                args,
+                "invak",
+                invalid_association_message(target_expr),
+            ));
+        }
+
         let target_result = self.evaluate(target_expr.clone());
         let expr = self.suspend_with_frame(target_result, {
             let head = head.clone();
@@ -365,24 +426,34 @@ impl Session {
             return Ok(Expr::call(system_expr(operator), held_call));
         }
 
-        let current_result = self.evaluate(Expr::Atom(Atom::Symbol(target.clone())));
-        let current = self.suspend_with_frame(current_result, {
-            let target = target.clone();
-            let held_call = held_call.clone();
-            let spec = spec.clone();
-            move |session, current| {
-                session.finish_held_association_mutation(
-                    operator, target, held_call, spec, current, mutate,
-                )
-            }
-        })?;
+        let Some(current) = self
+            .definitions
+            .get(&target)
+            .and_then(|definition| definition.own_value.clone())
+        else {
+            self.push_message(
+                operator,
+                "blnoval",
+                missing_immediate_value_message(&target, 1),
+            );
+            return Ok(Expr::call(system_expr(operator), held_call));
+        };
 
-        self.finish_held_association_mutation(operator, target, held_call, spec, current, mutate)
+        self.finish_held_association_mutation(
+            operator,
+            target_expr,
+            target,
+            held_call,
+            spec,
+            current,
+            mutate,
+        )
     }
 
     fn finish_held_association_mutation(
         &mut self,
         operator: &'static str,
+        target_expr: Expr,
         target: Symbol,
         held_call: Vec<Expr>,
         spec: Expr,
@@ -390,7 +461,12 @@ impl Session {
         mutate: fn(Expr, Expr) -> Option<Expr>,
     ) -> Result<Expr, EvalError> {
         let Some(updated) = mutate(current, spec) else {
-            return Ok(Expr::call(system_expr(operator), held_call));
+            return Ok(self.invalid_call_with_message(
+                operator,
+                &held_call,
+                "invak",
+                invalid_association_message(&target_expr),
+            ));
         };
 
         let definition = self.definitions.entry(target).or_default();

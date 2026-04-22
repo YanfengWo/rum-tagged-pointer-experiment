@@ -71,7 +71,7 @@ impl Session {
 
         Ok(predicate_bool_expr(matches!(
             expr,
-            Expr::Call { head, args } if is_system_symbol_name(head, "Missing") && !args.is_empty()
+            Expr::Call { head, .. } if is_system_symbol_name(head, "Missing")
         )))
     }
 

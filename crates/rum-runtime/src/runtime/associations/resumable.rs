@@ -19,7 +19,12 @@ impl Session {
             )),
             [expr, criterion] => {
                 let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                    return Ok(self.invalid_call_with_message(
+                        "KeySelect",
+                        args,
+                        "invru",
+                        invalid_association_or_rule_list_message(expr),
+                    ));
                 };
 
                 self.resume_key_select_from_index(
@@ -47,7 +52,12 @@ impl Session {
             )),
             [expr, function] => {
                 let Some(keyed) = keyed_entries_from_expr(expr) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                    return Ok(self.invalid_call_with_message(
+                        "KeySortBy",
+                        args,
+                        "invrl",
+                        invalid_association_or_rule_list_message(expr),
+                    ));
                 };
 
                 self.resume_key_sort_by_from_index(
@@ -199,7 +209,12 @@ impl Session {
                 } else if let Some(entries) = association_entries_from_expr(source) {
                     entries.into_iter().map(|(key, _)| key).collect()
                 } else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                    return Ok(self.invalid_call_with_message(
+                        "AssociationMap",
+                        args,
+                        "invrp",
+                        invalid_association_or_list_message(source),
+                    ));
                 };
 
                 self.resume_association_map_from_index(
@@ -224,7 +239,12 @@ impl Session {
             [combiner] => Ok(keyed_operator_form_slot_first("Merge", combiner.clone())),
             [associations_expr, combiner] => {
                 let Some(associations) = parse_keyed_entries_list_expr(associations_expr) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                    return Ok(self.invalid_call_with_message(
+                        "Merge",
+                        args,
+                        "list1",
+                        invalid_keyed_collection_list_message(associations_expr),
+                    ));
                 };
 
                 let mut grouped: Vec<(Expr, Vec<Expr>)> = Vec::new();
@@ -262,7 +282,12 @@ impl Session {
             [function] => Ok(keyed_operator_form_slot_first("CountsBy", function.clone())),
             [expr, function] => {
                 let Some(items) = list_items(expr) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                    return Ok(self.invalid_call_with_message(
+                        "CountsBy",
+                        args,
+                        "list",
+                        list_expected_message(1, expr),
+                    ));
                 };
 
                 self.resume_counts_by_from_index(
@@ -287,7 +312,12 @@ impl Session {
             [function] => Ok(keyed_operator_form_slot_first("GroupBy", function.clone())),
             [expr, function] => {
                 let Some(items) = list_items(expr) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                    return Ok(self.invalid_call_with_message(
+                        "GroupBy",
+                        args,
+                        "list1",
+                        invalid_keyed_collection_list_message(expr),
+                    ));
                 };
 
                 self.resume_group_by_from_index(

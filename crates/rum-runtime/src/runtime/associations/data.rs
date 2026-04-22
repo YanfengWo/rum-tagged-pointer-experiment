@@ -203,6 +203,49 @@ pub(in crate::runtime) fn predicate_bool_expr(value: bool) -> Expr {
     })
 }
 
+pub(in crate::runtime) fn invalid_association_message(expr: &Expr) -> String {
+    format!("The argument {expr} is not a valid Association.")
+}
+
+pub(in crate::runtime) fn invalid_association_or_rule_list_message(expr: &Expr) -> String {
+    format!("The argument {expr} is not a valid Association or a list of rules.")
+}
+
+pub(in crate::runtime) fn invalid_association_or_rule_message(expr: &Expr) -> String {
+    format!("The argument {expr} is not a valid Association or rule.")
+}
+
+pub(in crate::runtime) fn invalid_association_or_list_message(expr: &Expr) -> String {
+    format!("The argument {expr} is not a valid Association or a list.")
+}
+
+pub(in crate::runtime) fn invalid_keyed_collection_list_message(expr: &Expr) -> String {
+    format!("The argument {expr} is not a valid list of Associations or rules or lists of rules.")
+}
+
+pub(in crate::runtime) fn invalid_association_update_spec_message(expr: &Expr) -> String {
+    format!("The argument {expr} is not a list, Rule or Association.")
+}
+
+pub(in crate::runtime) fn missing_immediate_value_message(
+    symbol: &Symbol,
+    position: usize,
+) -> String {
+    format!("The symbol {symbol} at position {position} should have an immediate value defined.")
+}
+
+pub(in crate::runtime) fn list_expected_message(position: usize, expr: &Expr) -> String {
+    format!("List expected at position {position} in {expr}.")
+}
+
+pub(in crate::runtime) fn protected_tag_write_message(expr: &Expr) -> Option<String> {
+    let Expr::Call { head, .. } = expr else {
+        return None;
+    };
+
+    Some(format!("Tag {head} in {expr} is Protected."))
+}
+
 pub(in crate::runtime) fn keyed_operator_form_slot_first(symbol: &str, tail: Expr) -> Expr {
     let parameter = Expr::symbol("rum$keyedArg");
     Expr::call(

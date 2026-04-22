@@ -103,7 +103,7 @@ impl Session {
 
     pub(in crate::runtime) fn eval_key_exists_q(
         &mut self,
-        head: &Expr,
+        _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [expr, key] = args else {
@@ -111,7 +111,12 @@ impl Session {
         };
 
         let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+            self.push_message(
+                "KeyExistsQ",
+                "invrl",
+                invalid_association_or_rule_list_message(expr),
+            );
+            return Ok(predicate_bool_expr(false));
         };
 
         Ok(predicate_bool_expr(
@@ -159,7 +164,7 @@ impl Session {
 
     pub(in crate::runtime) fn eval_key_member_q(
         &mut self,
-        head: &Expr,
+        _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [expr, key] = args else {
@@ -167,7 +172,12 @@ impl Session {
         };
 
         let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+            return Ok(self.invalid_call_with_message(
+                "KeyMemberQ",
+                args,
+                "invas",
+                invalid_association_or_rule_message(expr),
+            ));
         };
 
         Ok(predicate_bool_expr(
@@ -177,7 +187,7 @@ impl Session {
 
     pub(in crate::runtime) fn eval_key_free_q(
         &mut self,
-        head: &Expr,
+        _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [expr, key] = args else {
@@ -185,7 +195,12 @@ impl Session {
         };
 
         let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+            return Ok(self.invalid_call_with_message(
+                "KeyFreeQ",
+                args,
+                "invas",
+                invalid_association_or_rule_message(expr),
+            ));
         };
 
         Ok(predicate_bool_expr(
@@ -236,10 +251,6 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        if args.len() > 2 {
-            return Ok(self.invalid_call_with_arg_range("Missing", args, 0, 2));
-        }
-
         Ok(Expr::call(head.clone(), args.to_vec()))
     }
 }

@@ -348,35 +348,30 @@ fn resume_eval_request_with_input_can_finish_deletecases_after_deleting_an_assoc
 }
 
 #[test]
-fn resume_eval_request_with_input_can_finish_associateto_after_suspending_symbol_value() {
+fn associateto_requires_an_immediate_symbol_value_instead_of_suspending_delayed_values() {
     let mut session = Session::new();
     session
         .eval_text("assoc := Association[a -> InputString[\"value: \"]]")
         .unwrap();
 
-    let failure = session
+    let response = session
         .eval_request("AssociateTo[assoc, b -> 2]")
-        .expect_err("AssociateTo should suspend when the held target value requests input");
+        .expect("AssociateTo should reject delayed values without trying to evaluate them");
 
-    match &failure.error {
+    assert_eq!(response.value.to_string(), "AssociateTo[assoc, Rule[b, 2]]");
+    assert_eq!(response.messages.len(), 1);
+    assert_eq!(response.messages[0].symbol, "AssociateTo");
+    assert_eq!(response.messages[0].tag, "blnoval");
+    match session
+        .eval_request("assoc")
+        .expect_err("delayed assoc should still request input")
+        .error
+    {
         SessionRequestError::InputRequired { request } => {
             assert_eq!(request.prompt, "value: ");
         }
-        other => panic!("expected input-required failure, got {other:?}"),
+        other => panic!("expected input-required error, got {other:?}"),
     }
-
-    let response = session
-        .resume_eval_request_with_input("done")
-        .expect("resume should continue AssociateTo after the held target resolves");
-
-    assert_eq!(
-        response.value.to_string(),
-        "Association[Rule[a, \"done\"], Rule[b, 2]]"
-    );
-    assert_eq!(
-        session.eval_request("assoc").unwrap().value.to_string(),
-        "Association[Rule[a, \"done\"], Rule[b, 2]]"
-    );
 }
 
 #[test]

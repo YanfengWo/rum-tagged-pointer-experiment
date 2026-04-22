@@ -103,6 +103,14 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
 
     assert_eq!(
         session
+            .eval_text("MissingQ[Missing[]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
             .eval_text("MissingQ[Missing[\"KeyAbsent\"]]")
             .unwrap()
             .value
