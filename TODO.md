@@ -248,7 +248,7 @@ This roadmap intentionally uses two levels of detail:
     - [ ] leave richer `Nearest` long-tail semantics for concrete caller demand
     - [ ] leave language-data-backed `Pluralize` parity for a future data-backed lexical layer if user-visible need justifies it
   - [ ] Wave 2: `CL-03` and `CL-05`
-    - [ ] `CL-03`: remaining rule/pattern/traversal convenience surface such as fuller `ReplaceList` backtracking parity, deeper traversal parity, and the remaining orderless/flat pattern edge cleanup after landing the current `Replace` / `ReplaceAt` / `ReplaceList` first passes plus `PatternSequence` / `OrderlessPatternSequence` / `Verbatim` / `Longest` / `Shortest`
+    - [ ] `CL-03`: remaining rule/pattern/traversal convenience surface such as the remaining `ReplaceList` long-tail beyond the now-landed root backtracking subset, broader tree-walker parity beyond the current association-aware traversal subset, and the remaining orderless/flat pattern edge cleanup after landing the current `Replace` / `ReplaceAt` / `ReplaceList` first passes plus `PatternSequence` / `OrderlessPatternSequence` / `Verbatim` / `Longest` / `Shortest`
     - [ ] `CL-05`: remaining keyed-data long-tail polish such as broader keyed-helper operator/rule-list compatibility and deeper association semantics beyond the current `Missing` / `KeySort` / `KeySortBy` / callable `Key[key][assoc]` / held-mutation first-pass subset
   - [ ] Wave 3: `CL-06` and `CL-01`
     - [ ] `CL-06`: deeper `WithCleanup` / `Failsafe` / `CheckAbort` / `AbortProtect` parity, richer failure/status behavior, and fuller host-I/O semantics

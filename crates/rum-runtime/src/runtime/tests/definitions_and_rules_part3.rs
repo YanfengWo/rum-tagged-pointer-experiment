@@ -147,6 +147,28 @@ fn replacelist_supports_operator_form_rule_order_and_max_results() {
 }
 
 #[test]
+fn replacelist_collects_multiple_backtracking_matches_for_sequence_patterns() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("ReplaceList[f[a, b, c], f[x__, y__] :> {List[x], List[y]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[List[a], List[b, c]], List[List[a, b], List[c]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplaceList[a + b + c, Plus[PatternSequence[a, x_], b] :> x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[c]"
+    );
+}
+
+#[test]
 fn replacerepeated_reaches_a_fixed_point() {
     let mut session = Session::new();
 

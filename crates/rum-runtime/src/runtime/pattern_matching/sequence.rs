@@ -45,6 +45,57 @@ impl Session {
         self.match_compiled_orderless_arg_choices_owned(first, rest_patterns, value_args, bindings)
     }
 
+    pub(in crate::runtime) fn collect_compiled_args_matches_owned(
+        &mut self,
+        pattern_args: Vec<MatcherArg>,
+        value_args: Vec<Expr>,
+        bindings: BTreeMap<Symbol, Expr>,
+    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        if pattern_args.is_empty() {
+            return Ok(if value_args.is_empty() {
+                vec![bindings]
+            } else {
+                Vec::new()
+            });
+        }
+
+        let mut pattern_iter = pattern_args.into_iter();
+        let first = pattern_iter
+            .next()
+            .expect("non-empty pattern args always have a first item");
+        let rest_patterns = pattern_iter.collect::<Vec<_>>();
+
+        self.collect_compiled_arg_and_rest_matches_owned(first, rest_patterns, value_args, bindings)
+    }
+
+    pub(in crate::runtime) fn collect_compiled_orderless_arg_matches_owned(
+        &mut self,
+        pattern_args: Vec<MatcherArg>,
+        value_args: Vec<Expr>,
+        bindings: BTreeMap<Symbol, Expr>,
+    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        if pattern_args.is_empty() {
+            return Ok(if value_args.is_empty() {
+                vec![bindings]
+            } else {
+                Vec::new()
+            });
+        }
+
+        let mut pattern_iter = pattern_args.into_iter();
+        let first = pattern_iter
+            .next()
+            .expect("non-empty pattern args always have a first item");
+        let rest_patterns = pattern_iter.collect::<Vec<_>>();
+
+        self.collect_compiled_orderless_arg_choice_matches_owned(
+            first,
+            rest_patterns,
+            value_args,
+            bindings,
+        )
+    }
+
     pub(super) fn match_compiled_arg_and_rest_owned(
         &mut self,
         pattern: MatcherArg,
@@ -95,6 +146,66 @@ impl Session {
         }
     }
 
+    fn collect_compiled_arg_and_rest_matches_owned(
+        &mut self,
+        pattern: MatcherArg,
+        rest_patterns: Vec<MatcherArg>,
+        value_args: Vec<Expr>,
+        bindings: BTreeMap<Symbol, Expr>,
+    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        match pattern {
+            MatcherArg::Sequence(spec) => {
+                let min_rest = min_required_matcher_arg_count(&rest_patterns);
+                let Some(max_len) = max_sequence_consume(&spec, min_rest, value_args.len()) else {
+                    return Ok(Vec::new());
+                };
+                let consumes = sequence_candidate_lengths(spec.min_len, max_len, spec.greediness);
+
+                self.collect_compiled_sequence_choice_matches_owned(
+                    spec,
+                    rest_patterns,
+                    value_args,
+                    bindings,
+                    consumes,
+                    0,
+                    Vec::new(),
+                )
+            }
+            MatcherArg::Optional(spec) => self.collect_compiled_optional_matches_owned(
+                spec,
+                rest_patterns,
+                value_args,
+                bindings,
+            ),
+            MatcherArg::PatternSequenceGroup(items)
+            | MatcherArg::OrderlessPatternSequenceGroup(items) => {
+                let mut expanded = items;
+                expanded.extend(rest_patterns);
+                self.collect_compiled_args_matches_owned(expanded, value_args, bindings)
+            }
+            MatcherArg::Single(pattern) => {
+                let mut value_iter = value_args.into_iter();
+                let Some(value) = value_iter.next() else {
+                    return Ok(Vec::new());
+                };
+                let rest_values = value_iter.collect::<Vec<_>>();
+
+                let pattern_result = self.match_compiled_owned(pattern, value, bindings);
+                self.drive_internal_value(pattern_result, move |session, outcome| {
+                    if !outcome.matched {
+                        return Ok(Vec::new());
+                    }
+
+                    session.collect_compiled_args_matches_owned(
+                        rest_patterns,
+                        rest_values,
+                        outcome.bindings,
+                    )
+                })
+            }
+        }
+    }
+
     fn match_compiled_orderless_arg_choices_owned(
         &mut self,
         pattern: MatcherArg,
@@ -117,6 +228,34 @@ impl Session {
                     choices,
                     bindings,
                     0,
+                )
+            }
+        }
+    }
+
+    fn collect_compiled_orderless_arg_choice_matches_owned(
+        &mut self,
+        pattern: MatcherArg,
+        rest_patterns: Vec<MatcherArg>,
+        value_args: Vec<Expr>,
+        bindings: BTreeMap<Symbol, Expr>,
+    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        match pattern {
+            MatcherArg::Optional(spec) => self.collect_compiled_orderless_optional_matches_owned(
+                spec,
+                rest_patterns,
+                value_args,
+                bindings,
+            ),
+            other => {
+                let choices = orderless_candidate_choices(&other, &rest_patterns, &value_args);
+                self.collect_compiled_orderless_choices_matches_owned(
+                    other,
+                    rest_patterns,
+                    choices,
+                    bindings,
+                    0,
+                    Vec::new(),
                 )
             }
         }
@@ -161,6 +300,41 @@ impl Session {
         )
     }
 
+    fn collect_compiled_orderless_optional_matches_owned(
+        &mut self,
+        spec: CompiledOptionalPattern,
+        rest_patterns: Vec<MatcherArg>,
+        value_args: Vec<Expr>,
+        bindings: BTreeMap<Symbol, Expr>,
+    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        let present_result = if value_args.is_empty() {
+            Ok(Vec::new())
+        } else {
+            self.collect_compiled_orderless_arg_choice_matches_owned(
+                (*spec.inner).clone(),
+                rest_patterns.clone(),
+                value_args.clone(),
+                bindings.clone(),
+            )
+        };
+
+        self.drive_internal_value(present_result, move |session, mut present| {
+            let omission_result = session.match_compiled_orderless_optional_omission_owned(
+                spec,
+                rest_patterns,
+                value_args,
+                bindings,
+            );
+
+            session.drive_internal_value(omission_result, move |_, outcome| {
+                if outcome.matched {
+                    present.push(outcome.bindings);
+                }
+                Ok(present)
+            })
+        })
+    }
+
     fn match_compiled_orderless_optional_omission_owned(
         &mut self,
         spec: CompiledOptionalPattern,
@@ -189,6 +363,58 @@ impl Session {
                     rest_patterns,
                     value_args,
                     outcome.bindings,
+                )
+            })
+        })
+    }
+
+    fn collect_compiled_orderless_choices_matches_owned(
+        &mut self,
+        pattern: MatcherArg,
+        rest_patterns: Vec<MatcherArg>,
+        choices: Vec<OrderlessCandidateChoice>,
+        bindings: BTreeMap<Symbol, Expr>,
+        index: usize,
+        collected: Vec<BTreeMap<Symbol, Expr>>,
+    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        let Some(choice) = choices.get(index).cloned() else {
+            return Ok(collected);
+        };
+
+        let selected_values = choice.selected_values;
+        let rest_values = choice.rest_values;
+        let match_result = self.match_compiled_orderless_selected_values_owned(
+            pattern.clone(),
+            selected_values,
+            bindings.clone(),
+        );
+        self.drive_internal_value(match_result, move |session, outcome| {
+            if !outcome.matched {
+                return session.collect_compiled_orderless_choices_matches_owned(
+                    pattern,
+                    rest_patterns,
+                    choices,
+                    bindings,
+                    index + 1,
+                    collected,
+                );
+            }
+
+            let rest_result = session.collect_compiled_orderless_arg_matches_owned(
+                rest_patterns.clone(),
+                rest_values,
+                outcome.bindings,
+            );
+            session.drive_internal_value(rest_result, move |session, mut rest_matches| {
+                let mut collected = collected;
+                collected.append(&mut rest_matches);
+                session.collect_compiled_orderless_choices_matches_owned(
+                    pattern,
+                    rest_patterns,
+                    choices,
+                    bindings,
+                    index + 1,
+                    collected,
                 )
             })
         })
@@ -325,6 +551,40 @@ impl Session {
         }
 
         self.match_compiled_optional_omission_owned(spec, rest_patterns, value_args, snapshot)
+    }
+
+    fn collect_compiled_optional_matches_owned(
+        &mut self,
+        spec: CompiledOptionalPattern,
+        rest_patterns: Vec<MatcherArg>,
+        value_args: Vec<Expr>,
+        bindings: BTreeMap<Symbol, Expr>,
+    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        let present_result = if value_args.is_empty() {
+            Ok(Vec::new())
+        } else {
+            self.collect_compiled_arg_and_rest_matches_owned(
+                (*spec.inner).clone(),
+                rest_patterns.clone(),
+                value_args.clone(),
+                bindings.clone(),
+            )
+        };
+
+        self.drive_internal_value(present_result, move |session, mut present| {
+            let omission_result = session.match_compiled_optional_omission_owned(
+                spec,
+                rest_patterns,
+                value_args,
+                bindings,
+            );
+            session.drive_internal_value(omission_result, move |_, outcome| {
+                if outcome.matched {
+                    present.push(outcome.bindings);
+                }
+                Ok(present)
+            })
+        })
     }
 
     fn match_compiled_optional_omission_owned(
@@ -470,6 +730,61 @@ impl Session {
                         next_consume,
                     )
                 }
+            })
+        })
+    }
+
+    fn collect_compiled_sequence_choice_matches_owned(
+        &mut self,
+        spec: CompiledSequencePattern,
+        rest_patterns: Vec<MatcherArg>,
+        value_args: Vec<Expr>,
+        bindings: BTreeMap<Symbol, Expr>,
+        consumes: Vec<usize>,
+        index: usize,
+        collected: Vec<BTreeMap<Symbol, Expr>>,
+    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        let Some(consume) = consumes.get(index).copied() else {
+            return Ok(collected);
+        };
+
+        let consumed_values = value_args.iter().take(consume).cloned().collect::<Vec<_>>();
+        let rest_values = value_args.iter().skip(consume).cloned().collect::<Vec<_>>();
+        let sequence_result = self.match_compiled_sequence_pattern_owned(
+            spec.clone(),
+            consumed_values,
+            bindings.clone(),
+        );
+        self.drive_internal_value(sequence_result, move |session, outcome| {
+            if !outcome.matched {
+                return session.collect_compiled_sequence_choice_matches_owned(
+                    spec,
+                    rest_patterns,
+                    value_args,
+                    bindings,
+                    consumes,
+                    index + 1,
+                    collected,
+                );
+            }
+
+            let rest_result = session.collect_compiled_args_matches_owned(
+                rest_patterns.clone(),
+                rest_values,
+                outcome.bindings,
+            );
+            session.drive_internal_value(rest_result, move |session, mut rest_matches| {
+                let mut collected = collected;
+                collected.append(&mut rest_matches);
+                session.collect_compiled_sequence_choice_matches_owned(
+                    spec,
+                    rest_patterns,
+                    value_args,
+                    bindings,
+                    consumes,
+                    index + 1,
+                    collected,
+                )
             })
         })
     }

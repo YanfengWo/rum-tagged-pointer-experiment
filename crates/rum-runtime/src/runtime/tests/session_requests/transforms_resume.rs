@@ -198,6 +198,39 @@ fn resume_eval_request_with_input_can_finish_replacelist_after_suspending_delaye
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_replacelist_after_multiple_backtracking_matches() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("ReplaceList[f[a, b, c], f[x__, y__] :> InputString[\"rhs: \"]]")
+        .expect_err("ReplaceList should suspend on the first delayed rhs match");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "rhs: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let second = session
+        .resume_eval_request_with_input("first")
+        .expect_err("ReplaceList should continue into the second backtracking match");
+
+    match &second.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "rhs: ");
+        }
+        other => panic!("expected second input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("second")
+        .expect("resume should finish ReplaceList after all backtracking matches");
+
+    assert_eq!(response.value.to_string(), "List[\"first\", \"second\"]");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_replaceat_after_suspending_position_spec() {
     let mut session = Session::new();
 

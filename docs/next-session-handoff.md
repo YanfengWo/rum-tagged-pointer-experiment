@@ -86,8 +86,8 @@ git diff --stat HEAD~1..HEAD
 如果继续当前主线，建议优先顺序：
 
 1. `CL-03`
-   - fuller `ReplaceList` backtracking parity
-   - deeper traversal parity
+   - remaining `ReplaceList` long-tail beyond the current root backtracking subset
+   - broader tree-walker parity beyond the current association-aware traversal subset
    - remaining orderless/flat pattern edge cleanup
 2. `CL-05` long tail
    - broader keyed-helper operator/rule-list compatibility polish
@@ -105,6 +105,7 @@ git diff --stat HEAD~1..HEAD
 - callable `Key[key][assoc]`
 - `Replace` first-pass
 - `ReplaceList` first-pass
+- `ReplaceList` root backtracking parity
 - `ReplaceAt` exact-position first-pass
 - `PatternSequence`
 - `OrderlessPatternSequence`
@@ -113,6 +114,7 @@ git diff --stat HEAD~1..HEAD
 - `AssociateTo` / `KeyDropFrom` held mutation parity
 - shared raw-option lookup cleanup for `Dialog` / `Monitor` / `TestReport`
 - shared no-limit traversal normalization reuse for `Count` / `MemberQ` / `FreeQ`
+- association-aware traversal semantics for `Level` / `Count` / `MemberQ` / `FreeQ` / `Position`
 
 ## 关键文档
 
@@ -188,4 +190,4 @@ cargo test -p rum-runtime associations
 
 如果新会话要无缝接手，可以直接从这句话开始：
 
-> 先按 `docs/next-session-handoff.md` 和最近几条 git 记录对齐状态；当前 `CL-07/08/09` 主线已完成，`Wave 2` 已经推进到 `DeleteCases`、richer `Lookup`、fuller `Missing`、custom `KeySort` comparer、`KeySortBy` rule-list/operator form、callable `Key[key][assoc]`、`Replace` / `ReplaceList` / `ReplaceAt` first-pass、`PatternSequence` / `OrderlessPatternSequence` / `Verbatim` / `Longest` / `Shortest` 和 held `AssociateTo` / `KeyDropFrom`，下一步优先看 `CL-03` 的 fuller `ReplaceList` parity、deeper traversal parity 和剩余的 orderless/flat pattern edge cleanup，再看 `CL-05` long tail。
+> 先按 `docs/next-session-handoff.md` 和最近几条 git 记录对齐状态；当前 `CL-07/08/09` 主线已完成，`Wave 2` 已经推进到 `DeleteCases`、richer `Lookup`、fuller `Missing`、custom `KeySort` comparer、`KeySortBy` rule-list/operator form、callable `Key[key][assoc]`、`Replace` / `ReplaceList` / `ReplaceAt` first-pass、`ReplaceList` root backtracking parity、`PatternSequence` / `OrderlessPatternSequence` / `Verbatim` / `Longest` / `Shortest`、association-aware `Level` / `Count` / `MemberQ` / `FreeQ` / `Position` 语义，以及 held `AssociateTo` / `KeyDropFrom`，下一步优先看 `CL-03` 的剩余 `ReplaceList` long-tail、broader tree-walker parity 和剩余的 orderless/flat pattern edge cleanup，再看 `CL-05` long tail。

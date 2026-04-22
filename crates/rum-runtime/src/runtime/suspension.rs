@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 
 use super::*;
 
@@ -99,6 +99,76 @@ impl ContinuationValue for Vec<Expr> {
                 args
             }
             other => vec![other],
+        }
+    }
+}
+
+impl ContinuationValue for Vec<BTreeMap<Symbol, Expr>> {
+    fn into_continuation_expr(self) -> Expr {
+        let items = self
+            .into_iter()
+            .map(|bindings| {
+                Expr::call(
+                    system_expr("InternalContinuationBindingMap"),
+                    bindings
+                        .into_iter()
+                        .map(|(symbol, value)| {
+                            Expr::call(
+                                system_expr("Rule"),
+                                vec![Expr::Atom(Atom::Symbol(symbol)), value],
+                            )
+                        })
+                        .collect(),
+                )
+            })
+            .collect();
+
+        Expr::call(system_expr("InternalContinuationBindingVec"), items)
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        match expr {
+            Expr::Call { head, args }
+                if is_system_symbol_name(&head, "InternalContinuationBindingVec") =>
+            {
+                args.into_iter()
+                    .map(|item| match item {
+                        Expr::Call { head, args }
+                            if is_system_symbol_name(&head, "InternalContinuationBindingMap") =>
+                        {
+                            args.into_iter()
+                                .map(|entry| match entry {
+                                    Expr::Call { head, args }
+                                        if is_system_symbol_name(&head, "Rule")
+                                            && args.len() == 2 =>
+                                    {
+                                        let mut parts = args.into_iter();
+                                        let symbol_expr =
+                                            parts.next().expect("rule stores lhs symbol");
+                                        let value =
+                                            parts.next().expect("rule stores rhs value");
+                                        let Expr::Atom(Atom::Symbol(symbol)) = symbol_expr else {
+                                            panic!(
+                                                "binding continuation lhs should be a symbol: {symbol_expr:?}"
+                                            );
+                                        };
+                                        (symbol, value)
+                                    }
+                                    other => {
+                                        panic!(
+                                            "unexpected binding continuation entry payload: {other:?}"
+                                        )
+                                    }
+                                })
+                                .collect()
+                        }
+                        other => panic!(
+                            "unexpected binding continuation item payload: {other:?}"
+                        ),
+                    })
+                    .collect()
+            }
+            other => panic!("unexpected continuation payload for binding vec: {other:?}"),
         }
     }
 }

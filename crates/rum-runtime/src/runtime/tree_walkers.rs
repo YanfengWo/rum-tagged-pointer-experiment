@@ -372,6 +372,62 @@ impl Session {
                 seen_before,
                 0,
             ),
+            Expr::Call { head, .. } if is_system_symbol_name(&head, "Association") => {
+                if let Some(entries) = association_entries_from_expr(&expr) {
+                    let mut children = Vec::new();
+                    if traversal.include_heads {
+                        children.push(head.as_ref().clone());
+                    }
+                    children.extend(entries.into_iter().map(|(_, value)| value));
+
+                    self.count_pattern_children(
+                        children,
+                        expr,
+                        pattern,
+                        traversal,
+                        level + 1,
+                        seen_before,
+                        0,
+                        0,
+                    )
+                } else {
+                    self.count_pattern_matches_in_standard_call(
+                        expr,
+                        pattern,
+                        traversal,
+                        level,
+                        seen_before,
+                    )
+                }
+            }
+            Expr::Call { .. } => self.count_pattern_matches_in_standard_call(
+                expr,
+                pattern,
+                traversal,
+                level,
+                seen_before,
+            ),
+        }
+    }
+
+    fn count_pattern_matches_in_standard_call(
+        &mut self,
+        expr: Expr,
+        pattern: Expr,
+        traversal: CasesTraversalConfig,
+        level: usize,
+        seen_before: usize,
+    ) -> Result<TraversalCountOutcome, EvalError> {
+        match expr.clone() {
+            Expr::Atom(_) => self.finish_count_at_current_node(
+                expr,
+                pattern,
+                traversal,
+                level,
+                1,
+                seen_before,
+                0,
+            ),
             Expr::Call { head, args } => {
                 let mut children = Vec::new();
                 if traversal.include_heads {
@@ -487,7 +543,70 @@ impl Session {
         pattern: Expr,
         traversal: CasesTraversalConfig,
         level: usize,
-        path: Vec<usize>,
+        path: Vec<Expr>,
+        seen_before: usize,
+    ) -> Result<PositionCollectionOutcome, EvalError> {
+        match expr.clone() {
+            Expr::Atom(_) => self.finish_positions_at_current_node(
+                expr,
+                pattern,
+                traversal,
+                level,
+                1,
+                path,
+                seen_before,
+                Vec::new(),
+            ),
+            Expr::Call { head, .. } if is_system_symbol_name(&head, "Association") => {
+                if let Some(entries) = association_entries_from_expr(&expr) {
+                    let mut children = Vec::new();
+                    if traversal.include_heads {
+                        children.push(((*head).clone(), extend_position(&path, position_index(0))));
+                    }
+                    for (key, value) in entries {
+                        children.push((value, extend_position(&path, position_key(key))));
+                    }
+
+                    self.collect_position_children(
+                        children,
+                        expr,
+                        pattern,
+                        traversal,
+                        level + 1,
+                        path,
+                        seen_before,
+                        Vec::new(),
+                        0,
+                    )
+                } else {
+                    self.collect_positions_in_standard_call(
+                        expr,
+                        pattern,
+                        traversal,
+                        level,
+                        path,
+                        seen_before,
+                    )
+                }
+            }
+            Expr::Call { .. } => self.collect_positions_in_standard_call(
+                expr,
+                pattern,
+                traversal,
+                level,
+                path,
+                seen_before,
+            ),
+        }
+    }
+
+    fn collect_positions_in_standard_call(
+        &mut self,
+        expr: Expr,
+        pattern: Expr,
+        traversal: CasesTraversalConfig,
+        level: usize,
+        path: Vec<Expr>,
         seen_before: usize,
     ) -> Result<PositionCollectionOutcome, EvalError> {
         match expr.clone() {
@@ -504,10 +623,10 @@ impl Session {
             Expr::Call { head, args } => {
                 let mut children = Vec::new();
                 if traversal.include_heads {
-                    children.push(((*head).clone(), extend_position(&path, 0)));
+                    children.push(((*head).clone(), extend_position(&path, position_index(0))));
                 }
                 for (index, arg) in args.into_iter().enumerate() {
-                    children.push((arg, extend_position(&path, index + 1)));
+                    children.push((arg, extend_position(&path, position_index(index + 1))));
                 }
 
                 self.collect_position_children(
@@ -532,7 +651,7 @@ impl Session {
         traversal: CasesTraversalConfig,
         level: usize,
         depth: usize,
-        path: Vec<usize>,
+        path: Vec<Expr>,
         seen_before: usize,
         mut positions: Vec<Expr>,
     ) -> Result<PositionCollectionOutcome, EvalError> {
@@ -561,12 +680,12 @@ impl Session {
 
     fn collect_position_children(
         &mut self,
-        children: Vec<(Expr, Vec<usize>)>,
+        children: Vec<(Expr, Vec<Expr>)>,
         expr: Expr,
         pattern: Expr,
         traversal: CasesTraversalConfig,
         level: usize,
-        path: Vec<usize>,
+        path: Vec<Expr>,
         seen_before: usize,
         mut positions: Vec<Expr>,
         max_child_depth: usize,
@@ -642,6 +761,51 @@ fn collect_level_parts(
 
             LevelCollection { parts, depth: 1 }
         }
+        Expr::Call { head, .. } if is_system_symbol_name(head, "Association") => {
+            if let Some(entries) = association_entries_from_expr(expr) {
+                let mut parts = Vec::new();
+                let mut max_child_depth = 0usize;
+
+                if traversal.include_heads {
+                    let head_result = collect_level_parts(head, traversal, level + 1);
+                    max_child_depth = max_child_depth.max(head_result.depth);
+                    parts.extend(head_result.parts);
+                }
+
+                for (_, value) in entries {
+                    let value_result = collect_level_parts(&value, traversal, level + 1);
+                    max_child_depth = max_child_depth.max(value_result.depth);
+                    parts.extend(value_result.parts);
+                }
+
+                let depth = max_child_depth.saturating_add(1);
+                if traversal.levels.matches(level, depth) {
+                    parts.push(expr.clone());
+                }
+
+                LevelCollection { parts, depth }
+            } else {
+                collect_level_parts_in_standard_call(expr, traversal, level)
+            }
+        }
+        Expr::Call { .. } => collect_level_parts_in_standard_call(expr, traversal, level),
+    }
+}
+
+fn collect_level_parts_in_standard_call(
+    expr: &Expr,
+    traversal: CasesTraversalConfig,
+    level: usize,
+) -> LevelCollection {
+    match expr {
+        Expr::Atom(_) => {
+            let mut parts = Vec::new();
+            if traversal.levels.matches(level, 1) {
+                parts.push(expr.clone());
+            }
+
+            LevelCollection { parts, depth: 1 }
+        }
         Expr::Call { head, args } => {
             let mut parts = Vec::new();
             let mut max_child_depth = 0;
@@ -676,17 +840,20 @@ pub(super) fn collect_level_parts_owned(
     collect_level_parts(expr, traversal, level).parts
 }
 
-fn extend_position(path: &[usize], next: usize) -> Vec<usize> {
+fn extend_position(path: &[Expr], next: Expr) -> Vec<Expr> {
     let mut extended = path.to_vec();
     extended.push(next);
     extended
 }
 
-fn position_expr(path: &[usize]) -> Expr {
-    Expr::call(
-        system_expr("List"),
-        path.iter()
-            .map(|index| Expr::integer(BigInt::from(*index)))
-            .collect(),
-    )
+fn position_expr(path: &[Expr]) -> Expr {
+    Expr::call(system_expr("List"), path.to_vec())
+}
+
+fn position_index(index: usize) -> Expr {
+    Expr::integer(BigInt::from(index))
+}
+
+fn position_key(key: Expr) -> Expr {
+    Expr::call(system_expr("Key"), vec![key])
 }

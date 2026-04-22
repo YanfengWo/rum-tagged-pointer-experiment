@@ -177,10 +177,12 @@ once in its primary implementation group. Other groups may mention it as
   `PatternSequence`, `OrderlessPatternSequence`, `Verbatim`, `Longest`,
   `Shortest`, matcher IR, delayed-rule substitution, suspend/resume through
   matcher-driven flows
-- `partial`: advanced pattern language breadth, full traversal parity, richer
+- `partial`: advanced pattern language breadth, broader tree-walker parity
+  beyond the current association-aware traversal subset, richer
   replacement-convenience family including the current `Replace`,
-  `ReplaceList`, and `ReplaceAt` first passes, pattern/string crossover,
-  remaining orderless/flat edge parity
+  `ReplaceList`, and `ReplaceAt` first passes plus root backtracking for
+  `ReplaceList`, pattern/string crossover, remaining orderless/flat edge
+  parity
 - `planned`: ordered-pattern controls and remaining parity cleanup
 
 ### Functions and Symbols
