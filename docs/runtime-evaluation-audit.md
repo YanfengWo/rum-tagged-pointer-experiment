@@ -140,10 +140,12 @@ The following parts of the evaluation model are now coherent enough to build on:
 - upvalues, downvalues, subvalues, tagged definitions, `TagUnset`, `Clear`,
   `ClearAll`, and definition inspection for the supported categories
 - immediate vs delayed rule behavior
-- compiled matcher dispatch for the current early subset, including
+- compiled matcher dispatch for the current rule/pattern subset, including
   `Condition`, sequence blanks, `PatternTest`, `Alternatives`, `Optional`,
-  `Except`, `Repeated`, `MatchQ`, `Cases`, `ReplaceAll`, and
-  `ReplaceRepeated`
+  `Except`, `Repeated`, `PatternSequence`, `OrderlessPatternSequence`,
+  `Verbatim`, `Longest`, `Shortest`, `MatchQ`, `Cases`, `DeleteCases`,
+  `Count`, `MemberQ`, `FreeQ`, `Position`, `Replace`, `ReplaceAll`,
+  `ReplaceRepeated`, and current first passes of `ReplaceList` and `ReplaceAt`
 - lexical scoping via `With` and `Module`
 - dynamic rebinding via `Block` for the currently localized categories
 - runtime messages, `Check`, `Quiet`, and `$MessageList`
@@ -251,14 +253,19 @@ language yet.
 
 Missing or incomplete areas include:
 
-- richer pattern operators such as `Longest` and `Shortest`
-- broader traversal semantics beyond the currently implemented `Cases` subset
+- deeper pattern-language breadth and pattern/string crossover beyond the
+  current `PatternSequence` / `OrderlessPatternSequence` / `Verbatim` /
+  `Longest` / `Shortest` subset
+- broader traversal semantics beyond the current association-aware `Cases` /
+  `DeleteCases` / `Level` / `Count` / `MemberQ` / `FreeQ` / `Position` slice
+- remaining replacement-family parity beyond the current `Replace` /
+  `ReplaceList` / `ReplaceAt` first-pass subset
 - later integration work with future string-pattern semantics
 
 Practical impact:
 
-- rule authoring is already useful, but still not expressive enough for many
-  mature Wolfram-style idioms
+- rule authoring is already useful across matcher, replacement, and tree-walker
+  flows, but still not expressive enough for many mature Wolfram-style idioms
 
 ## Priority Order Suggested By This Audit
 

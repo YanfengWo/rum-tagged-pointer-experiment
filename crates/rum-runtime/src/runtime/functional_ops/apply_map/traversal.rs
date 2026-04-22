@@ -18,7 +18,7 @@ pub(super) fn apply_heads_recursive(
 ) -> (Expr, usize) {
     match expr {
         Expr::Atom(_) => (expr.clone(), 1),
-        Expr::Call { head, args } if is_system_symbol_name(head, "Association") => {
+        Expr::Call { head, args: _ } if is_system_symbol_name(head, "Association") => {
             if let Some(entries) = association_entries_from_expr(expr) {
                 let mut max_depth = 0usize;
                 let mut transformed_entries = Vec::with_capacity(entries.len());
@@ -124,7 +124,7 @@ pub(super) fn map_parts_recursive(
 
             (rendered, depth)
         }
-        Expr::Call { head, args } if is_system_symbol_name(head, "Association") => {
+        Expr::Call { head, args: _ } if is_system_symbol_name(head, "Association") => {
             if let Some(entries) = association_entries_from_expr(expr) {
                 let mut max_depth = 0usize;
                 let mut transformed_entries = Vec::with_capacity(entries.len());
@@ -321,7 +321,7 @@ pub(super) fn collect_scan_parts_recursive(
 
             ScanCollection { parts, depth: 1 }
         }
-        Expr::Call { head, args } if is_system_symbol_name(head, "Association") => {
+        Expr::Call { head, args: _ } if is_system_symbol_name(head, "Association") => {
             if let Some(entries) = association_entries_from_expr(expr) {
                 let mut parts = Vec::new();
                 let mut max_depth = 0usize;

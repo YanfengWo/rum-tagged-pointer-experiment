@@ -43,7 +43,10 @@ impl Drop for TempDirGuard {
 }
 
 fn rum_path(path: &Path) -> String {
-    path.display().to_string().replace('\\', "/")
+    normalize_found_path(path)
+        .display()
+        .to_string()
+        .replace('\\', "/")
 }
 
 mod arithmetic;

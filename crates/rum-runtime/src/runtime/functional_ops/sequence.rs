@@ -405,7 +405,7 @@ fn accumulate_items(session: &mut Session, items: Vec<Expr>) -> Result<Vec<Expr>
 
 fn iterable_items(expr: &Expr) -> Option<Vec<Expr>> {
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "Association") => Some(
+        Expr::Call { head, args: _ } if is_system_symbol_name(head, "Association") => Some(
             association_entries_from_expr(expr)?
                 .into_iter()
                 .map(|(_, value)| value)

@@ -25,10 +25,11 @@ The rest of this document expands those principles into concrete rules.
 
 ## Environment Note
 
-Routine development in the current repository should use the WSL workspace and
-toolchain directly (for example under `/home/fft/src/rum` with the local
-`cargo`/`rustc`/`git` install). The practical entry points are described in
-`../README.md`.
+Routine development in the current repository should use the native workspace
+and toolchain of the active machine directly. On Windows, that usually means a
+real WSL checkout rather than a cross-environment wrapper flow; on macOS and
+Linux, it means the normal local checkout with the local `cargo` / `rustc` /
+`git` install. The practical entry points are described in `../README.md`.
 
 This is a local development rule, not part of the long-term product design.
 

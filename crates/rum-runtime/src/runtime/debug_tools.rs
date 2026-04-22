@@ -2025,7 +2025,7 @@ fn collect_structured_trace_lines(trace: &Expr, depth: usize, lines: &mut Vec<(u
         Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
             for item in args {
                 match item {
-                    Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
+                    Expr::Call { head, args: _ } if is_system_symbol_name(head, "List") => {
                         collect_structured_trace_lines(item, depth + 1, lines);
                     }
                     other => {

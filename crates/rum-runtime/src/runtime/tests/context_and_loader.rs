@@ -380,7 +380,7 @@ fn findfile_resolves_package_names_and_file_wrappers() {
             .unwrap()
             .value
             .to_string(),
-        Expr::string(file.display().to_string()).to_string()
+        Expr::string(rum_path(&file)).to_string()
     );
     assert_eq!(
         session
@@ -388,7 +388,7 @@ fn findfile_resolves_package_names_and_file_wrappers() {
             .unwrap()
             .value
             .to_string(),
-        Expr::string(file.display().to_string()).to_string()
+        Expr::string(rum_path(&file)).to_string()
     );
     assert_eq!(
         session
@@ -417,7 +417,7 @@ fn loader_builtins_accept_resolved_load_target_specs() {
             .unwrap()
             .value
             .to_string(),
-        Expr::string(package_file.display().to_string()).to_string()
+        Expr::string(rum_path(&package_file)).to_string()
     );
     assert_eq!(
         session

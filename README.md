@@ -25,8 +25,9 @@ substantial:
 - `rum-core` and `rum-runtime` support exact integers, canonical lowering,
   sessions, contexts, package loading, ownvalues/upvalues/downvalues/subvalues,
   hold-aware evaluation, threading, tracing, and resource limits
-- rules and patterns already drive `MatchQ`, `Cases`, `ReplaceAll`, and
-  `ReplaceRepeated`
+- rules and patterns already drive `MatchQ`, `Cases`, `DeleteCases`,
+  `ReplaceAll`, `ReplaceRepeated`, and current first passes of `Replace`,
+  `ReplaceList`, and `ReplaceAt`
 - `rum-cli` and `rum-repl` are usable developer tools
 - `rum-jupyter` is an early adapter layer built on top of host-facing session
   APIs, not part of the evaluator core
@@ -88,13 +89,13 @@ The repository is a Cargo workspace with these top-level crates:
 
 ## Development Environment
 
-Primary day-to-day development happens in WSL2 under:
+Primary day-to-day development should happen in a native local workspace for
+the current machine, using the locally installed toolchain directly (`git`,
+`cargo`, `rustc`, etc.).
 
-- `/home/fft/src/rum`
-
-Use the WSL-installed toolchain directly (`git`, `cargo`, `rustc`, etc.).
-Do not run the old Windows portable wrapper flow from `C:\...` / `/mnt/c/...`
-for normal development.
+On Windows, prefer a real WSL checkout over the old `C:\...` / `/mnt/c/...`
+portable-wrapper flow. On macOS and Linux, use the normal local checkout and
+native toolchain directly.
 
 ```bash
 cargo test --workspace
@@ -140,8 +141,8 @@ Near-term work is concentrated in four areas:
 
 - further tightening evaluator semantics where behavior is still somewhat ad hoc
 - continuing to expand the rule / matcher language
-- advancing the active `Wave 2` backlog across `CL-03` and `CL-05`, especially
-  replacement/traversal and association-parity gaps
+- finishing the active `Wave 2` backlog, with emphasis on the remaining
+  `CL-05` keyed-data long tail plus any follow-on matcher / traversal cleanup
 - splitting oversized runtime and adapter modules back into healthier boundaries
 
 `rum-jupyter` remains useful and actively maintained, but it is not the primary

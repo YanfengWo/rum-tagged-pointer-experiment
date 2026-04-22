@@ -214,7 +214,7 @@ impl Session {
 fn split_dialog_body_and_options(args: &[Expr]) -> (Option<&Expr>, &[Expr]) {
     match args {
         [] => (None, &[]),
-        [first, rest @ ..] if is_dialog_option_expr(first) => (None, args),
+        [first, ..] if is_dialog_option_expr(first) => (None, args),
         [first, rest @ ..] => (Some(first), rest),
     }
 }
