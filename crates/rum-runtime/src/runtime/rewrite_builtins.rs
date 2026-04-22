@@ -472,6 +472,52 @@ impl Session {
                 seen_before,
                 Vec::new(),
             ),
+            Expr::Call { head, .. } if is_system_symbol_name(&head, "Association") => {
+                if let Some(entries) = association_entries_from_expr(&expr) {
+                    let mut children = Vec::new();
+                    if traversal.include_heads {
+                        children.push(head.as_ref().clone());
+                    }
+                    children.extend(entries.into_iter().map(|(_, value)| value));
+
+                    self.collect_cases_children(
+                        children,
+                        expr,
+                        spec,
+                        traversal,
+                        level + 1,
+                        seen_before,
+                        Vec::new(),
+                        0,
+                    )
+                } else {
+                    self.collect_cases_in_standard_call(expr, spec, traversal, level, seen_before)
+                }
+            }
+            Expr::Call { .. } => {
+                self.collect_cases_in_standard_call(expr, spec, traversal, level, seen_before)
+            }
+        }
+    }
+
+    fn collect_cases_in_standard_call(
+        &mut self,
+        expr: Expr,
+        spec: CasesSpec,
+        traversal: CasesTraversalConfig,
+        level: usize,
+        seen_before: usize,
+    ) -> Result<CasesCollectionOutcome, EvalError> {
+        match expr.clone() {
+            Expr::Atom(_) => self.finish_cases_at_current_node(
+                expr,
+                spec,
+                traversal,
+                level,
+                1,
+                seen_before,
+                Vec::new(),
+            ),
             Expr::Call { head, args } => {
                 let mut children = Vec::new();
                 if traversal.include_heads {
@@ -877,8 +923,8 @@ impl Session {
         if children.is_empty() {
             if head_deleted {
                 return Ok(DeleteCasesOutcome {
-                    result: DeleteCasesResult::Splice(rebuilt_entries),
-                    depth: max_child_depth,
+                    result: DeleteCasesResult::Keep(render_association(Vec::new())),
+                    depth: 1,
                     deleted_count: deleted_before - subtree_start,
                     exhausted: traversal.limit_reached(deleted_before),
                 });
@@ -941,6 +987,15 @@ impl Session {
                 }
             }
 
+            if next_head_deleted {
+                return Ok(DeleteCasesOutcome {
+                    result: DeleteCasesResult::Keep(render_association(Vec::new())),
+                    depth: 1,
+                    deleted_count: deleted_before_next - subtree_start,
+                    exhausted: traversal.limit_reached(deleted_before_next),
+                });
+            }
+
             if child_outcome.exhausted {
                 let untouched_rest = rest
                     .iter()
@@ -958,15 +1013,6 @@ impl Session {
                     })
                     .collect::<Vec<_>>();
                 next_entries.extend(untouched_rest);
-
-                if next_head_deleted {
-                    return Ok(DeleteCasesOutcome {
-                        result: DeleteCasesResult::Splice(next_entries),
-                        depth: next_max_child_depth,
-                        deleted_count: deleted_before_next - subtree_start,
-                        exhausted: true,
-                    });
-                }
 
                 return Ok(DeleteCasesOutcome {
                     result: DeleteCasesResult::Keep(Expr::Call {

@@ -178,7 +178,8 @@ once in its primary implementation group. Other groups may mention it as
   `Shortest`, matcher IR, delayed-rule substitution, suspend/resume through
   matcher-driven flows
 - `partial`: advanced pattern language breadth, broader tree-walker parity
-  beyond the current association-aware traversal subset, richer
+  beyond the current association-aware `Cases` / `DeleteCases` / `Level` /
+  `Count` / `MemberQ` / `FreeQ` / `Position` subset, richer
   replacement-convenience family including the current `Replace`,
   `ReplaceList`, and `ReplaceAt` first passes plus root backtracking for
   `ReplaceList`, pattern/string crossover, remaining orderless/flat edge
