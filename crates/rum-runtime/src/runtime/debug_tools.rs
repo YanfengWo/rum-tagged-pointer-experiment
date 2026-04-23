@@ -1670,7 +1670,7 @@ impl Session {
                 association_property_by_name(&data, &key).unwrap_or_else(|| {
                     Expr::call(
                         system_expr("Missing"),
-                        vec![Expr::string("KeyAbsent"), Expr::string(key)],
+                        vec![Expr::string("KeyAbsent"), properties.clone()],
                     )
                 }),
             ),
@@ -1698,7 +1698,7 @@ impl Session {
                     let value = association_property_by_name(&data, &key).unwrap_or_else(|| {
                         Expr::call(
                             system_expr("Missing"),
-                            vec![Expr::string("KeyAbsent"), Expr::string(key.clone())],
+                            vec![Expr::string("KeyAbsent"), key_expr.clone()],
                         )
                     });
                     entries.push((Expr::string(key.clone()), value));

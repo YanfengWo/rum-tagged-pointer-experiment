@@ -684,6 +684,48 @@ fn evaluation_data_captures_result_messages_prints_and_failure_type_without_leak
         message_exprs.value.to_string(),
         "List[Hold[Message[FindFile::notfound]]]"
     );
+    assert_eq!(
+        session
+            .eval_text("EvaluationData[3, Missing]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", Missing]"
+    );
+    assert_eq!(
+        session
+            .eval_text("EvaluationData[3, \"Missing\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", \"Missing\"]"
+    );
+    let mixed_missing_projection = session
+        .eval_text("EvaluationData[3, {Result, Missing}]")
+        .unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![
+                    mixed_missing_projection.value.clone(),
+                    Expr::string("Result")
+                ],
+            ))
+            .unwrap()
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![mixed_missing_projection.value, Expr::string("Missing")],
+            ))
+            .unwrap()
+            .to_string(),
+        "Missing[\"KeyAbsent\", Missing]"
+    );
 }
 
 #[test]
@@ -892,6 +934,48 @@ fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
             .unwrap()
             .to_string(),
         "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("TestReport[{TestCreate[1 + 1, 2]}, Missing]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", Missing]"
+    );
+    assert_eq!(
+        session
+            .eval_text("TestReport[{TestCreate[1 + 1, 2]}, \"Missing\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", \"Missing\"]"
+    );
+    let mixed_missing_report = session
+        .eval_text("TestReport[{TestCreate[1 + 1, 2]}, {TestsRunCount, Missing}]")
+        .unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![
+                    mixed_missing_report.value.clone(),
+                    Expr::string("TestsRunCount")
+                ],
+            ))
+            .unwrap()
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![mixed_missing_report.value, Expr::string("Missing")],
+            ))
+            .unwrap()
+            .to_string(),
+        "Missing[\"KeyAbsent\", Missing]"
     );
     assert!(session.take_messages().is_empty());
 

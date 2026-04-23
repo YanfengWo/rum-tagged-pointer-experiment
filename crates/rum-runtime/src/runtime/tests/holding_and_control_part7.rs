@@ -139,6 +139,22 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Success[\"ok\", {Code -> 200, Body -> 7}][Code]")
+            .unwrap()
+            .value
+            .to_string(),
+        "200"
+    );
+    assert_eq!(
+        session
+            .eval_text("Success[\"ok\", {\"Code\" -> 200, \"Body\" -> 7}][Code]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", Code]"
+    );
+    assert_eq!(
+        session
             .eval_text("Success[\"ok\", {\"Code\" -> 200, \"Body\" -> 7}][{\"Body\", \"Missing\"}]")
             .unwrap()
             .value
@@ -147,11 +163,157 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Success[\"ok\", {Code -> 200, Body -> 7}][{Body, Missing}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[7, Missing[\"KeyAbsent\", Missing]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Success[\"ok\", {\"Code\" -> 200, \"Body\" -> 7}][\"Properties\"]")
             .unwrap()
             .value
             .to_string(),
         "List[\"Code\", \"Body\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Success[\"ok\", {\"Code\" -> 200, \"Body\" -> 7}][Properties]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", Properties]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {\"Code\" -> 500, \"Body\" -> 7}][\"Missing\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"NotAvailable\", \"Missing\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {\"Code\" -> 500}][All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[\"Code\", 500]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {\"Code\" -> 500}][\"All\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"NotAvailable\", \"All\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {\"Code\" -> 500, \"Body\" -> 7}][\"Properties\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"Body\", \"Code\", \"Message\", \"StyledMessage\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {Code -> 500, Body -> 7}][\"Properties\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"Message\", \"StyledMessage\", Body, Code]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {\"Code\" -> 500}][\"Message\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"A failure of type \\\"oops\\\" occurred.\""
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[tag, {\"Code\" -> 500}][\"Message\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"An unknown failure occurred.\""
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {\"Code\" -> 500}][\"StyledMessage\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Style[\"A failure of type \\\"oops\\\" occurred.\", \"Message\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[tag, {\"Code\" -> 500}][\"StyledMessage\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Style[\"An unknown failure occurred.\", \"Message\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {Code -> 500, Body -> 7}][Code]")
+            .unwrap()
+            .value
+            .to_string(),
+        "500"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {Message -> 1, StyledMessage -> 2}][Message]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "Failure[\"oops\", {\"Code\" -> 500, \"Body\" -> 7}][{\"Body\", \"Missing\"}]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[7, Missing[\"NotAvailable\", List[\"Body\", \"Missing\"]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {Code -> 500, Body -> 7}][{Body, Missing}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[7, Missing[\"NotAvailable\", List[Body, Missing]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {\"Message\" -> 1, \"StyledMessage\" -> 2}][{\"Message\", \"StyledMessage\"}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {\"Code\" -> 500}][Properties]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"NotAvailable\", Properties]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[1, {\"Code\" -> 500}][All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Failure[1, Association[Rule[\"Code\", 500]]][All]"
     );
     assert_eq!(
         session

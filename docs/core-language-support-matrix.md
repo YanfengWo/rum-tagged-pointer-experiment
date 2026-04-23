@@ -264,10 +264,12 @@ once in its primary implementation group. Other groups may mention it as
   key-value canonicalization, keyed part specifications via `Key`,
   deterministic ordering for canonical association rendering, key-based
   pattern matching through `KeyValuePattern`, richer `Lookup`
-  threading/multi-key behavior including `Lookup[..., default, h]`, rule-list
-  plus wrapper/threading support for `Keys` / `Values`, rule-list-aware keyed
-  predicates through `KeyExistsQ` / `KeyMemberQ` / `KeyFreeQ`, spec-ordered
-  and threaded rule-list-normalizing `KeyTake` / `KeyDrop`, broader
+  threading/multi-key behavior including `Lookup[..., default, h]` plus
+  single-rule/rule-list parity and keyed `Missing["KeyAbsent", key]`
+  fallbacks, rule-list plus wrapper/threading support for `Keys` / `Values`,
+  rule-list-aware keyed predicates through `KeyExistsQ` / `KeyMemberQ` /
+  `KeyFreeQ`, spec-ordered and threaded rule-list-normalizing `KeyTake` /
+  `KeyDrop`, broader
   keyed-helper operator-form parity across `KeyMap` / `KeyValueMap` /
   `KeySelect` / `AssociationMap` / `Merge` / `CountsBy` / `GroupBy`,
   rule-list-normalizing `KeySelect` / `KeySort` / `KeySortBy`, mixed
@@ -280,8 +282,8 @@ once in its primary implementation group. Other groups may mention it as
   comparers, `Catenate` over lists plus association values with current
   invalid-argument parity, current `GroupBy[list, f, g]` reducer support,
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
-  forms, and held symbol-mutation first passes for `AssociateTo` /
-  `KeyDropFrom`
+  forms plus current keyed-lookup propagation, and held symbol-mutation
+  first passes for `AssociateTo` / `KeyDropFrom`
 - `planned`: any remaining keyed-helper rule-list breadth and deeper
   association semantics beyond the current first-pass subset
 
@@ -318,9 +320,11 @@ once in its primary implementation group. Other groups may mention it as
   basic I/O subset also includes `MissingQ`, `Success`,
   `TerminatedEvaluation`, `Input`, `Print`, `Pause`, and `BlockRandom`.
   Recent follow-up work tightened protected-abort catching, session-config
-  assertion enablement, `Success[...]` property extraction, and request-level
-  print transport, but richer held/cleanup corners and deeper status parity
-  are still pending
+  assertion enablement, exact-key `Success[...]` / `Failure[...]` property
+  extraction with the current `Missing` propagation subset, including current
+  `Failure[...]` `All` / `"Properties"` / `"Message"` / `"StyledMessage"`
+  parity for string-or-symbol tags, and request-level print transport, but
+  richer held/cleanup corners and deeper status parity are still pending
 - `planned`: broader failure values, abort-protection parity, external
   interaction builtins, and deeper cleanup/exception compatibility
 
@@ -508,7 +512,8 @@ once in its primary implementation group. Other groups may mention it as
   `DialogSymbols` handling and host-input resume support,
   `EvaluationData[...]` property projection through current string-or-symbol,
   list, and `All` forms plus `"Properties"` with matching structured `"Trace"`,
-  held `"Input"`, and held `"MessagesExpressions"` payloads, including current
+  held `"Input"`, and held `"MessagesExpressions"` payloads, including
+  request-shaped `Missing["KeyAbsent", ...]` payloads and current
   input-resume coverage, and
   first-pass `TestCreate[...]` / `TestReport[...]`
   metadata through
@@ -540,8 +545,9 @@ once in its primary implementation group. Other groups may mention it as
   for filtered `Trace[...]` / `TracePrint[...]`, depth-aware nested branch
   shaping, an indented structured `TracePrint[...]` subset, current
   layout-aware structural byte/memory accounting with payload-aware
-  `ByteArray[...]` handling, current symbol-or-string report/property projection,
-  held message-expression payloads, current report merging plus
+  `ByteArray[...]` handling, current symbol-or-string report/property projection
+  with request-shaped `Missing["KeyAbsent", ...]` payloads, held
+  message-expression payloads, current report merging plus
   current report-level `SameTest` / `TimeConstraint` / `MemoryConstraint`
   options, broader per-test `ActualMessagesText` / `OutputLog` / `Timing`
   payloads, current input-resume coverage for `EvaluationData` / `Monitor`,

@@ -98,12 +98,7 @@ pub(in crate::runtime) fn normalize_status_details_expr(expr: &Expr) -> Option<E
 }
 
 pub(in crate::runtime) fn failure_property_value(failure: &Expr, property: &str) -> Expr {
-    status_object_property_value(failure, property).unwrap_or_else(|| {
-        Expr::call(
-            system_expr("Missing"),
-            vec![Expr::string("KeyAbsent"), Expr::string(property)],
-        )
-    })
+    status_object_projection_value(failure, &Expr::string(property), None)
 }
 
 pub(in crate::runtime) fn apply_status_object_to_args(head: &Expr, args: &[Expr]) -> Option<Expr> {
@@ -111,45 +106,132 @@ pub(in crate::runtime) fn apply_status_object_to_args(head: &Expr, args: &[Expr]
         return None;
     }
 
+    if is_failure_expr(head) && !failure_tag_supports_projection(head) {
+        return None;
+    }
+
     match args {
-        [Expr::Atom(Atom::String(property))] => Some(failure_property_value(head, property)),
         [
-            Expr::Call {
+            list @ Expr::Call {
                 head: list_head,
                 args: properties,
             },
         ] if is_system_symbol_name(list_head, heads::structure::LIST) => {
             let values = properties
                 .iter()
-                .map(|property| match property {
-                    Expr::Atom(Atom::String(property)) => failure_property_value(head, property),
-                    other => Expr::call(head.clone(), vec![other.clone()]),
-                })
+                .map(|property| status_object_projection_value(head, property, Some(list)))
                 .collect();
             Some(Expr::call(system_expr("List"), values))
         }
+        [property] => Some(status_object_projection_value(head, property, None)),
         _ => None,
     }
 }
 
-fn status_object_property_value(status: &Expr, property: &str) -> Option<Expr> {
-    let (_, details) = status_object_parts(status)?;
+fn status_object_projection_value(
+    status: &Expr,
+    property: &Expr,
+    missing_property_context: Option<&Expr>,
+) -> Expr {
+    if missing_property_context.is_none() {
+        if is_failure_expr(status) {
+            if is_system_symbol_name(property, "All") {
+                return status_object_all_value(status)
+                    .unwrap_or_else(|| status_object_missing_expr(status, property.clone()));
+            }
 
-    if property == "Properties" {
-        let properties = association_entries_from_expr(details)?
-            .into_iter()
-            .map(|(key, _)| key)
-            .collect::<Vec<_>>();
-        return Some(Expr::call(system_expr("List"), properties));
+            if let Expr::Atom(Atom::String(name)) = property {
+                return match name.as_str() {
+                    "Properties" => failure_properties_value(status)
+                        .unwrap_or_else(|| status_object_missing_expr(status, property.clone())),
+                    "Message" => failure_virtual_message_value(status)
+                        .unwrap_or_else(|| status_object_missing_expr(status, property.clone())),
+                    "StyledMessage" => failure_virtual_styled_message_value(status)
+                        .unwrap_or_else(|| status_object_missing_expr(status, property.clone())),
+                    _ => status_object_property_value(status, property)
+                        .unwrap_or_else(|| status_object_missing_expr(status, property.clone())),
+                };
+            }
+        } else if matches!(property, Expr::Atom(Atom::String(name)) if name == "Properties") {
+            return status_object_properties_value(status)
+                .unwrap_or_else(|| status_object_missing_expr(status, property.clone()));
+        }
     }
 
-    Some(
-        association_value_by_key(details, &Expr::string(property)).unwrap_or_else(|| {
-            Expr::call(
-                system_expr("Missing"),
-                vec![Expr::string("KeyAbsent"), Expr::string(property)],
-            )
-        }),
+    status_object_property_value(status, property).unwrap_or_else(|| {
+        let missing_property = if is_failure_expr(status) {
+            missing_property_context.unwrap_or(property)
+        } else {
+            property
+        };
+        status_object_missing_expr(status, missing_property.clone())
+    })
+}
+
+fn status_object_properties_value(status: &Expr) -> Option<Expr> {
+    let (_, details) = status_object_parts(status)?;
+    let properties = association_entries_from_expr(details)?
+        .into_iter()
+        .map(|(key, _)| key)
+        .collect::<Vec<_>>();
+    Some(Expr::call(system_expr("List"), properties))
+}
+
+fn failure_properties_value(status: &Expr) -> Option<Expr> {
+    let (_, details) = status_object_parts(status)?;
+    let mut properties = association_entries_from_expr(details)?
+        .into_iter()
+        .map(|(key, _)| key)
+        .collect::<Vec<_>>();
+    properties.push(Expr::string("Message"));
+    properties.push(Expr::string("StyledMessage"));
+    properties.sort_by(compare_expr_canonical);
+    properties.dedup();
+    Some(Expr::call(system_expr("List"), properties))
+}
+
+fn status_object_all_value(status: &Expr) -> Option<Expr> {
+    let (_, details) = status_object_parts(status)?;
+    Some(details.clone())
+}
+
+fn status_object_property_value(status: &Expr, property: &Expr) -> Option<Expr> {
+    let (_, details) = status_object_parts(status)?;
+    association_value_by_key(details, property)
+}
+
+fn failure_virtual_message_value(status: &Expr) -> Option<Expr> {
+    let (tag, _) = status_object_parts(status)?;
+    match tag {
+        Expr::Atom(Atom::String(tag)) => Some(Expr::string(format!(
+            "A failure of type \"{tag}\" occurred."
+        ))),
+        Expr::Atom(Atom::Symbol(_)) => Some(Expr::string("An unknown failure occurred.")),
+        _ => None,
+    }
+}
+
+fn failure_virtual_styled_message_value(status: &Expr) -> Option<Expr> {
+    Some(Expr::call(
+        system_expr("Style"),
+        vec![
+            failure_virtual_message_value(status)?,
+            Expr::string("Message"),
+        ],
+    ))
+}
+
+fn status_object_missing_expr(status: &Expr, property: Expr) -> Expr {
+    Expr::call(
+        system_expr("Missing"),
+        vec![
+            Expr::string(if is_failure_expr(status) {
+                "NotAvailable"
+            } else {
+                "KeyAbsent"
+            }),
+            property,
+        ],
     )
 }
 
@@ -167,4 +249,11 @@ fn status_object_parts(status: &Expr) -> Option<(&Expr, &Expr)> {
     };
 
     Some((tag, details))
+}
+
+fn failure_tag_supports_projection(status: &Expr) -> bool {
+    matches!(
+        status_object_parts(status).map(|(tag, _)| tag),
+        Some(Expr::Atom(Atom::String(_) | Atom::Symbol(_)))
+    )
 }

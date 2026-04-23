@@ -108,6 +108,14 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
     );
     assert_eq!(
         session
+            .eval_text("Lookup[Association[a -> 1], Key[b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", b]"
+    );
+    assert_eq!(
+        session
             .eval_text("Lookup[Association[a -> 1, b -> 2], {b, a, c}]")
             .unwrap()
             .value
@@ -153,6 +161,62 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
             .value
             .to_string(),
         "List[Hold[1], Hold[0]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Lookup[{a -> 1, b -> 2}, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Lookup[a -> 1, c]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Lookup[{a -> 1, b -> 2}, Key[b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Lookup[{a -> 1, b -> 2}, Key[c]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Lookup[{a -> 1, b -> 2}, {b, a, c}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 1, Missing[\"KeyAbsent\", c]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Lookup[{{a -> 1}, {b -> 2}}, a, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 0]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Lookup[{Association[a -> 1], {b -> 2}}, a, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 0]"
     );
     assert_eq!(
         session
@@ -901,13 +965,24 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .to_string(),
         "Association[a]"
     );
+    let outcome = session.eval_text("Lookup[a, b]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Lookup[a, b]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Lookup" && message.tag == "invrl")
+    );
+    let outcome = session.eval_text("Lookup[{a -> 1, {b -> 2}}, a]").unwrap();
     assert_eq!(
-        session
-            .eval_text("Lookup[List[a -> 1], a]")
-            .unwrap()
-            .value
-            .to_string(),
-        "Lookup[List[Rule[a, 1]], a]"
+        outcome.value.to_string(),
+        "Lookup[List[Rule[a, 1], List[Rule[b, 2]]], a]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Lookup" && message.tag == "invrl")
     );
     assert_eq!(
         session

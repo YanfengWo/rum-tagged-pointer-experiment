@@ -49,6 +49,13 @@ impl Session {
         let default = args.get(2).cloned();
         let wrapper = args.get(3);
         let Some(value) = lookup_value(&args[0], &args[1], default, wrapper) else {
+            if !lookup_data_is_valid(&args[0]) {
+                self.push_message(
+                    "Lookup",
+                    "invrl",
+                    invalid_association_or_rule_list_message(&args[0]),
+                );
+            }
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -265,18 +272,21 @@ fn lookup_value(
         return Some(wrap_keyed_result(value, wrapper));
     }
 
-    if let Some(items) = call_items_with_head(data, &system_expr("List")) {
-        if items
-            .iter()
-            .all(|item| association_entries_from_expr(item).is_some())
-        {
-            return Some(Expr::call(
-                system_expr("List"),
-                items
-                    .iter()
-                    .map(|item| lookup_value(item, key_spec, default.clone(), wrapper))
-                    .collect::<Option<Vec<_>>>()?,
-            ));
+    let direct_entries = single_rule_or_keyed_entries_from_expr(data);
+    if direct_entries.is_none() {
+        if let Some(items) = call_items_with_head(data, &system_expr("List")) {
+            if items
+                .iter()
+                .all(|item| keyed_entries_from_expr(item).is_some())
+            {
+                return Some(Expr::call(
+                    system_expr("List"),
+                    items
+                        .iter()
+                        .map(|item| lookup_value(item, key_spec, default.clone(), wrapper))
+                        .collect::<Option<Vec<_>>>()?,
+                ));
+            }
         }
     }
 
@@ -289,23 +299,11 @@ fn lookup_value(
         ));
     }
 
-    let entries = association_entries_from_expr(data)?;
-    if let Some((_, value)) = entries
-        .into_iter()
-        .find(|(entry_key, _)| entry_key == key_spec)
-    {
-        return Some(wrap_keyed_result(value, wrapper));
+    if let Some(entries) = direct_entries.as_ref() {
+        return Some(lookup_entries_value(entries, key_spec, default, wrapper));
     }
 
-    Some(wrap_keyed_result(
-        default.unwrap_or_else(|| {
-            Expr::call(
-                system_expr("Missing"),
-                vec![Expr::string("KeyAbsent"), key_spec.clone()],
-            )
-        }),
-        wrapper,
-    ))
+    None
 }
 
 fn wrap_keyed_result(value: Expr, wrapper: Option<&Expr>) -> Expr {
@@ -313,6 +311,54 @@ fn wrap_keyed_result(value: Expr, wrapper: Option<&Expr>) -> Expr {
         Some(head) => Expr::call(head, vec![value]),
         None => value,
     }
+}
+
+fn lookup_entries_value(
+    entries: &[(Expr, Expr)],
+    key_spec: &Expr,
+    default: Option<Expr>,
+    wrapper: Option<&Expr>,
+) -> Expr {
+    let lookup_key = lookup_key_expr(key_spec);
+    if let Some((_, value)) = entries
+        .iter()
+        .find(|(entry_key, _)| entry_key == lookup_key)
+    {
+        return wrap_keyed_result(value.clone(), wrapper);
+    }
+
+    wrap_keyed_result(
+        default.unwrap_or_else(|| {
+            Expr::call(
+                system_expr("Missing"),
+                vec![Expr::string("KeyAbsent"), lookup_key.clone()],
+            )
+        }),
+        wrapper,
+    )
+}
+
+fn lookup_key_expr(key_spec: &Expr) -> &Expr {
+    match key_spec {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Key") && args.len() == 1 => {
+            &args[0]
+        }
+        _ => key_spec,
+    }
+}
+
+fn lookup_data_is_valid(expr: &Expr) -> bool {
+    if single_rule_or_keyed_entries_from_expr(expr).is_some() {
+        return true;
+    }
+
+    let Some(items) = call_items_with_head(expr, &system_expr("List")) else {
+        return false;
+    };
+
+    items
+        .iter()
+        .all(|item| keyed_entries_from_expr(item).is_some())
 }
 
 fn keys_result_for_expr(expr: &Expr, wrapper: Option<&Expr>) -> Option<Expr> {
