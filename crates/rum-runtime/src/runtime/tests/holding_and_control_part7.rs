@@ -69,6 +69,62 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
 }
 
 #[test]
+fn abortprotect_and_failsafe_resume_through_host_input() {
+    let mut session = Session::new();
+    session.eval_text("x = 0").unwrap();
+
+    let failure = session
+        .eval_request(
+            "CheckAbort[AbortProtect[x = 1; Abort[]; InputString[\"body: \"]; x = 2; x], rescued]",
+        )
+        .expect_err("AbortProtect body should suspend before delayed abort propagates");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "body: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
+
+    let response = session
+        .resume_eval_request_with_input("ok")
+        .expect("resuming protected body should let CheckAbort catch the delayed abort");
+    assert_eq!(response.value.to_string(), "rescued");
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "2");
+
+    let failure = session
+        .eval_request("Failsafe[f, Function[MatchQ[InputString[\"test: \"], \"yes\"]]][arg]")
+        .expect_err("Failsafe test should suspend when host input is needed");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "test: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("truthy resumed Failsafe test should call the wrapped function");
+    assert_eq!(response.value.to_string(), "f[arg]");
+
+    let failure = session
+        .eval_request("Failsafe[f, Function[MatchQ[InputString[\"test: \"], \"yes\"]]][arg]")
+        .expect_err("Failsafe test should suspend again for the next call");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "test: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("no")
+        .expect("falsy resumed Failsafe test should produce a failure object");
+    assert_eq!(
+        response.value.to_string(),
+        "Failure[\"FailsafeFailure\", Association[Rule[\"Function\", f], Rule[\"Test\", Function[MatchQ[InputString[\"test: \"], \"yes\"]]], Rule[\"Arguments\", List[arg]]]]"
+    );
+}
+
+#[test]
 fn input_print_and_pause_cover_current_first_pass_io_subset() {
     let mut session = Session::new();
 
@@ -95,6 +151,47 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
         .expect("resuming Input should parse and evaluate the supplied expression");
     assert_eq!(response.value.to_string(), "5");
     assert!(response.prints.is_empty());
+}
+
+#[test]
+fn withcleanup_defers_cleanup_until_suspended_body_finishes() {
+    let mut session = Session::new();
+    session.eval_text("x = 0").unwrap();
+
+    let failure = session
+        .eval_request("WithCleanup[x = 1; InputString[\"body: \"]; x = 2; done, x = 3]")
+        .expect_err("WithCleanup body should suspend before cleanup runs");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "body: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
+
+    let response = session
+        .resume_eval_request_with_input("ok")
+        .expect("resuming WithCleanup body should finish and then run cleanup");
+    assert_eq!(response.value.to_string(), "done");
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "3");
+
+    session.eval_text("x = 0").unwrap();
+    let failure = session
+        .eval_request("WithCleanup[x = 10, x = 1; InputString[\"body: \"]; x = 2; done, x = 3]")
+        .expect_err("WithCleanup main body should suspend after init");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "body: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
+
+    let response = session
+        .resume_eval_request_with_input("ok")
+        .expect("resuming three-argument WithCleanup body should run cleanup last");
+    assert_eq!(response.value.to_string(), "done");
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "3");
 }
 
 #[test]

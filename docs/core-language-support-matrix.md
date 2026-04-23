@@ -331,8 +331,11 @@ once in its primary implementation group. Other groups may mention it as
   assertion enablement, exact-key `Success[...]` / `Failure[...]` property
   extraction with the current `Missing` propagation subset, including current
   `Failure[...]` `All` / `"Properties"` / `"Message"` / `"StyledMessage"`
-  parity for string-or-symbol tags, and request-level print transport, but
-  richer held/cleanup corners and deeper status parity are still pending
+  parity for string-or-symbol tags, request-level print transport,
+  suspension-safe `WithCleanup` body cleanup, current `CheckAbort` option-list
+  parity for `PropagateAborts`, `Failsafe` true-only test gating, and
+  abort/failsafe resume through host input, but richer held/cleanup corners
+  and deeper status parity are still pending
 - `planned`: broader failure values, abort-protection parity, external
   interaction builtins, and deeper cleanup/exception compatibility
 
@@ -346,7 +349,7 @@ once in its primary implementation group. Other groups may mention it as
   `Success`, `TerminatedEvaluation`, `MissingQ`, `WithCleanup`, `Failsafe`,
   `Abort`, `CheckAbort`, `PropagateAborts`, `AbortProtect`, `Assert`,
   `BlockRandom`, `Input`, `Print`, `Pause` in the current first-pass subset
-- `planned`: deeper `WithCleanup` / `Failsafe` / `CheckAbort` /
+- `planned`: remaining deeper `WithCleanup` / `Failsafe` / `CheckAbort` /
   `AbortProtect` parity, richer `Assert` controls beyond the current session
   flag, more complete `TerminatedEvaluation` behavior, and fuller host-I/O
   semantics

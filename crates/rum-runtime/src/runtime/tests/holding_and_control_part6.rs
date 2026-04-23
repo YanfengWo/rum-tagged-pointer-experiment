@@ -27,6 +27,51 @@ fn abort_and_checkabort_cover_current_first_pass_subset() {
         "$Aborted"
     );
     assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
+
+    assert_eq!(
+        session
+            .eval_text("CheckAbort[Abort[], rescued, {PropagateAborts -> False}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "rescued"
+    );
+    assert_eq!(
+        session
+            .eval_text("CheckAbort[Abort[], rescued, \"PropagateAborts\" -> False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "rescued"
+    );
+    assert_eq!(
+        session
+            .eval_text("CheckAbort[CheckAbort[Abort[], rescued, {PropagateAborts -> True}], outer]")
+            .unwrap()
+            .value
+            .to_string(),
+        "outer"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "CheckAbort[CheckAbort[Abort[], rescued, {PropagateAborts -> True, PropagateAborts -> False}], outer]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "outer"
+    );
+    let invalid_value = session
+        .eval_text("CheckAbort[Abort[], rescued, PropagateAborts -> bad]")
+        .unwrap();
+    assert_eq!(invalid_value.value.to_string(), "rescued");
+    assert!(
+        invalid_value
+            .messages
+            .iter()
+            .any(|message| message.symbol == "CheckAbort" && message.tag == "opttfa")
+    );
 }
 
 #[test]
@@ -101,6 +146,22 @@ fn failsafe_wrapper_preserves_failure_like_inputs_and_supports_test_forms() {
     assert_eq!(
         session
             .eval_text("FailureQ[Failsafe[Function[Plus[Slot[1], Slot[1]]], Positive][-1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("FailureQ[Failsafe[f, Function[p]][1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("FailureQ[Failsafe[f, Function[1]][1]]")
             .unwrap()
             .value
             .to_string(),

@@ -21,6 +21,19 @@ enum PropagateAbortsMode {
     True,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CheckAbortPropagation {
+    mode: PropagateAbortsMode,
+    invalid_value: Option<Expr>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum CheckAbortOptionError {
+    NonOption(Expr),
+    InvalidOptionName(Expr),
+    UnknownOption(Symbol),
+}
+
 impl Session {
     pub(super) fn eval_check(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if !(2..=3).contains(&args.len()) {
@@ -137,10 +150,20 @@ impl Session {
                 &Symbol::system("PropagateAborts"),
             )?,
         };
-        let propagate = match parse_check_abort_propagation(propagate_expr.as_ref()) {
-            Ok(mode) => mode,
-            Err(detail) => return Ok(self.invalid_call_with_arg_form("CheckAbort", args, detail)),
+        let propagation = match parse_check_abort_propagation(propagate_expr.as_ref()) {
+            Ok(propagation) => propagation,
+            Err(error) => return Ok(self.invalid_check_abort_option_call(args, error)),
         };
+        if let Some(invalid_value) = propagation.invalid_value.as_ref() {
+            self.push_message(
+                "CheckAbort",
+                "opttfa",
+                format!(
+                    "The value of the option PropagateAborts -> {invalid_value} should be True, False or Automatic."
+                ),
+            );
+        }
+        let propagate = propagation.mode;
         let pending_checkpoint = self.abort_protect_pending;
 
         let primary_result = self.evaluate(args[0].clone());
@@ -189,7 +212,7 @@ impl Session {
         match args {
             [expr, cleanup] => {
                 let primary_result = self.evaluate(expr.clone());
-                self.resume_with_cleanup_after_primary(cleanup.clone(), primary_result)
+                self.drive_with_cleanup_primary(cleanup.clone(), primary_result)
             }
             [init, expr, cleanup] => {
                 let init_result = self.evaluate(init.clone());
@@ -472,9 +495,27 @@ impl Session {
         match outcome {
             Ok(_) => {
                 let primary_result = self.evaluate(expr);
-                self.resume_with_cleanup_after_primary(cleanup, primary_result)
+                self.drive_with_cleanup_primary(cleanup, primary_result)
             }
             Err(error) => self.resume_with_cleanup_after_primary(cleanup, Err(error)),
+        }
+    }
+
+    fn drive_with_cleanup_primary(
+        &mut self,
+        cleanup: Expr,
+        primary_result: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        let outcome = self.suspend_with_result_frame(primary_result, {
+            let cleanup = cleanup.clone();
+            move |session, primary_outcome| {
+                session.resume_with_cleanup_after_primary(cleanup, primary_outcome)
+            }
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.resume_with_cleanup_after_primary(cleanup, outcome),
         }
     }
 
@@ -535,6 +576,38 @@ impl Session {
 
         outcome
     }
+
+    fn invalid_check_abort_option_call(
+        &mut self,
+        args: &[Expr],
+        error: CheckAbortOptionError,
+    ) -> Expr {
+        let held_call = Expr::call(system_expr("CheckAbort"), args.to_vec());
+        match error {
+            CheckAbortOptionError::NonOption(offender) => self.invalid_call_with_message(
+                "CheckAbort",
+                args,
+                "nonopt",
+                format!(
+                    "Options expected (instead of {offender}) beyond position 2 in {held_call}. An option must be a rule or a list of rules."
+                ),
+            ),
+            CheckAbortOptionError::InvalidOptionName(offender) => self.invalid_call_with_message(
+                "CheckAbort",
+                args,
+                "optrs",
+                format!(
+                    "Option specification {offender} in {held_call} is not a rule for a symbol or string."
+                ),
+            ),
+            CheckAbortOptionError::UnknownOption(option_name) => self.invalid_call_with_message(
+                "CheckAbort",
+                args,
+                "optx",
+                format!("Unknown option {option_name} in {held_call}."),
+            ),
+        }
+    }
 }
 
 fn is_failsafe_failure_like(expr: &Expr) -> bool {
@@ -550,37 +623,74 @@ fn render_assert_failure_message(test: &Expr, tag: Option<&Expr>, value: &Expr) 
 
 fn parse_check_abort_propagation(
     option_expr: Option<&Expr>,
-) -> Result<PropagateAbortsMode, &'static str> {
+) -> Result<CheckAbortPropagation, CheckAbortOptionError> {
     let Some(option_expr) = option_expr else {
-        return Ok(PropagateAbortsMode::Automatic);
+        return Ok(CheckAbortPropagation {
+            mode: PropagateAbortsMode::Automatic,
+            invalid_value: None,
+        });
     };
 
+    parse_check_abort_propagation_expr(option_expr)?.map_or_else(
+        || {
+            Ok(CheckAbortPropagation {
+                mode: PropagateAbortsMode::Automatic,
+                invalid_value: None,
+            })
+        },
+        Ok,
+    )
+}
+
+fn parse_check_abort_propagation_expr(
+    option_expr: &Expr,
+) -> Result<Option<CheckAbortPropagation>, CheckAbortOptionError> {
     let Expr::Call { head, args } = option_expr else {
-        return Err(
-            "expected PropagateAborts -> True|False|Automatic as the optional third argument",
-        );
+        return Err(CheckAbortOptionError::NonOption(option_expr.clone()));
     };
 
-    if !is_system_symbol_name(head, "Rule") || args.len() != 2 {
-        return Err(
-            "expected PropagateAborts -> True|False|Automatic as the optional third argument",
-        );
+    if is_system_symbol_name(head, heads::structure::LIST) {
+        for item in args {
+            if let Some(propagation) = parse_check_abort_propagation_expr(item)? {
+                return Ok(Some(propagation));
+            }
+        }
+        return Ok(None);
     }
 
-    if !is_system_symbol_name(&args[0], "PropagateAborts") {
-        return Err(
-            "expected PropagateAborts -> True|False|Automatic as the optional third argument",
-        );
+    if !(is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
+        || args.len() != 2
+    {
+        return Err(CheckAbortOptionError::NonOption(option_expr.clone()));
     }
 
-    if is_system_symbol_name(&args[1], "True") {
-        Ok(PropagateAbortsMode::True)
+    let option_name = check_abort_option_name(&args[0])
+        .ok_or_else(|| CheckAbortOptionError::InvalidOptionName(option_expr.clone()))?;
+    if option_name.name() != "PropagateAborts" {
+        return Err(CheckAbortOptionError::UnknownOption(option_name));
+    }
+
+    let (mode, invalid_value) = if is_system_symbol_name(&args[1], "True") {
+        (PropagateAbortsMode::True, None)
     } else if is_system_symbol_name(&args[1], "False") {
-        Ok(PropagateAbortsMode::False)
+        (PropagateAbortsMode::False, None)
     } else if is_system_symbol_name(&args[1], "Automatic") {
-        Ok(PropagateAbortsMode::Automatic)
+        (PropagateAbortsMode::Automatic, None)
     } else {
-        Err("expected PropagateAborts -> True|False|Automatic as the optional third argument")
+        (PropagateAbortsMode::Automatic, Some(args[1].clone()))
+    };
+
+    Ok(Some(CheckAbortPropagation {
+        mode,
+        invalid_value,
+    }))
+}
+
+fn check_abort_option_name(expr: &Expr) -> Option<Symbol> {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => Some(symbol.clone()),
+        Expr::Atom(Atom::String(name)) => resolve_unqualified_symbol(name),
+        _ => None,
     }
 }
 
@@ -605,7 +715,11 @@ pub(super) fn apply_callable_failsafe_wrapper_to_args(head: &Expr, args: &[Expr]
 
     Some(Expr::call(
         system_expr("If"),
-        vec![Expr::call(test, args.to_vec()), success, fallback],
+        vec![
+            Expr::call(system_expr("TrueQ"), vec![Expr::call(test, args.to_vec())]),
+            success,
+            fallback,
+        ],
     ))
 }
 
