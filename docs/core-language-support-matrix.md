@@ -271,11 +271,17 @@ once in its primary implementation group. Other groups may mention it as
   keyed-helper operator-form parity across `KeyMap` / `KeyValueMap` /
   `KeySelect` / `AssociationMap` / `Merge` / `CountsBy` / `GroupBy`,
   rule-list-normalizing `KeySelect` / `KeySort` / `KeySortBy`, mixed
-  association/rule-list `Merge`, current list-form `KeyUnion` /
-  `KeyIntersection` / `KeyComplement` semantics over keyed collections,
-  callable `Key[key][assoc]` extraction, custom `KeySort` comparers, basic
-  `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]` forms, and
-  held symbol-mutation first passes for `AssociateTo` / `KeyDropFrom`
+  association/rule-list `Merge` plus more precise invalid-item diagnostics,
+  current list-form `KeyUnion` / `KeyIntersection` / `KeyComplement`
+  semantics over association, rule, and rule-list keyed collections,
+  including `KeyUnion[..., f]` fill behavior and current `KeyComplement`
+  option-tail parity, current `AssociationThread` rule plus singleton/list
+  threading, callable `Key[key][assoc]` extraction, custom `KeySort`
+  comparers, `Catenate` over lists plus association values with current
+  invalid-argument parity, current `GroupBy[list, f, g]` reducer support,
+  basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
+  forms, and held symbol-mutation first passes for `AssociateTo` /
+  `KeyDropFrom`
 - `planned`: any remaining keyed-helper rule-list breadth and deeper
   association semantics beyond the current first-pass subset
 

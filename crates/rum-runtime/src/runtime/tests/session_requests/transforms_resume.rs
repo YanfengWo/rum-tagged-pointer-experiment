@@ -429,6 +429,33 @@ fn resume_eval_request_with_input_can_finish_keysort_after_suspending_comparer()
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_keyunion_after_suspending_fill_function() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "KeyUnion[{Association[a -> 1], Association[]}, Function[k, InputString[\"fill: \"]]]",
+        )
+        .expect_err("KeyUnion should suspend when the fill function requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "fill: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue KeyUnion after the fill function resolves");
+
+    assert_eq!(
+        response.value.to_string(),
+        "List[Association[Rule[a, 1]], Association[Rule[a, \"done\"]]]"
+    );
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_match_limit() {
     let mut session = Session::new();
 

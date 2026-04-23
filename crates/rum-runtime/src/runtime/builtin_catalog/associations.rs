@@ -88,12 +88,12 @@ pub(super) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "AssociationThread",
-        "Threads key and value lists into an association in the current first-pass subset.",
+        "Threads rule or key/value inputs into an association in the current first-pass subset.",
         BuiltinHandler::AssociationThread,
     ),
     BuiltinSpec::ordinary(
         "KeyUnion",
-        "Builds a key-union association in the current first-pass subset.",
+        "Builds keyed unions, including the current missing-key fill-function form.",
         BuiltinHandler::KeyUnion,
     ),
     BuiltinSpec::ordinary(
@@ -135,7 +135,7 @@ pub(super) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "Catenate",
-        "Concatenates a list of associations into a single association in the current first-pass subset.",
+        "Concatenates lists and association values into a list in the current first-pass subset.",
         BuiltinHandler::Catenate,
     ),
     BuiltinSpec::ordinary(
@@ -150,7 +150,7 @@ pub(super) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "GroupBy",
-        "Groups list elements by transformed keys in the current first-pass subset.",
+        "Groups list elements by transformed keys, including the current reducer form.",
         BuiltinHandler::GroupBy,
     ),
     BuiltinSpec::ordinary(

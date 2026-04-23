@@ -12,6 +12,12 @@ pub(in crate::runtime) struct KeyedEntries {
     pub(in crate::runtime) entries: Vec<(Expr, Expr)>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) enum KeyedEntriesListError {
+    NotList,
+    InvalidElement(Expr),
+}
+
 pub(in crate::runtime) fn association_entries_from_expr(expr: &Expr) -> Option<Vec<(Expr, Expr)>> {
     let Expr::Call { head, args } = expr else {
         return None;
@@ -50,6 +56,16 @@ pub(in crate::runtime) fn keyed_entries_from_expr(expr: &Expr) -> Option<KeyedEn
         kind: KeyedCollectionKind::RuleList,
         entries,
     })
+}
+
+pub(in crate::runtime) fn single_rule_or_keyed_entries_from_expr(
+    expr: &Expr,
+) -> Option<Vec<(Expr, Expr)>> {
+    if let Some(entry) = parse_association_entry(expr) {
+        return Some(vec![entry]);
+    }
+
+    keyed_entries_from_expr(expr).map(|keyed| keyed.entries)
 }
 
 pub(in crate::runtime) fn parse_association_entries(items: &[Expr]) -> Option<Vec<(Expr, Expr)>> {
@@ -146,13 +162,16 @@ pub(in crate::runtime) fn list_items(expr: &Expr) -> Option<&[Expr]> {
     }
 }
 
-pub(in crate::runtime) fn parse_keyed_entries_list_expr(
+pub(in crate::runtime) fn parse_keyed_entries_list_expr_with_diagnostics(
     expr: &Expr,
-) -> Option<Vec<Vec<(Expr, Expr)>>> {
-    let items = list_items(expr)?;
+) -> Result<Vec<Vec<(Expr, Expr)>>, KeyedEntriesListError> {
+    let items = list_items(expr).ok_or(KeyedEntriesListError::NotList)?;
     items
         .iter()
-        .map(|item| keyed_entries_from_expr(item).map(|keyed| keyed.entries))
+        .map(|item| {
+            single_rule_or_keyed_entries_from_expr(item)
+                .ok_or_else(|| KeyedEntriesListError::InvalidElement(item.clone()))
+        })
         .collect()
 }
 
@@ -215,12 +234,20 @@ pub(in crate::runtime) fn invalid_association_or_rule_message(expr: &Expr) -> St
     format!("The argument {expr} is not a valid Association or rule.")
 }
 
+pub(in crate::runtime) fn invalid_rule_message(expr: &Expr) -> String {
+    format!("The argument {expr} is not a valid rule.")
+}
+
 pub(in crate::runtime) fn invalid_association_or_list_message(expr: &Expr) -> String {
     format!("The argument {expr} is not a valid Association or a list.")
 }
 
 pub(in crate::runtime) fn invalid_keyed_collection_list_message(expr: &Expr) -> String {
     format!("The argument {expr} is not a valid list of Associations or rules or lists of rules.")
+}
+
+pub(in crate::runtime) fn invalid_keyed_collection_outer_list_message(expr: &Expr) -> String {
+    format!("The argument {expr} is not a valid list of Associations or rules.")
 }
 
 pub(in crate::runtime) fn invalid_association_update_spec_message(expr: &Expr) -> String {
@@ -236,6 +263,14 @@ pub(in crate::runtime) fn missing_immediate_value_message(
 
 pub(in crate::runtime) fn list_expected_message(position: usize, expr: &Expr) -> String {
     format!("List expected at position {position} in {expr}.")
+}
+
+pub(in crate::runtime) fn nonempty_list_message(expr: &Expr) -> String {
+    format!("Argument {expr} should be a nonempty list.")
+}
+
+pub(in crate::runtime) fn same_length_message(lhs: &Expr, rhs: &Expr) -> String {
+    format!("{lhs} and {rhs} must have the same length.")
 }
 
 pub(in crate::runtime) fn protected_tag_write_message(expr: &Expr) -> Option<String> {

@@ -226,7 +226,12 @@ impl Session {
                     Vec::new(),
                 )
             }
-            _ => Ok(self.invalid_call_with_arg_range("AssociationMap", args, 1, 2)),
+            _ => Ok(self.invalid_call_with_message(
+                "AssociationMap",
+                args,
+                "argt",
+                one_or_two_argument_count_message("AssociationMap", args.len()),
+            )),
         }
     }
 
@@ -238,13 +243,29 @@ impl Session {
         match args {
             [combiner] => Ok(keyed_operator_form_slot_first("Merge", combiner.clone())),
             [associations_expr, combiner] => {
-                let Some(associations) = parse_keyed_entries_list_expr(associations_expr) else {
-                    return Ok(self.invalid_call_with_message(
-                        "Merge",
-                        args,
-                        "list1",
-                        invalid_keyed_collection_list_message(associations_expr),
-                    ));
+                let associations =
+                    match parse_keyed_entries_list_expr_with_diagnostics(associations_expr) {
+                        Ok(associations) => associations,
+                        Err(KeyedEntriesListError::NotList) => {
+                            return Ok(self.invalid_call_with_message(
+                                "Merge",
+                                args,
+                                "list1",
+                                invalid_keyed_collection_list_message(associations_expr),
+                            ));
+                        }
+                        Err(KeyedEntriesListError::InvalidElement(expr)) => {
+                            return Ok(self.invalid_call_with_message(
+                                "Merge",
+                                args,
+                                "list1",
+                                invalid_keyed_collection_list_message(&expr),
+                            ));
+                        }
+                    };
+
+                if associations.is_empty() {
+                    return Ok(render_association(Vec::new()));
                 };
 
                 let mut grouped: Vec<(Expr, Vec<Expr>)> = Vec::new();
@@ -269,7 +290,12 @@ impl Session {
                     Vec::new(),
                 )
             }
-            _ => Ok(self.invalid_call_with_arg_range("Merge", args, 1, 2)),
+            _ => Ok(self.invalid_call_with_message(
+                "Merge",
+                args,
+                "argt",
+                one_or_two_argument_count_message("Merge", args.len()),
+            )),
         }
     }
 
@@ -299,7 +325,12 @@ impl Session {
                     Vec::new(),
                 )
             }
-            _ => Ok(self.invalid_call_with_arg_range("CountsBy", args, 1, 2)),
+            _ => Ok(self.invalid_call_with_message(
+                "CountsBy",
+                args,
+                "argt",
+                one_or_two_argument_count_message("CountsBy", args.len()),
+            )),
         }
     }
 
@@ -324,12 +355,38 @@ impl Session {
                     head.clone(),
                     args.to_vec(),
                     function.clone(),
+                    None,
                     items.to_vec(),
                     0,
                     Vec::new(),
                 )
             }
-            _ => Ok(self.invalid_call_with_arg_range("GroupBy", args, 1, 2)),
+            [expr, function, reducer] => {
+                let Some(items) = list_items(expr) else {
+                    return Ok(self.invalid_call_with_message(
+                        "GroupBy",
+                        args,
+                        "list1",
+                        invalid_keyed_collection_list_message(expr),
+                    ));
+                };
+
+                self.resume_group_by_from_index(
+                    head.clone(),
+                    args.to_vec(),
+                    function.clone(),
+                    Some(reducer.clone()),
+                    items.to_vec(),
+                    0,
+                    Vec::new(),
+                )
+            }
+            _ => Ok(self.invalid_call_with_message(
+                "GroupBy",
+                args,
+                "argb",
+                between_one_and_three_argument_count_message("GroupBy", args.len()),
+            )),
         }
     }
 
@@ -635,23 +692,35 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         function: Expr,
+        reducer: Option<Expr>,
         items: Vec<Expr>,
         index: usize,
         grouped: Vec<(Expr, Vec<Expr>)>,
     ) -> Result<Expr, EvalError> {
         let Some(item) = items.get(index).cloned() else {
-            return Ok(render_association(
-                grouped
-                    .into_iter()
-                    .map(|(key, values)| (key, Expr::call(system_expr("List"), values)))
-                    .collect(),
-            ));
+            return match reducer {
+                None => Ok(render_association(
+                    grouped
+                        .into_iter()
+                        .map(|(key, values)| (key, Expr::call(system_expr("List"), values)))
+                        .collect(),
+                )),
+                Some(reducer) => self.resume_group_by_reduce_from_index(
+                    head,
+                    call_args,
+                    reducer,
+                    grouped,
+                    0,
+                    Vec::new(),
+                ),
+            };
         };
 
         let key_result = self.evaluate(Expr::call(function.clone(), vec![item.clone()]));
         let suspended_head = head.clone();
         let suspended_call_args = call_args.clone();
         let suspended_function = function.clone();
+        let suspended_reducer = reducer.clone();
         let suspended_items = items.clone();
         let suspended_grouped = grouped.clone();
         let suspended_item = item.clone();
@@ -660,6 +729,7 @@ impl Session {
                 suspended_head,
                 suspended_call_args,
                 suspended_function,
+                suspended_reducer,
                 suspended_items,
                 index,
                 suspended_grouped,
@@ -668,7 +738,9 @@ impl Session {
             )
         })?;
 
-        self.resume_group_by_with_value(head, call_args, function, items, index, grouped, item, key)
+        self.resume_group_by_with_value(
+            head, call_args, function, reducer, items, index, grouped, item, key,
+        )
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -677,6 +749,7 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         function: Expr,
+        reducer: Option<Expr>,
         items: Vec<Expr>,
         index: usize,
         mut grouped: Vec<(Expr, Vec<Expr>)>,
@@ -689,7 +762,79 @@ impl Session {
             grouped.push((key, vec![item]));
         }
 
-        self.resume_group_by_from_index(head, call_args, function, items, index + 1, grouped)
+        self.resume_group_by_from_index(
+            head,
+            call_args,
+            function,
+            reducer,
+            items,
+            index + 1,
+            grouped,
+        )
+    }
+
+    fn resume_group_by_reduce_from_index(
+        &mut self,
+        head: Expr,
+        call_args: Vec<Expr>,
+        reducer: Expr,
+        grouped: Vec<(Expr, Vec<Expr>)>,
+        index: usize,
+        reduced: Vec<(Expr, Expr)>,
+    ) -> Result<Expr, EvalError> {
+        let Some((key, values)) = grouped.get(index).cloned() else {
+            return Ok(render_association(reduced));
+        };
+
+        let value_result = self.evaluate(Expr::call(
+            reducer.clone(),
+            vec![Expr::call(system_expr("List"), values)],
+        ));
+        let suspended_head = head.clone();
+        let suspended_call_args = call_args.clone();
+        let suspended_reducer = reducer.clone();
+        let suspended_grouped = grouped.clone();
+        let suspended_reduced = reduced.clone();
+        let suspended_key = key.clone();
+        let value = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_group_by_reduce_with_value(
+                suspended_head,
+                suspended_call_args,
+                suspended_reducer,
+                suspended_grouped,
+                index,
+                suspended_reduced,
+                suspended_key,
+                value,
+            )
+        })?;
+
+        self.resume_group_by_reduce_with_value(
+            head, call_args, reducer, grouped, index, reduced, key, value,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn resume_group_by_reduce_with_value(
+        &mut self,
+        head: Expr,
+        call_args: Vec<Expr>,
+        reducer: Expr,
+        grouped: Vec<(Expr, Vec<Expr>)>,
+        index: usize,
+        mut reduced: Vec<(Expr, Expr)>,
+        key: Expr,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        reduced.push((key, value));
+        self.resume_group_by_reduce_from_index(
+            head,
+            call_args,
+            reducer,
+            grouped,
+            index + 1,
+            reduced,
+        )
     }
 }
 
@@ -709,4 +854,12 @@ fn key_sort_ordering_decision(value: &Expr) -> KeySortOrderingDecision {
             None => KeySortOrderingDecision::InsertBefore,
         },
     }
+}
+
+fn one_or_two_argument_count_message(symbol: &str, count: usize) -> String {
+    format!("{symbol} called with {count} arguments; 1 or 2 arguments are expected.")
+}
+
+fn between_one_and_three_argument_count_message(symbol: &str, count: usize) -> String {
+    format!("{symbol} called with {count} arguments; between 1 and 3 arguments are expected.")
 }

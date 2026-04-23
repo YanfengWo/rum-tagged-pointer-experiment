@@ -256,6 +256,14 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("KeyExistsQ[a -> 1, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
             .eval_text("KeyTake[Association[a -> 1, b -> 2, c -> 3], {b, a}]")
             .unwrap()
             .value
@@ -269,6 +277,22 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .value
             .to_string(),
         "Association[Rule[a, 1], Rule[c, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyTake[a -> 1, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyDrop[a -> 1, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[]"
     );
     assert_eq!(
         session
@@ -474,11 +498,43 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("AssociationThread[a -> 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("AssociationThread[a, {1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("AssociationThread[{a}, b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, b]]"
+    );
+    assert_eq!(
+        session
             .eval_text("KeyUnion[{Association[a -> 1, b -> 2], Association[b -> 9, c -> 3]}]")
             .unwrap()
             .value
             .to_string(),
         "List[Association[Rule[a, 1], Rule[b, 2], Rule[c, Missing[\"KeyAbsent\", c]]], Association[Rule[a, Missing[\"KeyAbsent\", a]], Rule[b, 9], Rule[c, 3]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyUnion[{Association[a -> 1], Association[a -> 2, b -> 3]}, f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[a, 1], Rule[b, f[b]]], Association[Rule[a, 2], Rule[b, 3]]]"
     );
     assert_eq!(
         session
@@ -517,6 +573,22 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     assert_eq!(
         session
             .eval_text("KeyComplement[{{a -> 1, b -> 2}, {b -> 9}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyUnion[{a -> 1, {b -> 2}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[a, 1], Rule[b, Missing[\"KeyAbsent\", b]]], Association[Rule[a, Missing[\"KeyAbsent\", a]], Rule[b, 2]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyComplement[{a -> 1, {b -> 2}}]")
             .unwrap()
             .value
             .to_string(),
@@ -713,6 +785,14 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Merge[{a -> 1, {a -> 2, b -> 3}}, Total]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, Total[List[1, 2]]], Rule[b, Total[List[3]]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Merge[Total][{Association[a -> 1, b -> 2], Association[a -> 3]}]")
             .unwrap()
             .value
@@ -725,7 +805,23 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .unwrap()
             .value
             .to_string(),
-        "Association[Rule[a, 1], Rule[b, 2]]"
+        "List[1, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Catenate[Association[a -> {1, 2}, b -> {3}]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2, 3]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Catenate[{Association[a -> {1, 2}], {3, 4}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1, 2], 3, 4]"
     );
     assert_eq!(
         session
@@ -758,6 +854,14 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .value
             .to_string(),
         "Association[Rule[1, List[a]], Rule[2, List[bb, dd]], Rule[3, List[ccc]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("GroupBy[{a, bb, ccc, dd}, StringLength[ToString[#]] &, Last]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[1, a], Rule[2, dd], Rule[3, ccc]]"
     );
     assert_eq!(
         session
@@ -861,13 +965,16 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .to_string(),
         "Association[Rule[a, 1]]"
     );
+    let outcome = session.eval_text("AssociationThread[{a}, {1, 2}]").unwrap();
     assert_eq!(
-        session
-            .eval_text("AssociationThread[{a}, {1, 2}]")
-            .unwrap()
-            .value
-            .to_string(),
+        outcome.value.to_string(),
         "AssociationThread[List[a], List[1, 2]]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociationThread" && message.tag == "idim")
     );
     let outcome = session.eval_text("AssociationMap[f, a]").unwrap();
     assert_eq!(outcome.value.to_string(), "AssociationMap[f, a]");
@@ -949,7 +1056,20 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .unwrap()
             .value
             .to_string(),
-        "Catenate[Association[Rule[a, 1]]]"
+        "List[1]"
+    );
+    let outcome = session
+        .eval_text("Catenate[{Association[a -> 1], a}]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "Catenate[List[Association[Rule[a, 1]], a]]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Catenate" && message.tag == "invrp")
     );
     assert_eq!(
         session.eval_text("Counts[a]").unwrap().value.to_string(),
@@ -1111,6 +1231,24 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
     );
     assert!(outcome.messages.is_empty());
 
+    let outcome = session.eval_text("AssociationMap[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "AssociationMap[]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociationMap" && message.tag == "argt")
+    );
+
+    let outcome = session.eval_text("AssociationMap[f, {a}, b]").unwrap();
+    assert_eq!(outcome.value.to_string(), "AssociationMap[f, List[a], b]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociationMap" && message.tag == "argt")
+    );
+
     let outcome = session.eval_text("KeySortBy[a]").unwrap();
     assert_eq!(
         outcome.value.to_string(),
@@ -1142,7 +1280,7 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
         outcome
             .messages
             .iter()
-            .any(|message| message.symbol == "AssociationThread" && message.tag == "argx")
+            .any(|message| message.symbol == "AssociationThread" && message.tag == "invrk")
     );
 
     let outcome = session.eval_text("KeyUnion[Association[a -> 1]]").unwrap();
@@ -1150,7 +1288,12 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
         outcome.value.to_string(),
         "KeyUnion[Association[Rule[a, 1]]]"
     );
-    assert!(outcome.messages.is_empty());
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyUnion" && message.tag == "invar")
+    );
 
     let outcome = session
         .eval_text("KeyIntersection[Association[a -> 1]]")
@@ -1159,7 +1302,12 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
         outcome.value.to_string(),
         "KeyIntersection[Association[Rule[a, 1]]]"
     );
-    assert!(outcome.messages.is_empty());
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyIntersection" && message.tag == "invar")
+    );
 
     let outcome = session
         .eval_text("KeyComplement[Association[a -> 1]]")
@@ -1168,19 +1316,122 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
         outcome.value.to_string(),
         "KeyComplement[Association[Rule[a, 1]]]"
     );
-    assert!(outcome.messages.is_empty());
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyComplement" && message.tag == "invar")
+    );
 
     let outcome = session.eval_text("KeyUnion[{}]").unwrap();
     assert_eq!(outcome.value.to_string(), "List[]");
     assert!(outcome.messages.is_empty());
 
+    let outcome = session
+        .eval_text("KeyUnion[{Association[a -> 1]}, f, g]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyUnion[List[Association[Rule[a, 1]]], f, g]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyUnion" && message.tag == "argt")
+    );
+
     let outcome = session.eval_text("KeyIntersection[{}]").unwrap();
     assert_eq!(outcome.value.to_string(), "List[]");
     assert!(outcome.messages.is_empty());
 
+    let outcome = session.eval_text("KeyIntersection[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyIntersection[]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyIntersection" && message.tag == "argx")
+    );
+
     let outcome = session.eval_text("KeyComplement[{}]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyComplement[List[]]");
-    assert!(outcome.messages.is_empty());
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyComplement" && message.tag == "empt")
+    );
+
+    let outcome = session
+        .eval_text("KeyComplement[{Association[a -> 1]}, b]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyComplement[List[Association[Rule[a, 1]]], b]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyComplement" && message.tag == "nonopt")
+    );
+
+    let outcome = session
+        .eval_text("KeyComplement[{Association[a -> 1]}, x -> y]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyComplement[List[Association[Rule[a, 1]]], Rule[x, y]]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyComplement" && message.tag == "optx")
+    );
+
+    let outcome = session
+        .eval_text("KeyUnion[{Association[a -> 1], a}]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyUnion[List[Association[Rule[a, 1]], a]]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyUnion" && message.tag == "invas")
+    );
+
+    let outcome = session
+        .eval_text("KeyIntersection[{Association[a -> 1], a}]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyIntersection[List[Association[Rule[a, 1]], a]]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyIntersection" && message.tag == "invas")
+    );
+
+    let outcome = session
+        .eval_text("KeyComplement[{Association[a -> 1], a}]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyComplement[List[Association[Rule[a, 1]], a]]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyComplement" && message.tag == "invrl")
+    );
 
     let outcome = session.eval_text("Missing[]").unwrap();
     assert_eq!(outcome.value.to_string(), "Missing[]");
@@ -1197,5 +1448,46 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .messages
             .iter()
             .any(|message| message.symbol == "CountsBy" && message.tag == "list")
+    );
+
+    let outcome = session.eval_text("CountsBy[{a}, f, g]").unwrap();
+    assert_eq!(outcome.value.to_string(), "CountsBy[List[a], f, g]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "CountsBy" && message.tag == "argt")
+    );
+
+    let outcome = session.eval_text("Merge[{a}, f]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Merge[List[a], f]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Merge" && message.tag == "list1")
+    );
+
+    let outcome = session
+        .eval_text("Merge[{Association[a -> 1]}, f, g]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "Merge[List[Association[Rule[a, 1]]], f, g]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Merge" && message.tag == "argt")
+    );
+
+    let outcome = session.eval_text("GroupBy[{a}, f, g, h]").unwrap();
+    assert_eq!(outcome.value.to_string(), "GroupBy[List[a], f, g, h]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "GroupBy" && message.tag == "argb")
     );
 }

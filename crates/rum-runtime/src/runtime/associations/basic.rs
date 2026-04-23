@@ -110,7 +110,7 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("KeyExistsQ", args, 2));
         };
 
-        let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
+        let Some(entries) = single_rule_or_keyed_entries_from_expr(expr) else {
             self.push_message(
                 "KeyExistsQ",
                 "invrl",
@@ -391,13 +391,12 @@ fn keyed_take_drop_result_for_expr(
 ) -> Option<Expr> {
     let selected_keys = parse_key_spec(key_spec)?;
 
-    if let Some(keyed) = keyed_entries_from_expr(expr) {
+    if let Some(entries) = single_rule_or_keyed_entries_from_expr(expr) {
         let filtered = if keep_selected {
             let mut taken = Vec::new();
             for selected_key in &selected_keys {
                 taken.extend(
-                    keyed
-                        .entries
+                    entries
                         .iter()
                         .filter(|(key, _)| key == selected_key)
                         .cloned(),
@@ -405,8 +404,7 @@ fn keyed_take_drop_result_for_expr(
             }
             taken
         } else {
-            keyed
-                .entries
+            entries
                 .into_iter()
                 .filter(|(key, _)| !selected_keys.iter().any(|candidate| candidate == key))
                 .collect()
