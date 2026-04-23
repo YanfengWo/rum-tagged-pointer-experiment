@@ -107,7 +107,7 @@ impl Session {
     }
 }
 
-fn parse_part_selectors(exprs: &[Expr]) -> Option<Vec<PartSelector>> {
+pub(super) fn parse_part_selectors(exprs: &[Expr]) -> Option<Vec<PartSelector>> {
     exprs.iter().map(parse_part_selector).collect()
 }
 

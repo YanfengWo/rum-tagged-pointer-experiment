@@ -30,6 +30,14 @@ fn association_and_associationq_cover_first_pass_rule_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Association[{a -> 1, {b -> 2}, Association[c -> 3]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1], Rule[b, 2], Rule[c, 3]]"
+    );
+    assert_eq!(
+        session
             .eval_text("<|a -> 1, b -> 2, a -> 3|>")
             .unwrap()
             .value
@@ -365,6 +373,22 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .value
             .to_string(),
         "Association[Rule[a, 1], Rule[c, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyTake[Association[a -> 1, Key[a] -> 7], Key[a]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyDrop[Association[a -> 1, Key[a] -> 7, b -> 2], {Key[a], b}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[Key[a], 7]]"
     );
     assert_eq!(
         session
@@ -726,6 +750,19 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
         session.eval_text("assoc").unwrap().value.to_string(),
         "Association[Rule[a, 1], Rule[b, 2]]"
     );
+    session.eval_text("assoc = Association[a -> 1]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("AssociateTo[assoc, {Association[b -> 2], c -> 3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1], Rule[b, 2], Rule[c, 3]]"
+    );
+    assert_eq!(
+        session.eval_text("assoc").unwrap().value.to_string(),
+        "Association[Rule[a, 1], Rule[b, 2], Rule[c, 3]]"
+    );
     session
         .eval_text("assoc = Association[a -> 1, b -> 2, c -> 3]")
         .unwrap();
@@ -740,6 +777,126 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     assert_eq!(
         session.eval_text("assoc").unwrap().value.to_string(),
         "Association[Rule[b, 2]]"
+    );
+    session
+        .eval_text("assoc = Association[a -> 1, Key[a] -> 7, b -> 2]")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("KeyDropFrom[assoc, {Key[a], b}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[Key[a], 7]]"
+    );
+    assert_eq!(
+        session.eval_text("assoc").unwrap().value.to_string(),
+        "Association[Rule[Key[a], 7]]"
+    );
+    session.eval_text("parts = {Association[a -> 1]}").unwrap();
+    assert_eq!(
+        session
+            .eval_text("AssociateTo[parts[[1]], b -> 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[a, 1], Rule[b, 2]]]"
+    );
+    assert_eq!(
+        session.eval_text("parts").unwrap().value.to_string(),
+        "List[Association[Rule[a, 1], Rule[b, 2]]]"
+    );
+    session
+        .eval_text("parts = {Association[a -> 1], Association[a -> 2]}")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("AssociateTo[parts[[{1, 2}]], b -> 3]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[a, 1], Rule[b, 3]], Association[Rule[a, 2], Rule[b, 3]]]"
+    );
+    assert_eq!(
+        session.eval_text("parts").unwrap().value.to_string(),
+        "List[Association[Rule[a, 1], Rule[b, 3]], Association[Rule[a, 2], Rule[b, 3]]]"
+    );
+    session
+        .eval_text("parts = {Association[a -> 1], 1}")
+        .unwrap();
+    let invalid_part_associate = session
+        .eval_text("AssociateTo[parts[[{1, 2}]], b -> 3]")
+        .unwrap();
+    assert!(
+        invalid_part_associate
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociateTo" && message.tag == "invak")
+    );
+    assert_eq!(
+        session.eval_text("parts").unwrap().value.to_string(),
+        "List[Association[Rule[a, 1]], 1]"
+    );
+    session
+        .eval_text("nested = Association[a -> Association[b -> 1]]")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("AssociateTo[nested[[Key[a]]], c -> 3]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, Association[Rule[b, 1], Rule[c, 3]]]]"
+    );
+    assert_eq!(
+        session.eval_text("nested").unwrap().value.to_string(),
+        "Association[Rule[a, Association[Rule[b, 1], Rule[c, 3]]]]"
+    );
+    session
+        .eval_text("parts = {Association[a -> 1, b -> 2]}")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("KeyDropFrom[parts[[1]], a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[b, 2]]"
+    );
+    assert_eq!(
+        session.eval_text("parts").unwrap().value.to_string(),
+        "List[Association[Rule[b, 2]]]"
+    );
+    session.eval_text("parts = {Association[a -> 1]}").unwrap();
+    session.eval_text("Protect[parts]").unwrap();
+    let blocked_part_associate = session
+        .eval_text("AssociateTo[parts[[1]], b -> 2]")
+        .unwrap();
+    assert!(
+        blocked_part_associate
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociateTo" && message.tag == "wrsym")
+    );
+    assert_eq!(
+        session.eval_text("parts").unwrap().value.to_string(),
+        "List[Association[Rule[a, 1]]]"
+    );
+    session.eval_text("Unprotect[parts]").unwrap();
+    session
+        .eval_text("nested = Association[a -> Association[b -> 1, c -> 2]]")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("KeyDropFrom[nested[[Key[a]]], b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[c, 2]]"
+    );
+    assert_eq!(
+        session.eval_text("nested").unwrap().value.to_string(),
+        "Association[Rule[a, Association[Rule[c, 2]]]]"
     );
     session.eval_text("ClearAll[assoc]").unwrap();
     let missing_value = session.eval_text("AssociateTo[assoc, b -> 2]").unwrap();

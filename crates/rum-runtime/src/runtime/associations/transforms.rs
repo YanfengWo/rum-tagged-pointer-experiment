@@ -1,5 +1,21 @@
 use super::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum HeldAssociationPartMutationResult {
+    UpdatedTarget,
+    UpdatedPart,
+}
+
+fn part_target_selectors_are_exact_leaf_path(selector_exprs: &[Expr]) -> bool {
+    selector_exprs.iter().all(|expr| {
+        expr_as_signed_isize(expr).is_some()
+            || matches!(
+                expr,
+                Expr::Call { head, args } if is_system_symbol_name(head, "Key") && args.len() == 1
+            )
+    })
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_key_map(
         &mut self,
@@ -376,6 +392,20 @@ impl Session {
             );
         };
 
+        if let Some((target, selector_exprs)) = self.normalize_part_mutation_target(target_expr) {
+            if let Some(updated) = self.try_eval_held_association_part_mutation(
+                "AssociateTo",
+                target_expr.clone(),
+                target,
+                selector_exprs,
+                spec.clone(),
+                Self::apply_associate_to_value,
+                HeldAssociationPartMutationResult::UpdatedTarget,
+            )? {
+                return Ok(updated);
+            }
+        }
+
         if association_entries_from_expr(target_expr).is_some()
             || rule_list_entries_from_expr(target_expr).is_some()
         {
@@ -445,6 +475,22 @@ impl Session {
                 Self::apply_key_drop_from_value,
             );
         };
+
+        if let Some((target, selector_exprs)) = self.normalize_part_mutation_target(target_expr) {
+            if part_target_selectors_are_exact_leaf_path(&selector_exprs) {
+                if let Some(updated) = self.try_eval_held_association_part_mutation(
+                    "KeyDropFrom",
+                    target_expr.clone(),
+                    target,
+                    selector_exprs,
+                    key_spec.clone(),
+                    Self::apply_key_drop_from_value,
+                    HeldAssociationPartMutationResult::UpdatedPart,
+                )? {
+                    return Ok(updated);
+                }
+            }
+        }
 
         if association_entries_from_expr(target_expr).is_some() {
             let updated = Self::apply_key_drop_from_value(target_expr.clone(), key_spec.clone())
@@ -563,6 +609,93 @@ impl Session {
         definition.delayed_own_value = None;
 
         Ok(updated)
+    }
+
+    fn normalize_part_mutation_target(&self, target_expr: &Expr) -> Option<(Symbol, Vec<Expr>)> {
+        let Expr::Call { head, args } = target_expr else {
+            return None;
+        };
+
+        if !is_system_symbol_name(head, "Part") || args.len() < 2 {
+            return None;
+        }
+
+        let target = self.normalize_symbol_target_expr(&args[0], true)?;
+        Some((target, args[1..].to_vec()))
+    }
+
+    fn try_eval_held_association_part_mutation(
+        &mut self,
+        operator: &'static str,
+        target_expr: Expr,
+        target: Symbol,
+        selector_exprs: Vec<Expr>,
+        spec: Expr,
+        mutate: fn(Expr, Expr) -> Option<Expr>,
+        result: HeldAssociationPartMutationResult,
+    ) -> Result<Option<Expr>, EvalError> {
+        let held_call = vec![target_expr.clone(), spec.clone()];
+
+        if !self.ensure_symbol_not_protected_for_write(operator, &target) {
+            return Ok(Some(Expr::call(system_expr(operator), held_call)));
+        }
+
+        let Some(current) = self
+            .definitions
+            .get(&target)
+            .and_then(|definition| definition.own_value.clone())
+        else {
+            return Ok(None);
+        };
+
+        let Some(paths) = exact_position_paths_from_part_selector_exprs(&current, &selector_exprs)
+        else {
+            return Ok(None);
+        };
+
+        if paths.is_empty() {
+            return Ok(Some(Expr::call(system_expr(operator), held_call)));
+        }
+
+        let mut replacements = Vec::with_capacity(paths.len());
+        for path in paths {
+            let Some(part) = exact_expr_at_path(&current, &path) else {
+                return Ok(Some(Expr::call(system_expr(operator), held_call)));
+            };
+            let Some(updated_part) = mutate(part.clone(), spec.clone()) else {
+                let invalid_expr = match result {
+                    HeldAssociationPartMutationResult::UpdatedTarget => part,
+                    HeldAssociationPartMutationResult::UpdatedPart => target_expr,
+                };
+                return Ok(Some(self.invalid_call_with_message(
+                    operator,
+                    &held_call,
+                    "invak",
+                    invalid_association_message(&invalid_expr),
+                )));
+            };
+            replacements.push((path, updated_part));
+        }
+
+        let selected_result = replacements
+            .first()
+            .map(|(_, updated_part)| updated_part.clone())
+            .unwrap_or_else(|| Expr::call(system_expr(operator), held_call.clone()));
+
+        let mut updated_target = current;
+        for (path, updated_part) in replacements {
+            updated_target = replace_exact_path(updated_target, &path, updated_part);
+        }
+
+        let definition = self.definitions.entry(target).or_default();
+        definition.own_value = Some(updated_target.clone());
+        definition.delayed_own_value = None;
+
+        let value = match result {
+            HeldAssociationPartMutationResult::UpdatedTarget => updated_target,
+            HeldAssociationPartMutationResult::UpdatedPart => selected_result,
+        };
+        Ok(Some(value))
     }
 
     pub(in crate::runtime) fn eval_catenate(

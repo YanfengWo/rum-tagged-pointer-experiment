@@ -16,7 +16,7 @@ impl Session {
             _ => args.to_vec(),
         };
 
-        let Some(entries) = parse_association_entries(&source_items) else {
+        let Some(entries) = parse_association_entries_deep(&source_items) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 

@@ -27,9 +27,9 @@ pub(in crate::runtime) fn association_entries_from_expr(expr: &Expr) -> Option<V
         return None;
     }
 
-    Some(canonicalize_association_entries(parse_association_entries(
-        args,
-    )?))
+    Some(canonicalize_association_entries(
+        parse_association_entries_deep(args)?,
+    ))
 }
 
 pub(in crate::runtime) fn rule_list_entries_from_expr(expr: &Expr) -> Option<Vec<(Expr, Expr)>> {
@@ -72,6 +72,36 @@ pub(in crate::runtime) fn parse_association_entries(items: &[Expr]) -> Option<Ve
     items.iter().map(parse_association_entry).collect()
 }
 
+pub(in crate::runtime) fn parse_association_entries_deep(
+    items: &[Expr],
+) -> Option<Vec<(Expr, Expr)>> {
+    let mut entries = Vec::new();
+    for item in items {
+        entries.extend(parse_association_item_deep(item)?);
+    }
+    Some(entries)
+}
+
+fn parse_association_item_deep(expr: &Expr) -> Option<Vec<(Expr, Expr)>> {
+    if let Some(entry) = parse_association_entry(expr) {
+        return Some(vec![entry]);
+    }
+
+    if let Some(entries) = association_entries_from_expr(expr) {
+        return Some(entries);
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return None;
+    }
+
+    parse_association_entries_deep(args)
+}
+
 pub(in crate::runtime) fn render_association(entries: Vec<(Expr, Expr)>) -> Expr {
     let entries = canonicalize_association_entries(entries);
     Expr::call(
@@ -103,19 +133,32 @@ pub(in crate::runtime) fn association_position_and_value_by_key(
 
 pub(in crate::runtime) fn parse_key_spec(expr: &Expr) -> Option<Vec<Expr>> {
     let Expr::Call { head, args } = expr else {
-        return Some(vec![expr.clone()]);
+        return Some(vec![key_spec_key_expr(expr)]);
     };
 
     if !is_system_symbol_name(head, heads::structure::LIST) {
-        return Some(vec![expr.clone()]);
+        return Some(vec![key_spec_key_expr(expr)]);
     }
 
-    Some(args.clone())
+    Some(args.iter().map(key_spec_key_expr).collect())
+}
+
+fn key_spec_key_expr(expr: &Expr) -> Expr {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Key") && args.len() == 1 => {
+            args[0].clone()
+        }
+        _ => expr.clone(),
+    }
 }
 
 pub(in crate::runtime) fn parse_association_update_spec(spec: &Expr) -> Option<Vec<(Expr, Expr)>> {
     if let Some(entry) = parse_association_entry(spec) {
         return Some(vec![entry]);
+    }
+
+    if let Some(entries) = association_entries_from_expr(spec) {
+        return Some(entries);
     }
 
     let Expr::Call { head, args } = spec else {
@@ -125,7 +168,7 @@ pub(in crate::runtime) fn parse_association_update_spec(spec: &Expr) -> Option<V
         return None;
     }
 
-    parse_association_entries(args)
+    parse_association_entries_deep(args)
 }
 
 pub(in crate::runtime) fn normalize_key_value_pattern_spec(spec: &Expr) -> Option<Expr> {

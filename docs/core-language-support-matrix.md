@@ -280,15 +280,18 @@ once in its primary implementation group. Other groups may mention it as
   semantics over association, rule, and rule-list keyed collections,
   including `KeyUnion[..., f]` fill behavior and current `KeyComplement`
   option-tail parity, current `AssociationThread` rule plus singleton/list
-  threading, callable `Key[key][assoc]` extraction, callable
+  threading, deep `Association[...]` construction and `AssociateTo` update
+  specs over nested rule lists / associations, callable `Key[key][assoc]`
+  extraction, callable
   `Association[...][key]` lookup, current `Part[..., Key[...]]` association
   projection including missing-key propagation and no-mixed-key/index
-  diagnostics, custom `KeySort` comparers, `Catenate` over lists plus
-  association values with current invalid-argument parity, current
-  `GroupBy[list, f, g]` reducer support,
+  diagnostics, `Key[...]` key-spec unwrapping for the current `KeyTake` /
+  `KeyDrop` / `KeyDropFrom` subset, custom `KeySort` comparers,
+  `Catenate` over lists plus association values with current invalid-argument
+  parity, current `GroupBy[list, f, g]` reducer support,
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
-  forms plus current keyed-lookup propagation, and held symbol-mutation
-  first passes for `AssociateTo` / `KeyDropFrom`
+  forms plus current keyed-lookup propagation, and held symbol plus exact
+  part-target mutation first passes for `AssociateTo` / `KeyDropFrom`
 - `planned`: any remaining keyed-helper rule-list breadth and deeper
   association semantics beyond the current first-pass subset
 
