@@ -262,16 +262,36 @@ impl Session {
     }
 }
 
+pub(in crate::runtime) fn is_association_expr(expr: &Expr) -> bool {
+    association_entries_from_expr(expr).is_some()
+}
+
+pub(in crate::runtime) fn apply_association_to_args(head: &Expr, args: &[Expr]) -> Option<Expr> {
+    let entries = association_entries_from_expr(head)?;
+
+    match args {
+        [] => Some(head.clone()),
+        [key] => Some(
+            entries
+                .iter()
+                .find(|(entry_key, _)| entry_key == key)
+                .map(|(_, value)| value.clone())
+                .unwrap_or_else(|| missing_key_absent_expr(key.clone())),
+        ),
+        _ => None,
+    }
+}
+
+pub(in crate::runtime) fn missing_key_absent_expr(key: Expr) -> Expr {
+    Expr::call(system_expr("Missing"), vec![Expr::string("KeyAbsent"), key])
+}
+
 fn lookup_value(
     data: &Expr,
     key_spec: &Expr,
     default: Option<Expr>,
     wrapper: Option<&Expr>,
 ) -> Option<Expr> {
-    if let Some(value) = apply_keyed_part_spec(data, key_spec) {
-        return Some(wrap_keyed_result(value, wrapper));
-    }
-
     let direct_entries = single_rule_or_keyed_entries_from_expr(data);
     if direct_entries.is_none() {
         if let Some(items) = call_items_with_head(data, &system_expr("List")) {
@@ -327,15 +347,7 @@ fn lookup_entries_value(
         return wrap_keyed_result(value.clone(), wrapper);
     }
 
-    wrap_keyed_result(
-        default.unwrap_or_else(|| {
-            Expr::call(
-                system_expr("Missing"),
-                vec![Expr::string("KeyAbsent"), lookup_key.clone()],
-            )
-        }),
-        wrapper,
-    )
+    default.unwrap_or_else(|| missing_key_absent_expr(lookup_key.clone()))
 }
 
 fn lookup_key_expr(key_spec: &Expr) -> &Expr {

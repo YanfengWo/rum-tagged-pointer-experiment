@@ -31,6 +31,7 @@ pub(super) enum PartSelector {
 enum SelectedPartShape {
     Leaf(Expr),
     Branch(Vec<SelectedPartShape>),
+    AssociationBranch(Vec<(Expr, SelectedPartShape)>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -57,6 +58,16 @@ impl Session {
         let Some(selectors) = parse_part_selectors(&args[1..]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
+        if association_entries_from_expr(&args[0]).is_some()
+            && selectors.iter().any(selector_mixes_key_and_non_key)
+        {
+            self.push_message(
+                "Part",
+                "pmix",
+                "Integer and Key specifications cannot be mixed in the same part specification.",
+            );
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
 
         Ok(apply_part_selectors(&args[0], &selectors)
             .unwrap_or_else(|| Expr::call(head.clone(), args.to_vec())))
@@ -211,12 +222,18 @@ pub(super) fn apply_part_selectors(expr: &Expr, selectors: &[PartSelector]) -> O
             SelectedPartShape::Branch(apply_part_selectors_to_shape(selected, rest)?),
             Some(selected_shape_head_for_expr(expr, first)),
         )),
+        SelectedPartShape::AssociationBranch(selected) => Some(selected_shape_to_expr(
+            SelectedPartShape::AssociationBranch(apply_part_selectors_to_keyed_shape(
+                selected, rest,
+            )?),
+            None,
+        )),
     }
 }
 
 fn selected_shape_head_for_expr(expr: &Expr, selector: &PartSelector) -> Expr {
     if association_entries_from_expr(expr).is_some() && selector_contains_key(selector) {
-        system_expr("List")
+        system_expr("Association")
     } else {
         structural_head_expr(expr)
     }
@@ -230,13 +247,18 @@ fn selector_contains_key(selector: &PartSelector) -> bool {
     }
 }
 
-fn position_spec_contains_key(selectors: &[PartSelector]) -> bool {
-    selectors.iter().any(selector_contains_key)
-}
+fn selector_mixes_key_and_non_key(selector: &PartSelector) -> bool {
+    let PartSelector::Multi(specs) = selector else {
+        return false;
+    };
 
-pub(super) fn apply_keyed_part_spec(expr: &Expr, spec_expr: &Expr) -> Option<Expr> {
-    let selectors = parse_single_position_spec(spec_expr)?;
-    position_spec_contains_key(&selectors).then(|| apply_part_selectors(expr, &selectors))?
+    let has_key = specs
+        .iter()
+        .any(|spec| matches!(spec, PartSelector::Key(_)));
+    let has_non_key = specs
+        .iter()
+        .any(|spec| !matches!(spec, PartSelector::Key(_)));
+    (has_key && has_non_key) || specs.iter().any(selector_mixes_key_and_non_key)
 }
 
 fn apply_part_selectors_to_shape(
@@ -263,7 +285,27 @@ fn apply_part_selectors_to_selected_shape(
                 .map(|child| apply_part_selectors_to_selected_shape(child, selectors))
                 .collect::<Option<Vec<_>>>()?,
         )),
+        SelectedPartShape::AssociationBranch(children) => {
+            Some(SelectedPartShape::AssociationBranch(
+                apply_part_selectors_to_keyed_shape(children, selectors)?,
+            ))
+        }
     }
+}
+
+fn apply_part_selectors_to_keyed_shape(
+    selected: Vec<(Expr, SelectedPartShape)>,
+    selectors: &[PartSelector],
+) -> Option<Vec<(Expr, SelectedPartShape)>> {
+    selected
+        .into_iter()
+        .map(|(key, shape)| {
+            Some((
+                key,
+                apply_part_selectors_to_selected_shape(shape, selectors)?,
+            ))
+        })
+        .collect()
 }
 
 fn selected_shape_to_expr(shape: SelectedPartShape, root_head: Option<Expr>) -> Expr {
@@ -274,6 +316,12 @@ fn selected_shape_to_expr(shape: SelectedPartShape, root_head: Option<Expr>) -> 
             children
                 .into_iter()
                 .map(|child| selected_shape_to_expr(child, None))
+                .collect(),
+        ),
+        SelectedPartShape::AssociationBranch(children) => render_association(
+            children
+                .into_iter()
+                .map(|(key, child)| (key, selected_shape_to_expr(child, None)))
                 .collect(),
         ),
     }
@@ -292,8 +340,45 @@ fn select_parts_for_selector(expr: &Expr, selector: &PartSelector) -> Option<Sel
                     .collect(),
             )),
         },
-        PartSelector::Key(key) => association_value_by_key(expr, key).map(SelectedPartShape::Leaf),
+        PartSelector::Key(key) => {
+            let entries = association_entries_from_expr(expr)?;
+            Some(SelectedPartShape::Leaf(
+                entries
+                    .iter()
+                    .find(|(entry_key, _)| entry_key == key)
+                    .map(|(_, value)| value.clone())
+                    .unwrap_or_else(|| missing_key_absent_expr(key_expr(key.clone()))),
+            ))
+        }
         PartSelector::Multi(specs) => {
+            if let Some(entries) = association_entries_from_expr(expr) {
+                if specs
+                    .iter()
+                    .all(|spec| matches!(spec, PartSelector::Key(_)))
+                {
+                    return Some(SelectedPartShape::AssociationBranch(
+                        specs
+                            .iter()
+                            .filter_map(|spec| match spec {
+                                PartSelector::Key(key) => Some((
+                                    key.clone(),
+                                    SelectedPartShape::Leaf(
+                                        entries
+                                            .iter()
+                                            .find(|(entry_key, _)| entry_key == key)
+                                            .map(|(_, value)| value.clone())
+                                            .unwrap_or_else(|| {
+                                                missing_key_absent_expr(key_expr(key.clone()))
+                                            }),
+                                    ),
+                                )),
+                                _ => None,
+                            })
+                            .collect(),
+                    ));
+                }
+            }
+
             let mut selected = Vec::new();
             for spec in specs {
                 match (spec, select_parts_for_selector(expr, spec)?) {
@@ -309,12 +394,22 @@ fn select_parts_for_selector(expr: &Expr, selector: &PartSelector) -> Option<Sel
                     ) => {
                         selected.extend(children);
                     }
+                    (
+                        PartSelector::Single(_) | PartSelector::Key(_),
+                        SelectedPartShape::AssociationBranch(children),
+                    ) => {
+                        selected.push(SelectedPartShape::AssociationBranch(children));
+                    }
                     (PartSelector::Multi(_), shape) => selected.push(shape),
                 }
             }
             Some(SelectedPartShape::Branch(selected))
         }
     }
+}
+
+fn key_expr(key: Expr) -> Expr {
+    Expr::call(system_expr("Key"), vec![key])
 }
 
 fn select_parts_for_atomic_spec(expr: &Expr, spec: &AtomicPartSpec) -> Option<Vec<Expr>> {

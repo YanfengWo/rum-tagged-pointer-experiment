@@ -112,7 +112,36 @@ fn keyed_part_and_extract_cover_association_paths() {
             .unwrap()
             .value
             .to_string(),
-        "List[2, 1]"
+        "Association[Rule[b, 2], Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[Association[a -> 1], Key[b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", Key[b]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[Association[a -> Association[b -> 2]], {Key[a]}, Key[b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 2]]"
+    );
+    let mixed = session
+        .eval_text("Part[Association[a -> 1, b -> 2], {Key[a], 2}]")
+        .unwrap();
+    assert_eq!(
+        mixed.value.to_string(),
+        "Part[Association[Rule[a, 1], Rule[b, 2]], List[Key[a], 2]]"
+    );
+    assert!(
+        mixed
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "pmix")
     );
     assert_eq!(
         session

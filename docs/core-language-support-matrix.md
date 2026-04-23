@@ -265,8 +265,10 @@ once in its primary implementation group. Other groups may mention it as
   deterministic ordering for canonical association rendering, key-based
   pattern matching through `KeyValuePattern`, richer `Lookup`
   threading/multi-key behavior including `Lookup[..., default, h]` plus
-  single-rule/rule-list parity and keyed `Missing["KeyAbsent", key]`
-  fallbacks, rule-list plus wrapper/threading support for `Keys` / `Values`,
+  current Wolfram-style key-list threading, found-value-only wrapper
+  application, single-rule/rule-list parity, and keyed
+  `Missing["KeyAbsent", key]` fallbacks, rule-list plus wrapper/threading
+  support for `Keys` / `Values`,
   rule-list-aware keyed predicates through `KeyExistsQ` / `KeyMemberQ` /
   `KeyFreeQ`, spec-ordered and threaded rule-list-normalizing `KeyTake` /
   `KeyDrop`, broader
@@ -278,9 +280,12 @@ once in its primary implementation group. Other groups may mention it as
   semantics over association, rule, and rule-list keyed collections,
   including `KeyUnion[..., f]` fill behavior and current `KeyComplement`
   option-tail parity, current `AssociationThread` rule plus singleton/list
-  threading, callable `Key[key][assoc]` extraction, custom `KeySort`
-  comparers, `Catenate` over lists plus association values with current
-  invalid-argument parity, current `GroupBy[list, f, g]` reducer support,
+  threading, callable `Key[key][assoc]` extraction, callable
+  `Association[...][key]` lookup, current `Part[..., Key[...]]` association
+  projection including missing-key propagation and no-mixed-key/index
+  diagnostics, custom `KeySort` comparers, `Catenate` over lists plus
+  association values with current invalid-argument parity, current
+  `GroupBy[list, f, g]` reducer support,
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
   forms plus current keyed-lookup propagation, and held symbol-mutation
   first passes for `AssociateTo` / `KeyDropFrom`

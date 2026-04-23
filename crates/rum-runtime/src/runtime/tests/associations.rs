@@ -96,7 +96,7 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
             .unwrap()
             .value
             .to_string(),
-        "2"
+        "List[Association[Rule[b, 2]], Missing[\"KeyAbsent\", b]]"
     );
     assert_eq!(
         session
@@ -136,7 +136,7 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
             .unwrap()
             .value
             .to_string(),
-        "Hold[99]"
+        "99"
     );
     assert_eq!(
         session
@@ -160,7 +160,7 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
             .unwrap()
             .value
             .to_string(),
-        "List[Hold[1], Hold[0]]"
+        "List[Hold[1], 0]"
     );
     assert_eq!(
         session
@@ -226,7 +226,7 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
             .unwrap()
             .value
             .to_string(),
-        "List[2, 3]"
+        "List[List[Association[Rule[b, 2]], Missing[\"KeyAbsent\", b]], List[Association[Rule[b, 3]], Missing[\"KeyAbsent\", b]]]"
     );
     assert_eq!(
         session
@@ -295,6 +295,30 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
             .value
             .to_string(),
         "\"two\""
+    );
+    assert_eq!(
+        session
+            .eval_text("Association[a -> 1, b -> 2][a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Association[a -> 1][b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Association[a -> 1][]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1]]"
     );
 }
 

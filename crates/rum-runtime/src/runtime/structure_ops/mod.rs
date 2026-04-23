@@ -16,10 +16,6 @@ use selectors::{
     parse_single_position_spec, select_positioned_parts_for_span,
 };
 
-pub(super) fn apply_keyed_part_spec(expr: &Expr, spec_expr: &Expr) -> Option<Expr> {
-    selectors::apply_keyed_part_spec(expr, spec_expr)
-}
-
 pub(super) fn exact_position_paths_from_expr(
     expr: &Expr,
     spec_expr: &Expr,

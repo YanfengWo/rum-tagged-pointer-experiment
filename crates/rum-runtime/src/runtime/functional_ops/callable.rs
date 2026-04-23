@@ -113,14 +113,14 @@ pub(in crate::runtime) fn apply_callable_operator_wrapper_to_args(
     };
 
     let key = parse_key_wrapper(head)?;
-    apply_keyed_part_spec(expr, head).or_else(|| {
-        association_entries_from_expr(expr).map(|_| {
-            Expr::call(
-                system_expr("Missing"),
-                vec![Expr::string("KeyAbsent"), key.clone()],
-            )
-        })
-    })
+    let entries = association_entries_from_expr(expr)?;
+    Some(
+        entries
+            .iter()
+            .find(|(entry_key, _)| entry_key == key)
+            .map(|(_, value)| value.clone())
+            .unwrap_or_else(|| missing_key_absent_expr(key.clone())),
+    )
 }
 
 impl Session {

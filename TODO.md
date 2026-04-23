@@ -249,7 +249,7 @@ This roadmap intentionally uses two levels of detail:
     - [ ] leave language-data-backed `Pluralize` parity for a future data-backed lexical layer if user-visible need justifies it
   - [ ] Wave 2: `CL-03` and `CL-05`
     - [x] `CL-03`: close the current Wave 2 rule/pattern/traversal convenience sweep through association-aware `Cases` / `DeleteCases` / `Level` / `Count` / `MemberQ` / `FreeQ` / `Position`, the remaining `ReplaceList` root long-tail needed beyond the earlier backtracking subset, and current `Flat` / `Orderless` regrouping parity for `MatchQ` / `ReplaceAll` / `ReplaceList`; leave deeper pattern/string crossover and any remaining advanced matcher breadth as non-blocking long-tail
-    - [ ] `CL-05`: remaining keyed-data long-tail polish such as deeper association semantics beyond the current broader keyed-helper operator-form sweep, the remaining invalid/option parity corners beyond the current `KeyUnion` / `KeyIntersection` / `KeyComplement` plus `AssociationThread` / `Catenate` / `Merge` alignment, fuller `Missing` forms beyond the current keyed-lookup subset, and any held-mutation follow-up beyond the current first-pass subset
+    - [ ] `CL-05`: remaining keyed-data long-tail polish such as deeper association semantics beyond the current broader keyed-helper operator-form sweep and current `Lookup` / callable association / keyed `Part` alignment, the remaining invalid/option parity corners beyond the current `KeyUnion` / `KeyIntersection` / `KeyComplement` plus `AssociationThread` / `Catenate` / `Merge` alignment, fuller `Missing` forms beyond the current keyed-lookup subset, and any held-mutation follow-up beyond the current first-pass subset
   - [ ] Wave 3: `CL-06` and `CL-01`
     - [ ] `CL-06`: deeper `WithCleanup` / `Failsafe` / `CheckAbort` / `AbortProtect` parity, richer failure/status behavior, and fuller host-I/O semantics
     - [ ] `CL-01`: remaining part-spec / `Heads` parity and deeper truth/comparison breadth
@@ -267,6 +267,26 @@ This roadmap intentionally uses two levels of detail:
 - [ ] Add broader regression corpora and golden fixtures for syntax formatting, lowering, evaluation, runtime messages, and transport-facing APIs
 - [ ] Establish explicit coverage goals for high-risk semantic areas instead of relying only on opportunistic test growth
 - [ ] Add differential-conformance fixtures that compare selected `rum` results against Wolfram behavior for the supported subset, with same-name language features treated as compatibility targets by default
+- [ ] `CL-Y` Real-project Wolfram package/script support, using the local
+  `mma-hol` project as the first concrete sample:
+  - [ ] preserve the already-demonstrated `Module` closure pattern where
+    exported definitions retain access to fresh private mutable state after
+    the enclosing `Module` returns
+  - [ ] add the small but project-critical list/set helpers used by ordinary
+    `.wl` libraries, including `Join`, `Flatten`, `DeleteDuplicates`,
+    `Union`, `Sort`, `SortBy`, `Reverse`, `Transpose`, and `Complement`
+  - [ ] deepen held mutation support beyond the current subset so closure-owned
+    state updates such as `AppendTo[privateList, item]` work predictably
+  - [ ] add explicit gensym support through `Unique[...]` so package code can
+    construct unforgeable private heads without relying only on `Module`
+    locals
+  - [ ] fill the script-runner environment needed by multi-file projects,
+    including `$InputFileName`, mutable `$Path`-driven loading, `FileNameJoin`,
+    `DirectoryName`, `ParentDirectory`, `FileNames`, `FileNameTake`, and
+    `Exit`
+  - [ ] keep small glue helpers such as `FromDigits` and text-only `Row` on the
+    compatibility radar, while preferring sample-code cleanup when a dependency
+    is accidental rather than philosophically important
 - [x] Create a dedicated `rum-difftest` crate and ingest the imported `ham` seed pack plus handoff docs as a first-class conformance workstream input
 - [ ] Keep `rum-difftest` split into explicit lanes instead of one monolithic diff bucket:
   - [ ] Lane A: single-expression Wolfram diff fixtures and runner
