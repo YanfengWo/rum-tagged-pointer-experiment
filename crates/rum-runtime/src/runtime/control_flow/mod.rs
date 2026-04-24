@@ -5,8 +5,8 @@ mod confirmation;
 mod status;
 
 use self::confirmation::{build_failsafe_failure, is_confirmation_failure_like};
-pub(super) use self::status::{apply_status_object_to_args, is_failure_expr, is_success_expr};
-use self::status::{failure_property_value, is_failure_q_expr};
+use self::status::is_failure_q_expr;
+pub(super) use self::status::{is_failure_expr, is_success_expr};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum ConfirmQuietSelectors {

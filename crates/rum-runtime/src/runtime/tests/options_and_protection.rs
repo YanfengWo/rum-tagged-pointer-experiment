@@ -231,6 +231,14 @@ fn system_default_options_cover_current_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Options[InputString]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[FieldMasked, False]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Options[ArrayFilter]")
             .unwrap()
             .value

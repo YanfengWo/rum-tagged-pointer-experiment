@@ -269,7 +269,7 @@ impl Session {
         match handler {
             None => Ok(failure),
             Some(Expr::Atom(Atom::String(property))) => {
-                Ok(failure_property_value(&failure, &property))
+                self.failure_property_value(&failure, &property)
             }
             Some(handler) => self.evaluate(Expr::call(handler, vec![failure])),
         }

@@ -31,6 +31,7 @@ pub(super) fn format_message_template(
 ) -> String {
     let mut rendered = String::with_capacity(template.len());
     let mut cursor = 0;
+    let mut implicit_index = 0;
 
     while let Some(start_rel) = template[cursor..].find('`') {
         let start = cursor + start_rel;
@@ -45,7 +46,19 @@ pub(super) fn format_message_template(
         let end = token_start + end_rel;
         let token = &template[token_start..end];
 
-        if let Some(formatted) = format_message_placeholder(token, key, args) {
+        let formatted = if token.is_empty() {
+            let formatted = args
+                .get(implicit_index)
+                .and_then(|arg| format_message_arg_placeholder(arg, None));
+            if formatted.is_some() {
+                implicit_index += 1;
+            }
+            formatted
+        } else {
+            format_message_placeholder(token, key, args)
+        };
+
+        if let Some(formatted) = formatted {
             rendered.push_str(&formatted);
         } else {
             rendered.push_str(&template[start..=end]);

@@ -218,7 +218,7 @@ impl Session {
             }
         } else if let Some(composition) = parse_composition(head) {
             apply_composition_to_args(&composition, args)
-        } else if let Some(status) = apply_status_object_to_args(head, args) {
+        } else if let Some(status) = self.apply_status_object_to_args(head, args)? {
             status
         } else if let Some(value) = apply_association_to_args(head, args) {
             value

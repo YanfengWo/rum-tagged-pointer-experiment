@@ -60,6 +60,171 @@ impl Session {
 
         Ok(Expr::call(head.clone(), vec![reason.clone()]))
     }
+
+    pub(in crate::runtime) fn failure_property_value(
+        &mut self,
+        failure: &Expr,
+        property: &str,
+    ) -> Result<Expr, EvalError> {
+        self.status_object_projection_value(failure, &Expr::string(property), None)
+    }
+
+    pub(in crate::runtime) fn apply_status_object_to_args(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Option<Expr>, EvalError> {
+        if !is_failure_expr(head) && !is_success_expr(head) {
+            return Ok(None);
+        }
+
+        if is_failure_expr(head) && !failure_tag_supports_projection(head) {
+            return Ok(None);
+        }
+
+        match args {
+            [
+                list @ Expr::Call {
+                    head: list_head,
+                    args: properties,
+                },
+            ] if is_system_symbol_name(list_head, heads::structure::LIST) => {
+                let mut values = Vec::with_capacity(properties.len());
+                for property in properties {
+                    values.push(self.status_object_projection_value(head, property, Some(list))?);
+                }
+                Ok(Some(Expr::call(system_expr("List"), values)))
+            }
+            [property] => Ok(Some(
+                self.status_object_projection_value(head, property, None)?,
+            )),
+            _ => Ok(None),
+        }
+    }
+
+    fn status_object_projection_value(
+        &mut self,
+        status: &Expr,
+        property: &Expr,
+        missing_property_context: Option<&Expr>,
+    ) -> Result<Expr, EvalError> {
+        if missing_property_context.is_none() {
+            if is_failure_expr(status) {
+                if is_system_symbol_name(property, "All") {
+                    return Ok(status_object_all_value(status)
+                        .unwrap_or_else(|| status_object_missing_expr(status, property.clone())));
+                }
+
+                if let Expr::Atom(Atom::String(name)) = property {
+                    return match name.as_str() {
+                        "Properties" => Ok(failure_properties_value(status).unwrap_or_else(|| {
+                            status_object_missing_expr(status, property.clone())
+                        })),
+                        "HeldMessageTemplate" => {
+                            Ok(failure_virtual_held_message_template_value(status)
+                                .or_else(|| status_object_property_value(status, property))
+                                .unwrap_or_else(|| {
+                                    status_object_missing_expr(status, property.clone())
+                                }))
+                        }
+                        "Message" => Ok(self
+                            .failure_virtual_message_value(status)?
+                            .unwrap_or_else(|| {
+                                status_object_missing_expr(status, property.clone())
+                            })),
+                        "MessageName" => Ok(failure_virtual_message_name_value(status)
+                            .or_else(|| status_object_property_value(status, property))
+                            .unwrap_or_else(|| {
+                                status_object_missing_expr(status, property.clone())
+                            })),
+                        "StyledMessage" => Ok(self
+                            .failure_virtual_styled_message_value(status)?
+                            .unwrap_or_else(|| {
+                                status_object_missing_expr(status, property.clone())
+                            })),
+                        _ => Ok(
+                            status_object_property_value(status, property).unwrap_or_else(|| {
+                                status_object_missing_expr(status, property.clone())
+                            }),
+                        ),
+                    };
+                }
+            } else if matches!(property, Expr::Atom(Atom::String(name)) if name == "Properties") {
+                return Ok(status_object_properties_value(status)
+                    .unwrap_or_else(|| status_object_missing_expr(status, property.clone())));
+            }
+        }
+
+        Ok(
+            status_object_property_value(status, property).unwrap_or_else(|| {
+                let missing_property = if is_failure_expr(status) {
+                    missing_property_context.unwrap_or(property)
+                } else {
+                    property
+                };
+                status_object_missing_expr(status, missing_property.clone())
+            }),
+        )
+    }
+
+    fn failure_virtual_message_value(&mut self, status: &Expr) -> Result<Option<Expr>, EvalError> {
+        if let Some(message) = self.failure_message_from_template(status)? {
+            return Ok(Some(message));
+        }
+
+        let Some((tag, _)) = status_object_parts(status) else {
+            return Ok(None);
+        };
+        Ok(match tag {
+            Expr::Atom(Atom::String(tag)) => Some(Expr::string(format!(
+                "A failure of type \"{tag}\" occurred."
+            ))),
+            Expr::Atom(Atom::Symbol(_)) => Some(Expr::string("An unknown failure occurred.")),
+            _ => None,
+        })
+    }
+
+    fn failure_virtual_styled_message_value(
+        &mut self,
+        status: &Expr,
+    ) -> Result<Option<Expr>, EvalError> {
+        match self.failure_virtual_message_value(status) {
+            Ok(Some(message)) => Ok(Some(styled_message_expr(message))),
+            Ok(None) => Ok(None),
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(|_, outcome| match outcome {
+                    Ok(message) => Ok(styled_message_expr(message)),
+                    Err(error) => Err(error),
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn failure_message_from_template(&mut self, status: &Expr) -> Result<Option<Expr>, EvalError> {
+        let Some(template) = status_object_property_value(status, &Expr::string("MessageTemplate"))
+        else {
+            return Ok(None);
+        };
+        let args = failure_message_template_args(status);
+
+        if let Expr::Atom(Atom::String(template)) = template {
+            let Some(key) = failure_message_template_key(status) else {
+                return Ok(None);
+            };
+            return Ok(Some(Expr::string(format_message_template(
+                &template, &key, &args,
+            ))));
+        }
+
+        let Some(key) = message_name_key_from_expr(&template) else {
+            return Ok(None);
+        };
+        let rendered = self.render_message_text(&key, &args);
+        self.drive_internal_value::<String, Expr, _>(rendered, |_, text| Ok(Expr::string(text)))
+            .map(Some)
+    }
 }
 
 pub(in crate::runtime) fn is_failure_expr(expr: &Expr) -> bool {
@@ -97,77 +262,6 @@ pub(in crate::runtime) fn normalize_status_details_expr(expr: &Expr) -> Option<E
     Some(render_association(entries))
 }
 
-pub(in crate::runtime) fn failure_property_value(failure: &Expr, property: &str) -> Expr {
-    status_object_projection_value(failure, &Expr::string(property), None)
-}
-
-pub(in crate::runtime) fn apply_status_object_to_args(head: &Expr, args: &[Expr]) -> Option<Expr> {
-    if !is_failure_expr(head) && !is_success_expr(head) {
-        return None;
-    }
-
-    if is_failure_expr(head) && !failure_tag_supports_projection(head) {
-        return None;
-    }
-
-    match args {
-        [
-            list @ Expr::Call {
-                head: list_head,
-                args: properties,
-            },
-        ] if is_system_symbol_name(list_head, heads::structure::LIST) => {
-            let values = properties
-                .iter()
-                .map(|property| status_object_projection_value(head, property, Some(list)))
-                .collect();
-            Some(Expr::call(system_expr("List"), values))
-        }
-        [property] => Some(status_object_projection_value(head, property, None)),
-        _ => None,
-    }
-}
-
-fn status_object_projection_value(
-    status: &Expr,
-    property: &Expr,
-    missing_property_context: Option<&Expr>,
-) -> Expr {
-    if missing_property_context.is_none() {
-        if is_failure_expr(status) {
-            if is_system_symbol_name(property, "All") {
-                return status_object_all_value(status)
-                    .unwrap_or_else(|| status_object_missing_expr(status, property.clone()));
-            }
-
-            if let Expr::Atom(Atom::String(name)) = property {
-                return match name.as_str() {
-                    "Properties" => failure_properties_value(status)
-                        .unwrap_or_else(|| status_object_missing_expr(status, property.clone())),
-                    "Message" => failure_virtual_message_value(status)
-                        .unwrap_or_else(|| status_object_missing_expr(status, property.clone())),
-                    "StyledMessage" => failure_virtual_styled_message_value(status)
-                        .unwrap_or_else(|| status_object_missing_expr(status, property.clone())),
-                    _ => status_object_property_value(status, property)
-                        .unwrap_or_else(|| status_object_missing_expr(status, property.clone())),
-                };
-            }
-        } else if matches!(property, Expr::Atom(Atom::String(name)) if name == "Properties") {
-            return status_object_properties_value(status)
-                .unwrap_or_else(|| status_object_missing_expr(status, property.clone()));
-        }
-    }
-
-    status_object_property_value(status, property).unwrap_or_else(|| {
-        let missing_property = if is_failure_expr(status) {
-            missing_property_context.unwrap_or(property)
-        } else {
-            property
-        };
-        status_object_missing_expr(status, missing_property.clone())
-    })
-}
-
 fn status_object_properties_value(status: &Expr) -> Option<Expr> {
     let (_, details) = status_object_parts(status)?;
     let properties = association_entries_from_expr(details)?
@@ -183,6 +277,10 @@ fn failure_properties_value(status: &Expr) -> Option<Expr> {
         .into_iter()
         .map(|(key, _)| key)
         .collect::<Vec<_>>();
+    if status_object_property_value(status, &Expr::string("MessageTemplate")).is_some() {
+        properties.push(Expr::string("HeldMessageTemplate"));
+        properties.push(Expr::string("MessageName"));
+    }
     properties.push(Expr::string("Message"));
     properties.push(Expr::string("StyledMessage"));
     properties.sort_by(compare_expr_canonical);
@@ -200,25 +298,51 @@ fn status_object_property_value(status: &Expr, property: &Expr) -> Option<Expr> 
     association_value_by_key(details, property)
 }
 
-fn failure_virtual_message_value(status: &Expr) -> Option<Expr> {
-    let (tag, _) = status_object_parts(status)?;
-    match tag {
-        Expr::Atom(Atom::String(tag)) => Some(Expr::string(format!(
-            "A failure of type \"{tag}\" occurred."
-        ))),
-        Expr::Atom(Atom::Symbol(_)) => Some(Expr::string("An unknown failure occurred.")),
-        _ => None,
-    }
+fn failure_virtual_held_message_template_value(status: &Expr) -> Option<Expr> {
+    Some(Expr::call(
+        system_expr("Hold"),
+        vec![status_object_property_value(
+            status,
+            &Expr::string("MessageTemplate"),
+        )?],
+    ))
 }
 
-fn failure_virtual_styled_message_value(status: &Expr) -> Option<Expr> {
+fn failure_virtual_message_name_value(status: &Expr) -> Option<Expr> {
+    let template = status_object_property_value(status, &Expr::string("MessageTemplate"))?;
+    if let Some(key) = message_name_key_from_expr(&template) {
+        return Some(Expr::string(key.tag));
+    }
+
     Some(Expr::call(
-        system_expr("Style"),
-        vec![
-            failure_virtual_message_value(status)?,
-            Expr::string("Message"),
-        ],
+        system_expr("Missing"),
+        vec![Expr::string("NotApplicable")],
     ))
+}
+
+fn styled_message_expr(message: Expr) -> Expr {
+    Expr::call(system_expr("Style"), vec![message, Expr::string("Message")])
+}
+
+fn failure_message_template_key(status: &Expr) -> Option<MessageNameKey> {
+    let (tag, _) = status_object_parts(status)?;
+    Some(MessageNameKey {
+        symbol: Symbol::system("Failure"),
+        tag: match tag {
+            Expr::Atom(Atom::String(tag)) => tag.clone(),
+            Expr::Atom(Atom::Symbol(tag)) => tag.name().to_string(),
+            _ => return None,
+        },
+    })
+}
+
+fn failure_message_template_args(status: &Expr) -> Vec<Expr> {
+    let Some(params) = status_object_property_value(status, &Expr::string("MessageParameters"))
+    else {
+        return Vec::new();
+    };
+
+    list_items(&params).map_or_else(Vec::new, ToOwned::to_owned)
 }
 
 fn status_object_missing_expr(status: &Expr, property: Expr) -> Expr {

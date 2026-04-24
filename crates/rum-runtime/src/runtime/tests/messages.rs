@@ -109,14 +109,14 @@ fn message_templates_support_message_name_and_all_args_placeholders() {
     let mut session = Session::new();
 
     session
-        .eval_text("f::argx = \"`0`: first=`1`; all=`*`\"")
+        .eval_text("f::argx = \"`0`: first=`1`; all=`*`; implicit=``/``\"")
         .unwrap();
     let outcome = session.eval_text("Message[f::argx, 1, 2]").unwrap();
 
     assert!(outcome.messages.iter().any(|message| {
         message.symbol == "f"
             && message.tag == "argx"
-            && message.text == "f::argx: first=1; all=1, 2"
+            && message.text == "f::argx: first=1; all=1, 2; implicit=1/2"
     }));
 }
 #[test]
