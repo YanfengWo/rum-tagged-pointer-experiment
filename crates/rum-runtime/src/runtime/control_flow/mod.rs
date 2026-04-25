@@ -139,19 +139,29 @@ impl Session {
     }
 
     pub(super) fn eval_check_abort(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if !(2..=3).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("CheckAbort", args, 2, 3));
+        if args.len() < 2 {
+            let tag = if args.is_empty() { "argrx" } else { "argr" };
+            return Ok(self.invalid_call_with_message(
+                "CheckAbort",
+                args,
+                tag,
+                format!("expected at least 2 argument(s), got {}", args.len()),
+            ));
         }
 
-        let propagate_expr = match args.get(2).cloned() {
-            Some(expr) => Some(expr),
-            None => self.option_rule_expr_for_symbol(
-                &Symbol::system("CheckAbort"),
-                &Symbol::system("PropagateAborts"),
-            )?,
+        let default_option = self.option_rule_expr_for_symbol(
+            &Symbol::system("CheckAbort"),
+            &Symbol::system("PropagateAborts"),
+        )?;
+        let default_option_exprs: Vec<Expr> = default_option.into_iter().collect();
+        let default_propagation = match parse_check_abort_propagation(&default_option_exprs) {
+            Ok(Some(propagation)) => propagation,
+            Ok(None) => default_check_abort_propagation(),
+            Err(error) => return Ok(self.invalid_check_abort_option_call(args, error)),
         };
-        let propagation = match parse_check_abort_propagation(propagate_expr.as_ref()) {
-            Ok(propagation) => propagation,
+        let propagation = match parse_check_abort_propagation(&args[2..]) {
+            Ok(Some(propagation)) => propagation,
+            Ok(None) => default_propagation,
             Err(error) => return Ok(self.invalid_check_abort_option_call(args, error)),
         };
         if let Some(invalid_value) = propagation.invalid_value.as_ref() {
@@ -238,10 +248,6 @@ impl Session {
     }
 
     pub(super) fn eval_failsafe(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-        if !(1..=3).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Failsafe", args, 1, 3));
-        }
-
         Ok(Expr::call(head.clone(), args.to_vec()))
     }
 
@@ -622,24 +628,22 @@ fn render_assert_failure_message(test: &Expr, tag: Option<&Expr>, value: &Expr) 
 }
 
 fn parse_check_abort_propagation(
-    option_expr: Option<&Expr>,
-) -> Result<CheckAbortPropagation, CheckAbortOptionError> {
-    let Some(option_expr) = option_expr else {
-        return Ok(CheckAbortPropagation {
-            mode: PropagateAbortsMode::Automatic,
-            invalid_value: None,
-        });
-    };
+    option_exprs: &[Expr],
+) -> Result<Option<CheckAbortPropagation>, CheckAbortOptionError> {
+    for option_expr in option_exprs {
+        if let Some(propagation) = parse_check_abort_propagation_expr(option_expr)? {
+            return Ok(Some(propagation));
+        }
+    }
 
-    parse_check_abort_propagation_expr(option_expr)?.map_or_else(
-        || {
-            Ok(CheckAbortPropagation {
-                mode: PropagateAbortsMode::Automatic,
-                invalid_value: None,
-            })
-        },
-        Ok,
-    )
+    Ok(None)
+}
+
+fn default_check_abort_propagation() -> CheckAbortPropagation {
+    CheckAbortPropagation {
+        mode: PropagateAbortsMode::Automatic,
+        invalid_value: None,
+    }
 }
 
 fn parse_check_abort_propagation_expr(

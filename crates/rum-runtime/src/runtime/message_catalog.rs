@@ -83,12 +83,22 @@ impl Session {
         key: &MessageNameKey,
         args: &[Expr],
     ) -> Result<String, EvalError> {
+        self.render_message_text_with_named(key, args, &[])
+    }
+
+    pub(super) fn render_message_text_with_named(
+        &mut self,
+        key: &MessageNameKey,
+        args: &[Expr],
+        named_args: &[(String, Expr)],
+    ) -> Result<String, EvalError> {
         let template = self.message_definitions.get(key).cloned();
         let finish_rendered = {
             let key = key.clone();
             let args = args.to_vec();
+            let named_args = named_args.to_vec();
             move |session: &mut Session, rendered: Expr| {
-                Ok(session.finish_render_message_text(rendered, &key, &args))
+                Ok(session.finish_render_message_text(rendered, &key, &args, &named_args))
             }
         };
 
@@ -123,13 +133,14 @@ impl Session {
         rendered: Expr,
         key: &MessageNameKey,
         args: &[Expr],
+        named_args: &[(String, Expr)],
     ) -> String {
         let template = match rendered {
             Expr::Atom(Atom::String(text)) => text,
             other => other.to_string(),
         };
 
-        format_message_template(&template, key, args)
+        format_message_template_with_named(&template, key, args, named_args)
     }
 
     pub(super) fn normalize_symbol_target_expr(

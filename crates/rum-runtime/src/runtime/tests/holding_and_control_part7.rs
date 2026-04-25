@@ -425,7 +425,16 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
             .to_string(),
         "\"bad `1`\""
     );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"tag\", {\"MessageTemplate\" -> \"bad `Name`\", \"MessageParameters\" -> <|\"Name\" -> \"x\"|>}][\"Message\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"bad x\""
+    );
     session.eval_text("f::argx = \"bad arg `1`\"").unwrap();
+    session.eval_text("f::named = \"bad `Name`\"").unwrap();
     assert_eq!(
         session
             .eval_text("Failure[\"tag\", {\"MessageTemplate\" -> MessageName[f, \"argx\"], \"MessageParameters\" -> {x}}][\"Message\"]")
@@ -433,6 +442,14 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
             .value
             .to_string(),
         "\"bad arg x\""
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"tag\", {\"MessageTemplate\" -> MessageName[f, \"named\"], \"MessageParameters\" -> <|\"Name\" -> \"x\"|>}][\"Message\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"bad x\""
     );
     assert_eq!(
         session
@@ -571,5 +588,37 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
             .value
             .to_string(),
         "TerminatedEvaluation[\"RecursionLimit\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("TerminatedEvaluation[]")
+            .unwrap()
+            .value
+            .to_string(),
+        "TerminatedEvaluation[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("TerminatedEvaluation[\"RecursionLimit\", \"extra\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "TerminatedEvaluation[\"RecursionLimit\", \"extra\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("FailureQ[TerminatedEvaluation[\"RecursionLimit\"]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("TerminatedEvaluation[\"RecursionLimit\"][\"Properties\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "TerminatedEvaluation[\"RecursionLimit\"][\"Properties\"]"
     );
 }

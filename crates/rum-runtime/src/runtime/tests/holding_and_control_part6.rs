@@ -62,6 +62,85 @@ fn abort_and_checkabort_cover_current_first_pass_subset() {
             .to_string(),
         "outer"
     );
+    assert_eq!(
+        session
+            .eval_text(
+                "CheckAbort[CheckAbort[Abort[], rescued, {}, PropagateAborts -> True], outer]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "outer"
+    );
+    assert_eq!(
+        session
+            .eval_text("CheckAbort[Abort[], rescued, {}, {}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "rescued"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "CheckAbort[Abort[], rescued, PropagateAborts -> False, PropagateAborts -> True]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "rescued"
+    );
+    session
+        .eval_text("SetOptions[CheckAbort, PropagateAborts -> True]")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text(
+                "CheckAbort[CheckAbort[Abort[], rescued, {}], outer, PropagateAborts -> False]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "outer"
+    );
+    assert_eq!(
+        session
+            .eval_text("CheckAbort[CheckAbort[Abort[], rescued, PropagateAborts -> False], outer, PropagateAborts -> False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "rescued"
+    );
+    session
+        .eval_text("SetOptions[CheckAbort, PropagateAborts -> Automatic]")
+        .unwrap();
+    let invalid_extra_option = session.eval_text("CheckAbort[1, 2, 3, 4]").unwrap();
+    assert_eq!(
+        invalid_extra_option.value.to_string(),
+        "CheckAbort[1, 2, 3, 4]"
+    );
+    assert!(
+        invalid_extra_option
+            .messages
+            .iter()
+            .any(|message| message.symbol == "CheckAbort" && message.tag == "nonopt")
+    );
+    let missing_args = session.eval_text("CheckAbort[]").unwrap();
+    assert_eq!(missing_args.value.to_string(), "CheckAbort[]");
+    assert!(
+        missing_args
+            .messages
+            .iter()
+            .any(|message| message.symbol == "CheckAbort" && message.tag == "argrx")
+    );
+    let missing_fallback = session.eval_text("CheckAbort[1]").unwrap();
+    assert_eq!(missing_fallback.value.to_string(), "CheckAbort[1]");
+    assert!(
+        missing_fallback
+            .messages
+            .iter()
+            .any(|message| message.symbol == "CheckAbort" && message.tag == "argr")
+    );
     let invalid_value = session
         .eval_text("CheckAbort[Abort[], rescued, PropagateAborts -> bad]")
         .unwrap();
@@ -121,6 +200,28 @@ fn withcleanup_runs_cleanup_on_values_throws_and_aborts() {
         "$Aborted"
     );
     assert_eq!(session.eval_text("x").unwrap().value.to_string(), "5");
+
+    session.eval_text("x = 0").unwrap();
+    assert_eq!(
+        session
+            .eval_text("Catch[WithCleanup[Throw[1, tag], x = 9, x = 6], tag]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "6");
+
+    session.eval_text("x = 0").unwrap();
+    assert_eq!(
+        session
+            .eval_text("CheckAbort[WithCleanup[x = 1; done, (x = 7; Abort[])], aborted]")
+            .unwrap()
+            .value
+            .to_string(),
+        "aborted"
+    );
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "7");
 }
 
 #[test]
@@ -174,5 +275,17 @@ fn failsafe_wrapper_preserves_failure_like_inputs_and_supports_test_forms() {
             .value
             .to_string(),
         "Missing[\"ZeroDiv\"]"
+    );
+    assert_eq!(
+        session.eval_text("Failsafe[]").unwrap().value.to_string(),
+        "Failsafe[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failsafe[f, t, g, h][x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Failsafe[f, t, g, h][x]"
     );
 }

@@ -54,11 +54,7 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [reason] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("TerminatedEvaluation", args, 1));
-        };
-
-        Ok(Expr::call(head.clone(), vec![reason.clone()]))
+        Ok(Expr::call(head.clone(), args.to_vec()))
     }
 
     pub(in crate::runtime) fn failure_property_value(
@@ -207,21 +203,24 @@ impl Session {
         else {
             return Ok(None);
         };
-        let args = failure_message_template_args(status);
+        let params = failure_message_template_parameters(status);
 
         if let Expr::Atom(Atom::String(template)) = template {
             let Some(key) = failure_message_template_key(status) else {
                 return Ok(None);
             };
-            return Ok(Some(Expr::string(format_message_template(
-                &template, &key, &args,
+            return Ok(Some(Expr::string(format_message_template_with_named(
+                &template,
+                &key,
+                &params.positional,
+                &params.named,
             ))));
         }
 
         let Some(key) = message_name_key_from_expr(&template) else {
             return Ok(None);
         };
-        let rendered = self.render_message_text(&key, &args);
+        let rendered = self.render_message_text_with_named(&key, &params.positional, &params.named);
         self.drive_internal_value::<String, Expr, _>(rendered, |_, text| Ok(Expr::string(text)))
             .map(Some)
     }
@@ -336,13 +335,44 @@ fn failure_message_template_key(status: &Expr) -> Option<MessageNameKey> {
     })
 }
 
-fn failure_message_template_args(status: &Expr) -> Vec<Expr> {
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct FailureMessageTemplateParameters {
+    positional: Vec<Expr>,
+    named: Vec<(String, Expr)>,
+}
+
+fn failure_message_template_parameters(status: &Expr) -> FailureMessageTemplateParameters {
     let Some(params) = status_object_property_value(status, &Expr::string("MessageParameters"))
     else {
-        return Vec::new();
+        return FailureMessageTemplateParameters::default();
     };
 
-    list_items(&params).map_or_else(Vec::new, ToOwned::to_owned)
+    if let Some(items) = list_items(&params) {
+        return FailureMessageTemplateParameters {
+            positional: items.to_vec(),
+            named: Vec::new(),
+        };
+    }
+
+    let Some(entries) = association_entries_from_expr(&params) else {
+        return FailureMessageTemplateParameters::default();
+    };
+
+    FailureMessageTemplateParameters {
+        positional: Vec::new(),
+        named: entries
+            .into_iter()
+            .filter_map(|(key, value)| Some((message_parameter_name(&key)?, value)))
+            .collect(),
+    }
+}
+
+fn message_parameter_name(key: &Expr) -> Option<String> {
+    match key {
+        Expr::Atom(Atom::String(name)) => Some(name.clone()),
+        Expr::Atom(Atom::Symbol(symbol)) => Some(symbol.name().to_string()),
+        _ => None,
+    }
 }
 
 fn status_object_missing_expr(status: &Expr, property: Expr) -> Expr {

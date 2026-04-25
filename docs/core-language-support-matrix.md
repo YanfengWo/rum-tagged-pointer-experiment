@@ -334,13 +334,15 @@ once in its primary implementation group. Other groups may mention it as
   `Failure[...]` `All` / `"Properties"` / `"Message"` / `"StyledMessage"`
   parity for string-or-symbol tags plus string and `MessageName[...]`
   `MessageTemplate` / `MessageParameters` message rendering through the
-  current message catalog, including delayed-template host-input resume,
-  request-level print transport, non-string `InputString` prompts and
-  `FieldMasked -> True` host request metadata, suspension-safe `WithCleanup`
-  body cleanup, current `CheckAbort` option-list parity for `PropagateAborts`,
-  `Failsafe` true-only test gating, and abort/failsafe resume through host
-  input, but richer held/cleanup corners and deeper status parity are still
-  pending
+  current message catalog, including named `MessageParameters` and
+  delayed-template host-input resume, request-level print transport,
+  non-string `InputString` prompts and `FieldMasked -> True` host request
+  metadata, suspension-safe `WithCleanup` body cleanup plus current
+  throw/abort cleanup boundaries, current `CheckAbort` option-list and
+  multi-option `PropagateAborts` parity, `Failsafe` true-only test gating plus
+  inert non-wrapper arity, inert direct `TerminatedEvaluation` constructor /
+  application behavior, and abort/failsafe resume through host input, but
+  richer held/cleanup corners and deeper status parity are still pending
 - `planned`: broader failure values, abort-protection parity, external
   interaction builtins, and deeper cleanup/exception compatibility
 
@@ -357,8 +359,8 @@ once in its primary implementation group. Other groups may mention it as
   first-pass subset
 - `planned`: remaining deeper `WithCleanup` / `Failsafe` / `CheckAbort` /
   `AbortProtect` parity, richer `Assert` controls beyond the current session
-  flag, more complete `TerminatedEvaluation` behavior, and fuller host-I/O
-  semantics
+  flag, generated-resource `TerminatedEvaluation` use sites beyond the direct
+  inert constructor subset, and fuller host-I/O semantics
 - `cross-tracked elsewhere`: `Block`, `Function`, `Module`, `Rule`,
   `RuleDelayed`, `With`
 

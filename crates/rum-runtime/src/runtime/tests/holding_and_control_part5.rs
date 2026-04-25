@@ -124,6 +124,23 @@ fn failure_and_enclose_confirm_family_cover_first_pass_error_flow() {
             .to_string(),
         "info"
     );
+
+    session
+        .eval_text("f::argx := StringJoin[InputString[\"msg: \"], \" `1`\"]")
+        .unwrap();
+    let failure = session
+        .eval_request("Enclose[Confirm[Failure[\"tag\", {\"MessageTemplate\" -> MessageName[f, \"argx\"], \"MessageParameters\" -> {x}}]], \"Message\"]")
+        .expect_err("Enclose string property handler should suspend while rendering Failure MessageName template");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "msg: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("bad")
+        .expect("resuming Enclose property handler should finish rendering Failure message");
+    assert_eq!(response.value.to_string(), "\"bad x\"");
 }
 
 #[test]

@@ -118,6 +118,14 @@ fn message_templates_support_message_name_and_all_args_placeholders() {
             && message.tag == "argx"
             && message.text == "f::argx: first=1; all=1, 2; implicit=1/2"
     }));
+
+    session
+        .eval_text("f::str = \"string=`1`; all=`*`\"")
+        .unwrap();
+    let outcome = session.eval_text("Message[f::str, \"x\", \"y\"]").unwrap();
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "f" && message.tag == "str" && message.text == "string=x; all=x, y"
+    }));
 }
 #[test]
 fn message_templates_support_richer_format_specifiers() {

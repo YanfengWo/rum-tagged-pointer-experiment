@@ -24,10 +24,11 @@ pub(super) fn runtime_message_name_expr(message: RuntimeMessage) -> Expr {
     message_name_expr(symbol_from_raw_name(&message.symbol), message.tag)
 }
 
-pub(super) fn format_message_template(
+pub(super) fn format_message_template_with_named(
     template: &str,
     key: &MessageNameKey,
     args: &[Expr],
+    named_args: &[(String, Expr)],
 ) -> String {
     let mut rendered = String::with_capacity(template.len());
     let mut cursor = 0;
@@ -56,6 +57,7 @@ pub(super) fn format_message_template(
             formatted
         } else {
             format_message_placeholder(token, key, args)
+                .or_else(|| format_named_message_placeholder(token, named_args))
         };
 
         if let Some(formatted) = formatted {
@@ -69,6 +71,14 @@ pub(super) fn format_message_template(
 
     rendered.push_str(&template[cursor..]);
     rendered
+}
+
+fn format_named_message_placeholder(token: &str, named_args: &[(String, Expr)]) -> Option<String> {
+    let (base, spec) = token
+        .split_once(':')
+        .map_or((token, None), |(base, spec)| (base, Some(spec)));
+    let (_, value) = named_args.iter().find(|(name, _)| name == base)?;
+    format_message_arg_placeholder(value, spec)
 }
 
 pub(super) fn format_message_placeholder(
@@ -108,7 +118,7 @@ pub(super) fn format_message_star_placeholder(args: &[Expr], spec: Option<&str>)
     match spec {
         None => Some(
             args.iter()
-                .map(ToString::to_string)
+                .map(format_message_default_fragment)
                 .collect::<Vec<_>>()
                 .join(", "),
         ),
@@ -125,7 +135,7 @@ pub(super) fn format_message_star_placeholder(args: &[Expr], spec: Option<&str>)
 
 pub(super) fn format_message_arg_placeholder(arg: &Expr, spec: Option<&str>) -> Option<String> {
     match spec {
-        None => Some(arg.to_string()),
+        None => Some(format_message_default_fragment(arg)),
         Some("head") => Some(message_arg_head(arg)),
         Some("name") => Some(expr_as_symbol(arg)?.name().to_string()),
         Some("context") => Some(expr_as_symbol(arg)?.context().to_string()),
@@ -136,6 +146,13 @@ pub(super) fn format_message_arg_placeholder(arg: &Expr, spec: Option<&str>) -> 
             _ => None,
         },
         _ => None,
+    }
+}
+
+fn format_message_default_fragment(arg: &Expr) -> String {
+    match arg {
+        Expr::Atom(Atom::String(value)) => value.clone(),
+        other => other.to_string(),
     }
 }
 
