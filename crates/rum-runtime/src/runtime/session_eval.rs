@@ -13,6 +13,23 @@ impl Session {
         }
     }
 
+    pub(super) fn finalize_top_level_eval_value(
+        &mut self,
+        outcome: Result<Expr, EvalError>,
+        handled_error_checkpoint: usize,
+    ) -> Result<Expr, EvalError> {
+        match self.finalize_top_level_control_flow(outcome) {
+            Err(error) => match Self::terminated_evaluation_expr_for_error(&error) {
+                Some(value) => {
+                    self.emit_non_loader_eval_message(handled_error_checkpoint, &error);
+                    Ok(value)
+                }
+                None => Err(error),
+            },
+            other => other,
+        }
+    }
+
     pub fn inspect(&self, name: &str) -> Option<SymbolInfo> {
         let symbol = self
             .resolve_symbol_name(name, false)
@@ -131,7 +148,7 @@ impl Session {
             let syntax = parse_expr(input)?;
             let expr = self.lower_syntax_expr(&syntax)?;
             let result = self.evaluate(expr);
-            self.finalize_top_level_control_flow(result)
+            self.finalize_top_level_eval_value(result, handled_error_checkpoint)
         })();
 
         match result {

@@ -1413,6 +1413,12 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         self.tracing_enabled = prior_tracing;
 
+        if let Err(error) = &outcome {
+            if Self::terminated_evaluation_expr_for_error(error).is_some() {
+                self.emit_non_loader_eval_message(checkpoint.handled_error_checkpoint, error);
+            }
+        }
+
         let messages = self.messages.split_off(checkpoint.message_checkpoint);
         let prints = self.prints.split_off(checkpoint.print_checkpoint);
         let events = self.trace_events[checkpoint.trace_checkpoint..].to_vec();
@@ -1422,10 +1428,21 @@ impl Session {
         if !prior_tracing {
             self.truncate_trace_from(checkpoint.trace_checkpoint);
         }
+        self.handled_non_loader_eval_errors
+            .truncate(checkpoint.handled_error_checkpoint);
 
         let elapsed = elapsed_duration_expr(started.elapsed());
         let (result_expr, success, failure_type) = match outcome {
             Ok(value) => (value, true, system_expr("None")),
+            Err(error) if Self::terminated_evaluation_expr_for_error(&error).is_some() => (
+                Self::terminated_evaluation_expr_for_error(&error)
+                    .expect("termination value should exist after guard"),
+                false,
+                Expr::string(
+                    Self::terminated_evaluation_reason_for_error(&error)
+                        .expect("termination reason should exist after guard"),
+                ),
+            ),
             Err(EvalError::Abort | EvalError::ProtectedAbort) => {
                 (system_expr("$Aborted"), false, Expr::string("Abort"))
             }
@@ -1591,6 +1608,11 @@ impl Session {
     ) -> Result<(Expr, Option<&'static str>), EvalError> {
         match outcome {
             Ok(value) => Ok((value, None)),
+            Err(error) if Self::terminated_evaluation_expr_for_error(&error).is_some() => Ok((
+                Self::terminated_evaluation_expr_for_error(&error)
+                    .expect("termination value should exist after guard"),
+                Self::terminated_evaluation_reason_for_error(&error),
+            )),
             Err(EvalError::Abort | EvalError::ProtectedAbort) => {
                 Ok((system_expr("$Aborted"), Some("Abort")))
             }
@@ -2411,6 +2433,7 @@ struct DebugCaptureCheckpoint {
     message_checkpoint: usize,
     print_checkpoint: usize,
     trace_checkpoint: usize,
+    handled_error_checkpoint: usize,
 }
 
 impl DebugCaptureCheckpoint {
@@ -2419,6 +2442,7 @@ impl DebugCaptureCheckpoint {
             message_checkpoint: session.messages.len(),
             print_checkpoint: session.prints.len(),
             trace_checkpoint: session.trace_events.len(),
+            handled_error_checkpoint: session.handled_non_loader_eval_errors.len(),
         }
     }
 }

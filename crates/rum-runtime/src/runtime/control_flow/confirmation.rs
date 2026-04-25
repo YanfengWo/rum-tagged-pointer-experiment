@@ -631,17 +631,28 @@ fn build_confirmation_failure(fields: Vec<(&str, Expr)>) -> Expr {
 }
 
 pub(super) fn build_failsafe_failure(function: Expr, test: Expr, args: Vec<Expr>) -> Expr {
+    let held_args = Expr::call(system_expr("Hold"), args.clone());
+    let held_message_parameters = Expr::call(
+        system_expr("List"),
+        args.iter()
+            .cloned()
+            .map(|arg| Expr::call(system_expr("HoldForm"), vec![arg]))
+            .collect(),
+    );
+
     Expr::call(
         system_expr("Failure"),
         vec![
-            Expr::string("FailsafeFailure"),
+            Expr::string("FailsafeFailed"),
             render_association(vec![
+                (
+                    Expr::string("MessageTemplate"),
+                    Expr::string("The test failed on the arguments `1`."),
+                ),
+                (Expr::string("MessageParameters"), held_message_parameters),
+                (Expr::string("Arguments"), held_args),
                 (Expr::string("Function"), function),
                 (Expr::string("Test"), test),
-                (
-                    Expr::string("Arguments"),
-                    Expr::call(system_expr("List"), args),
-                ),
             ]),
         ],
     )

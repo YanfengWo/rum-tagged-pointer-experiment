@@ -93,6 +93,43 @@ fn abortprotect_and_failsafe_resume_through_host_input() {
     assert_eq!(session.eval_text("x").unwrap().value.to_string(), "2");
 
     let failure = session
+        .eval_request("CheckAbort[Abort[], InputString[\"fallback: \"]]")
+        .expect_err("CheckAbort fallback should suspend when host input is needed");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "fallback: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("rescued")
+        .expect("resuming CheckAbort fallback should finish the caught abort");
+    assert_eq!(response.value.to_string(), "\"rescued\"");
+
+    let failure = session
+        .eval_request("CheckAbort[InputString[\"body: \"]; Abort[], InputString[\"fallback: \"]]")
+        .expect_err("CheckAbort body should suspend before aborting");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "body: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let failure = session
+        .resume_eval_request_with_input("continue")
+        .expect_err("resuming the body should reach the abort and then suspend in fallback");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "fallback: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("rescued")
+        .expect("resuming nested CheckAbort fallback should finish the caught abort");
+    assert_eq!(response.value.to_string(), "\"rescued\"");
+
+    let failure = session
         .eval_request("Failsafe[f, Function[MatchQ[InputString[\"test: \"], \"yes\"]]][arg]")
         .expect_err("Failsafe test should suspend when host input is needed");
     match &failure.error {
@@ -120,8 +157,36 @@ fn abortprotect_and_failsafe_resume_through_host_input() {
         .expect("falsy resumed Failsafe test should produce a failure object");
     assert_eq!(
         response.value.to_string(),
-        "Failure[\"FailsafeFailure\", Association[Rule[\"Function\", f], Rule[\"Test\", Function[MatchQ[InputString[\"test: \"], \"yes\"]]], Rule[\"Arguments\", List[arg]]]]"
+        "Failure[\"FailsafeFailed\", Association[Rule[\"MessageTemplate\", \"The test failed on the arguments `1`.\"], Rule[\"MessageParameters\", List[HoldForm[arg]]], Rule[\"Arguments\", Hold[arg]], Rule[\"Function\", f], Rule[\"Test\", Function[MatchQ[InputString[\"test: \"], \"yes\"]]]]]"
     );
+
+    let failure = session
+        .eval_request("Failsafe[Function[InputString[\"fn: \"]], Function[True]][arg]")
+        .expect_err("truthy Failsafe function branch should suspend when host input is needed");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "fn: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("value")
+        .expect("resuming truthy Failsafe function branch should return the supplied text");
+    assert_eq!(response.value.to_string(), "\"value\"");
+
+    let failure = session
+        .eval_request("Failsafe[f, Function[False], Function[InputString[\"fail: \"]]][arg]")
+        .expect_err("falsy Failsafe fail-function branch should suspend when host input is needed");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "fail: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("fallback")
+        .expect("resuming Failsafe fail-function branch should return the supplied text");
+    assert_eq!(response.value.to_string(), "\"fallback\"");
 }
 
 #[test]
@@ -291,6 +356,42 @@ fn withcleanup_defers_cleanup_until_suspended_body_finishes() {
         .expect("resuming three-argument WithCleanup body should run cleanup last");
     assert_eq!(response.value.to_string(), "done");
     assert_eq!(session.eval_text("x").unwrap().value.to_string(), "3");
+
+    session.eval_text("x = 0").unwrap();
+    let failure = session
+        .eval_request("WithCleanup[x = 1; done, InputString[\"cleanup: \"]; x = 2]")
+        .expect_err("WithCleanup cleanup should suspend after a successful body");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cleanup: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
+    let response = session
+        .resume_eval_request_with_input("ok")
+        .expect("resuming suspended cleanup should return the primary body value");
+    assert_eq!(response.value.to_string(), "done");
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "2");
+
+    session.eval_text("x = 0").unwrap();
+    let failure = session
+        .eval_request(
+            "CheckAbort[WithCleanup[Abort[], InputString[\"cleanup: \"]; x = 4], rescued]",
+        )
+        .expect_err("WithCleanup cleanup should suspend before propagating an abort");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "cleanup: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "0");
+    let response = session
+        .resume_eval_request_with_input("ok")
+        .expect("resuming cleanup should let CheckAbort catch the original abort");
+    assert_eq!(response.value.to_string(), "rescued");
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "4");
 }
 
 #[test]
@@ -736,5 +837,80 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
             .value
             .to_string(),
         "TerminatedEvaluation[\"RecursionLimit\"][\"Properties\"]"
+    );
+
+    let mut recursion_session = Session::new();
+    recursion_session.set_recursion_limit(32);
+    recursion_session
+        .eval_text("grow[x_] := grow[f[x]]")
+        .unwrap();
+    let recursion = recursion_session.eval_text("grow[1]").unwrap();
+    assert_eq!(
+        recursion.value.to_string(),
+        "TerminatedEvaluation[\"RecursionLimit\"]"
+    );
+    assert!(
+        recursion
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reclim")
+    );
+
+    let mut iteration_session = Session::new();
+    iteration_session.set_evaluation_pass_limit(1);
+    let iteration = iteration_session
+        .eval_text("f[f = Hold, Identity[1]]")
+        .unwrap();
+    assert_eq!(
+        iteration.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
+    assert!(
+        iteration
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "passlim")
+    );
+
+    let mut request_session = Session::new();
+    request_session.set_recursion_limit(32);
+    request_session
+        .eval_request("grow[x_] := grow[f[x]]")
+        .unwrap();
+    let request = request_session.eval_request("grow[1]").unwrap();
+    assert_eq!(
+        request.value.to_string(),
+        "TerminatedEvaluation[\"RecursionLimit\"]"
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reclim")
+    );
+
+    let mut data_session = Session::new();
+    data_session.set_recursion_limit(32);
+    data_session.eval_text("grow[x_] := grow[f[x]]").unwrap();
+    let data = data_session.eval_text("EvaluationData[grow[1]]").unwrap();
+    assert_eq!(
+        data_session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![data.value.clone(), Expr::string("Result")],
+            ))
+            .unwrap()
+            .to_string(),
+        "TerminatedEvaluation[\"RecursionLimit\"]"
+    );
+    assert_eq!(
+        data_session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![data.value, Expr::string("FailureType")],
+            ))
+            .unwrap()
+            .to_string(),
+        "\"RecursionLimit\""
     );
 }

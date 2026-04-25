@@ -281,14 +281,17 @@ fn recursion_limit_stops_expanding_recursive_downvalues() {
 
     session.eval_text("grow[x_] := grow[f[x]]").unwrap();
 
-    let error = session
-        .eval_text("grow[1]")
-        .expect_err("expected recursion limit error");
-
-    assert!(matches!(
-        error,
-        EvalError::RecursionLimitExceeded { limit: 32 }
-    ));
+    let outcome = session.eval_text("grow[1]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"RecursionLimit\"]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reclim")
+    );
 }
 
 #[test]
@@ -310,14 +313,17 @@ fn evaluation_pass_limit_bounds_fixed_point_revisits() {
     let mut session = Session::new();
     session.set_evaluation_pass_limit(1);
 
-    let error = session
-        .eval_text("f[f = Hold, Identity[1]]")
-        .expect_err("expected evaluation pass limit error");
-
-    assert!(matches!(
-        error,
-        EvalError::EvaluationPassLimitExceeded { limit: 1 }
-    ));
+    let outcome = session.eval_text("f[f = Hold, Identity[1]]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "passlim")
+    );
     assert_eq!(session.resource_limits().evaluation_pass_limit, 1);
 }
 

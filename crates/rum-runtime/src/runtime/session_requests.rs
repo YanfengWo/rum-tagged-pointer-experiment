@@ -115,7 +115,9 @@ impl Session {
             .lower_syntax_expr(parsed.syntax())
             .map_err(|err| self.finish_request_failure(checkpoint, err))?;
         let outcome = self.evaluate(expr);
-        let value = match self.finalize_top_level_control_flow(outcome) {
+        let value = match self
+            .finalize_top_level_eval_value(outcome, checkpoint.handled_error_checkpoint)
+        {
             Ok(value) => value,
             Err(EvalError::InputRequired { .. }) => {
                 self.pending_eval_request = Some(checkpoint.into());
@@ -166,7 +168,9 @@ impl Session {
             })?;
 
         let outcome = self.resume_suspended_evaluation(input);
-        let value = match self.finalize_top_level_control_flow(outcome) {
+        let value = match self
+            .finalize_top_level_eval_value(outcome, checkpoint.handled_error_checkpoint)
+        {
             Ok(value) => value,
             Err(EvalError::InputRequired { .. }) => {
                 self.pending_eval_request = Some(checkpoint.into());

@@ -91,6 +91,25 @@ impl Session {
         })
     }
 
+    pub(super) fn terminated_evaluation_reason_for_error(
+        error: &EvalError,
+    ) -> Option<&'static str> {
+        match error {
+            EvalError::RecursionLimitExceeded { .. } => Some("RecursionLimit"),
+            EvalError::EvaluationPassLimitExceeded { .. } => Some("IterationLimit"),
+            _ => None,
+        }
+    }
+
+    pub(super) fn terminated_evaluation_expr_for_error(error: &EvalError) -> Option<Expr> {
+        Self::terminated_evaluation_reason_for_error(error).map(|reason| {
+            Expr::call(
+                system_expr("TerminatedEvaluation"),
+                vec![Expr::string(reason)],
+            )
+        })
+    }
+
     pub(super) fn emit_non_loader_eval_message(
         &mut self,
         checkpoint: usize,

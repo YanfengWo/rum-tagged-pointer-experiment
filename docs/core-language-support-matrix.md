@@ -339,12 +339,16 @@ once in its primary implementation group. Other groups may mention it as
   non-string `InputString` prompts, `Input` / `InputString`
   `FieldMasked -> True` host request metadata and current option-error
   boundaries, suspension-safe `WithCleanup` body cleanup plus current
-  throw/abort cleanup boundaries, current `CheckAbort` option-list and
-  multi-option `PropagateAborts` parity, `Failsafe` true-only test gating plus
-  inert non-wrapper arity, inert direct `TerminatedEvaluation` constructor /
-  application behavior, current string-tag `Success` projection boundary, and
-  abort/failsafe resume through host input, but richer held/cleanup corners and
-  deeper status parity are still pending
+  cleanup-time host-input resume and throw/abort cleanup boundaries, current
+  `CheckAbort` option-list and multi-option `PropagateAborts` parity including
+  fallback host-input resume, `Failsafe` true-only test gating plus inert
+  non-wrapper arity, current Failsafe failure metadata, function/fail-function
+  host-input resume, inert direct `TerminatedEvaluation` constructor /
+  application behavior plus generated top-level/request/evaluation-data
+  `TerminatedEvaluation` for recursion and fixed-point iteration limits,
+  current string-tag `Success` projection boundary, and abort/failsafe resume
+  through host input, but richer held/cleanup corners and deeper status parity
+  are still pending
 - `planned`: broader failure values, abort-protection parity, external
   interaction builtins, and deeper cleanup/exception compatibility
 
@@ -361,9 +365,8 @@ once in its primary implementation group. Other groups may mention it as
   first-pass subset
 - `planned`: remaining deeper `WithCleanup` / `Failsafe` / `CheckAbort` /
   `AbortProtect` parity, richer `Assert` controls beyond the current session
-  flag, generated-resource `TerminatedEvaluation` use sites beyond the direct
-  inert constructor subset that need an evaluator-error API decision, and
-  fuller host-I/O semantics
+  flag, broader generated-resource `TerminatedEvaluation` parity beyond the
+  current recursion/fixed-point limit subset, and fuller host-I/O semantics
 - `cross-tracked elsewhere`: `Block`, `Function`, `Module`, `Rule`,
   `RuleDelayed`, `With`
 
