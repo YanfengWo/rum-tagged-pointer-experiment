@@ -16,6 +16,13 @@ enum DialogNormalizationError {
     InvalidSymbols,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum InputOptionsError {
+    NonOption(Expr),
+    InvalidOptionName(Expr),
+    UnknownOption(Symbol),
+}
+
 impl DialogNormalizationError {
     fn message(self) -> &'static str {
         match self {
@@ -65,36 +72,21 @@ impl Session {
     }
 
     pub(super) fn eval_input_string(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let request = match self.compile_input_string_request(args) {
-            Some(request) => request,
-            None => {
-                return Ok(self.invalid_call_with_arg_form(
-                    "InputString",
-                    args,
-                    "expected an optional prompt followed by FieldMasked option rules",
-                ));
-            }
+        let request = match self.compile_input_request("InputString", args, String::new()) {
+            Ok(request) => request,
+            Err(error) => return Ok(self.invalid_input_options_call("InputString", args, error)),
         };
 
-        if let Some(value) = self.queued_input_responses.pop_front() {
-            self.clear_suspension_state();
-            return Ok(Expr::string(value));
-        }
-
-        self.begin_input_suspension(request.clone());
-
-        Err(EvalError::InputRequired { request })
+        self.drive_input_request(request)
     }
 
     pub(super) fn eval_input(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let prompt = match args {
-            [] => "?".to_string(),
-            [Expr::Atom(Atom::String(prompt))] => prompt.clone(),
-            [prompt] => prompt.to_string(),
-            _ => return Ok(self.invalid_call_with_arg_range("Input", args, 0, 1)),
+        let request = match self.compile_input_request("Input", args, "?".to_string()) {
+            Ok(request) => request,
+            Err(error) => return Ok(self.invalid_input_options_call("Input", args, error)),
         };
 
-        let text_result = self.eval_input_string(&[Expr::string(prompt)]);
+        let text_result = self.drive_input_request(request);
         let text = self.suspend_with_frame(text_result, |session, text| {
             session.resume_input_after_text(text)
         })?;
@@ -176,36 +168,96 @@ impl Session {
         })
     }
 
-    fn compile_input_string_request(&self, args: &[Expr]) -> Option<RuntimeInputRequest> {
-        let (prompt, option_exprs) = split_input_string_prompt_and_options(args);
-        let prompt = prompt.map_or_else(String::new, render_print_fragment);
-        let explicit_options = if option_exprs.is_empty() {
-            None
-        } else {
-            let options = self
-                .compile_assigned_options_from_resolved(&Expr::call(
-                    system_expr("List"),
-                    option_exprs.to_vec(),
-                ))
-                .ok()?;
-            for (name, _, _) in options.iter() {
-                if name.name() != "FieldMasked" {
-                    return None;
-                }
-            }
-            Some(options)
-        };
+    fn compile_input_request(
+        &self,
+        symbol_name: &str,
+        args: &[Expr],
+        default_prompt: String,
+    ) -> Result<RuntimeInputRequest, InputOptionsError> {
+        let (prompt, option_exprs) = split_input_prompt_and_options(args);
+        let prompt = prompt.map_or(default_prompt, render_print_fragment);
+        let explicit_options = self.parse_input_options(option_exprs)?;
 
         let mut request = RuntimeInputRequest::new(prompt);
-        if explicit_options
-            .as_ref()
-            .and_then(|options| options.get_by_name("FieldMasked"))
-            .is_some_and(|value| is_system_symbol_name(value, "True"))
-        {
+        let field_masked = self
+            .raw_option_value_for_symbol(
+                explicit_options.as_ref(),
+                &Symbol::system(symbol_name),
+                "FieldMasked",
+            )
+            .is_some_and(|(value, _)| is_system_symbol_name(&value, "True"));
+        if field_masked {
             request = request.password();
         }
 
-        Some(request)
+        Ok(request)
+    }
+
+    fn parse_input_options(
+        &self,
+        option_exprs: &[Expr],
+    ) -> Result<Option<SymbolOptions>, InputOptionsError> {
+        if option_exprs.is_empty() {
+            return Ok(None);
+        }
+
+        let mut options = Vec::new();
+        for option_expr in option_exprs {
+            collect_input_option_expr(option_expr, &mut options)?;
+        }
+
+        self.compile_assigned_options_from_resolved(&Expr::call(system_expr("List"), options))
+            .map(Some)
+            .map_err(|_| {
+                InputOptionsError::InvalidOptionName(Expr::call(
+                    system_expr("List"),
+                    option_exprs.to_vec(),
+                ))
+            })
+    }
+
+    fn drive_input_request(&mut self, request: RuntimeInputRequest) -> Result<Expr, EvalError> {
+        if let Some(value) = self.queued_input_responses.pop_front() {
+            self.clear_suspension_state();
+            return Ok(Expr::string(value));
+        }
+
+        self.begin_input_suspension(request.clone());
+
+        Err(EvalError::InputRequired { request })
+    }
+
+    fn invalid_input_options_call(
+        &mut self,
+        symbol_name: &str,
+        args: &[Expr],
+        error: InputOptionsError,
+    ) -> Expr {
+        let held_call = Expr::call(system_expr(symbol_name), args.to_vec());
+        match error {
+            InputOptionsError::NonOption(offender) => self.invalid_call_with_message(
+                symbol_name,
+                args,
+                "nonopt",
+                format!(
+                    "Options expected (instead of {offender}) beyond position 1 in {held_call}. An option must be a rule or a list of rules."
+                ),
+            ),
+            InputOptionsError::InvalidOptionName(offender) => self.invalid_call_with_message(
+                symbol_name,
+                args,
+                "optrs",
+                format!(
+                    "Option specification {offender} in {held_call} is not a rule for a symbol or string."
+                ),
+            ),
+            InputOptionsError::UnknownOption(option_name) => self.invalid_call_with_message(
+                symbol_name,
+                args,
+                "optx",
+                format!("Unknown option {option_name} in {held_call}."),
+            ),
+        }
     }
 
     fn dialog_body_expr(&self, body: Option<Expr>) -> Expr {
@@ -240,33 +292,64 @@ impl Session {
     }
 }
 
-fn split_input_string_prompt_and_options(args: &[Expr]) -> (Option<&Expr>, &[Expr]) {
+fn split_input_prompt_and_options(args: &[Expr]) -> (Option<&Expr>, &[Expr]) {
     match args {
         [] => (None, &[]),
-        [first, ..] if is_input_string_option_expr(first) => (None, args),
+        [first, ..] if is_input_option_start_expr(first) => (None, args),
         [first, rest @ ..] => (Some(first), rest),
     }
 }
 
-fn is_input_string_option_expr(expr: &Expr) -> bool {
+fn is_input_option_start_expr(expr: &Expr) -> bool {
     match expr {
         Expr::Call { head, args }
             if (is_system_symbol_name(head, "Rule")
                 || is_system_symbol_name(head, "RuleDelayed"))
                 && args.len() == 2 =>
         {
-            matches!(
-                &args[0],
-                Expr::Atom(Atom::Symbol(name)) if name.name() == "FieldMasked"
-            ) || matches!(
-                &args[0],
-                Expr::Atom(Atom::String(name)) if name == "FieldMasked"
-            )
+            matches!(&args[0], Expr::Atom(Atom::Symbol(_)))
+                || matches!(&args[0], Expr::Atom(Atom::String(_)))
         }
         Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
-            !args.is_empty() && args.iter().all(is_input_string_option_expr)
+            !args.is_empty() && args.iter().all(is_input_option_start_expr)
         }
         _ => false,
+    }
+}
+
+fn collect_input_option_expr(
+    option_expr: &Expr,
+    options: &mut Vec<Expr>,
+) -> Result<(), InputOptionsError> {
+    match option_expr {
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "Rule")
+                || is_system_symbol_name(head, "RuleDelayed"))
+                && args.len() == 2 =>
+        {
+            let option_name = input_option_name(&args[0])
+                .ok_or_else(|| InputOptionsError::InvalidOptionName(option_expr.clone()))?;
+            if option_name.name() != "FieldMasked" {
+                return Err(InputOptionsError::UnknownOption(option_name));
+            }
+            options.push(option_expr.clone());
+            Ok(())
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
+            for item in args {
+                collect_input_option_expr(item, options)?;
+            }
+            Ok(())
+        }
+        _ => Err(InputOptionsError::NonOption(option_expr.clone())),
+    }
+}
+
+fn input_option_name(expr: &Expr) -> Option<Symbol> {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => Some(symbol.clone()),
+        Expr::Atom(Atom::String(name)) => resolve_unqualified_symbol(name),
+        _ => None,
     }
 }
 

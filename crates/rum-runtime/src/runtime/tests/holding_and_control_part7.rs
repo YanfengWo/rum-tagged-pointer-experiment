@@ -166,6 +166,90 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
         .expect("resuming Input should parse and evaluate the supplied expression");
     assert_eq!(response.value.to_string(), "5");
     assert!(response.prints.is_empty());
+
+    let failure = session
+        .eval_request("Input[\"expr: \", FieldMasked -> True]")
+        .expect_err("Input should pass FieldMasked through to the host request");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "expr: ");
+            assert!(request.password);
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("2 + 3")
+        .expect("resuming masked Input should parse and evaluate the supplied expression");
+    assert_eq!(response.value.to_string(), "5");
+
+    session
+        .eval_text("SetOptions[InputString, FieldMasked -> True]")
+        .unwrap();
+    let failure = session
+        .eval_request("InputString[\"default masked: \"]")
+        .expect_err("InputString should honor FieldMasked from SetOptions");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "default masked: ");
+            assert!(request.password);
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("secret")
+        .expect("resuming default-masked InputString should return the supplied text");
+    assert_eq!(response.value.to_string(), "\"secret\"");
+    session
+        .eval_text("SetOptions[InputString, FieldMasked -> False]")
+        .unwrap();
+
+    let unknown = session.eval_text("InputString[BadOption -> 1]").unwrap();
+    assert_eq!(unknown.value.to_string(), "InputString[Rule[BadOption, 1]]");
+    assert!(
+        unknown
+            .messages
+            .iter()
+            .any(|message| message.symbol == "InputString" && message.tag == "optx")
+    );
+
+    let non_option = session.eval_text("InputString[\"p\", 1]").unwrap();
+    assert_eq!(non_option.value.to_string(), "InputString[\"p\", 1]");
+    assert!(
+        non_option
+            .messages
+            .iter()
+            .any(|message| message.symbol == "InputString" && message.tag == "nonopt")
+    );
+
+    let invalid_option_name = session.eval_text("InputString[\"p\", 1 -> 2]").unwrap();
+    assert_eq!(
+        invalid_option_name.value.to_string(),
+        "InputString[\"p\", Rule[1, 2]]"
+    );
+    assert!(
+        invalid_option_name
+            .messages
+            .iter()
+            .any(|message| message.symbol == "InputString" && message.tag == "optrs")
+    );
+
+    let input_unknown = session.eval_text("Input[BadOption -> 1]").unwrap();
+    assert_eq!(input_unknown.value.to_string(), "Input[Rule[BadOption, 1]]");
+    assert!(
+        input_unknown
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Input" && message.tag == "optx")
+    );
+
+    let input_non_option = session.eval_text("Input[1, 2]").unwrap();
+    assert_eq!(input_non_option.value.to_string(), "Input[1, 2]");
+    assert!(
+        input_non_option
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Input" && message.tag == "nonopt")
+    );
 }
 
 #[test]
@@ -291,11 +375,43 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Success[\"ok\", {\"Code\" -> 200}][All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", All]"
+    );
+    assert_eq!(
+        session
             .eval_text("Success[\"ok\", {\"Code\" -> 200, \"Body\" -> 7}][Properties]")
             .unwrap()
             .value
             .to_string(),
         "Missing[\"KeyAbsent\", Properties]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Success[tag, {Code -> 200}][Code]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Success[tag, Association[Rule[Code, 200]]][Code]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Success[1, {Code -> 200}][Code]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Success[1, Association[Rule[Code, 200]]][Code]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Success[\"ok\", {Properties -> 1, \"Properties\" -> 2}][\"Properties\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Properties, \"Properties\"]"
     );
     assert_eq!(
         session

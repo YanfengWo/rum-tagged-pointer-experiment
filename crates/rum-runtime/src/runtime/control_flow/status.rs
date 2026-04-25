@@ -70,11 +70,16 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Option<Expr>, EvalError> {
-        if !is_failure_expr(head) && !is_success_expr(head) {
+        let is_failure = is_failure_expr(head);
+        let is_success = is_success_expr(head);
+        if !is_failure && !is_success {
             return Ok(None);
         }
 
-        if is_failure_expr(head) && !failure_tag_supports_projection(head) {
+        if is_failure && !failure_tag_supports_projection(head) {
+            return Ok(None);
+        }
+        if is_success && !success_tag_supports_projection(head) {
             return Ok(None);
         }
 
@@ -409,5 +414,12 @@ fn failure_tag_supports_projection(status: &Expr) -> bool {
     matches!(
         status_object_parts(status).map(|(tag, _)| tag),
         Some(Expr::Atom(Atom::String(_) | Atom::Symbol(_)))
+    )
+}
+
+fn success_tag_supports_projection(status: &Expr) -> bool {
+    matches!(
+        status_object_parts(status).map(|(tag, _)| tag),
+        Some(Expr::Atom(Atom::String(_)))
     )
 }

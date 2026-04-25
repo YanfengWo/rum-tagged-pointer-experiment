@@ -336,13 +336,15 @@ once in its primary implementation group. Other groups may mention it as
   `MessageTemplate` / `MessageParameters` message rendering through the
   current message catalog, including named `MessageParameters` and
   delayed-template host-input resume, request-level print transport,
-  non-string `InputString` prompts and `FieldMasked -> True` host request
-  metadata, suspension-safe `WithCleanup` body cleanup plus current
+  non-string `InputString` prompts, `Input` / `InputString`
+  `FieldMasked -> True` host request metadata and current option-error
+  boundaries, suspension-safe `WithCleanup` body cleanup plus current
   throw/abort cleanup boundaries, current `CheckAbort` option-list and
   multi-option `PropagateAborts` parity, `Failsafe` true-only test gating plus
   inert non-wrapper arity, inert direct `TerminatedEvaluation` constructor /
-  application behavior, and abort/failsafe resume through host input, but
-  richer held/cleanup corners and deeper status parity are still pending
+  application behavior, current string-tag `Success` projection boundary, and
+  abort/failsafe resume through host input, but richer held/cleanup corners and
+  deeper status parity are still pending
 - `planned`: broader failure values, abort-protection parity, external
   interaction builtins, and deeper cleanup/exception compatibility
 
@@ -360,7 +362,8 @@ once in its primary implementation group. Other groups may mention it as
 - `planned`: remaining deeper `WithCleanup` / `Failsafe` / `CheckAbort` /
   `AbortProtect` parity, richer `Assert` controls beyond the current session
   flag, generated-resource `TerminatedEvaluation` use sites beyond the direct
-  inert constructor subset, and fuller host-I/O semantics
+  inert constructor subset that need an evaluator-error API decision, and
+  fuller host-I/O semantics
 - `cross-tracked elsewhere`: `Block`, `Function`, `Module`, `Rule`,
   `RuleDelayed`, `With`
 
