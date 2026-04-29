@@ -426,6 +426,13 @@ impl Session {
                 }
 
                 if propagate == PropagateAbortsMode::True {
+                    if self.abort_protect_depth > 0 {
+                        if self.abort_protect_pending <= pending_checkpoint {
+                            self.abort_protect_pending = pending_checkpoint.saturating_add(1);
+                        }
+                        return Ok(system_expr("$Aborted"));
+                    }
+
                     Err(if protected {
                         EvalError::ProtectedAbort
                     } else {
@@ -457,6 +464,15 @@ impl Session {
         let delayed_abort = self.abort_protect_pending > pending_checkpoint
             || matches!(outcome, Err(EvalError::Abort | EvalError::ProtectedAbort));
         self.abort_protect_pending = pending_checkpoint;
+
+        if delayed_abort && self.abort_protect_depth > 0 {
+            self.abort_protect_pending = pending_checkpoint.saturating_add(1);
+            return match outcome {
+                Ok(value) => Ok(value),
+                Err(EvalError::Abort | EvalError::ProtectedAbort) => Ok(system_expr("$Aborted")),
+                Err(error) => Err(error),
+            };
+        }
 
         match outcome {
             Ok(value) => {

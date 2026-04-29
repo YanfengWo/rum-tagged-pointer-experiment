@@ -32,6 +32,36 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
             .to_string(),
         "outer"
     );
+    session.eval_text("x = 0; y = unset").unwrap();
+    assert_eq!(
+        session
+            .eval_text(
+                "CheckAbort[AbortProtect[y = CheckAbort[Abort[], inner, PropagateAborts -> True]; x = 1], rescued]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "rescued"
+    );
+    assert_eq!(
+        session.eval_text("{x, y}").unwrap().value.to_string(),
+        "List[1, $Aborted]"
+    );
+    session.eval_text("x = 0; y = unset").unwrap();
+    assert_eq!(
+        session
+            .eval_text(
+                "CheckAbort[AbortProtect[y = AbortProtect[x = 1; Abort[]; x = 2]; x = 3], rescued]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "rescued"
+    );
+    assert_eq!(
+        session.eval_text("{x, y}").unwrap().value.to_string(),
+        "List[3, 2]"
+    );
 
     assert_eq!(
         session
