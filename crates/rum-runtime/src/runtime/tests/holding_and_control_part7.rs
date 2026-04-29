@@ -236,6 +236,7 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
         .expect_err("InputString should accept non-string prompts and surface masked input");
     match &failure.error {
         SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.kind, RuntimeInputKind::InputString);
             assert_eq!(request.prompt, "1");
             assert!(request.password);
         }
@@ -251,6 +252,7 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
         .expect_err("Input should suspend until the host provides an expression");
     match &failure.error {
         SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.kind, RuntimeInputKind::Input);
             assert_eq!(request.prompt, "expr: ");
         }
         other => panic!("expected input-required failure, got {other:?}"),
@@ -267,6 +269,7 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
         .expect_err("Input should pass FieldMasked through to the host request");
     match &failure.error {
         SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.kind, RuntimeInputKind::Input);
             assert_eq!(request.prompt, "expr: ");
             assert!(request.password);
         }
@@ -285,6 +288,7 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
         .expect_err("InputString should honor FieldMasked from SetOptions");
     match &failure.error {
         SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.kind, RuntimeInputKind::InputString);
             assert_eq!(request.prompt, "default masked: ");
             assert!(request.password);
         }
@@ -546,6 +550,22 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Success[\"ok\", 1][\"Properties\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Success[\"ok\", 1][\"Properties\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Success[\"ok\", 1][All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Success[\"ok\", 1][All]"
+    );
+    assert_eq!(
+        session
             .eval_text("Failure[\"oops\", {\"Code\" -> 500, \"Body\" -> 7}][\"Missing\"]")
             .unwrap()
             .value
@@ -662,7 +682,23 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
             .unwrap()
             .value
             .to_string(),
-        "Missing[\"NotAvailable\", \"Tag\"]"
+        "Failure[\"oops\", 1][\"Tag\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", 1][\"Message\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Failure[\"oops\", 1][\"Message\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", 1][All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Failure[\"oops\", 1][All]"
     );
     assert_eq!(
         session

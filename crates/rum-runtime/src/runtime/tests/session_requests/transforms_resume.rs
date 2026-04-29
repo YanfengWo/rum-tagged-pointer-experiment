@@ -646,6 +646,7 @@ fn eval_request_reports_prints_on_failure_and_across_input_resume() {
         .expect_err("Input should suspend the request");
     match &suspended.error {
         SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.kind, RuntimeInputKind::Input);
             assert_eq!(request.prompt, "expr: ");
         }
         other => panic!("expected input-required failure, got {other:?}"),

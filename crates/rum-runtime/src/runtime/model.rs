@@ -156,8 +156,15 @@ pub struct RuntimeMessage {
     pub text: String,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RuntimeInputKind {
+    InputString,
+    Input,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RuntimeInputRequest {
+    pub kind: RuntimeInputKind,
     pub prompt: String,
     pub password: bool,
 }
@@ -165,9 +172,20 @@ pub struct RuntimeInputRequest {
 impl RuntimeInputRequest {
     pub fn new(prompt: impl Into<String>) -> Self {
         Self {
+            kind: RuntimeInputKind::InputString,
             prompt: prompt.into(),
             password: false,
         }
+    }
+
+    pub fn input(mut self) -> Self {
+        self.kind = RuntimeInputKind::Input;
+        self
+    }
+
+    pub fn input_string(mut self) -> Self {
+        self.kind = RuntimeInputKind::InputString;
+        self
     }
 
     pub fn password(mut self) -> Self {

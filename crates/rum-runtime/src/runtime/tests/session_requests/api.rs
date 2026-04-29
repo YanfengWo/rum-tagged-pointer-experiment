@@ -143,6 +143,7 @@ fn eval_request_surfaces_structured_input_requests() {
 
     match &failure.error {
         SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.kind, RuntimeInputKind::InputString);
             assert_eq!(request.prompt, "name: ");
             assert!(!request.password);
         }

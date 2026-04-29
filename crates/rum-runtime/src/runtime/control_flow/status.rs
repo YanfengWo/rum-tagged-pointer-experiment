@@ -426,15 +426,18 @@ fn status_object_parts(status: &Expr) -> Option<(&Expr, &Expr)> {
 }
 
 fn failure_tag_supports_projection(status: &Expr) -> bool {
-    matches!(
-        status_object_parts(status).map(|(tag, _)| tag),
-        Some(Expr::Atom(Atom::String(_) | Atom::Symbol(_)))
-    )
+    let Some((tag, details)) = status_object_parts(status) else {
+        return false;
+    };
+
+    association_entries_from_expr(details).is_some()
+        && matches!(tag, Expr::Atom(Atom::String(_) | Atom::Symbol(_)))
 }
 
 fn success_tag_supports_projection(status: &Expr) -> bool {
-    matches!(
-        status_object_parts(status).map(|(tag, _)| tag),
-        Some(Expr::Atom(Atom::String(_)))
-    )
+    let Some((tag, details)) = status_object_parts(status) else {
+        return false;
+    };
+
+    association_entries_from_expr(details).is_some() && matches!(tag, Expr::Atom(Atom::String(_)))
 }

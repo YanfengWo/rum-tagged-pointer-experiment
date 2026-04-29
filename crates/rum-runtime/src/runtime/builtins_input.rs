@@ -178,7 +178,10 @@ impl Session {
         let prompt = prompt.map_or(default_prompt, render_print_fragment);
         let explicit_options = self.parse_input_options(option_exprs)?;
 
-        let mut request = RuntimeInputRequest::new(prompt);
+        let mut request = match symbol_name {
+            "Input" => RuntimeInputRequest::new(prompt).input(),
+            _ => RuntimeInputRequest::new(prompt).input_string(),
+        };
         let field_masked = self
             .raw_option_value_for_symbol(
                 explicit_options.as_ref(),
