@@ -98,7 +98,8 @@ once in its primary implementation group. Other groups may mention it as
   `ReplacePart` atom-head non-replacement and non-expanding `All` / `Span`
   position-spec boundaries
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
-  across every structural walker, general boolean/comparison evaluation
+  across every structural walker, general boolean/comparison evaluation beyond
+  the current exact-numeric order-chain reductions
 - `planned`: richer expression introspection, broader list-manipulation
   surface, fuller truth-value and predicate surface
 

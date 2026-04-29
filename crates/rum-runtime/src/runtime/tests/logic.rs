@@ -170,6 +170,14 @@ fn and_or_short_circuit_side_effects_and_compare_exact_values() {
     );
     assert_eq!(
         session
+            .eval_text("Less[\"a\", \"b\", u]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Less[\"a\", \"b\", u]"
+    );
+    assert_eq!(
+        session
             .eval_text("GreaterEqual[2, 2, 1]")
             .unwrap()
             .value
@@ -187,5 +195,85 @@ fn and_or_short_circuit_side_effects_and_compare_exact_values() {
     assert_eq!(
         session.eval_text("Less[a, b]").unwrap().value.to_string(),
         "Less[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Less[1, 2, u]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Less[2, u]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Less[u, 1, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Less[u, 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Less[1, 2, u, 3, 4]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Less[2, u, 3]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Less[1, 2, u, 3, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("Less[u, 2, 1, v]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("LessEqual[1, 1, u, 2, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "LessEqual[1, u, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Greater[5, 4, u, 3, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Greater[4, u, 3]"
+    );
+    assert_eq!(
+        session
+            .eval_text("GreaterEqual[3, 3, u]")
+            .unwrap()
+            .value
+            .to_string(),
+        "GreaterEqual[3, u]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Equal[1, 1, u]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Equal[1, 1, u]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Unequal[1, 2, u]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Unequal[1, 2, u]"
     );
 }

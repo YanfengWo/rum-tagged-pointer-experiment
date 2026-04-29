@@ -169,10 +169,87 @@ impl Session {
             .map(comparable_value_from_expr)
             .collect::<Option<Vec<_>>>();
 
+        if matches!(
+            relation,
+            ComparisonRelation::Less
+                | ComparisonRelation::Greater
+                | ComparisonRelation::LessEqual
+                | ComparisonRelation::GreaterEqual
+        ) {
+            if let Some(result) = reduce_order_chain(head, args, relation) {
+                return result;
+            }
+        }
+
         match comparable.and_then(|values| compare_values(&values, relation)) {
             Some(result) => predicate_bool_expr(result),
             None => Expr::call(head.clone(), args.to_vec()),
         }
+    }
+}
+
+fn reduce_order_chain(head: &Expr, args: &[Expr], relation: ComparisonRelation) -> Option<Expr> {
+    if args.len() <= 2 {
+        return None;
+    }
+
+    let mut kept = Vec::new();
+    let mut had_known_true_pair = false;
+
+    for (index, pair) in args.windows(2).enumerate() {
+        let Some(ordering) = compare_numeric_expr_pair(&pair[0], &pair[1]) else {
+            push_unique_expr(&mut kept, pair[0].clone());
+            push_unique_expr(&mut kept, pair[1].clone());
+            continue;
+        };
+
+        if !ordering_satisfies_relation(ordering, relation) {
+            return Some(system_expr(heads::structure::FALSE));
+        }
+
+        had_known_true_pair = true;
+        if index > 0 && index + 1 < args.len() {
+            push_unique_expr(&mut kept, pair[0].clone());
+        }
+    }
+
+    if !had_known_true_pair || kept.len() == args.len() {
+        return None;
+    }
+
+    Some(match kept.len() {
+        0 | 1 => system_expr(heads::structure::TRUE),
+        _ => Expr::call(head.clone(), kept),
+    })
+}
+
+fn compare_numeric_expr_pair(lhs: &Expr, rhs: &Expr) -> Option<std::cmp::Ordering> {
+    let lhs = numeric_comparable_value_from_expr(lhs)?;
+    let rhs = numeric_comparable_value_from_expr(rhs)?;
+    Some(compare_rationals(&lhs, &rhs))
+}
+
+fn numeric_comparable_value_from_expr(expr: &Expr) -> Option<Rational> {
+    match expr {
+        Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.clone())),
+        Expr::Atom(Atom::Rational(value)) => Some(value.clone()),
+        _ => None,
+    }
+}
+
+fn ordering_satisfies_relation(ordering: std::cmp::Ordering, relation: ComparisonRelation) -> bool {
+    match relation {
+        ComparisonRelation::Less => ordering == std::cmp::Ordering::Less,
+        ComparisonRelation::Greater => ordering == std::cmp::Ordering::Greater,
+        ComparisonRelation::LessEqual => ordering != std::cmp::Ordering::Greater,
+        ComparisonRelation::GreaterEqual => ordering != std::cmp::Ordering::Less,
+        ComparisonRelation::Equal | ComparisonRelation::Unequal => false,
+    }
+}
+
+fn push_unique_expr(values: &mut Vec<Expr>, value: Expr) {
+    if values.last() != Some(&value) {
+        values.push(value);
     }
 }
 
