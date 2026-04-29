@@ -222,6 +222,52 @@ fn withcleanup_runs_cleanup_on_values_throws_and_aborts() {
         "aborted"
     );
     assert_eq!(session.eval_text("x").unwrap().value.to_string(), "7");
+
+    session.eval_text("x = 0").unwrap();
+    assert_eq!(
+        session
+            .eval_text("WithCleanup[x = 1; done, x = 2; Return[20]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "done"
+    );
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "2");
+
+    session.eval_text("x = 0").unwrap();
+    assert_eq!(
+        session
+            .eval_text("Function[WithCleanup[x = 1; Return[10], x = 2; Return[20]]; 99][]")
+            .unwrap()
+            .value
+            .to_string(),
+        "10"
+    );
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "2");
+
+    session.eval_text("x = 0").unwrap();
+    assert_eq!(
+        session
+            .eval_text(
+                "Catch[Function[WithCleanup[x = 1; Throw[10, tag], x = 2; Return[20]]; 99][], tag]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "10"
+    );
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "2");
+
+    session.eval_text("x = 0").unwrap();
+    assert_eq!(
+        session
+            .eval_text("CheckAbort[Function[WithCleanup[x = 1; Abort[], x = 2; Return[20]]; 99][], aborted]")
+            .unwrap()
+            .value
+            .to_string(),
+        "aborted"
+    );
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "2");
 }
 
 #[test]

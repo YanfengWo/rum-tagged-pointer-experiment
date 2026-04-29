@@ -565,7 +565,7 @@ impl Session {
         cleanup_outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
         match cleanup_outcome {
-            Ok(_) => primary_outcome,
+            Ok(_) | Err(EvalError::Return { .. }) => primary_outcome,
             Err(error) => Err(error),
         }
     }
