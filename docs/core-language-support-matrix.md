@@ -335,7 +335,8 @@ once in its primary implementation group. Other groups may mention it as
   parity for string-or-symbol tags plus string and `MessageName[...]`
   `MessageTemplate` / `MessageParameters` message rendering through the
   current message catalog, including named `MessageParameters` and
-  delayed-template host-input resume, request-level print transport,
+  delayed-template host-input resume plus direct virtual `"Tag"` projection,
+  request-level print transport,
   non-string `InputString` prompts, `Input` / `InputString`
   `FieldMasked -> True` host request metadata and current option-error
   boundaries, suspension-safe `WithCleanup` body cleanup plus current

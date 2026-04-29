@@ -143,6 +143,11 @@ impl Session {
                             .unwrap_or_else(|| {
                                 status_object_missing_expr(status, property.clone())
                             })),
+                        "Tag" => Ok(status_object_property_value(status, property)
+                            .or_else(|| failure_virtual_tag_value(status))
+                            .unwrap_or_else(|| {
+                                status_object_missing_expr(status, property.clone())
+                            })),
                         _ => Ok(
                             status_object_property_value(status, property).unwrap_or_else(|| {
                                 status_object_missing_expr(status, property.clone())
@@ -322,6 +327,16 @@ fn failure_virtual_message_name_value(status: &Expr) -> Option<Expr> {
         system_expr("Missing"),
         vec![Expr::string("NotApplicable")],
     ))
+}
+
+fn failure_virtual_tag_value(status: &Expr) -> Option<Expr> {
+    let (tag, details) = status_object_parts(status)?;
+    association_entries_from_expr(details)?;
+    match tag {
+        Expr::Atom(Atom::String(tag)) => Some(Expr::string(tag.clone())),
+        Expr::Atom(Atom::Symbol(tag)) => Some(Expr::Atom(Atom::Symbol(tag.clone()))),
+        _ => None,
+    }
 }
 
 fn styled_message_expr(message: Expr) -> Expr {

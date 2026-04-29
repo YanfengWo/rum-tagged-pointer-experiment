@@ -618,6 +618,54 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Failure[\"oops\", {}][\"Tag\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"oops\""
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[tag, {}][\"Tag\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "tag"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {\"Tag\" -> override}][\"Tag\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "override"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {Tag -> override}][Tag]")
+            .unwrap()
+            .value
+            .to_string(),
+        "override"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {Tag -> override}][\"Tag\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"oops\""
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", 1][\"Tag\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"NotAvailable\", \"Tag\"]"
+    );
+    assert_eq!(
+        session
             .eval_text("Failure[\"tag\", {\"MessageTemplate\" -> \"bad `1`\", \"MessageParameters\" -> {x}}][\"Properties\"]")
             .unwrap()
             .value
