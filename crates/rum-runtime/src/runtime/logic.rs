@@ -68,6 +68,14 @@ impl Session {
         Ok(self.eval_comparison_subset(head, args, ComparisonRelation::GreaterEqual))
     }
 
+    pub(super) fn eval_comparison_operator_wrapper(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
     fn resume_and_from_index(
         &mut self,
         args: Vec<Expr>,

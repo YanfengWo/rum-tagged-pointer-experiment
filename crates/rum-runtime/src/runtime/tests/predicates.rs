@@ -280,7 +280,47 @@ fn list_relation_and_shape_predicates_cover_current_exact_subsets() {
     );
     assert_eq!(
         session.eval_text("Order[a, b]").unwrap().value.to_string(),
+        "1"
+    );
+    assert_eq!(
+        session.eval_text("Order[b, a]").unwrap().value.to_string(),
         "-1"
+    );
+    assert_eq!(
+        session.eval_text("Order[2, 10]").unwrap().value.to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("NumericalOrder[10, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "-1"
+    );
+    assert_eq!(
+        session
+            .eval_text("LexicographicOrder[{1, 2}, {1, 3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("LexicographicOrder[\"2\", \"10\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "-1"
+    );
+    assert_eq!(
+        session
+            .eval_text("AlphabeticOrder[\"a\", \"b\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
     );
     assert_eq!(
         session
@@ -293,6 +333,22 @@ fn list_relation_and_shape_predicates_cover_current_exact_subsets() {
     assert_eq!(
         session
             .eval_text("OrderedQ[{b, a}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("OrderedQ[{2, 10}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("OrderedQ[{10, 2}]")
             .unwrap()
             .value
             .to_string(),

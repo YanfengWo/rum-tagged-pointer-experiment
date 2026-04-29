@@ -277,3 +277,113 @@ fn and_or_short_circuit_side_effects_and_compare_exact_values() {
         "Unequal[1, 2, u]"
     );
 }
+
+#[test]
+fn comparison_operator_forms_apply_single_arguments_on_the_left() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session.eval_text("LessThan[3]").unwrap().value.to_string(),
+        "LessThan[3]"
+    );
+    assert_eq!(
+        session.eval_text("LessThan[]").unwrap().value.to_string(),
+        "LessThan[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("LessThan[3, 4]")
+            .unwrap()
+            .value
+            .to_string(),
+        "LessThan[3, 4]"
+    );
+    assert_eq!(
+        session
+            .eval_text("LessThan[3][2, 4]")
+            .unwrap()
+            .value
+            .to_string(),
+        "LessThan[3][2, 4]"
+    );
+    assert_eq!(
+        session
+            .eval_text("LessThan[3][2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("LessThan[3][4]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("LessThan[x][1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Less[1, x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("GreaterThan[3][4]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("LessEqualThan[3][3]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("GreaterEqualThan[3][3]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("EqualTo[3][3]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("UnequalTo[3][4]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("SameAs[f[a]][f[a]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("SameAs[f[a]][f[b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+}

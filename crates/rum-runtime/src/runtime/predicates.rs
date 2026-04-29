@@ -320,14 +320,7 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("Order", args, 2));
         };
 
-        let ordering = compare_expr_canonical(lhs, rhs);
-        let value = match ordering {
-            std::cmp::Ordering::Less => -1_i64,
-            std::cmp::Ordering::Equal => 0_i64,
-            std::cmp::Ordering::Greater => 1_i64,
-        };
-
-        Ok(Expr::integer(BigInt::from(value)))
+        Ok(order_result_expr(compare_exact_order_subset(lhs, rhs)))
     }
 
     pub(super) fn eval_ordered_q(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -340,8 +333,67 @@ impl Session {
         };
 
         Ok(predicate_bool_expr(items.windows(2).all(|pair| {
-            compare_expr_canonical(&pair[0], &pair[1]) != std::cmp::Ordering::Greater
+            compare_exact_order_subset(&pair[0], &pair[1]) != std::cmp::Ordering::Greater
         })))
+    }
+
+    pub(super) fn eval_lexicographic_order(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [lhs, rhs] = args else {
+            return Ok(if (1..=3).contains(&args.len()) {
+                Expr::call(head.clone(), args.to_vec())
+            } else {
+                self.invalid_call_with_arg_range("LexicographicOrder", args, 1, 3)
+            });
+        };
+
+        Ok(order_result_expr(compare_lexicographic_order_subset(
+            lhs, rhs,
+        )))
+    }
+
+    pub(super) fn eval_numerical_order(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [lhs, rhs] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("NumericalOrder", args, 2));
+        };
+
+        Ok(order_result_expr(compare_exact_order_subset(lhs, rhs)))
+    }
+
+    pub(super) fn eval_alphabetic_order(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [lhs, rhs] = args else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let Some(lhs) = string_atom_value(lhs) else {
+            return Ok(self.invalid_call_with_message(
+                "AlphabeticOrder",
+                args,
+                "nstr",
+                format!("argument {} is not a string", lhs),
+            ));
+        };
+        let Some(rhs) = string_atom_value(rhs) else {
+            return Ok(self.invalid_call_with_message(
+                "AlphabeticOrder",
+                args,
+                "nstr",
+                format!("argument {} is not a string", rhs),
+            ));
+        };
+
+        Ok(order_result_expr(lhs.cmp(rhs)))
     }
 
     pub(super) fn eval_contains_all(
@@ -712,6 +764,13 @@ fn exact_numeric_value(expr: &Expr) -> Option<Rational> {
     }
 }
 
+fn string_atom_value(expr: &Expr) -> Option<&str> {
+    match expr {
+        Expr::Atom(Atom::String(value)) => Some(value),
+        _ => None,
+    }
+}
+
 fn exact_integer_value(expr: &Expr) -> Option<BigInt> {
     match expr {
         Expr::Atom(Atom::Integer(value)) => Some(value.clone()),
@@ -858,6 +917,44 @@ fn compare_exact_numeric(lhs: &Rational, rhs: &Rational) -> std::cmp::Ordering {
     let lhs_cross = lhs.numerator() * rhs.denominator();
     let rhs_cross = rhs.numerator() * lhs.denominator();
     lhs_cross.cmp(&rhs_cross)
+}
+
+fn compare_exact_order_subset(lhs: &Expr, rhs: &Expr) -> std::cmp::Ordering {
+    match (exact_numeric_value(lhs), exact_numeric_value(rhs)) {
+        (Some(lhs), Some(rhs)) => compare_exact_numeric(&lhs, &rhs),
+        _ => compare_expr_canonical(lhs, rhs),
+    }
+}
+
+fn compare_lexicographic_order_subset(lhs: &Expr, rhs: &Expr) -> std::cmp::Ordering {
+    match (list_items(lhs), list_items(rhs)) {
+        (Some(lhs), Some(rhs)) => compare_lexicographic_slices(lhs, rhs),
+        _ => match (string_atom_value(lhs), string_atom_value(rhs)) {
+            (Some(lhs), Some(rhs)) => lhs.cmp(rhs),
+            _ => compare_exact_order_subset(lhs, rhs),
+        },
+    }
+}
+
+fn compare_lexicographic_slices(lhs: &[Expr], rhs: &[Expr]) -> std::cmp::Ordering {
+    for (lhs_item, rhs_item) in lhs.iter().zip(rhs) {
+        let ordering = compare_lexicographic_order_subset(lhs_item, rhs_item);
+        if ordering != std::cmp::Ordering::Equal {
+            return ordering;
+        }
+    }
+
+    lhs.len().cmp(&rhs.len())
+}
+
+fn order_result_expr(ordering: std::cmp::Ordering) -> Expr {
+    let value = match ordering {
+        std::cmp::Ordering::Less => 1_i64,
+        std::cmp::Ordering::Equal => 0_i64,
+        std::cmp::Ordering::Greater => -1_i64,
+    };
+
+    Expr::integer(BigInt::from(value))
 }
 
 fn predicate_bool_expr(value: bool) -> Expr {

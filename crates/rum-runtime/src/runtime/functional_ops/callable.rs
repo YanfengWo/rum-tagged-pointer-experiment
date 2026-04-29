@@ -18,6 +18,17 @@ enum CurriedOperatorKind {
     CurryApplied,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ComparisonOperatorKind {
+    Less,
+    Greater,
+    LessEqual,
+    GreaterEqual,
+    Equal,
+    Unequal,
+    Same,
+}
+
 #[derive(Clone, Debug)]
 struct CurriedOperatorSpec<'a> {
     kind: CurriedOperatorKind,
@@ -31,6 +42,12 @@ struct CurriedOperatorSpec<'a> {
 struct ReverseAppliedSpec<'a> {
     function: &'a Expr,
     reversed_count: Option<usize>,
+}
+
+#[derive(Clone, Debug)]
+struct ComparisonOperatorSpec<'a> {
+    kind: ComparisonOperatorKind,
+    bound: &'a Expr,
 }
 
 impl CurriedOperatorKind {
@@ -93,6 +110,7 @@ pub(in crate::runtime) fn apply_composition_to_args(
 pub(in crate::runtime) fn is_callable_operator_wrapper(expr: &Expr) -> bool {
     parse_curried_operator(expr).is_some()
         || parse_reverse_applied_wrapper(expr).is_some()
+        || parse_comparison_operator_wrapper(expr).is_some()
         || parse_key_wrapper(expr).is_some()
 }
 
@@ -106,6 +124,10 @@ pub(in crate::runtime) fn apply_callable_operator_wrapper_to_args(
 
     if let Some(spec) = parse_reverse_applied_wrapper(head) {
         return Some(apply_reverse_applied_to_args(&spec, args));
+    }
+
+    if let Some(spec) = parse_comparison_operator_wrapper(head) {
+        return apply_comparison_operator_wrapper_to_args(&spec, args);
     }
 
     let [expr] = args else {
@@ -331,6 +353,59 @@ fn parse_curried_operator(expr: &Expr) -> Option<CurriedOperatorSpec<'_>> {
         }
         _ => None,
     }
+}
+
+fn parse_comparison_operator_wrapper(expr: &Expr) -> Option<ComparisonOperatorSpec<'_>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    let [bound] = args.as_slice() else {
+        return None;
+    };
+
+    let kind = if is_system_symbol_name(head, "LessThan") {
+        ComparisonOperatorKind::Less
+    } else if is_system_symbol_name(head, "GreaterThan") {
+        ComparisonOperatorKind::Greater
+    } else if is_system_symbol_name(head, "LessEqualThan") {
+        ComparisonOperatorKind::LessEqual
+    } else if is_system_symbol_name(head, "GreaterEqualThan") {
+        ComparisonOperatorKind::GreaterEqual
+    } else if is_system_symbol_name(head, "EqualTo") {
+        ComparisonOperatorKind::Equal
+    } else if is_system_symbol_name(head, "UnequalTo") {
+        ComparisonOperatorKind::Unequal
+    } else if is_system_symbol_name(head, "SameAs") {
+        ComparisonOperatorKind::Same
+    } else {
+        return None;
+    };
+
+    Some(ComparisonOperatorSpec { kind, bound })
+}
+
+fn apply_comparison_operator_wrapper_to_args(
+    spec: &ComparisonOperatorSpec<'_>,
+    args: &[Expr],
+) -> Option<Expr> {
+    let [arg] = args else {
+        return None;
+    };
+
+    let head = match spec.kind {
+        ComparisonOperatorKind::Less => "Less",
+        ComparisonOperatorKind::Greater => "Greater",
+        ComparisonOperatorKind::LessEqual => "LessEqual",
+        ComparisonOperatorKind::GreaterEqual => "GreaterEqual",
+        ComparisonOperatorKind::Equal => "Equal",
+        ComparisonOperatorKind::Unequal => "Unequal",
+        ComparisonOperatorKind::Same => "SameQ",
+    };
+
+    Some(Expr::call(
+        system_expr(head),
+        vec![arg.clone(), spec.bound.clone()],
+    ))
 }
 
 fn parse_curried_operator_spec(spec: &Expr) -> Option<(usize, Vec<usize>)> {

@@ -107,7 +107,8 @@ once in its primary implementation group. Other groups may mention it as
 
   - `implemented`: `Identity`, `List`, `Head`, `Length`, `Depth`, `TrueQ`,
     `BooleanQ`, `AtomQ`, `ListQ`, `StringQ`, `IntegerQ`, `NumberQ`, `True`,
-    `False`, `SameQ`, `UnsameQ`
+    `False`, `SameQ`, `UnsameQ`, `LessThan`, `GreaterThan`,
+    `LessEqualThan`, `GreaterEqualThan`, `EqualTo`, `UnequalTo`, `SameAs`
   - `partial`: `Part`, `Extract`, `ReplacePart`, `Thread`, `First`, `Last`,
     `Rest`, `Most`, `Take`, `Drop`, `TakeDrop`, `Insert`, `Delete`,
     `TakeList`, `Append`, `Prepend`, `FullForm`, `Symbol`, `Construct`,
@@ -117,14 +118,12 @@ once in its primary implementation group. Other groups may mention it as
     `MachineNumberQ`, `RealValuedNumberQ`, `RealValuedNumericQ`, `PrimeQ`,
     `AlgebraicIntegerQ`, `DuplicateFreeQ`, `IntersectingQ`, `DisjointQ`,
     `SubsetQ`, `Order`, `OrderedQ`, `ContainsAll`, `ContainsAny`,
+    `LexicographicOrder`, `NumericalOrder`, `AlphabeticOrder`,
     `ContainsExactly`, `ContainsNone`, `ContainsOnly`, `Between`, `VectorQ`,
     `MatrixQ`, `ArrayQ`, `AllTrue`, `AnyTrue`, `NoneTrue`, `CoprimeQ`
-  - `planned`: `Heads`,
-    `LexicographicOrder`, `NumericalOrder`, `AlphabeticOrder`,
-    `GreaterThan`, `LessThan`, `GreaterEqualThan`, `LessEqualThan`,
-    `EqualTo`, `UnequalTo`, `NearestTo`, `SameAs`, `PolynomialQ`,
-    `PolynomialExpressionQ`, `RationalExpressionQ`, `DateObjectQ`,
-    `TimeObjectQ`
+  - `planned`: `Heads`, `NearestTo`,
+    `PolynomialQ`, `PolynomialExpressionQ`, `RationalExpressionQ`,
+    `DateObjectQ`, `TimeObjectQ`
 - `cross-tracked elsewhere`: `Apply`, `Array`, `Cases`, `Count`,
   `DeleteCases`, `FreeQ`, `Join`, `Map`, `MapAll`, `MapAt`, `MemberQ`,
   `Outer`, `Position`, `Range`, `Select`, `Table`

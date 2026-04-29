@@ -37,6 +37,9 @@ impl Session {
             BuiltinHandler::SubsetQ => self.eval_subset_q(head, args),
             BuiltinHandler::Order => self.eval_order(head, args),
             BuiltinHandler::OrderedQ => self.eval_ordered_q(head, args),
+            BuiltinHandler::LexicographicOrder => self.eval_lexicographic_order(head, args),
+            BuiltinHandler::NumericalOrder => self.eval_numerical_order(head, args),
+            BuiltinHandler::AlphabeticOrder => self.eval_alphabetic_order(head, args),
             BuiltinHandler::ContainsAll => self.eval_contains_all(head, args),
             BuiltinHandler::ContainsAny => self.eval_contains_any(head, args),
             BuiltinHandler::ContainsExactly => self.eval_contains_exactly(head, args),
@@ -90,6 +93,13 @@ impl Session {
             BuiltinHandler::Greater => self.eval_greater(head, args),
             BuiltinHandler::LessEqual => self.eval_less_equal(head, args),
             BuiltinHandler::GreaterEqual => self.eval_greater_equal(head, args),
+            BuiltinHandler::LessThan
+            | BuiltinHandler::GreaterThan
+            | BuiltinHandler::LessEqualThan
+            | BuiltinHandler::GreaterEqualThan
+            | BuiltinHandler::EqualTo
+            | BuiltinHandler::UnequalTo
+            | BuiltinHandler::SameAs => self.eval_comparison_operator_wrapper(head, args),
             BuiltinHandler::Part => self.eval_part(head, args),
             BuiltinHandler::Extract => self.eval_extract(head, args),
             BuiltinHandler::ReplacePart => self.eval_replace_part(head, args),

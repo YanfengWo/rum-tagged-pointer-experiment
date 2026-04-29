@@ -249,13 +249,28 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "Order",
-        "Orders two expressions using the current canonical textual ordering subset.",
+        "Orders two expressions using exact numeric order when possible, then the current canonical textual ordering subset.",
         BuiltinHandler::Order,
     ),
     BuiltinSpec::ordinary(
         "OrderedQ",
-        "Tests whether a List is nondecreasing under the current canonical textual ordering subset.",
+        "Tests whether a List is nondecreasing under the current exact order subset.",
         BuiltinHandler::OrderedQ,
+    ),
+    BuiltinSpec::ordinary(
+        "LexicographicOrder",
+        "Compares two expressions lexicographically in the current exact order subset.",
+        BuiltinHandler::LexicographicOrder,
+    ),
+    BuiltinSpec::ordinary(
+        "NumericalOrder",
+        "Compares two expressions using exact numeric order when possible, then canonical order.",
+        BuiltinHandler::NumericalOrder,
+    ),
+    BuiltinSpec::ordinary(
+        "AlphabeticOrder",
+        "Compares two strings alphabetically in the current string-order subset.",
+        BuiltinHandler::AlphabeticOrder,
     ),
     BuiltinSpec::ordinary(
         "ContainsAll",
@@ -361,6 +376,41 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         "GreaterEqual",
         "Tests nonincreasing order in the current exact comparable subset.",
         BuiltinHandler::GreaterEqual,
+    ),
+    BuiltinSpec::ordinary(
+        "LessThan",
+        "Represents a unary comparison operator equivalent to Less[#, bound] when applied.",
+        BuiltinHandler::LessThan,
+    ),
+    BuiltinSpec::ordinary(
+        "GreaterThan",
+        "Represents a unary comparison operator equivalent to Greater[#, bound] when applied.",
+        BuiltinHandler::GreaterThan,
+    ),
+    BuiltinSpec::ordinary(
+        "LessEqualThan",
+        "Represents a unary comparison operator equivalent to LessEqual[#, bound] when applied.",
+        BuiltinHandler::LessEqualThan,
+    ),
+    BuiltinSpec::ordinary(
+        "GreaterEqualThan",
+        "Represents a unary comparison operator equivalent to GreaterEqual[#, bound] when applied.",
+        BuiltinHandler::GreaterEqualThan,
+    ),
+    BuiltinSpec::ordinary(
+        "EqualTo",
+        "Represents a unary comparison operator equivalent to Equal[#, bound] when applied.",
+        BuiltinHandler::EqualTo,
+    ),
+    BuiltinSpec::ordinary(
+        "UnequalTo",
+        "Represents a unary comparison operator equivalent to Unequal[#, bound] when applied.",
+        BuiltinHandler::UnequalTo,
+    ),
+    BuiltinSpec::ordinary(
+        "SameAs",
+        "Represents a unary comparison operator equivalent to SameQ[#, bound] when applied.",
+        BuiltinHandler::SameAs,
     ),
     BuiltinSpec::ordinary(
         "Part",
