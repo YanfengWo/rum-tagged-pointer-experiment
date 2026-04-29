@@ -335,12 +335,16 @@ once in its primary implementation group. Other groups may mention it as
   parity for string-or-symbol tags plus string and `MessageName[...]`
   `MessageTemplate` / `MessageParameters` message rendering through the
   current message catalog, including named `MessageParameters` and
-  delayed-template host-input resume plus direct virtual `"Tag"` projection
-  and malformed status-object inert projection boundaries, request-level print
-  transport,
+  delayed-template host-input resume, valid-template-only virtual
+  `HeldMessageTemplate` / `MessageName`, plus direct virtual `"Tag"` projection
+  and malformed status-object inert projection boundaries, silent malformed
+  `Failure` / `Success` constructors, `FailureQ` recognition for malformed
+  `Failure[...]`, immediate-rule `Failure` details normalization,
+  association-only `Success` details projection, request-level print transport,
   non-string `InputString` prompts, `Input` / `InputString`
   `FieldMasked -> True` plus request-kind host request metadata, resumed
-  `Input` parse diagnostics, and current option-error boundaries,
+  `Input` parse diagnostics, `Pause::numnm`, and current option-error
+  boundaries,
   suspension-safe `WithCleanup` body cleanup plus current
   cleanup-time host-input resume, throw/abort cleanup boundaries,
   cleanup-`Return` preservation of the primary outcome, and nested

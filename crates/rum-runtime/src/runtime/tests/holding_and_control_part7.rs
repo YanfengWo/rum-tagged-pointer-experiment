@@ -231,6 +231,15 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
     assert_eq!(paused.value.to_string(), "Null");
     assert!(paused.prints.is_empty());
 
+    let invalid_pause = session.eval_text("Pause[-1]").unwrap();
+    assert_eq!(invalid_pause.value.to_string(), "Pause[-1]");
+    assert!(
+        invalid_pause
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Pause" && message.tag == "numnm")
+    );
+
     let failure = session
         .eval_request("InputString[1, FieldMasked -> True]")
         .expect_err("InputString should accept non-string prompts and surface masked input");
@@ -452,9 +461,15 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
         session.eval_text("MissingQ[1]").unwrap().value.to_string(),
         "False"
     );
+    let malformed_failure = session.eval_text("Failure[\"oops\"]").unwrap();
+    assert_eq!(malformed_failure.value.to_string(), "Failure[\"oops\"]");
+    assert!(malformed_failure.messages.is_empty());
+    let malformed_success = session.eval_text("Success[\"ok\"]").unwrap();
+    assert_eq!(malformed_success.value.to_string(), "Success[\"ok\"]");
+    assert!(malformed_success.messages.is_empty());
     assert_eq!(
         session
-            .eval_text("Success[\"ok\", {\"Code\" -> 200}]")
+            .eval_text("Success[\"ok\", Association[\"Code\" -> 200]]")
             .unwrap()
             .value
             .to_string(),
@@ -462,7 +477,7 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
-            .eval_text("Success[\"ok\", {\"Code\" -> 200, \"Body\" -> 7}][\"Code\"]")
+            .eval_text("Success[\"ok\", Association[\"Code\" -> 200, \"Body\" -> 7]][\"Code\"]")
             .unwrap()
             .value
             .to_string(),
@@ -470,7 +485,7 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
-            .eval_text("Success[\"ok\", {Code -> 200, Body -> 7}][Code]")
+            .eval_text("Success[\"ok\", Association[Code -> 200, Body -> 7]][Code]")
             .unwrap()
             .value
             .to_string(),
@@ -478,7 +493,7 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
-            .eval_text("Success[\"ok\", {\"Code\" -> 200, \"Body\" -> 7}][Code]")
+            .eval_text("Success[\"ok\", Association[\"Code\" -> 200, \"Body\" -> 7]][Code]")
             .unwrap()
             .value
             .to_string(),
@@ -486,7 +501,7 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
-            .eval_text("Success[\"ok\", {\"Code\" -> 200, \"Body\" -> 7}][{\"Body\", \"Missing\"}]")
+            .eval_text("Success[\"ok\", Association[\"Code\" -> 200, \"Body\" -> 7]][{\"Body\", \"Missing\"}]")
             .unwrap()
             .value
             .to_string(),
@@ -494,7 +509,7 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
-            .eval_text("Success[\"ok\", {Code -> 200, Body -> 7}][{Body, Missing}]")
+            .eval_text("Success[\"ok\", Association[Code -> 200, Body -> 7]][{Body, Missing}]")
             .unwrap()
             .value
             .to_string(),
@@ -502,7 +517,9 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
-            .eval_text("Success[\"ok\", {\"Code\" -> 200, \"Body\" -> 7}][\"Properties\"]")
+            .eval_text(
+                "Success[\"ok\", Association[\"Code\" -> 200, \"Body\" -> 7]][\"Properties\"]"
+            )
             .unwrap()
             .value
             .to_string(),
@@ -510,7 +527,7 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
-            .eval_text("Success[\"ok\", {\"Code\" -> 200}][All]")
+            .eval_text("Success[\"ok\", Association[\"Code\" -> 200]][All]")
             .unwrap()
             .value
             .to_string(),
@@ -518,7 +535,7 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
-            .eval_text("Success[\"ok\", {\"Code\" -> 200, \"Body\" -> 7}][Properties]")
+            .eval_text("Success[\"ok\", Association[\"Code\" -> 200, \"Body\" -> 7]][Properties]")
             .unwrap()
             .value
             .to_string(),
@@ -526,7 +543,7 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
-            .eval_text("Success[tag, {Code -> 200}][Code]")
+            .eval_text("Success[tag, Association[Code -> 200]][Code]")
             .unwrap()
             .value
             .to_string(),
@@ -534,7 +551,7 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
-            .eval_text("Success[1, {Code -> 200}][Code]")
+            .eval_text("Success[1, Association[Code -> 200]][Code]")
             .unwrap()
             .value
             .to_string(),
@@ -542,11 +559,29 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
-            .eval_text("Success[\"ok\", {Properties -> 1, \"Properties\" -> 2}][\"Properties\"]")
+            .eval_text(
+                "Success[\"ok\", Association[Properties -> 1, \"Properties\" -> 2]][\"Properties\"]"
+            )
             .unwrap()
             .value
             .to_string(),
         "List[Properties, \"Properties\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Success[\"ok\", {\"Code\" -> 200}][\"Code\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Success[\"ok\", List[Rule[\"Code\", 200]]][\"Code\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Success[\"ok\", \"Code\" -> 200][\"Code\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Success[\"ok\", Rule[\"Code\", 200]][\"Code\"]"
     );
     assert_eq!(
         session
@@ -571,6 +606,14 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
             .value
             .to_string(),
         "Missing[\"NotAvailable\", \"Missing\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", \"Code\" -> 500][\"Code\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "500"
     );
     assert_eq!(
         session
@@ -758,6 +801,50 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Failure[\"tag\", {\"MessageTemplate\" -> 1}][\"Properties\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"Message\", \"MessageTemplate\", \"StyledMessage\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"tag\", {\"MessageTemplate\" -> 1}][\"HeldMessageTemplate\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"NotAvailable\", \"HeldMessageTemplate\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"tag\", {\"MessageTemplate\" -> 1}][\"MessageName\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"NotAvailable\", \"MessageName\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "Failure[\"tag\", {\"MessageTemplate\" -> 1, \"HeldMessageTemplate\" -> 2}][\"HeldMessageTemplate\"]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "Failure[\"tag\", {\"MessageTemplate\" -> 1, \"MessageName\" -> 3}][\"MessageName\"]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
             .eval_text("Failure[\"tag\", {\"MessageTemplate\" -> \"bad `Name`\", \"MessageParameters\" -> <|\"Name\" -> \"x\"|>}][\"Message\"]")
             .unwrap()
             .value
@@ -907,6 +994,25 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     assert_eq!(
         session
             .eval_text("FailureQ[$Failed]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    let malformed_failure_q = session.eval_text("FailureQ[Failure[\"oops\"]]").unwrap();
+    assert_eq!(malformed_failure_q.value.to_string(), "True");
+    assert!(malformed_failure_q.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text("FailureQ[Failure[\"oops\", bad]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("FailureQ[Failure[1, {\"Code\" -> 500}]]")
             .unwrap()
             .value
             .to_string(),

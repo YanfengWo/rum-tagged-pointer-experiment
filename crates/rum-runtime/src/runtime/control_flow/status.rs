@@ -7,10 +7,10 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [tag, details] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("Failure", args, 2));
+            return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let Some(details) = normalize_status_details_expr(details) else {
+        let Some(details) = normalize_failure_details_expr(details) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -39,10 +39,10 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [tag, details] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("Success", args, 2));
+            return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let Some(details) = normalize_status_details_expr(details) else {
+        let Some(details) = normalize_success_details_expr(details) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -245,14 +245,26 @@ pub(in crate::runtime) fn is_success_expr(expr: &Expr) -> bool {
 }
 
 pub(in crate::runtime) fn is_failure_q_expr(expr: &Expr) -> bool {
-    is_failure_expr(expr)
+    matches!(expr, Expr::Call { head, .. } if is_system_symbol_name(head, "Failure"))
         || is_system_symbol_name(expr, "$Failed")
         || is_system_symbol_name(expr, "$Aborted")
 }
 
-pub(in crate::runtime) fn normalize_status_details_expr(expr: &Expr) -> Option<Expr> {
+fn normalize_success_details_expr(expr: &Expr) -> Option<Expr> {
     if association_entries_from_expr(expr).is_some() {
         return Some(expr.clone());
+    }
+
+    None
+}
+
+fn normalize_failure_details_expr(expr: &Expr) -> Option<Expr> {
+    if association_entries_from_expr(expr).is_some() {
+        return Some(expr.clone());
+    }
+
+    if let Some(entry) = parse_immediate_rule_entry(expr) {
+        return Some(render_association(vec![entry]));
     }
 
     let Expr::Call { head, args } = expr else {
@@ -265,10 +277,22 @@ pub(in crate::runtime) fn normalize_status_details_expr(expr: &Expr) -> Option<E
 
     let mut entries = Vec::with_capacity(args.len());
     for item in args {
-        entries.push(parse_association_entry(item)?);
+        entries.push(parse_immediate_rule_entry(item)?);
     }
 
     Some(render_association(entries))
+}
+
+fn parse_immediate_rule_entry(expr: &Expr) -> Option<(Expr, Expr)> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "Rule") || args.len() != 2 {
+        return None;
+    }
+
+    Some((args[0].clone(), args[1].clone()))
 }
 
 fn status_object_properties_value(status: &Expr) -> Option<Expr> {
@@ -286,7 +310,9 @@ fn failure_properties_value(status: &Expr) -> Option<Expr> {
         .into_iter()
         .map(|(key, _)| key)
         .collect::<Vec<_>>();
-    if status_object_property_value(status, &Expr::string("MessageTemplate")).is_some() {
+    if failure_virtual_held_message_template_value(status).is_some()
+        || failure_virtual_message_name_value(status).is_some()
+    {
         properties.push(Expr::string("HeldMessageTemplate"));
         properties.push(Expr::string("MessageName"));
     }
@@ -308,13 +334,12 @@ fn status_object_property_value(status: &Expr, property: &Expr) -> Option<Expr> 
 }
 
 fn failure_virtual_held_message_template_value(status: &Expr) -> Option<Expr> {
-    Some(Expr::call(
-        system_expr("Hold"),
-        vec![status_object_property_value(
-            status,
-            &Expr::string("MessageTemplate"),
-        )?],
-    ))
+    let template = status_object_property_value(status, &Expr::string("MessageTemplate"))?;
+    if !is_failure_message_template_virtualizable(&template) {
+        return None;
+    }
+
+    Some(Expr::call(system_expr("Hold"), vec![template]))
 }
 
 fn failure_virtual_message_name_value(status: &Expr) -> Option<Expr> {
@@ -323,10 +348,19 @@ fn failure_virtual_message_name_value(status: &Expr) -> Option<Expr> {
         return Some(Expr::string(key.tag));
     }
 
-    Some(Expr::call(
-        system_expr("Missing"),
-        vec![Expr::string("NotApplicable")],
-    ))
+    if matches!(template, Expr::Atom(Atom::String(_))) {
+        return Some(Expr::call(
+            system_expr("Missing"),
+            vec![Expr::string("NotApplicable")],
+        ));
+    }
+
+    None
+}
+
+fn is_failure_message_template_virtualizable(template: &Expr) -> bool {
+    matches!(template, Expr::Atom(Atom::String(_)))
+        || message_name_key_from_expr(template).is_some()
 }
 
 fn failure_virtual_tag_value(status: &Expr) -> Option<Expr> {

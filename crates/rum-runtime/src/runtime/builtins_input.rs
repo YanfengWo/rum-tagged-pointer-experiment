@@ -110,10 +110,12 @@ impl Session {
         };
 
         let Some(duration) = expr_as_nonnegative_duration(seconds) else {
-            return Ok(self.invalid_call_with_arg_form(
+            let held_call = Expr::call(system_expr("Pause"), args.to_vec());
+            return Ok(self.invalid_call_with_message(
                 "Pause",
                 args,
-                "expected one nonnegative exact numeric duration",
+                "numnm",
+                format!("Non-negative machine-sized number expected at position 1 in {held_call}."),
             ));
         };
 
