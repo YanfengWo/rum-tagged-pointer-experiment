@@ -523,7 +523,7 @@ fn parse_replace_part_position_specs(expr: &Expr) -> Option<Vec<ReplacePartPosit
         return Some(Vec::new());
     }
 
-    if let Some(position_spec) = parse_single_position_spec(expr) {
+    if let Some(position_spec) = parse_replace_part_exact_position_spec(expr) {
         return Some(vec![ReplacePartPositionSpec::Exact(position_spec)]);
     }
 
@@ -542,12 +542,56 @@ fn parse_replace_part_position_specs(expr: &Expr) -> Option<Vec<ReplacePartPosit
     Some(
         args.iter()
             .map(|item| {
-                parse_single_position_spec(item)
+                parse_replace_part_exact_position_spec(item)
                     .map(ReplacePartPositionSpec::Exact)
                     .unwrap_or_else(|| ReplacePartPositionSpec::Pattern(item.clone()))
             })
             .collect(),
     )
+}
+
+fn parse_replace_part_exact_position_spec(expr: &Expr) -> Option<Vec<PartSelector>> {
+    if let Some(selector) = parse_replace_part_exact_selector(expr) {
+        return Some(vec![selector]);
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return None;
+    }
+
+    if args.is_empty() {
+        return Some(Vec::new());
+    }
+
+    if args.iter().all(is_plain_list_expr) {
+        return None;
+    }
+
+    args.iter().map(parse_replace_part_exact_selector).collect()
+}
+
+fn parse_replace_part_exact_selector(expr: &Expr) -> Option<PartSelector> {
+    if let Some(index) = expr_as_signed_isize(expr) {
+        return Some(PartSelector::Single(AtomicPartSpec::Index(index)));
+    }
+
+    parse_replace_part_key_selector(expr).map(PartSelector::Key)
+}
+
+fn parse_replace_part_key_selector(expr: &Expr) -> Option<Expr> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "Key") || args.len() != 1 {
+        return None;
+    }
+
+    Some(args[0].clone())
 }
 
 fn build_replace_plan_from_targets(targets: Vec<ReplacePartTarget>) -> ReplacePlanNode {

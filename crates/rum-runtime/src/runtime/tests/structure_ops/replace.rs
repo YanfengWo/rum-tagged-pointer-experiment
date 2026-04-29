@@ -63,7 +63,7 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
             .unwrap()
             .value
             .to_string(),
-        "f[g[a, x], h[c, x]]"
+        "f[g[a, b], h[c, d]]"
     );
     assert_eq!(
         session
@@ -71,7 +71,23 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
             .unwrap()
             .value
             .to_string(),
-        "f[a, y, c, y]"
+        "f[a, b, c, d]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[a, b], All -> x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[f[a, b], {1 ;; 2} -> x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b]"
     );
 
     session.eval_text("delayedAll = {All, 2} :> n").unwrap();
@@ -81,7 +97,7 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
             .unwrap()
             .value
             .to_string(),
-        "f[g[a, 2], h[c, 2]]"
+        "f[g[a, b], h[c, d]]"
     );
     assert_eq!(
         session
@@ -89,7 +105,7 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
             .unwrap()
             .value
             .to_string(),
-        "f[a, y, c, y]"
+        "f[a, b, c, d]"
     );
     assert_eq!(
         session
@@ -105,7 +121,7 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
             .unwrap()
             .value
             .to_string(),
-        "x[x, x]"
+        "f[a, b]"
     );
     assert_eq!(
         session
@@ -245,7 +261,7 @@ fn replacepart_handles_duplicate_and_overlapping_targets_more_stably() {
             .unwrap()
             .value
             .to_string(),
-        "f[x[a], x[b]]"
+        "f[g[a], h[b]]"
     );
 }
 
