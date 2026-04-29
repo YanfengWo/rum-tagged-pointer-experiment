@@ -164,6 +164,41 @@ fn resume_eval_request_with_input_preserves_block_scope_until_completion() {
 }
 
 #[test]
+fn resume_eval_request_with_input_reports_input_parse_errors_as_syntax_diagnostics() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("Input[\"expr: \"]")
+        .expect_err("Input should suspend until host text is available");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.kind, RuntimeInputKind::Input);
+            assert_eq!(request.prompt, "expr: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let failure = session
+        .resume_eval_request_with_input("1 2")
+        .expect_err("malformed host text should surface a syntax diagnostic");
+
+    match &failure.error {
+        SessionRequestError::Syntax(diagnostic) => {
+            assert!(!diagnostic.message.is_empty());
+            assert!(!diagnostic.is_incomplete);
+            assert!(diagnostic.rendered.contains("--> 1:3"));
+            assert_eq!(diagnostic.spans.len(), 1);
+            assert_eq!(diagnostic.spans[0].start.column, 3);
+            assert_eq!(diagnostic.spans[0].text, "2");
+        }
+        other => panic!("expected syntax diagnostic, got {other:?}"),
+    }
+    assert!(failure.messages.is_empty());
+    assert!(session.pending_input_request().is_none());
+}
+
+#[test]
 fn resume_eval_request_with_input_finishes_evaluation_data_capture() {
     let mut session = Session::new();
 

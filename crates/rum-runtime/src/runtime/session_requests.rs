@@ -154,6 +154,7 @@ impl Session {
         &mut self,
         input: impl Into<String>,
     ) -> Result<SessionEvalResponse, SessionRequestFailure> {
+        let input = input.into();
         let checkpoint = self
             .pending_eval_request
             .take()
@@ -167,7 +168,7 @@ impl Session {
                 trace: Vec::new(),
             })?;
 
-        let outcome = self.resume_suspended_evaluation(input);
+        let outcome = self.resume_suspended_evaluation(input.clone());
         let value = match self
             .finalize_top_level_eval_value(outcome, checkpoint.handled_error_checkpoint)
         {
@@ -183,6 +184,9 @@ impl Session {
                             .expect("nested input suspension should record the pending request"),
                     },
                 ));
+            }
+            Err(err @ EvalError::Syntax(_)) => {
+                return Err(self.finish_completed_request_failure(checkpoint, Some(&input), err));
             }
             Err(err) => return Err(self.finish_request_failure(checkpoint, err)),
         };

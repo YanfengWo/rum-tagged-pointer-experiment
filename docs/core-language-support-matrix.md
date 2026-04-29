@@ -339,8 +339,9 @@ once in its primary implementation group. Other groups may mention it as
   and malformed status-object inert projection boundaries, request-level print
   transport,
   non-string `InputString` prompts, `Input` / `InputString`
-  `FieldMasked -> True` plus request-kind host request metadata and current
-  option-error boundaries, suspension-safe `WithCleanup` body cleanup plus current
+  `FieldMasked -> True` plus request-kind host request metadata, resumed
+  `Input` parse diagnostics, and current option-error boundaries,
+  suspension-safe `WithCleanup` body cleanup plus current
   cleanup-time host-input resume, throw/abort cleanup boundaries,
   cleanup-`Return` preservation of the primary outcome, and nested
   `AbortProtect` pending-abort propagation, current `CheckAbort` option-list
@@ -352,7 +353,9 @@ once in its primary implementation group. Other groups may mention it as
   recursion and fixed-point iteration limits, current string-tag `Success`
   projection boundary, and abort/failsafe resume through host input, but richer
   held/cleanup corners such as cleanup-time `Throw` during active throw and
-  deeper status parity are still pending
+  deeper status parity are still pending; exact cleanup-time `Throw` parity
+  needs active-unwind / `Catch`-frame bypass state rather than another local
+  cleanup special case
 - `planned`: broader failure values, abort-protection parity, external
   interaction builtins, and deeper cleanup/exception compatibility
 
