@@ -432,7 +432,7 @@ fn select_positioned_parts_for_atomic_spec(
             Some(vec![(component, value)])
         }
         AtomicPartSpec::All => match expr {
-            Expr::Atom(_) => None,
+            Expr::Atom(_) => Some(Vec::new()),
             Expr::Call { args, .. } => Some(
                 args.iter()
                     .enumerate()
@@ -440,123 +440,126 @@ fn select_positioned_parts_for_atomic_spec(
                     .collect(),
             ),
         },
-        AtomicPartSpec::Span(span) => {
-            select_positioned_parts_for_span(expr, *span, part_span_includes_head(*span))
-        }
-    }
-}
-
-fn resolve_span_endpoint(
-    endpoint: SpanEndpoint,
-    len: usize,
-    step: isize,
-    include_head: bool,
-    is_start: bool,
-) -> Option<isize> {
-    match endpoint {
-        SpanEndpoint::All => {
-            let len = isize::try_from(len).ok()?;
-            Some(if step > 0 {
-                if is_start {
-                    if include_head { 0 } else { 1 }
-                } else {
-                    len
-                }
-            } else if is_start {
-                len
-            } else if include_head {
-                0
-            } else {
-                1
-            })
-        }
-        SpanEndpoint::Index(0) if include_head => Some(0),
-        SpanEndpoint::Index(index) => normalize_clamped_structural_endpoint(index, len),
+        AtomicPartSpec::Span(span) => select_positioned_parts_for_span(expr, *span),
     }
 }
 
 pub(super) fn select_positioned_parts_for_span(
     expr: &Expr,
     spec: PartSpanSpec,
-    include_head: bool,
 ) -> Option<Vec<(isize, Expr)>> {
     match expr {
         Expr::Atom(_) => {
-            let components = resolve_span_components(spec, 0, include_head)?;
-            Some(
-                components
-                    .into_iter()
-                    .filter_map(|component| {
-                        if component == 0 {
-                            Some((0, structural_head_expr(expr)))
-                        } else {
-                            None
-                        }
-                    })
-                    .collect(),
-            )
+            resolve_span_components(spec, 0)?;
+            Some(Vec::new())
         }
         Expr::Call { args, .. } => {
-            let components = resolve_span_components(spec, args.len(), include_head)?;
+            let components = resolve_span_components(spec, args.len())?;
             Some(
                 components
                     .into_iter()
-                    .filter_map(|component| {
-                        if component == 0 {
-                            Some((0, structural_head_expr(expr)))
-                        } else {
-                            let index = normalize_structural_arg_position(component, args.len())?;
-                            Some((component, args[index].clone()))
-                        }
+                    .map(|component| {
+                        let index = normalize_structural_arg_position(component, args.len())?;
+                        Some((component, args[index].clone()))
                     })
-                    .collect(),
+                    .collect::<Option<Vec<_>>>()?,
             )
         }
     }
 }
 
-fn part_span_includes_head(spec: PartSpanSpec) -> bool {
-    matches!(spec.start, SpanEndpoint::Index(0)) || matches!(spec.end, SpanEndpoint::Index(0))
+fn resolve_span_components(spec: PartSpanSpec, len: usize) -> Option<Vec<isize>> {
+    let len = isize::try_from(len).ok()?;
+    if spec.step > 0 {
+        let start = resolve_positive_span_start(spec.start, len)?;
+        let end = resolve_positive_span_end(spec.end, len)?;
+        resolve_ordered_span_components(start, end, spec.step)
+    } else {
+        let start = resolve_negative_span_start(spec.start, len)?;
+        let end = resolve_negative_span_end(spec.end, len)?;
+        resolve_ordered_span_components(start, end, spec.step)
+    }
 }
 
-fn resolve_span_components(
-    spec: PartSpanSpec,
-    len: usize,
-    include_head: bool,
-) -> Option<Vec<isize>> {
-    let start = resolve_span_endpoint(spec.start, len, spec.step, include_head, true)?;
-    let end = resolve_span_endpoint(spec.end, len, spec.step, include_head, false)?;
+fn resolve_ordered_span_components(start: isize, end: isize, step: isize) -> Option<Vec<isize>> {
     let mut current = start;
     let mut components = Vec::new();
 
-    if spec.step > 0 {
+    if step > 0 {
+        if start > end {
+            return (start == end + 1).then_some(Vec::new());
+        }
         while current <= end {
             components.push(current);
-            current += spec.step;
+            current += step;
         }
     } else {
+        if start < end {
+            return (start + 1 == end).then_some(Vec::new());
+        }
         while current >= end {
             components.push(current);
-            current += spec.step;
+            current += step;
         }
     }
 
     Some(components)
 }
 
-pub(super) fn normalize_clamped_structural_endpoint(position: isize, len: usize) -> Option<isize> {
-    if position == 0 || len == 0 {
+fn resolve_positive_span_start(endpoint: SpanEndpoint, len: isize) -> Option<isize> {
+    match endpoint {
+        SpanEndpoint::All => Some(1),
+        SpanEndpoint::Index(0) => Some(len + 1),
+        SpanEndpoint::Index(index) if index > 0 => (index <= len + 1).then_some(index),
+        SpanEndpoint::Index(index) => {
+            let normalized = len + index + 1;
+            (1..=len).contains(&normalized).then_some(normalized)
+        }
+    }
+}
+
+fn resolve_positive_span_end(endpoint: SpanEndpoint, len: isize) -> Option<isize> {
+    match endpoint {
+        SpanEndpoint::All => Some(len),
+        SpanEndpoint::Index(0) => Some(0),
+        SpanEndpoint::Index(index) if index > 0 => (index <= len).then_some(index),
+        SpanEndpoint::Index(index) => {
+            let normalized = len + index + 1;
+            (0..=len).contains(&normalized).then_some(normalized)
+        }
+    }
+}
+
+fn resolve_negative_span_start(endpoint: SpanEndpoint, len: isize) -> Option<isize> {
+    if len == 0 {
         return None;
     }
 
-    let len = isize::try_from(len).ok()?;
-    let normalized = if position > 0 {
-        position
-    } else {
-        len + position + 1
-    };
+    match endpoint {
+        SpanEndpoint::All => Some(1),
+        SpanEndpoint::Index(0) => None,
+        SpanEndpoint::Index(index) if index > 0 => (index <= len).then_some(index),
+        SpanEndpoint::Index(index) => {
+            let normalized = len + index + 1;
+            (1..=len).contains(&normalized).then_some(normalized)
+        }
+    }
+}
 
-    Some(normalized.clamp(1, len))
+fn resolve_negative_span_end(endpoint: SpanEndpoint, len: isize) -> Option<isize> {
+    if len == 0 {
+        return None;
+    }
+
+    match endpoint {
+        SpanEndpoint::All => Some(len),
+        SpanEndpoint::Index(0) => None,
+        SpanEndpoint::Index(index) if index > 0 => (index <= len + 1).then_some(index),
+        SpanEndpoint::Index(index) => {
+            let normalized = len + index + 1;
+            (1..=len).contains(&normalized).then_some(normalized)
+        }
+    }
 }
 
 fn parse_extract_position_spec(expr: &Expr) -> Option<ExtractPositionSpec> {

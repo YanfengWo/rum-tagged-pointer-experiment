@@ -141,9 +141,10 @@ fn select_positioned_parts_for_atomic_spec_with_heads(
     match spec {
         AtomicPartSpec::Index(0) => match heads {
             ReplacePartHeadsMode::Exclude => None,
-            ReplacePartHeadsMode::Automatic | ReplacePartHeadsMode::Include => {
-                Some(vec![(0, structural_head_expr(expr))])
-            }
+            ReplacePartHeadsMode::Automatic | ReplacePartHeadsMode::Include => match expr {
+                Expr::Atom(_) => Some(Vec::new()),
+                Expr::Call { .. } => Some(vec![(0, structural_head_expr(expr))]),
+            },
         },
         AtomicPartSpec::Index(index) => {
             let value = select_exact_part(expr, *index)?;
@@ -151,10 +152,7 @@ fn select_positioned_parts_for_atomic_spec_with_heads(
             Some(vec![(component, value)])
         }
         AtomicPartSpec::All => match expr {
-            Expr::Atom(_) => match heads {
-                ReplacePartHeadsMode::Include => Some(vec![(0, structural_head_expr(expr))]),
-                ReplacePartHeadsMode::Automatic | ReplacePartHeadsMode::Exclude => Some(Vec::new()),
-            },
+            Expr::Atom(_) => Some(Vec::new()),
             Expr::Call { args, .. } => {
                 let mut parts = Vec::new();
                 if matches!(heads, ReplacePartHeadsMode::Include) {
@@ -168,22 +166,7 @@ fn select_positioned_parts_for_atomic_spec_with_heads(
                 Some(parts)
             }
         },
-        AtomicPartSpec::Span(span) => select_positioned_parts_for_span(
-            expr,
-            *span,
-            replace_part_span_includes_heads(*span, heads),
-        ),
-    }
-}
-
-fn replace_part_span_includes_heads(spec: PartSpanSpec, heads: ReplacePartHeadsMode) -> bool {
-    match heads {
-        ReplacePartHeadsMode::Include => true,
-        ReplacePartHeadsMode::Exclude => false,
-        ReplacePartHeadsMode::Automatic => {
-            matches!(spec.start, SpanEndpoint::Index(0))
-                || matches!(spec.end, SpanEndpoint::Index(0))
-        }
+        AtomicPartSpec::Span(span) => select_positioned_parts_for_span(expr, *span),
     }
 }
 

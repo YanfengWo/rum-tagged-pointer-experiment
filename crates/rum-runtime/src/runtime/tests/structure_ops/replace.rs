@@ -97,7 +97,7 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
             .unwrap()
             .value
             .to_string(),
-        "x[x, x]"
+        "f[a, b]"
     );
     assert_eq!(
         session
@@ -114,6 +114,30 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
             .value
             .to_string(),
         "f[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[1, 0 -> x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[1, All -> x, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplacePart[1, 0 ;; 0 -> x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
     );
     assert_eq!(
         session

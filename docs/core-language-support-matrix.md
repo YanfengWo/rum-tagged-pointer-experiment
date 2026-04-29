@@ -92,7 +92,9 @@ once in its primary implementation group. Other groups may mention it as
 - `implemented`: symbolic `Expr` model, atom-vs-call representation, canonical
   heads, fixed-point evaluation core, list as a first-class expression head,
   standard structural traversal groundwork, exact path selectors with integer /
-  `All` / `Span` / pattern-position subsets
+  `All` / `Span` / pattern-position subsets, including current atom `All` /
+  positive empty-span and zero-endpoint boundary behavior in `Part` / `Extract`,
+  plus the current `ReplacePart` atom-head non-replacement boundary
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
   across every structural walker, general boolean/comparison evaluation
 - `planned`: richer expression introspection, broader list-manipulation

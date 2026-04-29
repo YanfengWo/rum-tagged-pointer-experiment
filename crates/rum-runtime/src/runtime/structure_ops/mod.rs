@@ -12,8 +12,8 @@ use exact_paths::{
 };
 use replace::ReplacePartHeadsMode;
 use selectors::{
-    AtomicPartSpec, PartSelector, PartSpanSpec, SpanEndpoint, apply_part_selectors,
-    parse_part_selectors, parse_single_position_spec, select_positioned_parts_for_span,
+    AtomicPartSpec, PartSelector, apply_part_selectors, parse_part_selectors,
+    parse_single_position_spec, select_positioned_parts_for_span,
 };
 
 pub(super) fn exact_position_paths_from_expr(

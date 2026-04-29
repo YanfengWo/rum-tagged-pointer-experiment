@@ -74,7 +74,95 @@ fn part_supports_exact_indices_nested_paths_and_head_access() {
             .unwrap()
             .value
             .to_string(),
+        "f[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b], {0, 1, 2}]")
+            .unwrap()
+            .value
+            .to_string(),
         "f[f, a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b], 1 ;; 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b], 2 ;; 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b], 0 ;; 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Part[f[a, b], Span[0, 0]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b], All ;; 1 ;; -1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b], 2 ;; All ;; -1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], All ;; All ;; -1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Part[f[a, b, c], Span[All, All, -1]]"
+    );
+    assert_eq!(
+        session.eval_text("Part[1, All]").unwrap().value.to_string(),
+        "Integer[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[\"a\", All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "String[]"
+    );
+    assert_eq!(
+        session.eval_text("Part[x, All]").unwrap().value.to_string(),
+        "Symbol[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[x, 0 ;; 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Symbol[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[1, 1 ;; All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Integer[]"
     );
     assert_eq!(
         session
@@ -211,7 +299,7 @@ fn extract_consumes_exact_paths_and_position_output() {
             .unwrap()
             .value
             .to_string(),
-        "f[f, a, b]"
+        "f[]"
     );
     assert_eq!(
         session
@@ -228,5 +316,21 @@ fn extract_consumes_exact_paths_and_position_output() {
             .value
             .to_string(),
         "List[f[a, b]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[1, {All}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Integer[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[1, {{All}, {0 ;; 0}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Integer[], Integer[]]"
     );
 }
