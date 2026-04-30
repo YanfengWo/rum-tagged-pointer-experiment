@@ -344,7 +344,8 @@ once in its primary implementation group. Other groups may mention it as
   `TerminatedEvaluation`, `InputString`, `Input`, `Print`, `Pause`, and
   `BlockRandom`.
   Recent follow-up work tightened protected-abort catching, session-config
-  assertion enablement plus the current `$AssertFunction` callback hook,
+  assertion enablement, `On[Assert]` / `Off[Assert]` controls, inert disabled
+  `Assert`, plus the current `$AssertFunction` callback hook,
   exact-key `Success[...]` / `Failure[...]` property
   extraction with the current `Missing` propagation subset, including current
   `Failure[...]` `All` / `"Properties"` / `"Message"` / `"StyledMessage"`

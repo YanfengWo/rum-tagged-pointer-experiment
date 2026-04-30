@@ -60,13 +60,13 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary_with_hold(
         "On",
-        "Enables session-level emission of matching messages in the current selector subset.",
+        "Enables session-level assertion checking or emission of matching messages in the current selector subset.",
         HoldAttribute::HoldAll,
         BuiltinHandler::On,
     ),
     BuiltinSpec::ordinary_with_hold(
         "Off",
-        "Disables session-level emission of matching messages in the current selector subset.",
+        "Disables session-level assertion checking or emission of matching messages in the current selector subset.",
         HoldAttribute::HoldAll,
         BuiltinHandler::Off,
     ),

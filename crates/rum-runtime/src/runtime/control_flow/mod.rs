@@ -501,7 +501,7 @@ impl Session {
             Some(function)
         };
         if !self.asserts_enabled && assert_function.is_none() {
-            return Ok(system_expr("Null"));
+            return Ok(Expr::call(system_expr("Assert"), assert_args));
         }
 
         let test_result = self.evaluate(test.clone());

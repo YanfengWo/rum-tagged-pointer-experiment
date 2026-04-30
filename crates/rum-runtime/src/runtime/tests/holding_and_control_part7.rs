@@ -69,7 +69,7 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
             .unwrap()
             .value
             .to_string(),
-        "Null"
+        "Assert[InputString[\"never: \"]]"
     );
     assert!(session.pending_input_request().is_none());
 
@@ -125,7 +125,11 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
         .expect("resuming $AssertFunction callback should finish Assert");
     assert_eq!(response.value.to_string(), "Null");
 
-    session.enable_asserts(true);
+    assert_eq!(
+        session.eval_text("On[Assert]").unwrap().value.to_string(),
+        "Null"
+    );
+    assert!(session.asserts_enabled());
     let asserted = session.eval_text("Assert[Equal[1, 2], tag]").unwrap();
     assert_eq!(asserted.value.to_string(), "Null");
     assert_eq!(asserted.messages.len(), 1);
@@ -139,6 +143,19 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
         EvalError::InputRequired { request } => assert_eq!(request.prompt, "now: "),
         other => panic!("expected input-required error, got {other:?}"),
     }
+    assert_eq!(
+        session.eval_text("Off[Assert]").unwrap().value.to_string(),
+        "Null"
+    );
+    assert!(!session.asserts_enabled());
+    assert_eq!(
+        session
+            .eval_text("Assert[Equal[1, 2], tag]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Assert[Equal[1, 2], tag]"
+    );
 
     assert_eq!(
         session

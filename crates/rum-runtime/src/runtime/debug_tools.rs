@@ -240,10 +240,20 @@ impl Session {
     }
 
     pub(super) fn eval_on(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if is_assert_switch(args) {
+            self.asserts_enabled = true;
+            return Ok(system_expr("Null"));
+        }
+
         self.eval_message_switch("On", args, true)
     }
 
     pub(super) fn eval_off(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if is_assert_switch(args) {
+            self.asserts_enabled = false;
+            return Ok(system_expr("Null"));
+        }
+
         self.eval_message_switch("Off", args, false)
     }
 
@@ -2078,6 +2088,10 @@ fn normalize_message_switch_selectors(args: &[Expr]) -> Option<Vec<MessageSelect
     }
 
     Some(selectors)
+}
+
+fn is_assert_switch(args: &[Expr]) -> bool {
+    matches!(args, [arg] if is_system_symbol_name(arg, "Assert"))
 }
 
 fn normalize_trace_patterns(expr: &Expr) -> Vec<Expr> {
