@@ -50,6 +50,12 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::HoldLiteral,
     ),
     BuiltinSpec::ordinary_with_attributes(
+        "HoldComplete",
+        "Prevents evaluation of all arguments and disables Evaluate and Sequence escapes.",
+        AttributeSet::from_attribute(Attribute::HoldAllComplete),
+        BuiltinHandler::HoldLiteral,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
         "Unevaluated",
         "Temporarily leaves an argument unevaluated as a direct function argument.",
         AttributeSet::from_attribute(Attribute::HoldAllComplete),

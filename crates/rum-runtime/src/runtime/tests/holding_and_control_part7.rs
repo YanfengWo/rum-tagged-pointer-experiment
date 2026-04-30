@@ -73,6 +73,58 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
     );
     assert!(session.pending_input_request().is_none());
 
+    let mut callback_session = Session::new();
+    assert_eq!(
+        callback_session
+            .eval_text("Context[$AssertFunction]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"System`\""
+    );
+    assert_eq!(
+        callback_session
+            .eval_text("HoldComplete[InputString[\"held: \"]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "HoldComplete[InputString[\"held: \"]]"
+    );
+    assert!(callback_session.pending_input_request().is_none());
+
+    callback_session
+        .eval_text("$AssertFunction = Print")
+        .unwrap();
+    let callback = callback_session
+        .eval_text("Assert[Equal[1, 2], tag]")
+        .unwrap();
+    assert_eq!(callback.value.to_string(), "Null");
+    assert!(callback.messages.is_empty());
+    assert_eq!(
+        callback.prints,
+        vec!["HoldComplete[Assert[Equal[1, 2], tag]]"]
+    );
+    let callback_true = callback_session.eval_text("Assert[True]").unwrap();
+    assert_eq!(callback_true.value.to_string(), "Null");
+    assert!(callback_true.prints.is_empty());
+
+    callback_session
+        .eval_text("$AssertFunction = Function[InputString[\"assert: \"]]")
+        .unwrap();
+    let failure = callback_session
+        .eval_request("Assert[False]")
+        .expect_err("$AssertFunction callback should be able to suspend");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "assert: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = callback_session
+        .resume_eval_request_with_input("ignored")
+        .expect("resuming $AssertFunction callback should finish Assert");
+    assert_eq!(response.value.to_string(), "Null");
+
     session.enable_asserts(true);
     let asserted = session.eval_text("Assert[Equal[1, 2], tag]").unwrap();
     assert_eq!(asserted.value.to_string(), "Null");

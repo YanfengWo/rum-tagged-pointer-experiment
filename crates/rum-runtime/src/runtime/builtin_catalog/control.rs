@@ -85,9 +85,13 @@ pub(super) const CONTROL_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary_with_hold(
         "Assert",
-        "Represents an assertion site and currently acts as an inert assertion unless richer assertion controls are added.",
+        "Represents an assertion site and supports the current session flag plus $AssertFunction hook.",
         HoldAttribute::HoldAll,
         BuiltinHandler::Assert,
+    ),
+    BuiltinSpec::new(
+        "$AssertFunction",
+        "Stores the optional assertion failure callback used by Assert in the current first-pass subset.",
     ),
     BuiltinSpec::new(
         "PropagateAborts",

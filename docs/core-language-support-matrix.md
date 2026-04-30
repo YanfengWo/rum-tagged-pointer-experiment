@@ -334,7 +334,8 @@ once in its primary implementation group. Other groups may mention it as
   `TerminatedEvaluation`, `InputString`, `Input`, `Print`, `Pause`, and
   `BlockRandom`.
   Recent follow-up work tightened protected-abort catching, session-config
-  assertion enablement, exact-key `Success[...]` / `Failure[...]` property
+  assertion enablement plus the current `$AssertFunction` callback hook,
+  exact-key `Success[...]` / `Failure[...]` property
   extraction with the current `Missing` propagation subset, including current
   `Failure[...]` `All` / `"Properties"` / `"Message"` / `"StyledMessage"`
   parity for string-or-symbol tags plus string and `MessageName[...]`
@@ -381,8 +382,9 @@ once in its primary implementation group. Other groups may mention it as
   first-pass subset
 - `planned`: remaining deeper `WithCleanup` / `Failsafe` / `CheckAbort` /
   `AbortProtect` parity, richer `Assert` controls beyond the current session
-  flag, broader generated-resource `TerminatedEvaluation` parity beyond the
-  current recursion/fixed-point limit subset, and fuller host-I/O semantics
+  flag plus `$AssertFunction` hook, broader generated-resource
+  `TerminatedEvaluation` parity beyond the current recursion/fixed-point limit
+  subset, and fuller host-I/O semantics
 - `cross-tracked elsewhere`: `Block`, `Function`, `Module`, `Rule`,
   `RuleDelayed`, `With`
 

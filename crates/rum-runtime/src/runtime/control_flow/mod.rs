@@ -252,50 +252,24 @@ impl Session {
     }
 
     pub(super) fn eval_assert(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        match args {
-            [test] => {
-                if !self.asserts_enabled {
-                    return Ok(system_expr("Null"));
-                }
+        let (test, tag) = match args {
+            [test] => (test.clone(), None),
+            [test, tag] => (test.clone(), Some(tag.clone())),
+            _ => return Ok(self.invalid_call_with_arg_range("Assert", args, 1, 2)),
+        };
+        let assert_args = args.to_vec();
 
-                let test_result = self.evaluate(test.clone());
-                let outcome = self.suspend_with_result_frame(test_result, {
-                    let test = test.clone();
-                    move |session, outcome| session.resume_assert_after_test(test, None, outcome)
-                });
-
-                match outcome {
-                    Err(EvalError::InputRequired { request }) => {
-                        Err(EvalError::InputRequired { request })
-                    }
-                    outcome => self.resume_assert_after_test(test.clone(), None, outcome),
-                }
+        let function_result = self.evaluate(system_expr("$AssertFunction"));
+        let function = self.suspend_with_frame(function_result, {
+            let test = test.clone();
+            let tag = tag.clone();
+            let assert_args = assert_args.clone();
+            move |session, function| {
+                session.resume_assert_after_function(test, tag, assert_args, function)
             }
-            [test, tag] => {
-                if !self.asserts_enabled {
-                    return Ok(system_expr("Null"));
-                }
+        })?;
 
-                let test_result = self.evaluate(test.clone());
-                let outcome = self.suspend_with_result_frame(test_result, {
-                    let test = test.clone();
-                    let tag = tag.clone();
-                    move |session, outcome| {
-                        session.resume_assert_after_test(test, Some(tag), outcome)
-                    }
-                });
-
-                match outcome {
-                    Err(EvalError::InputRequired { request }) => {
-                        Err(EvalError::InputRequired { request })
-                    }
-                    outcome => {
-                        self.resume_assert_after_test(test.clone(), Some(tag.clone()), outcome)
-                    }
-                }
-            }
-            _ => Ok(self.invalid_call_with_arg_range("Assert", args, 1, 2)),
-        }
+        self.resume_assert_after_function(test, tag, assert_args, function)
     }
 
     pub(super) fn eval_block_random(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -492,11 +466,17 @@ impl Session {
         &mut self,
         test: Expr,
         tag: Option<Expr>,
+        assert_args: Vec<Expr>,
+        assert_function: Option<Expr>,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
         match outcome {
             Ok(value) if is_system_symbol_name(&value, "True") => Ok(system_expr("Null")),
             Ok(value) => {
+                if let Some(assert_function) = assert_function {
+                    return self.finish_assert_function(assert_function, assert_args);
+                }
+
                 self.push_message(
                     "Assert",
                     "fail",
@@ -506,6 +486,54 @@ impl Session {
             }
             Err(error) => Err(error),
         }
+    }
+
+    fn resume_assert_after_function(
+        &mut self,
+        test: Expr,
+        tag: Option<Expr>,
+        assert_args: Vec<Expr>,
+        function: Expr,
+    ) -> Result<Expr, EvalError> {
+        let assert_function = if is_system_symbol_name(&function, "$AssertFunction") {
+            None
+        } else {
+            Some(function)
+        };
+        if !self.asserts_enabled && assert_function.is_none() {
+            return Ok(system_expr("Null"));
+        }
+
+        let test_result = self.evaluate(test.clone());
+        let outcome = self.suspend_with_result_frame(test_result, {
+            let test = test.clone();
+            let tag = tag.clone();
+            let assert_args = assert_args.clone();
+            let assert_function = assert_function.clone();
+            move |session, outcome| {
+                session.resume_assert_after_test(test, tag, assert_args, assert_function, outcome)
+            }
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => {
+                self.resume_assert_after_test(test, tag, assert_args, assert_function, outcome)
+            }
+        }
+    }
+
+    fn finish_assert_function(
+        &mut self,
+        assert_function: Expr,
+        assert_args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let payload = Expr::call(
+            system_expr("HoldComplete"),
+            vec![Expr::call(system_expr("Assert"), assert_args)],
+        );
+        let result = self.evaluate(Expr::call(assert_function, vec![payload]));
+        self.suspend_with_frame(result, |_, _| Ok(system_expr("Null")))
     }
 
     fn resume_with_cleanup_after_init(
