@@ -127,7 +127,7 @@ impl Session {
             Some(true) => self.resume_and_from_index(args, index + 1, residual),
             Some(false) => Ok(system_expr(heads::structure::FALSE)),
             None => {
-                residual.push(value);
+                extend_flat_logical_residual(&mut residual, value, "And");
                 self.resume_and_from_index(args, index + 1, residual)
             }
         }
@@ -168,7 +168,7 @@ impl Session {
             Some(true) => Ok(system_expr(heads::structure::TRUE)),
             Some(false) => self.resume_or_from_index(args, index + 1, residual),
             None => {
-                residual.push(value);
+                extend_flat_logical_residual(&mut residual, value, "Or");
                 self.resume_or_from_index(args, index + 1, residual)
             }
         }
@@ -313,6 +313,15 @@ fn ordering_satisfies_relation(ordering: std::cmp::Ordering, relation: Compariso
 fn push_unique_expr(values: &mut Vec<Expr>, value: Expr) {
     if values.last() != Some(&value) {
         values.push(value);
+    }
+}
+
+fn extend_flat_logical_residual(residual: &mut Vec<Expr>, value: Expr, head_name: &str) {
+    match value {
+        Expr::Call { head, args } if is_system_symbol_name(&head, head_name) => {
+            residual.extend(args);
+        }
+        other => residual.push(other),
     }
 }
 

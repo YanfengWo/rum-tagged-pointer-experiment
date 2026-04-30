@@ -42,6 +42,22 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
     );
     assert_eq!(
         session
+            .eval_text("And[a, And[b, c]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "And[a, b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("And[True, And[a, b], c]")
+            .unwrap()
+            .value
+            .to_string(),
+        "And[a, b, c]"
+    );
+    assert_eq!(
+        session
             .eval_text("And[x, False, y]")
             .unwrap()
             .value
@@ -59,6 +75,22 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
             .value
             .to_string(),
         "Or[x, y]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Or[a, Or[b, c]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Or[a, b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Or[False, Or[a, b], c]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Or[a, b, c]"
     );
     assert_eq!(
         session

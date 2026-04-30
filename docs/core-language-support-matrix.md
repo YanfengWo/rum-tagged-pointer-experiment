@@ -100,9 +100,10 @@ once in its primary implementation group. Other groups may mention it as
   association-aware `Depth` parity, `Level` scalar-zero levelspec parity, and
   empty-expression negative-level depth alignment across the current structural
   walkers, current `Not[Not[...]]` and relational-`Not` simplifications,
-  mixed-symbolic `Unequal` chain boundary, nonatomic `OrderedQ` argument-order
-  parity, `ReplacePart` atom-head non-replacement, and non-expanding `All` /
-  `Span` position-spec boundaries
+  flat nested `And` / `Or` residual simplification, mixed-symbolic `Unequal`
+  chain boundary, nonatomic `OrderedQ` argument-order parity, `ReplacePart`
+  atom-head non-replacement, and non-expanding `All` / `Span` position-spec
+  boundaries
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
   across every structural walker, general boolean/comparison evaluation beyond
   the current exact-numeric order-chain reductions
