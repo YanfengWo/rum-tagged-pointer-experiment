@@ -712,6 +712,22 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("x = 0; {KeyUnion[{Association[a :> (x = x + 1)], Association[]}], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], Association[RuleDelayed[a, Missing[\"KeyAbsent\", a]]]], 0]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {KeyUnion[{Association[a :> (x = x + 1)], Association[]}, f], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], Association[RuleDelayed[a, f[a]]]], 0]"
+    );
+    assert_eq!(
+        session
             .eval_text(
                 "KeyIntersection[{Association[a -> 1, b -> 2, c -> 3], Association[b -> 9, c -> 8]}]"
             )
@@ -722,11 +738,31 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text(
+                "x = 0; {KeyIntersection[{Association[a :> (x = x + 1), b -> 2], Association[a -> 9]}], x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], Association[Rule[a, 9]]], 0]"
+    );
+    assert_eq!(
+        session
             .eval_text("KeyComplement[{Association[a -> 1, b -> 2, c -> 3], Association[b -> 9]}]")
             .unwrap()
             .value
             .to_string(),
         "Association[Rule[a, 1], Rule[c, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "x = 0; {KeyComplement[{Association[a :> (x = x + 1), b -> 2], Association[b -> 9]}], x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], 0]"
     );
     assert_eq!(
         session

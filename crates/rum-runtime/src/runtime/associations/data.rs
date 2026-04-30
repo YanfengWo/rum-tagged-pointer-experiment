@@ -290,6 +290,19 @@ pub(in crate::runtime) fn parse_keyed_entries_list_expr_with_diagnostics(
         .collect()
 }
 
+pub(in crate::runtime) fn parse_keyed_entry_forms_list_expr_with_diagnostics(
+    expr: &Expr,
+) -> Result<Vec<Vec<AssociationEntryForm>>, KeyedEntriesListError> {
+    let items = list_items(expr).ok_or(KeyedEntriesListError::NotList)?;
+    items
+        .iter()
+        .map(|item| {
+            single_rule_or_keyed_entry_forms_from_expr(item)
+                .ok_or_else(|| KeyedEntriesListError::InvalidElement(item.clone()))
+        })
+        .collect()
+}
+
 pub(in crate::runtime) fn increment_count(counts: &mut Vec<(Expr, usize)>, key: Expr) {
     if let Some((_, count)) = counts.iter_mut().find(|(existing, _)| existing == &key) {
         *count += 1;

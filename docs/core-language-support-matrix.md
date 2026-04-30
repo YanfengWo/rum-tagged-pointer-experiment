@@ -303,7 +303,8 @@ once in its primary implementation group. Other groups may mention it as
   projection including missing-key propagation and no-mixed-key/index
   diagnostics, `Key[...]` key-spec unwrapping and current `RuleDelayed`
   preservation for the current `KeyTake` / `KeyDrop` / `KeyDropFrom` plus
-  `KeyMap` / `KeySelect` / `KeySort` / `KeySortBy` keyed-transform subset,
+  `KeyMap` / `KeySelect` / `KeySort` / `KeySortBy` keyed-transform subset
+  plus `KeyUnion` / `KeyIntersection` / `KeyComplement`,
   custom `KeySort` comparers,
   `Catenate` over lists plus association values with current invalid-argument
   parity, current `GroupBy[list, f, g]` reducer support,

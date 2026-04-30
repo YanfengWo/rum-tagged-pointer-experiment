@@ -184,7 +184,8 @@ impl Session {
             }
         };
 
-        let collections = match parse_keyed_entries_list_expr_with_diagnostics(collections_expr) {
+        let collections = match parse_keyed_entry_forms_list_expr_with_diagnostics(collections_expr)
+        {
             Ok(collections) => collections,
             Err(KeyedEntriesListError::NotList) => {
                 return Ok(self.invalid_call_with_message(
@@ -204,17 +205,17 @@ impl Session {
             }
         };
 
-        let union_keys = key_union_keys(&collections);
-        let missing_keys = key_union_missing_keys(&collections, &union_keys);
+        let union_entries = key_union_entries(&collections);
+        let missing_keys = key_union_missing_keys(&collections, &union_entries);
 
         match fill_function {
-            None => Ok(render_key_union_result(&collections, &union_keys, &[])),
+            None => Ok(render_key_union_result(&collections, &union_entries, &[])),
             Some(fill_function) => self.resume_key_union_missing_values_from_index(
                 head.clone(),
                 args.to_vec(),
                 fill_function,
                 collections,
-                union_keys,
+                union_entries,
                 missing_keys,
                 0,
                 Vec::new(),
@@ -236,7 +237,8 @@ impl Session {
             ));
         };
 
-        let collections = match parse_keyed_entries_list_expr_with_diagnostics(collections_expr) {
+        let collections = match parse_keyed_entry_forms_list_expr_with_diagnostics(collections_expr)
+        {
             Ok(collections) => collections,
             Err(KeyedEntriesListError::NotList) => {
                 return Ok(self.invalid_call_with_message(
@@ -262,12 +264,12 @@ impl Session {
 
         let intersection_keys = first
             .iter()
-            .filter(|(key, _)| {
+            .filter(|entry| {
                 collections[1..]
                     .iter()
-                    .all(|entries| entries.iter().any(|(entry_key, _)| entry_key == key))
+                    .all(|entries| entries.iter().any(|candidate| candidate.key == entry.key))
             })
-            .map(|(key, _)| key.clone())
+            .map(|entry| entry.key.clone())
             .collect::<Vec<_>>();
 
         Ok(Expr::call(
@@ -275,14 +277,17 @@ impl Session {
             collections
                 .into_iter()
                 .map(|entries| {
-                    render_association(
+                    render_association_entry_forms_preserving_heads(
                         intersection_keys
                             .iter()
                             .filter_map(|key| {
-                                entries
-                                    .iter()
-                                    .find(|(entry_key, _)| entry_key == key)
-                                    .map(|(_, value)| (key.clone(), value.clone()))
+                                entries.iter().find(|entry| entry.key == *key).map(|entry| {
+                                    AssociationEntryForm {
+                                        key: key.clone(),
+                                        value: entry.value.clone(),
+                                        delayed: entry.delayed,
+                                    }
+                                })
                             })
                             .collect(),
                     )
@@ -323,7 +328,8 @@ impl Session {
             });
         };
 
-        let collections = match parse_keyed_entries_list_expr_with_diagnostics(collections_expr) {
+        let collections = match parse_keyed_entry_forms_list_expr_with_diagnostics(collections_expr)
+        {
             Ok(collections) => collections,
             Err(KeyedEntriesListError::NotList) => {
                 return Ok(self.invalid_call_with_message(
@@ -354,13 +360,13 @@ impl Session {
 
         let excluded = rest
             .iter()
-            .flat_map(|entries| entries.iter().map(|(key, _)| key.clone()))
+            .flat_map(|entries| entries.iter().map(|entry| entry.key.clone()))
             .collect::<std::collections::HashSet<_>>();
 
-        Ok(render_association(
+        Ok(render_association_entry_forms_preserving_heads(
             first
                 .iter()
-                .filter(|(key, _)| !excluded.contains(key))
+                .filter(|entry| !excluded.contains(&entry.key))
                 .cloned()
                 .collect(),
         ))
@@ -825,8 +831,8 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         fill_function: Expr,
-        collections: Vec<Vec<(Expr, Expr)>>,
-        union_keys: Vec<Expr>,
+        collections: Vec<Vec<AssociationEntryForm>>,
+        union_entries: Vec<AssociationEntryForm>,
         missing_keys: Vec<Expr>,
         index: usize,
         fill_values: Vec<(Expr, Expr)>,
@@ -834,7 +840,7 @@ impl Session {
         let Some(key) = missing_keys.get(index).cloned() else {
             return Ok(render_key_union_result(
                 &collections,
-                &union_keys,
+                &union_entries,
                 &fill_values,
             ));
         };
@@ -844,7 +850,7 @@ impl Session {
         let suspended_call_args = call_args.clone();
         let suspended_fill_function = fill_function.clone();
         let suspended_collections = collections.clone();
-        let suspended_union_keys = union_keys.clone();
+        let suspended_union_entries = union_entries.clone();
         let suspended_missing_keys = missing_keys.clone();
         let suspended_fill_values = fill_values.clone();
         let suspended_key = key.clone();
@@ -854,7 +860,7 @@ impl Session {
                 suspended_call_args,
                 suspended_fill_function,
                 suspended_collections,
-                suspended_union_keys,
+                suspended_union_entries,
                 suspended_missing_keys,
                 index,
                 suspended_fill_values,
@@ -868,7 +874,7 @@ impl Session {
             call_args,
             fill_function,
             collections,
-            union_keys,
+            union_entries,
             missing_keys,
             index,
             fill_values,
@@ -883,8 +889,8 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         fill_function: Expr,
-        collections: Vec<Vec<(Expr, Expr)>>,
-        union_keys: Vec<Expr>,
+        collections: Vec<Vec<AssociationEntryForm>>,
+        union_entries: Vec<AssociationEntryForm>,
         missing_keys: Vec<Expr>,
         index: usize,
         mut fill_values: Vec<(Expr, Expr)>,
@@ -897,7 +903,7 @@ impl Session {
             call_args,
             fill_function,
             collections,
-            union_keys,
+            union_entries,
             missing_keys,
             index + 1,
             fill_values,
@@ -905,33 +911,39 @@ impl Session {
     }
 }
 
-fn key_union_keys(collections: &[Vec<(Expr, Expr)>]) -> Vec<Expr> {
-    let mut union_keys = Vec::new();
+fn key_union_entries(collections: &[Vec<AssociationEntryForm>]) -> Vec<AssociationEntryForm> {
+    let mut union_entries = Vec::new();
     for entries in collections {
-        for (key, _) in entries {
-            if !union_keys.iter().any(|existing| existing == key) {
-                union_keys.push(key.clone());
+        for entry in entries {
+            if !union_entries
+                .iter()
+                .any(|existing: &AssociationEntryForm| existing.key == entry.key)
+            {
+                union_entries.push(entry.clone());
             }
         }
     }
-    union_keys
+    union_entries
 }
 
-fn key_union_missing_keys(collections: &[Vec<(Expr, Expr)>], union_keys: &[Expr]) -> Vec<Expr> {
-    union_keys
+fn key_union_missing_keys(
+    collections: &[Vec<AssociationEntryForm>],
+    union_entries: &[AssociationEntryForm],
+) -> Vec<Expr> {
+    union_entries
         .iter()
-        .filter(|key| {
+        .filter(|entry| {
             collections
                 .iter()
-                .any(|entries| !entries.iter().any(|(entry_key, _)| entry_key == *key))
+                .any(|entries| !entries.iter().any(|candidate| candidate.key == entry.key))
         })
-        .cloned()
+        .map(|entry| entry.key.clone())
         .collect()
 }
 
 fn render_key_union_result(
-    collections: &[Vec<(Expr, Expr)>],
-    union_keys: &[Expr],
+    collections: &[Vec<AssociationEntryForm>],
+    union_entries: &[AssociationEntryForm],
     fill_values: &[(Expr, Expr)],
 ) -> Expr {
     Expr::call(
@@ -939,28 +951,32 @@ fn render_key_union_result(
         collections
             .iter()
             .map(|entries| {
-                render_association(
-                    union_keys
+                render_association_entry_forms_preserving_heads(
+                    union_entries
                         .iter()
-                        .cloned()
-                        .map(|key| {
-                            let value = entries
+                        .map(|union_entry| {
+                            entries
                                 .iter()
-                                .find(|(entry_key, _)| entry_key == &key)
-                                .map(|(_, value)| value.clone())
+                                .find(|entry| entry.key == union_entry.key)
+                                .cloned()
                                 .or_else(|| {
                                     fill_values
                                         .iter()
-                                        .find(|(fill_key, _)| fill_key == &key)
-                                        .map(|(_, value)| value.clone())
+                                        .find(|(fill_key, _)| fill_key == &union_entry.key)
+                                        .map(|(_, value)| AssociationEntryForm {
+                                            key: union_entry.key.clone(),
+                                            value: value.clone(),
+                                            delayed: union_entry.delayed,
+                                        })
                                 })
-                                .unwrap_or_else(|| {
-                                    Expr::call(
+                                .unwrap_or_else(|| AssociationEntryForm {
+                                    key: union_entry.key.clone(),
+                                    value: Expr::call(
                                         system_expr("Missing"),
-                                        vec![Expr::string("KeyAbsent"), key.clone()],
-                                    )
-                                });
-                            (key, value)
+                                        vec![Expr::string("KeyAbsent"), union_entry.key.clone()],
+                                    ),
+                                    delayed: union_entry.delayed,
+                                })
                         })
                         .collect(),
                 )
