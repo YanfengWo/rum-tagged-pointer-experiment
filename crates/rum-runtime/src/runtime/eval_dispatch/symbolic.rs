@@ -12,6 +12,7 @@ impl Session {
             BuiltinHandler::Or => self.eval_or(head, args),
             BuiltinHandler::Xor => self.eval_xor(head, args),
             BuiltinHandler::Equivalent => self.eval_equivalent(head, args),
+            BuiltinHandler::Implies => self.eval_implies(head, args),
             BuiltinHandler::Not => self.eval_not(head, args),
             BuiltinHandler::TrueQ => self.eval_true_q(head, args),
             BuiltinHandler::BooleanQ => self.eval_boolean_q(head, args),

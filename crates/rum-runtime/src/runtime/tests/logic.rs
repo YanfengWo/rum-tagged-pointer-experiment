@@ -214,6 +214,46 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
     );
     assert_eq!(
         session
+            .eval_text("Implies[True, x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x"
+    );
+    assert_eq!(
+        session
+            .eval_text("Implies[False, x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("Implies[x, True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("Implies[x, False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Not[x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Implies[x, y]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Implies[x, y]"
+    );
+    assert_eq!(
+        session
             .eval_text("Or[x, True, y]")
             .unwrap()
             .value

@@ -60,6 +60,19 @@ impl Session {
         Ok(finalize_equivalent(head, residual, saw_true, saw_false))
     }
 
+    pub(super) fn eval_implies(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [lhs, rhs] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Implies", args, 2));
+        };
+
+        Ok(match (truthiness_symbol(lhs), truthiness_symbol(rhs)) {
+            (Some(false), _) | (_, Some(true)) => system_expr(heads::structure::TRUE),
+            (Some(true), _) => rhs.clone(),
+            (_, Some(false)) => Expr::call(system_expr("Not"), vec![lhs.clone()]),
+            _ => Expr::call(head.clone(), args.to_vec()),
+        })
+    }
+
     pub(super) fn eval_not(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let [arg] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("Not", args, 1));

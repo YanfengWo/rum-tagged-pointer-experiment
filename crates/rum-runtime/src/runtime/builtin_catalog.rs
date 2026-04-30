@@ -138,6 +138,11 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::Equivalent,
     ),
     BuiltinSpec::ordinary(
+        "Implies",
+        "Evaluates binary logical implication over exact boolean arguments in the current subset.",
+        BuiltinHandler::Implies,
+    ),
+    BuiltinSpec::ordinary(
         "Not",
         "Negates a boolean value in the current exact boolean subset.",
         BuiltinHandler::Not,

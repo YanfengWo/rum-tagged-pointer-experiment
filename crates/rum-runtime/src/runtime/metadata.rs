@@ -324,6 +324,7 @@ pub enum BuiltinHandler {
     Or,
     Xor,
     Equivalent,
+    Implies,
     Not,
     TrueQ,
     BooleanQ,
