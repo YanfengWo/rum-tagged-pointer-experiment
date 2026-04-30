@@ -295,7 +295,8 @@ once in its primary implementation group. Other groups may mention it as
   semantics over association, rule, and rule-list keyed collections,
   including `KeyUnion[..., f]` fill behavior and current `KeyComplement`
   option-tail parity, current `AssociationThread` rule plus singleton/list
-  threading, deep `Association[...]` construction plus `Normal` with current
+  threading with delayed-rule preservation, deep `Association[...]`
+  construction plus `Normal` with current
   `RuleDelayed` head preservation, `AssociateTo` update specs over nested rule
   lists / associations with current delayed-entry preservation, callable `Key[key][assoc]`
   extraction, callable

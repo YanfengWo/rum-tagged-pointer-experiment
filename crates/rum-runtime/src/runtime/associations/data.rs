@@ -342,7 +342,9 @@ pub(in crate::runtime) fn parse_association_entry(expr: &Expr) -> Option<(Expr, 
     Some((args[0].clone(), args[1].clone()))
 }
 
-fn parse_association_entry_form(expr: &Expr) -> Option<AssociationEntryForm> {
+pub(in crate::runtime) fn parse_association_entry_form(
+    expr: &Expr,
+) -> Option<AssociationEntryForm> {
     let Expr::Call { head, args } = expr else {
         return None;
     };

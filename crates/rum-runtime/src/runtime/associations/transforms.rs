@@ -128,9 +128,9 @@ impl Session {
         _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let (keys_expr, values_expr) = match args {
+        let (keys_expr, values_expr, delayed) = match args {
             [spec] => {
-                let Some((keys_expr, values_expr)) = parse_association_entry(spec) else {
+                let Some(entry) = parse_association_entry_form(spec) else {
                     return Ok(self.invalid_call_with_message(
                         "AssociationThread",
                         args,
@@ -138,9 +138,9 @@ impl Session {
                         invalid_rule_message(spec),
                     ));
                 };
-                (keys_expr, values_expr)
+                (entry.key, entry.value, entry.delayed)
             }
-            [keys_expr, values_expr] => (keys_expr.clone(), values_expr.clone()),
+            [keys_expr, values_expr] => (keys_expr.clone(), values_expr.clone(), false),
             _ => return Ok(self.invalid_call_with_message(
                 "AssociationThread",
                 args,
@@ -163,7 +163,16 @@ impl Session {
             ));
         }
 
-        Ok(render_association(keys.into_iter().zip(values).collect()))
+        Ok(render_association_entry_forms_preserving_heads(
+            keys.into_iter()
+                .zip(values)
+                .map(|(key, value)| AssociationEntryForm {
+                    key,
+                    value,
+                    delayed,
+                })
+                .collect(),
+        ))
     }
 
     pub(in crate::runtime) fn eval_key_union(

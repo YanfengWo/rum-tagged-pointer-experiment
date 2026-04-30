@@ -680,6 +680,22 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("x = 0; {AssociationThread[a :> (x = x + 1)], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], 0]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {AssociationThread[{a, b} :> {x = x + 1, x = x + 1}], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]], RuleDelayed[b, Set[x, Plus[x, 1]]]], 0]"
+    );
+    assert_eq!(
+        session
             .eval_text("AssociationThread[a, {1}]")
             .unwrap()
             .value
