@@ -488,7 +488,7 @@ impl Session {
                         level + 1,
                         seen_before,
                         Vec::new(),
-                        0,
+                        1,
                     )
                 } else {
                     self.collect_cases_in_standard_call(expr, spec, traversal, level, seen_before)
@@ -533,7 +533,7 @@ impl Session {
                     level + 1,
                     seen_before,
                     Vec::new(),
-                    0,
+                    1,
                 )
             }
         }
@@ -699,7 +699,7 @@ impl Session {
                     level + 1,
                     deleted_before,
                     Vec::new(),
-                    0,
+                    1,
                     false,
                 ),
             Expr::Call { head, args } => self.delete_cases_call_children(
@@ -710,7 +710,7 @@ impl Session {
                 level + 1,
                 deleted_before,
                 Vec::new(),
-                0,
+                1,
                 false,
             ),
         }
@@ -924,7 +924,7 @@ impl Session {
             if head_deleted {
                 return Ok(DeleteCasesOutcome {
                     result: DeleteCasesResult::Keep(render_association(Vec::new())),
-                    depth: 1,
+                    depth: 2,
                     deleted_count: deleted_before - subtree_start,
                     exhausted: traversal.limit_reached(deleted_before),
                 });
@@ -990,7 +990,7 @@ impl Session {
             if next_head_deleted {
                 return Ok(DeleteCasesOutcome {
                     result: DeleteCasesResult::Keep(render_association(Vec::new())),
-                    depth: 1,
+                    depth: 2,
                     deleted_count: deleted_before_next - subtree_start,
                     exhausted: traversal.limit_reached(deleted_before_next),
                 });
@@ -1568,7 +1568,7 @@ impl Session {
                     levels,
                     child_level,
                     Vec::new(),
-                    0,
+                    1,
                     0,
                 ),
             Expr::Call { head, args } => self.replace_call_children_owned(
@@ -1578,7 +1578,7 @@ impl Session {
                 levels,
                 child_level,
                 Vec::new(),
-                0,
+                1,
             ),
         }
     }
@@ -1682,7 +1682,18 @@ impl Session {
 fn replace_expr_depth(expr: &Expr) -> usize {
     match expr {
         Expr::Atom(_) => 1,
-        Expr::Call { args, .. } => 1 + args.iter().map(replace_expr_depth).max().unwrap_or(0),
+        Expr::Call { .. } if association_entries_from_expr(expr).is_some() => {
+            let value_depth = association_entries_from_expr(expr)
+                .expect("association shape checked above")
+                .into_iter()
+                .map(|(_, value)| replace_expr_depth(&value))
+                .max()
+                .unwrap_or(0);
+            1 + 1.max(value_depth)
+        }
+        Expr::Call { args, .. } => {
+            1 + 1.max(args.iter().map(replace_expr_depth).max().unwrap_or(0))
+        }
     }
 }
 

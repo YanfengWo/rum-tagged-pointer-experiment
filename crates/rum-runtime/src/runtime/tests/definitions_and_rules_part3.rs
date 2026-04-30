@@ -98,6 +98,38 @@ fn replace_supports_levelspecs_and_rule_lists() {
             .to_string(),
         "g[a]"
     );
+    assert_eq!(
+        session
+            .eval_text("Replace[f[], _ -> x, {-1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Replace[f[], _ -> x, {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x"
+    );
+    assert_eq!(
+        session
+            .eval_text("Replace[f[g[]], _ -> x, {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Replace[f[g[]], _ -> x, {-3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x"
+    );
 }
 
 #[test]
@@ -509,6 +541,38 @@ fn cases_supports_exact_range_negative_and_infinity_level_specs() {
             .value
             .to_string(),
         "List[1, 2, 3]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Cases[f[], _, {-1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Cases[f[], _, {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Cases[f[g[]], _, {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[g[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Cases[f[g[]], _, {-3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[g[]]]"
     );
     assert_eq!(
         session

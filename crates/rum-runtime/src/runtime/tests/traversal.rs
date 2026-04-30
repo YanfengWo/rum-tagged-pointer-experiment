@@ -38,6 +38,38 @@ fn level_supports_standard_levelspecs_and_depth_first_ordering() {
     );
     assert_eq!(
         session
+            .eval_text("Level[f[], {-1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[], {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g[]], {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[g[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g[]], {-3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[g[]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Level[f[a], 0]")
             .unwrap()
             .value
@@ -100,6 +132,22 @@ fn count_memberq_and_freeq_share_standard_traversal_semantics() {
     );
     assert_eq!(
         session
+            .eval_text("Count[f[g[]], g[], {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Count[f[g[]], f[g[]], {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "0"
+    );
+    assert_eq!(
+        session
             .eval_text("MemberQ[f[g[1]], _Integer]")
             .unwrap()
             .value
@@ -116,6 +164,14 @@ fn count_memberq_and_freeq_share_standard_traversal_semantics() {
     );
     assert_eq!(
         session
+            .eval_text("MemberQ[f[g[]], f[g[]], {-3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
             .eval_text("FreeQ[f[g[1]], _Integer]")
             .unwrap()
             .value
@@ -125,6 +181,14 @@ fn count_memberq_and_freeq_share_standard_traversal_semantics() {
     assert_eq!(
         session
             .eval_text("FreeQ[f[g[1]], _Integer, {1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("FreeQ[f[g[]], g[], {-1}]")
             .unwrap()
             .value
             .to_string(),

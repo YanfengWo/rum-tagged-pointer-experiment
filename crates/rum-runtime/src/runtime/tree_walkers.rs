@@ -388,7 +388,7 @@ impl Session {
                         level + 1,
                         seen_before,
                         0,
-                        0,
+                        1,
                     )
                 } else {
                     self.count_pattern_matches_in_standard_call(
@@ -443,7 +443,7 @@ impl Session {
                     level + 1,
                     seen_before,
                     0,
-                    0,
+                    1,
                 )
             }
         }
@@ -576,7 +576,7 @@ impl Session {
                         path,
                         seen_before,
                         Vec::new(),
-                        0,
+                        1,
                     )
                 } else {
                     self.collect_positions_in_standard_call(
@@ -638,7 +638,7 @@ impl Session {
                     path,
                     seen_before,
                     Vec::new(),
-                    0,
+                    1,
                 )
             }
         }
@@ -764,7 +764,7 @@ fn collect_level_parts(
         Expr::Call { head, .. } if is_system_symbol_name(head, "Association") => {
             if let Some(entries) = association_entries_from_expr(expr) {
                 let mut parts = Vec::new();
-                let mut max_child_depth = 0usize;
+                let mut max_child_depth = 1usize;
 
                 if traversal.include_heads {
                     let head_result = collect_level_parts(head, traversal, level + 1);
@@ -808,7 +808,7 @@ fn collect_level_parts_in_standard_call(
         }
         Expr::Call { head, args } => {
             let mut parts = Vec::new();
-            let mut max_child_depth = 0;
+            let mut max_child_depth = 1;
 
             if traversal.include_heads {
                 let head_result = collect_level_parts(head, traversal, level + 1);
