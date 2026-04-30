@@ -16,11 +16,11 @@ impl Session {
             _ => args.to_vec(),
         };
 
-        let Some(entries) = parse_association_entries_deep(&source_items) else {
+        let Some(association) = render_association_preserving_rule_heads(&source_items) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        Ok(render_association(entries))
+        Ok(association)
     }
 
     pub(in crate::runtime) fn eval_association_q(

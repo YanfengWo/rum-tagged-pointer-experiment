@@ -304,7 +304,7 @@ fn failsafe_wrapper_preserves_failure_like_inputs_and_supports_test_forms() {
             .unwrap()
             .value
             .to_string(),
-        "Association[Rule[\"MessageTemplate\", \"The test failed on the arguments `1`.\"], Rule[\"MessageParameters\", List[HoldForm[-1]]], Rule[\"Arguments\", Hold[-1]]]"
+        "Association[Rule[\"MessageTemplate\", \"The test failed on the arguments `1`.\"], RuleDelayed[\"MessageParameters\", List[HoldForm[-1]]], Rule[\"Arguments\", Hold[-1]]]"
     );
     assert_eq!(
         session

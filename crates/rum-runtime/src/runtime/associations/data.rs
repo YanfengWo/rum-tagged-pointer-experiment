@@ -13,6 +13,13 @@ pub(in crate::runtime) struct KeyedEntries {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+struct AssociationEntryForm {
+    key: Expr,
+    value: Expr,
+    delayed: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::runtime) enum KeyedEntriesListError {
     NotList,
     InvalidElement(Expr),
@@ -111,6 +118,12 @@ pub(in crate::runtime) fn render_association(entries: Vec<(Expr, Expr)>) -> Expr
             .map(|(key, value)| Expr::call(system_expr("Rule"), vec![key, value]))
             .collect(),
     )
+}
+
+pub(in crate::runtime) fn render_association_preserving_rule_heads(args: &[Expr]) -> Option<Expr> {
+    Some(render_association_entry_forms(
+        parse_association_entry_forms_deep(args)?,
+    ))
 }
 
 pub(in crate::runtime) fn association_value_by_key(expr: &Expr, key: &Expr) -> Option<Expr> {
@@ -255,6 +268,84 @@ pub(in crate::runtime) fn parse_association_entry(expr: &Expr) -> Option<(Expr, 
     }
 
     Some((args[0].clone(), args[1].clone()))
+}
+
+fn parse_association_entry_form(expr: &Expr) -> Option<AssociationEntryForm> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !(is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
+        || args.len() != 2
+    {
+        return None;
+    }
+
+    Some(AssociationEntryForm {
+        key: args[0].clone(),
+        value: args[1].clone(),
+        delayed: is_system_symbol_name(head, "RuleDelayed"),
+    })
+}
+
+fn parse_association_entry_forms_deep(items: &[Expr]) -> Option<Vec<AssociationEntryForm>> {
+    let mut entries = Vec::new();
+    for item in items {
+        entries.extend(parse_association_item_forms_deep(item)?);
+    }
+    Some(entries)
+}
+
+fn parse_association_item_forms_deep(expr: &Expr) -> Option<Vec<AssociationEntryForm>> {
+    if let Some(entry) = parse_association_entry_form(expr) {
+        return Some(vec![entry]);
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if is_system_symbol_name(head, "Association")
+        || is_system_symbol_name(head, heads::structure::LIST)
+    {
+        return parse_association_entry_forms_deep(args);
+    }
+
+    None
+}
+
+fn render_association_entry_forms(entries: Vec<AssociationEntryForm>) -> Expr {
+    let entries = canonicalize_association_entry_forms(entries);
+    Expr::call(
+        system_expr("Association"),
+        entries
+            .into_iter()
+            .map(|entry| {
+                Expr::call(
+                    system_expr(if entry.delayed { "RuleDelayed" } else { "Rule" }),
+                    vec![entry.key, entry.value],
+                )
+            })
+            .collect(),
+    )
+}
+
+fn canonicalize_association_entry_forms(
+    entries: Vec<AssociationEntryForm>,
+) -> Vec<AssociationEntryForm> {
+    let mut canonical: Vec<AssociationEntryForm> = Vec::new();
+    for entry in entries {
+        if let Some(existing) = canonical
+            .iter_mut()
+            .find(|existing| existing.key == entry.key)
+        {
+            *existing = entry;
+        } else {
+            canonical.push(entry);
+        }
+    }
+
+    canonical
 }
 
 pub(in crate::runtime) fn predicate_bool_expr(value: bool) -> Expr {

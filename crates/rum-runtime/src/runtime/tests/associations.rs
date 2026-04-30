@@ -10,7 +10,7 @@ fn association_and_associationq_cover_first_pass_rule_subset() {
             .unwrap()
             .value
             .to_string(),
-        "Association[Rule[a, 1], Rule[b, 2]]"
+        "Association[Rule[a, 1], RuleDelayed[b, 2]]"
     );
     assert_eq!(
         session

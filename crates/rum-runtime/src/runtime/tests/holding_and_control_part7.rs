@@ -256,7 +256,7 @@ fn abortprotect_and_failsafe_resume_through_host_input() {
         .expect("falsy resumed Failsafe test should produce a failure object");
     assert_eq!(
         response.value.to_string(),
-        "Failure[\"FailsafeFailed\", Association[Rule[\"MessageTemplate\", \"The test failed on the arguments `1`.\"], Rule[\"MessageParameters\", List[HoldForm[arg]]], Rule[\"Arguments\", Hold[arg]]]]"
+        "Failure[\"FailsafeFailed\", Association[Rule[\"MessageTemplate\", \"The test failed on the arguments `1`.\"], RuleDelayed[\"MessageParameters\", List[HoldForm[arg]]], Rule[\"Arguments\", Hold[arg]]]]"
     );
 
     let failure = session

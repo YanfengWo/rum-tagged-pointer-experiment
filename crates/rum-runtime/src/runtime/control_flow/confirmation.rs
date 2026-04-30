@@ -644,14 +644,26 @@ pub(super) fn build_failsafe_failure(_function: Expr, _test: Expr, args: Vec<Exp
         system_expr("Failure"),
         vec![
             Expr::string("FailsafeFailed"),
-            render_association(vec![
-                (
-                    Expr::string("MessageTemplate"),
-                    Expr::string("The test failed on the arguments `1`."),
-                ),
-                (Expr::string("MessageParameters"), held_message_parameters),
-                (Expr::string("Arguments"), held_args),
-            ]),
+            Expr::call(
+                system_expr("Association"),
+                vec![
+                    Expr::call(
+                        system_expr("Rule"),
+                        vec![
+                            Expr::string("MessageTemplate"),
+                            Expr::string("The test failed on the arguments `1`."),
+                        ],
+                    ),
+                    Expr::call(
+                        system_expr("RuleDelayed"),
+                        vec![Expr::string("MessageParameters"), held_message_parameters],
+                    ),
+                    Expr::call(
+                        system_expr("Rule"),
+                        vec![Expr::string("Arguments"), held_args],
+                    ),
+                ],
+            ),
         ],
     )
 }

@@ -295,8 +295,8 @@ once in its primary implementation group. Other groups may mention it as
   semantics over association, rule, and rule-list keyed collections,
   including `KeyUnion[..., f]` fill behavior and current `KeyComplement`
   option-tail parity, current `AssociationThread` rule plus singleton/list
-  threading, deep `Association[...]` construction and `AssociateTo` update
-  specs over nested rule lists / associations, callable `Key[key][assoc]`
+  threading, deep `Association[...]` construction with current `RuleDelayed`
+  head preservation, `AssociateTo` update specs over nested rule lists / associations, callable `Key[key][assoc]`
   extraction, callable
   `Association[...][key]` lookup, current `Part[..., Key[...]]` association
   projection including missing-key propagation and no-mixed-key/index
@@ -364,6 +364,7 @@ once in its primary implementation group. Other groups may mention it as
   boundaries,
   suspension-safe `WithCleanup` body cleanup plus current
   cleanup-time host-input resume, throw/abort cleanup boundaries,
+  oracle-aligned delayed `Failsafe` failure `MessageParameters` metadata,
   cleanup-`Return` preservation of the primary outcome, and nested
   `AbortProtect` pending-abort propagation, current `CheckAbort` option-list
   and multi-option `PropagateAborts` parity including fallback host-input
