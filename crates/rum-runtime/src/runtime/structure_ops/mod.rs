@@ -93,6 +93,18 @@ fn structural_depth(expr: &Expr, include_heads: bool) -> usize {
     match expr {
         Expr::Atom(_) => 1,
         Expr::Call { head, args } => {
+            if let Some(entries) = association_entries_from_expr(expr) {
+                let head_depth = include_heads
+                    .then(|| structural_depth(head, true))
+                    .unwrap_or(0);
+                let value_depth = entries
+                    .iter()
+                    .map(|(_, value)| structural_depth(value, include_heads))
+                    .max()
+                    .unwrap_or(0);
+                return 1 + 1.max(head_depth).max(value_depth);
+            }
+
             let head_depth = include_heads
                 .then(|| structural_depth(head, true))
                 .unwrap_or(0);
@@ -101,7 +113,7 @@ fn structural_depth(expr: &Expr, include_heads: bool) -> usize {
                 .map(|arg| structural_depth(arg, include_heads))
                 .max()
                 .unwrap_or(0);
-            1 + head_depth.max(arg_depth)
+            1 + 1.max(head_depth).max(arg_depth)
         }
     }
 }

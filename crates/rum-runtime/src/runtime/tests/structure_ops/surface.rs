@@ -41,8 +41,32 @@ fn head_length_and_depth_cover_atoms_calls_and_compound_heads() {
         "1"
     );
     assert_eq!(
+        session.eval_text("Depth[f[]]").unwrap().value.to_string(),
+        "2"
+    );
+    assert_eq!(
+        session.eval_text("Depth[{}]").unwrap().value.to_string(),
+        "2"
+    );
+    assert_eq!(
         session
             .eval_text("Depth[f[a, g[b]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("Depth[Association[f[1] -> 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Depth[Association[a -> 1, b -> f[2]]]")
             .unwrap()
             .value
             .to_string(),
