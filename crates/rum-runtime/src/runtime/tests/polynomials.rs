@@ -1,6 +1,76 @@
 use super::*;
 
 #[test]
+fn polynomial_predicates_cover_current_expression_subsets() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("PolynomialQ[x^2 + Sin[x]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("PolynomialQ[1/(1 + x)]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("PolynomialQ[x^2 + Sin[x], x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("PolynomialQ[x^2 + Sin[x], {Sin[x]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("PolynomialExpressionQ[x^2 + y, {x, y}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("PolynomialExpressionQ[x^n, x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("RationalExpressionQ[(x + 1)/(x - 1), x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("RationalExpressionQ[Sin[x]/x, x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+}
+
+#[test]
 fn expand_distributes_products_and_positive_integer_powers() {
     let mut session = Session::new();
 

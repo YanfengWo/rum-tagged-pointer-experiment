@@ -237,6 +237,36 @@ impl Session {
         Ok(predicate_bool_expr(exact_integer_value(expr).is_some()))
     }
 
+    pub(super) fn eval_date_object_q(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("DateObjectQ", args, 1));
+        };
+
+        Ok(predicate_bool_expr(expr_has_system_head(
+            expr,
+            "DateObject",
+        )))
+    }
+
+    pub(super) fn eval_time_object_q(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("TimeObjectQ", args, 1));
+        };
+
+        Ok(predicate_bool_expr(expr_has_system_head(
+            expr,
+            "TimeObject",
+        )))
+    }
+
     pub(super) fn eval_duplicate_free_q(
         &mut self,
         head: &Expr,
@@ -775,6 +805,13 @@ fn exact_integer_value(expr: &Expr) -> Option<BigInt> {
     match expr {
         Expr::Atom(Atom::Integer(value)) => Some(value.clone()),
         _ => None,
+    }
+}
+
+fn expr_has_system_head(expr: &Expr, name: &str) -> bool {
+    match expr {
+        Expr::Call { head, .. } => is_system_symbol_name(head, name),
+        Expr::Atom(_) => false,
     }
 }
 

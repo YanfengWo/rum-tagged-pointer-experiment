@@ -122,9 +122,9 @@ once in its primary implementation group. Other groups may mention it as
     `LexicographicOrder`, `NumericalOrder`, `AlphabeticOrder`,
     `ContainsExactly`, `ContainsNone`, `ContainsOnly`, `Between`, `VectorQ`,
     `MatrixQ`, `ArrayQ`, `AllTrue`, `AnyTrue`, `NoneTrue`, `CoprimeQ`,
-    `NearestTo`
-  - `planned`: `Heads`, `PolynomialQ`, `PolynomialExpressionQ`, `RationalExpressionQ`,
-    `DateObjectQ`, `TimeObjectQ`
+    `NearestTo`, `PolynomialQ`, `PolynomialExpressionQ`,
+    `RationalExpressionQ`, `DateObjectQ`, `TimeObjectQ`
+  - `planned`: `Heads`
 - `cross-tracked elsewhere`: `Apply`, `Array`, `Cases`, `Count`,
   `DeleteCases`, `FreeQ`, `Join`, `Map`, `MapAll`, `MapAt`, `MemberQ`,
   `Outer`, `Position`, `Range`, `Select`, `Table`

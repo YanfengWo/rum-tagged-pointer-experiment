@@ -69,6 +69,7 @@ pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
     matches!(
         name,
         "Alternatives"
+            | "DateObject"
             | "DistanceFunction"
             | "Flat"
             | "Heads"
@@ -91,6 +92,7 @@ pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
             | "RegularExpression"
             | "StepMonitor"
             | "StringExpression"
+            | "TimeObject"
             | "UpTo"
             | "Verbatim"
             | "WhitespaceCharacter"

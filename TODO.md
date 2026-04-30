@@ -155,6 +155,8 @@ This roadmap intentionally uses two levels of detail:
 - [x] Align first-pass order-comparison parity by fixing `Order`'s sign convention, using exact numeric order for numeric ordering predicates, and adding current two-argument `LexicographicOrder` / `NumericalOrder` / `AlphabeticOrder` coverage
 - [x] Extend `Part` / `Extract` span endpoint parity with the current `UpTo[n]` / `UpTo[Infinity]` subset while keeping direct `UpTo[...]` part specifications inert
 - [x] Add the first `NearestTo` callable wrapper subset by routing `NearestTo[target][data]` and positive-count / radius-limited forms through the existing `Nearest[data, target, ...]` evaluator while keeping unsupported selection forms inert
+- [x] Add first-pass algebraic expression predicates by covering current `PolynomialQ`, two-argument `PolynomialExpressionQ`, and two-argument `RationalExpressionQ` over exact variables / expression variables while leaving richer coefficient-domain forms inert
+- [x] Add structural `DateObjectQ` / `TimeObjectQ` recognition for System `DateObject[...]` and `TimeObject[...]` wrappers without attempting date/time object normalization
 - [ ] Continue widening that traversal model into future tree walkers beyond `Cases`, `Level`, and `Position` as those builtins land
 - [ ] Continue the structure access/update family beyond the current integer / `All` / `Span` / pattern-position subset with additional Wolfram-compatible part specifications and any remaining edge-case parity work in `ReplacePart`
 - [ ] Continue auditing any remaining held/spec-driven target families outside the message/definition/attribute cluster so new raw-form builtins reuse shared normalization helpers from the start

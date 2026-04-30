@@ -228,6 +228,31 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::AlgebraicIntegerQ,
     ),
     BuiltinSpec::ordinary(
+        "PolynomialQ",
+        "Tests whether an expression is polynomial in the current exact symbolic subset.",
+        BuiltinHandler::PolynomialQ,
+    ),
+    BuiltinSpec::ordinary(
+        "PolynomialExpressionQ",
+        "Tests whether an expression is polynomial in the requested variable subset.",
+        BuiltinHandler::PolynomialExpressionQ,
+    ),
+    BuiltinSpec::ordinary(
+        "RationalExpressionQ",
+        "Tests whether an expression is a rational expression in the requested variable subset.",
+        BuiltinHandler::RationalExpressionQ,
+    ),
+    BuiltinSpec::ordinary(
+        "DateObjectQ",
+        "Tests whether an expression has a DateObject head in the current structural subset.",
+        BuiltinHandler::DateObjectQ,
+    ),
+    BuiltinSpec::ordinary(
+        "TimeObjectQ",
+        "Tests whether an expression has a TimeObject head in the current structural subset.",
+        BuiltinHandler::TimeObjectQ,
+    ),
+    BuiltinSpec::ordinary(
         "DuplicateFreeQ",
         "Tests whether a List has no repeated elements in the current exact structural subset.",
         BuiltinHandler::DuplicateFreeQ,

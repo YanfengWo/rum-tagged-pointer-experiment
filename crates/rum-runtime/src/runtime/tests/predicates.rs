@@ -221,6 +221,38 @@ fn predicate_q_family_covers_current_exact_and_structural_subsets() {
         "False"
     );
     assert_eq!(
+        session
+            .eval_text("DateObjectQ[DateObject[{2020, 1, 1}]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("DateObjectQ[TimeObject[{1, 2, 3}]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("TimeObjectQ[TimeObject[{1, 2, 3}]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("TimeObjectQ[DateObject[{2020, 1, 1}]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
         session.eval_text("SameQ[]").unwrap().value.to_string(),
         "True"
     );
