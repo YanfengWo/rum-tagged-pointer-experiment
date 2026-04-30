@@ -322,6 +322,8 @@ pub enum BuiltinHandler {
     Construct,
     And,
     Or,
+    Nand,
+    Nor,
     Xor,
     Equivalent,
     Implies,

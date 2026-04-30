@@ -122,6 +122,18 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
         BuiltinHandler::Or,
     ),
+    BuiltinSpec::ordinary_with_hold(
+        "Nand",
+        "Evaluates a negated conjunction with current short-circuit boolean semantics.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Nand,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Nor",
+        "Evaluates a negated disjunction with current short-circuit boolean semantics.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Nor,
+    ),
     BuiltinSpec::ordinary_with_attributes(
         "Xor",
         "Evaluates exclusive-or over exact boolean arguments and reduces duplicate symbolic terms in the current subset.",

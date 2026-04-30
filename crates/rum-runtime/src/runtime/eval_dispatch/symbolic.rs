@@ -10,6 +10,8 @@ impl Session {
         match handler {
             BuiltinHandler::And => self.eval_and(head, args),
             BuiltinHandler::Or => self.eval_or(head, args),
+            BuiltinHandler::Nand => self.eval_nand(args),
+            BuiltinHandler::Nor => self.eval_nor(args),
             BuiltinHandler::Xor => self.eval_xor(head, args),
             BuiltinHandler::Equivalent => self.eval_equivalent(head, args),
             BuiltinHandler::Implies => self.eval_implies(head, args),

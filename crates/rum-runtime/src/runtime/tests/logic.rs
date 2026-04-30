@@ -93,6 +93,58 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
         "Or[a, b, c]"
     );
     assert_eq!(
+        session.eval_text("Nand[]").unwrap().value.to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("Nand[False, x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("Nand[True, x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Not[x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Nand[True, x, y]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Nand[x, y]"
+    );
+    assert_eq!(
+        session.eval_text("Nor[]").unwrap().value.to_string(),
+        "True"
+    );
+    assert_eq!(
+        session.eval_text("Nor[True, x]").unwrap().value.to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("Nor[False, x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Not[x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Nor[False, x, y]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Nor[x, y]"
+    );
+    assert_eq!(
         session.eval_text("Xor[]").unwrap().value.to_string(),
         "False"
     );
@@ -335,6 +387,34 @@ fn and_or_short_circuit_side_effects_and_compare_exact_values() {
         "True"
     );
     assert_eq!(session.eval_text("y").unwrap().value.to_string(), "seed");
+
+    session.eval_text("nandSide = seed").unwrap();
+    assert_eq!(
+        session
+            .eval_text("Nand[False, nandSide = changed]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session.eval_text("nandSide").unwrap().value.to_string(),
+        "seed"
+    );
+
+    session.eval_text("norSide = seed").unwrap();
+    assert_eq!(
+        session
+            .eval_text("Nor[True, norSide = changed]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session.eval_text("norSide").unwrap().value.to_string(),
+        "seed"
+    );
 
     assert_eq!(
         session

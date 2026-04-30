@@ -25,6 +25,20 @@ impl Session {
         self.resume_or_from_index(args.to_vec(), 0, Vec::new())
     }
 
+    pub(super) fn eval_nand(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let result = self.resume_and_from_index(args.to_vec(), 0, Vec::new());
+        let value =
+            self.suspend_with_frame(result, |_, value| Ok(negate_logical_value(value, "Nand")))?;
+        Ok(negate_logical_value(value, "Nand"))
+    }
+
+    pub(super) fn eval_nor(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let result = self.resume_or_from_index(args.to_vec(), 0, Vec::new());
+        let value =
+            self.suspend_with_frame(result, |_, value| Ok(negate_logical_value(value, "Nor")))?;
+        Ok(negate_logical_value(value, "Nor"))
+    }
+
     pub(super) fn eval_xor(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let mut invert = false;
         let mut residual = Vec::new();
@@ -442,6 +456,26 @@ fn finalize_equivalent_constant_side(mut residual: Vec<Expr>, negate_residuals: 
             };
             Expr::call(system_expr("And"), args)
         }
+    }
+}
+
+fn negate_logical_value(value: Expr, wrapper_head_name: &str) -> Expr {
+    match truthiness_symbol(&value) {
+        Some(truth) => return predicate_bool_expr(!truth),
+        None => {}
+    }
+
+    let source_head_name = match wrapper_head_name {
+        "Nand" => "And",
+        "Nor" => "Or",
+        _ => unreachable!("unsupported negated logical wrapper"),
+    };
+
+    match value {
+        Expr::Call { head, args } if is_system_symbol_name(&head, source_head_name) => {
+            Expr::call(system_expr(wrapper_head_name), args)
+        }
+        other => Expr::call(system_expr("Not"), vec![other]),
     }
 }
 
