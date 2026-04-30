@@ -476,6 +476,14 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("x = 0; {KeyMap[f, Association[a :> (x = x + 1)]], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[RuleDelayed[f[a], Set[x, Plus[x, 1]]]], 0]"
+    );
+    assert_eq!(
+        session
             .eval_text("KeyValueMap[f, Association[a -> 1, b -> 2]]")
             .unwrap()
             .value
@@ -552,6 +560,14 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("x = 0; {KeySelect[Association[a :> (x = x + 1)], True &], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], 0]"
+    );
+    assert_eq!(
+        session
             .eval_text("KeySort[Association[b -> 2, a -> 1, c -> 3]]")
             .unwrap()
             .value
@@ -589,6 +605,16 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     assert_eq!(
         session
             .eval_text(
+                "x = 0; {KeySort[Association[a :> (x = x + 1)]], KeySort[Association[a :> (x = x + 1)], OrderedQ[{#1, #2}] &], x}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], 0]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
                 "KeySortBy[Association[a -> 1, bb -> 2, ccc -> 3], StringLength[ToString[#]] &]"
             )
             .unwrap()
@@ -611,6 +637,14 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .value
             .to_string(),
         "Association[Rule[a, 1], Rule[bb, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {KeySortBy[Association[a :> (x = x + 1)], Identity], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], 0]"
     );
     assert_eq!(
         session

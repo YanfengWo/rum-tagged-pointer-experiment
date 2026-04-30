@@ -89,6 +89,32 @@ pub(in crate::runtime) fn single_rule_or_keyed_entry_forms_from_expr(
     rule_list_entry_forms_from_expr(expr)
 }
 
+pub(in crate::runtime) fn association_entry_forms_from_expr(
+    expr: &Expr,
+) -> Option<Vec<AssociationEntryForm>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "Association") {
+        return None;
+    }
+
+    Some(canonicalize_association_entry_forms(
+        parse_association_entry_forms_deep(args)?,
+    ))
+}
+
+pub(in crate::runtime) fn keyed_entry_forms_from_expr(
+    expr: &Expr,
+) -> Option<Vec<AssociationEntryForm>> {
+    if let Some(entries) = association_entry_forms_from_expr(expr) {
+        return Some(entries);
+    }
+
+    rule_list_entry_forms_from_expr(expr)
+}
+
 pub(in crate::runtime) fn parse_association_entries(items: &[Expr]) -> Option<Vec<(Expr, Expr)>> {
     items.iter().map(parse_association_entry).collect()
 }
@@ -317,20 +343,6 @@ fn parse_association_entry_form(expr: &Expr) -> Option<AssociationEntryForm> {
         value: args[1].clone(),
         delayed: is_system_symbol_name(head, "RuleDelayed"),
     })
-}
-
-fn association_entry_forms_from_expr(expr: &Expr) -> Option<Vec<AssociationEntryForm>> {
-    let Expr::Call { head, args } = expr else {
-        return None;
-    };
-
-    if !is_system_symbol_name(head, "Association") {
-        return None;
-    }
-
-    Some(canonicalize_association_entry_forms(
-        parse_association_entry_forms_deep(args)?,
-    ))
 }
 
 fn rule_list_entry_forms_from_expr(expr: &Expr) -> Option<Vec<AssociationEntryForm>> {

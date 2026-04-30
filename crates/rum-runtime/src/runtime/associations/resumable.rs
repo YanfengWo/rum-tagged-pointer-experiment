@@ -18,7 +18,7 @@ impl Session {
                 criterion.clone(),
             )),
             [expr, criterion] => {
-                let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
+                let Some(entries) = keyed_entry_forms_from_expr(expr) else {
                     return Ok(self.invalid_call_with_message(
                         "KeySelect",
                         args,
@@ -51,7 +51,7 @@ impl Session {
                 function.clone(),
             )),
             [expr, function] => {
-                let Some(keyed) = keyed_entries_from_expr(expr) else {
+                let Some(entries) = keyed_entry_forms_from_expr(expr) else {
                     return Ok(self.invalid_call_with_message(
                         "KeySortBy",
                         args,
@@ -64,7 +64,7 @@ impl Session {
                     head.clone(),
                     args.to_vec(),
                     function.clone(),
-                    keyed.entries,
+                    entries,
                     0,
                     Vec::new(),
                 )
@@ -78,12 +78,12 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         ordering: Expr,
-        entries: Vec<(Expr, Expr)>,
+        entries: Vec<AssociationEntryForm>,
         index: usize,
-        sorted: Vec<(Expr, Expr)>,
+        sorted: Vec<AssociationEntryForm>,
     ) -> Result<Expr, EvalError> {
         let Some(candidate) = entries.get(index).cloned() else {
-            return Ok(render_association(sorted));
+            return Ok(render_association_entry_forms_preserving_heads(sorted));
         };
 
         self.resume_key_sort_with_ordering_insert(
@@ -97,13 +97,13 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         ordering: Expr,
-        entries: Vec<(Expr, Expr)>,
+        entries: Vec<AssociationEntryForm>,
         index: usize,
-        sorted: Vec<(Expr, Expr)>,
-        candidate: (Expr, Expr),
+        sorted: Vec<AssociationEntryForm>,
+        candidate: AssociationEntryForm,
         insert_index: usize,
     ) -> Result<Expr, EvalError> {
-        let Some((existing_key, _)) = sorted.get(insert_index).cloned() else {
+        let Some(existing) = sorted.get(insert_index).cloned() else {
             let mut next_sorted = sorted;
             next_sorted.push(candidate);
             return self.resume_key_sort_with_ordering_from_index(
@@ -118,7 +118,7 @@ impl Session {
 
         let compare_result = self.evaluate(Expr::call(
             ordering.clone(),
-            vec![candidate.0.clone(), existing_key],
+            vec![candidate.key.clone(), existing.key],
         ));
         let suspended_head = head.clone();
         let suspended_call_args = call_args.clone();
@@ -160,10 +160,10 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         ordering: Expr,
-        entries: Vec<(Expr, Expr)>,
+        entries: Vec<AssociationEntryForm>,
         index: usize,
-        sorted: Vec<(Expr, Expr)>,
-        candidate: (Expr, Expr),
+        sorted: Vec<AssociationEntryForm>,
+        candidate: AssociationEntryForm,
         insert_index: usize,
         compare_value: Expr,
     ) -> Result<Expr, EvalError> {
@@ -394,23 +394,22 @@ impl Session {
         &mut self,
         head: Expr,
         call_args: Vec<Expr>,
-        entries: Vec<(Expr, Expr)>,
+        entries: Vec<AssociationEntryForm>,
         criterion: Expr,
         index: usize,
-        selected: Vec<(Expr, Expr)>,
+        selected: Vec<AssociationEntryForm>,
     ) -> Result<Expr, EvalError> {
-        let Some((key, value)) = entries.get(index).cloned() else {
-            return Ok(render_association(selected));
+        let Some(entry) = entries.get(index).cloned() else {
+            return Ok(render_association_entry_forms_preserving_heads(selected));
         };
 
-        let call = Expr::call(criterion.clone(), vec![key.clone()]);
+        let call = Expr::call(criterion.clone(), vec![entry.key.clone()]);
         let suspended_head = head.clone();
         let suspended_call_args = call_args.clone();
         let suspended_entries = entries.clone();
         let suspended_criterion = criterion.clone();
         let suspended_selected = selected.clone();
-        let suspended_key = key.clone();
-        let suspended_entry_value = value.clone();
+        let suspended_entry = entry.clone();
         let value_result = self.evaluate(call);
         let criterion_result = self.suspend_with_frame(value_result, move |session, outcome| {
             session.resume_key_select_with_value(
@@ -420,8 +419,7 @@ impl Session {
                 suspended_criterion,
                 index,
                 suspended_selected,
-                suspended_key,
-                suspended_entry_value,
+                suspended_entry,
                 outcome,
             )
         })?;
@@ -433,8 +431,7 @@ impl Session {
             criterion,
             index,
             selected,
-            key,
-            value,
+            entry,
             criterion_result,
         )
     }
@@ -444,16 +441,15 @@ impl Session {
         &mut self,
         head: Expr,
         call_args: Vec<Expr>,
-        entries: Vec<(Expr, Expr)>,
+        entries: Vec<AssociationEntryForm>,
         criterion: Expr,
         index: usize,
-        mut selected: Vec<(Expr, Expr)>,
-        key: Expr,
-        entry_value: Expr,
+        mut selected: Vec<AssociationEntryForm>,
+        entry: AssociationEntryForm,
         criterion_value: Expr,
     ) -> Result<Expr, EvalError> {
         if truthiness_symbol(&criterion_value) == Some(true) {
-            selected.push((key, entry_value));
+            selected.push(entry);
         }
 
         self.resume_key_select_from_index(head, call_args, entries, criterion, index + 1, selected)
@@ -464,28 +460,24 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         function: Expr,
-        entries: Vec<(Expr, Expr)>,
+        entries: Vec<AssociationEntryForm>,
         index: usize,
-        mut decorated: Vec<(Expr, Expr, Expr)>,
+        mut decorated: Vec<(AssociationEntryForm, Expr)>,
     ) -> Result<Expr, EvalError> {
-        let Some((key, value)) = entries.get(index).cloned() else {
-            decorated.sort_by(|lhs, rhs| compare_expr_canonical(&lhs.2, &rhs.2));
-            return Ok(render_association(
-                decorated
-                    .into_iter()
-                    .map(|(key, value, _)| (key, value))
-                    .collect(),
+        let Some(entry) = entries.get(index).cloned() else {
+            decorated.sort_by(|lhs, rhs| compare_expr_canonical(&lhs.1, &rhs.1));
+            return Ok(render_association_entry_forms_preserving_heads(
+                decorated.into_iter().map(|(entry, _)| entry).collect(),
             ));
         };
 
-        let sort_key_result = self.evaluate(Expr::call(function.clone(), vec![key.clone()]));
+        let sort_key_result = self.evaluate(Expr::call(function.clone(), vec![entry.key.clone()]));
         let suspended_head = head.clone();
         let suspended_call_args = call_args.clone();
         let suspended_function = function.clone();
         let suspended_entries = entries.clone();
         let suspended_decorated = decorated.clone();
-        let suspended_key = key.clone();
-        let suspended_value = value.clone();
+        let suspended_entry = entry.clone();
         let sort_key = self.suspend_with_frame(sort_key_result, move |session, sort_key| {
             session.resume_key_sort_by_with_value(
                 suspended_head,
@@ -494,14 +486,13 @@ impl Session {
                 suspended_entries,
                 index,
                 suspended_decorated,
-                suspended_key,
-                suspended_value,
+                suspended_entry,
                 sort_key,
             )
         })?;
 
         self.resume_key_sort_by_with_value(
-            head, call_args, function, entries, index, decorated, key, value, sort_key,
+            head, call_args, function, entries, index, decorated, entry, sort_key,
         )
     }
 
@@ -511,14 +502,13 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         function: Expr,
-        entries: Vec<(Expr, Expr)>,
+        entries: Vec<AssociationEntryForm>,
         index: usize,
-        mut decorated: Vec<(Expr, Expr, Expr)>,
-        key: Expr,
-        value: Expr,
+        mut decorated: Vec<(AssociationEntryForm, Expr)>,
+        entry: AssociationEntryForm,
         sort_key: Expr,
     ) -> Result<Expr, EvalError> {
-        decorated.push((key, value, sort_key));
+        decorated.push((entry, sort_key));
         self.resume_key_sort_by_from_index(head, call_args, function, entries, index + 1, decorated)
     }
 

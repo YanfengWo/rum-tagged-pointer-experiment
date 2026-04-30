@@ -25,7 +25,7 @@ impl Session {
         match args {
             [function] => Ok(keyed_operator_form_slot_second("KeyMap", function.clone())),
             [function, expr] => {
-                let Some(entries) = association_entries_from_expr(expr) else {
+                let Some(entries) = association_entry_forms_from_expr(expr) else {
                     return Ok(self.invalid_call_with_message(
                         "KeyMap",
                         args,
@@ -34,10 +34,14 @@ impl Session {
                     ));
                 };
 
-                Ok(render_association(
+                Ok(render_association_entry_forms_preserving_heads(
                     entries
                         .into_iter()
-                        .map(|(key, value)| (Expr::call(function.clone(), vec![key]), value))
+                        .map(|entry| AssociationEntryForm {
+                            key: Expr::call(function.clone(), vec![entry.key]),
+                            value: entry.value,
+                            delayed: entry.delayed,
+                        })
                         .collect(),
                 ))
             }
@@ -84,7 +88,7 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         match args {
             [expr] => {
-                let Some(mut keyed) = keyed_entries_from_expr(expr) else {
+                let Some(mut entries) = keyed_entry_forms_from_expr(expr) else {
                     return Ok(self.invalid_call_with_message(
                         "KeySort",
                         args,
@@ -93,13 +97,11 @@ impl Session {
                     ));
                 };
 
-                keyed
-                    .entries
-                    .sort_by(|lhs, rhs| compare_expr_canonical(&lhs.0, &rhs.0));
-                Ok(render_association(keyed.entries))
+                entries.sort_by(|lhs, rhs| compare_expr_canonical(&lhs.key, &rhs.key));
+                Ok(render_association_entry_forms_preserving_heads(entries))
             }
             [expr, ordering] => {
-                let Some(keyed) = keyed_entries_from_expr(expr) else {
+                let Some(entries) = keyed_entry_forms_from_expr(expr) else {
                     return Ok(self.invalid_call_with_message(
                         "KeySort",
                         args,
@@ -112,7 +114,7 @@ impl Session {
                     head.clone(),
                     args.to_vec(),
                     ordering.clone(),
-                    keyed.entries,
+                    entries,
                     0,
                     Vec::new(),
                 )
