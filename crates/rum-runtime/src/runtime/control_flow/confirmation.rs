@@ -630,7 +630,7 @@ fn build_confirmation_failure(fields: Vec<(&str, Expr)>) -> Expr {
     )
 }
 
-pub(super) fn build_failsafe_failure(function: Expr, test: Expr, args: Vec<Expr>) -> Expr {
+pub(super) fn build_failsafe_failure(_function: Expr, _test: Expr, args: Vec<Expr>) -> Expr {
     let held_args = Expr::call(system_expr("Hold"), args.clone());
     let held_message_parameters = Expr::call(
         system_expr("List"),
@@ -651,8 +651,6 @@ pub(super) fn build_failsafe_failure(function: Expr, test: Expr, args: Vec<Expr>
                 ),
                 (Expr::string("MessageParameters"), held_message_parameters),
                 (Expr::string("Arguments"), held_args),
-                (Expr::string("Function"), function),
-                (Expr::string("Test"), test),
             ]),
         ],
     )

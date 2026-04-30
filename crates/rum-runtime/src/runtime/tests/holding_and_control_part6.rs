@@ -300,6 +300,22 @@ fn failsafe_wrapper_preserves_failure_like_inputs_and_supports_test_forms() {
     );
     assert_eq!(
         session
+            .eval_text("Failsafe[f, Positive][-1][All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[\"MessageTemplate\", \"The test failed on the arguments `1`.\"], Rule[\"MessageParameters\", List[HoldForm[-1]]], Rule[\"Arguments\", Hold[-1]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failsafe[f, Positive][-1][\"Function\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"NotAvailable\", \"Function\"]"
+    );
+    assert_eq!(
+        session
             .eval_text("FailureQ[Failsafe[f, Function[p]][1]]")
             .unwrap()
             .value

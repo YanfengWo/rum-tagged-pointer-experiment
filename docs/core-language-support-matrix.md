@@ -357,7 +357,7 @@ once in its primary implementation group. Other groups may mention it as
   `AbortProtect` pending-abort propagation, current `CheckAbort` option-list
   and multi-option `PropagateAborts` parity including fallback host-input
   resume, `Failsafe` true-only test gating plus inert non-wrapper arity,
-  current Failsafe failure metadata, function/fail-function host-input resume,
+  oracle-aligned Failsafe failure metadata, function/fail-function host-input resume,
   inert direct `TerminatedEvaluation` constructor / application behavior plus
   generated top-level/request/evaluation-data `TerminatedEvaluation` for
   recursion and fixed-point iteration limits, current string-tag `Success`
