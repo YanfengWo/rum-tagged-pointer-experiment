@@ -32,7 +32,19 @@ impl Session {
 
         match truthiness_symbol(arg) {
             Some(value) => Ok(predicate_bool_expr(!value)),
-            None => Ok(Expr::call(head.clone(), args.to_vec())),
+            None => {
+                if let Expr::Call {
+                    head: inner_head,
+                    args: inner_args,
+                } = arg
+                {
+                    if is_system_symbol_name(inner_head, "Not") && inner_args.len() == 1 {
+                        return Ok(inner_args[0].clone());
+                    }
+                }
+
+                Ok(Expr::call(head.clone(), args.to_vec()))
+            }
         }
     }
 

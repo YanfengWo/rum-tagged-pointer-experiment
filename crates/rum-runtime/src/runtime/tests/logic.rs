@@ -80,6 +80,10 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
         session.eval_text("Not[x]").unwrap().value.to_string(),
         "Not[x]"
     );
+    assert_eq!(
+        session.eval_text("Not[Not[x]]").unwrap().value.to_string(),
+        "x"
+    );
 }
 
 #[test]

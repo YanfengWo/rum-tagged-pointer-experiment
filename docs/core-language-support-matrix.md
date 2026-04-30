@@ -99,8 +99,8 @@ once in its primary implementation group. Other groups may mention it as
   `Extract` nested position-list selector subset, empty-expression and
   association-aware `Depth` parity, `Level` scalar-zero levelspec parity, and
   empty-expression negative-level depth alignment across the current structural
-  walkers, `ReplacePart` atom-head non-replacement, and non-expanding `All` /
-  `Span` position-spec boundaries
+  walkers, current `Not[Not[...]]` simplification, `ReplacePart` atom-head
+  non-replacement, and non-expanding `All` / `Span` position-spec boundaries
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
   across every structural walker, general boolean/comparison evaluation beyond
   the current exact-numeric order-chain reductions
