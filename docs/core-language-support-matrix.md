@@ -100,10 +100,10 @@ once in its primary implementation group. Other groups may mention it as
   association-aware `Depth` parity, `Level` scalar-zero levelspec parity, and
   empty-expression negative-level depth alignment across the current structural
   walkers, current `Not[Not[...]]` and relational-`Not` simplifications,
-  flat nested `And` / `Or` residual simplification, mixed-symbolic `Unequal`
-  chain boundary, nonatomic `OrderedQ` argument-order parity, `ReplacePart`
-  atom-head non-replacement, and non-expanding `All` / `Span` position-spec
-  boundaries
+  flat nested `And` / `Or` residual simplification, first-pass `Boole`
+  truth-to-integer conversion, mixed-symbolic `Unequal` chain boundary,
+  nonatomic `OrderedQ` argument-order parity, `ReplacePart` atom-head
+  non-replacement, and non-expanding `All` / `Span` position-spec boundaries
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
   across every structural walker, general boolean/comparison evaluation beyond
   the current exact-numeric order-chain reductions
@@ -113,8 +113,8 @@ once in its primary implementation group. Other groups may mention it as
 ### Functions and Symbols
 
   - `implemented`: `Identity`, `List`, `Head`, `Length`, `Depth`, `TrueQ`,
-    `BooleanQ`, `AtomQ`, `ListQ`, `StringQ`, `IntegerQ`, `NumberQ`, `True`,
-    `False`, `SameQ`, `UnsameQ`, `LessThan`, `GreaterThan`,
+    `BooleanQ`, `Boole`, `AtomQ`, `ListQ`, `StringQ`, `IntegerQ`, `NumberQ`,
+    `True`, `False`, `SameQ`, `UnsameQ`, `LessThan`, `GreaterThan`,
     `LessEqualThan`, `GreaterEqualThan`, `EqualTo`, `UnequalTo`, `SameAs`
   - `partial`: `Part`, `Extract`, `ReplacePart`, `Thread`, `First`, `Last`,
     `Rest`, `Most`, `Take`, `Drop`, `TakeDrop`, `Insert`, `Delete`,

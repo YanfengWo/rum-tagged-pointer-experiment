@@ -138,6 +138,11 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::BooleanQ,
     ),
     BuiltinSpec::ordinary(
+        "Boole",
+        "Converts exact True and False to 1 and 0, leaving non-boolean conditions unevaluated.",
+        BuiltinHandler::Boole,
+    ),
+    BuiltinSpec::ordinary(
         "AtomQ",
         "Tests whether an expression is atomic rather than a normal expression.",
         BuiltinHandler::AtomQ,

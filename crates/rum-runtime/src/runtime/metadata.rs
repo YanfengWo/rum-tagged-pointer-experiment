@@ -325,6 +325,7 @@ pub enum BuiltinHandler {
     Not,
     TrueQ,
     BooleanQ,
+    Boole,
     AtomQ,
     ListQ,
     StringQ,

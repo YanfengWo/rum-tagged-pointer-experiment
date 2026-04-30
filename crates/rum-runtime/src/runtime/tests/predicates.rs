@@ -37,6 +37,26 @@ fn predicate_q_family_covers_current_exact_and_structural_subsets() {
         "False"
     );
     assert_eq!(
+        session.eval_text("Boole[True]").unwrap().value.to_string(),
+        "1"
+    );
+    assert_eq!(
+        session.eval_text("Boole[False]").unwrap().value.to_string(),
+        "0"
+    );
+    assert_eq!(
+        session
+            .eval_text("Boole[Less[1, 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session.eval_text("Boole[x]").unwrap().value.to_string(),
+        "Boole[x]"
+    );
+    assert_eq!(
         session.eval_text("AtomQ[5]").unwrap().value.to_string(),
         "True"
     );

@@ -31,6 +31,18 @@ impl Session {
         Ok(predicate_bool_expr(truthiness_symbol(expr).is_some()))
     }
 
+    pub(super) fn eval_boole(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Boole", args, 1));
+        };
+
+        Ok(match truthiness_symbol(expr) {
+            Some(true) => Expr::integer(BigInt::from(1_i64)),
+            Some(false) => Expr::integer(BigInt::from(0_i64)),
+            None => Expr::call(head.clone(), args.to_vec()),
+        })
+    }
+
     pub(super) fn eval_atom_q(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let [expr] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("AtomQ", args, 1));

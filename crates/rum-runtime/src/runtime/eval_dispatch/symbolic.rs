@@ -13,6 +13,7 @@ impl Session {
             BuiltinHandler::Not => self.eval_not(head, args),
             BuiltinHandler::TrueQ => self.eval_true_q(head, args),
             BuiltinHandler::BooleanQ => self.eval_boolean_q(head, args),
+            BuiltinHandler::Boole => self.eval_boole(head, args),
             BuiltinHandler::AtomQ => self.eval_atom_q(head, args),
             BuiltinHandler::ListQ => self.eval_list_q(head, args),
             BuiltinHandler::StringQ => self.eval_string_q(head, args),
