@@ -521,6 +521,54 @@ fn logic_short_circuit_can_avoid_or_resume_input_requests() {
 
     assert_eq!(response.value.to_string(), "False");
     assert!(session.pending_input_request().is_none());
+
+    let response = session
+        .eval_request("Nand[False, InputString[\"rhs: \"]]")
+        .expect("Nand should short-circuit before requesting input");
+    assert_eq!(response.value.to_string(), "True");
+    assert!(session.pending_input_request().is_none());
+
+    let failure = session
+        .eval_request("Nand[InputString[\"lhs: \"], False]")
+        .expect_err("leading InputString should still suspend the Nand request");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "lhs: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("text")
+        .expect("resume should continue Nand evaluation after the suspended input");
+
+    assert_eq!(response.value.to_string(), "True");
+    assert!(session.pending_input_request().is_none());
+
+    let response = session
+        .eval_request("Nor[True, InputString[\"rhs: \"]]")
+        .expect("Nor should short-circuit before requesting input");
+    assert_eq!(response.value.to_string(), "False");
+    assert!(session.pending_input_request().is_none());
+
+    let failure = session
+        .eval_request("Nor[InputString[\"lhs: \"], True]")
+        .expect_err("leading InputString should still suspend the Nor request");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "lhs: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("text")
+        .expect("resume should continue Nor evaluation after the suspended input");
+
+    assert_eq!(response.value.to_string(), "False");
+    assert!(session.pending_input_request().is_none());
 }
 
 #[test]
