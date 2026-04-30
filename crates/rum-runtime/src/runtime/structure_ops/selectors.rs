@@ -617,7 +617,7 @@ fn parse_extract_position_spec(expr: &Expr) -> Option<ExtractPositionSpec> {
         });
     }
 
-    if let Some(position_spec) = parse_single_position_spec(expr) {
+    if let Some(position_spec) = parse_single_position_spec_with_nested_lists(expr, false) {
         return Some(ExtractPositionSpec {
             position_specs: vec![position_spec],
             multiple: false,
@@ -634,7 +634,7 @@ fn parse_extract_position_spec(expr: &Expr) -> Option<ExtractPositionSpec> {
 
     let position_specs = args
         .iter()
-        .map(parse_single_position_spec)
+        .map(|arg| parse_single_position_spec_with_nested_lists(arg, true))
         .collect::<Option<Vec<_>>>()?;
     Some(ExtractPositionSpec {
         position_specs,
@@ -643,6 +643,13 @@ fn parse_extract_position_spec(expr: &Expr) -> Option<ExtractPositionSpec> {
 }
 
 pub(super) fn parse_single_position_spec(expr: &Expr) -> Option<Vec<PartSelector>> {
+    parse_single_position_spec_with_nested_lists(expr, false)
+}
+
+fn parse_single_position_spec_with_nested_lists(
+    expr: &Expr,
+    allow_nested_plain_lists: bool,
+) -> Option<Vec<PartSelector>> {
     if let Some(selector) = parse_scalar_part_selector(expr) {
         return Some(vec![selector]);
     }
@@ -659,7 +666,7 @@ pub(super) fn parse_single_position_spec(expr: &Expr) -> Option<Vec<PartSelector
         return Some(Vec::new());
     }
 
-    if args.iter().all(is_plain_list_expr) {
+    if !allow_nested_plain_lists && args.iter().all(is_plain_list_expr) {
         return None;
     }
 

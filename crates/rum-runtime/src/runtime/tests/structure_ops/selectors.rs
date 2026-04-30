@@ -359,6 +359,30 @@ fn extract_consumes_exact_paths_and_position_output() {
     );
     assert_eq!(
         session
+            .eval_text("Extract[f[a, b], {{{}}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[a, b], {{{1}}, {{2}}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[a], f[b]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[g[a, b], h[c, d]], {{{1}, {2}}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[g[b]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Extract[1, {All}]")
             .unwrap()
             .value

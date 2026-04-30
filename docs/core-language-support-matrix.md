@@ -96,8 +96,8 @@ once in its primary implementation group. Other groups may mention it as
   `UpTo[...]` span-endpoint support, and `ReplacePart`
   pattern-position subsets, including current atom `All` / positive empty-span
   and zero-endpoint boundary behavior in `Part` / `Extract`, plus the current
-  `ReplacePart` atom-head non-replacement and non-expanding `All` / `Span`
-  position-spec boundaries
+  `Extract` nested position-list selector subset, `ReplacePart` atom-head
+  non-replacement, and non-expanding `All` / `Span` position-spec boundaries
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
   across every structural walker, general boolean/comparison evaluation beyond
   the current exact-numeric order-chain reductions
