@@ -222,12 +222,14 @@ fn key_spec_key_expr(expr: &Expr) -> Expr {
     }
 }
 
-pub(in crate::runtime) fn parse_association_update_spec(spec: &Expr) -> Option<Vec<(Expr, Expr)>> {
-    if let Some(entry) = parse_association_entry(spec) {
+pub(in crate::runtime) fn parse_association_update_spec_forms(
+    spec: &Expr,
+) -> Option<Vec<AssociationEntryForm>> {
+    if let Some(entry) = parse_association_entry_form(spec) {
         return Some(vec![entry]);
     }
 
-    if let Some(entries) = association_entries_from_expr(spec) {
+    if let Some(entries) = association_entry_forms_from_expr(spec) {
         return Some(entries);
     }
 
@@ -238,7 +240,7 @@ pub(in crate::runtime) fn parse_association_update_spec(spec: &Expr) -> Option<V
         return None;
     }
 
-    parse_association_entries_deep(args)
+    parse_association_entry_forms_deep(args)
 }
 
 pub(in crate::runtime) fn normalize_key_value_pattern_spec(spec: &Expr) -> Option<Expr> {

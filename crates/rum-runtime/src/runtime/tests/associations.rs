@@ -812,6 +812,18 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
         session.eval_text("assoc").unwrap().value.to_string(),
         "Association[Rule[a, 1], Rule[b, 2]]"
     );
+    assert_eq!(
+        session
+            .eval_text("x = 0; assoc = Association[]; {AssociateTo[assoc, a :> (x = x + 1)], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], 0]"
+    );
+    assert_eq!(
+        session.eval_text("assoc").unwrap().value.to_string(),
+        "Association[RuleDelayed[a, Set[x, Plus[x, 1]]]]"
+    );
     session.eval_text("assoc = Association[a -> 1]").unwrap();
     assert_eq!(
         session
@@ -839,6 +851,16 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     assert_eq!(
         session.eval_text("assoc").unwrap().value.to_string(),
         "Association[Rule[b, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "x = 0; assoc = Association[a :> (x = x + 1), b -> 2]; {KeyDropFrom[assoc, b], assoc, x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], 0]"
     );
     session
         .eval_text("assoc = Association[a -> 1, Key[a] -> 7, b -> 2]")

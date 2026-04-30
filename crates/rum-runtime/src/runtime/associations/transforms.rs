@@ -375,7 +375,7 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("AssociateTo", args, 2));
         };
 
-        if parse_association_update_spec(spec).is_none() {
+        if parse_association_update_spec_forms(spec).is_none() {
             return Ok(self.invalid_call_with_message(
                 "AssociateTo",
                 args,
@@ -448,15 +448,15 @@ impl Session {
     }
 
     fn apply_associate_to_value(expr: Expr, spec: Expr) -> Option<Expr> {
-        let mut entries = association_entries_from_expr(&expr)?;
-        let updates = parse_association_update_spec(&spec)?;
+        let mut entries = association_entry_forms_from_expr(&expr)?;
+        let updates = parse_association_update_spec_forms(&spec)?;
 
-        for (key, value) in updates {
-            entries.retain(|(existing, _)| existing != &key);
-            entries.push((key, value));
+        for update in updates {
+            entries.retain(|existing| existing.key != update.key);
+            entries.push(update);
         }
 
-        Some(render_association(entries))
+        Some(render_association_entry_forms_preserving_heads(entries))
     }
 
     pub(in crate::runtime) fn eval_key_drop_from(
@@ -538,13 +538,17 @@ impl Session {
     }
 
     fn apply_key_drop_from_value(expr: Expr, key_spec: Expr) -> Option<Expr> {
-        let entries = association_entries_from_expr(&expr)?;
+        let entries = association_entry_forms_from_expr(&expr)?;
         let selected_keys = parse_key_spec(&key_spec)?;
 
-        Some(render_association(
+        Some(render_association_entry_forms_preserving_heads(
             entries
                 .into_iter()
-                .filter(|(key, _)| !selected_keys.iter().any(|candidate| candidate == key))
+                .filter(|entry| {
+                    !selected_keys
+                        .iter()
+                        .any(|candidate| candidate == &entry.key)
+                })
                 .collect(),
         ))
     }
