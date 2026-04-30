@@ -388,6 +388,38 @@ fn list_relation_and_shape_predicates_cover_current_exact_subsets() {
     );
     assert_eq!(
         session
+            .eval_text("OrderedQ[f[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("OrderedQ[f[b, a]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("OrderedQ[Association[b -> 2, a -> 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    let atom_ordered_q = session.eval_text("OrderedQ[1]").unwrap();
+    assert_eq!(atom_ordered_q.value.to_string(), "OrderedQ[1]");
+    assert!(
+        atom_ordered_q
+            .messages
+            .iter()
+            .any(|message| message.symbol == "OrderedQ" && message.tag == "normal")
+    );
+    assert_eq!(
+        session
             .eval_text("ContainsAll[{a, b, c}, {b, a}]")
             .unwrap()
             .value

@@ -358,8 +358,19 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("OrderedQ", args, 1));
         };
 
-        let Some(items) = list_items(expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+        let items = match expr {
+            Expr::Call { args, .. } => args.as_slice(),
+            Expr::Atom(_) => {
+                return Ok(self.invalid_call_with_message(
+                    "OrderedQ",
+                    args,
+                    "normal",
+                    format!(
+                        "Nonatomic expression expected at position 1 in {}.",
+                        Expr::call(head.clone(), args.to_vec())
+                    ),
+                ));
+            }
         };
 
         Ok(predicate_bool_expr(items.windows(2).all(|pair| {
