@@ -62,6 +62,14 @@ fn association_and_associationq_cover_first_pass_rule_subset() {
     );
     assert_eq!(
         session
+            .eval_text("x = 0; {Normal[Association[a :> (x = x + 1)]], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[RuleDelayed[a, Set[x, Plus[x, 1]]]], 0]"
+    );
+    assert_eq!(
+        session
             .eval_text("AssociationQ[List[a -> 1]]")
             .unwrap()
             .value

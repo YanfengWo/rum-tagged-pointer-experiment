@@ -224,17 +224,11 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("Normal", args, 1));
         };
 
-        let Some(entries) = association_entries_from_expr(expr) else {
+        let Some(entries) = association_rule_exprs_preserving_heads(expr) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        Ok(Expr::call(
-            system_expr("List"),
-            entries
-                .into_iter()
-                .map(|(key, value)| Expr::call(system_expr("Rule"), vec![key, value]))
-                .collect(),
-        ))
+        Ok(Expr::call(system_expr("List"), entries))
     }
 
     pub(in crate::runtime) fn eval_key_value_pattern(

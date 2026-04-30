@@ -126,6 +126,25 @@ pub(in crate::runtime) fn render_association_preserving_rule_heads(args: &[Expr]
     ))
 }
 
+pub(in crate::runtime) fn association_rule_exprs_preserving_heads(
+    expr: &Expr,
+) -> Option<Vec<Expr>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "Association") {
+        return None;
+    }
+
+    Some(
+        canonicalize_association_entry_forms(parse_association_entry_forms_deep(args)?)
+            .into_iter()
+            .map(association_entry_form_expr)
+            .collect(),
+    )
+}
+
 pub(in crate::runtime) fn association_value_by_key(expr: &Expr, key: &Expr) -> Option<Expr> {
     association_entries_from_expr(expr)?
         .into_iter()
@@ -320,13 +339,15 @@ fn render_association_entry_forms(entries: Vec<AssociationEntryForm>) -> Expr {
         system_expr("Association"),
         entries
             .into_iter()
-            .map(|entry| {
-                Expr::call(
-                    system_expr(if entry.delayed { "RuleDelayed" } else { "Rule" }),
-                    vec![entry.key, entry.value],
-                )
-            })
+            .map(association_entry_form_expr)
             .collect(),
+    )
+}
+
+fn association_entry_form_expr(entry: AssociationEntryForm) -> Expr {
+    Expr::call(
+        system_expr(if entry.delayed { "RuleDelayed" } else { "Rule" }),
+        vec![entry.key, entry.value],
     )
 }
 
