@@ -41,7 +41,13 @@ pub(super) fn release_hold_once(expr: &Expr) -> Option<Expr> {
         .is_some_and(|symbol| {
             matches!(
                 symbol.name(),
-                "Hold" | "HoldFirst" | "HoldRest" | "HoldAll" | "HoldAllComplete" | "HoldPattern"
+                "Hold"
+                    | "HoldFirst"
+                    | "HoldRest"
+                    | "HoldAll"
+                    | "HoldAllComplete"
+                    | "HoldComplete"
+                    | "HoldPattern"
             )
         })
     {

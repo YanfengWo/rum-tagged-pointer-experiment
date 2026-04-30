@@ -348,6 +348,14 @@ fn releasehold_releases_supported_hold_wrappers() {
     );
     assert_eq!(
         session
+            .eval_text("ReleaseHold[HoldComplete[Identity[1]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
             .eval_text("ReleaseHold[HoldPattern[f[x_Integer]]]")
             .unwrap()
             .value
