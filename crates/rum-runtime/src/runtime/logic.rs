@@ -180,7 +180,11 @@ impl Session {
             return predicate_bool_expr(true);
         }
 
-        if let Some(result) = comparison_result_from_expr_identity(args, relation) {
+        if relation == ComparisonRelation::Unequal {
+            if let Some(result) = reduce_unequal_chain(args) {
+                return predicate_bool_expr(result);
+            }
+        } else if let Some(result) = comparison_result_from_expr_identity(args, relation) {
             return predicate_bool_expr(result);
         }
 
@@ -206,6 +210,28 @@ impl Session {
             None => Expr::call(head.clone(), args.to_vec()),
         }
     }
+}
+
+fn reduce_unequal_chain(args: &[Expr]) -> Option<bool> {
+    for pair in args.windows(2) {
+        match adjacent_unequal_truth(&pair[0], &pair[1]) {
+            Some(true) => continue,
+            Some(false) => return Some(false),
+            None => return None,
+        }
+    }
+
+    None
+}
+
+fn adjacent_unequal_truth(lhs: &Expr, rhs: &Expr) -> Option<bool> {
+    if lhs == rhs {
+        return Some(false);
+    }
+
+    let lhs = comparable_value_from_expr(lhs)?;
+    let rhs = comparable_value_from_expr(rhs)?;
+    Some(compare_comparable_values(&lhs, &rhs)? != std::cmp::Ordering::Equal)
 }
 
 fn reduce_order_chain(head: &Expr, args: &[Expr], relation: ComparisonRelation) -> Option<Expr> {
@@ -282,11 +308,7 @@ fn comparison_result_from_expr_identity(
             .windows(2)
             .all(|pair| pair[0] == pair[1])
             .then_some(true),
-        ComparisonRelation::Unequal => args
-            .iter()
-            .enumerate()
-            .any(|(index, lhs)| args[index + 1..].iter().any(|rhs| lhs == rhs))
-            .then_some(false),
+        ComparisonRelation::Unequal => None,
         ComparisonRelation::Less => args
             .windows(2)
             .any(|pair| pair[0] == pair[1])

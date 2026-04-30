@@ -154,6 +154,38 @@ fn and_or_short_circuit_side_effects_and_compare_exact_values() {
     );
     assert_eq!(
         session
+            .eval_text("Unequal[a, a, b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("Unequal[a, b, b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Unequal[a, b, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Unequal[1, u, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Unequal[1, u, 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Unequal[1, 2, 2, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
             .eval_text("Less[1, 2, 3]")
             .unwrap()
             .value
