@@ -36,6 +36,38 @@ fn level_supports_standard_levelspecs_and_depth_first_ordering() {
             .to_string(),
         "List[1, 2, 3]"
     );
+    assert_eq!(
+        session
+            .eval_text("Level[f[a], 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[a], {0}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[a]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[{}, 0, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[{}, {0}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[]]"
+    );
 }
 
 #[test]

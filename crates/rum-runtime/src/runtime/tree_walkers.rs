@@ -64,7 +64,7 @@ impl Session {
         }
 
         let default_include_heads = self.system_option_bool("Level", "Heads", false)?;
-        let Some(levels) = parse_standard_level_spec(&args[1]) else {
+        let Some(levels) = parse_level_level_spec(&args[1]) else {
             return Ok(self.invalid_call_with_arg_form(
                 "Level",
                 args,
@@ -838,6 +838,14 @@ pub(super) fn collect_level_parts_owned(
     level: usize,
 ) -> Vec<Expr> {
     collect_level_parts(expr, traversal, level).parts
+}
+
+fn parse_level_level_spec(expr: &Expr) -> Option<CasesLevelSpec> {
+    if expr_as_signed_isize(expr) == Some(0) {
+        return Some(CasesLevelSpec::range(1, Some(0)));
+    }
+
+    parse_standard_level_spec(expr)
 }
 
 fn extend_position(path: &[Expr], next: Expr) -> Vec<Expr> {

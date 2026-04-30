@@ -97,8 +97,9 @@ once in its primary implementation group. Other groups may mention it as
   pattern-position subsets, including current atom `All` / positive empty-span
   and zero-endpoint boundary behavior in `Part` / `Extract`, plus the current
   `Extract` nested position-list selector subset, empty-expression and
-  association-aware `Depth` parity, `ReplacePart` atom-head non-replacement,
-  and non-expanding `All` / `Span` position-spec boundaries
+  association-aware `Depth` parity, `Level` scalar-zero levelspec parity,
+  `ReplacePart` atom-head non-replacement, and non-expanding `All` / `Span`
+  position-spec boundaries
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
   across every structural walker, general boolean/comparison evaluation beyond
   the current exact-numeric order-chain reductions
