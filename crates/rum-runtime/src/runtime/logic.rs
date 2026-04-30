@@ -40,6 +40,26 @@ impl Session {
         Ok(finalize_xor(head, residual, invert))
     }
 
+    pub(super) fn eval_equivalent(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let mut saw_true = false;
+        let mut saw_false = false;
+        let mut residual = Vec::new();
+
+        for arg in args {
+            match truthiness_symbol(arg) {
+                Some(true) => saw_true = true,
+                Some(false) => saw_false = true,
+                None => push_unique_residual_expr(&mut residual, arg.clone()),
+            }
+        }
+
+        Ok(finalize_equivalent(head, residual, saw_true, saw_false))
+    }
+
     pub(super) fn eval_not(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let [arg] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("Not", args, 1));
@@ -348,6 +368,12 @@ fn toggle_residual_expr(residual: &mut Vec<Expr>, value: Expr) {
     }
 }
 
+fn push_unique_residual_expr(residual: &mut Vec<Expr>, value: Expr) {
+    if !residual.iter().any(|existing| existing == &value) {
+        residual.push(value);
+    }
+}
+
 fn finalize_xor(head: &Expr, mut residual: Vec<Expr>, invert: bool) -> Expr {
     let expr = match residual.len() {
         0 => predicate_bool_expr(invert),
@@ -359,6 +385,50 @@ fn finalize_xor(head: &Expr, mut residual: Vec<Expr>, invert: bool) -> Expr {
         Expr::call(system_expr("Not"), vec![expr])
     } else {
         expr
+    }
+}
+
+fn finalize_equivalent(head: &Expr, residual: Vec<Expr>, saw_true: bool, saw_false: bool) -> Expr {
+    if saw_true && saw_false {
+        return predicate_bool_expr(false);
+    }
+
+    if saw_true {
+        return finalize_equivalent_constant_side(residual, false);
+    }
+
+    if saw_false {
+        return finalize_equivalent_constant_side(residual, true);
+    }
+
+    match residual.len() {
+        0 | 1 => predicate_bool_expr(true),
+        _ => Expr::call(head.clone(), residual),
+    }
+}
+
+fn finalize_equivalent_constant_side(mut residual: Vec<Expr>, negate_residuals: bool) -> Expr {
+    match residual.len() {
+        0 => predicate_bool_expr(true),
+        1 => {
+            let expr = residual.pop().expect("single residual value");
+            if negate_residuals {
+                Expr::call(system_expr("Not"), vec![expr])
+            } else {
+                expr
+            }
+        }
+        _ => {
+            let args = if negate_residuals {
+                residual
+                    .into_iter()
+                    .map(|expr| Expr::call(system_expr("Not"), vec![expr]))
+                    .collect()
+            } else {
+                residual
+            };
+            Expr::call(system_expr("And"), args)
+        }
     }
 }
 

@@ -131,6 +131,12 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
             .with(Attribute::OneIdentity),
         BuiltinHandler::Xor,
     ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Equivalent",
+        "Evaluates logical equivalence over exact boolean arguments and reduces duplicate symbolic terms in the current subset.",
+        AttributeSet::empty().with(Attribute::Orderless),
+        BuiltinHandler::Equivalent,
+    ),
     BuiltinSpec::ordinary(
         "Not",
         "Negates a boolean value in the current exact boolean subset.",
