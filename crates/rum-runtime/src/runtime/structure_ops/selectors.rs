@@ -17,6 +17,7 @@ pub(super) struct PartSpanSpec {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum SpanEndpoint {
     Index(isize),
+    UpTo(Option<isize>),
     All,
 }
 
@@ -208,7 +209,31 @@ fn parse_span_endpoint(expr: &Expr) -> Option<SpanEndpoint> {
         return Some(SpanEndpoint::All);
     }
 
+    if let Some(limit) = parse_upto_span_endpoint(expr) {
+        return Some(SpanEndpoint::UpTo(limit));
+    }
+
     expr_as_signed_isize(expr).map(SpanEndpoint::Index)
+}
+
+fn parse_upto_span_endpoint(expr: &Expr) -> Option<Option<isize>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    let [limit] = args.as_slice() else {
+        return None;
+    };
+    if !is_system_symbol_name(head, "UpTo") {
+        return None;
+    }
+
+    if is_system_symbol_name(limit, heads::structure::INFINITY) {
+        return Some(None);
+    }
+
+    let limit = expr_as_signed_isize(limit)?;
+    (limit >= 0).then_some(Some(limit))
 }
 
 pub(super) fn apply_part_selectors(expr: &Expr, selectors: &[PartSelector]) -> Option<Expr> {
@@ -509,6 +534,7 @@ fn resolve_ordered_span_components(start: isize, end: isize, step: isize) -> Opt
 fn resolve_positive_span_start(endpoint: SpanEndpoint, len: isize) -> Option<isize> {
     match endpoint {
         SpanEndpoint::All => Some(1),
+        SpanEndpoint::UpTo(limit) => Some(resolve_upto_start_boundary(limit, len)),
         SpanEndpoint::Index(0) => Some(len + 1),
         SpanEndpoint::Index(index) if index > 0 => (index <= len + 1).then_some(index),
         SpanEndpoint::Index(index) => {
@@ -521,6 +547,7 @@ fn resolve_positive_span_start(endpoint: SpanEndpoint, len: isize) -> Option<isi
 fn resolve_positive_span_end(endpoint: SpanEndpoint, len: isize) -> Option<isize> {
     match endpoint {
         SpanEndpoint::All => Some(len),
+        SpanEndpoint::UpTo(limit) => Some(resolve_upto_end_boundary(limit, len)),
         SpanEndpoint::Index(0) => Some(0),
         SpanEndpoint::Index(index) if index > 0 => (index <= len).then_some(index),
         SpanEndpoint::Index(index) => {
@@ -537,6 +564,8 @@ fn resolve_negative_span_start(endpoint: SpanEndpoint, len: isize) -> Option<isi
 
     match endpoint {
         SpanEndpoint::All => Some(1),
+        SpanEndpoint::UpTo(Some(0)) => None,
+        SpanEndpoint::UpTo(limit) => Some(resolve_upto_end_boundary(limit, len)),
         SpanEndpoint::Index(0) => None,
         SpanEndpoint::Index(index) if index > 0 => (index <= len).then_some(index),
         SpanEndpoint::Index(index) => {
@@ -553,12 +582,30 @@ fn resolve_negative_span_end(endpoint: SpanEndpoint, len: isize) -> Option<isize
 
     match endpoint {
         SpanEndpoint::All => Some(len),
+        SpanEndpoint::UpTo(Some(0)) => None,
+        SpanEndpoint::UpTo(limit) => Some(resolve_upto_end_boundary(limit, len)),
         SpanEndpoint::Index(0) => None,
         SpanEndpoint::Index(index) if index > 0 => (index <= len + 1).then_some(index),
         SpanEndpoint::Index(index) => {
             let normalized = len + index + 1;
             (1..=len).contains(&normalized).then_some(normalized)
         }
+    }
+}
+
+fn resolve_upto_start_boundary(limit: Option<isize>, len: isize) -> isize {
+    match limit {
+        None => len,
+        Some(0) => len + 1,
+        Some(limit) if len == 0 => limit,
+        Some(limit) => limit.min(len),
+    }
+}
+
+fn resolve_upto_end_boundary(limit: Option<isize>, len: isize) -> isize {
+    match limit {
+        None => len,
+        Some(limit) => limit.min(len),
     }
 }
 

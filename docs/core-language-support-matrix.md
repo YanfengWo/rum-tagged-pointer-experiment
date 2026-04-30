@@ -92,7 +92,8 @@ once in its primary implementation group. Other groups may mention it as
 - `implemented`: symbolic `Expr` model, atom-vs-call representation, canonical
   heads, fixed-point evaluation core, list as a first-class expression head,
   standard structural traversal groundwork, exact path selectors with integer
-  position specs, `Part` / `Extract` `All` / `Span` subsets, and `ReplacePart`
+  position specs, `Part` / `Extract` `All` / `Span` subsets, including current
+  `UpTo[...]` span-endpoint support, and `ReplacePart`
   pattern-position subsets, including current atom `All` / positive empty-span
   and zero-endpoint boundary behavior in `Part` / `Extract`, plus the current
   `ReplacePart` atom-head non-replacement and non-expanding `All` / `Span`
@@ -120,9 +121,9 @@ once in its primary implementation group. Other groups may mention it as
     `SubsetQ`, `Order`, `OrderedQ`, `ContainsAll`, `ContainsAny`,
     `LexicographicOrder`, `NumericalOrder`, `AlphabeticOrder`,
     `ContainsExactly`, `ContainsNone`, `ContainsOnly`, `Between`, `VectorQ`,
-    `MatrixQ`, `ArrayQ`, `AllTrue`, `AnyTrue`, `NoneTrue`, `CoprimeQ`
-  - `planned`: `Heads`, `NearestTo`,
-    `PolynomialQ`, `PolynomialExpressionQ`, `RationalExpressionQ`,
+    `MatrixQ`, `ArrayQ`, `AllTrue`, `AnyTrue`, `NoneTrue`, `CoprimeQ`,
+    `NearestTo`
+  - `planned`: `Heads`, `PolynomialQ`, `PolynomialExpressionQ`, `RationalExpressionQ`,
     `DateObjectQ`, `TimeObjectQ`
 - `cross-tracked elsewhere`: `Apply`, `Array`, `Cases`, `Count`,
   `DeleteCases`, `FreeQ`, `Join`, `Map`, `MapAll`, `MapAt`, `MemberQ`,

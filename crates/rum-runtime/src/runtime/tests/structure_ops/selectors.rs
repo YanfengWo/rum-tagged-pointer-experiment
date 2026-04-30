@@ -180,6 +180,46 @@ fn part_supports_exact_indices_nested_paths_and_head_access() {
             .to_string(),
         "f[List[a, c], List[b]]"
     );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], 1 ;; UpTo[5]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], UpTo[2] ;; All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], 3 ;; UpTo[1] ;; -1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[c, b, a]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], 1 ;; UpTo[Infinity] ;; 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], UpTo[2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Part[f[a, b, c], UpTo[2]]"
+    );
 }
 
 #[test]
@@ -332,5 +372,21 @@ fn extract_consumes_exact_paths_and_position_output() {
             .value
             .to_string(),
         "List[Integer[], Integer[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[a, b, c], {1 ;; UpTo[2]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[a, b, c], {{1 ;; UpTo[2]}, {UpTo[2] ;; All}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[a, b], f[b, c]]"
     );
 }

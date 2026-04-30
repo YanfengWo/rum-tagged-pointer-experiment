@@ -184,6 +184,38 @@ fn operator_wrappers_cover_current_curried_subset() {
             .to_string(),
         "f[b, a, c]"
     );
+    assert_eq!(
+        session
+            .eval_text("NearestTo[3][{1, 2, 5}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("NearestTo[3, 2][{1, 2, 5}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("NearestTo[3, {All, 1}][{1, 2, 5}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("NearestTo[3, All][{1, 2, 5}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "NearestTo[3, All][List[1, 2, 5]]"
+    );
 }
 
 #[test]

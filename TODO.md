@@ -153,6 +153,8 @@ This roadmap intentionally uses two levels of detail:
 - [x] Tighten truth/comparison breadth by reducing exact-numeric order chains around symbolic gaps and short-circuiting known-false numeric neighbor pairs while keeping `Equal` / `Unequal` and string-chain cases conservative
 - [x] Add the current unary comparison operator forms `LessThan` / `GreaterThan` / `LessEqualThan` / `GreaterEqualThan` / `EqualTo` / `UnequalTo` / `SameAs` as callable wrappers that apply a single argument on the left while keeping direct malformed forms inert
 - [x] Align first-pass order-comparison parity by fixing `Order`'s sign convention, using exact numeric order for numeric ordering predicates, and adding current two-argument `LexicographicOrder` / `NumericalOrder` / `AlphabeticOrder` coverage
+- [x] Extend `Part` / `Extract` span endpoint parity with the current `UpTo[n]` / `UpTo[Infinity]` subset while keeping direct `UpTo[...]` part specifications inert
+- [x] Add the first `NearestTo` callable wrapper subset by routing `NearestTo[target][data]` and positive-count / radius-limited forms through the existing `Nearest[data, target, ...]` evaluator while keeping unsupported selection forms inert
 - [ ] Continue widening that traversal model into future tree walkers beyond `Cases`, `Level`, and `Position` as those builtins land
 - [ ] Continue the structure access/update family beyond the current integer / `All` / `Span` / pattern-position subset with additional Wolfram-compatible part specifications and any remaining edge-case parity work in `ReplacePart`
 - [ ] Continue auditing any remaining held/spec-driven target families outside the message/definition/attribute cluster so new raw-form builtins reuse shared normalization helpers from the start
