@@ -84,6 +84,16 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
     );
     assert_eq!(
         session
+            .eval_text(
+                "x = 0; assoc = Association[k :> (x = x + 1)]; {assoc[k], Lookup[assoc, k], x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2, 2]"
+    );
+    assert_eq!(
+        session
             .eval_text("Lookup[Association[a -> 1], b, 99]")
             .unwrap()
             .value
