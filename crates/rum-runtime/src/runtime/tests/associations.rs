@@ -394,6 +394,16 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text(
+                "x = 0; {KeyTake[Association[a :> (x = x + 1)], a], KeyDrop[Association[a :> (x = x + 1), b -> 2], b], x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], 0]"
+    );
+    assert_eq!(
+        session
             .eval_text("KeyTake[Association[a -> 1, Key[a] -> 7], Key[a]]")
             .unwrap()
             .value

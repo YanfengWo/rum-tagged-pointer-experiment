@@ -13,10 +13,10 @@ pub(in crate::runtime) struct KeyedEntries {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct AssociationEntryForm {
-    key: Expr,
-    value: Expr,
-    delayed: bool,
+pub(in crate::runtime) struct AssociationEntryForm {
+    pub(in crate::runtime) key: Expr,
+    pub(in crate::runtime) value: Expr,
+    pub(in crate::runtime) delayed: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -75,6 +75,20 @@ pub(in crate::runtime) fn single_rule_or_keyed_entries_from_expr(
     keyed_entries_from_expr(expr).map(|keyed| keyed.entries)
 }
 
+pub(in crate::runtime) fn single_rule_or_keyed_entry_forms_from_expr(
+    expr: &Expr,
+) -> Option<Vec<AssociationEntryForm>> {
+    if let Some(entry) = parse_association_entry_form(expr) {
+        return Some(vec![entry]);
+    }
+
+    if let Some(entries) = association_entry_forms_from_expr(expr) {
+        return Some(entries);
+    }
+
+    rule_list_entry_forms_from_expr(expr)
+}
+
 pub(in crate::runtime) fn parse_association_entries(items: &[Expr]) -> Option<Vec<(Expr, Expr)>> {
     items.iter().map(parse_association_entry).collect()
 }
@@ -126,19 +140,17 @@ pub(in crate::runtime) fn render_association_preserving_rule_heads(args: &[Expr]
     ))
 }
 
+pub(in crate::runtime) fn render_association_entry_forms_preserving_heads(
+    entries: Vec<AssociationEntryForm>,
+) -> Expr {
+    render_association_entry_forms(entries)
+}
+
 pub(in crate::runtime) fn association_rule_exprs_preserving_heads(
     expr: &Expr,
 ) -> Option<Vec<Expr>> {
-    let Expr::Call { head, args } = expr else {
-        return None;
-    };
-
-    if !is_system_symbol_name(head, "Association") {
-        return None;
-    }
-
     Some(
-        canonicalize_association_entry_forms(parse_association_entry_forms_deep(args)?)
+        association_entry_forms_from_expr(expr)?
             .into_iter()
             .map(association_entry_form_expr)
             .collect(),
@@ -305,6 +317,36 @@ fn parse_association_entry_form(expr: &Expr) -> Option<AssociationEntryForm> {
         value: args[1].clone(),
         delayed: is_system_symbol_name(head, "RuleDelayed"),
     })
+}
+
+fn association_entry_forms_from_expr(expr: &Expr) -> Option<Vec<AssociationEntryForm>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "Association") {
+        return None;
+    }
+
+    Some(canonicalize_association_entry_forms(
+        parse_association_entry_forms_deep(args)?,
+    ))
+}
+
+fn rule_list_entry_forms_from_expr(expr: &Expr) -> Option<Vec<AssociationEntryForm>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return None;
+    }
+
+    parse_association_entry_forms(args)
+}
+
+fn parse_association_entry_forms(items: &[Expr]) -> Option<Vec<AssociationEntryForm>> {
+    items.iter().map(parse_association_entry_form).collect()
 }
 
 fn parse_association_entry_forms_deep(items: &[Expr]) -> Option<Vec<AssociationEntryForm>> {

@@ -443,14 +443,14 @@ fn keyed_take_drop_result_for_expr(
 ) -> Option<Expr> {
     let selected_keys = parse_key_spec(key_spec)?;
 
-    if let Some(entries) = single_rule_or_keyed_entries_from_expr(expr) {
+    if let Some(entries) = single_rule_or_keyed_entry_forms_from_expr(expr) {
         let filtered = if keep_selected {
             let mut taken = Vec::new();
             for selected_key in &selected_keys {
                 taken.extend(
                     entries
                         .iter()
-                        .filter(|(key, _)| key == selected_key)
+                        .filter(|entry| &entry.key == selected_key)
                         .cloned(),
                 );
             }
@@ -458,11 +458,15 @@ fn keyed_take_drop_result_for_expr(
         } else {
             entries
                 .into_iter()
-                .filter(|(key, _)| !selected_keys.iter().any(|candidate| candidate == key))
+                .filter(|entry| {
+                    !selected_keys
+                        .iter()
+                        .any(|candidate| candidate == &entry.key)
+                })
                 .collect()
         };
 
-        return Some(render_association(filtered));
+        return Some(render_association_entry_forms_preserving_heads(filtered));
     }
 
     let items = list_items(expr)?;

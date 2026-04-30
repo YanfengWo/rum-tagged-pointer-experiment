@@ -301,8 +301,9 @@ once in its primary implementation group. Other groups may mention it as
   extraction, callable
   `Association[...][key]` lookup, current `Part[..., Key[...]]` association
   projection including missing-key propagation and no-mixed-key/index
-  diagnostics, `Key[...]` key-spec unwrapping for the current `KeyTake` /
-  `KeyDrop` / `KeyDropFrom` subset, custom `KeySort` comparers,
+  diagnostics, `Key[...]` key-spec unwrapping and current `RuleDelayed`
+  preservation for the current `KeyTake` / `KeyDrop` / `KeyDropFrom` subset,
+  custom `KeySort` comparers,
   `Catenate` over lists plus association values with current invalid-argument
   parity, current `GroupBy[list, f, g]` reducer support,
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
