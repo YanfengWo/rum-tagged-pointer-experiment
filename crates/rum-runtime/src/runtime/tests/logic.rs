@@ -93,6 +93,58 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
         "Or[a, b, c]"
     );
     assert_eq!(
+        session.eval_text("Xor[]").unwrap().value.to_string(),
+        "False"
+    );
+    assert_eq!(
+        session.eval_text("Xor[True]").unwrap().value.to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("Xor[True, False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("Xor[True, True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("Xor[x, False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x"
+    );
+    assert_eq!(
+        session.eval_text("Xor[x, True]").unwrap().value.to_string(),
+        "Not[x]"
+    );
+    assert_eq!(
+        session.eval_text("Xor[x, x]").unwrap().value.to_string(),
+        "False"
+    );
+    assert_eq!(
+        session.eval_text("Xor[x, y, x]").unwrap().value.to_string(),
+        "y"
+    );
+    assert_eq!(
+        session
+            .eval_text("Xor[x, y, True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Not[Xor[x, y]]"
+    );
+    assert_eq!(
         session
             .eval_text("Or[x, True, y]")
             .unwrap()

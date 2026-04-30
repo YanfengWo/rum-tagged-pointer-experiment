@@ -25,6 +25,21 @@ impl Session {
         self.resume_or_from_index(args.to_vec(), 0, Vec::new())
     }
 
+    pub(super) fn eval_xor(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let mut invert = false;
+        let mut residual = Vec::new();
+
+        for arg in args {
+            match truthiness_symbol(arg) {
+                Some(true) => invert = !invert,
+                Some(false) => {}
+                None => toggle_residual_expr(&mut residual, arg.clone()),
+            }
+        }
+
+        Ok(finalize_xor(head, residual, invert))
+    }
+
     pub(super) fn eval_not(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let [arg] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("Not", args, 1));
@@ -322,6 +337,28 @@ fn extend_flat_logical_residual(residual: &mut Vec<Expr>, value: Expr, head_name
             residual.extend(args);
         }
         other => residual.push(other),
+    }
+}
+
+fn toggle_residual_expr(residual: &mut Vec<Expr>, value: Expr) {
+    if let Some(index) = residual.iter().position(|existing| existing == &value) {
+        residual.remove(index);
+    } else {
+        residual.push(value);
+    }
+}
+
+fn finalize_xor(head: &Expr, mut residual: Vec<Expr>, invert: bool) -> Expr {
+    let expr = match residual.len() {
+        0 => predicate_bool_expr(invert),
+        1 => residual.pop().expect("single residual value"),
+        _ => Expr::call(head.clone(), residual),
+    };
+
+    if invert && truthiness_symbol(&expr).is_none() {
+        Expr::call(system_expr("Not"), vec![expr])
+    } else {
+        expr
     }
 }
 

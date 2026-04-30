@@ -322,6 +322,7 @@ pub enum BuiltinHandler {
     Construct,
     And,
     Or,
+    Xor,
     Not,
     TrueQ,
     BooleanQ,

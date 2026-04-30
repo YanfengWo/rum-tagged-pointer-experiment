@@ -100,10 +100,11 @@ once in its primary implementation group. Other groups may mention it as
   association-aware `Depth` parity, `Level` scalar-zero levelspec parity, and
   empty-expression negative-level depth alignment across the current structural
   walkers, current `Not[Not[...]]` and relational-`Not` simplifications,
-  flat nested `And` / `Or` residual simplification, first-pass `Boole`
-  truth-to-integer conversion, mixed-symbolic `Unequal` chain boundary,
-  nonatomic `OrderedQ` argument-order parity, `ReplacePart` atom-head
-  non-replacement, and non-expanding `All` / `Span` position-spec boundaries
+  flat nested `And` / `Or` residual simplification, first-pass `Xor`
+  boolean/repeated-term reductions, first-pass `Boole` truth-to-integer
+  conversion, mixed-symbolic `Unequal` chain boundary, nonatomic `OrderedQ`
+  argument-order parity, `ReplacePart` atom-head non-replacement, and
+  non-expanding `All` / `Span` position-spec boundaries
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
   across every structural walker, general boolean/comparison evaluation beyond
   the current exact-numeric order-chain reductions
@@ -120,7 +121,7 @@ once in its primary implementation group. Other groups may mention it as
     `Rest`, `Most`, `Take`, `Drop`, `TakeDrop`, `Insert`, `Delete`,
     `TakeList`, `Append`, `Prepend`, `FullForm`, `Symbol`, `Construct`,
     `Equal`, `Unequal`, `Less`, `Greater`, `LessEqual`,
-    `GreaterEqual`, `And`, `Or`, `Not`, `NumericQ`, `EvenQ`, `OddQ`,
+    `GreaterEqual`, `And`, `Or`, `Xor`, `Not`, `NumericQ`, `EvenQ`, `OddQ`,
     `Positive`, `Negative`, `NonPositive`, `NonNegative`, `PossibleZeroQ`,
     `MachineNumberQ`, `RealValuedNumberQ`, `RealValuedNumericQ`, `PrimeQ`,
     `AlgebraicIntegerQ`, `DuplicateFreeQ`, `IntersectingQ`, `DisjointQ`,

@@ -122,6 +122,15 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
         BuiltinHandler::Or,
     ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Xor",
+        "Evaluates exclusive-or over exact boolean arguments and reduces duplicate symbolic terms in the current subset.",
+        AttributeSet::empty()
+            .with(Attribute::Orderless)
+            .with(Attribute::Flat)
+            .with(Attribute::OneIdentity),
+        BuiltinHandler::Xor,
+    ),
     BuiltinSpec::ordinary(
         "Not",
         "Negates a boolean value in the current exact boolean subset.",
