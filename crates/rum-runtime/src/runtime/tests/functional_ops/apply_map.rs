@@ -50,6 +50,38 @@ fn apply_and_mapapply_cover_operator_forms_levelspecs_and_association_values() {
     );
     assert_eq!(
         session
+            .eval_text("Apply[h, f[], {-1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Apply[h, f[], {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "h[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Apply[h, f[g[]], {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[h[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Apply[h, f[g[]], {-3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "h[g[]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Apply[f, g[h[a, b], k[c]], -2]")
             .unwrap()
             .value
@@ -133,6 +165,70 @@ fn map_scan_and_comap_family_cover_current_first_pass_subset() {
             .value
             .to_string(),
         "f[g[f[h[a, b]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Map[h, f[], {-1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Map[h, f[], {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "h[f[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Map[h, f[g[]], {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[h[g[]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Map[h, f[g[]], {-3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "h[f[g[]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("MapIndexed[h, f[], {-1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("MapIndexed[h, f[], {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "h[f[], List[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("MapIndexed[h, f[g[]], {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[h[g[], List[1]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("MapIndexed[h, f[g[]], {-3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "h[f[g[]], List[]]"
     );
     assert_eq!(
         session

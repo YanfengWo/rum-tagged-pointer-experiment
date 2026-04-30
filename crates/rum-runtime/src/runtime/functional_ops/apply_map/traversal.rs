@@ -20,7 +20,7 @@ pub(super) fn apply_heads_recursive(
         Expr::Atom(_) => (expr.clone(), 1),
         Expr::Call { head, args: _ } if is_system_symbol_name(head, "Association") => {
             if let Some(entries) = association_entries_from_expr(expr) {
-                let mut max_depth = 0usize;
+                let mut max_depth = 1usize;
                 let mut transformed_entries = Vec::with_capacity(entries.len());
 
                 for (key, value) in entries {
@@ -71,7 +71,7 @@ pub(super) fn apply_heads_on_standard_call(
     };
 
     let mut transformed_args = Vec::with_capacity(args.len());
-    let mut max_arg_depth = 0usize;
+    let mut max_arg_depth = 1usize;
     for arg in args {
         let (transformed_arg, arg_depth) =
             apply_heads_recursive(arg, operator, config, flavor, level + 1);
@@ -126,7 +126,7 @@ pub(super) fn map_parts_recursive(
         }
         Expr::Call { head, args: _ } if is_system_symbol_name(head, "Association") => {
             if let Some(entries) = association_entries_from_expr(expr) {
-                let mut max_depth = 0usize;
+                let mut max_depth = 1usize;
                 let mut transformed_entries = Vec::with_capacity(entries.len());
 
                 for (key, value) in entries {
@@ -174,7 +174,7 @@ pub(super) fn map_parts_on_standard_call(
     };
 
     let mut transformed_args = Vec::with_capacity(args.len());
-    let mut max_arg_depth = 0usize;
+    let mut max_arg_depth = 1usize;
     for arg in args {
         let (transformed_arg, arg_depth) =
             map_parts_recursive(arg, operator, config, flavor, level + 1);
@@ -223,7 +223,7 @@ pub(super) fn map_indexed_parts_recursive(
         }
         Expr::Call { head, .. } if is_system_symbol_name(head, "Association") => {
             if let Some(entries) = association_entries_from_expr(expr) {
-                let mut max_depth = 0usize;
+                let mut max_depth = 1usize;
                 let mut rebuilt_entries = Vec::with_capacity(entries.len());
 
                 for (index, (key, value)) in entries.into_iter().enumerate() {
@@ -280,7 +280,7 @@ pub(super) fn map_indexed_parts_on_standard_call(
     };
 
     let mut transformed_args = Vec::with_capacity(args.len());
-    let mut max_arg_depth = 0usize;
+    let mut max_arg_depth = 1usize;
     for (index, arg) in args.iter().enumerate() {
         let child_path = extend_isize_path(path, index as isize + 1);
         let (transformed_arg, arg_depth) =
@@ -324,7 +324,7 @@ pub(super) fn collect_scan_parts_recursive(
         Expr::Call { head, args: _ } if is_system_symbol_name(head, "Association") => {
             if let Some(entries) = association_entries_from_expr(expr) {
                 let mut parts = Vec::new();
-                let mut max_depth = 0usize;
+                let mut max_depth = 1usize;
 
                 for (_, value) in entries {
                     let child = collect_scan_parts_recursive(&value, config, level + 1);
@@ -359,7 +359,7 @@ pub(super) fn collect_scan_parts_on_standard_call(
     };
 
     let mut parts = Vec::new();
-    let mut max_child_depth = 0usize;
+    let mut max_child_depth = 1usize;
 
     if config.include_heads {
         let head_result = collect_scan_parts_recursive(head, config, level + 1);

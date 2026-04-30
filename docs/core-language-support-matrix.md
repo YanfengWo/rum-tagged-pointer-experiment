@@ -229,6 +229,8 @@ once in its primary implementation group. Other groups may mention it as
   `ReverseApplied`, `Composition`, `RightComposition`, `Through`, `Operate`,
   `ArrayFilter`, and `ArrayReduce`, plus current `levelspec` / `Heads`
   support for the `Apply`, `Map`, and `Comap` families, current
+  negative-level empty-expression depth alignment for the `Apply` / `Map`
+  traversal families, current
   callable-wrapper support for `OperatorApplied` / `CurryApplied` /
   `ReverseApplied`, operator-form `Heads` parity for the `Apply` family,
   current `Operate[..., 0]` and `Operate[p, n]` parity, current
