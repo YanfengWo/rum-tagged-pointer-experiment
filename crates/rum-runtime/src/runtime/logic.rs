@@ -41,6 +41,10 @@ impl Session {
                     if is_system_symbol_name(inner_head, "Not") && inner_args.len() == 1 {
                         return Ok(inner_args[0].clone());
                     }
+
+                    if let Some(opposite) = negated_relation_head_name(inner_head) {
+                        return Ok(Expr::call(system_expr(opposite), inner_args.clone()));
+                    }
                 }
 
                 Ok(Expr::call(head.clone(), args.to_vec()))
@@ -210,6 +214,19 @@ impl Session {
             None => Expr::call(head.clone(), args.to_vec()),
         }
     }
+}
+
+fn negated_relation_head_name(head: &Expr) -> Option<&'static str> {
+    [
+        ("Equal", "Unequal"),
+        ("Unequal", "Equal"),
+        ("Less", "GreaterEqual"),
+        ("Greater", "LessEqual"),
+        ("LessEqual", "Greater"),
+        ("GreaterEqual", "Less"),
+    ]
+    .into_iter()
+    .find_map(|(name, opposite)| is_system_symbol_name(head, name).then_some(opposite))
 }
 
 fn reduce_unequal_chain(args: &[Expr]) -> Option<bool> {

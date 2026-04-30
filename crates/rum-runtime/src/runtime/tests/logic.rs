@@ -84,6 +84,38 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
         session.eval_text("Not[Not[x]]").unwrap().value.to_string(),
         "x"
     );
+    assert_eq!(
+        session
+            .eval_text("Not[Equal[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Unequal[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Not[Unequal[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Equal[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Not[Less[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "GreaterEqual[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Not[Greater[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "LessEqual[a, b]"
+    );
 }
 
 #[test]
