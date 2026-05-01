@@ -298,8 +298,8 @@ once in its primary implementation group. Other groups may mention it as
   threading with delayed-rule preservation, deep `Association[...]`
   construction plus `Normal` with current
   `RuleDelayed` head preservation, `AssociateTo` update specs over nested rule
-  lists / associations with current delayed-entry preservation, callable `Key[key][assoc]`
-  extraction, callable
+  lists / associations with current delayed-entry preservation, callable
+  `Key[key][assoc]` extraction, callable
   `Association[...][key]` lookup, current `Part[..., Key[...]]` association
   projection including missing-key propagation and no-mixed-key/index
   diagnostics, `Key[...]` key-spec unwrapping and current `RuleDelayed`
@@ -312,8 +312,10 @@ once in its primary implementation group. Other groups may mention it as
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
   forms plus current keyed-lookup propagation, and held symbol plus exact
   part-target mutation first passes for `AssociateTo` / `KeyDropFrom`
-- `planned`: any remaining keyed-helper rule-list breadth and deeper
-  association semantics beyond the current first-pass subset
+- `planned`: any remaining keyed-helper rule-list breadth, deeper
+  value-consuming delayed-entry semantics such as `Merge` / `Catenate`
+  corners, and deeper association semantics beyond the current first-pass
+  subset
 
 ### Functions and Symbols
 
@@ -323,8 +325,9 @@ once in its primary implementation group. Other groups may mention it as
   `AssociationThread`, `KeyUnion`, `KeyIntersection`, `KeyComplement`,
   `Normal`, `AssociateTo`, `KeyDropFrom`, `KeyValuePattern`, `Merge`,
   `Catenate`, `Counts`, `CountsBy`, `GroupBy`, `PositionIndex`, `Missing`
-- `planned`: any remaining keyed-helper rule-list compatibility and
-  deeper association semantics beyond the current first-pass subset
+- `planned`: any remaining keyed-helper rule-list compatibility,
+  value-consuming delayed-entry corners, and deeper association semantics
+  beyond the current first-pass subset
 - `cross-tracked elsewhere`: `#name`, `DeleteDuplicates`, `Map`, `Plus`,
   `Select`, `Sort`
 
