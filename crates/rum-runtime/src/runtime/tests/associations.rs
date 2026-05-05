@@ -1182,6 +1182,26 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text(
+                "x = 0; {Merge[{Association[a :> (x = x + 1)], Association[a :> (x = x + 1)]}, Function[v, v]], x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[a, List[1, 2]]], 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "x = 0; {Merge[{Association[a :> (x = x + 1)], Association[a -> 2]}, HoldComplete], x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[a, HoldComplete[List[Set[x, Plus[x, 1]], 2]]]], 0]"
+    );
+    assert_eq!(
+        session
             .eval_text("Catenate[{Association[a -> 1], Association[b -> 2]}]")
             .unwrap()
             .value
@@ -1203,6 +1223,32 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .value
             .to_string(),
         "List[List[1, 2], 3, 4]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {Catenate[Association[a :> (x = x + 1)]], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1], 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {Catenate[Association[a :> {x = x + 1}, b :> {x = x + 1}]], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1, 2], 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "x = 0; {Catenate[{Association[a :> (x = x + 1)], Association[b :> (x = x + 1)]}], x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1, 2], 2]"
     );
     assert_eq!(
         session

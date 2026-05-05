@@ -6,6 +6,23 @@ enum HeldAssociationPartMutationResult {
     UpdatedPart,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CatenateAssociationValueMode {
+    FlattenValueContribution,
+    AppendValue,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum CatenateStep {
+    Append(Vec<Expr>),
+    AssociationValue {
+        value: Expr,
+        delayed: bool,
+        mode: CatenateAssociationValueMode,
+    },
+    Invalid(Expr),
+}
+
 fn part_target_selectors_are_exact_leaf_path(selector_exprs: &[Expr]) -> bool {
     selector_exprs.iter().all(|expr| {
         expr_as_signed_isize(expr).is_some()
@@ -728,37 +745,30 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("Catenate", args, 1));
         };
 
-        if let Some(entries) = association_entries_from_expr(associations_expr) {
-            let mut flattened = Vec::new();
-            for (_, value) in entries {
-                if let Some(items) = catenate_item_contribution(&value) {
-                    flattened.extend(items);
-                } else {
-                    flattened.push(value);
-                }
-            }
-
-            return Ok(Expr::call(system_expr("List"), flattened));
+        if let Some(entries) = association_entry_forms_from_expr(associations_expr) {
+            return self.resume_catenate_steps_from_index(
+                head.clone(),
+                args.to_vec(),
+                catenate_steps_for_association_entries(
+                    entries,
+                    CatenateAssociationValueMode::FlattenValueContribution,
+                ),
+                0,
+                Vec::new(),
+            );
         }
 
         let Some(items) = list_items(associations_expr) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let mut flattened = Vec::new();
-        for item in items {
-            let Some(contribution) = catenate_item_contribution(item) else {
-                return Ok(self.invalid_call_with_message(
-                    "Catenate",
-                    args,
-                    "invrp",
-                    invalid_association_or_list_message(item),
-                ));
-            };
-            flattened.extend(contribution);
-        }
-
-        Ok(Expr::call(system_expr("List"), flattened))
+        self.resume_catenate_steps_from_index(
+            head.clone(),
+            args.to_vec(),
+            catenate_steps_for_list_items(items),
+            0,
+            Vec::new(),
+        )
     }
 
     pub(in crate::runtime) fn eval_counts(
@@ -833,7 +843,128 @@ fn catenate_item_contribution(expr: &Expr) -> Option<Vec<Expr>> {
     list_items(expr).map(|items| items.to_vec())
 }
 
+fn catenate_steps_for_association_entries(
+    entries: Vec<AssociationEntryForm>,
+    mode: CatenateAssociationValueMode,
+) -> Vec<CatenateStep> {
+    entries
+        .into_iter()
+        .map(|entry| CatenateStep::AssociationValue {
+            value: entry.value,
+            delayed: entry.delayed,
+            mode,
+        })
+        .collect()
+}
+
+fn catenate_steps_for_list_items(items: &[Expr]) -> Vec<CatenateStep> {
+    let mut steps = Vec::new();
+    for item in items {
+        if let Some(entries) = association_entry_forms_from_expr(item) {
+            steps.extend(catenate_steps_for_association_entries(
+                entries,
+                CatenateAssociationValueMode::AppendValue,
+            ));
+        } else if let Some(items) = list_items(item) {
+            steps.push(CatenateStep::Append(items.to_vec()));
+        } else {
+            steps.push(CatenateStep::Invalid(item.clone()));
+            break;
+        }
+    }
+
+    steps
+}
+
+fn append_catenate_association_value(
+    flattened: &mut Vec<Expr>,
+    value: Expr,
+    mode: CatenateAssociationValueMode,
+) {
+    match mode {
+        CatenateAssociationValueMode::FlattenValueContribution => {
+            if let Some(items) = catenate_item_contribution(&value) {
+                flattened.extend(items);
+            } else {
+                flattened.push(value);
+            }
+        }
+        CatenateAssociationValueMode::AppendValue => flattened.push(value),
+    }
+}
+
 impl Session {
+    fn resume_catenate_steps_from_index(
+        &mut self,
+        head: Expr,
+        call_args: Vec<Expr>,
+        steps: Vec<CatenateStep>,
+        index: usize,
+        mut flattened: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let Some(step) = steps.get(index).cloned() else {
+            return Ok(Expr::call(system_expr("List"), flattened));
+        };
+
+        match step {
+            CatenateStep::Append(items) => {
+                flattened.extend(items);
+                self.resume_catenate_steps_from_index(head, call_args, steps, index + 1, flattened)
+            }
+            CatenateStep::AssociationValue {
+                value,
+                delayed,
+                mode,
+            } => {
+                if delayed {
+                    let suspended_head = head.clone();
+                    let suspended_call_args = call_args.clone();
+                    let suspended_steps = steps.clone();
+                    let suspended_flattened = flattened.clone();
+                    let value_result = self.evaluate(value);
+                    let value = self.suspend_with_frame(value_result, move |session, value| {
+                        session.resume_catenate_after_association_value(
+                            suspended_head,
+                            suspended_call_args,
+                            suspended_steps,
+                            index,
+                            suspended_flattened,
+                            value,
+                            mode,
+                        )
+                    })?;
+                    self.resume_catenate_after_association_value(
+                        head, call_args, steps, index, flattened, value, mode,
+                    )
+                } else {
+                    self.resume_catenate_after_association_value(
+                        head, call_args, steps, index, flattened, value, mode,
+                    )
+                }
+            }
+            CatenateStep::Invalid(expr) => Ok(self.invalid_call_with_message(
+                "Catenate",
+                &call_args,
+                "invrp",
+                invalid_association_or_list_message(&expr),
+            )),
+        }
+    }
+
+    fn resume_catenate_after_association_value(
+        &mut self,
+        head: Expr,
+        call_args: Vec<Expr>,
+        steps: Vec<CatenateStep>,
+        index: usize,
+        mut flattened: Vec<Expr>,
+        value: Expr,
+        mode: CatenateAssociationValueMode,
+    ) -> Result<Expr, EvalError> {
+        append_catenate_association_value(&mut flattened, value, mode);
+        self.resume_catenate_steps_from_index(head, call_args, steps, index + 1, flattened)
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn resume_key_union_missing_values_from_index(
         &mut self,

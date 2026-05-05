@@ -456,6 +456,53 @@ fn resume_eval_request_with_input_can_finish_keyunion_after_suspending_fill_func
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_merge_after_suspending_delayed_association_value() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("Merge[{Association[a :> InputString[\"value: \"]]}, Function[v, v]]")
+        .expect_err("Merge should suspend when its combiner evaluates a delayed association value");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "value: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue Merge after the delayed association value resolves");
+
+    assert_eq!(
+        response.value.to_string(),
+        "Association[Rule[a, List[\"done\"]]]"
+    );
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_catenate_after_suspending_delayed_association_value() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("Catenate[Association[a :> {InputString[\"value: \"]}]]")
+        .expect_err("Catenate should suspend when a delayed association value requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "value: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue Catenate after the delayed association value resolves");
+
+    assert_eq!(response.value.to_string(), "List[\"done\"]");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_match_limit() {
     let mut session = Session::new();
 

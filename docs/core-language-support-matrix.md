@@ -290,7 +290,8 @@ once in its primary implementation group. Other groups may mention it as
   keyed-helper operator-form parity across `KeyMap` / `KeyValueMap` /
   `KeySelect` / `AssociationMap` / `Merge` / `CountsBy` / `GroupBy`,
   rule-list-normalizing `KeySelect` / `KeySort` / `KeySortBy`, mixed
-  association/rule-list `Merge` plus more precise invalid-item diagnostics,
+  association/rule-list `Merge` plus more precise invalid-item diagnostics
+  and current combiner-controlled delayed-value consumption,
   current list-form `KeyUnion` / `KeyIntersection` / `KeyComplement`
   semantics over association, rule, and rule-list keyed collections,
   including `KeyUnion[..., f]` fill behavior and current `KeyComplement`
@@ -307,15 +308,15 @@ once in its primary implementation group. Other groups may mention it as
   `KeyMap` / `KeySelect` / `KeySort` / `KeySortBy` keyed-transform subset
   plus `KeyUnion` / `KeyIntersection` / `KeyComplement`,
   custom `KeySort` comparers,
-  `Catenate` over lists plus association values with current invalid-argument
-  parity, current `GroupBy[list, f, g]` reducer support,
+  `Catenate` over lists plus association values with current delayed
+  association-value consumption and current invalid-argument subset parity,
+  current `GroupBy[list, f, g]` reducer support,
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
   forms plus current keyed-lookup propagation, and held symbol plus exact
   part-target mutation first passes for `AssociateTo` / `KeyDropFrom`
 - `planned`: any remaining keyed-helper rule-list breadth, deeper
-  value-consuming delayed-entry semantics such as `Merge` / `Catenate`
-  corners, and deeper association semantics beyond the current first-pass
-  subset
+  direct-association `Catenate` invalid-value boundaries, and deeper
+  association semantics beyond the current first-pass subset
 
 ### Functions and Symbols
 
@@ -326,8 +327,8 @@ once in its primary implementation group. Other groups may mention it as
   `Normal`, `AssociateTo`, `KeyDropFrom`, `KeyValuePattern`, `Merge`,
   `Catenate`, `Counts`, `CountsBy`, `GroupBy`, `PositionIndex`, `Missing`
 - `planned`: any remaining keyed-helper rule-list compatibility,
-  value-consuming delayed-entry corners, and deeper association semantics
-  beyond the current first-pass subset
+  direct-association `Catenate` invalid-value boundaries, and deeper
+  association semantics beyond the current first-pass subset
 - `cross-tracked elsewhere`: `#name`, `DeleteDuplicates`, `Map`, `Plus`,
   `Select`, `Sort`
 
