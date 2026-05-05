@@ -260,10 +260,13 @@ impl Session {
         _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let (expr, depth) = match args {
-            [expr] => (expr, DeleteMissingDepth::Finite(1)),
+        let (expr, mode) = match args {
+            [expr] => (
+                expr,
+                DeleteMissingMode::Recursive(DeleteMissingDepth::Finite(1)),
+            ),
             [expr, depth_expr] => {
-                let Some(depth) = parse_delete_missing_depth(depth_expr) else {
+                let Some(depth) = parse_delete_missing_positive_depth(depth_expr) else {
                     return Ok(self.invalid_call_with_message(
                         "DeleteMissing",
                         args,
@@ -271,12 +274,31 @@ impl Session {
                         "The second argument is expected to be a positive integer or Infinity.",
                     ));
                 };
-                (expr, depth)
+                (expr, DeleteMissingMode::Recursive(depth))
             }
-            _ => return Ok(self.invalid_call_with_arg_range("DeleteMissing", args, 1, 2)),
+            [expr, level_expr, scan_expr] => {
+                let Some(level) = parse_delete_missing_positive_depth(level_expr) else {
+                    return Ok(self.invalid_call_with_message(
+                        "DeleteMissing",
+                        args,
+                        "arg2",
+                        "The second argument is expected to be a positive integer or Infinity.",
+                    ));
+                };
+                let Some(scan) = parse_delete_missing_scan_depth(scan_expr) else {
+                    return Ok(self.invalid_call_with_message(
+                        "DeleteMissing",
+                        args,
+                        "arg3",
+                        "The third argument is expected to be a non-negative integer or Infinity.",
+                    ));
+                };
+                (expr, DeleteMissingMode::Target { level, scan })
+            }
+            _ => return Ok(self.invalid_call_with_arg_range("DeleteMissing", args, 1, 3)),
         };
 
-        let Some(value) = delete_missing_from_keyed_data(expr, depth) else {
+        let Some(value) = delete_missing_from_keyed_data(expr, mode) else {
             return Ok(self.invalid_call_with_message(
                 "DeleteMissing",
                 args,
@@ -314,6 +336,15 @@ pub(in crate::runtime) fn missing_key_absent_expr(key: Expr) -> Expr {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DeleteMissingMode {
+    Recursive(DeleteMissingDepth),
+    Target {
+        level: DeleteMissingDepth,
+        scan: DeleteMissingDepth,
+    },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum DeleteMissingDepth {
     Finite(usize),
     Infinity,
@@ -327,9 +358,24 @@ impl DeleteMissingDepth {
             Self::Infinity => Some(Self::Infinity),
         }
     }
+
+    fn descend_scan(self) -> Option<Self> {
+        match self {
+            Self::Finite(depth) if depth > 0 => Some(Self::Finite(depth - 1)),
+            Self::Finite(_) => None,
+            Self::Infinity => Some(Self::Infinity),
+        }
+    }
+
+    fn expr(self) -> Expr {
+        match self {
+            Self::Finite(depth) => Expr::integer(BigInt::from(depth)),
+            Self::Infinity => system_expr("Infinity"),
+        }
+    }
 }
 
-fn parse_delete_missing_depth(expr: &Expr) -> Option<DeleteMissingDepth> {
+fn parse_delete_missing_positive_depth(expr: &Expr) -> Option<DeleteMissingDepth> {
     if is_system_symbol_name(expr, "Infinity") {
         return Some(DeleteMissingDepth::Infinity);
     }
@@ -339,42 +385,69 @@ fn parse_delete_missing_depth(expr: &Expr) -> Option<DeleteMissingDepth> {
         .map(DeleteMissingDepth::Finite)
 }
 
-fn delete_missing_from_keyed_data(expr: &Expr, depth: DeleteMissingDepth) -> Option<Expr> {
+fn parse_delete_missing_scan_depth(expr: &Expr) -> Option<DeleteMissingDepth> {
+    if is_system_symbol_name(expr, "Infinity") {
+        return Some(DeleteMissingDepth::Infinity);
+    }
+
+    expr_as_non_negative_usize(expr).map(DeleteMissingDepth::Finite)
+}
+
+fn delete_missing_from_keyed_data(expr: &Expr, mode: DeleteMissingMode) -> Option<Expr> {
+    match mode {
+        DeleteMissingMode::Recursive(depth) => {
+            delete_missing_from_keyed_data_recursive(expr, depth)
+        }
+        DeleteMissingMode::Target {
+            level: DeleteMissingDepth::Infinity,
+            ..
+        } => delete_missing_from_keyed_data_recursive(expr, DeleteMissingDepth::Infinity),
+        DeleteMissingMode::Target {
+            level: DeleteMissingDepth::Finite(level),
+            scan,
+        } => delete_missing_at_target_level(expr, level, scan),
+    }
+}
+
+fn delete_missing_from_keyed_data_recursive(
+    expr: &Expr,
+    depth: DeleteMissingDepth,
+) -> Option<Expr> {
     if let Some(items) = list_items(expr) {
-        return Some(delete_missing_from_list(items, depth));
+        return Some(delete_missing_from_list_recursive(items, depth));
     }
 
     let entries = association_entry_forms_from_expr(expr)?;
     Some(render_association_entry_forms_preserving_heads(
-        delete_missing_from_association_entries(entries, depth),
+        delete_missing_from_association_entries_recursive(entries, depth),
     ))
 }
 
-fn delete_missing_from_list(items: &[Expr], depth: DeleteMissingDepth) -> Expr {
+fn delete_missing_from_list_recursive(items: &[Expr], depth: DeleteMissingDepth) -> Expr {
     Expr::call(
         system_expr("List"),
         items
             .iter()
-            .filter_map(|item| delete_missing_list_item(item, depth))
+            .filter_map(|item| delete_missing_list_item_recursive(item, depth))
             .collect(),
     )
 }
 
-fn delete_missing_list_item(item: &Expr, depth: DeleteMissingDepth) -> Option<Expr> {
+fn delete_missing_list_item_recursive(item: &Expr, depth: DeleteMissingDepth) -> Option<Expr> {
     if is_missing_expr(item) || rule_like_expr_has_missing_value(item) {
         return None;
     }
 
     if let Some(child_depth) = depth.descend() {
         if list_items(item).is_some() || association_entry_forms_from_expr(item).is_some() {
-            return delete_missing_from_keyed_data(item, child_depth);
+            return delete_missing_from_keyed_data_recursive(item, child_depth);
         }
     }
 
     Some(item.clone())
 }
 
-fn delete_missing_from_association_entries(
+fn delete_missing_from_association_entries_recursive(
     entries: Vec<AssociationEntryForm>,
     depth: DeleteMissingDepth,
 ) -> Vec<AssociationEntryForm> {
@@ -387,15 +460,149 @@ fn delete_missing_from_association_entries(
 
             if !entry.delayed {
                 if let Some(child_depth) = depth.descend() {
-                    if let Some(value) = delete_missing_from_keyed_data(&entry.value, child_depth) {
+                    if let Some(value) =
+                        delete_missing_from_keyed_data_recursive(&entry.value, child_depth)
+                    {
                         entry.value = value;
                     }
                 }
+            } else if let Some(child_depth) = depth.descend() {
+                entry.value = delete_missing_delayed_wrapper(
+                    entry.value,
+                    DeleteMissingMode::Recursive(child_depth),
+                );
             }
 
             Some(entry)
         })
         .collect()
+}
+
+fn delete_missing_at_target_level(
+    expr: &Expr,
+    level: usize,
+    scan: DeleteMissingDepth,
+) -> Option<Expr> {
+    if let Some(items) = list_items(expr) {
+        return Some(delete_missing_from_list_at_target_level(items, level, scan));
+    }
+
+    let entries = association_entry_forms_from_expr(expr)?;
+    Some(render_association_entry_forms_preserving_heads(
+        delete_missing_from_association_entries_at_target_level(entries, level, scan),
+    ))
+}
+
+fn delete_missing_from_list_at_target_level(
+    items: &[Expr],
+    level: usize,
+    scan: DeleteMissingDepth,
+) -> Expr {
+    Expr::call(
+        system_expr("List"),
+        items
+            .iter()
+            .filter_map(|item| delete_missing_list_item_at_target_level(item, level, scan))
+            .collect(),
+    )
+}
+
+fn delete_missing_list_item_at_target_level(
+    item: &Expr,
+    level: usize,
+    scan: DeleteMissingDepth,
+) -> Option<Expr> {
+    if level == 1 {
+        return (!rule_like_expr_has_missing_value(item) && !contains_missing_within(item, scan))
+            .then(|| item.clone());
+    }
+
+    if list_items(item).is_some() || association_entry_forms_from_expr(item).is_some() {
+        return delete_missing_at_target_level(item, level - 1, scan);
+    }
+
+    Some(item.clone())
+}
+
+fn delete_missing_from_association_entries_at_target_level(
+    entries: Vec<AssociationEntryForm>,
+    level: usize,
+    scan: DeleteMissingDepth,
+) -> Vec<AssociationEntryForm> {
+    entries
+        .into_iter()
+        .filter_map(|mut entry| {
+            if level == 1 {
+                if is_missing_expr(&entry.value) || contains_missing_within(&entry.value, scan) {
+                    return None;
+                }
+            } else if entry.delayed {
+                entry.value = delete_missing_delayed_wrapper(
+                    entry.value,
+                    DeleteMissingMode::Target {
+                        level: DeleteMissingDepth::Finite(level - 1),
+                        scan,
+                    },
+                );
+            } else if let Some(value) =
+                delete_missing_at_target_level(&entry.value, level - 1, scan)
+            {
+                entry.value = value;
+            }
+
+            Some(entry)
+        })
+        .collect()
+}
+
+fn delete_missing_delayed_wrapper(value: Expr, mode: DeleteMissingMode) -> Expr {
+    let local = system_expr("rum$deleteMissingValue");
+    let cleanup = Expr::call(
+        system_expr("DeleteMissing"),
+        delete_missing_call_args(local.clone(), mode),
+    );
+    let should_cleanup = Expr::call(
+        system_expr("Or"),
+        vec![
+            Expr::call(system_expr("ListQ"), vec![local.clone()]),
+            Expr::call(system_expr("AssociationQ"), vec![local.clone()]),
+        ],
+    );
+
+    Expr::call(
+        system_expr("With"),
+        vec![
+            Expr::call(
+                system_expr("List"),
+                vec![Expr::call(system_expr("Rule"), vec![local.clone(), value])],
+            ),
+            Expr::call(system_expr("If"), vec![should_cleanup, cleanup, local]),
+        ],
+    )
+}
+
+fn delete_missing_call_args(expr: Expr, mode: DeleteMissingMode) -> Vec<Expr> {
+    match mode {
+        DeleteMissingMode::Recursive(depth) => vec![expr, depth.expr()],
+        DeleteMissingMode::Target { level, scan } => vec![expr, level.expr(), scan.expr()],
+    }
+}
+
+fn contains_missing_within(expr: &Expr, depth: DeleteMissingDepth) -> bool {
+    if is_missing_expr(expr) {
+        return true;
+    }
+
+    let Some(child_depth) = depth.descend_scan() else {
+        return false;
+    };
+
+    let Expr::Call { args, .. } = expr else {
+        return false;
+    };
+
+    args.iter()
+        .any(|arg| contains_missing_within(arg, child_depth))
 }
 
 fn is_missing_expr(expr: &Expr) -> bool {

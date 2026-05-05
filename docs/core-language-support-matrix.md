@@ -312,14 +312,15 @@ once in its primary implementation group. Other groups may mention it as
   association-value consumption and current invalid-argument subset parity,
   current `GroupBy[list, f, g]` reducer support,
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
-  forms plus current keyed-lookup propagation and first-pass
-  `DeleteMissing` over list / association / rule-list data, and held symbol
-  plus exact part-target mutation first passes for `AssociateTo` /
+  forms plus current keyed-lookup propagation and current `DeleteMissing`
+  over list / association / rule-list data including depth, third-argument
+  scan-depth, and delayed nested-cleanup subsets, and held symbol plus exact
+  part-target mutation first passes for `AssociateTo` /
   `KeyDropFrom`
 - `planned`: any remaining keyed-helper rule-list breadth, deeper
-  direct-association `Catenate` invalid-value boundaries, fuller
-  `DeleteMissing` third-argument and delayed nested-cleanup parity, and
-  deeper association semantics beyond the current first-pass subset
+  direct-association `Catenate` invalid-value boundaries, remaining exact
+  `DeleteMissing` eager-delayed target-level deletion and internal-message
+  parity, and deeper association semantics beyond the current first-pass subset
 
 ### Functions and Symbols
 
@@ -331,9 +332,9 @@ once in its primary implementation group. Other groups may mention it as
   `Catenate`, `Counts`, `CountsBy`, `GroupBy`, `PositionIndex`, `Missing`,
   `DeleteMissing`
 - `planned`: any remaining keyed-helper rule-list compatibility,
-  direct-association `Catenate` invalid-value boundaries, fuller
-  `DeleteMissing` third-argument and delayed nested-cleanup parity, and
-  deeper association semantics beyond the current first-pass subset
+  direct-association `Catenate` invalid-value boundaries, remaining exact
+  `DeleteMissing` eager-delayed target-level deletion and internal-message
+  parity, and deeper association semantics beyond the current first-pass subset
 - `cross-tracked elsewhere`: `#name`, `DeleteDuplicates`, `Map`, `Plus`,
   `Select`, `Sort`
 

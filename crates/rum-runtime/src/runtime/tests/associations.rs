@@ -1116,6 +1116,9 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
         session.eval_text("assoc").unwrap().value.to_string(),
         "Association[Rule[b, 2]]"
     );
+    session
+        .eval_text("Unprotect[assoc]; ClearAll[assoc]")
+        .unwrap();
     assert_eq!(
         session
             .eval_text("KeyValuePattern[a -> _]")
@@ -1362,6 +1365,84 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .to_string(),
         "List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], 0]"
     );
+    assert_eq!(
+        session
+            .eval_text("DeleteMissing[{{1, Missing[]}, {2, 3}}, 1, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1, Missing[]], List[2, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DeleteMissing[{{1, Missing[]}, {2, 3}}, 1, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[2, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DeleteMissing[{{1, {Missing[]}}, {2, 3}}, 1, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1, List[Missing[]]], List[2, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DeleteMissing[{{1, {Missing[]}}, {2, 3}}, 1, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[2, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DeleteMissing[Association[a -> {1, Missing[]}, b -> {2, 3}], 1, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[b, List[2, 3]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DeleteMissing[{f[Missing[]], 2}, 1, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DeleteMissing[{a -> {Missing[], 1}, b -> {2}}, 1, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[b, List[2]]]"
+    );
+    session
+        .eval_text(
+            "x = 0; dmAssoc = DeleteMissing[Association[a :> {Missing[], x = x + 1}, b -> 2], 2]",
+        )
+        .unwrap();
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "0");
+    assert_eq!(
+        session.eval_text("dmAssoc[a]").unwrap().value.to_string(),
+        "List[1]"
+    );
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
+    session
+        .eval_text(
+            "x = 0; dmAssoc = DeleteMissing[Association[a :> {Missing[], x = x + 1}, b -> 2], 2, 1]",
+        )
+        .unwrap();
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "0");
+    assert_eq!(
+        session.eval_text("dmAssoc[a]").unwrap().value.to_string(),
+        "List[1]"
+    );
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
 }
 
 #[test]
@@ -1949,17 +2030,17 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
     );
 
     let outcome = session
-        .eval_text("DeleteMissing[{Missing[]}, Infinity, 1]")
+        .eval_text("DeleteMissing[{Missing[]}, 1, a]")
         .unwrap();
     assert_eq!(
         outcome.value.to_string(),
-        "DeleteMissing[List[Missing[]], Infinity, 1]"
+        "DeleteMissing[List[Missing[]], 1, a]"
     );
     assert!(
         outcome
             .messages
             .iter()
-            .any(|message| message.symbol == "DeleteMissing" && message.tag == "argtu")
+            .any(|message| message.symbol == "DeleteMissing" && message.tag == "arg3")
     );
 
     let outcome = session.eval_text("CountsBy[a, f]").unwrap();
