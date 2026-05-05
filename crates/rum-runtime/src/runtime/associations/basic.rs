@@ -254,6 +254,39 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         Ok(Expr::call(head.clone(), args.to_vec()))
     }
+
+    pub(in crate::runtime) fn eval_delete_missing(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let (expr, depth) = match args {
+            [expr] => (expr, DeleteMissingDepth::Finite(1)),
+            [expr, depth_expr] => {
+                let Some(depth) = parse_delete_missing_depth(depth_expr) else {
+                    return Ok(self.invalid_call_with_message(
+                        "DeleteMissing",
+                        args,
+                        "arg2",
+                        "The second argument is expected to be a positive integer or Infinity.",
+                    ));
+                };
+                (expr, depth)
+            }
+            _ => return Ok(self.invalid_call_with_arg_range("DeleteMissing", args, 1, 2)),
+        };
+
+        let Some(value) = delete_missing_from_keyed_data(expr, depth) else {
+            return Ok(self.invalid_call_with_message(
+                "DeleteMissing",
+                args,
+                "invrp",
+                invalid_association_or_list_message(expr),
+            ));
+        };
+
+        Ok(value)
+    }
 }
 
 pub(in crate::runtime) fn is_association_expr(expr: &Expr) -> bool {
@@ -278,6 +311,99 @@ pub(in crate::runtime) fn apply_association_to_args(head: &Expr, args: &[Expr]) 
 
 pub(in crate::runtime) fn missing_key_absent_expr(key: Expr) -> Expr {
     Expr::call(system_expr("Missing"), vec![Expr::string("KeyAbsent"), key])
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DeleteMissingDepth {
+    Finite(usize),
+    Infinity,
+}
+
+impl DeleteMissingDepth {
+    fn descend(self) -> Option<Self> {
+        match self {
+            Self::Finite(depth) if depth > 1 => Some(Self::Finite(depth - 1)),
+            Self::Finite(_) => None,
+            Self::Infinity => Some(Self::Infinity),
+        }
+    }
+}
+
+fn parse_delete_missing_depth(expr: &Expr) -> Option<DeleteMissingDepth> {
+    if is_system_symbol_name(expr, "Infinity") {
+        return Some(DeleteMissingDepth::Infinity);
+    }
+
+    expr_as_non_negative_usize(expr)
+        .filter(|depth| *depth > 0)
+        .map(DeleteMissingDepth::Finite)
+}
+
+fn delete_missing_from_keyed_data(expr: &Expr, depth: DeleteMissingDepth) -> Option<Expr> {
+    if let Some(items) = list_items(expr) {
+        return Some(delete_missing_from_list(items, depth));
+    }
+
+    let entries = association_entry_forms_from_expr(expr)?;
+    Some(render_association_entry_forms_preserving_heads(
+        delete_missing_from_association_entries(entries, depth),
+    ))
+}
+
+fn delete_missing_from_list(items: &[Expr], depth: DeleteMissingDepth) -> Expr {
+    Expr::call(
+        system_expr("List"),
+        items
+            .iter()
+            .filter_map(|item| delete_missing_list_item(item, depth))
+            .collect(),
+    )
+}
+
+fn delete_missing_list_item(item: &Expr, depth: DeleteMissingDepth) -> Option<Expr> {
+    if is_missing_expr(item) || rule_like_expr_has_missing_value(item) {
+        return None;
+    }
+
+    if let Some(child_depth) = depth.descend() {
+        if list_items(item).is_some() || association_entry_forms_from_expr(item).is_some() {
+            return delete_missing_from_keyed_data(item, child_depth);
+        }
+    }
+
+    Some(item.clone())
+}
+
+fn delete_missing_from_association_entries(
+    entries: Vec<AssociationEntryForm>,
+    depth: DeleteMissingDepth,
+) -> Vec<AssociationEntryForm> {
+    entries
+        .into_iter()
+        .filter_map(|mut entry| {
+            if is_missing_expr(&entry.value) {
+                return None;
+            }
+
+            if !entry.delayed {
+                if let Some(child_depth) = depth.descend() {
+                    if let Some(value) = delete_missing_from_keyed_data(&entry.value, child_depth) {
+                        entry.value = value;
+                    }
+                }
+            }
+
+            Some(entry)
+        })
+        .collect()
+}
+
+fn is_missing_expr(expr: &Expr) -> bool {
+    matches!(expr, Expr::Call { head, .. } if is_system_symbol_name(head, "Missing"))
+}
+
+fn rule_like_expr_has_missing_value(expr: &Expr) -> bool {
+    parse_association_entry_form(expr).is_some_and(|entry| is_missing_expr(&entry.value))
 }
 
 fn lookup_value(

@@ -408,6 +408,7 @@ pub enum BuiltinHandler {
     GroupBy,
     PositionIndex,
     Missing,
+    DeleteMissing,
     SameQ,
     UnsameQ,
     Equal,

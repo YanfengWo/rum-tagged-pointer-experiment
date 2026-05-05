@@ -164,6 +164,11 @@ pub(super) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Missing,
     ),
     BuiltinSpec::ordinary(
+        "DeleteMissing",
+        "Deletes Missing entries from lists, associations, and rule-list data in the current first-pass subset.",
+        BuiltinHandler::DeleteMissing,
+    ),
+    BuiltinSpec::ordinary(
         "MissingQ",
         "Tests whether an expression is a Missing object.",
         BuiltinHandler::MissingQ,

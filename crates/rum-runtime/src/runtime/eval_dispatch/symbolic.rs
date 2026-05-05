@@ -96,6 +96,7 @@ impl Session {
             BuiltinHandler::GroupBy => self.eval_group_by(head, args),
             BuiltinHandler::PositionIndex => self.eval_position_index(head, args),
             BuiltinHandler::Missing => self.eval_missing(head, args),
+            BuiltinHandler::DeleteMissing => self.eval_delete_missing(head, args),
             BuiltinHandler::SameQ => self.eval_same_q(head, args),
             BuiltinHandler::UnsameQ => self.eval_unsame_q(head, args),
             BuiltinHandler::Equal => self.eval_equal(head, args),
