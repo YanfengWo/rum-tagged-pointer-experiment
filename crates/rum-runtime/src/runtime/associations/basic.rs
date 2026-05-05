@@ -425,91 +425,289 @@ impl Session {
     ) -> Result<Option<Expr>, EvalError> {
         if let Some(items) = list_items(expr) {
             return self
-                .delete_missing_from_list_at_target_level(items, level, scan)
+                .resume_delete_missing_list_at_target_level(
+                    items.to_vec(),
+                    level,
+                    scan,
+                    0,
+                    Vec::new(),
+                )
                 .map(Some);
         }
 
         let Some(entries) = association_entry_forms_from_expr(expr) else {
             return Ok(None);
         };
-        Ok(Some(render_association_entry_forms_preserving_heads(
-            self.delete_missing_from_association_entries_at_target_level(entries, level, scan)?,
-        )))
+        self.resume_delete_missing_association_at_target_level(entries, level, scan, 0, Vec::new())
+            .map(Some)
     }
 
-    fn delete_missing_from_list_at_target_level(
+    fn resume_delete_missing_list_at_target_level(
         &mut self,
-        items: &[Expr],
+        items: Vec<Expr>,
         level: usize,
         scan: DeleteMissingDepth,
+        index: usize,
+        mut kept: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
-        let mut kept = Vec::new();
-        for item in items {
-            if let Some(value) = self.delete_missing_list_item_at_target_level(item, level, scan)? {
-                kept.push(value);
+        let Some(item) = items.get(index).cloned() else {
+            return Ok(Expr::call(system_expr("List"), kept));
+        };
+
+        if level == 1 {
+            if !rule_like_expr_has_missing_value(&item) && !contains_missing_within(&item, scan) {
+                kept.push(item);
             }
+
+            return self.resume_delete_missing_list_at_target_level(
+                items,
+                level,
+                scan,
+                index + 1,
+                kept,
+            );
         }
 
-        Ok(Expr::call(system_expr("List"), kept))
+        if let Some(child_items) = list_items(&item) {
+            let child_result = self.resume_delete_missing_list_at_target_level(
+                child_items.to_vec(),
+                level - 1,
+                scan,
+                0,
+                Vec::new(),
+            );
+            let child_value = self.suspend_with_frame(child_result, {
+                let items = items.clone();
+                let kept = kept.clone();
+                move |session, value| {
+                    session.resume_delete_missing_list_after_child(
+                        items, level, scan, index, kept, value,
+                    )
+                }
+            })?;
+            return self.resume_delete_missing_list_after_child(
+                items,
+                level,
+                scan,
+                index,
+                kept,
+                child_value,
+            );
+        }
+
+        if let Some(child_entries) = association_entry_forms_from_expr(&item) {
+            let child_result = self.resume_delete_missing_association_at_target_level(
+                child_entries,
+                level - 1,
+                scan,
+                0,
+                Vec::new(),
+            );
+            let child_value = self.suspend_with_frame(child_result, {
+                let items = items.clone();
+                let kept = kept.clone();
+                move |session, value| {
+                    session.resume_delete_missing_list_after_child(
+                        items, level, scan, index, kept, value,
+                    )
+                }
+            })?;
+            return self.resume_delete_missing_list_after_child(
+                items,
+                level,
+                scan,
+                index,
+                kept,
+                child_value,
+            );
+        }
+
+        kept.push(item);
+        self.resume_delete_missing_list_at_target_level(items, level, scan, index + 1, kept)
     }
 
-    fn delete_missing_list_item_at_target_level(
+    fn resume_delete_missing_list_after_child(
         &mut self,
-        item: &Expr,
+        items: Vec<Expr>,
         level: usize,
         scan: DeleteMissingDepth,
-    ) -> Result<Option<Expr>, EvalError> {
-        if level == 1 {
-            return Ok((!rule_like_expr_has_missing_value(item)
-                && !contains_missing_within(item, scan))
-            .then(|| item.clone()));
-        }
-
-        if list_items(item).is_some() || association_entry_forms_from_expr(item).is_some() {
-            return self.delete_missing_at_target_level(item, level - 1, scan);
-        }
-
-        Ok(Some(item.clone()))
+        index: usize,
+        mut kept: Vec<Expr>,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        kept.push(value);
+        self.resume_delete_missing_list_at_target_level(items, level, scan, index + 1, kept)
     }
 
-    fn delete_missing_from_association_entries_at_target_level(
+    fn resume_delete_missing_association_at_target_level(
         &mut self,
         entries: Vec<AssociationEntryForm>,
         level: usize,
         scan: DeleteMissingDepth,
-    ) -> Result<Vec<AssociationEntryForm>, EvalError> {
-        let mut kept = Vec::new();
-        for mut entry in entries {
-            if level == 1 {
-                let predicate_value = if entry.delayed {
-                    self.evaluate(entry.value.clone())?
-                } else {
-                    entry.value.clone()
-                };
+        index: usize,
+        mut kept: Vec<AssociationEntryForm>,
+    ) -> Result<Expr, EvalError> {
+        let Some(mut entry) = entries.get(index).cloned() else {
+            return Ok(render_association_entry_forms_preserving_heads(kept));
+        };
 
-                if is_missing_expr(&predicate_value)
-                    || contains_missing_within(&predicate_value, scan)
-                {
-                    continue;
+        if level == 1 {
+            let predicate_result = if entry.delayed {
+                self.evaluate(entry.value.clone())
+            } else {
+                Ok(entry.value.clone())
+            };
+            let predicate_value = self.suspend_with_frame(predicate_result, {
+                let entries = entries.clone();
+                let entry = entry.clone();
+                let kept = kept.clone();
+                move |session, value| {
+                    session.resume_delete_missing_association_after_predicate(
+                        entries, level, scan, index, kept, entry, value,
+                    )
                 }
-            } else if entry.delayed {
-                entry.value = delete_missing_delayed_wrapper(
-                    entry.value,
-                    DeleteMissingMode::Target {
-                        level: DeleteMissingDepth::Finite(level - 1),
-                        scan,
-                    },
-                );
-            } else if let Some(value) =
-                self.delete_missing_at_target_level(&entry.value, level - 1, scan)?
-            {
-                entry.value = value;
-            }
+            })?;
+            return self.resume_delete_missing_association_after_predicate(
+                entries,
+                level,
+                scan,
+                index,
+                kept,
+                entry,
+                predicate_value,
+            );
+        }
 
+        if entry.delayed {
+            entry.value = delete_missing_delayed_wrapper(
+                entry.value,
+                DeleteMissingMode::Target {
+                    level: DeleteMissingDepth::Finite(level - 1),
+                    scan,
+                },
+            );
+            kept.push(entry);
+            return self.resume_delete_missing_association_at_target_level(
+                entries,
+                level,
+                scan,
+                index + 1,
+                kept,
+            );
+        }
+
+        if let Some(child_items) = list_items(&entry.value) {
+            let child_result = self.resume_delete_missing_list_at_target_level(
+                child_items.to_vec(),
+                level - 1,
+                scan,
+                0,
+                Vec::new(),
+            );
+            let child_value = self.suspend_with_frame(child_result, {
+                let entries = entries.clone();
+                let entry = entry.clone();
+                let kept = kept.clone();
+                move |session, value| {
+                    session.resume_delete_missing_association_after_child(
+                        entries, level, scan, index, kept, entry, value,
+                    )
+                }
+            })?;
+            return self.resume_delete_missing_association_after_child(
+                entries,
+                level,
+                scan,
+                index,
+                kept,
+                entry,
+                child_value,
+            );
+        }
+
+        if let Some(child_entries) = association_entry_forms_from_expr(&entry.value) {
+            let child_result = self.resume_delete_missing_association_at_target_level(
+                child_entries,
+                level - 1,
+                scan,
+                0,
+                Vec::new(),
+            );
+            let child_value = self.suspend_with_frame(child_result, {
+                let entries = entries.clone();
+                let entry = entry.clone();
+                let kept = kept.clone();
+                move |session, value| {
+                    session.resume_delete_missing_association_after_child(
+                        entries, level, scan, index, kept, entry, value,
+                    )
+                }
+            })?;
+            return self.resume_delete_missing_association_after_child(
+                entries,
+                level,
+                scan,
+                index,
+                kept,
+                entry,
+                child_value,
+            );
+        }
+
+        kept.push(entry);
+        self.resume_delete_missing_association_at_target_level(
+            entries,
+            level,
+            scan,
+            index + 1,
+            kept,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn resume_delete_missing_association_after_predicate(
+        &mut self,
+        entries: Vec<AssociationEntryForm>,
+        level: usize,
+        scan: DeleteMissingDepth,
+        index: usize,
+        mut kept: Vec<AssociationEntryForm>,
+        entry: AssociationEntryForm,
+        predicate_value: Expr,
+    ) -> Result<Expr, EvalError> {
+        if !is_missing_expr(&predicate_value) && !contains_missing_within(&predicate_value, scan) {
             kept.push(entry);
         }
 
-        Ok(kept)
+        self.resume_delete_missing_association_at_target_level(
+            entries,
+            level,
+            scan,
+            index + 1,
+            kept,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn resume_delete_missing_association_after_child(
+        &mut self,
+        entries: Vec<AssociationEntryForm>,
+        level: usize,
+        scan: DeleteMissingDepth,
+        index: usize,
+        mut kept: Vec<AssociationEntryForm>,
+        mut entry: AssociationEntryForm,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        entry.value = value;
+        kept.push(entry);
+        self.resume_delete_missing_association_at_target_level(
+            entries,
+            level,
+            scan,
+            index + 1,
+            kept,
+        )
     }
 }
 

@@ -503,6 +503,91 @@ fn resume_eval_request_with_input_can_finish_catenate_after_suspending_delayed_a
 }
 
 #[test]
+fn resume_eval_request_with_input_reports_catenate_invalid_value_after_suspension() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("Catenate[Association[a :> {InputString[\"value: \"]}, b -> 2]]")
+        .expect_err("Catenate should suspend before discovering the later invalid scalar");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "value: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should report the invalid scalar after collecting delayed values");
+
+    assert_eq!(
+        response.value.to_string(),
+        "Catenate[Association[RuleDelayed[a, List[InputString[\"value: \"]]], Rule[b, 2]]]"
+    );
+    assert_eq!(response.messages.len(), 1);
+    assert_eq!(response.messages[0].symbol, "Catenate");
+    assert_eq!(response.messages[0].tag, "invrp");
+    assert_eq!(
+        response.messages[0].text,
+        "The argument 2 is not a valid Association or a list."
+    );
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_deletemissing_eager_delayed_predicate() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "DeleteMissing[Association[a :> {InputString[\"value: \"], Missing[]}, b -> 2], 1, 1]",
+        )
+        .expect_err(
+            "DeleteMissing should suspend when eager delayed deletion predicate requests input",
+        );
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "value: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue DeleteMissing after the delayed predicate resolves");
+
+    assert_eq!(response.value.to_string(), "Association[Rule[b, 2]]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_nested_deletemissing_predicate() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "DeleteMissing[Association[outer -> Association[a :> {InputString[\"value: \"], Missing[]}, b -> 2]], 2, 1]",
+        )
+        .expect_err("nested DeleteMissing should suspend when an eager delayed predicate requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "value: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should rebuild the outer DeleteMissing result");
+
+    assert_eq!(
+        response.value.to_string(),
+        "Association[Rule[outer, Association[Rule[b, 2]]]]"
+    );
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_match_limit() {
     let mut session = Session::new();
 

@@ -1281,12 +1281,23 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
         outcome.value.to_string(),
         "Catenate[Association[Rule[a, List[1]], Rule[b, 2]]]"
     );
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "Catenate" && message.tag == "invrp")
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Catenate"
+            && message.tag == "invrp"
+            && message.text == "The argument 2 is not a valid Association or a list."
+    }));
+    let outcome = session
+        .eval_text("Catenate[Association[a -> Missing[], b -> 2]]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "Catenate[Association[Rule[a, Missing[]], Rule[b, 2]]]"
     );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Catenate"
+            && message.tag == "invrp"
+            && message.text == "The argument 2 is not a valid Association or a list."
+    }));
     assert_eq!(
         session
             .eval_text("Catenate[{Association[a -> {1, 2}], {3, 4}}]")
@@ -1318,12 +1329,11 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
         outcome.value.to_string(),
         "List[Catenate[Association[RuleDelayed[a, List[Set[x, Plus[x, 1]]]], RuleDelayed[b, Set[x, Plus[x, 1]]]]], 2]"
     );
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "Catenate" && message.tag == "invrp")
-    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Catenate"
+            && message.tag == "invrp"
+            && message.text == "The argument 2 is not a valid Association or a list."
+    }));
     assert_eq!(
         session
             .eval_text(
