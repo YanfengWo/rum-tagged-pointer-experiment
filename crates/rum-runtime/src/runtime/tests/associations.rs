@@ -1003,6 +1003,37 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
         session.eval_text("parts").unwrap().value.to_string(),
         "List[Association[Rule[b, 2]]]"
     );
+    session
+        .eval_text("parts = {Association[a -> 1, b -> 2], Association[a -> 3, c -> 4]}")
+        .unwrap();
+    let invalid_multi_drop = session.eval_text("KeyDropFrom[parts[[All]], a]").unwrap();
+    assert_eq!(
+        invalid_multi_drop.value.to_string(),
+        "KeyDropFrom[Part[parts, All], a]"
+    );
+    assert!(
+        invalid_multi_drop
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyDropFrom" && message.tag == "invak")
+    );
+    let invalid_list_drop = session
+        .eval_text("KeyDropFrom[parts[[{1, 2}]], a]")
+        .unwrap();
+    assert_eq!(
+        invalid_list_drop.value.to_string(),
+        "KeyDropFrom[Part[parts, List[1, 2]], a]"
+    );
+    assert!(
+        invalid_list_drop
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyDropFrom" && message.tag == "invak")
+    );
+    assert_eq!(
+        session.eval_text("parts").unwrap().value.to_string(),
+        "List[Association[Rule[a, 1], Rule[b, 2]], Association[Rule[a, 3], Rule[c, 4]]]"
+    );
     session.eval_text("parts = {Association[a -> 1]}").unwrap();
     session.eval_text("Protect[parts]").unwrap();
     let blocked_part_associate = session
@@ -1221,6 +1252,43 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Catenate[Association[a -> 1, b -> 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Catenate[Association[a -> Missing[], b -> {2}]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Catenate[Association[a -> Missing[\"x\"], b -> Missing[]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    let outcome = session
+        .eval_text("Catenate[Association[a -> {1}, b -> 2]]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "Catenate[Association[Rule[a, List[1]], Rule[b, 2]]]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Catenate" && message.tag == "invrp")
+    );
+    assert_eq!(
+        session
             .eval_text("Catenate[{Association[a -> {1, 2}], {3, 4}}]")
             .unwrap()
             .value
@@ -1242,6 +1310,19 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .value
             .to_string(),
         "List[List[1, 2], 2]"
+    );
+    let outcome = session
+        .eval_text("x = 0; {Catenate[Association[a :> {x = x + 1}, b :> (x = x + 1)]], x}")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[Catenate[Association[RuleDelayed[a, List[Set[x, Plus[x, 1]]]], RuleDelayed[b, Set[x, Plus[x, 1]]]]], 2]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Catenate" && message.tag == "invrp")
     );
     assert_eq!(
         session
@@ -1420,6 +1501,50 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .value
             .to_string(),
         "List[Rule[b, List[2]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "x = 0; {DeleteMissing[Association[a :> {Missing[], x = x + 1}, b -> 2], 1, 0], x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[RuleDelayed[a, List[Missing[], Set[x, Plus[x, 1]]]], Rule[b, 2]], 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "x = 0; {DeleteMissing[Association[a :> {Missing[], x = x + 1}, b -> 2], 1, 1], x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[b, 2]], 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {DeleteMissing[Association[a :> {1, x = x + 1}, b -> 2], 1, 1], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[RuleDelayed[a, List[1, Set[x, Plus[x, 1]]]], Rule[b, 2]], 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {DeleteMissing[Association[outer -> Association[a :> {Missing[], x = x + 1}, b -> 2]], 2, 1], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[outer, Association[Rule[b, 2]]]], 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {DeleteMissing[{a :> {Missing[], x = x + 1}, b -> 2}, 1, 1], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[RuleDelayed[a, List[Missing[], Set[x, Plus[x, 1]]]], Rule[b, 2]], 0]"
     );
     session
         .eval_text(

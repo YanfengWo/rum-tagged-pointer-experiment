@@ -309,18 +309,20 @@ once in its primary implementation group. Other groups may mention it as
   plus `KeyUnion` / `KeyIntersection` / `KeyComplement`,
   custom `KeySort` comparers,
   `Catenate` over lists plus association values with current delayed
-  association-value consumption and current invalid-argument subset parity,
+  association-value consumption and direct-association invalid-value subset
+  parity,
   current `GroupBy[list, f, g]` reducer support,
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
   forms plus current keyed-lookup propagation and current `DeleteMissing`
   over list / association / rule-list data including depth, third-argument
-  scan-depth, and delayed nested-cleanup subsets, and held symbol plus exact
-  part-target mutation first passes for `AssociateTo` /
-  `KeyDropFrom`
+  scan-depth, eager delayed target-level deletion, and delayed nested-cleanup
+  subsets, and held symbol plus exact part-target mutation first passes and
+  current non-leaf `KeyDropFrom` part-target invalid boundary for
+  `AssociateTo` / `KeyDropFrom`
 - `planned`: any remaining keyed-helper rule-list breadth, deeper
-  direct-association `Catenate` invalid-value boundaries, remaining exact
-  `DeleteMissing` eager-delayed target-level deletion and internal-message
-  parity, and deeper association semantics beyond the current first-pass subset
+  `Catenate` invalid-message corners, remaining exact `DeleteMissing`
+  internal-message / suspension parity, and deeper association semantics beyond
+  the current first-pass subset
 
 ### Functions and Symbols
 
@@ -332,9 +334,9 @@ once in its primary implementation group. Other groups may mention it as
   `Catenate`, `Counts`, `CountsBy`, `GroupBy`, `PositionIndex`, `Missing`,
   `DeleteMissing`
 - `planned`: any remaining keyed-helper rule-list compatibility,
-  direct-association `Catenate` invalid-value boundaries, remaining exact
-  `DeleteMissing` eager-delayed target-level deletion and internal-message
-  parity, and deeper association semantics beyond the current first-pass subset
+  `Catenate` invalid-message corners, remaining exact `DeleteMissing`
+  internal-message / suspension parity, and deeper association semantics beyond
+  the current first-pass subset
 - `cross-tracked elsewhere`: `#name`, `DeleteDuplicates`, `Map`, `Plus`,
   `Select`, `Sort`
 
