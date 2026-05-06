@@ -405,7 +405,7 @@ fn render_dialog_symbols_bindings(items: &[(Symbol, Option<Expr>)]) -> Expr {
 fn render_print_fragment(expr: &Expr) -> String {
     match expr {
         Expr::Atom(Atom::String(value)) => value.clone(),
-        other => other.to_string(),
+        other => render_input_like_expr(other),
     }
 }
 

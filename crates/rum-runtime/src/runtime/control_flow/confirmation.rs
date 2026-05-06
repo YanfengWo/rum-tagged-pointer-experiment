@@ -504,8 +504,13 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         match outcome {
             Ok(value) => Ok(value),
-            Err(EvalError::ThrownBypassingCatch { value, tag }) => {
-                self.resume_catch_for_bypassing_throw(form, value, tag)
+            Err(EvalError::ThrownBypassingCatch {
+                value,
+                tag,
+                cleanup_value,
+                cleanup_tag,
+            }) => {
+                self.resume_catch_for_bypassing_throw(form, value, tag, cleanup_value, cleanup_tag)
             }
             Err(EvalError::Thrown { value, tag }) => {
                 self.resume_catch_for_throw(form, handler, value, tag)
@@ -540,6 +545,8 @@ impl Session {
         form: Option<Expr>,
         value: Expr,
         tag: Expr,
+        cleanup_value: Expr,
+        cleanup_tag: Expr,
     ) -> Result<Expr, EvalError> {
         let Some(form) = form else {
             return Err(EvalError::Thrown { value, tag });
@@ -550,7 +557,12 @@ impl Session {
             if outcome.matched {
                 Err(EvalError::Thrown { value, tag })
             } else {
-                Err(EvalError::ThrownBypassingCatch { value, tag })
+                Err(EvalError::ThrownBypassingCatch {
+                    value,
+                    tag,
+                    cleanup_value,
+                    cleanup_tag,
+                })
             }
         })
     }

@@ -197,6 +197,33 @@ fn withcleanup_runs_cleanup_on_values_throws_and_aborts() {
             .to_string(),
         "1"
     );
+    let dual_uncaught = session
+        .eval_request("WithCleanup[Throw[1, tag], Throw[2, tag]]")
+        .expect_err("top-level active cleanup throw should report cleanup and primary throws");
+    match dual_uncaught.error {
+        SessionRequestError::Other { message } => assert_eq!(
+            message,
+            "uncaught throw: 2 with tag tag; uncaught throw: 1 with tag tag"
+        ),
+        other => panic!("expected dual uncaught throw request error, got {other:?}"),
+    }
+    match session
+        .eval_text("Catch[WithCleanup[Throw[1, tag], Throw[2, tag]], other]")
+        .expect_err("nonmatching Catch should keep both cleanup and primary throw information")
+    {
+        EvalError::ThrownBypassingCatch {
+            value,
+            tag,
+            cleanup_value,
+            cleanup_tag,
+        } => {
+            assert_eq!(value.to_string(), "1");
+            assert_eq!(tag.to_string(), "tag");
+            assert_eq!(cleanup_value.to_string(), "2");
+            assert_eq!(cleanup_tag.to_string(), "tag");
+        }
+        other => panic!("expected bypassing throw with cleanup context, got {other:?}"),
+    }
 
     session.eval_text("x = 0").unwrap();
     assert_eq!(

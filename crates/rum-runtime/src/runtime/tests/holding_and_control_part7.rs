@@ -177,6 +177,40 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
             .to_string(),
         "Assert[Equal[1, 2], tag]"
     );
+    assert_eq!(
+        session
+            .eval_text("On[Assert, tag]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Null"
+    );
+    assert!(session.asserts_enabled());
+    let asserted_after_tagged_on = session.eval_text("Assert[False, other]").unwrap();
+    assert_eq!(asserted_after_tagged_on.value.to_string(), "Null");
+    assert_eq!(asserted_after_tagged_on.messages.len(), 1);
+    assert_eq!(asserted_after_tagged_on.messages[0].tag, "asrtfe");
+    assert_eq!(
+        asserted_after_tagged_on.messages[0].text,
+        "Assertion False in Assert[False, other] failed."
+    );
+    assert_eq!(
+        session
+            .eval_text("Off[Assert, tag]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Null"
+    );
+    assert!(!session.asserts_enabled());
+    assert_eq!(
+        session
+            .eval_text("Assert[False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Assert[False]"
+    );
 
     assert_eq!(
         session
@@ -317,6 +351,10 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
     assert_eq!(printed.value.to_string(), "Null");
     assert_eq!(printed.prints, vec!["x=2"]);
 
+    let printed_held = session.eval_text("Print[HoldComplete[1 + 2]]").unwrap();
+    assert_eq!(printed_held.value.to_string(), "Null");
+    assert_eq!(printed_held.prints, vec!["HoldComplete[1 + 2]"]);
+
     let paused = session.eval_text("Pause[0]").unwrap();
     assert_eq!(paused.value.to_string(), "Null");
     assert!(paused.prints.is_empty());
@@ -400,6 +438,22 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
     session
         .eval_text("SetOptions[InputString, FieldMasked -> False]")
         .unwrap();
+
+    let failure = session
+        .eval_request("InputString[HoldComplete[1 + 2]]")
+        .expect_err("InputString should render held prompts in input-like form");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.kind, RuntimeInputKind::InputString);
+            assert_eq!(request.prompt, "HoldComplete[1 + 2]");
+            assert!(!request.password);
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("held")
+        .expect("resuming held-prompt InputString should return the supplied text");
+    assert_eq!(response.value.to_string(), "\"held\"");
 
     let unknown = session.eval_text("InputString[BadOption -> 1]").unwrap();
     assert_eq!(unknown.value.to_string(), "InputString[Rule[BadOption, 1]]");
