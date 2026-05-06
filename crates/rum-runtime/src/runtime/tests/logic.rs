@@ -442,6 +442,30 @@ fn and_or_short_circuit_side_effects_and_compare_exact_values() {
     );
     assert_eq!(
         session
+            .eval_text("Equal[1, 2, u]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("Equal[u, 1, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Equal[u, 1, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Equal[1, u, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Equal[1, u, 2]"
+    );
+    assert_eq!(
+        session
             .eval_text("Unequal[1, 2, 3]")
             .unwrap()
             .value
@@ -523,6 +547,46 @@ fn and_or_short_circuit_side_effects_and_compare_exact_values() {
             .value
             .to_string(),
         "Less[\"a\", \"b\", u]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Less[1, u, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("LessEqual[1, u, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("LessEqual[1, u, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "LessEqual[1, u, 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Greater[0, u, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("GreaterEqual[0, u, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "GreaterEqual[0, u, 0]"
     );
     assert_eq!(
         session

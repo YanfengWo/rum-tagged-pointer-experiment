@@ -106,7 +106,8 @@ once in its primary implementation group. Other groups may mention it as
   `Equivalent` boolean/repeated-term reductions, first-pass `Implies`
   simplification including identical-argument tautology, current short-circuit
   `Nand` / `Nor`, first-pass `Boole` truth-to-integer conversion,
-  mixed-symbolic `Unequal` chain boundary,
+  mixed-symbolic `Equal` / `Unequal` chain boundaries plus current numeric
+  order-chain endpoint contradiction detection,
   nonatomic `OrderedQ` argument-order parity, `ReplacePart` atom-head
   non-replacement, and non-expanding `All` / `Span` position-spec boundaries
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity

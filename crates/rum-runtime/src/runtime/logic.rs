@@ -250,7 +250,11 @@ impl Session {
             return predicate_bool_expr(true);
         }
 
-        if relation == ComparisonRelation::Unequal {
+        if relation == ComparisonRelation::Equal {
+            if let Some(result) = reduce_equal_prefix_chain(args) {
+                return predicate_bool_expr(result);
+            }
+        } else if relation == ComparisonRelation::Unequal {
             if let Some(result) = reduce_unequal_chain(args) {
                 return predicate_bool_expr(result);
             }
@@ -270,6 +274,9 @@ impl Session {
                 | ComparisonRelation::LessEqual
                 | ComparisonRelation::GreaterEqual
         ) {
+            if known_order_chain_contradiction(args, relation) {
+                return predicate_bool_expr(false);
+            }
             if let Some(result) = reduce_order_chain(head, args, relation) {
                 return result;
             }
@@ -280,6 +287,30 @@ impl Session {
             None => Expr::call(head.clone(), args.to_vec()),
         }
     }
+}
+
+fn reduce_equal_prefix_chain(args: &[Expr]) -> Option<bool> {
+    let mut saw_known_pair = false;
+
+    for pair in args.windows(2) {
+        match adjacent_equal_truth(&pair[0], &pair[1]) {
+            Some(true) => saw_known_pair = true,
+            Some(false) => return Some(false),
+            None => return None,
+        }
+    }
+
+    saw_known_pair.then_some(true)
+}
+
+fn adjacent_equal_truth(lhs: &Expr, rhs: &Expr) -> Option<bool> {
+    if lhs == rhs {
+        return Some(true);
+    }
+
+    let lhs = comparable_value_from_expr(lhs)?;
+    let rhs = comparable_value_from_expr(rhs)?;
+    Some(compare_comparable_values(&lhs, &rhs)? == std::cmp::Ordering::Equal)
 }
 
 fn negated_relation_head_name(head: &Expr) -> Option<&'static str> {
@@ -350,6 +381,28 @@ fn reduce_order_chain(head: &Expr, args: &[Expr], relation: ComparisonRelation) 
         0 | 1 => system_expr(heads::structure::TRUE),
         _ => Expr::call(head.clone(), kept),
     })
+}
+
+fn known_order_chain_contradiction(args: &[Expr], relation: ComparisonRelation) -> bool {
+    for (left_index, lhs) in args.iter().enumerate() {
+        let Some(lhs) = comparable_value_from_expr(lhs) else {
+            continue;
+        };
+
+        for rhs in args.iter().skip(left_index + 1) {
+            let Some(rhs) = comparable_value_from_expr(rhs) else {
+                continue;
+            };
+            let Some(ordering) = compare_comparable_values(&lhs, &rhs) else {
+                continue;
+            };
+            if !ordering_satisfies_relation(ordering, relation) {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 fn compare_numeric_expr_pair(lhs: &Expr, rhs: &Expr) -> Option<std::cmp::Ordering> {
