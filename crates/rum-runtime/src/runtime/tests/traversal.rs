@@ -100,6 +100,14 @@ fn level_supports_standard_levelspecs_and_depth_first_ordering() {
             .to_string(),
         "List[List[]]"
     );
+    assert_eq!(
+        session
+            .eval_text("Level[f[1, g[2]], All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2, g[2], f[1, g[2]]]"
+    );
 }
 
 #[test]
@@ -202,6 +210,30 @@ fn count_memberq_and_freeq_share_standard_traversal_semantics() {
             .to_string(),
         "False"
     );
+    assert_eq!(
+        session
+            .eval_text("Count[f[1], _, All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("MemberQ[f[1], f[1], All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("FreeQ[f[1], f[1], All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
 }
 
 #[test]
@@ -269,6 +301,14 @@ fn position_supports_standard_levelspecs_heads_and_limits() {
             .value
             .to_string(),
         "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Position[f[1], f[1], All, Heads -> False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[]]"
     );
 }
 

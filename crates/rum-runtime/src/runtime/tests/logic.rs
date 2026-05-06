@@ -298,6 +298,14 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
     );
     assert_eq!(
         session
+            .eval_text("Implies[x, x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
             .eval_text("Implies[x, y]")
             .unwrap()
             .value

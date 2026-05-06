@@ -156,6 +156,10 @@ pub(super) fn parse_standard_level_spec(expr: &Expr) -> Option<CasesLevelSpec> {
         return Some(CasesLevelSpec::range(1, None));
     }
 
+    if is_system_symbol_name(expr, heads::structure::ALL) {
+        return Some(CasesLevelSpec::range(0, None));
+    }
+
     let Expr::Call { head, args } = expr else {
         return None;
     };

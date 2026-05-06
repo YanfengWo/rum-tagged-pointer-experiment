@@ -79,6 +79,10 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("Implies", args, 2));
         };
 
+        if lhs == rhs {
+            return Ok(system_expr(heads::structure::TRUE));
+        }
+
         Ok(match (truthiness_symbol(lhs), truthiness_symbol(rhs)) {
             (Some(false), _) | (_, Some(true)) => system_expr(heads::structure::TRUE),
             (Some(true), _) => rhs.clone(),

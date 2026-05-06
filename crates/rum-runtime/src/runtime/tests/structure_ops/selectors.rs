@@ -62,11 +62,27 @@ fn part_supports_exact_indices_nested_paths_and_head_access() {
     );
     assert_eq!(
         session
+            .eval_text("Part[f[a, b, c], {All}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Part[f[a, b, c], List[All]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], {1 ;; 2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Part[f[a, b, c], List[Span[1, 2]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Part[f[a, b, c], {Span[1, All, 2], -1}]")
             .unwrap()
             .value
             .to_string(),
-        "f[a, c, c]"
+        "Part[f[a, b, c], List[Span[1, All, 2], -1]]"
     );
     assert_eq!(
         session
@@ -178,7 +194,7 @@ fn part_supports_exact_indices_nested_paths_and_head_access() {
             .unwrap()
             .value
             .to_string(),
-        "f[List[a, c], List[b]]"
+        "Part[f[a, b, c], List[List[1, 3], List[2]]]"
     );
     assert_eq!(
         session

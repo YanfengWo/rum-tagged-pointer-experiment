@@ -56,7 +56,7 @@ impl Session {
             ));
         }
 
-        let Some(selectors) = parse_part_selectors(&args[1..]) else {
+        let Some(selectors) = parse_part_selectors_for_part(&args[1..]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
         if association_entries_from_expr(&args[0]).is_some()
@@ -110,6 +110,38 @@ impl Session {
 
 pub(super) fn parse_part_selectors(exprs: &[Expr]) -> Option<Vec<PartSelector>> {
     exprs.iter().map(parse_part_selector).collect()
+}
+
+fn parse_part_selectors_for_part(exprs: &[Expr]) -> Option<Vec<PartSelector>> {
+    exprs.iter().map(parse_part_selector_for_part).collect()
+}
+
+fn parse_part_selector_for_part(expr: &Expr) -> Option<PartSelector> {
+    if let Some(selector) = parse_scalar_part_selector(expr) {
+        return Some(selector);
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return None;
+    }
+
+    Some(PartSelector::Multi(
+        args.iter()
+            .map(parse_part_list_item_selector)
+            .collect::<Option<Vec<_>>>()?,
+    ))
+}
+
+fn parse_part_list_item_selector(expr: &Expr) -> Option<PartSelector> {
+    if let Some(index) = expr_as_signed_isize(expr) {
+        return Some(PartSelector::Single(AtomicPartSpec::Index(index)));
+    }
+
+    parse_key_part_selector(expr).map(PartSelector::Key)
 }
 
 fn parse_part_selector(expr: &Expr) -> Option<PartSelector> {

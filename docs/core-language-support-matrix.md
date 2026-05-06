@@ -97,14 +97,16 @@ once in its primary implementation group. Other groups may mention it as
   pattern-position subsets, including current atom `All` / positive empty-span
   and zero-endpoint boundary behavior in `Part` / `Extract`, current
   association-aware numeric/range `Part` / `Extract` value projection, plus the
-  current `Extract` nested position-list selector subset, empty-expression and
-  association-aware `Depth` parity, `Level` scalar-zero levelspec parity, and
-  empty-expression negative-level depth alignment across the current structural
-  walkers, current `Not[Not[...]]` and relational-`Not` simplifications,
+  current `Part` selector-list boundary and `Extract` nested position-list
+  selector subset, empty-expression and association-aware `Depth` parity,
+  `Level` scalar-zero and standard-`All` levelspec parity, and empty-expression
+  negative-level depth alignment across the current structural walkers, current
+  `Not[Not[...]]` and relational-`Not` simplifications,
   flat nested `And` / `Or` residual simplification, first-pass `Xor` /
   `Equivalent` boolean/repeated-term reductions, first-pass `Implies`
-  simplification, current short-circuit `Nand` / `Nor`, first-pass `Boole`
-  truth-to-integer conversion, mixed-symbolic `Unequal` chain boundary,
+  simplification including identical-argument tautology, current short-circuit
+  `Nand` / `Nor`, first-pass `Boole` truth-to-integer conversion,
+  mixed-symbolic `Unequal` chain boundary,
   nonatomic `OrderedQ` argument-order parity, `ReplacePart` atom-head
   non-replacement, and non-expanding `All` / `Span` position-spec boundaries
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
