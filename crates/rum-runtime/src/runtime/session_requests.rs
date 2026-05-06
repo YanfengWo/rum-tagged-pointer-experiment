@@ -380,9 +380,11 @@ fn session_request_error_from_eval_error_with_source(
         EvalError::Return { value } => SessionRequestError::Other {
             message: format!("uncaught top-level Return resolved to {value}"),
         },
-        EvalError::Thrown { value, tag } => SessionRequestError::Other {
-            message: format!("uncaught throw: {value} with tag {tag}"),
-        },
+        EvalError::Thrown { value, tag } | EvalError::ThrownBypassingCatch { value, tag } => {
+            SessionRequestError::Other {
+                message: format!("uncaught throw: {value} with tag {tag}"),
+            }
+        }
         EvalError::Abort | EvalError::ProtectedAbort => SessionRequestError::Other {
             message: "uncaught Abort[]".to_string(),
         },

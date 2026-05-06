@@ -590,6 +590,21 @@ impl Session {
         primary_outcome: Result<Expr, EvalError>,
         cleanup_outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
+        if let (
+            Err(EvalError::Thrown { value, tag }),
+            Err(EvalError::Thrown {
+                tag: cleanup_tag, ..
+            }),
+        ) = (&primary_outcome, &cleanup_outcome)
+        {
+            if tag == cleanup_tag {
+                return Err(EvalError::ThrownBypassingCatch {
+                    value: value.clone(),
+                    tag: tag.clone(),
+                });
+            }
+        }
+
         match cleanup_outcome {
             Ok(_) | Err(EvalError::Return { .. }) => primary_outcome,
             Err(error) => Err(error),

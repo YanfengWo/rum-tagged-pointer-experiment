@@ -393,11 +393,10 @@ once in its primary implementation group. Other groups may mention it as
   inert direct `TerminatedEvaluation` constructor / application behavior plus
   generated top-level/request/evaluation-data `TerminatedEvaluation` for
   recursion and fixed-point iteration limits, current string-tag `Success`
-  projection boundary, and abort/failsafe resume through host input, but richer
-  held/cleanup corners such as cleanup-time `Throw` during active throw and
-  deeper status parity are still pending; exact cleanup-time `Throw` parity
-  needs active-unwind / `Catch`-frame bypass state rather than another local
-  cleanup special case
+  projection boundary, active-throw cleanup `Throw` bypass for the matching
+  `Catch` frame, and abort/failsafe resume through host input, but richer
+  held/cleanup corners such as cleanup-time `Throw` dual-uncaught diagnostics
+  and deeper status parity are still pending
 - `planned`: broader failure values, abort-protection parity, external
   interaction builtins, and deeper cleanup/exception compatibility
 

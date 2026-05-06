@@ -504,6 +504,9 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         match outcome {
             Ok(value) => Ok(value),
+            Err(EvalError::ThrownBypassingCatch { value, tag }) => {
+                self.resume_catch_for_bypassing_throw(form, value, tag)
+            }
             Err(EvalError::Thrown { value, tag }) => {
                 self.resume_catch_for_throw(form, handler, value, tag)
             }
@@ -528,6 +531,26 @@ impl Session {
                 session.finish_catch_match(handler, value, tag)
             } else {
                 Err(EvalError::Thrown { value, tag })
+            }
+        })
+    }
+
+    fn resume_catch_for_bypassing_throw(
+        &mut self,
+        form: Option<Expr>,
+        value: Expr,
+        tag: Expr,
+    ) -> Result<Expr, EvalError> {
+        let Some(form) = form else {
+            return Err(EvalError::Thrown { value, tag });
+        };
+
+        let match_result = self.match_expr_owned(form, tag.clone(), BTreeMap::new());
+        self.drive_internal_value(match_result, move |_, outcome| {
+            if outcome.matched {
+                Err(EvalError::Thrown { value, tag })
+            } else {
+                Err(EvalError::ThrownBypassingCatch { value, tag })
             }
         })
     }

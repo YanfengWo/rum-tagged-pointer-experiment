@@ -251,6 +251,8 @@ pub enum EvalError {
     Return { value: Expr },
     #[error("uncaught throw: {value} with tag {tag}")]
     Thrown { value: Expr, tag: Expr },
+    #[error("uncaught throw: {value} with tag {tag}")]
+    ThrownBypassingCatch { value: Expr, tag: Expr },
     #[error("uncaught Abort[]")]
     Abort,
     #[error("uncaught protected Abort[]")]

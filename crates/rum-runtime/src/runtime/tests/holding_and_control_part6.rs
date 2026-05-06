@@ -179,6 +179,25 @@ fn withcleanup_runs_cleanup_on_values_throws_and_aborts() {
     );
     assert_eq!(session.eval_text("x").unwrap().value.to_string(), "3");
 
+    let cleanup_throw = session
+        .eval_text("Catch[WithCleanup[Throw[1, tag], Throw[2, tag]], tag]")
+        .expect_err("cleanup-time Throw with the active tag should bypass the current Catch");
+    match cleanup_throw {
+        EvalError::Thrown { value, tag } => {
+            assert_eq!(value.to_string(), "1");
+            assert_eq!(tag.to_string(), "tag");
+        }
+        other => panic!("expected primary throw to bypass current Catch, got {other:?}"),
+    }
+    assert_eq!(
+        session
+            .eval_text("Catch[Catch[WithCleanup[Throw[1, tag], Throw[2, tag]], tag], tag]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+
     session.eval_text("x = 0").unwrap();
     assert_eq!(
         session

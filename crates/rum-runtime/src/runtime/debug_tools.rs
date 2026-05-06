@@ -1471,7 +1471,9 @@ impl Session {
             Err(EvalError::Return { .. }) => {
                 (system_expr("$Failed"), false, Expr::string("Return"))
             }
-            Err(EvalError::Thrown { .. }) => (system_expr("$Failed"), false, Expr::string("Throw")),
+            Err(EvalError::Thrown { .. } | EvalError::ThrownBypassingCatch { .. }) => {
+                (system_expr("$Failed"), false, Expr::string("Throw"))
+            }
             Err(EvalError::InputRequired { request }) => {
                 return Err(EvalError::InputRequired { request });
             }
@@ -1635,7 +1637,9 @@ impl Session {
             Err(EvalError::Break) => Ok((system_expr("$Failed"), Some("Break"))),
             Err(EvalError::Continue) => Ok((system_expr("$Failed"), Some("Continue"))),
             Err(EvalError::Return { .. }) => Ok((system_expr("$Failed"), Some("Return"))),
-            Err(EvalError::Thrown { .. }) => Ok((system_expr("$Failed"), Some("Throw"))),
+            Err(EvalError::Thrown { .. } | EvalError::ThrownBypassingCatch { .. }) => {
+                Ok((system_expr("$Failed"), Some("Throw")))
+            }
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
             Err(_) => Ok((system_expr("$Failed"), Some("Error"))),
         }
