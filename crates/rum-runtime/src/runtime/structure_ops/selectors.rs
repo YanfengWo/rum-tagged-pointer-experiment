@@ -353,6 +353,10 @@ fn selected_shape_to_expr(shape: SelectedPartShape, root_head: Option<Expr>) -> 
 }
 
 fn select_parts_for_selector(expr: &Expr, selector: &PartSelector) -> Option<SelectedPartShape> {
+    if let Some(entries) = association_entries_from_expr(expr) {
+        return select_association_parts_for_selector(expr, &entries, selector);
+    }
+
     match selector {
         PartSelector::Single(spec) => match spec {
             AtomicPartSpec::Index(index) => {
@@ -429,6 +433,108 @@ fn select_parts_for_selector(expr: &Expr, selector: &PartSelector) -> Option<Sel
                 }
             }
             Some(SelectedPartShape::Branch(selected))
+        }
+    }
+}
+
+fn select_association_parts_for_selector(
+    expr: &Expr,
+    entries: &[(Expr, Expr)],
+    selector: &PartSelector,
+) -> Option<SelectedPartShape> {
+    match selector {
+        PartSelector::Key(key) => Some(SelectedPartShape::Leaf(
+            entries
+                .iter()
+                .find(|(entry_key, _)| entry_key == key)
+                .map(|(_, value)| value.clone())
+                .unwrap_or_else(|| missing_key_absent_expr(key_expr(key.clone()))),
+        )),
+        PartSelector::Single(AtomicPartSpec::Index(0)) => {
+            Some(SelectedPartShape::Leaf(structural_head_expr(expr)))
+        }
+        PartSelector::Single(AtomicPartSpec::Index(index)) => {
+            let (_, value) = association_entry_by_index(entries, *index)?;
+            Some(SelectedPartShape::Leaf(value))
+        }
+        PartSelector::Single(spec @ (AtomicPartSpec::All | AtomicPartSpec::Span(_))) => {
+            Some(SelectedPartShape::AssociationBranch(
+                select_association_entries_for_atomic_spec(entries, spec)?
+                    .into_iter()
+                    .map(|(key, value)| (key, SelectedPartShape::Leaf(value)))
+                    .collect(),
+            ))
+        }
+        PartSelector::Multi(specs) => {
+            if specs
+                .iter()
+                .all(|spec| matches!(spec, PartSelector::Key(_)))
+            {
+                return Some(SelectedPartShape::AssociationBranch(
+                    specs
+                        .iter()
+                        .filter_map(|spec| match spec {
+                            PartSelector::Key(key) => Some((
+                                key.clone(),
+                                SelectedPartShape::Leaf(
+                                    entries
+                                        .iter()
+                                        .find(|(entry_key, _)| entry_key == key)
+                                        .map(|(_, value)| value.clone())
+                                        .unwrap_or_else(|| {
+                                            missing_key_absent_expr(key_expr(key.clone()))
+                                        }),
+                                ),
+                            )),
+                            _ => None,
+                        })
+                        .collect(),
+                ));
+            }
+
+            Some(SelectedPartShape::AssociationBranch(
+                specs
+                    .iter()
+                    .map(|spec| {
+                        let PartSelector::Single(AtomicPartSpec::Index(index)) = spec else {
+                            return None;
+                        };
+                        let (key, value) = association_entry_by_index(entries, *index)?;
+                        Some((key, SelectedPartShape::Leaf(value)))
+                    })
+                    .collect::<Option<Vec<_>>>()?,
+            ))
+        }
+    }
+}
+
+fn association_entry_by_index(entries: &[(Expr, Expr)], index: isize) -> Option<(Expr, Expr)> {
+    if index == 0 {
+        return None;
+    }
+
+    let normalized = normalize_structural_arg_position(index, entries.len())?;
+    entries.get(normalized).cloned()
+}
+
+fn select_association_entries_for_atomic_spec(
+    entries: &[(Expr, Expr)],
+    spec: &AtomicPartSpec,
+) -> Option<Vec<(Expr, Expr)>> {
+    match spec {
+        AtomicPartSpec::Index(index) => {
+            association_entry_by_index(entries, *index).map(|entry| vec![entry])
+        }
+        AtomicPartSpec::All => Some(entries.to_vec()),
+        AtomicPartSpec::Span(span) => {
+            let components = resolve_span_components(*span, entries.len())?;
+            components
+                .into_iter()
+                .map(|component| {
+                    let index = normalize_structural_arg_position(component, entries.len())?;
+                    entries.get(index).cloned()
+                })
+                .collect()
         }
     }
 }

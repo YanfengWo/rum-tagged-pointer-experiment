@@ -258,6 +258,54 @@ fn keyed_part_and_extract_cover_association_paths() {
             .to_string(),
         "Association[Rule[a, 2]]"
     );
+    assert_eq!(
+        session
+            .eval_text("Part[Association[a -> 1, b -> 2], 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[Association[a -> 1, b -> 2], -1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[Association[a -> 1, b -> 2], All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1], Rule[b, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[Association[a -> f[x], b -> f[y]], All, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, x], Rule[b, y]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[Association[a -> 1, b -> 2], 1 ;; 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1], Rule[b, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[Association[a -> 1, b -> 2], {2, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[b, 2], Rule[a, 1]]"
+    );
     let mixed = session
         .eval_text("Part[Association[a -> 1, b -> 2], {Key[a], 2}]")
         .unwrap();
@@ -286,6 +334,22 @@ fn keyed_part_and_extract_cover_association_paths() {
             .value
             .to_string(),
         "List[3, 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[Association[a -> 1, b -> 2], {{1}, {2}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[Association[a -> f[x], b -> f[y]], {All, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, x], Rule[b, y]]"
     );
 }
 

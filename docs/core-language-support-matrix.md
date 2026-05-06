@@ -95,8 +95,9 @@ once in its primary implementation group. Other groups may mention it as
   position specs, `Part` / `Extract` `All` / `Span` subsets, including current
   `UpTo[...]` span-endpoint support, and `ReplacePart`
   pattern-position subsets, including current atom `All` / positive empty-span
-  and zero-endpoint boundary behavior in `Part` / `Extract`, plus the current
-  `Extract` nested position-list selector subset, empty-expression and
+  and zero-endpoint boundary behavior in `Part` / `Extract`, current
+  association-aware numeric/range `Part` / `Extract` value projection, plus the
+  current `Extract` nested position-list selector subset, empty-expression and
   association-aware `Depth` parity, `Level` scalar-zero levelspec parity, and
   empty-expression negative-level depth alignment across the current structural
   walkers, current `Not[Not[...]]` and relational-`Not` simplifications,
@@ -301,9 +302,9 @@ once in its primary implementation group. Other groups may mention it as
   `RuleDelayed` head preservation, `AssociateTo` update specs over nested rule
   lists / associations with current delayed-entry preservation, callable
   `Key[key][assoc]` extraction, callable
-  `Association[...][key]` lookup, current `Part[..., Key[...]]` association
-  projection including missing-key propagation and no-mixed-key/index
-  diagnostics, `Key[...]` key-spec unwrapping and current `RuleDelayed`
+  `Association[...][key]` lookup, current `Part[..., Key[...]]` plus
+  numeric/range association projection including missing-key propagation and
+  no-mixed-key/index diagnostics, `Key[...]` key-spec unwrapping and current `RuleDelayed`
   preservation for the current `KeyTake` / `KeyDrop` / `KeyDropFrom` plus
   `KeyMap` / `KeySelect` / `KeySort` / `KeySortBy` keyed-transform subset
   plus `KeyUnion` / `KeyIntersection` / `KeyComplement`,
