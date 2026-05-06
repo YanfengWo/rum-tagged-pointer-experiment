@@ -152,6 +152,15 @@ pub(super) fn format_message_arg_placeholder(arg: &Expr, spec: Option<&str>) -> 
 fn format_message_default_fragment(arg: &Expr) -> String {
     match arg {
         Expr::Atom(Atom::String(value)) => value.clone(),
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "HoldForm")
+                || is_system_symbol_name(head, "HoldCompleteForm")
+                || is_system_symbol_name(head, "Defer")
+                || is_system_symbol_name(head, "Unevaluated"))
+                && args.len() == 1 =>
+        {
+            render_input_like_expr(&args[0])
+        }
         other => other.to_string(),
     }
 }
