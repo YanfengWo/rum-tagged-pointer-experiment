@@ -374,7 +374,7 @@ once in its primary implementation group. Other groups may mention it as
   `HeldMessageTemplate` / `MessageName`, plus direct virtual `"Tag"` projection
   and malformed status-object inert projection boundaries, silent malformed
   `Failure` / `Success` constructors, `FailureQ` recognition for malformed
-  `Failure[...]`, immediate-rule `Failure` details normalization,
+  `Failure[...]`, immediate-rule plus single-`RuleDelayed` `Failure` details normalization,
   association-only `Success` details projection, request-level print transport,
   non-string `InputString` prompts, `Input` / `InputString`
   `FieldMasked -> True` plus request-kind host request metadata, resumed

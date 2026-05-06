@@ -263,8 +263,8 @@ fn normalize_failure_details_expr(expr: &Expr) -> Option<Expr> {
         return Some(expr.clone());
     }
 
-    if let Some(entry) = parse_immediate_rule_entry(expr) {
-        return Some(render_association(vec![entry]));
+    if let Some(entry) = parse_association_entry_form(expr) {
+        return Some(render_association_entry_forms_preserving_heads(vec![entry]));
     }
 
     let Expr::Call { head, args } = expr else {

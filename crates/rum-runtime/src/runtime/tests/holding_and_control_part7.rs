@@ -686,6 +686,30 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Failure[\"oops\", \"Code\" :> x][All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[RuleDelayed[\"Code\", x]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", \"Code\" :> x][\"Code\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failure[\"oops\", {\"Code\" :> x}][\"Code\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Failure[\"oops\", List[RuleDelayed[\"Code\", x]]][\"Code\"]"
+    );
+    assert_eq!(
+        session
             .eval_text("Failure[\"oops\", {\"Code\" -> 500}][All]")
             .unwrap()
             .value
