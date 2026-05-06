@@ -477,11 +477,9 @@ impl Session {
                     return self.finish_assert_function(assert_function, assert_args);
                 }
 
-                self.push_message(
-                    "Assert",
-                    "fail",
-                    render_assert_failure_message(&test, tag.as_ref(), &value),
-                );
+                for (message_tag, text) in assert_failure_messages(&test, tag.as_ref(), &value) {
+                    self.push_message("Assert", message_tag, text);
+                }
                 Ok(system_expr("Null"))
             }
             Err(error) => Err(error),
@@ -664,10 +662,38 @@ fn is_failsafe_failure_like(expr: &Expr) -> bool {
     is_confirmation_failure_like(expr)
 }
 
-fn render_assert_failure_message(test: &Expr, tag: Option<&Expr>, value: &Expr) -> String {
+fn assert_failure_messages(
+    test: &Expr,
+    tag: Option<&Expr>,
+    value: &Expr,
+) -> Vec<(&'static str, String)> {
+    let mut messages = Vec::new();
+    let test_text = render_input_like_expr(test);
+
+    if !is_system_symbol_name(value, "False") {
+        messages.push((
+            "asrttf",
+            format!(
+                "Assertion test {test_text} evaluated to {} that is neither True nor False.",
+                render_input_like_expr(value)
+            ),
+        ));
+    }
+
+    messages.push(assert_failure_message(&test_text, tag));
+    messages
+}
+
+fn assert_failure_message(test_text: &str, tag: Option<&Expr>) -> (&'static str, String) {
     match tag {
-        Some(tag) => format!("assertion `{tag}` failed: {test} evaluated to {value}"),
-        None => format!("assertion failed: {test} evaluated to {value}"),
+        Some(tag) => (
+            "asrtfe",
+            format!(
+                "Assertion {test_text} in Assert[{test_text}, {}] failed.",
+                render_input_like_expr(tag)
+            ),
+        ),
+        None => ("asrtf", format!("Assertion {test_text} failed.")),
     }
 }
 

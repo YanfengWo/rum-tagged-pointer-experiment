@@ -130,12 +130,33 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
         "Null"
     );
     assert!(session.asserts_enabled());
-    let asserted = session.eval_text("Assert[Equal[1, 2], tag]").unwrap();
+    let asserted = session.eval_text("Assert[False, tag]").unwrap();
     assert_eq!(asserted.value.to_string(), "Null");
     assert_eq!(asserted.messages.len(), 1);
     assert_eq!(asserted.messages[0].symbol, "Assert");
-    assert_eq!(asserted.messages[0].tag, "fail");
-    assert!(asserted.messages[0].text.contains("tag"));
+    assert_eq!(asserted.messages[0].tag, "asrtfe");
+    assert_eq!(
+        asserted.messages[0].text,
+        "Assertion False in Assert[False, tag] failed."
+    );
+    let untagged = session.eval_text("Assert[False]").unwrap();
+    assert_eq!(untagged.value.to_string(), "Null");
+    assert_eq!(untagged.messages.len(), 1);
+    assert_eq!(untagged.messages[0].symbol, "Assert");
+    assert_eq!(untagged.messages[0].tag, "asrtf");
+    assert_eq!(untagged.messages[0].text, "Assertion False failed.");
+    let symbolic = session.eval_text("Assert[p]").unwrap();
+    assert_eq!(symbolic.value.to_string(), "Null");
+    assert_eq!(symbolic.messages.len(), 2);
+    assert_eq!(symbolic.messages[0].symbol, "Assert");
+    assert_eq!(symbolic.messages[0].tag, "asrttf");
+    assert_eq!(
+        symbolic.messages[0].text,
+        "Assertion test p evaluated to p that is neither True nor False."
+    );
+    assert_eq!(symbolic.messages[1].symbol, "Assert");
+    assert_eq!(symbolic.messages[1].tag, "asrtf");
+    assert_eq!(symbolic.messages[1].text, "Assertion p failed.");
     match session
         .eval_text("Assert[InputString[\"now: \"]]")
         .expect_err("enabled Assert should evaluate its test and suspend when input is needed")

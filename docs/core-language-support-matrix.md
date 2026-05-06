@@ -363,7 +363,8 @@ once in its primary implementation group. Other groups may mention it as
   `BlockRandom`.
   Recent follow-up work tightened protected-abort catching, session-config
   assertion enablement, `On[Assert]` / `Off[Assert]` controls, inert disabled
-  `Assert`, plus the current `$AssertFunction` callback hook,
+  `Assert`, oracle-aligned enabled-`Assert` failure message tags/text,
+  plus the current `$AssertFunction` callback hook,
   exact-key `Success[...]` / `Failure[...]` property
   extraction with the current `Missing` propagation subset, including current
   `Failure[...]` `All` / `"Properties"` / `"Message"` / `"StyledMessage"`
