@@ -494,3 +494,113 @@ fn extract_consumes_exact_paths_and_position_output() {
         "List[f[a, b], f[b, c]]"
     );
 }
+
+#[test]
+fn invalid_part_and_extract_specs_report_selector_messages() {
+    let mut session = Session::new();
+
+    let invalid_part = session.eval_text("Part[f[a, b, c], {1 ;; 2}]").unwrap();
+    assert_eq!(
+        invalid_part.value.to_string(),
+        "Part[f[a, b, c], List[Span[1, 2]]]"
+    );
+    assert!(
+        invalid_part
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "pkspec1")
+    );
+
+    let invalid_extract = session.eval_text("Extract[f[a], foo]").unwrap();
+    assert_eq!(invalid_extract.value.to_string(), "Extract[f[a], foo]");
+    assert!(
+        invalid_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "psl1")
+    );
+
+    let missing_part = session.eval_text("Part[f[a], 2]").unwrap();
+    assert_eq!(missing_part.value.to_string(), "Part[f[a], 2]");
+    assert!(
+        missing_part
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "partw")
+    );
+
+    let too_deep_part = session.eval_text("Part[f[a], All, 2]").unwrap();
+    assert_eq!(too_deep_part.value.to_string(), "Part[f[a], All, 2]");
+    assert!(
+        too_deep_part
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "partd")
+    );
+
+    let bad_take_part = session.eval_text("Part[f[a], 1 ;; 5]").unwrap();
+    assert_eq!(bad_take_part.value.to_string(), "Part[f[a], Span[1, 5]]");
+    assert!(
+        bad_take_part
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "take")
+    );
+
+    let bad_key_part = session.eval_text("Part[f[a], Key[x]]").unwrap();
+    assert_eq!(bad_key_part.value.to_string(), "Part[f[a], Key[x]]");
+    assert!(
+        bad_key_part
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "pspec1")
+    );
+
+    let missing_extract = session.eval_text("Extract[f[a], {{1}, {2}}]").unwrap();
+    assert_eq!(
+        missing_extract.value.to_string(),
+        "Extract[f[a], List[List[1], List[2]]]"
+    );
+    assert!(
+        missing_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "partw")
+    );
+
+    let too_deep_extract = session.eval_text("Extract[f[a], {All, 2}]").unwrap();
+    assert_eq!(
+        too_deep_extract.value.to_string(),
+        "Extract[f[a], List[All, 2]]"
+    );
+    assert!(
+        too_deep_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "partd")
+    );
+
+    let bad_take_extract = session.eval_text("Extract[f[a], {1 ;; 2}]").unwrap();
+    assert_eq!(
+        bad_take_extract.value.to_string(),
+        "Extract[f[a], List[Span[1, 2]]]"
+    );
+    assert!(
+        bad_take_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "take")
+    );
+
+    let bad_key_extract = session.eval_text("Extract[f[a], {Key[x]}]").unwrap();
+    assert_eq!(
+        bad_key_extract.value.to_string(),
+        "Extract[f[a], List[Key[x]]]"
+    );
+    assert!(
+        bad_key_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "pspec1")
+    );
+}

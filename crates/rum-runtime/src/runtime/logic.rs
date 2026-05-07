@@ -262,11 +262,6 @@ impl Session {
             return predicate_bool_expr(result);
         }
 
-        let comparable = args
-            .iter()
-            .map(comparable_value_from_expr)
-            .collect::<Option<Vec<_>>>();
-
         if matches!(
             relation,
             ComparisonRelation::Less
@@ -282,7 +277,23 @@ impl Session {
             }
         }
 
-        match comparable.and_then(|values| compare_values(&values, relation)) {
+        let result = match relation {
+            ComparisonRelation::Equal | ComparisonRelation::Unequal => args
+                .iter()
+                .map(comparable_value_from_expr)
+                .collect::<Option<Vec<_>>>()
+                .map(|values| compare_equality_values(&values, relation)),
+            ComparisonRelation::Less
+            | ComparisonRelation::Greater
+            | ComparisonRelation::LessEqual
+            | ComparisonRelation::GreaterEqual => args
+                .iter()
+                .map(numeric_comparable_value_from_expr)
+                .collect::<Option<Vec<_>>>()
+                .map(|values| compare_numeric_values(&values, relation)),
+        };
+
+        match result {
             Some(result) => predicate_bool_expr(result),
             None => Expr::call(head.clone(), args.to_vec()),
         }
@@ -385,17 +396,15 @@ fn reduce_order_chain(head: &Expr, args: &[Expr], relation: ComparisonRelation) 
 
 fn known_order_chain_contradiction(args: &[Expr], relation: ComparisonRelation) -> bool {
     for (left_index, lhs) in args.iter().enumerate() {
-        let Some(lhs) = comparable_value_from_expr(lhs) else {
+        let Some(lhs) = numeric_comparable_value_from_expr(lhs) else {
             continue;
         };
 
         for rhs in args.iter().skip(left_index + 1) {
-            let Some(rhs) = comparable_value_from_expr(rhs) else {
+            let Some(rhs) = numeric_comparable_value_from_expr(rhs) else {
                 continue;
             };
-            let Some(ordering) = compare_comparable_values(&lhs, &rhs) else {
-                continue;
-            };
+            let ordering = compare_rationals(&lhs, &rhs);
             if !ordering_satisfies_relation(ordering, relation) {
                 return true;
             }
@@ -546,28 +555,10 @@ fn comparison_result_from_expr_identity(
             .all(|pair| pair[0] == pair[1])
             .then_some(true),
         ComparisonRelation::Unequal => None,
-        ComparisonRelation::Less => args
-            .windows(2)
-            .any(|pair| pair[0] == pair[1])
-            .then_some(false),
-        ComparisonRelation::Greater => args
-            .windows(2)
-            .any(|pair| pair[0] == pair[1])
-            .then_some(false),
-        ComparisonRelation::LessEqual => {
-            if args.windows(2).all(|pair| pair[0] == pair[1]) {
-                Some(true)
-            } else {
-                None
-            }
-        }
-        ComparisonRelation::GreaterEqual => {
-            if args.windows(2).all(|pair| pair[0] == pair[1]) {
-                Some(true)
-            } else {
-                None
-            }
-        }
+        ComparisonRelation::Less
+        | ComparisonRelation::Greater
+        | ComparisonRelation::LessEqual
+        | ComparisonRelation::GreaterEqual => None,
     }
 }
 
@@ -582,45 +573,26 @@ fn comparable_value_from_expr(expr: &Expr) -> Option<ComparableValue> {
     }
 }
 
-fn compare_values(values: &[ComparableValue], relation: ComparisonRelation) -> Option<bool> {
+fn compare_equality_values(values: &[ComparableValue], relation: ComparisonRelation) -> bool {
     match relation {
-        ComparisonRelation::Equal => Some(values.windows(2).all(|pair| pair[0] == pair[1])),
-        ComparisonRelation::Unequal => Some(
-            !values
-                .iter()
-                .enumerate()
-                .any(|(index, lhs)| values[index + 1..].iter().any(|rhs| lhs == rhs)),
-        ),
-        ComparisonRelation::Less => {
-            compare_pair_chain(values, |ordering| ordering == std::cmp::Ordering::Less)
-        }
-        ComparisonRelation::Greater => {
-            compare_pair_chain(values, |ordering| ordering == std::cmp::Ordering::Greater)
-        }
-        ComparisonRelation::LessEqual => {
-            compare_pair_chain(values, |ordering| ordering != std::cmp::Ordering::Greater)
-        }
-        ComparisonRelation::GreaterEqual => {
-            compare_pair_chain(values, |ordering| ordering != std::cmp::Ordering::Less)
+        ComparisonRelation::Equal => values.windows(2).all(|pair| pair[0] == pair[1]),
+        ComparisonRelation::Unequal => !values
+            .iter()
+            .enumerate()
+            .any(|(index, lhs)| values[index + 1..].iter().any(|rhs| lhs == rhs)),
+        ComparisonRelation::Less
+        | ComparisonRelation::Greater
+        | ComparisonRelation::LessEqual
+        | ComparisonRelation::GreaterEqual => {
+            unreachable!("order relations use numeric comparison")
         }
     }
 }
 
-fn compare_pair_chain<F>(values: &[ComparableValue], predicate: F) -> Option<bool>
-where
-    F: Fn(std::cmp::Ordering) -> bool,
-{
-    let mut result = true;
-
-    for pair in values.windows(2) {
-        let ordering = compare_comparable_values(&pair[0], &pair[1])?;
-        if !predicate(ordering) {
-            result = false;
-            break;
-        }
-    }
-
-    Some(result)
+fn compare_numeric_values(values: &[Rational], relation: ComparisonRelation) -> bool {
+    values
+        .windows(2)
+        .all(|pair| ordering_satisfies_relation(compare_rationals(&pair[0], &pair[1]), relation))
 }
 
 fn compare_comparable_values(

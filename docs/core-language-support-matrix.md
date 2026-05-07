@@ -100,16 +100,20 @@ once in its primary implementation group. Other groups may mention it as
   current `Part` selector-list boundary and `Extract` nested position-list
   selector subset, empty-expression and association-aware `Depth` parity,
   `Level` scalar-zero and standard-`All` levelspec parity, and empty-expression
-  negative-level depth alignment across the current structural walkers, current
+  negative-level depth alignment plus current oracle-locked `Heads` traversal
+  edges across the current structural walkers, current
   `Not[Not[...]]` and relational-`Not` simplifications,
   flat nested `And` / `Or` residual simplification, first-pass `Xor` /
   `Equivalent` boolean/repeated-term reductions, first-pass `Implies`
   simplification including identical-argument tautology, current short-circuit
   `Nand` / `Nor`, first-pass `Boole` truth-to-integer conversion,
   mixed-symbolic `Equal` / `Unequal` chain boundaries plus current numeric
-  order-chain endpoint contradiction detection,
+  order-chain endpoint contradiction detection while leaving nonnumeric order
+  comparisons conservative,
   nonatomic `OrderedQ` argument-order parity, `ReplacePart` atom-head
-  non-replacement, and non-expanding `All` / `Span` position-spec boundaries
+  non-replacement, current invalid and out-of-range `Part` / `Extract`
+  selector diagnostics, and non-expanding `All` / `Span` position-spec
+  boundaries
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
   across every structural walker, general boolean/comparison evaluation beyond
   the current exact-numeric order-chain reductions

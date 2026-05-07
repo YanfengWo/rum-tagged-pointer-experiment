@@ -538,7 +538,7 @@ fn and_or_short_circuit_side_effects_and_compare_exact_values() {
             .unwrap()
             .value
             .to_string(),
-        "True"
+        "Less[\"a\", \"b\"]"
     );
     assert_eq!(
         session
@@ -547,6 +547,46 @@ fn and_or_short_circuit_side_effects_and_compare_exact_values() {
             .value
             .to_string(),
         "Less[\"a\", \"b\", u]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Less[\"b\", u, \"a\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Less[\"b\", u, \"a\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Greater[\"a\", u, \"b\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Greater[\"a\", u, \"b\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Less[\"b\", \"a\", u]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Less[\"b\", \"a\", u]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Less[cmpSym, cmpSym]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Less[cmpSym, cmpSym]"
+    );
+    assert_eq!(
+        session
+            .eval_text("LessEqual[cmpSym, cmpSym]")
+            .unwrap()
+            .value
+            .to_string(),
+        "LessEqual[cmpSym, cmpSym]"
     );
     assert_eq!(
         session

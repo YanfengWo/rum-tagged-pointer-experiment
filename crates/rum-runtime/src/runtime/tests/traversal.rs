@@ -140,6 +140,14 @@ fn count_memberq_and_freeq_share_standard_traversal_semantics() {
     );
     assert_eq!(
         session
+            .eval_text("Count[f[1], _Symbol, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
             .eval_text("Count[f[g[]], g[], {-2}]")
             .unwrap()
             .value
@@ -180,6 +188,14 @@ fn count_memberq_and_freeq_share_standard_traversal_semantics() {
     );
     assert_eq!(
         session
+            .eval_text("MemberQ[f[1], f, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
             .eval_text("FreeQ[f[g[1]], _Integer]")
             .unwrap()
             .value
@@ -209,6 +225,14 @@ fn count_memberq_and_freeq_share_standard_traversal_semantics() {
             .value
             .to_string(),
         "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("FreeQ[f[1], f, Heads -> False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
     );
     assert_eq!(
         session
@@ -242,11 +266,59 @@ fn level_supports_heads_and_apply_head_forms() {
 
     assert_eq!(
         session
+            .eval_text("Level[x, All, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[{}, All, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List, List[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[{}, {-1}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[{}, {-2}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Level[f[1, g[2]], 1, Heads -> True]")
             .unwrap()
             .value
             .to_string(),
         "List[f, 1, g[2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g[1]], {2}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[g, 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g[1]], {-1}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f, g, 1]"
     );
     assert_eq!(
         session
@@ -280,6 +352,22 @@ fn position_supports_standard_levelspecs_heads_and_limits() {
     );
     assert_eq!(
         session
+            .eval_text("Position[x, _Symbol, All, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Position[x, _Symbol, All, Heads -> False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Position[f[1, g[2]], x_Symbol]")
             .unwrap()
             .value
@@ -301,6 +389,14 @@ fn position_supports_standard_levelspecs_heads_and_limits() {
             .value
             .to_string(),
         "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Position[f[1], _Symbol, {1}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[0]]"
     );
     assert_eq!(
         session
@@ -371,5 +467,13 @@ fn traversal_uses_values_only_association_semantics_and_keyed_positions() {
             .value
             .to_string(),
         "List[List[Key[a]], List[Key[b], 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Position[Association[a -> 1, b -> f[2]], _Symbol, All, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[0], List[Key[b], 0]]"
     );
 }

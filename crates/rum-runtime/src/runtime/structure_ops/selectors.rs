@@ -41,6 +41,14 @@ struct ExtractPositionSpec {
     multiple: bool,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum PartSelectionFailure {
+    PartW { part: Expr, target: Expr },
+    PartD,
+    Take { spec: Expr, target: Expr },
+    Pspec1 { spec: Expr },
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_part(
         &mut self,
@@ -57,6 +65,19 @@ impl Session {
         }
 
         let Some(selectors) = parse_part_selectors_for_part(&args[1..]) else {
+            if let Some(offender) = args[1..]
+                .iter()
+                .find(|selector| parse_part_selector_for_part(selector).is_none())
+            {
+                self.push_message(
+                    "Part",
+                    "pkspec1",
+                    format!(
+                        "The expression {} cannot be used as a part specification.",
+                        offender
+                    ),
+                );
+            }
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
         if association_entries_from_expr(&args[0]).is_some()
@@ -70,8 +91,15 @@ impl Session {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         }
 
-        Ok(apply_part_selectors(&args[0], &selectors)
-            .unwrap_or_else(|| Expr::call(head.clone(), args.to_vec())))
+        let original = Expr::call(head.clone(), args.to_vec());
+        let Some(value) = apply_part_selectors(&args[0], &selectors) else {
+            if let Some(failure) = diagnose_part_selection_failure(&args[0], &selectors) {
+                self.push_part_selection_failure("Part", failure, &original);
+            }
+            return Ok(original);
+        };
+
+        Ok(value)
     }
 
     pub(in crate::runtime) fn eval_extract(
@@ -84,6 +112,15 @@ impl Session {
         }
 
         let Some(position_spec) = parse_extract_position_spec(&args[1]) else {
+            self.push_message(
+                "Extract",
+                "psl1",
+                format!(
+                    "Position specification {} in {} is not applicable.",
+                    args[1],
+                    Expr::call(head.clone(), args.to_vec())
+                ),
+            );
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -91,6 +128,10 @@ impl Session {
             let mut items = Vec::new();
             for selectors in &position_spec.position_specs {
                 let Some(value) = apply_part_selectors(&args[0], selectors) else {
+                    if let Some(failure) = diagnose_part_selection_failure(&args[0], selectors) {
+                        let original = Expr::call(head.clone(), args.to_vec());
+                        self.push_part_selection_failure("Extract", failure, &original);
+                    }
                     return Ok(Expr::call(head.clone(), args.to_vec()));
                 };
                 items.push(wrap_extracted_value(value, args.get(2)));
@@ -99,12 +140,51 @@ impl Session {
         } else {
             let Some(value) = apply_part_selectors(&args[0], &position_spec.position_specs[0])
             else {
+                if let Some(failure) =
+                    diagnose_part_selection_failure(&args[0], &position_spec.position_specs[0])
+                {
+                    let original = Expr::call(head.clone(), args.to_vec());
+                    self.push_part_selection_failure("Extract", failure, &original);
+                }
                 return Ok(Expr::call(head.clone(), args.to_vec()));
             };
             wrap_extracted_value(value, args.get(2))
         };
 
         Ok(extracted)
+    }
+
+    fn push_part_selection_failure(
+        &mut self,
+        symbol: &str,
+        failure: PartSelectionFailure,
+        original: &Expr,
+    ) {
+        match failure {
+            PartSelectionFailure::PartW { part, target } => self.push_message(
+                symbol,
+                "partw",
+                format!("Part {} of {} does not exist.", part, target),
+            ),
+            PartSelectionFailure::PartD => self.push_message(
+                symbol,
+                "partd",
+                format!(
+                    "Part specification {} is longer than depth of object.",
+                    original
+                ),
+            ),
+            PartSelectionFailure::Take { spec, target } => self.push_message(
+                symbol,
+                "take",
+                format!("Cannot take positions {} in {}.", spec, target),
+            ),
+            PartSelectionFailure::Pspec1 { spec } => self.push_message(
+                symbol,
+                "pspec1",
+                format!("Part specification {} is not applicable.", spec),
+            ),
+        }
     }
 }
 
@@ -285,6 +365,152 @@ pub(super) fn apply_part_selectors(expr: &Expr, selectors: &[PartSelector]) -> O
             )?),
             None,
         )),
+    }
+}
+
+fn diagnose_part_selection_failure(
+    expr: &Expr,
+    selectors: &[PartSelector],
+) -> Option<PartSelectionFailure> {
+    let (first, rest) = selectors.split_first()?;
+    diagnose_selector_failure(expr, first, rest)
+}
+
+fn diagnose_selector_failure(
+    expr: &Expr,
+    selector: &PartSelector,
+    rest: &[PartSelector],
+) -> Option<PartSelectionFailure> {
+    match select_parts_for_selector(expr, selector) {
+        Some(shape) => diagnose_selected_shape_failure(shape, rest),
+        None => diagnose_failed_selector(expr, selector),
+    }
+}
+
+fn diagnose_selected_shape_failure(
+    shape: SelectedPartShape,
+    rest: &[PartSelector],
+) -> Option<PartSelectionFailure> {
+    if rest.is_empty() {
+        return None;
+    }
+
+    match shape {
+        SelectedPartShape::Leaf(expr) => diagnose_part_selection_failure(&expr, rest),
+        SelectedPartShape::Branch(children) => diagnose_children_failure(children, rest),
+        SelectedPartShape::AssociationBranch(children) => diagnose_children_failure(
+            children
+                .into_iter()
+                .map(|(_, child)| child)
+                .collect::<Vec<_>>(),
+            rest,
+        ),
+    }
+}
+
+fn diagnose_children_failure(
+    children: Vec<SelectedPartShape>,
+    rest: &[PartSelector],
+) -> Option<PartSelectionFailure> {
+    if children.is_empty() {
+        return Some(PartSelectionFailure::PartD);
+    }
+
+    children
+        .into_iter()
+        .find_map(|child| diagnose_selected_shape_failure(child, rest))
+}
+
+fn diagnose_failed_selector(expr: &Expr, selector: &PartSelector) -> Option<PartSelectionFailure> {
+    match selector {
+        PartSelector::Key(_) => Some(PartSelectionFailure::Pspec1 {
+            spec: selector_to_expr(selector),
+        }),
+        PartSelector::Single(AtomicPartSpec::Index(index)) => diagnose_failed_index(expr, *index),
+        PartSelector::Single(AtomicPartSpec::All) => Some(PartSelectionFailure::PartD),
+        PartSelector::Single(AtomicPartSpec::Span(span)) => Some(PartSelectionFailure::Take {
+            spec: span_to_expr(*span),
+            target: expr.clone(),
+        }),
+        PartSelector::Multi(specs) => diagnose_failed_multi_selector(expr, selector, specs),
+    }
+}
+
+fn diagnose_failed_index(expr: &Expr, index: isize) -> Option<PartSelectionFailure> {
+    if index == 0 {
+        return None;
+    }
+
+    match expr {
+        Expr::Atom(_) => Some(PartSelectionFailure::PartD),
+        Expr::Call { .. } => Some(PartSelectionFailure::PartW {
+            part: Expr::integer(BigInt::from(index)),
+            target: expr.clone(),
+        }),
+    }
+}
+
+fn diagnose_failed_multi_selector(
+    expr: &Expr,
+    selector: &PartSelector,
+    specs: &[PartSelector],
+) -> Option<PartSelectionFailure> {
+    for spec in specs {
+        if select_parts_for_selector(expr, spec).is_some() {
+            continue;
+        }
+
+        let failure = diagnose_failed_selector(expr, spec)?;
+        return Some(match failure {
+            PartSelectionFailure::PartW { target, .. } => PartSelectionFailure::PartW {
+                part: selector_to_expr(selector),
+                target,
+            },
+            other => other,
+        });
+    }
+
+    Some(PartSelectionFailure::Pspec1 {
+        spec: selector_to_expr(selector),
+    })
+}
+
+fn selector_to_expr(selector: &PartSelector) -> Expr {
+    match selector {
+        PartSelector::Single(AtomicPartSpec::Index(index)) => Expr::integer(BigInt::from(*index)),
+        PartSelector::Single(AtomicPartSpec::All) => system_expr(heads::structure::ALL),
+        PartSelector::Single(AtomicPartSpec::Span(span)) => span_to_expr(*span),
+        PartSelector::Key(key) => key_expr(key.clone()),
+        PartSelector::Multi(specs) => Expr::call(
+            system_expr(heads::structure::LIST),
+            specs.iter().map(selector_to_expr).collect(),
+        ),
+    }
+}
+
+fn span_to_expr(span: PartSpanSpec) -> Expr {
+    Expr::call(
+        system_expr(heads::structure::SPAN),
+        vec![
+            span_endpoint_to_expr(span.start),
+            span_endpoint_to_expr(span.end),
+            Expr::integer(BigInt::from(span.step)),
+        ],
+    )
+}
+
+fn span_endpoint_to_expr(endpoint: SpanEndpoint) -> Expr {
+    match endpoint {
+        SpanEndpoint::Index(index) => Expr::integer(BigInt::from(index)),
+        SpanEndpoint::UpTo(limit) => Expr::call(
+            system_expr("UpTo"),
+            vec![
+                limit
+                    .map(|value| Expr::integer(BigInt::from(value)))
+                    .unwrap_or_else(|| system_expr(heads::structure::INFINITY)),
+            ],
+        ),
+        SpanEndpoint::All => system_expr(heads::structure::ALL),
     }
 }
 

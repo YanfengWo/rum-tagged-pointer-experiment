@@ -606,6 +606,22 @@ fn cases_supports_explicit_head_traversal_control() {
 
     assert_eq!(
         session
+            .eval_text("Cases[x, _Symbol, All, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Cases[x, _Symbol, All, Heads -> False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[x]"
+    );
+    assert_eq!(
+        session
             .eval_text("Cases[f[1, g[2]], x_Symbol, Heads -> True]")
             .unwrap()
             .value
@@ -627,6 +643,14 @@ fn cases_supports_explicit_head_traversal_control() {
             .value
             .to_string(),
         "List[g]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Cases[f[g[1]], _Symbol, {-1}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f, g]"
     );
 }
 
@@ -1060,6 +1084,22 @@ fn deletecases_supports_standard_levelspecs_and_limits() {
 fn deletecases_can_delete_heads_and_association_values() {
     let mut session = Session::new();
 
+    assert_eq!(
+        session
+            .eval_text("DeleteCases[f[g[1]], g, All, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DeleteCases[f[g[1]], g, All, Heads -> False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[g[1]]"
+    );
     assert_eq!(
         session
             .eval_text("DeleteCases[f[1, g[2]], x_Symbol, Heads -> True]")
