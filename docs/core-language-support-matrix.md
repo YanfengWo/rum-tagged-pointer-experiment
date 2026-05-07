@@ -140,10 +140,12 @@ once in its primary implementation group. Other groups may mention it as
     `MatrixQ`, `ArrayQ`, `AllTrue`, `AnyTrue`, `NoneTrue`, `CoprimeQ`,
     `NearestTo`, `PolynomialQ`, `PolynomialExpressionQ`,
     `RationalExpressionQ`, `DateObjectQ`, `TimeObjectQ`
-  - `planned`: `Heads`
+  - `planned`: `Heads`, `Join`, `Flatten`, `DeleteDuplicates`,
+    `DeleteDuplicatesBy`, `Union`, `Sort`, `SortBy`, `Reverse`, `Transpose`,
+    `Complement`
 - `cross-tracked elsewhere`: `Apply`, `Array`, `Cases`, `Count`,
-  `DeleteCases`, `FreeQ`, `Join`, `Map`, `MapAll`, `MapAt`, `MemberQ`,
-  `Outer`, `Position`, `Range`, `Select`, `Table`
+  `DeleteCases`, `FreeQ`, `Map`, `MapAll`, `MapAt`, `MemberQ`, `Outer`,
+  `Position`, `Range`, `Select`, `Table`
 
 ## CL-02: Definitions, Attributes, Assignments, and Scoping
 
@@ -162,8 +164,8 @@ once in its primary implementation group. Other groups may mention it as
 - `partial`: public attribute surface is narrower than Wolfram's full
   attribute family, while the broader protection / option / package-tooling
   layers are cross-tracked in `CL-08`
-- `planned`: fuller assignment/update family and broader
-  definition-introspection parity
+- `planned`: fuller assignment/update family, public `Unique[...]` gensym
+  support, and broader definition-introspection parity
 
 ### Functions and Symbols
 
@@ -174,7 +176,7 @@ once in its primary implementation group. Other groups may mention it as
 - `partial`: `Attributes`
 - `planned`: `AddTo`, `AppendTo`, `ApplyTo`, `Decrement`, `PreDecrement`,
   `DefaultValues`, `DivideBy`, `Increment`, `PreIncrement`, `Information`,
-  `PrependTo`, `Remove`, `SubtractFrom`, `TimesBy`, `ValueQ`
+  `PrependTo`, `Remove`, `SubtractFrom`, `TimesBy`, `Unique`, `ValueQ`
 - `cross-tracked elsewhere`: `Alternatives`, `BlankSequence`, `Function`,
   `Optional`, `Check`, `Confirm`, `CompoundExpression`, `Enclose`, `OptionValue`,
   `Options`, `OptionsPattern`, `Protect`, `Protected`, `Quiet`, `Rule`,
@@ -373,7 +375,8 @@ once in its primary implementation group. Other groups may mention it as
   assertion enablement, `On[Assert]` / `Off[Assert]` controls including
   Wolfram-style extra-argument global switch forms, inert disabled
   `Assert`, oracle-aligned enabled-`Assert` failure message tags/text,
-  plus the current `$AssertFunction` callback hook,
+  no-test and extra-argument `Assert` call handling, plus the current
+  `$AssertFunction` callback hook including non-boolean-test diagnostics,
   exact-key `Success[...]` / `Failure[...]` property
   extraction with the current `Missing` propagation subset, including current
   `Failure[...]` `All` / `"Properties"` / `"Message"` / `"StyledMessage"`
@@ -747,6 +750,11 @@ of the page-defined official matrix above.
   `NormalizeRules`, `ReleaseHold`, `SetAttributes`, `ClearAttributes`,
   `StringEndsQ`, `StringStartsQ`, `StringTrim`, `TagSetDelayed`, `TagUnset`,
   `$Context`, `$Failed`, `$MessageList`, `$Path`, `File`
+- `planned`: real-project script/package glue for `CL-Y`, including
+  `$InputFileName`, mutable `$Path`-driven loading, `FileNameJoin`,
+  `DirectoryName`, `ParentDirectory`, `FileNames`, `FileNameTake`, `Exit`,
+  text-only `Row`, and parser compatibility for Wolfram-style Unicode
+  identifier characters used as ordinary source symbols
 
 ## Maintenance Notes
 

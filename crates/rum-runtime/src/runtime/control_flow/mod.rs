@@ -252,24 +252,19 @@ impl Session {
     }
 
     pub(super) fn eval_assert(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let (test, tag) = match args {
-            [test] => (test.clone(), None),
-            [test, tag] => (test.clone(), Some(tag.clone())),
-            _ => return Ok(self.invalid_call_with_arg_range("Assert", args, 1, 2)),
-        };
         let assert_args = args.to_vec();
+        let test = args.first().cloned();
 
         let function_result = self.evaluate(system_expr("$AssertFunction"));
         let function = self.suspend_with_frame(function_result, {
             let test = test.clone();
-            let tag = tag.clone();
             let assert_args = assert_args.clone();
             move |session, function| {
-                session.resume_assert_after_function(test, tag, assert_args, function)
+                session.resume_assert_after_function(test, assert_args, function)
             }
         })?;
 
-        self.resume_assert_after_function(test, tag, assert_args, function)
+        self.resume_assert_after_function(test, assert_args, function)
     }
 
     pub(super) fn eval_block_random(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -465,7 +460,6 @@ impl Session {
     fn resume_assert_after_test(
         &mut self,
         test: Expr,
-        tag: Option<Expr>,
         assert_args: Vec<Expr>,
         assert_function: Option<Expr>,
         outcome: Result<Expr, EvalError>,
@@ -473,11 +467,15 @@ impl Session {
         match outcome {
             Ok(value) if is_system_symbol_name(&value, "True") => Ok(system_expr("Null")),
             Ok(value) => {
+                for (message_tag, text) in assert_test_value_messages(&test, &value) {
+                    self.push_message("Assert", message_tag, text);
+                }
+
                 if let Some(assert_function) = assert_function {
                     return self.finish_assert_function(assert_function, assert_args);
                 }
 
-                for (message_tag, text) in assert_failure_messages(&test, tag.as_ref(), &value) {
+                for (message_tag, text) in assert_failure_messages(&test, &assert_args) {
                     self.push_message("Assert", message_tag, text);
                 }
                 Ok(system_expr("Null"))
@@ -488,8 +486,7 @@ impl Session {
 
     fn resume_assert_after_function(
         &mut self,
-        test: Expr,
-        tag: Option<Expr>,
+        test: Option<Expr>,
         assert_args: Vec<Expr>,
         function: Expr,
     ) -> Result<Expr, EvalError> {
@@ -501,23 +498,31 @@ impl Session {
         if !self.asserts_enabled && assert_function.is_none() {
             return Ok(Expr::call(system_expr("Assert"), assert_args));
         }
+        let Some(test) = test else {
+            self.push_message(
+                "Assert",
+                "asrte",
+                format!(
+                    "Assertion {} had no test.",
+                    render_input_like_expr(&Expr::call(system_expr("Assert"), assert_args))
+                ),
+            );
+            return Ok(system_expr("Null"));
+        };
 
         let test_result = self.evaluate(test.clone());
         let outcome = self.suspend_with_result_frame(test_result, {
             let test = test.clone();
-            let tag = tag.clone();
             let assert_args = assert_args.clone();
             let assert_function = assert_function.clone();
             move |session, outcome| {
-                session.resume_assert_after_test(test, tag, assert_args, assert_function, outcome)
+                session.resume_assert_after_test(test, assert_args, assert_function, outcome)
             }
         });
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => {
-                self.resume_assert_after_test(test, tag, assert_args, assert_function, outcome)
-            }
+            outcome => self.resume_assert_after_test(test, assert_args, assert_function, outcome),
         }
     }
 
@@ -687,11 +692,7 @@ fn is_failsafe_failure_like(expr: &Expr) -> bool {
     is_confirmation_failure_like(expr)
 }
 
-fn assert_failure_messages(
-    test: &Expr,
-    tag: Option<&Expr>,
-    value: &Expr,
-) -> Vec<(&'static str, String)> {
+fn assert_test_value_messages(test: &Expr, value: &Expr) -> Vec<(&'static str, String)> {
     let mut messages = Vec::new();
     let test_text = render_input_like_expr(test);
 
@@ -705,21 +706,21 @@ fn assert_failure_messages(
         ));
     }
 
-    messages.push(assert_failure_message(&test_text, tag));
     messages
 }
 
-fn assert_failure_message(test_text: &str, tag: Option<&Expr>) -> (&'static str, String) {
-    match tag {
-        Some(tag) => (
+fn assert_failure_messages(test: &Expr, assert_args: &[Expr]) -> Vec<(&'static str, String)> {
+    let test_text = render_input_like_expr(test);
+    vec![match assert_args {
+        [_] => ("asrtf", format!("Assertion {test_text} failed.")),
+        _ => (
             "asrtfe",
             format!(
-                "Assertion {test_text} in Assert[{test_text}, {}] failed.",
-                render_input_like_expr(tag)
+                "Assertion {test_text} in {} failed.",
+                render_input_like_expr(&Expr::call(system_expr("Assert"), assert_args.to_vec()))
             ),
         ),
-        None => ("asrtf", format!("Assertion {test_text} failed.")),
-    }
+    }]
 }
 
 fn parse_check_abort_propagation(

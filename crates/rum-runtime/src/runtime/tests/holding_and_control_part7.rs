@@ -72,6 +72,12 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
         "Assert[InputString[\"never: \"]]"
     );
     assert!(session.pending_input_request().is_none());
+    let disabled_no_test = session.eval_text("Assert[]").unwrap();
+    assert_eq!(disabled_no_test.value.to_string(), "Assert[]");
+    assert!(disabled_no_test.messages.is_empty());
+    let disabled_extra_args = session.eval_text("Assert[1, 2, 3]").unwrap();
+    assert_eq!(disabled_extra_args.value.to_string(), "Assert[1, 2, 3]");
+    assert!(disabled_extra_args.messages.is_empty());
 
     let mut callback_session = Session::new();
     assert_eq!(
@@ -107,6 +113,16 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
     let callback_true = callback_session.eval_text("Assert[True]").unwrap();
     assert_eq!(callback_true.value.to_string(), "Null");
     assert!(callback_true.prints.is_empty());
+    let callback_symbolic = callback_session.eval_text("Assert[p]").unwrap();
+    assert_eq!(callback_symbolic.value.to_string(), "Null");
+    assert_eq!(callback_symbolic.messages.len(), 1);
+    assert_eq!(callback_symbolic.messages[0].symbol, "Assert");
+    assert_eq!(callback_symbolic.messages[0].tag, "asrttf");
+    assert_eq!(
+        callback_symbolic.messages[0].text,
+        "Assertion test p evaluated to p that is neither True nor False."
+    );
+    assert_eq!(callback_symbolic.prints, vec!["HoldComplete[Assert[p]]"]);
 
     callback_session
         .eval_text("$AssertFunction = Function[InputString[\"assert: \"]]")
@@ -130,6 +146,30 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
         "Null"
     );
     assert!(session.asserts_enabled());
+    let no_test = session.eval_text("Assert[]").unwrap();
+    assert_eq!(no_test.value.to_string(), "Null");
+    assert_eq!(no_test.messages.len(), 1);
+    assert_eq!(no_test.messages[0].symbol, "Assert");
+    assert_eq!(no_test.messages[0].tag, "asrte");
+    assert_eq!(no_test.messages[0].text, "Assertion Assert[] had no test.");
+    let extra_args = session.eval_text("Assert[1, 2, 3]").unwrap();
+    assert_eq!(extra_args.value.to_string(), "Null");
+    assert_eq!(extra_args.messages.len(), 2);
+    assert_eq!(extra_args.messages[0].symbol, "Assert");
+    assert_eq!(extra_args.messages[0].tag, "asrttf");
+    assert_eq!(
+        extra_args.messages[0].text,
+        "Assertion test 1 evaluated to 1 that is neither True nor False."
+    );
+    assert_eq!(extra_args.messages[1].symbol, "Assert");
+    assert_eq!(extra_args.messages[1].tag, "asrtfe");
+    assert_eq!(
+        extra_args.messages[1].text,
+        "Assertion 1 in Assert[1, 2, 3] failed."
+    );
+    let true_extra_args = session.eval_text("Assert[True, tag, extra]").unwrap();
+    assert_eq!(true_extra_args.value.to_string(), "Null");
+    assert!(true_extra_args.messages.is_empty());
     let asserted = session.eval_text("Assert[False, tag]").unwrap();
     assert_eq!(asserted.value.to_string(), "Null");
     assert_eq!(asserted.messages.len(), 1);
