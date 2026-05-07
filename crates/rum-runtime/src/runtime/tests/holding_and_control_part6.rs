@@ -183,7 +183,7 @@ fn withcleanup_runs_cleanup_on_values_throws_and_aborts() {
         .eval_text("Catch[WithCleanup[Throw[1, tag], Throw[2, tag]], tag]")
         .expect_err("cleanup-time Throw with the active tag should bypass the current Catch");
     match cleanup_throw {
-        EvalError::Thrown { value, tag } => {
+        EvalError::Thrown { value, tag, .. } => {
             assert_eq!(value.to_string(), "1");
             assert_eq!(tag.to_string(), "tag");
         }
@@ -207,6 +207,19 @@ fn withcleanup_runs_cleanup_on_values_throws_and_aborts() {
         ),
         other => panic!("expected dual uncaught throw request error, got {other:?}"),
     }
+    assert_eq!(dual_uncaught.messages.len(), 2);
+    assert_eq!(dual_uncaught.messages[0].symbol, "Throw");
+    assert_eq!(dual_uncaught.messages[0].tag, "nocatch");
+    assert_eq!(
+        dual_uncaught.messages[0].text,
+        "Uncaught Throw[2, tag] returned to top level."
+    );
+    assert_eq!(dual_uncaught.messages[1].symbol, "Throw");
+    assert_eq!(dual_uncaught.messages[1].tag, "nocatch");
+    assert_eq!(
+        dual_uncaught.messages[1].text,
+        "Uncaught Throw[1, tag] returned to top level."
+    );
     match session
         .eval_text("Catch[WithCleanup[Throw[1, tag], Throw[2, tag]], other]")
         .expect_err("nonmatching Catch should keep both cleanup and primary throw information")
@@ -216,6 +229,7 @@ fn withcleanup_runs_cleanup_on_values_throws_and_aborts() {
             tag,
             cleanup_value,
             cleanup_tag,
+            ..
         } => {
             assert_eq!(value.to_string(), "1");
             assert_eq!(tag.to_string(), "tag");
@@ -314,6 +328,107 @@ fn withcleanup_runs_cleanup_on_values_throws_and_aborts() {
         "aborted"
     );
     assert_eq!(session.eval_text("x").unwrap().value.to_string(), "2");
+}
+
+#[test]
+fn uncaught_throw_request_messages_follow_wolfram_nocatch_shape() {
+    let mut session = Session::new();
+
+    let plain = session
+        .eval_request("Throw[1]")
+        .expect_err("top-level Throw should fail the request");
+    assert_eq!(plain.messages.len(), 1);
+    assert_eq!(plain.messages[0].symbol, "Throw");
+    assert_eq!(plain.messages[0].tag, "nocatch");
+    assert_eq!(
+        plain.messages[0].text,
+        "Uncaught Throw[1] returned to top level."
+    );
+
+    let through_active_catch = session
+        .eval_request("Catch[WithCleanup[Throw[1, tag], Throw[2, tag]], tag]")
+        .expect_err("cleanup-time Throw should force the primary throw past active Catch");
+    assert_eq!(through_active_catch.messages.len(), 1);
+    assert_eq!(through_active_catch.messages[0].symbol, "Throw");
+    assert_eq!(through_active_catch.messages[0].tag, "nocatch");
+    assert_eq!(
+        through_active_catch.messages[0].text,
+        "Uncaught Throw[1, tag] returned to top level."
+    );
+
+    let cleanup_only = session
+        .eval_request("Catch[WithCleanup[Throw[1, tag], Throw[2, other]], tag]")
+        .expect_err("nonmatching cleanup Throw should escape before the primary is caught");
+    assert_eq!(cleanup_only.messages.len(), 1);
+    assert_eq!(cleanup_only.messages[0].symbol, "Throw");
+    assert_eq!(cleanup_only.messages[0].tag, "nocatch");
+    assert_eq!(
+        cleanup_only.messages[0].text,
+        "Uncaught Throw[2, other] returned to top level."
+    );
+
+    let explicit_none = session
+        .eval_request("Throw[1, None]")
+        .expect_err("explicit None tag should still be visible in the diagnostic");
+    assert_eq!(explicit_none.messages.len(), 1);
+    assert_eq!(explicit_none.messages[0].symbol, "Throw");
+    assert_eq!(explicit_none.messages[0].tag, "nocatch");
+    assert_eq!(
+        explicit_none.messages[0].text,
+        "Uncaught Throw[1, None] returned to top level."
+    );
+
+    let explicit_none_cleanup = session
+        .eval_request("WithCleanup[Throw[1, None], Throw[2, None]]")
+        .expect_err("explicit None tags should be preserved through cleanup throw diagnostics");
+    assert_eq!(explicit_none_cleanup.messages.len(), 2);
+    assert_eq!(
+        explicit_none_cleanup.messages[0].text,
+        "Uncaught Throw[2, None] returned to top level."
+    );
+    assert_eq!(
+        explicit_none_cleanup.messages[1].text,
+        "Uncaught Throw[1, None] returned to top level."
+    );
+
+    session.eval_text("Off[Throw::nocatch]").unwrap();
+    let suppressed = session
+        .eval_request("Throw[1, tag]")
+        .expect_err("Off[Throw::nocatch] suppresses only the diagnostic message");
+    assert!(suppressed.messages.is_empty());
+}
+
+#[test]
+fn top_level_break_and_continue_report_wolfram_nofwd_messages() {
+    let mut session = Session::new();
+
+    let break_failure = session
+        .eval_request("Break[]")
+        .expect_err("top-level Break should fail the request");
+    assert_eq!(break_failure.messages.len(), 1);
+    assert_eq!(break_failure.messages[0].symbol, "Break");
+    assert_eq!(break_failure.messages[0].tag, "nofwd");
+    assert_eq!(
+        break_failure.messages[0].text,
+        "No enclosing For, While, Until or Do found for Break[]."
+    );
+
+    let continue_failure = session
+        .eval_request("Continue[]")
+        .expect_err("top-level Continue should fail the request");
+    assert_eq!(continue_failure.messages.len(), 1);
+    assert_eq!(continue_failure.messages[0].symbol, "Continue");
+    assert_eq!(continue_failure.messages[0].tag, "nofwd");
+    assert_eq!(
+        continue_failure.messages[0].text,
+        "No enclosing For, While, Until or Do found for Continue[]."
+    );
+
+    session.eval_text("Off[Break::nofwd]").unwrap();
+    let suppressed_break = session
+        .eval_request("Break[]")
+        .expect_err("Off[Break::nofwd] suppresses only the diagnostic message");
+    assert!(suppressed_break.messages.is_empty());
 }
 
 #[test]

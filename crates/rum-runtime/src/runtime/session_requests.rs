@@ -266,6 +266,7 @@ impl Session {
         err: EvalError,
     ) -> SessionRequestFailure {
         self.emit_non_loader_eval_message(checkpoint.handled_error_checkpoint, &err);
+        self.emit_top_level_control_flow_messages(&err);
 
         let messages = self.messages[checkpoint.message_checkpoint..].to_vec();
         let prints = self.prints[checkpoint.print_checkpoint..].to_vec();
@@ -380,7 +381,7 @@ fn session_request_error_from_eval_error_with_source(
         EvalError::Return { value } => SessionRequestError::Other {
             message: format!("uncaught top-level Return resolved to {value}"),
         },
-        EvalError::Thrown { value, tag } => SessionRequestError::Other {
+        EvalError::Thrown { value, tag, .. } => SessionRequestError::Other {
             message: format!("uncaught throw: {value} with tag {tag}"),
         },
         EvalError::ThrownBypassingCatch {
@@ -388,6 +389,7 @@ fn session_request_error_from_eval_error_with_source(
             tag,
             cleanup_value,
             cleanup_tag,
+            ..
         } => SessionRequestError::Other {
             message: format!(
                 "uncaught throw: {cleanup_value} with tag {cleanup_tag}; uncaught throw: {value} with tag {tag}"

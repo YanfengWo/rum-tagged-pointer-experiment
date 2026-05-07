@@ -166,6 +166,7 @@ impl Session {
             }
             Err(err) => {
                 self.emit_non_loader_eval_message(handled_error_checkpoint, &err);
+                self.emit_top_level_control_flow_messages(&err);
                 self.last_message_list = self.messages[message_checkpoint..].to_vec();
                 self.handled_non_loader_eval_errors
                     .truncate(handled_error_checkpoint);

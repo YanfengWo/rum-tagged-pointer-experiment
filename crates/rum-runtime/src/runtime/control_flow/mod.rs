@@ -591,10 +591,15 @@ impl Session {
         cleanup_outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
         if let (
-            Err(EvalError::Thrown { value, tag }),
+            Err(EvalError::Thrown {
+                value,
+                tag,
+                explicit_tag,
+            }),
             Err(EvalError::Thrown {
                 value: cleanup_value,
                 tag: cleanup_tag,
+                explicit_tag: cleanup_explicit_tag,
             }),
         ) = (&primary_outcome, &cleanup_outcome)
         {
@@ -602,8 +607,10 @@ impl Session {
                 return Err(EvalError::ThrownBypassingCatch {
                     value: value.clone(),
                     tag: tag.clone(),
+                    explicit_tag: *explicit_tag,
                     cleanup_value: cleanup_value.clone(),
                     cleanup_tag: cleanup_tag.clone(),
+                    cleanup_explicit_tag: *cleanup_explicit_tag,
                 });
             }
         }

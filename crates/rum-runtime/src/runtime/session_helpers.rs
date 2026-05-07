@@ -133,6 +133,51 @@ impl Session {
         true
     }
 
+    pub(super) fn emit_top_level_control_flow_messages(&mut self, error: &EvalError) {
+        match error {
+            EvalError::Thrown {
+                value,
+                tag,
+                explicit_tag,
+            } => {
+                self.emit_uncaught_throw_message(value, tag, *explicit_tag);
+            }
+            EvalError::ThrownBypassingCatch {
+                value,
+                tag,
+                explicit_tag,
+                cleanup_value,
+                cleanup_tag,
+                cleanup_explicit_tag,
+            } => {
+                self.emit_uncaught_throw_message(cleanup_value, cleanup_tag, *cleanup_explicit_tag);
+                self.emit_uncaught_throw_message(value, tag, *explicit_tag);
+            }
+            EvalError::Break => self.push_message(
+                "Break",
+                "nofwd",
+                "No enclosing For, While, Until or Do found for Break[].",
+            ),
+            EvalError::Continue => self.push_message(
+                "Continue",
+                "nofwd",
+                "No enclosing For, While, Until or Do found for Continue[].",
+            ),
+            _ => {}
+        }
+    }
+
+    fn emit_uncaught_throw_message(&mut self, value: &Expr, tag: &Expr, explicit_tag: bool) {
+        self.push_message(
+            "Throw",
+            "nocatch",
+            format!(
+                "Uncaught {} returned to top level.",
+                uncaught_throw_message_expr(value, tag, explicit_tag)
+            ),
+        );
+    }
+
     pub(super) fn emit_loader_message(&mut self, symbol: &str, error: &EvalError) {
         match error {
             EvalError::LoadPathNotFound { target, searched } => {
@@ -236,5 +281,13 @@ impl Session {
                 self.messages.push(message);
             }
         }
+    }
+}
+
+fn uncaught_throw_message_expr(value: &Expr, tag: &Expr, explicit_tag: bool) -> String {
+    if !explicit_tag && is_system_symbol_name(tag, "None") {
+        format!("Throw[{value}]")
+    } else {
+        format!("Throw[{value}, {tag}]")
     }
 }

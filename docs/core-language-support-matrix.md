@@ -404,9 +404,11 @@ once in its primary implementation group. Other groups may mention it as
   generated top-level/request/evaluation-data `TerminatedEvaluation` for
   recursion and fixed-point iteration limits, current string-tag `Success`
   projection boundary, active-throw cleanup `Throw` bypass for the matching
-  `Catch` frame plus request-level cleanup/primary throw reporting, and
-  abort/failsafe resume through host input, but richer held/cleanup corners
-  such as exact `Throw::nocatch` message diagnostics and deeper status parity
+  `Catch` frame plus request-level cleanup/primary throw reporting, top-level
+  and cleanup-time `Throw::nocatch` diagnostics with cleanup-before-primary
+  ordering plus explicit `Throw[..., None]` spelling, top-level
+  `Break::nofwd` / `Continue::nofwd` diagnostics, and abort/failsafe resume
+  through host input, but richer held/cleanup corners and deeper status parity
   are still pending
 - `planned`: broader failure values, abort-protection parity, external
   interaction builtins, and deeper cleanup/exception compatibility

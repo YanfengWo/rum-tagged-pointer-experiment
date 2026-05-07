@@ -250,15 +250,21 @@ pub enum EvalError {
     #[error("nonlocal return: {value}")]
     Return { value: Expr },
     #[error("uncaught throw: {value} with tag {tag}")]
-    Thrown { value: Expr, tag: Expr },
+    Thrown {
+        value: Expr,
+        tag: Expr,
+        explicit_tag: bool,
+    },
     #[error(
         "uncaught throw: {cleanup_value} with tag {cleanup_tag}; uncaught throw: {value} with tag {tag}"
     )]
     ThrownBypassingCatch {
         value: Expr,
         tag: Expr,
+        explicit_tag: bool,
         cleanup_value: Expr,
         cleanup_tag: Expr,
+        cleanup_explicit_tag: bool,
     },
     #[error("uncaught Abort[]")]
     Abort,

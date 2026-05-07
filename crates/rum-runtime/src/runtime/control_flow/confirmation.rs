@@ -162,10 +162,12 @@ impl Session {
             [value] => Err(EvalError::Thrown {
                 value: value.clone(),
                 tag: system_expr("None"),
+                explicit_tag: false,
             }),
             [value, tag] => Err(EvalError::Thrown {
                 value: value.clone(),
                 tag: tag.clone(),
+                explicit_tag: true,
             }),
             _ => Ok(self.invalid_call_with_arg_range("Throw", args, 1, 2)),
         }
@@ -224,9 +226,18 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         match outcome {
             Ok(value) => Ok(value),
-            Err(EvalError::Thrown { value, tag }) if is_failure_expr(&value) => {
-                self.resume_enclose_for_failure(handler, form, lexical_tag, value, tag)
-            }
+            Err(EvalError::Thrown {
+                value,
+                tag,
+                explicit_tag,
+            }) if is_failure_expr(&value) => self.resume_enclose_for_failure(
+                handler,
+                form,
+                lexical_tag,
+                value,
+                tag,
+                explicit_tag,
+            ),
             Err(error) => Err(error),
         }
     }
@@ -238,17 +249,26 @@ impl Session {
         lexical_tag: Option<Expr>,
         value: Expr,
         tag: Expr,
+        explicit_tag: bool,
     ) -> Result<Expr, EvalError> {
         if let Some(lexical_tag) = lexical_tag {
             if tag == lexical_tag {
                 return self.finish_enclose_handler(handler, value);
             }
 
-            return Err(EvalError::Thrown { value, tag });
+            return Err(EvalError::Thrown {
+                value,
+                tag,
+                explicit_tag,
+            });
         }
 
         let Some(form) = form else {
-            return Err(EvalError::Thrown { value, tag });
+            return Err(EvalError::Thrown {
+                value,
+                tag,
+                explicit_tag,
+            });
         };
 
         let match_result = self.match_expr_owned(form, tag.clone(), BTreeMap::new());
@@ -256,7 +276,11 @@ impl Session {
             if outcome.matched {
                 session.finish_enclose_handler(handler, value)
             } else {
-                Err(EvalError::Thrown { value, tag })
+                Err(EvalError::Thrown {
+                    value,
+                    tag,
+                    explicit_tag,
+                })
             }
         })
     }
@@ -313,6 +337,7 @@ impl Session {
         Err(EvalError::Thrown {
             value: failure,
             tag,
+            explicit_tag: true,
         })
     }
 
@@ -367,6 +392,7 @@ impl Session {
         Err(EvalError::Thrown {
             value: failure,
             tag,
+            explicit_tag: true,
         })
     }
 
@@ -410,6 +436,7 @@ impl Session {
         Err(EvalError::Thrown {
             value: failure,
             tag,
+            explicit_tag: true,
         })
     }
 
@@ -459,6 +486,7 @@ impl Session {
         Err(EvalError::Thrown {
             value: failure,
             tag,
+            explicit_tag: true,
         })
     }
 
@@ -493,6 +521,7 @@ impl Session {
         Err(EvalError::Thrown {
             value: failure,
             tag,
+            explicit_tag: true,
         })
     }
 
@@ -507,14 +536,24 @@ impl Session {
             Err(EvalError::ThrownBypassingCatch {
                 value,
                 tag,
+                explicit_tag,
                 cleanup_value,
                 cleanup_tag,
-            }) => {
-                self.resume_catch_for_bypassing_throw(form, value, tag, cleanup_value, cleanup_tag)
-            }
-            Err(EvalError::Thrown { value, tag }) => {
-                self.resume_catch_for_throw(form, handler, value, tag)
-            }
+                cleanup_explicit_tag,
+            }) => self.resume_catch_for_bypassing_throw(
+                form,
+                value,
+                tag,
+                explicit_tag,
+                cleanup_value,
+                cleanup_tag,
+                cleanup_explicit_tag,
+            ),
+            Err(EvalError::Thrown {
+                value,
+                tag,
+                explicit_tag,
+            }) => self.resume_catch_for_throw(form, handler, value, tag, explicit_tag),
             Err(error) => Err(error),
         }
     }
@@ -525,6 +564,7 @@ impl Session {
         handler: Option<Expr>,
         value: Expr,
         tag: Expr,
+        explicit_tag: bool,
     ) -> Result<Expr, EvalError> {
         let Some(form) = form else {
             return self.finish_catch_match(handler, value, tag);
@@ -535,7 +575,11 @@ impl Session {
             if outcome.matched {
                 session.finish_catch_match(handler, value, tag)
             } else {
-                Err(EvalError::Thrown { value, tag })
+                Err(EvalError::Thrown {
+                    value,
+                    tag,
+                    explicit_tag,
+                })
             }
         })
     }
@@ -545,23 +589,35 @@ impl Session {
         form: Option<Expr>,
         value: Expr,
         tag: Expr,
+        explicit_tag: bool,
         cleanup_value: Expr,
         cleanup_tag: Expr,
+        cleanup_explicit_tag: bool,
     ) -> Result<Expr, EvalError> {
         let Some(form) = form else {
-            return Err(EvalError::Thrown { value, tag });
+            return Err(EvalError::Thrown {
+                value,
+                tag,
+                explicit_tag,
+            });
         };
 
         let match_result = self.match_expr_owned(form, tag.clone(), BTreeMap::new());
         self.drive_internal_value(match_result, move |_, outcome| {
             if outcome.matched {
-                Err(EvalError::Thrown { value, tag })
+                Err(EvalError::Thrown {
+                    value,
+                    tag,
+                    explicit_tag,
+                })
             } else {
                 Err(EvalError::ThrownBypassingCatch {
                     value,
                     tag,
+                    explicit_tag,
                     cleanup_value,
                     cleanup_tag,
+                    cleanup_explicit_tag,
                 })
             }
         })

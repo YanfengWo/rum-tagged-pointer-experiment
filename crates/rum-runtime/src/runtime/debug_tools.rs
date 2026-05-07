@@ -1431,6 +1431,7 @@ impl Session {
             if Self::terminated_evaluation_expr_for_error(error).is_some() {
                 self.emit_non_loader_eval_message(checkpoint.handled_error_checkpoint, error);
             }
+            self.emit_top_level_control_flow_messages(error);
         }
 
         let messages = self.messages.split_off(checkpoint.message_checkpoint);
@@ -1871,6 +1872,7 @@ impl Session {
             }
             Err(err) => {
                 self.emit_non_loader_eval_message(handled_error_checkpoint, &err);
+                self.emit_top_level_control_flow_messages(&err);
                 let messages = self.messages[message_checkpoint..].to_vec();
                 let prints = self.prints[print_checkpoint..].to_vec();
                 self.last_message_list = messages.clone();
