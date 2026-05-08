@@ -143,6 +143,7 @@ impl Parser {
             TokenKind::MessageName => Some(BinaryOp::MessageName),
             TokenKind::TagSet => Some(BinaryOp::TagSet),
             TokenKind::Set => Some(BinaryOp::Set),
+            TokenKind::PlusEqual => Some(BinaryOp::AddTo),
             TokenKind::SetDelayed => Some(BinaryOp::SetDelayed),
             TokenKind::ReplaceAll => Some(BinaryOp::ReplaceAll),
             TokenKind::ReplaceRepeated => Some(BinaryOp::ReplaceRepeated),
@@ -165,6 +166,14 @@ impl Parser {
 
     pub(super) fn consume_ampersand(&mut self) -> Option<Span> {
         if matches!(self.current().kind, TokenKind::Ampersand) {
+            Some(self.bump())
+        } else {
+            None
+        }
+    }
+
+    pub(super) fn consume_increment(&mut self) -> Option<Span> {
+        if matches!(self.current().kind, TokenKind::PlusPlus) {
             Some(self.bump())
         } else {
             None

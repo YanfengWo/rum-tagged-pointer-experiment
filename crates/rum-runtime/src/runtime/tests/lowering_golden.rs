@@ -46,6 +46,8 @@ fn lowering_golden_forms_cover_rules_patterns_slots_and_scoping() {
         ),
         ("a - b", "Plus[a, Times[-1, b]]"),
         ("a / b", "Times[a, Power[b, -1]]"),
+        ("x += 1", "AddTo[x, 1]"),
+        ("x++", "Increment[x]"),
         ("With[{x = 1}, x]", "With[List[Set[x, 1]], x]"),
         ("Module[{x = 1}, x]", "Module[List[Set[x, 1]], x]"),
         ("Block[{x = 1}, x]", "Block[List[Set[x, 1]], x]"),

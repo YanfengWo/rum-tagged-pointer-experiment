@@ -102,7 +102,15 @@ impl<'a> Lexer<'a> {
                     self.single(TokenKind::At)
                 }
             }
-            '+' => self.single(TokenKind::Plus),
+            '+' => {
+                if self.consume_str("++") {
+                    TokenKind::PlusPlus
+                } else if self.consume_str("+=") {
+                    TokenKind::PlusEqual
+                } else {
+                    self.single(TokenKind::Plus)
+                }
+            }
             '*' => self.single(TokenKind::Star),
             '^' => self.single(TokenKind::Caret),
             '&' => self.single(TokenKind::Ampersand),

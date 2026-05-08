@@ -13,6 +13,11 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
         BuiltinHandler::Module,
     ),
+    BuiltinSpec::ordinary(
+        "Unique",
+        "Creates a fresh symbol using the current first-pass prefix subset.",
+        BuiltinHandler::Unique,
+    ),
     BuiltinSpec::special_with_hold(
         "Block",
         "Temporarily rebinds symbols dynamically.",

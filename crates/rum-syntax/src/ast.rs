@@ -196,6 +196,7 @@ pub enum BinaryOp {
     MessageName,
     TagSet,
     Set,
+    AddTo,
     SetDelayed,
     ReplaceAll,
     ReplaceRepeated,
@@ -217,6 +218,7 @@ pub enum BinaryOp {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PostfixOp {
     Function,
+    Increment,
     Unset,
 }
 
@@ -250,6 +252,7 @@ impl BinaryOp {
             Self::MessageName => "::",
             Self::TagSet => "/:",
             Self::Set => "=",
+            Self::AddTo => "+=",
             Self::SetDelayed => ":=",
             Self::ReplaceAll => "/.",
             Self::ReplaceRepeated => "//.",
@@ -275,6 +278,7 @@ impl BinaryOp {
             Self::MessageName => 75,
             Self::TagSet => 5,
             Self::Set | Self::SetDelayed => 10,
+            Self::AddTo => 10,
             Self::ReplaceAll | Self::ReplaceRepeated => 20,
             Self::Rule | Self::RuleDelayed => 30,
             Self::Condition => 40,
@@ -292,6 +296,7 @@ impl BinaryOp {
             Self::CompoundExpression
                 | Self::TagSet
                 | Self::Set
+                | Self::AddTo
                 | Self::SetDelayed
                 | Self::Rule
                 | Self::RuleDelayed
@@ -309,6 +314,7 @@ impl PostfixOp {
     pub fn token(self) -> &'static str {
         match self {
             Self::Function => "&",
+            Self::Increment => "++",
             Self::Unset => "=.",
         }
     }
@@ -316,6 +322,7 @@ impl PostfixOp {
     pub(crate) fn precedence(self) -> u8 {
         match self {
             Self::Function => 5,
+            Self::Increment => 80,
             Self::Unset => 10,
         }
     }

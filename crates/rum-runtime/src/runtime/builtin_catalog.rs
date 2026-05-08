@@ -499,6 +499,24 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         "Assigns an immediate value to a symbol or pattern.",
         BuiltinHandler::Set,
     ),
+    BuiltinSpec::ordinary_with_hold(
+        "AddTo",
+        "Adds an evaluated increment to a held symbol target and stores the result.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::AddTo,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "AppendTo",
+        "Appends an evaluated item to a held symbol target and stores the result.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::AppendTo,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Increment",
+        "Increments a held symbol target and returns its previous value.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::Increment,
+    ),
     BuiltinSpec::special(
         "SetDelayed",
         "Assigns a delayed definition evaluated on use.",

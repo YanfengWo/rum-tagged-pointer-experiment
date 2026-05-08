@@ -285,16 +285,22 @@ This roadmap intentionally uses two levels of detail:
   - [ ] preserve the already-demonstrated `Module` closure pattern where
     exported definitions retain access to fresh private mutable state after
     the enclosing `Module` returns
+  - [ ] next wave first: make the normal `Table` collection path avoid
+    repeated accumulator cloning, then add first-pass `Flatten` support for
+    `Flatten[expr]`, `Flatten[expr, 1]`, `Flatten[expr, n]`, and
+    `Flatten[expr, Infinity]` over `List` heads so nested-table construction
+    becomes the preferred efficient alternative to large-loop `AppendTo`
   - [ ] add the small but project-critical list/set helpers used by ordinary
     `.wl` libraries, including `Join`, `Flatten`, `DeleteDuplicates`,
     `DeleteDuplicatesBy`, `Union`, `Sort`, `SortBy`, `Reverse`,
     `Transpose`, and `Complement`
-  - [ ] deepen held mutation support beyond the current subset so closure-owned
-    state updates such as `AppendTo[privateList, item]`, `i++`, and
-    `counter += delta` work predictably
-  - [ ] add explicit gensym support through `Unique[...]` so package code can
-    construct unforgeable private heads without relying only on `Module`
-    locals
+  - [x] deepen held mutation support with first-pass symbol-target
+    `AppendTo[privateList, item]`, `i++`, and `counter += delta`; leave
+    broader part-target and obscure update-family parity for later CL-02 polish
+  - [x] add first-pass explicit gensym support through `Unique[]`,
+    `Unique["prefix"]`, and `Unique[symbol]` so package code can construct
+    unforgeable private heads without relying only on `Module` locals; leave
+    list and attribute forms as future parity polish if a caller needs them
   - [ ] broaden source-language parsing for real Wolfram scripts, including
     Unicode identifier characters used as ordinary local names and the
     Unicode operator glyphs that package-level parsers/printers commonly keep

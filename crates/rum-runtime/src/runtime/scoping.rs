@@ -29,6 +29,39 @@ impl ScopingBindingNormalizationError {
     }
 }
 
+fn unique_string_prefix_parts(prefix: &str, current_context: &str) -> Option<(String, String)> {
+    let (context, name_prefix) = if let Some((context, name_prefix)) = split_symbol_name(prefix) {
+        if !is_valid_unique_context(context) {
+            return None;
+        }
+        (normalize_context_name(context), name_prefix)
+    } else {
+        (current_context.to_string(), prefix)
+    };
+
+    is_valid_unique_symbol_prefix(name_prefix).then(|| (context, name_prefix.to_string()))
+}
+
+fn is_valid_unique_context(context: &str) -> bool {
+    context
+        .strip_suffix('`')
+        .is_some_and(|body| !body.is_empty() && body.split('`').all(is_valid_unique_context_part))
+}
+
+fn is_valid_unique_context_part(part: &str) -> bool {
+    is_valid_unique_symbol_prefix(part)
+}
+
+fn is_valid_unique_symbol_prefix(prefix: &str) -> bool {
+    let mut chars = prefix.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+
+    (first.is_ascii_alphabetic() || first == '$')
+        && chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '$')
+}
+
 impl Session {
     pub(super) fn eval_with(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
@@ -81,6 +114,28 @@ impl Session {
         }
 
         self.resume_module_initializers(items, args[1].clone(), renames, 0)
+    }
+
+    pub(super) fn eval_unique(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let symbol = match args {
+            [] => self.allocate_unique_string_symbol("$"),
+            [Expr::Atom(Atom::Symbol(symbol))] => Some(self.allocate_fresh_symbol(symbol)),
+            [Expr::Atom(Atom::String(prefix))] => self.allocate_unique_string_symbol(prefix),
+            [arg] => {
+                return Ok(self.invalid_unique_arg(args, arg));
+            }
+            _ => {
+                return Ok(self.invalid_call_with_arg_range("Unique", args, 0, 1));
+            }
+        };
+
+        let Some(symbol) = symbol else {
+            return Ok(self.invalid_unique_arg(args, &args[0]));
+        };
+
+        self.definitions.entry(symbol.clone()).or_default();
+
+        Ok(Expr::Atom(Atom::Symbol(symbol)))
     }
 
     pub(super) fn eval_block(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -253,11 +308,25 @@ impl Session {
     }
 
     pub(super) fn allocate_fresh_symbol(&mut self, symbol: &Symbol) -> Symbol {
+        self.allocate_generated_symbol(symbol.context(), symbol.name(), "$")
+    }
+
+    fn allocate_unique_string_symbol(&mut self, prefix: &str) -> Option<Symbol> {
+        let (context, name_prefix) = unique_string_prefix_parts(prefix, &self.current_context)?;
+        Some(self.allocate_generated_symbol(&context, &name_prefix, ""))
+    }
+
+    fn allocate_generated_symbol(
+        &mut self,
+        context: &str,
+        name_prefix: &str,
+        separator: &str,
+    ) -> Symbol {
         loop {
             self.next_generated_symbol_id += 1;
             let candidate = Symbol::new(
-                symbol.context().to_string(),
-                format!("{}${}", symbol.name(), self.next_generated_symbol_id),
+                context.to_string(),
+                format!("{name_prefix}{separator}{}", self.next_generated_symbol_id),
             );
 
             if !self.generated_symbol_exists(&candidate) {
@@ -272,6 +341,18 @@ impl Session {
                 .message_definitions
                 .keys()
                 .any(|key| key.symbol == *symbol)
+    }
+
+    fn invalid_unique_arg(&mut self, args: &[Expr], arg: &Expr) -> Expr {
+        self.invalid_call_with_message(
+            "Unique",
+            args,
+            "usym",
+            format!(
+                "{} is not a symbol or a valid symbol name.",
+                render_input_like_expr(arg)
+            ),
+        )
     }
 
     fn resume_with_bindings(

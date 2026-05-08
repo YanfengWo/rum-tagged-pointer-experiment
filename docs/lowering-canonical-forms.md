@@ -64,6 +64,8 @@ rewritten further. For example:
 - `a; b` -> `CompoundExpression[a, b]`
 - `a;` -> `CompoundExpression[a, Null]`
 - `lhs = rhs` -> `Set[lhs, rhs]`
+- `lhs += rhs` -> `AddTo[lhs, rhs]`
+- `expr++` -> `Increment[expr]`
 - `lhs := rhs` -> `SetDelayed[lhs, rhs]`
 - `lhs =.` -> `Unset[lhs]`
 - `lhs -> rhs` -> `Rule[lhs, rhs]`

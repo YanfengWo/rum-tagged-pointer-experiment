@@ -27,6 +27,7 @@ mod definition_application;
 mod definition_catalog;
 mod definition_clear;
 mod definition_tags;
+mod definition_updates;
 mod definitions;
 mod eval_call_prepare;
 mod eval_core;
@@ -75,15 +76,16 @@ use self::{
     builtins_context_loader::*, builtins_input::*, builtins_messages::*,
     builtins_messages_inspect::*, calculus::*, context_and_load_helpers::*, control_flow::*,
     debug_tools::*, definition_analysis_helpers::*, definition_application::*,
-    definition_catalog::*, definition_clear::*, definition_tags::*, definitions::*,
-    eval_call_prepare::*, eval_core::*, eval_dispatch::*, expr_helpers::*, expr_runtime_helpers::*,
-    function_and_subst_helpers::*, functional_ops::*, hold_thread::*, lexical_substitution::*,
-    listable_dispatch::*, logic::*, lowering::*, matcher_and_symbols::*, message_catalog::*,
-    message_format::*, message_selector_parsing::*, metadata::*, model::*, namespace_tools::*,
-    options::*, package_tools::*, parse_and_message_helpers::*, pattern_matching::*,
-    polynomials::*, predicates::*, resolution::*, rewrite_builtins::*, scoping::*, session_api::*,
-    session_eval::*, session_helpers::*, session_requests::*, session_state::*,
-    slot_substitution::*, strings::*, structure_ops::*, suspension::*, tree_walkers::*,
+    definition_catalog::*, definition_clear::*, definition_tags::*, definition_updates::*,
+    definitions::*, eval_call_prepare::*, eval_core::*, eval_dispatch::*, expr_helpers::*,
+    expr_runtime_helpers::*, function_and_subst_helpers::*, functional_ops::*, hold_thread::*,
+    lexical_substitution::*, listable_dispatch::*, logic::*, lowering::*, matcher_and_symbols::*,
+    message_catalog::*, message_format::*, message_selector_parsing::*, metadata::*, model::*,
+    namespace_tools::*, options::*, package_tools::*, parse_and_message_helpers::*,
+    pattern_matching::*, polynomials::*, predicates::*, resolution::*, rewrite_builtins::*,
+    scoping::*, session_api::*, session_eval::*, session_helpers::*, session_requests::*,
+    session_state::*, slot_substitution::*, strings::*, structure_ops::*, suspension::*,
+    tree_walkers::*,
 };
 pub use self::{
     builtin_catalog::core_builtin_specs, lowering::lower_syntax_expr, metadata::*, model::*,

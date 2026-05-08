@@ -146,6 +146,12 @@ impl Parser {
                 continue;
             }
 
+            if let Some(increment_span) = self.consume_increment() {
+                let span = expr.span().merge(increment_span);
+                expr = SyntaxExpr::postfix(PostfixOp::Increment, expr, span);
+                continue;
+            }
+
             break;
         }
 

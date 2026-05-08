@@ -210,6 +210,7 @@ where
             heads::rules::SET,
             vec![lowered_lhs, lowered_rhs],
         )),
+        BinaryOp::AddTo => Ok(canonical_call("AddTo", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::SetDelayed => Ok(canonical_call(
             heads::rules::SET_DELAYED,
             vec![lowered_lhs, lowered_rhs],
@@ -322,6 +323,7 @@ where
 
     match op {
         PostfixOp::Function => Ok(canonical_call(heads::functions::FUNCTION, vec![lowered])),
+        PostfixOp::Increment => Ok(canonical_call("Increment", vec![lowered])),
         PostfixOp::Unset => Ok(canonical_call(heads::rules::UNSET, vec![lowered])),
     }
 }
