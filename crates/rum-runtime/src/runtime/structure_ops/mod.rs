@@ -2,6 +2,7 @@ use super::*;
 
 mod exact_paths;
 mod flatten;
+mod join;
 mod replace;
 mod selectors;
 mod sequence;

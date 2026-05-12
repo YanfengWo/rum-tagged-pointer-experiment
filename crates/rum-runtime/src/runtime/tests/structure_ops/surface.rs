@@ -276,6 +276,86 @@ fn flatten_covers_current_same_head_level_subset() {
             .to_string(),
         "f[h[g[a, b]], c]"
     );
+    assert_eq!(
+        session
+            .eval_text("Flatten[{{a, b}, {c, d}}, {{2}, {1}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a, c], List[b, d]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[{{a, b}, {c, d}}, {2, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, c, b, d]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[{{a}, {b, c}}, {{2}, {1}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a, b], List[c]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[{{{a, b}, {c, d}}, {{e, f}, {g, h}}}, {{1, 2}, {3}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a, b], List[c, d], List[e, f], List[g, h]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[{{{a, b}, {c, d}}, {{e, f}, {g, h}}}, {{1, 3}, {2}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a, c], List[b, d], List[e, g], List[f, h]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[f[f[a, b], f[c, d]], {{2}, {1}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[f[a, c], f[b, d]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[f[f[a, b], f[c, d]], {{1, 2}}, f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b, c, d]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[{{a, b}}, {}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a, b]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[{{}}, {{2}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[{{}}, {{1}, {2}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[]]"
+    );
 }
 
 #[test]
@@ -310,6 +390,51 @@ fn flatten_reports_current_invalid_boundaries() {
             .messages
             .iter()
             .any(|message| message.symbol == "Flatten" && message.tag == "flev")
+    );
+
+    let excess_level = session.eval_text("Flatten[{{a, b}, c}, {{2}}]").unwrap();
+    assert_eq!(
+        excess_level.value.to_string(),
+        "Flatten[List[List[a, b], c], List[List[2]]]"
+    );
+    assert!(
+        excess_level
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Flatten" && message.tag == "fldep")
+    );
+
+    let repeated_level = session.eval_text("Flatten[{{a, b}}, {{1}, {1}}]").unwrap();
+    assert_eq!(
+        repeated_level.value.to_string(),
+        "Flatten[List[List[a, b]], List[List[1], List[1]]]"
+    );
+    assert!(
+        repeated_level
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Flatten" && message.tag == "flrep")
+    );
+
+    let non_positive_level = session.eval_text("Flatten[{{a, b}}, {{0}}]").unwrap();
+    assert_eq!(
+        non_positive_level.value.to_string(),
+        "Flatten[List[List[a, b]], List[List[0]]]"
+    );
+    assert!(
+        non_positive_level
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Flatten" && message.tag == "flpi")
+    );
+
+    let atomic_with_invalid_spec = session.eval_text("Flatten[x, y]").unwrap();
+    assert_eq!(atomic_with_invalid_spec.value.to_string(), "Flatten[x, y]");
+    assert!(
+        atomic_with_invalid_spec
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "normal")
     );
 }
 

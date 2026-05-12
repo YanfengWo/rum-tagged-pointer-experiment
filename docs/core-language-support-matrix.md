@@ -116,9 +116,10 @@ once in its primary implementation group. Other groups may mention it as
   boundaries
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
   across every structural walker, `Flatten` beyond the current same-head /
-  single-head-spec non-negative-level / `Infinity` subset, general
-  boolean/comparison evaluation beyond the current exact-numeric order-chain
-  reductions
+  single-head-spec non-negative-level / `Infinity` plus level-list subset,
+  `Join` beyond the current top-level same-head / association /
+  positive-integer level subset, general boolean/comparison evaluation beyond
+  the current exact-numeric order-chain reductions
 - `planned`: richer expression introspection, broader list-manipulation
   surface, fuller truth-value and predicate surface
 
@@ -130,7 +131,7 @@ once in its primary implementation group. Other groups may mention it as
     `LessEqualThan`, `GreaterEqualThan`, `EqualTo`, `UnequalTo`, `SameAs`
   - `partial`: `Part`, `Extract`, `ReplacePart`, `Thread`, `First`, `Last`,
     `Rest`, `Most`, `Take`, `Drop`, `TakeDrop`, `Insert`, `Delete`,
-    `TakeList`, `Flatten`, `Append`, `Prepend`, `FullForm`, `Symbol`, `Construct`,
+    `TakeList`, `Flatten`, `Join`, `Append`, `Prepend`, `FullForm`, `Symbol`, `Construct`,
     `Equal`, `Unequal`, `Less`, `Greater`, `LessEqual`,
     `GreaterEqual`, `And`, `Or`, `Nand`, `Nor`, `Xor`, `Equivalent`, `Implies`, `Not`, `NumericQ`, `EvenQ`, `OddQ`,
     `Positive`, `Negative`, `NonPositive`, `NonNegative`, `PossibleZeroQ`,
@@ -142,8 +143,8 @@ once in its primary implementation group. Other groups may mention it as
     `MatrixQ`, `ArrayQ`, `AllTrue`, `AnyTrue`, `NoneTrue`, `CoprimeQ`,
     `NearestTo`, `PolynomialQ`, `PolynomialExpressionQ`,
     `RationalExpressionQ`, `DateObjectQ`, `TimeObjectQ`
-  - `planned`: `Heads`, `Join`, `DeleteDuplicates`, `DeleteDuplicatesBy`,
-    `Union`, `Sort`, `SortBy`, `Reverse`, `Transpose`, `Complement`
+  - `planned`: `Heads`, `DeleteDuplicates`, `DeleteDuplicatesBy`, `Union`,
+    `Sort`, `SortBy`, `Reverse`, `Transpose`, `Complement`
 - `cross-tracked elsewhere`: `Apply`, `Array`, `Cases`, `Count`,
   `DeleteCases`, `FreeQ`, `Map`, `MapAll`, `MapAt`, `MemberQ`, `Outer`,
   `Position`, `Range`, `Select`, `Table`

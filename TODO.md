@@ -289,13 +289,18 @@ This roadmap intentionally uses two levels of detail:
     repeated accumulator cloning, then add first-pass `Flatten` support for
     `Flatten[expr]`, `Flatten[expr, 1]`, `Flatten[expr, n]`, and
     `Flatten[expr, Infinity]` over same-head expressions plus
-    `Flatten[expr, n, h]` single-head specs, covering the nested-table `List`
-    case as the preferred efficient alternative to large-loop `AppendTo`;
-    leave level-list specs for later parity work
+    `Flatten[expr, n, h]` single-head specs and current level-list specs such
+    as `{2, 1}` / `{{1, 2}, {3}}`, covering the nested-table `List` case as
+    the preferred efficient alternative to large-loop `AppendTo`; leave only
+    obscure edge-case parity for later polish
+  - [x] add first-pass `Join` support for top-level same-head expressions,
+    associations, later-key-wins association canonicalization, and the current
+    positive-integer `Join[..., n]` level subset over homogeneous same-head
+    structure; leave obscure edge-case/message parity for later structural
+    polish
   - [ ] add the small but project-critical list/set helpers used by ordinary
-    `.wl` libraries, including `Join`, fuller `Flatten`, `DeleteDuplicates`,
-    `DeleteDuplicatesBy`, `Union`, `Sort`, `SortBy`, `Reverse`, `Transpose`,
-    and `Complement`
+    `.wl` libraries, including `DeleteDuplicates`, `DeleteDuplicatesBy`,
+    `Union`, `Sort`, `SortBy`, `Reverse`, `Transpose`, and `Complement`
   - [x] deepen held mutation support with first-pass symbol-target
     `AppendTo[privateList, item]`, `i++`, and `counter += delta`; leave
     broader part-target and obscure update-family parity for later CL-02 polish

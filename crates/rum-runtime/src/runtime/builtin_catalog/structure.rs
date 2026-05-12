@@ -76,8 +76,13 @@ pub(super) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "Flatten",
-        "Flattens nested expressions through the current non-negative level and single-head-spec subset.",
+        "Flattens nested expressions through the current non-negative level, single-head-spec, and level-list subset.",
         BuiltinHandler::Flatten,
+    ),
+    BuiltinSpec::ordinary(
+        "Join",
+        "Concatenates same-head normal expressions and associations in the current top-level subset.",
+        BuiltinHandler::Join,
     ),
     BuiltinSpec::ordinary(
         "Append",
