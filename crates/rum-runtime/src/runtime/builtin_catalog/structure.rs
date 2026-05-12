@@ -85,6 +85,26 @@ pub(super) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Join,
     ),
     BuiltinSpec::ordinary(
+        "Reverse",
+        "Reverses normal-expression arguments at the current positive level subset.",
+        BuiltinHandler::Reverse,
+    ),
+    BuiltinSpec::ordinary(
+        "Transpose",
+        "Transposes rectangular plain-list matrices in the current first-pass subset.",
+        BuiltinHandler::Transpose,
+    ),
+    BuiltinSpec::ordinary(
+        "DeleteDuplicates",
+        "Keeps the first occurrence of structurally equal top-level elements.",
+        BuiltinHandler::DeleteDuplicates,
+    ),
+    BuiltinSpec::ordinary(
+        "DeleteDuplicatesBy",
+        "Keeps the first top-level element for each evaluated key in the current unary-function subset.",
+        BuiltinHandler::DeleteDuplicatesBy,
+    ),
+    BuiltinSpec::ordinary(
         "Append",
         "Appends an element to the end of a normal expression, with current operator-form support.",
         BuiltinHandler::Append,

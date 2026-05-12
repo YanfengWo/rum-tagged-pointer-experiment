@@ -298,9 +298,13 @@ This roadmap intentionally uses two levels of detail:
     positive-integer `Join[..., n]` level subset over homogeneous same-head
     structure; leave obscure edge-case/message parity for later structural
     polish
-  - [ ] add the small but project-critical list/set helpers used by ordinary
-    `.wl` libraries, including `DeleteDuplicates`, `DeleteDuplicatesBy`,
-    `Union`, `Sort`, `SortBy`, `Reverse`, `Transpose`, and `Complement`
+  - [x] add first-pass `Reverse`, `Transpose`, `DeleteDuplicates`, and
+    `DeleteDuplicatesBy` support for ordinary `.wl` list-shaping and stable
+    deduplication flows; leave fuller permutation/rank, custom same-test, and
+    option/message parity as polish
+  - [ ] add the remaining small but project-critical list/set helpers used by
+    ordinary `.wl` libraries, including `Union`, `Sort`, `SortBy`, and
+    `Complement`
   - [x] deepen held mutation support with first-pass symbol-target
     `AppendTo[privateList, item]`, `i++`, and `counter += delta`; leave
     broader part-target and obscure update-family parity for later CL-02 polish
