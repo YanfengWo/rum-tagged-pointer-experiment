@@ -76,7 +76,7 @@ pub(super) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "Flatten",
-        "Flattens same-head nested expressions through the current non-negative level subset.",
+        "Flattens nested expressions through the current non-negative level and single-head-spec subset.",
         BuiltinHandler::Flatten,
     ),
     BuiltinSpec::ordinary(

@@ -236,6 +236,46 @@ fn flatten_covers_current_same_head_level_subset() {
             .to_string(),
         "List[a, f[List[b]], c]"
     );
+    assert_eq!(
+        session
+            .eval_text("Flatten[f[{a, b}, {c}], Infinity, List]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[{f[a, b], f[c]}, Infinity, f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[f[g[a, g[b]]], 1, g]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, g[b]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[f[g[a, g[b]]], 2, g]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[f[h[g[a, b]], g[c]], Infinity, g]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[h[g[a, b]], c]"
+    );
 }
 
 #[test]
@@ -255,6 +295,18 @@ fn flatten_reports_current_invalid_boundaries() {
     assert_eq!(invalid_level.value.to_string(), "Flatten[List[a], x]");
     assert!(
         invalid_level
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Flatten" && message.tag == "flev")
+    );
+
+    let invalid_level_with_head = session.eval_text("Flatten[{a}, x, List]").unwrap();
+    assert_eq!(
+        invalid_level_with_head.value.to_string(),
+        "Flatten[List[a], x, List]"
+    );
+    assert!(
+        invalid_level_with_head
             .messages
             .iter()
             .any(|message| message.symbol == "Flatten" && message.tag == "flev")

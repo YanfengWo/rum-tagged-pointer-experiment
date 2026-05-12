@@ -115,9 +115,10 @@ once in its primary implementation group. Other groups may mention it as
   selector diagnostics, and non-expanding `All` / `Span` position-spec
   boundaries
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
-  across every structural walker, `Flatten` beyond the current same-head
-  non-negative-level / `Infinity` subset, general boolean/comparison
-  evaluation beyond the current exact-numeric order-chain reductions
+  across every structural walker, `Flatten` beyond the current same-head /
+  single-head-spec non-negative-level / `Infinity` subset, general
+  boolean/comparison evaluation beyond the current exact-numeric order-chain
+  reductions
 - `planned`: richer expression introspection, broader list-manipulation
   surface, fuller truth-value and predicate surface
 

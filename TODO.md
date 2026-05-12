@@ -288,10 +288,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] make the normal `Table` collection path avoid
     repeated accumulator cloning, then add first-pass `Flatten` support for
     `Flatten[expr]`, `Flatten[expr, 1]`, `Flatten[expr, n]`, and
-    `Flatten[expr, Infinity]` over same-head expressions, covering the
-    nested-table `List` case as the preferred efficient alternative to
-    large-loop `AppendTo`; leave level-list specs and third-argument head
-    specs for later parity work
+    `Flatten[expr, Infinity]` over same-head expressions plus
+    `Flatten[expr, n, h]` single-head specs, covering the nested-table `List`
+    case as the preferred efficient alternative to large-loop `AppendTo`;
+    leave level-list specs for later parity work
   - [ ] add the small but project-critical list/set helpers used by ordinary
     `.wl` libraries, including `Join`, fuller `Flatten`, `DeleteDuplicates`,
     `DeleteDuplicatesBy`, `Union`, `Sort`, `SortBy`, `Reverse`, `Transpose`,

@@ -12,22 +12,28 @@ impl Session {
         _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let (expr, depth) = match args {
-            [expr] => (expr, FlattenDepth::Infinity),
+        let (expr, depth, explicit_head) = match args {
+            [expr] => (expr, FlattenDepth::Infinity, None),
             [expr, depth_expr] => {
                 let Some(depth) = parse_flatten_depth(depth_expr) else {
                     return Ok(self.invalid_flatten_level_call(args, depth_expr));
                 };
-                (expr, depth)
+                (expr, depth, None)
             }
-            _ => return Ok(self.invalid_call_with_arg_range("Flatten", args, 1, 2)),
+            [expr, depth_expr, head_spec] => {
+                let Some(depth) = parse_flatten_depth(depth_expr) else {
+                    return Ok(self.invalid_flatten_level_call(args, depth_expr));
+                };
+                (expr, depth, Some(head_spec))
+            }
+            _ => return Ok(self.invalid_call_with_arg_range("Flatten", args, 1, 3)),
         };
 
         if matches!(expr, Expr::Atom(_)) {
             return Ok(self.invalid_normal_expression_call("Flatten", args));
         }
 
-        Ok(flatten_same_head(expr, depth))
+        Ok(flatten_same_head(expr, depth, explicit_head))
     }
 
     fn invalid_flatten_level_call(&mut self, args: &[Expr], depth_expr: &Expr) -> Expr {
@@ -51,7 +57,7 @@ fn parse_flatten_depth(expr: &Expr) -> Option<FlattenDepth> {
     }
 }
 
-fn flatten_same_head(expr: &Expr, depth: FlattenDepth) -> Expr {
+fn flatten_same_head(expr: &Expr, depth: FlattenDepth, explicit_head: Option<&Expr>) -> Expr {
     let Expr::Call { head, args } = expr else {
         return expr.clone();
     };
@@ -60,13 +66,13 @@ fn flatten_same_head(expr: &Expr, depth: FlattenDepth) -> Expr {
         return expr.clone();
     }
 
-    let target_head = head.as_ref();
+    let target_head = explicit_head.unwrap_or(head.as_ref());
     let mut flattened = Vec::new();
     for arg in args {
         flatten_matching_arg(arg, target_head, depth, &mut flattened);
     }
 
-    Expr::call(target_head.clone(), flattened)
+    Expr::call(head.as_ref().clone(), flattened)
 }
 
 fn flatten_matching_arg(
