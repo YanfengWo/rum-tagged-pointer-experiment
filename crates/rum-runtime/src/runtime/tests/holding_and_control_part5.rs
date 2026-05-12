@@ -32,6 +32,22 @@ fn table_supports_count_iterators_and_nested_iterators() {
             .to_string(),
         "List[List[1], List[2, 4]]"
     );
+    assert_eq!(
+        session
+            .eval_text("Length[Table[i, {i, 1200}]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1200"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[Table[j, {i, 2}, {j, 2}], 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2, 1, 2]"
+    );
 }
 
 #[test]

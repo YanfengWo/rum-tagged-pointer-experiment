@@ -185,6 +185,83 @@ fn first_last_rest_and_most_emit_expected_messages_for_invalid_inputs() {
 }
 
 #[test]
+fn flatten_covers_current_same_head_level_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Flatten[{a, {b, c}, {{d}}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, b, c, d]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[{a, {b, c}, {{d}}}, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, b, c, List[d]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[{a, {b, c}, {{d}}}, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, List[b, c], List[List[d]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[{a, {b, c}, {{d}}}, Infinity]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, b, c, d]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[f[a, f[b, c]], Infinity]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Flatten[{a, f[{b}], {c}}, Infinity]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, f[List[b]], c]"
+    );
+}
+
+#[test]
+fn flatten_reports_current_invalid_boundaries() {
+    let mut session = Session::new();
+
+    let atomic = session.eval_text("Flatten[x]").unwrap();
+    assert_eq!(atomic.value.to_string(), "Flatten[x]");
+    assert!(
+        atomic
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "normal")
+    );
+
+    let invalid_level = session.eval_text("Flatten[{a}, x]").unwrap();
+    assert_eq!(invalid_level.value.to_string(), "Flatten[List[a], x]");
+    assert!(
+        invalid_level
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Flatten" && message.tag == "flev")
+    );
+}
+
+#[test]
 fn append_prepend_symbol_and_construct_cover_current_surface_subset() {
     let mut session = Session::new();
 

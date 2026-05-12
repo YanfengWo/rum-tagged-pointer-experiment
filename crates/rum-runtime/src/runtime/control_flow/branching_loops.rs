@@ -394,31 +394,31 @@ impl Session {
         args: Vec<Expr>,
         spec_index: usize,
         spec: DoSpec,
-        iteration: usize,
-        collected: Vec<Expr>,
+        mut iteration: usize,
+        mut collected: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
-        let Some(iteration_expr) = build_table_iteration_expr(&args, spec_index, &spec, iteration)
-        else {
-            return Ok(Expr::call(system_expr("List"), collected));
-        };
+        loop {
+            let Some(iteration_expr) =
+                build_table_iteration_expr(&args, spec_index, &spec, iteration)
+            else {
+                return Ok(Expr::call(system_expr("List"), collected));
+            };
 
-        let iteration_result = self.evaluate(iteration_expr);
-        let outcome = self.suspend_with_result_frame(iteration_result, {
-            let args = args.clone();
-            let spec = spec.clone();
-            let collected = collected.clone();
-            move |session, outcome| {
-                session.resume_table_after_iteration(
-                    args, spec_index, spec, iteration, collected, outcome,
-                )
+            match self.evaluate(iteration_expr) {
+                Ok(value) => {
+                    collected.push(value);
+                    iteration += 1;
+                }
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, outcome| {
+                        session.resume_table_after_iteration(
+                            args, spec_index, spec, iteration, collected, outcome,
+                        )
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
             }
-        });
-
-        match outcome {
-            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => self.resume_table_after_iteration(
-                args, spec_index, spec, iteration, collected, outcome,
-            ),
         }
     }
 

@@ -75,6 +75,11 @@ pub(super) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::TakeList,
     ),
     BuiltinSpec::ordinary(
+        "Flatten",
+        "Flattens same-head nested expressions through the current non-negative level subset.",
+        BuiltinHandler::Flatten,
+    ),
+    BuiltinSpec::ordinary(
         "Append",
         "Appends an element to the end of a normal expression, with current operator-form support.",
         BuiltinHandler::Append,

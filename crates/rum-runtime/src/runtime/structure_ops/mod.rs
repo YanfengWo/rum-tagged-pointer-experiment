@@ -1,6 +1,7 @@
 use super::*;
 
 mod exact_paths;
+mod flatten;
 mod replace;
 mod selectors;
 mod sequence;

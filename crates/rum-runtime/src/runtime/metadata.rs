@@ -316,6 +316,7 @@ pub enum BuiltinHandler {
     Insert,
     Delete,
     TakeList,
+    Flatten,
     Append,
     Prepend,
     Symbol,

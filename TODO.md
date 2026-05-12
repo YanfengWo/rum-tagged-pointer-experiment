@@ -285,15 +285,17 @@ This roadmap intentionally uses two levels of detail:
   - [ ] preserve the already-demonstrated `Module` closure pattern where
     exported definitions retain access to fresh private mutable state after
     the enclosing `Module` returns
-  - [ ] next wave first: make the normal `Table` collection path avoid
+  - [x] make the normal `Table` collection path avoid
     repeated accumulator cloning, then add first-pass `Flatten` support for
     `Flatten[expr]`, `Flatten[expr, 1]`, `Flatten[expr, n]`, and
-    `Flatten[expr, Infinity]` over `List` heads so nested-table construction
-    becomes the preferred efficient alternative to large-loop `AppendTo`
+    `Flatten[expr, Infinity]` over same-head expressions, covering the
+    nested-table `List` case as the preferred efficient alternative to
+    large-loop `AppendTo`; leave level-list specs and third-argument head
+    specs for later parity work
   - [ ] add the small but project-critical list/set helpers used by ordinary
-    `.wl` libraries, including `Join`, `Flatten`, `DeleteDuplicates`,
-    `DeleteDuplicatesBy`, `Union`, `Sort`, `SortBy`, `Reverse`,
-    `Transpose`, and `Complement`
+    `.wl` libraries, including `Join`, fuller `Flatten`, `DeleteDuplicates`,
+    `DeleteDuplicatesBy`, `Union`, `Sort`, `SortBy`, `Reverse`, `Transpose`,
+    and `Complement`
   - [x] deepen held mutation support with first-pass symbol-target
     `AppendTo[privateList, item]`, `i++`, and `counter += delta`; leave
     broader part-target and obscure update-family parity for later CL-02 polish

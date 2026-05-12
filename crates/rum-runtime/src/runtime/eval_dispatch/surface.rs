@@ -121,6 +121,7 @@ impl Session {
             BuiltinHandler::Insert => self.eval_insert(head, args),
             BuiltinHandler::Delete => self.eval_delete(head, args),
             BuiltinHandler::TakeList => self.eval_take_list(head, args),
+            BuiltinHandler::Flatten => self.eval_flatten(head, args),
             BuiltinHandler::Append => self.eval_append(head, args),
             BuiltinHandler::Prepend => self.eval_prepend(head, args),
             BuiltinHandler::Symbol => self.eval_symbol(head, args),
