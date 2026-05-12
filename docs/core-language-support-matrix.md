@@ -132,7 +132,8 @@ once in its primary implementation group. Other groups may mention it as
   - `partial`: `Part`, `Extract`, `ReplacePart`, `Thread`, `First`, `Last`,
     `Rest`, `Most`, `Take`, `Drop`, `TakeDrop`, `Insert`, `Delete`,
     `TakeList`, `Flatten`, `Join`, `Reverse`, `Transpose`,
-    `DeleteDuplicates`, `DeleteDuplicatesBy`, `Append`, `Prepend`, `FullForm`, `Symbol`, `Construct`,
+    `DeleteDuplicates`, `DeleteDuplicatesBy`, `Sort`, `SortBy`, `Union`,
+    `Complement`, `Append`, `Prepend`, `FullForm`, `Symbol`, `Construct`,
     `Equal`, `Unequal`, `Less`, `Greater`, `LessEqual`,
     `GreaterEqual`, `And`, `Or`, `Nand`, `Nor`, `Xor`, `Equivalent`, `Implies`, `Not`, `NumericQ`, `EvenQ`, `OddQ`,
     `Positive`, `Negative`, `NonPositive`, `NonNegative`, `PossibleZeroQ`,
@@ -144,7 +145,7 @@ once in its primary implementation group. Other groups may mention it as
     `MatrixQ`, `ArrayQ`, `AllTrue`, `AnyTrue`, `NoneTrue`, `CoprimeQ`,
     `NearestTo`, `PolynomialQ`, `PolynomialExpressionQ`,
     `RationalExpressionQ`, `DateObjectQ`, `TimeObjectQ`
-  - `planned`: `Heads`, `Union`, `Sort`, `SortBy`, `Complement`
+  - `planned`: `Heads`
 - `cross-tracked elsewhere`: `Apply`, `Array`, `Cases`, `Count`,
   `DeleteCases`, `FreeQ`, `Map`, `MapAll`, `MapAt`, `MemberQ`, `Outer`,
   `Position`, `Range`, `Select`, `Table`

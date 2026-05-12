@@ -4,6 +4,7 @@ mod dedup;
 mod exact_paths;
 mod flatten;
 mod join;
+mod ordering_sets;
 mod reordering;
 mod replace;
 mod selectors;

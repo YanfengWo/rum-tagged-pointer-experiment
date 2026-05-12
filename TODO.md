@@ -302,9 +302,10 @@ This roadmap intentionally uses two levels of detail:
     `DeleteDuplicatesBy` support for ordinary `.wl` list-shaping and stable
     deduplication flows; leave fuller permutation/rank, custom same-test, and
     option/message parity as polish
-  - [ ] add the remaining small but project-critical list/set helpers used by
-    ordinary `.wl` libraries, including `Union`, `Sort`, `SortBy`, and
-    `Complement`
+  - [x] add first-pass `Union`, `Complement`, `Sort`, and `SortBy` support for
+    ordinary same-head list/set and structural-ordering flows; leave custom
+    ordering predicates, multi-key `SortBy`, and deeper option/message parity
+    as polish
   - [x] deepen held mutation support with first-pass symbol-target
     `AppendTo[privateList, item]`, `i++`, and `counter += delta`; leave
     broader part-target and obscure update-family parity for later CL-02 polish

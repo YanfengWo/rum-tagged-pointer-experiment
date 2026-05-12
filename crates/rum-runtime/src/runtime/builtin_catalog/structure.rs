@@ -105,6 +105,26 @@ pub(super) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::DeleteDuplicatesBy,
     ),
     BuiltinSpec::ordinary(
+        "Sort",
+        "Sorts top-level elements using the current structural ordering subset.",
+        BuiltinHandler::Sort,
+    ),
+    BuiltinSpec::ordinary(
+        "SortBy",
+        "Sorts top-level elements by an evaluated key in the current unary-function subset.",
+        BuiltinHandler::SortBy,
+    ),
+    BuiltinSpec::ordinary(
+        "Union",
+        "Returns sorted unique elements across same-head normal expressions.",
+        BuiltinHandler::Union,
+    ),
+    BuiltinSpec::ordinary(
+        "Complement",
+        "Returns sorted unique elements from the first expression that are absent from later same-head expressions.",
+        BuiltinHandler::Complement,
+    ),
+    BuiltinSpec::ordinary(
         "Append",
         "Appends an element to the end of a normal expression, with current operator-form support.",
         BuiltinHandler::Append,
