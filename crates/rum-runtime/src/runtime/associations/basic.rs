@@ -80,7 +80,12 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         if !(1..=2).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Keys", args, 1, 2));
+            return Ok(self.invalid_call_with_message(
+                "Keys",
+                args,
+                "argt",
+                one_or_two_argument_count_message("Keys", args.len()),
+            ));
         };
 
         let wrapper = args.get(1);
@@ -97,7 +102,12 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         if !(1..=2).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Values", args, 1, 2));
+            return Ok(self.invalid_call_with_message(
+                "Values",
+                args,
+                "argt",
+                one_or_two_argument_count_message("Values", args.len()),
+            ));
         };
 
         let wrapper = args.get(1);
@@ -146,7 +156,12 @@ impl Session {
 
                 Ok(value)
             }
-            _ => Ok(self.invalid_call_with_arg_range("KeyTake", args, 1, 2)),
+            _ => Ok(self.invalid_call_with_message(
+                "KeyTake",
+                args,
+                "argt",
+                one_or_two_argument_count_message("KeyTake", args.len()),
+            )),
         }
     }
 
@@ -165,7 +180,12 @@ impl Session {
 
                 Ok(value)
             }
-            _ => Ok(self.invalid_call_with_arg_range("KeyDrop", args, 1, 2)),
+            _ => Ok(self.invalid_call_with_message(
+                "KeyDrop",
+                args,
+                "argt",
+                one_or_two_argument_count_message("KeyDrop", args.len()),
+            )),
         }
     }
 
@@ -410,6 +430,10 @@ fn delete_missing_arg3_message(expr: &Expr) -> String {
 
 fn delete_missing_arg_count_message(count: usize) -> String {
     format!("DeleteMissing called with {count} arguments; between 1 and 3 arguments are expected.")
+}
+
+fn one_or_two_argument_count_message(symbol: &str, count: usize) -> String {
+    format!("{symbol} called with {count} arguments; 1 or 2 arguments are expected.")
 }
 
 impl Session {

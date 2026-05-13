@@ -221,7 +221,12 @@ impl Session {
                     Vec::new(),
                 )
             }
-            _ => Ok(self.invalid_call_with_arg_range("KeySort", args, 1, 2)),
+            _ => Ok(self.invalid_call_with_message(
+                "KeySort",
+                args,
+                "argt",
+                one_or_two_argument_count_message("KeySort", args.len()),
+            )),
         }
     }
 

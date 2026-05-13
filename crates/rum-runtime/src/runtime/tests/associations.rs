@@ -2134,6 +2134,38 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .any(|message| message.symbol == "KeyFreeQ" && message.tag == "invas")
     );
 
+    for (symbol, zero_arg_call, three_arg_call) in [
+        ("Keys", "Keys[]", "Keys[Association[], x, y]"),
+        ("Values", "Values[]", "Values[Association[], x, y]"),
+        ("KeyTake", "KeyTake[]", "KeyTake[Association[], a, b]"),
+        ("KeyDrop", "KeyDrop[]", "KeyDrop[Association[], a, b]"),
+        (
+            "KeySelect",
+            "KeySelect[]",
+            "KeySelect[Association[], TrueQ, x]",
+        ),
+        ("KeySort", "KeySort[]", "KeySort[Association[], Less, x]"),
+        ("KeySortBy", "KeySortBy[]", "KeySortBy[Association[], f, x]"),
+    ] {
+        let outcome = session.eval_text(zero_arg_call).unwrap();
+        assert_eq!(outcome.value.to_string(), zero_arg_call);
+        assert!(outcome.messages.iter().any(|message| {
+            message.symbol == symbol
+                && message.tag == "argt"
+                && message.text
+                    == format!("{symbol} called with 0 arguments; 1 or 2 arguments are expected.")
+        }));
+
+        let outcome = session.eval_text(three_arg_call).unwrap();
+        assert_eq!(outcome.value.to_string(), three_arg_call);
+        assert!(outcome.messages.iter().any(|message| {
+            message.symbol == symbol
+                && message.tag == "argt"
+                && message.text
+                    == format!("{symbol} called with 3 arguments; 1 or 2 arguments are expected.")
+        }));
+    }
+
     let outcome = session.eval_text("KeyMap[f]").unwrap();
     assert_eq!(
         outcome.value.to_string(),

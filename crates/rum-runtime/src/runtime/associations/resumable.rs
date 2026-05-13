@@ -36,7 +36,12 @@ impl Session {
                     Vec::new(),
                 )
             }
-            _ => Ok(self.invalid_call_with_arg_range("KeySelect", args, 1, 2)),
+            _ => Ok(self.invalid_call_with_message(
+                "KeySelect",
+                args,
+                "argt",
+                one_or_two_argument_count_message("KeySelect", args.len()),
+            )),
         }
     }
 
@@ -69,7 +74,12 @@ impl Session {
                     Vec::new(),
                 )
             }
-            _ => Ok(self.invalid_call_with_arg_range("KeySortBy", args, 1, 2)),
+            _ => Ok(self.invalid_call_with_message(
+                "KeySortBy",
+                args,
+                "argt",
+                one_or_two_argument_count_message("KeySortBy", args.len()),
+            )),
         }
     }
 

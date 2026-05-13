@@ -300,13 +300,13 @@ once in its primary implementation group. Other groups may mention it as
   current Wolfram-style key-list threading, found-value-only wrapper
   application, single-rule/rule-list parity, and keyed
   `Missing["KeyAbsent", key]` fallbacks, rule-list plus wrapper/threading
-  support for `Keys` / `Values`,
+  support and arity-diagnostic parity for `Keys` / `Values`,
   rule-list-aware keyed predicates through `KeyExistsQ` / `KeyMemberQ` /
   `KeyFreeQ`, spec-ordered and threaded rule-list-normalizing `KeyTake` /
-  `KeyDrop`, broader
+  `KeyDrop` with current arity-diagnostic parity, broader
   keyed-helper operator-form and arity-diagnostic parity across `KeyMap` /
-  `KeyValueMap` / `KeySelect` / `AssociationMap` / `Merge` / `CountsBy` /
-  `GroupBy`,
+  `KeyValueMap` / `KeySelect` / `KeySort` / `KeySortBy` /
+  `AssociationMap` / `Merge` / `CountsBy` / `GroupBy`,
   current association-entry application and invalid mapped-entry diagnostics
   for `AssociationMap`,
   rule-list rejection parity for `KeyMap` / `KeyValueMap`,
