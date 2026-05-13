@@ -271,7 +271,7 @@ impl Session {
                         "DeleteMissing",
                         args,
                         "arg2",
-                        "The second argument is expected to be a positive integer or Infinity.",
+                        delete_missing_arg2_message(depth_expr),
                     ));
                 };
                 (expr, DeleteMissingMode::Recursive(depth))
@@ -282,7 +282,7 @@ impl Session {
                         "DeleteMissing",
                         args,
                         "arg2",
-                        "The second argument is expected to be a positive integer or Infinity.",
+                        delete_missing_arg2_message(level_expr),
                     ));
                 };
                 let Some(scan) = parse_delete_missing_scan_depth(scan_expr) else {
@@ -290,12 +290,19 @@ impl Session {
                         "DeleteMissing",
                         args,
                         "arg3",
-                        "The third argument is expected to be a non-negative integer or Infinity.",
+                        delete_missing_arg3_message(scan_expr),
                     ));
                 };
                 (expr, DeleteMissingMode::Target { level, scan })
             }
-            _ => return Ok(self.invalid_call_with_arg_range("DeleteMissing", args, 1, 3)),
+            _ => {
+                return Ok(self.invalid_call_with_message(
+                    "DeleteMissing",
+                    args,
+                    "argb",
+                    delete_missing_arg_count_message(args.len()),
+                ));
+            }
         };
 
         let Some(value) = self.delete_missing_from_keyed_data(expr, mode)? else {
@@ -391,6 +398,18 @@ fn parse_delete_missing_scan_depth(expr: &Expr) -> Option<DeleteMissingDepth> {
     }
 
     expr_as_non_negative_usize(expr).map(DeleteMissingDepth::Finite)
+}
+
+fn delete_missing_arg2_message(expr: &Expr) -> String {
+    format!("The second argument {expr} is expected to be a positive integer or Infinity.")
+}
+
+fn delete_missing_arg3_message(expr: &Expr) -> String {
+    format!("The third argument {expr} is expected to be a non-negative integer or Infinity.")
+}
+
+fn delete_missing_arg_count_message(count: usize) -> String {
+    format!("DeleteMissing called with {count} arguments; between 1 and 3 arguments are expected.")
 }
 
 impl Session {

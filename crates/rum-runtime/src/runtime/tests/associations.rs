@@ -2274,12 +2274,12 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
         outcome.value.to_string(),
         "DeleteMissing[List[Missing[]], 0]"
     );
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "DeleteMissing" && message.tag == "arg2")
-    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "DeleteMissing"
+            && message.tag == "arg2"
+            && message.text
+                == "The second argument 0 is expected to be a positive integer or Infinity."
+    }));
 
     let outcome = session
         .eval_text("DeleteMissing[{Missing[]}, 1, a]")
@@ -2288,12 +2288,26 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
         outcome.value.to_string(),
         "DeleteMissing[List[Missing[]], 1, a]"
     );
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "DeleteMissing" && message.tag == "arg3")
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "DeleteMissing"
+            && message.tag == "arg3"
+            && message.text
+                == "The third argument a is expected to be a non-negative integer or Infinity."
+    }));
+
+    let outcome = session
+        .eval_text("DeleteMissing[{Missing[]}, 1, 2, 3]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "DeleteMissing[List[Missing[]], 1, 2, 3]"
     );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "DeleteMissing"
+            && message.tag == "argb"
+            && message.text
+                == "DeleteMissing called with 4 arguments; between 1 and 3 arguments are expected."
+    }));
 
     let outcome = session.eval_text("CountsBy[a, f]").unwrap();
     assert_eq!(outcome.value.to_string(), "CountsBy[a, f]");

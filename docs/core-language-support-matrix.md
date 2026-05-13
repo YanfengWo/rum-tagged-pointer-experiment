@@ -337,15 +337,16 @@ once in its primary implementation group. Other groups may mention it as
   forms plus current keyed-lookup propagation and current `DeleteMissing`
   over list / association / rule-list data including depth, third-argument
   scan-depth, eager delayed target-level deletion, delayed predicate
-  suspension/resume, and delayed nested-cleanup subsets, and held symbol plus
+  suspension/resume, invalid-argument diagnostics, and delayed nested-cleanup
+  subsets, and held symbol plus
   exact part-target mutation first passes, current `AssociateTo` missing-key
   diagnostics, and current non-leaf / empty `KeyDropFrom` part-target invalid
   boundaries for
   `AssociateTo` / `KeyDropFrom`
 - `planned`: any remaining keyed-helper rule-list breadth, deeper
-  niche `Catenate` invalid-message corners, remaining exact `DeleteMissing`
-  internal-message parity, and deeper association semantics beyond the current
-  first-pass subset
+  niche `Catenate` invalid-message corners, deeper `DeleteMissing` edge
+  parity beyond the current invalid-argument diagnostics, and deeper
+  association semantics beyond the current first-pass subset
 
 ### Functions and Symbols
 
@@ -357,9 +358,9 @@ once in its primary implementation group. Other groups may mention it as
   `Catenate`, `Counts`, `CountsBy`, `GroupBy`, `PositionIndex`, `Missing`,
   `DeleteMissing`
 - `planned`: any remaining keyed-helper rule-list compatibility,
-  niche `Catenate` invalid-message corners, remaining exact `DeleteMissing`
-  internal-message parity, and deeper association semantics beyond the current
-  first-pass subset
+  niche `Catenate` invalid-message corners, deeper `DeleteMissing` edge parity
+  beyond the current invalid-argument diagnostics, and deeper association
+  semantics beyond the current first-pass subset
 - `cross-tracked elsewhere`: `#name`, `DeleteDuplicates`, `Map`, `Plus`,
   `Select`, `Sort`
 
