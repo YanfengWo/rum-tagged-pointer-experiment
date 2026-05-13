@@ -13,6 +13,12 @@ enum CatenateStep {
     Invalid(Expr),
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum ExactPartSelectorFailure {
+    PartW { part: Expr, target: Expr },
+    PartD { part: Expr },
+}
+
 fn part_target_selectors_are_exact_leaf_path(selector_exprs: &[Expr]) -> bool {
     selector_exprs.iter().all(|expr| {
         expr_as_signed_isize(expr).is_some()
@@ -53,6 +59,53 @@ fn missing_key_in_exact_part_selector_path(
     }
 
     None
+}
+
+fn failed_exact_part_selector_path(
+    expr: &Expr,
+    selector_exprs: &[Expr],
+) -> Option<ExactPartSelectorFailure> {
+    let mut selected = expr.clone();
+    for selector in selector_exprs {
+        if let Some(index) = expr_as_signed_isize(selector) {
+            if let Some(next) = exact_expr_at_path(&selected, &[index]) {
+                selected = next;
+                continue;
+            }
+
+            if index == 0 {
+                return None;
+            }
+
+            return Some(match selected {
+                Expr::Atom(_) => ExactPartSelectorFailure::PartD {
+                    part: Expr::call(system_expr("Part"), vec![selected, selector.clone()]),
+                },
+                Expr::Call { .. } => ExactPartSelectorFailure::PartW {
+                    part: selector.clone(),
+                    target: selected,
+                },
+            });
+        }
+
+        let key = part_selector_key_expr(selector)?;
+        let entries = association_entry_forms_from_expr(&selected)?;
+        if let Some(entry) = entries.into_iter().find(|entry| entry.key == key) {
+            selected = entry.value;
+        } else {
+            return None;
+        }
+    }
+
+    None
+}
+
+fn partw_message(part: &Expr, target: &Expr) -> String {
+    format!("Part {part} of {target} does not exist.")
+}
+
+fn partd_message(part: &Expr) -> String {
+    format!("Part specification {part} is longer than depth of object.")
 }
 
 impl Session {
@@ -721,6 +774,7 @@ impl Session {
         };
 
         if paths.is_empty() {
+            let part_failure = failed_exact_part_selector_path(&current, &selector_exprs);
             if operator == "AssociateTo" {
                 if let Some((key, target)) =
                     missing_key_in_exact_part_selector_path(&current, &selector_exprs)
@@ -730,11 +784,23 @@ impl Session {
                         "keynx",
                         format!("Key {key} does not exist in {target}."),
                     );
+                } else if let Some(ExactPartSelectorFailure::PartW { part, target }) = part_failure
+                {
+                    self.push_message("AssociateTo", "partw", partw_message(&part, &target));
                 }
                 return Ok(Some(Expr::call(system_expr(operator), held_call)));
             }
 
             if operator == "KeyDropFrom" {
+                match part_failure {
+                    Some(ExactPartSelectorFailure::PartW { part, target }) => {
+                        self.push_message("Part", "partw", partw_message(&part, &target));
+                    }
+                    Some(ExactPartSelectorFailure::PartD { part }) => {
+                        self.push_message("Part", "partd", partd_message(&part));
+                    }
+                    None => {}
+                }
                 return Ok(None);
             }
 

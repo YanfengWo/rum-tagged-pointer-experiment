@@ -340,8 +340,8 @@ once in its primary implementation group. Other groups may mention it as
   suspension/resume, invalid-argument diagnostics, and delayed nested-cleanup
   subsets, and held symbol plus
   exact part-target mutation first passes, current `AssociateTo` missing-key
-  diagnostics, and current non-leaf / empty `KeyDropFrom` part-target invalid
-  boundaries for
+  and missing-part diagnostics, and current non-leaf / empty / missing-part
+  `KeyDropFrom` part-target invalid boundaries for
   `AssociateTo` / `KeyDropFrom`
 - `planned`: any remaining keyed-helper rule-list breadth, deeper
   niche `Catenate` invalid-message corners, deeper `DeleteMissing` edge
