@@ -1182,6 +1182,19 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .iter()
             .any(|message| message.symbol == "KeyDropFrom" && message.tag == "invak")
     );
+    let invalid_span_drop = session
+        .eval_text("KeyDropFrom[parts[[1 ;; 2]], a]")
+        .unwrap();
+    assert_eq!(
+        invalid_span_drop.value.to_string(),
+        "KeyDropFrom[Part[parts, Span[1, 2]], a]"
+    );
+    assert!(
+        invalid_span_drop
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyDropFrom" && message.tag == "invak")
+    );
     assert_eq!(
         session.eval_text("parts").unwrap().value.to_string(),
         "List[Association[Rule[a, 1], Rule[b, 2]], Association[Rule[a, 3], Rule[c, 4]]]"
@@ -1882,6 +1895,17 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .iter()
             .any(|message| message.symbol == "KeyMap" && message.tag == "invak")
     );
+    let outcome = session.eval_text("KeyValueMap[f, List[a -> 1]]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyValueMap[f, List[Rule[a, 1]]]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyValueMap" && message.tag == "invak")
+    );
     assert_eq!(
         session
             .eval_text("KeySelect[List[a -> 1], TrueQ]")
@@ -1916,6 +1940,14 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .messages
             .iter()
             .any(|message| message.symbol == "AssociationMap" && message.tag == "invrp")
+    );
+    assert_eq!(
+        session
+            .eval_text("AssociationMap[f, List[a -> 1, b -> 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[Rule[a, 1], f[Rule[a, 1]]], Rule[Rule[b, 2], f[Rule[b, 2]]]]"
     );
     assert_eq!(
         session
@@ -2109,6 +2141,14 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
     );
     assert!(outcome.messages.is_empty());
 
+    let outcome = session.eval_text("KeyMap[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyMap[]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyMap"
+            && message.tag == "argt"
+            && message.text == "KeyMap called with 0 arguments; 1 or 2 arguments are expected."
+    }));
+
     let outcome = session.eval_text("KeyMap[f, a]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyMap[f, a]");
     assert!(
@@ -2118,12 +2158,33 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .any(|message| message.symbol == "KeyMap" && message.tag == "invak")
     );
 
+    let outcome = session
+        .eval_text("KeyMap[f, Association[a -> 1], x]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyMap[f, Association[Rule[a, 1]], x]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyMap"
+            && message.tag == "argt"
+            && message.text == "KeyMap called with 3 arguments; 1 or 2 arguments are expected."
+    }));
+
     let outcome = session.eval_text("KeyValueMap[f]").unwrap();
     assert_eq!(
         outcome.value.to_string(),
         "Function[rum$keyedArg, KeyValueMap[f, rum$keyedArg]]"
     );
     assert!(outcome.messages.is_empty());
+
+    let outcome = session.eval_text("KeyValueMap[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyValueMap[]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyValueMap"
+            && message.tag == "argt"
+            && message.text == "KeyValueMap called with 0 arguments; 1 or 2 arguments are expected."
+    }));
 
     let outcome = session.eval_text("KeyValueMap[f, a]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyValueMap[f, a]");
@@ -2133,6 +2194,19 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .iter()
             .any(|message| message.symbol == "KeyValueMap" && message.tag == "invak")
     );
+
+    let outcome = session
+        .eval_text("KeyValueMap[f, Association[a -> 1], x]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyValueMap[f, Association[Rule[a, 1]], x]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyValueMap"
+            && message.tag == "argt"
+            && message.text == "KeyValueMap called with 3 arguments; 1 or 2 arguments are expected."
+    }));
 
     let outcome = session.eval_text("KeySelect[a]").unwrap();
     assert_eq!(

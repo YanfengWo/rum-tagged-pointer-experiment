@@ -137,7 +137,12 @@ impl Session {
                         .collect(),
                 ))
             }
-            _ => Ok(self.invalid_call_with_arg_range("KeyMap", args, 1, 2)),
+            _ => Ok(self.invalid_call_with_message(
+                "KeyMap",
+                args,
+                "argt",
+                one_or_two_argument_count_message("KeyMap", args.len()),
+            )),
         }
     }
 
@@ -169,7 +174,12 @@ impl Session {
                         .collect(),
                 ))
             }
-            _ => Ok(self.invalid_call_with_arg_range("KeyValueMap", args, 1, 2)),
+            _ => Ok(self.invalid_call_with_message(
+                "KeyValueMap",
+                args,
+                "argt",
+                one_or_two_argument_count_message("KeyValueMap", args.len()),
+            )),
         }
     }
 

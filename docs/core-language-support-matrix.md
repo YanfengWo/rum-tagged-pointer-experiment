@@ -304,10 +304,12 @@ once in its primary implementation group. Other groups may mention it as
   rule-list-aware keyed predicates through `KeyExistsQ` / `KeyMemberQ` /
   `KeyFreeQ`, spec-ordered and threaded rule-list-normalizing `KeyTake` /
   `KeyDrop`, broader
-  keyed-helper operator-form parity across `KeyMap` / `KeyValueMap` /
-  `KeySelect` / `AssociationMap` / `Merge` / `CountsBy` / `GroupBy`,
+  keyed-helper operator-form and arity-diagnostic parity across `KeyMap` /
+  `KeyValueMap` / `KeySelect` / `AssociationMap` / `Merge` / `CountsBy` /
+  `GroupBy`,
   current association-entry application and invalid mapped-entry diagnostics
   for `AssociationMap`,
+  rule-list rejection parity for `KeyMap` / `KeyValueMap`,
   rule-list-normalizing `KeySelect` / `KeySort` / `KeySortBy`, mixed
   association/rule-list `Merge` including nested keyed collection groups plus
   more precise invalid-item diagnostics and current combiner-controlled
@@ -341,10 +343,12 @@ once in its primary implementation group. Other groups may mention it as
   subsets, and held symbol plus
   exact part-target mutation first passes including scalar, list, `All`, and
   span selectors, current `AssociateTo` missing-key and missing-part
-  diagnostics, and current non-leaf / empty / missing-part `KeyDropFrom`
-  part-target invalid boundaries for
+  diagnostics, and current non-leaf / empty / bulk selector / missing-part
+  `KeyDropFrom` part-target invalid boundaries for
   `AssociateTo` / `KeyDropFrom`
-- `planned`: any remaining keyed-helper rule-list breadth, deeper
+- `planned`: any remaining keyed-helper rule-list breadth outside the current
+  `KeyMap` / `KeyValueMap` rejection and `KeySelect` / `KeySort` /
+  `KeySortBy` normalizing subset, deeper
   niche `Catenate` invalid-message corners, deeper `DeleteMissing` edge
   parity beyond the current invalid-argument diagnostics, and deeper
   association semantics beyond the current first-pass subset
