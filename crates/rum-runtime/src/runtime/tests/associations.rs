@@ -1844,6 +1844,25 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .iter()
             .any(|message| message.symbol == "Lookup" && message.tag == "invrl")
     );
+    let outcome = session.eval_text("Lookup[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Lookup[]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Lookup"
+            && message.tag == "argb"
+            && message.text
+                == "Lookup called with 0 arguments; between 2 and 4 arguments are expected."
+    }));
+    let outcome = session.eval_text("Lookup[a]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Lookup[a]");
+    assert!(outcome.messages.is_empty());
+    let outcome = session.eval_text("Lookup[a, b, c, d, e]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Lookup[a, b, c, d, e]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Lookup"
+            && message.tag == "argb"
+            && message.text
+                == "Lookup called with 5 arguments; between 2 and 4 arguments are expected."
+    }));
     let outcome = session.eval_text("Lookup[{a -> 1, {b -> 2}}, a]").unwrap();
     assert_eq!(
         outcome.value.to_string(),

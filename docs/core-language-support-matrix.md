@@ -298,7 +298,8 @@ once in its primary implementation group. Other groups may mention it as
   pattern matching through `KeyValuePattern`, richer `Lookup`
   threading/multi-key behavior including `Lookup[..., default, h]` plus
   current Wolfram-style key-list threading, found-value-only wrapper
-  application, single-rule/rule-list parity, and keyed
+  application, single-rule/rule-list parity, current arity diagnostics plus
+  inert singleton-call boundary, and keyed
   `Missing["KeyAbsent", key]` fallbacks, rule-list plus wrapper/threading
   support and arity-diagnostic parity for `Keys` / `Values`,
   rule-list-aware keyed predicates through `KeyExistsQ` / `KeyMemberQ` /

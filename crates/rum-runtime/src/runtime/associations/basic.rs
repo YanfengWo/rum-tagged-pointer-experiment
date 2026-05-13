@@ -42,18 +42,26 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        if !(2..=4).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Lookup", args, 2, 4));
+        if args.is_empty() || args.len() > 4 {
+            return Ok(self.invalid_call_with_message(
+                "Lookup",
+                args,
+                "argb",
+                lookup_arg_count_message(args.len()),
+            ));
         }
 
-        let default = args.get(2).cloned();
-        let wrapper = args.get(3);
-        let Some(value) = lookup_value(&args[0], &args[1], default, wrapper) else {
-            if !lookup_data_is_valid(&args[0]) {
+        let [expr, key, rest @ ..] = args else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let default = rest.first().cloned();
+        let wrapper = rest.get(1);
+        let Some(value) = lookup_value(expr, key, default, wrapper) else {
+            if !lookup_data_is_valid(expr) {
                 self.push_message(
                     "Lookup",
                     "invrl",
-                    invalid_association_or_rule_list_message(&args[0]),
+                    invalid_association_or_rule_list_message(expr),
                 );
             }
             return Ok(Expr::call(head.clone(), args.to_vec()));
@@ -86,7 +94,7 @@ impl Session {
                 "argt",
                 one_or_two_argument_count_message("Keys", args.len()),
             ));
-        };
+        }
 
         let wrapper = args.get(1);
         let Some(value) = keys_result_for_expr(&args[0], wrapper) else {
@@ -430,6 +438,10 @@ fn delete_missing_arg3_message(expr: &Expr) -> String {
 
 fn delete_missing_arg_count_message(count: usize) -> String {
     format!("DeleteMissing called with {count} arguments; between 1 and 3 arguments are expected.")
+}
+
+fn lookup_arg_count_message(count: usize) -> String {
+    format!("Lookup called with {count} arguments; between 2 and 4 arguments are expected.")
 }
 
 fn one_or_two_argument_count_message(symbol: &str, count: usize) -> String {
