@@ -997,6 +997,36 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
         "List[Association[Rule[a, 1], Rule[b, 3]], Association[Rule[a, 2], Rule[b, 3]]]"
     );
     session
+        .eval_text("parts = {Association[a -> 1], Association[a -> 2]}")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("AssociateTo[parts[[All]], b -> 3]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[a, 1], Rule[b, 3]], Association[Rule[a, 2], Rule[b, 3]]]"
+    );
+    assert_eq!(
+        session.eval_text("parts").unwrap().value.to_string(),
+        "List[Association[Rule[a, 1], Rule[b, 3]], Association[Rule[a, 2], Rule[b, 3]]]"
+    );
+    session
+        .eval_text("parts = {Association[a -> 1], Association[a -> 2]}")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("AssociateTo[parts[[1 ;; 2]], b -> 4]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[a, 1], Rule[b, 4]], Association[Rule[a, 2], Rule[b, 4]]]"
+    );
+    assert_eq!(
+        session.eval_text("parts").unwrap().value.to_string(),
+        "List[Association[Rule[a, 1], Rule[b, 4]], Association[Rule[a, 2], Rule[b, 4]]]"
+    );
+    session
         .eval_text("parts = {Association[a -> 1], 1}")
         .unwrap();
     let invalid_part_associate = session
@@ -1004,6 +1034,23 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
         .unwrap();
     assert!(
         invalid_part_associate
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociateTo" && message.tag == "invak")
+    );
+    assert_eq!(
+        session.eval_text("parts").unwrap().value.to_string(),
+        "List[Association[Rule[a, 1]], 1]"
+    );
+    let invalid_all_associate = session
+        .eval_text("AssociateTo[parts[[All]], b -> 3]")
+        .unwrap();
+    assert_eq!(
+        invalid_all_associate.value.to_string(),
+        "AssociateTo[Part[parts, All], Rule[b, 3]]"
+    );
+    assert!(
+        invalid_all_associate
             .messages
             .iter()
             .any(|message| message.symbol == "AssociateTo" && message.tag == "invak")
