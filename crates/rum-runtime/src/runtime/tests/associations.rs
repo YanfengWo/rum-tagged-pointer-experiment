@@ -1890,6 +1890,20 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .iter()
             .any(|message| message.symbol == "Catenate" && message.tag == "invrp")
     );
+    let outcome = session.eval_text("Catenate[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Catenate[]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Catenate"
+            && message.tag == "argx"
+            && message.text == "Catenate called with 0 arguments; 1 argument is expected."
+    }));
+    let outcome = session.eval_text("Catenate[{}, {}]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Catenate[List[], List[]]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Catenate"
+            && message.tag == "argx"
+            && message.text == "Catenate called with 2 arguments; 1 argument is expected."
+    }));
     assert_eq!(
         session.eval_text("Counts[a]").unwrap().value.to_string(),
         "Counts[a]"

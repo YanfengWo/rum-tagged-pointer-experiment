@@ -788,7 +788,12 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [associations_expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("Catenate", args, 1));
+            return Ok(self.invalid_call_with_message(
+                "Catenate",
+                args,
+                "argx",
+                catenate_arg_count_message(args.len()),
+            ));
         };
 
         if let Some(entries) = association_entry_forms_from_expr(associations_expr) {
@@ -884,6 +889,10 @@ fn catenate_item_contribution(expr: &Expr) -> Option<Vec<Expr>> {
     }
 
     list_items(expr).map(|items| items.to_vec())
+}
+
+fn catenate_arg_count_message(count: usize) -> String {
+    format!("Catenate called with {count} arguments; 1 argument is expected.")
 }
 
 fn catenate_steps_for_association_entries(entries: Vec<AssociationEntryForm>) -> Vec<CatenateStep> {

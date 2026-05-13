@@ -331,7 +331,7 @@ once in its primary implementation group. Other groups may mention it as
   custom `KeySort` comparers,
   `Catenate` over lists plus association values with current delayed
   association-value consumption, direct-association invalid-value subset
-  parity, and invalid-value host-input resume coverage,
+  parity, arity diagnostics, and invalid-value host-input resume coverage,
   current `GroupBy[list, f, g]` reducer support,
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
   forms plus current keyed-lookup propagation and current `DeleteMissing`
