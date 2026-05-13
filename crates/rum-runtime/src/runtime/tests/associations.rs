@@ -532,6 +532,30 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("KeyExistsQ[a][Association[a -> 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyMemberQ[a][Association[a -> 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyFreeQ[a][Association[a -> 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
             .eval_text(
                 "KeySelect[Association[a -> 1, b -> 2, c -> 3], MatchQ[#, Alternatives[a, c]] &]"
             )
@@ -2099,14 +2123,20 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .any(|message| message.symbol == "Key" && message.tag == "argx")
     );
 
+    let outcome = session.eval_text("KeyExistsQ[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyExistsQ[]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyExistsQ"
+            && message.tag == "argt"
+            && message.text == "KeyExistsQ called with 0 arguments; 1 or 2 arguments are expected."
+    }));
+
     let outcome = session.eval_text("KeyExistsQ[a]").unwrap();
-    assert_eq!(outcome.value.to_string(), "KeyExistsQ[a]");
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "KeyExistsQ" && message.tag == "argx")
+    assert_eq!(
+        outcome.value.to_string(),
+        "Function[rum$keyedArg, KeyExistsQ[rum$keyedArg, a]]"
     );
+    assert!(outcome.messages.is_empty());
 
     let outcome = session.eval_text("KeyExistsQ[a, b]").unwrap();
     assert_eq!(outcome.value.to_string(), "False");
@@ -2117,14 +2147,28 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .any(|message| message.symbol == "KeyExistsQ" && message.tag == "invrl")
     );
 
+    let outcome = session.eval_text("KeyExistsQ[a, b, c]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyExistsQ[a, b, c]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyExistsQ"
+            && message.tag == "argt"
+            && message.text == "KeyExistsQ called with 3 arguments; 1 or 2 arguments are expected."
+    }));
+
+    let outcome = session.eval_text("KeyMemberQ[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyMemberQ[]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyMemberQ"
+            && message.tag == "argrx"
+            && message.text == "KeyMemberQ called with 0 arguments; 2 arguments are expected."
+    }));
+
     let outcome = session.eval_text("KeyMemberQ[a]").unwrap();
-    assert_eq!(outcome.value.to_string(), "KeyMemberQ[a]");
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "KeyMemberQ" && message.tag == "argx")
+    assert_eq!(
+        outcome.value.to_string(),
+        "Function[rum$keyedArg, KeyMemberQ[rum$keyedArg, a]]"
     );
+    assert!(outcome.messages.is_empty());
 
     let outcome = session.eval_text("KeyMemberQ[a, b]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyMemberQ[a, b]");
@@ -2135,14 +2179,28 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .any(|message| message.symbol == "KeyMemberQ" && message.tag == "invas")
     );
 
+    let outcome = session.eval_text("KeyMemberQ[a, b, c]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyMemberQ[a, b, c]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyMemberQ"
+            && message.tag == "argrx"
+            && message.text == "KeyMemberQ called with 3 arguments; 2 arguments are expected."
+    }));
+
+    let outcome = session.eval_text("KeyFreeQ[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyFreeQ[]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyFreeQ"
+            && message.tag == "argrx"
+            && message.text == "KeyFreeQ called with 0 arguments; 2 arguments are expected."
+    }));
+
     let outcome = session.eval_text("KeyFreeQ[a]").unwrap();
-    assert_eq!(outcome.value.to_string(), "KeyFreeQ[a]");
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "KeyFreeQ" && message.tag == "argx")
+    assert_eq!(
+        outcome.value.to_string(),
+        "Function[rum$keyedArg, KeyFreeQ[rum$keyedArg, a]]"
     );
+    assert!(outcome.messages.is_empty());
 
     let outcome = session.eval_text("KeyFreeQ[a, b]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyFreeQ[a, b]");
@@ -2152,6 +2210,14 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .iter()
             .any(|message| message.symbol == "KeyFreeQ" && message.tag == "invas")
     );
+
+    let outcome = session.eval_text("KeyFreeQ[a, b, c]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyFreeQ[a, b, c]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyFreeQ"
+            && message.tag == "argrx"
+            && message.text == "KeyFreeQ called with 3 arguments; 2 arguments are expected."
+    }));
 
     for (symbol, zero_arg_call, three_arg_call) in [
         ("Keys", "Keys[]", "Keys[Association[], x, y]"),

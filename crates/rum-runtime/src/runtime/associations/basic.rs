@@ -131,8 +131,17 @@ impl Session {
         _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr, key] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("KeyExistsQ", args, 2));
+        let (expr, key) = match args {
+            [key] => return Ok(keyed_operator_form_slot_first("KeyExistsQ", key.clone())),
+            [expr, key] => (expr, key),
+            _ => {
+                return Ok(self.invalid_call_with_message(
+                    "KeyExistsQ",
+                    args,
+                    "argt",
+                    one_or_two_argument_count_message("KeyExistsQ", args.len()),
+                ));
+            }
         };
 
         let Some(entries) = single_rule_or_keyed_entries_from_expr(expr) else {
@@ -202,8 +211,17 @@ impl Session {
         _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr, key] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("KeyMemberQ", args, 2));
+        let (expr, key) = match args {
+            [key] => return Ok(keyed_operator_form_slot_first("KeyMemberQ", key.clone())),
+            [expr, key] => (expr, key),
+            _ => {
+                return Ok(self.invalid_call_with_message(
+                    "KeyMemberQ",
+                    args,
+                    "argrx",
+                    exact_argument_count_message("KeyMemberQ", args.len(), 2),
+                ));
+            }
         };
 
         let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
@@ -225,8 +243,17 @@ impl Session {
         _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr, key] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("KeyFreeQ", args, 2));
+        let (expr, key) = match args {
+            [key] => return Ok(keyed_operator_form_slot_first("KeyFreeQ", key.clone())),
+            [expr, key] => (expr, key),
+            _ => {
+                return Ok(self.invalid_call_with_message(
+                    "KeyFreeQ",
+                    args,
+                    "argrx",
+                    exact_argument_count_message("KeyFreeQ", args.len(), 2),
+                ));
+            }
         };
 
         let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
@@ -442,6 +469,15 @@ fn delete_missing_arg_count_message(count: usize) -> String {
 
 fn lookup_arg_count_message(count: usize) -> String {
     format!("Lookup called with {count} arguments; between 2 and 4 arguments are expected.")
+}
+
+fn exact_argument_count_message(symbol: &str, count: usize, expected: usize) -> String {
+    let noun = if expected == 1 {
+        "argument is"
+    } else {
+        "arguments are"
+    };
+    format!("{symbol} called with {count} arguments; {expected} {noun} expected.")
 }
 
 fn one_or_two_argument_count_message(symbol: &str, count: usize) -> String {
