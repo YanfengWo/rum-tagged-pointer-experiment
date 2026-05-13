@@ -1027,6 +1027,44 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
         session.eval_text("nested").unwrap().value.to_string(),
         "Association[Rule[a, Association[Rule[b, 1], Rule[c, 3]]]]"
     );
+    session.eval_text("assoc = Association[a -> 1]").unwrap();
+    let missing_key_associate = session
+        .eval_text("AssociateTo[assoc[[Key[b]]], c -> 3]")
+        .unwrap();
+    assert_eq!(
+        missing_key_associate.value.to_string(),
+        "AssociateTo[Part[assoc, Key[b]], Rule[c, 3]]"
+    );
+    assert!(
+        missing_key_associate
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociateTo" && message.tag == "keynx")
+    );
+    assert_eq!(
+        session.eval_text("assoc").unwrap().value.to_string(),
+        "Association[Rule[a, 1]]"
+    );
+    session
+        .eval_text("nested = Association[a -> Association[b -> 1]]")
+        .unwrap();
+    let missing_nested_key_associate = session
+        .eval_text("AssociateTo[nested[[Key[a], Key[c]]], d -> 4]")
+        .unwrap();
+    assert_eq!(
+        missing_nested_key_associate.value.to_string(),
+        "AssociateTo[Part[nested, Key[a], Key[c]], Rule[d, 4]]"
+    );
+    assert!(
+        missing_nested_key_associate
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociateTo" && message.tag == "keynx")
+    );
+    assert_eq!(
+        session.eval_text("nested").unwrap().value.to_string(),
+        "Association[Rule[a, Association[Rule[b, 1]]]]"
+    );
     session
         .eval_text("parts = {Association[a -> 1, b -> 2]}")
         .unwrap();
@@ -1103,6 +1141,30 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     assert_eq!(
         session.eval_text("nested").unwrap().value.to_string(),
         "Association[Rule[a, Association[Rule[c, 2]]]]"
+    );
+    session.eval_text("assoc = Association[a -> 1]").unwrap();
+    let missing_key_drop = session
+        .eval_text("KeyDropFrom[assoc[[Key[b]]], c]")
+        .unwrap();
+    assert_eq!(
+        missing_key_drop.value.to_string(),
+        "KeyDropFrom[Part[assoc, Key[b]], c]"
+    );
+    assert!(
+        missing_key_drop
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyDropFrom" && message.tag == "invak")
+    );
+    assert!(
+        !missing_key_drop
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyDropFrom" && message.tag == "keynx")
+    );
+    assert_eq!(
+        session.eval_text("assoc").unwrap().value.to_string(),
+        "Association[Rule[a, 1]]"
     );
     session.eval_text("ClearAll[assoc]").unwrap();
     let missing_value = session.eval_text("AssociateTo[assoc, b -> 2]").unwrap();

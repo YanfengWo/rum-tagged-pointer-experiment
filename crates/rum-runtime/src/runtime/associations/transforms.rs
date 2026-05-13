@@ -23,6 +23,38 @@ fn part_target_selectors_are_exact_leaf_path(selector_exprs: &[Expr]) -> bool {
     })
 }
 
+fn part_selector_key_expr(expr: &Expr) -> Option<Expr> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Key") && args.len() == 1 => {
+            Some(args[0].clone())
+        }
+        _ => None,
+    }
+}
+
+fn missing_key_in_exact_part_selector_path(
+    expr: &Expr,
+    selector_exprs: &[Expr],
+) -> Option<(Expr, Expr)> {
+    let mut selected = expr.clone();
+    for selector in selector_exprs {
+        if let Some(index) = expr_as_signed_isize(selector) {
+            selected = exact_expr_at_path(&selected, &[index])?;
+            continue;
+        }
+
+        let key = part_selector_key_expr(selector)?;
+        let entries = association_entry_forms_from_expr(&selected)?;
+        if let Some(entry) = entries.into_iter().find(|entry| entry.key == key) {
+            selected = entry.value;
+        } else {
+            return Some((key, selected));
+        }
+    }
+
+    None
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_key_map(
         &mut self,
@@ -689,6 +721,23 @@ impl Session {
         };
 
         if paths.is_empty() {
+            if operator == "AssociateTo" {
+                if let Some((key, target)) =
+                    missing_key_in_exact_part_selector_path(&current, &selector_exprs)
+                {
+                    self.push_message(
+                        "AssociateTo",
+                        "keynx",
+                        format!("Key {key} does not exist in {target}."),
+                    );
+                }
+                return Ok(Some(Expr::call(system_expr(operator), held_call)));
+            }
+
+            if operator == "KeyDropFrom" {
+                return Ok(None);
+            }
+
             return Ok(Some(Expr::call(system_expr(operator), held_call)));
         }
 

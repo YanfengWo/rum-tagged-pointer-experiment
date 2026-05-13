@@ -338,8 +338,9 @@ once in its primary implementation group. Other groups may mention it as
   over list / association / rule-list data including depth, third-argument
   scan-depth, eager delayed target-level deletion, delayed predicate
   suspension/resume, and delayed nested-cleanup subsets, and held symbol plus
-  exact part-target mutation first passes and current non-leaf `KeyDropFrom`
-  part-target invalid boundary for
+  exact part-target mutation first passes, current `AssociateTo` missing-key
+  diagnostics, and current non-leaf / empty `KeyDropFrom` part-target invalid
+  boundaries for
   `AssociateTo` / `KeyDropFrom`
 - `planned`: any remaining keyed-helper rule-list breadth, deeper
   niche `Catenate` invalid-message corners, remaining exact `DeleteMissing`
