@@ -664,6 +664,45 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("AssociationMap[Identity, Association[a -> 1, b :> 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1], RuleDelayed[b, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("AssociationMap[(h[#] -> #) &, Association[a -> 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[h[Rule[a, 1]], Rule[a, 1]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {AssociationMap[Identity, Association[a :> (x = x + 1)]], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], 0]"
+    );
+    let invalid_association_map = session
+        .eval_text("AssociationMap[f, Association[a -> 1, b -> 2]]")
+        .unwrap();
+    assert_eq!(
+        invalid_association_map.value.to_string(),
+        "Association[f[Rule[a, 1]], f[Rule[b, 2]]]"
+    );
+    assert_eq!(
+        invalid_association_map
+            .messages
+            .iter()
+            .filter(|message| message.symbol == "AssociationMap" && message.tag == "invrlf")
+            .count(),
+        2
+    );
+    assert_eq!(
+        session
             .eval_text("AssociationThread[{a, b}, {1, 2}]")
             .unwrap()
             .value
@@ -1205,6 +1244,22 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .value
             .to_string(),
         "Association[Rule[a, Total[List[1, 2]]], Rule[b, Total[List[3]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Merge[{{{a -> 1}, {a -> 2, b -> 3}}}, Total]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, Total[List[1, 2]]], Rule[b, Total[List[3]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Merge[{{Association[a -> 1], {a -> 2}}}, Total]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, Total[List[1, 2]]]]"
     );
     assert_eq!(
         session
@@ -2204,6 +2259,14 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .iter()
             .any(|message| message.symbol == "Merge" && message.tag == "list1")
     );
+    let outcome = session.eval_text("Merge[{{a}}, f]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Merge[List[List[a]], f]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Merge"
+            && message.tag == "list1"
+            && message.text
+                == "The argument a is not a valid list of Associations or rules or lists of rules."
+    }));
 
     let outcome = session
         .eval_text("Merge[{Association[a -> 1]}, f, g]")

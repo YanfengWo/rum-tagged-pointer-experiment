@@ -283,11 +283,26 @@ pub(in crate::runtime) fn parse_keyed_entries_list_expr_with_diagnostics(
     let items = list_items(expr).ok_or(KeyedEntriesListError::NotList)?;
     items
         .iter()
-        .map(|item| {
-            single_rule_or_keyed_entries_from_expr(item)
-                .ok_or_else(|| KeyedEntriesListError::InvalidElement(item.clone()))
-        })
+        .map(parse_merge_keyed_entries_collection_with_diagnostics)
         .collect()
+}
+
+fn parse_merge_keyed_entries_collection_with_diagnostics(
+    expr: &Expr,
+) -> Result<Vec<(Expr, Expr)>, KeyedEntriesListError> {
+    if let Some(entries) = single_rule_or_keyed_entries_from_expr(expr) {
+        return Ok(entries);
+    }
+
+    let Some(items) = list_items(expr) else {
+        return Err(KeyedEntriesListError::InvalidElement(expr.clone()));
+    };
+
+    let mut entries = Vec::new();
+    for item in items {
+        entries.extend(parse_merge_keyed_entries_collection_with_diagnostics(item)?);
+    }
+    Ok(entries)
 }
 
 pub(in crate::runtime) fn parse_keyed_entry_forms_list_expr_with_diagnostics(
@@ -415,7 +430,7 @@ fn render_association_entry_forms(entries: Vec<AssociationEntryForm>) -> Expr {
     )
 }
 
-fn association_entry_form_expr(entry: AssociationEntryForm) -> Expr {
+pub(in crate::runtime) fn association_entry_form_expr(entry: AssociationEntryForm) -> Expr {
     Expr::call(
         system_expr(if entry.delayed { "RuleDelayed" } else { "Rule" }),
         vec![entry.key, entry.value],

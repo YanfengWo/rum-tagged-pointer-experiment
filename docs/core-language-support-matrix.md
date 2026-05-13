@@ -306,9 +306,12 @@ once in its primary implementation group. Other groups may mention it as
   `KeyDrop`, broader
   keyed-helper operator-form parity across `KeyMap` / `KeyValueMap` /
   `KeySelect` / `AssociationMap` / `Merge` / `CountsBy` / `GroupBy`,
+  current association-entry application and invalid mapped-entry diagnostics
+  for `AssociationMap`,
   rule-list-normalizing `KeySelect` / `KeySort` / `KeySortBy`, mixed
-  association/rule-list `Merge` plus more precise invalid-item diagnostics
-  and current combiner-controlled delayed-value consumption,
+  association/rule-list `Merge` including nested keyed collection groups plus
+  more precise invalid-item diagnostics and current combiner-controlled
+  delayed-value consumption,
   current list-form `KeyUnion` / `KeyIntersection` / `KeyComplement`
   semantics over association, rule, and rule-list keyed collections,
   including `KeyUnion[..., f]` fill behavior and current `KeyComplement`
@@ -319,8 +322,9 @@ once in its primary implementation group. Other groups may mention it as
   lists / associations with current delayed-entry preservation, callable
   `Key[key][assoc]` extraction, callable
   `Association[...][key]` lookup, current `Part[..., Key[...]]` plus
-  numeric/range association projection including missing-key propagation and
-  no-mixed-key/index diagnostics, `Key[...]` key-spec unwrapping and current `RuleDelayed`
+  numeric/range association projection including missing-key propagation,
+  current `Extract::keyw` missing-key diagnostics, and no-mixed-key/index
+  diagnostics, `Key[...]` key-spec unwrapping and current `RuleDelayed`
   preservation for the current `KeyTake` / `KeyDrop` / `KeyDropFrom` plus
   `KeyMap` / `KeySelect` / `KeySort` / `KeySortBy` keyed-transform subset
   plus `KeyUnion` / `KeyIntersection` / `KeyComplement`,

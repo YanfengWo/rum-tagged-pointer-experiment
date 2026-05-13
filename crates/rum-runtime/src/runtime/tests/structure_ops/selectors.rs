@@ -351,6 +351,32 @@ fn keyed_part_and_extract_cover_association_paths() {
             .to_string(),
         "List[3, 1]"
     );
+    let missing_key_extract = session
+        .eval_text("Extract[Association[a -> 1], {Key[b]}]")
+        .unwrap();
+    assert_eq!(
+        missing_key_extract.value.to_string(),
+        "Missing[\"KeyAbsent\", Key[b]]"
+    );
+    assert!(
+        missing_key_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "keyw")
+    );
+    let mixed_missing_key_extract = session
+        .eval_text("Extract[Association[a -> 1], {{Key[b]}, {Key[a]}}]")
+        .unwrap();
+    assert_eq!(
+        mixed_missing_key_extract.value.to_string(),
+        "List[Missing[\"KeyAbsent\", Key[b]], 1]"
+    );
+    assert!(
+        mixed_missing_key_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "keyw")
+    );
     assert_eq!(
         session
             .eval_text("Extract[Association[a -> 1, b -> 2], {{1}, {2}}]")

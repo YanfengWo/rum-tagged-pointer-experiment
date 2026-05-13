@@ -134,6 +134,7 @@ impl Session {
                     }
                     return Ok(Expr::call(head.clone(), args.to_vec()));
                 };
+                self.push_extract_missing_key_messages(&args[0], selectors);
                 items.push(wrap_extracted_value(value, args.get(2)));
             }
             Expr::call(system_expr("List"), items)
@@ -148,10 +149,23 @@ impl Session {
                 }
                 return Ok(Expr::call(head.clone(), args.to_vec()));
             };
+            self.push_extract_missing_key_messages(&args[0], &position_spec.position_specs[0]);
             wrap_extracted_value(value, args.get(2))
         };
 
         Ok(extracted)
+    }
+
+    fn push_extract_missing_key_messages(&mut self, expr: &Expr, selectors: &[PartSelector]) {
+        let mut missing_keys = Vec::new();
+        collect_missing_key_selections(expr, selectors, &mut missing_keys);
+        for (key, target) in missing_keys {
+            self.push_message(
+                "Extract",
+                "keyw",
+                format!("Key {key} does not exist in {target}."),
+            );
+        }
     }
 
     fn push_part_selection_failure(
@@ -519,6 +533,92 @@ fn selected_shape_head_for_expr(expr: &Expr, selector: &PartSelector) -> Expr {
         system_expr("Association")
     } else {
         structural_head_expr(expr)
+    }
+}
+
+fn collect_missing_key_selections(
+    expr: &Expr,
+    selectors: &[PartSelector],
+    missing_keys: &mut Vec<(Expr, Expr)>,
+) {
+    let Some((first, rest)) = selectors.split_first() else {
+        return;
+    };
+
+    if collect_missing_key_selections_for_key_selector(expr, first, rest, missing_keys) {
+        return;
+    }
+
+    if let Some(shape) = select_parts_for_selector(expr, first) {
+        collect_missing_key_selections_in_shape(shape, rest, missing_keys);
+    }
+}
+
+fn collect_missing_key_selections_for_key_selector(
+    expr: &Expr,
+    selector: &PartSelector,
+    rest: &[PartSelector],
+    missing_keys: &mut Vec<(Expr, Expr)>,
+) -> bool {
+    match selector {
+        PartSelector::Key(key) => {
+            collect_missing_key_selection_for_key(expr, key, rest, missing_keys);
+            true
+        }
+        PartSelector::Multi(specs)
+            if association_entries_from_expr(expr).is_some()
+                && specs
+                    .iter()
+                    .all(|spec| matches!(spec, PartSelector::Key(_))) =>
+        {
+            for spec in specs {
+                let PartSelector::Key(key) = spec else {
+                    continue;
+                };
+                collect_missing_key_selection_for_key(expr, key, rest, missing_keys);
+            }
+            true
+        }
+        _ => false,
+    }
+}
+
+fn collect_missing_key_selection_for_key(
+    expr: &Expr,
+    key: &Expr,
+    rest: &[PartSelector],
+    missing_keys: &mut Vec<(Expr, Expr)>,
+) {
+    let Some(entries) = association_entries_from_expr(expr) else {
+        return;
+    };
+
+    if let Some((_, value)) = entries.iter().find(|(entry_key, _)| entry_key == key) {
+        collect_missing_key_selections(value, rest, missing_keys);
+    } else {
+        missing_keys.push((key.clone(), expr.clone()));
+    }
+}
+
+fn collect_missing_key_selections_in_shape(
+    shape: SelectedPartShape,
+    selectors: &[PartSelector],
+    missing_keys: &mut Vec<(Expr, Expr)>,
+) {
+    match shape {
+        SelectedPartShape::Leaf(expr) => {
+            collect_missing_key_selections(&expr, selectors, missing_keys);
+        }
+        SelectedPartShape::Branch(children) => {
+            for child in children {
+                collect_missing_key_selections_in_shape(child, selectors, missing_keys);
+            }
+        }
+        SelectedPartShape::AssociationBranch(children) => {
+            for (_, child) in children {
+                collect_missing_key_selections_in_shape(child, selectors, missing_keys);
+            }
+        }
     }
 }
 

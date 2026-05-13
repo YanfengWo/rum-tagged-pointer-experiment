@@ -375,6 +375,30 @@ fn associateto_requires_an_immediate_symbol_value_instead_of_suspending_delayed_
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_associationmap_over_association_entries() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request(
+            "AssociationMap[If[SameQ[InputString[\"go: \"], \"yes\"], #, #] &, Association[a -> 1]]",
+        )
+        .expect_err("AssociationMap should suspend when the mapped entry function requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "go: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("k")
+        .expect("resume should finish AssociationMap after the mapped entry function resolves");
+
+    assert_eq!(response.value.to_string(), "Association[Rule[a, 1]]");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_keysortby_after_suspending_sort_key() {
     let mut session = Session::new();
 
