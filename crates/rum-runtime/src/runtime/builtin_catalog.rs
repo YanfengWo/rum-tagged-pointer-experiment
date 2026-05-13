@@ -644,7 +644,36 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         "$Packages",
         "Lists package contexts loaded into the current session.",
     ),
+    BuiltinSpec::new(
+        "$InputFileName",
+        "Evaluates to the path of the file currently being loaded, or the empty string at top level.",
+    ),
     BuiltinSpec::new("$Path", "Lists search roots used by the package loader."),
+    BuiltinSpec::ordinary(
+        "FileNameJoin",
+        "Joins path components into a platform path string.",
+        BuiltinHandler::FileNameJoin,
+    ),
+    BuiltinSpec::ordinary(
+        "DirectoryName",
+        "Returns a parent directory path string for a file name.",
+        BuiltinHandler::DirectoryName,
+    ),
+    BuiltinSpec::ordinary(
+        "ParentDirectory",
+        "Returns the parent directory for an existing directory path.",
+        BuiltinHandler::ParentDirectory,
+    ),
+    BuiltinSpec::ordinary(
+        "FileNameTake",
+        "Takes file name components from a path string.",
+        BuiltinHandler::FileNameTake,
+    ),
+    BuiltinSpec::ordinary(
+        "FileNames",
+        "Lists matching files in one or more directories in the current first-pass subset.",
+        BuiltinHandler::FileNames,
+    ),
     BuiltinSpec::ordinary_with_hold(
         "Context",
         "Returns the context of the current session or of a symbol.",

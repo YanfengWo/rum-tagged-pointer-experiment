@@ -1482,6 +1482,7 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 return Err(EvalError::InputRequired { request });
             }
+            Err(EvalError::Exit { code }) => return Err(EvalError::Exit { code }),
             Err(_) => (system_expr("$Failed"), false, Expr::string("Error")),
         };
 
@@ -1646,6 +1647,7 @@ impl Session {
                 Ok((system_expr("$Failed"), Some("Throw")))
             }
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            Err(EvalError::Exit { code }) => Err(EvalError::Exit { code }),
             Err(_) => Ok((system_expr("$Failed"), Some("Error"))),
         }
     }

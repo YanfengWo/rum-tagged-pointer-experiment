@@ -756,12 +756,12 @@ of the page-defined official matrix above.
   `InputString`, `Level`, `MessageDefinitions`, `MessageTags`, `Messages`,
   `NormalizeRules`, `ReleaseHold`, `SetAttributes`, `ClearAttributes`,
   `StringEndsQ`, `StringStartsQ`, `StringTrim`, `TagSetDelayed`, `TagUnset`,
-  `$Context`, `$Failed`, `$MessageList`, `$Path`, `File`
+  `$Context`, `$Failed`, `$InputFileName`, `$MessageList`, `$Path`, `File`,
+  `FileNameJoin`, `DirectoryName`, `ParentDirectory`, `FileNames`,
+  `FileNameTake`, `Exit`
 - `planned`: real-project script/package glue for `CL-Y`, including
-  `$InputFileName`, mutable `$Path`-driven loading, `FileNameJoin`,
-  `DirectoryName`, `ParentDirectory`, `FileNames`, `FileNameTake`, `Exit`,
-  text-only `Row`, and parser compatibility for Wolfram-style Unicode
-  identifier characters used as ordinary source symbols
+  text-only `Row`, fuller path helper parity, and parser compatibility for
+  Wolfram-style Unicode identifier characters used as ordinary source symbols
 
 ## Maintenance Notes
 

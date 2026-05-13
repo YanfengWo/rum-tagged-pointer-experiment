@@ -60,6 +60,11 @@ pub(super) const CONTROL_BUILTINS: &[BuiltinSpec] = &[
         "Generates an abort that terminates the current evaluation unless caught.",
         BuiltinHandler::Abort,
     ),
+    BuiltinSpec::ordinary(
+        "Exit",
+        "Requests host-level termination with an optional integer exit code.",
+        BuiltinHandler::Exit,
+    ),
     BuiltinSpec::ordinary_with_hold(
         "CheckAbort",
         "Evaluates an expression and substitutes a fallback if an Abort occurs.",

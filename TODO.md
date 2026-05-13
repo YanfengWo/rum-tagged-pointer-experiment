@@ -130,7 +130,10 @@ This roadmap intentionally uses two levels of detail:
   - [ ] `crates/rum-runtime/src/runtime/functional_ops/sequence.rs` (`23386` bytes)
   - [ ] `crates/rum-jupyter/src/transport/codec.rs` (`23115` bytes)
   - [ ] `crates/rum-jupyter/src/adapter/mod.rs` (`23007` bytes)
-  - [ ] `crates/rum-runtime/src/runtime/control_flow/mod.rs` (`22282` bytes)
+  - [ ] `crates/rum-runtime/src/runtime/control_flow/mod.rs` (`30724` bytes)
+  - [ ] `crates/rum-runtime/src/runtime/builtins_context_loader.rs` (`22001` bytes);
+    split path/string filename helpers from context/package loading once the
+    CL-Y smoke lane stabilizes enough to define a durable boundary
   - [ ] `crates/rum-runtime/src/runtime/polynomials/core.rs` (`21551` bytes)
   - [ ] `docs/core-language-support-matrix.md` (`20475` bytes)
   - [ ] `crates/rum-jupyter/src/tests/adapter.rs` (`20336` bytes)
@@ -317,10 +320,13 @@ This roadmap intentionally uses two levels of detail:
     Unicode identifier characters used as ordinary local names and the
     Unicode operator glyphs that package-level parsers/printers commonly keep
     in string data or symbolic constants
-  - [ ] fill the script-runner environment needed by multi-file projects,
-    including `$InputFileName`, mutable `$Path`-driven loading, `FileNameJoin`,
-    `DirectoryName`, `ParentDirectory`, `FileNames`, `FileNameTake`, and
-    `Exit`
+  - [x] add the first script-runner environment wave for multi-file projects,
+    including `$InputFileName`, mutable `$Path`-driven loading,
+    `FileNameJoin`, `DirectoryName`, `ParentDirectory`, `FileNames`, and
+    `FileNameTake`; leave fuller path-option/message parity for later polish
+  - [x] add request-boundary `Exit` control flow, including `Get` propagation
+    and CLI exit-code mapping, before turning on the first real-project smoke
+    lane
   - [ ] turn `mma-hol/tests/run_all.wls` into the first real-project smoke lane
     once the loader/script prerequisites land, with special attention to the
     already-matrix-tracked `Throw` / `Catch` / `Failure` / `FailureQ` /

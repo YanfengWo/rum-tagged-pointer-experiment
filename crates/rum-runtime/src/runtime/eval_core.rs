@@ -60,6 +60,14 @@ impl Session {
                         .collect::<Vec<_>>();
                     return Ok(Expr::call(system_expr("List"), packages));
                 }
+                "$InputFileName" => {
+                    return Ok(Expr::string(
+                        self.load_stack
+                            .last()
+                            .map(|path| path.display().to_string())
+                            .unwrap_or_default(),
+                    ));
+                }
                 "$Path" => {
                     let paths = self
                         .package_search_paths

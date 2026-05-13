@@ -10,7 +10,7 @@ use rum_terminal::{render_request_failure, render_runtime_message};
 
 fn main() -> ExitCode {
     match run() {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(code) => code,
         Err(err) => {
             eprintln!("error: {err}");
             ExitCode::FAILURE
@@ -18,7 +18,7 @@ fn main() -> ExitCode {
     }
 }
 
-fn run() -> Result<(), Box<dyn std::error::Error>> {
+fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut session = Session::new();
     install_core(&mut session);
 
@@ -57,6 +57,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             match session.eval_request(&input) {
                 Ok(response) => print_outcome(&response),
                 Err(failure) => {
+                    if let Some(code) = exit_code_from_failure(&failure) {
+                        return Ok(code);
+                    }
                     return Err(request_failure_to_cli_error(failure, "evaluation failed"));
                 }
             }
@@ -66,7 +69,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 io::Error::new(io::ErrorKind::InvalidInput, "--file expects a path")
             })?;
 
-            eval_file(&mut session, &path)?;
+            return eval_file(&mut session, &path);
         }
         Some("--help") | Some("-h") => print_usage(),
         Some(flag) if flag.starts_with("--") => {
@@ -75,10 +78,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 format!("unknown flag `{flag}`"),
             )));
         }
-        Some(path) => eval_file(&mut session, path)?,
+        Some(path) => return eval_file(&mut session, path),
     }
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
 
 fn run_repl(session: &mut Session) -> io::Result<()> {
@@ -88,16 +91,22 @@ fn run_repl(session: &mut Session) -> io::Result<()> {
     repl.run(session)
 }
 
-fn eval_file(session: &mut Session, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn eval_file(session: &mut Session, path: &str) -> Result<ExitCode, Box<dyn std::error::Error>> {
     match session.eval_file_request(path) {
         Ok(response) => {
             print_outcome(&response);
-            Ok(())
+            Ok(ExitCode::SUCCESS)
         }
-        Err(failure) => Err(request_failure_to_cli_error(
-            failure,
-            "file evaluation failed",
-        )),
+        Err(failure) => {
+            if let Some(code) = exit_code_from_failure(&failure) {
+                return Ok(code);
+            }
+
+            Err(request_failure_to_cli_error(
+                failure,
+                "file evaluation failed",
+            ))
+        }
     }
 }
 
@@ -124,6 +133,13 @@ fn request_failure_to_cli_error(
             eprintln!("{rendered}");
             Box::new(io::Error::other(error.to_string()))
         }
+    }
+}
+
+fn exit_code_from_failure(failure: &SessionRequestFailure) -> Option<ExitCode> {
+    match &failure.error {
+        SessionRequestError::Exit { code } => Some(ExitCode::from(*code as u8)),
+        _ => None,
     }
 }
 

@@ -138,6 +138,37 @@ impl Session {
         Err(EvalError::Abort)
     }
 
+    pub(super) fn eval_exit(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let code = match args {
+            [] => 0,
+            [code] => {
+                let Some(code) = expr_as_signed_isize(code) else {
+                    let call = self.invalid_call("Exit", args);
+                    return Ok(self.invalid_call_with_message(
+                        "Exit",
+                        args,
+                        "intm",
+                        format!("Machine-sized integer expected at position 1 in {call}."),
+                    ));
+                };
+                code as i64
+            }
+            _ => {
+                return Ok(self.invalid_call_with_message(
+                    "Exit",
+                    args,
+                    "argt",
+                    format!(
+                        "Exit called with {} arguments; 0 or 1 arguments are expected.",
+                        args.len()
+                    ),
+                ));
+            }
+        };
+
+        Err(EvalError::Exit { code })
+    }
+
     pub(super) fn eval_check_abort(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() < 2 {
             let tag = if args.is_empty() { "argrx" } else { "argr" };

@@ -135,6 +135,26 @@ fn file_flag_renders_source_aware_syntax_diagnostics() {
 }
 
 #[test]
+fn eval_exit_uses_requested_status_code_without_error_rendering() {
+    let output = run_cli(&["--eval", "Exit[7]"]);
+
+    assert_eq!(output.status.code(), Some(7));
+    assert!(stdout(&output).is_empty());
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
+fn file_exit_uses_requested_status_code_without_error_rendering() {
+    let file = TempFile::new("Exit[6]");
+    let path = file.path().to_string_lossy().into_owned();
+    let output = run_cli(&["--file", &path]);
+
+    assert_eq!(output.status.code(), Some(6));
+    assert!(stdout(&output).is_empty());
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
 fn unknown_long_flag_is_rejected() {
     let output = run_cli(&["--typo"]);
 

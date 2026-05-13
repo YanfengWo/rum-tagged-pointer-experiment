@@ -18,6 +18,7 @@ impl Session {
             BuiltinHandler::For => self.eval_for(args),
             BuiltinHandler::Table => self.eval_table(args),
             BuiltinHandler::Abort => self.eval_abort(head, args),
+            BuiltinHandler::Exit => self.eval_exit(args),
             BuiltinHandler::CheckAbort => self.eval_check_abort(args),
             BuiltinHandler::AbortProtect => self.eval_abort_protect(args),
             BuiltinHandler::WithCleanup => self.eval_with_cleanup(args),

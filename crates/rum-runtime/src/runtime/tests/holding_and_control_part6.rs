@@ -154,6 +154,45 @@ fn abort_and_checkabort_cover_current_first_pass_subset() {
 }
 
 #[test]
+fn exit_reports_a_request_level_code_and_stops_evaluation() {
+    let mut session = Session::new();
+
+    match session
+        .eval_text("Exit[7]")
+        .expect_err("Exit should terminate the current evaluation")
+    {
+        EvalError::Exit { code } => assert_eq!(code, 7),
+        other => panic!("expected Exit control flow, got {other:?}"),
+    }
+
+    let invalid_code = session.eval_text("Exit[foo]").unwrap();
+    assert_eq!(invalid_code.value.to_string(), "Exit[foo]");
+    assert!(
+        invalid_code
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Exit" && message.tag == "intm")
+    );
+
+    let invalid_arity = session.eval_text("Exit[1, 2]").unwrap();
+    assert!(
+        invalid_arity
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Exit" && message.tag == "argt")
+    );
+
+    let failure = session
+        .eval_script_request("x = 1\nExit[5]\nx = 2")
+        .expect_err("script Exit should surface at the request boundary");
+    assert!(matches!(
+        failure.error,
+        SessionRequestError::Exit { code: 5 }
+    ));
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
+}
+
+#[test]
 fn withcleanup_runs_cleanup_on_values_throws_and_aborts() {
     let mut session = Session::new();
 

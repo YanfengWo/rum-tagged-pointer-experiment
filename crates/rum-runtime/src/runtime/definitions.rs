@@ -90,6 +90,19 @@ impl Session {
         delayed: bool,
     ) -> Result<Expr, EvalError> {
         if !delayed {
+            if is_path_symbol_expr(&lhs) {
+                let Some(paths) = expr_as_string_list(&rhs) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        symbol,
+                        &[lhs, rhs],
+                        "expected $Path to be assigned a list of string paths",
+                    ));
+                };
+                self.package_search_paths =
+                    dedup_paths(paths.into_iter().map(PathBuf::from).collect());
+                return Ok(rhs);
+            }
+
             if let Some(target) = self.normalize_options_target_expr(&lhs) {
                 if !self.ensure_symbol_not_protected_for_write(symbol, &target) {
                     return Ok(rhs);
@@ -156,4 +169,8 @@ impl Session {
             None => Ok(Expr::call(system_expr(symbol), vec![lhs, rhs])),
         }
     }
+}
+
+fn is_path_symbol_expr(expr: &Expr) -> bool {
+    matches!(expr, Expr::Atom(Atom::Symbol(symbol)) if symbol.context() == SYSTEM_CONTEXT && symbol.name() == "$Path")
 }

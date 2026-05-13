@@ -11,6 +11,7 @@ impl Session {
             current_context: self.current_context.clone(),
             context_path: self.context_path.clone(),
             context_stack: self.context_stack.clone(),
+            package_search_paths: self.package_search_paths.clone(),
             loaded_packages: self.loaded_packages.clone(),
             definitions: self.definitions.clone(),
             message_definitions: self.message_definitions.clone(),
@@ -32,6 +33,7 @@ impl Session {
         self.current_context = snapshot.current_context;
         self.context_path = snapshot.context_path;
         self.context_stack = snapshot.context_stack;
+        self.package_search_paths = snapshot.package_search_paths;
         self.loaded_packages = snapshot.loaded_packages;
         self.definitions = snapshot.definitions;
         self.message_definitions = snapshot.message_definitions;

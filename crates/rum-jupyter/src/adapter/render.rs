@@ -135,6 +135,7 @@ fn error_output(failure: &SessionRequestFailure) -> KernelErrorOutput {
         SessionRequestError::EvaluationPassLimitExceeded { .. } => {
             ("EvaluationPassLimitExceeded".to_string(), None)
         }
+        SessionRequestError::Exit { .. } => ("Exit".to_string(), None),
         SessionRequestError::InputRequired { .. } => ("InputRequired".to_string(), None),
         SessionRequestError::Other { .. } => ("Other".to_string(), None),
     };

@@ -255,6 +255,7 @@ impl fmt::Display for SessionRequestError {
             Self::EvaluationPassLimitExceeded { limit } => {
                 write!(f, "evaluation exceeded fixed-point pass limit ({limit})")
             }
+            Self::Exit { code } => write!(f, "Exit[{code}]"),
             Self::InputRequired { request } => write!(f, "{request}"),
             Self::Other { message } => f.write_str(message),
         }
@@ -401,6 +402,9 @@ pub enum SessionRequestError {
     },
     EvaluationPassLimitExceeded {
         limit: usize,
+    },
+    Exit {
+        code: i64,
     },
     InputRequired {
         request: RuntimeInputRequest,

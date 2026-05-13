@@ -84,6 +84,7 @@ pub(super) struct LoaderSnapshot {
     pub(super) current_context: String,
     pub(super) context_path: Vec<String>,
     pub(super) context_stack: Vec<ContextFrame>,
+    pub(super) package_search_paths: Vec<PathBuf>,
     pub(super) loaded_packages: Vec<String>,
     pub(super) definitions: BTreeMap<Symbol, SymbolDefinition>,
     pub(super) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
@@ -274,6 +275,8 @@ pub enum EvalError {
     Break,
     #[error("uncaught Continue[]")]
     Continue,
+    #[error("Exit[{code}]")]
+    Exit { code: i64 },
     #[error("{request}")]
     InputRequired { request: RuntimeInputRequest },
 }

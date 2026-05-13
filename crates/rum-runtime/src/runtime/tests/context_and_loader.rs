@@ -22,6 +22,94 @@ fn context_variables_and_builtin_inspection_reflect_session_contexts() {
 }
 
 #[test]
+fn path_variables_and_file_name_helpers_cover_current_script_environment_subset() {
+    let root = TempDirGuard::new("file-name-helpers");
+    let package = root.write("Pkg.rum", "BeginPackage[\"Pkg`\"]\nvalue = 7\nEndPackage[]");
+    let nested = root.write(
+        "nested/script.rum",
+        "{StringQ[$InputFileName], FileNameTake[$InputFileName], DirectoryName[$InputFileName]}",
+    );
+    root.write("nested/a.wl", "");
+    root.write("nested/b.txt", "");
+
+    let mut session = Session::new();
+    assert_eq!(
+        session
+            .eval_text("$InputFileName")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"\""
+    );
+
+    assert_eq!(
+        session
+            .eval_text("FileNameJoin[{\"alpha\", \"beta\", \"gamma.wl\"}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"alpha/beta/gamma.wl\""
+    );
+    assert_eq!(
+        session
+            .eval_text("FileNameJoin[{}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"\""
+    );
+    assert_eq!(
+        session
+            .eval_text(&format!("FileNameTake[\"{}\"]", rum_path(&package)))
+            .unwrap()
+            .value
+            .to_string(),
+        "\"Pkg.rum\""
+    );
+
+    let nested_dir = nested.parent().unwrap();
+    let nested_dir_rendered = format!("{}/", rum_path(nested_dir));
+    let loaded = session
+        .eval_text(&format!("Get[\"{}\"]", rum_path(&nested)))
+        .unwrap();
+    assert_eq!(
+        loaded.value.to_string(),
+        format!("List[True, \"script.rum\", \"{nested_dir_rendered}\"]")
+    );
+
+    let files = session
+        .eval_text(&format!(
+            "FileNames[\"*.wl\", \"{}\"]",
+            rum_path(nested_dir)
+        ))
+        .unwrap();
+    assert_eq!(
+        files.value.to_string(),
+        format!("List[\"{}\"]", rum_path(&nested_dir.join("a.wl")))
+    );
+
+    let parent = session
+        .eval_text(&format!("ParentDirectory[\"{}\"]", rum_path(nested_dir)))
+        .unwrap();
+    assert_eq!(
+        parent.value.to_string(),
+        format!("\"{}/\"", rum_path(root.path()))
+    );
+
+    assert_eq!(
+        session
+            .eval_text(&format!(
+                "$Path = {{\"{}\"}}; FindFile[\"Pkg`\"]",
+                rum_path(root.path())
+            ))
+            .unwrap()
+            .value
+            .to_string(),
+        Expr::string(rum_path(&package)).to_string()
+    );
+}
+
+#[test]
 fn bare_symbols_search_context_path_before_current_context() {
     let mut session = Session::new();
 
@@ -231,6 +319,22 @@ fn get_loads_a_script_file_and_returns_the_last_value() {
 }
 
 #[test]
+fn get_propagates_exit_without_collapsing_it_to_failed_load() {
+    let dir = TempDirGuard::new("get-exit");
+    let file = dir.write("script.rum", "Exit[6]");
+    let mut session = Session::new();
+
+    match session
+        .eval_text(&format!("Get[\"{}\"]", rum_path(&file)))
+        .expect_err("Exit inside Get should escape the loader")
+    {
+        EvalError::Exit { code } => assert_eq!(code, 6),
+        other => panic!("expected Exit control flow, got {other:?}"),
+    }
+    assert!(session.take_messages().is_empty());
+}
+
+#[test]
 fn nested_get_prefers_the_current_loader_directory_over_package_search_paths() {
     let root = TempDirGuard::new("nested-get-root");
     let fallback = TempDirGuard::new("nested-get-fallback");
@@ -288,9 +392,10 @@ fn get_rolls_back_loader_side_effects_and_collapses_failed_file_messages() {
     let dir = TempDirGuard::new("get-rollback");
     let file = dir.write(
         "broken.rum",
-        "BeginPackage[\"Broken`\"]\nFindFile[\"Missing`\"]\nflag = 1\nSetAttributes[f, HoldFirst]\nself := self\nself",
+        "$Path = {\"/tmp/rum-loader-should-roll-back\"}\nBeginPackage[\"Broken`\"]\nFindFile[\"Missing`\"]\nflag = 1\nSetAttributes[f, HoldFirst]\nself := self\nself",
     );
     let mut session = Session::new();
+    session.set_package_search_paths([dir.path().to_path_buf()]);
 
     let outcome = session
         .eval_text(&format!("Get[\"{}\"]", rum_path(&file)))
@@ -312,6 +417,10 @@ fn get_rolls_back_loader_side_effects_and_collapses_failed_file_messages() {
     assert_eq!(
         session.eval_text("$Packages").unwrap().value.to_string(),
         "List[]"
+    );
+    assert_eq!(
+        session.eval_text("$Path").unwrap().value.to_string(),
+        format!("List[\"{}\"]", dir.path().display())
     );
     assert_eq!(
         session.eval_text("Context[]").unwrap().value.to_string(),

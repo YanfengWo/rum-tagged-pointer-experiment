@@ -378,6 +378,7 @@ fn session_request_error_from_eval_error_with_source(
         EvalError::EvaluationPassLimitExceeded { limit } => {
             SessionRequestError::EvaluationPassLimitExceeded { limit: *limit }
         }
+        EvalError::Exit { code } => SessionRequestError::Exit { code: *code },
         EvalError::Return { value } => SessionRequestError::Other {
             message: format!("uncaught top-level Return resolved to {value}"),
         },
