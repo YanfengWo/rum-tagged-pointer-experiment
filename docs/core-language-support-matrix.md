@@ -352,8 +352,8 @@ once in its primary implementation group. Other groups may mention it as
   forms plus current keyed-lookup propagation and current `DeleteMissing`
   over list / association / rule-list data including depth, third-argument
   scan-depth, eager delayed target-level deletion, delayed predicate
-  suspension/resume, invalid-argument diagnostics, and delayed nested-cleanup
-  subsets, and held symbol plus
+  suspension/resume, deeper target-level direct association-value deletion,
+  invalid-argument diagnostics, and delayed nested-cleanup subsets, and held symbol plus
   exact part-target mutation first passes including scalar, list, `All`, and
   span selectors, current `AssociateTo` missing-key and missing-part
   diagnostics, and current non-leaf / empty / bulk selector / missing-part

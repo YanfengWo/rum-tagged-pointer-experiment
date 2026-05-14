@@ -677,6 +677,16 @@ impl Session {
             return Ok(render_association_entry_forms_preserving_heads(kept));
         };
 
+        if is_missing_expr(&entry.value) {
+            return self.resume_delete_missing_association_at_target_level(
+                entries,
+                level,
+                scan,
+                index + 1,
+                kept,
+            );
+        }
+
         if level == 1 {
             let predicate_result = if entry.delayed {
                 self.evaluate(entry.value.clone())

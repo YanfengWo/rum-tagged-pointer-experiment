@@ -1908,6 +1908,22 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("DeleteMissing[Association[a -> Missing[], b -> 2], 2, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[b, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DeleteMissing[Association[a :> Missing[], b -> 2], 2, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[b, 2]]"
+    );
+    assert_eq!(
+        session
             .eval_text("DeleteMissing[{f[Missing[]], 2}, 1, 1]")
             .unwrap()
             .value
