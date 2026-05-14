@@ -537,6 +537,7 @@ impl Session {
 
         if association_entries_from_expr(target_expr).is_some()
             || rule_list_entries_from_expr(target_expr).is_some()
+            || parse_association_entry_form(target_expr).is_some()
         {
             if let Expr::Call {
                 head: target_head, ..
@@ -642,7 +643,9 @@ impl Session {
             return Ok(updated);
         }
 
-        if rule_list_entries_from_expr(target_expr).is_some() {
+        if rule_list_entries_from_expr(target_expr).is_some()
+            || parse_association_entry_form(target_expr).is_some()
+        {
             return Ok(self.invalid_call_with_message(
                 "KeyDropFrom",
                 args,

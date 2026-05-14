@@ -2245,6 +2245,47 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .iter()
             .any(|message| message.symbol == "AssociateTo" && message.tag == "invlb")
     );
+    let outcome = session.eval_text("AssociateTo[a -> 1, b -> 2]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "AssociateTo[Rule[a, 1], Rule[b, 2]]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociateTo" && message.tag == "wrsym")
+    );
+    let outcome = session.eval_text("AssociateTo[a :> 1, b -> 2]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "AssociateTo[RuleDelayed[a, 1], Rule[b, 2]]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociateTo" && message.tag == "wrsym")
+    );
+    let outcome = session.eval_text("KeyDropFrom[a -> 1, a]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyDropFrom[Rule[a, 1], a]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyDropFrom" && message.tag == "invak")
+    );
+    let outcome = session.eval_text("KeyDropFrom[a :> 1, a]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyDropFrom[RuleDelayed[a, 1], a]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyDropFrom" && message.tag == "invak")
+    );
     for (symbol, zero_arg_call, one_arg_call, three_arg_call) in [
         (
             "AssociateTo",
