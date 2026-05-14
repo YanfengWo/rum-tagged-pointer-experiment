@@ -190,6 +190,14 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
     );
     assert_eq!(
         session
+            .eval_text("x = 0; {Lookup[Association[a :> (x = x + 1)], a, missing, Hold], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Hold[Set[x, Plus[x, 1]]], 0]"
+    );
+    assert_eq!(
+        session
             .eval_text("Lookup[{Association[a -> 1], Association[a -> 2, b -> 3]}, a]")
             .unwrap()
             .value
