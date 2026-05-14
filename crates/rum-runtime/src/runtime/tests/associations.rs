@@ -1726,6 +1726,16 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text(
+                "PositionIndex[Association[first -> countedX, second -> countedX, third -> countedY]]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[countedX, List[first, second]], Rule[countedY, List[third]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Missing[\"KeyAbsent\", a]")
             .unwrap()
             .value

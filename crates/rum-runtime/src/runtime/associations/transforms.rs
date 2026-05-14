@@ -979,24 +979,24 @@ impl Session {
             ));
         };
 
+        if let Some(entries) = association_entries_from_expr(expr) {
+            return Ok(render_position_index_entries(
+                entries
+                    .into_iter()
+                    .map(|(key, value)| (value, key))
+                    .collect(),
+            ));
+        }
+
         let Some(items) = list_items(expr) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let mut grouped: Vec<(Expr, Vec<Expr>)> = Vec::new();
-        for (index, item) in items.iter().enumerate() {
-            let position = Expr::integer(BigInt::from(index + 1));
-            if let Some((_, positions)) = grouped.iter_mut().find(|(key, _)| key == item) {
-                positions.push(position);
-            } else {
-                grouped.push((item.clone(), vec![position]));
-            }
-        }
-
-        Ok(render_association(
-            grouped
-                .into_iter()
-                .map(|(key, positions)| (key, Expr::call(system_expr("List"), positions)))
+        Ok(render_position_index_entries(
+            items
+                .iter()
+                .enumerate()
+                .map(|(index, item)| (item.clone(), Expr::integer(BigInt::from(index + 1))))
                 .collect(),
         ))
     }
@@ -1045,6 +1045,24 @@ fn render_count_association(counts: Vec<(Expr, usize)>) -> Expr {
         counts
             .into_iter()
             .map(|(key, count)| (key, Expr::integer(BigInt::from(count))))
+            .collect(),
+    )
+}
+
+fn render_position_index_entries(items: Vec<(Expr, Expr)>) -> Expr {
+    let mut grouped: Vec<(Expr, Vec<Expr>)> = Vec::new();
+    for (item, position) in items {
+        if let Some((_, positions)) = grouped.iter_mut().find(|(key, _)| key == &item) {
+            positions.push(position);
+        } else {
+            grouped.push((item, vec![position]));
+        }
+    }
+
+    render_association(
+        grouped
+            .into_iter()
+            .map(|(key, positions)| (key, Expr::call(system_expr("List"), positions)))
             .collect(),
     )
 }

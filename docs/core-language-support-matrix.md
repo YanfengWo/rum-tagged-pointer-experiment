@@ -342,7 +342,7 @@ once in its primary implementation group. Other groups may mention it as
   parity, arity diagnostics, and invalid-value host-input resume coverage,
   current `Counts` over lists plus association values with explicit key-list
   count specs, current `GroupBy[list, f, g]` reducer support, current
-  `PositionIndex` arity diagnostics,
+  `PositionIndex` over lists plus association values and arity diagnostics,
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
   forms plus current keyed-lookup propagation and current `DeleteMissing`
   over list / association / rule-list data including depth, third-argument
