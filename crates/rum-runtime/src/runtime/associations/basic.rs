@@ -285,15 +285,26 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("Normal", args, 1));
-        };
+        if args.is_empty() || args.len() > 3 {
+            return Ok(self.invalid_call_with_message(
+                "Normal",
+                args,
+                "argb",
+                normal_arg_count_message(args.len()),
+            ));
+        }
 
-        let Some(entries) = association_rule_exprs_preserving_heads(expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
+        match args {
+            [expr] => Ok(normalize_association_expr(expr).unwrap_or_else(|| expr.clone())),
+            [expr, target] => {
+                if normal_target_matches_association(target) {
+                    return Ok(normalize_association_expr(expr).unwrap_or_else(|| expr.clone()));
+                }
 
-        Ok(Expr::call(system_expr("List"), entries))
+                Ok(expr.clone())
+            }
+            _ => Ok(Expr::call(head.clone(), args.to_vec())),
+        }
     }
 
     pub(in crate::runtime) fn eval_key_value_pattern(
@@ -481,6 +492,10 @@ fn lookup_arg_count_message(count: usize) -> String {
     format!("Lookup called with {count} arguments; between 2 and 4 arguments are expected.")
 }
 
+fn normal_arg_count_message(count: usize) -> String {
+    format!("Normal called with {count} arguments; between 1 and 3 arguments are expected.")
+}
+
 fn exact_argument_count_message(symbol: &str, count: usize, expected: usize) -> String {
     let count_noun = if count == 1 { "argument" } else { "arguments" };
     let expected_noun = if expected == 1 {
@@ -493,6 +508,15 @@ fn exact_argument_count_message(symbol: &str, count: usize, expected: usize) -> 
 
 fn one_or_two_argument_count_message(symbol: &str, count: usize) -> String {
     format!("{symbol} called with {count} arguments; 1 or 2 arguments are expected.")
+}
+
+fn normalize_association_expr(expr: &Expr) -> Option<Expr> {
+    association_rule_exprs_preserving_heads(expr)
+        .map(|entries| Expr::call(system_expr("List"), entries))
+}
+
+fn normal_target_matches_association(target: &Expr) -> bool {
+    is_system_symbol_name(target, "Association") || is_system_symbol_name(target, "All")
 }
 
 impl Session {

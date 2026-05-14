@@ -323,8 +323,9 @@ once in its primary implementation group. Other groups may mention it as
   including `KeyUnion[..., f]` fill behavior and current `KeyComplement`
   option-tail parity, current `AssociationThread` rule plus singleton/list
   threading with delayed-rule preservation, deep `Association[...]`
-  construction plus `Normal` with current
-  `RuleDelayed` head preservation, `AssociateTo` update specs over nested rule
+  construction plus `Normal` one/two-argument association-target boundaries,
+  ordinary-expression passthrough, and current `RuleDelayed` head preservation,
+  `AssociateTo` update specs over nested rule
   lists / associations with current delayed-entry preservation plus current
   mutation arity diagnostics, callable
   `Key[key][assoc]` extraction plus current `Key` arity diagnostics, callable

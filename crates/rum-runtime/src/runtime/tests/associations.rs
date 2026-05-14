@@ -62,6 +62,30 @@ fn association_and_associationq_cover_first_pass_rule_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Normal[Association[a -> 1], Association]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Normal[Association[a -> 1], All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Normal[Association[a -> 1], List]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
             .eval_text("x = 0; {Normal[Association[a :> (x = x + 1)]], x}")
             .unwrap()
             .value
@@ -2026,8 +2050,36 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .unwrap()
             .value
             .to_string(),
-        "Normal[List[Rule[a, 1]]]"
+        "List[Rule[a, 1]]"
     );
+    assert_eq!(
+        session.eval_text("Normal[a]").unwrap().value.to_string(),
+        "a"
+    );
+    let outcome = session.eval_text("Normal[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Normal[]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Normal"
+            && message.tag == "argb"
+            && message.text
+                == "Normal called with 0 arguments; between 1 and 3 arguments are expected."
+    }));
+    let outcome = session
+        .eval_text("Normal[Association[a -> 1], Association, Heads -> True]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "Normal[Association[Rule[a, 1]], Association, Rule[Heads, True]]"
+    );
+    assert!(outcome.messages.is_empty());
+    let outcome = session.eval_text("Normal[a, b, c, d]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Normal[a, b, c, d]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Normal"
+            && message.tag == "argb"
+            && message.text
+                == "Normal called with 4 arguments; between 1 and 3 arguments are expected."
+    }));
     let outcome = session
         .eval_text("AssociateTo[Association[a -> 1], a]")
         .unwrap();
