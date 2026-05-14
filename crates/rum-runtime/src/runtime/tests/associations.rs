@@ -1678,6 +1678,22 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("x = 0; {Counts[Association[a :> (x = x + 1), b :> (x = x + 1)]], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[1, 1], Rule[2, 1]], 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {Counts[Association[a :> (x = x + 1), b -> 1], {1, 2}], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[1, 2], Rule[2, 0]], 1]"
+    );
+    assert_eq!(
+        session
             .eval_text("CountsBy[{a, bb, ccc}, StringLength[ToString[#]] &]")
             .unwrap()
             .value

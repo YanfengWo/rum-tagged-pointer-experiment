@@ -928,7 +928,28 @@ impl Session {
             }
         };
 
-        let Some(items) = counts_items_from_expr(expr) else {
+        if let Some(entries) = association_entry_forms_from_expr(expr) {
+            let spec_keys = match counts_spec_keys(spec) {
+                Ok(spec_keys) => spec_keys,
+                Err(invalid_spec) => {
+                    return Ok(self.invalid_call_with_message(
+                        "Counts",
+                        args,
+                        "invl",
+                        invalid_list_message(&invalid_spec),
+                    ));
+                }
+            };
+
+            return self.resume_counts_association_entries_from_index(
+                entries,
+                0,
+                Vec::new(),
+                spec_keys,
+            );
+        }
+
+        let Some(items) = list_items(expr) else {
             return Ok(self.invalid_call_with_message(
                 "Counts",
                 args,
@@ -937,32 +958,19 @@ impl Session {
             ));
         };
 
-        let Some(spec) = spec else {
-            return Ok(render_count_association(count_items(items)));
+        let spec_keys = match counts_spec_keys(spec) {
+            Ok(spec_keys) => spec_keys,
+            Err(invalid_spec) => {
+                return Ok(self.invalid_call_with_message(
+                    "Counts",
+                    args,
+                    "invl",
+                    invalid_list_message(&invalid_spec),
+                ));
+            }
         };
 
-        let Some(keys) = list_items(spec) else {
-            return Ok(self.invalid_call_with_message(
-                "Counts",
-                args,
-                "invl",
-                invalid_list_message(spec),
-            ));
-        };
-
-        let counts = count_items(items);
-        Ok(render_association(
-            keys.iter()
-                .map(|key| {
-                    let count = counts
-                        .iter()
-                        .find(|(existing, _)| existing == key)
-                        .map(|(_, count)| *count)
-                        .unwrap_or(0);
-                    (key.clone(), Expr::integer(BigInt::from(count)))
-                })
-                .collect(),
-        ))
+        Ok(render_count_association_for_spec(items.to_vec(), spec_keys))
     }
 
     pub(in crate::runtime) fn eval_position_index(
@@ -1024,12 +1032,14 @@ fn invalid_list_message(expr: &Expr) -> String {
     format!("The argument {expr} is not a list.")
 }
 
-fn counts_items_from_expr(expr: &Expr) -> Option<Vec<Expr>> {
-    if let Some(entries) = association_entries_from_expr(expr) {
-        return Some(entries.into_iter().map(|(_, value)| value).collect());
-    }
+fn counts_spec_keys(spec: Option<&Expr>) -> Result<Option<Vec<Expr>>, Expr> {
+    let Some(spec) = spec else {
+        return Ok(None);
+    };
 
-    list_items(expr).map(|items| items.to_vec())
+    list_items(spec)
+        .map(|items| Some(items.to_vec()))
+        .ok_or_else(|| spec.clone())
 }
 
 fn count_items(items: Vec<Expr>) -> Vec<(Expr, usize)> {
@@ -1045,6 +1055,26 @@ fn render_count_association(counts: Vec<(Expr, usize)>) -> Expr {
         counts
             .into_iter()
             .map(|(key, count)| (key, Expr::integer(BigInt::from(count))))
+            .collect(),
+    )
+}
+
+fn render_count_association_for_spec(items: Vec<Expr>, spec_keys: Option<Vec<Expr>>) -> Expr {
+    let counts = count_items(items);
+    let Some(keys) = spec_keys else {
+        return render_count_association(counts);
+    };
+
+    render_association(
+        keys.into_iter()
+            .map(|key| {
+                let count = counts
+                    .iter()
+                    .find(|(existing, _)| existing == &key)
+                    .map(|(_, count)| *count)
+                    .unwrap_or(0);
+                (key, Expr::integer(BigInt::from(count)))
+            })
             .collect(),
     )
 }
@@ -1094,6 +1124,55 @@ fn catenate_steps_for_list_items(items: &[Expr]) -> Vec<CatenateStep> {
 }
 
 impl Session {
+    fn resume_counts_association_entries_from_index(
+        &mut self,
+        entries: Vec<AssociationEntryForm>,
+        index: usize,
+        values: Vec<Expr>,
+        spec_keys: Option<Vec<Expr>>,
+    ) -> Result<Expr, EvalError> {
+        let Some(entry) = entries.get(index).cloned() else {
+            return Ok(render_count_association_for_spec(values, spec_keys));
+        };
+
+        if entry.delayed {
+            let suspended_entries = entries.clone();
+            let suspended_values = values.clone();
+            let suspended_spec_keys = spec_keys.clone();
+            let value_result = self.evaluate(entry.value);
+            let value = self.suspend_with_frame(value_result, move |session, value| {
+                session.resume_counts_after_association_value(
+                    suspended_entries,
+                    index,
+                    suspended_values,
+                    suspended_spec_keys,
+                    value,
+                )
+            })?;
+            self.resume_counts_after_association_value(entries, index, values, spec_keys, value)
+        } else {
+            self.resume_counts_after_association_value(
+                entries,
+                index,
+                values,
+                spec_keys,
+                entry.value,
+            )
+        }
+    }
+
+    fn resume_counts_after_association_value(
+        &mut self,
+        entries: Vec<AssociationEntryForm>,
+        index: usize,
+        mut values: Vec<Expr>,
+        spec_keys: Option<Vec<Expr>>,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        values.push(value);
+        self.resume_counts_association_entries_from_index(entries, index + 1, values, spec_keys)
+    }
+
     fn resume_catenate_direct_association_entries_from_index(
         &mut self,
         head: Expr,
