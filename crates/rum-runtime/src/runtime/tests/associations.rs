@@ -1745,6 +1745,16 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     assert_eq!(
         session
             .eval_text(
+                "x = 0; {GroupBy[Association[first :> (x = x + 1), second :> (x = x + 1)], Identity], x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[1, Association[RuleDelayed[first, Set[x, Plus[x, 1]]]]], Rule[2, Association[RuleDelayed[second, Set[x, Plus[x, 1]]]]]], 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
                 "GroupBy[Identity][Association[first -> countedX, second -> countedX, third -> countedY]]"
             )
             .unwrap()

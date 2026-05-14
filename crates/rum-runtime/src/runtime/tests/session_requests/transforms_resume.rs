@@ -552,6 +552,31 @@ fn resume_eval_request_with_input_can_finish_counts_after_suspending_delayed_ass
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_groupby_after_suspending_delayed_association_value() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("GroupBy[Association[a :> InputString[\"value: \"]], Identity]")
+        .expect_err("GroupBy should suspend when keying a delayed association value");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "value: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue GroupBy after the delayed association value resolves");
+
+    assert_eq!(
+        response.value.to_string(),
+        "Association[Rule[\"done\", Association[RuleDelayed[a, InputString[\"value: \"]]]]]"
+    );
+}
+
+#[test]
 fn resume_eval_request_with_input_reports_catenate_invalid_value_after_suspension() {
     let mut session = Session::new();
 
