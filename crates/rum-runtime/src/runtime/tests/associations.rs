@@ -975,6 +975,61 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
         session.eval_text("assoc").unwrap().value.to_string(),
         "Association[Rule[a, 1], Rule[b, 2]]"
     );
+    session.eval_text("ClearAll[f]").unwrap();
+    session.eval_text("f[1] = Association[a -> 1]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("AssociateTo[f[1], b -> 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1], Rule[b, 2]]"
+    );
+    assert_eq!(
+        session.eval_text("f[1]").unwrap().value.to_string(),
+        "Association[Rule[a, 1], Rule[b, 2]]"
+    );
+    session
+        .eval_text("f[1] = Association[a -> 1, b -> 2]")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("KeyDropFrom[f[1], a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[b, 2]]"
+    );
+    assert_eq!(
+        session.eval_text("f[1]").unwrap().value.to_string(),
+        "Association[Rule[b, 2]]"
+    );
+    session.eval_text("Protect[f]").unwrap();
+    let blocked_compound_associate = session.eval_text("AssociateTo[f[1], c -> 3]").unwrap();
+    assert_eq!(
+        blocked_compound_associate.value.to_string(),
+        "AssociateTo[f[1], Rule[c, 3]]"
+    );
+    assert!(
+        blocked_compound_associate
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociateTo" && message.tag == "wrsym")
+    );
+    let protected_compound_drop = session.eval_text("KeyDropFrom[f[1], b]").unwrap();
+    assert_eq!(protected_compound_drop.value.to_string(), "Association[]");
+    assert!(
+        protected_compound_drop
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Set" && message.tag == "write")
+    );
+    session.eval_text("Unprotect[f]").unwrap();
+    assert_eq!(
+        session.eval_text("f[1]").unwrap().value.to_string(),
+        "Association[Rule[b, 2]]"
+    );
+    session.eval_text("ClearAll[f]").unwrap();
     assert_eq!(
         session
             .eval_text("x = 0; assoc = Association[]; {AssociateTo[assoc, a :> (x = x + 1)], x}")
@@ -2267,6 +2322,46 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .iter()
             .any(|message| message.symbol == "AssociateTo" && message.tag == "wrsym")
     );
+    let outcome = session
+        .eval_text("AssociateTo[Association[a], b -> 2]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "AssociateTo[Association[a], Rule[b, 2]]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociateTo" && message.tag == "wrsym")
+    );
+    let outcome = session.eval_text("AssociateTo[f[1], b -> 2]").unwrap();
+    assert_eq!(outcome.value.to_string(), "AssociateTo[f[1], Rule[b, 2]]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociateTo" && message.tag == "invak")
+    );
+    let outcome = session.eval_text("AssociateTo[1, b -> 2]").unwrap();
+    assert_eq!(outcome.value.to_string(), "AssociateTo[1, Rule[b, 2]]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociateTo" && message.tag == "rvalue")
+    );
+    let outcome = session.eval_text("AssociateTo[1 + 2, b -> 2]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "AssociateTo[Plus[1, 2], Rule[b, 2]]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AssociateTo" && message.tag == "wrsym")
+    );
     let outcome = session.eval_text("KeyDropFrom[a -> 1, a]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyDropFrom[Rule[a, 1], a]");
     assert!(
@@ -2280,6 +2375,38 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
         outcome.value.to_string(),
         "KeyDropFrom[RuleDelayed[a, 1], a]"
     );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyDropFrom" && message.tag == "invak")
+    );
+    let outcome = session.eval_text("KeyDropFrom[Association[a], b]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyDropFrom[Association[a], b]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyDropFrom" && message.tag == "invak")
+    );
+    let outcome = session.eval_text("KeyDropFrom[f[1], a]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyDropFrom[f[1], a]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyDropFrom" && message.tag == "invak")
+    );
+    let outcome = session.eval_text("KeyDropFrom[1, a]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyDropFrom[1, a]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "KeyDropFrom" && message.tag == "rvalue")
+    );
+    let outcome = session.eval_text("KeyDropFrom[1 + 2, a]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyDropFrom[Plus[1, 2], a]");
     assert!(
         outcome
             .messages

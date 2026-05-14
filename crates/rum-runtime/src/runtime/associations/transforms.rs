@@ -108,6 +108,14 @@ fn partd_message(part: &Expr) -> String {
     format!("Part specification {part} is longer than depth of object.")
 }
 
+fn mutation_rvalue_message(target: &Expr) -> String {
+    format!("{target} is not a variable with a value, so its value cannot be changed.")
+}
+
+fn is_non_symbol_atom(expr: &Expr) -> bool {
+    matches!(expr, Expr::Atom(atom) if !matches!(atom, Atom::Symbol(_)))
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_key_map(
         &mut self,
@@ -535,43 +543,50 @@ impl Session {
             }
         }
 
-        if association_entries_from_expr(target_expr).is_some()
-            || rule_list_entries_from_expr(target_expr).is_some()
-            || parse_association_entry_form(target_expr).is_some()
-        {
-            if let Expr::Call {
-                head: target_head, ..
-            } = target_expr
-            {
-                if let Some(target_symbol) = expr_as_symbol(target_head) {
-                    self.push_protected_write_message("AssociateTo", target_symbol);
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
-                }
-            }
+        if is_non_symbol_atom(target_expr) {
+            return Ok(self.invalid_call_with_message(
+                "AssociateTo",
+                args,
+                "rvalue",
+                mutation_rvalue_message(target_expr),
+            ));
+        }
+
+        if let Some(target_symbol) = self.protected_definition_target_symbol(target_expr) {
+            self.push_protected_write_message("AssociateTo", &target_symbol);
+            return Ok(Expr::call(head.clone(), args.to_vec()));
         }
 
         let target_result = self.evaluate(target_expr.clone());
         let expr = self.suspend_with_frame(target_result, {
-            let head = head.clone();
             let call_args = args.to_vec();
+            let target_expr = target_expr.clone();
             let spec = spec.clone();
-            move |session, expr| session.finish_associate_to_value(head, call_args, expr, spec)
+            move |session, expr| {
+                session.finish_associate_to_value(call_args, target_expr, expr, spec)
+            }
         })?;
 
-        self.finish_associate_to_value(head.clone(), args.to_vec(), expr, spec.clone())
+        self.finish_associate_to_value(args.to_vec(), target_expr.clone(), expr, spec.clone())
     }
 
     fn finish_associate_to_value(
         &mut self,
-        head: Expr,
         call_args: Vec<Expr>,
+        target_expr: Expr,
         expr: Expr,
         spec: Expr,
     ) -> Result<Expr, EvalError> {
         let Some(updated) = Self::apply_associate_to_value(expr, spec) else {
-            return Ok(Expr::call(head, call_args));
+            return Ok(self.invalid_call_with_message(
+                "AssociateTo",
+                &call_args,
+                "invak",
+                invalid_association_message(&target_expr),
+            ));
         };
 
+        self.store_association_lvalue_update(&target_expr, updated.clone());
         Ok(updated)
     }
 
@@ -589,7 +604,7 @@ impl Session {
 
     pub(in crate::runtime) fn eval_key_drop_from(
         &mut self,
-        head: &Expr,
+        _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [target_expr, key_spec] = args else {
@@ -654,28 +669,49 @@ impl Session {
             ));
         }
 
+        if is_non_symbol_atom(target_expr) {
+            return Ok(self.invalid_call_with_message(
+                "KeyDropFrom",
+                args,
+                "rvalue",
+                mutation_rvalue_message(target_expr),
+            ));
+        }
+
         let target_result = self.evaluate(target_expr.clone());
         let expr = self.suspend_with_frame(target_result, {
-            let head = head.clone();
             let call_args = args.to_vec();
+            let target_expr = target_expr.clone();
             let key_spec = key_spec.clone();
-            move |session, expr| session.finish_key_drop_from_value(head, call_args, expr, key_spec)
+            move |session, expr| {
+                session.finish_key_drop_from_value(call_args, target_expr, expr, key_spec)
+            }
         })?;
 
-        self.finish_key_drop_from_value(head.clone(), args.to_vec(), expr, key_spec.clone())
+        self.finish_key_drop_from_value(args.to_vec(), target_expr.clone(), expr, key_spec.clone())
     }
 
     fn finish_key_drop_from_value(
         &mut self,
-        head: Expr,
         call_args: Vec<Expr>,
+        target_expr: Expr,
         expr: Expr,
         key_spec: Expr,
     ) -> Result<Expr, EvalError> {
         let Some(updated) = Self::apply_key_drop_from_value(expr, key_spec) else {
-            return Ok(Expr::call(head, call_args));
+            return Ok(self.invalid_call_with_message(
+                "KeyDropFrom",
+                &call_args,
+                "invak",
+                invalid_association_message(&target_expr),
+            ));
         };
 
+        if let Some(message) = self.protected_definition_target_write_message(&target_expr) {
+            self.push_message("Set", "write", message);
+        } else {
+            self.store_association_lvalue_update(&target_expr, updated.clone());
+        }
         Ok(updated)
     }
 
@@ -693,6 +729,30 @@ impl Session {
                 })
                 .collect(),
         ))
+    }
+
+    fn protected_definition_target_symbol(&self, target_expr: &Expr) -> Option<Symbol> {
+        let Some(DefinitionAssignmentTarget::Definition(target)) =
+            self.normalize_definition_assignment_target(target_expr)
+        else {
+            return None;
+        };
+
+        let symbol = target.symbol().clone();
+        (self.symbol_is_protected(&symbol) || is_known_system_symbol(&symbol)).then_some(symbol)
+    }
+
+    fn protected_definition_target_write_message(&self, target_expr: &Expr) -> Option<String> {
+        self.protected_definition_target_symbol(target_expr)?;
+        protected_tag_write_message(target_expr)
+    }
+
+    fn store_association_lvalue_update(&mut self, target_expr: &Expr, updated: Expr) {
+        if let Some(DefinitionAssignmentTarget::Definition(target)) =
+            self.normalize_definition_assignment_target(target_expr)
+        {
+            self.store_definition_target(target, target_expr.clone(), updated, false);
+        }
     }
 
     fn eval_held_association_mutation(

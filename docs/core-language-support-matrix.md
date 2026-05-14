@@ -354,12 +354,13 @@ once in its primary implementation group. Other groups may mention it as
   over list / association / rule-list data including depth, third-argument
   scan-depth, eager delayed target-level deletion, delayed predicate
   suspension/resume, deeper target-level direct association-value deletion,
-  invalid-argument diagnostics, and delayed nested-cleanup subsets, and held symbol plus
-  exact part-target mutation first passes including scalar, list, `All`, and
-  span selectors, current `AssociateTo` missing-key and missing-part
-  diagnostics, and current non-leaf / empty / bulk selector / missing-part
-  `KeyDropFrom` part-target invalid boundaries for
-  `AssociateTo` / `KeyDropFrom`
+  invalid-argument diagnostics, and delayed nested-cleanup subsets, and held
+  symbol / compound-lvalue plus exact part-target mutation first passes
+  including scalar, list, `All`, and span selectors, current `AssociateTo`
+  missing-key and missing-part diagnostics, current non-symbol / invalid
+  literal-target diagnostics, and current non-leaf / empty / bulk selector /
+  missing-part `KeyDropFrom` part-target invalid boundaries for `AssociateTo` /
+  `KeyDropFrom`
 - `planned`: any remaining keyed-helper rule-list breadth outside the current
   `KeyMap` / `KeyValueMap` rejection and `KeySelect` / `KeySort` /
   `KeySortBy` normalizing subset, deeper
