@@ -363,6 +363,17 @@ impl Session {
         match args {
             [function] => Ok(keyed_operator_form_slot_first("GroupBy", function.clone())),
             [expr, function] => {
+                if let Some(entries) = association_entry_forms_from_expr(expr) {
+                    return self.resume_association_group_by_from_index(
+                        head.clone(),
+                        args.to_vec(),
+                        function.clone(),
+                        entries,
+                        0,
+                        Vec::new(),
+                    );
+                }
+
                 let Some(items) = list_items(expr) else {
                     return Ok(self.invalid_call_with_message(
                         "GroupBy",
@@ -924,6 +935,82 @@ impl Session {
             grouped,
             index + 1,
             reduced,
+        )
+    }
+
+    fn resume_association_group_by_from_index(
+        &mut self,
+        head: Expr,
+        call_args: Vec<Expr>,
+        function: Expr,
+        entries: Vec<AssociationEntryForm>,
+        index: usize,
+        grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
+    ) -> Result<Expr, EvalError> {
+        let Some(entry) = entries.get(index).cloned() else {
+            return Ok(render_association(
+                grouped
+                    .into_iter()
+                    .map(|(key, entries)| {
+                        (
+                            key,
+                            render_association_entry_forms_preserving_heads(entries),
+                        )
+                    })
+                    .collect(),
+            ));
+        };
+
+        let key_result = self.evaluate(Expr::call(function.clone(), vec![entry.value.clone()]));
+        let suspended_head = head.clone();
+        let suspended_call_args = call_args.clone();
+        let suspended_function = function.clone();
+        let suspended_entries = entries.clone();
+        let suspended_grouped = grouped.clone();
+        let suspended_entry = entry.clone();
+        let key = self.suspend_with_frame(key_result, move |session, key| {
+            session.resume_association_group_by_with_key(
+                suspended_head,
+                suspended_call_args,
+                suspended_function,
+                suspended_entries,
+                index,
+                suspended_grouped,
+                suspended_entry,
+                key,
+            )
+        })?;
+
+        self.resume_association_group_by_with_key(
+            head, call_args, function, entries, index, grouped, entry, key,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn resume_association_group_by_with_key(
+        &mut self,
+        head: Expr,
+        call_args: Vec<Expr>,
+        function: Expr,
+        entries: Vec<AssociationEntryForm>,
+        index: usize,
+        mut grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
+        entry: AssociationEntryForm,
+        key: Expr,
+    ) -> Result<Expr, EvalError> {
+        if let Some((_, values)) = grouped.iter_mut().find(|(existing, _)| existing == &key) {
+            values.push(entry);
+        } else {
+            grouped.push((key, vec![entry]));
+        }
+
+        self.resume_association_group_by_from_index(
+            head,
+            call_args,
+            function,
+            entries,
+            index + 1,
+            grouped,
         )
     }
 }
