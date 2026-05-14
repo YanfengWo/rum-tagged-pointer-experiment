@@ -1652,6 +1652,32 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Counts[Association[a -> countedX, b -> countedX, c -> countedY]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[countedX, 2], Rule[countedY, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Counts[{a, b, a}, {a, b, c}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 2], Rule[b, 1], Rule[c, 0]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "Counts[Association[a -> countedX, b -> countedX, c -> countedY], {countedX, countedY, countedZ}]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[countedX, 2], Rule[countedY, 1], Rule[countedZ, 0]]"
+    );
+    assert_eq!(
+        session
             .eval_text("CountsBy[{a, bb, ccc}, StringLength[ToString[#]] &]")
             .unwrap()
             .value
@@ -2206,10 +2232,41 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             && message.tag == "argx"
             && message.text == "Catenate called with 2 arguments; 1 argument is expected."
     }));
-    assert_eq!(
-        session.eval_text("Counts[a]").unwrap().value.to_string(),
-        "Counts[a]"
-    );
+    let outcome = session.eval_text("Counts[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Counts[]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Counts"
+            && message.tag == "argt"
+            && message.text == "Counts called with 0 arguments; 1 or 2 arguments are expected."
+    }));
+    let outcome = session.eval_text("Counts[a]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Counts[a]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Counts"
+            && message.tag == "invrp"
+            && message.text == "The argument a is not a valid Association or a list."
+    }));
+    let outcome = session.eval_text("Counts[a, b]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Counts[a, b]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Counts"
+            && message.tag == "invrp"
+            && message.text == "The argument a is not a valid Association or a list."
+    }));
+    let outcome = session.eval_text("Counts[{a}, f]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Counts[List[a], f]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Counts"
+            && message.tag == "invl"
+            && message.text == "The argument f is not a list."
+    }));
+    let outcome = session.eval_text("Counts[a, b, c]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Counts[a, b, c]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Counts"
+            && message.tag == "argt"
+            && message.text == "Counts called with 3 arguments; 1 or 2 arguments are expected."
+    }));
     let outcome = session.eval_text("GroupBy[a, f]").unwrap();
     assert_eq!(outcome.value.to_string(), "GroupBy[a, f]");
     assert!(

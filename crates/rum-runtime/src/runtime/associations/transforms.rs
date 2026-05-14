@@ -912,26 +912,55 @@ impl Session {
 
     pub(in crate::runtime) fn eval_counts(
         &mut self,
-        head: &Expr,
+        _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("Counts", args, 1));
+        let (expr, spec) = match args {
+            [expr] => (expr, None),
+            [expr, spec] => (expr, Some(spec)),
+            _ => {
+                return Ok(self.invalid_call_with_message(
+                    "Counts",
+                    args,
+                    "argt",
+                    one_or_two_argument_count_message("Counts", args.len()),
+                ));
+            }
         };
 
-        let Some(items) = list_items(expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+        let Some(items) = counts_items_from_expr(expr) else {
+            return Ok(self.invalid_call_with_message(
+                "Counts",
+                args,
+                "invrp",
+                invalid_association_or_list_message(expr),
+            ));
         };
 
-        let mut counts: Vec<(Expr, usize)> = Vec::new();
-        for item in items {
-            increment_count(&mut counts, item.clone());
-        }
+        let Some(spec) = spec else {
+            return Ok(render_count_association(count_items(items)));
+        };
 
+        let Some(keys) = list_items(spec) else {
+            return Ok(self.invalid_call_with_message(
+                "Counts",
+                args,
+                "invl",
+                invalid_list_message(spec),
+            ));
+        };
+
+        let counts = count_items(items);
         Ok(render_association(
-            counts
-                .into_iter()
-                .map(|(key, count)| (key, Expr::integer(BigInt::from(count))))
+            keys.iter()
+                .map(|key| {
+                    let count = counts
+                        .iter()
+                        .find(|(existing, _)| existing == key)
+                        .map(|(_, count)| *count)
+                        .unwrap_or(0);
+                    (key.clone(), Expr::integer(BigInt::from(count)))
+                })
                 .collect(),
         ))
     }
@@ -989,6 +1018,35 @@ fn catenate_item_contribution(expr: &Expr) -> Option<Vec<Expr>> {
 
 fn catenate_arg_count_message(count: usize) -> String {
     format!("Catenate called with {count} arguments; 1 argument is expected.")
+}
+
+fn invalid_list_message(expr: &Expr) -> String {
+    format!("The argument {expr} is not a list.")
+}
+
+fn counts_items_from_expr(expr: &Expr) -> Option<Vec<Expr>> {
+    if let Some(entries) = association_entries_from_expr(expr) {
+        return Some(entries.into_iter().map(|(_, value)| value).collect());
+    }
+
+    list_items(expr).map(|items| items.to_vec())
+}
+
+fn count_items(items: Vec<Expr>) -> Vec<(Expr, usize)> {
+    let mut counts = Vec::new();
+    for item in items {
+        increment_count(&mut counts, item);
+    }
+    counts
+}
+
+fn render_count_association(counts: Vec<(Expr, usize)>) -> Expr {
+    render_association(
+        counts
+            .into_iter()
+            .map(|(key, count)| (key, Expr::integer(BigInt::from(count))))
+            .collect(),
+    )
 }
 
 fn catenate_steps_for_association_entries(entries: Vec<AssociationEntryForm>) -> Vec<CatenateStep> {

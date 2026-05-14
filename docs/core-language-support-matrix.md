@@ -340,8 +340,9 @@ once in its primary implementation group. Other groups may mention it as
   `Catenate` over lists plus association values with current delayed
   association-value consumption, direct-association invalid-value subset
   parity, arity diagnostics, and invalid-value host-input resume coverage,
-  current `GroupBy[list, f, g]` reducer support, current `PositionIndex`
-  arity diagnostics,
+  current `Counts` over lists plus association values with explicit key-list
+  count specs, current `GroupBy[list, f, g]` reducer support, current
+  `PositionIndex` arity diagnostics,
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
   forms plus current keyed-lookup propagation and current `DeleteMissing`
   over list / association / rule-list data including depth, third-argument
