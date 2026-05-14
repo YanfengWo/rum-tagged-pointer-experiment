@@ -341,9 +341,9 @@ once in its primary implementation group. Other groups may mention it as
   association-value consumption, direct-association invalid-value subset
   parity, arity diagnostics, and invalid-value host-input resume coverage,
   current `Counts` over lists plus association values with explicit key-list
-  count specs, current `GroupBy[list, f, g]` reducer support plus no-reducer
-  association grouping, current `PositionIndex` over lists plus association
-  values and arity diagnostics,
+  count specs, current `GroupBy[list, f, g]` reducer support plus association
+  grouping and reducer invocation, current `PositionIndex` over lists plus
+  association values and arity diagnostics,
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
   forms plus current keyed-lookup propagation and current `DeleteMissing`
   over list / association / rule-list data including depth, third-argument

@@ -368,6 +368,7 @@ impl Session {
                         head.clone(),
                         args.to_vec(),
                         function.clone(),
+                        None,
                         entries,
                         0,
                         Vec::new(),
@@ -394,6 +395,18 @@ impl Session {
                 )
             }
             [expr, function, reducer] => {
+                if let Some(entries) = association_entry_forms_from_expr(expr) {
+                    return self.resume_association_group_by_from_index(
+                        head.clone(),
+                        args.to_vec(),
+                        function.clone(),
+                        Some(reducer.clone()),
+                        entries,
+                        0,
+                        Vec::new(),
+                    );
+                }
+
                 let Some(items) = list_items(expr) else {
                     return Ok(self.invalid_call_with_message(
                         "GroupBy",
@@ -943,28 +956,30 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         function: Expr,
+        reducer: Option<Expr>,
         entries: Vec<AssociationEntryForm>,
         index: usize,
         grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
     ) -> Result<Expr, EvalError> {
         let Some(entry) = entries.get(index).cloned() else {
-            return Ok(render_association(
-                grouped
-                    .into_iter()
-                    .map(|(key, entries)| {
-                        (
-                            key,
-                            render_association_entry_forms_preserving_heads(entries),
-                        )
-                    })
-                    .collect(),
-            ));
+            return match reducer {
+                None => Ok(render_association(association_group_by_groups(grouped))),
+                Some(reducer) => self.resume_association_group_by_reduce_from_index(
+                    head,
+                    call_args,
+                    reducer,
+                    grouped,
+                    0,
+                    Vec::new(),
+                ),
+            };
         };
 
         let key_result = self.evaluate(Expr::call(function.clone(), vec![entry.value.clone()]));
         let suspended_head = head.clone();
         let suspended_call_args = call_args.clone();
         let suspended_function = function.clone();
+        let suspended_reducer = reducer.clone();
         let suspended_entries = entries.clone();
         let suspended_grouped = grouped.clone();
         let suspended_entry = entry.clone();
@@ -973,6 +988,7 @@ impl Session {
                 suspended_head,
                 suspended_call_args,
                 suspended_function,
+                suspended_reducer,
                 suspended_entries,
                 index,
                 suspended_grouped,
@@ -982,7 +998,7 @@ impl Session {
         })?;
 
         self.resume_association_group_by_with_key(
-            head, call_args, function, entries, index, grouped, entry, key,
+            head, call_args, function, reducer, entries, index, grouped, entry, key,
         )
     }
 
@@ -992,6 +1008,7 @@ impl Session {
         head: Expr,
         call_args: Vec<Expr>,
         function: Expr,
+        reducer: Option<Expr>,
         entries: Vec<AssociationEntryForm>,
         index: usize,
         mut grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
@@ -1008,11 +1025,88 @@ impl Session {
             head,
             call_args,
             function,
+            reducer,
             entries,
             index + 1,
             grouped,
         )
     }
+
+    fn resume_association_group_by_reduce_from_index(
+        &mut self,
+        head: Expr,
+        call_args: Vec<Expr>,
+        reducer: Expr,
+        grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
+        index: usize,
+        reduced: Vec<(Expr, Expr)>,
+    ) -> Result<Expr, EvalError> {
+        let Some((key, entries)) = grouped.get(index).cloned() else {
+            return Ok(render_association(reduced));
+        };
+
+        let group = render_association_entry_forms_preserving_heads(entries);
+        let value_result = self.evaluate(Expr::call(reducer.clone(), vec![group]));
+        let suspended_head = head.clone();
+        let suspended_call_args = call_args.clone();
+        let suspended_reducer = reducer.clone();
+        let suspended_grouped = grouped.clone();
+        let suspended_reduced = reduced.clone();
+        let suspended_key = key.clone();
+        let value = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_association_group_by_reduce_with_value(
+                suspended_head,
+                suspended_call_args,
+                suspended_reducer,
+                suspended_grouped,
+                index,
+                suspended_reduced,
+                suspended_key,
+                value,
+            )
+        })?;
+
+        self.resume_association_group_by_reduce_with_value(
+            head, call_args, reducer, grouped, index, reduced, key, value,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn resume_association_group_by_reduce_with_value(
+        &mut self,
+        head: Expr,
+        call_args: Vec<Expr>,
+        reducer: Expr,
+        grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
+        index: usize,
+        mut reduced: Vec<(Expr, Expr)>,
+        key: Expr,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        reduced.push((key, value));
+        self.resume_association_group_by_reduce_from_index(
+            head,
+            call_args,
+            reducer,
+            grouped,
+            index + 1,
+            reduced,
+        )
+    }
+}
+
+fn association_group_by_groups(
+    grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
+) -> Vec<(Expr, Expr)> {
+    grouped
+        .into_iter()
+        .map(|(key, entries)| {
+            (
+                key,
+                render_association_entry_forms_preserving_heads(entries),
+            )
+        })
+        .collect()
 }
 
 fn key_sort_ordering_decision(value: &Expr) -> KeySortOrderingDecision {
