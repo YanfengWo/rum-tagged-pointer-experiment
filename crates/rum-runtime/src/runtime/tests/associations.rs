@@ -312,6 +312,22 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
     );
     assert_eq!(
         session
+            .eval_text("x = 0; {Values[Association[a :> (x = x + 1), b -> 2]], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1, 2], 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {Values[Association[a :> (x = x + 1)], Hold], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Hold[Set[x, Plus[x, 1]]]], 0]"
+    );
+    assert_eq!(
+        session
             .eval_text("Values[{Association[a -> 1], {b -> 2}}, Hold]")
             .unwrap()
             .value
