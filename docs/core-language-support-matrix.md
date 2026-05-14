@@ -96,9 +96,11 @@ once in its primary implementation group. Other groups may mention it as
   `UpTo[...]` span-endpoint support, and `ReplacePart`
   pattern-position subsets, including current atom `All` / positive empty-span
   and zero-endpoint boundary behavior in `Part` / `Extract`, current
-  association-aware numeric/range `Part` / `Extract` value projection, plus the
-  current `Part` selector-list boundary and `Extract` nested position-list
-  selector subset, empty-expression and association-aware `Depth` parity,
+  association-aware numeric/range `Part` / `Extract` value projection, current
+  association-aware `First` / `Last` value selection plus `Rest` / `Most`
+  association slicing, plus the current `Part` selector-list boundary and
+  `Extract` nested position-list selector subset, empty-expression and
+  association-aware `Depth` parity,
   `Level` scalar-zero and standard-`All` levelspec parity, and empty-expression
   negative-level depth alignment plus current oracle-locked `Heads` traversal
   edges across the current structural walkers, current

@@ -104,6 +104,12 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("Rest", args, 1));
         };
 
+        if let Some(entries) = association_entry_forms_from_expr(expr) {
+            return Ok(render_association_entry_forms_preserving_heads(
+                entries.into_iter().skip(1).collect(),
+            ));
+        }
+
         Ok(match expr {
             Expr::Atom(_) => self.invalid_normal_expression_call("Rest", args),
             Expr::Call { head, args } => Expr::call(
@@ -121,6 +127,13 @@ impl Session {
         let [expr] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("Most", args, 1));
         };
+
+        if let Some(entries) = association_entry_forms_from_expr(expr) {
+            let retained_len = entries.len().saturating_sub(1);
+            return Ok(render_association_entry_forms_preserving_heads(
+                entries.into_iter().take(retained_len).collect(),
+            ));
+        }
 
         Ok(match expr {
             Expr::Atom(_) => self.invalid_normal_expression_call("Most", args),
@@ -221,6 +234,20 @@ impl Session {
         empty_tag: &str,
         take_first: bool,
     ) -> Expr {
+        if let Some(entries) = association_entry_forms_from_expr(expr) {
+            let selected = if take_first {
+                entries.first()
+            } else {
+                entries.last()
+            };
+            return selected
+                .map(|entry| entry.value.clone())
+                .or_else(|| default.cloned())
+                .unwrap_or_else(|| {
+                    self.invalid_empty_structural_selection_call(symbol, empty_tag, expr)
+                });
+        }
+
         match expr {
             Expr::Call { args, .. } if !args.is_empty() => {
                 if take_first {

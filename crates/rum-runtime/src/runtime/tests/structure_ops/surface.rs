@@ -141,6 +141,46 @@ fn first_last_rest_and_most_support_defaults_and_empty_calls() {
         session.eval_text("Most[f[]]").unwrap().value.to_string(),
         "f[]"
     );
+    assert_eq!(
+        session
+            .eval_text("First[Association[a -> 1, b -> 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Last[Association[a -> 1, b -> 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Rest[Association[a -> 1, b -> 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[b, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Most[Association[a -> 1, b -> 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {First[Association[a :> (x = x + 1)]], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 1]"
+    );
 }
 
 #[test]
