@@ -1410,6 +1410,12 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .to_string(),
         "KeyValuePattern[List[Rule[a, Blank[]]]]"
     );
+    let outcome = session.eval_text("KeyValuePattern[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyValuePattern[]");
+    assert!(outcome.messages.is_empty());
+    let outcome = session.eval_text("KeyValuePattern[a, b]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyValuePattern[a, b]");
+    assert!(outcome.messages.is_empty());
     assert_eq!(
         session
             .eval_text("MatchQ[Association[a -> 1, b -> 2], KeyValuePattern[a -> _Integer]]")
@@ -1860,6 +1866,20 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .to_string(),
         "Association[a]"
     );
+    let outcome = session.eval_text("AssociationQ[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "AssociationQ[]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "AssociationQ"
+            && message.tag == "argx"
+            && message.text == "AssociationQ called with 0 arguments; 1 argument is expected."
+    }));
+    let outcome = session.eval_text("AssociationQ[a, b]").unwrap();
+    assert_eq!(outcome.value.to_string(), "AssociationQ[a, b]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "AssociationQ"
+            && message.tag == "argx"
+            && message.text == "AssociationQ called with 2 arguments; 1 argument is expected."
+    }));
     let outcome = session.eval_text("Lookup[a, b]").unwrap();
     assert_eq!(outcome.value.to_string(), "Lookup[a, b]");
     assert!(

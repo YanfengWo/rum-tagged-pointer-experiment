@@ -29,7 +29,12 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("AssociationQ", args, 1));
+            return Ok(self.invalid_call_with_message(
+                "AssociationQ",
+                args,
+                "argx",
+                exact_argument_count_message("AssociationQ", args.len(), 1),
+            ));
         };
 
         Ok(predicate_bool_expr(
@@ -297,7 +302,7 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [spec] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("KeyValuePattern", args, 1));
+            return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
         let Some(normalized_spec) = normalize_key_value_pattern_spec(spec) else {

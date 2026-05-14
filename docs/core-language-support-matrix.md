@@ -293,9 +293,11 @@ once in its primary implementation group. Other groups may mention it as
 
 - `partial`: named-slot syntax `#name` exists generically, and the current
   first-pass association subset now includes association syntax/lowering,
-  key-value canonicalization, keyed part specifications via `Key`,
+  key-value canonicalization, current `AssociationQ` arity diagnostics,
+  keyed part specifications via `Key`,
   deterministic ordering for canonical association rendering, key-based
-  pattern matching through `KeyValuePattern`, richer `Lookup`
+  pattern matching through `KeyValuePattern` including current non-unary inert
+  boundaries, richer `Lookup`
   threading/multi-key behavior including `Lookup[..., default, h]` plus
   current Wolfram-style key-list threading, found-value-only wrapper
   application, single-rule/rule-list parity, current arity diagnostics plus
