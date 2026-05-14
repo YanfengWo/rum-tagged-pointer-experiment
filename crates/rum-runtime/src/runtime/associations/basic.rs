@@ -76,7 +76,12 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [key] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("Key", args, 1));
+            return Ok(self.invalid_call_with_message(
+                "Key",
+                args,
+                "argx",
+                exact_argument_count_message("Key", args.len(), 1),
+            ));
         };
 
         Ok(Expr::call(head.clone(), vec![key.clone()]))
@@ -472,12 +477,13 @@ fn lookup_arg_count_message(count: usize) -> String {
 }
 
 fn exact_argument_count_message(symbol: &str, count: usize, expected: usize) -> String {
-    let noun = if expected == 1 {
+    let count_noun = if count == 1 { "argument" } else { "arguments" };
+    let expected_noun = if expected == 1 {
         "argument is"
     } else {
         "arguments are"
     };
-    format!("{symbol} called with {count} arguments; {expected} {noun} expected.")
+    format!("{symbol} called with {count} {count_noun}; {expected} {expected_noun} expected.")
 }
 
 fn one_or_two_argument_count_message(symbol: &str, count: usize) -> String {

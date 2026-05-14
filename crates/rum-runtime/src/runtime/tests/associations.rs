@@ -2021,6 +2021,47 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .iter()
             .any(|message| message.symbol == "AssociateTo" && message.tag == "invlb")
     );
+    for (symbol, zero_arg_call, one_arg_call, three_arg_call) in [
+        (
+            "AssociateTo",
+            "AssociateTo[]",
+            "AssociateTo[a]",
+            "AssociateTo[a, b, c]",
+        ),
+        (
+            "KeyDropFrom",
+            "KeyDropFrom[]",
+            "KeyDropFrom[a]",
+            "KeyDropFrom[a, b, c]",
+        ),
+    ] {
+        let outcome = session.eval_text(zero_arg_call).unwrap();
+        assert_eq!(outcome.value.to_string(), zero_arg_call);
+        assert!(outcome.messages.iter().any(|message| {
+            message.symbol == symbol
+                && message.tag == "argrx"
+                && message.text
+                    == format!("{symbol} called with 0 arguments; 2 arguments are expected.")
+        }));
+
+        let outcome = session.eval_text(one_arg_call).unwrap();
+        assert_eq!(outcome.value.to_string(), one_arg_call);
+        assert!(outcome.messages.iter().any(|message| {
+            message.symbol == symbol
+                && message.tag == "argr"
+                && message.text
+                    == format!("{symbol} called with 1 argument; 2 arguments are expected.")
+        }));
+
+        let outcome = session.eval_text(three_arg_call).unwrap();
+        assert_eq!(outcome.value.to_string(), three_arg_call);
+        assert!(outcome.messages.iter().any(|message| {
+            message.symbol == symbol
+                && message.tag == "argrx"
+                && message.text
+                    == format!("{symbol} called with 3 arguments; 2 arguments are expected.")
+        }));
+    }
     let outcome = session
         .eval_text("Merge[Association[a -> 1], Total]")
         .unwrap();
@@ -2113,15 +2154,35 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .to_string(),
         "PositionIndex[a]"
     );
+    let outcome = session.eval_text("PositionIndex[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "PositionIndex[]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "PositionIndex"
+            && message.tag == "argx"
+            && message.text == "PositionIndex called with 0 arguments; 1 argument is expected."
+    }));
+    let outcome = session.eval_text("PositionIndex[a, b]").unwrap();
+    assert_eq!(outcome.value.to_string(), "PositionIndex[a, b]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "PositionIndex"
+            && message.tag == "argx"
+            && message.text == "PositionIndex called with 2 arguments; 1 argument is expected."
+    }));
 
     let outcome = session.eval_text("Key[]").unwrap();
     assert_eq!(outcome.value.to_string(), "Key[]");
-    assert!(
-        outcome
-            .messages
-            .iter()
-            .any(|message| message.symbol == "Key" && message.tag == "argx")
-    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Key"
+            && message.tag == "argx"
+            && message.text == "Key called with 0 arguments; 1 argument is expected."
+    }));
+    let outcome = session.eval_text("Key[a, b]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Key[a, b]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Key"
+            && message.tag == "argx"
+            && message.text == "Key called with 2 arguments; 1 argument is expected."
+    }));
 
     let outcome = session.eval_text("KeyExistsQ[]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyExistsQ[]");

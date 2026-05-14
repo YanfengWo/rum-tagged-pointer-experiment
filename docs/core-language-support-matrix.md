@@ -323,8 +323,9 @@ once in its primary implementation group. Other groups may mention it as
   threading with delayed-rule preservation, deep `Association[...]`
   construction plus `Normal` with current
   `RuleDelayed` head preservation, `AssociateTo` update specs over nested rule
-  lists / associations with current delayed-entry preservation, callable
-  `Key[key][assoc]` extraction, callable
+  lists / associations with current delayed-entry preservation plus current
+  mutation arity diagnostics, callable
+  `Key[key][assoc]` extraction plus current `Key` arity diagnostics, callable
   `Association[...][key]` lookup, current `Part[..., Key[...]]` plus
   numeric/range association projection including missing-key propagation,
   current `Extract::keyw` missing-key diagnostics, and no-mixed-key/index
@@ -336,7 +337,8 @@ once in its primary implementation group. Other groups may mention it as
   `Catenate` over lists plus association values with current delayed
   association-value consumption, direct-association invalid-value subset
   parity, arity diagnostics, and invalid-value host-input resume coverage,
-  current `GroupBy[list, f, g]` reducer support,
+  current `GroupBy[list, f, g]` reducer support, current `PositionIndex`
+  arity diagnostics,
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
   forms plus current keyed-lookup propagation and current `DeleteMissing`
   over list / association / rule-list data including depth, third-argument

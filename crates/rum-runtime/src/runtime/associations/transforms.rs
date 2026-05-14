@@ -494,7 +494,12 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [target_expr, spec] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("AssociateTo", args, 2));
+            return Ok(self.invalid_call_with_message(
+                "AssociateTo",
+                args,
+                two_argument_mutation_arity_tag(args.len()),
+                exact_argument_count_message("AssociateTo", args.len(), 2),
+            ));
         };
 
         if parse_association_update_spec_forms(spec).is_none() {
@@ -587,7 +592,12 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [target_expr, key_spec] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("KeyDropFrom", args, 2));
+            return Ok(self.invalid_call_with_message(
+                "KeyDropFrom",
+                args,
+                two_argument_mutation_arity_tag(args.len()),
+                exact_argument_count_message("KeyDropFrom", args.len(), 2),
+            ));
         };
 
         if let Some(target) = self.normalize_symbol_target_expr(target_expr, true) {
@@ -932,7 +942,12 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("PositionIndex", args, 1));
+            return Ok(self.invalid_call_with_message(
+                "PositionIndex",
+                args,
+                "argx",
+                exact_argument_count_message("PositionIndex", args.len(), 1),
+            ));
         };
 
         let Some(items) = list_items(expr) else {
@@ -1356,16 +1371,21 @@ fn collect_option_names_from_expr(
 }
 
 fn exact_argument_count_message(symbol: &str, count: usize, expected: usize) -> String {
-    let noun = if expected == 1 {
+    let count_noun = if count == 1 { "argument" } else { "arguments" };
+    let expected_noun = if expected == 1 {
         "argument is"
     } else {
         "arguments are"
     };
-    format!("{symbol} called with {count} arguments; {expected} {noun} expected.")
+    format!("{symbol} called with {count} {count_noun}; {expected} {expected_noun} expected.")
 }
 
 fn one_or_two_argument_count_message(symbol: &str, count: usize) -> String {
     format!("{symbol} called with {count} arguments; 1 or 2 arguments are expected.")
+}
+
+fn two_argument_mutation_arity_tag(count: usize) -> &'static str {
+    if count == 1 { "argr" } else { "argrx" }
 }
 
 fn non_option_syntax_message(
