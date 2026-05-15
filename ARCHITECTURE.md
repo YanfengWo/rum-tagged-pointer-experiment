@@ -388,17 +388,24 @@ commitments.
 For a future Python host, the reference scenario is AI- and data-tooling-
 oriented applications that need deterministic rule evaluation, symbolic
 normalization, structured diagnostics, and resumable execution around model,
-tool, or workflow orchestration.
+tool, or workflow orchestration. The current concrete planning target is
+[Python AI Policy](./examples/python-ai-policy/PLAN.md): a small offline
+AI-infrastructure policy / rewrite / validation example with a thin Python
+adapter and a narrow canonical request IR.
 
-For a future Rust host, the reference scenario is long-running backend
-services, rule engines, and DSL-oriented infrastructure that need stable
-session lifecycles, predictable resource boundaries, transport-friendly
-outcomes, and embedding-friendly request flows.
+For a future Rust host, the reference scenario is a compiler/runtime-style
+prototype that needs stable session lifecycles, predictable resource
+boundaries, transport-friendly outcomes, and embedding-friendly request flows.
+The current concrete planning target is
+[Rust Wasm Prototype](./examples/rust-wasm-proto/PLAN.md): a Rust-hosted
+WebAssembly validation and semantics prototype where Rust owns IR, fixtures,
+memory, and host plumbing while `rum` owns symbolic validation, step rules,
+traps, diagnostics, and explanation.
 
 These scenarios are design pressure, not product definition. They should help
 the project choose a clean and useful host boundary, but they should not turn
-`rum` into an AI framework, a backend framework, or a family of project-owned
-host products.
+`rum` into an AI framework, a Wasm runtime, or a family of project-owned host
+products.
 
 ## API Scope Boundary
 

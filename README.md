@@ -87,6 +87,20 @@ The repository is a Cargo workspace with these top-level crates:
 - [Code Organization Guidelines](./docs/code-organization-guidelines.md)
 - [Jupyter Console Manual Smoke](./docs/jupyter-console-manual.md)
 
+## Future Example Plans
+
+The `examples/` directory currently contains planning documents for future
+showcase projects. These are not active implementation targets yet; they should
+wait until the core runtime and host-adapter APIs are stable enough.
+
+- [Python AI Policy](./examples/python-ai-policy/PLAN.md): a future
+  Python-hosted AI-infrastructure policy / rewrite / validation example built
+  around a narrow canonical request IR and thin project adapters.
+- [Rust Wasm Prototype](./examples/rust-wasm-proto/PLAN.md): a future
+  Rust-hosted WebAssembly validation and semantics prototype where Rust owns
+  host infrastructure and `rum` owns symbolic validation, step rules,
+  diagnostics, and explanation.
+
 ## Development Environment
 
 Primary day-to-day development should happen in a native local workspace for

@@ -201,8 +201,8 @@ This roadmap intentionally uses two levels of detail:
 ### Samples and Showcase Packages
 
 - [ ] Prepare a small, polished sample set once the core kernel and host-adapter surfaces are stable enough to demonstrate end-to-end value rather than isolated builtin checklists
-- [ ] Add a Python-host sample that shows `rum` embedded from Python for an AI-adjacent workflow, such as structured symbolic preprocessing, rule-driven tool orchestration, or controllable prompt-side helper logic layered on top of the future `rum-python` adapter
-- [ ] Add a Rust-host sample that shows `rum` embedded for system/ops or backend-style automation, such as policy-driven maintenance flows, config inspection/transformation, or rule-engine style control logic layered on top of the future `rum-host` adapter
+- [ ] Later build the planned [Python AI Policy](./examples/python-ai-policy/PLAN.md) sample once `rum-python` is ready: a Python-hosted AI-infrastructure policy / rewrite / validation example that keeps provider calls mocked and uses `rum` as a symbolic middleware layer over a narrow canonical request IR
+- [ ] Later build the planned [Rust Wasm Prototype](./examples/rust-wasm-proto/PLAN.md) sample once `rum-host` is ready: a Rust-hosted WebAssembly validation and semantics prototype that uses Rust for host infrastructure and `rum` for stack typing, control-flow validation, step rules, traps, diagnostics, and explanation
 - [ ] Explore a pure-Wolfram-language object/class showcase package as a sample of how much higher-level abstraction `rum` can support without new runtime mechanisms:
   - [ ] first survey existing Wolfram-language object/class implementations such as `Wolfram/Class`, `KirillBelov/Objects`, and older closure/message-passing packages from the Mathematica ecosystem
   - [ ] record the tradeoffs of reusing an existing package versus writing a project-owned sample package tuned to `rum`'s supported subset and showcase goals

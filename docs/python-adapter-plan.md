@@ -143,7 +143,9 @@ The first validation wave should include:
 - suspend/resume tests through Python
 - completion/inspect/is-complete smoke coverage
 - message/print/result shape assertions
-- one small example integration for notebook-adjacent or tool-oriented usage
+- one small example integration for tool-oriented usage, with
+  [Python AI Policy](../examples/python-ai-policy/PLAN.md) as the current
+  long-range showcase candidate once the Python adapter is stable enough
 
 ## Suggested Build Order
 

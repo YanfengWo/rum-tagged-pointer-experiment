@@ -123,7 +123,9 @@ The first validation wave for `rum-host` should include:
 - adapter-focused Rust tests for session lifecycle and eval flows
 - suspend/resume tests through the host facade
 - structured outcome and message coverage
-- one small example embedding binary or example module
+- one small example embedding binary or example module, with
+  [Rust Wasm Prototype](../examples/rust-wasm-proto/PLAN.md) as the current
+  long-range showcase candidate once the host boundary is stable enough
 - selective reuse by `rum-jupyter` only after the surface proves useful
 
 ## Suggested Build Order
