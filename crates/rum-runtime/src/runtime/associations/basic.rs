@@ -56,6 +56,10 @@ impl Session {
             ));
         }
 
+        if let [key] = args {
+            return Ok(keyed_operator_form_slot_first("Lookup", key.clone()));
+        }
+
         let [expr, key, rest @ ..] = args else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };

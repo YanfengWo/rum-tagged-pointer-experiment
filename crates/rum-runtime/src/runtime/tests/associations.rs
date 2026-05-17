@@ -174,6 +174,22 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
     );
     assert_eq!(
         session
+            .eval_text("Lookup[a][Association[a -> 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Lookup[{a, b}][Association[a -> 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, Missing[\"KeyAbsent\", b]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Lookup[Association[a -> 1], {a, b}, 99]")
             .unwrap()
             .value
@@ -2128,7 +2144,10 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
                 == "Lookup called with 0 arguments; between 2 and 4 arguments are expected."
     }));
     let outcome = session.eval_text("Lookup[a]").unwrap();
-    assert_eq!(outcome.value.to_string(), "Lookup[a]");
+    assert_eq!(
+        outcome.value.to_string(),
+        "Function[rum$keyedArg, Lookup[rum$keyedArg, a]]"
+    );
     assert!(outcome.messages.is_empty());
     let outcome = session.eval_text("Lookup[a, b, c, d, e]").unwrap();
     assert_eq!(outcome.value.to_string(), "Lookup[a, b, c, d, e]");

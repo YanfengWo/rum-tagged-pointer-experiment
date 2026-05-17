@@ -332,7 +332,8 @@ once in its primary implementation group. Other groups may mention it as
   lists / associations with current delayed-entry preservation plus current
   mutation arity diagnostics, callable
   `Key[key][assoc]` extraction plus current `Key` arity diagnostics, callable
-  `Association[...][key]` lookup, current `Part[..., Key[...]]` plus
+  `Association[...][key]` lookup, `Lookup[key]` operator form, current
+  `Part[..., Key[...]]` plus
   numeric/range association projection including missing-key propagation,
   current `Extract::keyw` missing-key diagnostics, and no-mixed-key/index
   diagnostics, `Key[...]` key-spec unwrapping and current `RuleDelayed`
