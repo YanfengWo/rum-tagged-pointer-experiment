@@ -358,7 +358,7 @@ once in its primary implementation group. Other groups may mention it as
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
   forms plus current keyed-lookup propagation and current `DeleteMissing`
   over list / association / rule-list data including depth, third-argument
-  scan-depth, eager delayed target-level deletion, delayed predicate
+  scan-depth, `All`/`Infinity` depth aliases, eager delayed target-level deletion, delayed predicate
   suspension/resume, deeper target-level direct association-value deletion,
   invalid-argument diagnostics, and delayed nested-cleanup subsets, and held
   symbol / compound-lvalue plus exact part-target mutation first passes

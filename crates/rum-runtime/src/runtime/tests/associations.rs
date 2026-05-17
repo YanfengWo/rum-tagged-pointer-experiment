@@ -2147,6 +2147,14 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("DeleteMissing[Association[a -> {Missing[], 1}, b -> Association[c -> Missing[], d -> 2]], All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, List[1]], Rule[b, Association[Rule[d, 2]]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("DeleteMissing[{a -> Missing[], b :> Missing[], c -> 2}]")
             .unwrap()
             .value
@@ -2188,6 +2196,14 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     assert_eq!(
         session
             .eval_text("DeleteMissing[{{1, {Missing[]}}, {2, 3}}, 1, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[2, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DeleteMissing[{{1, {Missing[]}}, {2, 3}}, 1, All]")
             .unwrap()
             .value
             .to_string(),

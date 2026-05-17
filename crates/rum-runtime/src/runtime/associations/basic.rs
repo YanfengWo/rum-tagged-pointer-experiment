@@ -486,7 +486,7 @@ impl DeleteMissingDepth {
 }
 
 fn parse_delete_missing_positive_depth(expr: &Expr) -> Option<DeleteMissingDepth> {
-    if is_system_symbol_name(expr, "Infinity") {
+    if is_system_symbol_name(expr, "Infinity") || is_system_symbol_name(expr, "All") {
         return Some(DeleteMissingDepth::Infinity);
     }
 
@@ -496,7 +496,7 @@ fn parse_delete_missing_positive_depth(expr: &Expr) -> Option<DeleteMissingDepth
 }
 
 fn parse_delete_missing_scan_depth(expr: &Expr) -> Option<DeleteMissingDepth> {
-    if is_system_symbol_name(expr, "Infinity") {
+    if is_system_symbol_name(expr, "Infinity") || is_system_symbol_name(expr, "All") {
         return Some(DeleteMissingDepth::Infinity);
     }
 
