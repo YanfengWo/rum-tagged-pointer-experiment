@@ -267,27 +267,20 @@ impl Session {
             )),
         };
 
-        let keys = threaded_items(&keys_expr);
-        let values = threaded_items(&values_expr);
-        if keys.len() != values.len() {
-            return Ok(self.invalid_call_with_message(
-                "AssociationThread",
-                args,
-                "idim",
-                same_length_message(&keys_expr, &values_expr),
-            ));
-        }
+        let entries =
+            match association_thread_entry_forms(keys_expr.clone(), values_expr.clone(), delayed) {
+                Some(entries) => entries,
+                None => {
+                    return Ok(self.invalid_call_with_message(
+                        "AssociationThread",
+                        args,
+                        "idim",
+                        same_length_message(&keys_expr, &values_expr),
+                    ));
+                }
+            };
 
-        Ok(render_association_entry_forms_preserving_heads(
-            keys.into_iter()
-                .zip(values)
-                .map(|(key, value)| AssociationEntryForm {
-                    key,
-                    value,
-                    delayed,
-                })
-                .collect(),
-        ))
+        Ok(render_association_entry_forms_preserving_heads(entries))
     }
 
     pub(in crate::runtime) fn eval_key_union(
@@ -1073,10 +1066,56 @@ impl Session {
     }
 }
 
-fn threaded_items(expr: &Expr) -> Vec<Expr> {
-    list_items(expr)
-        .map(|items| items.to_vec())
-        .unwrap_or_else(|| vec![expr.clone()])
+fn association_thread_entry_forms(
+    keys_expr: Expr,
+    values_expr: Expr,
+    delayed: bool,
+) -> Option<Vec<AssociationEntryForm>> {
+    let key_items = list_items(&keys_expr).map(|items| items.to_vec());
+    let value_items = list_items(&values_expr).map(|items| items.to_vec());
+
+    match (key_items, value_items) {
+        (Some(keys), Some(values)) => {
+            if keys.len() != values.len() {
+                return None;
+            }
+            Some(
+                keys.into_iter()
+                    .zip(values)
+                    .map(|(key, value)| association_thread_entry(key, value, delayed))
+                    .collect(),
+            )
+        }
+        (Some(keys), None) => Some(
+            keys.into_iter()
+                .map(|key| association_thread_entry(key, values_expr.clone(), delayed))
+                .collect(),
+        ),
+        (None, Some(values)) if values.is_empty() => Some(vec![association_thread_entry(
+            keys_expr,
+            system_expr(heads::structure::LIST),
+            delayed,
+        )]),
+        (None, Some(values)) => Some(
+            values
+                .into_iter()
+                .map(|value| association_thread_entry(keys_expr.clone(), value, delayed))
+                .collect(),
+        ),
+        (None, None) => Some(vec![association_thread_entry(
+            keys_expr,
+            values_expr,
+            delayed,
+        )]),
+    }
+}
+
+fn association_thread_entry(key: Expr, value: Expr, delayed: bool) -> AssociationEntryForm {
+    AssociationEntryForm {
+        key,
+        value,
+        delayed,
+    }
 }
 
 fn catenate_item_contribution(expr: &Expr) -> Option<Vec<Expr>> {

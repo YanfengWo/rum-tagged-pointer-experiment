@@ -324,9 +324,11 @@ once in its primary implementation group. Other groups may mention it as
   current list-form `KeyUnion` / `KeyIntersection` / `KeyComplement`
   semantics over association, rule, and rule-list keyed collections,
   including `KeyUnion[..., f]` fill behavior and current `KeyComplement`
-  option-tail parity, current `AssociationThread` rule plus singleton/list
-  threading with delayed-rule preservation, deep `Association[...]`
-  construction plus `Normal` one/two-argument association-target boundaries,
+  option-tail parity, current `AssociationThread` rule plus scalar/list
+  broadcasting and singleton/list threading with delayed-rule preservation,
+  deep `Association[...]` construction plus current recursive `Normal`
+  association conversion for default, `Association`, `All`, and
+  nonnegative-integer targets,
   ordinary-expression passthrough, and current `RuleDelayed` head preservation,
   `AssociateTo` update specs over nested rule
   lists / associations with current delayed-entry preservation plus current

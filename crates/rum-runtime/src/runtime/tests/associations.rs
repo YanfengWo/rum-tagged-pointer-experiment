@@ -62,6 +62,30 @@ fn association_and_associationq_cover_first_pass_rule_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Normal[{Association[a -> 1]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Rule[a, 1]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Normal[f[Association[a -> 1]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[List[Rule[a, 1]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Normal[Association[a -> Association[b -> 2]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[a, Association[Rule[b, 2]]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Normal[Association[a -> 1], Association]")
             .unwrap()
             .value
@@ -75,6 +99,30 @@ fn association_and_associationq_cover_first_pass_rule_subset() {
             .value
             .to_string(),
         "List[Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Normal[{Association[a -> 1]}, All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Rule[a, 1]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Normal[Association[a -> 1], 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Normal[Association[a -> 1], Infinity]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1]]"
     );
     assert_eq!(
         session
@@ -799,6 +847,38 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("AssociationThread[{a, b}, u]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, u], Rule[b, u]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("AssociationThread[u, {1, 2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[u, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("AssociationThread[{}, u]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("AssociationThread[u, {}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[u, List]]"
+    );
+    assert_eq!(
+        session
             .eval_text("AssociationThread[a -> 1]")
             .unwrap()
             .value
@@ -812,6 +892,22 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .value
             .to_string(),
         "List[Association[RuleDelayed[a, Set[x, Plus[x, 1]]]], 0]"
+    );
+    assert_eq!(
+        session
+            .eval_text("AssociationThread[{a, b} :> z]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[RuleDelayed[a, z], RuleDelayed[b, z]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("AssociationThread[z :> {1, 2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[RuleDelayed[z, 2]]"
     );
     assert_eq!(
         session

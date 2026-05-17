@@ -299,10 +299,10 @@ impl Session {
         }
 
         match args {
-            [expr] => Ok(normalize_association_expr(expr).unwrap_or_else(|| expr.clone())),
+            [expr] => Ok(normalize_association_expr(expr)),
             [expr, target] => {
                 if normal_target_matches_association(target) {
-                    return Ok(normalize_association_expr(expr).unwrap_or_else(|| expr.clone()));
+                    return Ok(normalize_association_expr(expr));
                 }
 
                 Ok(expr.clone())
@@ -514,13 +514,24 @@ fn one_or_two_argument_count_message(symbol: &str, count: usize) -> String {
     format!("{symbol} called with {count} arguments; 1 or 2 arguments are expected.")
 }
 
-fn normalize_association_expr(expr: &Expr) -> Option<Expr> {
-    association_rule_exprs_preserving_heads(expr)
-        .map(|entries| Expr::call(system_expr("List"), entries))
+fn normalize_association_expr(expr: &Expr) -> Expr {
+    if let Some(entries) = association_rule_exprs_preserving_heads(expr) {
+        return Expr::call(system_expr("List"), entries);
+    }
+
+    match expr {
+        Expr::Call { head, args } => Expr::call(
+            (**head).clone(),
+            args.iter().map(normalize_association_expr).collect(),
+        ),
+        Expr::Atom(_) => expr.clone(),
+    }
 }
 
 fn normal_target_matches_association(target: &Expr) -> bool {
-    is_system_symbol_name(target, "Association") || is_system_symbol_name(target, "All")
+    is_system_symbol_name(target, "Association")
+        || is_system_symbol_name(target, "All")
+        || matches!(target, Expr::Atom(Atom::Integer(value)) if value >= &BigInt::from(0))
 }
 
 impl Session {
