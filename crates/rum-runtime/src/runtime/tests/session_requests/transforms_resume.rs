@@ -602,6 +602,42 @@ fn resume_eval_request_with_input_can_finish_groupby_after_suspending_value_tran
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_nested_groupby_after_multiple_key_suspensions() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("GroupBy[Association[a :> InputString[\"value: \"]], {Identity, Identity}]")
+        .expect_err("nested GroupBy should suspend while keying the first level");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "value: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let second = session
+        .resume_eval_request_with_input("first")
+        .expect_err("nested GroupBy should suspend again while keying the second level");
+
+    match &second.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "value: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("second")
+        .expect("resume should continue nested GroupBy after the second key resolves");
+
+    assert_eq!(
+        response.value.to_string(),
+        "Association[Rule[\"first\", Association[Rule[\"second\", Association[RuleDelayed[a, InputString[\"value: \"]]]]]]]"
+    );
+}
+
+#[test]
 fn resume_eval_request_with_input_reports_catenate_invalid_value_after_suspension() {
     let mut session = Session::new();
 
