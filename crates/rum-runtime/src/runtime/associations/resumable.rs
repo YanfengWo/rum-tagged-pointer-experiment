@@ -6,6 +6,31 @@ enum KeySortOrderingDecision {
     KeepScanning,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct GroupBySpec {
+    key_function: Expr,
+    value_function: Option<Expr>,
+}
+
+fn group_by_spec(function: &Expr) -> GroupBySpec {
+    match function {
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "Rule")
+                || is_system_symbol_name(head, "RuleDelayed"))
+                && args.len() == 2 =>
+        {
+            GroupBySpec {
+                key_function: args[0].clone(),
+                value_function: Some(args[1].clone()),
+            }
+        }
+        _ => GroupBySpec {
+            key_function: function.clone(),
+            value_function: None,
+        },
+    }
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_key_select(
         &mut self,
@@ -363,11 +388,12 @@ impl Session {
         match args {
             [function] => Ok(keyed_operator_form_slot_first("GroupBy", function.clone())),
             [expr, function] => {
+                let spec = group_by_spec(function);
                 if let Some(entries) = association_entry_forms_from_expr(expr) {
                     return self.resume_association_group_by_from_index(
                         head.clone(),
                         args.to_vec(),
-                        function.clone(),
+                        spec,
                         None,
                         entries,
                         0,
@@ -387,7 +413,7 @@ impl Session {
                 self.resume_group_by_from_index(
                     head.clone(),
                     args.to_vec(),
-                    function.clone(),
+                    spec,
                     None,
                     items.to_vec(),
                     0,
@@ -395,11 +421,12 @@ impl Session {
                 )
             }
             [expr, function, reducer] => {
+                let spec = group_by_spec(function);
                 if let Some(entries) = association_entry_forms_from_expr(expr) {
                     return self.resume_association_group_by_from_index(
                         head.clone(),
                         args.to_vec(),
-                        function.clone(),
+                        spec,
                         Some(reducer.clone()),
                         entries,
                         0,
@@ -419,7 +446,7 @@ impl Session {
                 self.resume_group_by_from_index(
                     head.clone(),
                     args.to_vec(),
-                    function.clone(),
+                    spec,
                     Some(reducer.clone()),
                     items.to_vec(),
                     0,
@@ -805,7 +832,7 @@ impl Session {
         &mut self,
         head: Expr,
         call_args: Vec<Expr>,
-        function: Expr,
+        spec: GroupBySpec,
         reducer: Option<Expr>,
         items: Vec<Expr>,
         index: usize,
@@ -830,19 +857,19 @@ impl Session {
             };
         };
 
-        let key_result = self.evaluate(Expr::call(function.clone(), vec![item.clone()]));
+        let key_result = self.evaluate(Expr::call(spec.key_function.clone(), vec![item.clone()]));
         let suspended_head = head.clone();
         let suspended_call_args = call_args.clone();
-        let suspended_function = function.clone();
+        let suspended_spec = spec.clone();
         let suspended_reducer = reducer.clone();
         let suspended_items = items.clone();
         let suspended_grouped = grouped.clone();
         let suspended_item = item.clone();
         let key = self.suspend_with_frame(key_result, move |session, key| {
-            session.resume_group_by_with_value(
+            session.resume_group_by_with_key(
                 suspended_head,
                 suspended_call_args,
-                suspended_function,
+                suspended_spec,
                 suspended_reducer,
                 suspended_items,
                 index,
@@ -852,39 +879,77 @@ impl Session {
             )
         })?;
 
-        self.resume_group_by_with_value(
-            head, call_args, function, reducer, items, index, grouped, item, key,
+        self.resume_group_by_with_key(
+            head, call_args, spec, reducer, items, index, grouped, item, key,
         )
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn resume_group_by_with_value(
+    fn resume_group_by_with_key(
         &mut self,
         head: Expr,
         call_args: Vec<Expr>,
-        function: Expr,
+        spec: GroupBySpec,
+        reducer: Option<Expr>,
+        items: Vec<Expr>,
+        index: usize,
+        grouped: Vec<(Expr, Vec<Expr>)>,
+        item: Expr,
+        key: Expr,
+    ) -> Result<Expr, EvalError> {
+        let Some(value_function) = spec.value_function.clone() else {
+            return self.resume_group_by_with_item_value(
+                head, call_args, spec, reducer, items, index, grouped, key, item,
+            );
+        };
+
+        let value_result = self.evaluate(Expr::call(value_function, vec![item]));
+        let suspended_head = head.clone();
+        let suspended_call_args = call_args.clone();
+        let suspended_spec = spec.clone();
+        let suspended_reducer = reducer.clone();
+        let suspended_items = items.clone();
+        let suspended_grouped = grouped.clone();
+        let suspended_key = key.clone();
+        let value = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_group_by_with_item_value(
+                suspended_head,
+                suspended_call_args,
+                suspended_spec,
+                suspended_reducer,
+                suspended_items,
+                index,
+                suspended_grouped,
+                suspended_key,
+                value,
+            )
+        })?;
+
+        self.resume_group_by_with_item_value(
+            head, call_args, spec, reducer, items, index, grouped, key, value,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn resume_group_by_with_item_value(
+        &mut self,
+        head: Expr,
+        call_args: Vec<Expr>,
+        spec: GroupBySpec,
         reducer: Option<Expr>,
         items: Vec<Expr>,
         index: usize,
         mut grouped: Vec<(Expr, Vec<Expr>)>,
-        item: Expr,
         key: Expr,
+        value: Expr,
     ) -> Result<Expr, EvalError> {
         if let Some((_, values)) = grouped.iter_mut().find(|(existing, _)| existing == &key) {
-            values.push(item);
+            values.push(value);
         } else {
-            grouped.push((key, vec![item]));
+            grouped.push((key, vec![value]));
         }
 
-        self.resume_group_by_from_index(
-            head,
-            call_args,
-            function,
-            reducer,
-            items,
-            index + 1,
-            grouped,
-        )
+        self.resume_group_by_from_index(head, call_args, spec, reducer, items, index + 1, grouped)
     }
 
     fn resume_group_by_reduce_from_index(
@@ -955,7 +1020,7 @@ impl Session {
         &mut self,
         head: Expr,
         call_args: Vec<Expr>,
-        function: Expr,
+        spec: GroupBySpec,
         reducer: Option<Expr>,
         entries: Vec<AssociationEntryForm>,
         index: usize,
@@ -975,10 +1040,13 @@ impl Session {
             };
         };
 
-        let key_result = self.evaluate(Expr::call(function.clone(), vec![entry.value.clone()]));
+        let key_result = self.evaluate(Expr::call(
+            spec.key_function.clone(),
+            vec![entry.value.clone()],
+        ));
         let suspended_head = head.clone();
         let suspended_call_args = call_args.clone();
-        let suspended_function = function.clone();
+        let suspended_spec = spec.clone();
         let suspended_reducer = reducer.clone();
         let suspended_entries = entries.clone();
         let suspended_grouped = grouped.clone();
@@ -987,7 +1055,7 @@ impl Session {
             session.resume_association_group_by_with_key(
                 suspended_head,
                 suspended_call_args,
-                suspended_function,
+                suspended_spec,
                 suspended_reducer,
                 suspended_entries,
                 index,
@@ -998,7 +1066,7 @@ impl Session {
         })?;
 
         self.resume_association_group_by_with_key(
-            head, call_args, function, reducer, entries, index, grouped, entry, key,
+            head, call_args, spec, reducer, entries, index, grouped, entry, key,
         )
     }
 
@@ -1007,7 +1075,67 @@ impl Session {
         &mut self,
         head: Expr,
         call_args: Vec<Expr>,
-        function: Expr,
+        spec: GroupBySpec,
+        reducer: Option<Expr>,
+        entries: Vec<AssociationEntryForm>,
+        index: usize,
+        grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
+        entry: AssociationEntryForm,
+        key: Expr,
+    ) -> Result<Expr, EvalError> {
+        let Some(value_function) = spec.value_function.clone() else {
+            return self.resume_association_group_by_with_entry(
+                head, call_args, spec, reducer, entries, index, grouped, entry, key,
+            );
+        };
+
+        let value_result = self.evaluate(Expr::call(value_function, vec![entry.value.clone()]));
+        let suspended_head = head.clone();
+        let suspended_call_args = call_args.clone();
+        let suspended_spec = spec.clone();
+        let suspended_reducer = reducer.clone();
+        let suspended_entries = entries.clone();
+        let suspended_grouped = grouped.clone();
+        let suspended_entry = entry.clone();
+        let suspended_key = key.clone();
+        let value = self.suspend_with_frame(value_result, move |session, value| {
+            let transformed_entry = AssociationEntryForm {
+                value,
+                ..suspended_entry
+            };
+            session.resume_association_group_by_with_entry(
+                suspended_head,
+                suspended_call_args,
+                suspended_spec,
+                suspended_reducer,
+                suspended_entries,
+                index,
+                suspended_grouped,
+                transformed_entry,
+                suspended_key,
+            )
+        })?;
+
+        let transformed_entry = AssociationEntryForm { value, ..entry };
+        self.resume_association_group_by_with_entry(
+            head,
+            call_args,
+            spec,
+            reducer,
+            entries,
+            index,
+            grouped,
+            transformed_entry,
+            key,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn resume_association_group_by_with_entry(
+        &mut self,
+        head: Expr,
+        call_args: Vec<Expr>,
+        spec: GroupBySpec,
         reducer: Option<Expr>,
         entries: Vec<AssociationEntryForm>,
         index: usize,
@@ -1024,7 +1152,7 @@ impl Session {
         self.resume_association_group_by_from_index(
             head,
             call_args,
-            function,
+            spec,
             reducer,
             entries,
             index + 1,

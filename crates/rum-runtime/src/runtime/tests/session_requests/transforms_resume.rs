@@ -577,6 +577,31 @@ fn resume_eval_request_with_input_can_finish_groupby_after_suspending_delayed_as
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_groupby_after_suspending_value_transform() {
+    let mut session = Session::new();
+
+    let failure = session
+        .eval_request("GroupBy[Association[a -> key], Identity -> (InputString[\"value: \"] &)]")
+        .expect_err("GroupBy should suspend when the value transform requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "value: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue GroupBy after the value transform resolves");
+
+    assert_eq!(
+        response.value.to_string(),
+        "Association[Rule[key, Association[Rule[a, \"done\"]]]]"
+    );
+}
+
+#[test]
 fn resume_eval_request_with_input_reports_catenate_invalid_value_after_suspension() {
     let mut session = Session::new();
 
