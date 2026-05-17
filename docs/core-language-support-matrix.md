@@ -344,7 +344,8 @@ once in its primary implementation group. Other groups may mention it as
   association-value consumption, direct-association invalid-value subset
   parity, arity diagnostics, and invalid-value host-input resume coverage,
   current `Counts` over lists plus association values with explicit key-list
-  count specs and delayed association-value consumption, current
+  count specs including duplicate, nested, rule-key, and empty-input edges plus
+  delayed association-value consumption, current
   `GroupBy[list, f, g]` reducer support plus `key -> value` transform specs
   and nested spec-list grouping over lists and associations, association
   grouping, delayed association-value key evaluation with preserved grouped
