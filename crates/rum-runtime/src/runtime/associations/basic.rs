@@ -403,19 +403,42 @@ pub(in crate::runtime) fn is_association_expr(expr: &Expr) -> bool {
 }
 
 pub(in crate::runtime) fn apply_association_to_args(head: &Expr, args: &[Expr]) -> Option<Expr> {
-    let entries = association_entries_from_expr(head)?;
-
     match args {
         [] => Some(head.clone()),
-        [key] => Some(
-            entries
-                .iter()
-                .find(|(entry_key, _)| entry_key == key)
-                .map(|(_, value)| value.clone())
-                .unwrap_or_else(|| missing_key_absent_expr(key.clone())),
-        ),
-        _ => None,
+        [key] => lookup_association_key(head, key),
+        _ => apply_association_to_key_path(head, args),
     }
+}
+
+fn lookup_association_key(expr: &Expr, key: &Expr) -> Option<Expr> {
+    let entries = association_entries_from_expr(expr)?;
+    Some(
+        entries
+            .iter()
+            .find(|(entry_key, _)| entry_key == key)
+            .map(|(_, value)| value.clone())
+            .unwrap_or_else(|| missing_key_absent_expr(key.clone())),
+    )
+}
+
+fn apply_association_to_key_path(head: &Expr, keys: &[Expr]) -> Option<Expr> {
+    let mut current = head.clone();
+    for (index, key) in keys.iter().enumerate() {
+        let Some(value) = lookup_association_key(&current, key) else {
+            return None;
+        };
+
+        if is_missing_expr(&value) || index + 1 == keys.len() {
+            return Some(value);
+        }
+
+        if !is_association_expr(&value) {
+            return None;
+        }
+        current = value;
+    }
+
+    Some(current)
 }
 
 pub(in crate::runtime) fn missing_key_absent_expr(key: Expr) -> Expr {

@@ -452,6 +452,38 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
     );
     assert_eq!(
         session
+            .eval_text("Association[a -> Association[b -> 2]][a, b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Association[a -> Association[b -> 2]][a, c]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Association[a -> 1][b, c]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"KeyAbsent\", b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Association[a -> 1][a, b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1]][a, b]"
+    );
+    assert_eq!(
+        session
             .eval_text("Association[a -> 1][]")
             .unwrap()
             .value
