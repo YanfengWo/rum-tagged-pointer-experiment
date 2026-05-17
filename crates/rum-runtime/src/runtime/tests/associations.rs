@@ -2400,6 +2400,58 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .to_string(),
         "List[1]"
     );
+    let outcome = session.eval_text("Keys[a]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Keys[a]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Keys"
+            && message.tag == "invrl"
+            && message.text == "The argument a is not a valid Association or a list of rules."
+    }));
+    let outcome = session.eval_text("Values[a]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Values[a]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Values"
+            && message.tag == "invrl"
+            && message.text == "The argument a is not a valid Association or a list of rules."
+    }));
+    let outcome = session.eval_text("Keys[{Association[a -> 1], x}]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "Keys[List[Association[Rule[a, 1]], x]]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Keys"
+            && message.tag == "invrl"
+            && message.text == "The argument x is not a valid Association or a list of rules."
+    }));
+    let outcome = session
+        .eval_text("Values[{Association[a -> 1], x}]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "Values[List[Association[Rule[a, 1]], x]]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Values"
+            && message.tag == "invrl"
+            && message.text
+                == "The argument List[Association[Rule[a, 1]], x] is not a valid Association or a list of rules."
+    }));
+    let outcome = session.eval_text("Keys[{a -> 1, b}]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Keys[List[Rule[a, 1], b]]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Keys"
+            && message.tag == "invrl"
+            && message.text == "The argument b is not a valid Association or a list of rules."
+    }));
+    let outcome = session.eval_text("Values[{a -> 1, b}]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Values[List[Rule[a, 1], b]]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Values"
+            && message.tag == "invrl"
+            && message.text
+                == "The argument List[Rule[a, 1], b] is not a valid Association or a list of rules."
+    }));
     assert_eq!(
         session
             .eval_text("KeyTake[List[a -> 1], a]")

@@ -306,8 +306,8 @@ once in its primary implementation group. Other groups may mention it as
   application, single-rule/rule-list parity, current arity diagnostics plus
   singleton operator-form boundary, and keyed
   `Missing["KeyAbsent", key]` fallbacks, rule-list plus wrapper/threading
-  support, delayed-entry `Values` wrapper boundary, and arity-diagnostic parity
-  for `Keys` / `Values`,
+  support, delayed-entry `Values` wrapper boundary, and arity plus
+  invalid-input diagnostic parity for `Keys` / `Values`,
   rule-list-aware keyed predicates with current operator-form and
   arity-diagnostic parity through `KeyExistsQ` / `KeyMemberQ` / `KeyFreeQ`,
   spec-ordered and threaded rule-list-normalizing `KeyTake` /
