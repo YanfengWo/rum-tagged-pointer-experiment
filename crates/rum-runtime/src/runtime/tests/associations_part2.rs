@@ -92,6 +92,46 @@ fn group_by_nested_specs_recurse_through_lists_and_associations() {
     );
     assert_eq!(
         session
+            .eval_text("GroupBy[{}, {}, Last]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("GroupBy[Association[], {}, Last]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("GroupBy[{1, 2, 3}, {OddQ}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[True, List[1, 3]], Rule[False, List[2]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("GroupBy[{OddQ, Identity}][{1, 2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[True, Association[Rule[1, List[1]]]], Rule[False, Association[Rule[2, List[2]]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("GroupBy[{}][{1, 2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2]"
+    );
+    assert_eq!(
+        session
             .eval_text("GroupBy[{1, 2, 3, 4}, {OddQ, Mod[#, 3] &}]")
             .unwrap()
             .value

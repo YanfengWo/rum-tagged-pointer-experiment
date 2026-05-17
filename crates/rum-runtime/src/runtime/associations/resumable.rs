@@ -1009,6 +1009,10 @@ impl Session {
         reducer: Option<Expr>,
         values: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
+        if reducer.is_some() && values.is_empty() {
+            return Ok(render_association(Vec::new()));
+        }
+
         let group = Expr::call(system_expr("List"), values);
         match reducer {
             None => Ok(group),
@@ -1352,6 +1356,10 @@ impl Session {
         reducer: Option<Expr>,
         entries: Vec<AssociationEntryForm>,
     ) -> Result<Expr, EvalError> {
+        if reducer.is_some() && entries.is_empty() {
+            return Ok(render_association(Vec::new()));
+        }
+
         let group = render_association_entry_forms_preserving_heads(entries);
         match reducer {
             None => Ok(group),
