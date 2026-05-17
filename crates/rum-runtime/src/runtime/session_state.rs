@@ -124,7 +124,7 @@ pub(super) enum MatcherNode {
     Blank {
         head_constraint: Option<Expr>,
     },
-    KeyValuePattern(Vec<(MatcherNode, MatcherNode)>),
+    KeyValuePattern(Vec<(MatcherNode, MatcherNode, bool)>),
     Named {
         name: Symbol,
         inner: Box<MatcherNode>,

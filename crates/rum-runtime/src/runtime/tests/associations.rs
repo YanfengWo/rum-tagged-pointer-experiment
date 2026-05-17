@@ -1625,6 +1625,14 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .to_string(),
         "KeyValuePattern[List[Rule[a, Blank[]]]]"
     );
+    assert_eq!(
+        session
+            .eval_text("KeyValuePattern[a :> _]")
+            .unwrap()
+            .value
+            .to_string(),
+        "KeyValuePattern[List[RuleDelayed[a, Blank[]]]]"
+    );
     let outcome = session.eval_text("KeyValuePattern[]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyValuePattern[]");
     assert!(outcome.messages.is_empty());
@@ -1670,6 +1678,38 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
             .value
             .to_string(),
         "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[Association[a :> 1], KeyValuePattern[a :> _Integer]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[{a :> 1}, KeyValuePattern[a :> _Integer]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[Association[a -> 1], KeyValuePattern[a :> _Integer]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[Association[a :> 1], KeyValuePattern[a -> _Integer]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
     );
     assert_eq!(
         session

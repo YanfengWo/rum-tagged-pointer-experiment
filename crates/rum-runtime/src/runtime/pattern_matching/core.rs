@@ -255,11 +255,11 @@ impl Session {
 
     pub(in crate::runtime) fn match_compiled_key_value_pattern_owned(
         &mut self,
-        entries: Vec<(MatcherNode, MatcherNode)>,
+        entries: Vec<(MatcherNode, MatcherNode, bool)>,
         value: Expr,
         bindings: BTreeMap<Symbol, Expr>,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        let Some(candidates) = keyed_entries_from_expr(&value).map(|keyed| keyed.entries) else {
+        let Some(candidates) = keyed_entry_forms_from_expr(&value) else {
             return Ok(match_outcome(false, bindings));
         };
 
@@ -268,17 +268,18 @@ impl Session {
 
     fn match_compiled_key_value_pattern_entries_owned(
         &mut self,
-        entries: Vec<(MatcherNode, MatcherNode)>,
-        candidates: Vec<(Expr, Expr)>,
+        entries: Vec<(MatcherNode, MatcherNode, bool)>,
+        candidates: Vec<AssociationEntryForm>,
         bindings: BTreeMap<Symbol, Expr>,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        let Some((key_pattern, value_pattern)) = entries.first().cloned() else {
+        let Some((key_pattern, value_pattern, delayed)) = entries.first().cloned() else {
             return Ok(match_outcome(true, bindings));
         };
 
         self.match_compiled_key_value_pattern_choice_owned(
             key_pattern,
             value_pattern,
+            delayed,
             entries.into_iter().skip(1).collect(),
             candidates,
             bindings,
@@ -290,15 +291,27 @@ impl Session {
         &mut self,
         key_pattern: MatcherNode,
         value_pattern: MatcherNode,
-        remaining_entries: Vec<(MatcherNode, MatcherNode)>,
-        candidates: Vec<(Expr, Expr)>,
+        delayed: bool,
+        remaining_entries: Vec<(MatcherNode, MatcherNode, bool)>,
+        candidates: Vec<AssociationEntryForm>,
         bindings: BTreeMap<Symbol, Expr>,
         candidate_index: usize,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        let Some((candidate_key, candidate_value)) = candidates.get(candidate_index).cloned()
-        else {
+        let Some(candidate) = candidates.get(candidate_index).cloned() else {
             return Ok(match_outcome(false, bindings));
         };
+
+        if candidate.delayed != delayed {
+            return self.match_compiled_key_value_pattern_choice_owned(
+                key_pattern,
+                value_pattern,
+                delayed,
+                remaining_entries,
+                candidates,
+                bindings,
+                candidate_index + 1,
+            );
+        }
 
         let snapshot = bindings.clone();
         let candidates_for_retry = candidates.clone();
@@ -307,6 +320,8 @@ impl Session {
         let value_pattern_for_retry = value_pattern.clone();
         let candidates_for_success = candidates.clone();
         let remaining_entries_for_success = remaining_entries.clone();
+        let candidate_key = candidate.key;
+        let candidate_value = candidate.value;
 
         let key_result = self.match_compiled_owned(key_pattern, candidate_key, bindings);
         self.drive_internal_value(key_result, move |session, key_outcome| {
@@ -314,6 +329,7 @@ impl Session {
                 return session.match_compiled_key_value_pattern_choice_owned(
                     key_pattern_for_retry,
                     value_pattern_for_retry,
+                    delayed,
                     remaining_entries_for_retry,
                     candidates_for_retry,
                     snapshot,
@@ -334,6 +350,7 @@ impl Session {
                     return session.match_compiled_key_value_pattern_choice_owned(
                         key_pattern_for_value_failure,
                         value_pattern_for_value_failure,
+                        delayed,
                         remaining_entries_for_value_failure,
                         candidates_for_value_failure,
                         snapshot_for_value_failure,

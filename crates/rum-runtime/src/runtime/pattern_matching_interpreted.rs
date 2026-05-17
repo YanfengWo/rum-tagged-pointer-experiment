@@ -236,7 +236,13 @@ impl Session {
             return self.match_compiled_key_value_pattern_owned(
                 entries
                     .into_iter()
-                    .map(|(key, item)| (compile_matcher(&key), compile_matcher(&item)))
+                    .map(|entry| {
+                        (
+                            compile_matcher(&entry.key),
+                            compile_matcher(&entry.value),
+                            entry.delayed,
+                        )
+                    })
                     .collect(),
                 value,
                 bindings,

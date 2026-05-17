@@ -11,7 +11,13 @@ pub(super) fn compile_matcher(expr: &Expr) -> MatcherNode {
         return MatcherNode::KeyValuePattern(
             entries
                 .into_iter()
-                .map(|(key, value)| (compile_matcher(&key), compile_matcher(&value)))
+                .map(|entry| {
+                    (
+                        compile_matcher(&entry.key),
+                        compile_matcher(&entry.value),
+                        entry.delayed,
+                    )
+                })
                 .collect(),
         );
     }
@@ -209,7 +215,7 @@ pub(super) fn pattern_optional(expr: &Expr) -> Option<(&Expr, Option<&Expr>)> {
     }
 }
 
-pub(super) fn pattern_key_value_pattern_entries(expr: &Expr) -> Option<Vec<(Expr, Expr)>> {
+pub(super) fn pattern_key_value_pattern_entries(expr: &Expr) -> Option<Vec<AssociationEntryForm>> {
     let Expr::Call { head, args } = expr else {
         return None;
     };
@@ -233,7 +239,7 @@ pub(super) fn pattern_key_value_pattern_entries(expr: &Expr) -> Option<Vec<(Expr
 
     items
         .into_iter()
-        .map(|item| parse_association_entry(&item))
+        .map(|item| parse_association_entry_form(&item))
         .collect()
 }
 

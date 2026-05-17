@@ -299,7 +299,8 @@ once in its primary implementation group. Other groups may mention it as
   keyed part specifications via `Key`,
   deterministic ordering for canonical association rendering, key-based
   pattern matching through `KeyValuePattern` over associations and rule-lists
-  including current non-unary inert boundaries, richer `Lookup`
+  including rule-vs-delayed-rule sensitivity and current non-unary inert
+  boundaries, richer `Lookup`
   threading/multi-key behavior including `Lookup[..., default, h]` plus
   current Wolfram-style key-list threading, found-value-only wrapper
   application, single-rule/rule-list parity, current arity diagnostics plus
