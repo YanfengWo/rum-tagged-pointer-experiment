@@ -1649,6 +1649,38 @@ fn key_exists_take_drop_map_and_keyvaluemap_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("MatchQ[{a -> 1}, KeyValuePattern[a -> 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[{a -> 1, b -> 2}, KeyValuePattern[{b -> 2, a -> 1}]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[{a -> 1, a -> 2}, KeyValuePattern[a -> 2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[a -> 1, KeyValuePattern[a -> 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
             .eval_text("MatchQ[Association[a -> 1], KeyValuePattern[b -> _]]")
             .unwrap()
             .value

@@ -298,12 +298,12 @@ once in its primary implementation group. Other groups may mention it as
   key-value canonicalization, current `AssociationQ` arity diagnostics,
   keyed part specifications via `Key`,
   deterministic ordering for canonical association rendering, key-based
-  pattern matching through `KeyValuePattern` including current non-unary inert
-  boundaries, richer `Lookup`
+  pattern matching through `KeyValuePattern` over associations and rule-lists
+  including current non-unary inert boundaries, richer `Lookup`
   threading/multi-key behavior including `Lookup[..., default, h]` plus
   current Wolfram-style key-list threading, found-value-only wrapper
   application, single-rule/rule-list parity, current arity diagnostics plus
-  inert singleton-call boundary, and keyed
+  singleton operator-form boundary, and keyed
   `Missing["KeyAbsent", key]` fallbacks, rule-list plus wrapper/threading
   support, delayed-entry `Values` wrapper boundary, and arity-diagnostic parity
   for `Keys` / `Values`,

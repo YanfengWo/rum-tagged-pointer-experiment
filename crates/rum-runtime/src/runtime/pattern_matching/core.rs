@@ -259,7 +259,7 @@ impl Session {
         value: Expr,
         bindings: BTreeMap<Symbol, Expr>,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        let Some(candidates) = association_entries_from_expr(&value) else {
+        let Some(candidates) = keyed_entries_from_expr(&value).map(|keyed| keyed.entries) else {
             return Ok(match_outcome(false, bindings));
         };
 
