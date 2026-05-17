@@ -226,8 +226,26 @@ strength instead of turning the project into parser or performance work.
 - IR rewrite: constant folding, dead branch simplification, stack-effect
   simplification
 - Feature gates: rule switches for selected Wasm proposal subsets
+- Cranelift backend experiment: keep Rust plus `rum` responsible for parsing,
+  canonical IR, validation, semantic normalization, diagnostics, and
+  explanation, then lower the validated subset from Rust into Cranelift IR for
+  native code generation
 - Partial official test import: only import cases matching the implemented
   subset
+
+If this project ever grows from semantics prototype toward compiler prototype,
+the preferred route is:
+
+```text
+Wasm binary / WAT / fixture
+  -> Rust parser / canonical IR
+  -> rum validation + semantic normalization + diagnostics
+  -> Rust lowering to Cranelift IR
+  -> Cranelift native code
+```
+
+This preserves the core demonstration: `rum` accelerates the semantic frontend,
+while Rust and Cranelift handle systems integration and backend codegen.
 
 ## Expected Size
 
