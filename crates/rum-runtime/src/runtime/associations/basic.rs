@@ -252,18 +252,19 @@ impl Session {
             }
         };
 
-        let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
-            return Ok(self.invalid_call_with_message(
-                "KeyMemberQ",
-                args,
-                "invas",
-                invalid_association_or_rule_message(expr),
-            ));
+        let result = match key_member_q_result(expr, key) {
+            Ok(result) => result,
+            Err(error) => {
+                return Ok(self.invalid_call_with_message(
+                    "KeyMemberQ",
+                    args,
+                    error.tag,
+                    error.message,
+                ));
+            }
         };
 
-        Ok(predicate_bool_expr(
-            entries.iter().any(|(entry_key, _)| entry_key == key),
-        ))
+        Ok(predicate_bool_expr(result))
     }
 
     pub(in crate::runtime) fn eval_key_free_q(
@@ -284,18 +285,19 @@ impl Session {
             }
         };
 
-        let Some(entries) = keyed_entries_from_expr(expr).map(|keyed| keyed.entries) else {
-            return Ok(self.invalid_call_with_message(
-                "KeyFreeQ",
-                args,
-                "invas",
-                invalid_association_or_rule_message(expr),
-            ));
+        let result = match key_free_q_result(expr, key) {
+            Ok(result) => result,
+            Err(error) => {
+                return Ok(self.invalid_call_with_message(
+                    "KeyFreeQ",
+                    args,
+                    error.tag,
+                    error.message,
+                ));
+            }
         };
 
-        Ok(predicate_bool_expr(
-            !entries.iter().any(|(entry_key, _)| entry_key == key),
-        ))
+        Ok(predicate_bool_expr(result))
     }
 
     pub(in crate::runtime) fn eval_normal(
@@ -1171,6 +1173,66 @@ fn values_result_for_expr(expr: &Expr, wrapper: Option<&Expr>) -> Result<Expr, E
     }
 
     Ok(Expr::call(system_expr("List"), values))
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct KeyedPredicateInvalid {
+    tag: &'static str,
+    message: String,
+}
+
+fn key_member_q_result(expr: &Expr, key: &Expr) -> Result<bool, KeyedPredicateInvalid> {
+    if let Some(entries) = association_entries_from_expr(expr) {
+        return Ok(entries.iter().any(|(entry_key, _)| entry_key == key));
+    }
+
+    let Some(items) = list_items(expr) else {
+        return Err(KeyedPredicateInvalid {
+            tag: "invas",
+            message: invalid_association_or_rule_message(expr),
+        });
+    };
+
+    for item in items {
+        let Some((entry_key, _)) = parse_association_entry(item) else {
+            return Err(KeyedPredicateInvalid {
+                tag: "invrk",
+                message: invalid_rule_message(item),
+            });
+        };
+        if &entry_key == key {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
+
+fn key_free_q_result(expr: &Expr, key: &Expr) -> Result<bool, KeyedPredicateInvalid> {
+    if let Some(entries) = association_entries_from_expr(expr) {
+        return Ok(!entries.iter().any(|(entry_key, _)| entry_key == key));
+    }
+
+    let Some(items) = list_items(expr) else {
+        return Err(KeyedPredicateInvalid {
+            tag: "invas",
+            message: invalid_association_or_rule_message(expr),
+        });
+    };
+
+    for item in items {
+        let Some((entry_key, _)) = parse_association_entry(item) else {
+            return Err(KeyedPredicateInvalid {
+                tag: "invrk",
+                message: invalid_rule_message(item),
+            });
+        };
+        if &entry_key == key {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

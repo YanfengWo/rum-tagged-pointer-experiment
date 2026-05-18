@@ -3019,6 +3019,41 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .iter()
             .any(|message| message.symbol == "KeyMemberQ" && message.tag == "invas")
     );
+    let outcome = session.eval_text("KeyMemberQ[{a -> 1, x}, a]").unwrap();
+    assert_eq!(outcome.value.to_string(), "True");
+    assert!(outcome.messages.is_empty());
+    let outcome = session.eval_text("KeyMemberQ[{x, a -> 1}, a]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyMemberQ[List[x, Rule[a, 1]], a]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyMemberQ"
+            && message.tag == "invrk"
+            && message.text == "The argument x is not a valid rule."
+    }));
+    let outcome = session.eval_text("KeyMemberQ[{a -> 1, x}, z]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyMemberQ[List[Rule[a, 1], x], z]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyMemberQ"
+            && message.tag == "invrk"
+            && message.text == "The argument x is not a valid rule."
+    }));
+    let outcome = session
+        .eval_text("KeyMemberQ[{Association[a -> 1]}, a]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyMemberQ[List[Association[Rule[a, 1]]], a]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyMemberQ"
+            && message.tag == "invrk"
+            && message.text == "The argument Association[Rule[a, 1]] is not a valid rule."
+    }));
 
     let outcome = session.eval_text("KeyMemberQ[a, b, c]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyMemberQ[a, b, c]");
@@ -3051,6 +3086,29 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .iter()
             .any(|message| message.symbol == "KeyFreeQ" && message.tag == "invas")
     );
+    let outcome = session.eval_text("KeyFreeQ[{a -> 1, x}, a]").unwrap();
+    assert_eq!(outcome.value.to_string(), "False");
+    assert!(outcome.messages.is_empty());
+    let outcome = session.eval_text("KeyFreeQ[{x, a -> 1}, a]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyFreeQ[List[x, Rule[a, 1]], a]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyFreeQ"
+            && message.tag == "invrk"
+            && message.text == "The argument x is not a valid rule."
+    }));
+    let outcome = session.eval_text("KeyFreeQ[{a -> 1, x}, z]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyFreeQ[List[Rule[a, 1], x], z]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyFreeQ"
+            && message.tag == "invrk"
+            && message.text == "The argument x is not a valid rule."
+    }));
 
     let outcome = session.eval_text("KeyFreeQ[a, b, c]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyFreeQ[a, b, c]");

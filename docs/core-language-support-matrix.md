@@ -309,7 +309,9 @@ once in its primary implementation group. Other groups may mention it as
   support, delayed-entry `Values` wrapper boundary, and arity plus
   invalid-input diagnostic parity for `Keys` / `Values`,
   rule-list-aware keyed predicates with current operator-form and
-  arity-diagnostic parity through `KeyExistsQ` / `KeyMemberQ` / `KeyFreeQ`,
+  arity-diagnostic parity through `KeyExistsQ` / `KeyMemberQ` / `KeyFreeQ`
+  plus current `KeyMemberQ` / `KeyFreeQ` rule-list short-circuit invalid-rule
+  boundaries,
   spec-ordered and threaded rule-list-normalizing `KeyTake` /
   `KeyDrop` with current arity, invalid-input diagnostic, and empty-rule-list
   parity, broader
