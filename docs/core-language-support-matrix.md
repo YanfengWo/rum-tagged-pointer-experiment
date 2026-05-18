@@ -367,7 +367,8 @@ once in its primary implementation group. Other groups may mention it as
   suspension/resume, deeper target-level direct association-value deletion,
   invalid-argument diagnostics, and delayed nested-cleanup subsets, and held
   symbol / compound-lvalue plus exact part-target mutation first passes
-  including scalar, list, `All`, and span selectors, current `AssociateTo`
+  including scalar, list, `All`, span, deep `Key[...]`, mixed integer/key, and
+  current `AssociateTo` bulk nested selectors, current `AssociateTo`
   missing-key and missing-part diagnostics, current non-symbol / invalid
   literal-target diagnostics, and current non-leaf / empty / bulk selector /
   missing-part `KeyDropFrom` part-target invalid boundaries for `AssociateTo` /

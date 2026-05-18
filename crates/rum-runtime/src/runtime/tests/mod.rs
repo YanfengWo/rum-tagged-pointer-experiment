@@ -51,6 +51,7 @@ fn rum_path(path: &Path) -> String {
 
 mod arithmetic;
 mod associations;
+mod associations_mutation;
 mod associations_part2;
 mod calculus;
 mod context_and_loader;
