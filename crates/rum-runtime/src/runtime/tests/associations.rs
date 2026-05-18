@@ -2926,14 +2926,13 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
             .iter()
             .any(|message| message.symbol == "GroupBy" && message.tag == "list1")
     );
-    assert_eq!(
-        session
-            .eval_text("PositionIndex[a]")
-            .unwrap()
-            .value
-            .to_string(),
-        "PositionIndex[a]"
-    );
+    let outcome = session.eval_text("PositionIndex[a]").unwrap();
+    assert_eq!(outcome.value.to_string(), "PositionIndex[a]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "PositionIndex"
+            && message.tag == "invrp"
+            && message.text == "The argument a is not a valid Association or a list."
+    }));
     let outcome = session.eval_text("PositionIndex[]").unwrap();
     assert_eq!(outcome.value.to_string(), "PositionIndex[]");
     assert!(outcome.messages.iter().any(|message| {

@@ -357,7 +357,7 @@ once in its primary implementation group. Other groups may mention it as
   and nested spec-list grouping over lists and associations, association
   grouping, delayed association-value key evaluation with preserved grouped
   entries, and reducer invocation, current `PositionIndex` over lists plus
-  association values and arity diagnostics,
+  association values and arity / invalid-input diagnostics,
   basic `Missing[]` / `Missing["reason"]` / `Missing["reason", expr]`
   forms plus current keyed-lookup propagation and current `DeleteMissing`
   over list / association / rule-list data including depth, third-argument

@@ -1031,7 +1031,7 @@ impl Session {
 
     pub(in crate::runtime) fn eval_position_index(
         &mut self,
-        head: &Expr,
+        _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [expr] = args else {
@@ -1053,7 +1053,12 @@ impl Session {
         }
 
         let Some(items) = list_items(expr) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+            return Ok(self.invalid_call_with_message(
+                "PositionIndex",
+                args,
+                "invrp",
+                invalid_association_or_list_message(expr),
+            ));
         };
 
         Ok(render_position_index_entries(
