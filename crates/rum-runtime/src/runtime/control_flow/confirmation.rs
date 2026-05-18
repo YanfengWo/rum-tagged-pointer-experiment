@@ -327,10 +327,7 @@ impl Session {
         let failure = if info.is_none() && is_failure_expr(&value) {
             value
         } else {
-            build_confirmation_failure(vec![
-                ("Information", info.unwrap_or_else(|| system_expr("Null"))),
-                ("Expression", raw_expr),
-            ])
+            build_confirm_failure(raw_expr, value, info)
         };
 
         let _ = args;
@@ -383,11 +380,7 @@ impl Session {
         info: Option<Expr>,
         tag: Expr,
     ) -> Result<Expr, EvalError> {
-        let failure = build_confirmation_failure(vec![
-            ("Information", info.unwrap_or_else(|| system_expr("Null"))),
-            ("Expression", raw_expr),
-            ("Function", raw_function),
-        ]);
+        let failure = build_confirm_by_failure(raw_expr, raw_function, info);
 
         Err(EvalError::Thrown {
             value: failure,
@@ -427,11 +420,7 @@ impl Session {
         info: Option<Expr>,
         tag: Expr,
     ) -> Result<Expr, EvalError> {
-        let failure = build_confirmation_failure(vec![
-            ("Information", info.unwrap_or_else(|| system_expr("Null"))),
-            ("Expression", raw_expr),
-            ("Pattern", raw_pattern),
-        ]);
+        let failure = build_confirm_match_failure(raw_expr, raw_pattern, info);
 
         Err(EvalError::Thrown {
             value: failure,
@@ -471,17 +460,7 @@ impl Session {
         tag: Expr,
         message: RuntimeMessage,
     ) -> Result<Expr, EvalError> {
-        let failure = build_confirmation_failure(vec![
-            ("Information", info.unwrap_or_else(|| system_expr("Null"))),
-            ("Expression", raw_expr),
-            (
-                "HeldMessage",
-                Expr::call(
-                    system_expr("Hold"),
-                    vec![runtime_message_name_expr(message)],
-                ),
-            ),
-        ]);
+        let failure = build_confirm_quiet_failure(raw_expr, info, message);
 
         Err(EvalError::Thrown {
             value: failure,
@@ -513,10 +492,7 @@ impl Session {
         info: Option<Expr>,
         tag: Expr,
     ) -> Result<Expr, EvalError> {
-        let failure = build_confirmation_failure(vec![
-            ("Information", info.unwrap_or_else(|| system_expr("Null"))),
-            ("Test", raw_test),
-        ]);
+        let failure = build_confirm_assert_failure(raw_test, info);
 
         Err(EvalError::Thrown {
             value: failure,
@@ -706,19 +682,127 @@ fn is_internal_confirmation_auto_info(expr: &Expr) -> bool {
     is_system_symbol_name(expr, "InternalConfirmAutomaticInfo")
 }
 
-fn build_confirmation_failure(fields: Vec<(&str, Expr)>) -> Expr {
+fn build_confirm_failure(raw_expr: Expr, value: Expr, info: Option<Expr>) -> Expr {
+    build_confirmation_failure(vec![
+        confirmation_entry("MessageTemplate", Expr::string("`` encountered.")),
+        confirmation_delayed_entry("MessageParameters", list_expr(vec![value])),
+        confirmation_entry("ConfirmationType", Expr::string("Confirm")),
+        confirmation_delayed_entry("Expression", raw_expr),
+        confirmation_entry("Information", confirmation_info_expr(info)),
+    ])
+}
+
+fn build_confirm_by_failure(raw_expr: Expr, raw_function: Expr, info: Option<Expr>) -> Expr {
+    build_confirmation_failure(vec![
+        confirmation_entry(
+            "MessageTemplate",
+            Expr::string("``[``] did not return True."),
+        ),
+        confirmation_delayed_entry(
+            "MessageParameters",
+            list_expr(vec![raw_function.clone(), raw_expr.clone()]),
+        ),
+        confirmation_entry("ConfirmationType", Expr::string("ConfirmBy")),
+        confirmation_delayed_entry("Expression", raw_expr),
+        confirmation_entry("Information", confirmation_info_expr(info)),
+        confirmation_entry("Function", raw_function),
+    ])
+}
+
+fn build_confirm_match_failure(raw_expr: Expr, raw_pattern: Expr, info: Option<Expr>) -> Expr {
+    build_confirmation_failure(vec![
+        confirmation_entry("MessageTemplate", Expr::string("`` does not match ``.")),
+        confirmation_delayed_entry(
+            "MessageParameters",
+            list_expr(vec![raw_expr.clone(), raw_pattern.clone()]),
+        ),
+        confirmation_entry("ConfirmationType", Expr::string("ConfirmMatch")),
+        confirmation_delayed_entry("Expression", raw_expr),
+        confirmation_entry("Information", confirmation_info_expr(info)),
+        confirmation_entry("Pattern", raw_pattern),
+    ])
+}
+
+fn build_confirm_quiet_failure(
+    raw_expr: Expr,
+    info: Option<Expr>,
+    message: RuntimeMessage,
+) -> Expr {
+    let held_expr = hold_expr(raw_expr.clone());
+    let held_message_name = hold_expr(runtime_message_name_expr(message));
+    build_confirmation_failure(vec![
+        confirmation_entry(
+            "MessageTemplate",
+            Expr::string("`` produced a message on evaluation."),
+        ),
+        confirmation_delayed_entry(
+            "MessageParameters",
+            list_expr(vec![hold_form_expr(raw_expr.clone())]),
+        ),
+        confirmation_entry("ConfirmationType", Expr::string("ConfirmQuiet")),
+        confirmation_delayed_entry("Expression", held_expr.clone()),
+        confirmation_entry("Information", confirmation_info_expr(info)),
+        confirmation_entry("HeldExpression", held_expr),
+        confirmation_entry("HeldMessage", held_message_name.clone()),
+        confirmation_entry("HeldMessageName", held_message_name),
+    ])
+}
+
+fn build_confirm_assert_failure(raw_test: Expr, info: Option<Expr>) -> Expr {
+    build_confirmation_failure(vec![
+        confirmation_entry("MessageTemplate", Expr::string("Assertion `` failed.")),
+        confirmation_delayed_entry(
+            "MessageParameters",
+            list_expr(vec![hold_form_expr(raw_test.clone())]),
+        ),
+        confirmation_entry("ConfirmationType", Expr::string("ConfirmAssert")),
+        confirmation_delayed_entry("Expression", raw_test.clone()),
+        confirmation_entry("Information", confirmation_info_expr(info)),
+        confirmation_delayed_entry("Test", raw_test.clone()),
+        confirmation_entry("HeldTest", hold_expr(raw_test)),
+    ])
+}
+
+fn build_confirmation_failure(fields: Vec<AssociationEntryForm>) -> Expr {
     Expr::call(
         system_expr("Failure"),
         vec![
             Expr::string("ConfirmationFailed"),
-            render_association(
-                fields
-                    .into_iter()
-                    .map(|(key, value)| (Expr::string(key), value))
-                    .collect(),
-            ),
+            render_association_entry_forms_preserving_heads(fields),
         ],
     )
+}
+
+fn confirmation_entry(key: &str, value: Expr) -> AssociationEntryForm {
+    confirmation_entry_form(key, value, false)
+}
+
+fn confirmation_delayed_entry(key: &str, value: Expr) -> AssociationEntryForm {
+    confirmation_entry_form(key, value, true)
+}
+
+fn confirmation_entry_form(key: &str, value: Expr, delayed: bool) -> AssociationEntryForm {
+    AssociationEntryForm {
+        key: Expr::string(key),
+        value,
+        delayed,
+    }
+}
+
+fn confirmation_info_expr(info: Option<Expr>) -> Expr {
+    info.unwrap_or_else(|| system_expr("Null"))
+}
+
+fn list_expr(items: Vec<Expr>) -> Expr {
+    Expr::call(system_expr(heads::structure::LIST), items)
+}
+
+fn hold_expr(expr: Expr) -> Expr {
+    Expr::call(system_expr("Hold"), vec![expr])
+}
+
+fn hold_form_expr(expr: Expr) -> Expr {
+    Expr::call(system_expr("HoldForm"), vec![expr])
 }
 
 pub(super) fn build_failsafe_failure(_function: Expr, _test: Expr, args: Vec<Expr>) -> Expr {

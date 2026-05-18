@@ -635,6 +635,10 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         "$Aborted",
         "Represents a computation aborted by Abort or an external interrupt.",
     ),
+    BuiltinSpec::new(
+        "$Canceled",
+        "Represents a canceled operation for confirmation-flow compatibility.",
+    ),
     BuiltinSpec::new("$Failed", "Represents a failed operation."),
     BuiltinSpec::new(
         "$MessageList",

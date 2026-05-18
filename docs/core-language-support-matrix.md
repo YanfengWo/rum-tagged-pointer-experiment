@@ -373,7 +373,9 @@ once in its primary implementation group. Other groups may mention it as
   literal-target diagnostics, and current non-leaf / empty / bulk selector /
   missing-part `KeyDropFrom` part-target invalid boundaries for `AssociateTo` /
   `KeyDropFrom`
-- `planned`: any remaining keyed-helper rule-list breadth outside the current
+- `planned`: deferred evaluator-model cleanup for the current
+  `Values[..., Unevaluated]` delayed-value wrapper escape, any remaining
+  keyed-helper rule-list breadth outside the current
   `KeyMap` / `KeyValueMap` rejection and `KeySelect` / `KeySort` /
   `KeySortBy` normalizing subset, deeper
   niche `Catenate` invalid-message corners, deeper `DeleteMissing` edge
@@ -389,10 +391,12 @@ once in its primary implementation group. Other groups may mention it as
   `Normal`, `AssociateTo`, `KeyDropFrom`, `KeyValuePattern`, `Merge`,
   `Catenate`, `Counts`, `CountsBy`, `GroupBy`, `PositionIndex`, `Missing`,
   `DeleteMissing`
-- `planned`: any remaining keyed-helper rule-list compatibility,
-  niche `Catenate` invalid-message corners, deeper `DeleteMissing` edge parity
-  beyond the current invalid-argument diagnostics, and deeper association
-  semantics beyond the current first-pass subset
+- `planned`: deferred evaluator-model cleanup for the current
+  `Values[..., Unevaluated]` delayed-value wrapper gap, any remaining
+  keyed-helper rule-list compatibility, niche `Catenate`
+  invalid-message corners, deeper `DeleteMissing` edge parity beyond the
+  current invalid-argument diagnostics, and deeper association semantics beyond
+  the current first-pass subset
 - `cross-tracked elsewhere`: `#name`, `DeleteDuplicates`, `Map`, `Plus`,
   `Select`, `Sort`
 
@@ -439,6 +443,13 @@ once in its primary implementation group. Other groups may mention it as
   `FieldMasked -> True` plus request-kind host request metadata, resumed
   `Input` parse diagnostics, `Pause::numnm`, and current option-error
   boundaries,
+  `Enclose` handler and `Confirm` information-expression host-input
+  suspension/resume, broader `ConfirmBy` / `ConfirmMatch` /
+  `ConfirmQuiet` / `ConfirmAssert` host-input resume coverage, and
+  oracle-aligned generated `Confirm*` failure metadata for the current
+  `MessageTemplate` / `MessageParameters` / `ConfirmationType` slice,
+  including `$Canceled` confirmation handling while keeping
+  `FailureQ[$Canceled]` false,
   suspension-safe `WithCleanup` body cleanup plus current
   cleanup-time host-input resume, throw/abort cleanup boundaries,
   oracle-aligned delayed `Failsafe` failure `MessageParameters` metadata,
@@ -470,8 +481,8 @@ once in its primary implementation group. Other groups may mention it as
   `ConfirmMatch`, `ConfirmQuiet`, `ConfirmAssert`, `Failure`, `FailureQ`,
   `Success`, `TerminatedEvaluation`, `MissingQ`, `WithCleanup`, `Failsafe`,
   `Abort`, `CheckAbort`, `PropagateAborts`, `AbortProtect`, `Assert`,
-  `BlockRandom`, `InputString`, `Input`, `Print`, `Pause` in the current
-  first-pass subset
+  `BlockRandom`, `InputString`, `Input`, `Print`, `Pause`, `$Aborted`,
+  `$Canceled`, and `$Failed` in the current first-pass subset
 - `planned`: remaining deeper `WithCleanup` / `Failsafe` / `CheckAbort` /
   `AbortProtect` parity, richer `Assert` controls beyond the current session
   flag plus `$AssertFunction` hook, broader generated-resource
