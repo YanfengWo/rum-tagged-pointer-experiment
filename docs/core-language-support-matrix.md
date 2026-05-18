@@ -311,7 +311,8 @@ once in its primary implementation group. Other groups may mention it as
   rule-list-aware keyed predicates with current operator-form and
   arity-diagnostic parity through `KeyExistsQ` / `KeyMemberQ` / `KeyFreeQ`,
   spec-ordered and threaded rule-list-normalizing `KeyTake` /
-  `KeyDrop` with current arity-diagnostic parity, broader
+  `KeyDrop` with current arity, invalid-input diagnostic, and empty-rule-list
+  parity, broader
   keyed-helper operator-form and arity-diagnostic parity across `KeyMap` /
   `KeyValueMap` / `KeySelect` / `KeySort` / `KeySortBy` /
   `AssociationMap` / `Merge` / `CountsBy` / `GroupBy`,

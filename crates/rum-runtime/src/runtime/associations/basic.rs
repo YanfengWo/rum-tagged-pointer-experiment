@@ -182,18 +182,21 @@ impl Session {
 
     pub(in crate::runtime) fn eval_key_take(
         &mut self,
-        head: &Expr,
+        _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         match args {
             [key_spec] => Ok(keyed_operator_form_slot_first("KeyTake", key_spec.clone())),
             [expr, key_spec] => {
-                let Some(value) = keyed_take_drop_result_for_expr("KeyTake", expr, key_spec, true)
-                else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
-                };
-
-                Ok(value)
+                match keyed_take_drop_result_for_expr("KeyTake", expr, key_spec, true) {
+                    Ok(value) => Ok(value),
+                    Err(error) => Ok(self.invalid_call_with_message(
+                        "KeyTake",
+                        args,
+                        error.tag,
+                        invalid_association_or_rule_list_message(&error.invalid),
+                    )),
+                }
             }
             _ => Ok(self.invalid_call_with_message(
                 "KeyTake",
@@ -206,18 +209,21 @@ impl Session {
 
     pub(in crate::runtime) fn eval_key_drop(
         &mut self,
-        head: &Expr,
+        _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         match args {
             [key_spec] => Ok(keyed_operator_form_slot_first("KeyDrop", key_spec.clone())),
             [expr, key_spec] => {
-                let Some(value) = keyed_take_drop_result_for_expr("KeyDrop", expr, key_spec, false)
-                else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
-                };
-
-                Ok(value)
+                match keyed_take_drop_result_for_expr("KeyDrop", expr, key_spec, false) {
+                    Ok(value) => Ok(value),
+                    Err(error) => Ok(self.invalid_call_with_message(
+                        "KeyDrop",
+                        args,
+                        error.tag,
+                        invalid_association_or_rule_list_message(&error.invalid),
+                    )),
+                }
             }
             _ => Ok(self.invalid_call_with_message(
                 "KeyDrop",
@@ -1167,13 +1173,26 @@ fn values_result_for_expr(expr: &Expr, wrapper: Option<&Expr>) -> Result<Expr, E
     Ok(Expr::call(system_expr("List"), values))
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct KeyTakeDropInvalid {
+    tag: &'static str,
+    invalid: Expr,
+}
+
 fn keyed_take_drop_result_for_expr(
     symbol: &'static str,
     expr: &Expr,
     key_spec: &Expr,
     keep_selected: bool,
-) -> Option<Expr> {
-    let selected_keys = parse_key_spec(key_spec)?;
+) -> Result<Expr, KeyTakeDropInvalid> {
+    let selected_keys = parse_key_spec(key_spec).ok_or_else(|| KeyTakeDropInvalid {
+        tag: "invrl",
+        invalid: expr.clone(),
+    })?;
+
+    if list_items(expr).is_some_and(|items| items.is_empty()) {
+        return Ok(Expr::call(system_expr(heads::structure::LIST), vec![]));
+    }
 
     if let Some(entries) = single_rule_or_keyed_entry_forms_from_expr(expr) {
         let filtered = if keep_selected {
@@ -1198,24 +1217,32 @@ fn keyed_take_drop_result_for_expr(
                 .collect()
         };
 
-        return Some(render_association_entry_forms_preserving_heads(filtered));
+        return Ok(render_association_entry_forms_preserving_heads(filtered));
     }
 
-    let items = list_items(expr)?;
-    if parse_association_entries(items).is_some() {
-        return None;
+    let Some(items) = list_items(expr) else {
+        return Err(KeyTakeDropInvalid {
+            tag: "invrl",
+            invalid: expr.clone(),
+        });
+    };
+
+    let mut results = Vec::with_capacity(items.len());
+    for item in items {
+        match keyed_take_drop_result_for_expr(symbol, item, key_spec, keep_selected) {
+            Ok(value) => results.push(value),
+            Err(error) => {
+                return Err(KeyTakeDropInvalid {
+                    tag: "invru",
+                    invalid: if keep_selected {
+                        expr.clone()
+                    } else {
+                        error.invalid
+                    },
+                });
+            }
+        }
     }
 
-    Some(Expr::call(
-        system_expr("List"),
-        items
-            .iter()
-            .map(|item| {
-                keyed_take_drop_result_for_expr(symbol, item, key_spec, keep_selected)
-                    .unwrap_or_else(|| {
-                        Expr::call(system_expr(symbol), vec![item.clone(), key_spec.clone()])
-                    })
-            })
-            .collect(),
-    ))
+    Ok(Expr::call(system_expr("List"), results))
 }

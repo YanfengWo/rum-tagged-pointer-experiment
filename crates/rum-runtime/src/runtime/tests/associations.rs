@@ -2462,12 +2462,82 @@ fn association_family_keeps_invalid_forms_unevaluated_or_reports_arity() {
     );
     assert_eq!(
         session
+            .eval_text("KeyTake[{}, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
             .eval_text("KeyDrop[List[a -> 1, b -> 2], a]")
             .unwrap()
             .value
             .to_string(),
         "Association[Rule[b, 2]]"
     );
+    assert_eq!(
+        session
+            .eval_text("KeyDrop[{}, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    let outcome = session.eval_text("KeyTake[a, b]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyTake[a, b]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyTake"
+            && message.tag == "invrl"
+            && message.text == "The argument a is not a valid Association or a list of rules."
+    }));
+    let outcome = session.eval_text("KeyDrop[a, b]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyDrop[a, b]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyDrop"
+            && message.tag == "invrl"
+            && message.text == "The argument a is not a valid Association or a list of rules."
+    }));
+    let outcome = session
+        .eval_text("KeyTake[{Association[a -> 1], x}, a]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyTake[List[Association[Rule[a, 1]], x], a]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyTake"
+            && message.tag == "invru"
+            && message.text
+                == "The argument List[Association[Rule[a, 1]], x] is not a valid Association or a list of rules."
+    }));
+    let outcome = session
+        .eval_text("KeyDrop[{Association[a -> 1], x}, a]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeyDrop[List[Association[Rule[a, 1]], x], a]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyDrop"
+            && message.tag == "invru"
+            && message.text == "The argument x is not a valid Association or a list of rules."
+    }));
+    let outcome = session.eval_text("KeyTake[{a -> 1, b}, a]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyTake[List[Rule[a, 1], b], a]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyTake"
+            && message.tag == "invru"
+            && message.text
+                == "The argument List[Rule[a, 1], b] is not a valid Association or a list of rules."
+    }));
+    let outcome = session.eval_text("KeyDrop[{a -> 1, b}, a]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeyDrop[List[Rule[a, 1], b], a]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeyDrop"
+            && message.tag == "invru"
+            && message.text == "The argument b is not a valid Association or a list of rules."
+    }));
     let outcome = session.eval_text("KeyMap[f, List[a -> 1]]").unwrap();
     assert_eq!(outcome.value.to_string(), "KeyMap[f, List[Rule[a, 1]]]");
     assert!(
