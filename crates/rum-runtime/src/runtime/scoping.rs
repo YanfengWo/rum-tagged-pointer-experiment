@@ -277,6 +277,10 @@ impl Session {
             status
         } else if let Some(value) = apply_association_to_args(head, args) {
             value
+        } else if let Some(invalid_key_application) =
+            self.invalid_callable_key_application(head, args)
+        {
+            return Ok(Some(invalid_key_application));
         } else if let Some(wrapper) = apply_callable_operator_wrapper_to_args(head, args) {
             wrapper
         } else if let Some(wrapper) = apply_callable_failsafe_wrapper_to_args(head, args) {
@@ -305,6 +309,39 @@ impl Session {
             Err(EvalError::Return { value }) => Ok(value),
             Err(error) => Err(error),
         }
+    }
+
+    fn invalid_callable_key_application(&mut self, head: &Expr, args: &[Expr]) -> Option<Expr> {
+        let Expr::Call {
+            head: key_head,
+            args: key_args,
+        } = head
+        else {
+            return None;
+        };
+        if !is_system_symbol_name(key_head, "Key") || key_args.len() != 1 {
+            return None;
+        }
+
+        let held = Expr::call(head.clone(), args.to_vec());
+        let [expr] = args else {
+            self.push_message(
+                "Key",
+                "argx",
+                format!(
+                    "{head} called with {} arguments; 1 argument is expected.",
+                    args.len()
+                ),
+            );
+            return Some(held);
+        };
+
+        if association_entries_from_expr(expr).is_none() {
+            self.push_message("Key", "invak", invalid_association_message(expr));
+            return Some(held);
+        }
+
+        None
     }
 
     pub(super) fn allocate_fresh_symbol(&mut self, symbol: &Symbol) -> Symbol {

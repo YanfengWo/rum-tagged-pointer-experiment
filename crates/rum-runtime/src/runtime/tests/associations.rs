@@ -434,6 +434,23 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
             .to_string(),
         "\"two\""
     );
+    let outcome = session.eval_text("Key[a][b]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Key[a][b]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Key"
+            && message.tag == "invak"
+            && message.text == "The argument b is not a valid Association."
+    }));
+    let outcome = session.eval_text("Key[a][Association[a -> 1], b]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "Key[a][Association[Rule[a, 1]], b]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Key"
+            && message.tag == "argx"
+            && message.text == "Key[a] called with 2 arguments; 1 argument is expected."
+    }));
     assert_eq!(
         session
             .eval_text("Association[a -> 1, b -> 2][a]")

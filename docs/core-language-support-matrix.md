@@ -338,7 +338,8 @@ once in its primary implementation group. Other groups may mention it as
   `AssociateTo` update specs over nested rule
   lists / associations with current delayed-entry preservation plus current
   mutation arity diagnostics, callable
-  `Key[key][assoc]` extraction plus current `Key` arity diagnostics, callable
+  `Key[key][assoc]` extraction plus current `Key` arity / invalid-application
+  diagnostics, callable
   `Association[...][key, ...]` nested lookup, `Lookup[key]` operator form, current
   `Part[..., Key[...]]` plus
   numeric/range association projection including missing-key propagation,
