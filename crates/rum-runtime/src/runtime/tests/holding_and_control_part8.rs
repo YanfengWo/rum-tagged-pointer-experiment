@@ -144,6 +144,40 @@ fn generated_confirmation_failures_expose_current_oracle_metadata_slice() {
     );
     assert_eq!(
         session
+            .eval_text("Failsafe[f][Missing[]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Enclose[Confirm[Missing[]], \"ConfirmationType\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"Confirm\""
+    );
+    assert_eq!(
+        session
+            .eval_text("Enclose[Confirm[Failure[\"tag\", Association[\"Code\" -> 1]]], \"ConfirmationType\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"Confirm\""
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "Enclose[Confirm[Failure[\"tag\", Association[\"Code\" -> 1]]], \"Message\"]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "\"A failure of type \\\"tag\\\" occurred.\""
+    );
+    assert_eq!(
+        session
             .eval_text("Enclose[Confirm[$Canceled], \"ConfirmationType\"]")
             .unwrap()
             .value

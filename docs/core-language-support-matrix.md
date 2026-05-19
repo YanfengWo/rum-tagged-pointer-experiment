@@ -449,8 +449,9 @@ once in its primary implementation group. Other groups may mention it as
   `ConfirmQuiet` / `ConfirmAssert` host-input resume coverage, and
   oracle-aligned generated `Confirm*` failure metadata for the current
   `MessageTemplate` / `MessageParameters` / `ConfirmationType` slice,
-  including `$Canceled` confirmation handling while keeping
-  `FailureQ[$Canceled]` false,
+  including `$Canceled` and all `Missing[...]` confirmation handling while
+  keeping `FailureQ[$Canceled]` false, plus `Confirm[Failure[...]]`
+  wrapping into `ConfirmationFailed` with the source failure message,
   suspension-safe `WithCleanup` body cleanup plus current
   cleanup-time host-input resume, throw/abort cleanup boundaries,
   oracle-aligned delayed `Failsafe` failure `MessageParameters` metadata,

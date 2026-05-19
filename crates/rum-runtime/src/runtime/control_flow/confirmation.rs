@@ -324,15 +324,20 @@ impl Session {
         info: Option<Expr>,
         tag: Expr,
     ) -> Result<Expr, EvalError> {
-        let failure = if info.is_none() && is_failure_expr(&value) {
-            value
-        } else {
-            build_confirm_failure(raw_expr, value, info)
-        };
-
         let _ = args;
+        if is_failure_expr(&value) {
+            let message_result = self.failure_property_value(&value, "Message");
+            return self.drive_internal_value(message_result, move |_, message| {
+                Err(EvalError::Thrown {
+                    value: build_confirm_failure_from_failure(raw_expr, message, info),
+                    tag,
+                    explicit_tag: true,
+                })
+            });
+        }
+
         Err(EvalError::Thrown {
-            value: failure,
+            value: build_confirm_failure(raw_expr, value, info),
             tag,
             explicit_tag: true,
         })
@@ -692,6 +697,16 @@ fn build_confirm_failure(raw_expr: Expr, value: Expr, info: Option<Expr>) -> Exp
     ])
 }
 
+fn build_confirm_failure_from_failure(raw_expr: Expr, message: Expr, info: Option<Expr>) -> Expr {
+    build_confirmation_failure(vec![
+        confirmation_entry("MessageTemplate", message),
+        confirmation_entry("MessageParameters", list_expr(Vec::new())),
+        confirmation_entry("ConfirmationType", Expr::string("Confirm")),
+        confirmation_delayed_entry("Expression", raw_expr),
+        confirmation_entry("Information", confirmation_info_expr(info)),
+    ])
+}
+
 fn build_confirm_by_failure(raw_expr: Expr, raw_function: Expr, info: Option<Expr>) -> Expr {
     build_confirmation_failure(vec![
         confirmation_entry(
@@ -844,9 +859,7 @@ pub(super) fn build_failsafe_failure(_function: Expr, _test: Expr, args: Vec<Exp
 }
 
 pub(super) fn is_confirmation_failure_like(expr: &Expr) -> bool {
-    is_failure_q_expr(expr)
-        || is_system_symbol_name(expr, "$Canceled")
-        || matches!(expr, Expr::Call { head, args } if is_system_symbol_name(head, "Missing") && !args.is_empty())
+    is_failure_q_expr(expr) || is_system_symbol_name(expr, "$Canceled") || is_missing_expr(expr)
 }
 
 fn rewrite_untagged_confirms(expr: Expr, tag: &Expr) -> Expr {

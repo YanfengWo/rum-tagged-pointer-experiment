@@ -277,8 +277,10 @@ This roadmap intentionally uses two levels of detail:
       assertion, and host-input subsets tracked in the support matrix. The
       latest pass adds oracle-aligned generated `Confirm*` failure metadata
       for the current `MessageTemplate` / `MessageParameters` /
-      `ConfirmationType` slice, `$Canceled` confirmation handling, and
-      broader confirmation-family host-input resume coverage, plus
+      `ConfirmationType` slice, `$Canceled` and all `Missing[...]`
+      confirmation handling, and broader confirmation-family host-input
+      resume coverage, `Confirm[Failure[...]]` wrapping with the source
+      failure message, plus
       `$AssertFunction = None` no-callback behavior and discarded callback
       return values.
       - [ ] Remaining cleanup/control long-tail: deeper `WithCleanup` /
