@@ -107,11 +107,23 @@ impl Parser {
                 let span = token.span.merge(expr.span());
                 Ok(SyntaxExpr::prefix(PrefixOp::Plus, expr, span))
             }
+            TokenKind::PlusPlus => {
+                self.bump();
+                let expr = self.parse_binary_expr(PrefixOp::PreIncrement.precedence())?;
+                let span = token.span.merge(expr.span());
+                Ok(SyntaxExpr::prefix(PrefixOp::PreIncrement, expr, span))
+            }
             TokenKind::Minus => {
                 self.bump();
                 let expr = self.parse_binary_expr(PrefixOp::Minus.precedence())?;
                 let span = token.span.merge(expr.span());
                 Ok(SyntaxExpr::prefix(PrefixOp::Minus, expr, span))
+            }
+            TokenKind::MinusMinus => {
+                self.bump();
+                let expr = self.parse_binary_expr(PrefixOp::PreDecrement.precedence())?;
+                let span = token.span.merge(expr.span());
+                Ok(SyntaxExpr::prefix(PrefixOp::PreDecrement, expr, span))
             }
             _ => self.parse_postfix_expr(),
         }
@@ -149,6 +161,12 @@ impl Parser {
             if let Some(increment_span) = self.consume_increment() {
                 let span = expr.span().merge(increment_span);
                 expr = SyntaxExpr::postfix(PostfixOp::Increment, expr, span);
+                continue;
+            }
+
+            if let Some(decrement_span) = self.consume_decrement() {
+                let span = expr.span().merge(decrement_span);
+                expr = SyntaxExpr::postfix(PostfixOp::Decrement, expr, span);
                 continue;
             }
 

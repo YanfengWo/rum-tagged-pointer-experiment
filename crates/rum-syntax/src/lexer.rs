@@ -111,13 +111,23 @@ impl<'a> Lexer<'a> {
                     self.single(TokenKind::Plus)
                 }
             }
-            '*' => self.single(TokenKind::Star),
+            '*' => {
+                if self.consume_str("*=") {
+                    TokenKind::StarEqual
+                } else {
+                    self.single(TokenKind::Star)
+                }
+            }
             '^' => self.single(TokenKind::Caret),
             '&' => self.single(TokenKind::Ampersand),
             '#' => self.single(TokenKind::Hash),
             '-' => {
                 if self.consume_str("->") {
                     TokenKind::Arrow
+                } else if self.consume_str("--") {
+                    TokenKind::MinusMinus
+                } else if self.consume_str("-=") {
+                    TokenKind::MinusEqual
                 } else {
                     self.single(TokenKind::Minus)
                 }
@@ -146,6 +156,8 @@ impl<'a> Lexer<'a> {
             '/' => {
                 if self.consume_str("//.") {
                     TokenKind::ReplaceRepeated
+                } else if self.consume_str("/=") {
+                    TokenKind::SlashEqual
                 } else if self.consume_str("/.") {
                     TokenKind::ReplaceAll
                 } else if self.consume_str("/:") {

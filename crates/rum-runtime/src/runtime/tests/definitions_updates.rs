@@ -22,11 +22,27 @@ fn held_update_builtins_mutate_immediate_symbol_values() {
     );
     assert_eq!(
         session
+            .eval_text("x = 10; {SubtractFrom[x, 2], TimesBy[x, 3], DivideBy[x, 4], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[8, 24, 6, 6]"
+    );
+    assert_eq!(
+        session
             .eval_text("x = 1; {Increment[x], x}")
             .unwrap()
             .value
             .to_string(),
         "List[1, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 1; {PreIncrement[x], x, Decrement[x], x, PreDecrement[x], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 2, 2, 1, 0, 0]"
     );
 }
 
@@ -36,11 +52,13 @@ fn held_update_syntax_mutates_module_locals() {
 
     assert_eq!(
         session
-            .eval_text("Module[{l = {}, i = 0}, AppendTo[l, a]; i++; i += 2; {l, i}]")
+            .eval_text(
+                "Module[{l = {}, i = 0}, AppendTo[l, a]; ++i; i++; i += 2; i -= 1; i *= 3; i /= 3; i--; --i; {l, i}]"
+            )
             .unwrap()
             .value
             .to_string(),
-        "List[List[a], 3]"
+        "List[List[a], 1]"
     );
 }
 
@@ -53,15 +71,20 @@ fn held_updates_report_missing_or_invalid_targets_without_writing() {
     assert_eq!(missing.messages[0].symbol, "AddTo");
     assert_eq!(missing.messages[0].tag, "rvalue");
 
+    let missing_pre = session.eval_text("PreIncrement[y]").unwrap();
+    assert_eq!(missing_pre.value.to_string(), "PreIncrement[y]");
+    assert_eq!(missing_pre.messages[0].symbol, "PreIncrement");
+    assert_eq!(missing_pre.messages[0].tag, "rvalue");
+
     let invalid_append = session.eval_text("l = 1; AppendTo[l, a]").unwrap();
     assert_eq!(invalid_append.value.to_string(), "AppendTo[l, a]");
     assert_eq!(invalid_append.messages[0].symbol, "AppendTo");
     assert_eq!(invalid_append.messages[0].tag, "normal");
     assert_eq!(session.eval_text("l").unwrap().value.to_string(), "1");
 
-    let invalid_target = session.eval_text("AddTo[f[1], 2]").unwrap();
-    assert_eq!(invalid_target.value.to_string(), "AddTo[f[1], 2]");
-    assert_eq!(invalid_target.messages[0].symbol, "AddTo");
+    let invalid_target = session.eval_text("SubtractFrom[f[1], 2]").unwrap();
+    assert_eq!(invalid_target.value.to_string(), "SubtractFrom[f[1], 2]");
+    assert_eq!(invalid_target.messages[0].symbol, "SubtractFrom");
     assert_eq!(invalid_target.messages[0].tag, "argform");
 }
 

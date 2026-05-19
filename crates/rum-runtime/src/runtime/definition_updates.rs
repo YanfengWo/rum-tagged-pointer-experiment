@@ -27,6 +27,50 @@ impl Session {
         self.finish_held_update(target, update, HeldUpdateReturn::Updated)
     }
 
+    pub(super) fn eval_subtract_from(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [target_expr, decrement] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("SubtractFrom", args, 2));
+        };
+
+        let (target, current) =
+            match self.current_held_update_value("SubtractFrom", target_expr, args) {
+                HeldUpdateCurrent::Ready { target, current } => (target, current),
+                HeldUpdateCurrent::Immediate(value) => return Ok(value),
+            };
+
+        let update = Expr::call(system_expr("Subtract"), vec![current, decrement.clone()]);
+        self.finish_held_update(target, update, HeldUpdateReturn::Updated)
+    }
+
+    pub(super) fn eval_times_by(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [target_expr, factor] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("TimesBy", args, 2));
+        };
+
+        let (target, current) = match self.current_held_update_value("TimesBy", target_expr, args) {
+            HeldUpdateCurrent::Ready { target, current } => (target, current),
+            HeldUpdateCurrent::Immediate(value) => return Ok(value),
+        };
+
+        let update = Expr::call(system_expr("Times"), vec![current, factor.clone()]);
+        self.finish_held_update(target, update, HeldUpdateReturn::Updated)
+    }
+
+    pub(super) fn eval_divide_by(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [target_expr, divisor] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("DivideBy", args, 2));
+        };
+
+        let (target, current) = match self.current_held_update_value("DivideBy", target_expr, args)
+        {
+            HeldUpdateCurrent::Ready { target, current } => (target, current),
+            HeldUpdateCurrent::Immediate(value) => return Ok(value),
+        };
+
+        let update = Expr::call(system_expr("Divide"), vec![current, divisor.clone()]);
+        self.finish_held_update(target, update, HeldUpdateReturn::Updated)
+    }
+
     pub(super) fn eval_append_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let [target_expr, item] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("AppendTo", args, 2));
@@ -73,6 +117,53 @@ impl Session {
         );
 
         self.finish_held_update(target, update, HeldUpdateReturn::Previous(current))
+    }
+
+    pub(super) fn eval_decrement(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        self.eval_unary_increment_update("Decrement", args, Expr::integer(BigInt::from(-1)), true)
+    }
+
+    pub(super) fn eval_pre_increment(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        self.eval_unary_increment_update(
+            "PreIncrement",
+            args,
+            Expr::integer(BigInt::from(1)),
+            false,
+        )
+    }
+
+    pub(super) fn eval_pre_decrement(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        self.eval_unary_increment_update(
+            "PreDecrement",
+            args,
+            Expr::integer(BigInt::from(-1)),
+            false,
+        )
+    }
+
+    fn eval_unary_increment_update(
+        &mut self,
+        operator: &'static str,
+        args: &[Expr],
+        delta: Expr,
+        return_previous: bool,
+    ) -> Result<Expr, EvalError> {
+        let [target_expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count(operator, args, 1));
+        };
+
+        let (target, current) = match self.current_held_update_value(operator, target_expr, args) {
+            HeldUpdateCurrent::Ready { target, current } => (target, current),
+            HeldUpdateCurrent::Immediate(value) => return Ok(value),
+        };
+        let update = Expr::call(system_expr("Plus"), vec![current.clone(), delta]);
+        let return_value = if return_previous {
+            HeldUpdateReturn::Previous(current)
+        } else {
+            HeldUpdateReturn::Updated
+        };
+
+        self.finish_held_update(target, update, return_value)
     }
 
     fn current_held_update_value(

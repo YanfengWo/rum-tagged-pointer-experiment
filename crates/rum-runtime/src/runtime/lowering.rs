@@ -171,6 +171,8 @@ where
             heads::arithmetic::TIMES,
             vec![Expr::integer(BigInt::from(-1)), lowered],
         )),
+        PrefixOp::PreIncrement => Ok(canonical_call("PreIncrement", vec![lowered])),
+        PrefixOp::PreDecrement => Ok(canonical_call("PreDecrement", vec![lowered])),
     }
 }
 
@@ -211,6 +213,12 @@ where
             vec![lowered_lhs, lowered_rhs],
         )),
         BinaryOp::AddTo => Ok(canonical_call("AddTo", vec![lowered_lhs, lowered_rhs])),
+        BinaryOp::SubtractFrom => Ok(canonical_call(
+            "SubtractFrom",
+            vec![lowered_lhs, lowered_rhs],
+        )),
+        BinaryOp::TimesBy => Ok(canonical_call("TimesBy", vec![lowered_lhs, lowered_rhs])),
+        BinaryOp::DivideBy => Ok(canonical_call("DivideBy", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::SetDelayed => Ok(canonical_call(
             heads::rules::SET_DELAYED,
             vec![lowered_lhs, lowered_rhs],
@@ -324,6 +332,7 @@ where
     match op {
         PostfixOp::Function => Ok(canonical_call(heads::functions::FUNCTION, vec![lowered])),
         PostfixOp::Increment => Ok(canonical_call("Increment", vec![lowered])),
+        PostfixOp::Decrement => Ok(canonical_call("Decrement", vec![lowered])),
         PostfixOp::Unset => Ok(canonical_call(heads::rules::UNSET, vec![lowered])),
     }
 }

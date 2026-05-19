@@ -133,7 +133,11 @@ impl Parser {
     pub(super) fn token_starts_expression(&self) -> bool {
         matches!(
             self.current().kind,
-            TokenKind::Plus | TokenKind::Minus | TokenKind::Span
+            TokenKind::Plus
+                | TokenKind::PlusPlus
+                | TokenKind::Minus
+                | TokenKind::MinusMinus
+                | TokenKind::Span
         ) || self.token_starts_primary()
     }
 
@@ -144,6 +148,9 @@ impl Parser {
             TokenKind::TagSet => Some(BinaryOp::TagSet),
             TokenKind::Set => Some(BinaryOp::Set),
             TokenKind::PlusEqual => Some(BinaryOp::AddTo),
+            TokenKind::MinusEqual => Some(BinaryOp::SubtractFrom),
+            TokenKind::StarEqual => Some(BinaryOp::TimesBy),
+            TokenKind::SlashEqual => Some(BinaryOp::DivideBy),
             TokenKind::SetDelayed => Some(BinaryOp::SetDelayed),
             TokenKind::ReplaceAll => Some(BinaryOp::ReplaceAll),
             TokenKind::ReplaceRepeated => Some(BinaryOp::ReplaceRepeated),
@@ -174,6 +181,14 @@ impl Parser {
 
     pub(super) fn consume_increment(&mut self) -> Option<Span> {
         if matches!(self.current().kind, TokenKind::PlusPlus) {
+            Some(self.bump())
+        } else {
+            None
+        }
+    }
+
+    pub(super) fn consume_decrement(&mut self) -> Option<Span> {
+        if matches!(self.current().kind, TokenKind::MinusMinus) {
             Some(self.bump())
         } else {
             None

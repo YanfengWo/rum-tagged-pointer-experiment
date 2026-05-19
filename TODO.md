@@ -294,6 +294,12 @@ This roadmap intentionally uses two levels of detail:
       - [ ] Remaining assertion/I/O long-tail: obscure `Assert` controls and
         fuller host-I/O option, prompt, request, and parse/error semantics.
     - [ ] `CL-01`: remaining part-spec / `Heads` parity beyond the current atom `All` / span-boundary selector alignment, current invalid and out-of-range `Part` / `Extract` selector diagnostics, current `Part` selector-list boundary, current `Extract` nested position-list selector subset, empty-expression plus association-aware `Depth` parity, `Level` scalar-zero plus standard-`All` levelspec parity, empty-expression negative-level depth alignment plus current oracle-locked `Heads` traversal edges across the current structural walkers, current `Not[Not[...]]` and relational-`Not` simplifications, flat nested `And` / `Or` residual simplification, first-pass `Xor` / `Equivalent` boolean/repeated-term reductions, first-pass `Implies` simplification including identical-argument tautology, current short-circuit `Nand` / `Nor`, first-pass `Boole` truth-to-integer conversion, mixed-symbolic `Equal` / `Unequal` chain boundaries plus current numeric order-chain endpoint contradiction detection with nonnumeric order comparisons kept conservative, and nonatomic `OrderedQ` argument-order parity, plus deeper truth/comparison breadth beyond the current exact-numeric order-chain reductions
+    - [ ] `CL-02`: continue closing small definition/update-family gaps.
+      Current follow-up adds symbol-target `SubtractFrom`, `TimesBy`,
+      `DivideBy`, `Decrement`, `PreIncrement`, and `PreDecrement` plus their
+      common update syntax lowering. Remaining non-blocking gaps include
+      part-target updates and still-planned `ApplyTo`, `PrependTo`, `ValueQ`,
+      `Remove`, `Information`, and `DefaultValues`.
   - [ ] Wave 4: polish pass across `CL-04`, `CL-08`, and `CL-09`
     - [ ] `CL-04`: remaining threading / higher-order traversal / sparse array parity beyond the current negative-level empty-expression depth alignment for `Apply` / `Map` traversal families
     - [ ] `CL-08`: broader `Names` regex, `SyntaxInformation` properties, and package-tooling compatibility polish

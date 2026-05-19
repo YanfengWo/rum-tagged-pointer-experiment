@@ -506,6 +506,24 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::AddTo,
     ),
     BuiltinSpec::ordinary_with_hold(
+        "SubtractFrom",
+        "Subtracts an evaluated decrement from a held symbol target and stores the result.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::SubtractFrom,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "TimesBy",
+        "Multiplies a held symbol target by an evaluated factor and stores the result.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::TimesBy,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "DivideBy",
+        "Divides a held symbol target by an evaluated divisor and stores the result.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::DivideBy,
+    ),
+    BuiltinSpec::ordinary_with_hold(
         "AppendTo",
         "Appends an evaluated item to a held symbol target and stores the result.",
         HoldAttribute::HoldFirst,
@@ -516,6 +534,24 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         "Increments a held symbol target and returns its previous value.",
         HoldAttribute::HoldFirst,
         BuiltinHandler::Increment,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Decrement",
+        "Decrements a held symbol target and returns its previous value.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::Decrement,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "PreIncrement",
+        "Increments a held symbol target and returns the updated value.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::PreIncrement,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "PreDecrement",
+        "Decrements a held symbol target and returns the updated value.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::PreDecrement,
     ),
     BuiltinSpec::special(
         "SetDelayed",

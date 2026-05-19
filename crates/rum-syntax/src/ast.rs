@@ -188,6 +188,8 @@ pub enum BlankKind {
 pub enum PrefixOp {
     Plus,
     Minus,
+    PreIncrement,
+    PreDecrement,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -197,6 +199,9 @@ pub enum BinaryOp {
     TagSet,
     Set,
     AddTo,
+    SubtractFrom,
+    TimesBy,
+    DivideBy,
     SetDelayed,
     ReplaceAll,
     ReplaceRepeated,
@@ -219,6 +224,7 @@ pub enum BinaryOp {
 pub enum PostfixOp {
     Function,
     Increment,
+    Decrement,
     Unset,
 }
 
@@ -237,11 +243,16 @@ impl PrefixOp {
         match self {
             Self::Plus => "+",
             Self::Minus => "-",
+            Self::PreIncrement => "++",
+            Self::PreDecrement => "--",
         }
     }
 
     pub(crate) fn precedence(self) -> u8 {
-        65
+        match self {
+            Self::Plus | Self::Minus => 65,
+            Self::PreIncrement | Self::PreDecrement => 80,
+        }
     }
 }
 
@@ -253,6 +264,9 @@ impl BinaryOp {
             Self::TagSet => "/:",
             Self::Set => "=",
             Self::AddTo => "+=",
+            Self::SubtractFrom => "-=",
+            Self::TimesBy => "*=",
+            Self::DivideBy => "/=",
             Self::SetDelayed => ":=",
             Self::ReplaceAll => "/.",
             Self::ReplaceRepeated => "//.",
@@ -278,7 +292,7 @@ impl BinaryOp {
             Self::MessageName => 75,
             Self::TagSet => 5,
             Self::Set | Self::SetDelayed => 10,
-            Self::AddTo => 10,
+            Self::AddTo | Self::SubtractFrom | Self::TimesBy | Self::DivideBy => 10,
             Self::ReplaceAll | Self::ReplaceRepeated => 20,
             Self::Rule | Self::RuleDelayed => 30,
             Self::Condition => 40,
@@ -297,6 +311,9 @@ impl BinaryOp {
                 | Self::TagSet
                 | Self::Set
                 | Self::AddTo
+                | Self::SubtractFrom
+                | Self::TimesBy
+                | Self::DivideBy
                 | Self::SetDelayed
                 | Self::Rule
                 | Self::RuleDelayed
@@ -315,6 +332,7 @@ impl PostfixOp {
         match self {
             Self::Function => "&",
             Self::Increment => "++",
+            Self::Decrement => "--",
             Self::Unset => "=.",
         }
     }
@@ -322,7 +340,7 @@ impl PostfixOp {
     pub(crate) fn precedence(self) -> u8 {
         match self {
             Self::Function => 5,
-            Self::Increment => 80,
+            Self::Increment | Self::Decrement => 80,
             Self::Unset => 10,
         }
     }
