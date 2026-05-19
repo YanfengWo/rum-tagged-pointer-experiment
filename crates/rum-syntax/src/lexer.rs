@@ -156,6 +156,8 @@ impl<'a> Lexer<'a> {
             '/' => {
                 if self.consume_str("//.") {
                     TokenKind::ReplaceRepeated
+                } else if self.consume_str("//=") {
+                    TokenKind::SlashSlashEqual
                 } else if self.consume_str("/=") {
                     TokenKind::SlashEqual
                 } else if self.consume_str("/.") {

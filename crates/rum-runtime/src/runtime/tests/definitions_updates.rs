@@ -38,6 +38,22 @@ fn held_update_builtins_mutate_immediate_symbol_values() {
     );
     assert_eq!(
         session
+            .eval_text("x = 2; {ApplyTo[x, f], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[2], f[2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 2; {x //= Function[Plus[Slot[1], 3]], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[5, 5]"
+    );
+    assert_eq!(
+        session
             .eval_text("x = 1; {Increment[x], x}")
             .unwrap()
             .value
@@ -83,6 +99,11 @@ fn held_updates_report_missing_or_invalid_targets_without_writing() {
     assert_eq!(missing_pre.value.to_string(), "PreIncrement[y]");
     assert_eq!(missing_pre.messages[0].symbol, "PreIncrement");
     assert_eq!(missing_pre.messages[0].tag, "rvalue");
+
+    let missing_apply = session.eval_text("ApplyTo[y, f]").unwrap();
+    assert_eq!(missing_apply.value.to_string(), "ApplyTo[y, f]");
+    assert_eq!(missing_apply.messages[0].symbol, "ApplyTo");
+    assert_eq!(missing_apply.messages[0].tag, "rvalue");
 
     let invalid_append = session.eval_text("l = 1; AppendTo[l, a]").unwrap();
     assert_eq!(invalid_append.value.to_string(), "AppendTo[l, a]");

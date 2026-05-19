@@ -219,6 +219,7 @@ where
         )),
         BinaryOp::TimesBy => Ok(canonical_call("TimesBy", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::DivideBy => Ok(canonical_call("DivideBy", vec![lowered_lhs, lowered_rhs])),
+        BinaryOp::ApplyTo => Ok(canonical_call("ApplyTo", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::SetDelayed => Ok(canonical_call(
             heads::rules::SET_DELAYED,
             vec![lowered_lhs, lowered_rhs],

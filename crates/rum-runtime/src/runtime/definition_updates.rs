@@ -71,6 +71,20 @@ impl Session {
         self.finish_held_update(target, update, HeldUpdateReturn::Updated)
     }
 
+    pub(super) fn eval_apply_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [target_expr, function] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("ApplyTo", args, 2));
+        };
+
+        let (target, current) = match self.current_held_update_value("ApplyTo", target_expr, args) {
+            HeldUpdateCurrent::Ready { target, current } => (target, current),
+            HeldUpdateCurrent::Immediate(value) => return Ok(value),
+        };
+
+        let update = Expr::call(function.clone(), vec![current]);
+        self.finish_held_update(target, update, HeldUpdateReturn::Updated)
+    }
+
     pub(super) fn eval_append_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let [target_expr, item] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("AppendTo", args, 2));

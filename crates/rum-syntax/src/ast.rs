@@ -202,6 +202,7 @@ pub enum BinaryOp {
     SubtractFrom,
     TimesBy,
     DivideBy,
+    ApplyTo,
     SetDelayed,
     ReplaceAll,
     ReplaceRepeated,
@@ -267,6 +268,7 @@ impl BinaryOp {
             Self::SubtractFrom => "-=",
             Self::TimesBy => "*=",
             Self::DivideBy => "/=",
+            Self::ApplyTo => "//=",
             Self::SetDelayed => ":=",
             Self::ReplaceAll => "/.",
             Self::ReplaceRepeated => "//.",
@@ -292,7 +294,7 @@ impl BinaryOp {
             Self::MessageName => 75,
             Self::TagSet => 5,
             Self::Set | Self::SetDelayed => 10,
-            Self::AddTo | Self::SubtractFrom | Self::TimesBy | Self::DivideBy => 10,
+            Self::AddTo | Self::SubtractFrom | Self::TimesBy | Self::DivideBy | Self::ApplyTo => 10,
             Self::ReplaceAll | Self::ReplaceRepeated => 20,
             Self::Rule | Self::RuleDelayed => 30,
             Self::Condition => 40,
@@ -314,6 +316,7 @@ impl BinaryOp {
                 | Self::SubtractFrom
                 | Self::TimesBy
                 | Self::DivideBy
+                | Self::ApplyTo
                 | Self::SetDelayed
                 | Self::Rule
                 | Self::RuleDelayed

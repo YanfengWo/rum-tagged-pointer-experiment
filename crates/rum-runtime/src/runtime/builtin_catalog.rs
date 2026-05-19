@@ -524,6 +524,12 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::DivideBy,
     ),
     BuiltinSpec::ordinary_with_hold(
+        "ApplyTo",
+        "Applies an evaluated function to a held symbol target and stores the result.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::ApplyTo,
+    ),
+    BuiltinSpec::ordinary_with_hold(
         "AppendTo",
         "Appends an evaluated item to a held symbol target and stores the result.",
         HoldAttribute::HoldFirst,

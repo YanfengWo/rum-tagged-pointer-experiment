@@ -151,6 +151,7 @@ impl Parser {
             TokenKind::MinusEqual => Some(BinaryOp::SubtractFrom),
             TokenKind::StarEqual => Some(BinaryOp::TimesBy),
             TokenKind::SlashEqual => Some(BinaryOp::DivideBy),
+            TokenKind::SlashSlashEqual => Some(BinaryOp::ApplyTo),
             TokenKind::SetDelayed => Some(BinaryOp::SetDelayed),
             TokenKind::ReplaceAll => Some(BinaryOp::ReplaceAll),
             TokenKind::ReplaceRepeated => Some(BinaryOp::ReplaceRepeated),

@@ -170,11 +170,11 @@ once in its primary implementation group. Other groups may mention it as
   attribute family, and `Unique[...]` currently covers the zero-argument,
   string-prefix, and symbol-prefix forms without the fuller list / attribute
   forms; the held update family currently covers symbol-target `AddTo`,
-  `SubtractFrom`, `TimesBy`, `DivideBy`, `AppendTo`, `Increment`,
+  `SubtractFrom`, `TimesBy`, `DivideBy`, `ApplyTo`, `AppendTo`, `Increment`,
   `Decrement`, `PreIncrement`, `PreDecrement`, and `PrependTo`, including
-  the current `+=` / `-=` / `*=` / `/=` / postfix `++` / postfix `--` /
-  prefix `++` / prefix `--` lowering, but not fuller part-target or remaining
-  update-family parity, while the broader protection /
+  the current `+=` / `-=` / `*=` / `/=` / `//=` / postfix `++` /
+  postfix `--` / prefix `++` / prefix `--` lowering, but not fuller
+  part-target or remaining update-family parity, while the broader protection /
   option / package-tooling layers are cross-tracked in `CL-08`
 - `planned`: fuller assignment/update family and broader
   definition-introspection parity
@@ -186,9 +186,9 @@ once in its primary implementation group. Other groups may mention it as
   `With`, `Module`, `Block`, `TagSet`, `Flat`, `HoldFirst`,
   `Listable`, `Orderless`
 - `partial`: `Attributes`, `AddTo`, `SubtractFrom`, `TimesBy`, `DivideBy`,
-  `AppendTo`, `Increment`, `Decrement`, `PreIncrement`, `PreDecrement`,
-  `PrependTo`, `Unique`
-- `planned`: `ApplyTo`, `DefaultValues`, `Information`, `Remove`, `ValueQ`
+  `ApplyTo`, `AppendTo`, `Increment`, `Decrement`, `PreIncrement`,
+  `PreDecrement`, `PrependTo`, `Unique`
+- `planned`: `DefaultValues`, `Information`, `Remove`, `ValueQ`
 - `cross-tracked elsewhere`: `Alternatives`, `BlankSequence`, `Function`,
   `Optional`, `Check`, `Confirm`, `CompoundExpression`, `Enclose`, `OptionValue`,
   `Options`, `OptionsPattern`, `Protect`, `Protected`, `Quiet`, `Rule`,

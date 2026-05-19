@@ -50,6 +50,7 @@ fn lowering_golden_forms_cover_rules_patterns_slots_and_scoping() {
         ("x -= 1", "SubtractFrom[x, 1]"),
         ("x *= 2", "TimesBy[x, 2]"),
         ("x /= 2", "DivideBy[x, 2]"),
+        ("x //= f", "ApplyTo[x, f]"),
         ("x++", "Increment[x]"),
         ("x--", "Decrement[x]"),
         ("++x", "PreIncrement[x]"),

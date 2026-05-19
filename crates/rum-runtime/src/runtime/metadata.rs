@@ -443,6 +443,7 @@ pub enum BuiltinHandler {
     SubtractFrom,
     TimesBy,
     DivideBy,
+    ApplyTo,
     AppendTo,
     PrependTo,
     Increment,
