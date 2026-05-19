@@ -452,6 +452,7 @@ once in its primary implementation group. Other groups may mention it as
   including `$Canceled` and all `Missing[...]` confirmation handling while
   keeping `FailureQ[$Canceled]` false, plus `Confirm[Failure[...]]`
   wrapping into `ConfirmationFailed` with the source failure message,
+  including delayed source `MessageTemplate` host-input resume,
   suspension-safe `WithCleanup` body cleanup plus current
   cleanup-time host-input resume, throw/abort cleanup boundaries,
   oracle-aligned delayed `Failsafe` failure `MessageParameters` metadata,
@@ -469,8 +470,8 @@ once in its primary implementation group. Other groups may mention it as
   and cleanup-time `Throw::nocatch` diagnostics with cleanup-before-primary
   ordering plus explicit `Throw[..., None]` spelling, top-level
   `Break::nofwd` / `Continue::nofwd` diagnostics, and abort/failsafe resume
-  through host input, but richer held/cleanup corners and deeper status parity
-  are still pending
+  through host input; treat richer held/cleanup corners and deeper status
+  parity as non-blocking long-tail rather than active mainline blockers
 - `planned`: broader failure values, abort-protection parity, external
   interaction builtins, and deeper cleanup/exception compatibility
 
@@ -485,8 +486,9 @@ once in its primary implementation group. Other groups may mention it as
   `Abort`, `CheckAbort`, `PropagateAborts`, `AbortProtect`, `Assert`,
   `BlockRandom`, `InputString`, `Input`, `Print`, `Pause`, `$Aborted`,
   `$Canceled`, and `$Failed` in the current first-pass subset
-- `planned`: remaining deeper `WithCleanup` / `Failsafe` / `CheckAbort` /
-  `AbortProtect` parity, richer `Assert` controls beyond the current session
+- `planned`: non-blocking long-tail items include remaining deeper
+  `WithCleanup` / `Failsafe` / `CheckAbort` / `AbortProtect` parity, richer
+  `Assert` controls beyond the current session
   flag plus `$AssertFunction` hook, broader generated-resource
   `TerminatedEvaluation` parity beyond the current recursion/fixed-point limit
   subset, and fuller host-I/O semantics

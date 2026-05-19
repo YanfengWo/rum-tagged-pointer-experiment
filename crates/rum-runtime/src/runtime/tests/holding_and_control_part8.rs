@@ -219,6 +219,34 @@ fn generated_confirmation_failures_expose_current_oracle_metadata_slice() {
 }
 
 #[test]
+fn confirm_failure_wrapping_resumes_delayed_source_failure_message_template() {
+    let mut session = Session::new();
+
+    session
+        .eval_text("g::argx := StringJoin[InputString[\"msg: \"], \" `1`\"]")
+        .unwrap();
+    let failure = session
+        .eval_request("Enclose[Confirm[Failure[\"tag\", {\"MessageTemplate\" -> MessageName[g, \"argx\"], \"MessageParameters\" -> {x}}]], \"MessageTemplate\"]")
+        .expect_err("Confirm should suspend while rendering the source Failure message");
+    expect_input_prompt(failure, "msg: ");
+
+    let response = session
+        .resume_eval_request_with_input("bad")
+        .expect("resuming source Failure message rendering should finish Confirm wrapping");
+    assert_eq!(response.value.to_string(), "\"bad x\"");
+
+    let failure = session
+        .eval_request("Enclose[Confirm[Failure[\"tag\", {\"MessageTemplate\" -> MessageName[g, \"argx\"], \"MessageParameters\" -> {x}}]], \"MessageParameters\"]")
+        .expect_err("Confirm should suspend before producing wrapped message parameters");
+    expect_input_prompt(failure, "msg: ");
+
+    let response = session
+        .resume_eval_request_with_input("ignored")
+        .expect("resuming source Failure message rendering should expose wrapped parameters");
+    assert_eq!(response.value.to_string(), "List[]");
+}
+
+#[test]
 fn assert_function_none_restores_normal_assert_control() {
     let mut session = Session::new();
 

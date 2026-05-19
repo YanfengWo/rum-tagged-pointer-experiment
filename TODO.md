@@ -224,7 +224,7 @@ This roadmap intentionally uses two levels of detail:
 - [ ] `CL-03` Rules, patterns, and tree walkers
 - [ ] `CL-04` Functional and list combinators
 - [x] `CL-05` Associations and keyed data
-- [ ] `CL-06` Procedural control, exceptions, and failure flow
+- [x] `CL-06` Procedural control, exceptions, and failure flow
 - [x] `CL-07` String language
 - [x] `CL-08` Package, namespace, options, and protection tooling
   - [x] land first-pass `Protected` state on top of the shared attribute model, including `Protect` / `Unprotect` and protected-symbol write barriers across definition/message/clear paths
@@ -272,7 +272,7 @@ This roadmap intentionally uses two levels of detail:
       - [ ] Treat fuller `Missing` forms and any broader association semantics beyond the current keyed-lookup / `DeleteMissing` subset as future feature breadth, not a current CL-05 mainline blocker.
       - [ ] Keep association source/test splitting as architecture debt tracked by the source-size audit, not as a CL-05 semantic blocker.
   - [ ] Wave 3: `CL-06` and `CL-01`
-    - [ ] `CL-06`: current mainline is substantially covered by the
+    - [x] `CL-06`: close the current mainline as substantially covered by the
       implemented control-flow, cleanup/abort, confirmation, status-object,
       assertion, and host-input subsets tracked in the support matrix. The
       latest pass adds oracle-aligned generated `Confirm*` failure metadata
@@ -280,9 +280,10 @@ This roadmap intentionally uses two levels of detail:
       `ConfirmationType` slice, `$Canceled` and all `Missing[...]`
       confirmation handling, and broader confirmation-family host-input
       resume coverage, `Confirm[Failure[...]]` wrapping with the source
-      failure message, plus
+      failure message including delayed source `MessageTemplate` resume, plus
       `$AssertFunction = None` no-callback behavior and discarded callback
-      return values.
+      return values. Treat the remaining items below as non-blocking
+      long-tail parity work rather than active Wave 3 blockers.
       - [ ] Remaining cleanup/control long-tail: deeper `WithCleanup` /
         `Failsafe` / `CheckAbort` / `AbortProtect` parity beyond the current
         suspension-safe cleanup, throw/abort cleanup boundaries, abort
