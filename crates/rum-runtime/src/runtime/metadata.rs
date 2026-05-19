@@ -444,6 +444,7 @@ pub enum BuiltinHandler {
     TimesBy,
     DivideBy,
     AppendTo,
+    PrependTo,
     Increment,
     Decrement,
     PreIncrement,

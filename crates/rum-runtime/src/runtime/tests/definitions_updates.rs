@@ -14,6 +14,14 @@ fn held_update_builtins_mutate_immediate_symbol_values() {
     );
     assert_eq!(
         session
+            .eval_text("l = {b}; {PrependTo[l, a], l}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a, b], List[a, b]]"
+    );
+    assert_eq!(
+        session
             .eval_text("x = 1; {AddTo[x, 2], x}")
             .unwrap()
             .value
@@ -80,6 +88,12 @@ fn held_updates_report_missing_or_invalid_targets_without_writing() {
     assert_eq!(invalid_append.value.to_string(), "AppendTo[l, a]");
     assert_eq!(invalid_append.messages[0].symbol, "AppendTo");
     assert_eq!(invalid_append.messages[0].tag, "normal");
+    assert_eq!(session.eval_text("l").unwrap().value.to_string(), "1");
+
+    let invalid_prepend = session.eval_text("l = 1; PrependTo[l, a]").unwrap();
+    assert_eq!(invalid_prepend.value.to_string(), "PrependTo[l, a]");
+    assert_eq!(invalid_prepend.messages[0].symbol, "PrependTo");
+    assert_eq!(invalid_prepend.messages[0].tag, "normal");
     assert_eq!(session.eval_text("l").unwrap().value.to_string(), "1");
 
     let invalid_target = session.eval_text("SubtractFrom[f[1], 2]").unwrap();

@@ -171,10 +171,10 @@ once in its primary implementation group. Other groups may mention it as
   string-prefix, and symbol-prefix forms without the fuller list / attribute
   forms; the held update family currently covers symbol-target `AddTo`,
   `SubtractFrom`, `TimesBy`, `DivideBy`, `AppendTo`, `Increment`,
-  `Decrement`, `PreIncrement`, and `PreDecrement`, including the current
-  `+=` / `-=` / `*=` / `/=` / postfix `++` / postfix `--` / prefix `++` /
-  prefix `--` lowering, but not fuller part-target or remaining update-family
-  parity, while the broader protection /
+  `Decrement`, `PreIncrement`, `PreDecrement`, and `PrependTo`, including
+  the current `+=` / `-=` / `*=` / `/=` / postfix `++` / postfix `--` /
+  prefix `++` / prefix `--` lowering, but not fuller part-target or remaining
+  update-family parity, while the broader protection /
   option / package-tooling layers are cross-tracked in `CL-08`
 - `planned`: fuller assignment/update family and broader
   definition-introspection parity
@@ -187,9 +187,8 @@ once in its primary implementation group. Other groups may mention it as
   `Listable`, `Orderless`
 - `partial`: `Attributes`, `AddTo`, `SubtractFrom`, `TimesBy`, `DivideBy`,
   `AppendTo`, `Increment`, `Decrement`, `PreIncrement`, `PreDecrement`,
-  `Unique`
-- `planned`: `ApplyTo`, `DefaultValues`, `Information`, `PrependTo`,
-  `Remove`, `ValueQ`
+  `PrependTo`, `Unique`
+- `planned`: `ApplyTo`, `DefaultValues`, `Information`, `Remove`, `ValueQ`
 - `cross-tracked elsewhere`: `Alternatives`, `BlankSequence`, `Function`,
   `Optional`, `Check`, `Confirm`, `CompoundExpression`, `Enclose`, `OptionValue`,
   `Options`, `OptionsPattern`, `Protect`, `Protected`, `Quiet`, `Rule`,

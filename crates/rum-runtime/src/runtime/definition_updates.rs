@@ -101,6 +101,36 @@ impl Session {
         self.finish_held_update(target, update, HeldUpdateReturn::Updated)
     }
 
+    pub(super) fn eval_prepend_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [target_expr, item] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("PrependTo", args, 2));
+        };
+
+        let (target, current) = match self.current_held_update_value("PrependTo", target_expr, args)
+        {
+            HeldUpdateCurrent::Ready { target, current } => (target, current),
+            HeldUpdateCurrent::Immediate(value) => return Ok(value),
+        };
+
+        let update = match current {
+            Expr::Atom(_) => {
+                let held_call = Expr::call(system_expr("PrependTo"), args.to_vec());
+                self.push_message(
+                    "PrependTo",
+                    "normal",
+                    format!("Nonatomic expression expected at position 1 in {held_call}."),
+                );
+                return Ok(held_call);
+            }
+            Expr::Call { head, mut args } => {
+                args.insert(0, item.clone());
+                Expr::call(head.as_ref().clone(), args)
+            }
+        };
+
+        self.finish_held_update(target, update, HeldUpdateReturn::Updated)
+    }
+
     pub(super) fn eval_increment(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let [target_expr] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("Increment", args, 1));

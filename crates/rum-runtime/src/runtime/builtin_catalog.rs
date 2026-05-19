@@ -530,6 +530,12 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::AppendTo,
     ),
     BuiltinSpec::ordinary_with_hold(
+        "PrependTo",
+        "Prepends an evaluated item to a held symbol target and stores the result.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::PrependTo,
+    ),
+    BuiltinSpec::ordinary_with_hold(
         "Increment",
         "Increments a held symbol target and returns its previous value.",
         HoldAttribute::HoldFirst,

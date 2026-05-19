@@ -122,6 +122,7 @@ impl Session {
             BuiltinHandler::TimesBy => self.eval_times_by(args),
             BuiltinHandler::DivideBy => self.eval_divide_by(args),
             BuiltinHandler::AppendTo => self.eval_append_to(args),
+            BuiltinHandler::PrependTo => self.eval_prepend_to(args),
             BuiltinHandler::Increment => self.eval_increment(args),
             BuiltinHandler::Decrement => self.eval_decrement(args),
             BuiltinHandler::PreIncrement => self.eval_pre_increment(args),
