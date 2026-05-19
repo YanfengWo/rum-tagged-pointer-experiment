@@ -128,6 +128,22 @@ fn generated_confirmation_failures_expose_current_oracle_metadata_slice() {
 
     assert_eq!(
         session
+            .eval_text("FailureQ[$Canceled]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failsafe[f][$Canceled]")
+            .unwrap()
+            .value
+            .to_string(),
+        "$Canceled"
+    );
+    assert_eq!(
+        session
             .eval_text("Enclose[Confirm[$Canceled], \"ConfirmationType\"]")
             .unwrap()
             .value
@@ -166,4 +182,39 @@ fn generated_confirmation_failures_expose_current_oracle_metadata_slice() {
             .to_string(),
         "Hold[First::first]"
     );
+}
+
+#[test]
+fn assert_function_none_restores_normal_assert_control() {
+    let mut session = Session::new();
+
+    session.eval_text("$AssertFunction = None").unwrap();
+    assert_eq!(
+        session
+            .eval_text("Assert[False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Assert[False]"
+    );
+
+    assert_eq!(
+        session.eval_text("On[Assert]").unwrap().value.to_string(),
+        "Null"
+    );
+    let asserted = session.eval_text("Assert[False]").unwrap();
+    assert_eq!(asserted.value.to_string(), "Null");
+    assert_eq!(asserted.messages.len(), 1);
+    assert_eq!(asserted.messages[0].symbol, "Assert");
+    assert_eq!(asserted.messages[0].tag, "asrtf");
+    assert_eq!(asserted.messages[0].text, "Assertion False failed.");
+
+    assert_eq!(
+        session.eval_text("Off[Assert]").unwrap().value.to_string(),
+        "Null"
+    );
+    session.eval_text("$AssertFunction = Identity").unwrap();
+    let callback = session.eval_text("Assert[False]").unwrap();
+    assert_eq!(callback.value.to_string(), "Null");
+    assert!(callback.messages.is_empty());
 }

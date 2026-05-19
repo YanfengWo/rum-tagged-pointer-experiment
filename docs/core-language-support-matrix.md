@@ -426,6 +426,7 @@ once in its primary implementation group. Other groups may mention it as
   `Assert`, oracle-aligned enabled-`Assert` failure message tags/text,
   no-test and extra-argument `Assert` call handling, plus the current
   `$AssertFunction` callback hook including non-boolean-test diagnostics,
+  `None` as the no-callback sentinel, and discarded callback return values,
   exact-key `Success[...]` / `Failure[...]` property
   extraction with the current `Missing` propagation subset, including current
   `Failure[...]` `All` / `"Properties"` / `"Message"` / `"StyledMessage"`

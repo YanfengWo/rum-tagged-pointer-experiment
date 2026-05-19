@@ -521,7 +521,9 @@ impl Session {
         assert_args: Vec<Expr>,
         function: Expr,
     ) -> Result<Expr, EvalError> {
-        let assert_function = if is_system_symbol_name(&function, "$AssertFunction") {
+        let assert_function = if is_system_symbol_name(&function, "$AssertFunction")
+            || is_system_symbol_name(&function, "None")
+        {
             None
         } else {
             Some(function)
@@ -567,7 +569,7 @@ impl Session {
             vec![Expr::call(system_expr("Assert"), assert_args)],
         );
         let result = self.evaluate(Expr::call(assert_function, vec![payload]));
-        self.suspend_with_frame(result, |_, _| Ok(system_expr("Null")))
+        self.drive_internal_value(result, |_, _| Ok(system_expr("Null")))
     }
 
     fn resume_with_cleanup_after_init(

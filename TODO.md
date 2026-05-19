@@ -278,7 +278,9 @@ This roadmap intentionally uses two levels of detail:
       latest pass adds oracle-aligned generated `Confirm*` failure metadata
       for the current `MessageTemplate` / `MessageParameters` /
       `ConfirmationType` slice, `$Canceled` confirmation handling, and
-      broader confirmation-family host-input resume coverage.
+      broader confirmation-family host-input resume coverage, plus
+      `$AssertFunction = None` no-callback behavior and discarded callback
+      return values.
       - [ ] Remaining cleanup/control long-tail: deeper `WithCleanup` /
         `Failsafe` / `CheckAbort` / `AbortProtect` parity beyond the current
         suspension-safe cleanup, throw/abort cleanup boundaries, abort
