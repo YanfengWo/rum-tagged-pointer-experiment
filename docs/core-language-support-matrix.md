@@ -168,8 +168,8 @@ once in its primary implementation group. Other groups may mention it as
   storage and dispatch for the current attribute subset
 - `partial`: public attribute surface is narrower than Wolfram's full
   attribute family, and `Unique[...]` currently covers the zero-argument,
-  string-prefix, and symbol-prefix forms without the fuller list / attribute
-  forms; the held update family currently covers symbol-target `AddTo`,
+  string-prefix, symbol-prefix, list, and current attribute-setting forms;
+  the held update family currently covers symbol-target `AddTo`,
   `SubtractFrom`, `TimesBy`, `DivideBy`, `ApplyTo`, `AppendTo`, `Increment`,
   `Decrement`, `PreIncrement`, `PreDecrement`, and `PrependTo`, including
   the current `+=` / `-=` / `*=` / `/=` / `//=` / postfix `++` /
@@ -194,7 +194,7 @@ once in its primary implementation group. Other groups may mention it as
   `PreDecrement`, `PrependTo`, `DefaultValues`, `Information`, `Remove`,
   `Unique`, `ValueQ`
 - `planned`: remaining update-family diagnostics, overlapping part-target
-  edge cases, broader `Unique[...]` forms, and definition-introspection parity
+  edge cases, stale `Removed[...]` identity, and definition-introspection parity
 - `cross-tracked elsewhere`: `Alternatives`, `BlankSequence`, `Function`,
   `Optional`, `Check`, `Confirm`, `CompoundExpression`, `Enclose`, `OptionValue`,
   `Options`, `OptionsPattern`, `Protect`, `Protected`, `Quiet`, `Rule`,

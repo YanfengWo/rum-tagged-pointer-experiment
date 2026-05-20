@@ -307,7 +307,7 @@ This roadmap intentionally uses two levels of detail:
       with list-shaped distribution / broadcast assignment.
       Remaining non-blocking gaps include obscure update-family diagnostics,
       overlapping part-target edge cases, stale `Removed[...]` symbol identity,
-      broader `Unique[...]` forms, and fuller definition-introspection parity.
+      and fuller definition-introspection parity.
   - [ ] Wave 4: polish pass across `CL-04`, `CL-08`, and `CL-09`
     - [ ] `CL-04`: remaining threading / higher-order traversal / sparse array parity beyond the current negative-level empty-expression depth alignment for `Apply` / `Map` traversal families
     - [ ] `CL-08`: broader `Names` regex, `SyntaxInformation` properties, and package-tooling compatibility polish
@@ -352,9 +352,10 @@ This roadmap intentionally uses two levels of detail:
     `AppendTo[privateList, item]`, `i++`, and `counter += delta`; leave
     broader part-target and obscure update-family parity for later CL-02 polish
   - [x] add first-pass explicit gensym support through `Unique[]`,
-    `Unique["prefix"]`, and `Unique[symbol]` so package code can construct
-    unforgeable private heads without relying only on `Module` locals; leave
-    list and attribute forms as future parity polish if a caller needs them
+    `Unique["prefix"]`, `Unique[symbol]`, list forms, and current
+    attribute-setting forms so package code can construct unforgeable private
+    heads without relying only on `Module` locals; leave obscure
+    message/attribute edge cases as future parity polish
   - [ ] broaden source-language parsing for real Wolfram scripts, including
     Unicode identifier characters used as ordinary local names and the
     Unicode operator glyphs that package-level parsers/printers commonly keep

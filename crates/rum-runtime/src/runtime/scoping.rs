@@ -62,6 +62,15 @@ fn is_valid_unique_symbol_prefix(prefix: &str) -> bool {
         && chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '$')
 }
 
+fn generated_symbol_candidate(
+    context: &str,
+    name_prefix: &str,
+    separator: &str,
+    id: u64,
+) -> Symbol {
+    Symbol::new(context.to_string(), format!("{name_prefix}{separator}{id}"))
+}
+
 impl Session {
     pub(super) fn eval_with(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
@@ -117,25 +126,38 @@ impl Session {
     }
 
     pub(super) fn eval_unique(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let symbol = match args {
-            [] => self.allocate_unique_string_symbol("$"),
-            [Expr::Atom(Atom::Symbol(symbol))] => Some(self.allocate_fresh_symbol(symbol)),
-            [Expr::Atom(Atom::String(prefix))] => self.allocate_unique_string_symbol(prefix),
-            [arg] => {
-                return Ok(self.invalid_unique_arg(args, arg));
+        let (target, attributes) = match args {
+            [] => (None, AttributeSet::empty()),
+            [target] => (Some(target), AttributeSet::empty()),
+            [target, attributes] => {
+                let Some(attributes) = parse_attribute_set_expr(attributes) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        "Unique",
+                        args,
+                        "expected an attribute symbol or list of attribute symbols as the second argument",
+                    ));
+                };
+                (Some(target), attributes)
             }
             _ => {
-                return Ok(self.invalid_call_with_arg_range("Unique", args, 0, 1));
+                return Ok(self.invalid_call_with_arg_range("Unique", args, 0, 2));
             }
         };
 
-        let Some(symbol) = symbol else {
-            return Ok(self.invalid_unique_arg(args, &args[0]));
+        let generated = match target {
+            None => self
+                .allocate_unique_string_symbol("$")
+                .map(|symbol| Expr::Atom(Atom::Symbol(symbol))),
+            Some(target) => self.allocate_unique_expr(target),
         };
 
-        self.definitions.entry(symbol.clone()).or_default();
+        let Some(generated) = generated else {
+            let offender = target.expect("invalid Unique target should have a target argument");
+            return Ok(self.invalid_unique_arg(args, offender));
+        };
 
-        Ok(Expr::Atom(Atom::Symbol(symbol)))
+        self.register_unique_generated_expr(&generated, attributes);
+        Ok(generated)
     }
 
     pub(super) fn eval_block(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -353,6 +375,65 @@ impl Session {
         Some(self.allocate_generated_symbol(&context, &name_prefix, ""))
     }
 
+    fn allocate_unique_expr(&mut self, expr: &Expr) -> Option<Expr> {
+        match expr {
+            Expr::Atom(Atom::Symbol(symbol)) => {
+                Some(Expr::Atom(Atom::Symbol(self.allocate_fresh_symbol(symbol))))
+            }
+            Expr::Atom(Atom::String(prefix)) => self
+                .allocate_unique_string_symbol(prefix)
+                .map(|symbol| Expr::Atom(Atom::Symbol(symbol))),
+            Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
+                if args.is_empty() {
+                    return Some(Expr::call(system_expr("List"), Vec::new()));
+                }
+
+                if let Some(symbols) = args.iter().map(expr_as_symbol).collect::<Option<Vec<_>>>() {
+                    let generated = self.allocate_fresh_symbol_batch(&symbols);
+                    return Some(Expr::call(
+                        system_expr("List"),
+                        generated
+                            .into_iter()
+                            .map(|symbol| Expr::Atom(Atom::Symbol(symbol)))
+                            .collect(),
+                    ));
+                }
+
+                Some(Expr::call(
+                    system_expr("List"),
+                    args.iter()
+                        .map(|arg| self.allocate_unique_expr(arg))
+                        .collect::<Option<Vec<_>>>()?,
+                ))
+            }
+            _ => None,
+        }
+    }
+
+    fn allocate_fresh_symbol_batch(&mut self, symbols: &[&Symbol]) -> Vec<Symbol> {
+        loop {
+            self.next_generated_symbol_id += 1;
+            let candidates = symbols
+                .iter()
+                .map(|symbol| {
+                    generated_symbol_candidate(
+                        symbol.context(),
+                        symbol.name(),
+                        "$",
+                        self.next_generated_symbol_id,
+                    )
+                })
+                .collect::<Vec<_>>();
+
+            if candidates
+                .iter()
+                .all(|candidate| !self.generated_symbol_exists(candidate))
+            {
+                return candidates;
+            }
+        }
+    }
+
     fn allocate_generated_symbol(
         &mut self,
         context: &str,
@@ -361,14 +442,37 @@ impl Session {
     ) -> Symbol {
         loop {
             self.next_generated_symbol_id += 1;
-            let candidate = Symbol::new(
-                context.to_string(),
-                format!("{name_prefix}{separator}{}", self.next_generated_symbol_id),
+            let candidate = generated_symbol_candidate(
+                context,
+                name_prefix,
+                separator,
+                self.next_generated_symbol_id,
             );
 
             if !self.generated_symbol_exists(&candidate) {
                 return candidate;
             }
+        }
+    }
+
+    fn register_unique_generated_expr(&mut self, expr: &Expr, attributes: AttributeSet) {
+        match expr {
+            Expr::Atom(Atom::Symbol(symbol)) => {
+                self.definitions.entry(symbol.clone()).or_default();
+                if !attributes.is_empty() {
+                    let mut current = self.attribute_set_for_symbol(symbol);
+                    for attribute in attributes.attributes() {
+                        current.insert(attribute);
+                    }
+                    self.set_attribute_set_for_symbol(symbol.clone(), current);
+                }
+            }
+            Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
+                for arg in args {
+                    self.register_unique_generated_expr(arg, attributes);
+                }
+            }
+            _ => {}
         }
     }
 

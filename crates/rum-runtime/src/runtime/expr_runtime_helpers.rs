@@ -92,6 +92,7 @@ pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
             | "RegularExpression"
             | "StepMonitor"
             | "StringExpression"
+            | "Temporary"
             | "TimeObject"
             | "UpTo"
             | "Verbatim"

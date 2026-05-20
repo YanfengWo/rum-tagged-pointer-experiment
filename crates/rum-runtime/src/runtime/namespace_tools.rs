@@ -21,6 +21,7 @@ const EXTRA_SYSTEM_NAME_SYMBOLS: &[&str] = &[
     "Protected",
     "RegularExpression",
     "SequenceHold",
+    "Temporary",
     "Verbatim",
     "StepMonitor",
     "StringExpression",

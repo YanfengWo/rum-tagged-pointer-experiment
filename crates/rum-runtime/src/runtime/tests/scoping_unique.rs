@@ -74,6 +74,40 @@ fn unique_registers_generated_symbols_as_known_names() {
 }
 
 #[test]
+fn unique_supports_list_and_attribute_forms() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session.eval_text("Unique[{}]").unwrap().value.to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Unique[{x, y}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[x$1, y$1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Unique[{\"a\", b}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a2, b$3]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Map[Attributes, Unique[{p, q}, {Orderless, Protected, Temporary}]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Orderless, Protected, Temporary], List[Orderless, Protected, Temporary]]"
+    );
+}
+
+#[test]
 fn unique_reports_current_invalid_boundaries() {
     let mut session = Session::new();
 
@@ -95,8 +129,13 @@ fn unique_reports_current_invalid_boundaries() {
         "\"1x\" is not a symbol or a valid symbol name."
     );
 
-    let too_many = session.eval_text("Unique[\"x\", y]").unwrap();
-    assert_eq!(too_many.value.to_string(), "Unique[\"x\", y]");
+    let invalid_attribute = session.eval_text("Unique[\"x\", y]").unwrap();
+    assert_eq!(invalid_attribute.value.to_string(), "Unique[\"x\", y]");
+    assert_eq!(invalid_attribute.messages[0].symbol, "Unique");
+    assert_eq!(invalid_attribute.messages[0].tag, "argform");
+
+    let too_many = session.eval_text("Unique[\"x\", y, z]").unwrap();
+    assert_eq!(too_many.value.to_string(), "Unique[\"x\", y, z]");
     assert_eq!(too_many.messages[0].symbol, "Unique");
     assert_eq!(too_many.messages[0].tag, "argtu");
 }

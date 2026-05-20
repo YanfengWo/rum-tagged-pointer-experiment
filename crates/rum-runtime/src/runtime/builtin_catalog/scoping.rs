@@ -15,7 +15,7 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "Unique",
-        "Creates a fresh symbol using the current first-pass prefix subset.",
+        "Creates fresh symbols using prefix, list, and attribute forms.",
         BuiltinHandler::Unique,
     ),
     BuiltinSpec::special_with_hold(

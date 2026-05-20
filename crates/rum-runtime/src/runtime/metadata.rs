@@ -35,6 +35,7 @@ pub enum Attribute {
     Flat,
     OneIdentity,
     Protected,
+    Temporary,
 }
 
 impl Attribute {
@@ -50,6 +51,7 @@ impl Attribute {
             Self::Flat => 1 << 7,
             Self::OneIdentity => 1 << 8,
             Self::Protected => 1 << 9,
+            Self::Temporary => 1 << 10,
         }
     }
 
@@ -65,6 +67,7 @@ impl Attribute {
             Self::Flat => "Flat",
             Self::OneIdentity => "OneIdentity",
             Self::Protected => "Protected",
+            Self::Temporary => "Temporary",
         }
     }
 
@@ -90,6 +93,7 @@ impl Attribute {
             "Flat" => Some(Self::Flat),
             "OneIdentity" => Some(Self::OneIdentity),
             "Protected" => Some(Self::Protected),
+            "Temporary" => Some(Self::Temporary),
             _ => None,
         }
     }
@@ -195,7 +199,7 @@ impl AttributeSet {
     }
 }
 
-pub(super) const ALL_ATTRIBUTES: [Attribute; 10] = [
+pub(super) const ALL_ATTRIBUTES: [Attribute; 11] = [
     Attribute::HoldAllComplete,
     Attribute::HoldAll,
     Attribute::HoldFirst,
@@ -206,6 +210,7 @@ pub(super) const ALL_ATTRIBUTES: [Attribute; 10] = [
     Attribute::Flat,
     Attribute::OneIdentity,
     Attribute::Protected,
+    Attribute::Temporary,
 ];
 
 pub(super) fn parse_attribute_set_expr(expr: &Expr) -> Option<AttributeSet> {
