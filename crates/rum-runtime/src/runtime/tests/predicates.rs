@@ -57,6 +57,22 @@ fn predicate_q_family_covers_current_exact_and_structural_subsets() {
         "Boole[x]"
     );
     assert_eq!(
+        session
+            .eval_text("Boole[{True, False, x, Less[1, 2]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 0, Boole[x], 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Boole[{{True}, {False, x}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1], List[0, Boole[x]]]"
+    );
+    assert_eq!(
         session.eval_text("AtomQ[5]").unwrap().value.to_string(),
         "True"
     );

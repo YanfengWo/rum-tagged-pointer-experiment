@@ -169,9 +169,10 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         "Tests whether an expression evaluates exactly to True or False.",
         BuiltinHandler::BooleanQ,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "Boole",
         "Converts exact True and False to 1 and 0, leaving non-boolean conditions unevaluated.",
+        AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::Boole,
     ),
     BuiltinSpec::ordinary(
