@@ -832,6 +832,12 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::Information,
     ),
     BuiltinSpec::ordinary_with_hold(
+        "Definition",
+        "Returns a held first-pass expression containing visible definitions for a symbol.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::Definition,
+    ),
+    BuiltinSpec::ordinary_with_hold(
         "ValueQ",
         "Tests whether an expression has a value by trial evaluation without committing side effects.",
         HoldAttribute::HoldFirst,

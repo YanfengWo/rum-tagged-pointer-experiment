@@ -171,6 +171,50 @@ fn information_uses_symbol_name_usage_fallback_and_value_forms() {
 }
 
 #[test]
+fn definition_returns_held_first_pass_definition_statements() {
+    let mut session = Session::new();
+
+    session.eval_text("f::usage = \"desc\"").unwrap();
+    session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
+    session.eval_text("Options[f] = {a -> 0}").unwrap();
+    session.eval_text("f[x_Integer] := x").unwrap();
+    session.eval_text("f = 1").unwrap();
+    session.eval_text("Default[f] = 7").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("Definition[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "HoldComplete[Set[Attributes[f], List[HoldFirst]], Set[f::usage, \"desc\"], Set[Options[f], List[Rule[a, 0]]], Set[f, 1], SetDelayed[f[Pattern[x, Blank[Integer]]], x], Set[Default[f], 7]]"
+    );
+    assert_eq!(session.eval_text("f").unwrap().value.to_string(), "1");
+    assert_eq!(
+        session
+            .eval_text("Definition[\"f\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "HoldComplete[Set[Attributes[f], List[HoldFirst]], Set[f::usage, \"desc\"], Set[Options[f], List[Rule[a, 0]]], Set[f, 1], SetDelayed[f[Pattern[x, Blank[Integer]]], x], Set[Default[f], 7]]"
+    );
+}
+
+#[test]
+fn definition_returns_empty_hold_for_symbols_without_definitions() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Definition[cl02NoDefinition]")
+            .unwrap()
+            .value
+            .to_string(),
+        "HoldComplete[]"
+    );
+}
+
+#[test]
 fn valueq_uses_rollback_trial_evaluation_without_side_effects() {
     let mut session = Session::new();
 

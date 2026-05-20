@@ -300,7 +300,7 @@ impl Session {
         };
 
         let Some(paths) =
-            exact_position_paths_from_part_selector_exprs(&current_target, &selector_exprs)
+            exact_position_paths_from_part_target_selector_exprs(&current_target, &selector_exprs)
         else {
             return HeldUpdateCurrent::Immediate(self.invalid_call_with_arg_form(
                 operator,
@@ -310,7 +310,7 @@ impl Session {
         };
 
         let Some(current) =
-            selected_expr_from_part_selector_exprs(&current_target, &selector_exprs)
+            selected_expr_from_part_target_selector_exprs(&current_target, &selector_exprs)
         else {
             return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
         };

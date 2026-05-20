@@ -524,6 +524,7 @@ pub enum BuiltinHandler {
     MessageDefinitions,
     MessageTags,
     Information,
+    Definition,
     ValueQ,
     DefaultValues,
     OwnValues,

@@ -273,6 +273,29 @@ fn held_updates_cover_duplicate_bulk_part_targets() {
 }
 
 #[test]
+fn held_updates_reject_nested_part_selector_lists_without_mutation() {
+    let mut session = Session::new();
+
+    let outcome = session
+        .eval_text("x = {{1, 2}, {3, 4}}; AddTo[x[[{{1}, {1, 2}}]], 10]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "AddTo[Part[x, List[List[1], List[1, 2]]], 10]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "AddTo" && message.tag == "argform")
+    );
+    assert_eq!(
+        session.eval_text("x").unwrap().value.to_string(),
+        "List[List[1, 2], List[3, 4]]"
+    );
+}
+
+#[test]
 fn held_updates_report_missing_or_invalid_targets_without_writing() {
     let mut session = Session::new();
 

@@ -1,6 +1,18 @@
 use super::*;
 
 impl Session {
+    pub(super) fn eval_definition(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        match args {
+            [expr] => match self.normalize_definition_inspection_target(expr) {
+                Ok(symbol) => Ok(self.definition_expr_for_symbol(&symbol)),
+                Err(error) => {
+                    Ok(self.invalid_call_with_arg_form("Definition", args, error.message()))
+                }
+            },
+            _ => Ok(self.invalid_call_with_exact_arg_count("Definition", args, 1)),
+        }
+    }
+
     pub(super) fn eval_information(
         &mut self,
         head: &Expr,
@@ -118,6 +130,92 @@ impl Session {
         Expr::call(system_expr("List"), items)
     }
 
+    fn definition_expr_for_symbol(&self, symbol: &Symbol) -> Expr {
+        Expr::call(
+            system_expr("HoldComplete"),
+            self.definition_statements_for_symbol(symbol),
+        )
+    }
+
+    fn definition_statements_for_symbol(&self, symbol: &Symbol) -> Vec<Expr> {
+        let mut statements = Vec::new();
+
+        let attributes = self.attribute_set_for_symbol(symbol).expr();
+        if !is_empty_list_expr(&attributes) {
+            statements.push(definition_assignment_expr(
+                false,
+                Expr::call(
+                    system_expr("Attributes"),
+                    vec![Expr::Atom(Atom::Symbol(symbol.clone()))],
+                ),
+                attributes,
+            ));
+        }
+
+        statements.extend(self.message_definition_statements_for_symbol(symbol));
+
+        let options = self.options_for_symbol(symbol).expr();
+        if !is_empty_list_expr(&options) {
+            statements.push(definition_assignment_expr(
+                false,
+                Expr::call(
+                    system_expr("Options"),
+                    vec![Expr::Atom(Atom::Symbol(symbol.clone()))],
+                ),
+                options,
+            ));
+        }
+
+        statements.extend(
+            self.definition_catalog_entries_for_symbol(symbol)
+                .into_iter()
+                .map(definition_statement_for_catalog_entry),
+        );
+        statements.extend(self.default_value_definition_statements_for_symbol(symbol));
+        statements
+    }
+
+    fn message_definition_statements_for_symbol(&self, symbol: &Symbol) -> Vec<Expr> {
+        self.message_definitions
+            .iter()
+            .filter(|(key, _)| key.symbol == *symbol)
+            .filter_map(|(key, definition)| {
+                definition
+                    .immediate
+                    .as_ref()
+                    .map(|rhs| {
+                        definition_assignment_expr(
+                            false,
+                            message_name_expr(key.symbol.clone(), key.tag.clone()),
+                            rhs.clone(),
+                        )
+                    })
+                    .or_else(|| {
+                        definition.delayed.as_ref().map(|rhs| {
+                            definition_assignment_expr(
+                                true,
+                                message_name_expr(key.symbol.clone(), key.tag.clone()),
+                                rhs.clone(),
+                            )
+                        })
+                    })
+            })
+            .collect()
+    }
+
+    fn default_value_definition_statements_for_symbol(&self, symbol: &Symbol) -> Vec<Expr> {
+        let default_symbol = Symbol::system("Default");
+        self.definitions
+            .get(&default_symbol)
+            .into_iter()
+            .flat_map(|definition| definition.down_values.iter())
+            .filter(|entry| default_value_lhs_targets_symbol(&entry.lhs, symbol))
+            .map(|entry| {
+                definition_assignment_expr(entry.delayed, entry.lhs.clone(), entry.rhs.clone())
+            })
+            .collect()
+    }
+
     fn information_data_expr_for_symbol(&self, symbol: &Symbol) -> Expr {
         let entries = vec![
             information_rule("ObjectType", Expr::string("Symbol")),
@@ -174,6 +272,17 @@ fn information_rule(name: &str, value: Expr) -> Expr {
     Expr::call(system_expr("Rule"), vec![Expr::string(name), value])
 }
 
+fn definition_statement_for_catalog_entry(entry: DefinitionCatalogEntry) -> Expr {
+    definition_assignment_expr(entry.delayed, entry.lhs, entry.rhs)
+}
+
+fn definition_assignment_expr(delayed: bool, lhs: Expr, rhs: Expr) -> Expr {
+    Expr::call(
+        system_expr(if delayed { "SetDelayed" } else { "Set" }),
+        vec![lhs, rhs],
+    )
+}
+
 fn information_values_rule(name: &str, symbol: &Symbol, values: Expr) -> Expr {
     information_rule(name, information_value_form_or_none(name, symbol, values))
 }
@@ -204,4 +313,11 @@ fn none_if_empty_list(expr: Expr) -> Expr {
         }
         _ => expr,
     }
+}
+
+fn is_empty_list_expr(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Call { head, args } if is_system_symbol_name(head, "List") && args.is_empty()
+    )
 }

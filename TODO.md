@@ -294,7 +294,9 @@ This roadmap intentionally uses two levels of detail:
       - [ ] Remaining assertion/I/O long-tail: obscure `Assert` controls and
         fuller host-I/O option, prompt, request, and parse/error semantics.
     - [ ] `CL-01`: remaining part-spec / `Heads` parity beyond the current atom `All` / span-boundary selector alignment, current invalid and out-of-range `Part` / `Extract` selector diagnostics, current `Part` selector-list boundary, current `Extract` nested position-list selector subset, empty-expression plus association-aware `Depth` parity, `Level` scalar-zero plus standard-`All` levelspec parity, empty-expression negative-level depth alignment plus current oracle-locked `Heads` traversal edges across the current structural walkers, current `Not[Not[...]]` and relational-`Not` simplifications, flat nested `And` / `Or` residual simplification, first-pass `Xor` / `Equivalent` boolean/repeated-term reductions, first-pass `Implies` simplification including identical-argument tautology, current short-circuit `Nand` / `Nor`, first-pass `Boole` truth-to-integer conversion, mixed-symbolic `Equal` / `Unequal` chain boundaries plus current numeric order-chain endpoint contradiction detection with nonnumeric order comparisons kept conservative, and nonatomic `OrderedQ` argument-order parity, plus deeper truth/comparison breadth beyond the current exact-numeric order-chain reductions
-    - [ ] `CL-02`: continue closing small definition/update-family gaps.
+    - [ ] `CL-02`: mainline is closeable; leave only small
+      definition/update-family polish unless a downstream project exposes a
+      concrete blocker.
       Current follow-up adds symbol-target `SubtractFrom`, `TimesBy`,
       `DivideBy`, `ApplyTo`, `Decrement`, `PreIncrement`, `PreDecrement`, and
       `PrependTo` plus their common update syntax lowering where applicable,
@@ -306,16 +308,18 @@ This roadmap intentionally uses two levels of detail:
       `InformationData` association summary for symbol and string-name targets
       with current `InformationValueForm` wrapping for non-empty definition
       lists and Wolfram-style `HoldPattern[lhs] :> rhs` public value-list
-      rules,
+      rules, plus a held first-pass `Definition` expression for symbol and
+      string-name targets,
       a first-pass `ValueQ` based on rollback trial evaluation, and exact
       part-target updates for the held update family including bulk selectors
       with list-shaped distribution / broadcast assignment, empty bulk selector
-      no-op writes, and duplicate nested bulk selector leaf distribution.
+      no-op writes, duplicate nested bulk selector leaf distribution, and
+      rejection of nested selector lists that Wolfram `Part` itself rejects.
       Remaining non-blocking gaps include obscure update-family diagnostics,
-      deeper parent/child overlapping part-target edge cases, deeper
-      `Removed[...]` rendering / introspection corners, and fuller
-      definition-introspection parity beyond the current value-list and
-      `InformationData` shapes.
+      exact Wolfram diagnostic names/text for invalid nested held part-targets,
+      deeper `Removed[...]` rendering / introspection corners, and fuller
+      `Definition` / `Information` print-layer parity beyond the current
+      transport-safe expression shapes.
   - [ ] Wave 4: polish pass across `CL-04`, `CL-08`, and `CL-09`
     - [ ] `CL-04`: remaining threading / higher-order traversal / sparse array parity beyond the current negative-level empty-expression depth alignment for `Apply` / `Map` traversal families
     - [ ] `CL-08`: broader `Names` regex, `SyntaxInformation` properties, and package-tooling compatibility polish

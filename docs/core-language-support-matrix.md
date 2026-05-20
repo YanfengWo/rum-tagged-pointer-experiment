@@ -176,16 +176,17 @@ once in its primary implementation group. Other groups may mention it as
   postfix `--` / prefix `++` / prefix `--` lowering and exact part-target
   updates including current bulk-selector distribution / broadcast assignment,
   empty bulk-selector no-op writes, and duplicate nested bulk selector leaf
-  distribution, but not obscure update-family diagnostics or deeper overlapping
-  part-target edge parity; `Remove` currently clears stored state for symbol
+  distribution, while nested selector lists that `Part` rejects are also
+  rejected for held updates; `Remove` currently clears stored state for symbol
   and string-name targets, marks same-evaluation stale symbols as
   `Removed["name"]`, and allows later same-name reuse through runtime symbol
-  generations, while public definition lists now render the current
-  `HoldPattern[lhs] :> rhs` shape; broader stale-symbol rendering /
-  introspection corners and the protection / option / package-tooling layers
-  are cross-tracked in `CL-08`
-- `planned`: fuller assignment/update family and broader definition
-  introspection beyond the current value-list and `InformationData` shapes
+  generations, while public definition lists render the current
+  `HoldPattern[lhs] :> rhs` shape and `Definition` returns a held first-pass
+  definition expression; broader stale-symbol rendering / introspection corners
+  and the protection / option / package-tooling layers are cross-tracked in
+  `CL-08`
+- `planned`: fuller assignment/update diagnostic parity and broader definition
+  print-layer parity beyond the current transport-safe expression shapes
 
 ### Functions and Symbols
 
@@ -195,13 +196,13 @@ once in its primary implementation group. Other groups may mention it as
   `Listable`, `Orderless`
 - `partial`: `Attributes`, `AddTo`, `SubtractFrom`, `TimesBy`, `DivideBy`,
   `ApplyTo`, `AppendTo`, `Increment`, `Decrement`, `PreIncrement`,
-  `PreDecrement`, `PrependTo`, `DefaultValues`, `Information`, `Remove`,
-  `Unique`, `ValueQ`
-- `planned`: remaining update-family diagnostics, overlapping part-target
-  edge cases beyond the current duplicate bulk-selector coverage, deeper
-  `Removed[...]` rendering / introspection corners, and definition-introspection
-  parity beyond the current `HoldPattern` value-list and `InformationValueForm`
-  summary shapes
+  `PreDecrement`, `PrependTo`, `DefaultValues`, `Definition`, `Information`,
+  `Remove`, `Unique`, `ValueQ`
+- `planned`: remaining update-family diagnostics, exact diagnostic parity for
+  invalid nested held part-targets, deeper `Removed[...]` rendering /
+  introspection corners, and definition-introspection print-layer parity beyond
+  the current `HoldPattern` value-list, held `Definition`, and
+  `InformationValueForm` summary shapes
 - `cross-tracked elsewhere`: `Alternatives`, `BlankSequence`, `Function`,
   `Optional`, `Check`, `Confirm`, `CompoundExpression`, `Enclose`, `OptionValue`,
   `Options`, `OptionsPattern`, `Protect`, `Protected`, `Quiet`, `Rule`,
