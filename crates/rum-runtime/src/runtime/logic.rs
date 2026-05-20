@@ -86,38 +86,17 @@ impl Session {
         Ok(match (truthiness_symbol(lhs), truthiness_symbol(rhs)) {
             (Some(false), _) | (_, Some(true)) => system_expr(heads::structure::TRUE),
             (Some(true), _) => rhs.clone(),
-            (_, Some(false)) => Expr::call(system_expr("Not"), vec![lhs.clone()]),
+            (_, Some(false)) => negate_logical_expr(lhs.clone()),
             _ => Expr::call(head.clone(), args.to_vec()),
         })
     }
 
-    pub(super) fn eval_not(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+    pub(super) fn eval_not(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let [arg] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("Not", args, 1));
         };
 
-        match truthiness_symbol(arg) {
-            Some(value) => Ok(predicate_bool_expr(!value)),
-            None => {
-                if let Expr::Call {
-                    head: inner_head,
-                    args: inner_args,
-                } = arg
-                {
-                    if is_system_symbol_name(inner_head, "Not") && inner_args.len() == 1 {
-                        return Ok(inner_args[0].clone());
-                    }
-
-                    if inner_args.len() == 2 {
-                        if let Some(opposite) = negated_relation_head_name(inner_head) {
-                            return Ok(Expr::call(system_expr(opposite), inner_args.clone()));
-                        }
-                    }
-                }
-
-                Ok(Expr::call(head.clone(), args.to_vec()))
-            }
-        }
+        Ok(negate_logical_expr(arg.clone()))
     }
 
     pub(super) fn eval_equal(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -477,7 +456,7 @@ fn finalize_xor(head: &Expr, mut residual: Vec<Expr>, invert: bool) -> Expr {
     };
 
     if invert && truthiness_symbol(&expr).is_none() {
-        Expr::call(system_expr("Not"), vec![expr])
+        negate_logical_expr(expr)
     } else {
         expr
     }
@@ -508,17 +487,14 @@ fn finalize_equivalent_constant_side(mut residual: Vec<Expr>, negate_residuals: 
         1 => {
             let expr = residual.pop().expect("single residual value");
             if negate_residuals {
-                Expr::call(system_expr("Not"), vec![expr])
+                negate_logical_expr(expr)
             } else {
                 expr
             }
         }
         _ => {
             let args = if negate_residuals {
-                residual
-                    .into_iter()
-                    .map(|expr| Expr::call(system_expr("Not"), vec![expr]))
-                    .collect()
+                residual.into_iter().map(negate_logical_expr).collect()
             } else {
                 residual
             };
@@ -543,8 +519,31 @@ fn negate_logical_value(value: Expr, wrapper_head_name: &str) -> Expr {
         Expr::Call { head, args } if is_system_symbol_name(&head, source_head_name) => {
             Expr::call(system_expr(wrapper_head_name), args)
         }
-        other => Expr::call(system_expr("Not"), vec![other]),
+        other => negate_logical_expr(other),
     }
+}
+
+fn negate_logical_expr(expr: Expr) -> Expr {
+    match truthiness_symbol(&expr) {
+        Some(truth) => return predicate_bool_expr(!truth),
+        None => {}
+    }
+
+    if let Expr::Call { head, args } = expr {
+        if is_system_symbol_name(&head, "Not") && args.len() == 1 {
+            return args.into_iter().next().expect("single Not argument");
+        }
+
+        if args.len() == 2 {
+            if let Some(opposite) = negated_relation_head_name(&head) {
+                return Expr::call(system_expr(opposite), args);
+            }
+        }
+
+        return Expr::call(system_expr("Not"), vec![Expr::Call { head, args }]);
+    }
+
+    Expr::call(system_expr("Not"), vec![expr])
 }
 
 fn comparison_result_from_expr_identity(

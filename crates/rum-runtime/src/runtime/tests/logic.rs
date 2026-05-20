@@ -114,6 +114,22 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
     );
     assert_eq!(
         session
+            .eval_text("Nand[True, Not[x]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x"
+    );
+    assert_eq!(
+        session
+            .eval_text("Nand[True, Less[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "GreaterEqual[a, b]"
+    );
+    assert_eq!(
+        session
             .eval_text("Nand[True, x, y]")
             .unwrap()
             .value
@@ -135,6 +151,22 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
             .value
             .to_string(),
         "Not[x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Nor[False, Not[x]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x"
+    );
+    assert_eq!(
+        session
+            .eval_text("Nor[False, Less[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "GreaterEqual[a, b]"
     );
     assert_eq!(
         session
@@ -181,6 +213,22 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
         "Not[x]"
     );
     assert_eq!(
+        session
+            .eval_text("Xor[Not[x], True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x"
+    );
+    assert_eq!(
+        session
+            .eval_text("Xor[Less[a, b], True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "GreaterEqual[a, b]"
+    );
+    assert_eq!(
         session.eval_text("Xor[x, x]").unwrap().value.to_string(),
         "False"
     );
@@ -223,6 +271,22 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
             .value
             .to_string(),
         "Not[x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Equivalent[False, Not[x]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x"
+    );
+    assert_eq!(
+        session
+            .eval_text("Equivalent[False, Less[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "GreaterEqual[a, b]"
     );
     assert_eq!(
         session
@@ -295,6 +359,22 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
             .value
             .to_string(),
         "Not[x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Implies[Not[x], False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "x"
+    );
+    assert_eq!(
+        session
+            .eval_text("Implies[Less[a, b], False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "GreaterEqual[a, b]"
     );
     assert_eq!(
         session
