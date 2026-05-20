@@ -475,6 +475,15 @@ fn diagnose_failed_multi_selector(
     selector: &PartSelector,
     specs: &[PartSelector],
 ) -> Option<PartSelectionFailure> {
+    if association_entries_from_expr(expr).is_some() {
+        if let Some(index) = specs.iter().find_map(selector_zero_index) {
+            return Some(PartSelectionFailure::PartW {
+                part: Expr::integer(BigInt::from(index)),
+                target: expr.clone(),
+            });
+        }
+    }
+
     for spec in specs {
         if select_parts_for_selector(expr, spec).is_some() {
             continue;
@@ -493,6 +502,14 @@ fn diagnose_failed_multi_selector(
     Some(PartSelectionFailure::Pspec1 {
         spec: selector_to_expr(selector),
     })
+}
+
+fn selector_zero_index(selector: &PartSelector) -> Option<isize> {
+    match selector {
+        PartSelector::Single(AtomicPartSpec::Index(0)) => Some(0),
+        PartSelector::Multi(specs) => specs.iter().find_map(selector_zero_index),
+        _ => None,
+    }
 }
 
 fn selector_to_expr(selector: &PartSelector) -> Expr {

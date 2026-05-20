@@ -292,6 +292,40 @@ fn keyed_part_and_extract_cover_association_paths() {
     );
     assert_eq!(
         session
+            .eval_text("Part[Association[a -> 1, b -> 2], 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association"
+    );
+    let zero_in_part_list = session
+        .eval_text("Part[Association[a -> 1, b -> 2], {0}]")
+        .unwrap();
+    assert_eq!(
+        zero_in_part_list.value.to_string(),
+        "Part[Association[Rule[a, 1], Rule[b, 2]], List[0]]"
+    );
+    assert!(
+        zero_in_part_list
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "partw")
+    );
+    let mixed_zero_part_list = session
+        .eval_text("Part[Association[a -> 1, b -> 2], {1, 0}]")
+        .unwrap();
+    assert_eq!(
+        mixed_zero_part_list.value.to_string(),
+        "Part[Association[Rule[a, 1], Rule[b, 2]], List[1, 0]]"
+    );
+    assert!(
+        mixed_zero_part_list
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "partw")
+    );
+    assert_eq!(
+        session
             .eval_text("Part[Association[a -> 1, b -> 2], All]")
             .unwrap()
             .value
