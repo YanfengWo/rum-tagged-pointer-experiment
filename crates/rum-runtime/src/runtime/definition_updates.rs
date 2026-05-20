@@ -239,11 +239,8 @@ impl Session {
             return self.current_part_held_update_value(operator, target, selector_exprs, args);
         }
 
-        HeldUpdateCurrent::Immediate(self.invalid_call_with_arg_form(
-            operator,
-            args,
-            "expected a symbol, symbol-name string, or exact Part target as the first argument",
-        ))
+        self.push_held_update_rvalue_message(operator, target_expr);
+        HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()))
     }
 
     fn current_symbol_held_update_value(
@@ -261,10 +258,9 @@ impl Session {
             .get(&target)
             .and_then(|definition| definition.own_value.clone())
         else {
-            self.push_message(
+            self.push_held_update_rvalue_message(
                 operator,
-                "rvalue",
-                format!("{target} is not a variable with a value, so its value cannot be changed."),
+                &Expr::Atom(Atom::Symbol(target.clone())),
             );
             return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
         };
@@ -291,10 +287,9 @@ impl Session {
             .get(&target)
             .and_then(|definition| definition.own_value.clone())
         else {
-            self.push_message(
+            self.push_held_update_rvalue_message(
                 operator,
-                "rvalue",
-                format!("{target} is not a variable with a value, so its value cannot be changed."),
+                &Expr::Atom(Atom::Symbol(target.clone())),
             );
             return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
         };
@@ -302,11 +297,16 @@ impl Session {
         let Some(paths) =
             exact_position_paths_from_part_target_selector_exprs(&current_target, &selector_exprs)
         else {
-            return HeldUpdateCurrent::Immediate(self.invalid_call_with_arg_form(
-                operator,
-                args,
-                "expected an exact Part target as the first argument",
-            ));
+            if let Some(offender) = invalid_part_target_selector_expr(&selector_exprs) {
+                self.push_invalid_part_target_selector_messages(offender);
+            } else {
+                self.push_message(
+                    operator,
+                    "argform",
+                    "expected an exact Part target as the first argument",
+                );
+            }
+            return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
         };
 
         let Some(current) =
@@ -325,6 +325,20 @@ impl Session {
             },
             current,
         }
+    }
+
+    fn push_invalid_part_target_selector_messages(&mut self, offender: &Expr) {
+        let detail = format!("The expression {offender} cannot be used as a part specification.");
+        self.push_message("Part", "pkspec1", detail.clone());
+        self.push_message("Set", "pkspec1", detail);
+    }
+
+    fn push_held_update_rvalue_message(&mut self, operator: &'static str, target: &Expr) {
+        self.push_message(
+            operator,
+            "rvalue",
+            format!("{target} is not a variable with a value, so its value cannot be changed."),
+        );
     }
 
     fn finish_held_update(

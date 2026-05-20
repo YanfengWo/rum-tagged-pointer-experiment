@@ -287,7 +287,13 @@ fn held_updates_reject_nested_part_selector_lists_without_mutation() {
         outcome
             .messages
             .iter()
-            .any(|message| message.symbol == "AddTo" && message.tag == "argform")
+            .any(|message| message.symbol == "Part" && message.tag == "pkspec1")
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Set" && message.tag == "pkspec1")
     );
     assert_eq!(
         session.eval_text("x").unwrap().value.to_string(),
@@ -329,7 +335,14 @@ fn held_updates_report_missing_or_invalid_targets_without_writing() {
     let invalid_target = session.eval_text("SubtractFrom[f[1], 2]").unwrap();
     assert_eq!(invalid_target.value.to_string(), "SubtractFrom[f[1], 2]");
     assert_eq!(invalid_target.messages[0].symbol, "SubtractFrom");
-    assert_eq!(invalid_target.messages[0].tag, "argform");
+    assert_eq!(invalid_target.messages[0].tag, "rvalue");
+    assert!(invalid_target.messages[0].text.contains("f[1]"));
+
+    let invalid_literal_target = session.eval_text("AppendTo[1, a]").unwrap();
+    assert_eq!(invalid_literal_target.value.to_string(), "AppendTo[1, a]");
+    assert_eq!(invalid_literal_target.messages[0].symbol, "AppendTo");
+    assert_eq!(invalid_literal_target.messages[0].tag, "rvalue");
+    assert!(invalid_literal_target.messages[0].text.contains("1"));
 }
 
 #[test]

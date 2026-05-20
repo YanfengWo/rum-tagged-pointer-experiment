@@ -210,6 +210,12 @@ pub(super) fn parse_part_selectors_for_part(exprs: &[Expr]) -> Option<Vec<PartSe
     exprs.iter().map(parse_part_selector_for_part).collect()
 }
 
+pub(super) fn invalid_part_selector_for_part(exprs: &[Expr]) -> Option<&Expr> {
+    exprs
+        .iter()
+        .find(|selector| parse_part_selector_for_part(selector).is_none())
+}
+
 fn parse_part_selector_for_part(expr: &Expr) -> Option<PartSelector> {
     if let Some(selector) = parse_scalar_part_selector(expr) {
         return Some(selector);

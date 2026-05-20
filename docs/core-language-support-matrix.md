@@ -177,14 +177,17 @@ once in its primary implementation group. Other groups may mention it as
   updates including current bulk-selector distribution / broadcast assignment,
   empty bulk-selector no-op writes, and duplicate nested bulk selector leaf
   distribution, while nested selector lists that `Part` rejects are also
-  rejected for held updates; `Remove` currently clears stored state for symbol
+  rejected for held updates with current `Part::pkspec1` / `Set::pkspec1`
+  diagnostics, and non-variable held-update targets use current `rvalue`
+  diagnostics; `Remove` currently clears stored state for symbol
   and string-name targets, marks same-evaluation stale symbols as
   `Removed["name"]`, and allows later same-name reuse through runtime symbol
-  generations, while public definition lists render the current
-  `HoldPattern[lhs] :> rhs` shape and `Definition` returns a held first-pass
-  definition expression; broader stale-symbol rendering / introspection corners
-  and the protection / option / package-tooling layers are cross-tracked in
-  `CL-08`
+  generations, while `DefaultValues` includes the current `Default[...]` and
+  explicit `SyntaxInformation[...]` entries, public definition lists render the
+  current `HoldPattern[lhs] :> rhs` shape, and `Definition` returns a held
+  first-pass definition expression; broader stale-symbol rendering /
+  introspection corners and the protection / option / package-tooling layers
+  are cross-tracked in `CL-08`
 - `planned`: fuller assignment/update diagnostic parity and broader definition
   print-layer parity beyond the current transport-safe expression shapes
 
@@ -198,11 +201,11 @@ once in its primary implementation group. Other groups may mention it as
   `ApplyTo`, `AppendTo`, `Increment`, `Decrement`, `PreIncrement`,
   `PreDecrement`, `PrependTo`, `DefaultValues`, `Definition`, `Information`,
   `Remove`, `Unique`, `ValueQ`
-- `planned`: remaining update-family diagnostics, exact diagnostic parity for
-  invalid nested held part-targets, deeper `Removed[...]` rendering /
-  introspection corners, and definition-introspection print-layer parity beyond
-  the current `HoldPattern` value-list, held `Definition`, and
-  `InformationValueForm` summary shapes
+- `planned`: remaining update-family diagnostics, exact return-form /
+  message-count parity for invalid nested held part-targets, deeper
+  `Removed[...]` rendering / introspection corners, and definition-introspection
+  print-layer parity beyond the current `HoldPattern` value-list, held
+  `Definition`, and `InformationValueForm` summary shapes
 - `cross-tracked elsewhere`: `Alternatives`, `BlankSequence`, `Function`,
   `Optional`, `Check`, `Confirm`, `CompoundExpression`, `Enclose`, `OptionValue`,
   `Options`, `OptionsPattern`, `Protect`, `Protected`, `Quiet`, `Rule`,

@@ -304,7 +304,8 @@ This roadmap intentionally uses two levels of detail:
       same-evaluation stale `Removed[...]` symbol identity with later same-name
       reuse through runtime symbol generations, plus
       current `DefaultValues` query / `ClearAll` interaction for optional
-      defaults stored through `Default[...]`, plus a first-pass
+      defaults stored through `Default[...]` and explicit `SyntaxInformation`
+      entries, plus a first-pass
       `InformationData` association summary for symbol and string-name targets
       with current `InformationValueForm` wrapping for non-empty definition
       lists and Wolfram-style `HoldPattern[lhs] :> rhs` public value-list
@@ -314,9 +315,12 @@ This roadmap intentionally uses two levels of detail:
       part-target updates for the held update family including bulk selectors
       with list-shaped distribution / broadcast assignment, empty bulk selector
       no-op writes, duplicate nested bulk selector leaf distribution, and
-      rejection of nested selector lists that Wolfram `Part` itself rejects.
+      rejection of nested selector lists that Wolfram `Part` itself rejects
+      with current `Part::pkspec1` / `Set::pkspec1` diagnostics, plus
+      Wolfram-style `rvalue` diagnostics for non-variable held-update targets.
       Remaining non-blocking gaps include obscure update-family diagnostics,
-      exact Wolfram diagnostic names/text for invalid nested held part-targets,
+      exact return-form / message-count parity for invalid nested held
+      part-targets,
       deeper `Removed[...]` rendering / introspection corners, and fuller
       `Definition` / `Information` print-layer parity beyond the current
       transport-safe expression shapes.

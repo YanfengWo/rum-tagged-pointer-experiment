@@ -110,7 +110,7 @@ impl Session {
 
     pub(super) fn default_values_expr_for_symbol(&self, symbol: &Symbol) -> Expr {
         let default_symbol = Symbol::system("Default");
-        let items = self
+        let mut items = self
             .definitions
             .get(&default_symbol)
             .into_iter()
@@ -126,6 +126,19 @@ impl Session {
                 )
             })
             .collect::<Vec<_>>();
+
+        if let Some(syntax_information) = self.syntax_information.get(symbol) {
+            items.push(Expr::call(
+                system_expr("RuleDelayed"),
+                vec![
+                    Expr::call(
+                        system_expr("HoldPattern"),
+                        vec![syntax_information_lhs_expr(symbol)],
+                    ),
+                    syntax_information.clone(),
+                ],
+            ));
+        }
 
         Expr::call(system_expr("List"), items)
     }
@@ -172,6 +185,13 @@ impl Session {
                 .map(definition_statement_for_catalog_entry),
         );
         statements.extend(self.default_value_definition_statements_for_symbol(symbol));
+        if let Some(syntax_information) = self.syntax_information.get(symbol) {
+            statements.push(definition_assignment_expr(
+                false,
+                syntax_information_lhs_expr(symbol),
+                syntax_information.clone(),
+            ));
+        }
         statements
     }
 
@@ -280,6 +300,13 @@ fn definition_assignment_expr(delayed: bool, lhs: Expr, rhs: Expr) -> Expr {
     Expr::call(
         system_expr(if delayed { "SetDelayed" } else { "Set" }),
         vec![lhs, rhs],
+    )
+}
+
+fn syntax_information_lhs_expr(symbol: &Symbol) -> Expr {
+    Expr::call(
+        system_expr("SyntaxInformation"),
+        vec![Expr::Atom(Atom::Symbol(symbol.clone()))],
     )
 }
 

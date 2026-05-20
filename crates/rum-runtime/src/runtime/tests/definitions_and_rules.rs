@@ -98,6 +98,51 @@ fn defaultvalues_lists_optional_defaults_and_clearall_removes_them() {
 }
 
 #[test]
+fn defaultvalues_and_definition_include_explicit_syntax_information() {
+    let mut session = Session::new();
+
+    session
+        .eval_text("SyntaxInformation[f] = {\"ArgumentsPattern\" -> {_}}")
+        .unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("DefaultValues[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[HoldPattern[SyntaxInformation[f]], List[Rule[\"ArgumentsPattern\", List[Blank[]]]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Definition[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "HoldComplete[Set[SyntaxInformation[f], List[Rule[\"ArgumentsPattern\", List[Blank[]]]]]]"
+    );
+
+    let rendered = session
+        .eval_text("Information[f]")
+        .unwrap()
+        .value
+        .to_string();
+    assert!(
+        rendered.contains("Rule[\"DefaultValues\", Information`InformationValueForm[DefaultValues, f, List[RuleDelayed[HoldPattern[SyntaxInformation[f]], List[Rule[\"ArgumentsPattern\", List[Blank[]]]]]]]]")
+    );
+
+    session.eval_text("ClearAll[f]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("DefaultValues[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+}
+
+#[test]
 fn information_returns_first_pass_symbol_summary() {
     let mut session = Session::new();
 
