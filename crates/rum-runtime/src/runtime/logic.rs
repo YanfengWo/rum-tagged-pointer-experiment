@@ -108,8 +108,10 @@ impl Session {
                         return Ok(inner_args[0].clone());
                     }
 
-                    if let Some(opposite) = negated_relation_head_name(inner_head) {
-                        return Ok(Expr::call(system_expr(opposite), inner_args.clone()));
+                    if inner_args.len() == 2 {
+                        if let Some(opposite) = negated_relation_head_name(inner_head) {
+                            return Ok(Expr::call(system_expr(opposite), inner_args.clone()));
+                        }
                     }
                 }
 

@@ -368,6 +368,38 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
             .to_string(),
         "LessEqual[a, b]"
     );
+    assert_eq!(
+        session
+            .eval_text("Not[LessEqual[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Greater[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Not[GreaterEqual[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Less[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Not[Less[a, b, c]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Not[Less[a, b, c]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Not[Equal[a, b, c]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Not[Equal[a, b, c]]"
+    );
 }
 
 #[test]
