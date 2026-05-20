@@ -447,8 +447,11 @@ impl Session {
 
     pub(super) fn definition_rule_expr(entry: &DefinitionCatalogEntry) -> Expr {
         Expr::call(
-            system_expr(if entry.delayed { "RuleDelayed" } else { "Rule" }),
-            vec![entry.lhs.clone(), entry.rhs.clone()],
+            system_expr("RuleDelayed"),
+            vec![
+                Expr::call(system_expr("HoldPattern"), vec![entry.lhs.clone()]),
+                entry.rhs.clone(),
+            ],
         )
     }
 

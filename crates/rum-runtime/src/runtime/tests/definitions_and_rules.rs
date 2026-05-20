@@ -40,11 +40,11 @@ fn ownvalues_lists_immediate_and_delayed_symbol_definitions() {
 
     assert_eq!(
         session.eval_text("OwnValues[x]").unwrap().value.to_string(),
-        "List[Rule[x, 42]]"
+        "List[RuleDelayed[HoldPattern[x], 42]]"
     );
     assert_eq!(
         session.eval_text("OwnValues[y]").unwrap().value.to_string(),
-        "List[RuleDelayed[y, x]]"
+        "List[RuleDelayed[HoldPattern[y], x]]"
     );
     assert_eq!(
         session
@@ -118,7 +118,7 @@ fn information_returns_first_pass_symbol_summary() {
         rendered.contains("Rule[\"DefaultValues\", Information`InformationValueForm[DefaultValues, f, List[RuleDelayed[HoldPattern[Default[f]], 7]]]]")
     );
     assert!(
-        rendered.contains("Rule[\"DownValues\", Information`InformationValueForm[DownValues, f, List[RuleDelayed[f[Pattern[x, Blank[Integer]]], x]]]]")
+        rendered.contains("Rule[\"DownValues\", Information`InformationValueForm[DownValues, f, List[RuleDelayed[HoldPattern[f[Pattern[x, Blank[Integer]]]], x]]]]")
     );
     assert!(!rendered.contains("Rule[\"Symbol\""));
 
@@ -147,7 +147,7 @@ fn information_returns_first_pass_symbol_summary() {
             .value
             .to_string()
             .contains(
-                "Rule[\"OwnValues\", Information`InformationValueForm[OwnValues, f, List[Rule[f, 1]]]]"
+                "Rule[\"OwnValues\", Information`InformationValueForm[OwnValues, f, List[RuleDelayed[HoldPattern[f], 1]]]]"
             )
     );
 }
@@ -254,7 +254,7 @@ fn definition_inspection_builtins_accept_symbol_name_strings() {
             .unwrap()
             .value
             .to_string(),
-        "List[Rule[x, 42]]"
+        "List[RuleDelayed[HoldPattern[x], 42]]"
     );
     assert_eq!(
         session
@@ -262,7 +262,7 @@ fn definition_inspection_builtins_accept_symbol_name_strings() {
             .unwrap()
             .value
             .to_string(),
-        "List[RuleDelayed[f[Pattern[y, Blank[Integer]]], y]]"
+        "List[RuleDelayed[HoldPattern[f[Pattern[y, Blank[Integer]]]], y]]"
     );
     assert_eq!(
         session
@@ -270,7 +270,7 @@ fn definition_inspection_builtins_accept_symbol_name_strings() {
             .unwrap()
             .value
             .to_string(),
-        "List[RuleDelayed[h[a], 1]]"
+        "List[RuleDelayed[HoldPattern[h[a]], 1]]"
     );
     assert_eq!(
         session
@@ -278,7 +278,7 @@ fn definition_inspection_builtins_accept_symbol_name_strings() {
             .unwrap()
             .value
             .to_string(),
-        "List[RuleDelayed[g[Pattern[z, Blank[]]][Pattern[w, Blank[Integer]]], pair[z, w]]]"
+        "List[RuleDelayed[HoldPattern[g[Pattern[z, Blank[]]][Pattern[w, Blank[Integer]]]], pair[z, w]]]"
     );
 }
 
@@ -295,7 +295,7 @@ fn upvalues_lists_and_applies_tagged_definitions() {
     );
     assert_eq!(
         session.eval_text("UpValues[f]").unwrap().value.to_string(),
-        "List[RuleDelayed[g[f[Pattern[x, Blank[Integer]]]], h[x]]]"
+        "List[RuleDelayed[HoldPattern[g[f[Pattern[x, Blank[Integer]]]]], h[x]]]"
     );
 }
 
@@ -310,7 +310,7 @@ fn tagset_immediate_captures_rhs_before_later_changes() {
     assert_eq!(session.eval_text("g[f[7]]").unwrap().value.to_string(), "1");
     assert_eq!(
         session.eval_text("UpValues[f]").unwrap().value.to_string(),
-        "List[Rule[g[f[Pattern[x, Blank[Integer]]]], 1]]"
+        "List[RuleDelayed[HoldPattern[g[f[Pattern[x, Blank[Integer]]]]], 1]]"
     );
 }
 
@@ -327,7 +327,7 @@ fn downvalues_lists_stored_pattern_definitions_in_order() {
             .unwrap()
             .value
             .to_string(),
-        "List[RuleDelayed[f[Pattern[x, Blank[Integer]]], x], RuleDelayed[f[Pattern[y, Blank[String]]], y]]"
+        "List[RuleDelayed[HoldPattern[f[Pattern[x, Blank[Integer]]]], x], RuleDelayed[HoldPattern[f[Pattern[y, Blank[String]]]], y]]"
     );
 }
 
@@ -345,7 +345,7 @@ fn redefining_same_downvalue_replaces_the_older_rule_in_place() {
             .unwrap()
             .value
             .to_string(),
-        "List[RuleDelayed[f[Pattern[y, Blank[]]], 2]]"
+        "List[RuleDelayed[HoldPattern[f[Pattern[y, Blank[]]]], 2]]"
     );
 }
 
@@ -359,7 +359,7 @@ fn redefining_same_upvalue_replaces_the_older_rule_in_place() {
     assert_eq!(session.eval_text("g[f[a]]").unwrap().value.to_string(), "2");
     assert_eq!(
         session.eval_text("UpValues[f]").unwrap().value.to_string(),
-        "List[RuleDelayed[g[f[Pattern[y, Blank[]]]], 2]]"
+        "List[RuleDelayed[HoldPattern[g[f[Pattern[y, Blank[]]]]], 2]]"
     );
 }
 
@@ -376,7 +376,7 @@ fn redefining_same_subvalue_replaces_the_older_rule_in_place() {
     );
     assert_eq!(
         session.eval_text("SubValues[f]").unwrap().value.to_string(),
-        "List[RuleDelayed[f[Pattern[a, Blank[]]][Pattern[b, Blank[]]], List[a, b]]]"
+        "List[RuleDelayed[HoldPattern[f[Pattern[a, Blank[]]][Pattern[b, Blank[]]]], List[a, b]]]"
     );
 }
 
@@ -392,7 +392,7 @@ fn subvalues_list_and_apply_nested_head_definitions() {
     );
     assert_eq!(
         session.eval_text("SubValues[f]").unwrap().value.to_string(),
-        "List[RuleDelayed[f[Pattern[x, Blank[]]][Pattern[y, Blank[Integer]]], pair[x, y]]]"
+        "List[RuleDelayed[HoldPattern[f[Pattern[x, Blank[]]][Pattern[y, Blank[Integer]]]], pair[x, y]]]"
     );
 }
 
@@ -412,7 +412,7 @@ fn tagged_subvalues_attach_to_the_head_symbol_not_to_upvalues() {
     );
     assert_eq!(
         session.eval_text("SubValues[f]").unwrap().value.to_string(),
-        "List[RuleDelayed[f[Pattern[x, Blank[]]][Pattern[y, Blank[]]], pair[x, y]]]"
+        "List[RuleDelayed[HoldPattern[f[Pattern[x, Blank[]]][Pattern[y, Blank[]]]], pair[x, y]]]"
     );
 }
 
@@ -425,7 +425,7 @@ fn tagset_preserves_tag_ownership_for_upvalues() {
     assert_eq!(session.eval_text("f[g[7]]").unwrap().value.to_string(), "7");
     assert_eq!(
         session.eval_text("UpValues[g]").unwrap().value.to_string(),
-        "List[RuleDelayed[f[g[Pattern[x, Blank[]]]], x]]"
+        "List[RuleDelayed[HoldPattern[f[g[Pattern[x, Blank[]]]]], x]]"
     );
     assert_eq!(
         session.eval_text("UpValues[f]").unwrap().value.to_string(),
@@ -712,7 +712,7 @@ fn remove_marks_same_evaluation_symbols_stale_and_allows_later_reuse() {
             .unwrap()
             .value
             .to_string(),
-        "List[2, List[Rule[cl02r, 2]], List[\"cl02r\"]]"
+        "List[2, List[RuleDelayed[HoldPattern[cl02r], 2]], List[\"cl02r\"]]"
     );
 }
 
@@ -933,7 +933,7 @@ fn upset_stores_immediate_upvalues_on_inferred_argument_heads() {
     assert_eq!(session.eval_text("f[g[a]]").unwrap().value.to_string(), "1");
     assert_eq!(
         session.eval_text("UpValues[g]").unwrap().value.to_string(),
-        "List[Rule[f[g[Pattern[x, Blank[]]]], 1]]"
+        "List[RuleDelayed[HoldPattern[f[g[Pattern[x, Blank[]]]]], 1]]"
     );
 }
 
@@ -955,11 +955,11 @@ fn upsetdelayed_can_store_on_multiple_inferred_tag_symbols() {
     );
     assert_eq!(
         session.eval_text("UpValues[g]").unwrap().value.to_string(),
-        "List[RuleDelayed[f[g[Pattern[x, Blank[]]], h[Pattern[y, Blank[]]]], pair[x, y]]]"
+        "List[RuleDelayed[HoldPattern[f[g[Pattern[x, Blank[]]], h[Pattern[y, Blank[]]]]], pair[x, y]]]"
     );
     assert_eq!(
         session.eval_text("UpValues[h]").unwrap().value.to_string(),
-        "List[RuleDelayed[f[g[Pattern[x, Blank[]]], h[Pattern[y, Blank[]]]], pair[x, y]]]"
+        "List[RuleDelayed[HoldPattern[f[g[Pattern[x, Blank[]]], h[Pattern[y, Blank[]]]]], pair[x, y]]]"
     );
 }
 

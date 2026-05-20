@@ -251,7 +251,7 @@ fn holdallcomplete_blocks_upvalue_application() {
     );
     assert_eq!(
         session.eval_text("UpValues[f]").unwrap().value.to_string(),
-        "List[RuleDelayed[gate[f[Pattern[x, Blank[Integer]]]], x]]"
+        "List[RuleDelayed[HoldPattern[gate[f[Pattern[x, Blank[Integer]]]]], x]]"
     );
 }
 

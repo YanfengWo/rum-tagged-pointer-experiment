@@ -177,13 +177,15 @@ once in its primary implementation group. Other groups may mention it as
   updates including current bulk-selector distribution / broadcast assignment,
   empty bulk-selector no-op writes, and duplicate nested bulk selector leaf
   distribution, but not obscure update-family diagnostics or deeper overlapping
-  part-target edge parity; `Remove` currently clears stored state for symbol and string-name
-  targets, marks same-evaluation stale symbols as `Removed["name"]`, and
-  allows later same-name reuse through runtime symbol generations, while
-  broader stale-symbol rendering / introspection corners and the protection /
-  option / package-tooling layers are cross-tracked in `CL-08`
-- `planned`: fuller assignment/update family and broader
-  definition-introspection parity
+  part-target edge parity; `Remove` currently clears stored state for symbol
+  and string-name targets, marks same-evaluation stale symbols as
+  `Removed["name"]`, and allows later same-name reuse through runtime symbol
+  generations, while public definition lists now render the current
+  `HoldPattern[lhs] :> rhs` shape; broader stale-symbol rendering /
+  introspection corners and the protection / option / package-tooling layers
+  are cross-tracked in `CL-08`
+- `planned`: fuller assignment/update family and broader definition
+  introspection beyond the current value-list and `InformationData` shapes
 
 ### Functions and Symbols
 
@@ -198,7 +200,8 @@ once in its primary implementation group. Other groups may mention it as
 - `planned`: remaining update-family diagnostics, overlapping part-target
   edge cases beyond the current duplicate bulk-selector coverage, deeper
   `Removed[...]` rendering / introspection corners, and definition-introspection
-  parity beyond the current `InformationValueForm` summary shape
+  parity beyond the current `HoldPattern` value-list and `InformationValueForm`
+  summary shapes
 - `cross-tracked elsewhere`: `Alternatives`, `BlankSequence`, `Function`,
   `Optional`, `Check`, `Confirm`, `CompoundExpression`, `Enclose`, `OptionValue`,
   `Options`, `OptionsPattern`, `Protect`, `Protected`, `Quiet`, `Rule`,
