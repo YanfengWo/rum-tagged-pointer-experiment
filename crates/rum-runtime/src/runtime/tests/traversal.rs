@@ -212,6 +212,22 @@ fn count_memberq_and_freeq_share_standard_traversal_semantics() {
     );
     assert_eq!(
         session
+            .eval_text("Count[f[g][a], _Symbol, {-1}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("Count[f[g][a], _, {-2}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
             .eval_text("Count[f[g[]], g[], {-2}]")
             .unwrap()
             .value
@@ -394,6 +410,38 @@ fn level_supports_heads_and_apply_head_forms() {
     );
     assert_eq!(
         session
+            .eval_text("Level[f[g][a], {-1}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f, g, a]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g][a], {-2}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[g], f[g][a]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g][a], {-3}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g[h]][a], {-3}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[g[h]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Level[f[1, 2], {1}, Plus]")
             .unwrap()
             .value
@@ -445,6 +493,22 @@ fn position_supports_standard_levelspecs_heads_and_limits() {
             .value
             .to_string(),
         "List[List[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Position[f[g][a], f[g][a], {-2}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Position[f[g][a], f[g][a], {-3}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
     );
     assert_eq!(
         session

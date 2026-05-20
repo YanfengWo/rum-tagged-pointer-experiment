@@ -163,6 +163,7 @@ This roadmap intentionally uses two levels of detail:
 - [x] Align first-pass order-comparison parity by fixing `Order`'s sign convention, using exact numeric order for numeric ordering predicates, and adding current two-argument `LexicographicOrder` / `NumericalOrder` / `AlphabeticOrder` coverage
 - [x] Extend `Part` / `Extract` span endpoint parity with the current `UpTo[n]` / `UpTo[Infinity]` subset while keeping direct `UpTo[...]` part specifications inert
 - [x] Tighten standard levelspec parity across the shared traversal walkers by accepting legal empty ranges, positive/negative `Infinity` list bounds, and Wolfram's mixed negative-depth / positive-level range semantics under current `Heads` traversal
+- [x] Align compound-head `Heads -> True` traversal depth semantics so heads are visited as nodes without making their depth inflate the enclosing expression's negative level
 - [x] Add the first `NearestTo` callable wrapper subset by routing `NearestTo[target][data]` and positive-count / radius-limited forms through the existing `Nearest[data, target, ...]` evaluator while keeping unsupported selection forms inert
 - [x] Add first-pass algebraic expression predicates by covering current `PolynomialQ`, two-argument `PolynomialExpressionQ`, and two-argument `RationalExpressionQ` over exact variables / expression variables while leaving richer coefficient-domain forms inert
 - [x] Add structural `DateObjectQ` / `TimeObjectQ` recognition for System `DateObject[...]` and `TimeObject[...]` wrappers without attempting date/time object normalization

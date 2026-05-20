@@ -104,7 +104,8 @@ once in its primary implementation group. Other groups may mention it as
   `Level` scalar-zero, standard-`All`, empty-range, mixed positive/negative,
   and positive/negative `Infinity` levelspec parity, and empty-expression
   negative-level depth alignment plus current oracle-locked `Heads` traversal
-  edges across the current structural walkers, current
+  edges, including compound-head negative-level handling, across the current
+  structural walkers, current
   `Not[Not[...]]` and relational-`Not` simplifications,
   flat nested `And` / `Or` residual simplification, first-pass `Xor` /
   `Equivalent` boolean/repeated-term reductions, first-pass `Implies`

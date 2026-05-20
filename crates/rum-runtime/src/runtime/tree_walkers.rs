@@ -376,9 +376,9 @@ impl Session {
                 if let Some(entries) = association_entries_from_expr(&expr) {
                     let mut children = Vec::new();
                     if traversal.include_heads {
-                        children.push(head.as_ref().clone());
+                        children.push((head.as_ref().clone(), false));
                     }
-                    children.extend(entries.into_iter().map(|(_, value)| value));
+                    children.extend(entries.into_iter().map(|(_, value)| (value, true)));
 
                     self.count_pattern_children(
                         children,
@@ -431,9 +431,9 @@ impl Session {
             Expr::Call { head, args } => {
                 let mut children = Vec::new();
                 if traversal.include_heads {
-                    children.push(*head);
+                    children.push((*head, false));
                 }
-                children.extend(args);
+                children.extend(args.into_iter().map(|arg| (arg, true)));
 
                 self.count_pattern_children(
                     children,
@@ -481,7 +481,7 @@ impl Session {
 
     fn count_pattern_children(
         &mut self,
-        children: Vec<Expr>,
+        children: Vec<(Expr, bool)>,
         expr: Expr,
         pattern: Expr,
         traversal: CasesTraversalConfig,
@@ -490,7 +490,7 @@ impl Session {
         count: usize,
         max_child_depth: usize,
     ) -> Result<TraversalCountOutcome, EvalError> {
-        let Some((child, rest)) = children.split_first() else {
+        let Some(((child, contributes_depth), rest)) = children.split_first() else {
             let depth = max_child_depth.saturating_add(1);
             return self.finish_count_at_current_node(
                 expr,
@@ -503,6 +503,7 @@ impl Session {
             );
         };
 
+        let contributes_depth = *contributes_depth;
         let child_result = self.count_pattern_matches_owned(
             child.clone(),
             pattern.clone(),
@@ -514,7 +515,11 @@ impl Session {
 
         self.drive_internal_value(child_result, move |session, child_outcome| {
             let next_count = count + child_outcome.count;
-            let next_max_child_depth = max_child_depth.max(child_outcome.depth);
+            let next_max_child_depth = if contributes_depth {
+                max_child_depth.max(child_outcome.depth)
+            } else {
+                max_child_depth
+            };
 
             if child_outcome.exhausted {
                 return Ok(TraversalCountOutcome::new(
@@ -561,10 +566,14 @@ impl Session {
                 if let Some(entries) = association_entries_from_expr(&expr) {
                     let mut children = Vec::new();
                     if traversal.include_heads {
-                        children.push(((*head).clone(), extend_position(&path, position_index(0))));
+                        children.push((
+                            (*head).clone(),
+                            extend_position(&path, position_index(0)),
+                            false,
+                        ));
                     }
                     for (key, value) in entries {
-                        children.push((value, extend_position(&path, position_key(key))));
+                        children.push((value, extend_position(&path, position_key(key)), true));
                     }
 
                     self.collect_position_children(
@@ -623,10 +632,14 @@ impl Session {
             Expr::Call { head, args } => {
                 let mut children = Vec::new();
                 if traversal.include_heads {
-                    children.push(((*head).clone(), extend_position(&path, position_index(0))));
+                    children.push((
+                        (*head).clone(),
+                        extend_position(&path, position_index(0)),
+                        false,
+                    ));
                 }
                 for (index, arg) in args.into_iter().enumerate() {
-                    children.push((arg, extend_position(&path, position_index(index + 1))));
+                    children.push((arg, extend_position(&path, position_index(index + 1)), true));
                 }
 
                 self.collect_position_children(
@@ -680,7 +693,7 @@ impl Session {
 
     fn collect_position_children(
         &mut self,
-        children: Vec<(Expr, Vec<Expr>)>,
+        children: Vec<(Expr, Vec<Expr>, bool)>,
         expr: Expr,
         pattern: Expr,
         traversal: CasesTraversalConfig,
@@ -690,7 +703,7 @@ impl Session {
         mut positions: Vec<Expr>,
         max_child_depth: usize,
     ) -> Result<PositionCollectionOutcome, EvalError> {
-        let Some(((child, child_path), rest)) = children.split_first() else {
+        let Some(((child, child_path, contributes_depth), rest)) = children.split_first() else {
             let depth = max_child_depth.saturating_add(1);
             return self.finish_positions_at_current_node(
                 expr,
@@ -704,6 +717,7 @@ impl Session {
             );
         };
 
+        let contributes_depth = *contributes_depth;
         let child_result = self.collect_positions_owned(
             child.clone(),
             pattern.clone(),
@@ -716,7 +730,11 @@ impl Session {
 
         self.drive_internal_value(child_result, move |session, child_outcome| {
             positions.extend(child_outcome.positions);
-            let next_max_child_depth = max_child_depth.max(child_outcome.depth);
+            let next_max_child_depth = if contributes_depth {
+                max_child_depth.max(child_outcome.depth)
+            } else {
+                max_child_depth
+            };
 
             if child_outcome.exhausted {
                 return Ok(PositionCollectionOutcome::new(
@@ -768,7 +786,6 @@ fn collect_level_parts(
 
                 if traversal.include_heads {
                     let head_result = collect_level_parts(head, traversal, level + 1);
-                    max_child_depth = max_child_depth.max(head_result.depth);
                     parts.extend(head_result.parts);
                 }
 
@@ -812,7 +829,6 @@ fn collect_level_parts_in_standard_call(
 
             if traversal.include_heads {
                 let head_result = collect_level_parts(head, traversal, level + 1);
-                max_child_depth = max_child_depth.max(head_result.depth);
                 parts.extend(head_result.parts);
             }
 
