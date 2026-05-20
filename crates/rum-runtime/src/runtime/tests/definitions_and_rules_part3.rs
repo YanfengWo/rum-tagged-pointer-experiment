@@ -652,6 +652,22 @@ fn cases_supports_explicit_head_traversal_control() {
             .to_string(),
         "List[f, g]"
     );
+    assert_eq!(
+        session
+            .eval_text("Cases[f[g][a], _, {-2}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[g], f[g][a]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Cases[f[g][a], _, {-3}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
 }
 
 #[test]
@@ -1107,6 +1123,14 @@ fn deletecases_can_delete_heads_and_association_values() {
             .value
             .to_string(),
         "Sequence[1, g[2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DeleteCases[f[g][a], f[g][a], {-3}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[g][a]"
     );
     assert_eq!(
         session

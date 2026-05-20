@@ -521,6 +521,28 @@ fn extract_consumes_exact_paths_and_position_output() {
             .to_string(),
         "List[f[g[b]]]"
     );
+    let invalid_nested_all = session.eval_text("Extract[f[a, b, c], {{{All}}}]").unwrap();
+    assert_eq!(
+        invalid_nested_all.value.to_string(),
+        "Extract[f[a, b, c], List[List[List[All]]]]"
+    );
+    assert!(
+        invalid_nested_all
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "psl1")
+    );
+    let invalid_deeper_nested = session.eval_text("Extract[f[a, b, c], {{{{1}}}}]").unwrap();
+    assert_eq!(
+        invalid_deeper_nested.value.to_string(),
+        "Extract[f[a, b, c], List[List[List[List[1]]]]]"
+    );
+    assert!(
+        invalid_deeper_nested
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "psl1")
+    );
     assert_eq!(
         session
             .eval_text("Extract[1, {All}]")

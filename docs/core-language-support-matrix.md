@@ -99,13 +99,14 @@ once in its primary implementation group. Other groups may mention it as
   association-aware numeric/range `Part` / `Extract` value projection, current
   association-aware `First` / `Last` value selection plus `Rest` / `Most`
   association slicing, plus the current `Part` selector-list boundary and
-  `Extract` nested position-list selector subset, empty-expression and
+  `Extract` nested position-list selector subset, including shaped integer /
+  `Key[...]` selectors and nested `All` / `Span` rejection, empty-expression and
   association-aware `Depth` parity,
   `Level` scalar-zero, standard-`All`, empty-range, mixed positive/negative,
   and positive/negative `Infinity` levelspec parity, and empty-expression
   negative-level depth alignment plus current oracle-locked `Heads` traversal
-  edges, including compound-head negative-level handling, across the current
-  structural walkers, current
+  edges, including compound-head negative-level handling across the current
+  structural and cases/delete walkers, current
   `Not[Not[...]]` and relational-`Not` simplifications,
   flat nested `And` / `Or` residual simplification, first-pass `Xor` /
   `Equivalent` boolean/repeated-term reductions, first-pass `Implies`

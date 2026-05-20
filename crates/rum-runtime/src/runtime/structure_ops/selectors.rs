@@ -1157,7 +1157,33 @@ fn parse_single_position_spec_with_nested_lists(
         return None;
     }
 
-    args.iter().map(parse_part_selector).collect()
+    let parse_selector = if allow_nested_plain_lists {
+        parse_extract_position_selector
+    } else {
+        parse_part_selector
+    };
+
+    args.iter().map(parse_selector).collect()
+}
+
+fn parse_extract_position_selector(expr: &Expr) -> Option<PartSelector> {
+    if let Some(selector) = parse_scalar_part_selector(expr) {
+        return Some(selector);
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return None;
+    }
+
+    Some(PartSelector::Multi(
+        args.iter()
+            .map(parse_part_list_item_selector)
+            .collect::<Option<Vec<_>>>()?,
+    ))
 }
 
 fn wrap_extracted_value(value: Expr, wrapper: Option<&Expr>) -> Expr {

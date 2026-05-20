@@ -476,9 +476,9 @@ impl Session {
                 if let Some(entries) = association_entries_from_expr(&expr) {
                     let mut children = Vec::new();
                     if traversal.include_heads {
-                        children.push(head.as_ref().clone());
+                        children.push((head.as_ref().clone(), false));
                     }
-                    children.extend(entries.into_iter().map(|(_, value)| value));
+                    children.extend(entries.into_iter().map(|(_, value)| (value, true)));
 
                     self.collect_cases_children(
                         children,
@@ -521,9 +521,9 @@ impl Session {
             Expr::Call { head, args } => {
                 let mut children = Vec::new();
                 if traversal.include_heads {
-                    children.push(*head);
+                    children.push((*head, false));
                 }
-                children.extend(args);
+                children.extend(args.into_iter().map(|arg| (arg, true)));
 
                 self.collect_cases_children(
                     children,
@@ -617,7 +617,7 @@ impl Session {
 
     fn collect_cases_children(
         &mut self,
-        children: Vec<Expr>,
+        children: Vec<(Expr, bool)>,
         expr: Expr,
         spec: CasesSpec,
         traversal: CasesTraversalConfig,
@@ -626,7 +626,7 @@ impl Session {
         mut matches: Vec<Expr>,
         max_child_depth: usize,
     ) -> Result<CasesCollectionOutcome, EvalError> {
-        let Some((child, rest)) = children.split_first() else {
+        let Some(((child, contributes_depth), rest)) = children.split_first() else {
             let depth = max_child_depth.saturating_add(1);
             return self.finish_cases_at_current_node(
                 expr,
@@ -639,6 +639,7 @@ impl Session {
             );
         };
 
+        let contributes_depth = *contributes_depth;
         let child_result = self.collect_cases_owned(
             child.clone(),
             spec.clone(),
@@ -650,7 +651,11 @@ impl Session {
 
         self.drive_internal_value(child_result, move |session, child_outcome| {
             matches.extend(child_outcome.matches);
-            let next_max_child_depth = max_child_depth.max(child_outcome.depth);
+            let next_max_child_depth = if contributes_depth {
+                max_child_depth.max(child_outcome.depth)
+            } else {
+                max_child_depth
+            };
 
             if child_outcome.exhausted {
                 return Ok(CasesCollectionOutcome::new(
@@ -731,9 +736,9 @@ impl Session {
     ) -> Result<DeleteCasesOutcome, EvalError> {
         let mut children = Vec::new();
         if traversal.include_heads {
-            children.push((true, head.clone()));
+            children.push((true, head.clone(), false));
         }
-        children.extend(args.into_iter().map(|arg| (false, arg)));
+        children.extend(args.into_iter().map(|arg| (false, arg, true)));
 
         self.delete_cases_call_children_from_queue(
             children,
@@ -752,7 +757,7 @@ impl Session {
     #[allow(clippy::too_many_arguments)]
     fn delete_cases_call_children_from_queue(
         &mut self,
-        children: Vec<(bool, Expr)>,
+        children: Vec<(bool, Expr, bool)>,
         pattern: Expr,
         traversal: CasesTraversalConfig,
         level: usize,
@@ -792,7 +797,7 @@ impl Session {
             });
         }
 
-        let (is_head, child) = children[0].clone();
+        let (is_head, child, contributes_depth) = children[0].clone();
         let rest = children[1..].to_vec();
 
         let child_result =
@@ -800,7 +805,11 @@ impl Session {
 
         self.drive_internal_value(child_result, move |session, child_outcome| {
             let deleted_before_next = deleted_before + child_outcome.deleted_count;
-            let next_max_child_depth = max_child_depth.max(child_outcome.depth);
+            let next_max_child_depth = if contributes_depth {
+                max_child_depth.max(child_outcome.depth)
+            } else {
+                max_child_depth
+            };
             let mut next_args = rebuilt_args;
             let mut next_head = rebuilt_head;
             let mut next_head_deleted = head_deleted;
@@ -823,7 +832,7 @@ impl Session {
             if child_outcome.exhausted {
                 let untouched_rest = rest
                     .iter()
-                    .filter_map(|(is_head, expr)| (!*is_head).then_some(expr.clone()))
+                    .filter_map(|(is_head, expr, _)| (!*is_head).then_some(expr.clone()))
                     .collect::<Vec<_>>();
                 next_args.extend(untouched_rest);
 
@@ -877,7 +886,7 @@ impl Session {
     ) -> Result<DeleteCasesOutcome, EvalError> {
         let mut children = Vec::new();
         if traversal.include_heads {
-            children.push((true, None, head.clone()));
+            children.push((true, None, head.clone(), false));
         }
 
         for rule in args {
@@ -886,9 +895,14 @@ impl Session {
                     head: rule_head,
                     args: rule_args,
                 } if is_system_symbol_name(rule_head, "Rule") && rule_args.len() == 2 => {
-                    children.push((false, Some(rule_args[0].clone()), rule_args[1].clone()));
+                    children.push((
+                        false,
+                        Some(rule_args[0].clone()),
+                        rule_args[1].clone(),
+                        true,
+                    ));
                 }
-                _ => children.push((false, None, rule)),
+                _ => children.push((false, None, rule, true)),
             }
         }
 
@@ -909,7 +923,7 @@ impl Session {
     #[allow(clippy::too_many_arguments)]
     fn delete_cases_association_children_from_queue(
         &mut self,
-        children: Vec<(bool, Option<Expr>, Expr)>,
+        children: Vec<(bool, Option<Expr>, Expr, bool)>,
         pattern: Expr,
         traversal: CasesTraversalConfig,
         level: usize,
@@ -949,7 +963,7 @@ impl Session {
             });
         }
 
-        let (is_head, entry_key, child) = children[0].clone();
+        let (is_head, entry_key, child, contributes_depth) = children[0].clone();
         let rest = children[1..].to_vec();
 
         let child_expr = child.clone();
@@ -963,7 +977,11 @@ impl Session {
 
         self.drive_internal_value(child_result, move |session, child_outcome| {
             let deleted_before_next = deleted_before + child_outcome.deleted_count;
-            let next_max_child_depth = max_child_depth.max(child_outcome.depth);
+            let next_max_child_depth = if contributes_depth {
+                max_child_depth.max(child_outcome.depth)
+            } else {
+                max_child_depth
+            };
             let mut next_entries = rebuilt_entries;
             let mut next_head = rebuilt_head;
             let mut next_head_deleted = head_deleted;
@@ -999,7 +1017,7 @@ impl Session {
             if child_outcome.exhausted {
                 let untouched_rest = rest
                     .iter()
-                    .filter_map(|(is_head, key, expr)| {
+                    .filter_map(|(is_head, key, expr, _)| {
                         if *is_head {
                             None
                         } else if let Some(key) = key {
