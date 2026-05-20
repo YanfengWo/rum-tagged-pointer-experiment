@@ -220,7 +220,7 @@ This roadmap intentionally uses two levels of detail:
 ### Core-Language Matrix Groups
 
 - [ ] `CL-01` Expression, truth, and structural foundation
-- [ ] `CL-02` Definitions, attributes, assignments, and scoping
+- [x] `CL-02` Definitions, attributes, assignments, and scoping
 - [ ] `CL-03` Rules, patterns, and tree walkers
 - [ ] `CL-04` Functional and list combinators
 - [x] `CL-05` Associations and keyed data
@@ -294,10 +294,10 @@ This roadmap intentionally uses two levels of detail:
       - [ ] Remaining assertion/I/O long-tail: obscure `Assert` controls and
         fuller host-I/O option, prompt, request, and parse/error semantics.
     - [ ] `CL-01`: remaining part-spec / `Heads` parity beyond the current atom `All` / span-boundary selector alignment, current invalid and out-of-range `Part` / `Extract` selector diagnostics, current `Part` selector-list boundary, current `Extract` nested position-list selector subset, empty-expression plus association-aware `Depth` parity, `Level` scalar-zero plus standard-`All` levelspec parity, empty-expression negative-level depth alignment plus current oracle-locked `Heads` traversal edges across the current structural walkers, current `Not[Not[...]]` and relational-`Not` simplifications, flat nested `And` / `Or` residual simplification, first-pass `Xor` / `Equivalent` boolean/repeated-term reductions, first-pass `Implies` simplification including identical-argument tautology, current short-circuit `Nand` / `Nor`, first-pass `Boole` truth-to-integer conversion, mixed-symbolic `Equal` / `Unequal` chain boundaries plus current numeric order-chain endpoint contradiction detection with nonnumeric order comparisons kept conservative, and nonatomic `OrderedQ` argument-order parity, plus deeper truth/comparison breadth beyond the current exact-numeric order-chain reductions
-    - [ ] `CL-02`: mainline is closeable; leave only small
-      definition/update-family polish unless a downstream project exposes a
+    - [x] `CL-02`: mainline closed; leave only small definition/update-family
+      polish as deferred long-tail unless a downstream project exposes a
       concrete blocker.
-      Current follow-up adds symbol-target `SubtractFrom`, `TimesBy`,
+      Closed mainline includes symbol-target `SubtractFrom`, `TimesBy`,
       `DivideBy`, `ApplyTo`, `Decrement`, `PreIncrement`, `PreDecrement`, and
       `PrependTo` plus their common update syntax lowering where applicable,
       a first-pass `Remove` subset for symbol and string-name targets, and
@@ -318,7 +318,7 @@ This roadmap intentionally uses two levels of detail:
       rejection of nested selector lists that Wolfram `Part` itself rejects
       with current `Part::pkspec1` / `Set::pkspec1` diagnostics, plus
       Wolfram-style `rvalue` diagnostics for non-variable held-update targets.
-      Remaining non-blocking gaps include obscure update-family diagnostics,
+      Deferred non-blocking gaps include obscure update-family diagnostics,
       exact return-form / message-count parity for invalid nested held
       part-targets,
       deeper `Removed[...]` rendering / introspection corners, and fuller

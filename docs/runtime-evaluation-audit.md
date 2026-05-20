@@ -174,22 +174,27 @@ Practical impact:
 - the current attribute model is already useful, but still far from the broader
   Wolfram attribute surface
 
-### 2. Definition Lattice And Precedence Are Still A Narrow Slice
+### 2. Definition Lattice Is Usable But Not Exhaustive
 
 The evaluator now has a workable precedence order for ownvalues, upvalues,
 downvalues, subvalues, builtins, and pure functions, but it still does not
-model the full broader definition lattice.
+model the full broader definition lattice. The `CL-02` mainline is closed for
+the current core-language target, with remaining work treated as long-tail
+parity rather than an active blocker.
 
 Missing or incomplete areas include:
 
-- richer tag-based ownership and attachment models
+- richer tag-based ownership and attachment edge cases beyond the current
+  `TagSet` / `UpSet` subset
+- exact front-end-style definition introspection and print-layer rendering
 - broader metadata-driven semantics so fewer evaluator decisions remain
   handwritten
 
 Practical impact:
 
-- common argument-owned protocols are possible, but deeper multi-owner and
-  future richer precedence cases are still absent
+- common argument-owned protocols are possible, while deeper multi-owner,
+  print-layer, and future richer precedence cases remain explicit long-tail
+  work
 
 ### 3. Held Evaluation Is Functional But Not Exhaustive
 
