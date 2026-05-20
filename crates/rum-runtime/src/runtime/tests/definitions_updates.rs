@@ -87,6 +87,78 @@ fn held_update_syntax_mutates_module_locals() {
 }
 
 #[test]
+fn held_updates_mutate_single_exact_part_targets() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("x = {1, 2}; {AddTo[x[[1]], 3], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[4, List[4, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "x = {10, 4}; {SubtractFrom[x[[1]], 3], TimesBy[x[[2]], 5], DivideBy[x[[1]], 7], x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[7, 20, 1, List[1, 20]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = {10, 20}; {x[[2]]++, x, ++x[[1]], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[20, List[10, 21], 11, List[11, 21]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = {2, 3}; {x[[1]]--, --x[[2]], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 2, List[1, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = {{a}, {b}}; {AppendTo[x[[1]], z], PrependTo[x[[2]], q], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a, z], List[q, b], List[List[a, z], List[q, b]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = {2}; {ApplyTo[x[[1]], f], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[2], List[f[2]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Module[{x = {1, 2}}, x[[1]] += 3; x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[4, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = {1, 2}; {AddTo[x[[1]], (x = {9, 9}; 3)], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[12, List[12, 9]]"
+    );
+}
+
+#[test]
 fn held_updates_report_missing_or_invalid_targets_without_writing() {
     let mut session = Session::new();
 

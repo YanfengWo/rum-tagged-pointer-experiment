@@ -7,8 +7,21 @@ enum HeldUpdateReturn {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+enum HeldUpdateTarget {
+    Symbol(Symbol),
+    Part {
+        symbol: Symbol,
+        current_target: Expr,
+        path: Vec<isize>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum HeldUpdateCurrent {
-    Ready { target: Symbol, current: Expr },
+    Ready {
+        target: HeldUpdateTarget,
+        current: Expr,
+    },
     Immediate(Expr),
 }
 
@@ -216,14 +229,27 @@ impl Session {
         target_expr: &Expr,
         args: &[Expr],
     ) -> HeldUpdateCurrent {
-        let Some(target) = self.normalize_symbol_target_expr(target_expr, true) else {
-            return HeldUpdateCurrent::Immediate(self.invalid_call_with_arg_form(
-                operator,
-                args,
-                "expected a symbol or symbol-name string as the first argument",
-            ));
-        };
+        if let Some(target) = self.normalize_symbol_target_expr(target_expr, true) {
+            return self.current_symbol_held_update_value(operator, target, args);
+        }
 
+        if let Some((target, selector_exprs)) = normalize_part_update_target(target_expr) {
+            return self.current_part_held_update_value(operator, target, selector_exprs, args);
+        }
+
+        HeldUpdateCurrent::Immediate(self.invalid_call_with_arg_form(
+            operator,
+            args,
+            "expected a symbol, symbol-name string, or single exact Part target as the first argument",
+        ))
+    }
+
+    fn current_symbol_held_update_value(
+        &mut self,
+        operator: &'static str,
+        target: Symbol,
+        args: &[Expr],
+    ) -> HeldUpdateCurrent {
         if !self.ensure_symbol_not_protected_for_write(operator, &target) {
             return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
         }
@@ -241,12 +267,71 @@ impl Session {
             return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
         };
 
-        HeldUpdateCurrent::Ready { target, current }
+        HeldUpdateCurrent::Ready {
+            target: HeldUpdateTarget::Symbol(target),
+            current,
+        }
+    }
+
+    fn current_part_held_update_value(
+        &mut self,
+        operator: &'static str,
+        target: Symbol,
+        selector_exprs: Vec<Expr>,
+        args: &[Expr],
+    ) -> HeldUpdateCurrent {
+        if !self.ensure_symbol_not_protected_for_write(operator, &target) {
+            return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
+        }
+
+        let Some(current_target) = self
+            .definitions
+            .get(&target)
+            .and_then(|definition| definition.own_value.clone())
+        else {
+            self.push_message(
+                operator,
+                "rvalue",
+                format!("{target} is not a variable with a value, so its value cannot be changed."),
+            );
+            return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
+        };
+
+        let Some(paths) =
+            exact_position_paths_from_part_selector_exprs(&current_target, &selector_exprs)
+        else {
+            return HeldUpdateCurrent::Immediate(self.invalid_call_with_arg_form(
+                operator,
+                args,
+                "expected a single exact Part target as the first argument",
+            ));
+        };
+
+        let [path] = paths.as_slice() else {
+            return HeldUpdateCurrent::Immediate(self.invalid_call_with_arg_form(
+                operator,
+                args,
+                "expected a single exact Part target as the first argument",
+            ));
+        };
+
+        let Some(current) = exact_expr_at_path(&current_target, path) else {
+            return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
+        };
+
+        HeldUpdateCurrent::Ready {
+            target: HeldUpdateTarget::Part {
+                symbol: target,
+                current_target,
+                path: path.clone(),
+            },
+            current,
+        }
     }
 
     fn finish_held_update(
         &mut self,
-        target: Symbol,
+        target: HeldUpdateTarget,
         update: Expr,
         return_value: HeldUpdateReturn,
     ) -> Result<Expr, EvalError> {
@@ -262,17 +347,44 @@ impl Session {
 
     fn store_held_update(
         &mut self,
-        target: Symbol,
+        target: HeldUpdateTarget,
         updated: Expr,
         return_value: HeldUpdateReturn,
     ) -> Result<Expr, EvalError> {
-        let definition = self.definitions.entry(target).or_default();
-        definition.own_value = Some(updated.clone());
-        definition.delayed_own_value = None;
+        match target {
+            HeldUpdateTarget::Symbol(symbol) => {
+                let definition = self.definitions.entry(symbol).or_default();
+                definition.own_value = Some(updated.clone());
+                definition.delayed_own_value = None;
+            }
+            HeldUpdateTarget::Part {
+                symbol,
+                current_target,
+                path,
+            } => {
+                let updated_target = replace_exact_path(current_target, &path, updated.clone());
+                let definition = self.definitions.entry(symbol).or_default();
+                definition.own_value = Some(updated_target);
+                definition.delayed_own_value = None;
+            }
+        }
 
         Ok(match return_value {
             HeldUpdateReturn::Updated => updated,
             HeldUpdateReturn::Previous(value) => value,
         })
     }
+}
+
+fn normalize_part_update_target(expr: &Expr) -> Option<(Symbol, Vec<Expr>)> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, "Part") || args.len() < 2 {
+        return None;
+    }
+
+    let target = expr_as_symbol(&args[0])?.clone();
+    Some((target, args[1..].to_vec()))
 }
