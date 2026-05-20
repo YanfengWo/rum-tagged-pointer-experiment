@@ -108,7 +108,8 @@ once in its primary implementation group. Other groups may mention it as
   flat nested `And` / `Or` residual simplification, first-pass `Xor` /
   `Equivalent` boolean/repeated-term reductions, first-pass `Implies`
   simplification including identical-argument tautology, current short-circuit
-  `Nand` / `Nor`, current `Listable` `Boole` truth-to-integer conversion,
+  `Nand` / `Nor`, current `Listable` `Boole` truth-to-integer conversion plus
+  current `Listable` exact numeric predicate coverage,
   mixed-symbolic `Equal` / `Unequal` chain boundaries plus current numeric
   order-chain endpoint contradiction detection while leaving nonnumeric order
   comparisons conservative,

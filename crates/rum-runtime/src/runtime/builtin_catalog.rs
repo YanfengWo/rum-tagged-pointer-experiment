@@ -205,39 +205,46 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         "Tests whether an expression is currently numeric in the exact-number subset.",
         BuiltinHandler::NumericQ,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "EvenQ",
         "Tests whether an expression is currently an even exact integer.",
+        AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::EvenQ,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "OddQ",
         "Tests whether an expression is currently an odd exact integer.",
+        AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::OddQ,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "Positive",
         "Tests positivity in the current exact integer/rational subset.",
+        AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::Positive,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "Negative",
         "Tests negativity in the current exact integer/rational subset.",
+        AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::Negative,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "NonPositive",
         "Tests non-positivity in the current exact integer/rational subset.",
+        AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::NonPositive,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "NonNegative",
         "Tests non-negativity in the current exact integer/rational subset.",
+        AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::NonNegative,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "PossibleZeroQ",
         "Tests exact zero in the current exact integer/rational subset.",
+        AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::PossibleZeroQ,
     ),
     BuiltinSpec::ordinary(
@@ -255,14 +262,16 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         "Tests whether an expression is real-valued and numeric in the current exact-number subset.",
         BuiltinHandler::RealValuedNumericQ,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "PrimeQ",
         "Tests primality in the current exact-integer subset.",
+        AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::PrimeQ,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "AlgebraicIntegerQ",
         "Tests whether an expression is an exact integer in the current algebraic-integer subset.",
+        AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::AlgebraicIntegerQ,
     ),
     BuiltinSpec::ordinary(

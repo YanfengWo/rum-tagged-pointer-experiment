@@ -152,13 +152,13 @@ impl Session {
     }
 
     pub(super) fn eval_positive(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-        self.eval_exact_numeric_sign_predicate("Positive", args, |value| {
+        self.eval_exact_numeric_sign_predicate_or_inert("Positive", args, |value| {
             value.numerator() > &BigInt::from(0_u8)
         })
     }
 
     pub(super) fn eval_negative(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-        self.eval_exact_numeric_sign_predicate("Negative", args, |value| {
+        self.eval_exact_numeric_sign_predicate_or_inert("Negative", args, |value| {
             value.numerator() < &BigInt::from(0_u8)
         })
     }
@@ -168,7 +168,7 @@ impl Session {
         _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        self.eval_exact_numeric_sign_predicate("NonPositive", args, |value| {
+        self.eval_exact_numeric_sign_predicate_or_inert("NonPositive", args, |value| {
             value.numerator() <= &BigInt::from(0_u8)
         })
     }
@@ -178,7 +178,7 @@ impl Session {
         _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        self.eval_exact_numeric_sign_predicate("NonNegative", args, |value| {
+        self.eval_exact_numeric_sign_predicate_or_inert("NonNegative", args, |value| {
             value.numerator() >= &BigInt::from(0_u8)
         })
     }
@@ -644,6 +644,26 @@ impl Session {
         Ok(predicate_bool_expr(
             exact_numeric_value(expr).is_some_and(|value| predicate(&value)),
         ))
+    }
+
+    fn eval_exact_numeric_sign_predicate_or_inert<F>(
+        &mut self,
+        name: &str,
+        args: &[Expr],
+        predicate: F,
+    ) -> Result<Expr, EvalError>
+    where
+        F: FnOnce(&Rational) -> bool,
+    {
+        let [expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count(name, args, 1));
+        };
+
+        let Some(value) = exact_numeric_value(expr) else {
+            return Ok(Expr::call(system_expr(name), args.to_vec()));
+        };
+
+        Ok(predicate_bool_expr(predicate(&value)))
     }
 
     fn eval_list_containment_relation<F>(

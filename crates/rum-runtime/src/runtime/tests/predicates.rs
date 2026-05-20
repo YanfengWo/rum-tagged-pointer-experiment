@@ -158,6 +158,22 @@ fn predicate_q_family_covers_current_exact_and_structural_subsets() {
     );
     assert_eq!(
         session
+            .eval_text("EvenQ[{1, 2, x}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[False, True, False]"
+    );
+    assert_eq!(
+        session
+            .eval_text("OddQ[{{1}, {2, x}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[True], List[False, False]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Positive[3/4]")
             .unwrap()
             .value
@@ -167,6 +183,10 @@ fn predicate_q_family_covers_current_exact_and_structural_subsets() {
     assert_eq!(
         session.eval_text("Positive[0]").unwrap().value.to_string(),
         "False"
+    );
+    assert_eq!(
+        session.eval_text("Positive[x]").unwrap().value.to_string(),
+        "Positive[x]"
     );
     assert_eq!(
         session
@@ -194,6 +214,38 @@ fn predicate_q_family_covers_current_exact_and_structural_subsets() {
     );
     assert_eq!(
         session
+            .eval_text("Positive[{-1, 0, 1, x}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[False, False, True, Positive[x]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Negative[{-1, 0, 1, x}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[True, False, False, Negative[x]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("NonPositive[{-1, 0, 1, x}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[True, True, False, NonPositive[x]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("NonNegative[{-1, 0, 1, x}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[False, True, True, NonNegative[x]]"
+    );
+    assert_eq!(
+        session
             .eval_text("PossibleZeroQ[0]")
             .unwrap()
             .value
@@ -207,6 +259,14 @@ fn predicate_q_family_covers_current_exact_and_structural_subsets() {
             .value
             .to_string(),
         "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("PossibleZeroQ[{0, 1/3, x}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[True, False, False]"
     );
     assert_eq!(
         session
@@ -242,6 +302,14 @@ fn predicate_q_family_covers_current_exact_and_structural_subsets() {
     );
     assert_eq!(
         session
+            .eval_text("PrimeQ[{2, 9, x}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[True, False, False]"
+    );
+    assert_eq!(
+        session
             .eval_text("AlgebraicIntegerQ[3]")
             .unwrap()
             .value
@@ -255,6 +323,14 @@ fn predicate_q_family_covers_current_exact_and_structural_subsets() {
             .value
             .to_string(),
         "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("AlgebraicIntegerQ[{3, 1/2, x}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[True, False, False]"
     );
     assert_eq!(
         session
