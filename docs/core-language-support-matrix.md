@@ -175,10 +175,12 @@ once in its primary implementation group. Other groups may mention it as
   the current `+=` / `-=` / `*=` / `/=` / `//=` / postfix `++` /
   postfix `--` / prefix `++` / prefix `--` lowering and exact part-target
   updates including current bulk-selector distribution / broadcast assignment,
-  but not obscure update-family diagnostics or overlapping part-target edge
-  parity; `Remove` currently clears the
-  stored state for symbol and string-name targets but does not model Wolfram's
-  stale-symbol `Removed["name"]` identity, while the broader protection /
+  empty bulk-selector no-op writes, and duplicate nested bulk selector leaf
+  distribution, but not obscure update-family diagnostics or deeper overlapping
+  part-target edge parity; `Remove` currently clears stored state for symbol and string-name
+  targets, marks same-evaluation stale symbols as `Removed["name"]`, and
+  allows later same-name reuse through runtime symbol generations, while
+  broader stale-symbol rendering / introspection corners and the protection /
   option / package-tooling layers are cross-tracked in `CL-08`
 - `planned`: fuller assignment/update family and broader
   definition-introspection parity
@@ -194,7 +196,9 @@ once in its primary implementation group. Other groups may mention it as
   `PreDecrement`, `PrependTo`, `DefaultValues`, `Information`, `Remove`,
   `Unique`, `ValueQ`
 - `planned`: remaining update-family diagnostics, overlapping part-target
-  edge cases, stale `Removed[...]` identity, and definition-introspection parity
+  edge cases beyond the current duplicate bulk-selector coverage, deeper
+  `Removed[...]` rendering / introspection corners, and definition-introspection
+  parity beyond the current `InformationValueForm` summary shape
 - `cross-tracked elsewhere`: `Alternatives`, `BlankSequence`, `Function`,
   `Optional`, `Check`, `Confirm`, `CompoundExpression`, `Enclose`, `OptionValue`,
   `Options`, `OptionsPattern`, `Protect`, `Protected`, `Quiet`, `Rule`,

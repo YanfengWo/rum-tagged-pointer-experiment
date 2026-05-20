@@ -50,7 +50,8 @@ impl Session {
 
     pub(super) fn resolve_symbol_name(&self, raw: &str, create_if_missing: bool) -> Option<Symbol> {
         if let Some((context, name)) = split_symbol_name(raw) {
-            return Some(Symbol::new(normalize_context_name(context), name));
+            let context = normalize_context_name(context);
+            return Some(self.active_symbol_for_name(&context, name));
         }
 
         let mut seen_contexts = BTreeSet::new();
@@ -65,14 +66,26 @@ impl Session {
                 continue;
             }
 
-            let symbol = Symbol::new(context.to_string(), raw);
+            let symbol = self.active_symbol_for_name(context, raw);
 
             if self.symbol_exists(&symbol) {
                 return Some(symbol);
             }
         }
 
-        create_if_missing.then(|| Symbol::new(self.current_context.clone(), raw))
+        create_if_missing.then(|| self.active_symbol_for_name(&self.current_context, raw))
+    }
+
+    pub(super) fn active_symbol_for_name(&self, context: &str, name: &str) -> Symbol {
+        if context == SYSTEM_CONTEXT {
+            return Symbol::new(context, name);
+        }
+
+        self.symbol_generations
+            .get(&symbol_generation_key(context, name))
+            .copied()
+            .map(|identity| Symbol::with_identity(context, name, identity))
+            .unwrap_or_else(|| Symbol::new(context, name))
     }
 
     pub(super) fn symbol_exists(&self, symbol: &Symbol) -> bool {
@@ -267,4 +280,8 @@ impl Session {
             current = next;
         }
     }
+}
+
+pub(super) fn symbol_generation_key(context: &str, name: &str) -> (String, String) {
+    (context.to_string(), name.to_string())
 }

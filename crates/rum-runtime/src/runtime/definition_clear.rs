@@ -229,8 +229,23 @@ impl Session {
     }
 
     pub(super) fn remove_symbol_state(&mut self, symbol: &Symbol) {
+        self.mark_symbol_removed(symbol);
         self.clear_symbol_state(symbol, true, true, true, true, true);
         self.declared_stubs.remove(symbol);
+    }
+
+    fn mark_symbol_removed(&mut self, symbol: &Symbol) {
+        self.removed_symbols.insert(symbol.clone());
+
+        if symbol.context() == SYSTEM_CONTEXT {
+            return;
+        }
+
+        let key = symbol_generation_key(symbol.context(), symbol.name());
+        let current_generation = self.symbol_generations.get(&key).copied().unwrap_or(0);
+        let removed_generation = symbol.identity().unwrap_or(0);
+        self.symbol_generations
+            .insert(key, current_generation.max(removed_generation) + 1);
     }
 
     pub(super) fn remove_default_values_for_symbol(&mut self, symbol: &Symbol) {

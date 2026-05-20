@@ -285,6 +285,8 @@ pub struct Session {
     pub(super) options: BTreeMap<Symbol, SymbolOptions>,
     pub(super) syntax_information: BTreeMap<Symbol, Expr>,
     pub(super) declared_stubs: BTreeSet<Symbol>,
+    pub(super) removed_symbols: BTreeSet<Symbol>,
+    pub(super) symbol_generations: BTreeMap<(String, String), u64>,
     pub(super) once_values: BTreeMap<String, Expr>,
     pub(super) option_value_scopes: Vec<OptionValueScope>,
     pub(super) current_context: String,

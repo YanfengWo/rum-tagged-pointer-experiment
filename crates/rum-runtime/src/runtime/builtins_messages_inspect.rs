@@ -119,31 +119,22 @@ impl Session {
     }
 
     fn information_data_expr_for_symbol(&self, symbol: &Symbol) -> Expr {
-        let symbol_expr = Expr::Atom(Atom::Symbol(symbol.clone()));
         let entries = vec![
             information_rule("ObjectType", Expr::string("Symbol")),
-            information_rule("FullName", Expr::string(symbol.fully_qualified_name())),
             information_rule("Usage", self.usage_message_expr_for_symbol(symbol)),
             information_rule("Documentation", system_expr("None")),
-            information_rule(
-                "OwnValues",
-                none_if_empty_list(self.own_values_expr_for_symbol(symbol)),
-            ),
-            information_rule(
-                "UpValues",
-                none_if_empty_list(self.up_values_expr_for_symbol(symbol)),
-            ),
-            information_rule(
+            information_values_rule("OwnValues", symbol, self.own_values_expr_for_symbol(symbol)),
+            information_values_rule("UpValues", symbol, self.up_values_expr_for_symbol(symbol)),
+            information_values_rule(
                 "DownValues",
-                none_if_empty_list(self.down_values_expr_for_symbol(symbol)),
+                symbol,
+                self.down_values_expr_for_symbol(symbol),
             ),
-            information_rule(
-                "SubValues",
-                none_if_empty_list(self.sub_values_expr_for_symbol(symbol)),
-            ),
-            information_rule(
+            information_values_rule("SubValues", symbol, self.sub_values_expr_for_symbol(symbol)),
+            information_values_rule(
                 "DefaultValues",
-                none_if_empty_list(self.default_values_expr_for_symbol(symbol)),
+                symbol,
+                self.default_values_expr_for_symbol(symbol),
             ),
             information_rule("NValues", system_expr("None")),
             information_rule("FormatValues", system_expr("None")),
@@ -152,7 +143,7 @@ impl Session {
                 none_if_empty_list(self.options_for_symbol(symbol).expr()),
             ),
             information_rule("Attributes", self.attribute_set_for_symbol(symbol).expr()),
-            information_rule("Symbol", symbol_expr),
+            information_rule("FullName", Expr::string(symbol.fully_qualified_name())),
         ];
 
         Expr::call(
@@ -175,12 +166,35 @@ impl Session {
                     .clone()
                     .or_else(|| definition.delayed.clone())
             })
-            .unwrap_or_else(|| system_expr("None"))
+            .unwrap_or_else(|| Expr::string(symbol.fully_qualified_name()))
     }
 }
 
 fn information_rule(name: &str, value: Expr) -> Expr {
     Expr::call(system_expr("Rule"), vec![Expr::string(name), value])
+}
+
+fn information_values_rule(name: &str, symbol: &Symbol, values: Expr) -> Expr {
+    information_rule(name, information_value_form_or_none(name, symbol, values))
+}
+
+fn information_value_form_or_none(name: &str, symbol: &Symbol, values: Expr) -> Expr {
+    match &values {
+        Expr::Call { head, args } if is_system_symbol_name(head, "List") && args.is_empty() => {
+            system_expr("None")
+        }
+        _ => Expr::call(
+            Expr::Atom(Atom::Symbol(Symbol::new(
+                "Information`",
+                "InformationValueForm",
+            ))),
+            vec![
+                system_expr(name),
+                Expr::Atom(Atom::Symbol(symbol.clone())),
+                values,
+            ],
+        ),
+    }
 }
 
 fn none_if_empty_list(expr: Expr) -> Expr {

@@ -10,6 +10,13 @@ pub(super) fn system_expr(name: &str) -> Expr {
     Expr::system_symbol(name)
 }
 
+pub(super) fn removed_symbol_expr(symbol: &Symbol) -> Expr {
+    Expr::call(
+        system_expr("Removed"),
+        vec![Expr::string(symbol.to_string())],
+    )
+}
+
 pub(super) fn expr_as_symbol(expr: &Expr) -> Option<&Symbol> {
     match expr {
         Expr::Atom(Atom::Symbol(symbol)) => Some(symbol),

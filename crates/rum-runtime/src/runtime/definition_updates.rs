@@ -12,6 +12,8 @@ enum HeldUpdateTarget {
     Part {
         symbol: Symbol,
         current_target: Expr,
+        selection_shape: Expr,
+        distribute_updates: bool,
         paths: Vec<Vec<isize>>,
     },
 }
@@ -307,14 +309,6 @@ impl Session {
             ));
         };
 
-        if paths.is_empty() {
-            return HeldUpdateCurrent::Immediate(self.invalid_call_with_arg_form(
-                operator,
-                args,
-                "expected an exact Part target as the first argument",
-            ));
-        }
-
         let Some(current) =
             selected_expr_from_part_selector_exprs(&current_target, &selector_exprs)
         else {
@@ -325,6 +319,8 @@ impl Session {
             target: HeldUpdateTarget::Part {
                 symbol: target,
                 current_target,
+                selection_shape: current.clone(),
+                distribute_updates: part_selector_exprs_select_bulk(&selector_exprs),
                 paths,
             },
             current,
@@ -362,10 +358,18 @@ impl Session {
             HeldUpdateTarget::Part {
                 symbol,
                 current_target,
+                selection_shape,
+                distribute_updates,
                 paths,
             } => {
                 let mut updated_target = current_target;
-                for (path, updated_part) in bulk_part_update_replacements(&paths, updated.clone()) {
+                let replacements = bulk_part_update_replacements(
+                    &paths,
+                    &selection_shape,
+                    updated.clone(),
+                    distribute_updates,
+                );
+                for (path, updated_part) in replacements {
                     updated_target = replace_exact_path(updated_target, &path, updated_part);
                 }
                 let definition = self.definitions.entry(symbol).or_default();
@@ -394,16 +398,28 @@ fn normalize_part_update_target(expr: &Expr) -> Option<(Symbol, Vec<Expr>)> {
     Some((target, args[1..].to_vec()))
 }
 
-fn bulk_part_update_replacements(paths: &[Vec<isize>], updated: Expr) -> Vec<(&[isize], Expr)> {
-    let replacement_values = match &updated {
-        Expr::Call { head, args }
-            if paths.len() > 1
-                && is_system_symbol_name(head, "List")
-                && args.len() == paths.len() =>
-        {
-            args.clone()
-        }
-        _ => vec![updated; paths.len()],
+fn bulk_part_update_replacements<'a>(
+    paths: &'a [Vec<isize>],
+    selection_shape: &Expr,
+    updated: Expr,
+    distribute_updates: bool,
+) -> Vec<(&'a [isize], Expr)> {
+    let shape_matched = distribute_updates
+        .then(|| replacement_values_matching_selection_shape(selection_shape, &updated))
+        .flatten()
+        .filter(|values| values.len() == paths.len());
+    let replacement_values = match shape_matched {
+        Some(values) => values,
+        None => match &updated {
+            Expr::Call { head, args }
+                if paths.len() > 1
+                    && is_system_symbol_name(head, "List")
+                    && args.len() == paths.len() =>
+            {
+                args.clone()
+            }
+            _ => vec![updated; paths.len()],
+        },
     };
 
     paths
@@ -411,4 +427,50 @@ fn bulk_part_update_replacements(paths: &[Vec<isize>], updated: Expr) -> Vec<(&[
         .zip(replacement_values)
         .map(|(path, value)| (path.as_slice(), value))
         .collect()
+}
+
+fn part_selector_exprs_select_bulk(selector_exprs: &[Expr]) -> bool {
+    selector_exprs.iter().any(part_selector_expr_selects_bulk)
+}
+
+fn part_selector_expr_selects_bulk(expr: &Expr) -> bool {
+    if is_system_symbol_name(expr, "All") {
+        return true;
+    }
+
+    matches!(
+        expr,
+        Expr::Call { head, .. }
+            if is_system_symbol_name(head, "List") || is_system_symbol_name(head, "Span")
+    )
+}
+
+fn replacement_values_matching_selection_shape(
+    selection_shape: &Expr,
+    updated: &Expr,
+) -> Option<Vec<Expr>> {
+    match selection_shape {
+        Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
+            let Expr::Call {
+                head: updated_head,
+                args: updated_args,
+            } = updated
+            else {
+                return None;
+            };
+
+            if !is_system_symbol_name(updated_head, "List") || args.len() != updated_args.len() {
+                return None;
+            }
+
+            args.iter()
+                .zip(updated_args)
+                .map(|(selection_arg, updated_arg)| {
+                    replacement_values_matching_selection_shape(selection_arg, updated_arg)
+                })
+                .collect::<Option<Vec<_>>>()
+                .map(|values| values.into_iter().flatten().collect())
+        }
+        _ => Some(vec![updated.clone()]),
+    }
 }

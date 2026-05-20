@@ -115,12 +115,12 @@ fn information_returns_first_pass_symbol_summary() {
     assert!(rendered.contains("Rule[\"Attributes\", List[HoldFirst]]"));
     assert!(rendered.contains("Rule[\"Options\", List[Rule[a, 0]]]"));
     assert!(
-        rendered.contains("Rule[\"DefaultValues\", List[RuleDelayed[HoldPattern[Default[f]], 7]]]")
+        rendered.contains("Rule[\"DefaultValues\", Information`InformationValueForm[DefaultValues, f, List[RuleDelayed[HoldPattern[Default[f]], 7]]]]")
     );
     assert!(
-        rendered
-            .contains("Rule[\"DownValues\", List[RuleDelayed[f[Pattern[x, Blank[Integer]]], x]]]")
+        rendered.contains("Rule[\"DownValues\", Information`InformationValueForm[DownValues, f, List[RuleDelayed[f[Pattern[x, Blank[Integer]]], x]]]]")
     );
+    assert!(!rendered.contains("Rule[\"Symbol\""));
 
     session.eval_text("x = f").unwrap();
     let resolved = session.eval_text("Information[x]").unwrap();
@@ -146,7 +146,27 @@ fn information_returns_first_pass_symbol_summary() {
             .unwrap()
             .value
             .to_string()
-            .contains("Rule[\"OwnValues\", List[Rule[f, 1]]]")
+            .contains(
+                "Rule[\"OwnValues\", Information`InformationValueForm[OwnValues, f, List[Rule[f, 1]]]]"
+            )
+    );
+}
+
+#[test]
+fn information_uses_symbol_name_usage_fallback_and_value_forms() {
+    let mut session = Session::new();
+
+    session.eval_text("Default[g] = 3").unwrap();
+
+    let rendered = session
+        .eval_text("Information[\"g\"]")
+        .unwrap()
+        .value
+        .to_string();
+    assert!(rendered.contains("Rule[\"Usage\", \"Global`g\"]"));
+    assert!(rendered.contains("Rule[\"OwnValues\", None]"));
+    assert!(
+        rendered.contains("Rule[\"DefaultValues\", Information`InformationValueForm[DefaultValues, g, List[RuleDelayed[HoldPattern[Default[g]], 3]]]]")
     );
 }
 
@@ -665,6 +685,52 @@ fn remove_clears_current_symbol_state_and_declared_stubs() {
             .value
             .to_string(),
         "List[]"
+    );
+}
+
+#[test]
+fn remove_marks_same_evaluation_symbols_stale_and_allows_later_reuse() {
+    let mut session = Session::new();
+
+    session.eval_text("cl02r = 1").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("Remove[cl02r]; {cl02r, OwnValues[cl02r], Names[\"cl02r\"]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Removed[\"cl02r\"], List[], List[]]"
+    );
+    assert_eq!(
+        session.eval_text("cl02r").unwrap().value.to_string(),
+        "cl02r"
+    );
+    assert_eq!(
+        session
+            .eval_text("cl02r = 2; {cl02r, OwnValues[cl02r], Names[\"cl02r\"]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, List[Rule[cl02r, 2]], List[\"cl02r\"]]"
+    );
+}
+
+#[test]
+fn remove_marks_missing_same_evaluation_symbols_stale() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Remove[cl02Missing]; cl02Missing")
+            .unwrap()
+            .value
+            .to_string(),
+        "Removed[\"cl02Missing\"]"
+    );
+    assert_eq!(
+        session.eval_text("cl02Missing").unwrap().value.to_string(),
+        "cl02Missing"
     );
 }
 

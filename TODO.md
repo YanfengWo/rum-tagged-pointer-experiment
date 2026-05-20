@@ -299,15 +299,21 @@ This roadmap intentionally uses two levels of detail:
       `DivideBy`, `ApplyTo`, `Decrement`, `PreIncrement`, `PreDecrement`, and
       `PrependTo` plus their common update syntax lowering where applicable,
       a first-pass `Remove` subset for symbol and string-name targets, and
+      same-evaluation stale `Removed[...]` symbol identity with later same-name
+      reuse through runtime symbol generations, plus
       current `DefaultValues` query / `ClearAll` interaction for optional
       defaults stored through `Default[...]`, plus a first-pass
-      `InformationData` association summary for symbol and string-name targets,
+      `InformationData` association summary for symbol and string-name targets
+      with current `InformationValueForm` wrapping for non-empty definition
+      lists,
       a first-pass `ValueQ` based on rollback trial evaluation, and exact
       part-target updates for the held update family including bulk selectors
-      with list-shaped distribution / broadcast assignment.
+      with list-shaped distribution / broadcast assignment, empty bulk selector
+      no-op writes, and duplicate nested bulk selector leaf distribution.
       Remaining non-blocking gaps include obscure update-family diagnostics,
-      overlapping part-target edge cases, stale `Removed[...]` symbol identity,
-      and fuller definition-introspection parity.
+      deeper parent/child overlapping part-target edge cases, deeper
+      `Removed[...]` rendering / introspection corners, and fuller
+      definition-introspection parity.
   - [ ] Wave 4: polish pass across `CL-04`, `CL-08`, and `CL-09`
     - [ ] `CL-04`: remaining threading / higher-order traversal / sparse array parity beyond the current negative-level empty-expression depth alignment for `Apply` / `Map` traversal families
     - [ ] `CL-08`: broader `Names` regex, `SyntaxInformation` properties, and package-tooling compatibility polish

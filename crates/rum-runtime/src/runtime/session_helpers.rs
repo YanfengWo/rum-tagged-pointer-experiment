@@ -30,6 +30,8 @@ impl Session {
             options: self.options.clone(),
             syntax_information: self.syntax_information.clone(),
             declared_stubs: self.declared_stubs.clone(),
+            removed_symbols: self.removed_symbols.clone(),
+            symbol_generations: self.symbol_generations.clone(),
             once_values: self.once_values.clone(),
             current_context: self.current_context.clone(),
             context_path: self.context_path.clone(),
@@ -52,6 +54,8 @@ impl Session {
         self.options = snapshot.options;
         self.syntax_information = snapshot.syntax_information;
         self.declared_stubs = snapshot.declared_stubs;
+        self.removed_symbols = snapshot.removed_symbols;
+        self.symbol_generations = snapshot.symbol_generations;
         self.once_values = snapshot.once_values;
         self.current_context = snapshot.current_context;
         self.context_path = snapshot.context_path;

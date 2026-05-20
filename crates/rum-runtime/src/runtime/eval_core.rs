@@ -109,6 +109,7 @@ impl Session {
                 delayed_own_value: Some(value),
                 ..
             }) => self.evaluate(value),
+            _ if self.removed_symbols.contains(&symbol) => Ok(removed_symbol_expr(&symbol)),
             _ => Ok(Expr::Atom(Atom::Symbol(symbol))),
         }
     }

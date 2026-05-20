@@ -1009,6 +1009,12 @@ pub(super) fn default_builtin_dispatch_spec(name: &str) -> Option<BuiltinSpec> {
 }
 
 pub(super) fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
+    // Wolfram's private Information display wrapper holds symbols that would
+    // otherwise evaluate while an InformationData expression reaches a fixed point.
+    if symbol.context() == "Information`" && symbol.name() == "InformationValueForm" {
+        return AttributeSet::from_hold(HoldAttribute::HoldAll);
+    }
+
     if symbol.context() != SYSTEM_CONTEXT {
         return AttributeSet::empty();
     }

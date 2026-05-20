@@ -213,6 +213,66 @@ fn held_updates_mutate_bulk_exact_part_targets() {
 }
 
 #[test]
+fn held_updates_allow_empty_bulk_part_targets_without_mutation() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("x = {1, 2}; {AddTo[x[[{}]], 1], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[], List[1, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = {1, 2}; {Increment[x[[{}]]], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[], List[1, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = {1, 2}; {AppendTo[x[[{}]], a], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a], List[1, 2]]"
+    );
+}
+
+#[test]
+fn held_updates_cover_duplicate_bulk_part_targets() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("x = {1, 2}; {AddTo[x[[{1, 1}]], {10, 20}], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[11, 21], List[21, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = {{1, 2}, {3, 4}}; {AddTo[x[[All, {1, 1}]], 10], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[List[11, 11], List[13, 13]], List[List[11, 2], List[13, 4]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = {{1, 2}, {3, 4}}; {AddTo[x[[{1, 1}, All]], 10], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[List[11, 12], List[11, 12]], List[List[11, 12], List[3, 4]]]"
+    );
+}
+
+#[test]
 fn held_updates_report_missing_or_invalid_targets_without_writing() {
     let mut session = Session::new();
 

@@ -10,6 +10,8 @@ pub const SYSTEM_CONTEXT: &str = "System`";
 pub struct Symbol {
     context: String,
     name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    identity: Option<u64>,
 }
 
 impl Symbol {
@@ -17,6 +19,19 @@ impl Symbol {
         Self {
             context: context.into(),
             name: name.into(),
+            identity: None,
+        }
+    }
+
+    pub fn with_identity(
+        context: impl Into<String>,
+        name: impl Into<String>,
+        identity: u64,
+    ) -> Self {
+        Self {
+            context: context.into(),
+            name: name.into(),
+            identity: Some(identity),
         }
     }
 
@@ -34,6 +49,10 @@ impl Symbol {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn identity(&self) -> Option<u64> {
+        self.identity
     }
 
     pub fn fully_qualified_name(&self) -> String {
