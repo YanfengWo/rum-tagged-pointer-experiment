@@ -935,6 +935,12 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::ClearAll,
     ),
     BuiltinSpec::ordinary_with_hold(
+        "Remove",
+        "Removes the current stored state for one or more symbols in the first-pass namespace subset.",
+        HoldAttribute::HoldAll,
+        BuiltinHandler::Remove,
+    ),
+    BuiltinSpec::ordinary_with_hold(
         "Check",
         "Evaluates an expression and substitutes a fallback if matching messages are emitted.",
         HoldAttribute::HoldAll,

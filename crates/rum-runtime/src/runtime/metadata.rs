@@ -536,6 +536,7 @@ pub enum BuiltinHandler {
     Unset,
     Clear,
     ClearAll,
+    Remove,
     NormalizeRules,
     Check,
     Quiet,

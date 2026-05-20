@@ -174,7 +174,9 @@ once in its primary implementation group. Other groups may mention it as
   `Decrement`, `PreIncrement`, `PreDecrement`, and `PrependTo`, including
   the current `+=` / `-=` / `*=` / `/=` / `//=` / postfix `++` /
   postfix `--` / prefix `++` / prefix `--` lowering, but not fuller
-  part-target or remaining update-family parity, while the broader protection /
+  part-target or remaining update-family parity; `Remove` currently clears the
+  stored state for symbol and string-name targets but does not model Wolfram's
+  stale-symbol `Removed["name"]` identity, while the broader protection /
   option / package-tooling layers are cross-tracked in `CL-08`
 - `planned`: fuller assignment/update family and broader
   definition-introspection parity
@@ -187,8 +189,8 @@ once in its primary implementation group. Other groups may mention it as
   `Listable`, `Orderless`
 - `partial`: `Attributes`, `AddTo`, `SubtractFrom`, `TimesBy`, `DivideBy`,
   `ApplyTo`, `AppendTo`, `Increment`, `Decrement`, `PreIncrement`,
-  `PreDecrement`, `PrependTo`, `Unique`
-- `planned`: `DefaultValues`, `Information`, `Remove`, `ValueQ`
+  `PreDecrement`, `PrependTo`, `Remove`, `Unique`
+- `planned`: `DefaultValues`, `Information`, `ValueQ`
 - `cross-tracked elsewhere`: `Alternatives`, `BlankSequence`, `Function`,
   `Optional`, `Check`, `Confirm`, `CompoundExpression`, `Enclose`, `OptionValue`,
   `Options`, `OptionsPattern`, `Protect`, `Protected`, `Quiet`, `Rule`,

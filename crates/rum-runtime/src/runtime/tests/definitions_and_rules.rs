@@ -434,6 +434,96 @@ fn clear_and_clearall_manage_symbol_lifecycle_state() {
 }
 
 #[test]
+fn remove_clears_current_symbol_state_and_declared_stubs() {
+    let mut session = Session::new();
+
+    session.eval_text("f = 1").unwrap();
+    session.eval_text("f[x_] := x").unwrap();
+    session.eval_text("f /: g[f[x_]] := x").unwrap();
+    session.eval_text("f::msg = \"boom\"").unwrap();
+    session.eval_text("Options[f] = {a -> 0}").unwrap();
+    session
+        .eval_text("SyntaxInformation[f] = {\"ArgumentsPattern\" -> {_}}")
+        .unwrap();
+    session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
+    session
+        .eval_text("DeclarePackage[\"Demo`\", {\"h\"}]")
+        .unwrap();
+
+    let removed = session.eval_text("Remove[f, \"Demo`h\"]").unwrap();
+    assert_eq!(removed.value.to_string(), "Null");
+    assert!(removed.messages.is_empty());
+
+    assert_eq!(session.eval_text("f").unwrap().value.to_string(), "f");
+    assert_eq!(
+        session.eval_text("OwnValues[f]").unwrap().value.to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("DownValues[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session.eval_text("UpValues[f]").unwrap().value.to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session.eval_text("Messages[f]").unwrap().value.to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session.eval_text("Options[f]").unwrap().value.to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Attributes[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[\"Demo`h\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+}
+
+#[test]
+fn remove_reports_protected_symbols_without_clearing_state() {
+    let mut session = Session::new();
+
+    session.eval_text("f = 1").unwrap();
+    session.eval_text("Protect[f]").unwrap();
+
+    let removed = session.eval_text("Remove[f]").unwrap();
+    assert_eq!(removed.value.to_string(), "Null");
+    assert!(
+        removed
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "Remove" && message.tag == "rmptc" })
+    );
+    assert_eq!(session.eval_text("f").unwrap().value.to_string(), "1");
+}
+
+#[test]
 fn protected_symbols_block_definition_and_clear_writes() {
     let mut session = Session::new();
 

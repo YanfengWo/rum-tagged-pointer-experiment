@@ -24,6 +24,30 @@ impl Session {
         self.eval_clear_like("ClearAll", args, true, true, true, true)
     }
 
+    pub(super) fn eval_remove(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let symbols = match self.normalize_clear_targets(args) {
+            Ok(symbols) => symbols,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form("Remove", args, error.message()));
+            }
+        };
+
+        for symbol in symbols {
+            if self.symbol_is_protected(&symbol) {
+                self.push_message(
+                    "Remove",
+                    "rmptc",
+                    format!("Symbol {symbol} is Protected and cannot be removed."),
+                );
+                continue;
+            }
+
+            self.remove_symbol_state(&symbol);
+        }
+
+        Ok(system_expr("Null"))
+    }
+
     pub(super) fn eval_clear_like(
         &mut self,
         name: &str,
@@ -195,5 +219,10 @@ impl Session {
         if clear_syntax_information {
             self.syntax_information.remove(symbol);
         }
+    }
+
+    pub(super) fn remove_symbol_state(&mut self, symbol: &Symbol) {
+        self.clear_symbol_state(symbol, true, true, true, true);
+        self.declared_stubs.remove(symbol);
     }
 }

@@ -192,6 +192,7 @@ impl Session {
             BuiltinHandler::Unset => self.eval_unset(args),
             BuiltinHandler::Clear => self.eval_clear(args),
             BuiltinHandler::ClearAll => self.eval_clear_all(args),
+            BuiltinHandler::Remove => self.eval_remove(args),
             BuiltinHandler::NormalizeRules => self.eval_normalize_rules(args),
             BuiltinHandler::Check => self.eval_check(args),
             BuiltinHandler::Quiet => self.eval_quiet(args),
