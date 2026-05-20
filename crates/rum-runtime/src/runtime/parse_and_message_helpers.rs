@@ -156,6 +156,10 @@ pub(super) fn parse_standard_level_spec(expr: &Expr) -> Option<CasesLevelSpec> {
         return Some(CasesLevelSpec::range(1, None));
     }
 
+    if is_negative_infinity_expr(expr) {
+        return Some(CasesLevelSpec::exact(isize::MIN));
+    }
+
     if is_system_symbol_name(expr, heads::structure::ALL) {
         return Some(CasesLevelSpec::range(0, None));
     }
@@ -169,22 +173,51 @@ pub(super) fn parse_standard_level_spec(expr: &Expr) -> Option<CasesLevelSpec> {
     }
 
     match args.as_slice() {
-        [level] => Some(CasesLevelSpec::exact(expr_as_signed_isize(level)?)),
+        [level] => Some(CasesLevelSpec::exact(parse_level_bound(level)?)),
         [min, max] => parse_standard_level_range(min, max),
         _ => None,
     }
 }
 
 fn parse_standard_level_range(min: &Expr, max: &Expr) -> Option<CasesLevelSpec> {
-    let min = expr_as_signed_isize(min)?;
+    let min = parse_level_bound(min)?;
 
-    if let Some(max) = expr_as_signed_isize(max) {
-        (min <= max).then_some(CasesLevelSpec::range(min, Some(max)))
-    } else if is_system_symbol_name(max, "Infinity") {
+    if is_system_symbol_name(max, "Infinity") {
         Some(CasesLevelSpec::range(min, None))
+    } else if let Some(max) = parse_level_bound(max) {
+        Some(CasesLevelSpec::range(min, Some(max)))
     } else {
         None
     }
+}
+
+fn parse_level_bound(expr: &Expr) -> Option<isize> {
+    if let Some(level) = expr_as_signed_isize(expr) {
+        return Some(level);
+    }
+
+    if is_system_symbol_name(expr, "Infinity") {
+        return Some(isize::MAX);
+    }
+
+    is_negative_infinity_expr(expr).then_some(isize::MIN)
+}
+
+fn is_negative_infinity_expr(expr: &Expr) -> bool {
+    let Expr::Call { head, args } = expr else {
+        return false;
+    };
+
+    if !is_system_symbol_name(head, heads::arithmetic::TIMES) || args.len() != 2 {
+        return false;
+    }
+
+    let has_negative_one = args.iter().any(|arg| expr_as_signed_isize(arg) == Some(-1));
+    let has_infinity = args
+        .iter()
+        .any(|arg| is_system_symbol_name(arg, "Infinity"));
+
+    has_negative_one && has_infinity
 }
 
 pub(super) fn parse_non_negative_match_limit(expr: &Expr) -> Option<usize> {

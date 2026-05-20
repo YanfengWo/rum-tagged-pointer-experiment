@@ -108,6 +108,62 @@ fn level_supports_standard_levelspecs_and_depth_first_ordering() {
             .to_string(),
         "List[1, 2, g[2], f[1, g[2]]]"
     );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g[1], 2], {2, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g[1], 2], {-2, Infinity}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, g[1], 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g[1], 2], {-3, 0}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[g[1], 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g[1], 2], {-Infinity, -1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, g[1], 2, f[g[1], 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g[1], 2], {-Infinity, 0}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[g[1], 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g[1], 2], {Infinity}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[g[1]], {-2, Infinity}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f, g, 1, g[1]]"
+    );
 }
 
 #[test]
@@ -129,6 +185,14 @@ fn count_memberq_and_freeq_share_standard_traversal_semantics() {
             .value
             .to_string(),
         "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("Count[f[g[1], 2], _, {2, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "0"
     );
     assert_eq!(
         session
@@ -177,6 +241,14 @@ fn count_memberq_and_freeq_share_standard_traversal_semantics() {
             .value
             .to_string(),
         "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MemberQ[f[g[1], 2], _, {2, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
     );
     assert_eq!(
         session
@@ -341,6 +413,14 @@ fn position_supports_standard_levelspecs_heads_and_limits() {
             .value
             .to_string(),
         "List[List[1, 1], List[2], List[3, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Position[f[g[1], 2], _, {2, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
     );
     assert_eq!(
         session

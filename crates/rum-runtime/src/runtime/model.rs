@@ -551,12 +551,27 @@ impl CasesLevelSpec {
     }
 
     pub(super) fn matches(self, level: usize, depth: usize) -> bool {
-        self.contains_signed(level_as_signed(level))
-            || self.contains_signed(-level_as_signed(depth))
+        let level = level_as_signed(level);
+        let depth = level_as_signed(depth);
+
+        if self.spans_negative_and_nonnegative_levels() {
+            let positive_level_matches = self.max.is_none_or(|max| level <= max);
+            let negative_depth_matches = self
+                .min
+                .checked_abs()
+                .is_none_or(|max_depth| depth <= max_depth);
+            return positive_level_matches && negative_depth_matches;
+        }
+
+        self.contains_signed(level) || self.contains_signed(-depth)
     }
 
     fn contains_signed(self, level: isize) -> bool {
         level >= self.min && self.max.is_none_or(|max| level <= max)
+    }
+
+    fn spans_negative_and_nonnegative_levels(self) -> bool {
+        self.min < 0 && self.max.is_none_or(|max| max >= 0)
     }
 }
 
