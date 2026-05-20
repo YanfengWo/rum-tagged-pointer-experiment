@@ -40,6 +40,14 @@ pub(super) fn exact_position_paths_from_part_selector_exprs(
     ))
 }
 
+pub(super) fn selected_expr_from_part_selector_exprs(
+    expr: &Expr,
+    selector_exprs: &[Expr],
+) -> Option<Expr> {
+    let selectors = parse_part_selectors(selector_exprs)?;
+    apply_part_selectors(expr, &selectors)
+}
+
 pub(super) fn exact_expr_at_path(expr: &Expr, path: &[isize]) -> Option<Expr> {
     exact_paths::exact_expr_at_path(expr, path)
 }

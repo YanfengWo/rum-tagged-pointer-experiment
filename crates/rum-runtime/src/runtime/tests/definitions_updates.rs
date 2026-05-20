@@ -142,6 +142,14 @@ fn held_updates_mutate_single_exact_part_targets() {
     );
     assert_eq!(
         session
+            .eval_text("x = {{a}}; {ApplyTo[x[[1]], List], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[List[a]], List[List[List[a]]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Module[{x = {1, 2}}, x[[1]] += 3; x]")
             .unwrap()
             .value
@@ -155,6 +163,52 @@ fn held_updates_mutate_single_exact_part_targets() {
             .value
             .to_string(),
         "List[12, List[12, 9]]"
+    );
+}
+
+#[test]
+fn held_updates_mutate_bulk_exact_part_targets() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("x = {1, 2}; {AddTo[x[[All]], 1], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[2, 3], List[2, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = {1, 2}; {x[[All]]++, x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1, 2], List[2, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = {{1, 2}, {3, 4}}; {AddTo[x[[All, 1]], 10], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[11, 13], List[List[11, 2], List[13, 4]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = {a, b, c}; {AppendTo[x[[{1, 3}]], z], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[a, c, z], List[List[a, c, z], b, List[a, c, z]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = {1, 2}; {ApplyTo[x[[All]], f], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[List[1, 2]], List[f[List[1, 2]], f[List[1, 2]]]]"
     );
 }
 

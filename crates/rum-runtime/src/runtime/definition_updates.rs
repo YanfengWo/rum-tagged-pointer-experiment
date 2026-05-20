@@ -12,7 +12,7 @@ enum HeldUpdateTarget {
     Part {
         symbol: Symbol,
         current_target: Expr,
-        path: Vec<isize>,
+        paths: Vec<Vec<isize>>,
     },
 }
 
@@ -240,7 +240,7 @@ impl Session {
         HeldUpdateCurrent::Immediate(self.invalid_call_with_arg_form(
             operator,
             args,
-            "expected a symbol, symbol-name string, or single exact Part target as the first argument",
+            "expected a symbol, symbol-name string, or exact Part target as the first argument",
         ))
     }
 
@@ -303,19 +303,21 @@ impl Session {
             return HeldUpdateCurrent::Immediate(self.invalid_call_with_arg_form(
                 operator,
                 args,
-                "expected a single exact Part target as the first argument",
+                "expected an exact Part target as the first argument",
             ));
         };
 
-        let [path] = paths.as_slice() else {
+        if paths.is_empty() {
             return HeldUpdateCurrent::Immediate(self.invalid_call_with_arg_form(
                 operator,
                 args,
-                "expected a single exact Part target as the first argument",
+                "expected an exact Part target as the first argument",
             ));
-        };
+        }
 
-        let Some(current) = exact_expr_at_path(&current_target, path) else {
+        let Some(current) =
+            selected_expr_from_part_selector_exprs(&current_target, &selector_exprs)
+        else {
             return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
         };
 
@@ -323,7 +325,7 @@ impl Session {
             target: HeldUpdateTarget::Part {
                 symbol: target,
                 current_target,
-                path: path.clone(),
+                paths,
             },
             current,
         }
@@ -360,9 +362,12 @@ impl Session {
             HeldUpdateTarget::Part {
                 symbol,
                 current_target,
-                path,
+                paths,
             } => {
-                let updated_target = replace_exact_path(current_target, &path, updated.clone());
+                let mut updated_target = current_target;
+                for (path, updated_part) in bulk_part_update_replacements(&paths, updated.clone()) {
+                    updated_target = replace_exact_path(updated_target, &path, updated_part);
+                }
                 let definition = self.definitions.entry(symbol).or_default();
                 definition.own_value = Some(updated_target);
                 definition.delayed_own_value = None;
@@ -387,4 +392,23 @@ fn normalize_part_update_target(expr: &Expr) -> Option<(Symbol, Vec<Expr>)> {
 
     let target = expr_as_symbol(&args[0])?.clone();
     Some((target, args[1..].to_vec()))
+}
+
+fn bulk_part_update_replacements(paths: &[Vec<isize>], updated: Expr) -> Vec<(&[isize], Expr)> {
+    let replacement_values = match &updated {
+        Expr::Call { head, args }
+            if paths.len() > 1
+                && is_system_symbol_name(head, "List")
+                && args.len() == paths.len() =>
+        {
+            args.clone()
+        }
+        _ => vec![updated; paths.len()],
+    };
+
+    paths
+        .iter()
+        .zip(replacement_values)
+        .map(|(path, value)| (path.as_slice(), value))
+        .collect()
 }
