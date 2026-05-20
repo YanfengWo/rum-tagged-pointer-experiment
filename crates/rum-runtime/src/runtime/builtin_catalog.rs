@@ -826,6 +826,11 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
         BuiltinHandler::MessageTags,
     ),
+    BuiltinSpec::ordinary(
+        "Information",
+        "Returns a first-pass InformationData summary for a symbol or symbol-name string.",
+        BuiltinHandler::Information,
+    ),
     BuiltinSpec::ordinary_with_hold(
         "DefaultValues",
         "Lists stored Default[...] definitions for a symbol in the current optional-pattern subset.",

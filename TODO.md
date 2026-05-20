@@ -300,9 +300,10 @@ This roadmap intentionally uses two levels of detail:
       `PrependTo` plus their common update syntax lowering where applicable,
       a first-pass `Remove` subset for symbol and string-name targets, and
       current `DefaultValues` query / `ClearAll` interaction for optional
-      defaults stored through `Default[...]`.
+      defaults stored through `Default[...]`, plus a first-pass
+      `InformationData` association summary for symbol and string-name targets.
       Remaining non-blocking gaps include part-target updates and still-planned
-      `ValueQ` and `Information`.
+      `ValueQ`.
   - [ ] Wave 4: polish pass across `CL-04`, `CL-08`, and `CL-09`
     - [ ] `CL-04`: remaining threading / higher-order traversal / sparse array parity beyond the current negative-level empty-expression depth alignment for `Apply` / `Map` traversal families
     - [ ] `CL-08`: broader `Names` regex, `SyntaxInformation` properties, and package-tooling compatibility polish

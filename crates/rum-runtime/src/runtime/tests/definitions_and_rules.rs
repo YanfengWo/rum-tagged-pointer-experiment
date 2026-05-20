@@ -98,6 +98,59 @@ fn defaultvalues_lists_optional_defaults_and_clearall_removes_them() {
 }
 
 #[test]
+fn information_returns_first_pass_symbol_summary() {
+    let mut session = Session::new();
+
+    session.eval_text("f::usage = \"desc\"").unwrap();
+    session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
+    session.eval_text("Options[f] = {a -> 0}").unwrap();
+    session.eval_text("Default[f] = 7").unwrap();
+    session.eval_text("f[x_Integer] := x").unwrap();
+
+    let info = session.eval_text("Information[f]").unwrap();
+    let rendered = info.value.to_string();
+    assert!(rendered.starts_with("InformationData[Association["));
+    assert!(rendered.contains("Rule[\"FullName\", \"Global`f\"]"));
+    assert!(rendered.contains("Rule[\"Usage\", \"desc\"]"));
+    assert!(rendered.contains("Rule[\"Attributes\", List[HoldFirst]]"));
+    assert!(rendered.contains("Rule[\"Options\", List[Rule[a, 0]]]"));
+    assert!(
+        rendered.contains("Rule[\"DefaultValues\", List[RuleDelayed[HoldPattern[Default[f]], 7]]]")
+    );
+    assert!(
+        rendered
+            .contains("Rule[\"DownValues\", List[RuleDelayed[f[Pattern[x, Blank[Integer]]], x]]]")
+    );
+
+    session.eval_text("x = f").unwrap();
+    let resolved = session.eval_text("Information[x]").unwrap();
+    assert!(
+        resolved
+            .value
+            .to_string()
+            .contains("Rule[\"FullName\", \"Global`f\"]")
+    );
+
+    session.eval_text("f = 1").unwrap();
+    assert_eq!(
+        session
+            .eval_text("Information[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Information[1]"
+    );
+    assert!(
+        session
+            .eval_text("Information[\"f\"]")
+            .unwrap()
+            .value
+            .to_string()
+            .contains("Rule[\"OwnValues\", List[Rule[f, 1]]]")
+    );
+}
+
+#[test]
 fn definition_inspection_builtins_accept_symbol_name_strings() {
     let mut session = Session::new();
 

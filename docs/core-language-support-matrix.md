@@ -189,8 +189,9 @@ once in its primary implementation group. Other groups may mention it as
   `Listable`, `Orderless`
 - `partial`: `Attributes`, `AddTo`, `SubtractFrom`, `TimesBy`, `DivideBy`,
   `ApplyTo`, `AppendTo`, `Increment`, `Decrement`, `PreIncrement`,
-  `PreDecrement`, `PrependTo`, `DefaultValues`, `Remove`, `Unique`
-- `planned`: `Information`, `ValueQ`
+  `PreDecrement`, `PrependTo`, `DefaultValues`, `Information`, `Remove`,
+  `Unique`
+- `planned`: `ValueQ`
 - `cross-tracked elsewhere`: `Alternatives`, `BlankSequence`, `Function`,
   `Optional`, `Check`, `Confirm`, `CompoundExpression`, `Enclose`, `OptionValue`,
   `Options`, `OptionsPattern`, `Protect`, `Protected`, `Quiet`, `Rule`,
