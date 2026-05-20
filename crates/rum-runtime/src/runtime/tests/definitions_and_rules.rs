@@ -57,6 +57,47 @@ fn ownvalues_lists_immediate_and_delayed_symbol_definitions() {
 }
 
 #[test]
+fn defaultvalues_lists_optional_defaults_and_clearall_removes_them() {
+    let mut session = Session::new();
+
+    session.eval_text("Default[h] = 7").unwrap();
+    session.eval_text("Default[h, 1] = 9").unwrap();
+    session.eval_text("h[Optional[x_Integer]] := x").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("DefaultValues[h]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[HoldPattern[Default[h]], 7], RuleDelayed[HoldPattern[Default[h, 1]], 9]]"
+    );
+    assert_eq!(session.eval_text("h[]").unwrap().value.to_string(), "9");
+
+    session.eval_text("Unset[Default[h, 1]]").unwrap();
+    assert_eq!(session.eval_text("h[]").unwrap().value.to_string(), "7");
+    assert_eq!(
+        session
+            .eval_text("DefaultValues[\"h\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[HoldPattern[Default[h]], 7]]"
+    );
+
+    session.eval_text("ClearAll[h]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("DefaultValues[h]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(session.eval_text("h[]").unwrap().value.to_string(), "h[]");
+}
+
+#[test]
 fn definition_inspection_builtins_accept_symbol_name_strings() {
     let mut session = Session::new();
 

@@ -174,6 +174,7 @@ impl Session {
             BuiltinHandler::Messages => self.eval_messages(args),
             BuiltinHandler::MessageDefinitions => self.eval_message_definitions(args),
             BuiltinHandler::MessageTags => self.eval_message_tags(args),
+            BuiltinHandler::DefaultValues => self.eval_default_values(args),
             BuiltinHandler::OwnValues => self.eval_own_values(args),
             BuiltinHandler::UpValues => self.eval_up_values(args),
             BuiltinHandler::DownValues => self.eval_down_values(args),

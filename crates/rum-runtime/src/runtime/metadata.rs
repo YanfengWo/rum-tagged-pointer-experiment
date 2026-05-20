@@ -518,6 +518,7 @@ pub enum BuiltinHandler {
     Messages,
     MessageDefinitions,
     MessageTags,
+    DefaultValues,
     OwnValues,
     UpValues,
     DownValues,

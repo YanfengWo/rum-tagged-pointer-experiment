@@ -96,6 +96,15 @@ pub(super) fn collect_with_binding_symbols(expr: &Expr, locals: &mut BTreeSet<Sy
     }
 }
 
+pub(super) fn default_value_lhs_targets_symbol(lhs: &Expr, symbol: &Symbol) -> bool {
+    let Expr::Call { head, args } = lhs else {
+        return false;
+    };
+
+    is_system_symbol_name(head, "Default")
+        && matches!(args.first(), Some(Expr::Atom(Atom::Symbol(target))) if target == symbol)
+}
+
 impl Session {
     pub(super) fn normalize_tag_target(
         &self,

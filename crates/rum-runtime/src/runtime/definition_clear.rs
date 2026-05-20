@@ -17,11 +17,11 @@ impl Session {
     }
 
     pub(super) fn eval_clear(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        self.eval_clear_like("Clear", args, false, false, false, false)
+        self.eval_clear_like("Clear", args, false, false, false, false, false)
     }
 
     pub(super) fn eval_clear_all(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        self.eval_clear_like("ClearAll", args, true, true, true, true)
+        self.eval_clear_like("ClearAll", args, true, true, true, true, true)
     }
 
     pub(super) fn eval_remove(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -56,6 +56,7 @@ impl Session {
         clear_messages: bool,
         clear_options: bool,
         clear_syntax_information: bool,
+        clear_default_values: bool,
     ) -> Result<Expr, EvalError> {
         let symbols = match self.normalize_clear_targets(args) {
             Ok(symbols) => symbols,
@@ -70,6 +71,7 @@ impl Session {
                     clear_messages,
                     clear_options,
                     clear_syntax_information,
+                    clear_default_values,
                 );
             }
         }
@@ -200,6 +202,7 @@ impl Session {
         clear_messages: bool,
         clear_options: bool,
         clear_syntax_information: bool,
+        clear_default_values: bool,
     ) {
         self.definitions.remove(symbol);
 
@@ -219,10 +222,29 @@ impl Session {
         if clear_syntax_information {
             self.syntax_information.remove(symbol);
         }
+
+        if clear_default_values {
+            self.remove_default_values_for_symbol(symbol);
+        }
     }
 
     pub(super) fn remove_symbol_state(&mut self, symbol: &Symbol) {
-        self.clear_symbol_state(symbol, true, true, true, true);
+        self.clear_symbol_state(symbol, true, true, true, true, true);
         self.declared_stubs.remove(symbol);
+    }
+
+    pub(super) fn remove_default_values_for_symbol(&mut self, symbol: &Symbol) {
+        let default_symbol = Symbol::system("Default");
+        let Some(definition) = self.definitions.get_mut(&default_symbol) else {
+            return;
+        };
+
+        definition
+            .down_values
+            .retain(|entry| !default_value_lhs_targets_symbol(&entry.lhs, symbol));
+
+        if definition.is_empty() {
+            self.definitions.remove(&default_symbol);
+        }
     }
 }

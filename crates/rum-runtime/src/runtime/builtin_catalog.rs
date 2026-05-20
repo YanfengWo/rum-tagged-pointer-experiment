@@ -827,6 +827,12 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::MessageTags,
     ),
     BuiltinSpec::ordinary_with_hold(
+        "DefaultValues",
+        "Lists stored Default[...] definitions for a symbol in the current optional-pattern subset.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::DefaultValues,
+    ),
+    BuiltinSpec::ordinary_with_hold(
         "OwnValues",
         "Lists stored immediate or delayed ownvalue definitions for a symbol.",
         HoldAttribute::HoldFirst,
