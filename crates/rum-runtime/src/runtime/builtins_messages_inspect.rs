@@ -17,6 +17,25 @@ impl Session {
         Ok(self.information_data_expr_for_symbol(&symbol))
     }
 
+    pub(super) fn eval_value_q(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [target] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("ValueQ", args, 1));
+        };
+
+        let original = target.clone();
+        let snapshot = self.capture_evaluation_rollback_snapshot();
+        let outcome = self.evaluate(original.clone());
+        self.restore_evaluation_rollback_snapshot(snapshot);
+
+        let value_q = match outcome {
+            Ok(value) => value != original,
+            Err(EvalError::InputRequired { .. }) => true,
+            Err(_) => false,
+        };
+
+        Ok(system_expr(if value_q { "True" } else { "False" }))
+    }
+
     pub(super) fn eval_own_values(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
             [expr] => match self.normalize_definition_inspection_target(expr) {

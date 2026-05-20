@@ -1,4 +1,27 @@
 use super::*;
+use std::time::Instant;
+
+pub(super) struct EvaluationRollbackSnapshot {
+    loader: LoaderSnapshot,
+    option_value_scopes: Vec<OptionValueScope>,
+    load_stack: Vec<PathBuf>,
+    evaluation_depth: usize,
+    evaluation_stack: Vec<Expr>,
+    prints: Vec<String>,
+    handled_non_loader_eval_errors: Vec<RuntimeMessage>,
+    reap_scopes: Vec<ReapScope>,
+    monitor_scopes: Vec<MonitorScope>,
+    monitor_callbacks_enabled: bool,
+    current_time_deadline: Option<Instant>,
+    current_memory_limit: Option<usize>,
+    asserts_enabled: bool,
+    abort_protect_depth: usize,
+    abort_protect_pending: usize,
+    queued_input_responses: VecDeque<String>,
+    pending_input_request: Option<RuntimeInputRequest>,
+    pending_eval_request: Option<PendingEvalRequest>,
+    had_pending_suspension: bool,
+}
 
 impl Session {
     pub(super) fn capture_loader_snapshot(&self) -> LoaderSnapshot {
@@ -43,6 +66,58 @@ impl Session {
         self.disabled_message_selectors = snapshot.disabled_message_selectors;
         self.messages = snapshot.messages;
         self.last_message_list = snapshot.last_message_list;
+    }
+
+    pub(super) fn capture_evaluation_rollback_snapshot(&self) -> EvaluationRollbackSnapshot {
+        EvaluationRollbackSnapshot {
+            loader: self.capture_loader_snapshot(),
+            option_value_scopes: self.option_value_scopes.clone(),
+            load_stack: self.load_stack.clone(),
+            evaluation_depth: self.evaluation_depth,
+            evaluation_stack: self.evaluation_stack.clone(),
+            prints: self.prints.clone(),
+            handled_non_loader_eval_errors: self.handled_non_loader_eval_errors.clone(),
+            reap_scopes: self.reap_scopes.clone(),
+            monitor_scopes: self.monitor_scopes.clone(),
+            monitor_callbacks_enabled: self.monitor_callbacks_enabled,
+            current_time_deadline: self.current_time_deadline,
+            current_memory_limit: self.current_memory_limit,
+            asserts_enabled: self.asserts_enabled,
+            abort_protect_depth: self.abort_protect_depth,
+            abort_protect_pending: self.abort_protect_pending,
+            queued_input_responses: self.queued_input_responses.clone(),
+            pending_input_request: self.pending_input_request.clone(),
+            pending_eval_request: self.pending_eval_request,
+            had_pending_suspension: self.pending_suspension.is_some(),
+        }
+    }
+
+    pub(super) fn restore_evaluation_rollback_snapshot(
+        &mut self,
+        snapshot: EvaluationRollbackSnapshot,
+    ) {
+        self.restore_loader_snapshot(snapshot.loader);
+        self.option_value_scopes = snapshot.option_value_scopes;
+        self.load_stack = snapshot.load_stack;
+        self.evaluation_depth = snapshot.evaluation_depth;
+        self.evaluation_stack = snapshot.evaluation_stack;
+        self.prints = snapshot.prints;
+        self.handled_non_loader_eval_errors = snapshot.handled_non_loader_eval_errors;
+        self.reap_scopes = snapshot.reap_scopes;
+        self.monitor_scopes = snapshot.monitor_scopes;
+        self.monitor_callbacks_enabled = snapshot.monitor_callbacks_enabled;
+        self.current_time_deadline = snapshot.current_time_deadline;
+        self.current_memory_limit = snapshot.current_memory_limit;
+        self.asserts_enabled = snapshot.asserts_enabled;
+        self.abort_protect_depth = snapshot.abort_protect_depth;
+        self.abort_protect_pending = snapshot.abort_protect_pending;
+        self.queued_input_responses = snapshot.queued_input_responses;
+        self.pending_input_request = snapshot.pending_input_request;
+        self.pending_eval_request = snapshot.pending_eval_request;
+
+        if !snapshot.had_pending_suspension {
+            self.pending_suspension = None;
+        }
     }
 
     pub(super) fn message_enabled(&self, symbol: &str, tag: &str) -> bool {

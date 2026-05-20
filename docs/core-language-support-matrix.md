@@ -190,8 +190,8 @@ once in its primary implementation group. Other groups may mention it as
 - `partial`: `Attributes`, `AddTo`, `SubtractFrom`, `TimesBy`, `DivideBy`,
   `ApplyTo`, `AppendTo`, `Increment`, `Decrement`, `PreIncrement`,
   `PreDecrement`, `PrependTo`, `DefaultValues`, `Information`, `Remove`,
-  `Unique`
-- `planned`: `ValueQ`
+  `Unique`, `ValueQ`
+- `planned`: fuller part-target update parity
 - `cross-tracked elsewhere`: `Alternatives`, `BlankSequence`, `Function`,
   `Optional`, `Check`, `Confirm`, `CompoundExpression`, `Enclose`, `OptionValue`,
   `Options`, `OptionsPattern`, `Protect`, `Protected`, `Quiet`, `Rule`,

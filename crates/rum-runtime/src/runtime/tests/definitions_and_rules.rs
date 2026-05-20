@@ -151,6 +151,75 @@ fn information_returns_first_pass_symbol_summary() {
 }
 
 #[test]
+fn valueq_uses_rollback_trial_evaluation_without_side_effects() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session.eval_text("ValueQ[x]").unwrap().value.to_string(),
+        "False"
+    );
+    assert_eq!(
+        session.eval_text("ValueQ[1]").unwrap().value.to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("ValueQ[1 + 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session.eval_text("ValueQ[{x}]").unwrap().value.to_string(),
+        "False"
+    );
+
+    session.eval_text("x = 1").unwrap();
+    session.eval_text("y := x + 1").unwrap();
+    session.eval_text("f[1] = 3").unwrap();
+
+    assert_eq!(
+        session.eval_text("ValueQ[x]").unwrap().value.to_string(),
+        "True"
+    );
+    assert_eq!(
+        session.eval_text("ValueQ[y]").unwrap().value.to_string(),
+        "True"
+    );
+    assert_eq!(
+        session.eval_text("ValueQ[f[1]]").unwrap().value.to_string(),
+        "True"
+    );
+    assert_eq!(
+        session.eval_text("ValueQ[f[2]]").unwrap().value.to_string(),
+        "False"
+    );
+
+    assert_eq!(
+        session
+            .eval_text("ValueQ[z = 9]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(session.eval_text("z").unwrap().value.to_string(), "z");
+
+    let printed = session.eval_text("ValueQ[Print[1]]").unwrap();
+    assert_eq!(printed.value.to_string(), "True");
+    assert!(printed.prints.is_empty());
+
+    let input = session
+        .eval_request("ValueQ[InputString[\"name: \"]]")
+        .unwrap();
+    assert_eq!(input.value.to_string(), "True");
+    assert!(input.prints.is_empty());
+    assert!(input.messages.is_empty());
+    assert!(session.pending_input_request().is_none());
+}
+
+#[test]
 fn definition_inspection_builtins_accept_symbol_name_strings() {
     let mut session = Session::new();
 

@@ -832,6 +832,12 @@ const CORE_BUILTINS_SUFFIX: &[BuiltinSpec] = &[
         BuiltinHandler::Information,
     ),
     BuiltinSpec::ordinary_with_hold(
+        "ValueQ",
+        "Tests whether an expression has a value by trial evaluation without committing side effects.",
+        HoldAttribute::HoldFirst,
+        BuiltinHandler::ValueQ,
+    ),
+    BuiltinSpec::ordinary_with_hold(
         "DefaultValues",
         "Lists stored Default[...] definitions for a symbol in the current optional-pattern subset.",
         HoldAttribute::HoldFirst,
