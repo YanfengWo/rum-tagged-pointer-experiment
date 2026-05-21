@@ -474,6 +474,10 @@ fn extract_consumes_exact_paths_and_position_output() {
         "List[a, b]"
     );
     assert_eq!(
+        session.eval_text("Extract[x]").unwrap().value.to_string(),
+        "Function[Extract[Slot[1], x]]"
+    );
+    assert_eq!(
         session
             .eval_text("Extract[f[g[a, b], h[c, d]], {All, 2}]")
             .unwrap()
@@ -596,6 +600,36 @@ fn extract_consumes_exact_paths_and_position_output() {
 #[test]
 fn invalid_part_and_extract_specs_report_selector_messages() {
     let mut session = Session::new();
+
+    let empty_part = session.eval_text("Part[]").unwrap();
+    assert_eq!(empty_part.value.to_string(), "Part[]");
+    assert!(
+        empty_part
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "argm")
+    );
+
+    let empty_extract = session.eval_text("Extract[]").unwrap();
+    assert_eq!(empty_extract.value.to_string(), "Extract[]");
+    assert!(
+        empty_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "argt")
+    );
+
+    let too_many_extract = session.eval_text("Extract[x, {}, h, q]").unwrap();
+    assert_eq!(
+        too_many_extract.value.to_string(),
+        "Extract[x, List[], h, q]"
+    );
+    assert!(
+        too_many_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "argt")
+    );
 
     let invalid_part = session.eval_text("Part[f[a, b, c], {1 ;; 2}]").unwrap();
     assert_eq!(

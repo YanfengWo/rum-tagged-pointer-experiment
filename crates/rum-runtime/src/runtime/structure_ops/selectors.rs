@@ -59,8 +59,8 @@ impl Session {
             return Ok(self.invalid_call_with_message(
                 "Part",
                 args,
-                "argx",
-                "expected at least 1 argument",
+                "argm",
+                "Part called with 0 arguments; 1 or more arguments are expected.",
             ));
         }
 
@@ -116,7 +116,15 @@ impl Session {
         }
 
         if !(2..=3).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Extract", args, 2, 3));
+            return Ok(self.invalid_call_with_message(
+                "Extract",
+                args,
+                "argt",
+                format!(
+                    "Extract called with {} arguments; 2 or 3 arguments are expected.",
+                    args.len()
+                ),
+            ));
         }
 
         let Some(position_spec) = parse_extract_position_spec(&args[1]) else {

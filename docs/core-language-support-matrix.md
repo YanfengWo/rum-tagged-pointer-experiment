@@ -94,7 +94,7 @@ once in its primary implementation group. Other groups may mention it as
   standard structural traversal groundwork, exact path selectors with integer
   position specs, `Part` / `Extract` `All` / `Span` subsets, including current
   `UpTo[...]` span-endpoint support plus current invalid `Span` / `UpTo`
-  endpoint diagnostics, and `ReplacePart`
+  endpoint and argument-count diagnostics, and `ReplacePart`
   pattern-position subsets, including current atom `All` / positive empty-span
   and zero-endpoint boundary behavior in `Part` / `Extract`, current
   association-aware numeric/range `Part` / `Extract` value projection, current
