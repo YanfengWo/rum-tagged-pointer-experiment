@@ -137,6 +137,22 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
         "Nand[x, y]"
     );
     assert_eq!(
+        session
+            .eval_text("Nand[x, And[y, z]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Nand[x, And[y, z]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Nand[True, And[y, z]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Not[And[y, z]]"
+    );
+    assert_eq!(
         session.eval_text("Nor[]").unwrap().value.to_string(),
         "True"
     );
@@ -175,6 +191,22 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
             .value
             .to_string(),
         "Nor[x, y]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Nor[x, Or[y, z]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Nor[x, Or[y, z]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Nor[False, Or[y, z]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Not[Or[y, z]]"
     );
     assert_eq!(
         session.eval_text("Xor[]").unwrap().value.to_string(),
@@ -311,6 +343,22 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
             .value
             .to_string(),
         "Equivalent[x, y]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Equivalent[x, Equivalent[y, z]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Equivalent[x, Equivalent[y, z]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Equivalent[x, Equivalent[x, y]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Equivalent[x, Equivalent[x, y]]"
     );
     assert_eq!(
         session

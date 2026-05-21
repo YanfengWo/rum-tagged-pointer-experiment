@@ -88,7 +88,7 @@ fn expand_distributes_products_and_positive_integer_powers() {
             .unwrap()
             .value
             .to_string(),
-        "Plus[Power[x, 3], Power[y, 3], Times[3, Power[x, 2], y], Times[3, Power[y, 2], x]]"
+        "Plus[Power[x, 3], Power[y, 3], Times[3, x, Power[y, 2]], Times[3, y, Power[x, 2]]]"
     );
 }
 
@@ -124,7 +124,7 @@ fn expand_preserves_non_polynomial_or_pattern_bearing_regions() {
             .unwrap()
             .value
             .to_string(),
-        "Plus[Times[f[Power[Plus[1, x], 2]], y], f[Power[Plus[1, x], 2]]]"
+        "Plus[Times[y, f[Power[Plus[1, x], 2]]], f[Power[Plus[1, x], 2]]]"
     );
     assert_eq!(
         session
@@ -282,7 +282,7 @@ fn together_keeps_current_pattern_bearing_boundary_for_now() {
             .unwrap()
             .value
             .to_string(),
-        "Together[Plus[Power[Plus[1, u[Pattern[i, Blank[]]]], -1], Power[x, -1]]]"
+        "Together[Plus[Power[x, -1], Power[Plus[1, u[Pattern[i, Blank[]]]], -1]]]"
     );
 }
 

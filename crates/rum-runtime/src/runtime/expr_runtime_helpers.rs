@@ -62,11 +62,16 @@ pub(super) fn compare_expr_canonical(lhs: &Expr, rhs: &Expr) -> std::cmp::Orderi
                 args: rhs_args,
             },
         ) => compare_call_canonical(lhs_head, lhs_args, rhs_head, rhs_args),
-        _ => lhs.to_string().cmp(&rhs.to_string()),
+        _ => expr_order_rank(lhs).cmp(&expr_order_rank(rhs)),
     }
 }
 
 fn compare_atom_canonical(lhs: &Atom, rhs: &Atom) -> std::cmp::Ordering {
+    let rank_ordering = atom_order_rank(lhs).cmp(&atom_order_rank(rhs));
+    if rank_ordering != std::cmp::Ordering::Equal {
+        return rank_ordering;
+    }
+
     match (lhs, rhs) {
         (Atom::Integer(lhs), Atom::Integer(rhs)) => lhs.cmp(rhs),
         (Atom::Integer(lhs), Atom::Rational(rhs)) => {
@@ -78,7 +83,7 @@ fn compare_atom_canonical(lhs: &Atom, rhs: &Atom) -> std::cmp::Ordering {
         (Atom::Rational(lhs), Atom::Rational(rhs)) => compare_rational_values(lhs, rhs),
         (Atom::String(lhs), Atom::String(rhs)) => lhs.cmp(rhs),
         (Atom::Symbol(lhs), Atom::Symbol(rhs)) => lhs.qualified_name().cmp(&rhs.qualified_name()),
-        _ => lhs.to_string().cmp(&rhs.to_string()),
+        _ => std::cmp::Ordering::Equal,
     }
 }
 
@@ -107,6 +112,21 @@ fn compare_rational_values(lhs: &Rational, rhs: &Rational) -> std::cmp::Ordering
     let lhs_cross = lhs.numerator() * rhs.denominator();
     let rhs_cross = rhs.numerator() * lhs.denominator();
     lhs_cross.cmp(&rhs_cross)
+}
+
+fn expr_order_rank(expr: &Expr) -> u8 {
+    match expr {
+        Expr::Atom(atom) => atom_order_rank(atom),
+        Expr::Call { .. } => 3,
+    }
+}
+
+fn atom_order_rank(atom: &Atom) -> u8 {
+    match atom {
+        Atom::Integer(_) | Atom::Rational(_) => 0,
+        Atom::String(_) => 1,
+        Atom::Symbol(_) => 2,
+    }
 }
 
 pub(super) fn is_known_system_symbol(symbol: &Symbol) -> bool {

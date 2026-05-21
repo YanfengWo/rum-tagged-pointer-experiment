@@ -26,17 +26,11 @@ impl Session {
     }
 
     pub(super) fn eval_nand(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let result = self.resume_and_from_index(args.to_vec(), 0, Vec::new());
-        let value =
-            self.suspend_with_frame(result, |_, value| Ok(negate_logical_value(value, "Nand")))?;
-        Ok(negate_logical_value(value, "Nand"))
+        self.resume_nand_from_index(args.to_vec(), 0, Vec::new())
     }
 
     pub(super) fn eval_nor(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let result = self.resume_or_from_index(args.to_vec(), 0, Vec::new());
-        let value =
-            self.suspend_with_frame(result, |_, value| Ok(negate_logical_value(value, "Nor")))?;
-        Ok(negate_logical_value(value, "Nor"))
+        self.resume_nor_from_index(args.to_vec(), 0, Vec::new())
     }
 
     pub(super) fn eval_xor(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -217,6 +211,88 @@ impl Session {
             None => {
                 extend_flat_logical_residual(&mut residual, value, "Or");
                 self.resume_or_from_index(args, index + 1, residual)
+            }
+        }
+    }
+
+    fn resume_nand_from_index(
+        &mut self,
+        args: Vec<Expr>,
+        index: usize,
+        residual: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        if index >= args.len() {
+            return Ok(finalize_negated_logical_sequence("Nand", residual, false));
+        }
+
+        let arg = args[index].clone();
+        if let Some(truth) = truthiness_symbol(&arg) {
+            return self.resume_nand_with_value(args, index, residual, predicate_bool_expr(truth));
+        }
+
+        let suspended_args = args.clone();
+        let suspended_residual = residual.clone();
+        let result = self.evaluate(arg);
+        let value = self.suspend_with_frame(result, move |session, value| {
+            session.resume_nand_with_value(suspended_args, index, suspended_residual, value)
+        })?;
+        self.resume_nand_with_value(args, index, residual, value)
+    }
+
+    fn resume_nand_with_value(
+        &mut self,
+        args: Vec<Expr>,
+        index: usize,
+        mut residual: Vec<Expr>,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        match truthiness_symbol(&value) {
+            Some(false) => Ok(system_expr(heads::structure::TRUE)),
+            Some(true) => self.resume_nand_from_index(args, index + 1, residual),
+            None => {
+                residual.push(value);
+                self.resume_nand_from_index(args, index + 1, residual)
+            }
+        }
+    }
+
+    fn resume_nor_from_index(
+        &mut self,
+        args: Vec<Expr>,
+        index: usize,
+        residual: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        if index >= args.len() {
+            return Ok(finalize_negated_logical_sequence("Nor", residual, true));
+        }
+
+        let arg = args[index].clone();
+        if let Some(truth) = truthiness_symbol(&arg) {
+            return self.resume_nor_with_value(args, index, residual, predicate_bool_expr(truth));
+        }
+
+        let suspended_args = args.clone();
+        let suspended_residual = residual.clone();
+        let result = self.evaluate(arg);
+        let value = self.suspend_with_frame(result, move |session, value| {
+            session.resume_nor_with_value(suspended_args, index, suspended_residual, value)
+        })?;
+        self.resume_nor_with_value(args, index, residual, value)
+    }
+
+    fn resume_nor_with_value(
+        &mut self,
+        args: Vec<Expr>,
+        index: usize,
+        mut residual: Vec<Expr>,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        match truthiness_symbol(&value) {
+            Some(true) => Ok(system_expr(heads::structure::FALSE)),
+            Some(false) => self.resume_nor_from_index(args, index + 1, residual),
+            None => {
+                residual.push(value);
+                self.resume_nor_from_index(args, index + 1, residual)
             }
         }
     }
@@ -503,26 +579,6 @@ fn finalize_equivalent_constant_side(mut residual: Vec<Expr>, negate_residuals: 
     }
 }
 
-fn negate_logical_value(value: Expr, wrapper_head_name: &str) -> Expr {
-    match truthiness_symbol(&value) {
-        Some(truth) => return predicate_bool_expr(!truth),
-        None => {}
-    }
-
-    let source_head_name = match wrapper_head_name {
-        "Nand" => "And",
-        "Nor" => "Or",
-        _ => unreachable!("unsupported negated logical wrapper"),
-    };
-
-    match value {
-        Expr::Call { head, args } if is_system_symbol_name(&head, source_head_name) => {
-            Expr::call(system_expr(wrapper_head_name), args)
-        }
-        other => negate_logical_expr(other),
-    }
-}
-
 fn negate_logical_expr(expr: Expr) -> Expr {
     match truthiness_symbol(&expr) {
         Some(truth) => return predicate_bool_expr(!truth),
@@ -619,6 +675,18 @@ fn finalize_logical_sequence(head_name: &str, mut residual: Vec<Expr>, identity:
     match residual.len() {
         0 => predicate_bool_expr(identity),
         1 => residual.pop().expect("single residual value"),
+        _ => Expr::call(system_expr(head_name), residual),
+    }
+}
+
+fn finalize_negated_logical_sequence(
+    head_name: &str,
+    mut residual: Vec<Expr>,
+    empty_result: bool,
+) -> Expr {
+    match residual.len() {
+        0 => predicate_bool_expr(empty_result),
+        1 => negate_logical_expr(residual.pop().expect("single residual value")),
         _ => Expr::call(system_expr(head_name), residual),
     }
 }
