@@ -111,6 +111,10 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
+        if let [position_spec] = args {
+            return Ok(extract_operator_form(position_spec.clone()));
+        }
+
         if !(2..=3).contains(&args.len()) {
             return Ok(self.invalid_call_with_arg_range("Extract", args, 2, 3));
         }
@@ -1275,4 +1279,15 @@ fn wrap_extracted_value(value: Expr, wrapper: Option<&Expr>) -> Expr {
         .cloned()
         .map(|head| Expr::call(head, vec![value.clone()]))
         .unwrap_or(value)
+}
+
+fn extract_operator_form(position_spec: Expr) -> Expr {
+    let slot = Expr::call(system_expr("Slot"), vec![Expr::integer(BigInt::from(1))]);
+    Expr::call(
+        system_expr("Function"),
+        vec![Expr::call(
+            system_expr("Extract"),
+            vec![slot, position_spec],
+        )],
+    )
 }

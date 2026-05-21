@@ -102,7 +102,8 @@ once in its primary implementation group. Other groups may mention it as
   association slicing, plus the current `Part` selector-list boundary and
   `Extract` nested position-list selector subset, including shaped integer /
   `Key[...]` selectors and nested `All` / `Span` rejection, empty-expression and
-  association-aware `Depth` parity,
+  association-aware `Depth` parity, current unary `Extract[positionSpec]`
+  operator-form support,
   `Level` scalar-zero, standard-`All`, empty-range, mixed positive/negative,
   and positive/negative `Infinity` levelspec parity, and empty-expression
   negative-level depth alignment plus current oracle-locked `Heads` traversal
