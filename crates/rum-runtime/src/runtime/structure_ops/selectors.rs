@@ -44,7 +44,7 @@ struct ExtractPositionSpec {
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum PartSelectionFailure {
     PartW { part: Expr, target: Expr },
-    PartD,
+    PartD { spec: Option<Expr> },
     Take { spec: Expr, target: Expr },
     Pspec1 { spec: Expr },
 }
@@ -200,14 +200,21 @@ impl Session {
                 "partw",
                 format!("Part {} of {} does not exist.", part, target),
             ),
-            PartSelectionFailure::PartD => self.push_message(
-                symbol,
-                "partd",
-                format!(
-                    "Part specification {} is longer than depth of object.",
+            PartSelectionFailure::PartD { spec } => {
+                let rendered_spec = if symbol == "Extract" {
+                    spec.as_ref().unwrap_or(original)
+                } else {
                     original
-                ),
-            ),
+                };
+                self.push_message(
+                    symbol,
+                    "partd",
+                    format!(
+                        "Part specification {} is longer than depth of object.",
+                        rendered_spec
+                    ),
+                );
+            }
             PartSelectionFailure::Take { spec, target } => self.push_message(
                 symbol,
                 "take",
@@ -485,7 +492,13 @@ fn diagnose_part_selection_failure(
     selectors: &[PartSelector],
 ) -> Option<PartSelectionFailure> {
     let (first, rest) = selectors.split_first()?;
-    diagnose_selector_failure(expr, first, rest)
+    let failure = diagnose_selector_failure(expr, first, rest)?;
+    Some(match failure {
+        PartSelectionFailure::PartD { .. } => PartSelectionFailure::PartD {
+            spec: Some(selector_path_to_expr(selectors)),
+        },
+        other => other,
+    })
 }
 
 fn diagnose_selector_failure(
@@ -525,7 +538,7 @@ fn diagnose_children_failure(
     rest: &[PartSelector],
 ) -> Option<PartSelectionFailure> {
     if children.is_empty() {
-        return Some(PartSelectionFailure::PartD);
+        return Some(PartSelectionFailure::PartD { spec: None });
     }
 
     children
@@ -539,7 +552,9 @@ fn diagnose_failed_selector(expr: &Expr, selector: &PartSelector) -> Option<Part
             spec: selector_to_expr(selector),
         }),
         PartSelector::Single(AtomicPartSpec::Index(index)) => diagnose_failed_index(expr, *index),
-        PartSelector::Single(AtomicPartSpec::All) => Some(PartSelectionFailure::PartD),
+        PartSelector::Single(AtomicPartSpec::All) => Some(PartSelectionFailure::PartD {
+            spec: Some(selector_to_expr(selector)),
+        }),
         PartSelector::Single(AtomicPartSpec::Span(span)) => Some(PartSelectionFailure::Take {
             spec: span_to_expr(*span),
             target: expr.clone(),
@@ -554,7 +569,11 @@ fn diagnose_failed_index(expr: &Expr, index: isize) -> Option<PartSelectionFailu
     }
 
     match expr {
-        Expr::Atom(_) => Some(PartSelectionFailure::PartD),
+        Expr::Atom(_) => Some(PartSelectionFailure::PartD {
+            spec: Some(selector_to_expr(&PartSelector::Single(
+                AtomicPartSpec::Index(index),
+            ))),
+        }),
         Expr::Call { .. } => Some(PartSelectionFailure::PartW {
             part: Expr::integer(BigInt::from(index)),
             target: expr.clone(),
@@ -615,6 +634,13 @@ fn selector_to_expr(selector: &PartSelector) -> Expr {
             specs.iter().map(selector_to_expr).collect(),
         ),
     }
+}
+
+fn selector_path_to_expr(selectors: &[PartSelector]) -> Expr {
+    Expr::call(
+        system_expr(heads::structure::LIST),
+        selectors.iter().map(selector_to_expr).collect(),
+    )
 }
 
 fn span_to_expr(span: PartSpanSpec) -> Expr {

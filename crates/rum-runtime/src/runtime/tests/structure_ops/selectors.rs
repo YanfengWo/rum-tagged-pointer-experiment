@@ -753,6 +753,30 @@ fn invalid_part_and_extract_specs_report_selector_messages() {
             .iter()
             .any(|message| message.symbol == "Extract" && message.tag == "partd")
     );
+    assert!(
+        too_deep_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract"
+                && message.tag == "partd"
+                && message.text.contains("List[All, 2]")
+                && !message.text.contains("Extract[f[a]"))
+    );
+
+    let too_deep_extract_multi = session.eval_text("Extract[f[a], {{1}, {All, 2}}]").unwrap();
+    assert_eq!(
+        too_deep_extract_multi.value.to_string(),
+        "Extract[f[a], List[List[1], List[All, 2]]]"
+    );
+    assert!(
+        too_deep_extract_multi
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract"
+                && message.tag == "partd"
+                && message.text.contains("List[All, 2]")
+                && !message.text.contains("List[List[1], List[All, 2]]"))
+    );
 
     let bad_take_extract = session.eval_text("Extract[f[a], {1 ;; 2}]").unwrap();
     assert_eq!(
