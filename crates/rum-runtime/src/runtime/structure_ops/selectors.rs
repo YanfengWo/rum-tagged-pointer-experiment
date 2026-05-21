@@ -69,14 +69,18 @@ impl Session {
                 .iter()
                 .find(|selector| parse_part_selector_for_part(selector).is_none())
             {
-                self.push_message(
-                    "Part",
-                    "pkspec1",
-                    format!(
-                        "The expression {} cannot be used as a part specification.",
-                        offender
-                    ),
-                );
+                if is_invalid_span_expr(offender) {
+                    self.push_invalid_span_selector_messages("Part", offender);
+                } else {
+                    self.push_message(
+                        "Part",
+                        "pkspec1",
+                        format!(
+                            "The expression {} cannot be used as a part specification.",
+                            offender
+                        ),
+                    );
+                }
             }
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
@@ -112,15 +116,19 @@ impl Session {
         }
 
         let Some(position_spec) = parse_extract_position_spec(&args[1]) else {
-            self.push_message(
-                "Extract",
-                "psl1",
-                format!(
-                    "Position specification {} in {} is not applicable.",
-                    args[1],
-                    Expr::call(head.clone(), args.to_vec())
-                ),
-            );
+            if let Some(span_expr) = first_invalid_span_expr(&args[1]) {
+                self.push_invalid_span_selector_messages("Extract", span_expr);
+            } else {
+                self.push_message(
+                    "Extract",
+                    "psl1",
+                    format!(
+                        "Position specification {} in {} is not applicable.",
+                        args[1],
+                        Expr::call(head.clone(), args.to_vec())
+                    ),
+                );
+            }
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -198,6 +206,48 @@ impl Session {
                 "pspec1",
                 format!("Part specification {} is not applicable.", spec),
             ),
+        }
+    }
+
+    fn push_invalid_span_selector_messages(&mut self, symbol: &str, span_expr: &Expr) {
+        self.push_invalid_upto_messages_in_span(span_expr);
+        self.push_message(
+            symbol,
+            "span",
+            format!(
+                "{} is not a valid Span specification. A Span specification should be 1, 2 or 3 machine-sized integers separated by ;;. (Any of the integers can be omitted or replaced with All.)",
+                span_expr
+            ),
+        );
+    }
+
+    fn push_invalid_upto_messages_in_span(&mut self, expr: &Expr) {
+        let Expr::Call { head, args } = expr else {
+            return;
+        };
+
+        if is_system_symbol_name(head, "UpTo") {
+            match args.as_slice() {
+                [limit] if is_invalid_numeric_upto_limit(limit) => self.push_message(
+                    "UpTo",
+                    "innf",
+                    format!("Non-negative integer or Infinity expected at position 1 in {expr}."),
+                ),
+                [_] => {}
+                _ => self.push_message(
+                    "UpTo",
+                    "argx",
+                    format!(
+                        "UpTo called with {} arguments; 1 argument is expected.",
+                        args.len()
+                    ),
+                ),
+            }
+            return;
+        }
+
+        for arg in args {
+            self.push_invalid_upto_messages_in_span(arg);
         }
     }
 }
@@ -321,9 +371,6 @@ fn parse_span_part_spec(expr: &Expr) -> Option<AtomicPartSpec> {
         },
         [start, end, step] => {
             let step = expr_as_signed_isize(step)?;
-            if step == 0 {
-                return None;
-            }
             PartSpanSpec {
                 start: parse_span_endpoint(start)?,
                 end: parse_span_endpoint(end)?,
@@ -366,6 +413,39 @@ fn parse_upto_span_endpoint(expr: &Expr) -> Option<Option<isize>> {
 
     let limit = expr_as_signed_isize(limit)?;
     (limit >= 0).then_some(Some(limit))
+}
+
+fn is_invalid_span_expr(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Call { head, .. }
+            if is_system_symbol_name(head, heads::structure::SPAN)
+                && parse_span_part_spec(expr).is_none()
+    )
+}
+
+fn first_invalid_span_expr(expr: &Expr) -> Option<&Expr> {
+    if is_invalid_span_expr(expr) {
+        return Some(expr);
+    }
+
+    let Expr::Call { args, .. } = expr else {
+        return None;
+    };
+
+    args.iter().find_map(first_invalid_span_expr)
+}
+
+fn is_invalid_numeric_upto_limit(expr: &Expr) -> bool {
+    if is_system_symbol_name(expr, heads::structure::INFINITY) {
+        return false;
+    }
+
+    match expr {
+        Expr::Atom(Atom::Integer(value)) => value < &BigInt::from(0),
+        Expr::Atom(Atom::Rational(_)) => true,
+        _ => false,
+    }
 }
 
 pub(super) fn apply_part_selectors(expr: &Expr, selectors: &[PartSelector]) -> Option<Expr> {
@@ -981,6 +1061,10 @@ pub(super) fn select_positioned_parts_for_span(
 }
 
 fn resolve_span_components(spec: PartSpanSpec, len: usize) -> Option<Vec<isize>> {
+    if spec.step == 0 {
+        return None;
+    }
+
     let len = isize::try_from(len).ok()?;
     if spec.step > 0 {
         let start = resolve_positive_span_start(spec.start, len)?;

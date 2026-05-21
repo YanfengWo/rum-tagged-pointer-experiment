@@ -629,6 +629,48 @@ fn invalid_part_and_extract_specs_report_selector_messages() {
             .any(|message| message.symbol == "Part" && message.tag == "take")
     );
 
+    let zero_step_part = session.eval_text("Part[f[a, b], 1 ;; 2 ;; 0]").unwrap();
+    assert_eq!(
+        zero_step_part.value.to_string(),
+        "Part[f[a, b], Span[1, 2, 0]]"
+    );
+    assert!(
+        zero_step_part
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "take")
+    );
+
+    let invalid_span_part = session.eval_text("Part[f[a, b], 1 ;; 2 ;; x]").unwrap();
+    assert_eq!(
+        invalid_span_part.value.to_string(),
+        "Part[f[a, b], Span[1, 2, x]]"
+    );
+    assert!(
+        invalid_span_part
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "span")
+    );
+
+    let invalid_upto_part = session.eval_text("Part[f[a, b], 1 ;; UpTo[-1]]").unwrap();
+    assert_eq!(
+        invalid_upto_part.value.to_string(),
+        "Part[f[a, b], Span[1, UpTo[-1]]]"
+    );
+    assert!(
+        invalid_upto_part
+            .messages
+            .iter()
+            .any(|message| message.symbol == "UpTo" && message.tag == "innf")
+    );
+    assert!(
+        invalid_upto_part
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "span")
+    );
+
     let bad_key_part = session.eval_text("Part[f[a], Key[x]]").unwrap();
     assert_eq!(bad_key_part.value.to_string(), "Part[f[a], Key[x]]");
     assert!(
@@ -672,6 +714,54 @@ fn invalid_part_and_extract_specs_report_selector_messages() {
             .messages
             .iter()
             .any(|message| message.symbol == "Extract" && message.tag == "take")
+    );
+
+    let zero_step_extract = session
+        .eval_text("Extract[f[a, b], {1 ;; 2 ;; 0}]")
+        .unwrap();
+    assert_eq!(
+        zero_step_extract.value.to_string(),
+        "Extract[f[a, b], List[Span[1, 2, 0]]]"
+    );
+    assert!(
+        zero_step_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "take")
+    );
+
+    let invalid_span_extract = session
+        .eval_text("Extract[f[a, b], {1 ;; 2 ;; x}]")
+        .unwrap();
+    assert_eq!(
+        invalid_span_extract.value.to_string(),
+        "Extract[f[a, b], List[Span[1, 2, x]]]"
+    );
+    assert!(
+        invalid_span_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "span")
+    );
+
+    let invalid_upto_extract = session
+        .eval_text("Extract[f[a, b], {1 ;; UpTo[-1]}]")
+        .unwrap();
+    assert_eq!(
+        invalid_upto_extract.value.to_string(),
+        "Extract[f[a, b], List[Span[1, UpTo[-1]]]]"
+    );
+    assert!(
+        invalid_upto_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "UpTo" && message.tag == "innf")
+    );
+    assert!(
+        invalid_upto_extract
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "span")
     );
 
     let bad_key_extract = session.eval_text("Extract[f[a], {Key[x]}]").unwrap();
