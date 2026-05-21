@@ -891,6 +891,25 @@ fn and_or_short_circuit_side_effects_and_compare_exact_values() {
 }
 
 #[test]
+fn equal_and_unequal_leave_mixed_symbolic_chains_intact() {
+    let mut session = Session::new();
+
+    for (input, expected) in [
+        ("Equal[a, a, b]", "Equal[a, a, b]"),
+        ("Equal[1, u, u, 1]", "Equal[1, u, u, 1]"),
+        ("Equal[1, 1, u, 2]", "Equal[1, 1, u, 2]"),
+        ("Unequal[a, b, a]", "Unequal[a, b, a]"),
+        ("Unequal[1, u, 2, u]", "Unequal[1, u, 2, u]"),
+        ("Unequal[1, 2, u, 3, 1]", "Unequal[1, 2, u, 3, 1]"),
+    ] {
+        assert_eq!(
+            session.eval_text(input).unwrap().value.to_string(),
+            expected
+        );
+    }
+}
+
+#[test]
 fn comparison_operator_forms_apply_single_arguments_on_the_left() {
     let mut session = Session::new();
 

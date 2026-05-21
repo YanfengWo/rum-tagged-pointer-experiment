@@ -606,6 +606,9 @@ fn diagnose_failed_multi_selector(
                 part: selector_to_expr(selector),
                 target,
             },
+            PartSelectionFailure::Pspec1 { .. } => PartSelectionFailure::Pspec1 {
+                spec: selector_to_expr(selector),
+            },
             other => other,
         });
     }

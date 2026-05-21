@@ -730,6 +730,20 @@ fn invalid_part_and_extract_specs_report_selector_messages() {
             .any(|message| message.symbol == "Part" && message.tag == "pspec1")
     );
 
+    let bad_key_part_list = session.eval_text("Part[f[a, b], {Key[x], 1}]").unwrap();
+    assert_eq!(
+        bad_key_part_list.value.to_string(),
+        "Part[f[a, b], List[Key[x], 1]]"
+    );
+    assert!(
+        bad_key_part_list
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part"
+                && message.tag == "pspec1"
+                && message.text.contains("List[Key[x], 1]"))
+    );
+
     let missing_extract = session.eval_text("Extract[f[a], {{1}, {2}}]").unwrap();
     assert_eq!(
         missing_extract.value.to_string(),
