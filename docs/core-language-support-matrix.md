@@ -458,8 +458,9 @@ once in its primary implementation group. Other groups may mention it as
   `Failure[...]` `All` / `"Properties"` / `"Message"` / `"StyledMessage"`
   parity for string-or-symbol tags plus string and `MessageName[...]`
   `MessageTemplate` / `MessageParameters` message rendering through the
-  current message catalog, including named `MessageParameters` and
-  delayed-template host-input resume, valid-template-only virtual
+  current message catalog, including named and delayed `MessageParameters`,
+  delayed-parameter host-input resume, and delayed-template host-input resume,
+  valid-template-only virtual
   `HeldMessageTemplate` / `MessageName`, plus direct virtual `"Tag"` projection
   and malformed status-object inert projection boundaries, silent malformed
   `Failure` / `Success` constructors, `FailureQ` recognition for malformed
@@ -469,7 +470,7 @@ once in its primary implementation group. Other groups may mention it as
   prompts, `Input` / `InputString`
   `FieldMasked -> True` plus request-kind host request metadata, resumed
   `Input` parse diagnostics, `Pause::numnm`, and current option-error
-  boundaries,
+  boundaries including option-list non-option offender shape,
   `Enclose` handler and `Confirm` information-expression host-input
   suspension/resume, broader `ConfirmBy` / `ConfirmMatch` /
   `ConfirmQuiet` / `ConfirmAssert` host-input resume coverage, and
@@ -488,7 +489,8 @@ once in its primary implementation group. Other groups may mention it as
   validation before body evaluation, `Rule` vs `RuleDelayed` option RHS
   handling with host-input resume, and fallback host-input resume, `Failsafe`
   true-only test gating plus inert non-wrapper arity,
-  oracle-aligned Failsafe failure metadata, generated Failsafe failure
+  oracle-aligned Failsafe failure metadata, including multi-argument
+  `HoldForm[...]` message-parameter grouping, generated Failsafe failure
   `Message` rendering for held arguments, function/fail-function host-input resume,
   inert direct `TerminatedEvaluation` constructor / application behavior plus
   generated top-level/request/evaluation-data `TerminatedEvaluation` for

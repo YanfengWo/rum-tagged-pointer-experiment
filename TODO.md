@@ -298,9 +298,12 @@ This roadmap intentionally uses two levels of detail:
         coverage.
       - [ ] Remaining status/failure long-tail: richer generated
         `Failure` / `Success` / `TerminatedEvaluation` parity beyond the
-        current projection, metadata, and message-template subset.
+        current projection, metadata, message-template subset, delayed
+        `MessageParameters` rendering/resume, and Failsafe multi-argument
+        `MessageParameters` grouping.
       - [ ] Remaining assertion/I/O long-tail: obscure `Assert` controls and
-        fuller host-I/O option, prompt, request, and parse/error semantics.
+        fuller host-I/O option, prompt, request, parse/error semantics, and
+        option-list diagnostic shape.
     - [ ] `CL-01`: remaining part-spec / `Heads` parity beyond the current atom `All` / span-boundary selector alignment, current invalid and out-of-range `Part` / `Extract` selector diagnostics, current `Part` selector-list boundary, current `Extract` nested position-list selector subset, empty-expression plus association-aware `Depth` parity, `Level` levelspec parity beyond the current scalar-zero / standard-`All` / empty-range / mixed-infinite range subset, empty-expression negative-level depth alignment plus current oracle-locked `Heads` traversal edges across the current structural walkers, current `Not[Not[...]]` and relational-`Not` simplifications, flat nested `And` / `Or` residual simplification, first-pass `Xor` / `Equivalent` boolean/repeated-term reductions, first-pass `Implies` simplification including identical-argument tautology, mixed-symbolic `Equal` / `Unequal` chain boundaries plus current numeric order-chain endpoint contradiction detection with nonnumeric order comparisons kept conservative, plus deeper truth/comparison breadth beyond the current exact-numeric order-chain reductions
       - [x] Cover the current nonatomic `Order` / `OrderedQ` argument-order
         parity slice by replacing text-only expression ordering with recursive

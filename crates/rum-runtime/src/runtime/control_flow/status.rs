@@ -213,26 +213,61 @@ impl Session {
         else {
             return Ok(None);
         };
-        let params = failure_message_template_parameters(status);
 
+        let Some((param_value, delayed)) = failure_message_template_parameter_value(status) else {
+            return self
+                .finish_failure_message_from_template(
+                    status.clone(),
+                    template,
+                    FailureMessageTemplateParameters::default(),
+                )
+                .map(Some);
+        };
+        if delayed {
+            let status = status.clone();
+            let param_result = self.evaluate(param_value);
+            let param_value = self.suspend_with_frame(param_result, {
+                let status = status.clone();
+                let template = template.clone();
+                move |session, param_value| {
+                    let params = failure_message_template_parameters_from_expr(&param_value);
+                    session.finish_failure_message_from_template(status, template, params)
+                }
+            })?;
+            let params = failure_message_template_parameters_from_expr(&param_value);
+            return self
+                .finish_failure_message_from_template(status, template, params)
+                .map(Some);
+        }
+
+        let params = failure_message_template_parameters_from_expr(&param_value);
+        self.finish_failure_message_from_template(status.clone(), template, params)
+            .map(Some)
+    }
+
+    fn finish_failure_message_from_template(
+        &mut self,
+        status: Expr,
+        template: Expr,
+        params: FailureMessageTemplateParameters,
+    ) -> Result<Expr, EvalError> {
         if let Expr::Atom(Atom::String(template)) = template {
-            let Some(key) = failure_message_template_key(status) else {
-                return Ok(None);
+            let Some(key) = failure_message_template_key(&status) else {
+                return Ok(Expr::string(template));
             };
-            return Ok(Some(Expr::string(format_message_template_with_named(
+            return Ok(Expr::string(format_message_template_with_named(
                 &template,
                 &key,
                 &params.positional,
                 &params.named,
-            ))));
+            )));
         }
 
         let Some(key) = message_name_key_from_expr(&template) else {
-            return Ok(None);
+            return Ok(template);
         };
         let rendered = self.render_message_text_with_named(&key, &params.positional, &params.named);
         self.drive_internal_value::<String, Expr, _>(rendered, |_, text| Ok(Expr::string(text)))
-            .map(Some)
     }
 }
 
@@ -333,6 +368,16 @@ fn status_object_property_value(status: &Expr, property: &Expr) -> Option<Expr> 
     association_value_by_key(details, property)
 }
 
+fn status_object_property_entry_form(
+    status: &Expr,
+    property: &Expr,
+) -> Option<AssociationEntryForm> {
+    let (_, details) = status_object_parts(status)?;
+    association_entry_forms_from_expr(details)?
+        .into_iter()
+        .find(|entry| entry.key == *property)
+}
+
 fn failure_virtual_held_message_template_value(status: &Expr) -> Option<Expr> {
     let template = status_object_property_value(status, &Expr::string("MessageTemplate"))?;
     if !is_failure_message_template_virtualizable(&template) {
@@ -395,20 +440,20 @@ struct FailureMessageTemplateParameters {
     named: Vec<(String, Expr)>,
 }
 
-fn failure_message_template_parameters(status: &Expr) -> FailureMessageTemplateParameters {
-    let Some(params) = status_object_property_value(status, &Expr::string("MessageParameters"))
-    else {
-        return FailureMessageTemplateParameters::default();
-    };
+fn failure_message_template_parameter_value(status: &Expr) -> Option<(Expr, bool)> {
+    let entry = status_object_property_entry_form(status, &Expr::string("MessageParameters"))?;
+    Some((entry.value, entry.delayed))
+}
 
-    if let Some(items) = list_items(&params) {
+fn failure_message_template_parameters_from_expr(expr: &Expr) -> FailureMessageTemplateParameters {
+    if let Some(items) = list_items(expr) {
         return FailureMessageTemplateParameters {
             positional: items.to_vec(),
             named: Vec::new(),
         };
     }
 
-    let Some(entries) = association_entries_from_expr(&params) else {
+    let Some(entries) = association_entries_from_expr(expr) else {
         return FailureMessageTemplateParameters::default();
     };
 

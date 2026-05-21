@@ -824,10 +824,7 @@ pub(super) fn build_failsafe_failure(_function: Expr, _test: Expr, args: Vec<Exp
     let held_args = Expr::call(system_expr("Hold"), args.clone());
     let held_message_parameters = Expr::call(
         system_expr("List"),
-        args.iter()
-            .cloned()
-            .map(|arg| Expr::call(system_expr("HoldForm"), vec![arg]))
-            .collect(),
+        vec![Expr::call(system_expr("HoldForm"), args.clone())],
     );
 
     Expr::call(

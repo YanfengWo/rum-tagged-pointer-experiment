@@ -597,6 +597,22 @@ fn failsafe_wrapper_preserves_failure_like_inputs_and_supports_test_forms() {
     );
     assert_eq!(
         session
+            .eval_text("Failsafe[f, Function[False]][a, b][\"MessageParameters\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldForm[a, b]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Failsafe[f, Function[False]][a, b][\"Arguments\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[a, b]"
+    );
+    assert_eq!(
+        session
             .eval_text("Failsafe[f, Positive][-1][\"Function\"]")
             .unwrap()
             .value

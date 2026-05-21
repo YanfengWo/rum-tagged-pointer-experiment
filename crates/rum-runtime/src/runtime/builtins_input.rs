@@ -342,7 +342,14 @@ fn collect_input_option_expr(
         }
         Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
             for item in args {
-                collect_input_option_expr(item, options)?;
+                if let Err(error) = collect_input_option_expr(item, options) {
+                    return Err(match error {
+                        InputOptionsError::NonOption(_) => {
+                            InputOptionsError::NonOption(option_expr.clone())
+                        }
+                        other => other,
+                    });
+                }
             }
             Ok(())
         }

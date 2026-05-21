@@ -544,6 +544,18 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
             .iter()
             .any(|message| message.symbol == "InputString" && message.tag == "nonopt")
     );
+    let non_option_list = session
+        .eval_text("InputString[\"p\", {FieldMasked -> False, 1}]")
+        .unwrap();
+    assert_eq!(
+        non_option_list.value.to_string(),
+        "InputString[\"p\", List[Rule[FieldMasked, False], 1]]"
+    );
+    assert!(non_option_list.messages.iter().any(|message| {
+        message.symbol == "InputString"
+            && message.tag == "nonopt"
+            && message.text.contains("List[Rule[FieldMasked, False], 1]")
+    }));
 
     let invalid_option_name = session.eval_text("InputString[\"p\", 1 -> 2]").unwrap();
     assert_eq!(
@@ -574,6 +586,18 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
             .iter()
             .any(|message| message.symbol == "Input" && message.tag == "nonopt")
     );
+    let input_non_option_list = session
+        .eval_text("Input[\"p\", {FieldMasked -> False, 1}]")
+        .unwrap();
+    assert_eq!(
+        input_non_option_list.value.to_string(),
+        "Input[\"p\", List[Rule[FieldMasked, False], 1]]"
+    );
+    assert!(input_non_option_list.messages.iter().any(|message| {
+        message.symbol == "Input"
+            && message.tag == "nonopt"
+            && message.text.contains("List[Rule[FieldMasked, False], 1]")
+    }));
 }
 
 #[test]
@@ -999,6 +1023,36 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
             .to_string(),
         "\"bad x\""
     );
+    session.eval_text("delayedParamsSide = 0").unwrap();
+    assert_eq!(
+        session
+            .eval_text("Failure[\"tag\", Association[\"MessageTemplate\" -> \"bad `1`\", \"MessageParameters\" :> (delayedParamsSide = 1; {a})]][\"Message\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"bad a\""
+    );
+    assert_eq!(
+        session
+            .eval_text("delayedParamsSide")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    let failure = session
+        .eval_request("Failure[\"tag\", Association[\"MessageTemplate\" -> \"bad `1`\", \"MessageParameters\" :> {InputString[\"param: \"]}]][\"Message\"]")
+        .expect_err("delayed Failure MessageParameters should suspend through host input");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "param: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("ok")
+        .expect("resuming Failure MessageParameters should finish message rendering");
+    assert_eq!(response.value.to_string(), "\"bad ok\"");
     assert_eq!(
         session
             .eval_text("Failure[\"tag\", {\"MessageTemplate\" -> \"bad ``\", \"MessageParameters\" -> {x}}][\"Message\"]")
