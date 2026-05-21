@@ -516,6 +516,62 @@ fn list_relation_and_shape_predicates_cover_current_exact_subsets() {
     );
     assert_eq!(
         session
+            .eval_text("Order[f[2], f[10]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("OrderedQ[{f[2], f[10]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("OrderedQ[{f[10], f[2]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("Order[f[1], f[1, 0]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Order[{2}, {10}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Order[Association[a -> 2], Association[a -> 10]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("OrderedQ[{Association[a -> 2], Association[a -> 10]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
             .eval_text("OrderedQ[Association[b -> 2, a -> 1]]")
             .unwrap()
             .value
