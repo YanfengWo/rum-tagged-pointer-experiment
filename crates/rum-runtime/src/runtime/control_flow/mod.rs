@@ -28,6 +28,12 @@ struct CheckAbortPropagation {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+struct CheckAbortPropagationSource {
+    value: Expr,
+    evaluate_rhs: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum CheckAbortOptionError {
     NonOption(Expr),
     InvalidOptionName(Expr),
@@ -185,16 +191,49 @@ impl Session {
             &Symbol::system("PropagateAborts"),
         )?;
         let default_option_exprs: Vec<Expr> = default_option.into_iter().collect();
-        let default_propagation = match parse_check_abort_propagation(&default_option_exprs) {
-            Ok(Some(propagation)) => propagation,
-            Ok(None) => default_check_abort_propagation(),
+        let default_propagation =
+            match parse_check_abort_propagation_source(&default_option_exprs, false) {
+                Ok(Some(source)) => check_abort_propagation_from_value(source.value),
+                Ok(None) => default_check_abort_propagation(),
+                Err(error) => return Ok(self.invalid_check_abort_option_call(args, error)),
+            };
+
+        let propagation_source = match parse_check_abort_propagation_source(&args[2..], true) {
+            Ok(source) => source,
             Err(error) => return Ok(self.invalid_check_abort_option_call(args, error)),
         };
-        let propagation = match parse_check_abort_propagation(&args[2..]) {
-            Ok(Some(propagation)) => propagation,
-            Ok(None) => default_propagation,
-            Err(error) => return Ok(self.invalid_check_abort_option_call(args, error)),
+        let Some(source) = propagation_source else {
+            return self.resume_check_abort_with_propagation(args.to_vec(), default_propagation);
         };
+        if source.evaluate_rhs {
+            let value_result = self.evaluate(source.value.clone());
+            let value = self.suspend_with_frame(value_result, {
+                let args = args.to_vec();
+                move |session, value| {
+                    session.resume_check_abort_with_propagation(
+                        args,
+                        check_abort_propagation_from_value(value),
+                    )
+                }
+            })?;
+
+            return self.resume_check_abort_with_propagation(
+                args.to_vec(),
+                check_abort_propagation_from_value(value),
+            );
+        }
+
+        self.resume_check_abort_with_propagation(
+            args.to_vec(),
+            check_abort_propagation_from_value(source.value),
+        )
+    }
+
+    fn resume_check_abort_with_propagation(
+        &mut self,
+        args: Vec<Expr>,
+        propagation: CheckAbortPropagation,
+    ) -> Result<Expr, EvalError> {
         if let Some(invalid_value) = propagation.invalid_value.as_ref() {
             self.push_message(
                 "CheckAbort",
@@ -756,16 +795,16 @@ fn assert_failure_messages(test: &Expr, assert_args: &[Expr]) -> Vec<(&'static s
     }]
 }
 
-fn parse_check_abort_propagation(
+fn parse_check_abort_propagation_source(
     option_exprs: &[Expr],
-) -> Result<Option<CheckAbortPropagation>, CheckAbortOptionError> {
+    evaluate_rule_rhs: bool,
+) -> Result<Option<CheckAbortPropagationSource>, CheckAbortOptionError> {
+    let mut source = None;
     for option_expr in option_exprs {
-        if let Some(propagation) = parse_check_abort_propagation_expr(option_expr)? {
-            return Ok(Some(propagation));
-        }
+        parse_check_abort_propagation_source_expr(option_expr, evaluate_rule_rhs, &mut source)?;
     }
 
-    Ok(None)
+    Ok(source)
 }
 
 fn default_check_abort_propagation() -> CheckAbortPropagation {
@@ -775,20 +814,29 @@ fn default_check_abort_propagation() -> CheckAbortPropagation {
     }
 }
 
-fn parse_check_abort_propagation_expr(
+fn parse_check_abort_propagation_source_expr(
     option_expr: &Expr,
-) -> Result<Option<CheckAbortPropagation>, CheckAbortOptionError> {
+    evaluate_rule_rhs: bool,
+    source: &mut Option<CheckAbortPropagationSource>,
+) -> Result<(), CheckAbortOptionError> {
     let Expr::Call { head, args } = option_expr else {
         return Err(CheckAbortOptionError::NonOption(option_expr.clone()));
     };
 
     if is_system_symbol_name(head, heads::structure::LIST) {
         for item in args {
-            if let Some(propagation) = parse_check_abort_propagation_expr(item)? {
-                return Ok(Some(propagation));
+            if let Err(error) =
+                parse_check_abort_propagation_source_expr(item, evaluate_rule_rhs, source)
+            {
+                return Err(match error {
+                    CheckAbortOptionError::NonOption(_) => {
+                        CheckAbortOptionError::NonOption(option_expr.clone())
+                    }
+                    other => other,
+                });
             }
         }
-        return Ok(None);
+        return Ok(());
     }
 
     if !(is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
@@ -803,20 +851,31 @@ fn parse_check_abort_propagation_expr(
         return Err(CheckAbortOptionError::UnknownOption(option_name));
     }
 
-    let (mode, invalid_value) = if is_system_symbol_name(&args[1], "True") {
+    if source.is_none() {
+        *source = Some(CheckAbortPropagationSource {
+            value: args[1].clone(),
+            evaluate_rhs: evaluate_rule_rhs && is_system_symbol_name(head, "Rule"),
+        });
+    }
+
+    Ok(())
+}
+
+fn check_abort_propagation_from_value(value: Expr) -> CheckAbortPropagation {
+    let (mode, invalid_value) = if is_system_symbol_name(&value, "True") {
         (PropagateAbortsMode::True, None)
-    } else if is_system_symbol_name(&args[1], "False") {
+    } else if is_system_symbol_name(&value, "False") {
         (PropagateAbortsMode::False, None)
-    } else if is_system_symbol_name(&args[1], "Automatic") {
+    } else if is_system_symbol_name(&value, "Automatic") {
         (PropagateAbortsMode::Automatic, None)
     } else {
-        (PropagateAbortsMode::Automatic, Some(args[1].clone()))
+        (PropagateAbortsMode::Automatic, Some(value))
     };
 
-    Ok(Some(CheckAbortPropagation {
+    CheckAbortPropagation {
         mode,
         invalid_value,
-    }))
+    }
 }
 
 fn check_abort_option_name(expr: &Expr) -> Option<Symbol> {

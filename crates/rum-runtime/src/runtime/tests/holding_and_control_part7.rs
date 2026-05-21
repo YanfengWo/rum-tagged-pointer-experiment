@@ -324,6 +324,38 @@ fn abortprotect_and_failsafe_resume_through_host_input() {
     assert_eq!(response.value.to_string(), "\"rescued\"");
 
     let failure = session
+        .eval_request(
+            "CheckAbort[CheckAbort[Abort[], rescued, PropagateAborts -> MatchQ[InputString[\"option: \"], \"yes\"]], outer]",
+        )
+        .expect_err("CheckAbort option RHS should suspend before the protected body runs");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "option: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("truthy CheckAbort option RHS should propagate the abort");
+    assert_eq!(response.value.to_string(), "outer");
+
+    let failure = session
+        .eval_request(
+            "CheckAbort[CheckAbort[Abort[], rescued, PropagateAborts -> MatchQ[InputString[\"option: \"], \"yes\"]], outer]",
+        )
+        .expect_err("CheckAbort option RHS should suspend again on the next call");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "option: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("no")
+        .expect("falsy CheckAbort option RHS should keep the caught fallback");
+    assert_eq!(response.value.to_string(), "rescued");
+
+    let failure = session
         .eval_request("Failsafe[f, Function[MatchQ[InputString[\"test: \"], \"yes\"]]][arg]")
         .expect_err("Failsafe test should suspend when host input is needed");
     match &failure.error {

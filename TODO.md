@@ -293,7 +293,9 @@ This roadmap intentionally uses two levels of detail:
       - [ ] Remaining cleanup/control long-tail: deeper `WithCleanup` /
         `Failsafe` / `CheckAbort` / `AbortProtect` parity beyond the current
         suspension-safe cleanup, throw/abort cleanup boundaries, abort
-        propagation, and request-level diagnostic coverage.
+        propagation, full option-list validation plus `Rule` / `RuleDelayed`
+        option RHS handling for `CheckAbort`, and request-level diagnostic
+        coverage.
       - [ ] Remaining status/failure long-tail: richer generated
         `Failure` / `Success` / `TerminatedEvaluation` parity beyond the
         current projection, metadata, and message-template subset.

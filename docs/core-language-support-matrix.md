@@ -484,8 +484,10 @@ once in its primary implementation group. Other groups may mention it as
   oracle-aligned delayed `Failsafe` failure `MessageParameters` metadata,
   cleanup-`Return` preservation of the primary outcome, and nested
   `AbortProtect` pending-abort propagation, current `CheckAbort` option-list
-  and multi-option `PropagateAborts` parity including fallback host-input
-  resume, `Failsafe` true-only test gating plus inert non-wrapper arity,
+  and multi-option `PropagateAborts` parity, including full option-list
+  validation before body evaluation, `Rule` vs `RuleDelayed` option RHS
+  handling with host-input resume, and fallback host-input resume, `Failsafe`
+  true-only test gating plus inert non-wrapper arity,
   oracle-aligned Failsafe failure metadata, generated Failsafe failure
   `Message` rendering for held arguments, function/fail-function host-input resume,
   inert direct `TerminatedEvaluation` constructor / application behavior plus

@@ -154,6 +154,87 @@ fn abort_and_checkabort_cover_current_first_pass_subset() {
 }
 
 #[test]
+fn checkabort_validates_entire_option_lists_before_evaluating_body() {
+    let mut session = Session::new();
+
+    session.eval_text("propagate = True").unwrap();
+    assert_eq!(
+        session
+            .eval_text(
+                "CheckAbort[CheckAbort[Abort[], rescued, PropagateAborts -> propagate], outer]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "outer"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "CheckAbort[CheckAbort[Abort[], rescued, PropagateAborts :> propagate], outer]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "rescued"
+    );
+
+    let unknown_after_valid = session
+        .eval_text("CheckAbort[Abort[], rescued, {PropagateAborts -> False, BadOpt -> 1}]")
+        .unwrap();
+    assert_eq!(
+        unknown_after_valid.value.to_string(),
+        "CheckAbort[Abort[], rescued, List[Rule[PropagateAborts, False], Rule[BadOpt, 1]]]"
+    );
+    assert!(
+        unknown_after_valid
+            .messages
+            .iter()
+            .any(|message| message.symbol == "CheckAbort" && message.tag == "optx")
+    );
+
+    let non_option_after_valid = session
+        .eval_text("CheckAbort[Abort[], rescued, {PropagateAborts -> False, 3}]")
+        .unwrap();
+    assert_eq!(
+        non_option_after_valid.value.to_string(),
+        "CheckAbort[Abort[], rescued, List[Rule[PropagateAborts, False], 3]]"
+    );
+    assert!(non_option_after_valid.messages.iter().any(|message| {
+        message.symbol == "CheckAbort"
+            && message.tag == "nonopt"
+            && message
+                .text
+                .contains("List[Rule[PropagateAborts, False], 3]")
+    }));
+
+    let top_level_unknown_after_valid = session
+        .eval_text("CheckAbort[Abort[], rescued, PropagateAborts -> False, BadOpt -> 1]")
+        .unwrap();
+    assert_eq!(
+        top_level_unknown_after_valid.value.to_string(),
+        "CheckAbort[Abort[], rescued, Rule[PropagateAborts, False], Rule[BadOpt, 1]]"
+    );
+    assert!(
+        top_level_unknown_after_valid
+            .messages
+            .iter()
+            .any(|message| message.symbol == "CheckAbort" && message.tag == "optx")
+    );
+
+    let side_effect_blocked_by_invalid_list = session
+        .eval_text("x = 0; CheckAbort[Abort[], rescued, {PropagateAborts -> (x = 1; False), 3}]; x")
+        .unwrap();
+    assert_eq!(side_effect_blocked_by_invalid_list.value.to_string(), "0");
+    assert!(
+        side_effect_blocked_by_invalid_list
+            .messages
+            .iter()
+            .any(|message| message.symbol == "CheckAbort" && message.tag == "nonopt")
+    );
+}
+
+#[test]
 fn exit_reports_a_request_level_code_and_stops_evaluation() {
     let mut session = Session::new();
 
