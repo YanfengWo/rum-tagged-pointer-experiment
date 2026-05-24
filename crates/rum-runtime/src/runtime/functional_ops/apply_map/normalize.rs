@@ -156,7 +156,7 @@ impl Session {
                         "expected a standard levelspec as the third argument",
                     ));
                 };
-                let Some(include_heads) = parse_heads_option(fourth) else {
+                let Some(include_heads) = parse_heads_option_with_default(fourth, false) else {
                     return ApplyNormalization::Immediate(self.invalid_call_with_arg_form(
                         symbol,
                         args,
@@ -228,7 +228,7 @@ impl Session {
                         "expected a standard levelspec as the third argument",
                     ));
                 };
-                let Some(include_heads) = parse_heads_option(fourth) else {
+                let Some(include_heads) = parse_heads_option_with_default(fourth, false) else {
                     return MapLikeNormalization::Immediate(self.invalid_call_with_arg_form(
                         symbol,
                         args,
@@ -276,7 +276,7 @@ impl Session {
         let include_heads = match args {
             [_, _] => false,
             [_, _, option] => {
-                let Some(include_heads) = parse_heads_option(option) else {
+                let Some(include_heads) = parse_heads_option_with_default(option, false) else {
                     return MapLikeNormalization::Immediate(self.invalid_call_with_arg_form(
                         "MapAll",
                         args,
@@ -357,7 +357,7 @@ impl Session {
                         "expected a standard levelspec as the third argument",
                     ));
                 };
-                let Some(include_heads) = parse_heads_option(option) else {
+                let Some(include_heads) = parse_heads_option_with_default(option, false) else {
                     return CommonArgMapNormalization::Immediate(self.invalid_call_with_arg_form(
                         "Comap",
                         args,
@@ -421,7 +421,7 @@ impl Session {
         let include_heads = match args {
             [_, _] => false,
             [_, _, option] => {
-                let Some(include_heads) = parse_heads_option(option) else {
+                let Some(include_heads) = parse_heads_option_with_default(option, false) else {
                     return CommonArgMapNormalization::Immediate(self.invalid_call_with_arg_form(
                         "ComapApply",
                         args,

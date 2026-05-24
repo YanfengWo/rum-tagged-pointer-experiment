@@ -225,6 +225,37 @@ pub(super) fn parse_non_negative_match_limit(expr: &Expr) -> Option<usize> {
 }
 
 pub(super) fn parse_heads_option(expr: &Expr) -> Option<bool> {
+    parse_heads_option_value(expr).flatten()
+}
+
+pub(super) fn parse_heads_option_with_default(expr: &Expr, default: bool) -> Option<bool> {
+    Some(parse_heads_option_value(expr)?.unwrap_or(default))
+}
+
+fn parse_heads_option_value(expr: &Expr) -> Option<Option<bool>> {
+    if let Some(value) = parse_heads_option_rule(expr) {
+        return Some(Some(value));
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return None;
+    }
+
+    let mut value = None;
+    for arg in args {
+        let parsed = parse_heads_option_value(arg)?;
+        if value.is_none() {
+            value = parsed;
+        }
+    }
+    Some(value)
+}
+
+fn parse_heads_option_rule(expr: &Expr) -> Option<bool> {
     let Expr::Call { head, args } = expr else {
         return None;
     };
@@ -235,11 +266,19 @@ pub(super) fn parse_heads_option(expr: &Expr) -> Option<bool> {
         return None;
     }
 
-    let symbol = expr_as_symbol(&args[0])?;
+    let symbol = heads_option_symbol(&args[0])?;
 
     if symbol.context() != SYSTEM_CONTEXT || symbol.name() != "Heads" {
         return None;
     }
 
     truthiness_symbol(&args[1])
+}
+
+fn heads_option_symbol(expr: &Expr) -> Option<Symbol> {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => Some(symbol.clone()),
+        Expr::Atom(Atom::String(name)) => resolve_unqualified_symbol(name),
+        _ => None,
+    }
 }

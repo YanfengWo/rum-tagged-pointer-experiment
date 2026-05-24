@@ -80,6 +80,38 @@ fn head_length_and_depth_cover_atoms_calls_and_compound_heads() {
             .to_string(),
         "3"
     );
+    assert_eq!(
+        session
+            .eval_text("Depth[f[][a], {Heads -> True}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("Depth[f[][a], \"Heads\" -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("Depth[f[][a], {Heads -> False, Heads -> True}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Depth[f[][a], {}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
 }
 
 #[test]

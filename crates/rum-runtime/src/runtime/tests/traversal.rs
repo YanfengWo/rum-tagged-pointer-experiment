@@ -164,6 +164,30 @@ fn level_supports_standard_levelspecs_and_depth_first_ordering() {
             .to_string(),
         "List[f, g, 1, g[1]]"
     );
+    assert_eq!(
+        session
+            .eval_text("Level[f[1], {1}, {\"Heads\" -> True}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f, 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[1], {1}, {{\"Heads\" -> True}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f, 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[f[1], {1}, {}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1]"
+    );
 }
 
 #[test]
@@ -209,6 +233,30 @@ fn count_memberq_and_freeq_share_standard_traversal_semantics() {
             .value
             .to_string(),
         "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Count[f[1], _Symbol, Infinity, {\"Heads\" -> True}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("FreeQ[f[1], _Symbol, Infinity, {\"Heads\" -> True}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("Cases[f[1], _Symbol, {0, Infinity}, {}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
     );
     assert_eq!(
         session
@@ -537,6 +585,14 @@ fn position_supports_standard_levelspecs_heads_and_limits() {
     assert_eq!(
         session
             .eval_text("Position[f[1], _Symbol, {1}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[0]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Position[f[1], _Symbol, Infinity, {}]")
             .unwrap()
             .value
             .to_string(),

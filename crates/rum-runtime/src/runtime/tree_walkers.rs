@@ -74,14 +74,18 @@ impl Session {
 
         let (apply_head, include_heads) = match args {
             [_, _, third] => {
-                if let Some(include_heads) = parse_heads_option(third) {
+                if let Some(include_heads) =
+                    parse_heads_option_with_default(third, default_include_heads)
+                {
                     (None, include_heads)
                 } else {
                     (Some(third.clone()), default_include_heads)
                 }
             }
             [_, _, third, fourth] => {
-                let Some(include_heads) = parse_heads_option(fourth) else {
+                let Some(include_heads) =
+                    parse_heads_option_with_default(fourth, default_include_heads)
+                else {
                     return Ok(self.invalid_call_with_arg_form(
                         "Level",
                         args,

@@ -43,7 +43,9 @@ impl Session {
                         "expected a standard levelspec as the third argument in the current structured-trace subset",
                     ));
                 };
-                let Some(include_heads) = parse_heads_option(option) else {
+                let Some(include_heads) =
+                    parse_heads_option_with_default(option, default_include_heads)
+                else {
                     return Ok(self.invalid_call_with_arg_form(
                         "Trace",
                         args,
@@ -99,7 +101,9 @@ impl Session {
                         "expected a standard levelspec as the third argument in the current structured-trace subset",
                     ));
                 };
-                let Some(include_heads) = parse_heads_option(option) else {
+                let Some(include_heads) =
+                    parse_heads_option_with_default(option, default_include_heads)
+                else {
                     return Ok(self.invalid_call_with_arg_form(
                         "TracePrint",
                         args,

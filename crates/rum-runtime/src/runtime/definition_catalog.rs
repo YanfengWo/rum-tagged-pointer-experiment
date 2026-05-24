@@ -138,7 +138,9 @@ impl Session {
                     return Err(CasesTraversalNormalizationError::InvalidThirdArgument);
                 };
 
-                if let Some(include_heads) = parse_heads_option(fourth) {
+                if let Some(include_heads) =
+                    parse_heads_option_with_default(fourth, defaults.include_heads)
+                {
                     Ok(CasesTraversalConfig {
                         levels,
                         max_matches: defaults.max_matches,
@@ -161,7 +163,9 @@ impl Session {
                 let Some(max_matches) = parse_non_negative_match_limit(fourth) else {
                     return Err(CasesTraversalNormalizationError::InvalidFourthArgument);
                 };
-                let Some(include_heads) = parse_heads_option(fifth) else {
+                let Some(include_heads) =
+                    parse_heads_option_with_default(fifth, defaults.include_heads)
+                else {
                     return Err(CasesTraversalNormalizationError::InvalidFifthArgument);
                 };
 
@@ -198,7 +202,9 @@ impl Session {
                 let Some(levels) = parse_standard_level_spec(third) else {
                     return Err(TraversalWithoutLimitNormalizationError::InvalidThirdArgument);
                 };
-                let Some(include_heads) = parse_heads_option(fourth) else {
+                let Some(include_heads) =
+                    parse_heads_option_with_default(fourth, defaults.include_heads)
+                else {
                     return Err(TraversalWithoutLimitNormalizationError::InvalidFourthArgument);
                 };
 

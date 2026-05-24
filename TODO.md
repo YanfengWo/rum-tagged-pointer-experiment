@@ -312,6 +312,10 @@ This roadmap intentionally uses two levels of detail:
         Wolfram-aligned number/string/symbol/compound expression order
         categories, stable `Equivalent` orderless argument placement, and
         `Nand` / `Nor` residual handling that preserves nested `And` / `Or`.
+      - [x] Tighten the current `Heads` option parser shared by `Depth` /
+        `Level` / traversal walkers so string-named and nested-list option
+        forms, including empty option lists at option positions, follow the
+        current Wolfram-compatible boundary.
     - [x] `CL-02`: mainline closed; leave only small definition/update-family
       polish as deferred long-tail unless a downstream project exposes a
       concrete blocker.

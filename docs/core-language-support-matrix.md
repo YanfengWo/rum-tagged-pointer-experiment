@@ -107,7 +107,8 @@ once in its primary implementation group. Other groups may mention it as
   `Level` scalar-zero, standard-`All`, empty-range, mixed positive/negative,
   and positive/negative `Infinity` levelspec parity, and empty-expression
   negative-level depth alignment plus current oracle-locked `Heads` traversal
-  edges, including compound-head negative-level handling across the current
+  edges, including string-named, empty-list, and nested-list `Heads` option
+  forms plus compound-head negative-level handling across the current
   structural and cases/delete walkers, current
   `Not[Not[...]]` and relational-`Not` simplifications,
   flat nested `And` / `Or` residual simplification, first-pass `Xor` /
