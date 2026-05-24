@@ -304,7 +304,18 @@ This roadmap intentionally uses two levels of detail:
       - [ ] Remaining assertion/I/O long-tail: obscure `Assert` controls and
         fuller host-I/O option, prompt, request, parse/error semantics, and
         option-list diagnostic shape.
-    - [ ] `CL-01`: remaining part-spec / `Heads` parity beyond the current atom `All` / span-boundary selector alignment, current invalid and out-of-range `Part` / `Extract` selector diagnostics, current `Part` selector-list boundary, current `Extract` nested position-list selector subset, empty-expression plus association-aware `Depth` parity, `Level` levelspec parity beyond the current scalar-zero / standard-`All` / empty-range / mixed-infinite range subset, empty-expression negative-level depth alignment plus current oracle-locked `Heads` traversal edges across the current structural walkers, current `Not[Not[...]]` and relational-`Not` simplifications, flat nested `And` / `Or` residual simplification, first-pass `Xor` / `Equivalent` boolean/repeated-term reductions, first-pass `Implies` simplification including identical-argument tautology, mixed-symbolic `Equal` / `Unequal` chain boundaries plus current numeric order-chain endpoint contradiction detection with nonnumeric order comparisons kept conservative, plus deeper truth/comparison breadth beyond the current exact-numeric order-chain reductions
+    - [ ] `CL-01`: remaining long-tail is concentrated in full
+      Wolfram-compatible part-spec parity beyond the current atom `All` /
+      span-boundary selector alignment, current invalid and out-of-range
+      `Part` / `Extract` selector diagnostics, remaining `Part`
+      selector-list and `Extract` nested position-list edges beyond the locked
+      subset, full `Heads` parity for future walkers and less-common option
+      diagnostics beyond the current `Depth` / `Level` / traversal parser,
+      any `Level` / `Depth` oddities not covered by the current
+      empty-expression / association oracle cases, and deeper
+      truth/comparison breadth beyond the locked `Not` / `And` / `Or` /
+      `Xor` / `Equivalent` / `Implies`, `Equal` / `Unequal`, and
+      `Order` / `OrderedQ` slices.
       - [x] Cover the current nonatomic `Order` / `OrderedQ` argument-order
         parity slice by replacing text-only expression ordering with recursive
         same-head argument ordering and exact numeric atom comparison.
