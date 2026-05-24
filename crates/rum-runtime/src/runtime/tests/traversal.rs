@@ -94,6 +94,14 @@ fn level_supports_standard_levelspecs_and_depth_first_ordering() {
     );
     assert_eq!(
         session
+            .eval_text("Level[{}, {-1}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List]"
+    );
+    assert_eq!(
+        session
             .eval_text("Level[{}, {0}]")
             .unwrap()
             .value
@@ -163,6 +171,22 @@ fn level_supports_standard_levelspecs_and_depth_first_ordering() {
             .value
             .to_string(),
         "List[f, g, 1, g[1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[Association[], {-2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Level[Association[a -> 1], {1}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association, 1]"
     );
     assert_eq!(
         session

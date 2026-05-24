@@ -316,6 +316,10 @@ This roadmap intentionally uses two levels of detail:
         `Level` / traversal walkers so string-named and nested-list option
         forms, including empty option lists at option positions, follow the
         current Wolfram-compatible boundary.
+      - [x] Lock the current empty-expression and association-aware
+        `Depth` / `Level` boundary with oracle-backed cases for empty
+        `Association[]`, empty-list negative-level traversal under
+        `Heads -> True`, and association head/value traversal.
     - [x] `CL-02`: mainline closed; leave only small definition/update-family
       polish as deferred long-tail unless a downstream project exposes a
       concrete blocker.
