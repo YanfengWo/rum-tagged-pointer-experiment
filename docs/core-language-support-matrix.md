@@ -119,8 +119,9 @@ once in its primary implementation group. Other groups may mention it as
   mixed-symbolic `Equal` / `Unequal` chain boundaries plus current numeric
   order-chain endpoint contradiction detection while leaving nonnumeric order
   comparisons conservative,
-  nonatomic `OrderedQ` argument-order parity, `ReplacePart` atom-head
-  non-replacement, current invalid and out-of-range `Part` / `Extract`
+  nonatomic `OrderedQ` argument-order parity, including the current
+  symbol-name and common system call-head ordering slice, `ReplacePart`
+  atom-head non-replacement, current invalid and out-of-range `Part` / `Extract`
   selector diagnostics, and non-expanding `All` / `Span` position-spec
   boundaries
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity

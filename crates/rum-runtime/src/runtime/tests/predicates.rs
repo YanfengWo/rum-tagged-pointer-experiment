@@ -431,6 +431,18 @@ fn list_relation_and_shape_predicates_cover_current_exact_subsets() {
         "-1"
     );
     assert_eq!(
+        session
+            .eval_text("Order[f, List]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session.eval_text("Order[a, A]").unwrap().value.to_string(),
+        "1"
+    );
+    assert_eq!(
         session.eval_text("Order[2, 10]").unwrap().value.to_string(),
         "1"
     );
@@ -481,6 +493,22 @@ fn list_relation_and_shape_predicates_cover_current_exact_subsets() {
             .value
             .to_string(),
         "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("OrderedQ[{f, List}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("OrderedQ[{a, A}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
     );
     assert_eq!(
         session
@@ -540,7 +568,71 @@ fn list_relation_and_shape_predicates_cover_current_exact_subsets() {
     );
     assert_eq!(
         session
+            .eval_text("OrderedQ[{Power[a, b], Times[a, b], Plus[a, b], f[a], List[a]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("OrderedQ[{List[a], f[a]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
             .eval_text("Order[f[1], f[1, 0]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Order[List[a], f[a]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "-1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Order[Rule[a, 1], f[a]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "-1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Order[Hold[a], h[a]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "-1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Order[Plus[a, b], Times[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "-1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Order[Power[a, b], Plus[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Order[Plus[a, b], f[a]]")
             .unwrap()
             .value
             .to_string(),

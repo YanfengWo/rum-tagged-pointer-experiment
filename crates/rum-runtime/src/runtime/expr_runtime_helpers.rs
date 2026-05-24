@@ -82,7 +82,7 @@ fn compare_atom_canonical(lhs: &Atom, rhs: &Atom) -> std::cmp::Ordering {
         }
         (Atom::Rational(lhs), Atom::Rational(rhs)) => compare_rational_values(lhs, rhs),
         (Atom::String(lhs), Atom::String(rhs)) => lhs.cmp(rhs),
-        (Atom::Symbol(lhs), Atom::Symbol(rhs)) => lhs.qualified_name().cmp(&rhs.qualified_name()),
+        (Atom::Symbol(lhs), Atom::Symbol(rhs)) => compare_symbol_canonical(lhs, rhs),
         _ => std::cmp::Ordering::Equal,
     }
 }
@@ -93,7 +93,7 @@ fn compare_call_canonical(
     rhs_head: &Expr,
     rhs_args: &[Expr],
 ) -> std::cmp::Ordering {
-    let head_ordering = compare_expr_canonical(lhs_head, rhs_head);
+    let head_ordering = compare_call_head_canonical(lhs_head, rhs_head);
     if head_ordering != std::cmp::Ordering::Equal {
         return head_ordering;
     }
@@ -106,6 +106,96 @@ fn compare_call_canonical(
     }
 
     lhs_args.len().cmp(&rhs_args.len())
+}
+
+fn compare_call_head_canonical(lhs: &Expr, rhs: &Expr) -> std::cmp::Ordering {
+    match (expr_symbol(lhs), expr_symbol(rhs)) {
+        (Some(lhs), Some(rhs)) => compare_call_head_symbols(lhs, rhs),
+        _ => compare_expr_canonical(lhs, rhs),
+    }
+}
+
+fn compare_call_head_symbols(lhs: &Symbol, rhs: &Symbol) -> std::cmp::Ordering {
+    let lhs_rank = system_call_head_rank(lhs);
+    let rhs_rank = system_call_head_rank(rhs);
+    match (lhs_rank, rhs_rank) {
+        (Some(lhs_rank), Some(rhs_rank)) => lhs_rank.cmp(&rhs_rank),
+        (Some(lhs_rank), None) => lhs_rank.cmp(&(2, 0)),
+        (None, Some(rhs_rank)) => (2, 0).cmp(&rhs_rank),
+        (None, None) => compare_symbol_canonical(lhs, rhs),
+    }
+}
+
+fn system_call_head_rank(symbol: &Symbol) -> Option<(u8, u8)> {
+    if symbol.context() != SYSTEM_CONTEXT {
+        return None;
+    }
+
+    // Wolfram's expression order gives common call heads precedence that is
+    // distinct from standalone symbol order; keep this as an explicit subset.
+    match symbol.name() {
+        "Association" => Some((0, 0)),
+        "Power" => Some((1, 0)),
+        "Times" => Some((1, 1)),
+        "Plus" => Some((1, 2)),
+        _ => None,
+    }
+}
+
+fn compare_symbol_canonical(lhs: &Symbol, rhs: &Symbol) -> std::cmp::Ordering {
+    let name_ordering = compare_symbol_names(lhs.name(), rhs.name());
+    if name_ordering != std::cmp::Ordering::Equal {
+        return name_ordering;
+    }
+
+    let context_ordering = lhs.context().cmp(rhs.context());
+    if context_ordering != std::cmp::Ordering::Equal {
+        return context_ordering;
+    }
+
+    lhs.identity().cmp(&rhs.identity())
+}
+
+fn compare_symbol_names(lhs: &str, rhs: &str) -> std::cmp::Ordering {
+    let mut lhs_chars = lhs.chars();
+    let mut rhs_chars = rhs.chars();
+
+    loop {
+        match (lhs_chars.next(), rhs_chars.next()) {
+            (Some(lhs), Some(rhs)) => {
+                let ordering = symbol_name_char_key(lhs).cmp(&symbol_name_char_key(rhs));
+                if ordering != std::cmp::Ordering::Equal {
+                    return ordering;
+                }
+            }
+            (Some(_), None) => return std::cmp::Ordering::Greater,
+            (None, Some(_)) => return std::cmp::Ordering::Less,
+            (None, None) => return std::cmp::Ordering::Equal,
+        }
+    }
+}
+
+fn symbol_name_char_key(ch: char) -> (u8, u32, u8) {
+    if ch.is_ascii_alphabetic() {
+        return (
+            0,
+            ch.to_ascii_lowercase() as u32,
+            u8::from(ch.is_ascii_uppercase()),
+        );
+    }
+
+    if ch.is_ascii_digit() {
+        return (1, ch as u32, 0);
+    }
+
+    (2, ch as u32, 0)
+}
+
+fn expr_symbol(expr: &Expr) -> Option<&Symbol> {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => Some(symbol),
+        _ => None,
+    }
 }
 
 fn compare_rational_values(lhs: &Rational, rhs: &Rational) -> std::cmp::Ordering {

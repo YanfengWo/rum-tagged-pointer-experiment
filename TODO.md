@@ -308,6 +308,10 @@ This roadmap intentionally uses two levels of detail:
       - [x] Cover the current nonatomic `Order` / `OrderedQ` argument-order
         parity slice by replacing text-only expression ordering with recursive
         same-head argument ordering and exact numeric atom comparison.
+      - [x] Tighten the current `Order` / `OrderedQ` expression-order slice
+        with Wolfram-aligned symbol-name ordering, same-name context fallback,
+        and common system call-head precedence for `Association`, `Power`,
+        `Times`, and `Plus`.
       - [x] Tighten the current truth/comparison ordering slice with
         Wolfram-aligned number/string/symbol/compound expression order
         categories, stable `Equivalent` orderless argument placement, and
