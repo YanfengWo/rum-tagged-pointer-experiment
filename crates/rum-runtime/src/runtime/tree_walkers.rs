@@ -73,27 +73,41 @@ impl Session {
         };
 
         let (apply_head, include_heads) = match args {
-            [_, _, third] => {
-                if let Some(include_heads) =
-                    parse_heads_option_with_default(third, default_include_heads)
-                {
-                    (None, include_heads)
-                } else {
+            [_, _, third] => match classify_heads_option_expr(third) {
+                HeadsOptionClassification::Value(include_heads) => {
+                    (None, include_heads.unwrap_or(default_include_heads))
+                }
+                HeadsOptionClassification::NotOptionSyntax => {
                     (Some(third.clone()), default_include_heads)
                 }
-            }
-            [_, _, third, fourth] => {
-                let Some(include_heads) =
-                    parse_heads_option_with_default(fourth, default_include_heads)
-                else {
-                    return Ok(self.invalid_call_with_arg_form(
+                classification => {
+                    return Ok(self.invalid_heads_option_call(
                         "Level",
                         args,
+                        third,
+                        2,
+                        classification,
+                        "expected a Heads -> True/False option or apply head as the third argument",
+                    ));
+                }
+            },
+            [_, _, third, fourth] => {
+                let classification = classify_heads_option_expr(fourth);
+                let HeadsOptionClassification::Value(include_heads) = classification else {
+                    return Ok(self.invalid_heads_option_call(
+                        "Level",
+                        args,
+                        fourth,
+                        3,
+                        classification,
                         "expected a Heads -> True/False option as the fourth argument",
                     ));
                 };
 
-                (Some(third.clone()), include_heads)
+                (
+                    Some(third.clone()),
+                    include_heads.unwrap_or(default_include_heads),
+                )
             }
             _ => (None, default_include_heads),
         };

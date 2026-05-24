@@ -37,16 +37,18 @@ impl Session {
         let (expr, include_heads) = match args {
             [expr] => (expr, default_include_heads),
             [expr, option] => {
-                let Some(include_heads) =
-                    parse_heads_option_with_default(option, default_include_heads)
-                else {
-                    return Ok(self.invalid_call_with_arg_form(
+                let classification = classify_heads_option_expr(option);
+                let HeadsOptionClassification::Value(include_heads) = classification else {
+                    return Ok(self.invalid_heads_option_call(
                         "Depth",
                         args,
+                        option,
+                        1,
+                        classification,
                         "expected a Heads -> True/False option as the second argument",
                     ));
                 };
-                (expr, include_heads)
+                (expr, include_heads.unwrap_or(default_include_heads))
             }
             _ => return Ok(self.invalid_call_with_arg_range("Depth", args, 1, 2)),
         };

@@ -108,8 +108,9 @@ once in its primary implementation group. Other groups may mention it as
   and positive/negative `Infinity` levelspec parity, and empty-expression
   negative-level depth alignment plus current oracle-locked `Heads` traversal
   edges, including string-named, empty-list, and nested-list `Heads` option
-  forms plus compound-head negative-level handling across the current
-  structural and cases/delete walkers, current
+  forms and current `Depth` / `Level` `Heads` option diagnostics, plus
+  compound-head negative-level handling across the current structural and
+  cases/delete walkers, current
   `Not[Not[...]]` and relational-`Not` simplifications,
   flat nested `And` / `Or` residual simplification, first-pass `Xor` /
   `Equivalent` boolean/repeated-term reductions, first-pass `Implies`

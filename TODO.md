@@ -331,6 +331,10 @@ This roadmap intentionally uses two levels of detail:
         `Level` / traversal walkers so string-named and nested-list option
         forms, including empty option lists at option positions, follow the
         current Wolfram-compatible boundary.
+      - [x] Align the current `Depth` / `Level` `Heads` option diagnostics for
+        unknown option names, non-`True` / `False` `Heads` values, and
+        non-option list entries while preserving `Level`'s third-argument
+        wrapper-head ambiguity.
       - [x] Lock the current empty-expression and association-aware
         `Depth` / `Level` boundary with oracle-backed cases for empty
         `Association[]`, empty-list negative-level traversal under

@@ -212,6 +212,42 @@ fn level_supports_standard_levelspecs_and_depth_first_ordering() {
             .to_string(),
         "List[1]"
     );
+    let apply_head = session.eval_text("Level[f[a], {1}, h]").unwrap();
+    assert_eq!(apply_head.value.to_string(), "h[a]");
+    assert!(apply_head.messages.is_empty());
+    let unknown_option = session.eval_text("Level[f[a], {1}, Bad -> 1]").unwrap();
+    assert_eq!(
+        unknown_option.value.to_string(),
+        "Level[f[a], List[1], Rule[Bad, 1]]"
+    );
+    assert!(
+        unknown_option
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Level" && message.tag == "optx")
+    );
+    let invalid_heads_value = session.eval_text("Level[f[a], {1}, Heads -> x]").unwrap();
+    assert_eq!(
+        invalid_heads_value.value.to_string(),
+        "Level[f[a], List[1], Rule[Heads, x]]"
+    );
+    assert!(
+        invalid_heads_value
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Level" && message.tag == "opttf")
+    );
+    let non_option = session.eval_text("Level[f[a], {1}, h, {1}]").unwrap();
+    assert_eq!(
+        non_option.value.to_string(),
+        "Level[f[a], List[1], h, List[1]]"
+    );
+    assert!(
+        non_option
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Level" && message.tag == "nonopt")
+    );
 }
 
 #[test]

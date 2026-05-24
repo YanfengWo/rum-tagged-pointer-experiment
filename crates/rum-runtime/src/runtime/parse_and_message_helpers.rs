@@ -224,38 +224,81 @@ pub(super) fn parse_non_negative_match_limit(expr: &Expr) -> Option<usize> {
     expr_as_non_negative_usize(expr)
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) enum HeadsOptionClassification {
+    Value(Option<bool>),
+    UnknownOption(Symbol),
+    InvalidTruthValue { option: Symbol, value: Expr },
+    NonOption { option_expr: Expr, offender: Expr },
+    NotOptionSyntax,
+}
+
 pub(super) fn parse_heads_option(expr: &Expr) -> Option<bool> {
-    parse_heads_option_value(expr).flatten()
+    match classify_heads_option_expr(expr) {
+        HeadsOptionClassification::Value(value) => value,
+        _ => None,
+    }
 }
 
 pub(super) fn parse_heads_option_with_default(expr: &Expr, default: bool) -> Option<bool> {
-    Some(parse_heads_option_value(expr)?.unwrap_or(default))
+    match classify_heads_option_expr(expr) {
+        HeadsOptionClassification::Value(value) => Some(value.unwrap_or(default)),
+        _ => None,
+    }
 }
 
-fn parse_heads_option_value(expr: &Expr) -> Option<Option<bool>> {
-    if let Some(value) = parse_heads_option_rule(expr) {
-        return Some(Some(value));
+pub(super) fn classify_heads_option_expr(expr: &Expr) -> HeadsOptionClassification {
+    if let Some(classification) = classify_heads_option_rule(expr) {
+        return classification;
     }
 
     let Expr::Call { head, args } = expr else {
-        return None;
+        return HeadsOptionClassification::NotOptionSyntax;
     };
 
     if !is_system_symbol_name(head, heads::structure::LIST) {
-        return None;
+        return HeadsOptionClassification::NotOptionSyntax;
     }
 
     let mut value = None;
     for arg in args {
-        let parsed = parse_heads_option_value(arg)?;
-        if value.is_none() {
-            value = parsed;
+        match classify_heads_option_expr(arg) {
+            HeadsOptionClassification::Value(parsed) => {
+                if value.is_none() {
+                    value = parsed;
+                }
+            }
+            HeadsOptionClassification::InvalidTruthValue { option, value: _ }
+                if value.is_some()
+                    && option.context() == SYSTEM_CONTEXT
+                    && option.name() == "Heads" => {}
+            HeadsOptionClassification::InvalidTruthValue { option, value } => {
+                return HeadsOptionClassification::InvalidTruthValue { option, value };
+            }
+            HeadsOptionClassification::UnknownOption(option) => {
+                return HeadsOptionClassification::UnknownOption(option);
+            }
+            HeadsOptionClassification::NonOption {
+                option_expr,
+                offender,
+            } => {
+                return HeadsOptionClassification::NonOption {
+                    option_expr,
+                    offender,
+                };
+            }
+            HeadsOptionClassification::NotOptionSyntax => {
+                return HeadsOptionClassification::NonOption {
+                    option_expr: expr.clone(),
+                    offender: arg.clone(),
+                };
+            }
         }
     }
-    Some(value)
+    HeadsOptionClassification::Value(value)
 }
 
-fn parse_heads_option_rule(expr: &Expr) -> Option<bool> {
+fn classify_heads_option_rule(expr: &Expr) -> Option<HeadsOptionClassification> {
     let Expr::Call { head, args } = expr else {
         return None;
     };
@@ -269,10 +312,16 @@ fn parse_heads_option_rule(expr: &Expr) -> Option<bool> {
     let symbol = heads_option_symbol(&args[0])?;
 
     if symbol.context() != SYSTEM_CONTEXT || symbol.name() != "Heads" {
-        return None;
+        return Some(HeadsOptionClassification::UnknownOption(symbol));
     }
 
-    truthiness_symbol(&args[1])
+    match truthiness_symbol(&args[1]) {
+        Some(value) => Some(HeadsOptionClassification::Value(Some(value))),
+        None => Some(HeadsOptionClassification::InvalidTruthValue {
+            option: symbol,
+            value: args[1].clone(),
+        }),
+    }
 }
 
 fn heads_option_symbol(expr: &Expr) -> Option<Symbol> {
@@ -280,5 +329,60 @@ fn heads_option_symbol(expr: &Expr) -> Option<Symbol> {
         Expr::Atom(Atom::Symbol(symbol)) => Some(symbol.clone()),
         Expr::Atom(Atom::String(name)) => resolve_unqualified_symbol(name),
         _ => None,
+    }
+}
+
+impl Session {
+    pub(super) fn invalid_heads_option_call(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        option_expr: &Expr,
+        positional_count: usize,
+        classification: HeadsOptionClassification,
+        fallback: impl Into<String>,
+    ) -> Expr {
+        let call = Expr::call(system_expr(symbol), args.to_vec());
+        match classification {
+            HeadsOptionClassification::UnknownOption(option) => {
+                self.push_message(
+                    symbol,
+                    "optx",
+                    format!("Unknown option {option} in {call}."),
+                );
+            }
+            HeadsOptionClassification::InvalidTruthValue { option, value } => {
+                self.push_message(
+                    symbol,
+                    "opttf",
+                    format!("Value of option {option} -> {value} should be True or False."),
+                );
+            }
+            HeadsOptionClassification::NonOption {
+                option_expr: _,
+                offender,
+            } => {
+                self.push_message(
+                    symbol,
+                    "nonopt",
+                    format!(
+                        "Options expected (instead of {offender}) beyond position {positional_count} in {call}. An option must be a rule or a list of rules."
+                    ),
+                );
+            }
+            HeadsOptionClassification::NotOptionSyntax => {
+                self.push_message(
+                    symbol,
+                    "nonopt",
+                    format!(
+                        "Options expected (instead of {option_expr}) beyond position {positional_count} in {call}. An option must be a rule or a list of rules."
+                    ),
+                );
+            }
+            HeadsOptionClassification::Value(_) => {
+                self.push_message(symbol, "argform", fallback);
+            }
+        }
+        self.invalid_call(symbol, args)
     }
 }

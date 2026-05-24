@@ -136,6 +136,44 @@ fn head_length_and_depth_cover_atoms_calls_and_compound_heads() {
             .to_string(),
         "2"
     );
+    assert_eq!(
+        session
+            .eval_text("Depth[f[][a], {Heads -> True, Heads -> x}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    let unknown_option = session.eval_text("Depth[f[a], Bad -> 1]").unwrap();
+    assert_eq!(
+        unknown_option.value.to_string(),
+        "Depth[f[a], Rule[Bad, 1]]"
+    );
+    assert!(
+        unknown_option
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Depth" && message.tag == "optx")
+    );
+    let invalid_heads_value = session.eval_text("Depth[f[a], Heads -> x]").unwrap();
+    assert_eq!(
+        invalid_heads_value.value.to_string(),
+        "Depth[f[a], Rule[Heads, x]]"
+    );
+    assert!(
+        invalid_heads_value
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Depth" && message.tag == "opttf")
+    );
+    let non_option = session.eval_text("Depth[f[a], {1}]").unwrap();
+    assert_eq!(non_option.value.to_string(), "Depth[f[a], List[1]]");
+    assert!(
+        non_option
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Depth" && message.tag == "nonopt")
+    );
 }
 
 #[test]
