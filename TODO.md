@@ -335,6 +335,10 @@ This roadmap intentionally uses two levels of detail:
         unknown option names, non-`True` / `False` `Heads` values, and
         non-option list entries while preserving `Level`'s third-argument
         wrapper-head ambiguity.
+      - [x] Carry that `Heads` option diagnostic parity into the current
+        traversal-family parser users, including `Cases`, `DeleteCases`,
+        `Count`, `MemberQ`, `FreeQ`, and `Position` `optx` / `opttf` /
+        `nonopt` message tags through suspension-safe continuation payloads.
       - [x] Lock the current empty-expression and association-aware
         `Depth` / `Level` boundary with oracle-backed cases for empty
         `Association[]`, empty-list negative-level traversal under

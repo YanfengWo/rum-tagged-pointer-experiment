@@ -1,32 +1,42 @@
 use super::*;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum CasesTraversalNormalizationError {
     InvalidThirdArgument,
     InvalidFourthArgument,
     InvalidFifthArgument,
+    InvalidHeadsOption {
+        positional_count: usize,
+        option_expr: Expr,
+        classification: HeadsOptionClassification,
+    },
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum CasesTraversalResolution {
     Valid(CasesTraversalConfig),
     Invalid(CasesTraversalNormalizationError),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum TraversalWithoutLimitNormalizationError {
     InvalidThirdArgument,
     InvalidFourthArgument,
+    InvalidHeadsOption {
+        positional_count: usize,
+        option_expr: Expr,
+        classification: HeadsOptionClassification,
+    },
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum TraversalWithoutLimitResolution {
     Valid(CasesTraversalConfig),
     Invalid(TraversalWithoutLimitNormalizationError),
 }
 
 impl CasesTraversalNormalizationError {
-    pub(super) fn message(self) -> &'static str {
+    pub(super) fn message(&self) -> &'static str {
         match self {
             Self::InvalidThirdArgument => {
                 "expected a standard levelspec or Heads -> True/False as the third argument"
@@ -37,12 +47,22 @@ impl CasesTraversalNormalizationError {
             Self::InvalidFifthArgument => {
                 "expected a Heads -> True/False option as the fifth argument"
             }
+            Self::InvalidHeadsOption {
+                positional_count, ..
+            } => match positional_count {
+                2 => "expected a standard levelspec or Heads -> True/False as the third argument",
+                3 => {
+                    "expected a non-negative match limit or Heads -> True/False as the fourth argument"
+                }
+                4 => "expected a Heads -> True/False option as the fifth argument",
+                _ => "expected a valid Heads option",
+            },
         }
     }
 }
 
 impl TraversalWithoutLimitNormalizationError {
-    pub(super) fn message(self) -> &'static str {
+    pub(super) fn message(&self) -> &'static str {
         match self {
             Self::InvalidThirdArgument => {
                 "expected a standard levelspec or Heads -> True/False as the third argument"
@@ -50,6 +70,13 @@ impl TraversalWithoutLimitNormalizationError {
             Self::InvalidFourthArgument => {
                 "expected a Heads -> True/False option as the fourth argument"
             }
+            Self::InvalidHeadsOption {
+                positional_count, ..
+            } => match positional_count {
+                2 => "expected a standard levelspec or Heads -> True/False as the third argument",
+                3 => "expected a Heads -> True/False option as the fourth argument",
+                _ => "expected a valid Heads option",
+            },
         }
     }
 }
@@ -63,10 +90,7 @@ impl ContinuationValue for TraversalWithoutLimitResolution {
             ),
             Self::Invalid(error) => Expr::call(
                 system_expr("InternalContinuationTraversalWithoutLimitInvalid"),
-                vec![Expr::integer(BigInt::from(match error {
-                    TraversalWithoutLimitNormalizationError::InvalidThirdArgument => 3_i32,
-                    TraversalWithoutLimitNormalizationError::InvalidFourthArgument => 4_i32,
-                }))],
+                vec![error.into_continuation_expr()],
             ),
         }
     }
@@ -90,21 +114,132 @@ impl ContinuationValue for TraversalWithoutLimitResolution {
                     "InternalContinuationTraversalWithoutLimitInvalid",
                 ) && args.len() == 1 =>
             {
-                let code_expr = args
+                let error_expr = args
                     .pop()
-                    .expect("invalid traversal-without-limit stores code");
-                let code = expr_as_non_negative_usize(&code_expr)
-                    .expect("invalid traversal-without-limit code should be an integer");
-                let error = match code {
-                    3 => TraversalWithoutLimitNormalizationError::InvalidThirdArgument,
-                    4 => TraversalWithoutLimitNormalizationError::InvalidFourthArgument,
-                    other => panic!("unexpected traversal-without-limit error code: {other}"),
-                };
-                Self::Invalid(error)
+                    .expect("invalid traversal-without-limit stores error");
+                Self::Invalid(
+                    TraversalWithoutLimitNormalizationError::from_continuation_expr(error_expr),
+                )
             }
             other => panic!(
                 "unexpected continuation payload for TraversalWithoutLimitResolution: {other:?}"
             ),
+        }
+    }
+}
+
+impl ContinuationValue for TraversalWithoutLimitNormalizationError {
+    fn into_continuation_expr(self) -> Expr {
+        match self {
+            Self::InvalidThirdArgument => Expr::integer(BigInt::from(3_i32)),
+            Self::InvalidFourthArgument => Expr::integer(BigInt::from(4_i32)),
+            Self::InvalidHeadsOption {
+                positional_count,
+                option_expr,
+                classification,
+            } => Expr::call(
+                system_expr("InternalContinuationTraversalWithoutLimitHeadsOptionInvalid"),
+                vec![
+                    Expr::integer(BigInt::from(positional_count)),
+                    option_expr,
+                    classification.into_continuation_expr(),
+                ],
+            ),
+        }
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        if let Some(code) = expr_as_non_negative_usize(&expr) {
+            return match code {
+                3 => Self::InvalidThirdArgument,
+                4 => Self::InvalidFourthArgument,
+                other => panic!("unexpected traversal-without-limit error code: {other}"),
+            };
+        }
+
+        match expr {
+            Expr::Call { head, args }
+                if is_system_symbol_name(
+                    &head,
+                    "InternalContinuationTraversalWithoutLimitHeadsOptionInvalid",
+                ) && args.len() == 3 =>
+            {
+                let mut args = args.into_iter();
+                let positional_count = expr_as_non_negative_usize(
+                    &args.next().expect("heads option error stores a position"),
+                )
+                .expect("heads option error position should be an integer");
+                let option_expr = args.next().expect("heads option error stores option expr");
+                let classification = HeadsOptionClassification::from_continuation_expr(
+                    args.next()
+                        .expect("heads option error stores classification"),
+                );
+                Self::InvalidHeadsOption {
+                    positional_count,
+                    option_expr,
+                    classification,
+                }
+            }
+            other => panic!("unexpected traversal-without-limit error payload: {other:?}"),
+        }
+    }
+}
+
+impl ContinuationValue for CasesTraversalNormalizationError {
+    fn into_continuation_expr(self) -> Expr {
+        match self {
+            Self::InvalidThirdArgument => Expr::integer(BigInt::from(3_i32)),
+            Self::InvalidFourthArgument => Expr::integer(BigInt::from(4_i32)),
+            Self::InvalidFifthArgument => Expr::integer(BigInt::from(5_i32)),
+            Self::InvalidHeadsOption {
+                positional_count,
+                option_expr,
+                classification,
+            } => Expr::call(
+                system_expr("InternalContinuationCasesTraversalHeadsOptionInvalid"),
+                vec![
+                    Expr::integer(BigInt::from(positional_count)),
+                    option_expr,
+                    classification.into_continuation_expr(),
+                ],
+            ),
+        }
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        if let Some(code) = expr_as_non_negative_usize(&expr) {
+            return match code {
+                3 => Self::InvalidThirdArgument,
+                4 => Self::InvalidFourthArgument,
+                5 => Self::InvalidFifthArgument,
+                other => panic!("unexpected cases-traversal error code: {other}"),
+            };
+        }
+
+        match expr {
+            Expr::Call { head, args }
+                if is_system_symbol_name(
+                    &head,
+                    "InternalContinuationCasesTraversalHeadsOptionInvalid",
+                ) && args.len() == 3 =>
+            {
+                let mut args = args.into_iter();
+                let positional_count = expr_as_non_negative_usize(
+                    &args.next().expect("heads option error stores a position"),
+                )
+                .expect("heads option error position should be an integer");
+                let option_expr = args.next().expect("heads option error stores option expr");
+                let classification = HeadsOptionClassification::from_continuation_expr(
+                    args.next()
+                        .expect("heads option error stores classification"),
+                );
+                Self::InvalidHeadsOption {
+                    positional_count,
+                    option_expr,
+                    classification,
+                }
+            }
+            other => panic!("unexpected cases-traversal error payload: {other:?}"),
         }
     }
 }
@@ -118,16 +253,25 @@ impl Session {
         match resolved {
             [] => Ok(defaults),
             [third] => {
-                if let Some(include_heads) = parse_heads_option(third) {
-                    Ok(CasesTraversalConfig {
+                let classification = classify_heads_option_expr(third);
+                if let HeadsOptionClassification::Value(Some(include_heads)) = classification {
+                    return Ok(CasesTraversalConfig {
                         include_heads,
                         ..defaults
-                    })
-                } else if let Some(levels) = parse_standard_level_spec(third) {
+                    });
+                }
+
+                if let Some(levels) = parse_standard_level_spec(third) {
                     Ok(CasesTraversalConfig {
                         levels,
                         max_matches: defaults.max_matches,
                         include_heads: defaults.include_heads,
+                    })
+                } else if heads_option_classification_looks_like_option_syntax(&classification) {
+                    Err(CasesTraversalNormalizationError::InvalidHeadsOption {
+                        positional_count: 2,
+                        option_expr: third.clone(),
+                        classification,
                     })
                 } else {
                     Err(CasesTraversalNormalizationError::InvalidThirdArgument)
@@ -138,19 +282,24 @@ impl Session {
                     return Err(CasesTraversalNormalizationError::InvalidThirdArgument);
                 };
 
-                if let Some(include_heads) =
-                    parse_heads_option_with_default(fourth, defaults.include_heads)
-                {
+                let classification = classify_heads_option_expr(fourth);
+                if let HeadsOptionClassification::Value(include_heads) = classification {
                     Ok(CasesTraversalConfig {
                         levels,
                         max_matches: defaults.max_matches,
-                        include_heads,
+                        include_heads: include_heads.unwrap_or(defaults.include_heads),
                     })
                 } else if let Some(max_matches) = parse_non_negative_match_limit(fourth) {
                     Ok(CasesTraversalConfig {
                         levels,
                         max_matches: Some(max_matches),
                         include_heads: defaults.include_heads,
+                    })
+                } else if heads_option_classification_looks_like_option_syntax(&classification) {
+                    Err(CasesTraversalNormalizationError::InvalidHeadsOption {
+                        positional_count: 3,
+                        option_expr: fourth.clone(),
+                        classification,
                     })
                 } else {
                     Err(CasesTraversalNormalizationError::InvalidFourthArgument)
@@ -163,16 +312,19 @@ impl Session {
                 let Some(max_matches) = parse_non_negative_match_limit(fourth) else {
                     return Err(CasesTraversalNormalizationError::InvalidFourthArgument);
                 };
-                let Some(include_heads) =
-                    parse_heads_option_with_default(fifth, defaults.include_heads)
-                else {
-                    return Err(CasesTraversalNormalizationError::InvalidFifthArgument);
+                let classification = classify_heads_option_expr(fifth);
+                let HeadsOptionClassification::Value(include_heads) = classification else {
+                    return Err(CasesTraversalNormalizationError::InvalidHeadsOption {
+                        positional_count: 4,
+                        option_expr: fifth.clone(),
+                        classification,
+                    });
                 };
 
                 Ok(CasesTraversalConfig {
                     levels,
                     max_matches: Some(max_matches),
-                    include_heads,
+                    include_heads: include_heads.unwrap_or(defaults.include_heads),
                 })
             }
             _ => unreachable!("traversal arity is validated before traversal normalization"),
@@ -187,13 +339,24 @@ impl Session {
         match resolved {
             [] => Ok(defaults),
             [third] => {
-                if let Some(include_heads) = parse_heads_option(third) {
-                    Ok(CasesTraversalConfig {
+                let classification = classify_heads_option_expr(third);
+                if let HeadsOptionClassification::Value(Some(include_heads)) = classification {
+                    return Ok(CasesTraversalConfig {
                         include_heads,
                         ..defaults
-                    })
-                } else if let Some(levels) = parse_standard_level_spec(third) {
+                    });
+                }
+
+                if let Some(levels) = parse_standard_level_spec(third) {
                     Ok(CasesTraversalConfig { levels, ..defaults })
+                } else if heads_option_classification_looks_like_option_syntax(&classification) {
+                    Err(
+                        TraversalWithoutLimitNormalizationError::InvalidHeadsOption {
+                            positional_count: 2,
+                            option_expr: third.clone(),
+                            classification,
+                        },
+                    )
                 } else {
                     Err(TraversalWithoutLimitNormalizationError::InvalidThirdArgument)
                 }
@@ -202,21 +365,74 @@ impl Session {
                 let Some(levels) = parse_standard_level_spec(third) else {
                     return Err(TraversalWithoutLimitNormalizationError::InvalidThirdArgument);
                 };
-                let Some(include_heads) =
-                    parse_heads_option_with_default(fourth, defaults.include_heads)
-                else {
-                    return Err(TraversalWithoutLimitNormalizationError::InvalidFourthArgument);
+                let classification = classify_heads_option_expr(fourth);
+                let HeadsOptionClassification::Value(include_heads) = classification else {
+                    return Err(
+                        TraversalWithoutLimitNormalizationError::InvalidHeadsOption {
+                            positional_count: 3,
+                            option_expr: fourth.clone(),
+                            classification,
+                        },
+                    );
                 };
 
                 Ok(CasesTraversalConfig {
                     levels,
-                    include_heads,
+                    include_heads: include_heads.unwrap_or(defaults.include_heads),
                     ..defaults
                 })
             }
             _ => {
                 unreachable!("count/member/free traversal arity is validated before normalization")
             }
+        }
+    }
+
+    pub(super) fn invalid_cases_traversal_call(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        error: CasesTraversalNormalizationError,
+    ) -> Expr {
+        let fallback = error.message().to_string();
+        match error {
+            CasesTraversalNormalizationError::InvalidHeadsOption {
+                positional_count,
+                option_expr,
+                classification,
+            } => self.invalid_heads_option_call(
+                symbol,
+                args,
+                &option_expr,
+                positional_count,
+                classification,
+                fallback,
+            ),
+            _ => self.invalid_call_with_arg_form(symbol, args, fallback),
+        }
+    }
+
+    pub(super) fn invalid_traversal_without_limit_call(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        error: TraversalWithoutLimitNormalizationError,
+    ) -> Expr {
+        let fallback = error.message().to_string();
+        match error {
+            TraversalWithoutLimitNormalizationError::InvalidHeadsOption {
+                positional_count,
+                option_expr,
+                classification,
+            } => self.invalid_heads_option_call(
+                symbol,
+                args,
+                &option_expr,
+                positional_count,
+                classification,
+                fallback,
+            ),
+            _ => self.invalid_call_with_arg_form(symbol, args, fallback),
         }
     }
 

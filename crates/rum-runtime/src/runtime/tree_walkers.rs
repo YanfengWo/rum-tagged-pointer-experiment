@@ -307,10 +307,10 @@ impl Session {
             let traversal = match traversal {
                 TraversalWithoutLimitResolution::Valid(traversal) => traversal,
                 TraversalWithoutLimitResolution::Invalid(error) => {
-                    return Ok(session.invalid_call_with_arg_form(
+                    return Ok(session.invalid_traversal_without_limit_call(
                         builtin_name,
                         &call_args,
-                        error.message(),
+                        error,
                     ));
                 }
             };
@@ -353,11 +353,7 @@ impl Session {
         let traversal = match traversal {
             CasesTraversalResolution::Valid(traversal) => traversal,
             CasesTraversalResolution::Invalid(error) => {
-                return Ok(self.invalid_call_with_arg_form(
-                    "Position",
-                    &call_args,
-                    error.message(),
-                ));
+                return Ok(self.invalid_cases_traversal_call("Position", &call_args, error));
             }
         };
 

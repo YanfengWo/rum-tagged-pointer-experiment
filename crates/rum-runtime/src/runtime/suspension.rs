@@ -418,11 +418,7 @@ impl ContinuationValue for CasesTraversalResolution {
             ),
             CasesTraversalResolution::Invalid(error) => Expr::call(
                 system_expr("InternalContinuationCasesTraversalInvalid"),
-                vec![Expr::integer(BigInt::from(match error {
-                    CasesTraversalNormalizationError::InvalidThirdArgument => 3_i32,
-                    CasesTraversalNormalizationError::InvalidFourthArgument => 4_i32,
-                    CasesTraversalNormalizationError::InvalidFifthArgument => 5_i32,
-                }))],
+                vec![error.into_continuation_expr()],
             ),
         }
     }
@@ -440,16 +436,10 @@ impl ContinuationValue for CasesTraversalResolution {
                 if is_system_symbol_name(&head, "InternalContinuationCasesTraversalInvalid")
                     && args.len() == 1 =>
             {
-                let code_expr = args.pop().expect("invalid cases-traversal stores code");
-                let code = expr_as_non_negative_usize(&code_expr)
-                    .expect("invalid cases-traversal code should be an integer");
-                let error = match code {
-                    3 => CasesTraversalNormalizationError::InvalidThirdArgument,
-                    4 => CasesTraversalNormalizationError::InvalidFourthArgument,
-                    5 => CasesTraversalNormalizationError::InvalidFifthArgument,
-                    other => panic!("unexpected cases-traversal error code: {other}"),
-                };
-                Self::Invalid(error)
+                let error_expr = args.pop().expect("invalid cases-traversal stores error");
+                Self::Invalid(CasesTraversalNormalizationError::from_continuation_expr(
+                    error_expr,
+                ))
             }
             other => {
                 panic!("unexpected continuation payload for CasesTraversalResolution: {other:?}")

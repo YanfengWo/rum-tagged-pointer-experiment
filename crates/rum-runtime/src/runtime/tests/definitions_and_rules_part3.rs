@@ -668,6 +668,45 @@ fn cases_supports_explicit_head_traversal_control() {
             .to_string(),
         "List[]"
     );
+    let unknown_option = session
+        .eval_text("Cases[f[a], _, Infinity, Bad -> 1]")
+        .unwrap();
+    assert_eq!(
+        unknown_option.value.to_string(),
+        "Cases[f[a], Blank[], Infinity, Rule[Bad, 1]]"
+    );
+    assert!(
+        unknown_option
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Cases" && message.tag == "optx")
+    );
+    let invalid_heads_value = session
+        .eval_text("Cases[f[a], _, Infinity, Heads -> x]")
+        .unwrap();
+    assert_eq!(
+        invalid_heads_value.value.to_string(),
+        "Cases[f[a], Blank[], Infinity, Rule[Heads, x]]"
+    );
+    assert!(
+        invalid_heads_value
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Cases" && message.tag == "opttf")
+    );
+    let non_option = session
+        .eval_text("Cases[f[a], _, Infinity, 1, {1}]")
+        .unwrap();
+    assert_eq!(
+        non_option.value.to_string(),
+        "Cases[f[a], Blank[], Infinity, 1, List[1]]"
+    );
+    assert!(
+        non_option
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Cases" && message.tag == "nonopt")
+    );
 }
 
 #[test]
@@ -1139,6 +1178,19 @@ fn deletecases_can_delete_heads_and_association_values() {
             .value
             .to_string(),
         "Association[Rule[b, x]]"
+    );
+    let unknown_option = session
+        .eval_text("DeleteCases[f[a], _, Infinity, Bad -> 1]")
+        .unwrap();
+    assert_eq!(
+        unknown_option.value.to_string(),
+        "DeleteCases[f[a], Blank[], Infinity, Rule[Bad, 1]]"
+    );
+    assert!(
+        unknown_option
+            .messages
+            .iter()
+            .any(|message| message.symbol == "DeleteCases" && message.tag == "optx")
     );
 }
 

@@ -454,6 +454,45 @@ fn count_memberq_and_freeq_share_standard_traversal_semantics() {
             .to_string(),
         "False"
     );
+    let count_unknown_option = session
+        .eval_text("Count[f[a], _, Infinity, Bad -> 1]")
+        .unwrap();
+    assert_eq!(
+        count_unknown_option.value.to_string(),
+        "Count[f[a], Blank[], Infinity, Rule[Bad, 1]]"
+    );
+    assert!(
+        count_unknown_option
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Count" && message.tag == "optx")
+    );
+    let memberq_invalid_heads_value = session
+        .eval_text("MemberQ[f[a], _, Infinity, Heads -> x]")
+        .unwrap();
+    assert_eq!(
+        memberq_invalid_heads_value.value.to_string(),
+        "MemberQ[f[a], Blank[], Infinity, Rule[Heads, x]]"
+    );
+    assert!(
+        memberq_invalid_heads_value
+            .messages
+            .iter()
+            .any(|message| message.symbol == "MemberQ" && message.tag == "opttf")
+    );
+    let freeq_non_option = session
+        .eval_text("FreeQ[f[a], _, Infinity, {Heads -> True, 1}]")
+        .unwrap();
+    assert_eq!(
+        freeq_non_option.value.to_string(),
+        "FreeQ[f[a], Blank[], Infinity, List[Rule[Heads, True], 1]]"
+    );
+    assert!(
+        freeq_non_option
+            .messages
+            .iter()
+            .any(|message| message.symbol == "FreeQ" && message.tag == "nonopt")
+    );
 }
 
 #[test]
@@ -665,6 +704,32 @@ fn position_supports_standard_levelspecs_heads_and_limits() {
             .value
             .to_string(),
         "List[List[]]"
+    );
+    let unknown_option = session
+        .eval_text("Position[f[a], _, Infinity, Bad -> 1]")
+        .unwrap();
+    assert_eq!(
+        unknown_option.value.to_string(),
+        "Position[f[a], Blank[], Infinity, Rule[Bad, 1]]"
+    );
+    assert!(
+        unknown_option
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Position" && message.tag == "optx")
+    );
+    let invalid_heads_value = session
+        .eval_text("Position[f[a], _, Infinity, Heads -> x]")
+        .unwrap();
+    assert_eq!(
+        invalid_heads_value.value.to_string(),
+        "Position[f[a], Blank[], Infinity, Rule[Heads, x]]"
+    );
+    assert!(
+        invalid_heads_value
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Position" && message.tag == "opttf")
     );
 }
 

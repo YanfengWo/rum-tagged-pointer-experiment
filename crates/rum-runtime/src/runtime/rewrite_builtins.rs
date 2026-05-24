@@ -381,7 +381,7 @@ impl Session {
         let traversal = match traversal {
             CasesTraversalResolution::Valid(traversal) => traversal,
             CasesTraversalResolution::Invalid(error) => {
-                return Ok(self.invalid_call_with_arg_form("Cases", &call_args, error.message()));
+                return Ok(self.invalid_cases_traversal_call("Cases", &call_args, error));
             }
         };
 
@@ -420,11 +420,7 @@ impl Session {
         let traversal = match traversal {
             CasesTraversalResolution::Valid(traversal) => traversal,
             CasesTraversalResolution::Invalid(error) => {
-                return Ok(self.invalid_call_with_arg_form(
-                    "DeleteCases",
-                    &call_args,
-                    error.message(),
-                ));
+                return Ok(self.invalid_cases_traversal_call("DeleteCases", &call_args, error));
             }
         };
 

@@ -233,6 +233,111 @@ pub(super) enum HeadsOptionClassification {
     NotOptionSyntax,
 }
 
+impl ContinuationValue for HeadsOptionClassification {
+    fn into_continuation_expr(self) -> Expr {
+        match self {
+            Self::Value(value) => Expr::call(
+                system_expr("InternalContinuationHeadsOptionValue"),
+                match value {
+                    Some(value) => vec![value.into_continuation_expr()],
+                    None => Vec::new(),
+                },
+            ),
+            Self::UnknownOption(option) => Expr::call(
+                system_expr("InternalContinuationHeadsOptionUnknown"),
+                vec![Expr::Atom(Atom::Symbol(option))],
+            ),
+            Self::InvalidTruthValue { option, value } => Expr::call(
+                system_expr("InternalContinuationHeadsOptionInvalidTruthValue"),
+                vec![Expr::Atom(Atom::Symbol(option)), value],
+            ),
+            Self::NonOption {
+                option_expr,
+                offender,
+            } => Expr::call(
+                system_expr("InternalContinuationHeadsOptionNonOption"),
+                vec![option_expr, offender],
+            ),
+            Self::NotOptionSyntax => Expr::call(
+                system_expr("InternalContinuationHeadsOptionNotOptionSyntax"),
+                Vec::new(),
+            ),
+        }
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        match expr {
+            Expr::Call { head, args }
+                if is_system_symbol_name(&head, "InternalContinuationHeadsOptionValue") =>
+            {
+                match args.as_slice() {
+                    [] => Self::Value(None),
+                    [value] => Self::Value(Some(bool::from_continuation_expr(value.clone()))),
+                    _ => panic!("heads option value continuation stores zero or one item"),
+                }
+            }
+            Expr::Call { head, mut args }
+                if is_system_symbol_name(&head, "InternalContinuationHeadsOptionUnknown")
+                    && args.len() == 1 =>
+            {
+                Self::UnknownOption(symbol_from_continuation_expr(
+                    args.pop().expect("unknown option stores a symbol"),
+                ))
+            }
+            Expr::Call { head, args }
+                if is_system_symbol_name(
+                    &head,
+                    "InternalContinuationHeadsOptionInvalidTruthValue",
+                ) && args.len() == 2 =>
+            {
+                let mut args = args.into_iter();
+                let option = symbol_from_continuation_expr(
+                    args.next().expect("invalid truth option stores a symbol"),
+                );
+                let value = args.next().expect("invalid truth option stores a value");
+                Self::InvalidTruthValue { option, value }
+            }
+            Expr::Call { head, args }
+                if is_system_symbol_name(&head, "InternalContinuationHeadsOptionNonOption")
+                    && args.len() == 2 =>
+            {
+                let mut args = args.into_iter();
+                let option_expr = args
+                    .next()
+                    .expect("non-option stores the option expression");
+                let offender = args.next().expect("non-option stores the offender");
+                Self::NonOption {
+                    option_expr,
+                    offender,
+                }
+            }
+            Expr::Call { head, args }
+                if is_system_symbol_name(
+                    &head,
+                    "InternalContinuationHeadsOptionNotOptionSyntax",
+                ) && args.is_empty() =>
+            {
+                Self::NotOptionSyntax
+            }
+            other => panic!("unexpected heads option continuation payload: {other:?}"),
+        }
+    }
+}
+
+pub(super) fn heads_option_classification_looks_like_option_syntax(
+    classification: &HeadsOptionClassification,
+) -> bool {
+    match classification {
+        HeadsOptionClassification::Value(_)
+        | HeadsOptionClassification::UnknownOption(_)
+        | HeadsOptionClassification::InvalidTruthValue { .. } => true,
+        HeadsOptionClassification::NonOption { option_expr, .. } => {
+            heads_option_expr_contains_rule(option_expr)
+        }
+        HeadsOptionClassification::NotOptionSyntax => false,
+    }
+}
+
 pub(super) fn parse_heads_option(expr: &Expr) -> Option<bool> {
     match classify_heads_option_expr(expr) {
         HeadsOptionClassification::Value(value) => value,
@@ -332,6 +437,29 @@ fn heads_option_symbol(expr: &Expr) -> Option<Symbol> {
     }
 }
 
+fn heads_option_expr_contains_rule(expr: &Expr) -> bool {
+    match expr {
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "Rule")
+                || is_system_symbol_name(head, "RuleDelayed"))
+                && args.len() == 2 =>
+        {
+            heads_option_symbol(&args[0]).is_some()
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, heads::structure::LIST) => {
+            args.iter().any(heads_option_expr_contains_rule)
+        }
+        _ => false,
+    }
+}
+
+fn symbol_from_continuation_expr(expr: Expr) -> Symbol {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => symbol,
+        other => panic!("expected symbol continuation payload, got {other:?}"),
+    }
+}
+
 impl Session {
     pub(super) fn invalid_heads_option_call(
         &mut self,
@@ -359,14 +487,14 @@ impl Session {
                 );
             }
             HeadsOptionClassification::NonOption {
-                option_expr: _,
-                offender,
+                option_expr,
+                offender: _,
             } => {
                 self.push_message(
                     symbol,
                     "nonopt",
                     format!(
-                        "Options expected (instead of {offender}) beyond position {positional_count} in {call}. An option must be a rule or a list of rules."
+                        "Options expected (instead of {option_expr}) beyond position {positional_count} in {call}. An option must be a rule or a list of rules."
                     ),
                 );
             }
