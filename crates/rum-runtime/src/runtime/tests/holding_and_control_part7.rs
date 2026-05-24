@@ -490,6 +490,28 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
     assert_eq!(response.value.to_string(), "5");
 
     session
+        .eval_text("SetOptions[Input, FieldMasked -> True]")
+        .unwrap();
+    let failure = session
+        .eval_request("Input[]")
+        .expect_err("Input should use its default prompt and default options");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.kind, RuntimeInputKind::Input);
+            assert_eq!(request.prompt, "?");
+            assert!(request.password);
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("3 + 4")
+        .expect("resuming default Input should parse and evaluate the supplied expression");
+    assert_eq!(response.value.to_string(), "7");
+    session
+        .eval_text("SetOptions[Input, FieldMasked -> False]")
+        .unwrap();
+
+    session
         .eval_text("SetOptions[InputString, FieldMasked -> True]")
         .unwrap();
     let failure = session
@@ -510,6 +532,38 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
     session
         .eval_text("SetOptions[InputString, FieldMasked -> False]")
         .unwrap();
+
+    let failure = session
+        .eval_request("InputString[FieldMasked -> True]")
+        .expect_err("InputString should treat a first-position option as an option, not a prompt");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.kind, RuntimeInputKind::InputString);
+            assert_eq!(request.prompt, "");
+            assert!(request.password);
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("secret")
+        .expect("resuming first-position option InputString should return the supplied text");
+    assert_eq!(response.value.to_string(), "\"secret\"");
+
+    let failure = session
+        .eval_request("Input[{FieldMasked -> True}]")
+        .expect_err("Input should treat a first-position option list as options");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.kind, RuntimeInputKind::Input);
+            assert_eq!(request.prompt, "?");
+            assert!(request.password);
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    let response = session
+        .resume_eval_request_with_input("4 + 5")
+        .expect("resuming first-position option-list Input should parse and evaluate text");
+    assert_eq!(response.value.to_string(), "9");
 
     let failure = session
         .eval_request("InputString[HoldComplete[1 + 2]]")
@@ -1346,6 +1400,14 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
     );
     assert_eq!(
         session
+            .eval_text("FailureQ[TerminatedEvaluation[\"IterationLimit\"]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
             .eval_text("TerminatedEvaluation[\"RecursionLimit\"][\"Properties\"]")
             .unwrap()
             .value
@@ -1401,6 +1463,22 @@ fn missingq_success_and_terminatedevaluation_cover_current_subset() {
             .messages
             .iter()
             .any(|message| message.symbol == "General" && message.tag == "reclim")
+    );
+
+    let mut iteration_request_session = Session::new();
+    iteration_request_session.set_evaluation_pass_limit(1);
+    let iteration_request = iteration_request_session
+        .eval_request("f[f = Hold, Identity[1]]")
+        .unwrap();
+    assert_eq!(
+        iteration_request.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
+    assert!(
+        iteration_request
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "passlim")
     );
 
     let mut data_session = Session::new();

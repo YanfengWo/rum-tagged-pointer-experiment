@@ -369,6 +369,27 @@ fn withcleanup_runs_cleanup_on_values_throws_and_aborts() {
         "$Aborted"
     );
     assert_eq!(session.eval_text("x").unwrap().value.to_string(), "4");
+    let abort_cleanup_throw = session
+        .eval_text("WithCleanup[Abort[], Throw[2, tag]]")
+        .unwrap();
+    assert_eq!(abort_cleanup_throw.value.to_string(), "$Aborted");
+    assert!(abort_cleanup_throw.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text("CheckAbort[WithCleanup[Abort[], Throw[2, tag]], caught]")
+            .unwrap()
+            .value
+            .to_string(),
+        "caught"
+    );
+    assert_eq!(
+        session
+            .eval_text("Catch[CheckAbort[WithCleanup[Abort[], Throw[2, tag]], caught], tag]")
+            .unwrap()
+            .value
+            .to_string(),
+        "caught"
+    );
 
     session.eval_text("x = 0").unwrap();
     assert_eq!(

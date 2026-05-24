@@ -482,6 +482,7 @@ once in its primary implementation group. Other groups may mention it as
   including delayed source `MessageTemplate` host-input resume,
   suspension-safe `WithCleanup` body cleanup plus current
   cleanup-time host-input resume, throw/abort cleanup boundaries,
+  primary-abort precedence over cleanup-time `Throw`,
   oracle-aligned delayed `Failsafe` failure `MessageParameters` metadata,
   cleanup-`Return` preservation of the primary outcome, and nested
   `AbortProtect` pending-abort propagation, current `CheckAbort` option-list

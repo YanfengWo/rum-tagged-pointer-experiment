@@ -692,6 +692,16 @@ impl Session {
             }
         }
 
+        if matches!(
+            primary_outcome,
+            Err(EvalError::Abort | EvalError::ProtectedAbort)
+        ) && matches!(
+            cleanup_outcome,
+            Err(EvalError::Thrown { .. } | EvalError::ThrownBypassingCatch { .. })
+        ) {
+            return primary_outcome;
+        }
+
         match cleanup_outcome {
             Ok(_) | Err(EvalError::Return { .. }) => primary_outcome,
             Err(error) => Err(error),
