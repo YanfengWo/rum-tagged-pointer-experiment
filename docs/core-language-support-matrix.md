@@ -121,9 +121,10 @@ once in its primary implementation group. Other groups may mention it as
   `Nand` / `Nor`, current `Listable` `Boole` truth-to-integer conversion plus
   current `Listable` exact numeric predicate coverage,
   mixed-symbolic `Equal` / `Unequal` chain boundaries, adjacent mixed
-  comparable `Equal` contradiction detection, plus current numeric order-chain
-  endpoint contradiction detection while leaving nonnumeric order comparisons
-  conservative,
+  comparable `Equal` contradiction detection, current boolean-pair equality
+  handling and `Unequal` known-prefix duplicate detection, plus current numeric
+  order-chain endpoint contradiction detection while leaving nonnumeric order
+  comparisons conservative,
   nonatomic `OrderedQ` argument-order parity, including the current
   symbol-name and common system call-head ordering slice, `ReplacePart`
   atom-head non-replacement, current invalid and out-of-range `Part` / `Extract`

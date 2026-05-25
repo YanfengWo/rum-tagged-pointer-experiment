@@ -16,6 +16,12 @@ enum ComparableValue {
     String(String),
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum EqualityKnownValue {
+    Comparable(ComparableValue),
+    Boolean(bool),
+}
+
 impl Session {
     pub(super) fn eval_and(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         self.resume_and_from_index(args.to_vec(), 0, Vec::new())
@@ -376,6 +382,12 @@ fn adjacent_equal_truth(lhs: &Expr, rhs: &Expr) -> Option<bool> {
         return Some(true);
     }
 
+    match (truthiness_symbol(lhs), truthiness_symbol(rhs)) {
+        (Some(lhs), Some(rhs)) => return Some(lhs == rhs),
+        (Some(_), None) | (None, Some(_)) => return None,
+        (None, None) => {}
+    }
+
     let lhs = comparable_value_from_expr(lhs)?;
     let rhs = comparable_value_from_expr(rhs)?;
     Some(lhs == rhs)
@@ -395,15 +407,20 @@ fn negated_relation_head_name(head: &Expr) -> Option<&'static str> {
 }
 
 fn reduce_unequal_chain(args: &[Expr]) -> Option<bool> {
-    for pair in args.windows(2) {
+    for (index, pair) in args.windows(2).enumerate() {
         match adjacent_unequal_truth(&pair[0], &pair[1]) {
             Some(true) => continue,
             Some(false) => return Some(false),
-            None => return None,
+            None => {
+                return known_equality_prefix_has_duplicate(&args[..=index]).then_some(false);
+            }
         }
     }
 
-    None
+    args.iter()
+        .map(equality_known_value_from_expr)
+        .collect::<Option<Vec<_>>>()
+        .map(|values| !equality_values_have_duplicate(&values))
 }
 
 fn adjacent_unequal_truth(lhs: &Expr, rhs: &Expr) -> Option<bool> {
@@ -411,9 +428,34 @@ fn adjacent_unequal_truth(lhs: &Expr, rhs: &Expr) -> Option<bool> {
         return Some(false);
     }
 
+    match (truthiness_symbol(lhs), truthiness_symbol(rhs)) {
+        (Some(lhs), Some(rhs)) => return Some(lhs != rhs),
+        (Some(_), None) | (None, Some(_)) => return None,
+        (None, None) => {}
+    }
+
     let lhs = comparable_value_from_expr(lhs)?;
     let rhs = comparable_value_from_expr(rhs)?;
-    Some(compare_comparable_values(&lhs, &rhs)? != std::cmp::Ordering::Equal)
+    Some(lhs != rhs)
+}
+
+fn known_equality_prefix_has_duplicate(args: &[Expr]) -> bool {
+    let Some(values) = args
+        .iter()
+        .map(equality_known_value_from_expr)
+        .collect::<Option<Vec<_>>>()
+    else {
+        return false;
+    };
+
+    equality_values_have_duplicate(&values)
+}
+
+fn equality_values_have_duplicate(values: &[EqualityKnownValue]) -> bool {
+    values
+        .iter()
+        .enumerate()
+        .any(|(index, lhs)| values[index + 1..].iter().any(|rhs| lhs == rhs))
 }
 
 fn reduce_order_chain(head: &Expr, args: &[Expr], relation: ComparisonRelation) -> Option<Expr> {
@@ -630,6 +672,14 @@ fn comparable_value_from_expr(expr: &Expr) -> Option<ComparableValue> {
     }
 }
 
+fn equality_known_value_from_expr(expr: &Expr) -> Option<EqualityKnownValue> {
+    if let Some(value) = truthiness_symbol(expr) {
+        return Some(EqualityKnownValue::Boolean(value));
+    }
+
+    comparable_value_from_expr(expr).map(EqualityKnownValue::Comparable)
+}
+
 fn compare_equality_values(values: &[ComparableValue], relation: ComparisonRelation) -> bool {
     match relation {
         ComparisonRelation::Equal => values.windows(2).all(|pair| pair[0] == pair[1]),
@@ -650,19 +700,6 @@ fn compare_numeric_values(values: &[Rational], relation: ComparisonRelation) -> 
     values
         .windows(2)
         .all(|pair| ordering_satisfies_relation(compare_rationals(&pair[0], &pair[1]), relation))
-}
-
-fn compare_comparable_values(
-    lhs: &ComparableValue,
-    rhs: &ComparableValue,
-) -> Option<std::cmp::Ordering> {
-    match (lhs, rhs) {
-        (ComparableValue::Number(lhs), ComparableValue::Number(rhs)) => {
-            Some(compare_rationals(lhs, rhs))
-        }
-        (ComparableValue::String(lhs), ComparableValue::String(rhs)) => Some(lhs.cmp(rhs)),
-        _ => None,
-    }
 }
 
 fn compare_rationals(lhs: &Rational, rhs: &Rational) -> std::cmp::Ordering {
