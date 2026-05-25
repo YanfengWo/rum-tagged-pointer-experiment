@@ -105,7 +105,8 @@ once in its primary implementation group. Other groups may mention it as
   empty-`Association[]`, and association-aware `Depth` parity, current unary
   `Extract[positionSpec]` operator-form support,
   `Level` scalar-zero, standard-`All`, empty-range, mixed positive/negative,
-  and positive/negative `Infinity` levelspec parity, and empty-expression
+  and positive/negative `Infinity` levelspec parity plus current
+  `Level::level` invalid-levelspec diagnostics, and empty-expression
   negative-level depth alignment plus current oracle-locked `Heads` traversal
   edges, including string-named, empty-list, and nested-list `Heads` option
   forms and current `Depth` / `Level` / traversal-family `Heads` option

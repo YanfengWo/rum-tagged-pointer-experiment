@@ -350,6 +350,9 @@ This roadmap intentionally uses two levels of detail:
       - [x] Tighten the current `Equal` chain boundary so adjacent mixed
         comparable atoms, such as integer-vs-string pairs, reduce to `False`
         while non-adjacent unknown-containing chains remain conservative.
+      - [x] Align the current `Level` invalid-levelspec diagnostic with the
+        Wolfram-style `Level::level` tag while preserving apply-head and
+        option-position behavior.
     - [x] `CL-02`: mainline closed; leave only small definition/update-family
       polish as deferred long-tail unless a downstream project exposes a
       concrete blocker.
