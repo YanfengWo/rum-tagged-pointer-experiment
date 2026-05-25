@@ -324,6 +324,10 @@ This roadmap intentionally uses two levels of detail:
         with Wolfram-aligned symbol-name ordering, same-name context fallback,
         and common system call-head precedence for `Association`, `Power`,
         `Times`, and `Plus`.
+      - [x] Tighten the current `Order` / `OrderedQ` power-ordering slice so
+        negative powers compare by base and sort before their own base and
+        non-negative same-base powers, matching Wolfram's `a/b` vs `a*b`
+        ordering.
       - [x] Tighten the current truth/comparison ordering slice with
         Wolfram-aligned number/string/symbol/compound expression order
         categories, stable `Equivalent` orderless argument placement, and

@@ -50,6 +50,10 @@ pub(super) fn flatten_flat_call_args(head: &Expr, args: Vec<Expr>) -> Vec<Expr> 
 }
 
 pub(super) fn compare_expr_canonical(lhs: &Expr, rhs: &Expr) -> std::cmp::Ordering {
+    if let Some(ordering) = compare_negative_power_canonical(lhs, rhs) {
+        return ordering;
+    }
+
     match (lhs, rhs) {
         (Expr::Atom(lhs), Expr::Atom(rhs)) => compare_atom_canonical(lhs, rhs),
         (
@@ -106,6 +110,66 @@ fn compare_call_canonical(
     }
 
     lhs_args.len().cmp(&rhs_args.len())
+}
+
+fn compare_negative_power_canonical(lhs: &Expr, rhs: &Expr) -> Option<std::cmp::Ordering> {
+    match (
+        negative_power_components(lhs),
+        negative_power_components(rhs),
+    ) {
+        (Some((lhs_base, lhs_exponent)), Some((rhs_base, rhs_exponent))) => {
+            let base_ordering = compare_expr_canonical(lhs_base, rhs_base);
+            if base_ordering != std::cmp::Ordering::Equal {
+                return Some(base_ordering);
+            }
+            Some(compare_rational_values(&lhs_exponent, &rhs_exponent))
+        }
+        (Some((lhs_base, _)), None) => {
+            let rhs_base = power_base(rhs).unwrap_or(rhs);
+            let base_ordering = compare_expr_canonical(lhs_base, rhs_base);
+            if base_ordering != std::cmp::Ordering::Equal {
+                return Some(base_ordering);
+            }
+            Some(std::cmp::Ordering::Less)
+        }
+        (None, Some((rhs_base, _))) => {
+            let lhs_base = power_base(lhs).unwrap_or(lhs);
+            let base_ordering = compare_expr_canonical(lhs_base, rhs_base);
+            if base_ordering != std::cmp::Ordering::Equal {
+                return Some(base_ordering);
+            }
+            Some(std::cmp::Ordering::Greater)
+        }
+        (None, None) => None,
+    }
+}
+
+fn negative_power_components(expr: &Expr) -> Option<(&Expr, Rational)> {
+    let [base, exponent] = power_args(expr)?;
+    let exponent = exact_atom_numeric_value(exponent)?;
+    (exponent.numerator() < &BigInt::from(0_u8)).then_some((base, exponent))
+}
+
+fn power_base(expr: &Expr) -> Option<&Expr> {
+    let [base, _] = power_args(expr)?;
+    Some(base)
+}
+
+fn power_args(expr: &Expr) -> Option<&[Expr; 2]> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Power") && args.len() == 2 => {
+            args.as_slice().try_into().ok()
+        }
+        _ => None,
+    }
+}
+
+fn exact_atom_numeric_value(expr: &Expr) -> Option<Rational> {
+    match expr {
+        Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.clone())),
+        Expr::Atom(Atom::Rational(value)) => Some(value.clone()),
+        _ => None,
+    }
 }
 
 fn compare_call_head_canonical(lhs: &Expr, rhs: &Expr) -> std::cmp::Ordering {
