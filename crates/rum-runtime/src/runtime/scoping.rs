@@ -305,6 +305,16 @@ impl Session {
             return Ok(Some(invalid_key_application));
         } else if let Some(wrapper) = apply_callable_operator_wrapper_to_args(head, args) {
             wrapper
+        } else if let Some(symbol) = invalid_callable_operator_wrapper_argx_symbol(head, args) {
+            self.push_message(
+                symbol,
+                "argx",
+                format!(
+                    "{head} called with {} arguments; 1 argument is expected.",
+                    args.len()
+                ),
+            );
+            return Ok(Some(Expr::call(head.clone(), args.to_vec())));
         } else if let Some(wrapper) = apply_callable_failsafe_wrapper_to_args(head, args) {
             wrapper
         } else {

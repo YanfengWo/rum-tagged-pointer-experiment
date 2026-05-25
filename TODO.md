@@ -361,6 +361,9 @@ This roadmap intentionally uses two levels of detail:
       - [x] Revisit zero-argument applications of comparison operator forms,
         such as `EqualTo[3][]`; current compound-head zero-arg rendering keeps
         them inert instead of reducing the equality-like forms to `True`.
+      - [x] Align current order-comparison operator-form application arity
+        diagnostics so `LessThan[3][]` / `LessThan[3][2, 4]` emit the
+        wrapper-head `::argx` message while staying inert.
       - [x] Align the current `Level` invalid-levelspec diagnostic with the
         Wolfram-style `Level::level` tag while preserving apply-head and
         option-position behavior.

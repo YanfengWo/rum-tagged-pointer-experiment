@@ -156,6 +156,26 @@ pub(in crate::runtime) fn apply_callable_operator_wrapper_to_args(
     )
 }
 
+pub(in crate::runtime) fn invalid_callable_operator_wrapper_argx_symbol(
+    head: &Expr,
+    args: &[Expr],
+) -> Option<&'static str> {
+    let spec = parse_comparison_operator_wrapper(head)?;
+    if args.len() == 1 {
+        return None;
+    }
+
+    match spec.kind {
+        ComparisonOperatorKind::Less
+        | ComparisonOperatorKind::Greater
+        | ComparisonOperatorKind::LessEqual
+        | ComparisonOperatorKind::GreaterEqual => Some(spec.kind.wrapper_symbol()),
+        ComparisonOperatorKind::Equal
+        | ComparisonOperatorKind::Unequal
+        | ComparisonOperatorKind::Same => None,
+    }
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_operator_applied(
         &mut self,
@@ -299,6 +319,20 @@ impl Session {
                 self.evaluate(operate_on_head_level(expr, operator, level))
             }
             _ => Ok(self.invalid_call_with_arg_range("Operate", args, 1, 3)),
+        }
+    }
+}
+
+impl ComparisonOperatorKind {
+    fn wrapper_symbol(self) -> &'static str {
+        match self {
+            Self::Less => "LessThan",
+            Self::Greater => "GreaterThan",
+            Self::LessEqual => "LessEqualThan",
+            Self::GreaterEqual => "GreaterEqualThan",
+            Self::Equal => "EqualTo",
+            Self::Unequal => "UnequalTo",
+            Self::Same => "SameAs",
         }
     }
 }

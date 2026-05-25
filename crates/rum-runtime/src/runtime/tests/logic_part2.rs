@@ -207,3 +207,26 @@ fn equality_operator_forms_accept_multi_argument_applications() {
         "False"
     );
 }
+
+#[test]
+fn order_comparison_operator_forms_report_application_arity() {
+    let mut session = Session::new();
+
+    for (input, expected, count) in [
+        ("LessThan[3][]", "LessThan[3][]", 0),
+        ("LessThan[3][2, 4]", "LessThan[3][2, 4]", 2),
+        ("GreaterThan[3][]", "GreaterThan[3][]", 0),
+        ("LessEqualThan[3][2, 3]", "LessEqualThan[3][2, 3]", 2),
+        ("GreaterEqualThan[3][2, 3]", "GreaterEqualThan[3][2, 3]", 2),
+    ] {
+        let outcome = session.eval_text(input).unwrap();
+        assert_eq!(outcome.value.to_string(), expected);
+        let symbol = expected.split('[').next().unwrap();
+        assert!(outcome.messages.iter().any(|message| {
+            message.symbol == symbol
+                && message.tag == "argx"
+                && message.text
+                    == format!("{symbol}[3] called with {count} arguments; 1 argument is expected.")
+        }));
+    }
+}
