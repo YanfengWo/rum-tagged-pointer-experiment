@@ -135,6 +135,22 @@ fn equality_operator_forms_accept_multi_argument_applications() {
     let mut session = Session::new();
 
     assert_eq!(
+        session.eval_text("EqualTo[3][]").unwrap().value.to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("UnequalTo[3][]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session.eval_text("SameAs[3][]").unwrap().value.to_string(),
+        "True"
+    );
+    assert_eq!(
         session
             .eval_text("EqualTo[3][3, 3]")
             .unwrap()

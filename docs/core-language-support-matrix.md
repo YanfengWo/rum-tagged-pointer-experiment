@@ -125,7 +125,7 @@ once in its primary implementation group. Other groups may mention it as
   handling and `Unequal` known-prefix duplicate detection, plus current numeric
   order-chain endpoint contradiction detection while leaving nonnumeric order
   comparisons conservative, equality-like comparison operator forms for
-  multi-argument applications,
+  zero- and multi-argument applications,
   nonatomic `OrderedQ` argument-order parity, including the current
   symbol-name, negative-power, and common system call-head ordering slice,
   `ReplacePart` atom-head non-replacement, current invalid and out-of-range

@@ -420,7 +420,7 @@ pub(in crate::runtime) fn is_association_expr(expr: &Expr) -> bool {
 
 pub(in crate::runtime) fn apply_association_to_args(head: &Expr, args: &[Expr]) -> Option<Expr> {
     match args {
-        [] => Some(head.clone()),
+        [] => association_entries_from_expr(head).map(|_| head.clone()),
         [key] => lookup_association_key(head, key),
         _ => apply_association_to_key_path(head, args),
     }
