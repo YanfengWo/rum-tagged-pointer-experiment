@@ -71,6 +71,7 @@ mod holding_and_control_part6;
 mod holding_and_control_part7;
 mod holding_and_control_part8;
 mod logic;
+mod logic_part2;
 mod lowering_and_context;
 mod lowering_golden;
 mod messages;

@@ -378,7 +378,7 @@ fn adjacent_equal_truth(lhs: &Expr, rhs: &Expr) -> Option<bool> {
 
     let lhs = comparable_value_from_expr(lhs)?;
     let rhs = comparable_value_from_expr(rhs)?;
-    Some(compare_comparable_values(&lhs, &rhs)? == std::cmp::Ordering::Equal)
+    Some(lhs == rhs)
 }
 
 fn negated_relation_head_name(head: &Expr) -> Option<&'static str> {
