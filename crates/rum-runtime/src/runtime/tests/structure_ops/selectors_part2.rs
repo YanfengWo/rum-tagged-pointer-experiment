@@ -132,3 +132,35 @@ fn part_and_extract_emit_single_take_for_explicit_invalid_spans() {
         1
     );
 }
+
+#[test]
+fn part_and_extract_head_access_preserve_symbol_diagnostics() {
+    let mut session = Session::new();
+
+    let part_head_all = session.eval_text("Part[f[a, b], 0, All]").unwrap();
+    assert_eq!(part_head_all.value.to_string(), "Symbol[]");
+    assert!(
+        part_head_all
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Symbol" && message.tag == "argx")
+    );
+
+    let part_head_zero_list = session.eval_text("Part[f[a, b], 0, {0}]").unwrap();
+    assert_eq!(part_head_zero_list.value.to_string(), "Symbol[Symbol]");
+    assert!(
+        part_head_zero_list
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Symbol" && message.tag == "string")
+    );
+
+    let extract_head_zero_list = session.eval_text("Extract[f[a, b], {0, {0}}]").unwrap();
+    assert_eq!(extract_head_zero_list.value.to_string(), "Symbol[Symbol]");
+    assert!(
+        extract_head_zero_list
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Symbol" && message.tag == "string")
+    );
+}

@@ -624,6 +624,26 @@ fn append_prepend_symbol_and_construct_cover_current_surface_subset() {
             .to_string(),
         "List"
     );
+    let invalid_symbol_value = session.eval_text("Symbol[1]").unwrap();
+    assert_eq!(invalid_symbol_value.value.to_string(), "Symbol[1]");
+    assert!(
+        invalid_symbol_value
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Symbol"
+                && message.tag == "string"
+                && message.text == "String expected at position 1 in Symbol[1].")
+    );
+    let invalid_symbol_arity = session.eval_text("Symbol[]").unwrap();
+    assert_eq!(invalid_symbol_arity.value.to_string(), "Symbol[]");
+    assert!(
+        invalid_symbol_arity
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Symbol"
+                && message.tag == "argx"
+                && message.text == "Symbol called with 0 arguments; 1 argument is expected.")
+    );
     assert_eq!(
         session
             .eval_text("Construct[f, a, b]")

@@ -196,14 +196,26 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [name_expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("Symbol", args, 1));
+            return Ok(self.invalid_call_with_message(
+                "Symbol",
+                args,
+                "argx",
+                format!(
+                    "Symbol called with {} arguments; 1 argument is expected.",
+                    args.len()
+                ),
+            ));
         };
 
         let Some(name) = expr_as_string(name_expr) else {
-            return Ok(self.invalid_call_with_arg_form(
+            return Ok(self.invalid_call_with_message(
                 "Symbol",
                 args,
-                "expected a string symbol name",
+                "string",
+                format!(
+                    "String expected at position 1 in {}.",
+                    Expr::call(head.clone(), args.to_vec())
+                ),
             ));
         };
 

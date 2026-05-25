@@ -352,6 +352,9 @@ This roadmap intentionally uses two levels of detail:
         and nested `Extract` key / empty-selector shapes with oracle-backed
         regression tests, and align explicit invalid-span `take` diagnostics to
         emit once while leaving broader part-spec parity as long-tail.
+      - [x] Align `Symbol[...]` diagnostics that surface through `Part` /
+        `Extract` head-access paths, including non-string `Symbol::string`
+        and zero-argument `Symbol::argx` message tags.
       - [x] Tighten the current `Equal` chain boundary so adjacent mixed
         comparable atoms, such as integer-vs-string pairs, reduce to `False`
         while non-adjacent unknown-containing chains remain conservative.
