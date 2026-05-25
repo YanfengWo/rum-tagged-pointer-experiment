@@ -353,6 +353,10 @@ This roadmap intentionally uses two levels of detail:
       - [x] Align the current `Level` invalid-levelspec diagnostic with the
         Wolfram-style `Level::level` tag while preserving apply-head and
         option-position behavior.
+      - [x] Carry Wolfram-style invalid-levelspec and match-limit diagnostics
+        into the current traversal-family users, including `Cases`,
+        `DeleteCases`, `Count`, `MemberQ`, `FreeQ`, and `Position` `::level`
+        plus `Cases` / `Position` `::innf` message tags.
     - [x] `CL-02`: mainline closed; leave only small definition/update-family
       polish as deferred long-tail unless a downstream project exposes a
       concrete blocker.

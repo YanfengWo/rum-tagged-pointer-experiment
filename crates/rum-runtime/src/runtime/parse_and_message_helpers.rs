@@ -461,6 +461,35 @@ fn symbol_from_continuation_expr(expr: Expr) -> Symbol {
 }
 
 impl Session {
+    pub(super) fn invalid_level_spec_call(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        spec: &Expr,
+    ) -> Expr {
+        self.push_message(
+            symbol,
+            "level",
+            format!("Level specification {spec} is not of the form n, {{n}} or {{m, n}}."),
+        );
+        self.invalid_call(symbol, args)
+    }
+
+    pub(super) fn invalid_non_negative_or_infinity_call(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        position: usize,
+    ) -> Expr {
+        let call = Expr::call(system_expr(symbol), args.to_vec());
+        self.push_message(
+            symbol,
+            "innf",
+            format!("Non-negative integer or Infinity expected at position {position} in {call}."),
+        );
+        self.invalid_call(symbol, args)
+    }
+
     pub(super) fn invalid_heads_option_call(
         &mut self,
         symbol: &str,

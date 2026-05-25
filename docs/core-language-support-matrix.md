@@ -106,11 +106,12 @@ once in its primary implementation group. Other groups may mention it as
   `Extract[positionSpec]` operator-form support,
   `Level` scalar-zero, standard-`All`, empty-range, mixed positive/negative,
   and positive/negative `Infinity` levelspec parity plus current
-  `Level::level` invalid-levelspec diagnostics, and empty-expression
-  negative-level depth alignment plus current oracle-locked `Heads` traversal
-  edges, including string-named, empty-list, and nested-list `Heads` option
-  forms and current `Depth` / `Level` / traversal-family `Heads` option
-  diagnostics, plus
+  `Level::level` invalid-levelspec diagnostics and current
+  traversal-family invalid-levelspec / match-limit `::level` / `::innf`
+  diagnostics, and empty-expression negative-level depth alignment plus current
+  oracle-locked `Heads` traversal edges, including string-named, empty-list,
+  and nested-list `Heads` option forms and current `Depth` / `Level` /
+  traversal-family `Heads` option diagnostics, plus
   compound-head negative-level handling across the current structural and
   cases/delete walkers, current
   `Not[Not[...]]` and relational-`Not` simplifications,

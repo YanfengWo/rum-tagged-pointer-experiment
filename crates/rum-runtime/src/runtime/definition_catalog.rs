@@ -396,6 +396,12 @@ impl Session {
     ) -> Expr {
         let fallback = error.message().to_string();
         match error {
+            CasesTraversalNormalizationError::InvalidThirdArgument => {
+                self.invalid_level_spec_call(symbol, args, &args[2])
+            }
+            CasesTraversalNormalizationError::InvalidFourthArgument => {
+                self.invalid_non_negative_or_infinity_call(symbol, args, 4)
+            }
             CasesTraversalNormalizationError::InvalidHeadsOption {
                 positional_count,
                 option_expr,
@@ -408,7 +414,9 @@ impl Session {
                 classification,
                 fallback,
             ),
-            _ => self.invalid_call_with_arg_form(symbol, args, fallback),
+            CasesTraversalNormalizationError::InvalidFifthArgument => {
+                self.invalid_call_with_arg_form(symbol, args, fallback)
+            }
         }
     }
 
@@ -420,6 +428,9 @@ impl Session {
     ) -> Expr {
         let fallback = error.message().to_string();
         match error {
+            TraversalWithoutLimitNormalizationError::InvalidThirdArgument => {
+                self.invalid_level_spec_call(symbol, args, &args[2])
+            }
             TraversalWithoutLimitNormalizationError::InvalidHeadsOption {
                 positional_count,
                 option_expr,
@@ -432,7 +443,9 @@ impl Session {
                 classification,
                 fallback,
             ),
-            _ => self.invalid_call_with_arg_form(symbol, args, fallback),
+            TraversalWithoutLimitNormalizationError::InvalidFourthArgument => {
+                self.invalid_call_with_arg_form(symbol, args, fallback)
+            }
         }
     }
 

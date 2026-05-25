@@ -65,7 +65,7 @@ impl Session {
 
         let default_include_heads = self.system_option_bool("Level", "Heads", false)?;
         let Some(levels) = parse_level_level_spec(&args[1]) else {
-            return Ok(self.invalid_level_spec_call(args));
+            return Ok(self.invalid_level_spec_call("Level", args, &args[1]));
         };
 
         let (apply_head, include_heads) = match args {
@@ -118,18 +118,6 @@ impl Session {
             apply_head.unwrap_or_else(|| system_expr("List")),
             parts,
         ))
-    }
-
-    fn invalid_level_spec_call(&mut self, args: &[Expr]) -> Expr {
-        self.push_message(
-            "Level",
-            "level",
-            format!(
-                "Level specification {} is not of the form n, {{n}} or {{m, n}}.",
-                args[1]
-            ),
-        );
-        Expr::call(system_expr("Level"), args.to_vec())
     }
 
     pub(super) fn eval_position(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
