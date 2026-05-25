@@ -245,7 +245,7 @@ impl Session {
         self.push_invalid_upto_messages_in_span(span_expr);
         let text = format!(
             "{} is not a valid Span specification. A Span specification should be 1, 2 or 3 machine-sized integers separated by ;;. (Any of the integers can be omitted or replaced with All.)",
-            span_expr
+            invalid_span_message_spec(span_expr)
         );
         if self.has_message(symbol, "span", &text) {
             return;
@@ -404,6 +404,11 @@ fn parse_span_part_spec(expr: &Expr) -> Option<AtomicPartSpec> {
     }
 
     let spec = match args.as_slice() {
+        [] => PartSpanSpec {
+            start: SpanEndpoint::All,
+            end: SpanEndpoint::All,
+            step: 1,
+        },
         [value] => {
             let endpoint = parse_span_endpoint(value)?;
             PartSpanSpec {
@@ -684,6 +689,21 @@ fn span_to_expr(span: PartSpanSpec) -> Expr {
             Expr::integer(BigInt::from(span.step)),
         ],
     )
+}
+
+fn invalid_span_message_spec(expr: &Expr) -> String {
+    let Expr::Call { head, args } = expr else {
+        return expr.to_string();
+    };
+
+    if !is_system_symbol_name(head, heads::structure::SPAN) || !(2..=3).contains(&args.len()) {
+        return expr.to_string();
+    }
+
+    args.iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(" ;; ")
 }
 
 fn span_take_message_range(span: PartSpanSpec) -> (Expr, Expr) {

@@ -131,9 +131,11 @@ once in its primary implementation group. Other groups may mention it as
   symbol-name, negative-power, and common system call-head ordering slice,
   `ReplacePart` atom-head non-replacement, current invalid and out-of-range
   `Part` / `Extract` selector diagnostics, and non-expanding `All` / `Span`
-  position-spec boundaries, current de-duplicated invalid `UpTo[...]` span
-  endpoint diagnostics, current `Part::take` / `Extract::take` range
-  rendering, plus current `Symbol` string / arity diagnostics
+  position-spec boundaries, direct empty `Span[]` full-range selection,
+  current de-duplicated invalid `UpTo[...]` span endpoint diagnostics, current
+  invalid `Span` message rendering for infixable specs, current
+  `Part::take` / `Extract::take` range rendering, plus current `Symbol` string
+  / arity diagnostics
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
   across every structural walker, `Flatten` beyond the current same-head /
   single-head-spec non-negative-level / `Infinity` plus level-list subset,

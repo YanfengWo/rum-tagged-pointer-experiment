@@ -361,6 +361,10 @@ This roadmap intentionally uses two levels of detail:
       - [x] De-duplicate invalid `UpTo[...]` span endpoint diagnostics across
         fixed-point normalization so rational endpoints such as `UpTo[3/2]`
         emit one `UpTo::innf` plus one `Part` / `Extract` `::span`.
+      - [x] Align direct empty `Span[]` as a full-range `Part` / `Extract`
+        selector and render invalid two- / three-argument `Span` diagnostics
+        with Wolfram-style `;;` notation while preserving direct high-arity
+        `Span[...]` message shape.
       - [x] Tighten the current `Equal` chain boundary so adjacent mixed
         comparable atoms, such as integer-vs-string pairs, reduce to `False`
         while non-adjacent unknown-containing chains remain conservative.

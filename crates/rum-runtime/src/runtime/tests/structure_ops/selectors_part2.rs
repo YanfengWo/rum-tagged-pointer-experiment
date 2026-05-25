@@ -252,3 +252,93 @@ fn invalid_upto_span_diagnostics_are_not_duplicated_after_normalization() {
         1
     );
 }
+
+#[test]
+fn direct_empty_span_selects_full_range() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b], Span[]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b], Span[], 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Part[f[a, b], Span[], 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[a, b], {Span[]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[g[a], h[b]], {Span[], 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[1, {Span[]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Integer[]"
+    );
+}
+
+#[test]
+fn invalid_span_messages_render_infix_specs() {
+    let mut session = Session::new();
+
+    let invalid_two_arg_span = session.eval_text("Part[f[a, b], Span[1, x]]").unwrap();
+    assert_eq!(
+        invalid_two_arg_span.value.to_string(),
+        "Part[f[a, b], Span[1, x]]"
+    );
+    assert!(invalid_two_arg_span.messages.iter().any(|message| {
+        message.symbol == "Part"
+            && message.tag == "span"
+            && message
+                .text
+                .starts_with("1 ;; x is not a valid Span specification.")
+    }));
+
+    let invalid_three_arg_span = session
+        .eval_text("Extract[f[a, b], {1 ;; 2 ;; x}]")
+        .unwrap();
+    assert_eq!(
+        invalid_three_arg_span.value.to_string(),
+        "Extract[f[a, b], List[Span[1, 2, x]]]"
+    );
+    assert!(invalid_three_arg_span.messages.iter().any(|message| {
+        message.symbol == "Extract"
+            && message.tag == "span"
+            && message
+                .text
+                .starts_with("1 ;; 2 ;; x is not a valid Span specification.")
+    }));
+
+    let invalid_arity_span = session
+        .eval_text("Part[f[a, b], Span[1, 2, 3, 4]]")
+        .unwrap();
+    assert!(invalid_arity_span.messages.iter().any(|message| {
+        message.symbol == "Part"
+            && message.tag == "span"
+            && message
+                .text
+                .starts_with("Span[1, 2, 3, 4] is not a valid Span specification.")
+    }));
+}
