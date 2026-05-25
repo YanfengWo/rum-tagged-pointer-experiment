@@ -215,17 +215,26 @@ impl Session {
                     ),
                 );
             }
-            PartSelectionFailure::Take { spec, target } => self.push_message(
-                symbol,
-                "take",
-                format!("Cannot take positions {} in {}.", spec, target),
-            ),
+            PartSelectionFailure::Take { spec, target } => {
+                self.push_take_selection_failure(symbol, spec, target);
+            }
             PartSelectionFailure::Pspec1 { spec } => self.push_message(
                 symbol,
                 "pspec1",
                 format!("Part specification {} is not applicable.", spec),
             ),
         }
+    }
+
+    fn push_take_selection_failure(&mut self, symbol: &str, spec: Expr, target: Expr) {
+        let text = format!("Cannot take positions {} in {}.", spec, target);
+        if self.messages.last().is_some_and(|message| {
+            message.symbol == symbol && message.tag == "take" && message.text == text
+        }) {
+            return;
+        }
+
+        self.push_message(symbol, "take", text);
     }
 
     fn push_invalid_span_selector_messages(&mut self, symbol: &str, span_expr: &Expr) {

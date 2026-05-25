@@ -95,3 +95,40 @@ fn extract_preserves_nested_key_and_empty_selector_shapes() {
         "List[Association[Rule[a, 1]]]"
     );
 }
+
+#[test]
+fn part_and_extract_emit_single_take_for_explicit_invalid_spans() {
+    let mut session = Session::new();
+
+    let invalid_part_span = session
+        .eval_text("Part[f[a, b, c], All ;; All ;; -1]")
+        .unwrap();
+    assert_eq!(
+        invalid_part_span.value.to_string(),
+        "Part[f[a, b, c], Span[All, All, -1]]"
+    );
+    assert_eq!(
+        invalid_part_span
+            .messages
+            .iter()
+            .filter(|message| message.symbol == "Part" && message.tag == "take")
+            .count(),
+        1
+    );
+
+    let invalid_extract_span = session
+        .eval_text("Extract[f[a, b, c], {All ;; All ;; -1}]")
+        .unwrap();
+    assert_eq!(
+        invalid_extract_span.value.to_string(),
+        "Extract[f[a, b, c], List[Span[All, All, -1]]]"
+    );
+    assert_eq!(
+        invalid_extract_span
+            .messages
+            .iter()
+            .filter(|message| message.symbol == "Extract" && message.tag == "take")
+            .count(),
+        1
+    );
+}
