@@ -358,6 +358,9 @@ This roadmap intentionally uses two levels of detail:
       - [x] Align current `Part::take` / `Extract::take` range-rendering
         diagnostics so invalid `Span[...]` selections report `start through
         end` rather than raw canonical `Span[...]` expressions.
+      - [x] De-duplicate invalid `UpTo[...]` span endpoint diagnostics across
+        fixed-point normalization so rational endpoints such as `UpTo[3/2]`
+        emit one `UpTo::innf` plus one `Part` / `Extract` `::span`.
       - [x] Tighten the current `Equal` chain boundary so adjacent mixed
         comparable atoms, such as integer-vs-string pairs, reduce to `False`
         while non-adjacent unknown-containing chains remain conservative.

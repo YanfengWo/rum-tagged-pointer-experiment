@@ -201,3 +201,54 @@ fn part_and_extract_take_messages_render_span_ranges() {
             && message.text == "Cannot take positions 1 through 5 in f[a]."
     }));
 }
+
+#[test]
+fn invalid_upto_span_diagnostics_are_not_duplicated_after_normalization() {
+    let mut session = Session::new();
+
+    let part_invalid_upto = session.eval_text("Part[f[a, b], 1 ;; UpTo[3/2]]").unwrap();
+    assert_eq!(
+        part_invalid_upto.value.to_string(),
+        "Part[f[a, b], Span[1, UpTo[3/2]]]"
+    );
+    assert_eq!(
+        part_invalid_upto
+            .messages
+            .iter()
+            .filter(|message| message.symbol == "UpTo" && message.tag == "innf")
+            .count(),
+        1
+    );
+    assert_eq!(
+        part_invalid_upto
+            .messages
+            .iter()
+            .filter(|message| message.symbol == "Part" && message.tag == "span")
+            .count(),
+        1
+    );
+
+    let extract_invalid_upto = session
+        .eval_text("Extract[f[a, b], {1 ;; UpTo[3/2]}]")
+        .unwrap();
+    assert_eq!(
+        extract_invalid_upto.value.to_string(),
+        "Extract[f[a, b], List[Span[1, UpTo[3/2]]]]"
+    );
+    assert_eq!(
+        extract_invalid_upto
+            .messages
+            .iter()
+            .filter(|message| message.symbol == "UpTo" && message.tag == "innf")
+            .count(),
+        1
+    );
+    assert_eq!(
+        extract_invalid_upto
+            .messages
+            .iter()
+            .filter(|message| message.symbol == "Extract" && message.tag == "span")
+            .count(),
+        1
+    );
+}

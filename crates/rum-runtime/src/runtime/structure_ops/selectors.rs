@@ -243,14 +243,29 @@ impl Session {
 
     fn push_invalid_span_selector_messages(&mut self, symbol: &str, span_expr: &Expr) {
         self.push_invalid_upto_messages_in_span(span_expr);
-        self.push_message(
-            symbol,
-            "span",
-            format!(
-                "{} is not a valid Span specification. A Span specification should be 1, 2 or 3 machine-sized integers separated by ;;. (Any of the integers can be omitted or replaced with All.)",
-                span_expr
-            ),
+        let text = format!(
+            "{} is not a valid Span specification. A Span specification should be 1, 2 or 3 machine-sized integers separated by ;;. (Any of the integers can be omitted or replaced with All.)",
+            span_expr
         );
+        if self.has_message(symbol, "span", &text) {
+            return;
+        }
+
+        self.push_message(symbol, "span", text);
+    }
+
+    fn has_message(&self, symbol: &str, tag: &str, text: &str) -> bool {
+        self.messages
+            .iter()
+            .any(|message| message.symbol == symbol && message.tag == tag && message.text == text)
+    }
+
+    fn push_invalid_upto_message_once(&mut self, tag: &str, text: String) {
+        if self.has_message("UpTo", tag, &text) {
+            return;
+        }
+
+        self.push_message("UpTo", tag, text);
     }
 
     fn push_invalid_upto_messages_in_span(&mut self, expr: &Expr) {
@@ -260,14 +275,15 @@ impl Session {
 
         if is_system_symbol_name(head, "UpTo") {
             match args.as_slice() {
-                [limit] if is_invalid_numeric_upto_limit(limit) => self.push_message(
-                    "UpTo",
-                    "innf",
-                    format!("Non-negative integer or Infinity expected at position 1 in {expr}."),
-                ),
+                [limit] if is_invalid_numeric_upto_limit(limit) => self
+                    .push_invalid_upto_message_once(
+                        "innf",
+                        format!(
+                            "Non-negative integer or Infinity expected at position 1 in {expr}."
+                        ),
+                    ),
                 [_] => {}
-                _ => self.push_message(
-                    "UpTo",
+                _ => self.push_invalid_upto_message_once(
                     "argx",
                     format!(
                         "UpTo called with {} arguments; 1 argument is expected.",
