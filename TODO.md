@@ -343,6 +343,9 @@ This roadmap intentionally uses two levels of detail:
         `Depth` / `Level` boundary with oracle-backed cases for empty
         `Association[]`, empty-list negative-level traversal under
         `Heads -> True`, and association head/value traversal.
+      - [x] Lock the current `Part` / `Extract` selector-list branch-failure
+        and nested `Extract` key / empty-selector shapes with oracle-backed
+        regression tests while leaving broader part-spec parity as long-tail.
     - [x] `CL-02`: mainline closed; leave only small definition/update-family
       polish as deferred long-tail unless a downstream project exposes a
       concrete blocker.

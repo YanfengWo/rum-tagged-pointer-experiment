@@ -1,0 +1,97 @@
+use super::*;
+
+#[test]
+fn part_and_extract_report_branch_selector_failures() {
+    let mut session = Session::new();
+
+    let part_all_branch = session.eval_text("Part[f[g[a, b], h[c]], All, 2]").unwrap();
+    assert_eq!(
+        part_all_branch.value.to_string(),
+        "Part[f[g[a, b], h[c]], All, 2]"
+    );
+    assert!(
+        part_all_branch
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part"
+                && message.tag == "partw"
+                && message.text.contains("2 of h[c]"))
+    );
+
+    let part_multi_branch = session
+        .eval_text("Part[f[g[a, b], h[c]], {1, 2}, {1, 2}]")
+        .unwrap();
+    assert_eq!(
+        part_multi_branch.value.to_string(),
+        "Part[f[g[a, b], h[c]], List[1, 2], List[1, 2]]"
+    );
+    assert!(
+        part_multi_branch
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part"
+                && message.tag == "partw"
+                && message.text.contains("List[1, 2] of h[c]"))
+    );
+
+    let extract_branch = session
+        .eval_text("Extract[f[g[a, b], h[c]], {{{1, 2}, 2}}]")
+        .unwrap();
+    assert_eq!(
+        extract_branch.value.to_string(),
+        "Extract[f[g[a, b], h[c]], List[List[List[1, 2], 2]]]"
+    );
+    assert!(
+        extract_branch
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract"
+                && message.tag == "partw"
+                && message.text.contains("2 of h[c]"))
+    );
+}
+
+#[test]
+fn extract_preserves_nested_key_and_empty_selector_shapes() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Extract[Association[a -> 1], {{{Key[a]}}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[a, 1]]]"
+    );
+
+    let missing_nested_key = session
+        .eval_text("Extract[Association[a -> 1], {{{Key[b]}}}]")
+        .unwrap();
+    assert_eq!(
+        missing_nested_key.value.to_string(),
+        "List[Association[Rule[b, Missing[\"KeyAbsent\", Key[b]]]]]"
+    );
+    assert!(
+        missing_nested_key
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Extract" && message.tag == "keyw")
+    );
+
+    assert_eq!(
+        session
+            .eval_text("Extract[f[a, b], {{{}, {1}}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[Association[a -> 1], {{}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Association[Rule[a, 1]]]"
+    );
+}
