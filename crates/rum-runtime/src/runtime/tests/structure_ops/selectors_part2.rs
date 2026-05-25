@@ -164,3 +164,40 @@ fn part_and_extract_head_access_preserve_symbol_diagnostics() {
             .any(|message| message.symbol == "Symbol" && message.tag == "string")
     );
 }
+
+#[test]
+fn part_and_extract_take_messages_render_span_ranges() {
+    let mut session = Session::new();
+
+    let part_range = session.eval_text("Part[f[a], 1 ;; 5]").unwrap();
+    assert_eq!(part_range.value.to_string(), "Part[f[a], Span[1, 5]]");
+    assert!(part_range.messages.iter().any(|message| {
+        message.symbol == "Part"
+            && message.tag == "take"
+            && message.text == "Cannot take positions 1 through 5 in f[a]."
+    }));
+
+    let part_reverse_all = session
+        .eval_text("Part[f[a, b, c], All ;; All ;; -1]")
+        .unwrap();
+    assert_eq!(
+        part_reverse_all.value.to_string(),
+        "Part[f[a, b, c], Span[All, All, -1]]"
+    );
+    assert!(part_reverse_all.messages.iter().any(|message| {
+        message.symbol == "Part"
+            && message.tag == "take"
+            && message.text == "Cannot take positions 1 through -1 in f[a, b, c]."
+    }));
+
+    let extract_range = session.eval_text("Extract[f[a], {1 ;; 5}]").unwrap();
+    assert_eq!(
+        extract_range.value.to_string(),
+        "Extract[f[a], List[Span[1, 5]]]"
+    );
+    assert!(extract_range.messages.iter().any(|message| {
+        message.symbol == "Extract"
+            && message.tag == "take"
+            && message.text == "Cannot take positions 1 through 5 in f[a]."
+    }));
+}

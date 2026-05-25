@@ -355,6 +355,9 @@ This roadmap intentionally uses two levels of detail:
       - [x] Align `Symbol[...]` diagnostics that surface through `Part` /
         `Extract` head-access paths, including non-string `Symbol::string`
         and zero-argument `Symbol::argx` message tags.
+      - [x] Align current `Part::take` / `Extract::take` range-rendering
+        diagnostics so invalid `Span[...]` selections report `start through
+        end` rather than raw canonical `Span[...]` expressions.
       - [x] Tighten the current `Equal` chain boundary so adjacent mixed
         comparable atoms, such as integer-vs-string pairs, reduce to `False`
         while non-adjacent unknown-containing chains remain conservative.

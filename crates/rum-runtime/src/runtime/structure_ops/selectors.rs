@@ -45,7 +45,7 @@ struct ExtractPositionSpec {
 enum PartSelectionFailure {
     PartW { part: Expr, target: Expr },
     PartD { spec: Option<Expr> },
-    Take { spec: Expr, target: Expr },
+    Take { span: PartSpanSpec, target: Expr },
     Pspec1 { spec: Expr },
 }
 
@@ -215,8 +215,8 @@ impl Session {
                     ),
                 );
             }
-            PartSelectionFailure::Take { spec, target } => {
-                self.push_take_selection_failure(symbol, spec, target);
+            PartSelectionFailure::Take { span, target } => {
+                self.push_take_selection_failure(symbol, span, target);
             }
             PartSelectionFailure::Pspec1 { spec } => self.push_message(
                 symbol,
@@ -226,8 +226,12 @@ impl Session {
         }
     }
 
-    fn push_take_selection_failure(&mut self, symbol: &str, spec: Expr, target: Expr) {
-        let text = format!("Cannot take positions {} in {}.", spec, target);
+    fn push_take_selection_failure(&mut self, symbol: &str, span: PartSpanSpec, target: Expr) {
+        let (start, end) = span_take_message_range(span);
+        let text = format!(
+            "Cannot take positions {} through {} in {}.",
+            start, end, target
+        );
         if self.messages.last().is_some_and(|message| {
             message.symbol == symbol && message.tag == "take" && message.text == text
         }) {
@@ -565,7 +569,7 @@ fn diagnose_failed_selector(expr: &Expr, selector: &PartSelector) -> Option<Part
             spec: Some(selector_to_expr(selector)),
         }),
         PartSelector::Single(AtomicPartSpec::Span(span)) => Some(PartSelectionFailure::Take {
-            spec: span_to_expr(*span),
+            span: *span,
             target: expr.clone(),
         }),
         PartSelector::Multi(specs) => diagnose_failed_multi_selector(expr, selector, specs),
@@ -664,6 +668,27 @@ fn span_to_expr(span: PartSpanSpec) -> Expr {
             Expr::integer(BigInt::from(span.step)),
         ],
     )
+}
+
+fn span_take_message_range(span: PartSpanSpec) -> (Expr, Expr) {
+    (
+        span_take_message_start(span.start),
+        span_take_message_end(span.end),
+    )
+}
+
+fn span_take_message_start(endpoint: SpanEndpoint) -> Expr {
+    match endpoint {
+        SpanEndpoint::All => Expr::integer(BigInt::from(1)),
+        _ => span_endpoint_to_expr(endpoint),
+    }
+}
+
+fn span_take_message_end(endpoint: SpanEndpoint) -> Expr {
+    match endpoint {
+        SpanEndpoint::All => Expr::integer(BigInt::from(-1)),
+        _ => span_endpoint_to_expr(endpoint),
+    }
 }
 
 fn span_endpoint_to_expr(endpoint: SpanEndpoint) -> Expr {
