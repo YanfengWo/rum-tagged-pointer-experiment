@@ -129,3 +129,65 @@ fn unequal_detects_repeated_known_prefix_values_before_unknown_tail() {
         "Unequal[True, False, 1, u]"
     );
 }
+
+#[test]
+fn equality_operator_forms_accept_multi_argument_applications() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("EqualTo[3][3, 3]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("EqualTo[3][3, 4]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("EqualTo[x][1, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Equal[1, 1, x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("UnequalTo[3][4, 5]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("UnequalTo[3][4, 3]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("SameAs[f[a]][f[a], f[a]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("SameAs[f[a]][f[a], f[b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+}

@@ -399,10 +399,6 @@ fn apply_comparison_operator_wrapper_to_args(
     spec: &ComparisonOperatorSpec<'_>,
     args: &[Expr],
 ) -> Option<Expr> {
-    let [arg] = args else {
-        return None;
-    };
-
     let head = match spec.kind {
         ComparisonOperatorKind::Less => "Less",
         ComparisonOperatorKind::Greater => "Greater",
@@ -413,10 +409,27 @@ fn apply_comparison_operator_wrapper_to_args(
         ComparisonOperatorKind::Same => "SameQ",
     };
 
-    Some(Expr::call(
-        system_expr(head),
-        vec![arg.clone(), spec.bound.clone()],
-    ))
+    match spec.kind {
+        ComparisonOperatorKind::Equal
+        | ComparisonOperatorKind::Unequal
+        | ComparisonOperatorKind::Same => {
+            let mut comparison_args = args.to_vec();
+            comparison_args.push(spec.bound.clone());
+            Some(Expr::call(system_expr(head), comparison_args))
+        }
+        ComparisonOperatorKind::Less
+        | ComparisonOperatorKind::Greater
+        | ComparisonOperatorKind::LessEqual
+        | ComparisonOperatorKind::GreaterEqual => {
+            let [arg] = args else {
+                return None;
+            };
+            Some(Expr::call(
+                system_expr(head),
+                vec![arg.clone(), spec.bound.clone()],
+            ))
+        }
+    }
 }
 
 fn parse_nearest_to_wrapper(expr: &Expr) -> Option<NearestToSpec<'_>> {

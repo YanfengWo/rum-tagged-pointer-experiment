@@ -358,6 +358,9 @@ This roadmap intentionally uses two levels of detail:
       - [x] Tighten the current `Equal` / `Unequal` truth/comparison boundary
         with Wolfram-style boolean-pair equality plus `Unequal` known-prefix
         duplicate detection before the first unknown comparison.
+      - [ ] Revisit zero-argument applications of comparison operator forms,
+        such as `EqualTo[3][]`; current compound-head zero-arg rendering keeps
+        them inert instead of reducing the equality-like forms to `True`.
       - [x] Align the current `Level` invalid-levelspec diagnostic with the
         Wolfram-style `Level::level` tag while preserving apply-head and
         option-position behavior.
