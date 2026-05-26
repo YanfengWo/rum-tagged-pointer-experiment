@@ -267,11 +267,27 @@ fn direct_empty_span_selects_full_range() {
     );
     assert_eq!(
         session
+            .eval_text("Part[f[a, b], Span[0]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[]"
+    );
+    assert_eq!(
+        session
             .eval_text("Part[f[a, b], Span[], 1]")
             .unwrap()
             .value
             .to_string(),
         "Part[f[a, b], Span[], 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b], Span[0], 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[]"
     );
     assert_eq!(
         session
@@ -283,6 +299,14 @@ fn direct_empty_span_selects_full_range() {
     );
     assert_eq!(
         session
+            .eval_text("Extract[f[a, b], {Span[0]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[]"
+    );
+    assert_eq!(
+        session
             .eval_text("Extract[f[g[a], h[b]], {Span[], 1}]")
             .unwrap()
             .value
@@ -291,7 +315,23 @@ fn direct_empty_span_selects_full_range() {
     );
     assert_eq!(
         session
+            .eval_text("Extract[f[g[a], h[b]], {Span[0], 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[]"
+    );
+    assert_eq!(
+        session
             .eval_text("Extract[1, {Span[]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Integer[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[1, {Span[0]}]")
             .unwrap()
             .value
             .to_string(),

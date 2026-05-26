@@ -409,6 +409,11 @@ fn parse_span_part_spec(expr: &Expr) -> Option<AtomicPartSpec> {
             end: SpanEndpoint::All,
             step: 1,
         },
+        [value] if expr_as_signed_isize(value) == Some(0) => PartSpanSpec {
+            start: SpanEndpoint::Index(1),
+            end: SpanEndpoint::Index(0),
+            step: 1,
+        },
         [value] => {
             let endpoint = parse_span_endpoint(value)?;
             PartSpanSpec {
