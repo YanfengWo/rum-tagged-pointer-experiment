@@ -362,7 +362,8 @@ This roadmap intentionally uses two levels of detail:
         fixed-point normalization so rational endpoints such as `UpTo[3/2]`
         emit one `UpTo::innf` plus one `Part` / `Extract` `::span`.
       - [x] Align direct empty `Span[]` as a full-range `Part` / `Extract`
-      - [x] Align direct `Span[0]` as an empty-range `Part` / `Extract`
+      - [x] Align direct single-endpoint `Span[...]` as prefix / suffix /
+        empty-range `Part` / `Extract`
         selector and render invalid two- / three-argument `Span` diagnostics
         with Wolfram-style `;;` notation while preserving direct high-arity
         `Span[...]` message shape.

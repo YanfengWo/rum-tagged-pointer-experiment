@@ -409,18 +409,9 @@ fn parse_span_part_spec(expr: &Expr) -> Option<AtomicPartSpec> {
             end: SpanEndpoint::All,
             step: 1,
         },
-        [value] if expr_as_signed_isize(value) == Some(0) => PartSpanSpec {
-            start: SpanEndpoint::Index(1),
-            end: SpanEndpoint::Index(0),
-            step: 1,
-        },
         [value] => {
             let endpoint = parse_span_endpoint(value)?;
-            PartSpanSpec {
-                start: endpoint,
-                end: endpoint,
-                step: 1,
-            }
+            single_endpoint_span_spec(endpoint)
         }
         [start, end] => PartSpanSpec {
             start: parse_span_endpoint(start)?,
@@ -439,6 +430,36 @@ fn parse_span_part_spec(expr: &Expr) -> Option<AtomicPartSpec> {
     };
 
     Some(AtomicPartSpec::Span(spec))
+}
+
+fn single_endpoint_span_spec(endpoint: SpanEndpoint) -> PartSpanSpec {
+    match endpoint {
+        SpanEndpoint::All => PartSpanSpec {
+            start: SpanEndpoint::All,
+            end: SpanEndpoint::All,
+            step: 1,
+        },
+        SpanEndpoint::UpTo(limit) => PartSpanSpec {
+            start: SpanEndpoint::Index(1),
+            end: SpanEndpoint::UpTo(limit),
+            step: 1,
+        },
+        SpanEndpoint::Index(index) if index < 0 => PartSpanSpec {
+            start: SpanEndpoint::Index(index),
+            end: SpanEndpoint::Index(-1),
+            step: 1,
+        },
+        SpanEndpoint::Index(0) => PartSpanSpec {
+            start: SpanEndpoint::Index(1),
+            end: SpanEndpoint::Index(0),
+            step: 1,
+        },
+        SpanEndpoint::Index(index) => PartSpanSpec {
+            start: SpanEndpoint::Index(1),
+            end: SpanEndpoint::Index(index),
+            step: 1,
+        },
+    }
 }
 
 fn parse_span_endpoint(expr: &Expr) -> Option<SpanEndpoint> {

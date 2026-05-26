@@ -340,6 +340,100 @@ fn direct_empty_span_selects_full_range() {
 }
 
 #[test]
+fn direct_single_endpoint_span_selects_prefix_or_suffix_ranges() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], Span[2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], Span[-2]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[a, b, c], {Span[2]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[f[a, b, c], {Span[-2]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], Span[UpTo[2]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], Span[UpTo[0]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[f[a, b, c], Span[UpTo[Infinity]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Extract[1, {Span[UpTo[2]]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Integer[]"
+    );
+
+    let invalid_positive = session.eval_text("Part[f[a, b, c], Span[4]]").unwrap();
+    assert_eq!(
+        invalid_positive.value.to_string(),
+        "Part[f[a, b, c], Span[4]]"
+    );
+    assert!(invalid_positive.messages.iter().any(|message| {
+        message.symbol == "Part"
+            && message.tag == "take"
+            && message.text == "Cannot take positions 1 through 4 in f[a, b, c]."
+    }));
+
+    let invalid_negative = session
+        .eval_text("Extract[f[a, b, c], {Span[-4]}]")
+        .unwrap();
+    assert_eq!(
+        invalid_negative.value.to_string(),
+        "Extract[f[a, b, c], List[Span[-4]]]"
+    );
+    assert!(invalid_negative.messages.iter().any(|message| {
+        message.symbol == "Extract"
+            && message.tag == "take"
+            && message.text == "Cannot take positions -4 through -1 in f[a, b, c]."
+    }));
+}
+
+#[test]
 fn invalid_span_messages_render_infix_specs() {
     let mut session = Session::new();
 

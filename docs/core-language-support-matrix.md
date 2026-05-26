@@ -132,7 +132,7 @@ once in its primary implementation group. Other groups may mention it as
   `ReplacePart` atom-head non-replacement, current invalid and out-of-range
   `Part` / `Extract` selector diagnostics, and non-expanding `All` / `Span`
   position-spec boundaries, direct empty `Span[]` full-range selection,
-  direct `Span[0]` empty-range selection,
+  direct single-endpoint `Span[...]` prefix / suffix / empty-range selection,
   current de-duplicated invalid `UpTo[...]` span endpoint diagnostics, current
   invalid `Span` message rendering for infixable specs, current
   `Part::take` / `Extract::take` range rendering, plus current `Symbol` string
