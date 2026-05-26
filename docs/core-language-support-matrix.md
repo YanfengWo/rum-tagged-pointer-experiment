@@ -135,8 +135,9 @@ once in its primary implementation group. Other groups may mention it as
   direct single-endpoint `Span[...]` prefix / suffix / empty-range selection,
   current de-duplicated invalid `UpTo[...]` span endpoint diagnostics, current
   invalid `Span` message rendering for infixable specs, current
-  `Part::take` / `Extract::take` range rendering, plus current `Symbol` string
-  / arity diagnostics
+  `Part::take` / `Extract::take` range rendering, current `Flatten::normal`
+  atom / association input boundary, plus current `Symbol` string / arity
+  diagnostics
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
   across every structural walker, `Flatten` beyond the current same-head /
   single-head-spec non-negative-level / `Infinity` plus level-list subset,

@@ -30,8 +30,8 @@ impl Session {
             _ => return Ok(self.invalid_call_with_arg_range("Flatten", args, 1, 3)),
         };
 
-        if matches!(expr, Expr::Atom(_)) {
-            return Ok(self.invalid_normal_expression_call("Flatten", args));
+        if matches!(expr, Expr::Atom(_)) || association_entries_from_expr(expr).is_some() {
+            return Ok(self.invalid_flatten_normal_expression_call(args));
         }
 
         let (spec, explicit_head) = match args {
@@ -135,6 +135,18 @@ impl Session {
             "fldep",
             format!(
                 "Level {level} exceeds the levels, {depth}, which can be flattened together in {call}."
+            ),
+        )
+    }
+
+    fn invalid_flatten_normal_expression_call(&mut self, args: &[Expr]) -> Expr {
+        self.invalid_call_with_message(
+            "Flatten",
+            args,
+            "normal",
+            format!(
+                "Nonatomic expression expected at position 1 in {}.",
+                Expr::call(system_expr("Flatten"), args.to_vec())
             ),
         )
     }

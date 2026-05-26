@@ -502,7 +502,21 @@ fn flatten_reports_current_invalid_boundaries() {
         atomic
             .messages
             .iter()
-            .any(|message| message.symbol == "General" && message.tag == "normal")
+            .any(|message| message.symbol == "Flatten" && message.tag == "normal")
+    );
+
+    let association = session
+        .eval_text("Flatten[Association[a -> Association[b -> 1], c -> 2]]")
+        .unwrap();
+    assert_eq!(
+        association.value.to_string(),
+        "Flatten[Association[Rule[a, Association[Rule[b, 1]]], Rule[c, 2]]]"
+    );
+    assert!(
+        association
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Flatten" && message.tag == "normal")
     );
 
     let invalid_level = session.eval_text("Flatten[{a}, x]").unwrap();
@@ -568,7 +582,7 @@ fn flatten_reports_current_invalid_boundaries() {
         atomic_with_invalid_spec
             .messages
             .iter()
-            .any(|message| message.symbol == "General" && message.tag == "normal")
+            .any(|message| message.symbol == "Flatten" && message.tag == "normal")
     );
 }
 
