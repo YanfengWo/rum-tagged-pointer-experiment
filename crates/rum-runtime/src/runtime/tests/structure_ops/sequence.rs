@@ -201,6 +201,11 @@ fn take_drop_append_and_prepend_report_current_invalid_boundaries() {
 
     let outcome = session.eval_text("Insert[f[a], x, 0]").unwrap();
     assert_eq!(outcome.value.to_string(), "Insert[f[a], x, 0]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Insert"
+            && message.tag == "ins"
+            && message.text == "Cannot insert at position {0} in f[a]"
+    }));
 
     let outcome = session.eval_text("Insert[5, x, 1]").unwrap();
     assert_eq!(outcome.value.to_string(), "Insert[5, x, 1]");
@@ -212,6 +217,11 @@ fn take_drop_append_and_prepend_report_current_invalid_boundaries() {
 
     let outcome = session.eval_text("Delete[f[a], 2]").unwrap();
     assert_eq!(outcome.value.to_string(), "Delete[f[a], 2]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Delete"
+            && message.tag == "partw"
+            && message.text == "Part {2} of f[a] does not exist."
+    }));
 
     let outcome = session.eval_text("Delete[5, {1}]").unwrap();
     assert_eq!(outcome.value.to_string(), "Delete[5, List[1]]");

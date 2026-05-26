@@ -397,6 +397,9 @@ This roadmap intentionally uses two levels of detail:
       - [x] Align current `Insert` / `Delete` atom-input diagnostics for the
         supported integer position subset while leaving nested position-list
         breadth as long-tail.
+      - [x] Align current `Insert` / `Delete` out-of-range integer position
+        diagnostics for nonatomic expressions without folding in broader
+        nested position-list or `Delete[..., 0]` head-deletion semantics.
     - [x] `CL-02`: mainline closed; leave only small definition/update-family
       polish as deferred long-tail unless a downstream project exposes a
       concrete blocker.

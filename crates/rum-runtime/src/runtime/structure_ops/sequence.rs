@@ -122,7 +122,7 @@ impl Session {
         };
 
         if matches!(expr, Expr::Atom(_)) {
-            return Ok(self.invalid_insert_atom_call(args));
+            return Ok(self.invalid_insert_position_call(args));
         }
 
         let Expr::Call {
@@ -134,7 +134,7 @@ impl Session {
         };
 
         let Some(index) = normalize_insert_arg_position(position, expr_args.len()) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+            return Ok(self.invalid_insert_position_call(args));
         };
 
         let mut inserted = expr_args.clone();
@@ -167,6 +167,11 @@ impl Session {
         };
 
         let Some(positions) = parse_delete_positions(positions_expr, expr_args.len()) else {
+            if let Some(spec) =
+                delete_invalid_position_message_spec(positions_expr, expr_args.len())
+            {
+                return Ok(self.invalid_delete_position_call(args, &spec));
+            }
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -248,7 +253,7 @@ impl Session {
         Expr::call(system_expr("TakeDrop"), args.to_vec())
     }
 
-    fn invalid_insert_atom_call(&mut self, args: &[Expr]) -> Expr {
+    fn invalid_insert_position_call(&mut self, args: &[Expr]) -> Expr {
         self.push_message(
             "Insert",
             "ins",
@@ -262,6 +267,15 @@ impl Session {
             "Delete",
             "partw",
             format!("Part {} of {} does not exist.", part, args[0]),
+        );
+        Expr::call(system_expr("Delete"), args.to_vec())
+    }
+
+    fn invalid_delete_position_call(&mut self, args: &[Expr], spec: &str) -> Expr {
+        self.push_message(
+            "Delete",
+            "partw",
+            format!("Part {} of {} does not exist.", spec, args[0]),
         );
         Expr::call(system_expr("Delete"), args.to_vec())
     }
@@ -294,6 +308,38 @@ fn delete_atom_part_message_part(positions_expr: &Expr) -> Option<Expr> {
 
     let part = args.first()?;
     expr_as_signed_isize(part).is_some().then(|| part.clone())
+}
+
+fn delete_invalid_position_message_spec(positions_expr: &Expr, len: usize) -> Option<String> {
+    if let Some(position) = expr_as_signed_isize(positions_expr) {
+        return (position != 0).then(|| format!("{{{positions_expr}}}"));
+    }
+
+    let Expr::Call { head, args } = positions_expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) || args.is_empty() {
+        return None;
+    }
+
+    for position_expr in args {
+        let position = expr_as_signed_isize(position_expr)?;
+        if position == 0 {
+            return None;
+        }
+        if normalize_structural_arg_position(position, len).is_none() {
+            return Some(format!(
+                "{{{}}}",
+                args.iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+    }
+
+    None
 }
 
 fn take_drop_message_range(spec: StructuralSequenceSpec) -> (isize, isize) {

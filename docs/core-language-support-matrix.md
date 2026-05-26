@@ -139,8 +139,8 @@ once in its primary implementation group. Other groups may mention it as
   `Part::take` / `Extract::take` range rendering, current `Flatten::normal`
   atom / association input boundary, current `Take` / `Drop` / `TakeDrop` /
   `TakeList` atom-input diagnostics, current `Insert` / `Delete` atom-input
-  diagnostics for supported integer positions, plus current `Symbol` string /
-  arity diagnostics
+  and out-of-range integer-position diagnostics, plus current `Symbol` string
+  / arity diagnostics
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
   across every structural walker, `Flatten` beyond the current same-head /
   single-head-spec non-negative-level / `Infinity` plus level-list subset,
