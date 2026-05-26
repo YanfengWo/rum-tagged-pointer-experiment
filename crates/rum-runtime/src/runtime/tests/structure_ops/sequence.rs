@@ -111,11 +111,35 @@ fn take_drop_insert_delete_and_take_list_cover_current_structural_subset() {
     );
     assert_eq!(
         session
-            .eval_text("Delete[f[a, b, c, d], {2, -1}]")
+            .eval_text("Delete[f[a, b, c, d], {{2}, {-1}}]")
             .unwrap()
             .value
             .to_string(),
         "f[a, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Delete[f[g[a]], {1, 0}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Delete[f[a], 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "a"
+    );
+    assert_eq!(
+        session
+            .eval_text("Delete[f[a, b], 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Sequence[a, b]"
     );
     assert_eq!(
         session
@@ -221,6 +245,17 @@ fn take_drop_append_and_prepend_report_current_invalid_boundaries() {
         message.symbol == "Delete"
             && message.tag == "partw"
             && message.text == "Part {2} of f[a] does not exist."
+    }));
+
+    let outcome = session.eval_text("Delete[f[a, b, c, d], {2, -1}]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "Delete[f[a, b, c, d], List[2, -1]]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Delete"
+            && message.tag == "partw"
+            && message.text == "Part -1 of b does not exist."
     }));
 
     let outcome = session.eval_text("Delete[5, {1}]").unwrap();
