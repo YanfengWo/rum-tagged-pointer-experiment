@@ -77,9 +77,9 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         match args {
-            [expr] => Ok(self.resolve_first_like(expr, None, "First", "first", true)),
+            [expr] => Ok(self.resolve_first_like(expr, None, "First", "nofirst", true)),
             [expr, default] => {
-                Ok(self.resolve_first_like(expr, Some(default), "First", "first", true))
+                Ok(self.resolve_first_like(expr, Some(default), "First", "nofirst", true))
             }
             _ => Ok(self.invalid_call_with_arg_range("First", args, 1, 2)),
         }
@@ -109,13 +109,19 @@ impl Session {
         };
 
         if let Some(entries) = association_entry_forms_from_expr(expr) {
+            if entries.is_empty() {
+                return Ok(self.invalid_empty_sequence_selection_call("Rest", "norest", expr));
+            }
             return Ok(render_association_entry_forms_preserving_heads(
                 entries.into_iter().skip(1).collect(),
             ));
         }
 
         Ok(match expr {
-            Expr::Atom(_) => self.invalid_normal_expression_call("Rest", args),
+            Expr::Atom(_) => self.invalid_surface_normal_expression_call("Rest", args),
+            Expr::Call { args, .. } if args.is_empty() => {
+                self.invalid_empty_sequence_selection_call("Rest", "norest", expr)
+            }
             Expr::Call { head, args } => Expr::call(
                 head.as_ref().clone(),
                 args.iter().skip(1).cloned().collect::<Vec<_>>(),
@@ -133,6 +139,9 @@ impl Session {
         };
 
         if let Some(entries) = association_entry_forms_from_expr(expr) {
+            if entries.is_empty() {
+                return Ok(self.invalid_empty_sequence_selection_call("Most", "nomost", expr));
+            }
             let retained_len = entries.len().saturating_sub(1);
             return Ok(render_association_entry_forms_preserving_heads(
                 entries.into_iter().take(retained_len).collect(),
@@ -140,7 +149,10 @@ impl Session {
         }
 
         Ok(match expr {
-            Expr::Atom(_) => self.invalid_normal_expression_call("Most", args),
+            Expr::Atom(_) => self.invalid_surface_normal_expression_call("Most", args),
+            Expr::Call { args, .. } if args.is_empty() => {
+                self.invalid_empty_sequence_selection_call("Most", "nomost", expr)
+            }
             Expr::Call { head, args } => Expr::call(
                 head.as_ref().clone(),
                 args.iter()
@@ -158,7 +170,7 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         match args {
             [expr, item] => Ok(match expr {
-                Expr::Atom(_) => self.invalid_normal_expression_call("Append", args),
+                Expr::Atom(_) => self.invalid_surface_normal_expression_call("Append", args),
                 Expr::Call { head, args } => {
                     let mut new_args = args.clone();
                     new_args.push(item.clone());
@@ -177,7 +189,7 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         match args {
             [expr, item] => Ok(match expr {
-                Expr::Atom(_) => self.invalid_normal_expression_call("Prepend", args),
+                Expr::Atom(_) => self.invalid_surface_normal_expression_call("Prepend", args),
                 Expr::Call { head, args } => {
                     let mut new_args = Vec::with_capacity(args.len() + 1);
                     new_args.push(item.clone());
@@ -278,8 +290,20 @@ impl Session {
             Expr::Call { .. } => {
                 self.invalid_empty_structural_selection_call(symbol, empty_tag, expr)
             }
-            Expr::Atom(_) => self.invalid_normal_expression_call(symbol, &[expr.clone()]),
+            Expr::Atom(_) => self.invalid_surface_normal_expression_call(symbol, &[expr.clone()]),
         }
+    }
+
+    fn invalid_surface_normal_expression_call(&mut self, symbol: &str, args: &[Expr]) -> Expr {
+        self.invalid_call_with_message(
+            symbol,
+            args,
+            "normal",
+            format!(
+                "Nonatomic expression expected at position 1 in {}.",
+                Expr::call(system_expr(symbol), args.to_vec())
+            ),
+        )
     }
 
     fn invalid_empty_structural_selection_call(
@@ -295,6 +319,23 @@ impl Session {
                 "{} has zero length and no {} element.",
                 expr,
                 selection_name(symbol)
+            ),
+        );
+        Expr::call(system_expr(symbol), vec![expr.clone()])
+    }
+
+    fn invalid_empty_sequence_selection_call(
+        &mut self,
+        symbol: &str,
+        tag: &str,
+        expr: &Expr,
+    ) -> Expr {
+        self.push_message(
+            symbol,
+            tag,
+            format!(
+                "Cannot take {} of expression {} with length zero.",
+                symbol, expr
             ),
         );
         Expr::call(system_expr(symbol), vec![expr.clone()])

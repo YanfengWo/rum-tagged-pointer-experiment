@@ -214,7 +214,7 @@ fn generated_confirmation_failures_expose_current_oracle_metadata_slice() {
             .unwrap()
             .value
             .to_string(),
-        "Hold[First::first]"
+        "Hold[First::nofirst]"
     );
 }
 

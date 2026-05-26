@@ -389,6 +389,8 @@ This roadmap intentionally uses two levels of detail:
       - [x] Align the current `Flatten::normal` boundary for atom and
         association inputs while preserving the existing same-head /
         level-group subset.
+      - [x] Align `First` / `Last` / `Rest` / `Most` empty and atom
+        diagnostics for the current expression / association surface subset.
     - [x] `CL-02`: mainline closed; leave only small definition/update-family
       polish as deferred long-tail unless a downstream project exposes a
       concrete blocker.

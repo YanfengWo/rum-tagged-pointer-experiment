@@ -99,9 +99,10 @@ once in its primary implementation group. Other groups may mention it as
   and zero-endpoint boundary behavior in `Part` / `Extract`, current
   association-aware numeric/range `Part` / `Extract` value projection, current
   association-aware `First` / `Last` value selection plus `Rest` / `Most`
-  association slicing, plus the current `Part` selector-list boundary and
-  `Extract` nested position-list selector subset, including shaped integer /
-  `Key[...]` selectors and nested `All` / `Span` rejection, empty-expression,
+  association slicing and empty-input diagnostics, plus the current `Part`
+  selector-list boundary and `Extract` nested position-list selector subset,
+  including shaped integer / `Key[...]` selectors and nested `All` / `Span`
+  rejection, empty-expression,
   empty-`Association[]`, and association-aware `Depth` parity, current unary
   `Extract[positionSpec]` operator-form support,
   `Level` scalar-zero, standard-`All`, empty-range, mixed positive/negative,

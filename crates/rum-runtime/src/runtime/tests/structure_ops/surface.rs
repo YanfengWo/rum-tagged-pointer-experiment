@@ -228,14 +228,6 @@ fn first_last_rest_and_most_support_defaults_and_empty_calls() {
         "f[a, b]"
     );
     assert_eq!(
-        session.eval_text("Rest[f[]]").unwrap().value.to_string(),
-        "f[]"
-    );
-    assert_eq!(
-        session.eval_text("Most[f[]]").unwrap().value.to_string(),
-        "f[]"
-    );
-    assert_eq!(
         session
             .eval_text("First[Association[a -> 1, b -> 2]]")
             .unwrap()
@@ -287,7 +279,7 @@ fn first_last_rest_and_most_emit_expected_messages_for_invalid_inputs() {
         outcome
             .messages
             .iter()
-            .any(|message| message.symbol == "First" && message.tag == "first")
+            .any(|message| message.symbol == "First" && message.tag == "nofirst")
     );
 
     let outcome = session.eval_text("Last[f[]]").unwrap();
@@ -299,13 +291,22 @@ fn first_last_rest_and_most_emit_expected_messages_for_invalid_inputs() {
             .any(|message| message.symbol == "Last" && message.tag == "nolast")
     );
 
+    let outcome = session.eval_text("First[5]").unwrap();
+    assert_eq!(outcome.value.to_string(), "First[5]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "First" && message.tag == "normal")
+    );
+
     let outcome = session.eval_text("Rest[5]").unwrap();
     assert_eq!(outcome.value.to_string(), "Rest[5]");
     assert!(
         outcome
             .messages
             .iter()
-            .any(|message| message.symbol == "General" && message.tag == "normal")
+            .any(|message| message.symbol == "Rest" && message.tag == "normal")
     );
 
     let outcome = session.eval_text("Most[5]").unwrap();
@@ -314,7 +315,43 @@ fn first_last_rest_and_most_emit_expected_messages_for_invalid_inputs() {
         outcome
             .messages
             .iter()
-            .any(|message| message.symbol == "General" && message.tag == "normal")
+            .any(|message| message.symbol == "Most" && message.tag == "normal")
+    );
+
+    let outcome = session.eval_text("Rest[f[]]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Rest[f[]]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Rest" && message.tag == "norest")
+    );
+
+    let outcome = session.eval_text("Most[f[]]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Most[f[]]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Most" && message.tag == "nomost")
+    );
+
+    let outcome = session.eval_text("Rest[Association[]]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Rest[Association[]]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Rest" && message.tag == "norest")
+    );
+
+    let outcome = session.eval_text("Most[Association[]]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Most[Association[]]");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Most" && message.tag == "nomost")
     );
 }
 

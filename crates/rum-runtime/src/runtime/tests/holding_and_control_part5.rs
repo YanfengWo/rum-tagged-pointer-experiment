@@ -194,6 +194,6 @@ fn confirm_quiet_catches_and_quiets_matching_messages() {
         .eval_text("Enclose[ConfirmQuiet[First[f[]]], \"HeldMessage\"]")
         .unwrap();
 
-    assert_eq!(outcome.value.to_string(), "Hold[First::first]");
+    assert_eq!(outcome.value.to_string(), "Hold[First::nofirst]");
     assert!(outcome.messages.is_empty());
 }

@@ -155,7 +155,7 @@ fn take_drop_append_and_prepend_report_current_invalid_boundaries() {
         outcome
             .messages
             .iter()
-            .any(|message| message.symbol == "General" && message.tag == "normal")
+            .any(|message| message.symbol == "Append" && message.tag == "normal")
     );
 
     let outcome = session.eval_text("Prepend[5, x]").unwrap();
@@ -164,7 +164,7 @@ fn take_drop_append_and_prepend_report_current_invalid_boundaries() {
         outcome
             .messages
             .iter()
-            .any(|message| message.symbol == "General" && message.tag == "normal")
+            .any(|message| message.symbol == "Prepend" && message.tag == "normal")
     );
 
     let outcome = session.eval_text("Insert[f[a], x, 0]").unwrap();
