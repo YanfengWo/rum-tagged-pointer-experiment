@@ -35,7 +35,7 @@ impl Session {
         match apply_take_specs(&args[0], &specs) {
             Some(result) => Ok(result),
             None if matches!(args[0], Expr::Atom(_)) => {
-                Ok(self.invalid_normal_expression_call("Take", args))
+                Ok(self.invalid_take_drop_atom_call("Take", "take", args, specs[0]))
             }
             None => Ok(self.invalid_take_drop_sequence_call("Take", "take", args)),
         }
@@ -62,7 +62,7 @@ impl Session {
         match apply_drop_specs(&args[0], &specs) {
             Some(result) => Ok(result),
             None if matches!(args[0], Expr::Atom(_)) => {
-                Ok(self.invalid_normal_expression_call("Drop", args))
+                Ok(self.invalid_take_drop_atom_call("Drop", "drop", args, specs[0]))
             }
             None => Ok(self.invalid_take_drop_sequence_call("Drop", "drop", args)),
         }
@@ -94,7 +94,7 @@ impl Session {
                 Ok(Expr::call(system_expr("List"), vec![taken, dropped]))
             }
             _ if matches!(args[0], Expr::Atom(_)) => {
-                Ok(self.invalid_normal_expression_call("TakeDrop", args))
+                Ok(self.invalid_take_drop_atom_sequence_call(args))
             }
             _ => Ok(self.invalid_call_with_message(
                 "TakeDrop",
@@ -179,7 +179,7 @@ impl Session {
         };
 
         let Expr::Call { .. } = expr else {
-            return Ok(self.invalid_normal_expression_call("TakeList", args));
+            return Ok(self.invalid_sequence_normal_expression_call("TakeList", args));
         };
 
         let Some(counts) = parse_take_list_counts(counts) else {
@@ -203,6 +203,61 @@ impl Session {
             ),
         );
         Expr::call(system_expr(symbol), args.to_vec())
+    }
+
+    fn invalid_take_drop_atom_call(
+        &mut self,
+        symbol: &str,
+        tag: &str,
+        args: &[Expr],
+        spec: StructuralSequenceSpec,
+    ) -> Expr {
+        let (start, end) = take_drop_message_range(spec);
+        self.push_message(
+            symbol,
+            tag,
+            format!(
+                "Cannot {} positions {} through {} in {}.",
+                tag, start, end, args[0]
+            ),
+        );
+        Expr::call(system_expr(symbol), args.to_vec())
+    }
+
+    fn invalid_take_drop_atom_sequence_call(&mut self, args: &[Expr]) -> Expr {
+        self.push_message(
+            "TakeDrop",
+            "iseq",
+            format!(
+                "Invalid sequence specification {} for an expression of length {}.",
+                args[1],
+                structural_length(&args[0])
+            ),
+        );
+        Expr::call(system_expr("TakeDrop"), args.to_vec())
+    }
+
+    fn invalid_sequence_normal_expression_call(&mut self, symbol: &str, args: &[Expr]) -> Expr {
+        self.push_message(
+            symbol,
+            "normal",
+            format!(
+                "Nonatomic expression expected at position 1 in {}.",
+                Expr::call(system_expr(symbol), args.to_vec())
+            ),
+        );
+        Expr::call(system_expr(symbol), args.to_vec())
+    }
+}
+
+fn take_drop_message_range(spec: StructuralSequenceSpec) -> (isize, isize) {
+    match spec {
+        StructuralSequenceSpec::All => (1, -1),
+        StructuralSequenceSpec::None => (1, 0),
+        StructuralSequenceSpec::Count(count) if count >= 0 => (1, count),
+        StructuralSequenceSpec::Count(count) => (count, -1),
+        StructuralSequenceSpec::Single(index) => (index, index),
+        StructuralSequenceSpec::Range { start, end, .. } => (start, end),
     }
 }
 

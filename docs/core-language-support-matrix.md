@@ -137,7 +137,8 @@ once in its primary implementation group. Other groups may mention it as
   current de-duplicated invalid `UpTo[...]` span endpoint diagnostics, current
   invalid `Span` message rendering for infixable specs, current
   `Part::take` / `Extract::take` range rendering, current `Flatten::normal`
-  atom / association input boundary, plus current `Symbol` string / arity
+  atom / association input boundary, current `Take` / `Drop` / `TakeDrop` /
+  `TakeList` atom-input diagnostics, plus current `Symbol` string / arity
   diagnostics
 - `partial`: full Wolfram-compatible part-spec parity, full `Heads` parity
   across every structural walker, `Flatten` beyond the current same-head /

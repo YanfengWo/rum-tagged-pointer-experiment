@@ -391,6 +391,9 @@ This roadmap intentionally uses two levels of detail:
         level-group subset.
       - [x] Align `First` / `Last` / `Rest` / `Most` empty and atom
         diagnostics for the current expression / association surface subset.
+      - [x] Align current structural sequence atom diagnostics for `Take` /
+        `Drop` / `TakeDrop` / `TakeList` without broadening the implemented
+        sequence-spec subset.
     - [x] `CL-02`: mainline closed; leave only small definition/update-family
       polish as deferred long-tail unless a downstream project exposes a
       concrete blocker.

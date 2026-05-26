@@ -140,6 +140,22 @@ fn take_drop_append_and_prepend_report_current_invalid_boundaries() {
             .any(|message| message.symbol == "Take" && message.tag == "take")
     );
 
+    let outcome = session.eval_text("Take[5, 1]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Take[5, 1]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Take"
+            && message.tag == "take"
+            && message.text == "Cannot take positions 1 through 1 in 5."
+    }));
+
+    let outcome = session.eval_text("Take[5, All]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Take[5, All]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Take"
+            && message.tag == "take"
+            && message.text == "Cannot take positions 1 through -1 in 5."
+    }));
+
     let outcome = session.eval_text("Drop[f[a], 2]").unwrap();
     assert_eq!(outcome.value.to_string(), "Drop[f[a], 2]");
     assert!(
@@ -148,6 +164,22 @@ fn take_drop_append_and_prepend_report_current_invalid_boundaries() {
             .iter()
             .any(|message| message.symbol == "Drop" && message.tag == "drop")
     );
+
+    let outcome = session.eval_text("Drop[5, 1]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Drop[5, 1]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Drop"
+            && message.tag == "drop"
+            && message.text == "Cannot drop positions 1 through 1 in 5."
+    }));
+
+    let outcome = session.eval_text("TakeDrop[5, 1]").unwrap();
+    assert_eq!(outcome.value.to_string(), "TakeDrop[5, 1]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "TakeDrop"
+            && message.tag == "iseq"
+            && message.text == "Invalid sequence specification 1 for an expression of length 0."
+    }));
 
     let outcome = session.eval_text("Append[5, x]").unwrap();
     assert_eq!(outcome.value.to_string(), "Append[5, x]");
@@ -175,4 +207,13 @@ fn take_drop_append_and_prepend_report_current_invalid_boundaries() {
 
     let outcome = session.eval_text("TakeList[f[a], {2}]").unwrap();
     assert_eq!(outcome.value.to_string(), "TakeList[f[a], List[2]]");
+
+    let outcome = session.eval_text("TakeList[5, {1}]").unwrap();
+    assert_eq!(outcome.value.to_string(), "TakeList[5, List[1]]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "TakeList"
+            && message.tag == "normal"
+            && message.text
+                == "Nonatomic expression expected at position 1 in TakeList[5, List[1]]."
+    }));
 }
