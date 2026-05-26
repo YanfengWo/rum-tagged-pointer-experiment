@@ -121,6 +121,10 @@ impl Session {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
+        if matches!(expr, Expr::Atom(_)) {
+            return Ok(self.invalid_insert_atom_call(args));
+        }
+
         let Expr::Call {
             head: expr_head,
             args: expr_args,
@@ -146,6 +150,13 @@ impl Session {
         let [expr, positions_expr] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("Delete", args, 2));
         };
+
+        if matches!(expr, Expr::Atom(_)) {
+            if let Some(part) = delete_atom_part_message_part(positions_expr) {
+                return Ok(self.invalid_delete_atom_part_call(args, &part));
+            }
+            return Ok(self.invalid_normal_expression_call("Delete", args));
+        }
 
         let Expr::Call {
             head: expr_head,
@@ -237,6 +248,24 @@ impl Session {
         Expr::call(system_expr("TakeDrop"), args.to_vec())
     }
 
+    fn invalid_insert_atom_call(&mut self, args: &[Expr]) -> Expr {
+        self.push_message(
+            "Insert",
+            "ins",
+            format!("Cannot insert at position {{{}}} in {}", args[2], args[0]),
+        );
+        Expr::call(system_expr("Insert"), args.to_vec())
+    }
+
+    fn invalid_delete_atom_part_call(&mut self, args: &[Expr], part: &Expr) -> Expr {
+        self.push_message(
+            "Delete",
+            "partw",
+            format!("Part {} of {} does not exist.", part, args[0]),
+        );
+        Expr::call(system_expr("Delete"), args.to_vec())
+    }
+
     fn invalid_sequence_normal_expression_call(&mut self, symbol: &str, args: &[Expr]) -> Expr {
         self.push_message(
             symbol,
@@ -248,6 +277,23 @@ impl Session {
         );
         Expr::call(system_expr(symbol), args.to_vec())
     }
+}
+
+fn delete_atom_part_message_part(positions_expr: &Expr) -> Option<Expr> {
+    if expr_as_signed_isize(positions_expr).is_some() {
+        return Some(positions_expr.clone());
+    }
+
+    let Expr::Call { head, args } = positions_expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return None;
+    }
+
+    let part = args.first()?;
+    expr_as_signed_isize(part).is_some().then(|| part.clone())
 }
 
 fn take_drop_message_range(spec: StructuralSequenceSpec) -> (isize, isize) {

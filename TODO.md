@@ -394,6 +394,9 @@ This roadmap intentionally uses two levels of detail:
       - [x] Align current structural sequence atom diagnostics for `Take` /
         `Drop` / `TakeDrop` / `TakeList` without broadening the implemented
         sequence-spec subset.
+      - [x] Align current `Insert` / `Delete` atom-input diagnostics for the
+        supported integer position subset while leaving nested position-list
+        breadth as long-tail.
     - [x] `CL-02`: mainline closed; leave only small definition/update-family
       polish as deferred long-tail unless a downstream project exposes a
       concrete blocker.

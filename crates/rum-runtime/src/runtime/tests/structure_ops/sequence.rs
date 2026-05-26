@@ -202,8 +202,24 @@ fn take_drop_append_and_prepend_report_current_invalid_boundaries() {
     let outcome = session.eval_text("Insert[f[a], x, 0]").unwrap();
     assert_eq!(outcome.value.to_string(), "Insert[f[a], x, 0]");
 
+    let outcome = session.eval_text("Insert[5, x, 1]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Insert[5, x, 1]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Insert"
+            && message.tag == "ins"
+            && message.text == "Cannot insert at position {1} in 5"
+    }));
+
     let outcome = session.eval_text("Delete[f[a], 2]").unwrap();
     assert_eq!(outcome.value.to_string(), "Delete[f[a], 2]");
+
+    let outcome = session.eval_text("Delete[5, {1}]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Delete[5, List[1]]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Delete"
+            && message.tag == "partw"
+            && message.text == "Part 1 of 5 does not exist."
+    }));
 
     let outcome = session.eval_text("TakeList[f[a], {2}]").unwrap();
     assert_eq!(outcome.value.to_string(), "TakeList[f[a], List[2]]");
