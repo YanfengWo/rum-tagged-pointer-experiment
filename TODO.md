@@ -260,7 +260,11 @@ This roadmap intentionally uses two levels of detail:
   - [x] deepen the current CL-09 subset with more layout-aware structural accounting for `ByteCount[]` / `MemoryInUse[]`, including builtin/session-layout coverage and active `OptionValue` scope growth in the current proxy model
   - [x] deepen the current CL-09 subset with default `Heads` option support for filtered `Trace[...]` / `TracePrint[...]`, plus broader per-test `TestReport` metadata through `ActualMessagesText`, `OutputLog`, and `Timing`
   - [x] close the current CL-09 mainline with payload-aware `ByteArray` accounting inside the layout-aware `ByteCount[]` / `MemoryInUse[]` subset plus the current structured trace/report shape coverage; treat any remaining deeper real-memory parity or trace/report edge-case polish as non-blocking long-tail work rather than active mainline blockers
-- [ ] Defer reviewing the local `WLBuiltin/` workspace until the `CL-01` through `CL-09` mainline is complete; keep it ignored for now so it does not disrupt the active kernel roadmap
+- [ ] Defer reviewing any restored or regenerated `WLBuiltin/` inventory until
+  a deliberate post-mainline builtin survey is useful; see
+  [docs/wolfram-builtin-inventory.md](./docs/wolfram-builtin-inventory.md)
+  for the regeneration method, and do not treat the full Wolfram builtin table
+  as an implementation commitment
 
 ### Post-Mainline Long-Tail Priorities
 
