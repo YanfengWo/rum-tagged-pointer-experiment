@@ -310,8 +310,9 @@ once in its primary implementation group. Other groups may mention it as
   cyclic padding lists, matching per-axis asymmetric padding pairs, and
   explicit even-template anchoring for `ArrayFilter`, and current
   dimension-spec plus grouped-dimension support for `ArrayReduce`
-- `planned`: higher-order traversal, repeated-application families, and
-  remaining operator/combinator convenience layers
+- `planned`: sparse-array parity, broader ArrayPad-style padding / storage
+  compatibility, and obscure higher-order traversal, threading diagnostic, or
+  operator/combinator convenience corners beyond the current mainline subset
 
 ### Functions and Symbols
 
@@ -324,9 +325,10 @@ once in its primary implementation group. Other groups may mention it as
   `MapApply`, `OperatorApplied`, `CurryApplied`, `ReverseApplied`, `Through`,
   `Operate`, `ArrayFilter`, `ArrayReduce`, `Composition`,
   `RightComposition`
-- `planned`: `ArrayFilter` / `ArrayReduce` sparse-array parity and any future
+- `planned`: `ArrayFilter` / `ArrayReduce` sparse-array parity, any future
   broader ArrayPad-style padding or storage compatibility layers beyond the
-  current dense-array subset
+  current dense-array subset, and lower-priority diagnostic / option-shape
+  polish for rarely used functional-combinator corners
 - `cross-tracked elsewhere`: `Append`, `Array`, `AssociationMap`, `Cases`,
   `CountsBy`, `GroupBy`, `Identity`, `KeySortBy`, `Outer`, `Position`,
   `Select`

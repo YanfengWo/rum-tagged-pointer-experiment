@@ -230,7 +230,7 @@ This roadmap intentionally uses two levels of detail:
 - [x] `CL-01` Expression, truth, and structural foundation
 - [x] `CL-02` Definitions, attributes, assignments, and scoping
 - [x] `CL-03` Rules, patterns, and tree walkers
-- [ ] `CL-04` Functional and list combinators
+- [x] `CL-04` Functional and list combinators
 - [x] `CL-05` Associations and keyed data
 - [x] `CL-06` Procedural control, exceptions, and failure flow
 - [x] `CL-07` String language
@@ -439,7 +439,15 @@ This roadmap intentionally uses two levels of detail:
       `Definition` / `Information` print-layer parity beyond the current
       transport-safe expression shapes.
   - [ ] Wave 4: polish pass across `CL-04`, `CL-08`, and `CL-09`
-    - [ ] `CL-04`: remaining threading / higher-order traversal / sparse array parity beyond the current negative-level empty-expression depth alignment for `Apply` / `Map` traversal families
+    - [x] `CL-04`: close the current mainline as substantially covered by
+      the implemented threading / `Listable`, `Map` / `Apply` / `Comap`
+      traversal, targeted mapping, fold / nest / fixed-point, callable
+      operator-wrapper, and dense `ArrayFilter` / `ArrayReduce` subsets, plus
+      curated Wolfram Lane A coverage for representative Thread, Comap,
+      MapIndexed, ArrayFilter, and ArrayReduce cases. Treat sparse-array
+      parity, broader ArrayPad-style storage / padding compatibility, and
+      obscure functional-combinator diagnostic or option-shape corners as
+      non-blocking long-tail work rather than active CL-04 blockers.
     - [ ] `CL-08`: broader `Names` regex, `SyntaxInformation` properties, and package-tooling compatibility polish
     - [ ] `CL-09`: deeper real-memory accounting and trace/report edge-case polish
   - [ ] finish with a roadmap/docs cleanup pass that re-syncs the top-level `CL-01` through `CL-07` checklist state and any stale matrix wording with the now-completed mainlines
