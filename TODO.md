@@ -402,6 +402,8 @@ This roadmap intentionally uses two levels of detail:
         diagnostics for nonatomic expressions and correct the current
         `Delete` integer path / list-of-paths subset, including direct
         `Delete[..., 0]` head deletion.
+      - [x] Correct the current `Insert` integer path / list-of-paths subset,
+        including nested insertion and multi-position insertion ordering.
     - [x] `CL-02`: mainline closed; leave only small definition/update-family
       polish as deferred long-tail unless a downstream project exposes a
       concrete blocker.
