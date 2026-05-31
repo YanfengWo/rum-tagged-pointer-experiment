@@ -229,7 +229,7 @@ This roadmap intentionally uses two levels of detail:
 
 - [x] `CL-01` Expression, truth, and structural foundation
 - [x] `CL-02` Definitions, attributes, assignments, and scoping
-- [ ] `CL-03` Rules, patterns, and tree walkers
+- [x] `CL-03` Rules, patterns, and tree walkers
 - [ ] `CL-04` Functional and list combinators
 - [x] `CL-05` Associations and keyed data
 - [x] `CL-06` Procedural control, exceptions, and failure flow
