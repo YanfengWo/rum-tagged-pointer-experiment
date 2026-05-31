@@ -51,7 +51,19 @@ fn rum_path(path: &Path) -> String {
 
 mod arithmetic;
 mod associations;
+mod associations_aggregate_diagnostics;
+mod associations_aggregate_surface;
+mod associations_basic_diagnostics;
+mod associations_key_arity_diagnostics;
+mod associations_key_diagnostics;
+mod associations_key_ops;
+mod associations_key_sets;
+mod associations_key_value_pattern;
+mod associations_missing_diagnostics;
+mod associations_missing_surface;
 mod associations_mutation;
+mod associations_mutation_diagnostics;
+mod associations_mutation_surface;
 mod associations_part2;
 mod calculus;
 mod context_and_loader;
