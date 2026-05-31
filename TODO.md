@@ -13,13 +13,11 @@ This roadmap intentionally uses two levels of detail:
 - [x] Keep the workspace compiling and passing tests as the project evolves
 - [x] Establish source-organization guidelines and convert major `include!`-style roots into real module boundaries
 - [ ] Keep source organization aligned with the strengthened code-organization rules: human-readable modules, maintainable file sizes, feature-oriented subfolders, incremental-compilation-friendly boundaries, and unit-test-friendly function design
-- [ ] Resolve the 2026-05 source-size audit against `docs/code-organization-guidelines.md`: current Rust source count is 10 files over `35k` chars, 24 files in the `20k`-`35k` split-plan range, and 66 files in the `10k`-`20k` warning range
-  - [ ] Split or document explicit exceptions for the `>35k` architecture-debt files: `crates/rum-runtime/src/runtime/debug_tools.rs` (`96,923` chars), `crates/rum-runtime/src/runtime/pattern_matching/sequence.rs` (`72,861`), `crates/rum-runtime/src/runtime/rewrite_builtins.rs` (`61,372`), `crates/rum-runtime/src/runtime/tests/associations.rs` (`55,351`), `crates/rum-runtime/src/runtime/options.rs` (`45,163`), `crates/rum-runtime/src/runtime/tests/holding_and_control_part7.rs` (`40,464`), `crates/rum-runtime/src/runtime/strings/text.rs` (`38,929`), `crates/rum-runtime/src/runtime/structure_ops/selectors.rs` (`37,321`), `crates/rum-runtime/src/runtime/associations/transforms.rs` (`35,966`), and `crates/rum-runtime/src/runtime/namespace_tools.rs` (`35,671`)
-  - [ ] Add split plans for the `20k`-`35k` files: `crates/rum-runtime/src/runtime/builtin_catalog.rs`, `crates/rum-runtime/src/runtime/tests/debug_tools.rs`, `crates/rum-runtime/src/runtime/predicates.rs`, `crates/rum-runtime/src/runtime/tests/definitions_and_rules_part3.rs`, `crates/rum-runtime/src/runtime/suspension.rs`, `crates/rum-runtime/src/runtime/tree_walkers.rs`, `crates/rum-runtime/src/runtime/associations/resumable.rs`, `crates/rum-runtime/src/runtime/control_flow/mod.rs`, `crates/rum-runtime/src/runtime/strings/patterns/matcher.rs`, `crates/rum-runtime/src/runtime/control_flow/confirmation.rs`, `crates/rum-runtime/src/runtime/structure_ops/replace.rs`, `crates/rum-jupyter/src/zeromq_native.rs`, `crates/rum-runtime/src/runtime/control_flow/branching_loops.rs`, `crates/rum-jupyter/src/transport/json/parse.rs`, `crates/rum-runtime/src/runtime/functional_ops/callable.rs`, `crates/rum-runtime/src/runtime/functional_ops/sequence.rs`, `crates/rum-jupyter/src/transport/codec.rs`, `crates/rum-jupyter/src/adapter/mod.rs`, `crates/rum-runtime/src/runtime/tests/session_requests/transforms_resume.rs`, `crates/rum-runtime/src/runtime/tests/session_requests/matcher_resume.rs`, `crates/rum-runtime/src/runtime/polynomials/core.rs`, `crates/rum-runtime/src/runtime/strings/patterns/search.rs`, `crates/rum-runtime/src/runtime/definition_catalog.rs`, and `crates/rum-jupyter/src/tests/adapter.rs`
-  - [ ] Add `crates/rum-runtime/src/runtime/logic.rs` to the next source-size audit refresh; it is now in the `20k`-`35k` split-plan range after the CL-01 comparison-parity sweep, and the likely boundary is boolean aggregation vs equality/order comparison helpers.
-  - [ ] Add `crates/rum-runtime/src/runtime/structure_ops/sequence.rs` to the next source-size audit refresh; it is now in the `20k`-`35k` split-plan range after the CL-01 `Delete` path-parity sweep, and the likely split boundary is sequence slicing (`Take` / `Drop` / `TakeDrop` / `TakeList`) versus positional mutation (`Insert` / `Delete`).
-  - [ ] CL-05 association split follow-up: split the now-oversized association query / mutation / grouping files along real conceptual boundaries, especially `crates/rum-runtime/src/runtime/associations/basic.rs` (~40k chars), `crates/rum-runtime/src/runtime/associations/transforms.rs` (~56k), `crates/rum-runtime/src/runtime/associations/resumable.rs` (~52k), and `crates/rum-runtime/src/runtime/tests/associations.rs` (~115k); this supersedes the stale 2026-05 counts for these files without blocking the current parity sweep
-  - [ ] Revisit the 66 `10k`-`20k` warning-range files opportunistically when touching nearby subsystems, prioritizing active runtime files over stable tests
+- [ ] Resolve the 2026-05 source-size audit against `docs/code-organization-guidelines.md`: current Rust source count is 13 files over `35k` bytes, 30 files in the `20k`-`35k` split-plan range, and 73 files in the `10k`-`20k` warning range
+  - [ ] Split or document explicit exceptions for the `>35k` architecture-debt files: `crates/rum-runtime/src/runtime/tests/associations.rs` (`115,469` bytes), `crates/rum-runtime/src/runtime/debug_tools.rs` (`97,638`), `crates/rum-runtime/src/runtime/pattern_matching/sequence.rs` (`72,861`), `crates/rum-runtime/src/runtime/rewrite_builtins.rs` (`61,944`), `crates/rum-runtime/src/runtime/associations/transforms.rs` (`55,986`), `crates/rum-runtime/src/runtime/tests/holding_and_control_part7.rs` (`52,722`), `crates/rum-runtime/src/runtime/associations/resumable.rs` (`51,787`), `crates/rum-runtime/src/runtime/structure_ops/selectors.rs` (`46,111`), `crates/rum-runtime/src/runtime/options.rs` (`45,163`), `crates/rum-runtime/src/runtime/associations/basic.rs` (`40,366`), `crates/rum-runtime/src/runtime/strings/text.rs` (`39,135`), `crates/rum-runtime/src/runtime/builtin_catalog.rs` (`38,656`), and `crates/rum-runtime/src/runtime/namespace_tools.rs` (`35,688`)
+  - [ ] Add split plans for the `20k`-`35k` Rust files: `crates/rum-runtime/src/runtime/control_flow/mod.rs` (`33,306` bytes), `crates/rum-runtime/src/runtime/tests/definitions_and_rules_part3.rs` (`32,972`), `crates/rum-runtime/src/runtime/tests/session_requests/transforms_resume.rs` (`32,434`), `crates/rum-runtime/src/runtime/tests/debug_tools.rs` (`32,196`), `crates/rum-runtime/src/runtime/control_flow/confirmation.rs` (`32,151`), `crates/rum-runtime/src/runtime/tests/definitions_and_rules.rs` (`31,415`), `crates/rum-runtime/src/runtime/predicates.rs` (`31,274`), `crates/rum-runtime/src/runtime/definition_catalog.rs` (`30,215`), `crates/rum-runtime/src/runtime/tree_walkers.rs` (`29,929`), `crates/rum-runtime/src/runtime/suspension.rs` (`28,500`), `crates/rum-runtime/src/runtime/strings/patterns/matcher.rs` (`27,272`), `crates/rum-runtime/src/runtime/structure_ops/replace.rs` (`25,626`), `crates/rum-jupyter/src/zeromq_native.rs` (`25,373`), `crates/rum-runtime/src/runtime/control_flow/branching_loops.rs` (`25,216`), `crates/rum-runtime/src/runtime/functional_ops/callable.rs` (`25,148`), `crates/rum-runtime/src/runtime/structure_ops/sequence.rs` (`24,672`), `crates/rum-runtime/src/runtime/scoping.rs` (`24,445`), `crates/rum-jupyter/src/transport/json/parse.rs` (`24,369`), `crates/rum-runtime/src/runtime/logic.rs` (`23,819`), `crates/rum-runtime/src/runtime/tests/structure_ops/selectors.rs` (`23,399`), `crates/rum-runtime/src/runtime/functional_ops/sequence.rs` (`23,389`), `crates/rum-jupyter/src/transport/codec.rs` (`23,115`), `crates/rum-jupyter/src/adapter/mod.rs` (`23,007`), `crates/rum-runtime/src/runtime/tests/logic.rs` (`22,752`), `crates/rum-runtime/src/runtime/builtins_context_loader.rs` (`22,001`), `crates/rum-runtime/src/runtime/tests/session_requests/matcher_resume.rs` (`21,682`), `crates/rum-runtime/src/runtime/polynomials/core.rs` (`21,551`), `crates/rum-runtime/src/runtime/tests/holding_and_control_part6.rs` (`21,409`), `crates/rum-runtime/src/runtime/strings/patterns/search.rs` (`20,913`), and `crates/rum-jupyter/src/tests/adapter.rs` (`20,336`)
+  - [ ] CL-05 association split follow-up: split the now-oversized association query / mutation / grouping files along real conceptual boundaries, especially `crates/rum-runtime/src/runtime/associations/basic.rs`, `crates/rum-runtime/src/runtime/associations/transforms.rs`, `crates/rum-runtime/src/runtime/associations/resumable.rs`, and `crates/rum-runtime/src/runtime/tests/associations.rs`; this remains the highest-impact source-size cleanup cluster
+  - [ ] Revisit the 73 `10k`-`20k` warning-range files opportunistically when touching nearby subsystems, prioritizing active runtime files over stable tests
 
 ### Phase 1: Syntax Frontend
 
@@ -119,27 +117,27 @@ This roadmap intentionally uses two levels of detail:
   - [x] `crates/rum-jupyter/src/zeromq/tests/native/frontend.rs` -> `crates/rum-jupyter/src/zeromq/tests/native/frontend/`
   - [x] `crates/rum-jupyter/src/adapter.rs` -> `crates/rum-jupyter/src/adapter/`
   - [x] `crates/rum-syntax/src/formatter.rs` -> `crates/rum-syntax/src/formatter/`
-- [ ] Keep the remaining `20k+` files under active review and only continue the large-file workstream when one of these files is touched enough to justify the next conceptual split:
-  - [ ] `crates/rum-runtime/src/runtime/options.rs` (`44003` bytes)
-  - [ ] `crates/rum-runtime/src/runtime/rewrite_builtins.rs` (`38341` bytes)
-  - [ ] `crates/rum-runtime/src/runtime/predicates.rs` (`25943` bytes)
-  - [ ] `crates/rum-jupyter/src/zeromq_native.rs` (`25373` bytes)
-  - [ ] `crates/rum-runtime/src/runtime/control_flow/branching_loops.rs` (`25237` bytes)
-  - [ ] `crates/rum-runtime/src/runtime/control_flow/confirmation.rs` (`24919` bytes)
-  - [ ] `crates/rum-runtime/src/runtime/suspension.rs` (`24874` bytes)
-  - [ ] `crates/rum-runtime/src/runtime/builtin_catalog.rs` (`24421` bytes)
-  - [ ] `crates/rum-jupyter/src/transport/json/parse.rs` (`24369` bytes)
-  - [ ] `crates/rum-runtime/src/runtime/tree_walkers.rs` (`24253` bytes)
-  - [ ] `crates/rum-runtime/src/runtime/functional_ops/sequence.rs` (`23386` bytes)
-  - [ ] `crates/rum-jupyter/src/transport/codec.rs` (`23115` bytes)
-  - [ ] `crates/rum-jupyter/src/adapter/mod.rs` (`23007` bytes)
-  - [ ] `crates/rum-runtime/src/runtime/control_flow/mod.rs` (`30724` bytes)
-  - [ ] `crates/rum-runtime/src/runtime/builtins_context_loader.rs` (`22001` bytes);
-    split path/string filename helpers from context/package loading once the
-    CL-Y smoke lane stabilizes enough to define a durable boundary
-  - [ ] `crates/rum-runtime/src/runtime/polynomials/core.rs` (`21551` bytes)
-  - [ ] `docs/core-language-support-matrix.md` (`20475` bytes)
-  - [ ] `crates/rum-jupyter/src/tests/adapter.rs` (`20336` bytes)
+- [ ] Keep the remaining `20k+` Rust files under active review using the
+  refreshed source-size audit in Phase 0 as the authoritative roster, and only
+  continue the large-file workstream when a touched subsystem has a real
+  conceptual split:
+  - [ ] prioritize the association cluster first because it has the clearest
+    split boundary and the largest files: `crates/rum-runtime/src/runtime/tests/associations.rs`,
+    `crates/rum-runtime/src/runtime/associations/transforms.rs`,
+    `crates/rum-runtime/src/runtime/associations/resumable.rs`, and
+    `crates/rum-runtime/src/runtime/associations/basic.rs`
+  - [ ] treat the next likely runtime implementation candidates as
+    `crates/rum-runtime/src/runtime/debug_tools.rs`,
+    `crates/rum-runtime/src/runtime/pattern_matching/sequence.rs`,
+    `crates/rum-runtime/src/runtime/rewrite_builtins.rs`,
+    `crates/rum-runtime/src/runtime/options.rs`,
+    `crates/rum-runtime/src/runtime/structure_ops/selectors.rs`,
+    `crates/rum-runtime/src/runtime/strings/text.rs`,
+    `crates/rum-runtime/src/runtime/builtin_catalog.rs`, and
+    `crates/rum-runtime/src/runtime/namespace_tools.rs`
+  - [ ] split `crates/rum-runtime/src/runtime/builtins_context_loader.rs`
+    by separating path/string filename helpers from context/package loading
+    once the CL-Y smoke lane stabilizes enough to define a durable boundary
 
 ### `rum-syntax`
 
