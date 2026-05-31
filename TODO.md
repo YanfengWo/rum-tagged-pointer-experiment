@@ -227,7 +227,7 @@ This roadmap intentionally uses two levels of detail:
 
 ### Core-Language Matrix Groups
 
-- [ ] `CL-01` Expression, truth, and structural foundation
+- [x] `CL-01` Expression, truth, and structural foundation
 - [x] `CL-02` Definitions, attributes, assignments, and scoping
 - [ ] `CL-03` Rules, patterns, and tree walkers
 - [ ] `CL-04` Functional and list combinators
@@ -306,10 +306,13 @@ This roadmap intentionally uses two levels of detail:
       - [ ] Remaining assertion/I/O long-tail: obscure `Assert` controls and
         fuller host-I/O option, prompt, request, parse/error semantics, and
         option-list diagnostic shape.
-    - [ ] `CL-01`: remaining long-tail is concentrated in full
-      Wolfram-compatible part-spec parity beyond the current atom `All` /
-      span-boundary selector alignment, current invalid and out-of-range
-      `Part` / `Extract` selector diagnostics, remaining `Part`
+    - [x] `CL-01`: close the current mainline as substantially covered by the
+      implemented expression model, exact path selectors, current `Part` /
+      `Extract` / `ReplacePart` selector subset, current structural sequence
+      helpers, `Depth` / `Level` / traversal `Heads` option slice, and current
+      truth/comparison semantics tracked in the support matrix. Treat the
+      remaining full Wolfram-compatible part-spec parity beyond the current
+      atom `All` / span-boundary selector alignment, remaining `Part`
       selector-list and `Extract` nested position-list edges beyond the locked
       subset, full `Heads` parity for future walkers and less-common option
       diagnostics beyond the current `Depth` / `Level` / traversal parser,
@@ -317,7 +320,8 @@ This roadmap intentionally uses two levels of detail:
       empty-expression / association oracle cases, and deeper
       truth/comparison breadth beyond the locked `Not` / `And` / `Or` /
       `Xor` / `Equivalent` / `Implies`, `Equal` / `Unequal`, and
-      `Order` / `OrderedQ` slices.
+      `Order` / `OrderedQ` slices as non-blocking long-tail parity work rather
+      than active Wave 3 blockers.
       - [x] Cover the current nonatomic `Order` / `OrderedQ` argument-order
         parity slice by replacing text-only expression ordering with recursive
         same-head argument ordering and exact numeric atom comparison.
