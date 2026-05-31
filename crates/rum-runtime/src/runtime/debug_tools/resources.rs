@@ -1,0 +1,711 @@
+use super::*;
+
+impl Session {
+    pub(in crate::runtime) fn eval_byte_count(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        Ok(Expr::integer(BigInt::from(
+            expr_memory_proxy_bytes(expr) as u64
+        )))
+    }
+
+    pub(in crate::runtime) fn eval_time_constrained(
+        &mut self,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let (body, limit_expr, fallback) = match args {
+            [body, limit] => (body.clone(), limit, None),
+            [body, limit, fallback] => (body.clone(), limit, Some(fallback.clone())),
+            _ => {
+                return Ok(self.invalid_call_with_arg_range("TimeConstrained", args, 2, 3));
+            }
+        };
+
+        let resolved_limit = self.evaluate(limit_expr.clone())?;
+        let Some(limit) = parse_time_constraint_duration(&resolved_limit) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "TimeConstrained",
+                args,
+                "expected the timeout argument to be a non-negative exact number in the current first-pass subset",
+            ));
+        };
+
+        let prior_deadline = self.current_time_deadline;
+        let next_deadline = combine_time_deadlines(prior_deadline, limit);
+        self.current_time_deadline = Some(next_deadline);
+
+        let body_result = self.evaluate(body);
+        let outcome = self.suspend_with_result_frame(body_result, {
+            let fallback = fallback.clone();
+            move |session, outcome| {
+                session.finish_time_constrained(outcome, prior_deadline, fallback)
+            }
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.finish_time_constrained(outcome, prior_deadline, fallback),
+        }
+    }
+
+    pub(in crate::runtime) fn eval_memory_constrained(
+        &mut self,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let (body, limit_expr, fallback) = match args {
+            [body, limit] => (body.clone(), limit, None),
+            [body, limit, fallback] => (body.clone(), limit, Some(fallback.clone())),
+            _ => {
+                return Ok(self.invalid_call_with_arg_range("MemoryConstrained", args, 2, 3));
+            }
+        };
+
+        let resolved_limit = self.evaluate(limit_expr.clone())?;
+        let Some(limit) = expr_as_non_negative_usize(&resolved_limit) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "MemoryConstrained",
+                args,
+                "expected the memory limit argument to be a non-negative exact integer",
+            ));
+        };
+
+        let prior_limit = self.current_memory_limit;
+        self.current_memory_limit = Some(prior_limit.map_or(limit, |current| current.min(limit)));
+
+        let body_result = self.evaluate(body);
+        let outcome = self.suspend_with_result_frame(body_result, {
+            let fallback = fallback.clone();
+            move |session, outcome| {
+                session.finish_memory_constrained(outcome, prior_limit, fallback)
+            }
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.finish_memory_constrained(outcome, prior_limit, fallback),
+        }
+    }
+
+    pub(in crate::runtime) fn eval_memory_in_use(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !args.is_empty() {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
+
+        Ok(Expr::integer(BigInt::from(
+            self.current_memory_proxy_bytes() as u64,
+        )))
+    }
+
+    pub(in crate::runtime) fn enforce_active_resource_limits_for_expr(
+        &self,
+        expr: &Expr,
+    ) -> Result<(), EvalError> {
+        if let Some(deadline) = self.current_time_deadline {
+            if Instant::now() >= deadline {
+                return Err(EvalError::TimeConstraintExceeded);
+            }
+        }
+
+        if let Some(limit) = self.current_memory_limit {
+            let projected = self
+                .current_memory_proxy_bytes()
+                .saturating_add(expr_memory_proxy_bytes(expr));
+            if projected > limit {
+                return Err(EvalError::MemoryConstraintExceeded { limit });
+            }
+        }
+
+        Ok(())
+    }
+
+    fn current_memory_proxy_bytes(&self) -> usize {
+        let mut total = std::mem::size_of::<Session>();
+
+        total = total.saturating_add(
+            self.builtins
+                .iter()
+                .map(|(name, _)| {
+                    name.capacity()
+                        .saturating_add(std::mem::size_of::<BuiltinSpec>())
+                })
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(self.current_context.capacity());
+        total = total.saturating_add(render_string_vec_memory_proxy_bytes(&self.context_path));
+        total = total.saturating_add(
+            self.context_stack
+                .iter()
+                .map(render_context_frame_memory_proxy_bytes)
+                .sum::<usize>()
+                .saturating_add(vec_spare_capacity_bytes(&self.context_stack)),
+        );
+        total = total.saturating_add(render_path_buf_vec_memory_proxy_bytes(
+            &self.package_search_paths,
+        ));
+        total = total.saturating_add(render_string_vec_memory_proxy_bytes(&self.loaded_packages));
+        total = total.saturating_add(render_path_buf_vec_memory_proxy_bytes(&self.load_stack));
+
+        total = total.saturating_add(
+            self.evaluation_stack
+                .iter()
+                .map(expr_memory_proxy_bytes)
+                .sum::<usize>()
+                .saturating_add(vec_spare_capacity_bytes(&self.evaluation_stack)),
+        );
+
+        total = total.saturating_add(
+            self.definitions
+                .iter()
+                .map(|(symbol, definition)| {
+                    symbol.to_string().len() + render_definition_memory_proxy_bytes(definition)
+                })
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.attributes
+                .keys()
+                .map(|symbol| symbol.to_string().len())
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.options
+                .iter()
+                .map(|(symbol, options)| {
+                    symbol.to_string().len() + render_symbol_options_memory_proxy_bytes(options)
+                })
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.syntax_information
+                .iter()
+                .map(|(symbol, expr)| symbol.to_string().len() + expr_memory_proxy_bytes(expr))
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.declared_stubs
+                .iter()
+                .map(|symbol| symbol.to_string().len())
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.once_values
+                .iter()
+                .map(|(key, value)| key.capacity() + expr_memory_proxy_bytes(value))
+                .sum::<usize>(),
+        );
+        total = total.saturating_add(
+            self.option_value_scopes
+                .iter()
+                .map(render_option_value_scope_memory_proxy_bytes)
+                .sum::<usize>()
+                .saturating_add(vec_spare_capacity_bytes(&self.option_value_scopes)),
+        );
+
+        total = total.saturating_add(
+            self.disabled_message_selectors
+                .iter()
+                .map(render_message_selector_memory_proxy_bytes)
+                .sum::<usize>()
+                .saturating_add(vec_spare_capacity_bytes(&self.disabled_message_selectors)),
+        );
+
+        total = total.saturating_add(
+            self.message_definitions
+                .iter()
+                .map(|(key, definition)| {
+                    key.symbol.to_string().len()
+                        + key.tag.len()
+                        + definition
+                            .immediate
+                            .as_ref()
+                            .map_or(0, expr_memory_proxy_bytes)
+                        + definition
+                            .delayed
+                            .as_ref()
+                            .map_or(0, expr_memory_proxy_bytes)
+                })
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.messages
+                .iter()
+                .map(render_runtime_message_memory_proxy_bytes)
+                .sum::<usize>()
+                .saturating_add(vec_spare_capacity_bytes(&self.messages)),
+        );
+
+        total = total.saturating_add(
+            self.last_message_list
+                .iter()
+                .map(render_runtime_message_memory_proxy_bytes)
+                .sum::<usize>()
+                .saturating_add(vec_spare_capacity_bytes(&self.last_message_list)),
+        );
+
+        total = total.saturating_add(render_string_vec_memory_proxy_bytes(&self.prints));
+
+        total = total.saturating_add(
+            self.trace_events
+                .iter()
+                .map(render_trace_event_memory_proxy_bytes)
+                .sum::<usize>()
+                .saturating_add(vec_spare_capacity_bytes(&self.trace_events)),
+        );
+        total = total.saturating_add(
+            self.trace_event_depths
+                .capacity()
+                .saturating_mul(std::mem::size_of::<usize>()),
+        );
+
+        total = total.saturating_add(
+            self.handled_non_loader_eval_errors
+                .iter()
+                .map(render_runtime_message_memory_proxy_bytes)
+                .sum::<usize>()
+                .saturating_add(vec_spare_capacity_bytes(
+                    &self.handled_non_loader_eval_errors,
+                )),
+        );
+
+        total = total.saturating_add(
+            self.reap_scopes
+                .iter()
+                .map(render_reap_scope_memory_proxy_bytes)
+                .sum::<usize>()
+                .saturating_add(vec_spare_capacity_bytes(&self.reap_scopes)),
+        );
+
+        total = total.saturating_add(
+            self.monitor_scopes
+                .iter()
+                .map(render_monitor_scope_memory_proxy_bytes)
+                .sum::<usize>()
+                .saturating_add(vec_spare_capacity_bytes(&self.monitor_scopes)),
+        );
+
+        total = total.saturating_add(render_string_vecdeque_memory_proxy_bytes(
+            &self.queued_input_responses,
+        ));
+        total = total.saturating_add(
+            self.pending_input_request
+                .as_ref()
+                .map_or(0, render_input_request_memory_proxy_bytes),
+        );
+        total = total.saturating_add(
+            self.pending_eval_request
+                .as_ref()
+                .map_or(0, |_| std::mem::size_of::<PendingEvalRequest>()),
+        );
+        total = total.saturating_add(
+            self.pending_suspension
+                .as_ref()
+                .map_or(0, render_suspended_evaluation_memory_proxy_bytes),
+        );
+        total = total.saturating_add(std::mem::size_of::<ResourceLimits>());
+
+        total
+    }
+
+    fn finish_time_constrained(
+        &mut self,
+        outcome: Result<Expr, EvalError>,
+        prior_deadline: Option<Instant>,
+        fallback: Option<Expr>,
+    ) -> Result<Expr, EvalError> {
+        self.current_time_deadline = prior_deadline;
+
+        match outcome {
+            Ok(value) => Ok(value),
+            Err(EvalError::TimeConstraintExceeded) => match fallback {
+                Some(expr) => self.evaluate(expr),
+                None => Ok(system_expr("$Aborted")),
+            },
+            Err(error) => Err(error),
+        }
+    }
+
+    fn finish_memory_constrained(
+        &mut self,
+        outcome: Result<Expr, EvalError>,
+        prior_limit: Option<usize>,
+        fallback: Option<Expr>,
+    ) -> Result<Expr, EvalError> {
+        self.current_memory_limit = prior_limit;
+
+        match outcome {
+            Ok(value) => Ok(value),
+            Err(EvalError::MemoryConstraintExceeded { .. }) => match fallback {
+                Some(expr) => self.evaluate(expr),
+                None => Ok(system_expr("$Aborted")),
+            },
+            Err(error) => Err(error),
+        }
+    }
+}
+
+fn expr_memory_proxy_bytes(expr: &Expr) -> usize {
+    match expr {
+        Expr::Atom(Atom::Integer(value)) => {
+            std::mem::size_of::<Expr>().saturating_add(bigint_memory_proxy_bytes(value))
+        }
+        Expr::Atom(Atom::Rational(value)) => std::mem::size_of::<Expr>()
+            .saturating_add(bigint_memory_proxy_bytes(value.numerator()))
+            .saturating_add(bigint_memory_proxy_bytes(value.denominator())),
+        Expr::Atom(Atom::String(value)) => {
+            std::mem::size_of::<Expr>().saturating_add(value.capacity())
+        }
+        Expr::Atom(Atom::Symbol(symbol)) => {
+            std::mem::size_of::<Expr>().saturating_add(symbol.context().len() + symbol.name().len())
+        }
+        Expr::Call { head, args }
+            if is_system_symbol_name(head, "ByteArray") && args.len() == 1 =>
+        {
+            let payload_len = args
+                .first()
+                .and_then(expr_as_string)
+                .and_then(|encoded| base64_decoded_len(&encoded))
+                .unwrap_or_else(|| args.iter().map(expr_memory_proxy_bytes).sum::<usize>());
+            std::mem::size_of::<Expr>()
+                .saturating_add(expr_memory_proxy_bytes(head))
+                .saturating_add(
+                    args.capacity()
+                        .saturating_sub(args.len())
+                        .saturating_mul(std::mem::size_of::<Expr>()),
+                )
+                .saturating_add(payload_len)
+        }
+        Expr::Call { head, args } => {
+            let mut total = std::mem::size_of::<Expr>()
+                .saturating_add(expr_memory_proxy_bytes(head))
+                .saturating_add(
+                    args.capacity()
+                        .saturating_sub(args.len())
+                        .saturating_mul(std::mem::size_of::<Expr>()),
+                );
+            for arg in args {
+                total = total.saturating_add(expr_memory_proxy_bytes(arg));
+            }
+            total
+        }
+    }
+}
+fn parse_time_constraint_duration(expr: &Expr) -> Option<Duration> {
+    let rational = expr_as_exact_rational(expr)?;
+    if rational.numerator() < &BigInt::from(0) {
+        return None;
+    }
+
+    let nanos_numerator = rational.numerator().clone() * BigInt::from(1_000_000_000_u64);
+    let nanos = nanos_numerator / rational.denominator().clone();
+    let nanos = nanos
+        .to_string()
+        .parse::<u64>()
+        .unwrap_or(u64::MAX.saturating_sub(1));
+
+    Some(Duration::from_nanos(nanos))
+}
+
+fn combine_time_deadlines(prior: Option<Instant>, limit: Duration) -> Instant {
+    let candidate = Instant::now()
+        .checked_add(limit)
+        .unwrap_or_else(Instant::now);
+    prior.map_or(candidate, |current| current.min(candidate))
+}
+
+fn render_definition_memory_proxy_bytes(definition: &SymbolDefinition) -> usize {
+    std::mem::size_of::<SymbolDefinition>()
+        .saturating_add(
+            definition
+                .own_value
+                .as_ref()
+                .map_or(0, expr_memory_proxy_bytes),
+        )
+        .saturating_add(
+            definition
+                .delayed_own_value
+                .as_ref()
+                .map_or(0, expr_memory_proxy_bytes),
+        )
+        .saturating_add(
+            definition
+                .up_values
+                .iter()
+                .map(render_upvalue_memory_proxy_bytes)
+                .sum::<usize>(),
+        )
+        .saturating_add(
+            definition
+                .down_values
+                .iter()
+                .map(render_downvalue_memory_proxy_bytes)
+                .sum::<usize>(),
+        )
+        .saturating_add(
+            definition
+                .sub_values
+                .iter()
+                .map(render_subvalue_memory_proxy_bytes)
+                .sum::<usize>(),
+        )
+}
+
+fn render_upvalue_memory_proxy_bytes(value: &UpValue) -> usize {
+    std::mem::size_of::<UpValue>()
+        .saturating_add(expr_memory_proxy_bytes(&value.lhs))
+        .saturating_add(expr_memory_proxy_bytes(&value.rhs))
+}
+
+fn render_downvalue_memory_proxy_bytes(value: &DownValue) -> usize {
+    std::mem::size_of::<DownValue>()
+        .saturating_add(expr_memory_proxy_bytes(&value.lhs))
+        .saturating_add(expr_memory_proxy_bytes(&value.rhs))
+}
+
+fn render_subvalue_memory_proxy_bytes(value: &SubValue) -> usize {
+    std::mem::size_of::<SubValue>()
+        .saturating_add(expr_memory_proxy_bytes(&value.lhs))
+        .saturating_add(expr_memory_proxy_bytes(&value.rhs))
+}
+
+fn render_symbol_options_memory_proxy_bytes(options: &SymbolOptions) -> usize {
+    std::mem::size_of::<SymbolOptions>().saturating_add(
+        options
+            .iter()
+            .map(|(name, value, _)| {
+                std::mem::size_of::<SymbolOptionEntry>().saturating_add(
+                    name.to_string()
+                        .len()
+                        .saturating_add(expr_memory_proxy_bytes(value)),
+                )
+            })
+            .sum::<usize>()
+            .saturating_add(
+                options
+                    .capacity()
+                    .saturating_sub(options.len())
+                    .saturating_mul(std::mem::size_of::<SymbolOptionEntry>()),
+            ),
+    )
+}
+
+fn render_context_frame_memory_proxy_bytes(frame: &ContextFrame) -> usize {
+    std::mem::size_of::<ContextFrame>()
+        .saturating_add(frame.previous_context.capacity().saturating_add(
+            render_string_vec_memory_proxy_bytes(&frame.previous_context_path),
+        ))
+        .saturating_add(frame.opened_context.capacity())
+}
+
+fn render_message_selector_memory_proxy_bytes(selector: &MessageSelector) -> usize {
+    std::mem::size_of::<MessageSelector>().saturating_add(
+        selector
+            .symbol
+            .capacity()
+            .saturating_add(selector.tag.as_ref().map_or(0, String::capacity)),
+    )
+}
+
+fn render_runtime_message_memory_proxy_bytes(message: &RuntimeMessage) -> usize {
+    std::mem::size_of::<RuntimeMessage>().saturating_add(
+        message
+            .symbol
+            .capacity()
+            .saturating_add(message.tag.capacity())
+            .saturating_add(message.text.capacity()),
+    )
+}
+
+fn render_reap_scope_memory_proxy_bytes(scope: &ReapScope) -> usize {
+    let patterns = scope
+        .patterns
+        .iter()
+        .map(expr_memory_proxy_bytes)
+        .sum::<usize>();
+    let handler = scope.handler.as_ref().map_or(0, expr_memory_proxy_bytes);
+    let buckets = scope
+        .buckets_by_pattern
+        .iter()
+        .map(|group| {
+            group
+                .iter()
+                .map(|bucket| {
+                    expr_memory_proxy_bytes(&bucket.tag).saturating_add(
+                        bucket
+                            .values
+                            .iter()
+                            .map(expr_memory_proxy_bytes)
+                            .sum::<usize>(),
+                    )
+                })
+                .sum::<usize>()
+        })
+        .sum::<usize>();
+
+    std::mem::size_of::<ReapScope>()
+        .saturating_add(patterns)
+        .saturating_add(handler)
+        .saturating_add(buckets)
+}
+
+fn render_monitor_scope_memory_proxy_bytes(scope: &MonitorScope) -> usize {
+    std::mem::size_of::<MonitorScope>()
+        .saturating_add(expr_memory_proxy_bytes(&scope.display_expr))
+        .saturating_add(
+            scope
+                .evaluation_monitor
+                .as_ref()
+                .map_or(0, expr_memory_proxy_bytes),
+        )
+        .saturating_add(
+            scope
+                .step_monitor
+                .as_ref()
+                .map_or(0, expr_memory_proxy_bytes),
+        )
+        .saturating_add(scope.last_display.as_ref().map_or(0, String::capacity))
+}
+
+fn render_trace_event_memory_proxy_bytes(event: &TraceEvent) -> usize {
+    match event {
+        TraceEvent::EvaluationPass { before, after } => std::mem::size_of::<TraceEvent>()
+            .saturating_add(before.capacity())
+            .saturating_add(after.capacity()),
+        TraceEvent::DefinitionStored { symbol, value, .. } => std::mem::size_of::<TraceEvent>()
+            .saturating_add(symbol.capacity())
+            .saturating_add(value.capacity()),
+        TraceEvent::RuleApplied {
+            input,
+            rule,
+            result,
+            ..
+        } => std::mem::size_of::<TraceEvent>().saturating_add(
+            input
+                .capacity()
+                .saturating_add(rule.capacity())
+                .saturating_add(result.capacity()),
+        ),
+    }
+}
+
+fn bigint_memory_proxy_bytes(value: &BigInt) -> usize {
+    value.to_signed_bytes_le().len().max(1)
+}
+
+fn base64_decoded_len(encoded: &str) -> Option<usize> {
+    if encoded.is_empty() {
+        return Some(0);
+    }
+    if encoded.len() % 4 != 0 {
+        return None;
+    }
+
+    let mut padding = 0usize;
+    for (index, byte) in encoded.as_bytes().iter().copied().enumerate() {
+        let is_padding = byte == b'=';
+        let is_base64 = matches!(
+            byte,
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'+' | b'/'
+        );
+        if !is_padding && !is_base64 {
+            return None;
+        }
+        if is_padding {
+            padding += 1;
+            if index < encoded.len().saturating_sub(2) {
+                return None;
+            }
+        } else if padding != 0 {
+            return None;
+        }
+    }
+
+    if padding > 2 {
+        return None;
+    }
+
+    Some(encoded.len() / 4 * 3usize - padding)
+}
+
+fn render_input_request_memory_proxy_bytes(request: &RuntimeInputRequest) -> usize {
+    std::mem::size_of::<RuntimeInputRequest>()
+        .saturating_add(request.prompt.capacity())
+        .saturating_add(1)
+}
+
+fn render_suspended_evaluation_memory_proxy_bytes(suspended: &SuspendedEvaluation) -> usize {
+    std::mem::size_of::<SuspendedEvaluation>()
+        .saturating_add(
+            suspended
+                .active_stack
+                .iter()
+                .map(expr_memory_proxy_bytes)
+                .sum::<usize>(),
+        )
+        .saturating_add(suspended.frames.len().saturating_mul(16))
+}
+
+fn render_option_value_scope_memory_proxy_bytes(scope: &OptionValueScope) -> usize {
+    std::mem::size_of::<OptionValueScope>()
+        .saturating_add(scope.target().to_string().len())
+        .saturating_add(render_symbol_options_memory_proxy_bytes(scope.explicit()))
+}
+
+fn vec_spare_capacity_bytes<T>(values: &Vec<T>) -> usize {
+    values
+        .capacity()
+        .saturating_sub(values.len())
+        .saturating_mul(std::mem::size_of::<T>())
+}
+
+fn render_string_vec_memory_proxy_bytes(values: &Vec<String>) -> usize {
+    values
+        .iter()
+        .map(String::capacity)
+        .sum::<usize>()
+        .saturating_add(
+            values
+                .capacity()
+                .saturating_mul(std::mem::size_of::<String>()),
+        )
+}
+
+fn render_path_buf_vec_memory_proxy_bytes(values: &Vec<PathBuf>) -> usize {
+    values
+        .iter()
+        .map(|path| path.as_os_str().len())
+        .sum::<usize>()
+        .saturating_add(
+            values
+                .capacity()
+                .saturating_mul(std::mem::size_of::<PathBuf>()),
+        )
+}
+
+fn render_string_vecdeque_memory_proxy_bytes(values: &VecDeque<String>) -> usize {
+    values
+        .iter()
+        .map(String::capacity)
+        .sum::<usize>()
+        .saturating_add(
+            values
+                .capacity()
+                .saturating_mul(std::mem::size_of::<String>()),
+        )
+}
