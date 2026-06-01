@@ -2,7 +2,7 @@
 
 ## Goal
 
-`rum-host` is the planned first-class Rust embedding crate for `rum`.
+`rum-host` is the first-class Rust embedding crate for `rum`.
 
 Its job is to expose a narrow, stable, host-oriented API on top of
 `rum-runtime` so backend services, rule engines, and DSL-oriented applications
@@ -55,19 +55,29 @@ It should avoid re-exporting broad internal modules from `rum-runtime`.
 
 ## Proposed Public Surface
 
-The first-pass public surface should stay intentionally small:
+The initial public surface stays intentionally small:
 
 - `HostSessionBuilder`
 - `HostSession`
 - `HostConfig`
+- `HostParseRequest`
+- `HostParseResponse`
 - `HostEvalRequest`
 - `HostEvalOutcome`
 - `HostFailure`
 - `HostInputRequest`
+- `HostInputSuspension`
 - `HostStructuredOutput`
+- `HostCompletionRequest`
+- `HostCompletionResponse`
+- `HostInspectRequest`
+- `HostInspectResponse`
+- `HostIsCompleteRequest`
+- `HostIsCompleteResponse`
 
 That surface should cover these flows:
 
+- `parse`
 - `eval`
 - `resume_with_input`
 - `inspect`
@@ -93,15 +103,35 @@ It should not initially expose:
 The stable host-facing types should prefer transport-friendly facades over
 direct exposure of all internal runtime details.
 
-Default guidance:
+Initial policy:
 
 - expose rendered values and structured outcomes directly
 - expose diagnostics/messages/prints in stable host-friendly structs
 - keep raw/internal evaluator details behind `rum-runtime`
-- only expose `Expr` directly where it materially improves real embedding
-  scenarios without freezing too much internal representation
+- do not expose raw `Expr` in the first `rum-host` contract
+- revisit selective `Expr` exposure only if a real Rust host scenario shows
+  that rendered/facade values are insufficient
 
 The bias should be toward a smaller stable contract first.
+
+## Initial Implementation
+
+The first crate wave is intentionally a thin wrapper over the existing
+`rum-runtime` request APIs:
+
+- `HostSessionBuilder` builds a configured runtime session and installs the
+  current core builtin set by default.
+- `HostSession::parse`, `eval`, `resume_with_input`, `inspect`, `complete`,
+  and `is_complete` are the supported request entrypoints.
+- `HostEvalOutcome` distinguishes success, input suspension, and failure
+  without treating host input as an ordinary error.
+- `HostFailure` uses stable coarse failure codes plus rendered messages rather
+  than exposing every internal evaluator error type as public API.
+- `HostStructuredOutput` is a compact facade for result, print, message, and
+  trace outputs that downstream adapters can map into their own transports.
+
+The crate currently avoids ownership of terminal rendering, notebook MIME
+bundles, Jupyter wire schemas, and Python binding policy.
 
 ## Relationship To Python
 
@@ -109,7 +139,7 @@ Python should come after `rum-host`, not before it.
 
 The planned order is:
 
-1. stabilize the Rust host contract in `rum-host`
+1. continue hardening the Rust host contract in `rum-host`
 2. validate it through Rust-side embedding examples and tests
 3. add a thin `pyo3`-based Python adapter on top of that contract
 
@@ -118,11 +148,12 @@ reshape core runtime boundaries too early.
 
 ## Validation Strategy
 
-The first validation wave for `rum-host` should include:
+The first validation wave for `rum-host` includes:
 
-- adapter-focused Rust tests for session lifecycle and eval flows
+- adapter-focused Rust tests for eval flows
 - suspend/resume tests through the host facade
-- structured outcome and message coverage
+- structured outcome, failure-code, message, print, parse, inspect,
+  completion, and completeness coverage
 - one small example embedding binary or example module, with
   [Rust Wasm Prototype](../examples/rust-wasm-proto/PLAN.md) as the current
   long-range showcase candidate once the host boundary is stable enough
@@ -132,16 +163,37 @@ The first validation wave for `rum-host` should include:
 
 1. define the stable host-facing contract in documentation
 2. identify which existing `rum-runtime` types are already close enough to wrap
-3. create a small `rum-host` crate with builders and eval/resume flow only
+3. create a small `rum-host` crate with builders and eval/resume flow
 4. add host-focused regression tests
 5. expand to inspect/complete/is-complete
 6. only then plan Python on top
 
+Items 1 through 5 now have an initial implementation. The next work should be
+hardening the contract through real host examples and broader adapter tests,
+not expanding the public surface by default.
+
+## Jupyter Reuse Assessment
+
+`rum-jupyter` should not be force-migrated to `rum-host` immediately. It
+currently owns notebook-specific MIME bundles, IOPub lifecycle behavior,
+message routing, signatures, and transport frames, all of which are outside
+`rum-host`.
+
+The likely reuse points are narrower:
+
+- cursor-symbol extraction for inspect/complete requests
+- conversion from runtime request outcomes into stable host-level success,
+  input-suspension, and failure facades
+- future shared examples or smoke tests that exercise host request semantics
+
+The first `rum-host` crate should prove these seams before `rum-jupyter` takes
+a dependency on it.
+
 ## Initial Open Questions
 
-- how much `Expr` exposure is worth preserving in the stable host API?
-- should host config be a wrapper around `SessionConfig` or an independent
-  facade that converts inward?
-- which structured outputs should be guaranteed stable in v1 of `rum-host`?
+- should `rum-host` eventually expose a carefully bounded raw-expression
+  escape hatch, or keep all expression data behind rendered/facade values?
+- which additional structured outputs should be guaranteed stable in v1 of
+  `rum-host` beyond result, print, message, and trace?
 - when should `rum-jupyter` begin reusing `rum-host` helpers versus continuing
   to call `rum-runtime` directly?

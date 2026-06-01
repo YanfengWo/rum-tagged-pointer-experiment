@@ -29,7 +29,9 @@ The intended stack is:
 - `rum-runtime`
   - kernel semantics and session machinery
 - `rum-host`
-  - stable Rust embedding contract
+  - stable Rust embedding contract, now with an initial facade for parse,
+    eval, resume, inspect, complete, is-complete, failures, messages, and
+    structured outputs
 - planned Python adapter
   - thin Python-facing layer on top of `rum-host`
 
@@ -149,8 +151,8 @@ The first validation wave should include:
 
 ## Suggested Build Order
 
-1. finish stabilizing the `rum-host` contract
-2. identify the exact host-facing Rust types Python should wrap
+1. harden the initial `rum-host` contract through Rust-side examples and tests
+2. identify which host-facing Rust facade types Python should wrap directly
 3. create a minimal `rum-python` crate with `SessionBuilder`, `Session`, and
    eval/resume only
 4. add Python smoke tests

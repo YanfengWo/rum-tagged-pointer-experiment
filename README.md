@@ -69,6 +69,8 @@ The repository is a Cargo workspace with these top-level crates:
 - `rum-runtime`: lowering, evaluation sessions, definitions, scoping, messages,
   matching, tracing, and host-facing request APIs
 - `rum-stdlib`: builtin installation for the implemented core-language slice
+- `rum-host`: narrow Rust embedding facade over `rum-runtime` for host
+  sessions, requests, structured outcomes, and resumable input
 - `rum-terminal`: terminal-facing rendering for diagnostics, messages, and
   inspection
 - `rum-repl`: interactive shell layer
@@ -166,11 +168,12 @@ cargo run -p rum-cli -- --format "f[x(* note *)+y]"
 
 Near-term work is concentrated in four areas:
 
+- hardening the new `rum-host` embedding boundary and using it to shape Rust
+  and future Python host adapters
 - further tightening evaluator semantics where behavior is still somewhat ad hoc
 - continuing to expand the rule / matcher language
-- finishing the active `Wave 2` backlog, with emphasis on the remaining
-  `CL-05` keyed-data long tail plus any follow-on matcher / traversal cleanup
-- splitting oversized runtime and adapter modules back into healthier boundaries
+- finishing remaining post-mainline long-tail polish across the `CL-*` groups
+- broadening conformance, regression, and adapter-focused test coverage
 
 `rum-jupyter` remains useful and actively maintained, but it is not the primary
 driver of the core language roadmap.

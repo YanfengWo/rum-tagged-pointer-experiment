@@ -4,6 +4,7 @@ members = [
     "crates/rum-cli",
     "crates/rum-core",
     "crates/rum-difftest",
+    "crates/rum-host",
     "crates/rum-jupyter",
     "crates/rum-repl",
     "crates/rum-runtime",

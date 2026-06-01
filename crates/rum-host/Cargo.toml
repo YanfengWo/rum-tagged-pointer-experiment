@@ -1,0 +1,9 @@
+[package]
+name = "rum-host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rum-runtime = { path = "../rum-runtime" }
+rum-stdlib = { path = "../rum-stdlib" }

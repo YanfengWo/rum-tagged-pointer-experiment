@@ -530,6 +530,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rum-host"
+version = "0.1.0"
+dependencies = [
+ "rum-runtime",
+ "rum-stdlib",
+]
+
+[[package]]
 name = "rum-jupyter"
 version = "0.1.0"
 dependencies = [

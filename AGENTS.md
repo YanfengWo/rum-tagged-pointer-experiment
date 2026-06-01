@@ -18,6 +18,8 @@ The workspace is organized as Rust crates:
 - `rum-runtime`: lowering, evaluation, definitions, scoping, messages,
   matching, tracing, and host-facing request APIs
 - `rum-stdlib`: builtin installation for the implemented language slice
+- `rum-host`: narrow Rust embedding facade over runtime sessions, requests,
+  structured outcomes, and resumable input
 - `rum-terminal`, `rum-repl`, `rum-cli`: terminal and CLI layers
 - `rum-jupyter`: optional Jupyter adapter and transport work
 - `rum-difftest`: optional differential/conformance runner and fixtures

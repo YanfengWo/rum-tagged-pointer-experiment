@@ -13,7 +13,7 @@ This roadmap intentionally uses two levels of detail:
 - [x] Keep the workspace compiling and passing tests as the project evolves
 - [x] Establish source-organization guidelines and convert major `include!`-style roots into real module boundaries
 - [ ] Keep source organization aligned with the strengthened code-organization rules: human-readable modules, maintainable file sizes, feature-oriented subfolders, incremental-compilation-friendly boundaries, and unit-test-friendly function design
-- [ ] Resolve the 2026-05 source-size audit against `docs/code-organization-guidelines.md`: current Rust source count is 0 files over `35k` bytes, 0 files in the `20k`-`35k` split-plan range, and 134 files in the `10k`-`20k` warning range
+- [ ] Resolve the 2026-05 source-size audit against `docs/code-organization-guidelines.md`: current Rust source count is 0 files over `35k` bytes, 0 files in the `20k`-`35k` split-plan range, and 135 files in the `10k`-`20k` warning range
   - [x] Split or document explicit exceptions for the `>35k` architecture-debt files; no Rust source files remain over `35k` bytes after the 2026-05 split pass
   - [x] Add split plans for the current Rust files in the `20k`-`35k` split-plan range; no Rust source files remain in that range after the split pass
   - [x] CL-05 association split follow-up: split the remaining oversized association test file along real conceptual boundaries; `crates/rum-runtime/src/runtime/tests/associations.rs` is down to warning range after moving key transforms, key sets, mutation surface, `KeyValuePattern`, aggregate, missing, and diagnostics coverage into focused test modules
@@ -66,7 +66,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] String search split follow-up: keep `strings/patterns/search.rs` focused on string search/replace/count/delete/apply entry points and move delayed replacement/case rule output evaluation helpers into a focused child module
   - [x] Debug trace split follow-up: keep `debug_tools/trace.rs` focused on `Trace` / `TracePrint` capture, filtering, and rendering, and move structured trace tree construction into a focused child module
   - [x] Jupyter adapter test split follow-up: keep `tests/adapter.rs` focused on direct adapter execute, inspect, completion, tracing, and completeness APIs, and move envelope dispatch / IOPub lifecycle coverage into a focused child module
-  - [ ] Revisit the 134 `10k`-`20k` warning-range files opportunistically when touching nearby subsystems, prioritizing active runtime files over stable tests
+  - [ ] Revisit the 135 `10k`-`20k` warning-range files opportunistically when touching nearby subsystems, prioritizing active runtime files over stable tests
 
 ### Phase 1: Syntax Frontend
 
@@ -109,8 +109,8 @@ This roadmap intentionally uses two levels of detail:
 - [x] Create an initial `rum-jupyter` crate with execute/inspect/complete/is-complete mapping, structured outputs, stdin handling, wire codecs, connection-file/bootstrap support, local socket backends, and native ZeroMQ-backed transport coverage
 - [x] Document a first-pass `rum-host` design so Rust embedding can be implemented against an explicit crate boundary instead of growing ad hoc from `rum-runtime`
 - [x] Document a first-pass Python adapter design so the eventual binding layer has an explicit `rum-host`-first boundary before implementation starts
-- [ ] Define and document a minimal stable host-facing public contract around sessions, requests, configuration, structured outcomes, and suspend/resume while keeping evaluator internals and experimental abstractions out of the public API
-- [ ] Add a first-class Rust host adapter or embedding crate with a narrow public surface shaped for long-running backend, rule-engine, and DSL-service embedding rather than broad internal exposure
+- [x] Define and document a minimal stable host-facing public contract around sessions, requests, configuration, structured outcomes, and suspend/resume while keeping evaluator internals and experimental abstractions out of the public API
+- [x] Add an initial first-class Rust host adapter crate with a narrow public surface shaped for long-running backend, rule-engine, and DSL-service embedding rather than broad internal exposure
 - [ ] Add an optional Python host adapter with a narrow public surface shaped for AI- and data-tooling-oriented integration, likely using `pyo3` behind a thin project-owned boundary instead of leaking Python-binding concerns into `rum-runtime`
 - [ ] Continue hardening `rum-jupyter` as one optional capability-validation adapter for the kernel, prioritizing features that prove or exercise kernel maturity over notebook-only polish
 
@@ -166,30 +166,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] `crates/rum-jupyter/src/zeromq/tests/native/frontend.rs` -> `crates/rum-jupyter/src/zeromq/tests/native/frontend/`
   - [x] `crates/rum-jupyter/src/adapter.rs` -> `crates/rum-jupyter/src/adapter/`
   - [x] `crates/rum-syntax/src/formatter.rs` -> `crates/rum-syntax/src/formatter/`
-- [ ] Keep the remaining `20k+` Rust files under active review using the
-  refreshed source-size audit in Phase 0 as the authoritative roster, and only
-  continue the large-file workstream when a touched subsystem has a real
-  conceptual split:
-  - [ ] prioritize the association cluster first because it has the clearest
-    split boundary and the largest files: `crates/rum-runtime/src/runtime/tests/associations.rs`;
-    keep `crates/rum-runtime/src/runtime/associations/basic.rs`,
-    `crates/rum-runtime/src/runtime/associations/transforms.rs`,
-    `crates/rum-runtime/src/runtime/associations/resumable.rs`, and
-    `crates/rum-runtime/src/runtime/associations/grouping.rs` on the residual
-    split-plan roster after their `Missing` / `DeleteMissing`, mutation,
-    aggregate/summarization, and `GroupBy` extractions
-  - [ ] treat the next likely runtime implementation candidates as
-    `crates/rum-runtime/src/runtime/debug_tools.rs`,
-    `crates/rum-runtime/src/runtime/pattern_matching/sequence.rs`,
-    `crates/rum-runtime/src/runtime/rewrite_builtins.rs`,
-    `crates/rum-runtime/src/runtime/options.rs`,
-    `crates/rum-runtime/src/runtime/structure_ops/selectors.rs`,
-    `crates/rum-runtime/src/runtime/strings/text.rs`,
-    `crates/rum-runtime/src/runtime/builtin_catalog.rs`, and
-    `crates/rum-runtime/src/runtime/namespace_tools.rs`
-  - [ ] split `crates/rum-runtime/src/runtime/builtins_context_loader.rs`
-    by separating path/string filename helpers from context/package loading
-    once the CL-Y smoke lane stabilizes enough to define a durable boundary
+- [x] Complete the focused split-plan cleanup pass for the remaining `20k+`
+  Rust files; the current source-size audit has no Rust source files over
+  `20k`, leaving only the `10k`-`20k` warning range for opportunistic review
+  when nearby subsystems are touched.
 
 ### `rum-syntax`
 
@@ -239,7 +219,7 @@ This roadmap intentionally uses two levels of detail:
 - [ ] Keep the kernel adapter optional and layered on top of host-facing runtime APIs rather than letting protocol details leak back into `rum-runtime`
 - [x] Add a minimal `rum-jupyter-kernel` launcher plus temporary-kernelspec and one-shot smoke scripts so the adapter can be exercised against a real local Jupyter client without global installation
 - [ ] Continue hardening lifecycle and frontend-compatibility details beyond the current local-socket and native-ZeroMQ-backed coverage, but prioritize work that validates or exposes kernel capabilities over notebook-only surface polish
-- [ ] Continue splitting oversized `rum-jupyter` transport/backend/test modules as part of the code-organization workstream
+- [x] Complete the current oversized `rum-jupyter` transport/backend/test split pass; continue only opportunistic warning-range cleanup when touching nearby adapter code
 
 ### Rust and Python Host Adapters
 
@@ -248,14 +228,15 @@ This roadmap intentionally uses two levels of detail:
 - [ ] Treat Rust and Python host support as peer adapters to `rum-jupyter`, all layered on the same host-facing runtime API rather than becoming special cases inside `rum-runtime`
 - [ ] Use a Rust reference scenario of long-running backend services, rule engines, and DSL-oriented infrastructure to judge API ergonomics, but keep the public surface limited to kernel sessions, requests, configuration, structured outcomes, and resource-control boundaries
 - [ ] Use a Python reference scenario of AI- and data-tooling-oriented applications to judge API ergonomics, but keep the public surface general-purpose and free of AI-specific kernel features
-- [ ] Define which host-facing types and flows are stable public contract versus internal implementation detail so future adapters or wrappers can be added without freezing evaluator internals
-- [ ] Decide how much of `Expr`, diagnostics, messages, suspended input, and structured outputs should be exposed directly versus wrapped in host-friendly facades, erring on the side of a smaller stable contract
-- [ ] Create the `rum-host` crate as the primary Rust embedding boundary before starting project-owned Python bindings
+- [x] Define which host-facing types and flows are stable public contract versus internal implementation detail so future adapters or wrappers can be added without freezing evaluator internals
+- [x] Decide how much of `Expr`, diagnostics, messages, suspended input, and structured outputs should be exposed directly versus wrapped in host-friendly facades; the initial contract exposes rendered values and host facades, not raw `Expr`
+- [x] Create the `rum-host` crate as the primary Rust embedding boundary before starting project-owned Python bindings
 - [ ] Keep the Python adapter downstream of `rum-host` even if early experiments make direct `rum-runtime` binding look tempting
 - [ ] Provide enough extension-oriented examples and adapter seams that downstream contributors can build richer wrappers without turning `rum-runtime` into a kitchen-sink host framework
-- [ ] Add adapter-focused regression and smoke coverage for parse, eval, inspect, complete, is-complete, session lifecycle, structured failures, and resumable input from Rust and Python callers
+- [ ] Split `crates/rum-host/src/model.rs` into request/outcome/inspection submodules if the host facade grows beyond the current first-pass API shape
+- [ ] Add broader adapter-focused regression coverage for Rust and future Python callers beyond the initial `rum-host` smoke tests for parse, eval, inspect, complete, is-complete, structured failures, and resumable input
 - [ ] Establish Python packaging and local-dev workflow only after the API shape is stable, keeping wheel/build concerns outside the kernel core
-- [ ] Let `rum-jupyter` reuse shared host-adapter pieces later where that reduces duplication, but do not make notebook protocol concerns the center of the broader host design
+- [x] Evaluate the first `rum-jupyter` reuse boundary: keep direct `rum-runtime` use for now, and consider reusing `rum-host` cursor helpers and host outcome conversion only after the host facade proves stable
 
 ### Samples and Showcase Packages
 
@@ -651,7 +632,7 @@ rather than a verbatim import of every review comment.
 - [ ] Expand `rum-terminal` tests beyond the current small baseline so terminal rendering changes are protected by direct unit coverage
 - [ ] Fix REPL history persistence so multiline inputs survive reload as single logical entries instead of being split into fake per-line history items
 - [ ] Fix lexer unexpected-character spans so structured diagnostics report the actual offending byte range instead of zero-width placeholders
-- [ ] Keep splitting the oversized `rum-jupyter` transport/backend/test files called out by the review round until they fall back into the normal code-organization workflow
+- [x] Finish the oversized `rum-jupyter` transport/backend/test split pass; no current Rust source file remains in the split-plan range
 
 ### P2
 

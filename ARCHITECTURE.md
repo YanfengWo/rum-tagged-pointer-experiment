@@ -258,9 +258,9 @@ temporary-kernelspec smoke path so we can validate real Jupyter-client
 round-trips without installing a global kernelspec or keeping a long-lived
 notebook service around.
 
-### `rum-host` (planned)
+### `rum-host`
 
-`rum-host` is the planned first-class Rust embedding crate.
+`rum-host` is the first-class Rust embedding crate.
 
 Its role is to sit between `rum-runtime` and future long-running Rust hosts,
 providing a narrower and more stable public surface than exposing broad
@@ -273,6 +273,11 @@ It should own:
 - eval / resume / inspect / complete / is-complete helpers
 - transport-friendly outcome, failure, message, and input-request types
 - small embedding-oriented helper layers that future adapters can share
+
+The initial public contract exposes rendered values and host-owned facade
+types for messages, failures, traces, structured outputs, and input
+suspensions. It intentionally does not make raw `Expr`, matcher IR, planner
+state, or continuation payloads part of the stable embedding surface.
 
 It should not own:
 
@@ -427,8 +432,8 @@ IDE, or protocol integrations, they should be able to build them on top of a
 narrow kernel boundary or in optional extension crates rather than by expanding
 `rum-runtime` into a kitchen-sink host framework.
 
-The current plan is to realize that boundary through a dedicated `rum-host`
-crate rather than by making `rum-runtime` itself the long-term embedding API.
+That boundary is realized through the dedicated `rum-host` crate rather than
+by making `rum-runtime` itself the long-term embedding API.
 
 ## What Must Stay Out Of The Kernel
 
