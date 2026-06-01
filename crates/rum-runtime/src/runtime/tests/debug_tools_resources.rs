@@ -185,6 +185,27 @@ fn byte_count_and_memory_in_use_use_the_current_structural_proxy_subset() {
 }
 
 #[test]
+fn memory_in_use_accounts_for_removed_symbol_identity_state() {
+    let mut session = Session::new();
+
+    let before = session.eval_text("MemoryInUse[]").unwrap().value;
+    for index in 0..12 {
+        session
+            .eval_text(&format!("Remove[cl09RemovedMemory{index}]"))
+            .unwrap();
+    }
+    let after = session.eval_text("MemoryInUse[]").unwrap().value;
+
+    assert_eq!(
+        session
+            .evaluate(Expr::call(system_expr("Less"), vec![before, after]))
+            .unwrap()
+            .to_string(),
+        "True"
+    );
+}
+
+#[test]
 fn time_and_memory_constraints_cover_current_first_pass_resource_subset() {
     let mut session = Session::new();
 

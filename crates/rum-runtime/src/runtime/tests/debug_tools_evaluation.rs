@@ -208,4 +208,36 @@ fn evaluation_data_captures_result_messages_prints_and_failure_type_without_leak
             .to_string(),
         "Missing[\"KeyAbsent\", Missing]"
     );
+
+    let message_projection = session
+        .eval_text(
+            "EvaluationData[Message[FindFile::notfound], {\"MessagesText\", \"MessagesExpressions\"}]",
+        )
+        .unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![
+                    message_projection.value.clone(),
+                    Expr::string("MessagesText")
+                ],
+            ))
+            .unwrap()
+            .to_string(),
+        "List[\"message emitted\"]"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![
+                    message_projection.value,
+                    Expr::string("MessagesExpressions")
+                ],
+            ))
+            .unwrap()
+            .to_string(),
+        "List[Hold[Message[FindFile::notfound]]]"
+    );
 }

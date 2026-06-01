@@ -100,7 +100,21 @@ impl Session {
         total = total.saturating_add(
             self.declared_stubs
                 .iter()
-                .map(|symbol| symbol.to_string().len())
+                .map(render_symbol_memory_proxy_bytes)
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.removed_symbols
+                .iter()
+                .map(render_symbol_memory_proxy_bytes)
+                .sum::<usize>(),
+        );
+
+        total = total.saturating_add(
+            self.symbol_generations
+                .iter()
+                .map(render_symbol_generation_memory_proxy_bytes)
                 .sum::<usize>(),
         );
 
@@ -346,6 +360,19 @@ fn render_symbol_options_memory_proxy_bytes(options: &SymbolOptions) -> usize {
                     .saturating_mul(std::mem::size_of::<SymbolOptionEntry>()),
             ),
     )
+}
+
+fn render_symbol_memory_proxy_bytes(symbol: &Symbol) -> usize {
+    std::mem::size_of::<Symbol>()
+        .saturating_add(symbol.context().len())
+        .saturating_add(symbol.name().len())
+}
+
+fn render_symbol_generation_memory_proxy_bytes(entry: (&(String, String), &u64)) -> usize {
+    let ((context, name), _generation) = entry;
+    std::mem::size_of::<((String, String), u64)>()
+        .saturating_add(context.capacity())
+        .saturating_add(name.capacity())
 }
 
 fn render_context_frame_memory_proxy_bytes(frame: &ContextFrame) -> usize {

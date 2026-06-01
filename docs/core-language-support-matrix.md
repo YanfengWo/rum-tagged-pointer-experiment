@@ -712,16 +712,19 @@ once in its primary implementation group. Other groups may mention it as
   layout-aware structural `ByteCount[...]` subset with payload-aware
   `ByteArray[...]` accounting, cooperative
   `TimeConstrained[...]` / `MemoryConstrained[...]` wrappers, a session
-  layout-aware structural memory-proxy `MemoryInUse[]` subset, `Monitor[...]` hooks with
-  current `EvaluationMonitor` / `StepMonitor` option symbols plus stable
-  initial/final display refreshes, broader default-option coverage, and
+  layout-aware structural memory-proxy `MemoryInUse[]` subset, including
+  removed-symbol identity / generation state in the current session-state
+  proxy model, `Monitor[...]` hooks with current `EvaluationMonitor` /
+  `StepMonitor` option symbols plus stable initial/final display refreshes,
+  broader default-option coverage, and
   explicit `None` callback overrides, a first-pass `Dialog[...]` subset with
   `Return`-sensitive evaluation boundaries plus current `DialogProlog` /
   `DialogSymbols` handling and host-input resume support,
   `EvaluationData[...]` property projection through current string-or-symbol,
   list, and `All` forms plus `"Properties"` with matching structured `"Trace"`,
   held `"Input"`, and held `"MessagesExpressions"` payloads, including
-  request-shaped `Missing["KeyAbsent", ...]` payloads and current
+  list-projection coverage for held message-expression / message-text payloads,
+  request-shaped `Missing["KeyAbsent", ...]` payloads, and current
   input-resume coverage, and
   first-pass `TestCreate[...]` / `TestReport[...]`
   metadata through
@@ -729,14 +732,14 @@ once in its primary implementation group. Other groups may mention it as
   `TestReport[..., prop]` string-or-symbol projection plus report-level
   `"Success"`, held per-test `"Input"`, current merging of
   `{report_1, report_2, ...}`, broader per-test `ActualMessagesText` /
-  `OutputLog` / `Timing` payloads, and current report-level
-  `SameTest` / `TimeConstraint` / `MemoryConstraint` options, alongside
-  `Stack[]`; richer
+  `ActualMessagesExpressions` / `OutputLog` / `Timing` payloads, current
+  merged-report property projection, and current report-level `SameTest` /
+  `TimeConstraint` / `MemoryConstraint` options, alongside `Stack[]`; richer
   verification, monitoring, and resource-accounting parity is still
   pending even though the internal tracing/message
   foundations are already in place
-- `planned`: user-facing trace/timing/resource-limit family, verification
-  surface, and debugging output controls
+- `planned`: optional allocator-level real-memory accounting and obscure
+  trace/report edge-case parity if concrete downstream demand appears
 
 ### Functions and Symbols
 
@@ -750,20 +753,25 @@ once in its primary implementation group. Other groups may mention it as
   the current first-pass subset, including a structured default
   `Trace[expr]` model plus structured filtered trace forms with the current
   levelspec and `Heads` filtering, current default `Heads` option support
-  for filtered `Trace[...]` / `TracePrint[...]`, depth-aware nested branch
-  shaping, an indented structured `TracePrint[...]` subset, current
+  for filtered `Trace[...]` / `TracePrint[...]` plus explicit override
+  coverage, depth-aware nested branch shaping, an indented structured
+  `TracePrint[...]` subset, current
   layout-aware structural byte/memory accounting with payload-aware
-  `ByteArray[...]` handling, current symbol-or-string report/property projection
+  `ByteArray[...]` handling and removed-symbol identity / generation-state
+  session accounting, current symbol-or-string report/property projection
   with request-shaped `Missing["KeyAbsent", ...]` payloads, held
   message-expression payloads, current report merging plus
   current report-level `SameTest` / `TimeConstraint` / `MemoryConstraint`
-  options, broader per-test `ActualMessagesText` / `OutputLog` / `Timing`
-  payloads, current input-resume coverage for `EvaluationData` / `Monitor`,
-  and a first-pass `Dialog[...]` / `Dialog[]` one-shot subset with current
+  options, broader per-test `ActualMessagesText` /
+  `ActualMessagesExpressions` / `OutputLog` / `Timing` payloads, current
+  merged-report property projection, current input-resume coverage for
+  `EvaluationData` / `Monitor`, and a first-pass `Dialog[...]` / `Dialog[]`
+  one-shot subset with current
   `DialogProlog` / `DialogSymbols` handling; treat any remaining deeper
-  real-memory accounting or trace/report edge-case parity as long-tail polish
-  rather than active mainline blockers
-- `planned`: deeper real-memory accounting and trace/report edge-case polish
+  allocator-level real-memory accounting or obscure trace/report edge-case
+  parity as future demand-driven work rather than active mainline blockers
+- `planned`: optional allocator-level real-memory accounting and obscure
+  trace/report edge-case parity if concrete downstream demand appears
 - `cross-tracked elsewhere`: `AbortProtect`, `Check`, `CheckAbort`,
   `Failure`, `Message`, `Missing`, `PropagateAborts`, `Quiet`
 

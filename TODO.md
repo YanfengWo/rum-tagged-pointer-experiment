@@ -295,6 +295,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] deepen the current CL-09 subset with more layout-aware structural accounting for `ByteCount[]` / `MemoryInUse[]`, including builtin/session-layout coverage and active `OptionValue` scope growth in the current proxy model
   - [x] deepen the current CL-09 subset with default `Heads` option support for filtered `Trace[...]` / `TracePrint[...]`, plus broader per-test `TestReport` metadata through `ActualMessagesText`, `OutputLog`, and `Timing`
   - [x] close the current CL-09 mainline with payload-aware `ByteArray` accounting inside the layout-aware `ByteCount[]` / `MemoryInUse[]` subset plus the current structured trace/report shape coverage; treat any remaining deeper real-memory parity or trace/report edge-case polish as non-blocking long-tail work rather than active mainline blockers
+  - [x] close the current CL-09 polish pass with broader session-state accounting for removed-symbol identity / generation state in the `MemoryInUse[]` proxy, explicit `Heads -> False` override regressions for `Trace[...]` / `TracePrint[...]`, and boundary coverage for `EvaluationData[...]` / `TestReport[...]` message-property projection plus merged-report projection
 - [ ] Defer reviewing any restored or regenerated `WLBuiltin/` inventory until
   a deliberate post-mainline builtin survey is useful; see
   [docs/wolfram-builtin-inventory.md](./docs/wolfram-builtin-inventory.md)
@@ -475,7 +476,7 @@ This roadmap intentionally uses two levels of detail:
       deeper `Removed[...]` rendering / introspection corners, and fuller
       `Definition` / `Information` print-layer parity beyond the current
       transport-safe expression shapes.
-  - [ ] Wave 4: polish pass across `CL-04`, `CL-08`, and `CL-09`
+  - [x] Wave 4: polish pass across `CL-04`, `CL-08`, and `CL-09`
     - [x] `CL-04`: close the current mainline as substantially covered by
       the implemented threading / `Listable`, `Map` / `Apply` / `Comap`
       traversal, targeted mapping, fold / nest / fixed-point, callable
@@ -486,7 +487,13 @@ This roadmap intentionally uses two levels of detail:
       obscure functional-combinator diagnostic or option-shape corners as
       non-blocking long-tail work rather than active CL-04 blockers.
     - [x] `CL-08`: close the current polish pass with `Names` default options plus `IgnoreCase` matching for wildcard and current regex patterns, broader `SyntaxInformation` default shapes for `Names` / `Protect` / `Unprotect`, and package-tooling regressions for `Save` / `DumpSave` names-pattern object selection; leave deeper regex-engine parity, context-alias resolution, spelling correction, and fuller persistence compatibility as future non-blocking long-tail
-    - [ ] `CL-09`: deeper real-memory accounting and trace/report edge-case polish
+    - [x] `CL-09`: close the current polish pass with removed-symbol identity
+      / generation-state accounting in the `MemoryInUse[]` proxy, explicit
+      `Trace[...]` / `TracePrint[...]` `Heads` override regressions, and
+      `EvaluationData[...]` / `TestReport[...]` message-property and
+      merged-report projection boundary coverage. Leave allocator-level
+      real-memory accounting and obscure trace/report parity for future
+      concrete demand rather than active Wave 4 blockers.
   - [ ] finish with a roadmap/docs cleanup pass that re-syncs the top-level `CL-01` through `CL-07` checklist state and any stale matrix wording with the now-completed mainlines
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:

@@ -93,6 +93,16 @@ fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
     assert_eq!(
         session
             .eval_text(
+                "Lookup[Part[Lookup[TestReport[{TestCreate[Message[FindFile::notfound], Null, {ExpectedMessages -> {FindFile::notfound}}]}], \"TestResults\"], 1], \"ActualMessagesExpressions\"]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Hold[Message[FindFile::notfound]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
                 "Lookup[Part[Lookup[TestReport[{TestCreate[1 + 1, 2]}], \"TestResults\"], 1], \"Input\"]",
             )
             .unwrap()
@@ -282,6 +292,35 @@ fn testreport_merges_existing_reports_and_accepts_report_level_options() {
             .evaluate(Expr::call(
                 system_expr("Lookup"),
                 vec![merged.value, Expr::string("TestsSucceededCount")],
+            ))
+            .unwrap()
+            .to_string(),
+        "1"
+    );
+
+    let merged_projection = session
+        .eval_text(
+            "TestReport[{TestReport[{TestCreate[1 + 1, 2]}], TestReport[{TestCreate[2 + 2, 5]}]}, {TestsRunCount, TestsFailedCount}]",
+        )
+        .unwrap();
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![
+                    merged_projection.value.clone(),
+                    Expr::string("TestsRunCount")
+                ],
+            ))
+            .unwrap()
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("Lookup"),
+                vec![merged_projection.value, Expr::string("TestsFailedCount")],
             ))
             .unwrap()
             .to_string(),

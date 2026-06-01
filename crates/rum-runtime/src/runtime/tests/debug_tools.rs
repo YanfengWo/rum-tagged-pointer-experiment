@@ -49,6 +49,16 @@ fn trace_returns_a_first_pass_structured_expression_list_without_leaking_session
         default_heads.value.to_string(),
         "List[Hold[f], List[Hold[Plus]]]"
     );
+
+    let explicit_no_heads = session
+        .eval_text("Trace[f[1], _Symbol, Heads -> False]")
+        .unwrap();
+    assert_eq!(explicit_no_heads.value.to_string(), "List[]");
+
+    let explicit_no_heads_with_levels = session
+        .eval_text("Trace[f[1], _Symbol, {0, Infinity}, {Heads -> False}]")
+        .unwrap();
+    assert_eq!(explicit_no_heads_with_levels.value.to_string(), "List[]");
 }
 
 #[test]
@@ -113,6 +123,18 @@ fn trace_print_emits_trace_lines_and_returns_the_underlying_value() {
     let default_heads = session.eval_text("TracePrint[f[1], _Symbol]").unwrap();
     assert_eq!(default_heads.value.to_string(), "2");
     assert_eq!(default_heads.prints, vec!["f", "  Plus"]);
+
+    let explicit_no_heads = session
+        .eval_text("TracePrint[f[1], _Symbol, Heads -> False]")
+        .unwrap();
+    assert_eq!(explicit_no_heads.value.to_string(), "2");
+    assert!(explicit_no_heads.prints.is_empty());
+
+    let explicit_no_heads_with_levels = session
+        .eval_text("TracePrint[f[1], _Symbol, {0, Infinity}, {Heads -> False}]")
+        .unwrap();
+    assert_eq!(explicit_no_heads_with_levels.value.to_string(), "2");
+    assert!(explicit_no_heads_with_levels.prints.is_empty());
 }
 
 #[test]
