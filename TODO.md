@@ -66,7 +66,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] String search split follow-up: keep `strings/patterns/search.rs` focused on string search/replace/count/delete/apply entry points and move delayed replacement/case rule output evaluation helpers into a focused child module
   - [x] Debug trace split follow-up: keep `debug_tools/trace.rs` focused on `Trace` / `TracePrint` capture, filtering, and rendering, and move structured trace tree construction into a focused child module
   - [x] Jupyter adapter test split follow-up: keep `tests/adapter.rs` focused on direct adapter execute, inspect, completion, tracing, and completeness APIs, and move envelope dispatch / IOPub lifecycle coverage into a focused child module
-  - [ ] Revisit the 135 `10k`-`20k` warning-range files opportunistically when touching nearby subsystems, prioritizing active runtime files over stable tests
+  - [ ] Revisit the 134 `10k`-`20k` warning-range files opportunistically when touching nearby subsystems, prioritizing active runtime files over stable tests
 
 ### Phase 1: Syntax Frontend
 
