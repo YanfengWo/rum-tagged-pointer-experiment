@@ -1,0 +1,16 @@
+# Curated Lane B file: definitions, options, messages, and precedence
+# Format: input ||| expected_output
+x = 2 ||| 2
+x + 3 ||| 5
+f[n_] := n + 1 ||| Null
+f[10] ||| 11
+f[n_] := n + 2 ||| Null
+f[10] ||| 12
+Clear[f] ||| Null
+f[10] ||| f[10]
+Options[p] = {alpha -> 1}; ToString[Options[p], InputForm] ||| "{alpha -> 1}"
+p[OptionsPattern[]] := OptionValue[alpha] ||| Null
+p[] ||| 1
+p[alpha -> 9] ||| 9
+m::tag = "value `1`" ||| "value `1`"
+Message[m::tag, 3] ||| Null

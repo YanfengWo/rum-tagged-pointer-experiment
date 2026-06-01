@@ -57,6 +57,10 @@ pub fn golden_dir() -> PathBuf {
     seed_root().join("golden")
 }
 
+pub fn stateful_dir() -> PathBuf {
+    crate_root().join("cases/stateful")
+}
+
 pub fn parse_golden_file(text: &str) -> Result<Vec<GoldenEntry>, FixtureParseError> {
     let mut entries = Vec::new();
 
@@ -217,6 +221,31 @@ mod tests {
             assert!(
                 !entries.is_empty(),
                 "curated fixture should not be empty: {}",
+                file.display()
+            );
+        }
+    }
+
+    #[test]
+    fn parses_curated_stateful_fixtures() {
+        let mut files = fs::read_dir(stateful_dir())
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("txt"))
+            .collect::<Vec<_>>();
+        files.sort();
+
+        assert!(
+            !files.is_empty(),
+            "stateful fixture directory should contain at least one fixture"
+        );
+
+        for file in files {
+            let text = load_text(&file).unwrap();
+            let entries = parse_golden_file(&text).unwrap();
+            assert!(
+                !entries.is_empty(),
+                "stateful fixture should not be empty: {}",
                 file.display()
             );
         }

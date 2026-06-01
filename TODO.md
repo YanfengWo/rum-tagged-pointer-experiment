@@ -562,8 +562,9 @@ This roadmap intentionally uses two levels of detail:
 - [ ] Keep `rum-difftest` split into explicit lanes instead of one monolithic diff bucket:
   - [ ] Lane A: single-expression Wolfram diff fixtures and runner
   - [x] Land a first-pass Lane A runner that accepts a user-provided kernel path via CLI or config and keeps oracle artifacts transient
-  - [x] Land a first curated `cases/wolfram/core/` fixture set covering arithmetic/structures, strings, associations, loops/control objects, functional combinators, and failure/status smoke checks
-  - [ ] Lane B: stateful session fixture format and runner
+  - [x] Land a first curated `cases/wolfram/core/` fixture set covering arithmetic/structures, strings, associations, loops/control objects, functional combinators, rules/patterns/replacement/traversal, and failure/status smoke checks
+  - [x] Lane B: land a first stateful session fixture format and runner for ordered definition / option / message / precedence checks, using one `rum` session per fixture and a replay-based Wolfram oracle simulation as the current first pass
+  - [ ] Lane B follow-up: replace replay-based Wolfram state simulation with a true interactive-oracle transport before relying on deeper session, message-stream, or generated-symbol identity edge cases
   - [ ] Lane C: checked known-difference ledger
   - [ ] Lane D: performance baseline inputs and runners
   - [ ] Lane E: keep host-contract tests in `rum`-native crate-local suites rather than Wolfram diff
@@ -580,9 +581,9 @@ This roadmap intentionally uses two levels of detail:
   - [ ] record any deliberate divergences from Wolfram behavior alongside those fixtures
 - [ ] Prioritize oracle-style checks for the most semantics-sensitive areas first:
   - [x] arithmetic normalization and exact-integer behavior now have an initial curated Lane A foothold
-  - [ ] rules, patterns, replacement, and traversal behavior
+  - [x] rules, patterns, replacement, and traversal behavior now have an initial curated Lane A foothold
   - [x] scoping and held-evaluation constructs now have an initial curated Lane A foothold through loops/control/function cases
-  - [ ] messages, attributes, and definition precedence
+  - [ ] messages, attributes, and definition precedence have an initial Lane B stateful foothold, but still need richer message-shape comparison and broader attribute/default-value coverage
   - [x] string semantics now have an initial curated Lane A foothold that covers multiple CL-07 subfamilies
 
 ### Long-Tail Workstream: Full String Language Parity

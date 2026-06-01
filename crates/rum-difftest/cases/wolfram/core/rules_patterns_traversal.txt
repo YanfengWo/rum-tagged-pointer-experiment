@@ -1,0 +1,13 @@
+# Curated Lane A file: rules, patterns, replacement, and traversal
+# Format: input ||| expected_output
+MatchQ[f[1, 2], f[_Integer, _Integer]] ||| True
+MatchQ[f[1, a], f[_Integer, _Integer]] ||| False
+ToString[{a, b, c} /. b -> x, InputForm] ||| "{a, x, c}"
+ToString[Replace[{a, b}, {x_, y_} :> {y, x}], InputForm] ||| "{b, a}"
+ToString[Cases[f[1, g[2], 3], _Integer, Infinity], InputForm] ||| "{1, 2, 3}"
+ToString[Cases[f[1, g[2], 3], _Integer, {2}], InputForm] ||| "{2}"
+ToString[DeleteCases[{1, a, 2, b, 3}, _Integer], InputForm] ||| "{a, b}"
+ToString[Position[{a, {b, a}, c}, a], InputForm] ||| "{{1}, {2, 2}}"
+Count[f[1, g[2], 3], _Integer, Infinity] ||| 3
+FreeQ[f[1, g[2]], _String, Infinity] ||| True
+MemberQ[f[1, g[2]], _Integer, Infinity] ||| True

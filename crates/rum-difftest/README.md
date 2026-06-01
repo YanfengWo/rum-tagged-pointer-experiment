@@ -70,6 +70,20 @@ artifacts afterward. It is intentionally a first pass: enough to validate the
 oracle workflow, not yet the final word on message capture, top-level display
 parity, or every Wolfram transport nuance.
 
+## First-Pass Lane B Runner
+
+The crate also includes a first-pass `lane-b` runner for ordered stateful
+session fixtures:
+
+```bash
+cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel
+```
+
+Lane B keeps one `rum` session per fixture file and currently simulates
+Wolfram session state by replaying prior step inputs before the current step.
+This covers the first definition, option, message, and precedence checks while
+leaving a future interactive-oracle transport for deeper session edges.
+
 Start here:
 
 - [HANDOFF.md](./HANDOFF.md)
@@ -90,6 +104,7 @@ The first curated Lane A files now live under
 - loops, control objects, and failure/status flows
 - associations and keyed-data basics
 - CL-04 functional combinators
+- rules, patterns, replacement, and traversal
 - CL-07 string surface/pattern/template/similarity subsets
 
 The original imported staging README is preserved in

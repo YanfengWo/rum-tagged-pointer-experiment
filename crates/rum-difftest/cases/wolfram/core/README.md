@@ -33,6 +33,8 @@ The current first pass includes:
 - association and keyed-data smoke coverage
 - dedicated loop/procedural and control-object suites
 - a focused functional-combinator suite covering current CL-04 operator and iteration subsets
+- a focused rules/patterns/replacement/traversal suite for Lane A stateless
+  conformance
 - a failure/status suite covering stable CL-06 confirmation and status-object checks
 - focused string-language suites for surface operations, string-patterns,
   templating, and similarity helpers
