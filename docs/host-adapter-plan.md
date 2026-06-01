@@ -150,11 +150,13 @@ reshape core runtime boundaries too early.
 
 The first validation wave for `rum-host` includes:
 
-- adapter-focused Rust tests for eval flows
+- adapter-focused Rust tests for eval flows through the public facade
 - suspend/resume tests through the host facade
 - structured outcome, failure-code, message, print, parse, inspect,
   completion, and completeness coverage
-- one small example embedding binary or example module, with
+- one small example embedding binary or example module, with the current
+  `crates/rum-host/examples/basic_embedding.rs` serving as the minimal smoke
+  example and
   [Rust Wasm Prototype](../examples/rust-wasm-proto/PLAN.md) as the current
   long-range showcase candidate once the host boundary is stable enough
 - selective reuse by `rum-jupyter` only after the surface proves useful
@@ -168,9 +170,12 @@ The first validation wave for `rum-host` includes:
 5. expand to inspect/complete/is-complete
 6. only then plan Python on top
 
-Items 1 through 5 now have an initial implementation. The next work should be
-hardening the contract through real host examples and broader adapter tests,
-not expanding the public surface by default.
+Items 1 through 5 now have an initial implementation. The first hardening pass
+has also split the `rum-host` facade model into request, outcome, and
+inspection modules, added public adapter-contract regression coverage, and
+landed a minimal Rust embedding example. The next work should validate the
+surface through richer examples and downstream adapter pressure, not expand the
+public surface by default.
 
 ## Jupyter Reuse Assessment
 

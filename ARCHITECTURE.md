@@ -279,6 +279,12 @@ types for messages, failures, traces, structured outputs, and input
 suspensions. It intentionally does not make raw `Expr`, matcher IR, planner
 state, or continuation payloads part of the stable embedding surface.
 
+The host facade model is split by public contract responsibility: request /
+response shapes, evaluation outcomes, and inspection metadata. Public
+adapter-contract tests and the minimal `basic_embedding` example should remain
+the first regression layer for this boundary before richer Rust or Python
+wrappers are added.
+
 It should not own:
 
 - language semantics

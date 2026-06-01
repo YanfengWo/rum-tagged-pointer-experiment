@@ -164,6 +164,12 @@ Format an expression:
 cargo run -p rum-cli -- --format "f[x(* note *)+y]"
 ```
 
+Run the minimal Rust host embedding example:
+
+```bash
+cargo run -p rum-host --example basic_embedding
+```
+
 ## Current Priorities
 
 Near-term work is concentrated in four areas:

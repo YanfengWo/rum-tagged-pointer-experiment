@@ -13,7 +13,7 @@ This roadmap intentionally uses two levels of detail:
 - [x] Keep the workspace compiling and passing tests as the project evolves
 - [x] Establish source-organization guidelines and convert major `include!`-style roots into real module boundaries
 - [ ] Keep source organization aligned with the strengthened code-organization rules: human-readable modules, maintainable file sizes, feature-oriented subfolders, incremental-compilation-friendly boundaries, and unit-test-friendly function design
-- [ ] Resolve the 2026-05 source-size audit against `docs/code-organization-guidelines.md`: current Rust source count is 0 files over `35k` bytes, 0 files in the `20k`-`35k` split-plan range, and 135 files in the `10k`-`20k` warning range
+- [ ] Resolve the 2026-05 source-size audit against `docs/code-organization-guidelines.md`: current Rust source count is 0 files over `35k` bytes, 0 files in the `20k`-`35k` split-plan range, and 134 files in the `10k`-`20k` warning range
   - [x] Split or document explicit exceptions for the `>35k` architecture-debt files; no Rust source files remain over `35k` bytes after the 2026-05 split pass
   - [x] Add split plans for the current Rust files in the `20k`-`35k` split-plan range; no Rust source files remain in that range after the split pass
   - [x] CL-05 association split follow-up: split the remaining oversized association test file along real conceptual boundaries; `crates/rum-runtime/src/runtime/tests/associations.rs` is down to warning range after moving key transforms, key sets, mutation surface, `KeyValuePattern`, aggregate, missing, and diagnostics coverage into focused test modules
@@ -233,8 +233,10 @@ This roadmap intentionally uses two levels of detail:
 - [x] Create the `rum-host` crate as the primary Rust embedding boundary before starting project-owned Python bindings
 - [ ] Keep the Python adapter downstream of `rum-host` even if early experiments make direct `rum-runtime` binding look tempting
 - [ ] Provide enough extension-oriented examples and adapter seams that downstream contributors can build richer wrappers without turning `rum-runtime` into a kitchen-sink host framework
-- [ ] Split `crates/rum-host/src/model.rs` into request/outcome/inspection submodules if the host facade grows beyond the current first-pass API shape
-- [ ] Add broader adapter-focused regression coverage for Rust and future Python callers beyond the initial `rum-host` smoke tests for parse, eval, inspect, complete, is-complete, structured failures, and resumable input
+- [x] Split `crates/rum-host/src/model.rs` into request/outcome/inspection submodules once the host facade grew beyond the first-pass API shape
+- [x] Add broader Rust adapter-focused regression coverage beyond the initial `rum-host` smoke tests for parse, eval, inspect, complete, is-complete, structured failures, structured output, builtin-discovery configuration, and resumable input
+- [x] Add a minimal Rust embedding example under `crates/rum-host/examples/basic_embedding.rs`
+- [ ] Add future Python adapter-focused regression coverage after a `rum-python` crate exists
 - [ ] Establish Python packaging and local-dev workflow only after the API shape is stable, keeping wheel/build concerns outside the kernel core
 - [x] Evaluate the first `rum-jupyter` reuse boundary: keep direct `rum-runtime` use for now, and consider reusing `rum-host` cursor helpers and host outcome conversion only after the host facade proves stable
 
