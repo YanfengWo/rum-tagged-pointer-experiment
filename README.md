@@ -172,13 +172,15 @@ cargo run -p rum-host --example basic_embedding
 
 ## Current Priorities
 
-Near-term work is concentrated in four areas:
+Near-term work is concentrated in these areas:
 
 - hardening the new `rum-host` embedding boundary and using it to shape Rust
   and future Python host adapters
 - further tightening evaluator semantics where behavior is still somewhat ad hoc
 - continuing to expand the rule / matcher language
-- finishing remaining post-mainline long-tail polish across the `CL-*` groups
+- finishing remaining post-mainline long-tail polish across the `CL-*` groups,
+  with the current `CL-08` Names/options/package-tooling pass now folded back
+  into the documented support matrix
 - broadening conformance, regression, and adapter-focused test coverage
 
 `rum-jupyter` remains useful and actively maintained, but it is not the primary

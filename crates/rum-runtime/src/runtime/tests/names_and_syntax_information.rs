@@ -118,6 +118,59 @@ fn names_without_explicit_context_only_sees_visible_contexts() {
 }
 
 #[test]
+fn names_accepts_current_options_subset() {
+    let mut session = Session::new();
+
+    session.eval_text("CasePkg`Alpha = 1").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("Names[\"casepkg`alpha\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[\"casepkg`alpha\", IgnoreCase -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"CasePkg`Alpha\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[RegularExpression[\"^casepkg`a[a-z]+$\"], IgnoreCase -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"CasePkg`Alpha\"]"
+    );
+
+    session
+        .eval_text("SetOptions[Names, IgnoreCase -> True]")
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("Names[\"casepkg`alpha\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"CasePkg`Alpha\"]"
+    );
+
+    let invalid = session.eval_text("Names[\"*\", Bogus -> True]").unwrap();
+    assert_eq!(invalid.value.to_string(), "Names[\"*\", Rule[Bogus, True]]");
+    assert!(
+        invalid
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Names" && message.tag == "argform")
+    );
+}
+
+#[test]
 fn syntax_information_defaults_assignment_and_unset_cover_current_first_pass_subset() {
     let mut session = Session::new();
 
@@ -253,6 +306,14 @@ fn syntax_information_includes_current_system_default_subset() {
 
     assert_eq!(
         session
+            .eval_text("SyntaxInformation[Names]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Optional[Blank[]], OptionsPattern]], Rule[\"OptionNames\", List[\"IgnoreCase\", \"ResolveContextAliases\", \"SpellingCorrection\"]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("SyntaxInformation[Options]")
             .unwrap()
             .value
@@ -274,6 +335,22 @@ fn syntax_information_includes_current_system_default_subset() {
             .value
             .to_string(),
         "List[Rule[\"ArgumentsPattern\", List[Blank[], Blank[], Optional[Blank[Association]]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Protect]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[BlankNullSequence[]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SyntaxInformation[Unprotect]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[BlankSequence[]]]]"
     );
     assert_eq!(
         session

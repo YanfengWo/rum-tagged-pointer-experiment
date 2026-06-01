@@ -361,24 +361,38 @@ fn parse_regex_class_item(chars: &[char], index: &mut usize) -> Option<RegexClas
     Some(RegexClassItem::Char(ch))
 }
 
-pub(super) fn regex_pattern_matches(pattern: &RegexPattern, haystack: &[char]) -> bool {
+pub(super) fn regex_pattern_matches(
+    pattern: &RegexPattern,
+    haystack: &[char],
+    ignore_case: bool,
+) -> bool {
     pattern
         .branches
         .iter()
-        .any(|branch| regex_branch_matches(branch, haystack))
+        .any(|branch| regex_branch_matches(branch, haystack, ignore_case))
 }
 
-fn regex_branch_matches(tokens: &[RegexToken], haystack: &[char]) -> bool {
-    regex_branch_match_ends(tokens, haystack, 0)
+fn regex_branch_matches(tokens: &[RegexToken], haystack: &[char], ignore_case: bool) -> bool {
+    regex_branch_match_ends(tokens, haystack, 0, ignore_case)
         .into_iter()
         .any(|end| end == haystack.len())
 }
 
-fn regex_pattern_match_ends(pattern: &RegexPattern, haystack: &[char], start: usize) -> Vec<usize> {
+fn regex_pattern_match_ends(
+    pattern: &RegexPattern,
+    haystack: &[char],
+    start: usize,
+    ignore_case: bool,
+) -> Vec<usize> {
     let mut ends = Vec::new();
 
     for branch in &pattern.branches {
-        ends.extend(regex_branch_match_ends(branch, haystack, start));
+        ends.extend(regex_branch_match_ends(
+            branch,
+            haystack,
+            start,
+            ignore_case,
+        ));
     }
 
     ends.sort_unstable();
@@ -386,12 +400,18 @@ fn regex_pattern_match_ends(pattern: &RegexPattern, haystack: &[char], start: us
     ends
 }
 
-fn regex_branch_match_ends(tokens: &[RegexToken], haystack: &[char], start: usize) -> Vec<usize> {
+fn regex_branch_match_ends(
+    tokens: &[RegexToken],
+    haystack: &[char],
+    start: usize,
+    ignore_case: bool,
+) -> Vec<usize> {
     fn recur(
         tokens: &[RegexToken],
         token_index: usize,
         haystack: &[char],
         hay_index: usize,
+        ignore_case: bool,
         memo: &mut BTreeMap<(usize, usize), Vec<usize>>,
     ) -> Vec<usize> {
         if let Some(cached) = memo.get(&(token_index, hay_index)) {
@@ -402,11 +422,18 @@ fn regex_branch_match_ends(tokens: &[RegexToken], haystack: &[char], start: usiz
             vec![hay_index]
         } else {
             let token = &tokens[token_index];
-            let mut ends = regex_token_match_ends(token, haystack, hay_index);
+            let mut ends = regex_token_match_ends(token, haystack, hay_index, ignore_case);
             let mut result = Vec::new();
 
             for end in ends.drain(..) {
-                result.extend(recur(tokens, token_index + 1, haystack, end, memo));
+                result.extend(recur(
+                    tokens,
+                    token_index + 1,
+                    haystack,
+                    end,
+                    ignore_case,
+                    memo,
+                ));
             }
 
             result.sort_unstable();
@@ -419,10 +446,15 @@ fn regex_branch_match_ends(tokens: &[RegexToken], haystack: &[char], start: usiz
     }
 
     let mut memo = BTreeMap::new();
-    recur(tokens, 0, haystack, start, &mut memo)
+    recur(tokens, 0, haystack, start, ignore_case, &mut memo)
 }
 
-fn regex_token_match_ends(token: &RegexToken, haystack: &[char], start: usize) -> Vec<usize> {
+fn regex_token_match_ends(
+    token: &RegexToken,
+    haystack: &[char],
+    start: usize,
+    ignore_case: bool,
+) -> Vec<usize> {
     fn recur(
         atom: &RegexAtom,
         haystack: &[char],
@@ -430,6 +462,7 @@ fn regex_token_match_ends(token: &RegexToken, haystack: &[char], start: usize) -
         repeats: usize,
         min: usize,
         max: Option<usize>,
+        ignore_case: bool,
         ends: &mut Vec<usize>,
     ) {
         if repeats >= min {
@@ -440,29 +473,54 @@ fn regex_token_match_ends(token: &RegexToken, haystack: &[char], start: usize) -
             return;
         }
 
-        for next in regex_atom_match_ends(atom, haystack, current) {
+        for next in regex_atom_match_ends(atom, haystack, current, ignore_case) {
             if next == current {
                 continue;
             }
-            recur(atom, haystack, next, repeats + 1, min, max, ends);
+            recur(
+                atom,
+                haystack,
+                next,
+                repeats + 1,
+                min,
+                max,
+                ignore_case,
+                ends,
+            );
         }
     }
 
     let (min, max) = regex_quantifier_bounds(token.quantifier);
     let mut ends = Vec::new();
-    recur(&token.atom, haystack, start, 0, min, max, &mut ends);
+    recur(
+        &token.atom,
+        haystack,
+        start,
+        0,
+        min,
+        max,
+        ignore_case,
+        &mut ends,
+    );
     ends.sort_unstable();
     ends.dedup();
     ends
 }
 
-fn regex_atom_match_ends(atom: &RegexAtom, haystack: &[char], start: usize) -> Vec<usize> {
+fn regex_atom_match_ends(
+    atom: &RegexAtom,
+    haystack: &[char],
+    start: usize,
+    ignore_case: bool,
+) -> Vec<usize> {
     match atom {
-        RegexAtom::Group(pattern) => regex_pattern_match_ends(pattern, haystack, start),
+        RegexAtom::Group(pattern) => {
+            regex_pattern_match_ends(pattern, haystack, start, ignore_case)
+        }
         _ => haystack
             .get(start)
             .copied()
-            .filter(|ch| regex_atom_matches(atom, *ch))
+            .filter(|ch| regex_atom_matches(atom, *ch, ignore_case))
             .map(|_| vec![start + 1])
             .unwrap_or_default(),
     }
@@ -479,27 +537,48 @@ fn regex_quantifier_bounds(quantifier: RegexQuantifier) -> (usize, Option<usize>
     }
 }
 
-fn regex_atom_matches(atom: &RegexAtom, ch: char) -> bool {
+fn regex_atom_matches(atom: &RegexAtom, ch: char, ignore_case: bool) -> bool {
     match atom {
-        RegexAtom::Literal(expected) => *expected == ch,
+        RegexAtom::Literal(expected) => chars_match(*expected, ch, ignore_case),
         RegexAtom::AnyChar => true,
         RegexAtom::Digit => ch.is_ascii_digit(),
         RegexAtom::Word => ch.is_ascii_alphanumeric() || ch == '_',
         RegexAtom::Whitespace => ch.is_whitespace(),
         RegexAtom::Group(_) => false,
         RegexAtom::Class { negated, items } => {
-            let matched = items.iter().any(|item| regex_class_item_matches(item, ch));
+            let matched = items
+                .iter()
+                .any(|item| regex_class_item_matches(item, ch, ignore_case));
             if *negated { !matched } else { matched }
         }
     }
 }
 
-fn regex_class_item_matches(item: &RegexClassItem, ch: char) -> bool {
+fn regex_class_item_matches(item: &RegexClassItem, ch: char, ignore_case: bool) -> bool {
     match item {
-        RegexClassItem::Char(expected) => *expected == ch,
-        RegexClassItem::Range(start, end) => *start <= ch && ch <= *end,
+        RegexClassItem::Char(expected) => chars_match(*expected, ch, ignore_case),
+        RegexClassItem::Range(start, end) => {
+            let ch = comparable_char(ch, ignore_case);
+            comparable_char(*start, ignore_case) <= ch && ch <= comparable_char(*end, ignore_case)
+        }
         RegexClassItem::Digit => ch.is_ascii_digit(),
         RegexClassItem::Word => ch.is_ascii_alphanumeric() || ch == '_',
         RegexClassItem::Whitespace => ch.is_whitespace(),
+    }
+}
+
+fn chars_match(lhs: char, rhs: char, ignore_case: bool) -> bool {
+    if ignore_case {
+        lhs.eq_ignore_ascii_case(&rhs)
+    } else {
+        lhs == rhs
+    }
+}
+
+fn comparable_char(ch: char, ignore_case: bool) -> char {
+    if ignore_case {
+        ch.to_ascii_lowercase()
+    } else {
+        ch
     }
 }

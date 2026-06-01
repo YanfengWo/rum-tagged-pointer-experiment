@@ -277,6 +277,14 @@ fn system_default_options_cover_current_first_pass_subset() {
             .to_string(),
         "List[Rule[ExpirationDate, None], Rule[PersistenceTime, None]]"
     );
+    assert_eq!(
+        session
+            .eval_text("Options[Names]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[IgnoreCase, False], Rule[ResolveContextAliases, True], Rule[SpellingCorrection, False]]"
+    );
 }
 
 #[test]

@@ -67,6 +67,14 @@ pub(super) const NAMESPACE_BUILTINS: &[BuiltinSpec] = &[
         "Lists symbol names matching a current first-pass name pattern subset.",
         BuiltinHandler::Names,
     ),
+    BuiltinSpec::new(
+        "ResolveContextAliases",
+        "Represents the current Names option symbol for context-alias resolution.",
+    ),
+    BuiltinSpec::new(
+        "SpellingCorrection",
+        "Represents the current Names option symbol for spelling-correction control.",
+    ),
     BuiltinSpec::new("File", "Represents an explicit file specification."),
     BuiltinSpec::ordinary(
         "FindFile",

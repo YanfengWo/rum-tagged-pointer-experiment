@@ -643,13 +643,16 @@ once in its primary implementation group. Other groups may mention it as
   `RegularExpression[...]`, `StringExpression`, `Alternatives`, and
   pattern-list unions over current visible contexts or explicit contexts,
   including the current bounded / alternation / grouping /
-  non-capturing-group regex subset; `Save` now rejects unknown options in
+  non-capturing-group regex subset, plus the current default option surface
+  and `IgnoreCase -> True` matching for wildcard and supported regex
+  patterns; `Save` now rejects unknown options in
   the current package-tooling subset, and `Once` now accepts option rules in
   second position, reports unknown option names, and honors
   `PersistenceTime -> 0` as a no-cache subset;
   `SyntaxInformation` now covers direct query, assignment, `Unset`,
   system-default metadata for the current package/tooling subset plus a
   broader current slice of optioned string/traversal/package helpers,
+  `Names` option metadata, `Protect` / `Unprotect` argument shapes,
   `Protected` barriers, and `Block` / loader snapshot participation;
   `DeclarePackage` now installs stub-like declared symbols, updates
   `$ContextPath`, and auto-`Needs` the declared context on first symbol use;
@@ -657,14 +660,15 @@ once in its primary implementation group. Other groups may mention it as
   that can round-trip through `Get`, with current `IncludedContexts` /
   `ExcludedContexts` filtering and `DumpSave` `SymbolAttributes` handling,
   and `Once` now provides session-local memoization keyed by held expression
-  plus location;
+  plus location; package-tooling regressions cover `Save` / `DumpSave`
+  object selection through string and current regex names patterns;
   `ArgumentsOptions` / `CheckArguments` now cover the current held-call and
   trailing-options subset, and direct builtin `UpSet` / `UpSetDelayed` now
   cover first-pass inferred upvalue tags
 - `planned`: non-blocking long-tail package ergonomics, deeper
   `DeclarePackage` / `Save` / `DumpSave` / `Once` compatibility, richer
-  `Names` regex parity beyond the current wildcard/grouping subset, and
-  broader `SyntaxInformation` properties
+  `Names` regex parity beyond the current wildcard/grouping/ignore-case
+  subset, and broader `SyntaxInformation` properties
 
 ### Functions and Symbols
 
@@ -676,7 +680,8 @@ once in its primary implementation group. Other groups may mention it as
   `DeclarePackage`, `DumpSave`, `Once`, `Save`
 - `planned`: long-tail `DeclarePackage` / `Save` / `DumpSave` / `Once`
   parity, richer `Names` regex coverage beyond the current wildcard /
-  bounded / alternation subset, and broader `SyntaxInformation` properties
+  bounded / alternation / ignore-case subset, and broader
+  `SyntaxInformation` properties
 - `cross-tracked elsewhere`: `AbortProtect`, `Assert`, `Block`,
   `BlockRandom`, `Check`, `Confirm`, `Enclose`, `Failure`, `FailureQ`,
   `Module`, `MissingQ`, `Quiet`, `Success`, `TagSet`, `WithCleanup`

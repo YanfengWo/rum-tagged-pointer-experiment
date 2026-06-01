@@ -1,6 +1,12 @@
 use super::regex::{RegexPattern, compile_names_regex_pattern, regex_pattern_matches};
 use super::*;
 
+struct NamesInvocation {
+    patterns: Vec<NamesPattern>,
+    explicit_context: bool,
+    explicit_options: Option<SymbolOptions>,
+}
+
 const EXTRA_SYSTEM_NAME_SYMBOLS: &[&str] = &[
     "Alternatives",
     "DialogProlog",
@@ -21,7 +27,9 @@ const EXTRA_SYSTEM_NAME_SYMBOLS: &[&str] = &[
     "PatternSequence",
     "Protected",
     "RegularExpression",
+    "ResolveContextAliases",
     "SequenceHold",
+    "SpellingCorrection",
     "Temporary",
     "Verbatim",
     "StepMonitor",
@@ -53,24 +61,17 @@ impl NamesNormalizationError {
 
 impl Session {
     pub(in crate::runtime) fn eval_names(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let (patterns, explicit_context) = match args {
-            [] => (vec![NamesPattern::Wildcard("*".to_string())], false),
-            [pattern_expr] => match self.compile_names_patterns(pattern_expr) {
-                Some(compiled) => compiled,
-                None => {
-                    return Ok(self.invalid_call_with_arg_form(
-                        "Names",
-                        args,
-                        NamesNormalizationError::InvalidPattern.message(),
-                    ));
-                }
-            },
-            _ => return Ok(self.invalid_call_with_exact_arg_count("Names", args, 1)),
+        let invocation = match self.compile_names_invocation(args) {
+            Ok(invocation) => invocation,
+            Err(error) => return Ok(self.invalid_call_with_arg_form("Names", args, error)),
         };
+        let ignore_case = self.names_ignore_case(invocation.explicit_options.as_ref())?;
 
-        Ok(string_list_expr(
-            self.names_matching_patterns(&patterns, explicit_context),
-        ))
+        Ok(string_list_expr(self.names_matching_patterns(
+            &invocation.patterns,
+            invocation.explicit_context,
+            ignore_case,
+        )))
     }
 
     pub(in crate::runtime) fn resolve_names_matching_expr(
@@ -79,7 +80,7 @@ impl Session {
     ) -> Option<Vec<Symbol>> {
         let (patterns, explicit_context) = self.compile_names_patterns(expr)?;
         Some(
-            self.names_matching_patterns(&patterns, explicit_context)
+            self.names_matching_patterns(&patterns, explicit_context, false)
                 .into_iter()
                 .filter_map(|name| self.resolve_symbol_name(&name, false))
                 .collect(),
@@ -111,6 +112,7 @@ impl Session {
         &self,
         patterns: &[NamesPattern],
         explicit_context: bool,
+        ignore_case: bool,
     ) -> Vec<String> {
         let visible_contexts = self.visible_contexts();
         let mut names = BTreeSet::new();
@@ -130,13 +132,61 @@ impl Session {
 
             if patterns
                 .iter()
-                .any(|pattern| names_pattern_matches(pattern, &candidate))
+                .any(|pattern| names_pattern_matches(pattern, &candidate, ignore_case))
             {
                 names.insert(candidate);
             }
         }
 
         names.into_iter().collect()
+    }
+
+    fn compile_names_invocation(&self, args: &[Expr]) -> Result<NamesInvocation, String> {
+        let (pattern_expr, option_args) = match args {
+            [] => (None, &[][..]),
+            [_single] if self.compile_names_options(args).is_ok() => (None, args),
+            [pattern, rest @ ..] => (Some(pattern), rest),
+        };
+
+        let (patterns, explicit_context) = match pattern_expr {
+            Some(pattern) => self.compile_names_patterns(pattern).ok_or_else(|| {
+                NamesNormalizationError::InvalidPattern
+                    .message()
+                    .to_string()
+            })?,
+            None => (vec![NamesPattern::Wildcard("*".to_string())], false),
+        };
+
+        let explicit_options = if option_args.is_empty() {
+            None
+        } else {
+            Some(self.compile_names_options(option_args)?)
+        };
+
+        if let Some(option) = explicit_options
+            .as_ref()
+            .and_then(first_unknown_names_option)
+        {
+            return Err(format!("unknown option {option} for Names"));
+        }
+
+        Ok(NamesInvocation {
+            patterns,
+            explicit_context,
+            explicit_options,
+        })
+    }
+
+    fn compile_names_options(&self, args: &[Expr]) -> Result<SymbolOptions, String> {
+        self.compile_assigned_options_from_resolved(&Expr::call(system_expr("List"), args.to_vec()))
+            .map_err(|error| error.message().to_string())
+    }
+
+    fn names_ignore_case(&mut self, explicit: Option<&SymbolOptions>) -> Result<bool, EvalError> {
+        Ok(self
+            .runtime_option_expr_for_symbol(explicit, &Symbol::system("Names"), "IgnoreCase")?
+            .map(|value| is_system_symbol_name(&value, "True"))
+            .unwrap_or(false))
     }
 
     fn enumerated_names_symbols(&self) -> BTreeSet<Symbol> {
@@ -221,18 +271,33 @@ fn names_pattern_mentions_context(expr: &Expr) -> bool {
     }
 }
 
-fn names_pattern_matches(pattern: &NamesPattern, candidate: &str) -> bool {
+fn first_unknown_names_option(explicit: &SymbolOptions) -> Option<Symbol> {
+    let defaults = default_system_options(&Symbol::system("Names"));
+    explicit
+        .iter()
+        .find(|(name, _, _)| !defaults.contains_key(name) && !defaults.contains_name(name.name()))
+        .map(|(name, _, _)| name.clone())
+}
+
+fn names_pattern_matches(pattern: &NamesPattern, candidate: &str, ignore_case: bool) -> bool {
     let haystack = candidate.chars().collect::<Vec<_>>();
-    names_pattern_match_ends(pattern, &haystack, 0)
+    names_pattern_match_ends(pattern, &haystack, 0, ignore_case)
         .into_iter()
         .any(|end| end == haystack.len())
 }
 
-fn names_pattern_match_ends(pattern: &NamesPattern, haystack: &[char], start: usize) -> Vec<usize> {
+fn names_pattern_match_ends(
+    pattern: &NamesPattern,
+    haystack: &[char],
+    start: usize,
+    ignore_case: bool,
+) -> Vec<usize> {
     match pattern {
-        NamesPattern::Wildcard(pattern) => wildcard_match_ends(pattern, haystack, start),
+        NamesPattern::Wildcard(pattern) => {
+            wildcard_match_ends(pattern, haystack, start, ignore_case)
+        }
         NamesPattern::Regex(pattern) => {
-            if start == 0 && regex_pattern_matches(pattern, haystack) {
+            if start == 0 && regex_pattern_matches(pattern, haystack, ignore_case) {
                 vec![haystack.len()]
             } else {
                 Vec::new()
@@ -245,7 +310,7 @@ fn names_pattern_match_ends(pattern: &NamesPattern, haystack: &[char], start: us
                 let mut next = Vec::new();
 
                 for end in current {
-                    next.extend(names_pattern_match_ends(part, haystack, end));
+                    next.extend(names_pattern_match_ends(part, haystack, end, ignore_case));
                 }
 
                 next.sort_unstable();
@@ -264,7 +329,7 @@ fn names_pattern_match_ends(pattern: &NamesPattern, haystack: &[char], start: us
             let mut ends = Vec::new();
 
             for part in parts {
-                ends.extend(names_pattern_match_ends(part, haystack, start));
+                ends.extend(names_pattern_match_ends(part, haystack, start, ignore_case));
             }
 
             ends.sort_unstable();
@@ -274,12 +339,18 @@ fn names_pattern_match_ends(pattern: &NamesPattern, haystack: &[char], start: us
     }
 }
 
-fn wildcard_match_ends(pattern: &str, haystack: &[char], start: usize) -> Vec<usize> {
+fn wildcard_match_ends(
+    pattern: &str,
+    haystack: &[char],
+    start: usize,
+    ignore_case: bool,
+) -> Vec<usize> {
     fn recur(
         pattern: &[char],
         pi: usize,
         haystack: &[char],
         hi: usize,
+        ignore_case: bool,
         memo: &mut BTreeMap<(usize, usize), Vec<usize>>,
     ) -> Vec<usize> {
         if let Some(cached) = memo.get(&(pi, hi)) {
@@ -292,14 +363,16 @@ fn wildcard_match_ends(pattern: &str, haystack: &[char], start: usize) -> Vec<us
             let mut ends = Vec::new();
 
             for next_hi in hi..=haystack.len() {
-                ends.extend(recur(pattern, pi + 1, haystack, next_hi, memo));
+                ends.extend(recur(pattern, pi + 1, haystack, next_hi, ignore_case, memo));
             }
 
             ends.sort_unstable();
             ends.dedup();
             ends
-        } else if hi < haystack.len() && pattern[pi] == haystack[hi] {
-            recur(pattern, pi + 1, haystack, hi + 1, memo)
+        } else if hi < haystack.len()
+            && wildcard_chars_match(pattern[pi], haystack[hi], ignore_case)
+        {
+            recur(pattern, pi + 1, haystack, hi + 1, ignore_case, memo)
         } else {
             Vec::new()
         };
@@ -310,5 +383,13 @@ fn wildcard_match_ends(pattern: &str, haystack: &[char], start: usize) -> Vec<us
 
     let pattern = pattern.chars().collect::<Vec<_>>();
     let mut memo = BTreeMap::new();
-    recur(&pattern, 0, haystack, start, &mut memo)
+    recur(&pattern, 0, haystack, start, ignore_case, &mut memo)
+}
+
+fn wildcard_chars_match(pattern: char, candidate: char, ignore_case: bool) -> bool {
+    if ignore_case {
+        pattern.eq_ignore_ascii_case(&candidate)
+    } else {
+        pattern == candidate
+    }
 }

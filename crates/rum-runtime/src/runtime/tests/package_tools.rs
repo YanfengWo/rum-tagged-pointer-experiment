@@ -140,6 +140,41 @@ fn dump_save_overwrites_file_and_returns_saved_symbols() {
 }
 
 #[test]
+fn save_and_dumpsave_accept_names_pattern_objects() {
+    let dir = TempDirGuard::new("save-name-patterns");
+    let save_file = dir.path().join("saved.wl");
+    let dump_file = dir.path().join("saved.mx");
+    let mut session = Session::new();
+
+    session.eval_text("Pkg`Alpha[x_] := x + 1").unwrap();
+    session.eval_text("Pkg`Beta[x_] := x + 2").unwrap();
+    session.eval_text("Other`Alpha[x_] := x + 10").unwrap();
+
+    session
+        .eval_text(&format!(
+            "Save[File[\"{}\"], \"Pkg`A*\"]",
+            rum_path(&save_file)
+        ))
+        .unwrap();
+    let saved = fs::read_to_string(&save_file).unwrap();
+    assert!(saved.contains("SetDelayed[Pkg`Alpha"));
+    assert!(!saved.contains("Pkg`Beta"));
+    assert!(!saved.contains("Other`Alpha"));
+
+    let dumped = session
+        .eval_text(&format!(
+            "DumpSave[File[\"{}\"], RegularExpression[\"^Pkg`B.*$\"]]",
+            rum_path(&dump_file)
+        ))
+        .unwrap();
+    assert_eq!(dumped.value.to_string(), "List[Pkg`Beta]");
+    let dumped = fs::read_to_string(&dump_file).unwrap();
+    assert!(dumped.contains("SetDelayed[Pkg`Beta"));
+    assert!(!dumped.contains("Pkg`Alpha"));
+    assert!(!dumped.contains("Other`Alpha"));
+}
+
+#[test]
 fn save_and_dumpsave_honor_current_context_filter_and_attribute_options_subset() {
     let dir = TempDirGuard::new("save-filters");
     let save_file = dir.path().join("filtered.wl");

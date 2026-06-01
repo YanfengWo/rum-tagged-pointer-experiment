@@ -485,7 +485,7 @@ This roadmap intentionally uses two levels of detail:
       parity, broader ArrayPad-style storage / padding compatibility, and
       obscure functional-combinator diagnostic or option-shape corners as
       non-blocking long-tail work rather than active CL-04 blockers.
-    - [ ] `CL-08`: broader `Names` regex, `SyntaxInformation` properties, and package-tooling compatibility polish
+    - [x] `CL-08`: close the current polish pass with `Names` default options plus `IgnoreCase` matching for wildcard and current regex patterns, broader `SyntaxInformation` default shapes for `Names` / `Protect` / `Unprotect`, and package-tooling regressions for `Save` / `DumpSave` names-pattern object selection; leave deeper regex-engine parity, context-alias resolution, spelling correction, and fuller persistence compatibility as future non-blocking long-tail
     - [ ] `CL-09`: deeper real-memory accounting and trace/report edge-case polish
   - [ ] finish with a roadmap/docs cleanup pass that re-syncs the top-level `CL-01` through `CL-07` checklist state and any stale matrix wording with the now-completed mainlines
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later

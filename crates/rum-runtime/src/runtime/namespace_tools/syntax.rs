@@ -118,10 +118,22 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
     }
 
     let rules = match symbol.name() {
-        "Begin" | "FindFile" | "Get" | "Names" | "Options" | "Protect" | "SyntaxInformation"
-        | "Unprotect" => {
+        "Begin" | "FindFile" | "Get" | "Options" | "SyntaxInformation" => {
             vec![syntax_argument_pattern(vec![blank_expr()])]
         }
+        "Names" => vec![
+            syntax_argument_pattern(vec![optional_blank_expr(), system_expr("OptionsPattern")]),
+            syntax_rule(
+                "OptionNames",
+                string_list_expr(vec![
+                    "IgnoreCase".to_string(),
+                    "ResolveContextAliases".to_string(),
+                    "SpellingCorrection".to_string(),
+                ]),
+            ),
+        ],
+        "Protect" => vec![syntax_argument_pattern(vec![blank_null_sequence_expr()])],
+        "Unprotect" => vec![syntax_argument_pattern(vec![blank_sequence_expr()])],
         "BeginPackage" => vec![syntax_argument_pattern(vec![
             blank_expr(),
             blank_null_sequence_expr(),

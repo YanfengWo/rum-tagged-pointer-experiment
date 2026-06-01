@@ -57,6 +57,11 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
             system_rule_option("ExpirationDate", system_expr("None")),
             system_rule_option("PersistenceTime", system_expr("None")),
         ],
+        "Names" => vec![
+            system_rule_option("IgnoreCase", bool_option(false)),
+            system_rule_option("ResolveContextAliases", bool_option(true)),
+            system_rule_option("SpellingCorrection", bool_option(false)),
+        ],
         "StringContainsQ" | "StringStartsQ" | "StringEndsQ" | "StringMatchQ" | "StringFreeQ"
         | "StringDelete" | "StringReplace" | "StringCases" | "StringPosition" => {
             vec![system_rule_option("IgnoreCase", bool_option(false))]
