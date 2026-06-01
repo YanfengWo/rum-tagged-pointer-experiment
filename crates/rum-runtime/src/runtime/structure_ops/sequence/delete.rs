@@ -1,0 +1,230 @@
+use super::*;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct DeletePathFailure {
+    part: String,
+    target: Expr,
+}
+
+impl Session {
+    pub(in crate::runtime) fn eval_delete(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [expr, positions_expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Delete", args, 2));
+        };
+
+        if matches!(expr, Expr::Atom(_)) {
+            if let Some(part) = delete_atom_part_message_part(positions_expr) {
+                return Ok(self.invalid_delete_atom_part_call(args, &part));
+            }
+            return Ok(self.invalid_normal_expression_call("Delete", args));
+        }
+
+        let Expr::Call {
+            head: expr_head,
+            args: expr_args,
+        } = expr
+        else {
+            return Ok(self.invalid_normal_expression_call("Delete", args));
+        };
+
+        let Some(paths) = parse_delete_position_paths(positions_expr) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let mut canonical_paths = Vec::new();
+        for path in paths {
+            match canonical_delete_path(expr, &path) {
+                Ok(path) => canonical_paths.push(path),
+                Err(failure) => return Ok(self.invalid_delete_path_call(args, failure)),
+            }
+        }
+
+        Ok(delete_canonical_paths(
+            Expr::call(expr_head.as_ref().clone(), expr_args.clone()),
+            canonical_paths,
+        ))
+    }
+
+    fn invalid_delete_atom_part_call(&mut self, args: &[Expr], part: &Expr) -> Expr {
+        self.push_message(
+            "Delete",
+            "partw",
+            format!("Part {} of {} does not exist.", part, args[0]),
+        );
+        Expr::call(system_expr("Delete"), args.to_vec())
+    }
+
+    fn invalid_delete_path_call(&mut self, args: &[Expr], failure: DeletePathFailure) -> Expr {
+        self.push_message(
+            "Delete",
+            "partw",
+            format!(
+                "Part {} of {} does not exist.",
+                failure.part, failure.target
+            ),
+        );
+        Expr::call(system_expr("Delete"), args.to_vec())
+    }
+}
+
+fn delete_atom_part_message_part(positions_expr: &Expr) -> Option<Expr> {
+    if expr_as_signed_isize(positions_expr).is_some() {
+        return Some(positions_expr.clone());
+    }
+
+    let Expr::Call { head, args } = positions_expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return None;
+    }
+
+    let part = args.first()?;
+    expr_as_signed_isize(part).is_some().then(|| part.clone())
+}
+
+fn parse_delete_position_paths(positions_expr: &Expr) -> Option<Vec<Vec<isize>>> {
+    if let Some(position) = expr_as_signed_isize(positions_expr) {
+        return Some(vec![vec![position]]);
+    }
+
+    let Expr::Call { head, args } = positions_expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return None;
+    }
+
+    if args.is_empty() {
+        return Some(Vec::new());
+    }
+
+    if args.iter().all(|expr| expr_as_signed_isize(expr).is_some()) {
+        return Some(vec![
+            args.iter()
+                .map(expr_as_signed_isize)
+                .collect::<Option<Vec<_>>>()?,
+        ]);
+    }
+
+    args.iter().map(parse_delete_position_path_list).collect()
+}
+
+fn parse_delete_position_path_list(expr: &Expr) -> Option<Vec<isize>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) || args.is_empty() {
+        return None;
+    }
+
+    args.iter().map(expr_as_signed_isize).collect()
+}
+
+fn canonical_delete_path(expr: &Expr, path: &[isize]) -> Result<Vec<isize>, DeletePathFailure> {
+    let mut target = expr.clone();
+    let mut canonical = Vec::with_capacity(path.len());
+
+    for (depth, position) in path.iter().copied().enumerate() {
+        if position == 0 {
+            match &target {
+                Expr::Atom(_) => {
+                    return Err(DeletePathFailure {
+                        part: delete_failure_part(path, depth, position),
+                        target,
+                    });
+                }
+                Expr::Call { .. } => {
+                    canonical.push(0);
+                    target = structural_head_expr(&target);
+                }
+            }
+            continue;
+        }
+
+        let Expr::Call { args, .. } = &target else {
+            return Err(DeletePathFailure {
+                part: delete_failure_part(path, depth, position),
+                target,
+            });
+        };
+
+        let Some(index) = normalize_structural_arg_position(position, args.len()) else {
+            return Err(DeletePathFailure {
+                part: delete_failure_part(path, depth, position),
+                target,
+            });
+        };
+        canonical.push(index as isize + 1);
+        target = args[index].clone();
+    }
+
+    Ok(canonical)
+}
+
+fn delete_failure_part(path: &[isize], depth: usize, position: isize) -> String {
+    if depth == 0 {
+        return format!(
+            "{{{}}}",
+            path.iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+    }
+
+    position.to_string()
+}
+
+fn delete_canonical_paths(expr: Expr, mut paths: Vec<Vec<isize>>) -> Expr {
+    paths.sort_by(|left, right| right.cmp(left));
+    paths.dedup();
+    paths
+        .into_iter()
+        .fold(expr, |expr, path| delete_canonical_path(expr, &path))
+}
+
+fn delete_canonical_path(expr: Expr, path: &[isize]) -> Expr {
+    let Some((first, rest)) = path.split_first() else {
+        return expr;
+    };
+
+    match expr {
+        Expr::Atom(_) => expr,
+        Expr::Call { head, args } if *first == 0 => {
+            if rest.is_empty() {
+                return expression_without_head(args);
+            }
+
+            let replaced_head = delete_canonical_path(head.as_ref().clone(), rest);
+            Expr::call(replaced_head, args)
+        }
+        Expr::Call { head, mut args } => {
+            let index = (*first as usize).saturating_sub(1);
+            if index >= args.len() {
+                return Expr::Call { head, args };
+            }
+
+            if rest.is_empty() {
+                args.remove(index);
+            } else {
+                args[index] = delete_canonical_path(args[index].clone(), rest);
+            }
+            Expr::Call { head, args }
+        }
+    }
+}
+
+fn expression_without_head(args: Vec<Expr>) -> Expr {
+    match args.as_slice() {
+        [single] => single.clone(),
+        _ => Expr::call(system_expr("Sequence"), args),
+    }
+}
