@@ -178,9 +178,9 @@ Near-term work is concentrated in these areas:
   and future Python host adapters
 - further tightening evaluator semantics where behavior is still somewhat ad hoc
 - continuing to expand the rule / matcher language
-- finishing remaining post-mainline long-tail polish across the `CL-*` groups,
-  with the current `CL-09` tuning/debugging/verification polish pass now folded
-  back into the documented support matrix
+- keeping the `CL-01` through `CL-09` mainlines documented as closed while
+  promoting only concrete downstream blockers from deferred long-tail notes
+  back into scheduled work
 - broadening conformance, regression, and adapter-focused test coverage
 
 `rum-jupyter` remains useful and actively maintained, but it is not the primary

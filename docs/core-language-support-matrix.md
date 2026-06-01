@@ -70,6 +70,14 @@ IDs instead of re-enumerating every function name.
 - `CL-09`: tuning, debugging, and verification surface
 - `CL-X`: explicit exclusions for this project phase
 
+## Current Roadmap State
+
+The `CL-01` through `CL-09` mainlines are closed for the current kernel-first
+phase. Remaining `partial` / `planned` notes below describe known subset
+boundaries, demand-driven parity tails, or future feature breadth. They should
+not be read as active blockers unless `TODO.md` or a concrete downstream
+project promotes one of them back into scheduled work.
+
 ## Overlap Policy
 
 Many functions appear on more than one official page. Each item is listed only

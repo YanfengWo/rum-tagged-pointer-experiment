@@ -304,20 +304,20 @@ This roadmap intentionally uses two levels of detail:
 
 ### Post-Mainline Long-Tail Priorities
 
-- [ ] Work through the remaining `CL-01` through `CL-09` long-tail in explicit waves instead of reopening every matrix group at once:
+- [x] Work through the remaining `CL-01` through `CL-09` long-tail in explicit waves instead of reopening every matrix group at once. `CL-01` through `CL-09` are now mainline-closed; the notes below are demand-driven deferred parity items, not active blockers.
   - [x] Wave 1: `CL-07` deep parity
-    - [ ] leave unicode-heavy / golden regression expansion as non-blocking polish
-    - [ ] leave fuller project-owned crypto envelope compatibility for future interop-driven work
-    - [ ] leave richer `Nearest` long-tail semantics for concrete caller demand
-    - [ ] leave language-data-backed `Pluralize` parity for a future data-backed lexical layer if user-visible need justifies it
-  - [ ] Wave 2: `CL-03` and `CL-05`
+    - Deferred: unicode-heavy / golden regression expansion remains non-blocking polish.
+    - Deferred: fuller project-owned crypto envelope compatibility waits for future interop-driven work.
+    - Deferred: richer `Nearest` long-tail semantics should wait for concrete caller demand.
+    - Deferred: language-data-backed `Pluralize` parity can wait for a future data-backed lexical layer if user-visible need justifies it.
+  - [x] Wave 2: `CL-03` and `CL-05`
     - [x] `CL-03`: close the current Wave 2 rule/pattern/traversal convenience sweep through association-aware `Cases` / `DeleteCases` / `Level` / `Count` / `MemberQ` / `FreeQ` / `Position`, the remaining `ReplaceList` root long-tail needed beyond the earlier backtracking subset, and current `Flat` / `Orderless` regrouping parity for `MatchQ` / `ReplaceAll` / `ReplaceList`; leave deeper pattern/string crossover and any remaining advanced matcher breadth as non-blocking long-tail
     - [x] `CL-05`: close the current keyed-data mainline as substantially covered by the implemented association/rule-list construction, lookup, keyed helpers, grouping/counting/merge/catenate subsets, `Missing` / `DeleteMissing`, keyed structural selectors, and held mutation support; leave the remaining items below as non-blocking long-tail rather than active Wave 2 blockers.
-      - [ ] Defer the evaluator-coupled `Values[..., Unevaluated]` delayed-value wrapper escape to the later hold/evaluation-model cleanup; this is not a local association-helper blocker.
-      - [ ] Treat the remaining `GroupBy` / `Counts` / `Catenate` / `Merge` invalid-message, obscure reducer, and option-tail edges as non-blocking parity polish unless a concrete migration case needs them.
-      - [ ] Treat fuller `Missing` forms and any broader association semantics beyond the current keyed-lookup / `DeleteMissing` subset as future feature breadth, not a current CL-05 mainline blocker.
-      - [ ] Keep association source/test splitting as architecture debt tracked by the source-size audit, not as a CL-05 semantic blocker.
-  - [ ] Wave 3: `CL-06` and `CL-01`
+      - Deferred: the evaluator-coupled `Values[..., Unevaluated]` delayed-value wrapper escape belongs to later hold/evaluation-model cleanup; this is not a local association-helper blocker.
+      - Deferred: remaining `GroupBy` / `Counts` / `Catenate` / `Merge` invalid-message, obscure reducer, and option-tail edges are non-blocking parity polish unless a concrete migration case needs them.
+      - Deferred: fuller `Missing` forms and broader association semantics beyond the current keyed-lookup / `DeleteMissing` subset are future feature breadth, not current CL-05 mainline blockers.
+      - Deferred: association source/test splitting stays architecture debt tracked by the source-size audit, not a CL-05 semantic blocker.
+  - [x] Wave 3: `CL-06` and `CL-01`
     - [x] `CL-06`: close the current mainline as substantially covered by the
       implemented control-flow, cleanup/abort, confirmation, status-object,
       assertion, and host-input subsets tracked in the support matrix. The
@@ -330,18 +330,18 @@ This roadmap intentionally uses two levels of detail:
       `$AssertFunction = None` no-callback behavior and discarded callback
       return values. Treat the remaining items below as non-blocking
       long-tail parity work rather than active Wave 3 blockers.
-      - [ ] Remaining cleanup/control long-tail: deeper `WithCleanup` /
+      - Deferred cleanup/control long-tail: deeper `WithCleanup` /
         `Failsafe` / `CheckAbort` / `AbortProtect` parity beyond the current
         suspension-safe cleanup, throw/abort cleanup boundaries, abort
         propagation, full option-list validation plus `Rule` / `RuleDelayed`
         option RHS handling for `CheckAbort`, and request-level diagnostic
         coverage.
-      - [ ] Remaining status/failure long-tail: richer generated
+      - Deferred status/failure long-tail: richer generated
         `Failure` / `Success` / `TerminatedEvaluation` parity beyond the
         current projection, metadata, message-template subset, delayed
         `MessageParameters` rendering/resume, and Failsafe multi-argument
         `MessageParameters` grouping.
-      - [ ] Remaining assertion/I/O long-tail: obscure `Assert` controls and
+      - Deferred assertion/I/O long-tail: obscure `Assert` controls and
         fuller host-I/O option, prompt, request, parse/error semantics, and
         option-list diagnostic shape.
     - [x] `CL-01`: close the current mainline as substantially covered by the
@@ -494,7 +494,7 @@ This roadmap intentionally uses two levels of detail:
       merged-report projection boundary coverage. Leave allocator-level
       real-memory accounting and obscure trace/report parity for future
       concrete demand rather than active Wave 4 blockers.
-  - [ ] finish with a roadmap/docs cleanup pass that re-syncs the top-level `CL-01` through `CL-07` checklist state and any stale matrix wording with the now-completed mainlines
+  - [x] finish with a roadmap/docs cleanup pass that re-syncs the top-level `CL-01` through `CL-09` checklist state and stale matrix wording with the now-completed mainlines
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
 - [ ] Define a project-wide testing pyramid that distinguishes:
   - [ ] direct unit tests for small helpers, planners, normalization logic, and matcher branches
