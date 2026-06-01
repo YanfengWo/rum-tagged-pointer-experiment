@@ -132,7 +132,7 @@ This roadmap intentionally uses two levels of detail:
 
 ### Phase 9: Verification, Coverage, and Conformance
 
-- [ ] Build a deliberate, cross-cutting test strategy instead of relying only on feature-local regressions
+- [x] Build a deliberate, cross-cutting test strategy instead of relying only on feature-local regressions; see [docs/testing-strategy.md](./docs/testing-strategy.md)
 - [ ] Expand the project toward a fuller test suite covering unit behavior, boundary conditions, semantic regressions, and host-facing conformance
 - [ ] Build differential checking against Wolfram behavior into the verification strategy while keeping local Wolfram-kernel execution environment-gated rather than mandatory for every developer or CI run
 
@@ -496,10 +496,10 @@ This roadmap intentionally uses two levels of detail:
       concrete demand rather than active Wave 4 blockers.
   - [x] finish with a roadmap/docs cleanup pass that re-syncs the top-level `CL-01` through `CL-09` checklist state and stale matrix wording with the now-completed mainlines
 - [ ] `CL-X` Explicit exclusions for the current project phase stay documented and narrow unless they are deliberately adopted later
-- [ ] Define a project-wide testing pyramid that distinguishes:
-  - [ ] direct unit tests for small helpers, planners, normalization logic, and matcher branches
-  - [ ] subsystem regression tests for syntax, lowering, runtime, terminal, REPL, CLI, Rust/Python host adapters, and Jupyter
-  - [ ] end-to-end behavior tests for user-facing flows and protocol-level interactions
+- [x] Define a project-wide testing pyramid that distinguishes direct unit
+  tests, subsystem regressions, differential conformance, adapter /
+  host-contract suites, and real-project smoke lanes; see
+  [docs/testing-strategy.md](./docs/testing-strategy.md)
 - [ ] Strengthen boundary and edge-case coverage for parser, lowering, evaluator, matcher, scoping, threading, loader, and message semantics
 - [ ] Add broader regression corpora and golden fixtures for syntax formatting, lowering, evaluation, runtime messages, and transport-facing APIs
 - [ ] Establish explicit coverage goals for high-risk semantic areas instead of relying only on opportunistic test growth

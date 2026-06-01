@@ -3,6 +3,11 @@
 `rum-difftest` is the home for `rum`'s differential and conformance-testing
 workstream.
 
+The project-wide testing policy lives in
+[docs/testing-strategy.md](../../docs/testing-strategy.md). This crate owns the
+Wolfram-oracle-comparable lanes from that policy; crate-local regression,
+host-contract, and adapter/protocol tests should stay in their owning crates.
+
 It owns:
 
 - imported seed corpora

@@ -38,6 +38,8 @@ Before substantial work, read the smallest set needed for the task:
   syntax lowering contracts
 - [docs/runtime-evaluation-audit.md](./docs/runtime-evaluation-audit.md):
   evaluator invariants and current semantic boundaries
+- [docs/testing-strategy.md](./docs/testing-strategy.md): test layering,
+  Wolfram conformance lanes, and same-name compatibility rules
 - [docs/code-organization-guidelines.md](./docs/code-organization-guidelines.md):
   file-size and module-organization rules
 
@@ -100,6 +102,9 @@ When editing a file already over threshold, avoid making it worse unless the
 change is urgent and the split plan is recorded in `TODO.md`.
 
 ## Testing And Conformance
+
+Follow [docs/testing-strategy.md](./docs/testing-strategy.md). In short,
+choose the lowest layer that proves the contract under test.
 
 Keep tests near the crate that owns the behavior:
 

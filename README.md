@@ -83,6 +83,7 @@ The repository is a Cargo workspace with these top-level crates:
 - [Architecture](./ARCHITECTURE.md)
 - [TODO / Roadmap](./TODO.md)
 - [Core-Language Support Matrix](./docs/core-language-support-matrix.md)
+- [Testing Strategy](./docs/testing-strategy.md)
 - [Lowering Canonical Forms](./docs/lowering-canonical-forms.md)
 - [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md)
 - [Formatter Style Notes](./docs/formatter-style.md)
