@@ -1,7 +1,10 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+static TEMP_FILE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 fn cli_bin() -> &'static str {
     env!("CARGO_BIN_EXE_rum-cli")
@@ -32,7 +35,11 @@ impl TempFile {
             .duration_since(UNIX_EPOCH)
             .expect("system time should be after unix epoch")
             .as_nanos();
-        let path = std::env::temp_dir().join(format!("rum-cli-test-{unique}.rum"));
+        let counter = TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!(
+            "rum-cli-test-{}-{unique}-{counter}.rum",
+            std::process::id()
+        ));
         fs::write(&path, contents).expect("should write temporary test file");
         Self { path }
     }
