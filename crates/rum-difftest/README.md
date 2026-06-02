@@ -82,9 +82,9 @@ cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel
 Lane B keeps one `rum` session per fixture file and evaluates the matching
 Wolfram steps in one local kernel process for that fixture. This avoids the
 older replay-based state simulation and gives definition, option, message,
-attribute, and precedence checks a real ordered-session oracle. The runner is
-still value-first: exact per-step message-stream capture and long-lived
-interactive process reuse remain future transport refinements.
+attribute, and precedence checks a real ordered-session oracle. The runner
+compares result values plus per-step message and print streams. Long-lived
+interactive process reuse remains a future throughput refinement.
 
 ## Lane C Runner
 

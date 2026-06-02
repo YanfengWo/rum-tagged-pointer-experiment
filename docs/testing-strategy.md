@@ -110,9 +110,10 @@ single broad diff bucket:
 
 Messages and diagnostics start in runtime regression tests unless the
 differential runner can capture and compare them reliably. Lane B now provides
-ordered-session value comparisons against one local Wolfram kernel process per
-fixture, so message-list value probes can live there. Exact per-step
-message-stream capture is still a separate transport refinement.
+ordered-session comparisons against one local Wolfram kernel process per
+fixture, including result values, per-step messages, and per-step print output.
+That makes focused message and print behavior eligible for Lane B when the
+behavior is Wolfram-oracle-comparable.
 
 Lane C is the synchronization check for `!!! id=...` fixture entries. Keep
 known differences in `rum-difftest/divergences/known-differences.txt` and use

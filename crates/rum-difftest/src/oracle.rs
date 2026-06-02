@@ -15,9 +15,20 @@ Exit[];
 "#;
 const ORACLE_SESSION_WRAPPER: &str = r#"manifestPath = Last[$CommandLine];
 inputPaths = Import[manifestPath, "Lines"];
+sessionDir = DirectoryName[manifestPath];
 Do[
   exprText = Import[inputPaths[[i]], "Text"];
-  result = Block[{$MessageList = {}}, ToExpression[exprText, InputForm]];
+  suffix = IntegerString[i, 10, 4];
+  messagesPath = FileNameJoin[{sessionDir, "messages-" <> suffix <> ".txt"}];
+  printsPath = FileNameJoin[{sessionDir, "prints-" <> suffix <> ".txt"}];
+  messagesStream = OpenWrite[messagesPath, PageWidth -> Infinity];
+  printsStream = OpenWrite[printsPath, PageWidth -> Infinity];
+  result = Block[
+    {$MessageList = {}, $Messages = {messagesStream}, $Output = {printsStream}},
+    ToExpression[exprText, InputForm]
+  ];
+  Close[messagesStream];
+  Close[printsStream];
   WriteString[$Output, "__RUM_DIFFTEST_SESSION_RESULT__=", ToString[i, InputForm], "\t", ToString[result, InputForm], "\n"],
   {i, Length[inputPaths]}
 ];
@@ -255,15 +266,37 @@ impl Oracle for OracleKernel {
         }
 
         let printed_output = printed_lines.join("\n").trim().to_owned();
-        let stderr = stderr.trim().to_owned();
-        Ok(results
-            .into_iter()
-            .map(|result| OracleEvaluation {
+        let process_stderr = stderr.trim().to_owned();
+        let mut evaluations = Vec::with_capacity(results.len());
+        for (index, result) in results.into_iter().enumerate() {
+            let suffix = format!("{:04}", index + 1);
+            let messages_path = session_dir.join(format!("messages-{suffix}.txt"));
+            let prints_path = session_dir.join(format!("prints-{suffix}.txt"));
+            let mut step_messages =
+                read_trimmed_text(&messages_path).map_err(|source| OracleError::Io {
+                    path: messages_path.clone(),
+                    source,
+                })?;
+            if !process_stderr.is_empty() {
+                step_messages = join_nonempty_lines(&[&step_messages, &process_stderr]);
+            }
+            let mut step_prints =
+                read_trimmed_text(&prints_path).map_err(|source| OracleError::Io {
+                    path: prints_path.clone(),
+                    source,
+                })?;
+            if !printed_output.is_empty() {
+                step_prints = join_nonempty_lines(&[&step_prints, &printed_output]);
+            }
+
+            evaluations.push(OracleEvaluation {
                 result: result.expect("result count was already validated"),
-                printed_output: printed_output.clone(),
-                stderr: stderr.clone(),
-            })
-            .collect())
+                printed_output: step_prints,
+                stderr: step_messages,
+            });
+        }
+
+        Ok(evaluations)
     }
 }
 
@@ -358,4 +391,17 @@ impl Drop for TempDir {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.path);
     }
+}
+
+fn read_trimmed_text(path: &Path) -> Result<String, std::io::Error> {
+    Ok(fs::read_to_string(path)?.trim().to_owned())
+}
+
+fn join_nonempty_lines(parts: &[&str]) -> String {
+    parts
+        .iter()
+        .copied()
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n")
 }

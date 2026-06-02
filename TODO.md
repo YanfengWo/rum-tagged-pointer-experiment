@@ -565,7 +565,8 @@ This roadmap intentionally uses two levels of detail:
   - [x] Land a first curated `cases/wolfram/core/` fixture set covering arithmetic/structures, strings, associations, loops/control objects, functional combinators, rules/patterns/replacement/traversal, and failure/status smoke checks
   - [x] Lane B: land a first stateful session fixture format and runner for ordered definition / option / message / precedence checks
   - [x] Lane B follow-up: replace replay-based Wolfram state simulation with a single-kernel session oracle transport per fixture before relying on deeper stateful edges
-  - [ ] Lane B follow-up: add true per-step message-stream capture and optional long-lived interactive process reuse once message-output parity or oracle-run throughput needs it
+  - [x] Lane B follow-up: add per-step message-stream and print-stream capture so stateful diffs compare values, messages, and prints instead of values only
+  - [ ] Lane B follow-up: add optional long-lived interactive process reuse once oracle-run throughput needs it
   - [x] Lane C: land a checked known-difference ledger plus `rum-difftest lane-c` validation that fixture `!!! id=...` entries and ledger rows stay synchronized
   - [ ] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved
   - [ ] Lane D: performance baseline inputs and runners
@@ -585,9 +586,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] arithmetic normalization and exact-integer behavior now have an initial curated Lane A foothold
   - [x] rules, patterns, replacement, and traversal behavior now have an initial curated Lane A foothold
   - [x] scoping and held-evaluation constructs now have an initial curated Lane A foothold through loops/control/function cases
-  - [x] messages, attributes, and definition precedence now have an extended Lane B stateful foothold, including message-list length, `SetAttributes` / `ClearAttributes`, held argument evaluation, typed/generic/literal downvalue precedence, and UpValue dispatch
-  - [ ] close the new Lane B known differences: exact Wolfram `$MessageList` `HoldForm[...]` shape and literal downvalue priority after an existing typed downvalue
-  - [ ] broaden Lane B attributes/default-value coverage beyond the current smoke cases once the next CL-02/CL-06 long-tail pass resumes
+  - [x] messages, attributes, and definition precedence now have an extended Lane B stateful foothold, including exact emitted-message checks, message-list length, `SetAttributes` / `ClearAttributes`, held argument evaluation, typed/generic/literal downvalue precedence, and UpValue dispatch
+  - [x] Lane B now has broader stateful smoke coverage for prints, default values, repeated delayed evaluation, context `Begin` / `End`, definition lifecycle `Clear`, and `Protect` / `Unprotect`
+  - [ ] close the new Lane B known differences: exact Wolfram `$MessageList` `HoldForm[...]` shape, literal downvalue priority after an existing typed downvalue, and indexed default lookup fallback
+  - [ ] broaden Lane B package-loading/default-value coverage beyond the current smoke cases once the next CL-02/CL-06 long-tail pass resumes
   - [x] string semantics now have an initial curated Lane A foothold that covers multiple CL-07 subfamilies
 
 ### Long-Tail Workstream: Full String Language Parity

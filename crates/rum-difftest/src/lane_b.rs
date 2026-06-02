@@ -144,16 +144,8 @@ fn run_step(
     } = prepared;
     let rum = run_rum_step(session, &input);
     let status = match (&rum, &oracle_result) {
-        (
-            CaseValue::Value {
-                value: rum_value, ..
-            },
-            CaseValue::Value {
-                value: oracle_value,
-                ..
-            },
-        ) => {
-            if rum_value == oracle_value {
+        (CaseValue::Value { .. }, CaseValue::Value { .. }) => {
+            if case_values_match(&rum, &oracle_result) {
                 LaneBStepStatus::Match
             } else {
                 LaneBStepStatus::Mismatch
@@ -188,7 +180,7 @@ fn run_rum_step(session: &mut Session, input: &str) -> CaseValue {
                 .iter()
                 .map(render_runtime_message)
                 .collect(),
-            printed_output: None,
+            printed_output: (!response.prints.is_empty()).then(|| response.prints.join("\n")),
         },
         Err(failure) => CaseValue::Failure {
             message: render_request_failure(&failure),
@@ -227,13 +219,39 @@ fn run_oracle_session<O: Oracle>(oracle: &mut O, steps: &[PreparedLaneBStep]) ->
 fn case_from_oracle_output(output: crate::oracle::OracleEvaluation) -> CaseValue {
     CaseValue::Value {
         value: output.result,
-        messages: if output.stderr.is_empty() {
-            Vec::new()
-        } else {
-            output.stderr.lines().map(|line| line.to_owned()).collect()
-        },
+        messages: normalize_oracle_messages(&output.stderr),
         printed_output: (!output.printed_output.is_empty()).then_some(output.printed_output),
     }
+}
+
+fn case_values_match(rum: &CaseValue, oracle: &CaseValue) -> bool {
+    match (rum, oracle) {
+        (
+            CaseValue::Value {
+                value: rum_value,
+                messages: rum_messages,
+                printed_output: rum_printed_output,
+            },
+            CaseValue::Value {
+                value: oracle_value,
+                messages: oracle_messages,
+                printed_output: oracle_printed_output,
+            },
+        ) => {
+            rum_value == oracle_value
+                && rum_messages == oracle_messages
+                && rum_printed_output == oracle_printed_output
+        }
+        _ => false,
+    }
+}
+
+fn normalize_oracle_messages(text: &str) -> Vec<String> {
+    text.lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(|line| format!("! {line}"))
+        .collect()
 }
 
 fn render_oracle_error(error: &OracleError) -> String {
@@ -327,5 +345,43 @@ mod tests {
         assert_eq!(second.status, LaneBStepStatus::Match);
         assert_eq!(oracle.session_calls, 1);
         assert_eq!(oracle.evaluate_calls, 0);
+    }
+
+    #[test]
+    fn compares_messages_and_printed_output_when_values_match() {
+        let mut session = Session::new();
+        install_core(&mut session);
+
+        let message_mismatch = run_step(
+            &mut session,
+            PreparedLaneBStep {
+                fixture: PathBuf::from("stateful.txt"),
+                step_index: 1,
+                input: "1 + 1".to_string(),
+                expected_seed: Some("2".to_string()),
+            },
+            CaseValue::Value {
+                value: "2".to_string(),
+                messages: vec!["! unexpected::tag: text".to_string()],
+                printed_output: None,
+            },
+        );
+        assert_eq!(message_mismatch.status, LaneBStepStatus::Mismatch);
+
+        let print_mismatch = run_step(
+            &mut session,
+            PreparedLaneBStep {
+                fixture: PathBuf::from("stateful.txt"),
+                step_index: 2,
+                input: "Print[2]".to_string(),
+                expected_seed: Some("Null".to_string()),
+            },
+            CaseValue::Value {
+                value: "Null".to_string(),
+                messages: Vec::new(),
+                printed_output: Some("different".to_string()),
+            },
+        );
+        assert_eq!(print_mismatch.status, LaneBStepStatus::Mismatch);
     }
 }

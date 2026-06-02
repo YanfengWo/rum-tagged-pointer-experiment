@@ -32,3 +32,28 @@ d[1] := "one" ||| Null
 d[1] !!! id=lane-b-definition-specificity-literal-after-typed | type=definition-precedence | reason=rum currently leaves the typed downvalue ahead of a later literal downvalue
 u /: wrap[u[x_]] := x + 10 ||| Null
 wrap[u[5]] ||| 15
+Print[2] ||| Null
+Default[deflane] = 7 ||| 7
+Default[deflane] ||| 7
+Default[deflane, 1] = 9 ||| 9
+Default[deflane, 1] !!! id=lane-b-indexed-default-lookup-fallback | type=default-values | reason=rum currently returns the explicit indexed default while Wolfram falls back to Default[symbol] for this lookup form
+counter = 0 ||| 0
+tick[] := (counter = counter + 1) ||| Null
+tick[] ||| 1
+tick[] ||| 2
+counter ||| 2
+Begin["LaneBProbe`"] ||| "LaneBProbe`"
+ctxSymbol = 11 ||| 11
+$Context ||| "LaneBProbe`"
+End[] ||| "LaneBProbe`"
+ctxSymbol ||| ctxSymbol
+LaneBProbe`ctxSymbol ||| 11
+ClearAll[life] ||| Null
+life[x_] := x + 1 ||| Null
+life[2] ||| 3
+Clear[life] ||| Null
+life[2] ||| life[2]
+ToString[Protect[prot], InputForm] ||| "{\"prot\"}"
+ToString[Attributes[prot], InputForm] ||| "{Protected}"
+ToString[Unprotect[prot], InputForm] ||| "{\"prot\"}"
+ToString[Attributes[prot], InputForm] ||| "{}"
