@@ -14,3 +14,21 @@ p[] ||| 1
 p[alpha -> 9] ||| 9
 m::tag = "value `1`" ||| "value `1`"
 Message[m::tag, 3] ||| Null
+Message[m::tag, 4]; ToString[$MessageList, InputForm] !!! id=lane-b-message-list-holdform | type=message-shape | reason=rum currently records bare message names while Wolfram wraps $MessageList entries in HoldForm
+Message[m::tag, 5]; Length[$MessageList] ||| 1
+SetAttributes[held, HoldFirst] ||| Null
+ToString[Attributes[held], InputForm] ||| "{HoldFirst}"
+heldArg = 2 ||| 2
+held[y_] := Hold[y] ||| Null
+held[heldArg] ||| Hold[heldArg]
+ClearAttributes[held, HoldFirst] ||| Null
+ToString[Attributes[held], InputForm] ||| "{}"
+held[heldArg] ||| Hold[2]
+d[x_Integer] := "integer" ||| Null
+d[x_] := "generic" ||| Null
+d[3] ||| "integer"
+d[a] ||| "generic"
+d[1] := "one" ||| Null
+d[1] !!! id=lane-b-definition-specificity-literal-after-typed | type=definition-precedence | reason=rum currently leaves the typed downvalue ahead of a later literal downvalue
+u /: wrap[u[x_]] := x + 10 ||| Null
+wrap[u[5]] ||| 15

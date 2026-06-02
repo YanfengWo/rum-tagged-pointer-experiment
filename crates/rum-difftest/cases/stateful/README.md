@@ -6,8 +6,12 @@ same first-pass line format as Lane A:
 - `input ||| expected_output`
 - `input !!! id=name | type=... | reason=...`
 
-The runner keeps one `rum` session for all steps in a file. The current
-first-pass Wolfram oracle path evaluates each step by replaying prior inputs in
-a compound expression before the current input. That is enough for basic
-definition, option, message, and precedence conformance checks, but it is not
-the final interactive-oracle transport for every possible session edge.
+The runner keeps one `rum` session for all steps in a file. The Wolfram oracle
+path evaluates the same ordered steps in one local kernel process for that
+fixture, so definitions, options, messages, attributes, and precedence checks
+run against real session state instead of replayed setup expressions.
+
+Known-difference lines can be used for discovered long-tail divergences that
+should stay documented without breaking the default lane. The current fixture
+uses that for exact `$MessageList` `HoldForm` shape and one definition
+precedence edge.

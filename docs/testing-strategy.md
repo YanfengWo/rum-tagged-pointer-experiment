@@ -109,9 +109,10 @@ single broad diff bucket:
 - Lane F: adapter/protocol tests stay in adapter-native suites.
 
 Messages and diagnostics start in runtime regression tests unless the
-differential runner can capture and compare them reliably. Once supported,
-message-focused same-name behavior can be promoted into Lane B or a dedicated
-message fixture subset without changing this layer split.
+differential runner can capture and compare them reliably. Lane B now provides
+ordered-session value comparisons against one local Wolfram kernel process per
+fixture, so message-list value probes can live there. Exact per-step
+message-stream capture is still a separate transport refinement.
 
 ## Oracle Policy
 

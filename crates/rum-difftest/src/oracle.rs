@@ -6,11 +6,21 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 
 const RESULT_MARKER: &str = "__RUM_DIFFTEST_RESULT__=";
+const SESSION_RESULT_MARKER: &str = "__RUM_DIFFTEST_SESSION_RESULT__=";
 const ORACLE_WRAPPER: &str = r#"inputPath = Last[$CommandLine];
 exprText = Import[inputPath, "Text"];
-held = ToExpression[exprText, InputForm, HoldComplete];
-result = ReleaseHold[held];
+result = Block[{$MessageList = {}}, ToExpression[exprText, InputForm]];
 WriteString[$Output, "__RUM_DIFFTEST_RESULT__=", ToString[result, InputForm], "\n"];
+Exit[];
+"#;
+const ORACLE_SESSION_WRAPPER: &str = r#"manifestPath = Last[$CommandLine];
+inputPaths = Import[manifestPath, "Lines"];
+Do[
+  exprText = Import[inputPaths[[i]], "Text"];
+  result = Block[{$MessageList = {}}, ToExpression[exprText, InputForm]];
+  WriteString[$Output, "__RUM_DIFFTEST_SESSION_RESULT__=", ToString[i, InputForm], "\t", ToString[result, InputForm], "\n"],
+  {i, Length[inputPaths]}
+];
 Exit[];
 "#;
 
@@ -23,12 +33,24 @@ pub struct OracleEvaluation {
 
 pub trait Oracle {
     fn evaluate(&mut self, input: &str) -> Result<OracleEvaluation, OracleError>;
+
+    fn evaluate_session(
+        &mut self,
+        inputs: &[String],
+    ) -> Result<Vec<OracleEvaluation>, OracleError> {
+        let mut outputs = Vec::with_capacity(inputs.len());
+        for input in inputs {
+            outputs.push(self.evaluate(input)?);
+        }
+        Ok(outputs)
+    }
 }
 
 pub struct OracleKernel {
     executable: PathBuf,
     temp_dir: TempDir,
     wrapper_path: PathBuf,
+    session_wrapper_path: PathBuf,
     next_case_id: usize,
 }
 
@@ -37,15 +59,23 @@ impl OracleKernel {
         let executable = executable.into();
         let temp_dir = TempDir::new("rum-difftest")?;
         let wrapper_path = temp_dir.path().join("oracle_wrapper.wls");
+        let session_wrapper_path = temp_dir.path().join("oracle_session_wrapper.wls");
         fs::write(&wrapper_path, ORACLE_WRAPPER).map_err(|source| OracleError::Io {
             path: wrapper_path.clone(),
             source,
+        })?;
+        fs::write(&session_wrapper_path, ORACLE_SESSION_WRAPPER).map_err(|source| {
+            OracleError::Io {
+                path: session_wrapper_path.clone(),
+                source,
+            }
         })?;
 
         Ok(Self {
             executable,
             temp_dir,
             wrapper_path,
+            session_wrapper_path,
             next_case_id: 0,
         })
     }
@@ -115,6 +145,126 @@ impl Oracle for OracleKernel {
             stderr: stderr.trim().to_owned(),
         })
     }
+
+    fn evaluate_session(
+        &mut self,
+        inputs: &[String],
+    ) -> Result<Vec<OracleEvaluation>, OracleError> {
+        if inputs.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        self.next_case_id += 1;
+        let session_dir = self
+            .temp_dir
+            .path()
+            .join(format!("session-{:04}", self.next_case_id));
+        fs::create_dir(&session_dir).map_err(|source| OracleError::Io {
+            path: session_dir.clone(),
+            source,
+        })?;
+
+        let mut input_paths = Vec::with_capacity(inputs.len());
+        for (index, input) in inputs.iter().enumerate() {
+            let path = session_dir.join(format!("step-{:04}.wl", index + 1));
+            fs::write(&path, input).map_err(|source| OracleError::Io {
+                path: path.clone(),
+                source,
+            })?;
+            input_paths.push(path);
+        }
+
+        let manifest_path = session_dir.join("manifest.txt");
+        let manifest = input_paths
+            .iter()
+            .map(|path| path.to_string_lossy())
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(&manifest_path, manifest).map_err(|source| OracleError::Io {
+            path: manifest_path.clone(),
+            source,
+        })?;
+
+        let output = Command::new(&self.executable)
+            .arg("-noprompt")
+            .arg("-script")
+            .arg(&self.session_wrapper_path)
+            .arg(&manifest_path)
+            .output()
+            .map_err(|source| OracleError::Spawn {
+                executable: self.executable.clone(),
+                source,
+            })?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+        let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+
+        if !output.status.success() {
+            return Err(OracleError::ExecutionFailed {
+                executable: self.executable.clone(),
+                code: output.status.code(),
+                stdout,
+                stderr,
+            });
+        }
+
+        let mut results = vec![None; inputs.len()];
+        let mut printed_lines = Vec::new();
+
+        for line in stdout.lines() {
+            if let Some(payload) = line.strip_prefix(SESSION_RESULT_MARKER) {
+                let Some((index_text, value)) = payload.split_once('\t') else {
+                    return Err(OracleError::InvalidSessionResultMarker {
+                        executable: self.executable.clone(),
+                        line: line.to_owned(),
+                        stdout: stdout.clone(),
+                        stderr: stderr.clone(),
+                    });
+                };
+                let Ok(index) = index_text.parse::<usize>() else {
+                    return Err(OracleError::InvalidSessionResultMarker {
+                        executable: self.executable.clone(),
+                        line: line.to_owned(),
+                        stdout: stdout.clone(),
+                        stderr: stderr.clone(),
+                    });
+                };
+                if index == 0 || index > inputs.len() {
+                    return Err(OracleError::InvalidSessionResultMarker {
+                        executable: self.executable.clone(),
+                        line: line.to_owned(),
+                        stdout: stdout.clone(),
+                        stderr: stderr.clone(),
+                    });
+                }
+                results[index - 1] = Some(value.trim().to_owned());
+            } else {
+                printed_lines.push(line.to_owned());
+            }
+        }
+
+        let actual = results.iter().filter(|result| result.is_some()).count();
+        if actual != inputs.len() {
+            return Err(OracleError::SessionResultCountMismatch {
+                executable: self.executable.clone(),
+                expected: inputs.len(),
+                actual,
+                stdout,
+                stderr,
+            });
+        }
+
+        let printed_output = printed_lines.join("\n").trim().to_owned();
+        let stderr = stderr.trim().to_owned();
+        Ok(results
+            .into_iter()
+            .map(|result| OracleEvaluation {
+                result: result.expect("result count was already validated"),
+                printed_output: printed_output.clone(),
+                stderr: stderr.clone(),
+            })
+            .collect())
+    }
 }
 
 #[derive(Debug, Error)]
@@ -147,6 +297,25 @@ pub enum OracleError {
     )]
     MissingResultMarker {
         executable: PathBuf,
+        stdout: String,
+        stderr: String,
+    },
+    #[error(
+        "oracle executable `{executable}` emitted an invalid session result marker `{line}`\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    )]
+    InvalidSessionResultMarker {
+        executable: PathBuf,
+        line: String,
+        stdout: String,
+        stderr: String,
+    },
+    #[error(
+        "oracle executable `{executable}` emitted {actual} session results for {expected} inputs\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    )]
+    SessionResultCountMismatch {
+        executable: PathBuf,
+        expected: usize,
+        actual: usize,
         stdout: String,
         stderr: String,
     },

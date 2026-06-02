@@ -48,6 +48,14 @@ pub enum LaneBStepStatus {
     OracleFailure,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct PreparedLaneBStep {
+    fixture: PathBuf,
+    step_index: usize,
+    input: String,
+    expected_seed: Option<String>,
+}
+
 pub fn run<O: Oracle>(
     oracle: &mut O,
     options: &LaneBOptions,
@@ -67,9 +75,9 @@ pub fn run<O: Oracle>(
     'outer: for fixture in fixtures {
         let text = load_text(&fixture)?;
         let entries = parse_golden_file(&text).map_err(std::io::Error::other)?;
+        let mut prepared_steps = Vec::new();
         let mut session = Session::new();
         install_core(&mut session);
-        let mut prior_oracle_inputs = Vec::new();
         let mut step_index = 0usize;
 
         for entry in entries {
@@ -87,16 +95,24 @@ pub fn run<O: Oracle>(
             };
 
             step_index += 1;
-            let step = run_step(
-                oracle,
-                &mut session,
-                &fixture,
+            prepared_steps.push(PreparedLaneBStep {
+                fixture: fixture.clone(),
                 step_index,
                 input,
                 expected_seed,
-                &prior_oracle_inputs,
-            );
-            prior_oracle_inputs.push(step.input.clone());
+            });
+
+            if options
+                .limit
+                .is_some_and(|limit| summary.compared + prepared_steps.len() >= limit)
+            {
+                break;
+            }
+        }
+
+        let oracle_results = run_oracle_session(oracle, &prepared_steps);
+        for (prepared, oracle_result) in prepared_steps.into_iter().zip(oracle_results) {
+            let step = run_step(&mut session, prepared, oracle_result);
             summary.compared += 1;
             match step.status {
                 LaneBStepStatus::Match => summary.matches += 1,
@@ -115,18 +131,18 @@ pub fn run<O: Oracle>(
     Ok(summary)
 }
 
-fn run_step<O: Oracle>(
-    oracle: &mut O,
+fn run_step(
     session: &mut Session,
-    fixture: &Path,
-    step_index: usize,
-    input: String,
-    expected_seed: Option<String>,
-    prior_oracle_inputs: &[String],
+    prepared: PreparedLaneBStep,
+    oracle_result: CaseValue,
 ) -> LaneBStepReport {
+    let PreparedLaneBStep {
+        fixture,
+        step_index,
+        input,
+        expected_seed,
+    } = prepared;
     let rum = run_rum_step(session, &input);
-    let oracle_input = render_oracle_stateful_input(prior_oracle_inputs, &input);
-    let oracle_result = run_oracle_step(oracle, &oracle_input);
     let status = match (&rum, &oracle_result) {
         (
             CaseValue::Value {
@@ -152,7 +168,7 @@ fn run_step<O: Oracle>(
     };
 
     LaneBStepReport {
-        fixture: fixture.to_path_buf(),
+        fixture,
         step_index,
         input,
         expected_seed,
@@ -180,29 +196,44 @@ fn run_rum_step(session: &mut Session, input: &str) -> CaseValue {
     }
 }
 
-fn run_oracle_step<O: Oracle>(oracle: &mut O, input: &str) -> CaseValue {
-    match oracle.evaluate(input) {
-        Ok(output) => CaseValue::Value {
-            value: output.result,
-            messages: if output.stderr.is_empty() {
-                Vec::new()
-            } else {
-                output.stderr.lines().map(|line| line.to_owned()).collect()
-            },
-            printed_output: (!output.printed_output.is_empty()).then_some(output.printed_output),
-        },
-        Err(err) => CaseValue::Failure {
-            message: render_oracle_error(&err),
-        },
+fn run_oracle_session<O: Oracle>(oracle: &mut O, steps: &[PreparedLaneBStep]) -> Vec<CaseValue> {
+    let inputs = steps
+        .iter()
+        .map(|step| step.input.clone())
+        .collect::<Vec<_>>();
+    match oracle.evaluate_session(&inputs) {
+        Ok(outputs) if outputs.len() == steps.len() => {
+            outputs.into_iter().map(case_from_oracle_output).collect()
+        }
+        Ok(outputs) => vec![
+            CaseValue::Failure {
+                message: format!(
+                    "oracle returned {} session results for {} steps",
+                    outputs.len(),
+                    steps.len()
+                ),
+            };
+            steps.len()
+        ],
+        Err(err) => vec![
+            CaseValue::Failure {
+                message: render_oracle_error(&err),
+            };
+            steps.len()
+        ],
     }
 }
 
-fn render_oracle_stateful_input(prior_inputs: &[String], current: &str) -> String {
-    if prior_inputs.is_empty() {
-        return current.to_owned();
+fn case_from_oracle_output(output: crate::oracle::OracleEvaluation) -> CaseValue {
+    CaseValue::Value {
+        value: output.result,
+        messages: if output.stderr.is_empty() {
+            Vec::new()
+        } else {
+            output.stderr.lines().map(|line| line.to_owned()).collect()
+        },
+        printed_output: (!output.printed_output.is_empty()).then_some(output.printed_output),
     }
-
-    format!("{}; {current}", prior_inputs.join("; "))
 }
 
 fn render_oracle_error(error: &OracleError) -> String {
@@ -231,50 +262,70 @@ mod tests {
     use super::*;
     use crate::oracle::{Oracle, OracleError, OracleEvaluation};
 
-    struct FakeOracle;
+    #[derive(Default)]
+    struct FakeOracle {
+        evaluate_calls: usize,
+        session_calls: usize,
+    }
 
     impl Oracle for FakeOracle {
-        fn evaluate(&mut self, input: &str) -> Result<OracleEvaluation, OracleError> {
+        fn evaluate(&mut self, _input: &str) -> Result<OracleEvaluation, OracleError> {
+            self.evaluate_calls += 1;
             Ok(OracleEvaluation {
-                result: match input {
-                    "x = 2" => "2".to_string(),
-                    "x = 2; x + 3" => "5".to_string(),
-                    _ => "0".to_string(),
-                },
+                result: "unexpected".to_string(),
                 printed_output: String::new(),
                 stderr: String::new(),
             })
         }
+
+        fn evaluate_session(
+            &mut self,
+            inputs: &[String],
+        ) -> Result<Vec<OracleEvaluation>, OracleError> {
+            self.session_calls += 1;
+            assert_eq!(inputs, &["x = 2".to_string(), "x + 3".to_string()]);
+            Ok(vec![
+                OracleEvaluation {
+                    result: "2".to_string(),
+                    printed_output: String::new(),
+                    stderr: String::new(),
+                },
+                OracleEvaluation {
+                    result: "5".to_string(),
+                    printed_output: String::new(),
+                    stderr: String::new(),
+                },
+            ])
+        }
     }
 
     #[test]
-    fn compares_steps_against_accumulated_oracle_input() {
-        let mut oracle = FakeOracle;
+    fn compares_steps_against_session_oracle_once() {
+        let mut oracle = FakeOracle::default();
+        let prepared = vec![
+            PreparedLaneBStep {
+                fixture: PathBuf::from("stateful.txt"),
+                step_index: 1,
+                input: "x = 2".to_string(),
+                expected_seed: Some("2".to_string()),
+            },
+            PreparedLaneBStep {
+                fixture: PathBuf::from("stateful.txt"),
+                step_index: 2,
+                input: "x + 3".to_string(),
+                expected_seed: Some("5".to_string()),
+            },
+        ];
+        let oracle_results = run_oracle_session(&mut oracle, &prepared);
         let mut session = Session::new();
         install_core(&mut session);
-        let mut prior = Vec::new();
 
-        let first = run_step(
-            &mut oracle,
-            &mut session,
-            Path::new("stateful.txt"),
-            1,
-            "x = 2".to_string(),
-            Some("2".to_string()),
-            &prior,
-        );
+        let first = run_step(&mut session, prepared[0].clone(), oracle_results[0].clone());
         assert_eq!(first.status, LaneBStepStatus::Match);
-        prior.push(first.input);
 
-        let second = run_step(
-            &mut oracle,
-            &mut session,
-            Path::new("stateful.txt"),
-            2,
-            "x + 3".to_string(),
-            Some("5".to_string()),
-            &prior,
-        );
+        let second = run_step(&mut session, prepared[1].clone(), oracle_results[1].clone());
         assert_eq!(second.status, LaneBStepStatus::Match);
+        assert_eq!(oracle.session_calls, 1);
+        assert_eq!(oracle.evaluate_calls, 0);
     }
 }
