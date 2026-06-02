@@ -86,6 +86,19 @@ attribute, and precedence checks a real ordered-session oracle. The runner is
 still value-first: exact per-step message-stream capture and long-lived
 interactive process reuse remain future transport refinements.
 
+## Lane C Runner
+
+Lane C checks the known-difference ledger:
+
+```bash
+cargo run -p rum-difftest -- lane-c
+```
+
+The runner validates that every checked fixture `!!! id=...` is present in
+[divergences/known-differences.txt](./divergences/known-differences.txt), and
+that the ledger does not contain unreferenced IDs. This keeps deliberate or
+deferred Wolfram divergences visible as data instead of scattered comments.
+
 Start here:
 
 - [HANDOFF.md](./HANDOFF.md)
@@ -96,7 +109,7 @@ Layout:
 
 - `seed/`: imported or historical assets kept intact as input material
 - `cases/`: `rum`-owned curated fixtures layered on top of the imported seeds
-- `divergences/`: future checked known-difference ledgers
+- `divergences/`: checked known-difference ledgers
 - `perf/`: future performance baseline material
 
 The first curated Lane A files now live under

@@ -79,7 +79,7 @@ pub fn parse_golden_file(text: &str) -> Result<Vec<GoldenEntry>, FixtureParseErr
         }
 
         if let Some((input, rest)) = line.split_once(" !!! ") {
-            let metadata = parse_known_difference_fields(rest, line)?;
+            let metadata = parse_metadata_fields(rest, line)?;
             for required in ["id", "type", "reason"] {
                 if !metadata.contains_key(required) {
                     return Err(FixtureParseError::MissingKnownDifferenceField {
@@ -102,7 +102,7 @@ pub fn parse_golden_file(text: &str) -> Result<Vec<GoldenEntry>, FixtureParseErr
     Ok(entries)
 }
 
-fn parse_known_difference_fields(
+pub fn parse_metadata_fields(
     text: &str,
     full_line: &str,
 ) -> Result<BTreeMap<String, String>, FixtureParseError> {

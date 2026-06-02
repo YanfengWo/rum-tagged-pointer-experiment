@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use rum_difftest::config::{load_optional_config, resolve_oracle_kernel};
+use rum_difftest::divergences;
 use rum_difftest::lane_a::{self, CaseValue, LaneACaseStatus, LaneAOptions};
 use rum_difftest::lane_b::{self, LaneBOptions, LaneBStepStatus};
 use rum_difftest::oracle::OracleKernel;
@@ -22,6 +23,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     match args.next().as_deref() {
         Some("lane-a") => run_lane_a(args.collect()),
         Some("lane-b") => run_lane_b(args.collect()),
+        Some("lane-c") => run_lane_c(args.collect()),
         Some("--help") | Some("-h") | None => {
             print_usage();
             Ok(ExitCode::SUCCESS)
@@ -222,6 +224,61 @@ fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>>
     Ok(ExitCode::SUCCESS)
 }
 
+fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    let mut iter = args.into_iter();
+    while let Some(arg) = iter.next() {
+        match arg.as_str() {
+            "--help" | "-h" => {
+                print_lane_c_usage();
+                return Ok(ExitCode::SUCCESS);
+            }
+            other => return Err(format!("unknown lane-c flag `{other}`").into()),
+        }
+    }
+
+    let report = divergences::validate_known_difference_ledger()?;
+
+    println!(
+        "known-difference ledger: {}",
+        divergences::known_difference_ledger_path().display()
+    );
+    println!("ledger entries: {}", report.records.len());
+    println!(
+        "fixture known differences: {}",
+        report.fixture_references.len()
+    );
+    println!(
+        "missing ledger entries: {}",
+        report.missing_ledger_entries.len()
+    );
+    println!(
+        "unreferenced ledger entries: {}",
+        report.unreferenced_ledger_entries.len()
+    );
+
+    for reference in &report.missing_ledger_entries {
+        println!(
+            "missing: id={} fixture={}",
+            reference.id,
+            reference.fixture.display()
+        );
+    }
+    for record in &report.unreferenced_ledger_entries {
+        let fixture = record
+            .fields
+            .get("fixture")
+            .map(String::as_str)
+            .unwrap_or("<missing fixture>");
+        println!("unreferenced: id={} fixture={fixture}", record.id);
+    }
+
+    if report.is_clean() {
+        Ok(ExitCode::SUCCESS)
+    } else {
+        Ok(ExitCode::FAILURE)
+    }
+}
+
 fn expect_value(
     iter: &mut impl Iterator<Item = String>,
     flag: &str,
@@ -237,6 +294,7 @@ fn print_usage() {
     println!(
         "rum-difftest lane-b [--oracle-kernel PATH] [--config PATH] [--fixture PATH] [--limit N]"
     );
+    println!("rum-difftest lane-c");
     println!("rum-difftest --help");
 }
 
@@ -256,6 +314,11 @@ fn print_lane_b_usage() {
     println!("  --limit N                 Stop after N compared steps");
     println!("  --include-known-diffs     Include `!!!` steps in the run");
     println!("  --fail-on-mismatch        Exit non-zero if any step mismatches or fails");
+}
+
+fn print_lane_c_usage() {
+    println!("rum-difftest lane-c");
+    println!("  Validate that every fixture `!!! id=...` is present in the Lane C ledger");
 }
 
 fn print_case_value(label: &str, value: &CaseValue) {

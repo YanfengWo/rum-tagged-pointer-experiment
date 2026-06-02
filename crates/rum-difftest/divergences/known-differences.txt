@@ -1,0 +1,9 @@
+# Checked Lane C known-difference ledger.
+# Format:
+# id=... | type=... | status=open|deferred|intentional | fixture=... | reason=...
+
+id=pow_zero_zero | type=intentional | status=deferred | fixture=seed/ham-import/golden/arithmetic.txt | reason=Imported ham seed difference: ham returned 1 for 0^0 while Wolfram returns Indeterminate with Power::indet; revalidate against rum before promoting this seed into curated coverage.
+id=specific_override | type=temporary | status=deferred | fixture=seed/ham-import/golden/definitions.txt | reason=Imported ham seed difference around specific rule priority over a later generic rule; keep as seed metadata until the imported pack is normalized against rum semantics.
+id=unevaluated_toplevel | type=temporary | status=deferred | fixture=seed/ham-import/golden/evaluation_control.txt | reason=Imported ham seed difference around top-level Unevaluated stripping; keep as seed metadata until this top-level display boundary is normalized for rum.
+id=lane-b-message-list-holdform | type=message-shape | status=open | fixture=cases/stateful/definitions_messages.txt | reason=rum currently records bare message names in $MessageList while Wolfram wraps entries in HoldForm.
+id=lane-b-definition-specificity-literal-after-typed | type=definition-precedence | status=open | fixture=cases/stateful/definitions_messages.txt | reason=rum currently leaves an earlier typed downvalue ahead of a later literal downvalue; Wolfram prioritizes the literal definition.

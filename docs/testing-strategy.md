@@ -114,6 +114,10 @@ ordered-session value comparisons against one local Wolfram kernel process per
 fixture, so message-list value probes can live there. Exact per-step
 message-stream capture is still a separate transport refinement.
 
+Lane C is the synchronization check for `!!! id=...` fixture entries. Keep
+known differences in `rum-difftest/divergences/known-differences.txt` and use
+`rum-difftest lane-c` to catch missing or unreferenced ledger rows.
+
 ## Oracle Policy
 
 Oracle runs use a user-provided local Wolfram kernel such as `WolframKernel` or
