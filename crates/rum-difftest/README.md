@@ -99,6 +99,24 @@ The runner validates that every checked fixture `!!! id=...` is present in
 that the ledger does not contain unreferenced IDs. This keeps deliberate or
 deferred Wolfram divergences visible as data instead of scattered comments.
 
+## Lane D Runner
+
+Lane D runs local performance baseline inputs through `rum` without a Wolfram
+oracle:
+
+```bash
+cargo run -p rum-difftest -- lane-d
+cargo run -p rum-difftest -- lane-d --suite memory --limit 5
+cargo run -p rum-difftest -- lane-d --suite all --profile full
+```
+
+The default `smoke` profile skips imported heavy / very-large cases so the
+runner is safe for routine validation. Use `--profile full` for explicit
+baseline collection over every imported performance input. The runner reports
+elapsed microseconds, result node count, message count, and print count for
+each executed expression. It is a baseline input runner, not yet a
+historical-threshold or regression-decision system.
+
 Start here:
 
 - [HANDOFF.md](./HANDOFF.md)
@@ -110,7 +128,7 @@ Layout:
 - `seed/`: imported or historical assets kept intact as input material
 - `cases/`: `rum`-owned curated fixtures layered on top of the imported seeds
 - `divergences/`: checked known-difference ledgers
-- `perf/`: future performance baseline material
+- `perf/`: Lane D performance baseline policy and follow-up notes
 
 The first curated Lane A files now live under
 [cases/wolfram/core](./cases/wolfram/core/README.md). They currently cover:

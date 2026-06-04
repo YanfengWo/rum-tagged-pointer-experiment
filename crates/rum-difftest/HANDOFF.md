@@ -109,6 +109,8 @@ input !!! id=name | type=temporary | rum=... | wolfram=... | reason=...
 ```
 
 For `rum`, this should become the divergence ledger for same-name features.
+Current implementation has `divergences/known-differences.txt` plus
+`rum-difftest lane-c` to validate fixture IDs against the ledger.
 
 ### Lane D: Performance Regression
 
@@ -119,7 +121,12 @@ The imported `ham` timing and memory suites under
 [seed/ham-import/bench](./seed/ham-import/bench)
 and
 [seed/ham-import/mem](./seed/ham-import/mem)
-are seed inputs, not final `rum` policy.
+are seed inputs, not final `rum` policy. Current implementation has
+`rum-difftest lane-d`, which executes those seed inputs locally and reports raw
+metrics. Its default `smoke` profile skips imported heavy / very-large
+categories for daily validation; use `--profile full` for explicit all-input
+baseline collection. It does not yet store historical baseline artifacts or
+enforce thresholds.
 
 ### Lane E: Host Contract Tests
 
@@ -178,10 +185,11 @@ Raw counts:
    the matrix-guided kernel priorities.
 3. Normalize output conventions further so Lane A can compare more than today's
    scalar/list/plain-call-friendly subset.
-4. Extend the first single-expression oracle runner beyond value-only checks.
-5. Design and implement the stateful session fixture format.
-6. Add a checked known-difference ledger.
-7. Only after that, wire in timing and memory baselines.
+4. Continue extending Lane A/B curated fixtures from matrix-guided priorities.
+5. Add richer Lane C metadata links and close criteria for each divergence.
+6. Add Lane D historical baseline artifacts and threshold policy.
+7. Keep Lane E/F boundaries explicit: host-contract and adapter/protocol tests
+   stay in their owning crates rather than becoming Wolfram diffs.
 
 ## If This Folder Was Copied Standalone
 

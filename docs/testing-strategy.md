@@ -103,8 +103,8 @@ single broad diff bucket:
   contexts, package loading, and repeated evaluations.
 - Lane C: checked known-difference ledger, tying divergences to matrix entries
   or TODO notes.
-- Lane D: performance baseline inputs and runners. These are not semantic
-  conformance tests.
+- Lane D: local performance baseline inputs and runners. These are not
+  semantic conformance tests and should not use a Wolfram oracle.
 - Lane E: host-contract tests stay in host/native crate suites.
 - Lane F: adapter/protocol tests stay in adapter-native suites.
 
@@ -118,6 +118,13 @@ behavior is Wolfram-oracle-comparable.
 Lane C is the synchronization check for `!!! id=...` fixture entries. Keep
 known differences in `rum-difftest/divergences/known-differences.txt` and use
 `rum-difftest lane-c` to catch missing or unreferenced ledger rows.
+
+Lane D currently executes imported timing and memory seed suites through local
+`rum` sessions and reports raw metrics. Its default `smoke` profile skips
+heavy / very-large imported categories for routine validation; `--profile full`
+is the explicit all-input baseline mode. Historical baseline artifacts and
+threshold policy are separate follow-up work; until then, Lane D output should
+be treated as measurement data rather than a pass/fail performance gate.
 
 ## Oracle Policy
 
