@@ -5,7 +5,9 @@ use rum_difftest::config::{load_optional_config, resolve_oracle_kernel};
 use rum_difftest::divergences;
 use rum_difftest::lane_a::{self, CaseValue, LaneACaseStatus, LaneAOptions};
 use rum_difftest::lane_b::{self, LaneBOptions, LaneBStepStatus};
-use rum_difftest::lane_d::{self, LaneDCaseStatus, LaneDOptions, LaneDProfile, LaneDSuite};
+use rum_difftest::lane_d::{
+    self, LaneDBaselineCompareOptions, LaneDCaseStatus, LaneDOptions, LaneDProfile, LaneDSuite,
+};
 use rum_difftest::oracle::OracleKernel;
 
 fn main() -> ExitCode {
@@ -285,7 +287,9 @@ fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>>
     let mut suite = LaneDSuite::All;
     let mut profile = LaneDProfile::Smoke;
     let mut limit = None;
+    let mut baseline_path = None;
     let mut fail_on_error = false;
+    let mut fail_on_regression = false;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -304,7 +308,11 @@ fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>>
                 let value = expect_value(&mut iter, "--limit")?;
                 limit = Some(value.parse::<usize>()?);
             }
+            "--baseline" => {
+                baseline_path = Some(PathBuf::from(expect_value(&mut iter, "--baseline")?));
+            }
             "--fail-on-error" => fail_on_error = true,
+            "--fail-on-regression" => fail_on_regression = true,
             "--help" | "-h" => {
                 print_lane_d_usage();
                 return Ok(ExitCode::SUCCESS);
@@ -350,8 +358,78 @@ fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>>
         }
     }
 
+    let baseline_report = if let Some(path) = &baseline_path {
+        let baseline = lane_d::load_baseline(path)?;
+        let report = lane_d::compare_baseline(
+            &summary,
+            &baseline,
+            &LaneDBaselineCompareOptions {
+                profile,
+                require_all_records: limit.is_none(),
+            },
+        );
+        println!("baseline: {}", path.display());
+        println!("baseline records considered: {}", report.records_considered);
+        println!("baseline compared cases: {}", report.compared);
+        println!("baseline missing records: {}", report.missing_records.len());
+        println!("baseline unused records: {}", report.unused_records.len());
+        println!(
+            "baseline elapsed regressions: {}",
+            report.elapsed_regressions.len()
+        );
+        println!(
+            "baseline value-node regressions: {}",
+            report.value_node_regressions.len()
+        );
+        for missing in &report.missing_records {
+            println!(
+                "baseline-missing\t{}\t{}\t{}",
+                missing.index, missing.suite, missing.input
+            );
+        }
+        for unused in &report.unused_records {
+            println!(
+                "baseline-unused\t{}\t{}\t{}",
+                lane_d::profile_name(unused.profile),
+                unused.suite,
+                unused.input
+            );
+        }
+        for regression in &report.elapsed_regressions {
+            println!(
+                "baseline-regression\telapsed\t{}\t{}\t{}\t{}\t{}",
+                regression.case.index,
+                regression.case.suite,
+                regression.case.elapsed_micros,
+                regression.max_elapsed_micros,
+                regression.case.input
+            );
+        }
+        for regression in &report.value_node_regressions {
+            println!(
+                "baseline-regression\tvalue-nodes\t{}\t{}\t{}\t{}\t{}",
+                regression.case.index,
+                regression.case.suite,
+                regression.case.value_nodes.unwrap_or(0),
+                regression.max_value_nodes,
+                regression.case.input
+            );
+        }
+        Some(report)
+    } else {
+        None
+    };
+
     if fail_on_error && summary.failed > 0 {
         return Ok(ExitCode::FAILURE);
+    }
+    if fail_on_regression {
+        let Some(report) = baseline_report else {
+            return Err("--fail-on-regression requires --baseline PATH".into());
+        };
+        if !report.is_clean() {
+            return Ok(ExitCode::FAILURE);
+        }
     }
 
     Ok(ExitCode::SUCCESS)
@@ -373,7 +451,9 @@ fn print_usage() {
         "rum-difftest lane-b [--oracle-kernel PATH] [--config PATH] [--fixture PATH] [--limit N]"
     );
     println!("rum-difftest lane-c");
-    println!("rum-difftest lane-d [--suite all|timing|memory] [--profile smoke|full] [--limit N]");
+    println!(
+        "rum-difftest lane-d [--suite all|timing|memory] [--profile smoke|full] [--limit N] [--baseline PATH]"
+    );
     println!("rum-difftest --help");
 }
 
@@ -405,7 +485,9 @@ fn print_lane_d_usage() {
     println!("  --suite all|timing|memory  Select imported performance input suite");
     println!("  --profile smoke|full       Select daily-safe smoke inputs or explicit full inputs");
     println!("  --limit N                  Stop after N executed expressions");
+    println!("  --baseline PATH            Compare against a Lane D baseline artifact");
     println!("  --fail-on-error            Exit non-zero if any expression fails");
+    println!("  --fail-on-regression       Exit non-zero if baseline comparison is not clean");
 }
 
 fn print_case_value(label: &str, value: &CaseValue) {

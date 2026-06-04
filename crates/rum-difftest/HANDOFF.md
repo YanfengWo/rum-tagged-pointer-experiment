@@ -127,8 +127,14 @@ are seed inputs, not final `rum` policy. Current implementation has
 `rum-difftest lane-d`, which executes those seed inputs locally and reports raw
 metrics. Its default `smoke` profile skips imported heavy / very-large
 categories for daily validation; use `--profile full` for explicit all-input
-baseline collection. It does not yet store historical baseline artifacts or
-enforce thresholds.
+baseline collection.
+
+Checked baseline artifacts live under [perf/baselines](./perf/baselines).
+`perf/baselines/smoke.txt` covers the default smoke profile. `--baseline PATH`
+enables comparison, and `--fail-on-regression` exits non-zero for missing
+baseline rows, stale rows, elapsed guardrail failures, or result-node guardrail
+failures. The current elapsed thresholds are intentionally broad smoke
+guardrails, not tuned CI/release baselines.
 
 ### Lane E: Host Contract Tests
 
@@ -188,7 +194,8 @@ Raw counts:
 3. Normalize output conventions further so Lane A can compare more than today's
    scalar/list/plain-call-friendly subset.
 4. Continue extending Lane A/B curated fixtures from matrix-guided priorities.
-5. Add Lane D historical baseline artifacts and threshold policy.
+5. Add release/CI-specific Lane D baseline capture workflow before tightening
+   elapsed thresholds beyond broad smoke guardrails.
 6. Extend Lane C later with machine-checkable `tracked_by` targets if TODO or
    matrix anchors become stable identifiers.
 7. Keep Lane E/F boundaries explicit: host-contract and adapter/protocol tests

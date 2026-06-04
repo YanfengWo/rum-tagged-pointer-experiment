@@ -124,9 +124,11 @@ criteria.
 Lane D currently executes imported timing and memory seed suites through local
 `rum` sessions and reports raw metrics. Its default `smoke` profile skips
 heavy / very-large imported categories for routine validation; `--profile full`
-is the explicit all-input baseline mode. Historical baseline artifacts and
-threshold policy are separate follow-up work; until then, Lane D output should
-be treated as measurement data rather than a pass/fail performance gate.
+is the explicit all-input baseline mode. `--baseline PATH` compares a run
+against a checked baseline artifact, and `--fail-on-regression` turns missing
+rows, stale rows, elapsed-threshold failures, and result-node-threshold
+failures into a non-zero exit. Lane D remains a local `rum` performance lane;
+it should not use a Wolfram oracle.
 
 ## Oracle Policy
 

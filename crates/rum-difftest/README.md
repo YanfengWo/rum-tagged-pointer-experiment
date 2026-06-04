@@ -110,14 +110,17 @@ oracle:
 cargo run -p rum-difftest -- lane-d
 cargo run -p rum-difftest -- lane-d --suite memory --limit 5
 cargo run -p rum-difftest -- lane-d --suite all --profile full
+cargo run -p rum-difftest -- lane-d --baseline crates/rum-difftest/perf/baselines/smoke.txt --fail-on-regression
 ```
 
 The default `smoke` profile skips imported heavy / very-large cases so the
 runner is safe for routine validation. Use `--profile full` for explicit
 baseline collection over every imported performance input. The runner reports
 elapsed microseconds, result node count, message count, and print count for
-each executed expression. It is a baseline input runner, not yet a
-historical-threshold or regression-decision system.
+each executed expression. `--baseline PATH` compares the run against a checked
+baseline artifact; `--fail-on-regression` turns missing rows, stale rows,
+elapsed guardrail failures, and result-node guardrail failures into a non-zero
+exit.
 
 Start here:
 
@@ -130,7 +133,7 @@ Layout:
 - `seed/`: imported or historical assets kept intact as input material
 - `cases/`: `rum`-owned curated fixtures layered on top of the imported seeds
 - `divergences/`: checked known-difference ledgers
-- `perf/`: Lane D performance baseline policy and follow-up notes
+- `perf/`: Lane D performance baseline policy and checked baseline artifacts
 
 The first curated Lane A files now live under
 [cases/wolfram/core](./cases/wolfram/core/README.md). They currently cover:

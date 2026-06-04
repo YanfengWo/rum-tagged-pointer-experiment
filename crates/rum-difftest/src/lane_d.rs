@@ -8,6 +8,10 @@ use rum_terminal::render_request_failure;
 
 use crate::fixtures::{ExpressionSuiteEntry, load_text, parse_expression_suite, seed_root};
 
+mod baseline;
+
+pub use baseline::*;
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum LaneDSuite {
     #[default]
@@ -16,7 +20,7 @@ pub enum LaneDSuite {
     Memory,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LaneDProfile {
     #[default]
     Smoke,
