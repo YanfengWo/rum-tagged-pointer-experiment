@@ -27,6 +27,14 @@ pub enum LaneDProfile {
     Full,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LaneDThresholdProfile {
+    #[default]
+    LocalDebug,
+    CiDebug,
+    CiRelease,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LaneDOptions {
     pub suite: LaneDSuite,
@@ -226,6 +234,14 @@ pub fn profile_name(profile: LaneDProfile) -> &'static str {
     }
 }
 
+pub fn threshold_profile_name(profile: LaneDThresholdProfile) -> &'static str {
+    match profile {
+        LaneDThresholdProfile::LocalDebug => "local-debug",
+        LaneDThresholdProfile::CiDebug => "ci-debug",
+        LaneDThresholdProfile::CiRelease => "ci-release",
+    }
+}
+
 pub fn parse_suite_name(name: &str) -> Option<LaneDSuite> {
     match name {
         "all" => Some(LaneDSuite::All),
@@ -239,6 +255,15 @@ pub fn parse_profile_name(name: &str) -> Option<LaneDProfile> {
     match name {
         "smoke" => Some(LaneDProfile::Smoke),
         "full" => Some(LaneDProfile::Full),
+        _ => None,
+    }
+}
+
+pub fn parse_threshold_profile_name(name: &str) -> Option<LaneDThresholdProfile> {
+    match name {
+        "local-debug" => Some(LaneDThresholdProfile::LocalDebug),
+        "ci-debug" => Some(LaneDThresholdProfile::CiDebug),
+        "ci-release" => Some(LaneDThresholdProfile::CiRelease),
         _ => None,
     }
 }
@@ -303,5 +328,22 @@ mod tests {
         assert_eq!(parse_profile_name("smoke"), Some(LaneDProfile::Smoke));
         assert_eq!(parse_profile_name("full"), Some(LaneDProfile::Full));
         assert_eq!(parse_profile_name("typo"), None);
+    }
+
+    #[test]
+    fn parses_lane_d_threshold_profile_names() {
+        assert_eq!(
+            parse_threshold_profile_name("local-debug"),
+            Some(LaneDThresholdProfile::LocalDebug)
+        );
+        assert_eq!(
+            parse_threshold_profile_name("ci-debug"),
+            Some(LaneDThresholdProfile::CiDebug)
+        );
+        assert_eq!(
+            parse_threshold_profile_name("ci-release"),
+            Some(LaneDThresholdProfile::CiRelease)
+        );
+        assert_eq!(parse_threshold_profile_name("typo"), None);
     }
 }

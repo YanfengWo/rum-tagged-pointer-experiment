@@ -6,7 +6,10 @@ use thiserror::Error;
 
 use crate::fixtures::{crate_root, load_text, parse_metadata_fields};
 
-use super::{LaneDCaseReport, LaneDProfile, LaneDSummary, parse_profile_name, profile_name};
+use super::{
+    LaneDCaseReport, LaneDProfile, LaneDSummary, LaneDThresholdProfile, parse_profile_name,
+    parse_threshold_profile_name, profile_name, threshold_profile_name,
+};
 
 const REQUIRED_BASELINE_FIELDS: [&str; 6] = [
     "profile",
@@ -25,6 +28,7 @@ pub struct LaneDBaseline {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LaneDBaselineRecord {
     pub profile: LaneDProfile,
+    pub threshold_profile: LaneDThresholdProfile,
     pub suite: String,
     pub category: Option<String>,
     pub input: String,
@@ -37,23 +41,38 @@ pub struct LaneDBaselineRecord {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LaneDBaselineCaptureOptions {
     pub profile: LaneDProfile,
+    pub threshold_profile: LaneDThresholdProfile,
     pub elapsed_multiplier: u128,
     pub min_elapsed_micros: u128,
 }
 
-impl Default for LaneDBaselineCaptureOptions {
-    fn default() -> Self {
+impl LaneDBaselineCaptureOptions {
+    pub fn for_threshold_profile(threshold_profile: LaneDThresholdProfile) -> Self {
+        let (elapsed_multiplier, min_elapsed_micros) = match threshold_profile {
+            LaneDThresholdProfile::LocalDebug => (10, 250_000),
+            LaneDThresholdProfile::CiDebug => (25, 1_000_000),
+            LaneDThresholdProfile::CiRelease => (15, 500_000),
+        };
+
         Self {
             profile: LaneDProfile::Smoke,
-            elapsed_multiplier: 10,
-            min_elapsed_micros: 250_000,
+            threshold_profile,
+            elapsed_multiplier,
+            min_elapsed_micros,
         }
+    }
+}
+
+impl Default for LaneDBaselineCaptureOptions {
+    fn default() -> Self {
+        Self::for_threshold_profile(LaneDThresholdProfile::LocalDebug)
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LaneDBaselineCompareOptions {
     pub profile: LaneDProfile,
+    pub threshold_profile: LaneDThresholdProfile,
     pub require_all_records: bool,
 }
 
@@ -108,11 +127,14 @@ pub enum LaneDBaselineError {
     },
     #[error("unknown Lane D baseline profile `{profile}` in line: {line}")]
     UnknownProfile { line: String, profile: String },
+    #[error("unknown Lane D baseline threshold profile `{profile}` in line: {line}")]
+    UnknownThresholdProfile { line: String, profile: String },
     #[error(
-        "duplicate Lane D baseline record for profile `{profile}`, suite `{suite}`, input `{input}`"
+        "duplicate Lane D baseline record for profile `{profile}`, threshold profile `{threshold_profile}`, suite `{suite}`, input `{input}`"
     )]
     DuplicateRecord {
         profile: String,
+        threshold_profile: String,
         suite: String,
         input: String,
     },
@@ -199,6 +221,7 @@ pub fn capture_baseline_from_runs(
             let max_observed_elapsed_micros = elapsed_samples.iter().copied().max().unwrap_or(0);
             LaneDBaselineRecord {
                 profile: options.profile,
+                threshold_profile: options.threshold_profile,
                 suite: case.suite.clone(),
                 category: case.category.clone(),
                 input: case.input.clone(),
@@ -255,7 +278,7 @@ pub fn format_baseline(baseline: &LaneDBaseline) -> String {
     let mut output = String::from(
         "# Lane D captured performance baseline.\n\
          # Format:\n\
-         # profile=... | suite=... | category=... | input=... | baseline_elapsed_micros=... | max_elapsed_micros=... | max_value_nodes=...\n\
+         # profile=... | threshold_profile=... | suite=... | category=... | input=... | baseline_elapsed_micros=... | max_elapsed_micros=... | max_value_nodes=...\n\
          # `baseline_elapsed_micros` is measurement data from the capture run. `max_elapsed_micros` and `max_value_nodes` are checked guardrails.\n\n",
     );
 
@@ -276,6 +299,10 @@ fn checked_elapsed_limit(elapsed_micros: u128, options: &LaneDBaselineCaptureOpt
 fn format_baseline_record(record: &LaneDBaselineRecord) -> String {
     let mut fields = vec![
         format!("profile={}", profile_name(record.profile)),
+        format!(
+            "threshold_profile={}",
+            threshold_profile_name(record.threshold_profile)
+        ),
         format!("suite={}", record.suite),
     ];
     if let Some(category) = &record.category {
@@ -326,6 +353,17 @@ pub fn parse_baseline(text: &str) -> Result<LaneDBaseline, LaneDBaselineError> {
                 profile: profile_text.clone(),
             }
         })?;
+        let threshold_profile_text = fields
+            .get("threshold_profile")
+            .map(String::as_str)
+            .unwrap_or_else(|| threshold_profile_name(LaneDThresholdProfile::LocalDebug));
+        let threshold_profile =
+            parse_threshold_profile_name(threshold_profile_text).ok_or_else(|| {
+                LaneDBaselineError::UnknownThresholdProfile {
+                    line: line.to_owned(),
+                    profile: threshold_profile_text.to_owned(),
+                }
+            })?;
         let suite = required_field(&fields, "suite").to_owned();
         let input = required_field(&fields, "input").to_owned();
         let baseline_elapsed_micros =
@@ -334,12 +372,14 @@ pub fn parse_baseline(text: &str) -> Result<LaneDBaseline, LaneDBaselineError> {
         let max_value_nodes = parse_unsigned_field::<usize>(&fields, line, "max_value_nodes")?;
         let key = LaneDBaselineKey {
             profile,
+            threshold_profile,
             suite: suite.clone(),
             input: input.clone(),
         };
         if !seen.insert(key) {
             return Err(LaneDBaselineError::DuplicateRecord {
                 profile: profile_name(profile).to_owned(),
+                threshold_profile: threshold_profile_name(threshold_profile).to_owned(),
                 suite,
                 input,
             });
@@ -347,6 +387,7 @@ pub fn parse_baseline(text: &str) -> Result<LaneDBaseline, LaneDBaselineError> {
 
         records.push(LaneDBaselineRecord {
             profile,
+            threshold_profile,
             suite,
             category: fields.get("category").cloned(),
             input,
@@ -374,10 +415,12 @@ pub fn compare_baseline(
         .records
         .iter()
         .filter(|record| record.profile == options.profile && suites_run.contains(&record.suite))
+        .filter(|record| record.threshold_profile == options.threshold_profile)
         .map(|record| {
             (
                 LaneDBaselineKey {
                     profile: record.profile,
+                    threshold_profile: record.threshold_profile,
                     suite: record.suite.clone(),
                     input: record.input.clone(),
                 },
@@ -395,6 +438,7 @@ pub fn compare_baseline(
     for case in &summary.cases {
         let key = LaneDBaselineKey {
             profile: options.profile,
+            threshold_profile: options.threshold_profile,
             suite: case.suite.clone(),
             input: case.input.clone(),
         };
@@ -464,6 +508,7 @@ where
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct LaneDBaselineKey {
     profile: LaneDProfile,
+    threshold_profile: LaneDThresholdProfile,
     suite: String,
     input: String,
 }

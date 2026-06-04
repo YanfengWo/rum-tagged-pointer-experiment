@@ -1,11 +1,12 @@
 # Lane D smoke performance baseline.
 # Format:
-# profile=... | suite=... | category=... | input=... | baseline_elapsed_micros=... | max_elapsed_micros=... | max_value_nodes=...
+# profile=... | threshold_profile=... | suite=... | category=... | input=... | baseline_elapsed_micros=... | max_elapsed_micros=... | max_value_nodes=...
 #
 # `baseline_elapsed_micros` is historical measurement data from a local debug
 # run. `max_elapsed_micros` is the checked guardrail. Keep guardrails broad
 # enough to avoid machine-noise failures; tighten them only after repeated
-# measurements on the intended runner.
+# measurements on the intended runner. Rows without `threshold_profile` are
+# treated as `local-debug`.
 
 profile=smoke | suite=timing | category=trivial | input=1 + 1 | baseline_elapsed_micros=800 | max_elapsed_micros=250000 | max_value_nodes=1
 profile=smoke | suite=timing | category=trivial | input=2^10 | baseline_elapsed_micros=131 | max_elapsed_micros=250000 | max_value_nodes=1

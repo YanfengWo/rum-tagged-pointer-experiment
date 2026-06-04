@@ -12,6 +12,10 @@ fn parses_lane_d_baseline_records() {
 
     assert_eq!(baseline.records.len(), 1);
     assert_eq!(baseline.records[0].profile, LaneDProfile::Smoke);
+    assert_eq!(
+        baseline.records[0].threshold_profile,
+        LaneDThresholdProfile::LocalDebug
+    );
     assert_eq!(baseline.records[0].suite, "timing");
     assert_eq!(baseline.records[0].category.as_deref(), Some("trivial"));
     assert_eq!(baseline.records[0].baseline_elapsed_micros, 10);
@@ -46,6 +50,7 @@ fn baseline_comparison_reports_missing_and_regressions() {
         &baseline,
         &LaneDBaselineCompareOptions {
             profile: LaneDProfile::Smoke,
+            threshold_profile: LaneDThresholdProfile::LocalDebug,
             require_all_records: true,
         },
     );
@@ -74,6 +79,7 @@ fn captures_and_formats_baseline_from_successful_summary() {
         &summary,
         &LaneDBaselineCaptureOptions {
             profile: LaneDProfile::Smoke,
+            threshold_profile: LaneDThresholdProfile::LocalDebug,
             elapsed_multiplier: 3,
             min_elapsed_micros: 100,
         },
@@ -100,6 +106,7 @@ fn captures_multi_run_baseline_with_median_and_slowest_guardrail() {
         &summaries,
         &LaneDBaselineCaptureOptions {
             profile: LaneDProfile::Smoke,
+            threshold_profile: LaneDThresholdProfile::LocalDebug,
             elapsed_multiplier: 2,
             min_elapsed_micros: 1,
         },
@@ -111,6 +118,50 @@ fn captures_multi_run_baseline_with_median_and_slowest_guardrail() {
     assert_eq!(baseline.records[0].max_elapsed_micros, 60);
     assert_eq!(baseline.records[0].max_value_nodes, 3);
     assert_eq!(baseline.records[0].note.as_deref(), Some("capture_runs=3"));
+}
+
+#[test]
+fn threshold_profile_filters_baseline_records() {
+    let baseline = parse_baseline(
+        r#"
+        profile=smoke | suite=timing | input=fast[] | baseline_elapsed_micros=10 | max_elapsed_micros=10 | max_value_nodes=1
+        profile=smoke | threshold_profile=ci-debug | suite=timing | input=fast[] | baseline_elapsed_micros=10 | max_elapsed_micros=100 | max_value_nodes=1
+        "#,
+    )
+    .unwrap();
+    let summary = LaneDSummary {
+        total_seen: 1,
+        executed: 1,
+        skipped_by_profile: 0,
+        succeeded: 1,
+        failed: 0,
+        total_elapsed_micros: 20,
+        cases: vec![test_case(1, "timing", "fast[]", 20, Some(1))],
+    };
+
+    let local_report = compare_baseline(
+        &summary,
+        &baseline,
+        &LaneDBaselineCompareOptions {
+            profile: LaneDProfile::Smoke,
+            threshold_profile: LaneDThresholdProfile::LocalDebug,
+            require_all_records: true,
+        },
+    );
+    let ci_report = compare_baseline(
+        &summary,
+        &baseline,
+        &LaneDBaselineCompareOptions {
+            profile: LaneDProfile::Smoke,
+            threshold_profile: LaneDThresholdProfile::CiDebug,
+            require_all_records: true,
+        },
+    );
+
+    assert_eq!(local_report.records_considered, 1);
+    assert_eq!(local_report.elapsed_regressions.len(), 1);
+    assert_eq!(ci_report.records_considered, 1);
+    assert!(ci_report.is_clean());
 }
 
 #[test]
@@ -181,6 +232,7 @@ fn default_smoke_baseline_covers_current_smoke_lane() {
         &baseline,
         &LaneDBaselineCompareOptions {
             profile: LaneDProfile::Smoke,
+            threshold_profile: LaneDThresholdProfile::LocalDebug,
             require_all_records: true,
         },
     );

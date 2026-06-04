@@ -113,6 +113,7 @@ cargo run -p rum-difftest -- lane-d --suite all --profile full
 cargo run -p rum-difftest -- lane-d --baseline crates/rum-difftest/perf/baselines/smoke.txt --fail-on-regression
 cargo run -p rum-difftest -- lane-d --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
 cargo run -p rum-difftest -- lane-d --capture-runs 5 --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
+cargo run -p rum-difftest -- lane-d --threshold-profile ci-debug --capture-runs 5 --write-baseline /tmp/rum-lane-d-ci-debug.txt --fail-on-error
 ```
 
 The default `smoke` profile skips imported heavy / very-large cases so the
@@ -125,7 +126,10 @@ elapsed guardrail failures, and result-node guardrail failures into a non-zero
 exit. `--write-baseline PATH` captures the current run as a baseline artifact,
 refusing to write if any executed case fails. `--capture-runs N` repeats the
 same run before writing and uses per-case median elapsed samples plus the
-slowest observed sample for guardrails.
+slowest observed sample for guardrails. `--threshold-profile` selects the
+baseline threshold record set and capture defaults: `local-debug` for local dev
+runs, `ci-debug` for debug builds on CI machines, and `ci-release` for release
+builds on CI/release machines.
 
 Start here:
 

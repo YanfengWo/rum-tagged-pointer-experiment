@@ -3,7 +3,7 @@ use std::process::ExitCode;
 
 use rum_difftest::lane_d::{
     self, LaneDBaselineCaptureOptions, LaneDBaselineCompareOptions, LaneDCaseStatus, LaneDOptions,
-    LaneDProfile, LaneDSuite,
+    LaneDProfile, LaneDSuite, LaneDThresholdProfile,
 };
 
 use super::expect_value;
@@ -11,12 +11,13 @@ use super::expect_value;
 pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut suite = LaneDSuite::All;
     let mut profile = LaneDProfile::Smoke;
+    let mut threshold_profile = LaneDThresholdProfile::LocalDebug;
     let mut limit = None;
     let mut baseline_path = None;
     let mut write_baseline_path = None;
     let mut capture_runs = 1usize;
-    let mut baseline_elapsed_multiplier = 10;
-    let mut baseline_min_elapsed_micros = 250_000;
+    let mut baseline_elapsed_multiplier = None;
+    let mut baseline_min_elapsed_micros = None;
     let mut fail_on_error = false;
     let mut fail_on_regression = false;
 
@@ -32,6 +33,11 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 let value = expect_value(&mut iter, "--profile")?;
                 profile = lane_d::parse_profile_name(&value)
                     .ok_or_else(|| format!("unknown lane-d profile `{value}`"))?;
+            }
+            "--threshold-profile" => {
+                let value = expect_value(&mut iter, "--threshold-profile")?;
+                threshold_profile = lane_d::parse_threshold_profile_name(&value)
+                    .ok_or_else(|| format!("unknown lane-d threshold profile `{value}`"))?;
             }
             "--limit" => {
                 let value = expect_value(&mut iter, "--limit")?;
@@ -50,11 +56,11 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             }
             "--baseline-elapsed-multiplier" => {
                 let value = expect_value(&mut iter, "--baseline-elapsed-multiplier")?;
-                baseline_elapsed_multiplier = value.parse::<u128>()?;
+                baseline_elapsed_multiplier = Some(value.parse::<u128>()?);
             }
             "--baseline-min-elapsed-micros" => {
                 let value = expect_value(&mut iter, "--baseline-min-elapsed-micros")?;
-                baseline_min_elapsed_micros = value.parse::<u128>()?;
+                baseline_min_elapsed_micros = Some(value.parse::<u128>()?);
             }
             "--fail-on-error" => fail_on_error = true,
             "--fail-on-regression" => fail_on_regression = true,
@@ -71,6 +77,11 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     if capture_runs > 1 && write_baseline_path.is_none() {
         return Err("--capture-runs requires --write-baseline PATH".into());
     }
+    let capture_defaults = LaneDBaselineCaptureOptions::for_threshold_profile(threshold_profile);
+    let baseline_elapsed_multiplier =
+        baseline_elapsed_multiplier.unwrap_or(capture_defaults.elapsed_multiplier);
+    let baseline_min_elapsed_micros =
+        baseline_min_elapsed_micros.unwrap_or(capture_defaults.min_elapsed_micros);
 
     let summary = lane_d::run(&LaneDOptions {
         suite,
@@ -80,6 +91,10 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
 
     println!("lane-d suite: {}", lane_d::suite_name(suite));
     println!("lane-d profile: {}", lane_d::profile_name(profile));
+    println!(
+        "lane-d threshold profile: {}",
+        lane_d::threshold_profile_name(threshold_profile)
+    );
     println!("cases seen: {}", summary.total_seen);
     println!("cases skipped by profile: {}", summary.skipped_by_profile);
     println!("cases executed: {}", summary.executed);
@@ -116,6 +131,7 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             &baseline,
             &LaneDBaselineCompareOptions {
                 profile,
+                threshold_profile,
                 require_all_records: limit.is_none(),
             },
         );
@@ -137,6 +153,7 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         }
         let capture_options = LaneDBaselineCaptureOptions {
             profile,
+            threshold_profile,
             elapsed_multiplier: baseline_elapsed_multiplier,
             min_elapsed_micros: baseline_min_elapsed_micros,
         };
@@ -149,6 +166,10 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         println!("baseline written: {}", path.display());
         println!("baseline written records: {}", baseline.records.len());
         println!("baseline capture runs: {capture_runs}");
+        println!(
+            "baseline threshold profile: {}",
+            lane_d::threshold_profile_name(threshold_profile)
+        );
         println!("baseline elapsed multiplier: {baseline_elapsed_multiplier}");
         println!("baseline min elapsed micros: {baseline_min_elapsed_micros}");
     }
@@ -190,8 +211,9 @@ fn print_baseline_report(path: &PathBuf, report: &lane_d::LaneDBaselineReport) {
     }
     for unused in &report.unused_records {
         println!(
-            "baseline-unused\t{}\t{}\t{}",
+            "baseline-unused\t{}\t{}\t{}\t{}",
             lane_d::profile_name(unused.profile),
+            lane_d::threshold_profile_name(unused.threshold_profile),
             unused.suite,
             unused.input
         );
@@ -222,6 +244,8 @@ fn print_lane_d_usage() {
     println!("rum-difftest lane-d");
     println!("  --suite all|timing|memory  Select imported performance input suite");
     println!("  --profile smoke|full       Select daily-safe smoke inputs or explicit full inputs");
+    println!("  --threshold-profile local-debug|ci-debug|ci-release");
+    println!("                             Select baseline threshold records and capture defaults");
     println!("  --limit N                  Stop after N executed expressions");
     println!("  --baseline PATH            Compare against a Lane D baseline artifact");
     println!("  --write-baseline PATH      Capture the current run as a Lane D baseline artifact");

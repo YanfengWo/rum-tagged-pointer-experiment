@@ -137,8 +137,17 @@ failures. `--write-baseline PATH` captures the current successful run as a
 baseline artifact and can tune elapsed guardrails with
 `--baseline-elapsed-multiplier` and `--baseline-min-elapsed-micros`.
 `--capture-runs N` repeats the same run, using per-case median elapsed samples
-and slowest-sample guardrails. The current checked-in elapsed thresholds are
-intentionally broad smoke guardrails, not tuned CI/release baselines.
+and slowest-sample guardrails. `--threshold-profile` selects the baseline
+threshold record set and capture defaults:
+
+- `local-debug`: local developer debug runs
+- `ci-debug`: debug builds on shared CI machines
+- `ci-release`: release builds on CI/release machines
+
+Baseline rows without `threshold_profile` are treated as `local-debug` for
+compatibility with older artifacts. The current checked-in elapsed thresholds
+are intentionally broad smoke guardrails; actual CI/release artifacts still
+need to be captured on the intended runners before tightening thresholds.
 
 ### Lane E: Host Contract Tests
 
@@ -198,8 +207,8 @@ Raw counts:
 3. Normalize output conventions further so Lane A can compare more than today's
    scalar/list/plain-call-friendly subset.
 4. Continue extending Lane A/B curated fixtures from matrix-guided priorities.
-5. Add release/CI-specific Lane D threshold profiles before tightening elapsed
-   thresholds beyond broad smoke guardrails.
+5. Capture checked `ci-debug` / `ci-release` Lane D artifacts on the intended
+   runners before tightening elapsed thresholds beyond broad smoke guardrails.
 6. Extend Lane C later with machine-checkable `tracked_by` targets if TODO or
    matrix anchors become stable identifiers.
 7. Keep Lane E/F boundaries explicit: host-contract and adapter/protocol tests

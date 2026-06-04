@@ -15,6 +15,7 @@ cargo run -p rum-difftest -- lane-d --suite all --profile full
 cargo run -p rum-difftest -- lane-d --baseline crates/rum-difftest/perf/baselines/smoke.txt --fail-on-regression
 cargo run -p rum-difftest -- lane-d --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
 cargo run -p rum-difftest -- lane-d --capture-runs 5 --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
+cargo run -p rum-difftest -- lane-d --threshold-profile ci-debug --capture-runs 5 --write-baseline /tmp/rum-lane-d-ci-debug.txt --fail-on-error
 ```
 
 The first runner consumes the imported seed suites:
@@ -26,6 +27,16 @@ By default, `lane-d` uses the daily-safe `smoke` profile and skips imported
 heavy / very-large categories. `--profile full` is the explicit baseline
 collection mode for every imported input.
 
+`--threshold-profile` selects which baseline threshold records are compared and
+which capture defaults are used:
+
+- `local-debug`: local developer debug runs, using `observed * 10` and a
+  `250000` microsecond minimum guardrail.
+- `ci-debug`: debug builds on shared CI machines, using `observed * 25` and a
+  `1000000` microsecond minimum guardrail.
+- `ci-release`: release builds on CI/release machines, using `observed * 15`
+  and a `500000` microsecond minimum guardrail.
+
 It reports local evaluation metrics only: elapsed microseconds, result node
 count, message count, print count, and any evaluation failure.
 
@@ -35,13 +46,14 @@ artifact is [baselines/smoke.txt](./baselines/smoke.txt), covering the default
 `rum-difftest` fixtures:
 
 ```text
-profile=smoke | suite=timing | category=trivial | input=1 + 1 | baseline_elapsed_micros=800 | max_elapsed_micros=250000 | max_value_nodes=1
+profile=smoke | threshold_profile=local-debug | suite=timing | category=trivial | input=1 + 1 | baseline_elapsed_micros=800 | max_elapsed_micros=250000 | max_value_nodes=1
 ```
 
 `baseline_elapsed_micros` is historical measurement data. `max_elapsed_micros`
 and `max_value_nodes` are the checked guardrails. Keep elapsed thresholds broad
 enough to avoid machine-noise failures; tighten them only after repeated
-measurements on the intended runner.
+measurements on the intended runner. Baseline rows without `threshold_profile`
+are treated as `local-debug` for compatibility with older artifacts.
 
 `--baseline PATH` enables comparison. `--fail-on-regression` makes missing
 baseline rows, stale rows, elapsed regressions, and result-node regressions
@@ -55,8 +67,9 @@ the configured multiplier. The capture path validates that every run produced
 the same case sequence.
 
 By default capture sets `max_elapsed_micros` to `max(observed * 10, 250000)`
-and records the largest observed result node count as `max_value_nodes`.
-Override those elapsed guardrails with:
+for `local-debug` and records the largest observed result node count as
+`max_value_nodes`. Select CI/release guardrail defaults with
+`--threshold-profile`, or override elapsed guardrails explicitly with:
 
 ```bash
 cargo run -p rum-difftest -- lane-d \
