@@ -127,8 +127,10 @@ heavy / very-large imported categories for routine validation; `--profile full`
 is the explicit all-input baseline mode. `--baseline PATH` compares a run
 against a checked baseline artifact, and `--fail-on-regression` turns missing
 rows, stale rows, elapsed-threshold failures, and result-node-threshold
-failures into a non-zero exit. Lane D remains a local `rum` performance lane;
-it should not use a Wolfram oracle.
+failures into a non-zero exit. `--write-baseline PATH` captures the current
+successful run as a baseline artifact with configurable elapsed guardrails.
+Lane D remains a local `rum` performance lane; it should not use a Wolfram
+oracle.
 
 ## Oracle Policy
 
