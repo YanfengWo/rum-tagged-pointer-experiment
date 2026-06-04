@@ -135,9 +135,10 @@ enables comparison, and `--fail-on-regression` exits non-zero for missing
 baseline rows, stale rows, elapsed guardrail failures, or result-node guardrail
 failures. `--write-baseline PATH` captures the current successful run as a
 baseline artifact and can tune elapsed guardrails with
-`--baseline-elapsed-multiplier` and `--baseline-min-elapsed-micros`. The current
-checked-in elapsed thresholds are intentionally broad smoke guardrails, not
-tuned CI/release baselines.
+`--baseline-elapsed-multiplier` and `--baseline-min-elapsed-micros`.
+`--capture-runs N` repeats the same run, using per-case median elapsed samples
+and slowest-sample guardrails. The current checked-in elapsed thresholds are
+intentionally broad smoke guardrails, not tuned CI/release baselines.
 
 ### Lane E: Host Contract Tests
 
@@ -197,8 +198,8 @@ Raw counts:
 3. Normalize output conventions further so Lane A can compare more than today's
    scalar/list/plain-call-friendly subset.
 4. Continue extending Lane A/B curated fixtures from matrix-guided priorities.
-5. Add multi-run or release/CI-specific Lane D baseline calibration before
-   tightening elapsed thresholds beyond broad smoke guardrails.
+5. Add release/CI-specific Lane D threshold profiles before tightening elapsed
+   thresholds beyond broad smoke guardrails.
 6. Extend Lane C later with machine-checkable `tracked_by` targets if TODO or
    matrix anchors become stable identifiers.
 7. Keep Lane E/F boundaries explicit: host-contract and adapter/protocol tests

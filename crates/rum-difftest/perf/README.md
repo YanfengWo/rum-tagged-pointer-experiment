@@ -14,6 +14,7 @@ cargo run -p rum-difftest -- lane-d --suite memory --fail-on-error
 cargo run -p rum-difftest -- lane-d --suite all --profile full
 cargo run -p rum-difftest -- lane-d --baseline crates/rum-difftest/perf/baselines/smoke.txt --fail-on-regression
 cargo run -p rum-difftest -- lane-d --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
+cargo run -p rum-difftest -- lane-d --capture-runs 5 --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
 ```
 
 The first runner consumes the imported seed suites:
@@ -46,14 +47,21 @@ measurements on the intended runner.
 baseline rows, stale rows, elapsed regressions, and result-node regressions
 exit non-zero. Lane D still does not compare against Wolfram.
 
-`--write-baseline PATH` captures the current run as a baseline artifact. By
-default it sets `max_elapsed_micros` to `max(elapsed * 10, 250000)` and records
-the observed result node count as `max_value_nodes`. Override those elapsed
-guardrails with:
+`--write-baseline PATH` captures the current run as a baseline artifact.
+`--capture-runs N` repeats the same Lane D run `N` times before writing the
+artifact; captured `baseline_elapsed_micros` uses the median elapsed sample for
+each case, while `max_elapsed_micros` uses the slowest observed sample times
+the configured multiplier. The capture path validates that every run produced
+the same case sequence.
+
+By default capture sets `max_elapsed_micros` to `max(observed * 10, 250000)`
+and records the largest observed result node count as `max_value_nodes`.
+Override those elapsed guardrails with:
 
 ```bash
 cargo run -p rum-difftest -- lane-d \
   --write-baseline /tmp/rum-lane-d-smoke.txt \
+  --capture-runs 5 \
   --baseline-elapsed-multiplier 20 \
   --baseline-min-elapsed-micros 500000
 ```

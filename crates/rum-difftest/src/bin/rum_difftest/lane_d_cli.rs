@@ -14,6 +14,7 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut limit = None;
     let mut baseline_path = None;
     let mut write_baseline_path = None;
+    let mut capture_runs = 1usize;
     let mut baseline_elapsed_multiplier = 10;
     let mut baseline_min_elapsed_micros = 250_000;
     let mut fail_on_error = false;
@@ -43,6 +44,10 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 write_baseline_path =
                     Some(PathBuf::from(expect_value(&mut iter, "--write-baseline")?));
             }
+            "--capture-runs" => {
+                let value = expect_value(&mut iter, "--capture-runs")?;
+                capture_runs = value.parse::<usize>()?;
+            }
             "--baseline-elapsed-multiplier" => {
                 let value = expect_value(&mut iter, "--baseline-elapsed-multiplier")?;
                 baseline_elapsed_multiplier = value.parse::<u128>()?;
@@ -59,6 +64,12 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             }
             other => return Err(format!("unknown lane-d flag `{other}`").into()),
         }
+    }
+    if capture_runs == 0 {
+        return Err("--capture-runs must be at least 1".into());
+    }
+    if capture_runs > 1 && write_baseline_path.is_none() {
+        return Err("--capture-runs requires --write-baseline PATH".into());
     }
 
     let summary = lane_d::run(&LaneDOptions {
@@ -115,17 +126,29 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     };
 
     if let Some(path) = &write_baseline_path {
-        let baseline = lane_d::capture_baseline(
-            &summary,
-            &LaneDBaselineCaptureOptions {
-                profile,
-                elapsed_multiplier: baseline_elapsed_multiplier,
-                min_elapsed_micros: baseline_min_elapsed_micros,
-            },
-        )?;
+        let run_options = LaneDOptions {
+            suite,
+            profile,
+            limit,
+        };
+        let mut summaries = vec![summary.clone()];
+        for _ in 1..capture_runs {
+            summaries.push(lane_d::run(&run_options)?);
+        }
+        let capture_options = LaneDBaselineCaptureOptions {
+            profile,
+            elapsed_multiplier: baseline_elapsed_multiplier,
+            min_elapsed_micros: baseline_min_elapsed_micros,
+        };
+        let baseline = if capture_runs == 1 {
+            lane_d::capture_baseline(&summaries[0], &capture_options)?
+        } else {
+            lane_d::capture_baseline_from_runs(&summaries, &capture_options)?
+        };
         lane_d::write_baseline(path, &baseline)?;
         println!("baseline written: {}", path.display());
         println!("baseline written records: {}", baseline.records.len());
+        println!("baseline capture runs: {capture_runs}");
         println!("baseline elapsed multiplier: {baseline_elapsed_multiplier}");
         println!("baseline min elapsed micros: {baseline_min_elapsed_micros}");
     }
@@ -202,6 +225,7 @@ fn print_lane_d_usage() {
     println!("  --limit N                  Stop after N executed expressions");
     println!("  --baseline PATH            Compare against a Lane D baseline artifact");
     println!("  --write-baseline PATH      Capture the current run as a Lane D baseline artifact");
+    println!("  --capture-runs N           Number of runs to aggregate when writing a baseline");
     println!("  --baseline-elapsed-multiplier N");
     println!("                             Multiplier for captured max elapsed guardrails");
     println!("  --baseline-min-elapsed-micros N");

@@ -118,6 +118,17 @@ pub enum LaneDBaselineError {
     },
     #[error("cannot capture Lane D baseline while {count} case(s) failed")]
     CaptureHasFailures { count: usize },
+    #[error("cannot capture Lane D baseline without at least one run")]
+    CaptureHasNoRuns,
+    #[error(
+        "Lane D capture run {run_index} case {case_index} does not match the first run: expected `{expected}`, got `{actual}`"
+    )]
+    CaptureRunShapeMismatch {
+        run_index: usize,
+        case_index: usize,
+        expected: String,
+        actual: String,
+    },
 }
 
 pub fn default_smoke_baseline_path() -> PathBuf {
@@ -154,28 +165,90 @@ pub fn capture_baseline(
     summary: &LaneDSummary,
     options: &LaneDBaselineCaptureOptions,
 ) -> Result<LaneDBaseline, LaneDBaselineError> {
-    if summary.failed > 0 {
-        return Err(LaneDBaselineError::CaptureHasFailures {
-            count: summary.failed,
-        });
+    capture_baseline_from_runs(std::slice::from_ref(summary), options)
+}
+
+pub fn capture_baseline_from_runs(
+    summaries: &[LaneDSummary],
+    options: &LaneDBaselineCaptureOptions,
+) -> Result<LaneDBaseline, LaneDBaselineError> {
+    let Some(first) = summaries.first() else {
+        return Err(LaneDBaselineError::CaptureHasNoRuns);
+    };
+
+    let failed = summaries
+        .iter()
+        .map(|summary| summary.failed)
+        .sum::<usize>();
+    if failed > 0 {
+        return Err(LaneDBaselineError::CaptureHasFailures { count: failed });
     }
 
-    let records = summary
+    validate_capture_run_shapes(summaries)?;
+
+    let records = first
         .cases
         .iter()
-        .map(|case| LaneDBaselineRecord {
-            profile: options.profile,
-            suite: case.suite.clone(),
-            category: case.category.clone(),
-            input: case.input.clone(),
-            baseline_elapsed_micros: case.elapsed_micros,
-            max_elapsed_micros: checked_elapsed_limit(case.elapsed_micros, options),
-            max_value_nodes: case.value_nodes.unwrap_or(0),
-            note: None,
+        .enumerate()
+        .map(|(case_index, case)| {
+            let mut elapsed_samples = summaries
+                .iter()
+                .map(|summary| summary.cases[case_index].elapsed_micros)
+                .collect::<Vec<_>>();
+            let baseline_elapsed_micros = median_elapsed_micros(&mut elapsed_samples);
+            let max_observed_elapsed_micros = elapsed_samples.iter().copied().max().unwrap_or(0);
+            LaneDBaselineRecord {
+                profile: options.profile,
+                suite: case.suite.clone(),
+                category: case.category.clone(),
+                input: case.input.clone(),
+                baseline_elapsed_micros,
+                max_elapsed_micros: checked_elapsed_limit(max_observed_elapsed_micros, options),
+                max_value_nodes: max_value_nodes_for_case(summaries, case_index),
+                note: (summaries.len() > 1).then(|| format!("capture_runs={}", summaries.len())),
+            }
         })
         .collect();
 
     Ok(LaneDBaseline { records })
+}
+
+fn validate_capture_run_shapes(summaries: &[LaneDSummary]) -> Result<(), LaneDBaselineError> {
+    let first = &summaries[0];
+    for (run_index, summary) in summaries.iter().enumerate().skip(1) {
+        if summary.cases.len() != first.cases.len() {
+            return Err(LaneDBaselineError::CaptureRunShapeMismatch {
+                run_index: run_index + 1,
+                case_index: summary.cases.len().min(first.cases.len()) + 1,
+                expected: format!("{} cases", first.cases.len()),
+                actual: format!("{} cases", summary.cases.len()),
+            });
+        }
+        for (case_index, (expected, actual)) in first.cases.iter().zip(&summary.cases).enumerate() {
+            if expected.suite != actual.suite || expected.input != actual.input {
+                return Err(LaneDBaselineError::CaptureRunShapeMismatch {
+                    run_index: run_index + 1,
+                    case_index: case_index + 1,
+                    expected: format!("{}\t{}", expected.suite, expected.input),
+                    actual: format!("{}\t{}", actual.suite, actual.input),
+                });
+            }
+        }
+    }
+    Ok(())
+}
+
+fn median_elapsed_micros(samples: &mut [u128]) -> u128 {
+    samples.sort_unstable();
+    samples[samples.len() / 2]
+}
+
+fn max_value_nodes_for_case(summaries: &[LaneDSummary], case_index: usize) -> usize {
+    summaries
+        .iter()
+        .filter_map(|summary| summary.cases[case_index].value_nodes)
+        .max()
+        .unwrap_or(0)
 }
 
 pub fn format_baseline(baseline: &LaneDBaseline) -> String {
@@ -396,173 +469,4 @@ struct LaneDBaselineKey {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::super::{LaneDCaseStatus, LaneDOptions, LaneDSuite, run};
-    use super::*;
-
-    #[test]
-    fn parses_lane_d_baseline_records() {
-        let baseline = parse_baseline(
-            "profile=smoke | suite=timing | category=trivial | input=1 + 1 | baseline_elapsed_micros=10 | max_elapsed_micros=100 | max_value_nodes=1",
-        )
-        .unwrap();
-
-        assert_eq!(baseline.records.len(), 1);
-        assert_eq!(baseline.records[0].profile, LaneDProfile::Smoke);
-        assert_eq!(baseline.records[0].suite, "timing");
-        assert_eq!(baseline.records[0].category.as_deref(), Some("trivial"));
-        assert_eq!(baseline.records[0].baseline_elapsed_micros, 10);
-        assert_eq!(baseline.records[0].max_elapsed_micros, 100);
-        assert_eq!(baseline.records[0].max_value_nodes, 1);
-    }
-
-    #[test]
-    fn baseline_comparison_reports_missing_and_regressions() {
-        let baseline = parse_baseline(
-            r#"
-            profile=smoke | suite=timing | input=fast[] | baseline_elapsed_micros=10 | max_elapsed_micros=100 | max_value_nodes=2
-            profile=smoke | suite=timing | input=stale[] | baseline_elapsed_micros=10 | max_elapsed_micros=100 | max_value_nodes=2
-            "#,
-        )
-        .unwrap();
-        let summary = LaneDSummary {
-            total_seen: 2,
-            executed: 2,
-            skipped_by_profile: 0,
-            succeeded: 2,
-            failed: 0,
-            total_elapsed_micros: 501,
-            cases: vec![
-                test_case(1, "timing", "fast[]", 500, Some(3)),
-                test_case(2, "timing", "missing[]", 1, Some(1)),
-            ],
-        };
-
-        let report = compare_baseline(
-            &summary,
-            &baseline,
-            &LaneDBaselineCompareOptions {
-                profile: LaneDProfile::Smoke,
-                require_all_records: true,
-            },
-        );
-
-        assert!(!report.is_clean());
-        assert_eq!(report.compared, 1);
-        assert_eq!(report.missing_records.len(), 1);
-        assert_eq!(report.unused_records.len(), 1);
-        assert_eq!(report.elapsed_regressions.len(), 1);
-        assert_eq!(report.value_node_regressions.len(), 1);
-    }
-
-    #[test]
-    fn captures_and_formats_baseline_from_successful_summary() {
-        let summary = LaneDSummary {
-            total_seen: 1,
-            executed: 1,
-            skipped_by_profile: 0,
-            succeeded: 1,
-            failed: 0,
-            total_elapsed_micros: 42,
-            cases: vec![test_case(1, "timing", "fast[]", 42, Some(3))],
-        };
-
-        let baseline = capture_baseline(
-            &summary,
-            &LaneDBaselineCaptureOptions {
-                profile: LaneDProfile::Smoke,
-                elapsed_multiplier: 3,
-                min_elapsed_micros: 100,
-            },
-        )
-        .unwrap();
-        let text = format_baseline(&baseline);
-        let parsed = parse_baseline(&text).unwrap();
-
-        assert_eq!(parsed.records.len(), 1);
-        assert_eq!(parsed.records[0].baseline_elapsed_micros, 42);
-        assert_eq!(parsed.records[0].max_elapsed_micros, 126);
-        assert_eq!(parsed.records[0].max_value_nodes, 3);
-    }
-
-    #[test]
-    fn refuses_to_capture_failed_runs() {
-        let summary = LaneDSummary {
-            total_seen: 1,
-            executed: 1,
-            skipped_by_profile: 0,
-            succeeded: 0,
-            failed: 1,
-            total_elapsed_micros: 42,
-            cases: vec![LaneDCaseReport {
-                suite: "timing".to_owned(),
-                source: PathBuf::from("test"),
-                index: 1,
-                category: None,
-                threshold: None,
-                input: "bad[]".to_owned(),
-                status: LaneDCaseStatus::Failure {
-                    message: "bad".to_owned(),
-                },
-                elapsed_micros: 42,
-                value_nodes: None,
-                message_count: 0,
-                print_count: 0,
-            }],
-        };
-
-        let err = capture_baseline(&summary, &LaneDBaselineCaptureOptions::default()).unwrap_err();
-
-        assert!(matches!(
-            err,
-            LaneDBaselineError::CaptureHasFailures { count: 1 }
-        ));
-    }
-
-    #[test]
-    fn default_smoke_baseline_covers_current_smoke_lane() {
-        let summary = run(&LaneDOptions {
-            suite: LaneDSuite::All,
-            profile: LaneDProfile::Smoke,
-            limit: None,
-        })
-        .unwrap();
-        let baseline = load_baseline(default_smoke_baseline_path()).unwrap();
-        let report = compare_baseline(
-            &summary,
-            &baseline,
-            &LaneDBaselineCompareOptions {
-                profile: LaneDProfile::Smoke,
-                require_all_records: true,
-            },
-        );
-
-        assert!(
-            report.is_clean(),
-            "baseline comparison was not clean: {:?}",
-            report
-        );
-    }
-
-    fn test_case(
-        index: usize,
-        suite: &str,
-        input: &str,
-        elapsed_micros: u128,
-        value_nodes: Option<usize>,
-    ) -> LaneDCaseReport {
-        LaneDCaseReport {
-            suite: suite.to_owned(),
-            source: PathBuf::from("test"),
-            index,
-            category: None,
-            threshold: None,
-            input: input.to_owned(),
-            status: LaneDCaseStatus::Success,
-            elapsed_micros,
-            value_nodes,
-            message_count: 0,
-            print_count: 0,
-        }
-    }
-}
+mod tests;

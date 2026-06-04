@@ -129,8 +129,9 @@ against a checked baseline artifact, and `--fail-on-regression` turns missing
 rows, stale rows, elapsed-threshold failures, and result-node-threshold
 failures into a non-zero exit. `--write-baseline PATH` captures the current
 successful run as a baseline artifact with configurable elapsed guardrails.
-Lane D remains a local `rum` performance lane; it should not use a Wolfram
-oracle.
+`--capture-runs N` repeats the same run and writes median elapsed samples plus
+slowest-sample guardrails. Lane D remains a local `rum` performance lane; it
+should not use a Wolfram oracle.
 
 ## Oracle Policy
 

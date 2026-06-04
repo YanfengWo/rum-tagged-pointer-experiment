@@ -112,6 +112,7 @@ cargo run -p rum-difftest -- lane-d --suite memory --limit 5
 cargo run -p rum-difftest -- lane-d --suite all --profile full
 cargo run -p rum-difftest -- lane-d --baseline crates/rum-difftest/perf/baselines/smoke.txt --fail-on-regression
 cargo run -p rum-difftest -- lane-d --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
+cargo run -p rum-difftest -- lane-d --capture-runs 5 --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
 ```
 
 The default `smoke` profile skips imported heavy / very-large cases so the
@@ -122,7 +123,9 @@ each executed expression. `--baseline PATH` compares the run against a checked
 baseline artifact; `--fail-on-regression` turns missing rows, stale rows,
 elapsed guardrail failures, and result-node guardrail failures into a non-zero
 exit. `--write-baseline PATH` captures the current run as a baseline artifact,
-refusing to write if any executed case fails.
+refusing to write if any executed case fails. `--capture-runs N` repeats the
+same run before writing and uses per-case median elapsed samples plus the
+slowest observed sample for guardrails.
 
 Start here:
 

@@ -572,7 +572,8 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane D: land a local `rum-difftest lane-d` runner over the imported timing and memory seed suites, with a default smoke profile, explicit full profile, elapsed time, result node count, message count, print count, and evaluation failures without using a Wolfram oracle
   - [x] Lane D follow-up: add checked historical baseline artifacts, threshold policy, and regression-decision output before treating performance runs as pass/fail gates
   - [x] Lane D follow-up: add baseline capture workflow before tightening elapsed thresholds beyond broad smoke guardrails
-  - [ ] Lane D follow-up: add multi-run baseline calibration or CI-machine-specific threshold profiles before tightening elapsed thresholds beyond broad smoke guardrails
+  - [x] Lane D follow-up: add multi-run baseline calibration before tightening elapsed thresholds beyond broad smoke guardrails
+  - [ ] Lane D follow-up: add CI-machine-specific threshold profiles before tightening elapsed thresholds beyond broad smoke guardrails
   - [ ] Lane E: keep host-contract tests in `rum`-native crate-local suites rather than Wolfram diff
   - [ ] Lane F: keep adapter/protocol tests in adapter-native suites rather than Wolfram diff
 - [ ] Keep `rum`-specific kernel extensions and runtime/session semantics in crate-local suites unless they also have a meaningful Wolfram-oracle-comparable same-name surface
