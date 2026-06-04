@@ -110,7 +110,9 @@ input !!! id=name | type=temporary | rum=... | wolfram=... | reason=...
 
 For `rum`, this should become the divergence ledger for same-name features.
 Current implementation has `divergences/known-differences.txt` plus
-`rum-difftest lane-c` to validate fixture IDs against the ledger.
+`rum-difftest lane-c` to validate fixture IDs against the ledger. Each ledger
+row must include `tracked_by` and `close_when` metadata so divergences remain
+owned by a roadmap item and have explicit removal criteria.
 
 ### Lane D: Performance Regression
 
@@ -186,8 +188,9 @@ Raw counts:
 3. Normalize output conventions further so Lane A can compare more than today's
    scalar/list/plain-call-friendly subset.
 4. Continue extending Lane A/B curated fixtures from matrix-guided priorities.
-5. Add richer Lane C metadata links and close criteria for each divergence.
-6. Add Lane D historical baseline artifacts and threshold policy.
+5. Add Lane D historical baseline artifacts and threshold policy.
+6. Extend Lane C later with machine-checkable `tracked_by` targets if TODO or
+   matrix anchors become stable identifiers.
 7. Keep Lane E/F boundaries explicit: host-contract and adapter/protocol tests
    stay in their owning crates rather than becoming Wolfram diffs.
 

@@ -568,7 +568,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane B follow-up: add per-step message-stream and print-stream capture so stateful diffs compare values, messages, and prints instead of values only
   - [ ] Lane B follow-up: add optional long-lived interactive process reuse once oracle-run throughput needs it
   - [x] Lane C: land a checked known-difference ledger plus `rum-difftest lane-c` validation that fixture `!!! id=...` entries and ledger rows stay synchronized
-  - [ ] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved
+  - [x] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved
   - [x] Lane D: land a local `rum-difftest lane-d` runner over the imported timing and memory seed suites, with a default smoke profile, explicit full profile, elapsed time, result node count, message count, print count, and evaluation failures without using a Wolfram oracle
   - [ ] Lane D follow-up: add checked historical baseline artifacts, threshold policy, and regression-decision output before treating performance runs as pass/fail gates
   - [ ] Lane E: keep host-contract tests in `rum`-native crate-local suites rather than Wolfram diff

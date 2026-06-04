@@ -9,6 +9,16 @@ use crate::fixtures::{
     parse_metadata_fields,
 };
 
+const REQUIRED_LEDGER_FIELDS: [&str; 7] = [
+    "id",
+    "type",
+    "status",
+    "fixture",
+    "reason",
+    "tracked_by",
+    "close_when",
+];
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KnownDifferenceRecord {
     pub id: String,
@@ -52,7 +62,7 @@ pub enum KnownDifferenceLedgerError {
     #[error("invalid known-difference ledger line `{line}`: {message}")]
     InvalidLedgerLine { line: String, message: String },
     #[error("known-difference ledger line is missing `{field}`: {line}")]
-    MissingLedgerField { line: String, field: &'static str },
+    MissingLedgerField { line: String, field: String },
     #[error("known-difference ledger id `{id}` is duplicated")]
     DuplicateLedgerId { id: String },
     #[error(
@@ -125,11 +135,11 @@ pub fn parse_known_difference_ledger(
                 message: source.to_string(),
             }
         })?;
-        for required in ["id", "type", "status", "fixture", "reason"] {
+        for required in REQUIRED_LEDGER_FIELDS {
             if !fields.contains_key(required) {
                 return Err(KnownDifferenceLedgerError::MissingLedgerField {
                     line: line.to_owned(),
-                    field: required,
+                    field: required.to_owned(),
                 });
             }
         }
@@ -228,7 +238,7 @@ mod tests {
         let records = parse_known_difference_ledger(
             r#"
             # comment
-            id=case-a | type=temporary | status=open | fixture=cases/a.txt | reason=example
+            id=case-a | type=temporary | status=open | fixture=cases/a.txt | reason=example | tracked_by=TODO.md:case-a | close_when=example is fixed
             "#,
         )
         .unwrap();
@@ -236,6 +246,21 @@ mod tests {
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].id, "case-a");
         assert_eq!(records[0].fields["fixture"], "cases/a.txt");
+        assert_eq!(records[0].fields["tracked_by"], "TODO.md:case-a");
+    }
+
+    #[test]
+    fn ledger_records_require_tracking_metadata() {
+        let err = parse_known_difference_ledger(
+            "id=case-a | type=temporary | status=open | fixture=cases/a.txt | reason=example",
+        )
+        .unwrap_err();
+
+        assert!(matches!(
+            err,
+            KnownDifferenceLedgerError::MissingLedgerField { field, .. }
+                if field == "tracked_by"
+        ));
     }
 
     #[test]

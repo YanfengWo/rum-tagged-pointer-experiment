@@ -102,7 +102,7 @@ single broad diff bucket:
 - Lane B: stateful session scripts, including definitions, options, messages,
   contexts, package loading, and repeated evaluations.
 - Lane C: checked known-difference ledger, tying divergences to matrix entries
-  or TODO notes.
+  or TODO notes with explicit close criteria.
 - Lane D: local performance baseline inputs and runners. These are not
   semantic conformance tests and should not use a Wolfram oracle.
 - Lane E: host-contract tests stay in host/native crate suites.
@@ -117,7 +117,9 @@ behavior is Wolfram-oracle-comparable.
 
 Lane C is the synchronization check for `!!! id=...` fixture entries. Keep
 known differences in `rum-difftest/divergences/known-differences.txt` and use
-`rum-difftest lane-c` to catch missing or unreferenced ledger rows.
+`rum-difftest lane-c` to catch missing or unreferenced ledger rows. Ledger
+rows must carry `tracked_by` ownership metadata and `close_when` removal
+criteria.
 
 Lane D currently executes imported timing and memory seed suites through local
 `rum` sessions and reports raw metrics. Its default `smoke` profile skips

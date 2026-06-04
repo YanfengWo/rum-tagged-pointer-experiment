@@ -96,8 +96,10 @@ cargo run -p rum-difftest -- lane-c
 
 The runner validates that every checked fixture `!!! id=...` is present in
 [divergences/known-differences.txt](./divergences/known-differences.txt), and
-that the ledger does not contain unreferenced IDs. This keeps deliberate or
-deferred Wolfram divergences visible as data instead of scattered comments.
+that the ledger does not contain unreferenced IDs. Ledger rows must also carry
+`tracked_by` and `close_when` metadata, keeping deliberate or deferred Wolfram
+divergences tied to roadmap ownership and explicit removal criteria instead of
+scattered comments.
 
 ## Lane D Runner
 
