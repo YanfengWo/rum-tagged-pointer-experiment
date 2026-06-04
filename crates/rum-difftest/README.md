@@ -65,10 +65,10 @@ oracle_kernel = "/path/to/WolframKernel"
 
 The current runner accepts a kernel executable path such as `WolframKernel` or
 `MathKernel`. It writes its oracle wrapper script and per-case input files to a
-temporary directory for each run, compares results in-memory, and removes those
-artifacts afterward. It is intentionally a first pass: enough to validate the
-oracle workflow, not yet the final word on message capture, top-level display
-parity, or every Wolfram transport nuance.
+temporary directory for each run, compares values, messages, and printed output
+in-memory, and removes those artifacts afterward. It is intentionally a first
+pass: enough to validate the oracle workflow, not yet the final word on
+top-level display parity or every Wolfram transport nuance.
 
 ## Lane B Runner
 

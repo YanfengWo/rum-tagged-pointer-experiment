@@ -45,7 +45,8 @@ Current implementation status:
 - config currently supports `oracle_kernel = "/path/to/WolframKernel"`
 - it drives a local kernel executable directly and stores generated oracle
   inputs/wrappers only in a temporary run directory
-- it does not yet claim full message/output/top-level display parity
+- it now compares result values, messages, and printed output for each case
+- it does not yet claim full top-level display parity
 - a first pass of `rum`-owned curated Lane A files now exists under
   [cases/wolfram/core](./cases/wolfram/core/README.md)
 - that curated set currently covers arithmetic/structures, loops/control,
@@ -204,8 +205,8 @@ Raw counts:
 1. Keep the imported `ham` corpus intact under `seed/`.
 2. Continue extending the curated `cases/wolfram/core/` tree page by page from
    the matrix-guided kernel priorities.
-3. Normalize output conventions further so Lane A can compare more than today's
-   scalar/list/plain-call-friendly subset.
+3. Normalize top-level display conventions further so Lane A can compare beyond
+   today's scalar/list/plain-call-friendly subset.
 4. Continue extending Lane A/B curated fixtures from matrix-guided priorities.
 5. Capture checked `ci-debug` / `ci-release` Lane D artifacts on the intended
    runners before tightening elapsed thresholds beyond broad smoke guardrails.

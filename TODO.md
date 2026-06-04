@@ -562,6 +562,7 @@ This roadmap intentionally uses two levels of detail:
 - [ ] Keep `rum-difftest` split into explicit lanes instead of one monolithic diff bucket:
   - [ ] Lane A: single-expression Wolfram diff fixtures and runner
   - [x] Land a first-pass Lane A runner that accepts a user-provided kernel path via CLI or config and keeps oracle artifacts transient
+  - [x] Lane A follow-up: compare single-expression values, messages, and printed output instead of values only
   - [x] Land a first curated `cases/wolfram/core/` fixture set covering arithmetic/structures, strings, associations, loops/control objects, functional combinators, rules/patterns/replacement/traversal, and failure/status smoke checks
   - [x] Lane B: land a first stateful session fixture format and runner for ordered definition / option / message / precedence checks
   - [x] Lane B follow-up: replace replay-based Wolfram state simulation with a single-kernel session oracle transport per fixture before relying on deeper stateful edges

@@ -97,8 +97,9 @@ Use documentation examples in this order:
 `rum-difftest` should stay split into explicit lanes instead of becoming a
 single broad diff bucket:
 
-- Lane A: single-expression, stateless Wolfram comparisons. This is the first
-  place to put compact canonical and boundary cases.
+- Lane A: single-expression, stateless Wolfram comparisons over values,
+  messages, and printed output. This is the first place to put compact
+  canonical and boundary cases.
 - Lane B: stateful session scripts, including definitions, options, messages,
   contexts, package loading, and repeated evaluations.
 - Lane C: checked known-difference ledger, tying divergences to matrix entries
@@ -109,10 +110,11 @@ single broad diff bucket:
 - Lane F: adapter/protocol tests stay in adapter-native suites.
 
 Messages and diagnostics start in runtime regression tests unless the
-differential runner can capture and compare them reliably. Lane B now provides
-ordered-session comparisons against one local Wolfram kernel process per
-fixture, including result values, per-step messages, and per-step print output.
-That makes focused message and print behavior eligible for Lane B when the
+differential runner can capture and compare them reliably. Lane A can compare
+single-expression message and print output, while Lane B provides ordered
+session comparisons against one local Wolfram kernel process per fixture,
+including result values, per-step messages, and per-step print output. That
+makes focused message and print behavior eligible for either lane when the
 behavior is Wolfram-oracle-comparable.
 
 Lane C is the synchronization check for `!!! id=...` fixture entries. Keep
