@@ -256,7 +256,7 @@ fn non_loader_evaluation_errors_emit_general_messages_at_top_level() {
 
     assert_eq!(
         session.eval_text("$MessageList").unwrap().value.to_string(),
-        "List[General::cycle]"
+        "List[HoldForm[General::cycle]]"
     );
     assert!(
         session

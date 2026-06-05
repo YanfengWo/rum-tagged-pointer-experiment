@@ -14,5 +14,5 @@ compares values, per-step messages, and per-step print output.
 
 Known-difference lines can be used for discovered long-tail divergences that
 should stay documented without breaking the default lane. The current fixture
-uses that for exact `$MessageList` `HoldForm` shape, one definition precedence
-edge, and one indexed default-value lookup edge.
+uses that for one definition precedence edge and one indexed default-value
+lookup edge.

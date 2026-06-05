@@ -81,7 +81,7 @@ impl Session {
                         .last_message_list
                         .iter()
                         .cloned()
-                        .map(runtime_message_name_expr)
+                        .map(held_runtime_message_name_expr)
                         .collect::<Vec<_>>();
                     return Ok(Expr::call(system_expr("List"), messages));
                 }

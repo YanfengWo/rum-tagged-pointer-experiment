@@ -292,7 +292,7 @@ impl Session {
 
         Ok(Expr::string(render_to_string_expr(
             &args[0],
-            ToStringFormat::InputLike,
+            ToStringFormat::OutputLike,
         )))
     }
 
@@ -399,15 +399,15 @@ impl Session {
         }
 
         let format = match args.get(1) {
-            Some(form) if is_system_symbol_name(form, "InputForm") => ToStringFormat::InputLike,
-            Some(form) if is_system_symbol_name(form, "OutputForm") => ToStringFormat::InputLike,
-            Some(form) if is_system_symbol_name(form, "StandardForm") => ToStringFormat::InputLike,
+            Some(form) if is_system_symbol_name(form, "InputForm") => ToStringFormat::InputForm,
+            Some(form) if is_system_symbol_name(form, "OutputForm") => ToStringFormat::OutputLike,
+            Some(form) if is_system_symbol_name(form, "StandardForm") => ToStringFormat::OutputLike,
             Some(form) if is_system_symbol_name(form, "FullForm") => ToStringFormat::FullForm,
             Some(form) if is_system_symbol_name(form, "TraditionalForm") => {
-                ToStringFormat::InputLike
+                ToStringFormat::OutputLike
             }
             Some(_) => return Ok(Expr::call(head.clone(), args.to_vec())),
-            None => ToStringFormat::InputLike,
+            None => ToStringFormat::OutputLike,
         };
 
         Ok(Expr::string(render_to_string_expr(&args[0], format)))

@@ -14,7 +14,7 @@ p[] ||| 1
 p[alpha -> 9] ||| 9
 m::tag = "value `1`" ||| "value `1`"
 Message[m::tag, 3] ||| Null
-Message[m::tag, 4]; ToString[$MessageList, InputForm] !!! id=lane-b-message-list-holdform | type=message-shape | reason=rum currently records bare message names while Wolfram wraps $MessageList entries in HoldForm
+Message[m::tag, 4]; ToString[$MessageList, InputForm] ||| "{HoldForm[m::tag]}"
 Message[m::tag, 5]; Length[$MessageList] ||| 1
 SetAttributes[held, HoldFirst] ||| Null
 ToString[Attributes[held], InputForm] ||| "{HoldFirst}"

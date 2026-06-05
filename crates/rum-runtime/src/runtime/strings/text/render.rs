@@ -3,7 +3,8 @@ use super::*;
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum ToStringFormat {
     FullForm,
-    InputLike,
+    InputForm,
+    OutputLike,
 }
 
 const PREC_LOWEST: u8 = 0;
@@ -15,7 +16,7 @@ const PREC_POWER: u8 = 40;
 const PREC_CALL: u8 = 90;
 
 pub(in crate::runtime) fn render_input_like_expr(expr: &Expr) -> String {
-    render_to_string_expr(expr, ToStringFormat::InputLike)
+    render_to_string_expr(expr, ToStringFormat::OutputLike)
 }
 
 pub(super) fn render_to_string_expr(expr: &Expr, format: ToStringFormat) -> String {
@@ -92,8 +93,19 @@ fn render_to_string_expr_with_precedence(
                 return wrap_rendered(rendered, PREC_RULE, parent_precedence);
             }
 
-            if (is_system_symbol_name(head, "HoldForm")
-                || is_system_symbol_name(head, "HoldCompleteForm")
+            if is_system_symbol_name(head, "HoldForm") && args.len() == 1 {
+                if format == ToStringFormat::InputForm {
+                    let rendered = format!(
+                        "HoldForm[{}]",
+                        render_to_string_expr_with_precedence(&args[0], format, PREC_LOWEST)
+                    );
+                    return wrap_rendered(rendered, PREC_CALL, parent_precedence);
+                }
+
+                return render_to_string_expr_with_precedence(&args[0], format, parent_precedence);
+            }
+
+            if (is_system_symbol_name(head, "HoldCompleteForm")
                 || is_system_symbol_name(head, "Defer")
                 || is_system_symbol_name(head, "Unevaluated"))
                 && args.len() == 1

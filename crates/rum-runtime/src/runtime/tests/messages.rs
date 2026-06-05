@@ -317,7 +317,20 @@ fn message_list_reports_last_top_level_messages() {
 
     assert_eq!(
         session.eval_text("$MessageList").unwrap().value.to_string(),
-        "List[FindFile::notfound]"
+        "List[HoldForm[FindFile::notfound]]"
+    );
+
+    let mut string_session = Session::new();
+    string_session
+        .eval_text("Message[FindFile::notfound]")
+        .unwrap();
+    assert_eq!(
+        string_session
+            .eval_text("ToString[$MessageList, InputForm]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"{HoldForm[FindFile::notfound]}\""
     );
 }
 

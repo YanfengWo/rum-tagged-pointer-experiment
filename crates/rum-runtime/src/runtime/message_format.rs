@@ -24,6 +24,13 @@ pub(super) fn runtime_message_name_expr(message: RuntimeMessage) -> Expr {
     message_name_expr(symbol_from_raw_name(&message.symbol), message.tag)
 }
 
+pub(super) fn held_runtime_message_name_expr(message: RuntimeMessage) -> Expr {
+    Expr::call(
+        system_expr("HoldForm"),
+        vec![runtime_message_name_expr(message)],
+    )
+}
+
 pub(super) fn format_message_template_with_named(
     template: &str,
     key: &MessageNameKey,
