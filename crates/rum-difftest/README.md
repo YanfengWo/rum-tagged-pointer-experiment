@@ -81,12 +81,14 @@ are reported but do not fail the diff run. `rum` values are rendered through
 the shared difftest InputForm-like renderer, which covers common list, rule,
 delayed-rule, and association output shapes before comparison. It is
 intentionally not yet a complete Wolfram display implementation or transport
-model. When `--include-known-diffs` is used, the report includes
-known-difference ID/type/reason metadata and counts confirmed vs resolved known
-differences. Resolved known differences are listed by ID and fixture location
-so stale imported divergences are visible before curation. Keep `seed/`
-unchanged; migrate promoted cases under `cases/` before pruning seed-linked
-ledger rows.
+model. Fixture `expected` fields are seed annotations, not the pass/fail
+oracle: the runner compares `rum` against the fresh oracle result on every run
+and reports seed-vs-oracle drift separately. When `--include-known-diffs` is
+used, the report includes known-difference ID/type/reason metadata and counts
+confirmed vs resolved known differences. Resolved known differences are listed
+by ID and fixture location so stale imported divergences are visible before
+curation. Keep `seed/` unchanged; migrate promoted cases under `cases/` before
+pruning seed-linked ledger rows.
 
 ## Lane B Runner
 
@@ -106,6 +108,8 @@ attribute, and precedence checks a real ordered-session oracle. The runner
 compares InputForm-like result values plus per-step message and print streams.
 Like Lane A, its CLI reports the resolved oracle executable and best-effort
 Wolfram `$Version` without making version probing a pass/fail gate.
+Fixture `expected` fields are treated as seed annotations and are checked only
+for seed-vs-oracle drift, not as the comparison oracle.
 When `--include-known-diffs` is used, the report includes the known-difference
 ID/type/reason for non-matching steps and counts confirmed vs resolved known
 differences. Resolved known differences are listed by ID and fixture location

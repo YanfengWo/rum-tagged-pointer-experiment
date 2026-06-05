@@ -78,6 +78,37 @@ fn compares_steps_against_session_oracle_once() {
 }
 
 #[test]
+fn stale_seed_snapshot_does_not_affect_fresh_oracle_step_match() {
+    let mut session = Session::new();
+    install_core(&mut session);
+    let step = run_step(
+        &mut session,
+        PreparedLaneBStep {
+            fixture: PathBuf::from("stateful.txt"),
+            step_index: 1,
+            input: "2 + 3".to_string(),
+            expected_seed: Some("old snapshot".to_string()),
+            known_difference: None,
+        },
+        CaseValue::Value {
+            value: "5".to_string(),
+            messages: Vec::new(),
+            printed_output: None,
+        },
+    );
+
+    assert_eq!(step.status, LaneBStepStatus::Match);
+    assert_eq!(step.seed_matches_oracle, Some(false));
+
+    let mut summary = empty_summary();
+    record_step_result(&mut summary, &step);
+    assert_eq!(summary.matches, 1);
+    assert_eq!(summary.seed_snapshots_checked, 1);
+    assert_eq!(summary.seed_snapshots_matched_oracle, 0);
+    assert_eq!(summary.seed_snapshots_drifted_from_oracle, 1);
+}
+
+#[test]
 fn compares_messages_and_printed_output_when_values_match() {
     let mut session = Session::new();
     install_core(&mut session);
@@ -229,6 +260,9 @@ fn empty_summary() -> LaneBSummary {
         skipped_known_differences: 0,
         confirmed_known_differences: 0,
         resolved_known_differences: 0,
+        seed_snapshots_checked: 0,
+        seed_snapshots_matched_oracle: 0,
+        seed_snapshots_drifted_from_oracle: 0,
         steps: Vec::new(),
     }
 }

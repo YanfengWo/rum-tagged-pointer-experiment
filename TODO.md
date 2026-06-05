@@ -590,7 +590,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] treat connector- or MCP-wrapped Wolfram access as an optional convenience for small spot checks rather than the baseline oracle path
   - [x] do not make default development or CI flows depend on Wolfram tooling being installed
   - [x] do not commit oracle-generated expected outputs into the repository; `rum-difftest` now has an artifact hygiene test that rejects checked-in Lane A/B oracle wrapper, case/step, session, message, and print-capture artifacts
-  - [ ] regenerate oracle comparison material on each diff run rather than relying on checked-in snapshots
+  - [x] regenerate oracle comparison material on each diff run rather than relying on checked-in snapshots; Lane A/B compare `rum` against the fresh oracle result, treat fixture `expected` fields as seed annotations, and report seed-vs-oracle drift separately
   - [ ] allow oracle runs against non-pinned user versions as a compatibility check, not only against one project-standard Wolfram release
   - [x] record the resolved oracle executable and best-effort Wolfram `$Version` in Lane A/B CLI output without making version probing a pass/fail gate
   - [ ] record any deliberate divergences from Wolfram behavior alongside those fixtures

@@ -55,6 +55,9 @@ Current implementation status:
   Wolfram `$Version`; version probe failures are reported but do not fail the
   diff run
 - it now compares result values, messages, and printed output for each case
+- fixture `expected` fields are seed annotations only; Lane A/B pass/fail
+  compares `rum` against fresh oracle output and reports seed-vs-oracle drift
+  separately
 - `rum` values use a shared InputForm-like renderer that covers common list,
   rule, delayed-rule, and association output shapes
 - it does not yet claim full top-level display parity for broader Wolfram

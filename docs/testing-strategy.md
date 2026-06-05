@@ -168,6 +168,9 @@ Rules:
 - Keep `rum-difftest` artifact hygiene tests enabled so generated oracle
   wrappers, input files, session directories, and stream captures stay out of
   the repository.
+- Treat checked fixture `expected` fields as seed annotations. Lane A/B
+  pass/fail decisions must compare `rum` against fresh oracle output and report
+  seed-vs-oracle drift separately.
 - Record the oracle command and version in run output when practical.
 - Treat version differences as compatibility data, not as a reason to pin the
   project to one hidden oracle environment.

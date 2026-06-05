@@ -73,6 +73,15 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         "resolved known differences: {}",
         summary.resolved_known_differences
     );
+    println!("seed snapshots checked: {}", summary.seed_snapshots_checked);
+    println!(
+        "seed snapshots matched oracle: {}",
+        summary.seed_snapshots_matched_oracle
+    );
+    println!(
+        "seed snapshots drifted from oracle: {}",
+        summary.seed_snapshots_drifted_from_oracle
+    );
 
     for case in summary
         .cases
@@ -112,6 +121,21 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             println!("fixture: {}", case.fixture.display());
             println!("input: {}", case.input);
         }
+    }
+    for case in summary
+        .cases
+        .iter()
+        .filter(|case| case.seed_matches_oracle == Some(false))
+        .take(5)
+    {
+        println!("---");
+        println!("seed snapshot drift");
+        println!("fixture: {}", case.fixture.display());
+        println!("input: {}", case.input);
+        if let Some(expected_seed) = &case.expected_seed {
+            println!("seed expected: {expected_seed}");
+        }
+        print_case_value("oracle", &case.oracle);
     }
 
     let has_issues =

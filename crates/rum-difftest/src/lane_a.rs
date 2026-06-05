@@ -38,6 +38,9 @@ pub struct LaneASummary {
     pub skipped_known_differences: usize,
     pub confirmed_known_differences: usize,
     pub resolved_known_differences: usize,
+    pub seed_snapshots_checked: usize,
+    pub seed_snapshots_matched_oracle: usize,
+    pub seed_snapshots_drifted_from_oracle: usize,
     pub cases: Vec<LaneACaseReport>,
 }
 
@@ -95,6 +98,9 @@ pub fn run<O: Oracle>(
         skipped_known_differences: 0,
         confirmed_known_differences: 0,
         resolved_known_differences: 0,
+        seed_snapshots_checked: 0,
+        seed_snapshots_matched_oracle: 0,
+        seed_snapshots_drifted_from_oracle: 0,
         cases: Vec::new(),
     };
 
@@ -159,6 +165,18 @@ fn record_case_result(summary: &mut LaneASummary, case: &LaneACaseReport) {
             | LaneACaseStatus::RumFailure
             | LaneACaseStatus::OracleFailure => summary.confirmed_known_differences += 1,
         }
+    }
+
+    match case.seed_matches_oracle {
+        Some(true) => {
+            summary.seed_snapshots_checked += 1;
+            summary.seed_snapshots_matched_oracle += 1;
+        }
+        Some(false) => {
+            summary.seed_snapshots_checked += 1;
+            summary.seed_snapshots_drifted_from_oracle += 1;
+        }
+        None => {}
     }
 }
 

@@ -45,6 +45,28 @@ fn compares_single_case_against_oracle() {
 }
 
 #[test]
+fn stale_seed_snapshot_does_not_affect_fresh_oracle_match() {
+    let mut oracle = FakeOracle;
+    let report = run_case(
+        &mut oracle,
+        Path::new("fixture.txt"),
+        "2 + 3".to_string(),
+        Some("old snapshot".to_string()),
+        None,
+    );
+
+    assert_eq!(report.status, LaneACaseStatus::Match);
+    assert_eq!(report.seed_matches_oracle, Some(false));
+
+    let mut summary = empty_summary();
+    record_case_result(&mut summary, &report);
+    assert_eq!(summary.matches, 1);
+    assert_eq!(summary.seed_snapshots_checked, 1);
+    assert_eq!(summary.seed_snapshots_matched_oracle, 0);
+    assert_eq!(summary.seed_snapshots_drifted_from_oracle, 1);
+}
+
+#[test]
 fn compares_input_form_like_list_and_rule_outputs() {
     let mut list_oracle = StaticOracle {
         output: OracleEvaluation {
@@ -192,6 +214,9 @@ fn empty_summary() -> LaneASummary {
         skipped_known_differences: 0,
         confirmed_known_differences: 0,
         resolved_known_differences: 0,
+        seed_snapshots_checked: 0,
+        seed_snapshots_matched_oracle: 0,
+        seed_snapshots_drifted_from_oracle: 0,
         cases: Vec::new(),
     }
 }
