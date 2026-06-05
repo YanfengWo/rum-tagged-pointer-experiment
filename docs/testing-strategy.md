@@ -119,9 +119,11 @@ output. That makes focused message and print behavior eligible for either lane
 when the behavior is Wolfram-oracle-comparable.
 
 Lane C is the synchronization check for `!!! id=...` fixture entries. Keep
-known differences in `rum-difftest/divergences/known-differences.txt` and use
+active known differences in
+`rum-difftest/divergences/known-differences.txt`, retired imported seed IDs in
+`rum-difftest/divergences/retired-seed-differences.txt`, and use
 `rum-difftest lane-c` to catch missing rows, unreferenced rows, and stale
-ledger `fixture=...` metadata. Ledger rows must carry `tracked_by` ownership
+fixture metadata. Active ledger rows must carry `tracked_by` ownership
 metadata and `close_when` removal criteria.
 
 Use Lane A/B `--include-known-diffs` when auditing open divergences against a
@@ -130,7 +132,8 @@ count confirmed vs resolved rows. Resolved rows are listed by ID and fixture
 location so newly matching divergences can be removed from fixtures and the
 ledger intentionally. For imported `seed/` rows, treat resolved output as a
 curation signal: keep the historical seed unchanged, migrate promoted coverage
-into `cases/`, then prune seed-linked ledger rows.
+into `cases/`, then move seed-linked IDs from the active ledger into the
+retired seed manifest.
 
 Lane D currently executes imported timing and memory seed suites through local
 `rum` sessions and reports raw metrics. Its default `smoke` profile skips

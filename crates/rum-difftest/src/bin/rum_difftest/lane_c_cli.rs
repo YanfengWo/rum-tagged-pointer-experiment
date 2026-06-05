@@ -20,7 +20,15 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         "known-difference ledger: {}",
         divergences::known_difference_ledger_path().display()
     );
-    println!("ledger entries: {}", report.records.len());
+    println!(
+        "retired seed differences: {}",
+        divergences::retired_seed_difference_path().display()
+    );
+    println!("active ledger entries: {}", report.records.len());
+    println!(
+        "retired seed entries: {}",
+        report.retired_seed_records.len()
+    );
     println!(
         "fixture known differences: {}",
         report.fixture_references.len()
@@ -33,7 +41,15 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         "unreferenced ledger entries: {}",
         report.unreferenced_ledger_entries.len()
     );
+    println!(
+        "unreferenced retired seed entries: {}",
+        report.unreferenced_retired_seed_entries.len()
+    );
     println!("fixture mismatches: {}", report.fixture_mismatches.len());
+    println!(
+        "retired seed fixture mismatches: {}",
+        report.retired_seed_fixture_mismatches.len()
+    );
 
     for reference in &report.missing_ledger_entries {
         println!(
@@ -50,9 +66,28 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             .unwrap_or("<missing fixture>");
         println!("unreferenced: id={} fixture={fixture}", record.id);
     }
+    for record in &report.unreferenced_retired_seed_entries {
+        let fixture = record
+            .fields
+            .get("seed_fixture")
+            .map(String::as_str)
+            .unwrap_or("<missing seed_fixture>");
+        println!(
+            "unreferenced-retired-seed: id={} fixture={fixture}",
+            record.id
+        );
+    }
     for mismatch in &report.fixture_mismatches {
         println!(
             "fixture-mismatch: id={} ledger={} actual={}",
+            mismatch.id,
+            mismatch.ledger_fixture.display(),
+            mismatch.actual_fixture.display()
+        );
+    }
+    for mismatch in &report.retired_seed_fixture_mismatches {
+        println!(
+            "retired-seed-fixture-mismatch: id={} retired={} actual={}",
             mismatch.id,
             mismatch.ledger_fixture.display(),
             mismatch.actual_fixture.display()
@@ -68,5 +103,7 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
 
 fn print_lane_c_usage() {
     println!("rum-difftest lane-c");
-    println!("  Validate that every fixture `!!! id=...` is present in the Lane C ledger");
+    println!(
+        "  Validate that every fixture `!!! id=...` is active in the Lane C ledger or retired from imported seed coverage"
+    );
 }

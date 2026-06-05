@@ -17,6 +17,12 @@ Required fields are `id`, `type`, `status`, `fixture`, `reason`,
 roadmap item that owns the divergence. `close_when` should state the concrete
 condition for removing the ledger entry.
 
+Resolved imported seed IDs move to
+[retired-seed-differences.txt](./retired-seed-differences.txt) instead of being
+edited out of `seed/`. Each retired row records the historical `seed_fixture`,
+the promoted `curated_fixture`, and the reason the active ledger entry was
+removed.
+
 Validate the ledger with:
 
 ```bash
@@ -24,5 +30,6 @@ cargo run -p rum-difftest -- lane-c
 ```
 
 The validator checks that every checked fixture `!!! id=...` appears in the
-ledger, that every ledger entry is still referenced by a fixture, and that
-each ledger row carries the required tracking metadata.
+active ledger or the retired seed manifest, that every ledger entry is still
+referenced by a fixture, and that each ledger row carries the required tracking
+metadata.

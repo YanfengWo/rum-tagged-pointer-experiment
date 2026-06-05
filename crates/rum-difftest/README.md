@@ -110,9 +110,13 @@ cargo run -p rum-difftest -- lane-c
 The runner validates that every checked fixture `!!! id=...` is present in
 [divergences/known-differences.txt](./divergences/known-differences.txt), and
 that the ledger does not contain unreferenced IDs or stale `fixture=...`
-metadata. Ledger rows must also carry `tracked_by` and `close_when` metadata,
-keeping deliberate or deferred Wolfram divergences tied to roadmap ownership
-and explicit removal criteria instead of scattered comments.
+metadata. Resolved imported seed IDs can move to
+[divergences/retired-seed-differences.txt](./divergences/retired-seed-differences.txt)
+after promotion into `cases/`, preserving `seed/` as historical input without
+keeping resolved seed rows in the active ledger. Ledger rows must also carry
+`tracked_by` and `close_when` metadata, keeping deliberate or deferred Wolfram
+divergences tied to roadmap ownership and explicit removal criteria instead of
+scattered comments.
 
 ## Lane D Runner
 
@@ -163,6 +167,7 @@ The first curated Lane A files now live under
 - arithmetic and structural smoke checks
 - loops, control objects, and failure/status flows
 - associations and keyed-data basics
+- definition precedence promoted from resolved imported seed coverage
 - CL-04 functional combinators
 - rules, patterns, replacement, and traversal
 - CL-07 string surface/pattern/template/similarity subsets

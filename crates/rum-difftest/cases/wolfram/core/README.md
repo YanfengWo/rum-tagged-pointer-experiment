@@ -31,6 +31,7 @@ The current first pass includes:
 
 - small cross-domain smoke suites
 - association and keyed-data smoke coverage
+- a definition-precedence suite promoted from resolved imported seed coverage
 - dedicated loop/procedural and control-object suites
 - a focused functional-combinator suite covering current CL-04 operator and iteration subsets
 - a focused rules/patterns/replacement/traversal suite for Lane A stateless

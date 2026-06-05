@@ -563,7 +563,7 @@ This roadmap intentionally uses two levels of detail:
   - [ ] Lane A: single-expression Wolfram diff fixtures and runner
   - [x] Land a first-pass Lane A runner that accepts a user-provided kernel path via CLI or config and keeps oracle artifacts transient
   - [x] Lane A follow-up: compare single-expression values, messages, and printed output instead of values only
-  - [ ] Lane A follow-up: curate resolved imported seed known differences such as `specific_override` into `cases/` before pruning seed-linked ledger rows, preserving `seed/` as unchanged historical input
+  - [x] Lane A follow-up: curate resolved imported seed known differences such as `specific_override` into `cases/` before pruning seed-linked active ledger rows, preserving `seed/` as unchanged historical input via the retired seed manifest
   - [x] Lane A/B follow-up: add a shared InputForm-like renderer for common list, rule, delayed-rule, and association output shapes before oracle comparison
   - [x] Land a first curated `cases/wolfram/core/` fixture set covering arithmetic/structures, strings, associations, loops/control objects, functional combinators, rules/patterns/replacement/traversal, and failure/status smoke checks
   - [x] Lane B: land a first stateful session fixture format and runner for ordered definition / option / message / precedence checks

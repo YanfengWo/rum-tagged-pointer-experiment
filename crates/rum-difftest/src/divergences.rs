@@ -9,6 +9,11 @@ use crate::fixtures::{
     parse_metadata_fields,
 };
 
+mod retired;
+pub use retired::{
+    RetiredSeedDifferenceRecord, parse_retired_seed_differences, retired_seed_difference_path,
+};
+
 const REQUIRED_LEDGER_FIELDS: [&str; 7] = [
     "id",
     "type",
@@ -34,17 +39,22 @@ pub struct KnownDifferenceReference {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KnownDifferenceLedgerReport {
     pub records: Vec<KnownDifferenceRecord>,
+    pub retired_seed_records: Vec<RetiredSeedDifferenceRecord>,
     pub fixture_references: Vec<KnownDifferenceReference>,
     pub missing_ledger_entries: Vec<KnownDifferenceReference>,
     pub unreferenced_ledger_entries: Vec<KnownDifferenceRecord>,
+    pub unreferenced_retired_seed_entries: Vec<RetiredSeedDifferenceRecord>,
     pub fixture_mismatches: Vec<KnownDifferenceFixtureMismatch>,
+    pub retired_seed_fixture_mismatches: Vec<KnownDifferenceFixtureMismatch>,
 }
 
 impl KnownDifferenceLedgerReport {
     pub fn is_clean(&self) -> bool {
         self.missing_ledger_entries.is_empty()
             && self.unreferenced_ledger_entries.is_empty()
+            && self.unreferenced_retired_seed_entries.is_empty()
             && self.fixture_mismatches.is_empty()
+            && self.retired_seed_fixture_mismatches.is_empty()
     }
 }
 
@@ -97,9 +107,20 @@ pub fn validate_known_difference_ledger()
         source,
     })?;
     let records = parse_known_difference_ledger(&text)?;
+    let retired_seed_path = retired_seed_difference_path();
+    let retired_seed_text =
+        load_text(&retired_seed_path).map_err(|source| KnownDifferenceLedgerError::Io {
+            path: retired_seed_path.clone(),
+            source,
+        })?;
+    let retired_seed_records = parse_retired_seed_differences(&retired_seed_text)?;
     let fixture_references = collect_fixture_known_differences()?;
 
     let records_by_id = records
+        .iter()
+        .map(|record| (record.id.clone(), record.clone()))
+        .collect::<BTreeMap<_, _>>();
+    let retired_seed_records_by_id = retired_seed_records
         .iter()
         .map(|record| (record.id.clone(), record.clone()))
         .collect::<BTreeMap<_, _>>();
@@ -110,7 +131,10 @@ pub fn validate_known_difference_ledger()
 
     let missing_ledger_entries = fixture_references
         .iter()
-        .filter(|reference| !records_by_id.contains_key(&reference.id))
+        .filter(|reference| {
+            !records_by_id.contains_key(&reference.id)
+                && !retired_seed_records_by_id.contains_key(&reference.id)
+        })
         .cloned()
         .collect::<Vec<_>>();
     let unreferenced_ledger_entries = records
@@ -118,14 +142,26 @@ pub fn validate_known_difference_ledger()
         .filter(|record| !fixture_refs_by_id.contains_key(&record.id))
         .cloned()
         .collect::<Vec<_>>();
+    let unreferenced_retired_seed_entries = retired_seed_records
+        .iter()
+        .filter(|record| !fixture_refs_by_id.contains_key(&record.id))
+        .cloned()
+        .collect::<Vec<_>>();
     let fixture_mismatches = collect_fixture_mismatches(&records, &fixture_refs_by_id);
+    let retired_seed_fixture_mismatches = retired::collect_retired_seed_fixture_mismatches(
+        &retired_seed_records,
+        &fixture_refs_by_id,
+    );
 
     Ok(KnownDifferenceLedgerReport {
         records,
+        retired_seed_records,
         fixture_references,
         missing_ledger_entries,
         unreferenced_ledger_entries,
+        unreferenced_retired_seed_entries,
         fixture_mismatches,
+        retired_seed_fixture_mismatches,
     })
 }
 

@@ -128,11 +128,13 @@ input !!! id=name | type=temporary | rum=... | wolfram=... | reason=...
 
 For `rum`, this should become the divergence ledger for same-name features.
 Current implementation has `divergences/known-differences.txt` plus
-`rum-difftest lane-c` to validate fixture IDs against the ledger. The check
-reports missing ledger rows, unreferenced ledger rows, and stale `fixture=...`
-metadata when a known-difference ID moves between fixture files. Each ledger row
-must include `tracked_by` and `close_when` metadata so divergences remain owned
-by a roadmap item and have explicit removal criteria.
+`divergences/retired-seed-differences.txt` plus `rum-difftest lane-c` to
+validate fixture IDs against the active ledger or retired imported-seed
+manifest. The check reports missing rows, unreferenced active rows,
+unreferenced retired seed rows, and stale fixture metadata when a
+known-difference ID moves between fixture files. Each active ledger row must
+include `tracked_by` and `close_when` metadata so divergences remain owned by a
+roadmap item and have explicit removal criteria.
 
 ### Lane D: Performance Regression
 
@@ -224,10 +226,13 @@ Raw counts:
 1. Keep the imported `ham` corpus intact under `seed/`.
 2. Continue extending the curated `cases/wolfram/core/` tree page by page from
    the matrix-guided kernel priorities.
-3. Extend the shared InputForm-like renderer beyond the current common
+3. Keep promoting resolved imported seed differences into `cases/` and moving
+   their historical IDs into the retired seed manifest instead of editing
+   `seed/`.
+4. Extend the shared InputForm-like renderer beyond the current common
    structural forms when broader Wolfram display syntax becomes a real fixture
    blocker.
-4. Continue extending Lane A/B curated fixtures from matrix-guided priorities.
+5. Continue extending Lane A/B curated fixtures from matrix-guided priorities.
 5. Capture checked `ci-debug` / `ci-release` Lane D artifacts on the intended
    runners before tightening elapsed thresholds beyond broad smoke guardrails.
 6. Extend Lane C later with machine-checkable `tracked_by` targets if TODO or
