@@ -574,6 +574,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane C: land a checked known-difference ledger plus `rum-difftest lane-c` validation that fixture `!!! id=...` entries and ledger rows stay synchronized
   - [x] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved
   - [x] Lane C follow-up: validate ledger `fixture=...` metadata against the actual fixture file containing each known-difference ID
+  - [x] Lane C follow-up: validate active ledger `tracked_by=path:needle` metadata against repository files so stale ownership references fail `rum-difftest lane-c`
   - [x] Lane D: land a local `rum-difftest lane-d` runner over the imported timing and memory seed suites, with a default smoke profile, explicit full profile, elapsed time, result node count, message count, print count, and evaluation failures without using a Wolfram oracle
   - [x] Lane D follow-up: add checked historical baseline artifacts, threshold policy, and regression-decision output before treating performance runs as pass/fail gates
   - [x] Lane D follow-up: add baseline capture workflow before tightening elapsed thresholds beyond broad smoke guardrails

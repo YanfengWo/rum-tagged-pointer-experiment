@@ -124,9 +124,10 @@ metadata. Resolved imported seed IDs can move to
 [divergences/retired-seed-differences.txt](./divergences/retired-seed-differences.txt)
 after promotion into `cases/`, preserving `seed/` as historical input without
 keeping resolved seed rows in the active ledger. Ledger rows must also carry
-`tracked_by` and `close_when` metadata, keeping deliberate or deferred Wolfram
-divergences tied to roadmap ownership and explicit removal criteria instead of
-scattered comments.
+`tracked_by` and `close_when` metadata. Active `tracked_by` values use a
+machine-checked `path:needle` shape, keeping deliberate or deferred Wolfram
+divergences tied to live roadmap ownership and explicit removal criteria
+instead of scattered comments.
 
 ## Lane D Runner
 

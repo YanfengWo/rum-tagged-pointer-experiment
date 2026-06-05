@@ -50,6 +50,10 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         "retired seed fixture mismatches: {}",
         report.retired_seed_fixture_mismatches.len()
     );
+    println!(
+        "tracking target issues: {}",
+        report.tracking_target_issues.len()
+    );
 
     for reference in &report.missing_ledger_entries {
         println!(
@@ -93,6 +97,12 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             mismatch.actual_fixture.display()
         );
     }
+    for issue in &report.tracking_target_issues {
+        println!(
+            "tracking-target-issue: id={} target={} message={}",
+            issue.id, issue.target, issue.message
+        );
+    }
 
     if report.is_clean() {
         Ok(ExitCode::SUCCESS)
@@ -104,6 +114,6 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
 fn print_lane_c_usage() {
     println!("rum-difftest lane-c");
     println!(
-        "  Validate that every fixture `!!! id=...` is active in the Lane C ledger or retired from imported seed coverage"
+        "  Validate fixture `!!! id=...`, retired seed rows, fixture metadata, and active `tracked_by=path:needle` targets"
     );
 }

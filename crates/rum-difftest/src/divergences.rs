@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use thiserror::Error;
 
@@ -46,6 +46,7 @@ pub struct KnownDifferenceLedgerReport {
     pub unreferenced_retired_seed_entries: Vec<RetiredSeedDifferenceRecord>,
     pub fixture_mismatches: Vec<KnownDifferenceFixtureMismatch>,
     pub retired_seed_fixture_mismatches: Vec<KnownDifferenceFixtureMismatch>,
+    pub tracking_target_issues: Vec<KnownDifferenceTrackingTargetIssue>,
 }
 
 impl KnownDifferenceLedgerReport {
@@ -55,6 +56,7 @@ impl KnownDifferenceLedgerReport {
             && self.unreferenced_retired_seed_entries.is_empty()
             && self.fixture_mismatches.is_empty()
             && self.retired_seed_fixture_mismatches.is_empty()
+            && self.tracking_target_issues.is_empty()
     }
 }
 
@@ -63,6 +65,13 @@ pub struct KnownDifferenceFixtureMismatch {
     pub id: String,
     pub ledger_fixture: PathBuf,
     pub actual_fixture: PathBuf,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KnownDifferenceTrackingTargetIssue {
+    pub id: String,
+    pub target: String,
+    pub message: String,
 }
 
 #[derive(Debug, Error)]
@@ -152,6 +161,7 @@ pub fn validate_known_difference_ledger()
         &retired_seed_records,
         &fixture_refs_by_id,
     );
+    let tracking_target_issues = collect_tracking_target_issues(&records);
 
     Ok(KnownDifferenceLedgerReport {
         records,
@@ -162,6 +172,7 @@ pub fn validate_known_difference_ledger()
         unreferenced_retired_seed_entries,
         fixture_mismatches,
         retired_seed_fixture_mismatches,
+        tracking_target_issues,
     })
 }
 
@@ -280,6 +291,85 @@ fn collect_fixture_mismatches(
             })
         })
         .collect()
+}
+
+fn collect_tracking_target_issues(
+    records: &[KnownDifferenceRecord],
+) -> Vec<KnownDifferenceTrackingTargetIssue> {
+    records
+        .iter()
+        .filter_map(|record| {
+            let target = record
+                .fields
+                .get("tracked_by")
+                .expect("required tracked_by field was already validated");
+            validate_tracking_target(target).err().map(|message| {
+                KnownDifferenceTrackingTargetIssue {
+                    id: record.id.clone(),
+                    target: target.clone(),
+                    message,
+                }
+            })
+        })
+        .collect()
+}
+
+fn validate_tracking_target(target: &str) -> Result<(), String> {
+    let Some((path_text, needle)) = target.split_once(':') else {
+        return Err("expected `path:needle`".to_string());
+    };
+    if needle.trim().is_empty() {
+        return Err("tracking target needle is empty".to_string());
+    }
+
+    let relative_path = Path::new(path_text.trim());
+    if relative_path.as_os_str().is_empty() {
+        return Err("tracking target path is empty".to_string());
+    }
+    if relative_path.is_absolute()
+        || relative_path
+            .components()
+            .any(|component| matches!(component, Component::ParentDir))
+    {
+        return Err("tracking target path must stay inside the repository".to_string());
+    }
+
+    let Some(path) = resolve_tracking_target_path(relative_path) else {
+        return Err(format!(
+            "tracking target file `{}` does not exist",
+            relative_path.display()
+        ));
+    };
+    let text = fs::read_to_string(&path)
+        .map_err(|source| format!("failed to read `{}`: {source}", path.display()))?;
+    if !text.contains(needle.trim()) {
+        return Err(format!(
+            "tracking target `{}` does not contain `{}`",
+            path.display(),
+            needle.trim()
+        ));
+    }
+
+    Ok(())
+}
+
+fn resolve_tracking_target_path(relative_path: &Path) -> Option<PathBuf> {
+    let repo_path = repo_root().join(relative_path);
+    if repo_path.is_file() {
+        return Some(repo_path);
+    }
+
+    let crate_path = crate_root().join(relative_path);
+    crate_path.is_file().then_some(crate_path)
+}
+
+fn repo_root() -> PathBuf {
+    let crate_path = crate_root();
+    crate_path
+        .parent()
+        .and_then(Path::parent)
+        .unwrap_or(crate_path.as_path())
+        .to_path_buf()
 }
 
 fn collect_txt_files(root: &Path, out: &mut Vec<PathBuf>) -> Result<(), std::io::Error> {

@@ -125,8 +125,8 @@ active known differences in
 `rum-difftest/divergences/known-differences.txt`, retired imported seed IDs in
 `rum-difftest/divergences/retired-seed-differences.txt`, and use
 `rum-difftest lane-c` to catch missing rows, unreferenced rows, and stale
-fixture metadata. Active ledger rows must carry `tracked_by` ownership
-metadata and `close_when` removal criteria.
+fixture metadata. Active ledger rows must carry machine-checked
+`tracked_by=path:needle` ownership metadata and `close_when` removal criteria.
 
 Use Lane A/B `--include-known-diffs` when auditing open divergences against a
 local Wolfram oracle. Both lanes report included known-difference metadata and

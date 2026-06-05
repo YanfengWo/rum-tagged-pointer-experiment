@@ -140,8 +140,9 @@ validate fixture IDs against the active ledger or retired imported-seed
 manifest. The check reports missing rows, unreferenced active rows,
 unreferenced retired seed rows, and stale fixture metadata when a
 known-difference ID moves between fixture files. Each active ledger row must
-include `tracked_by` and `close_when` metadata so divergences remain owned by a
-roadmap item and have explicit removal criteria.
+include machine-checked `tracked_by=path:needle` and `close_when` metadata so
+divergences remain owned by a live roadmap item and have explicit removal
+criteria.
 
 ### Lane D: Performance Regression
 
@@ -248,9 +249,7 @@ Raw counts:
 5. Continue extending Lane A/B curated fixtures from matrix-guided priorities.
 6. Capture checked `ci-debug` / `ci-release` Lane D artifacts on the intended
    runners before tightening elapsed thresholds beyond broad smoke guardrails.
-7. Extend Lane C later with machine-checkable `tracked_by` targets if TODO or
-   matrix anchors become stable identifiers.
-8. Keep Lane E/F boundaries explicit: host-contract and adapter/protocol tests
+7. Keep Lane E/F boundaries explicit: host-contract and adapter/protocol tests
    stay in their owning crates rather than becoming Wolfram diffs.
 
 ## If This Folder Was Copied Standalone

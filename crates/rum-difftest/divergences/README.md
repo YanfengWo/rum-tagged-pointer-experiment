@@ -13,9 +13,10 @@ id=name | type=temporary | status=open | fixture=cases/... | reason=... | tracke
 ```
 
 Required fields are `id`, `type`, `status`, `fixture`, `reason`,
-`tracked_by`, and `close_when`. `tracked_by` should name the TODO, matrix, or
-roadmap item that owns the divergence. `close_when` should state the concrete
-condition for removing the ledger entry.
+`tracked_by`, and `close_when`. `tracked_by` should use `path:needle` to name a
+repository file and text fragment that owns the divergence, usually a TODO,
+matrix, or roadmap item. `close_when` should state the concrete condition for
+removing the ledger entry.
 
 Resolved imported seed IDs move to
 [retired-seed-differences.txt](./retired-seed-differences.txt) instead of being
@@ -31,5 +32,6 @@ cargo run -p rum-difftest -- lane-c
 
 The validator checks that every checked fixture `!!! id=...` appears in the
 active ledger or the retired seed manifest, that every ledger entry is still
-referenced by a fixture, and that each ledger row carries the required tracking
-metadata.
+referenced by a fixture, that `fixture=...` metadata matches the actual fixture
+file, and that each active ledger `tracked_by=path:needle` target points to an
+existing repository file containing the requested text fragment.

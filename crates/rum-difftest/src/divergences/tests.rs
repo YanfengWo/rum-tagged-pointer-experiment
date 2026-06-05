@@ -43,10 +43,11 @@ fn known_difference_ledger_covers_checked_fixture_ids() {
     );
     assert!(
         report.is_clean(),
-        "known-difference ledger is out of sync\nmissing: {:?}\nunreferenced: {:?}\nunreferenced retired: {:?}",
+        "known-difference ledger is out of sync\nmissing: {:?}\nunreferenced: {:?}\nunreferenced retired: {:?}\ntracking target issues: {:?}",
         report.missing_ledger_entries,
         report.unreferenced_ledger_entries,
-        report.unreferenced_retired_seed_entries
+        report.unreferenced_retired_seed_entries,
+        report.tracking_target_issues
     );
 }
 
@@ -94,6 +95,36 @@ fn ledger_validation_reports_fixture_metadata_mismatches() {
             actual_fixture: PathBuf::from("cases/new.txt"),
         }]
     );
+}
+
+#[test]
+fn ledger_validation_reports_stale_tracking_targets() {
+    let records = vec![KnownDifferenceRecord {
+        id: "case-a".to_string(),
+        fields: BTreeMap::from([(
+            "tracked_by".to_string(),
+            "TODO.md:missing difftest tracker text".to_string(),
+        )]),
+    }];
+
+    let issues = collect_tracking_target_issues(&records);
+
+    assert_eq!(issues.len(), 1);
+    assert_eq!(issues[0].id, "case-a");
+    assert!(issues[0].message.contains("does not contain"));
+}
+
+#[test]
+fn ledger_validation_accepts_project_tracking_targets() {
+    let records = vec![KnownDifferenceRecord {
+        id: "case-a".to_string(),
+        fields: BTreeMap::from([(
+            "tracked_by".to_string(),
+            "TODO.md:Lane C follow-up: add richer metadata links".to_string(),
+        )]),
+    }];
+
+    assert!(collect_tracking_target_issues(&records).is_empty());
 }
 
 #[test]
