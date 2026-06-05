@@ -73,7 +73,37 @@ fn defaultvalues_lists_optional_defaults_and_clearall_removes_them() {
             .to_string(),
         "List[RuleDelayed[HoldPattern[Default[h]], 7], RuleDelayed[HoldPattern[Default[h, 1]], 9]]"
     );
+    assert_eq!(
+        session
+            .eval_text("Default[h, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "7"
+    );
     assert_eq!(session.eval_text("h[]").unwrap().value.to_string(), "9");
+
+    session.eval_text("Default[g, 1] = 11").unwrap();
+    assert_eq!(
+        session.eval_text("Default[g]").unwrap().value.to_string(),
+        "11"
+    );
+    assert_eq!(
+        session
+            .eval_text("Default[g, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "11"
+    );
+    assert_eq!(
+        session
+            .eval_text("Default[g, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Default[g, 2]"
+    );
 
     session.eval_text("Unset[Default[h, 1]]").unwrap();
     assert_eq!(session.eval_text("h[]").unwrap().value.to_string(), "7");

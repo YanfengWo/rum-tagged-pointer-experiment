@@ -29,14 +29,14 @@ d[x_] := "generic" ||| Null
 d[3] ||| "integer"
 d[a] ||| "generic"
 d[1] := "one" ||| Null
-d[1] !!! id=lane-b-definition-specificity-literal-after-typed | type=definition-precedence | reason=rum currently leaves the typed downvalue ahead of a later literal downvalue
+d[1] ||| "one"
 u /: wrap[u[x_]] := x + 10 ||| Null
 wrap[u[5]] ||| 15
 Print[2] ||| Null
 Default[deflane] = 7 ||| 7
 Default[deflane] ||| 7
 Default[deflane, 1] = 9 ||| 9
-Default[deflane, 1] !!! id=lane-b-indexed-default-lookup-fallback | type=default-values | reason=rum currently returns the explicit indexed default while Wolfram falls back to Default[symbol] for this lookup form
+Default[deflane, 1] ||| 7
 counter = 0 ||| 0
 tick[] := (counter = counter + 1) ||| Null
 tick[] ||| 1

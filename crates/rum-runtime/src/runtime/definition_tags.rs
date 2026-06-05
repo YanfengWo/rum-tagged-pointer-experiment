@@ -200,16 +200,21 @@ impl Session {
             }
             TaggedDefinitionTarget::DownValue(symbol) => {
                 let definition = self.definitions.entry(symbol.clone()).or_default();
-                replace_or_append_definition(
-                    &mut definition.down_values,
-                    &lhs,
-                    DownValue {
-                        lhs: lhs.clone(),
-                        rhs: rhs.clone(),
-                        delayed,
-                    },
-                    |entry| &entry.lhs,
-                );
+                let down_value = DownValue {
+                    lhs: lhs.clone(),
+                    rhs: rhs.clone(),
+                    delayed,
+                };
+                if symbol.context() == SYSTEM_CONTEXT && symbol.name() == heads::patterns::DEFAULT {
+                    replace_or_append_definition(
+                        &mut definition.down_values,
+                        &lhs,
+                        down_value,
+                        |entry| &entry.lhs,
+                    );
+                } else {
+                    replace_or_insert_down_value(&mut definition.down_values, &lhs, down_value);
+                }
                 self.push_trace(TraceEvent::DefinitionStored {
                     symbol: symbol.to_string(),
                     kind: DefinitionKind::DownValue,
@@ -252,6 +257,58 @@ impl Session {
                     value: format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs),
                 });
             }
+        }
+    }
+}
+
+fn replace_or_insert_down_value(entries: &mut Vec<DownValue>, lhs: &Expr, new_entry: DownValue) {
+    if let Some(index) = entries
+        .iter()
+        .position(|entry| lhs_patterns_equivalent(&entry.lhs, lhs))
+    {
+        entries[index] = new_entry;
+        return;
+    }
+
+    let new_specificity = down_value_specificity(lhs);
+    let index = entries
+        .iter()
+        .position(|entry| new_specificity > down_value_specificity(&entry.lhs))
+        .unwrap_or(entries.len());
+    entries.insert(index, new_entry);
+}
+
+fn down_value_specificity(expr: &Expr) -> usize {
+    match expr {
+        Expr::Atom(_) => 4,
+        Expr::Call { head, args } if is_system_symbol_name(head, "Pattern") && args.len() == 2 => {
+            down_value_specificity(&args[1])
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "Blank") => {
+            if args.is_empty() {
+                1
+            } else {
+                2
+            }
+        }
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "Optional")
+                || is_system_symbol_name(head, "Repeated")
+                || is_system_symbol_name(head, "RepeatedNull"))
+                && !args.is_empty() =>
+        {
+            down_value_specificity(&args[0])
+        }
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "Condition")
+                || is_system_symbol_name(head, "PatternTest"))
+                && !args.is_empty() =>
+        {
+            1 + down_value_specificity(&args[0])
+        }
+        Expr::Call { head, args } => {
+            3 + down_value_specificity(head)
+                + args.iter().map(down_value_specificity).sum::<usize>()
         }
     }
 }

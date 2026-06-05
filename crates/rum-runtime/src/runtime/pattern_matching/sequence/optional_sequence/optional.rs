@@ -187,28 +187,7 @@ impl Session {
             CompiledOptionalDefault::Explicit(expr) => Ok(Some(expr)),
             CompiledOptionalDefault::UnavailableImplicit => Ok(None),
             CompiledOptionalDefault::Implicit { head, position } => {
-                let specific_expr = Expr::call(
-                    system_expr("Default"),
-                    vec![head.clone(), Expr::integer(BigInt::from(position))],
-                );
-                let specific_result = self.evaluate(specific_expr.clone());
-
-                self.drive_evaluated_value::<Expr, Option<Expr>, _>(
-                    specific_result,
-                    move |session, resolved| {
-                        if resolved != specific_expr {
-                            return Ok(Some(resolved));
-                        }
-
-                        let general_expr = Expr::call(system_expr("Default"), vec![head]);
-                        let general_result = session.evaluate(general_expr.clone());
-
-                        session.drive_evaluated_value::<Expr, Option<Expr>, _>(
-                            general_result,
-                            move |_, resolved| Ok((resolved != general_expr).then_some(resolved)),
-                        )
-                    },
-                )
+                self.resolve_optional_implicit_default(head, position)
             }
         }
     }

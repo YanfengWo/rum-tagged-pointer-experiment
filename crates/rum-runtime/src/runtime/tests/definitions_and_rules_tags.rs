@@ -68,6 +68,36 @@ fn redefining_same_downvalue_replaces_the_older_rule_in_place() {
 }
 
 #[test]
+fn literal_downvalue_is_prioritized_over_existing_typed_downvalue() {
+    let mut session = Session::new();
+
+    session.eval_text("d[x_Integer] := \"integer\"").unwrap();
+    session.eval_text("d[x_] := \"generic\"").unwrap();
+    session.eval_text("d[1] := \"one\"").unwrap();
+
+    assert_eq!(
+        session.eval_text("d[1]").unwrap().value.to_string(),
+        "\"one\""
+    );
+    assert_eq!(
+        session.eval_text("d[3]").unwrap().value.to_string(),
+        "\"integer\""
+    );
+    assert_eq!(
+        session.eval_text("d[a]").unwrap().value.to_string(),
+        "\"generic\""
+    );
+    assert_eq!(
+        session
+            .eval_text("DownValues[d]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[HoldPattern[d[1]], \"one\"], RuleDelayed[HoldPattern[d[Pattern[x, Blank[Integer]]]], \"integer\"], RuleDelayed[HoldPattern[d[Pattern[x, Blank[]]]], \"generic\"]]"
+    );
+}
+
+#[test]
 fn redefining_same_upvalue_replaces_the_older_rule_in_place() {
     let mut session = Session::new();
 
