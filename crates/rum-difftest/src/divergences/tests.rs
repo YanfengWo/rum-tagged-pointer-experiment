@@ -43,10 +43,11 @@ fn known_difference_ledger_covers_checked_fixture_ids() {
     );
     assert!(
         report.is_clean(),
-        "known-difference ledger is out of sync\nmissing: {:?}\nunreferenced: {:?}\nunreferenced retired: {:?}\ntracking target issues: {:?}",
+        "known-difference ledger is out of sync\nmissing: {:?}\nunreferenced: {:?}\nunreferenced retired: {:?}\nmetadata mismatches: {:?}\ntracking target issues: {:?}",
         report.missing_ledger_entries,
         report.unreferenced_ledger_entries,
         report.unreferenced_retired_seed_entries,
+        report.metadata_mismatches,
         report.tracking_target_issues
     );
 }
@@ -82,6 +83,7 @@ fn ledger_validation_reports_fixture_metadata_mismatches() {
         KnownDifferenceReference {
             id: "case-a".to_string(),
             fixture: PathBuf::from("cases/new.txt"),
+            metadata: BTreeMap::from([("type".to_string(), "temporary".to_string())]),
         },
     )]);
 
@@ -93,6 +95,34 @@ fn ledger_validation_reports_fixture_metadata_mismatches() {
             id: "case-a".to_string(),
             ledger_fixture: PathBuf::from("cases/old.txt"),
             actual_fixture: PathBuf::from("cases/new.txt"),
+        }]
+    );
+}
+
+#[test]
+fn ledger_validation_reports_fixture_metadata_type_mismatches() {
+    let records = vec![KnownDifferenceRecord {
+        id: "case-a".to_string(),
+        fields: BTreeMap::from([("type".to_string(), "intentional".to_string())]),
+    }];
+    let fixture_refs_by_id = BTreeMap::from([(
+        "case-a".to_string(),
+        KnownDifferenceReference {
+            id: "case-a".to_string(),
+            fixture: PathBuf::from("cases/a.txt"),
+            metadata: BTreeMap::from([("type".to_string(), "temporary".to_string())]),
+        },
+    )]);
+
+    let mismatches = collect_metadata_mismatches(&records, &fixture_refs_by_id);
+
+    assert_eq!(
+        mismatches,
+        vec![KnownDifferenceMetadataMismatch {
+            id: "case-a".to_string(),
+            field: "type".to_string(),
+            ledger_value: "intentional".to_string(),
+            fixture_value: "temporary".to_string(),
         }]
     );
 }
@@ -141,6 +171,7 @@ fn retired_seed_validation_reports_fixture_metadata_mismatches() {
         KnownDifferenceReference {
             id: "case-a".to_string(),
             fixture: PathBuf::from("seed/ham-import/golden/new.txt"),
+            metadata: BTreeMap::from([("type".to_string(), "temporary".to_string())]),
         },
     )]);
 

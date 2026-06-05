@@ -33,5 +33,8 @@ cargo run -p rum-difftest -- lane-c
 The validator checks that every checked fixture `!!! id=...` appears in the
 active ledger or the retired seed manifest, that every ledger entry is still
 referenced by a fixture, that `fixture=...` metadata matches the actual fixture
-file, and that each active ledger `tracked_by=path:needle` target points to an
-existing repository file containing the requested text fragment.
+file, that active fixture `type=...` metadata matches the ledger `type=...`,
+and that each active ledger `tracked_by=path:needle` target points to an
+existing repository file containing the requested text fragment. This keeps
+deliberate divergences recorded both beside the fixture input and in the
+central ledger.

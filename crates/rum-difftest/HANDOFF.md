@@ -143,11 +143,11 @@ Current implementation has `divergences/known-differences.txt` plus
 `divergences/retired-seed-differences.txt` plus `rum-difftest lane-c` to
 validate fixture IDs against the active ledger or retired imported-seed
 manifest. The check reports missing rows, unreferenced active rows,
-unreferenced retired seed rows, and stale fixture metadata when a
-known-difference ID moves between fixture files. Each active ledger row must
-include machine-checked `tracked_by=path:needle` and `close_when` metadata so
-divergences remain owned by a live roadmap item and have explicit removal
-criteria.
+unreferenced retired seed rows, stale fixture metadata when a known-difference
+ID moves between fixture files, and active fixture/ledger `type=...` metadata
+mismatches. Each active ledger row must include machine-checked
+`tracked_by=path:needle` and `close_when` metadata so divergences remain owned
+by a live roadmap item and have explicit removal criteria.
 
 ### Lane D: Performance Regression
 

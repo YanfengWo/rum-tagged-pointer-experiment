@@ -127,6 +127,9 @@ active known differences in
 `rum-difftest lane-c` to catch missing rows, unreferenced rows, and stale
 fixture metadata. Active ledger rows must carry machine-checked
 `tracked_by=path:needle` ownership metadata and `close_when` removal criteria.
+Lane C also checks active fixture/ledger `type=...` metadata alignment so an
+intentional or temporary divergence is recorded beside the fixture input and in
+the central ledger.
 
 Use Lane A/B `--include-known-diffs` when auditing open divergences against a
 local Wolfram oracle. Both lanes report included known-difference metadata and

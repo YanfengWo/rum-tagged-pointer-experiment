@@ -34,6 +34,7 @@ pub struct KnownDifferenceRecord {
 pub struct KnownDifferenceReference {
     pub id: String,
     pub fixture: PathBuf,
+    pub metadata: BTreeMap<String, String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -45,6 +46,7 @@ pub struct KnownDifferenceLedgerReport {
     pub unreferenced_ledger_entries: Vec<KnownDifferenceRecord>,
     pub unreferenced_retired_seed_entries: Vec<RetiredSeedDifferenceRecord>,
     pub fixture_mismatches: Vec<KnownDifferenceFixtureMismatch>,
+    pub metadata_mismatches: Vec<KnownDifferenceMetadataMismatch>,
     pub retired_seed_fixture_mismatches: Vec<KnownDifferenceFixtureMismatch>,
     pub tracking_target_issues: Vec<KnownDifferenceTrackingTargetIssue>,
 }
@@ -55,6 +57,7 @@ impl KnownDifferenceLedgerReport {
             && self.unreferenced_ledger_entries.is_empty()
             && self.unreferenced_retired_seed_entries.is_empty()
             && self.fixture_mismatches.is_empty()
+            && self.metadata_mismatches.is_empty()
             && self.retired_seed_fixture_mismatches.is_empty()
             && self.tracking_target_issues.is_empty()
     }
@@ -65,6 +68,14 @@ pub struct KnownDifferenceFixtureMismatch {
     pub id: String,
     pub ledger_fixture: PathBuf,
     pub actual_fixture: PathBuf,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KnownDifferenceMetadataMismatch {
+    pub id: String,
+    pub field: String,
+    pub ledger_value: String,
+    pub fixture_value: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -157,6 +168,7 @@ pub fn validate_known_difference_ledger()
         .cloned()
         .collect::<Vec<_>>();
     let fixture_mismatches = collect_fixture_mismatches(&records, &fixture_refs_by_id);
+    let metadata_mismatches = collect_metadata_mismatches(&records, &fixture_refs_by_id);
     let retired_seed_fixture_mismatches = retired::collect_retired_seed_fixture_mismatches(
         &retired_seed_records,
         &fixture_refs_by_id,
@@ -171,6 +183,7 @@ pub fn validate_known_difference_ledger()
         unreferenced_ledger_entries,
         unreferenced_retired_seed_entries,
         fixture_mismatches,
+        metadata_mismatches,
         retired_seed_fixture_mismatches,
         tracking_target_issues,
     })
@@ -263,7 +276,11 @@ fn collect_fixture_known_differences()
                     second_fixture: fixture,
                 });
             }
-            references.push(KnownDifferenceReference { id, fixture });
+            references.push(KnownDifferenceReference {
+                id,
+                fixture,
+                metadata,
+            });
         }
     }
 
@@ -288,6 +305,33 @@ fn collect_fixture_mismatches(
                 id: record.id.clone(),
                 ledger_fixture,
                 actual_fixture: actual.fixture.clone(),
+            })
+        })
+        .collect()
+}
+
+fn collect_metadata_mismatches(
+    records: &[KnownDifferenceRecord],
+    fixture_refs_by_id: &BTreeMap<String, KnownDifferenceReference>,
+) -> Vec<KnownDifferenceMetadataMismatch> {
+    records
+        .iter()
+        .filter_map(|record| {
+            let fixture_ref = fixture_refs_by_id.get(&record.id)?;
+            let field = "type";
+            let ledger_value = record
+                .fields
+                .get(field)
+                .expect("required type field was already validated");
+            let fixture_value = fixture_ref
+                .metadata
+                .get(field)
+                .expect("fixture parser validates known-difference type");
+            (ledger_value != fixture_value).then(|| KnownDifferenceMetadataMismatch {
+                id: record.id.clone(),
+                field: field.to_string(),
+                ledger_value: ledger_value.clone(),
+                fixture_value: fixture_value.clone(),
             })
         })
         .collect()

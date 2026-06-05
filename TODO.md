@@ -593,7 +593,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] regenerate oracle comparison material on each diff run rather than relying on checked-in snapshots; Lane A/B compare `rum` against the fresh oracle result, treat fixture `expected` fields as seed annotations, and report seed-vs-oracle drift separately
   - [ ] allow oracle runs against non-pinned user versions as a compatibility check, not only against one project-standard Wolfram release
   - [x] record the resolved oracle executable and best-effort Wolfram `$Version` in Lane A/B CLI output without making version probing a pass/fail gate
-  - [ ] record any deliberate divergences from Wolfram behavior alongside those fixtures
+  - [x] record any deliberate divergences from Wolfram behavior alongside those fixtures; Lane C now verifies active fixture `!!! type=...` metadata stays aligned with ledger `type=...`, while fixture lines already require local `reason=...`
 - [ ] Prioritize oracle-style checks for the most semantics-sensitive areas first:
   - [x] arithmetic normalization and exact-integer behavior now have an initial curated Lane A foothold
   - [x] rules, patterns, replacement, and traversal behavior now have an initial curated Lane A foothold

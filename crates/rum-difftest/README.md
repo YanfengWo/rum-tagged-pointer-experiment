@@ -126,8 +126,9 @@ cargo run -p rum-difftest -- lane-c
 
 The runner validates that every checked fixture `!!! id=...` is present in
 [divergences/known-differences.txt](./divergences/known-differences.txt), and
-that the ledger does not contain unreferenced IDs or stale `fixture=...`
-metadata. Resolved imported seed IDs can move to
+that the ledger does not contain unreferenced IDs, stale `fixture=...`
+metadata, or active fixture/ledger `type=...` mismatches. Resolved imported
+seed IDs can move to
 [divergences/retired-seed-differences.txt](./divergences/retired-seed-differences.txt)
 after promotion into `cases/`, preserving `seed/` as historical input without
 keeping resolved seed rows in the active ledger. Ledger rows must also carry

@@ -46,6 +46,7 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         report.unreferenced_retired_seed_entries.len()
     );
     println!("fixture mismatches: {}", report.fixture_mismatches.len());
+    println!("metadata mismatches: {}", report.metadata_mismatches.len());
     println!(
         "retired seed fixture mismatches: {}",
         report.retired_seed_fixture_mismatches.len()
@@ -89,6 +90,12 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             mismatch.actual_fixture.display()
         );
     }
+    for mismatch in &report.metadata_mismatches {
+        println!(
+            "metadata-mismatch: id={} field={} ledger={} fixture={}",
+            mismatch.id, mismatch.field, mismatch.ledger_value, mismatch.fixture_value
+        );
+    }
     for mismatch in &report.retired_seed_fixture_mismatches {
         println!(
             "retired-seed-fixture-mismatch: id={} retired={} actual={}",
@@ -114,6 +121,6 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
 fn print_lane_c_usage() {
     println!("rum-difftest lane-c");
     println!(
-        "  Validate fixture `!!! id=...`, retired seed rows, fixture metadata, and active `tracked_by=path:needle` targets"
+        "  Validate fixture `!!! id=...`, retired seed rows, fixture/type metadata, and active `tracked_by=path:needle` targets"
     );
 }
