@@ -1,3 +1,4 @@
+pub mod artifact_hygiene;
 pub mod config;
 pub mod divergences;
 pub mod fixtures;

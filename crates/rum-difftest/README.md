@@ -33,6 +33,9 @@ user's real environment.
 Oracle-generated outputs are not repository assets. The runner should generate
 fresh comparison material for each run and keep those artifacts out of the
 checked-in tree.
+`cargo test -p rum-difftest` includes an artifact hygiene check that rejects
+the Lane A/B temporary wrapper scripts, case/step input files, session
+directories, and message/print capture files if they appear under this crate.
 
 This crate is also deliberately not the place for every `rum` test. If a
 feature is `rum`-specific rather than Wolfram-oracle-comparable, its primary

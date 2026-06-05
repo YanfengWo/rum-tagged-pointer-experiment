@@ -165,6 +165,9 @@ Rules:
 
 - Do not require Wolfram tooling for default `cargo test --workspace`.
 - Do not commit generated oracle output.
+- Keep `rum-difftest` artifact hygiene tests enabled so generated oracle
+  wrappers, input files, session directories, and stream captures stay out of
+  the repository.
 - Record the oracle command and version in run output when practical.
 - Treat version differences as compatibility data, not as a reason to pin the
   project to one hidden oracle environment.

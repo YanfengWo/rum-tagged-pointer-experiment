@@ -26,6 +26,8 @@ For the Wolfram-backed lanes, keep these policy constraints explicit:
   `WolframKernel`, `MathKernel`, or a thin kernel-compatible wrapper script
 - the license belongs to the user running the diff, not to the project
 - generated oracle outputs are transient artifacts and should not be committed
+- `cargo test -p rum-difftest` rejects committed Lane A/B oracle wrapper,
+  case/step, session, message, and print-capture artifacts
 - every diff run should regenerate fresh comparison data
 - version variance is acceptable and useful because it also probes
   compatibility with users' existing Wolfram environments
