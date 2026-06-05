@@ -67,9 +67,11 @@ oracle_kernel = "/path/to/WolframKernel"
 The current runner accepts a kernel executable path such as `WolframKernel` or
 `MathKernel`. It writes its oracle wrapper script and per-case input files to a
 temporary directory for each run, compares values, messages, and printed output
-in-memory, and removes those artifacts afterward. `rum` values are rendered
-through the shared difftest InputForm-like renderer, which covers common list,
-rule, delayed-rule, and association output shapes before comparison. It is
+in-memory, and removes those artifacts afterward. The CLI reports the resolved
+oracle executable and best-effort Wolfram `$Version`; version probe failures
+are reported but do not fail the diff run. `rum` values are rendered through
+the shared difftest InputForm-like renderer, which covers common list, rule,
+delayed-rule, and association output shapes before comparison. It is
 intentionally not yet a complete Wolfram display implementation or transport
 model. When `--include-known-diffs` is used, the report includes
 known-difference ID/type/reason metadata and counts confirmed vs resolved known
@@ -93,6 +95,8 @@ Wolfram steps in one local kernel process for that fixture. This avoids the
 older replay-based state simulation and gives definition, option, message,
 attribute, and precedence checks a real ordered-session oracle. The runner
 compares InputForm-like result values plus per-step message and print streams.
+Like Lane A, its CLI reports the resolved oracle executable and best-effort
+Wolfram `$Version` without making version probing a pass/fail gate.
 When `--include-known-diffs` is used, the report includes the known-difference
 ID/type/reason for non-matching steps and counts confirmed vs resolved known
 differences. Resolved known differences are listed by ID and fixture location

@@ -591,6 +591,7 @@ This roadmap intentionally uses two levels of detail:
   - [ ] do not commit oracle-generated expected outputs into the repository
   - [ ] regenerate oracle comparison material on each diff run rather than relying on checked-in snapshots
   - [ ] allow oracle runs against non-pinned user versions as a compatibility check, not only against one project-standard Wolfram release
+  - [x] record the resolved oracle executable and best-effort Wolfram `$Version` in Lane A/B CLI output without making version probing a pass/fail gate
   - [ ] record any deliberate divergences from Wolfram behavior alongside those fixtures
 - [ ] Prioritize oracle-style checks for the most semantics-sensitive areas first:
   - [x] arithmetic normalization and exact-integer behavior now have an initial curated Lane A foothold

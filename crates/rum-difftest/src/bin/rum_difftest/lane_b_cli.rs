@@ -6,6 +6,8 @@ use rum_difftest::lane_a::CaseValue;
 use rum_difftest::lane_b::{self, LaneBOptions, LaneBStepStatus};
 use rum_difftest::oracle::OracleKernel;
 
+use super::oracle_cli::print_oracle_header;
+
 pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut config_path = None;
     let mut oracle_kernel = None;
@@ -53,7 +55,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         },
     )?;
 
-    println!("lane-b oracle: {}", oracle.executable().display());
+    print_oracle_header("lane-b", &oracle);
     println!("steps seen: {}", summary.total_seen);
     println!("steps compared: {}", summary.compared);
     println!("matches: {}", summary.matches);

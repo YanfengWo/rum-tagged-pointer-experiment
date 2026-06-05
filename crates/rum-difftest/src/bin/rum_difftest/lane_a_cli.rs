@@ -5,6 +5,8 @@ use rum_difftest::config::{load_optional_config, resolve_oracle_kernel};
 use rum_difftest::lane_a::{self, CaseValue, LaneACaseStatus, LaneAOptions};
 use rum_difftest::oracle::OracleKernel;
 
+use super::oracle_cli::print_oracle_header;
+
 pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut config_path = None;
     let mut oracle_kernel = None;
@@ -52,7 +54,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         },
     )?;
 
-    println!("lane-a oracle: {}", oracle.executable().display());
+    print_oracle_header("lane-a", &oracle);
     println!("cases seen: {}", summary.total_seen);
     println!("cases compared: {}", summary.compared);
     println!("matches: {}", summary.matches);

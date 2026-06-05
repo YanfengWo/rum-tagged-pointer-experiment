@@ -1,9 +1,15 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use thiserror::Error;
+
+#[path = "oracle/temp_dir.rs"]
+mod temp_dir;
+#[path = "oracle/version.rs"]
+mod version;
+
+use temp_dir::TempDir;
 
 const RESULT_MARKER: &str = "__RUM_DIFFTEST_RESULT__=";
 const SESSION_RESULT_MARKER: &str = "__RUM_DIFFTEST_SESSION_RESULT__=";
@@ -93,6 +99,10 @@ impl OracleKernel {
 
     pub fn executable(&self) -> &Path {
         &self.executable
+    }
+
+    pub fn version(&self) -> Result<String, OracleError> {
+        version::query_kernel_version(&self.executable, self.temp_dir.path())
     }
 }
 
@@ -352,45 +362,6 @@ pub enum OracleError {
         stdout: String,
         stderr: String,
     },
-}
-
-struct TempDir {
-    path: PathBuf,
-}
-
-impl TempDir {
-    fn new(prefix: &str) -> Result<Self, std::io::Error> {
-        let base = std::env::temp_dir();
-        let pid = std::process::id();
-
-        for attempt in 0..100u32 {
-            let now = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_nanos();
-            let candidate = base.join(format!("{prefix}-{pid}-{now}-{attempt}"));
-            match fs::create_dir(&candidate) {
-                Ok(()) => return Ok(Self { path: candidate }),
-                Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => continue,
-                Err(err) => return Err(err),
-            }
-        }
-
-        Err(std::io::Error::new(
-            std::io::ErrorKind::AlreadyExists,
-            "could not allocate a unique temporary directory",
-        ))
-    }
-
-    fn path(&self) -> &Path {
-        &self.path
-    }
-}
-
-impl Drop for TempDir {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.path);
-    }
 }
 
 fn read_trimmed_text(path: &Path) -> Result<String, std::io::Error> {

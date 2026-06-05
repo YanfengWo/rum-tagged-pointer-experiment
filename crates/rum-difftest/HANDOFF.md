@@ -45,6 +45,9 @@ Current implementation status:
 - config currently supports `oracle_kernel = "/path/to/WolframKernel"`
 - it drives a local kernel executable directly and stores generated oracle
   inputs/wrappers only in a temporary run directory
+- Lane A/B CLI output records the resolved oracle executable and best-effort
+  Wolfram `$Version`; version probe failures are reported but do not fail the
+  diff run
 - it now compares result values, messages, and printed output for each case
 - `rum` values use a shared InputForm-like renderer that covers common list,
   rule, delayed-rule, and association output shapes

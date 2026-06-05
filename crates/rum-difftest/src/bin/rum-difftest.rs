@@ -8,6 +8,8 @@ mod lane_b_cli;
 mod lane_c_cli;
 #[path = "rum_difftest/lane_d_cli.rs"]
 mod lane_d_cli;
+#[path = "rum_difftest/oracle_cli.rs"]
+mod oracle_cli;
 
 fn main() -> ExitCode {
     match run() {
