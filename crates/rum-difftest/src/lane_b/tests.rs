@@ -54,12 +54,14 @@ fn compares_steps_against_session_oracle_once() {
             step_index: 1,
             input: "x = 2".to_string(),
             expected_seed: Some("2".to_string()),
+            known_difference: None,
         },
         PreparedLaneBStep {
             fixture: PathBuf::from("stateful.txt"),
             step_index: 2,
             input: "x + 3".to_string(),
             expected_seed: Some("5".to_string()),
+            known_difference: None,
         },
     ];
     let oracle_results = run_oracle_session(&mut oracle, &prepared);
@@ -87,6 +89,7 @@ fn compares_messages_and_printed_output_when_values_match() {
             step_index: 1,
             input: "1 + 1".to_string(),
             expected_seed: Some("2".to_string()),
+            known_difference: None,
         },
         CaseValue::Value {
             value: "2".to_string(),
@@ -103,6 +106,7 @@ fn compares_messages_and_printed_output_when_values_match() {
             step_index: 2,
             input: "Print[2]".to_string(),
             expected_seed: Some("Null".to_string()),
+            known_difference: None,
         },
         CaseValue::Value {
             value: "Null".to_string(),
@@ -125,6 +129,7 @@ fn compares_input_form_like_outputs_in_stateful_steps() {
             step_index: 1,
             input: "{1, 2}".to_string(),
             expected_seed: Some("{1, 2}".to_string()),
+            known_difference: None,
         },
         CaseValue::Value {
             value: "{1, 2}".to_string(),
@@ -141,6 +146,7 @@ fn compares_input_form_like_outputs_in_stateful_steps() {
             step_index: 2,
             input: "Normal[<|a -> 1, b -> 2|>]".to_string(),
             expected_seed: Some("{a -> 1, b -> 2}".to_string()),
+            known_difference: None,
         },
         CaseValue::Value {
             value: "{a -> 1, b -> 2}".to_string(),
@@ -149,4 +155,80 @@ fn compares_input_form_like_outputs_in_stateful_steps() {
         },
     );
     assert_eq!(rule_list_match.status, LaneBStepStatus::Match);
+}
+
+#[test]
+fn summarizes_included_known_difference_status() {
+    let mut summary = empty_summary();
+    let known_difference = Some(LaneBKnownDifference {
+        id: "known-edge".to_string(),
+        kind: "fixture-shape".to_string(),
+        reason: "temporary difference".to_string(),
+    });
+
+    record_step_result(
+        &mut summary,
+        &LaneBStepReport {
+            fixture: PathBuf::from("stateful.txt"),
+            step_index: 1,
+            input: "edge[]".to_string(),
+            expected_seed: None,
+            known_difference: known_difference.clone(),
+            seed_matches_oracle: None,
+            rum: CaseValue::Value {
+                value: "old".to_string(),
+                messages: Vec::new(),
+                printed_output: None,
+            },
+            oracle: CaseValue::Value {
+                value: "new".to_string(),
+                messages: Vec::new(),
+                printed_output: None,
+            },
+            status: LaneBStepStatus::Mismatch,
+        },
+    );
+    record_step_result(
+        &mut summary,
+        &LaneBStepReport {
+            fixture: PathBuf::from("stateful.txt"),
+            step_index: 2,
+            input: "fixed[]".to_string(),
+            expected_seed: None,
+            known_difference,
+            seed_matches_oracle: None,
+            rum: CaseValue::Value {
+                value: "fixed".to_string(),
+                messages: Vec::new(),
+                printed_output: None,
+            },
+            oracle: CaseValue::Value {
+                value: "fixed".to_string(),
+                messages: Vec::new(),
+                printed_output: None,
+            },
+            status: LaneBStepStatus::Match,
+        },
+    );
+
+    assert_eq!(summary.compared, 2);
+    assert_eq!(summary.mismatches, 1);
+    assert_eq!(summary.matches, 1);
+    assert_eq!(summary.confirmed_known_differences, 1);
+    assert_eq!(summary.resolved_known_differences, 1);
+}
+
+fn empty_summary() -> LaneBSummary {
+    LaneBSummary {
+        total_seen: 0,
+        compared: 0,
+        matches: 0,
+        mismatches: 0,
+        rum_failures: 0,
+        oracle_failures: 0,
+        skipped_known_differences: 0,
+        confirmed_known_differences: 0,
+        resolved_known_differences: 0,
+        steps: Vec::new(),
+    }
 }

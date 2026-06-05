@@ -124,6 +124,11 @@ known differences in `rum-difftest/divergences/known-differences.txt` and use
 ledger `fixture=...` metadata. Ledger rows must carry `tracked_by` ownership
 metadata and `close_when` removal criteria.
 
+Use Lane A/B `--include-known-diffs` when auditing open divergences against a
+local Wolfram oracle. Lane B reports included known-difference metadata and
+counts confirmed vs resolved rows so newly matching stateful divergences can be
+removed from fixtures and the ledger intentionally.
+
 Lane D currently executes imported timing and memory seed suites through local
 `rum` sessions and reports raw metrics. Its default `smoke` profile skips
 heavy / very-large imported categories for routine validation; `--profile full`

@@ -568,6 +568,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane B: land a first stateful session fixture format and runner for ordered definition / option / message / precedence checks
   - [x] Lane B follow-up: replace replay-based Wolfram state simulation with a single-kernel session oracle transport per fixture before relying on deeper stateful edges
   - [x] Lane B follow-up: add per-step message-stream and print-stream capture so stateful diffs compare values, messages, and prints instead of values only
+  - [x] Lane B follow-up: surface included known-difference metadata in step reports and count confirmed vs resolved known differences so closable ledger rows are visible during oracle runs
   - [ ] Lane B follow-up: add optional long-lived interactive process reuse once oracle-run throughput needs it
   - [x] Lane C: land a checked known-difference ledger plus `rum-difftest lane-c` validation that fixture `!!! id=...` entries and ledger rows stay synchronized
   - [x] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved

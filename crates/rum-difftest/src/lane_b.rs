@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -26,6 +27,8 @@ pub struct LaneBSummary {
     pub rum_failures: usize,
     pub oracle_failures: usize,
     pub skipped_known_differences: usize,
+    pub confirmed_known_differences: usize,
+    pub resolved_known_differences: usize,
     pub steps: Vec<LaneBStepReport>,
 }
 
@@ -35,10 +38,18 @@ pub struct LaneBStepReport {
     pub step_index: usize,
     pub input: String,
     pub expected_seed: Option<String>,
+    pub known_difference: Option<LaneBKnownDifference>,
     pub seed_matches_oracle: Option<bool>,
     pub rum: CaseValue,
     pub oracle: CaseValue,
     pub status: LaneBStepStatus,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LaneBKnownDifference {
+    pub id: String,
+    pub kind: String,
+    pub reason: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -55,6 +66,7 @@ struct PreparedLaneBStep {
     step_index: usize,
     input: String,
     expected_seed: Option<String>,
+    known_difference: Option<LaneBKnownDifference>,
 }
 
 pub fn run<O: Oracle>(
@@ -70,6 +82,8 @@ pub fn run<O: Oracle>(
         rum_failures: 0,
         oracle_failures: 0,
         skipped_known_differences: 0,
+        confirmed_known_differences: 0,
+        resolved_known_differences: 0,
         steps: Vec::new(),
     };
 
@@ -84,14 +98,18 @@ pub fn run<O: Oracle>(
         for entry in entries {
             summary.total_seen += 1;
 
-            let (input, expected_seed) = match entry {
-                GoldenEntry::Normal { input, expected } => (input, Some(expected)),
-                GoldenEntry::KnownDifference { input, .. } => {
+            let (input, expected_seed, known_difference) = match entry {
+                GoldenEntry::Normal { input, expected } => (input, Some(expected), None),
+                GoldenEntry::KnownDifference { input, metadata } => {
                     if !options.include_known_differences {
                         summary.skipped_known_differences += 1;
                         continue;
                     }
-                    (input, None)
+                    (
+                        input,
+                        None,
+                        Some(LaneBKnownDifference::from_metadata(&metadata)),
+                    )
                 }
             };
 
@@ -101,6 +119,7 @@ pub fn run<O: Oracle>(
                 step_index,
                 input,
                 expected_seed,
+                known_difference,
             });
 
             if options
@@ -114,13 +133,7 @@ pub fn run<O: Oracle>(
         let oracle_results = run_oracle_session(oracle, &prepared_steps);
         for (prepared, oracle_result) in prepared_steps.into_iter().zip(oracle_results) {
             let step = run_step(&mut session, prepared, oracle_result);
-            summary.compared += 1;
-            match step.status {
-                LaneBStepStatus::Match => summary.matches += 1,
-                LaneBStepStatus::Mismatch => summary.mismatches += 1,
-                LaneBStepStatus::RumFailure => summary.rum_failures += 1,
-                LaneBStepStatus::OracleFailure => summary.oracle_failures += 1,
-            }
+            record_step_result(&mut summary, &step);
             summary.steps.push(step);
 
             if options.limit.is_some_and(|limit| summary.compared >= limit) {
@@ -130,6 +143,35 @@ pub fn run<O: Oracle>(
     }
 
     Ok(summary)
+}
+
+impl LaneBKnownDifference {
+    fn from_metadata(metadata: &BTreeMap<String, String>) -> Self {
+        Self {
+            id: metadata["id"].clone(),
+            kind: metadata["type"].clone(),
+            reason: metadata["reason"].clone(),
+        }
+    }
+}
+
+fn record_step_result(summary: &mut LaneBSummary, step: &LaneBStepReport) {
+    summary.compared += 1;
+    match step.status {
+        LaneBStepStatus::Match => summary.matches += 1,
+        LaneBStepStatus::Mismatch => summary.mismatches += 1,
+        LaneBStepStatus::RumFailure => summary.rum_failures += 1,
+        LaneBStepStatus::OracleFailure => summary.oracle_failures += 1,
+    }
+
+    if step.known_difference.is_some() {
+        match step.status {
+            LaneBStepStatus::Match => summary.resolved_known_differences += 1,
+            LaneBStepStatus::Mismatch
+            | LaneBStepStatus::RumFailure
+            | LaneBStepStatus::OracleFailure => summary.confirmed_known_differences += 1,
+        }
+    }
 }
 
 fn run_step(
@@ -142,6 +184,7 @@ fn run_step(
         step_index,
         input,
         expected_seed,
+        known_difference,
     } = prepared;
     let rum = run_rum_step(session, &input);
     let status = match (&rum, &oracle_result) {
@@ -165,6 +208,7 @@ fn run_step(
         step_index,
         input,
         expected_seed,
+        known_difference,
         seed_matches_oracle,
         rum,
         oracle: oracle_result,

@@ -79,6 +79,7 @@ fixtures:
 
 ```bash
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel
+cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --include-known-diffs
 ```
 
 Lane B keeps one `rum` session per fixture file and evaluates the matching
@@ -86,6 +87,9 @@ Wolfram steps in one local kernel process for that fixture. This avoids the
 older replay-based state simulation and gives definition, option, message,
 attribute, and precedence checks a real ordered-session oracle. The runner
 compares InputForm-like result values plus per-step message and print streams.
+When `--include-known-diffs` is used, the report includes the known-difference
+ID/type/reason for non-matching steps and counts confirmed vs resolved known
+differences so fixed divergences are visible before removing ledger rows.
 Long-lived interactive process reuse remains a future throughput refinement.
 
 ## Lane C Runner
