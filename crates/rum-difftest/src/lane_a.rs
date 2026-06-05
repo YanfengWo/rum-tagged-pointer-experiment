@@ -7,6 +7,7 @@ use rum_terminal::{render_request_failure, render_runtime_message};
 
 use crate::fixtures::{GoldenEntry, golden_dir, load_text, parse_golden_file};
 use crate::oracle::{Oracle, OracleError};
+use crate::value_render::render_input_form_like;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LaneAOptions {
@@ -162,7 +163,7 @@ fn run_rum_case(input: &str) -> CaseValue {
 
     match session.eval_request(input) {
         Ok(response) => CaseValue::Value {
-            value: response.value.to_string(),
+            value: render_input_form_like(&response.value),
             messages: response
                 .messages
                 .iter()
@@ -236,87 +237,4 @@ fn collect_fixture_paths(single_fixture: Option<&Path>) -> Result<Vec<PathBuf>, 
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::oracle::{Oracle, OracleError, OracleEvaluation};
-
-    struct FakeOracle;
-
-    impl Oracle for FakeOracle {
-        fn evaluate(&mut self, input: &str) -> Result<OracleEvaluation, OracleError> {
-            Ok(OracleEvaluation {
-                result: match input {
-                    "2 + 3" => "5".to_string(),
-                    _ => "0".to_string(),
-                },
-                printed_output: String::new(),
-                stderr: String::new(),
-            })
-        }
-    }
-
-    struct StaticOracle {
-        output: OracleEvaluation,
-    }
-
-    impl Oracle for StaticOracle {
-        fn evaluate(&mut self, _input: &str) -> Result<OracleEvaluation, OracleError> {
-            Ok(self.output.clone())
-        }
-    }
-
-    #[test]
-    fn compares_single_case_against_oracle() {
-        let mut oracle = FakeOracle;
-        let report = run_case(
-            &mut oracle,
-            Path::new("fixture.txt"),
-            "2 + 3".to_string(),
-            Some("5".to_string()),
-        );
-
-        assert_eq!(report.status, LaneACaseStatus::Match);
-        assert_eq!(report.seed_matches_oracle, Some(true));
-    }
-
-    #[test]
-    fn compares_messages_and_printed_output_when_values_match() {
-        let mut message_oracle = StaticOracle {
-            output: OracleEvaluation {
-                result: "2".to_string(),
-                printed_output: String::new(),
-                stderr: "test::msg: message text".to_string(),
-            },
-        };
-        let message_report = run_case(
-            &mut message_oracle,
-            Path::new("fixture.txt"),
-            "1 + 1".to_string(),
-            Some("2".to_string()),
-        );
-        assert_eq!(message_report.status, LaneACaseStatus::Mismatch);
-        assert_eq!(
-            message_report.oracle,
-            CaseValue::Value {
-                value: "2".to_string(),
-                messages: vec!["! test::msg: message text".to_string()],
-                printed_output: None,
-            }
-        );
-
-        let mut print_oracle = StaticOracle {
-            output: OracleEvaluation {
-                result: "2".to_string(),
-                printed_output: "extra output".to_string(),
-                stderr: String::new(),
-            },
-        };
-        let print_report = run_case(
-            &mut print_oracle,
-            Path::new("fixture.txt"),
-            "1 + 1".to_string(),
-            Some("2".to_string()),
-        );
-        assert_eq!(print_report.status, LaneACaseStatus::Mismatch);
-    }
-}
+mod tests;

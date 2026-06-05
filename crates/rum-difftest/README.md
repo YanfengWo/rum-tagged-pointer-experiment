@@ -66,9 +66,11 @@ oracle_kernel = "/path/to/WolframKernel"
 The current runner accepts a kernel executable path such as `WolframKernel` or
 `MathKernel`. It writes its oracle wrapper script and per-case input files to a
 temporary directory for each run, compares values, messages, and printed output
-in-memory, and removes those artifacts afterward. It is intentionally a first
-pass: enough to validate the oracle workflow, not yet the final word on
-top-level display parity or every Wolfram transport nuance.
+in-memory, and removes those artifacts afterward. `rum` values are rendered
+through the shared difftest InputForm-like renderer, which covers common list,
+rule, delayed-rule, and association output shapes before comparison. It is
+intentionally not yet a complete Wolfram display implementation or transport
+model.
 
 ## Lane B Runner
 
@@ -83,8 +85,8 @@ Lane B keeps one `rum` session per fixture file and evaluates the matching
 Wolfram steps in one local kernel process for that fixture. This avoids the
 older replay-based state simulation and gives definition, option, message,
 attribute, and precedence checks a real ordered-session oracle. The runner
-compares result values plus per-step message and print streams. Long-lived
-interactive process reuse remains a future throughput refinement.
+compares InputForm-like result values plus per-step message and print streams.
+Long-lived interactive process reuse remains a future throughput refinement.
 
 ## Lane C Runner
 

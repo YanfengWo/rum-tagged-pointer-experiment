@@ -98,8 +98,9 @@ Use documentation examples in this order:
 single broad diff bucket:
 
 - Lane A: single-expression, stateless Wolfram comparisons over values,
-  messages, and printed output. This is the first place to put compact
-  canonical and boundary cases.
+  messages, and printed output. `rum` results use the shared difftest
+  InputForm-like renderer for common structural output shapes. This is the
+  first place to put compact canonical and boundary cases.
 - Lane B: stateful session scripts, including definitions, options, messages,
   contexts, package loading, and repeated evaluations.
 - Lane C: checked known-difference ledger, tying divergences to matrix entries
@@ -113,9 +114,9 @@ Messages and diagnostics start in runtime regression tests unless the
 differential runner can capture and compare them reliably. Lane A can compare
 single-expression message and print output, while Lane B provides ordered
 session comparisons against one local Wolfram kernel process per fixture,
-including result values, per-step messages, and per-step print output. That
-makes focused message and print behavior eligible for either lane when the
-behavior is Wolfram-oracle-comparable.
+including InputForm-like result values, per-step messages, and per-step print
+output. That makes focused message and print behavior eligible for either lane
+when the behavior is Wolfram-oracle-comparable.
 
 Lane C is the synchronization check for `!!! id=...` fixture entries. Keep
 known differences in `rum-difftest/divergences/known-differences.txt` and use

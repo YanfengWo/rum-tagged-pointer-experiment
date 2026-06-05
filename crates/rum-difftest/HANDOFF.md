@@ -46,15 +46,18 @@ Current implementation status:
 - it drives a local kernel executable directly and stores generated oracle
   inputs/wrappers only in a temporary run directory
 - it now compares result values, messages, and printed output for each case
-- it does not yet claim full top-level display parity
+- `rum` values use a shared InputForm-like renderer that covers common list,
+  rule, delayed-rule, and association output shapes
+- it does not yet claim full top-level display parity for broader Wolfram
+  syntax sugar
 - a first pass of `rum`-owned curated Lane A files now exists under
   [cases/wolfram/core](./cases/wolfram/core/README.md)
 - that curated set currently covers arithmetic/structures, loops/control,
   associations, functional combinators, failure/status, and multiple string
   subfamilies
-- the current `lane-a` comparison is still display-sensitive, so curated files
-  should prefer scalar/list/plain-call results over outputs whose main
-  difference is just `rum` canonical form vs Wolfram `InputForm`
+- the current `lane-a` comparison still has display limits beyond the shared
+  renderer's common structural forms, so curated files should avoid cases whose
+  only useful signal is obscure Wolfram `InputForm` sugar
 
 ### Lane A: Single-Expression Wolfram Diff
 
@@ -205,8 +208,9 @@ Raw counts:
 1. Keep the imported `ham` corpus intact under `seed/`.
 2. Continue extending the curated `cases/wolfram/core/` tree page by page from
    the matrix-guided kernel priorities.
-3. Normalize top-level display conventions further so Lane A can compare beyond
-   today's scalar/list/plain-call-friendly subset.
+3. Extend the shared InputForm-like renderer beyond the current common
+   structural forms when broader Wolfram display syntax becomes a real fixture
+   blocker.
 4. Continue extending Lane A/B curated fixtures from matrix-guided priorities.
 5. Capture checked `ci-debug` / `ci-release` Lane D artifacts on the intended
    runners before tightening elapsed thresholds beyond broad smoke guardrails.
