@@ -12,6 +12,10 @@ fixture, so definitions, options, messages, attributes, and precedence checks
 run against real session state instead of replayed setup expressions. Lane B
 compares values, per-step messages, and per-step print output.
 
+Fixture-local package files live under `packages/`. They are support files for
+explicit `Needs[..., File[...]]` / `Get[...]` cases and are not collected as
+Lane B fixtures.
+
 Known-difference lines can be used for discovered long-tail divergences that
 should stay documented without breaking the default lane. The current fixture
 has no active known-difference lines.

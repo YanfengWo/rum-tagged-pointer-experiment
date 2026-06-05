@@ -1,0 +1,14 @@
+# Curated Lane B file: package loading and package-scoped defaults
+# Format: input ||| expected_output
+Needs["LaneBDiff`", File["crates/rum-difftest/cases/stateful/packages/LaneBDiff.rum"]] ||| Null
+LaneBDiff`token ||| 17
+LaneBDiff`triple[4] ||| 12
+LaneBDiff`slot[] ||| 6
+Default[LaneBDiff`slot] ||| 6
+Default[LaneBDiff`slot, 1] ||| 6
+LaneBDiff`indexedSlot[] ||| 11
+Default[LaneBDiff`indexedSlot] ||| 11
+Default[LaneBDiff`indexedSlot, 1] ||| 11
+LaneBDiff`token = 23 ||| 23
+Needs["LaneBDiff`", File["crates/rum-difftest/cases/stateful/packages/LaneBDiff.rum"]] ||| Null
+LaneBDiff`token ||| 23

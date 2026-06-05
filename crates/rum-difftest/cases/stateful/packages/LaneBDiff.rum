@@ -1,0 +1,8 @@
+BeginPackage["LaneBDiff`"]
+token = 17
+triple[x_] := x * 3
+Default[slot] = 6
+slot[Optional[x_]] := x
+Default[indexedSlot, 1] = 11
+indexedSlot[Optional[x_]] := x
+EndPackage[]
