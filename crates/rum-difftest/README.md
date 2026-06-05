@@ -76,19 +76,20 @@ as `WolframKernel`, `MathKernel`, or a wrapper with the same `-noprompt
 writes its oracle wrapper script and per-case input files to a temporary
 directory for each run, compares values, messages, and printed output
 in-memory, and removes those artifacts afterward. The CLI reports the resolved
-oracle executable and best-effort Wolfram `$Version`; version probe failures
-are reported but do not fail the diff run. `rum` values are rendered through
-the shared difftest InputForm-like renderer, which covers common list, rule,
-delayed-rule, and association output shapes before comparison. It is
-intentionally not yet a complete Wolfram display implementation or transport
-model. Fixture `expected` fields are seed annotations, not the pass/fail
-oracle: the runner compares `rum` against the fresh oracle result on every run
-and reports seed-vs-oracle drift separately. When `--include-known-diffs` is
-used, the report includes known-difference ID/type/reason metadata and counts
-confirmed vs resolved known differences. Resolved known differences are listed
-by ID and fixture location so stale imported divergences are visible before
-curation. Keep `seed/` unchanged; migrate promoted cases under `cases/` before
-pruning seed-linked ledger rows.
+oracle executable, the explicit `user-provided/unpinned` version policy, and
+best-effort Wolfram `$Version`; version probe failures are reported but do not
+fail the diff run, and config does not support version pin keys. `rum` values
+are rendered through the shared difftest InputForm-like renderer, which covers
+common list, rule, delayed-rule, and association output shapes before
+comparison. It is intentionally not yet a complete Wolfram display
+implementation or transport model. Fixture `expected` fields are seed
+annotations, not the pass/fail oracle: the runner compares `rum` against the
+fresh oracle result on every run and reports seed-vs-oracle drift separately.
+When `--include-known-diffs` is used, the report includes known-difference
+ID/type/reason metadata and counts confirmed vs resolved known differences.
+Resolved known differences are listed by ID and fixture location so stale
+imported divergences are visible before curation. Keep `seed/` unchanged;
+migrate promoted cases under `cases/` before pruning seed-linked ledger rows.
 
 ## Lane B Runner
 

@@ -176,7 +176,9 @@ Rules:
   seed-vs-oracle drift separately.
 - Record the oracle command and version in run output when practical.
 - Treat version differences as compatibility data, not as a reason to pin the
-  project to one hidden oracle environment.
+  project to one hidden oracle environment. Lane A/B should keep the
+  `user-provided/unpinned` version policy visible and should not accept config
+  keys that pin one required oracle version.
 - Record deliberate divergences next to fixtures, with a matrix or TODO
   reference.
 

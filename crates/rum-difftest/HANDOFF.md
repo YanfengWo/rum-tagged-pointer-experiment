@@ -31,6 +31,8 @@ For the Wolfram-backed lanes, keep these policy constraints explicit:
 - every diff run should regenerate fresh comparison data
 - version variance is acceptable and useful because it also probes
   compatibility with users' existing Wolfram environments
+- Lane A/B should report the `user-provided/unpinned` oracle-version policy
+  and should not accept config keys that pin one required oracle version
 
 And keep the exclusion boundary explicit too:
 
@@ -52,8 +54,8 @@ Current implementation status:
 - it drives a local kernel executable directly and stores generated oracle
   inputs/wrappers only in a temporary run directory
 - Lane A/B CLI output records the resolved oracle executable and best-effort
-  Wolfram `$Version`; version probe failures are reported but do not fail the
-  diff run
+  Wolfram `$Version`, plus the explicit `user-provided/unpinned` version
+  policy; version probe failures are reported but do not fail the diff run
 - it now compares result values, messages, and printed output for each case
 - fixture `expected` fields are seed annotations only; Lane A/B pass/fail
   compares `rum` against fresh oracle output and reports seed-vs-oracle drift

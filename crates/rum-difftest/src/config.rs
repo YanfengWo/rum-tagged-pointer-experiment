@@ -219,4 +219,15 @@ mod tests {
         let err = parse_config("unexpected = 1").unwrap_err();
         assert!(matches!(err, ConfigError::UnknownKey { .. }));
     }
+
+    #[test]
+    fn rejects_oracle_version_pin_config_keys() {
+        for key in ["oracle_version", "required_oracle_version"] {
+            let err = parse_config(&format!("{key} = '14.3'")).unwrap_err();
+            assert!(
+                matches!(err, ConfigError::UnknownKey { key: ref unknown } if unknown == key),
+                "expected `{key}` to remain unsupported, got {err:?}"
+            );
+        }
+    }
 }
