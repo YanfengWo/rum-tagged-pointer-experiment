@@ -185,6 +185,10 @@ Baseline rows without `threshold_profile` are treated as `local-debug` for
 compatibility with older artifacts. The current checked-in elapsed thresholds
 are intentionally broad smoke guardrails; actual CI/release artifacts still
 need to be captured on the intended runners before tightening thresholds.
+`lane-d --check-baseline-readiness` now checks the default checked smoke
+artifact set: `perf/baselines/smoke.txt`,
+`perf/baselines/smoke-ci-debug.txt`, and
+`perf/baselines/smoke-ci-release.txt`.
 
 ### Lane E: Host Contract Tests
 

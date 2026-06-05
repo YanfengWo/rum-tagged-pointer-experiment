@@ -1,4 +1,6 @@
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::super::{LaneDCaseStatus, LaneDOptions, LaneDSuite, run};
 use super::*;
@@ -244,6 +246,73 @@ fn default_smoke_baseline_covers_current_smoke_lane() {
     );
 }
 
+#[test]
+fn checked_baseline_readiness_reports_clean_and_missing_artifacts() {
+    let temp_dir = unique_temp_dir("lane-d-readiness");
+    fs::create_dir_all(&temp_dir).unwrap();
+    let ready_path = temp_dir.join("smoke.txt");
+    let missing_path = temp_dir.join("smoke-ci-debug.txt");
+    fs::write(
+        &ready_path,
+        "profile=smoke | threshold_profile=local-debug | suite=timing | input=fast[] | baseline_elapsed_micros=10 | max_elapsed_micros=100 | max_value_nodes=2\n",
+    )
+    .unwrap();
+    let summary = test_summary(vec![test_case(1, "timing", "fast[]", 50, Some(2))]);
+
+    let report = check_checked_baseline_readiness_for(
+        &summary,
+        &[
+            checked_artifact(LaneDThresholdProfile::LocalDebug, &ready_path),
+            checked_artifact(LaneDThresholdProfile::CiDebug, &missing_path),
+        ],
+    );
+
+    assert!(!report.is_ready());
+    assert!(matches!(
+        report.entries[0].status,
+        LaneDCheckedBaselineReadinessStatus::Ready {
+            records_considered: 1,
+            compared: 1
+        }
+    ));
+    assert!(matches!(
+        report.entries[1].status,
+        LaneDCheckedBaselineReadinessStatus::MissingArtifact
+    ));
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
+#[test]
+fn checked_baseline_readiness_reports_dirty_artifacts() {
+    let temp_dir = unique_temp_dir("lane-d-dirty-readiness");
+    fs::create_dir_all(&temp_dir).unwrap();
+    let dirty_path = temp_dir.join("smoke.txt");
+    fs::write(
+        &dirty_path,
+        "profile=smoke | threshold_profile=local-debug | suite=timing | input=fast[] | baseline_elapsed_micros=10 | max_elapsed_micros=10 | max_value_nodes=1\n",
+    )
+    .unwrap();
+    let summary = test_summary(vec![test_case(1, "timing", "fast[]", 50, Some(2))]);
+
+    let report = check_checked_baseline_readiness_for(
+        &summary,
+        &[checked_artifact(
+            LaneDThresholdProfile::LocalDebug,
+            &dirty_path,
+        )],
+    );
+
+    assert!(!report.is_ready());
+    match &report.entries[0].status {
+        LaneDCheckedBaselineReadinessStatus::NotClean { report } => {
+            assert_eq!(report.elapsed_regressions.len(), 1);
+            assert_eq!(report.value_node_regressions.len(), 1);
+        }
+        other => panic!("expected dirty readiness status, got {other:?}"),
+    }
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
 fn test_case(
     index: usize,
     suite: &str,
@@ -264,6 +333,25 @@ fn test_case(
         message_count: 0,
         print_count: 0,
     }
+}
+
+fn checked_artifact(
+    threshold_profile: LaneDThresholdProfile,
+    path: &Path,
+) -> LaneDCheckedBaselineArtifact {
+    LaneDCheckedBaselineArtifact {
+        profile: LaneDProfile::Smoke,
+        threshold_profile,
+        path: path.to_path_buf(),
+    }
+}
+
+fn unique_temp_dir(prefix: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    std::env::temp_dir().join(format!("{prefix}-{}-{nanos}", std::process::id()))
 }
 
 fn test_summary(cases: Vec<LaneDCaseReport>) -> LaneDSummary {

@@ -16,6 +16,7 @@ cargo run -p rum-difftest -- lane-d --baseline crates/rum-difftest/perf/baseline
 cargo run -p rum-difftest -- lane-d --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
 cargo run -p rum-difftest -- lane-d --capture-runs 5 --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
 cargo run -p rum-difftest -- lane-d --threshold-profile ci-debug --capture-runs 5 --write-baseline /tmp/rum-lane-d-ci-debug.txt --fail-on-error
+cargo run -p rum-difftest -- lane-d --check-baseline-readiness
 ```
 
 The first runner consumes the imported seed suites:
@@ -54,6 +55,20 @@ and `max_value_nodes` are the checked guardrails. Keep elapsed thresholds broad
 enough to avoid machine-noise failures; tighten them only after repeated
 measurements on the intended runner. Baseline rows without `threshold_profile`
 are treated as `local-debug` for compatibility with older artifacts.
+
+`--check-baseline-readiness` checks the default checked smoke baseline artifact
+set and exits non-zero if any expected file is missing, invalid, or no longer
+covers the current smoke lane. The current default artifact paths are:
+
+- [baselines/smoke.txt](./baselines/smoke.txt): `local-debug`
+- `baselines/smoke-ci-debug.txt`: `ci-debug`, to be captured on the intended
+  debug CI runner
+- `baselines/smoke-ci-release.txt`: `ci-release`, to be captured on the
+  intended CI/release runner
+
+Do not synthesize CI artifacts from a local developer machine just to satisfy
+the readiness gate; missing CI paths are an accurate signal that runner-specific
+capture is still pending.
 
 `--baseline PATH` enables comparison. `--fail-on-regression` makes missing
 baseline rows, stale rows, elapsed regressions, and result-node regressions

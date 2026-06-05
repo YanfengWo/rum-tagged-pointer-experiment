@@ -20,6 +20,7 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut baseline_min_elapsed_micros = None;
     let mut fail_on_error = false;
     let mut fail_on_regression = false;
+    let mut check_baseline_readiness = false;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -62,6 +63,7 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 let value = expect_value(&mut iter, "--baseline-min-elapsed-micros")?;
                 baseline_min_elapsed_micros = Some(value.parse::<u128>()?);
             }
+            "--check-baseline-readiness" => check_baseline_readiness = true,
             "--fail-on-error" => fail_on_error = true,
             "--fail-on-regression" => fail_on_regression = true,
             "--help" | "-h" => {
@@ -76,6 +78,13 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     }
     if capture_runs > 1 && write_baseline_path.is_none() {
         return Err("--capture-runs requires --write-baseline PATH".into());
+    }
+    if check_baseline_readiness
+        && (suite != LaneDSuite::All || profile != LaneDProfile::Smoke || limit.is_some())
+    {
+        return Err(
+            "--check-baseline-readiness expects --suite all --profile smoke without --limit".into(),
+        );
     }
     let capture_defaults = LaneDBaselineCaptureOptions::for_threshold_profile(threshold_profile);
     let baseline_elapsed_multiplier =
@@ -140,6 +149,13 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     } else {
         None
     };
+    let readiness_report = if check_baseline_readiness {
+        let report = lane_d::check_checked_baseline_readiness(&summary);
+        print_checked_baseline_readiness_report(&report);
+        Some(report)
+    } else {
+        None
+    };
 
     if let Some(path) = &write_baseline_path {
         let run_options = LaneDOptions {
@@ -184,6 +200,9 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         if !report.is_clean() {
             return Ok(ExitCode::FAILURE);
         }
+    }
+    if readiness_report.is_some_and(|report| !report.is_ready()) {
+        return Ok(ExitCode::FAILURE);
     }
 
     Ok(ExitCode::SUCCESS)
@@ -240,6 +259,43 @@ fn print_baseline_report(path: &PathBuf, report: &lane_d::LaneDBaselineReport) {
     }
 }
 
+fn print_checked_baseline_readiness_report(report: &lane_d::LaneDCheckedBaselineReadinessReport) {
+    println!("checked baseline readiness: {}", report.is_ready());
+    println!("checked baseline artifacts: {}", report.entries.len());
+    for entry in &report.entries {
+        let profile = lane_d::profile_name(entry.profile);
+        let threshold_profile = lane_d::threshold_profile_name(entry.threshold_profile);
+        match &entry.status {
+            lane_d::LaneDCheckedBaselineReadinessStatus::Ready {
+                records_considered,
+                compared,
+            } => println!(
+                "checked-baseline-ready\t{profile}\t{threshold_profile}\t{}\t{}\t{}",
+                entry.path.display(),
+                records_considered,
+                compared
+            ),
+            lane_d::LaneDCheckedBaselineReadinessStatus::MissingArtifact => println!(
+                "checked-baseline-missing\t{profile}\t{threshold_profile}\t{}",
+                entry.path.display()
+            ),
+            lane_d::LaneDCheckedBaselineReadinessStatus::InvalidArtifact { message } => println!(
+                "checked-baseline-invalid\t{profile}\t{threshold_profile}\t{}\t{}",
+                entry.path.display(),
+                message.replace('\n', "\\n")
+            ),
+            lane_d::LaneDCheckedBaselineReadinessStatus::NotClean { report } => println!(
+                "checked-baseline-not-clean\t{profile}\t{threshold_profile}\t{}\tmissing={}\tunused={}\telapsed={}\tvalue_nodes={}",
+                entry.path.display(),
+                report.missing_records.len(),
+                report.unused_records.len(),
+                report.elapsed_regressions.len(),
+                report.value_node_regressions.len()
+            ),
+        }
+    }
+}
+
 fn print_lane_d_usage() {
     println!("rum-difftest lane-d");
     println!("  --suite all|timing|memory  Select imported performance input suite");
@@ -254,6 +310,10 @@ fn print_lane_d_usage() {
     println!("                             Multiplier for captured max elapsed guardrails");
     println!("  --baseline-min-elapsed-micros N");
     println!("                             Minimum captured max elapsed guardrail");
+    println!("  --check-baseline-readiness");
+    println!(
+        "                             Check default checked smoke baselines for all threshold profiles"
+    );
     println!("  --fail-on-error            Exit non-zero if any expression fails");
     println!("  --fail-on-regression       Exit non-zero if baseline comparison is not clean");
 }

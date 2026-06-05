@@ -151,8 +151,11 @@ successful run as a baseline artifact with configurable elapsed guardrails.
 `--capture-runs N` repeats the same run and writes median elapsed samples plus
 slowest-sample guardrails. `--threshold-profile` selects the baseline
 threshold record set and capture defaults, separating local debug runs from
-CI debug and CI/release runners. Lane D remains a local `rum` performance lane;
-it should not use a Wolfram oracle.
+CI debug and CI/release runners. `--check-baseline-readiness` checks the
+default checked smoke baseline artifacts for all threshold profiles and should
+remain red until runner-specific `ci-debug` / `ci-release` artifacts are
+captured on the intended machines. Lane D remains a local `rum` performance
+lane; it should not use a Wolfram oracle.
 
 ## Oracle Policy
 

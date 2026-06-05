@@ -96,6 +96,52 @@ impl LaneDBaselineReport {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LaneDCheckedBaselineArtifact {
+    pub profile: LaneDProfile,
+    pub threshold_profile: LaneDThresholdProfile,
+    pub path: PathBuf,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LaneDCheckedBaselineReadinessReport {
+    pub entries: Vec<LaneDCheckedBaselineReadinessEntry>,
+}
+
+impl LaneDCheckedBaselineReadinessReport {
+    pub fn is_ready(&self) -> bool {
+        self.entries.iter().all(|entry| {
+            matches!(
+                entry.status,
+                LaneDCheckedBaselineReadinessStatus::Ready { .. }
+            )
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LaneDCheckedBaselineReadinessEntry {
+    pub profile: LaneDProfile,
+    pub threshold_profile: LaneDThresholdProfile,
+    pub path: PathBuf,
+    pub status: LaneDCheckedBaselineReadinessStatus,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum LaneDCheckedBaselineReadinessStatus {
+    Ready {
+        records_considered: usize,
+        compared: usize,
+    },
+    MissingArtifact,
+    InvalidArtifact {
+        message: String,
+    },
+    NotClean {
+        report: LaneDBaselineReport,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LaneDElapsedRegression {
     pub case: LaneDCaseReport,
     pub max_elapsed_micros: u128,
@@ -157,6 +203,27 @@ pub fn default_smoke_baseline_path() -> PathBuf {
     crate_root().join("perf/baselines/smoke.txt")
 }
 
+pub fn default_checked_baseline_artifacts() -> Vec<LaneDCheckedBaselineArtifact> {
+    let baseline_dir = crate_root().join("perf/baselines");
+    vec![
+        LaneDCheckedBaselineArtifact {
+            profile: LaneDProfile::Smoke,
+            threshold_profile: LaneDThresholdProfile::LocalDebug,
+            path: default_smoke_baseline_path(),
+        },
+        LaneDCheckedBaselineArtifact {
+            profile: LaneDProfile::Smoke,
+            threshold_profile: LaneDThresholdProfile::CiDebug,
+            path: baseline_dir.join("smoke-ci-debug.txt"),
+        },
+        LaneDCheckedBaselineArtifact {
+            profile: LaneDProfile::Smoke,
+            threshold_profile: LaneDThresholdProfile::CiRelease,
+            path: baseline_dir.join("smoke-ci-release.txt"),
+        },
+    ]
+}
+
 pub fn load_baseline(path: impl AsRef<Path>) -> Result<LaneDBaseline, LaneDBaselineError> {
     let path = path.as_ref();
     let text = load_text(path).map_err(|source| LaneDBaselineError::Io {
@@ -181,6 +248,29 @@ pub fn write_baseline(
         path: path.to_path_buf(),
         source,
     })
+}
+
+pub fn check_checked_baseline_readiness(
+    summary: &LaneDSummary,
+) -> LaneDCheckedBaselineReadinessReport {
+    check_checked_baseline_readiness_for(summary, &default_checked_baseline_artifacts())
+}
+
+pub fn check_checked_baseline_readiness_for(
+    summary: &LaneDSummary,
+    artifacts: &[LaneDCheckedBaselineArtifact],
+) -> LaneDCheckedBaselineReadinessReport {
+    let entries = artifacts
+        .iter()
+        .map(|artifact| LaneDCheckedBaselineReadinessEntry {
+            profile: artifact.profile,
+            threshold_profile: artifact.threshold_profile,
+            path: artifact.path.clone(),
+            status: check_checked_baseline_artifact(summary, artifact),
+        })
+        .collect();
+
+    LaneDCheckedBaselineReadinessReport { entries }
 }
 
 pub fn capture_baseline(
@@ -234,6 +324,42 @@ pub fn capture_baseline_from_runs(
         .collect();
 
     Ok(LaneDBaseline { records })
+}
+
+fn check_checked_baseline_artifact(
+    summary: &LaneDSummary,
+    artifact: &LaneDCheckedBaselineArtifact,
+) -> LaneDCheckedBaselineReadinessStatus {
+    if !artifact.path.exists() {
+        return LaneDCheckedBaselineReadinessStatus::MissingArtifact;
+    }
+
+    let baseline = match load_baseline(&artifact.path) {
+        Ok(baseline) => baseline,
+        Err(err) => {
+            return LaneDCheckedBaselineReadinessStatus::InvalidArtifact {
+                message: err.to_string(),
+            };
+        }
+    };
+    let report = compare_baseline(
+        summary,
+        &baseline,
+        &LaneDBaselineCompareOptions {
+            profile: artifact.profile,
+            threshold_profile: artifact.threshold_profile,
+            require_all_records: true,
+        },
+    );
+
+    if report.is_clean() {
+        LaneDCheckedBaselineReadinessStatus::Ready {
+            records_considered: report.records_considered,
+            compared: report.compared,
+        }
+    } else {
+        LaneDCheckedBaselineReadinessStatus::NotClean { report }
+    }
 }
 
 fn validate_capture_run_shapes(summaries: &[LaneDSummary]) -> Result<(), LaneDBaselineError> {

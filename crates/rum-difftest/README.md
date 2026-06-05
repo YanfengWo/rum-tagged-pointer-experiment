@@ -151,6 +151,7 @@ cargo run -p rum-difftest -- lane-d --baseline crates/rum-difftest/perf/baseline
 cargo run -p rum-difftest -- lane-d --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
 cargo run -p rum-difftest -- lane-d --capture-runs 5 --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
 cargo run -p rum-difftest -- lane-d --threshold-profile ci-debug --capture-runs 5 --write-baseline /tmp/rum-lane-d-ci-debug.txt --fail-on-error
+cargo run -p rum-difftest -- lane-d --check-baseline-readiness
 ```
 
 The default `smoke` profile skips imported heavy / very-large cases so the
@@ -166,7 +167,12 @@ same run before writing and uses per-case median elapsed samples plus the
 slowest observed sample for guardrails. `--threshold-profile` selects the
 baseline threshold record set and capture defaults: `local-debug` for local dev
 runs, `ci-debug` for debug builds on CI machines, and `ci-release` for release
-builds on CI/release machines.
+builds on CI/release machines. `--check-baseline-readiness` checks the default
+checked smoke baseline artifacts for all threshold profiles and exits non-zero
+until the `ci-debug` / `ci-release` artifacts have been captured on the
+intended runners. The default expected paths are
+`perf/baselines/smoke.txt`, `perf/baselines/smoke-ci-debug.txt`, and
+`perf/baselines/smoke-ci-release.txt`.
 
 Start here:
 
