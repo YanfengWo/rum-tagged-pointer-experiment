@@ -1,0 +1,72 @@
+use std::process::ExitCode;
+
+use rum_difftest::divergences;
+
+pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    let mut iter = args.into_iter();
+    while let Some(arg) = iter.next() {
+        match arg.as_str() {
+            "--help" | "-h" => {
+                print_lane_c_usage();
+                return Ok(ExitCode::SUCCESS);
+            }
+            other => return Err(format!("unknown lane-c flag `{other}`").into()),
+        }
+    }
+
+    let report = divergences::validate_known_difference_ledger()?;
+
+    println!(
+        "known-difference ledger: {}",
+        divergences::known_difference_ledger_path().display()
+    );
+    println!("ledger entries: {}", report.records.len());
+    println!(
+        "fixture known differences: {}",
+        report.fixture_references.len()
+    );
+    println!(
+        "missing ledger entries: {}",
+        report.missing_ledger_entries.len()
+    );
+    println!(
+        "unreferenced ledger entries: {}",
+        report.unreferenced_ledger_entries.len()
+    );
+    println!("fixture mismatches: {}", report.fixture_mismatches.len());
+
+    for reference in &report.missing_ledger_entries {
+        println!(
+            "missing: id={} fixture={}",
+            reference.id,
+            reference.fixture.display()
+        );
+    }
+    for record in &report.unreferenced_ledger_entries {
+        let fixture = record
+            .fields
+            .get("fixture")
+            .map(String::as_str)
+            .unwrap_or("<missing fixture>");
+        println!("unreferenced: id={} fixture={fixture}", record.id);
+    }
+    for mismatch in &report.fixture_mismatches {
+        println!(
+            "fixture-mismatch: id={} ledger={} actual={}",
+            mismatch.id,
+            mismatch.ledger_fixture.display(),
+            mismatch.actual_fixture.display()
+        );
+    }
+
+    if report.is_clean() {
+        Ok(ExitCode::SUCCESS)
+    } else {
+        Ok(ExitCode::FAILURE)
+    }
+}
+
+fn print_lane_c_usage() {
+    println!("rum-difftest lane-c");
+    println!("  Validate that every fixture `!!! id=...` is present in the Lane C ledger");
+}

@@ -37,12 +37,22 @@ pub struct KnownDifferenceLedgerReport {
     pub fixture_references: Vec<KnownDifferenceReference>,
     pub missing_ledger_entries: Vec<KnownDifferenceReference>,
     pub unreferenced_ledger_entries: Vec<KnownDifferenceRecord>,
+    pub fixture_mismatches: Vec<KnownDifferenceFixtureMismatch>,
 }
 
 impl KnownDifferenceLedgerReport {
     pub fn is_clean(&self) -> bool {
-        self.missing_ledger_entries.is_empty() && self.unreferenced_ledger_entries.is_empty()
+        self.missing_ledger_entries.is_empty()
+            && self.unreferenced_ledger_entries.is_empty()
+            && self.fixture_mismatches.is_empty()
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KnownDifferenceFixtureMismatch {
+    pub id: String,
+    pub ledger_fixture: PathBuf,
+    pub actual_fixture: PathBuf,
 }
 
 #[derive(Debug, Error)]
@@ -108,12 +118,14 @@ pub fn validate_known_difference_ledger()
         .filter(|record| !fixture_refs_by_id.contains_key(&record.id))
         .cloned()
         .collect::<Vec<_>>();
+    let fixture_mismatches = collect_fixture_mismatches(&records, &fixture_refs_by_id);
 
     Ok(KnownDifferenceLedgerReport {
         records,
         fixture_references,
         missing_ledger_entries,
         unreferenced_ledger_entries,
+        fixture_mismatches,
     })
 }
 
@@ -211,6 +223,29 @@ fn collect_fixture_known_differences()
     Ok(references)
 }
 
+fn collect_fixture_mismatches(
+    records: &[KnownDifferenceRecord],
+    fixture_refs_by_id: &BTreeMap<String, KnownDifferenceReference>,
+) -> Vec<KnownDifferenceFixtureMismatch> {
+    records
+        .iter()
+        .filter_map(|record| {
+            let actual = fixture_refs_by_id.get(&record.id)?;
+            let ledger_fixture = PathBuf::from(
+                record
+                    .fields
+                    .get("fixture")
+                    .expect("required fixture field was already validated"),
+            );
+            (ledger_fixture != actual.fixture).then(|| KnownDifferenceFixtureMismatch {
+                id: record.id.clone(),
+                ledger_fixture,
+                actual_fixture: actual.fixture.clone(),
+            })
+        })
+        .collect()
+}
+
 fn collect_txt_files(root: &Path, out: &mut Vec<PathBuf>) -> Result<(), std::io::Error> {
     for entry in fs::read_dir(root)? {
         let path = entry?.path();
@@ -230,52 +265,4 @@ fn relative_to_crate_root(path: &Path) -> PathBuf {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parses_known_difference_ledger_records() {
-        let records = parse_known_difference_ledger(
-            r#"
-            # comment
-            id=case-a | type=temporary | status=open | fixture=cases/a.txt | reason=example | tracked_by=TODO.md:case-a | close_when=example is fixed
-            "#,
-        )
-        .unwrap();
-
-        assert_eq!(records.len(), 1);
-        assert_eq!(records[0].id, "case-a");
-        assert_eq!(records[0].fields["fixture"], "cases/a.txt");
-        assert_eq!(records[0].fields["tracked_by"], "TODO.md:case-a");
-    }
-
-    #[test]
-    fn ledger_records_require_tracking_metadata() {
-        let err = parse_known_difference_ledger(
-            "id=case-a | type=temporary | status=open | fixture=cases/a.txt | reason=example",
-        )
-        .unwrap_err();
-
-        assert!(matches!(
-            err,
-            KnownDifferenceLedgerError::MissingLedgerField { field, .. }
-                if field == "tracked_by"
-        ));
-    }
-
-    #[test]
-    fn known_difference_ledger_covers_checked_fixture_ids() {
-        let report = validate_known_difference_ledger().unwrap();
-
-        assert!(
-            !report.fixture_references.is_empty(),
-            "expected at least one fixture known-difference"
-        );
-        assert!(
-            report.is_clean(),
-            "known-difference ledger is out of sync\nmissing: {:?}\nunreferenced: {:?}",
-            report.missing_ledger_entries,
-            report.unreferenced_ledger_entries
-        );
-    }
-}
+mod tests;

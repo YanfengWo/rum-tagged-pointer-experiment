@@ -120,9 +120,9 @@ when the behavior is Wolfram-oracle-comparable.
 
 Lane C is the synchronization check for `!!! id=...` fixture entries. Keep
 known differences in `rum-difftest/divergences/known-differences.txt` and use
-`rum-difftest lane-c` to catch missing or unreferenced ledger rows. Ledger
-rows must carry `tracked_by` ownership metadata and `close_when` removal
-criteria.
+`rum-difftest lane-c` to catch missing rows, unreferenced rows, and stale
+ledger `fixture=...` metadata. Ledger rows must carry `tracked_by` ownership
+metadata and `close_when` removal criteria.
 
 Lane D currently executes imported timing and memory seed suites through local
 `rum` sessions and reports raw metrics. Its default `smoke` profile skips

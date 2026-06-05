@@ -114,9 +114,11 @@ input !!! id=name | type=temporary | rum=... | wolfram=... | reason=...
 
 For `rum`, this should become the divergence ledger for same-name features.
 Current implementation has `divergences/known-differences.txt` plus
-`rum-difftest lane-c` to validate fixture IDs against the ledger. Each ledger
-row must include `tracked_by` and `close_when` metadata so divergences remain
-owned by a roadmap item and have explicit removal criteria.
+`rum-difftest lane-c` to validate fixture IDs against the ledger. The check
+reports missing ledger rows, unreferenced ledger rows, and stale `fixture=...`
+metadata when a known-difference ID moves between fixture files. Each ledger row
+must include `tracked_by` and `close_when` metadata so divergences remain owned
+by a roadmap item and have explicit removal criteria.
 
 ### Lane D: Performance Regression
 
