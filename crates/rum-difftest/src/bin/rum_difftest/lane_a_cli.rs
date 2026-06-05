@@ -19,8 +19,8 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--config" => config_path = Some(PathBuf::from(expect_value(&mut iter, "--config")?)),
-            "--oracle-kernel" => {
-                oracle_kernel = Some(PathBuf::from(expect_value(&mut iter, "--oracle-kernel")?))
+            "--oracle-kernel" | "--oracle-command" => {
+                oracle_kernel = Some(PathBuf::from(expect_value(&mut iter, &arg)?))
             }
             "--fixture" => fixture = Some(PathBuf::from(expect_value(&mut iter, "--fixture")?)),
             "--limit" => {
@@ -41,7 +41,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
 
     let config = load_optional_config(config_path.as_deref())?;
     let oracle_kernel = resolve_oracle_kernel(oracle_kernel, &config).ok_or_else(|| {
-        "no oracle kernel configured; pass --oracle-kernel PATH or set oracle_kernel in a config file"
+        "no oracle kernel configured; pass --oracle-kernel/--oracle-command PATH or set oracle_kernel/oracle_command in a config file"
     })?;
 
     let mut oracle = OracleKernel::new(&oracle_kernel)?;
@@ -133,6 +133,7 @@ fn expect_value(
 
 fn print_lane_a_usage() {
     println!("rum-difftest lane-a [--oracle-kernel PATH]");
+    println!("rum-difftest lane-a [--oracle-command PATH]");
     println!("rum-difftest lane-a [--config PATH]");
     println!("  --fixture PATH            Run a single imported golden file");
     println!("  --limit N                 Stop after N compared cases");

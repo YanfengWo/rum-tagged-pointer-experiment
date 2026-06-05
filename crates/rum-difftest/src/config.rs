@@ -124,8 +124,9 @@ fn find_kernel_in_path() -> Option<PathBuf> {
 
 fn find_common_kernel_path() -> Option<PathBuf> {
     find_linux_wolfram_kernel().or_else(|| {
-        let mac_path = PathBuf::from("/Applications/Mathematica.app/Contents/MacOS/MathKernel");
-        mac_path.is_file().then_some(mac_path)
+        common_macos_kernel_paths()
+            .into_iter()
+            .find(|path| path.is_file())
     })
 }
 
@@ -158,6 +159,18 @@ fn find_linux_wolfram_kernel() -> Option<PathBuf> {
     None
 }
 
+fn common_macos_kernel_paths() -> Vec<PathBuf> {
+    [
+        "/Applications/Wolfram.app/Contents/MacOS/WolframKernel",
+        "/Applications/Mathematica.app/Contents/MacOS/WolframKernel",
+        "/Applications/Mathematica.app/Contents/MacOS/MathKernel",
+        "/Applications/Wolfram Engine.app/Contents/MacOS/WolframKernel",
+    ]
+    .into_iter()
+    .map(PathBuf::from)
+    .collect()
+}
+
 fn unquote(value: &str) -> String {
     if value.len() >= 2 {
         let bytes = value.as_bytes();
@@ -186,6 +199,19 @@ mod tests {
         .unwrap();
 
         assert_eq!(config.oracle_kernel, Some(PathBuf::from("/tmp/MathKernel")));
+    }
+
+    #[test]
+    fn parses_oracle_command_alias_from_config() {
+        let config = parse_config("oracle_command = 'WolframKernel'").unwrap();
+        assert_eq!(config.oracle_kernel, Some(PathBuf::from("WolframKernel")));
+    }
+
+    #[test]
+    fn common_macos_kernel_paths_include_wolfram_app() {
+        assert!(common_macos_kernel_paths().contains(&PathBuf::from(
+            "/Applications/Wolfram.app/Contents/MacOS/WolframKernel"
+        )));
     }
 
     #[test]

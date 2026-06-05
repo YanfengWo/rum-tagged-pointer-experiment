@@ -560,7 +560,7 @@ This roadmap intentionally uses two levels of detail:
     than philosophically important
 - [x] Create a dedicated `rum-difftest` crate and ingest the imported `ham` seed pack plus handoff docs as a first-class conformance workstream input
 - [ ] Keep `rum-difftest` split into explicit lanes instead of one monolithic diff bucket:
-  - [ ] Lane A: single-expression Wolfram diff fixtures and runner
+  - [x] Lane A: single-expression Wolfram diff fixtures and runner
   - [x] Land a first-pass Lane A runner that accepts a user-provided kernel path via CLI or config and keeps oracle artifacts transient
   - [x] Lane A follow-up: compare single-expression values, messages, and printed output instead of values only
   - [x] Lane A follow-up: curate resolved imported seed known differences such as `specific_override` into `cases/` before pruning seed-linked active ledger rows, preserving `seed/` as unchanged historical input via the retired seed manifest
@@ -580,14 +580,14 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane D follow-up: add multi-run baseline calibration before tightening elapsed thresholds beyond broad smoke guardrails
   - [x] Lane D follow-up: add CI-machine-specific threshold profiles before tightening elapsed thresholds beyond broad smoke guardrails
   - [ ] Lane D follow-up: capture checked `ci-debug` / `ci-release` baseline artifacts on the intended runners before tightening elapsed thresholds beyond broad smoke guardrails
-  - [ ] Lane E: keep host-contract tests in `rum`-native crate-local suites rather than Wolfram diff
-  - [ ] Lane F: keep adapter/protocol tests in adapter-native suites rather than Wolfram diff
+  - [x] Lane E: keep host-contract tests in `rum`-native crate-local suites rather than Wolfram diff, with current Rust host-contract coverage owned by `cargo test -p rum-host`
+  - [x] Lane F: keep adapter/protocol tests in adapter-native suites rather than Wolfram diff, with current Jupyter protocol coverage owned by `cargo test -p rum-jupyter`
 - [ ] Keep `rum`-specific kernel extensions and runtime/session semantics in crate-local suites unless they also have a meaningful Wolfram-oracle-comparable same-name surface
 - [ ] Keep Wolfram-oracle execution environment-gated even though the differential test workstream itself is required:
-  - [ ] accept a user-configured local oracle command such as `wolframscript`, `WolframKernel`, or `MathKernel`
-  - [ ] treat the oracle environment and license as user-provided rather than project-provided
-  - [ ] treat connector- or MCP-wrapped Wolfram access as an optional convenience for small spot checks rather than the baseline oracle path
-  - [ ] do not make default development or CI flows depend on Wolfram tooling being installed
+  - [x] accept a user-configured local kernel-compatible oracle command such as `WolframKernel`, `MathKernel`, or a compatible wrapper via CLI, config, environment, `PATH`, or common install discovery
+  - [x] treat the oracle environment and license as user-provided rather than project-provided
+  - [x] treat connector- or MCP-wrapped Wolfram access as an optional convenience for small spot checks rather than the baseline oracle path
+  - [x] do not make default development or CI flows depend on Wolfram tooling being installed
   - [ ] do not commit oracle-generated expected outputs into the repository
   - [ ] regenerate oracle comparison material on each diff run rather than relying on checked-in snapshots
   - [ ] allow oracle runs against non-pinned user versions as a compatibility check, not only against one project-standard Wolfram release

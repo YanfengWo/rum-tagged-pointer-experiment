@@ -23,7 +23,7 @@ into separate lanes with different oracles.
 For the Wolfram-backed lanes, keep these policy constraints explicit:
 
 - the oracle command should be user-configured and may point to
-  `wolframscript`, `WolframKernel`, `MathKernel`, or a thin wrapper script
+  `WolframKernel`, `MathKernel`, or a thin kernel-compatible wrapper script
 - the license belongs to the user running the diff, not to the project
 - generated oracle outputs are transient artifacts and should not be committed
 - every diff run should regenerate fresh comparison data
@@ -41,8 +41,12 @@ And keep the exclusion boundary explicit too:
 Current implementation status:
 
 - a first-pass `lane-a` runner now exists
-- it accepts `--oracle-kernel PATH` or `--config PATH`
-- config currently supports `oracle_kernel = "/path/to/WolframKernel"`
+- it accepts `--oracle-kernel PATH`, `--oracle-command PATH`, or
+  `--config PATH`
+- config currently supports `oracle_kernel = "/path/to/WolframKernel"` and
+  `oracle_command = "WolframKernel"`
+- oracle resolution also checks `RUM_DIFFTEST_ORACLE_KERNEL`, `PATH`, and
+  common local Wolfram install paths
 - it drives a local kernel executable directly and stores generated oracle
   inputs/wrappers only in a temporary run directory
 - Lane A/B CLI output records the resolved oracle executable and best-effort
@@ -187,10 +191,16 @@ These should be tested against `rum`'s own public contract:
 - host callbacks / input requests
 - Rust and Python adapter semantics
 
+Current Rust host coverage lives in `cargo test -p rum-host`. Future Python
+host coverage should live in the future Python host crate rather than in
+`rum-difftest`.
+
 ### Lane F: Adapter / Protocol Tests
 
 Jupyter and other protocols should be tested against protocol specs and `rum`'s
 own regression expectations, not against Wolfram transport behavior.
+
+Current Jupyter adapter/protocol coverage lives in `cargo test -p rum-jupyter`.
 
 ## What Should Not Be Forced Into Wolfram Diff
 
@@ -236,11 +246,11 @@ Raw counts:
    structural forms when broader Wolfram display syntax becomes a real fixture
    blocker.
 5. Continue extending Lane A/B curated fixtures from matrix-guided priorities.
-5. Capture checked `ci-debug` / `ci-release` Lane D artifacts on the intended
+6. Capture checked `ci-debug` / `ci-release` Lane D artifacts on the intended
    runners before tightening elapsed thresholds beyond broad smoke guardrails.
-6. Extend Lane C later with machine-checkable `tracked_by` targets if TODO or
+7. Extend Lane C later with machine-checkable `tracked_by` targets if TODO or
    matrix anchors become stable identifiers.
-7. Keep Lane E/F boundaries explicit: host-contract and adapter/protocol tests
+8. Keep Lane E/F boundaries explicit: host-contract and adapter/protocol tests
    stay in their owning crates rather than becoming Wolfram diffs.
 
 ## If This Folder Was Copied Standalone

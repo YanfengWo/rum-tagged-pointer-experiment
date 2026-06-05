@@ -13,7 +13,7 @@ It owns:
 - imported seed corpora
 - future `rum`-owned curated fixture trees
 - fixture parsers and normalization helpers
-- future user-configured Wolfram/Mathematica oracle runners
+- user-configured Wolfram/Mathematica oracle runners
 - divergence ledgers
 - performance baseline inputs
 
@@ -49,6 +49,7 @@ The crate now includes a first-pass `lane-a` runner:
 
 ```bash
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel
+cargo run -p rum-difftest -- lane-a --oracle-command WolframKernel
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --include-known-diffs
 ```
 
@@ -62,11 +63,15 @@ Supported config keys today:
 
 ```text
 oracle_kernel = "/path/to/WolframKernel"
+oracle_command = "WolframKernel"
 ```
 
-The current runner accepts a kernel executable path such as `WolframKernel` or
-`MathKernel`. It writes its oracle wrapper script and per-case input files to a
-temporary directory for each run, compares values, messages, and printed output
+The current runner accepts a kernel-compatible executable path or command such
+as `WolframKernel`, `MathKernel`, or a wrapper with the same `-noprompt
+-script` interface. Oracle resolution prefers the CLI flag, then config, then
+`RUM_DIFFTEST_ORACLE_KERNEL`, then `PATH`, then common local install paths. It
+writes its oracle wrapper script and per-case input files to a temporary
+directory for each run, compares values, messages, and printed output
 in-memory, and removes those artifacts afterward. The CLI reports the resolved
 oracle executable and best-effort Wolfram `$Version`; version probe failures
 are reported but do not fail the diff run. `rum` values are rendered through
@@ -87,6 +92,7 @@ fixtures:
 
 ```bash
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel
+cargo run -p rum-difftest -- lane-b --oracle-command WolframKernel
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --include-known-diffs
 ```
 
@@ -164,6 +170,21 @@ Layout:
 - `cases/`: `rum`-owned curated fixtures layered on top of the imported seeds
 - `divergences/`: checked known-difference ledgers
 - `perf/`: Lane D performance baseline policy and checked baseline artifacts
+
+## Lane E/F Boundaries
+
+Lane E and Lane F are intentionally not Wolfram oracle runners. Host-contract
+coverage belongs in the host crate, and adapter/protocol coverage belongs in
+the adapter crate that owns the transport contract:
+
+```bash
+cargo test -p rum-host
+cargo test -p rum-jupyter
+```
+
+Future adapters should follow the same split. For example, a future Python
+host crate should carry its own host-contract tests instead of adding a
+Wolfram diff lane for Python binding behavior.
 
 The first curated Lane A files now live under
 [cases/wolfram/core](./cases/wolfram/core/README.md). They currently cover:

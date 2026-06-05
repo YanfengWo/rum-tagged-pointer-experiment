@@ -107,8 +107,10 @@ single broad diff bucket:
   or TODO notes with explicit close criteria.
 - Lane D: local performance baseline inputs and runners. These are not
   semantic conformance tests and should not use a Wolfram oracle.
-- Lane E: host-contract tests stay in host/native crate suites.
-- Lane F: adapter/protocol tests stay in adapter-native suites.
+- Lane E: host-contract tests stay in host/native crate suites, currently
+  `cargo test -p rum-host` for the Rust host boundary.
+- Lane F: adapter/protocol tests stay in adapter-native suites, currently
+  `cargo test -p rum-jupyter` for the Jupyter protocol boundary.
 
 Messages and diagnostics start in runtime regression tests unless the
 differential runner can capture and compare them reliably. Lane A can compare
@@ -151,9 +153,13 @@ it should not use a Wolfram oracle.
 
 ## Oracle Policy
 
-Oracle runs use a user-provided local Wolfram kernel such as `WolframKernel` or
-`MathKernel`. Connector-hosted or MCP-wrapped sessions are acceptable for tiny
-manual spot checks but are not the baseline oracle.
+Oracle runs use a user-provided local Wolfram kernel such as `WolframKernel`,
+`MathKernel`, or a kernel-compatible wrapper command. Lane A/B accept
+`--oracle-kernel`, `--oracle-command`, config keys `oracle_kernel` /
+`oracle_command`, the `RUM_DIFFTEST_ORACLE_KERNEL` environment variable, `PATH`
+discovery, and common local install paths. Connector-hosted or MCP-wrapped
+sessions are acceptable for tiny manual spot checks but are not the baseline
+oracle.
 
 Rules:
 

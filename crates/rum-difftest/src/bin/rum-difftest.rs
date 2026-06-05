@@ -47,10 +47,10 @@ fn expect_value(
 
 fn print_usage() {
     println!(
-        "rum-difftest lane-a [--oracle-kernel PATH] [--config PATH] [--fixture PATH] [--limit N]"
+        "rum-difftest lane-a [--oracle-kernel PATH|--oracle-command PATH] [--config PATH] [--fixture PATH] [--limit N]"
     );
     println!(
-        "rum-difftest lane-b [--oracle-kernel PATH] [--config PATH] [--fixture PATH] [--limit N]"
+        "rum-difftest lane-b [--oracle-kernel PATH|--oracle-command PATH] [--config PATH] [--fixture PATH] [--limit N]"
     );
     println!("rum-difftest lane-c");
     println!(
