@@ -97,6 +97,23 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         print_case_value("rum", &step.rum);
         print_case_value("oracle", &step.oracle);
     }
+    for step in summary
+        .steps
+        .iter()
+        .filter(|step| step.status == LaneBStepStatus::Match && step.known_difference.is_some())
+        .take(5)
+    {
+        if let Some(known_difference) = &step.known_difference {
+            println!("---");
+            println!(
+                "resolved known difference: id={} type={}",
+                known_difference.id, known_difference.kind
+            );
+            println!("fixture: {}", step.fixture.display());
+            println!("step: {}", step.step_index);
+            println!("input: {}", step.input);
+        }
+    }
 
     let has_issues =
         summary.mismatches > 0 || summary.rum_failures > 0 || summary.oracle_failures > 0;

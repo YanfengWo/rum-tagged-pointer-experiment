@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -35,6 +36,8 @@ pub struct LaneASummary {
     pub rum_failures: usize,
     pub oracle_failures: usize,
     pub skipped_known_differences: usize,
+    pub confirmed_known_differences: usize,
+    pub resolved_known_differences: usize,
     pub cases: Vec<LaneACaseReport>,
 }
 
@@ -43,10 +46,18 @@ pub struct LaneACaseReport {
     pub fixture: PathBuf,
     pub input: String,
     pub expected_seed: Option<String>,
+    pub known_difference: Option<LaneAKnownDifference>,
     pub seed_matches_oracle: Option<bool>,
     pub rum: CaseValue,
     pub oracle: CaseValue,
     pub status: LaneACaseStatus,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LaneAKnownDifference {
+    pub id: String,
+    pub kind: String,
+    pub reason: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -82,6 +93,8 @@ pub fn run<O: Oracle>(
         rum_failures: 0,
         oracle_failures: 0,
         skipped_known_differences: 0,
+        confirmed_known_differences: 0,
+        resolved_known_differences: 0,
         cases: Vec::new(),
     };
 
@@ -92,25 +105,23 @@ pub fn run<O: Oracle>(
         for entry in entries {
             summary.total_seen += 1;
 
-            let (input, expected_seed) = match entry {
-                GoldenEntry::Normal { input, expected } => (input, Some(expected)),
-                GoldenEntry::KnownDifference { input, .. } => {
+            let (input, expected_seed, known_difference) = match entry {
+                GoldenEntry::Normal { input, expected } => (input, Some(expected), None),
+                GoldenEntry::KnownDifference { input, metadata } => {
                     if !options.include_known_differences {
                         summary.skipped_known_differences += 1;
                         continue;
                     }
-                    (input, None)
+                    (
+                        input,
+                        None,
+                        Some(LaneAKnownDifference::from_metadata(&metadata)),
+                    )
                 }
             };
 
-            let case = run_case(oracle, &fixture, input, expected_seed);
-            summary.compared += 1;
-            match case.status {
-                LaneACaseStatus::Match => summary.matches += 1,
-                LaneACaseStatus::Mismatch => summary.mismatches += 1,
-                LaneACaseStatus::RumFailure => summary.rum_failures += 1,
-                LaneACaseStatus::OracleFailure => summary.oracle_failures += 1,
-            }
+            let case = run_case(oracle, &fixture, input, expected_seed, known_difference);
+            record_case_result(&mut summary, &case);
             summary.cases.push(case);
 
             if options.limit.is_some_and(|limit| summary.compared >= limit) {
@@ -122,11 +133,41 @@ pub fn run<O: Oracle>(
     Ok(summary)
 }
 
+impl LaneAKnownDifference {
+    fn from_metadata(metadata: &BTreeMap<String, String>) -> Self {
+        Self {
+            id: metadata["id"].clone(),
+            kind: metadata["type"].clone(),
+            reason: metadata["reason"].clone(),
+        }
+    }
+}
+
+fn record_case_result(summary: &mut LaneASummary, case: &LaneACaseReport) {
+    summary.compared += 1;
+    match case.status {
+        LaneACaseStatus::Match => summary.matches += 1,
+        LaneACaseStatus::Mismatch => summary.mismatches += 1,
+        LaneACaseStatus::RumFailure => summary.rum_failures += 1,
+        LaneACaseStatus::OracleFailure => summary.oracle_failures += 1,
+    }
+
+    if case.known_difference.is_some() {
+        match case.status {
+            LaneACaseStatus::Match => summary.resolved_known_differences += 1,
+            LaneACaseStatus::Mismatch
+            | LaneACaseStatus::RumFailure
+            | LaneACaseStatus::OracleFailure => summary.confirmed_known_differences += 1,
+        }
+    }
+}
+
 fn run_case<O: Oracle>(
     oracle: &mut O,
     fixture: &Path,
     input: String,
     expected_seed: Option<String>,
+    known_difference: Option<LaneAKnownDifference>,
 ) -> LaneACaseReport {
     let rum = run_rum_case(&input);
     let oracle_result = run_oracle_case(oracle, &input);
@@ -150,6 +191,7 @@ fn run_case<O: Oracle>(
         fixture: fixture.to_path_buf(),
         input,
         expected_seed,
+        known_difference,
         seed_matches_oracle,
         rum,
         oracle: oracle_result,

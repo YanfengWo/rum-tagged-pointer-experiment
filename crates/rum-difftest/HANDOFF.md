@@ -71,6 +71,14 @@ Use a Wolfram oracle for one-shot expression checks:
 This lane should start from the imported `ham` golden files under
 [seed/ham-import/golden](./seed/ham-import/golden).
 
+Run `lane-a --include-known-diffs` when auditing imported one-shot
+divergences. Included known-difference cases carry their fixture metadata into
+the report, and the summary counts confirmed vs resolved known differences so
+fixed rows can be removed from the ledger deliberately. Resolved rows are
+listed by ID and fixture location. For imported seed rows, treat this as a
+curation signal; keep `seed/` unchanged and migrate promoted coverage into
+`cases/` before pruning seed-linked ledger rows.
+
 Priority areas:
 
 - arithmetic normalization and exact numbers
@@ -93,7 +101,8 @@ This lane should cover:
 Run `lane-b --include-known-diffs` when auditing current divergences. Included
 known-difference steps carry their fixture metadata into the report, and the
 summary counts confirmed vs resolved known differences so fixed rows can be
-removed from the ledger deliberately.
+removed from the ledger deliberately. Resolved rows are listed by ID and
+fixture location.
 
 Recommended format:
 

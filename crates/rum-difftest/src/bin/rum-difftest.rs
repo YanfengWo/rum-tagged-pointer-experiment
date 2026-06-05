@@ -1,10 +1,7 @@
-use std::path::PathBuf;
 use std::process::ExitCode;
 
-use rum_difftest::config::{load_optional_config, resolve_oracle_kernel};
-use rum_difftest::lane_a::{self, CaseValue, LaneACaseStatus, LaneAOptions};
-use rum_difftest::oracle::OracleKernel;
-
+#[path = "rum_difftest/lane_a_cli.rs"]
+mod lane_a_cli;
 #[path = "rum_difftest/lane_b_cli.rs"]
 mod lane_b_cli;
 #[path = "rum_difftest/lane_c_cli.rs"]
@@ -26,7 +23,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
 
     match args.next().as_deref() {
-        Some("lane-a") => run_lane_a(args.collect()),
+        Some("lane-a") => lane_a_cli::run_lane_a(args.collect()),
         Some("lane-b") => lane_b_cli::run_lane_b(args.collect()),
         Some("lane-c") => lane_c_cli::run_lane_c(args.collect()),
         Some("lane-d") => lane_d_cli::run_lane_d(args.collect()),
@@ -36,116 +33,6 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
         }
         Some(other) => Err(format!("unknown subcommand `{other}`").into()),
     }
-}
-
-fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
-    let mut config_path = None;
-    let mut oracle_kernel = None;
-    let mut fixture = None;
-    let mut limit = None;
-    let mut include_known_differences = false;
-    let mut fail_on_mismatch = false;
-
-    let mut iter = args.into_iter();
-    while let Some(arg) = iter.next() {
-        match arg.as_str() {
-            "--config" => config_path = Some(PathBuf::from(expect_value(&mut iter, "--config")?)),
-            "--oracle-kernel" => {
-                oracle_kernel = Some(PathBuf::from(expect_value(&mut iter, "--oracle-kernel")?))
-            }
-            "--fixture" => fixture = Some(PathBuf::from(expect_value(&mut iter, "--fixture")?)),
-            "--limit" => {
-                let value = expect_value(&mut iter, "--limit")?;
-                limit = Some(value.parse::<usize>()?);
-            }
-            "--include-known-diffs" | "--include-known-differences" => {
-                include_known_differences = true
-            }
-            "--fail-on-mismatch" => fail_on_mismatch = true,
-            "--help" | "-h" => {
-                print_lane_a_usage();
-                return Ok(ExitCode::SUCCESS);
-            }
-            other => return Err(format!("unknown lane-a flag `{other}`").into()),
-        }
-    }
-
-    let config = load_optional_config(config_path.as_deref())?;
-    let oracle_kernel = resolve_oracle_kernel(oracle_kernel, &config).ok_or_else(|| {
-        "no oracle kernel configured; pass --oracle-kernel PATH or set oracle_kernel in a config file"
-    })?;
-
-    let mut oracle = OracleKernel::new(&oracle_kernel)?;
-    let summary = lane_a::run(
-        &mut oracle,
-        &LaneAOptions {
-            fixture,
-            limit,
-            include_known_differences,
-        },
-    )?;
-
-    println!("lane-a oracle: {}", oracle.executable().display());
-    println!("cases seen: {}", summary.total_seen);
-    println!("cases compared: {}", summary.compared);
-    println!("matches: {}", summary.matches);
-    println!("mismatches: {}", summary.mismatches);
-    println!("rum failures: {}", summary.rum_failures);
-    println!("oracle failures: {}", summary.oracle_failures);
-    println!(
-        "skipped known differences: {}",
-        summary.skipped_known_differences
-    );
-
-    for case in summary
-        .cases
-        .iter()
-        .filter(|case| case.status != LaneACaseStatus::Match)
-        .take(5)
-    {
-        println!("---");
-        println!("fixture: {}", case.fixture.display());
-        println!("input: {}", case.input);
-        println!("status: {:?}", case.status);
-        if let Some(expected_seed) = &case.expected_seed {
-            println!("seed expected: {expected_seed}");
-        }
-        match &case.rum {
-            CaseValue::Value {
-                value, messages, ..
-            } => {
-                println!("rum value: {value}");
-                if !messages.is_empty() {
-                    println!("rum messages: {}", messages.join(" | "));
-                }
-            }
-            CaseValue::Failure { message } => println!("rum failure: {message}"),
-        }
-        match &case.oracle {
-            CaseValue::Value {
-                value,
-                messages,
-                printed_output,
-            } => {
-                println!("oracle value: {value}");
-                if !messages.is_empty() {
-                    println!("oracle messages: {}", messages.join(" | "));
-                }
-                if let Some(printed_output) = printed_output {
-                    println!("oracle printed: {printed_output}");
-                }
-            }
-            CaseValue::Failure { message } => println!("oracle failure: {message}"),
-        }
-    }
-
-    let has_issues =
-        summary.mismatches > 0 || summary.rum_failures > 0 || summary.oracle_failures > 0;
-    if fail_on_mismatch && has_issues {
-        return Ok(ExitCode::FAILURE);
-    }
-
-    Ok(ExitCode::SUCCESS)
 }
 
 fn expect_value(
@@ -168,15 +55,4 @@ fn print_usage() {
         "rum-difftest lane-d [--suite all|timing|memory] [--profile smoke|full] [--limit N] [--baseline PATH] [--write-baseline PATH]"
     );
     println!("rum-difftest --help");
-}
-
-fn print_lane_a_usage() {
-    println!("rum-difftest lane-a [--oracle-kernel PATH]");
-    println!("rum-difftest lane-a [--config PATH]");
-    println!("  --fixture PATH            Run a single imported golden file");
-    println!("  --limit N                 Stop after N compared cases");
-    println!("  --include-known-diffs     Include `!!!` cases in the run");
-    println!("  --include-known-differences");
-    println!("                              Alias for --include-known-diffs");
-    println!("  --fail-on-mismatch        Exit non-zero if any case mismatches or fails");
 }

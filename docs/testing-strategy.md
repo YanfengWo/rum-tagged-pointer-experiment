@@ -125,9 +125,12 @@ ledger `fixture=...` metadata. Ledger rows must carry `tracked_by` ownership
 metadata and `close_when` removal criteria.
 
 Use Lane A/B `--include-known-diffs` when auditing open divergences against a
-local Wolfram oracle. Lane B reports included known-difference metadata and
-counts confirmed vs resolved rows so newly matching stateful divergences can be
-removed from fixtures and the ledger intentionally.
+local Wolfram oracle. Both lanes report included known-difference metadata and
+count confirmed vs resolved rows. Resolved rows are listed by ID and fixture
+location so newly matching divergences can be removed from fixtures and the
+ledger intentionally. For imported `seed/` rows, treat resolved output as a
+curation signal: keep the historical seed unchanged, migrate promoted coverage
+into `cases/`, then prune seed-linked ledger rows.
 
 Lane D currently executes imported timing and memory seed suites through local
 `rum` sessions and reports raw metrics. Its default `smoke` profile skips

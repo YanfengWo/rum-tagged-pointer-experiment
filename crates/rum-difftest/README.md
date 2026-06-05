@@ -49,6 +49,7 @@ The crate now includes a first-pass `lane-a` runner:
 
 ```bash
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel
+cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --include-known-diffs
 ```
 
 You can also point it at a config file:
@@ -70,7 +71,12 @@ in-memory, and removes those artifacts afterward. `rum` values are rendered
 through the shared difftest InputForm-like renderer, which covers common list,
 rule, delayed-rule, and association output shapes before comparison. It is
 intentionally not yet a complete Wolfram display implementation or transport
-model.
+model. When `--include-known-diffs` is used, the report includes
+known-difference ID/type/reason metadata and counts confirmed vs resolved known
+differences. Resolved known differences are listed by ID and fixture location
+so stale imported divergences are visible before curation. Keep `seed/`
+unchanged; migrate promoted cases under `cases/` before pruning seed-linked
+ledger rows.
 
 ## Lane B Runner
 
@@ -89,7 +95,8 @@ attribute, and precedence checks a real ordered-session oracle. The runner
 compares InputForm-like result values plus per-step message and print streams.
 When `--include-known-diffs` is used, the report includes the known-difference
 ID/type/reason for non-matching steps and counts confirmed vs resolved known
-differences so fixed divergences are visible before removing ledger rows.
+differences. Resolved known differences are listed by ID and fixture location
+so fixed divergences are visible before removing ledger rows.
 Long-lived interactive process reuse remains a future throughput refinement.
 
 ## Lane C Runner
