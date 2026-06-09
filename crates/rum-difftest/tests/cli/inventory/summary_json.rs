@@ -146,3 +146,42 @@ fn inventory_summary_without_baseline_reports_unchecked_clean_state() {
     assert_json_null(&summary_json, "/baseline");
     fs::remove_dir_all(temp_dir).unwrap();
 }
+
+#[test]
+fn failed_inventory_baseline_gate_still_writes_dirty_summary_json() {
+    let temp_dir = unique_temp_dir("inventory-json-dirty-baseline");
+    let baseline_path = temp_dir.join("inventory-baseline.txt");
+    let summary_path = temp_dir.join("summary.json");
+    fs::create_dir_all(&temp_dir).unwrap();
+    fs::write(
+        &baseline_path,
+        "lane=lane-a source=curated-core min_fixtures=999 min_entries=999 min_normal_entries=999 max_known_difference_entries=0\n",
+    )
+    .unwrap();
+
+    let output = run_difftest(&[
+        "inventory",
+        "--baseline",
+        baseline_path.to_str().unwrap(),
+        "--fail-on-regression",
+        "--summary-json",
+        summary_path.to_str().unwrap(),
+    ]);
+
+    assert!(!output.status.success());
+    let summary = fs::read_to_string(&summary_path).unwrap();
+    let summary_json = parse_summary_json(&summary);
+    assert_eq!(json_str(&summary_json, "/lane"), "inventory");
+    assert!(!json_bool(&summary_json, "/clean"));
+    assert!(json_bool(&summary_json, "/baseline_checked"));
+    assert!(!json_bool(&summary_json, "/baseline/clean"));
+    assert_eq!(json_u64(&summary_json, "/baseline/regressions"), 1);
+    assert_eq!(
+        json_str(
+            &json_array(&summary_json, "/baseline/regression_details")[0],
+            "/lane"
+        ),
+        "lane-a"
+    );
+    fs::remove_dir_all(temp_dir).unwrap();
+}
