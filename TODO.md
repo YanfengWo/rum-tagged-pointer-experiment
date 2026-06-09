@@ -606,10 +606,10 @@ This roadmap intentionally uses two levels of detail:
     machine-readable report regressions cannot pass through string-fragment
     assertions alone
   - [x] Lane A/B follow-up: expose oracle process counts in lane summary JSON
-    plus concrete batch transport metadata, and keep Lane A text output showing
-    process counts, making the current case-isolated batch Lane A transport and
-    single-process Lane B batch transport auditable before any future
-    interactive reuse work
+    plus concrete batch transport metadata and generic batch/input counts, and
+    keep Lane A text output showing process counts, making the current
+    case-isolated batch Lane A transport and single-process Lane B batch
+    transport auditable before any future interactive reuse work
   - [x] Lane A follow-up: add a curated structure-selector fixture for stable
     `Part` / `Extract` / `ReplacePart` / `Depth` / `Level` conformance, and
     guard it with the checked inventory category baseline

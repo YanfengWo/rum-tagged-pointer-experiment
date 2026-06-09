@@ -133,9 +133,9 @@ curation signal; keep `seed/` unchanged and migrate promoted coverage into
 `cases/` before pruning seed-linked ledger rows.
 `lane-a --summary-json PATH` writes a stable machine-readable summary with
 oracle configuration, run options, comparison counts, known-difference counts,
-seed-drift counts, and `counts.oracle_processes` without freezing per-case
-report rows. The current Lane A `OracleKernel` transport reports one oracle
-process for a non-empty run by submitting compared cases as isolated
+seed-drift counts, and oracle process/batch/input counts without freezing
+per-case report rows. The current Lane A `OracleKernel` transport reports one
+oracle process for a non-empty run by submitting compared cases as isolated
 single-expression batches, and the JSON oracle section reports the concrete
 batch transport name plus process count.
 
@@ -164,10 +164,10 @@ summary counts confirmed vs resolved known differences so fixed rows can be
 removed from the ledger deliberately. Resolved rows are listed by ID and
 fixture location.
 `lane-b --summary-json PATH` writes the same stable machine-readable summary
-shape as Lane A, including `counts.oracle_processes`, without freezing per-step
-report rows. Lane B also reports the concrete session-batch transport and
-process count so the current single-process batch path is visible before any
-future interactive reuse transport is added.
+shape as Lane A, including oracle process/batch/input counts, without freezing
+per-step report rows. Lane B also reports the concrete session-batch transport
+and process count so the current single-process batch path is visible before
+any future interactive reuse transport is added.
 
 Recommended format:
 

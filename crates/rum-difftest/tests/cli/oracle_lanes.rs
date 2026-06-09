@@ -69,6 +69,8 @@ fn oracle_lanes_write_machine_readable_summary_json() {
         assert_eq!(json_u64(&summary_json, "/counts/items_compared"), 1);
         assert_eq!(json_u64(&summary_json, "/counts/oracle_failures"), 1);
         assert_eq!(json_u64(&summary_json, "/counts/oracle_processes"), 1);
+        assert_eq!(json_u64(&summary_json, "/counts/oracle_batches"), 1);
+        assert_eq!(json_u64(&summary_json, "/counts/oracle_batch_inputs"), 1);
         assert_eq!(json_u64(&summary_json, "/issue_samples_limit"), 5);
         assert_eq!(json_u64(&summary_json, "/issue_samples_emitted"), 1);
         assert_eq!(json_u64(&summary_json, "/issue_samples_total"), 1);
@@ -140,10 +142,14 @@ fn oracle_lanes_bound_summary_json_issue_samples() {
         assert_eq!(json_str(&samples[0], "/kind"), "non_match");
         if lane == "lane-b" {
             assert_eq!(json_u64(&summary_json, "/counts/oracle_processes"), 1);
+            assert_eq!(json_u64(&summary_json, "/counts/oracle_batches"), 1);
+            assert_eq!(json_u64(&summary_json, "/counts/oracle_batch_inputs"), 2);
             assert_eq!(json_u64(&summary_json, "/counts/oracle_session_batches"), 1);
             assert_eq!(json_u64(&summary_json, "/counts/oracle_session_steps"), 2);
         } else {
             assert_eq!(json_u64(&summary_json, "/counts/oracle_processes"), 1);
+            assert_eq!(json_u64(&summary_json, "/counts/oracle_batches"), 2);
+            assert_eq!(json_u64(&summary_json, "/counts/oracle_batch_inputs"), 2);
         }
         fs::remove_dir_all(temp_dir).unwrap();
     }
