@@ -207,7 +207,7 @@ mod tests {
         assert_eq!(lane_a.totals_by_category()["context-namespace"].entries, 14);
         assert_eq!(
             lane_a.totals_by_category()["definitions-precedence"].entries,
-            8
+            14
         );
         assert_eq!(lane_a.totals_by_category()["exact-arithmetic"].entries, 20);
         assert_eq!(

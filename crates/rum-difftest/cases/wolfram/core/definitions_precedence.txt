@@ -8,3 +8,9 @@ rev[x_] := any[x]; rev[x_Integer] := integer[x]; {rev[7], rev[a]} ||| {integer[7
 typed[x_] := any[x]; typed[x_String] := string[x]; typed[x_Integer] := integer[x]; {typed["s"], typed[2], typed[q]} ||| {string["s"], integer[2], any[q]}
 literal[x_] := any[x]; literal[x_String] := string[x]; literal["a"] := exact; {literal["a"], literal["b"], literal[c]} ||| {exact, string["b"], any[c]}
 g[x_] := base[x]; u /: g[u[x_Integer]] := up[x]; {g[u[3]], g[q[3]]} ||| {up[3], base[q[3]]}
+sv[x_][y_Integer] := pair[x, y]; {sv[1][2], sv[1][a]} ||| {pair[1, 2], sv[1][a]}
+sv2[x_][y_] := pair[x, y]; sv2[a_][b_] := {a, b}; sv2[1][2] ||| {1, 2}
+n = 1; im /: h[im[x_Integer]] = n; n = 2; h[im[7]] ||| 1
+uv /: h[uv[x_]] := first[x]; uv /: h[uv[y_]] := second[y]; h[uv[a]] ||| second[a]
+tag /: outer[tag[x_], y_] := left[x, y]; tag /: outer[y_, tag[x_]] := right[y, x]; {outer[tag[1], z], outer[z, tag[2]]} ||| {left[1, z], right[z, 2]}
+ts /: ts[x_][y_] := pair[x, y]; ts[1][2] ||| pair[1, 2]

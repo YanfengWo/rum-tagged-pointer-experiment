@@ -706,8 +706,9 @@ This roadmap intentionally uses two levels of detail:
     category baseline
   - [x] Lane A follow-up: broaden the curated definition-precedence fixture
     with stable downvalue replacement, literal-vs-typed dispatch, reversed
-    generic-vs-typed downvalue insertion, and upvalue precedence cases, and
-    guard the higher coverage floor in the inventory baseline
+    generic-vs-typed downvalue insertion, SubValue dispatch, immediate
+    TagSet capture, and multi-position UpValue precedence cases, and guard the
+    higher coverage floor in the inventory baseline
   - [x] Lane A follow-up: add a curated options-surface fixture for stable
     `Options` / `SetOptions` / `OptionValue` / `OptionsPattern` conformance,
     and guard it with the checked inventory category baseline
