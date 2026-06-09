@@ -3,11 +3,37 @@ use std::fs;
 use super::{json_bool, json_str, parse_summary_json, run_difftest, stderr_text, unique_temp_dir};
 
 #[test]
-fn non_oracle_commands_emit_schema_versioned_summary_json() {
+fn commands_emit_schema_versioned_summary_json() {
     let temp_dir = unique_temp_dir("summary-contract");
     fs::create_dir_all(&temp_dir).unwrap();
     let cases: &[(&str, &[&str], &str, &str)] = &[
         ("check", &["check", "--summary-json"], "/command", "check"),
+        (
+            "lane-a",
+            &[
+                "lane-a",
+                "--oracle-command",
+                "/bin/true",
+                "--limit",
+                "1",
+                "--summary-json",
+            ],
+            "/lane",
+            "lane-a",
+        ),
+        (
+            "lane-b",
+            &[
+                "lane-b",
+                "--oracle-command",
+                "/bin/true",
+                "--limit",
+                "1",
+                "--summary-json",
+            ],
+            "/lane",
+            "lane-b",
+        ),
         (
             "inventory",
             &["inventory", "--summary-json"],

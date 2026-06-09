@@ -83,10 +83,11 @@ consumers should stay on the current version.
 
 CLI regression tests parse generated summaries as JSON and assert the schema
 version, so machine-readable report changes should not rely only on string
-fragment checks. The integration suite also includes a small non-oracle
-summary contract smoke that runs the `check`, `inventory`, `lane-c`, and
-`lane-d` summary paths together, including a failing aggregate `check`, so
-schema-versioned JSON emission stays consistent across command families.
+fragment checks. The integration suite also includes a small summary contract
+smoke that runs `check`, fake-oracle `lane-a` / `lane-b`, `inventory`,
+`lane-c`, and `lane-d` summary paths together, including a failing aggregate
+`check`, so schema-versioned JSON emission stays consistent across command
+families.
 
 ## Fixture Inventory
 
