@@ -210,8 +210,24 @@ mod tests {
             lane_a.totals_by_category()["structure-selectors"].entries,
             10
         );
+        assert_eq!(
+            lane_a.totals_by_category()["smoke-strings"].normal_entries,
+            6
+        );
+        assert_eq!(
+            lane_a.totals_by_category()["smoke-strings"].known_difference_entries,
+            1
+        );
+        assert_eq!(
+            lane_a.totals_by_category()["strings-surface"].normal_entries,
+            10
+        );
+        assert_eq!(
+            lane_a.totals_by_category()["strings-surface"].known_difference_entries,
+            1
+        );
         assert_eq!(lane_a.totals_by_category()["threading"].entries, 10);
-        assert_eq!(lane_a.totals().known_difference_entries, 3);
+        assert_eq!(lane_a.totals().known_difference_entries, 5);
         assert_eq!(lane_b.totals().fixtures, 4);
         assert_eq!(lane_b.totals_by_source()["stateful"].fixtures, 4);
         assert_eq!(

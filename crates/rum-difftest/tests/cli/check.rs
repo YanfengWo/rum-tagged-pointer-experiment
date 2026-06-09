@@ -73,7 +73,7 @@ fn check_writes_machine_readable_summary_json() {
     assert_eq!(json_u64(inventory, "/records_considered"), 37);
     let lane_c = check_entry(&summary_json, "lane-c-ledger");
     assert!(json_bool(lane_c, "/clean"));
-    assert_eq!(json_u64(lane_c, "/counts/active_ledger_entries"), 2);
+    assert_eq!(json_u64(lane_c, "/counts/active_ledger_entries"), 4);
     assert_eq!(json_u64(lane_c, "/issues/tracking_target_issues"), 0);
     let artifact_hygiene = check_entry(&summary_json, "artifact-hygiene");
     assert!(json_bool(artifact_hygiene, "/clean"));
@@ -279,7 +279,7 @@ fn check_exits_nonzero_for_inventory_baseline_regression() {
     let summary_json = parse_summary_json(&summary);
     assert_eq!(json_u64(&summary_json, "/issue_samples_limit"), 1);
     assert_eq!(json_u64(&summary_json, "/issue_samples_emitted"), 1);
-    assert_eq!(json_u64(&summary_json, "/issue_samples_total"), 3);
+    assert_eq!(json_u64(&summary_json, "/issue_samples_total"), 4);
     assert!(json_bool(&summary_json, "/issue_samples_truncated"));
     let samples = json_array(&summary_json, "/issue_samples");
     assert_eq!(samples.len(), 1);

@@ -48,14 +48,27 @@ userContext = "Global`";
 userContextPath = {"System`"};
 initialPackages = {};
 initialContexts = {};
+initialContextPath = {};
+packageContextRoots = {};
+contextRoot[ctx_String] := Module[{parts = StringSplit[ctx, "`"]},
+  If[Length[parts] > 0, First[parts] <> "`", ctx]
+];
+removableContextQ[ctx_String, userPackageContexts_] := Module[{root = contextRoot[ctx]},
+  !MemberQ[initialContexts, ctx] &&
+  !StringMatchQ[ctx, "System`*"] &&
+  (!MemberQ[packageContextRoots, root] || MemberQ[userPackageContexts, root])
+];
 resetFixtureState[] := (
-  Quiet[Remove["Global`*"], {Remove::rmnsm, Remove::rmvex}];
+  (* Remove user contexts without tearing down lazily loaded Wolfram packages. *)
+  packageContextRoots = Union[packageContextRoots, contextRoot /@ $Packages];
+  userPackageContexts = Complement[$ContextPath, initialContextPath];
+  Quiet[Remove["Global`*"]];
   Scan[
     Function[{ctx},
       If[
-        StringQ[ctx] && !MemberQ[initialContexts, ctx] && !StringMatchQ[ctx, "System`*"],
+        removableContextQ[ctx, userPackageContexts],
         With[{pattern = ctx <> "*"},
-          Quiet[Remove[pattern], {Remove::rmnsm, Remove::rmvex}]
+          Quiet[Remove[pattern]]
         ]
       ]
     ],
@@ -76,6 +89,9 @@ RumDifftestOracle`batchManifestPaths = Select[
 ];
 RumDifftestOracle`initialPackages = $Packages;
 RumDifftestOracle`initialContexts = Contexts[];
+RumDifftestOracle`initialContextPath = $ContextPath;
+RumDifftestOracle`packageContextRoots =
+  RumDifftestOracle`contextRoot /@ $Packages;
 Do[
   RumDifftestOracle`resetFixtureState[];
   RumDifftestOracle`inputPaths = Select[

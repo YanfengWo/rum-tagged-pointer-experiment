@@ -9,6 +9,8 @@ use crate::fixtures::{GoldenEntry, lane_a_default_fixture_paths, load_text, pars
 use crate::oracle::{Oracle, OracleError};
 use crate::value_render::render_input_form_like;
 
+const SESSION_BATCH_RESULT_MARKER: &str = "__RUM_DIFFTEST_SESSION_BATCH_RESULT__=";
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LaneAOptions {
     pub fixture: Option<PathBuf>,
@@ -232,13 +234,86 @@ fn run_oracle_case_batches<O: Oracle>(
             };
             cases.len()
         ],
-        Err(err) => vec![
-            CaseValue::Failure {
-                message: render_oracle_error(&err),
-            };
-            cases.len()
-        ],
+        Err(err) => partial_timeout_case_values(&err, cases)
+            .unwrap_or_else(|| failure_case_values(cases.len(), render_oracle_error(&err))),
     }
+}
+
+fn partial_timeout_case_values(
+    error: &OracleError,
+    cases: &[PreparedLaneACase],
+) -> Option<Vec<CaseValue>> {
+    let OracleError::TimedOut {
+        executable,
+        timeout_millis,
+        stdout,
+        stderr,
+    } = error
+    else {
+        return None;
+    };
+
+    let mut values = vec![None; cases.len()];
+    for line in stdout.lines() {
+        let Some(payload) = line.strip_prefix(SESSION_BATCH_RESULT_MARKER) else {
+            continue;
+        };
+        let Some((batch_text, rest)) = payload.split_once('\t') else {
+            continue;
+        };
+        let Some((step_text, value)) = rest.split_once('\t') else {
+            continue;
+        };
+        let Ok(batch_index) = batch_text.parse::<usize>() else {
+            continue;
+        };
+        let Ok(step_index) = step_text.parse::<usize>() else {
+            continue;
+        };
+        if batch_index == 0 || batch_index > values.len() || step_index != 1 {
+            continue;
+        }
+        values[batch_index - 1] = Some(value.trim().to_owned());
+    }
+
+    let completed = values.iter().filter(|value| value.is_some()).count();
+    if completed == 0 {
+        return None;
+    }
+
+    let first_incomplete = values
+        .iter()
+        .position(Option::is_none)
+        .map(|index| (index + 1, cases[index].input.as_str()));
+    let timeout_context = PartialTimeoutContext {
+        executable: executable.display().to_string(),
+        timeout_millis: *timeout_millis,
+        completed,
+        total: cases.len(),
+        first_incomplete,
+        stdout_len: stdout.len(),
+        stderr_len: stderr.len(),
+    };
+    Some(
+        values
+            .into_iter()
+            .enumerate()
+            .map(|(index, value)| match value {
+                Some(value) => CaseValue::Value {
+                    value,
+                    messages: Vec::new(),
+                    printed_output: None,
+                },
+                None => CaseValue::Failure {
+                    message: timeout_context.message(index + 1),
+                },
+            })
+            .collect(),
+    )
+}
+
+fn failure_case_values(count: usize, message: String) -> Vec<CaseValue> {
+    vec![CaseValue::Failure { message }; count]
 }
 
 fn run_case(prepared: PreparedLaneACase, oracle_result: CaseValue) -> LaneACaseReport {
@@ -330,7 +405,48 @@ fn normalize_oracle_messages(text: &str) -> Vec<String> {
 }
 
 fn render_oracle_error(error: &OracleError) -> String {
-    error.to_string()
+    match error {
+        OracleError::TimedOut {
+            executable,
+            timeout_millis,
+            stdout,
+            stderr,
+        } => format!(
+            "oracle executable `{}` timed out after {timeout_millis} ms (captured stdout bytes: {}, stderr bytes: {})",
+            executable.display(),
+            stdout.len(),
+            stderr.len()
+        ),
+        _ => error.to_string(),
+    }
+}
+
+struct PartialTimeoutContext<'a> {
+    executable: String,
+    timeout_millis: u128,
+    completed: usize,
+    total: usize,
+    first_incomplete: Option<(usize, &'a str)>,
+    stdout_len: usize,
+    stderr_len: usize,
+}
+
+impl PartialTimeoutContext<'_> {
+    fn message(&self, batch_index: usize) -> String {
+        let first_incomplete = self
+            .first_incomplete
+            .map(|(index, input)| format!("; first incomplete batch {index}: {input}"))
+            .unwrap_or_default();
+        format!(
+            "oracle executable `{}` timed out after {} ms after completing {} of {} Lane A batches{first_incomplete}; this case is batch {batch_index}; captured stdout bytes: {}, stderr bytes: {}",
+            self.executable,
+            self.timeout_millis,
+            self.completed,
+            self.total,
+            self.stdout_len,
+            self.stderr_len
+        )
+    }
 }
 
 fn collect_fixture_paths(single_fixture: Option<&Path>) -> Result<Vec<PathBuf>, std::io::Error> {

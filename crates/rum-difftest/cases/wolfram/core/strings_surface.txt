@@ -8,6 +8,6 @@ ToUpperCase["miXeD"] ||| "MIXED"
 StringTake["kernel", 3] ||| "ker"
 StringDrop["kernel", -2] ||| "kern"
 ToCharacterCode["Ab"] ||| {65, 98}
-TextWords["alpha beta,gamma"] ||| {"alpha", "beta", "gamma"}
+TextWords["alpha beta,gamma"] !!! id=textwords_surface_oracle_initialization | type=temporary | rum={"alpha", "beta", "gamma"} | wolfram={"alpha", "beta", "gamma"} | reason=Local Wolfram TextWords can trigger language-data initialization beyond the default Lane A oracle timeout.
 SyntaxQ["1+2"] ||| True
 RemoveDiacritics["café naïve façade"] ||| "cafe naive facade"
