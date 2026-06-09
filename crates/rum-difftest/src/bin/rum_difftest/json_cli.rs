@@ -51,6 +51,12 @@ pub fn json_usize_option(value: Option<usize>) -> String {
         .unwrap_or_else(|| "null".to_string())
 }
 
+pub fn json_path_option(value: Option<&Path>) -> String {
+    value
+        .map(|value| format!("\"{}\"", json_string(&value.display().to_string())))
+        .unwrap_or_else(|| "null".to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
@@ -90,6 +96,11 @@ mod tests {
         assert_eq!(json_string_option(Some("a\"b")), "\"a\\\"b\"");
         assert_eq!(json_usize_option(None), "null");
         assert_eq!(json_usize_option(Some(42)), "42");
+        assert_eq!(json_path_option(None), "null");
+        assert_eq!(
+            json_path_option(Some(Path::new("fixtures/a\"b.txt"))),
+            "\"fixtures/a\\\"b.txt\""
+        );
     }
 
     #[test]

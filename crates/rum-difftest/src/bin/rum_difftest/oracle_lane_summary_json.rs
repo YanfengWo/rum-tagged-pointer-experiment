@@ -4,7 +4,8 @@ use std::path::Path;
 use rum_difftest::oracle::OracleKernel;
 
 use crate::json_cli::{
-    SUMMARY_SCHEMA_VERSION, json_string, json_string_option, json_usize_option, write_json_file,
+    SUMMARY_SCHEMA_VERSION, json_path_option, json_string, json_string_option, json_usize_option,
+    write_json_file,
 };
 
 pub(super) use crate::json_cli::parse_max_issue_samples;
@@ -437,12 +438,6 @@ fn issue_source_counts_json(source_counts: &[OracleLaneIssueSourceCounts]) -> St
         })
         .collect::<Vec<_>>()
         .join(",\n")
-}
-
-fn json_path_option(value: Option<&Path>) -> String {
-    value
-        .map(|path| format!("\"{}\"", json_string(&path.display().to_string())))
-        .unwrap_or_else(|| "null".to_string())
 }
 
 fn json_session_batch_transport_name(value: Option<OracleLaneSessionBatchTransport>) -> String {
