@@ -111,7 +111,7 @@ fn setattributes_accepts_symbol_lists_and_combined_hold_attributes() {
             .unwrap()
             .value
             .to_string(),
-        "List[HoldFirst, HoldRest]"
+        "List[HoldAll]"
     );
     assert_eq!(
         session
@@ -119,7 +119,7 @@ fn setattributes_accepts_symbol_lists_and_combined_hold_attributes() {
             .unwrap()
             .value
             .to_string(),
-        "List[HoldFirst, HoldRest]"
+        "List[HoldAll]"
     );
     assert_eq!(
         session
@@ -144,10 +144,21 @@ fn setattributes_accepts_resolved_attribute_specs() {
             .unwrap()
             .value
             .to_string(),
-        "List[HoldFirst, HoldRest]"
+        "List[HoldAll]"
     );
 
     session.eval_text("ClearAttributes[f, attrs]").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("Attributes[f]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldAll]"
+    );
+
+    session.eval_text("ClearAttributes[f, HoldAll]").unwrap();
 
     assert_eq!(
         session

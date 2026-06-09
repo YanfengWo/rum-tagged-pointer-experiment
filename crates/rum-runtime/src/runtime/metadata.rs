@@ -115,7 +115,7 @@ impl AttributeSet {
 
     pub const fn from_attribute(attribute: Attribute) -> Self {
         Self {
-            bits: attribute.bit(),
+            bits: Self::normalized_bits(attribute.bit()),
         }
     }
 
@@ -130,7 +130,7 @@ impl AttributeSet {
 
     pub const fn with(self, attribute: Attribute) -> Self {
         Self {
-            bits: self.bits | attribute.bit(),
+            bits: Self::normalized_bits(self.bits | attribute.bit()),
         }
     }
 
@@ -139,11 +139,26 @@ impl AttributeSet {
     }
 
     pub(super) fn insert(&mut self, attribute: Attribute) {
-        self.bits |= attribute.bit();
+        self.bits = Self::normalized_bits(self.bits | attribute.bit());
     }
 
     pub(super) fn remove(&mut self, attribute: Attribute) {
-        self.bits &= !attribute.bit();
+        self.bits = Self::normalized_bits(self.bits & !attribute.bit());
+    }
+
+    const fn normalized_bits(bits: u16) -> u16 {
+        let hold_all = Attribute::HoldAll.bit();
+        let hold_first = Attribute::HoldFirst.bit();
+        let hold_rest = Attribute::HoldRest.bit();
+        let has_hold_all = bits & hold_all != 0;
+        let has_hold_first = bits & hold_first != 0;
+        let has_hold_rest = bits & hold_rest != 0;
+
+        if has_hold_all || (has_hold_first && has_hold_rest) {
+            (bits | hold_all) & !hold_first & !hold_rest
+        } else {
+            bits
+        }
     }
 
     pub(super) fn is_empty(self) -> bool {
@@ -219,7 +234,8 @@ pub(super) fn parse_attribute_set_expr(expr: &Expr) -> Option<AttributeSet> {
             let mut attributes = AttributeSet::empty();
 
             for item in args {
-                attributes.insert(Attribute::from_expr(item)?);
+                // Preserve the user-written spec for ClearAttributes; storage normalizes later.
+                attributes.bits |= Attribute::from_expr(item)?.bit();
             }
 
             Some(attributes)

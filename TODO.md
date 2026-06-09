@@ -508,7 +508,7 @@ This roadmap intentionally uses two levels of detail:
   inventory baseline now guards source and semantic-category minima, with the
   policy documented in `crates/rum-difftest/coverage/README.md`
 - [ ] Add differential-conformance fixtures that compare selected `rum` results against Wolfram behavior for the supported subset, with same-name language features treated as compatibility targets by default
-  - [ ] Attribute parity follow-up: normalize equivalent hold-attribute
+  - [x] Attribute parity follow-up: normalize equivalent hold-attribute
     combinations such as `HoldFirst` plus `HoldRest` to `HoldAll`, then retire
     the `attributes_hold_first_rest_normalizes_holdall` known difference
 - [ ] `CL-Y` Real-project Wolfram package/script support, using the local
@@ -676,9 +676,9 @@ This roadmap intentionally uses two levels of detail:
     `Options` / `SetOptions` / `OptionValue` / `OptionsPattern` conformance,
     and guard it with the checked inventory category baseline
   - [x] Lane A follow-up: add a curated messages/attributes fixture for stable
-    `Message` / `Quiet` / `Check` and basic attribute conformance, while
-    tracking the current `HoldFirst` plus `HoldRest` normalization parity gap
-    through Lane C
+    `Message` / `Quiet` / `Check` and basic attribute conformance, then retire
+    the `HoldFirst` plus `HoldRest` normalization known-difference row after
+    runtime parity landed
   - [ ] Lane B follow-up: add optional long-lived interactive process reuse once oracle-run throughput needs it
   - [x] Lane C: land a checked known-difference ledger plus `rum-difftest lane-c` validation that fixture `!!! id=...` entries and ledger rows stay synchronized
   - [x] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved

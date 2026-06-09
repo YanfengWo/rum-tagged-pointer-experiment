@@ -3,8 +3,8 @@
 # (`category=...`).
 # `min_*` fields are lower bounds. `max_known_difference_entries` is an upper
 # bound so resolved known differences can decrease without failing the gate.
-lane=lane-a source=all min_fixtures=30 min_entries=364 min_normal_entries=358 max_known_difference_entries=6
-lane=lane-a source=curated-core min_fixtures=21 min_entries=195 min_normal_entries=192 max_known_difference_entries=3
+lane=lane-a source=all min_fixtures=30 min_entries=364 min_normal_entries=359 max_known_difference_entries=5
+lane=lane-a source=curated-core min_fixtures=21 min_entries=195 min_normal_entries=193 max_known_difference_entries=2
 lane=lane-a source=seed-golden min_fixtures=9 min_entries=169 min_normal_entries=166 max_known_difference_entries=3
 lane=lane-a category=arithmetic min_fixtures=1 min_entries=34 min_normal_entries=33 max_known_difference_entries=1
 lane=lane-a category=associations-core min_fixtures=1 min_entries=22 min_normal_entries=22 max_known_difference_entries=0
@@ -18,7 +18,7 @@ lane=lane-a category=exact-arithmetic min_fixtures=1 min_entries=9 min_normal_en
 lane=lane-a category=failure-status min_fixtures=1 min_entries=12 min_normal_entries=12 max_known_difference_entries=0
 lane=lane-a category=functional-combinators min_fixtures=1 min_entries=20 min_normal_entries=20 max_known_difference_entries=0
 lane=lane-a category=lists min_fixtures=1 min_entries=38 min_normal_entries=38 max_known_difference_entries=0
-lane=lane-a category=messages-attributes min_fixtures=1 min_entries=9 min_normal_entries=8 max_known_difference_entries=1
+lane=lane-a category=messages-attributes min_fixtures=1 min_entries=9 min_normal_entries=9 max_known_difference_entries=0
 lane=lane-a category=ordering min_fixtures=1 min_entries=12 min_normal_entries=12 max_known_difference_entries=0
 lane=lane-a category=options-surface min_fixtures=1 min_entries=6 min_normal_entries=6 max_known_difference_entries=0
 lane=lane-a category=patterns min_fixtures=1 min_entries=17 min_normal_entries=17 max_known_difference_entries=0
