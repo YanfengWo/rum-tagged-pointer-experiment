@@ -23,6 +23,16 @@ fn stderr_text(output: &Output) -> String {
     String::from_utf8_lossy(&output.stderr).into_owned()
 }
 
+fn parse_summary_json(summary: &str) -> serde_json::Value {
+    let value: serde_json::Value = serde_json::from_str(summary)
+        .unwrap_or_else(|err| panic!("invalid summary JSON: {err}\n{summary}"));
+    assert_eq!(
+        value.get("schema_version").and_then(|value| value.as_u64()),
+        Some(1)
+    );
+    value
+}
+
 #[test]
 fn top_level_help_lists_lane_d_readiness_gate() {
     let output = run_difftest(&["--help"]);
@@ -156,6 +166,7 @@ fn inventory_writes_machine_readable_summary_json() {
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     assert!(stdout_text(&output).contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
+    parse_summary_json(&summary);
     assert!(summary.contains("\"lane\": \"inventory\""));
     assert!(summary.contains("\"schema_version\": 1"));
     assert!(summary.contains("\"baseline\": {"));
@@ -193,6 +204,7 @@ fn lane_c_writes_machine_readable_summary_json() {
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     assert!(stdout_text(&output).contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
+    parse_summary_json(&summary);
     assert!(summary.contains("\"lane\": \"lane-c\""));
     assert!(summary.contains("\"schema_version\": 1"));
     assert!(summary.contains("\"clean\": true"));
@@ -219,6 +231,7 @@ fn lane_d_writes_machine_readable_summary_json() {
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     assert!(stdout_text(&output).contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
+    parse_summary_json(&summary);
     assert!(summary.contains("\"lane\": \"lane-d\""));
     assert!(summary.contains("\"schema_version\": 1"));
     assert!(summary.contains("\"suite\": \"timing\""));

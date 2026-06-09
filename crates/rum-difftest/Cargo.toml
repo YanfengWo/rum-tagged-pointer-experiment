@@ -10,3 +10,6 @@ rum-runtime = { path = "../rum-runtime" }
 rum-stdlib = { path = "../rum-stdlib" }
 rum-terminal = { path = "../rum-terminal" }
 thiserror.workspace = true
+
+[dev-dependencies]
+serde_json = "1"

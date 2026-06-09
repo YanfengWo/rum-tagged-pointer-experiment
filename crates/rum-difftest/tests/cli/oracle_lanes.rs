@@ -1,6 +1,6 @@
 use std::fs;
 
-use super::{run_difftest, stderr_text, stdout_text, unique_temp_dir};
+use super::{parse_summary_json, run_difftest, stderr_text, stdout_text, unique_temp_dir};
 
 #[test]
 fn oracle_lane_help_lists_timeout_and_sample_controls() {
@@ -54,6 +54,7 @@ fn oracle_lanes_write_machine_readable_summary_json() {
         let stdout = stdout_text(&output);
         assert!(stdout.contains("summary json:"));
         let summary = fs::read_to_string(&summary_path).unwrap();
+        parse_summary_json(&summary);
         assert!(summary.contains(&format!("\"lane\": \"{lane}\"")));
         assert!(summary.contains("\"schema_version\": 1"));
         assert!(summary.contains("\"clean\": false"));
@@ -111,6 +112,7 @@ fn oracle_lanes_bound_summary_json_issue_samples() {
 
         assert!(output.status.success(), "stderr: {}", stderr_text(&output));
         let summary = fs::read_to_string(&summary_path).unwrap();
+        parse_summary_json(&summary);
         assert!(summary.contains("\"issue_samples_limit\": 1"));
         assert!(summary.contains("\"issue_samples_emitted\": 1"));
         assert!(summary.contains("\"issue_samples_total\": 2"));

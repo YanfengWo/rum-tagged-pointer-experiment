@@ -527,6 +527,7 @@ dependencies = [
  "rum-runtime",
  "rum-stdlib",
  "rum-terminal",
+ "serde_json",
  "thiserror 2.0.18",
 ]
 

@@ -151,7 +151,10 @@ artifacts exist.
 Every `rum-difftest --summary-json` shape includes a top-level
 `schema_version` field. Increment that value when a report change is
 intentionally incompatible for scripts or dashboards; additive fields that
-preserve existing consumers should remain on the current version.
+preserve existing consumers should remain on the current version. CLI tests
+should parse every generated summary as JSON, not only assert on string
+fragments, so report-generation changes cannot silently emit invalid machine
+output.
 
 Messages and diagnostics start in runtime regression tests unless the
 differential runner can capture and compare them reliably. Lane A can compare

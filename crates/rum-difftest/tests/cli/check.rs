@@ -1,6 +1,6 @@
 use std::fs;
 
-use super::{run_difftest, stderr_text, stdout_text, unique_temp_dir};
+use super::{parse_summary_json, run_difftest, stderr_text, stdout_text, unique_temp_dir};
 
 #[test]
 fn check_runs_fast_non_oracle_gates() {
@@ -55,6 +55,7 @@ fn check_writes_machine_readable_summary_json() {
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     assert!(stdout_text(&output).contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
+    parse_summary_json(&summary);
     assert!(summary.contains("\"command\": \"check\""));
     assert!(summary.contains("\"schema_version\": 1"));
     assert!(summary.contains("\"clean\": true"));
@@ -113,6 +114,7 @@ fn check_writes_lane_d_smoke_summary_when_included() {
 
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     let summary = fs::read_to_string(&summary_path).unwrap();
+    parse_summary_json(&summary);
     assert!(summary.contains("\"checks_passed\": 3"));
     assert!(summary.contains("\"checks_failed\": 0"));
     assert!(summary.contains("\"checks_skipped\": 1"));
@@ -155,6 +157,7 @@ fn check_can_include_lane_d_readiness_gate() {
     assert!(stdout.contains("checks skipped: 1"));
 
     let summary = fs::read_to_string(&summary_path).unwrap();
+    parse_summary_json(&summary);
     assert!(summary.contains("\"clean\": false"));
     assert!(summary.contains("\"checks_passed\": 2"));
     assert!(summary.contains("\"checks_failed\": 1"));
@@ -230,6 +233,7 @@ fn check_exits_nonzero_for_inventory_baseline_regression() {
     assert!(stdout.contains("checks passed: 1"));
     assert!(stdout.contains("checks failed: 1"));
     let summary = fs::read_to_string(&summary_path).unwrap();
+    parse_summary_json(&summary);
     assert!(summary.contains("\"issue_samples_limit\": 1"));
     assert!(summary.contains("\"issue_samples_emitted\": 1"));
     assert!(summary.contains("\"issue_samples_total\": 3"));
