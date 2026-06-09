@@ -56,6 +56,17 @@ fixture-coverage baseline. Use `--include-lane-d-smoke` to opt into the local
 Lane D smoke baseline gate, or `--lane-d-smoke-baseline PATH` to run that gate
 against an alternate smoke baseline.
 
+## Machine-Readable Summaries
+
+Every `--summary-json PATH` output includes a top-level `schema_version` field.
+The current version is `1`. Increment that value for intentionally
+incompatible report-shape changes; additive fields that preserve existing
+consumers should stay on the current version.
+
+CLI regression tests parse generated summaries as JSON and assert the schema
+version, so machine-readable report changes should not rely only on string
+fragment checks.
+
 ## Fixture Inventory
 
 Use `inventory` to inspect the default non-oracle fixture coverage before
@@ -74,8 +85,10 @@ categories, normal entries, and known-difference entries. It does not execute
 dashboards that need stable coverage counts without parsing runner logs.
 `--check-baseline` compares the current inventory against
 [coverage/inventory-baseline.txt](./coverage/inventory-baseline.txt).
-Baseline records can target source groups with `source=...` or semantic
-categories with `category=...`. `min_*` counts are lower bounds;
+The coverage policy is documented in
+[coverage/README.md](./coverage/README.md). Baseline records can target source
+groups with `source=...` or semantic categories with `category=...`. `min_*`
+counts are lower bounds;
 `max_known_difference_entries` is an upper bound so resolved known differences
 can decrease without failing the gate. Use `--fail-on-regression` to make a
 non-clean baseline comparison exit non-zero. `--write-baseline PATH` captures
