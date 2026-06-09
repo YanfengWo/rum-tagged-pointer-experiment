@@ -76,3 +76,39 @@ fn oracle_lane_rejects_invalid_numeric_controls() {
     assert!(!sample_source.status.success());
     assert!(stderr_text(&sample_source).contains("--issue-sample-source expects one of"));
 }
+
+#[test]
+fn oracle_lane_rejects_issue_sample_options_without_summary_json_before_oracle_setup() {
+    let cases: &[(&[&str], &str)] = &[
+        (
+            &["lane-a", "--max-issue-samples", "1"],
+            "--max-issue-samples requires --summary-json PATH",
+        ),
+        (
+            &["lane-b", "--issue-sample-kind", "non-match"],
+            "--issue-sample-kind requires --summary-json PATH",
+        ),
+        (
+            &["lane-a", "--issue-sample-source", "curated-core"],
+            "--issue-sample-source requires --summary-json PATH",
+        ),
+    ];
+
+    for (args, expected_error) in cases {
+        let output = run_difftest(args);
+        assert!(
+            !output.status.success(),
+            "expected failure for {args:?}, stdout: {}",
+            stdout_text(&output)
+        );
+        assert!(
+            stderr_text(&output).contains(expected_error),
+            "expected `{expected_error}` for {args:?}, stderr: {}",
+            stderr_text(&output)
+        );
+        assert!(
+            stdout_text(&output).is_empty(),
+            "expected no oracle-lane output for {args:?}"
+        );
+    }
+}

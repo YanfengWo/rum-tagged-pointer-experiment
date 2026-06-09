@@ -100,6 +100,9 @@ pub(super) fn parse_oracle_lane_cli_args(
     lane: &str,
 ) -> Result<OracleLaneCliArgs, Box<dyn std::error::Error>> {
     let mut options = OracleLaneCliOptions::default();
+    let mut max_issue_samples_specified = false;
+    let mut issue_sample_kind_specified = false;
+    let mut issue_sample_source_specified = false;
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
         match arg.as_str() {
@@ -132,14 +135,17 @@ pub(super) fn parse_oracle_lane_cli_args(
             }
             "--max-issue-samples" => {
                 let value = expect_value(&mut iter, "--max-issue-samples")?;
+                max_issue_samples_specified = true;
                 options.max_issue_samples = parse_max_issue_samples(&value)?;
             }
             "--issue-sample-kind" => {
                 let value = expect_value(&mut iter, "--issue-sample-kind")?;
+                issue_sample_kind_specified = true;
                 options.issue_sample_kind = parse_issue_sample_kind(&value)?;
             }
             "--issue-sample-source" => {
                 let value = expect_value(&mut iter, "--issue-sample-source")?;
+                issue_sample_source_specified = true;
                 options.issue_sample_source = parse_issue_sample_source(&value)?;
             }
             "--fail-on-mismatch" => options.fail_on_mismatch = true,
@@ -151,6 +157,17 @@ pub(super) fn parse_oracle_lane_cli_args(
             }
             "--help" | "-h" => return Ok(OracleLaneCliArgs::Help),
             other => return Err(format!("unknown {lane} flag `{other}`").into()),
+        }
+    }
+    if options.summary_json_path.is_none() {
+        if max_issue_samples_specified {
+            return Err("--max-issue-samples requires --summary-json PATH".into());
+        }
+        if issue_sample_kind_specified {
+            return Err("--issue-sample-kind requires --summary-json PATH".into());
+        }
+        if issue_sample_source_specified {
+            return Err("--issue-sample-source requires --summary-json PATH".into());
         }
     }
 
