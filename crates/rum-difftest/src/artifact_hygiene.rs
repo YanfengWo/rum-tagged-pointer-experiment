@@ -49,7 +49,10 @@ fn oracle_artifact_issue(path: &Path) -> Option<OracleArtifactIssue> {
     let file_name = path.file_name()?.to_str()?;
     if matches!(
         file_name,
-        "oracle_wrapper.wls" | "oracle_session_wrapper.wls" | "oracle_version.wls"
+        "oracle_wrapper.wls"
+            | "oracle_session_wrapper.wls"
+            | "oracle_session_batch_wrapper.wls"
+            | "oracle_version.wls"
     ) {
         return Some(issue(path, "generated oracle wrapper script"));
     }
@@ -75,6 +78,7 @@ fn matches_generated_session_dir(component: Component<'_>) -> bool {
         return false;
     };
     matches_numbered_name(name, "session-", "")
+        || matches_numbered_name(name, "session-batches-", "")
 }
 
 fn matches_numbered_name(name: &str, prefix: &str, suffix: &str) -> bool {
@@ -123,6 +127,13 @@ mod tests {
                 "generated oracle wrapper script"
             ))
         );
+        assert_eq!(
+            oracle_artifact_issue(Path::new("oracle_session_batch_wrapper.wls")),
+            Some(issue(
+                Path::new("oracle_session_batch_wrapper.wls"),
+                "generated oracle wrapper script"
+            ))
+        );
     }
 
     #[test]
@@ -138,6 +149,13 @@ mod tests {
             oracle_artifact_issue(Path::new("session-0002/messages-0001.txt")),
             Some(issue(
                 Path::new("session-0002/messages-0001.txt"),
+                "generated Lane B oracle session directory"
+            ))
+        );
+        assert_eq!(
+            oracle_artifact_issue(Path::new("session-batches-0002/batch-0001/manifest.txt")),
+            Some(issue(
+                Path::new("session-batches-0002/batch-0001/manifest.txt"),
                 "generated Lane B oracle session directory"
             ))
         );

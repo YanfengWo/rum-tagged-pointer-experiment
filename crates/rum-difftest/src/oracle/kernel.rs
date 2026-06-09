@@ -13,6 +13,8 @@ use super::{
 mod evaluate;
 #[path = "kernel/session.rs"]
 mod session;
+#[path = "kernel/session_batches.rs"]
+mod session_batches;
 
 const ORACLE_WRAPPER: &str = r#"inputPath = Last[$CommandLine];
 exprText = Import[inputPath, "Text"];
@@ -41,12 +43,90 @@ Do[
 ];
 Exit[];
 "#;
+const ORACLE_SESSION_BATCH_WRAPPER: &str = r#"Begin["RumDifftestOracle`"];
+userContext = "Global`";
+userContextPath = {"System`"};
+initialPackages = {};
+initialContexts = {};
+resetFixtureState[] := (
+  Quiet[Remove["Global`*"], {Remove::rmnsm, Remove::rmvex}];
+  Scan[
+    Function[{ctx},
+      If[
+        StringQ[ctx] && !MemberQ[initialContexts, ctx] && !StringMatchQ[ctx, "System`*"],
+        With[{pattern = ctx <> "*"},
+          Quiet[Remove[pattern], {Remove::rmnsm, Remove::rmvex}]
+        ]
+      ]
+    ],
+    Contexts[]
+  ];
+  Unprotect[$Packages];
+  $Packages = initialPackages;
+  Protect[$Packages];
+  $Context = userContext;
+  $ContextPath = userContextPath;
+);
+End[];
+
+RumDifftestOracle`batchManifestPath = Last[$CommandLine];
+RumDifftestOracle`batchManifestPaths = Select[
+  Import[RumDifftestOracle`batchManifestPath, "Lines"],
+  StringLength[#] > 0 &
+];
+RumDifftestOracle`initialPackages = $Packages;
+RumDifftestOracle`initialContexts = Contexts[];
+Do[
+  RumDifftestOracle`resetFixtureState[];
+  RumDifftestOracle`inputPaths = Select[
+    Import[RumDifftestOracle`batchManifestPaths[[RumDifftestOracle`b]], "Lines"],
+    StringLength[#] > 0 &
+  ];
+  RumDifftestOracle`sessionDir = DirectoryName[
+    RumDifftestOracle`batchManifestPaths[[RumDifftestOracle`b]]
+  ];
+  Do[
+    RumDifftestOracle`exprText = Import[RumDifftestOracle`inputPaths[[RumDifftestOracle`i]], "Text"];
+    RumDifftestOracle`suffix =
+      IntegerString[RumDifftestOracle`b, 10, 4] <> "-" <>
+      IntegerString[RumDifftestOracle`i, 10, 4];
+    RumDifftestOracle`messagesPath =
+      FileNameJoin[{RumDifftestOracle`sessionDir, "messages-" <> RumDifftestOracle`suffix <> ".txt"}];
+    RumDifftestOracle`printsPath =
+      FileNameJoin[{RumDifftestOracle`sessionDir, "prints-" <> RumDifftestOracle`suffix <> ".txt"}];
+    RumDifftestOracle`messagesStream =
+      OpenWrite[RumDifftestOracle`messagesPath, PageWidth -> Infinity];
+    RumDifftestOracle`printsStream =
+      OpenWrite[RumDifftestOracle`printsPath, PageWidth -> Infinity];
+    RumDifftestOracle`result = Block[
+      {$MessageList = {}, $Messages = {RumDifftestOracle`messagesStream}, $Output = {RumDifftestOracle`printsStream}},
+      ToExpression[RumDifftestOracle`exprText, InputForm]
+    ];
+    Close[RumDifftestOracle`messagesStream];
+    Close[RumDifftestOracle`printsStream];
+    WriteString[
+      $Output,
+      "__RUM_DIFFTEST_SESSION_BATCH_RESULT__=",
+      ToString[RumDifftestOracle`b, InputForm],
+      "\t",
+      ToString[RumDifftestOracle`i, InputForm],
+      "\t",
+      ToString[RumDifftestOracle`result, InputForm],
+      "\n"
+    ],
+    {RumDifftestOracle`i, Length[RumDifftestOracle`inputPaths]}
+  ],
+  {RumDifftestOracle`b, Length[RumDifftestOracle`batchManifestPaths]}
+];
+Exit[];
+"#;
 
 pub struct OracleKernel {
     executable: PathBuf,
     temp_dir: TempDir,
     wrapper_path: PathBuf,
     session_wrapper_path: PathBuf,
+    session_batch_wrapper_path: PathBuf,
     next_case_id: usize,
     timeout: Duration,
     output_limit_bytes: usize,
@@ -73,6 +153,7 @@ impl OracleKernel {
         let temp_dir = TempDir::new("rum-difftest")?;
         let wrapper_path = temp_dir.path().join("oracle_wrapper.wls");
         let session_wrapper_path = temp_dir.path().join("oracle_session_wrapper.wls");
+        let session_batch_wrapper_path = temp_dir.path().join("oracle_session_batch_wrapper.wls");
         fs::write(&wrapper_path, ORACLE_WRAPPER).map_err(|source| OracleError::Io {
             path: wrapper_path.clone(),
             source,
@@ -83,12 +164,19 @@ impl OracleKernel {
                 source,
             }
         })?;
+        fs::write(&session_batch_wrapper_path, ORACLE_SESSION_BATCH_WRAPPER).map_err(|source| {
+            OracleError::Io {
+                path: session_batch_wrapper_path.clone(),
+                source,
+            }
+        })?;
 
         Ok(Self {
             executable,
             temp_dir,
             wrapper_path,
             session_wrapper_path,
+            session_batch_wrapper_path,
             next_case_id: 0,
             timeout,
             output_limit_bytes,
@@ -127,5 +215,12 @@ impl Oracle for OracleKernel {
         inputs: &[String],
     ) -> Result<Vec<OracleEvaluation>, OracleError> {
         session::evaluate_session(self, inputs)
+    }
+
+    fn evaluate_session_batches(
+        &mut self,
+        batches: &[Vec<String>],
+    ) -> Result<Vec<Vec<OracleEvaluation>>, OracleError> {
+        session_batches::evaluate_session_batches(self, batches)
     }
 }
