@@ -763,6 +763,10 @@ This roadmap intentionally uses two levels of detail:
     stable `Coefficient`, `CoefficientList`, `Together` cancellation, and
     current `Factor` cases while continuing to avoid string-level
     term-ordering differences
+  - [x] Add a curated Lane A symbolic-calculus fixture for stable first-order,
+    higher-order, indexed-variable, and abstract `Derivative[...]` behavior in
+    the current `D` subset, and guard it with the checked inventory category
+    baseline
   - [x] rules, patterns, replacement, and traversal behavior now have an initial curated Lane A foothold
   - [x] scoping and held-evaluation constructs now have an initial curated Lane A foothold through loops/control/function cases
   - [x] Lane A now has a focused scoping/closure fixture covering stable `With`

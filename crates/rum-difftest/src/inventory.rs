@@ -193,10 +193,11 @@ mod tests {
             .find(|lane| lane.lane == "lane-b")
             .unwrap();
 
-        assert_eq!(lane_a.totals().fixtures, 37);
+        assert_eq!(lane_a.totals().fixtures, 38);
         assert_eq!(lane_a.totals_by_source()["seed-golden"].fixtures, 9);
-        assert_eq!(lane_a.totals_by_source()["curated-core"].fixtures, 28);
+        assert_eq!(lane_a.totals_by_source()["curated-core"].fixtures, 29);
         assert_eq!(lane_a.totals_by_category()["associations-core"].entries, 22);
+        assert_eq!(lane_a.totals_by_category()["calculus-symbolic"].entries, 9);
         assert_eq!(
             lane_a.totals_by_category()["collection-shape-predicates"].entries,
             22

@@ -248,7 +248,7 @@ mod tests {
     fn lane_a_default_fixture_paths_include_seed_and_curated_cases() {
         let files = lane_a_default_fixture_paths().unwrap();
 
-        assert_eq!(files.len(), 37);
+        assert_eq!(files.len(), 38);
         assert!(
             files
                 .iter()
@@ -273,6 +273,11 @@ mod tests {
             files
                 .iter()
                 .any(|path| path.ends_with("cases/wolfram/core/collection_shape_predicates.txt"))
+        );
+        assert!(
+            files
+                .iter()
+                .any(|path| path.ends_with("cases/wolfram/core/calculus_symbolic.txt"))
         );
         assert!(
             files

@@ -35,6 +35,8 @@ The current first pass includes:
 - a small polynomial/rational-expression suite covering renderer-supported
   `Expand`, `Coefficient`, `CoefficientList`, `Together`, and `Factor`
   outputs that currently avoid broader term-ordering differences
+- a symbolic calculus suite covering stable first-order, higher-order, indexed
+  variable, and abstract `Derivative[...]` behavior for the current `D` subset
 - association and keyed-data smoke coverage
 - a definition-precedence suite promoted from resolved imported seed coverage
 - dedicated loop/procedural and control-object suites
