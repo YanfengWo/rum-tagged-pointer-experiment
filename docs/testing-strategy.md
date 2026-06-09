@@ -197,7 +197,9 @@ adjusts the default 5-entry cap, and the summary records the sample limit,
 emitted count, total issue count, and truncation status. Use
 `--fail-on-seed-drift` only for deliberate fixture-snapshot audits; normal
 oracle conformance should continue to compare `rum` against fresh oracle output
-rather than against checked seed annotations. Lane A/B summary JSON
+rather than against checked seed annotations. Lane A/B summary JSON records the
+active `fail_on_mismatch` and `fail_on_seed_drift` gate options so automation
+can distinguish comparison cleanliness from the requested exit policy. It also
 reports `oracle_processes`, `oracle_batches`, and `oracle_batch_inputs` so
 process-reuse work can be evaluated against real batching rather than guessed
 from fixture counts. Lane B also keeps its session-specific batch and step

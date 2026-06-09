@@ -69,6 +69,8 @@ fn oracle_lanes_write_machine_readable_summary_json() {
             "user-provided/unpinned"
         );
         assert_eq!(json_u64(&summary_json, "/options/limit"), 1);
+        assert!(!json_bool(&summary_json, "/options/fail_on_mismatch"));
+        assert!(!json_bool(&summary_json, "/options/fail_on_seed_drift"));
         assert_eq!(json_u64(&summary_json, "/counts/items_compared"), 1);
         assert_eq!(json_u64(&summary_json, "/counts/oracle_failures"), 1);
         assert_eq!(json_u64(&summary_json, "/counts/oracle_processes"), 1);
@@ -172,6 +174,16 @@ fn oracle_lanes_can_fail_on_seed_snapshot_drift() {
             "seed drift should be fatal when requested"
         );
         assert!(stdout_text(&failure).contains("seed snapshots drifted from oracle: 1"));
+        let failure_summary = fs::read_to_string(&failure_summary_path).unwrap();
+        let failure_summary_json = parse_summary_json(&failure_summary);
+        assert!(json_bool(
+            &failure_summary_json,
+            "/options/fail_on_seed_drift"
+        ));
+        assert!(!json_bool(
+            &failure_summary_json,
+            "/options/fail_on_mismatch"
+        ));
         fs::remove_dir_all(temp_dir).unwrap();
     }
 }

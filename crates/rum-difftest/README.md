@@ -173,11 +173,13 @@ known-difference counts, and seed-drift counts, including
 `counts.oracle_processes`, `counts.oracle_batches`, and
 `counts.oracle_batch_inputs` so scripts can see that the current Lane A
 `OracleKernel` transport runs compared cases through a single case-isolated
-batch process. The JSON oracle section also reports the concrete batch
-transport name and process count. It also includes a bounded
-`issue_samples` locator list for the first non-matching, seed-drifted, or
-resolved known-difference cases. It does not freeze the full per-case report
-shape.
+batch process. The JSON options section records failure gate flags such as
+`fail_on_mismatch` and `fail_on_seed_drift`, so scripts can interpret non-zero
+exits without inferring which gate was active. The JSON oracle section also
+reports the concrete batch transport name and process count. It also includes
+a bounded `issue_samples` locator list for the first non-matching,
+seed-drifted, or resolved known-difference cases. It does not freeze the full
+per-case report shape.
 
 ## Lane B Runner
 
@@ -211,7 +213,7 @@ differences. Resolved known differences are listed by ID and fixture location
 so fixed divergences are visible before removing ledger rows. `--summary-json
 PATH` writes the same stable machine-readable summary shape as Lane A, with
 oracle configuration, run options, comparison counts, known-difference counts,
-seed-drift counts, oracle process/batch/input counts, and bounded
+seed-drift counts, failure gate options, oracle process/batch/input counts, and bounded
 `issue_samples` locators, without freezing the full per-step report rows. Lane
 B also reports oracle batch/input counts and the concrete session-batch
 transport name/process count in text output, so the current single-process

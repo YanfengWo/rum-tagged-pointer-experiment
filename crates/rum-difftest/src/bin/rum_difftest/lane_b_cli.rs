@@ -101,6 +101,8 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 fixture: options.fixture.as_deref(),
                 limit: options.limit,
                 include_known_differences: options.include_known_differences,
+                fail_on_mismatch,
+                fail_on_seed_drift,
                 session_batch_transport: Some(session_batch_transport),
                 counts: OracleLaneSummaryCounts {
                     total_seen: summary.total_seen,

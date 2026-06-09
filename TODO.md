@@ -613,6 +613,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B follow-up: add `--fail-on-seed-drift` as an opt-in fixture
     snapshot audit gate, keeping normal oracle conformance based on fresh
     `rum`-vs-Wolfram comparisons while letting seed refresh passes fail fast
+    and recording active failure gates in summary JSON options
   - [x] Lane A follow-up: add a curated structure-selector fixture for stable
     `Part` / `Extract` / `ReplacePart` / `Depth` / `Level` conformance, and
     guard it with the checked inventory category baseline
