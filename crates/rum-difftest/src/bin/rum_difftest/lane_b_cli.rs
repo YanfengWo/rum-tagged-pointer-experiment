@@ -114,6 +114,8 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 lane: "lane-b",
                 oracle: &oracle,
                 fixture: options.fixture.as_deref(),
+                source: None,
+                category: None,
                 limit: options.limit,
                 include_known_differences: options.include_known_differences,
                 fail_on_mismatch,

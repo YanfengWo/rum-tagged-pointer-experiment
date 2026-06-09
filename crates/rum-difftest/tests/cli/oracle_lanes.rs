@@ -25,6 +25,16 @@ fn oracle_lane_help_lists_timeout_and_sample_controls() {
 }
 
 #[test]
+fn lane_a_help_lists_fixture_filters() {
+    let output = run_difftest(&["lane-a", "--help"]);
+
+    assert!(output.status.success());
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("--source"));
+    assert!(stdout.contains("--category"));
+}
+
+#[test]
 fn oracle_lane_rejects_invalid_numeric_controls() {
     let timeout = run_difftest(&[
         "lane-a",
@@ -46,6 +56,69 @@ fn oracle_lane_rejects_invalid_numeric_controls() {
     let sample_kind = run_difftest(&["lane-a", "--issue-sample-kind", "unknown"]);
     assert!(!sample_kind.status.success());
     assert!(stderr_text(&sample_kind).contains("--issue-sample-kind expects one of"));
+}
+
+#[test]
+fn lane_a_filters_default_fixtures_by_source_and_category() {
+    let temp_dir = unique_temp_dir("lane-a-filter");
+    let summary_path = temp_dir.join("summary.json");
+    fs::create_dir_all(&temp_dir).unwrap();
+    let output = run_difftest(&[
+        "lane-a",
+        "--oracle-command",
+        "/bin/true",
+        "--source",
+        "curated-core",
+        "--category",
+        "context-namespace",
+        "--summary-json",
+        summary_path.to_str().unwrap(),
+    ]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("cases seen: 8"));
+    assert!(stdout.contains("cases compared: 8"));
+    assert!(stdout.contains("oracle failures: 8"));
+    let summary = fs::read_to_string(&summary_path).unwrap();
+    let summary_json = parse_summary_json(&summary);
+    assert_eq!(json_u64(&summary_json, "/counts/items_seen"), 8);
+    assert_eq!(json_str(&summary_json, "/options/source"), "curated-core");
+    assert_eq!(
+        json_str(&summary_json, "/options/category"),
+        "context-namespace"
+    );
+    assert_eq!(json_u64(&summary_json, "/counts/items_compared"), 8);
+    assert_eq!(json_u64(&summary_json, "/counts/oracle_failures"), 8);
+    let source_counts = json_array(&summary_json, "/issue_source_counts");
+    assert_eq!(source_counts.len(), 1);
+    assert_eq!(
+        json_str(&source_counts[0], "/fixture_source"),
+        "curated-core"
+    );
+    assert!(json_bool(&source_counts[0], "/project_owned_fixture"));
+    assert_eq!(json_u64(&source_counts[0], "/total"), 8);
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
+#[test]
+fn lane_a_filter_that_matches_no_fixtures_fails() {
+    let output = run_difftest(&[
+        "lane-a",
+        "--oracle-command",
+        "/bin/true",
+        "--source",
+        "curated-core",
+        "--category",
+        "not-a-category",
+    ]);
+
+    assert!(!output.status.success());
+    assert!(
+        stderr_text(&output).contains("lane-a filters matched no fixtures"),
+        "stderr: {}",
+        stderr_text(&output)
+    );
 }
 
 #[test]
@@ -76,6 +149,8 @@ fn oracle_lanes_write_machine_readable_summary_json() {
             "user-provided/unpinned"
         );
         assert_eq!(json_u64(&summary_json, "/options/limit"), 1);
+        assert_json_null(&summary_json, "/options/source");
+        assert_json_null(&summary_json, "/options/category");
         assert_eq!(json_str(&summary_json, "/options/issue_sample_kind"), "all");
         assert!(!json_bool(&summary_json, "/options/fail_on_mismatch"));
         assert!(!json_bool(&summary_json, "/options/fail_on_seed_drift"));

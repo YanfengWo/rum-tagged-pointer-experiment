@@ -131,6 +131,7 @@ cargo run -p rum-difftest -- lane-a --oracle-command WolframKernel
 cargo run -p rum-difftest -- lane-a --oracle-command WolframKernel --oracle-timeout-seconds 60
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --include-known-diffs
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-a-summary.json
+cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --source curated-core --category context-namespace
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --fail-on-seed-drift
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --fail-on-project-seed-drift
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --include-known-diffs --fail-on-resolved-known-difference
@@ -160,7 +161,10 @@ directory for each run, compares values, messages, and printed output
 in-memory, and removes those artifacts afterward. By default, Lane A runs both
 the imported seed golden files under `seed/ham-import/golden/` and the curated
 project-owned fixtures under `cases/wolfram/core/`; use `--fixture PATH` for a
-single file. The CLI reports the resolved oracle executable, the effective
+single file. Use `--source NAME` and `--category NAME` to run a focused slice
+of the default fixture set, using the same source labels and semantic category
+names reported by `inventory`; a filter set that matches no fixtures fails
+fast. The CLI reports the resolved oracle executable, the effective
 per-invocation timeout, the explicit
 `user-provided/unpinned` version policy, and best-effort Wolfram `$Version`;
 version probe failures are reported but do not fail the diff run, and config
@@ -197,9 +201,10 @@ known-difference counts, and seed-drift counts, including
 batch process. The JSON options section records failure gate flags such as
 `fail_on_mismatch`, `fail_on_seed_drift`,
 `fail_on_project_seed_drift`, and
-`fail_on_resolved_known_difference`, so scripts can interpret non-zero exits
-without inferring which gate was active. The JSON oracle section also reports
-the concrete batch transport name and process count. It also includes
+`fail_on_resolved_known_difference`, plus optional `source` / `category`
+filters, so scripts can interpret non-zero exits without inferring which gate
+or fixture slice was active. The JSON oracle section also reports the concrete
+batch transport name and process count. It also includes
 an unfiltered `issue_counts` breakdown plus a bounded `issue_samples` locator
 list for the first non-matching, seed-drifted, or resolved known-difference
 cases, including each sample's `fixture_source` and
