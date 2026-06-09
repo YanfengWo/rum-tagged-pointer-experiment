@@ -679,6 +679,9 @@ This roadmap intentionally uses two levels of detail:
     `Message` / `Quiet` / `Check` and basic attribute conformance, then retire
     the `HoldFirst` plus `HoldRest` normalization known-difference row after
     runtime parity landed
+  - [x] Lane A follow-up: add a curated context/namespace fixture for stable
+    `Context`, `Begin` / `End`, `BeginPackage`, and `Names` conformance, and
+    guard it with the checked inventory category baseline
   - [ ] Lane B follow-up: add optional long-lived interactive process reuse once oracle-run throughput needs it
   - [x] Lane C: land a checked known-difference ledger plus `rum-difftest lane-c` validation that fixture `!!! id=...` entries and ledger rows stay synchronized
   - [x] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved

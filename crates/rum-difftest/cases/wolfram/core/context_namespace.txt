@@ -1,0 +1,10 @@
+# Curated Lane A file: context and namespace surface
+# Format: input ||| expected_output
+Context[] ||| "Global`"
+Context[Identity] ||| "System`"
+x = 1; Context[x] ||| "Global`"
+Begin["LaneAContext`"]; {$Context, End[], $Context} ||| {"LaneAContext`", "LaneAContext`", "Global`"}
+Begin["LaneAOuter`"]; Begin["`Private`"]; result = {$Context, End[], $Context}; End[]; result ||| {"LaneAOuter`Private`", "LaneAOuter`Private`", "LaneAOuter`"}
+BeginPackage["LaneAPkg`"]; public = 2; EndPackage[]; {public, Context[public], MemberQ[$ContextPath, "LaneAPkg`"]} ||| {2, "Global`", True}
+BeginPackage["LaneAPkg2`"]; Begin["`Private`"]; hidden = 1; End[]; public = 2; EndPackage[]; {public, hidden, LaneAPkg2`Private`hidden} ||| {2, 1, LaneAPkg2`Private`hidden}
+pkg`alpha = 1; pkg`beta = 2; ToString[Names["pkg`*"], InputForm] ||| "{\"pkg`alpha\", \"pkg`beta\"}"
