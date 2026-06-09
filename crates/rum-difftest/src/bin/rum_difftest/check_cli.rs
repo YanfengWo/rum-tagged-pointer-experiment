@@ -7,8 +7,8 @@ use rum_difftest::inventory::{
     compare_inventory_baseline, default_inventory_baseline_path, load_inventory_baseline,
 };
 use rum_difftest::lane_d::{
-    self, LaneDBaselineCompareOptions, LaneDBaselineReport, LaneDOptions, LaneDProfile, LaneDSuite,
-    LaneDSummary, LaneDThresholdProfile,
+    self, LaneDBaselineCompareOptions, LaneDBaselineReport, LaneDCheckedBaselineReadinessReport,
+    LaneDOptions, LaneDProfile, LaneDSuite, LaneDSummary, LaneDThresholdProfile,
 };
 
 use super::expect_value;
@@ -21,6 +21,7 @@ mod text_report;
 pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut inventory_baseline_path = None;
     let mut lane_d_smoke_baseline = None;
+    let mut include_lane_d_readiness = false;
     let mut summary_json_path = None;
 
     let mut iter = args.into_iter();
@@ -42,6 +43,9 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
                     expect_value(&mut iter, "--lane-d-smoke-baseline")?,
                 )));
             }
+            "--include-lane-d-readiness" => {
+                include_lane_d_readiness = true;
+            }
             "--summary-json" => {
                 summary_json_path = Some(PathBuf::from(expect_value(&mut iter, "--summary-json")?));
             }
@@ -53,7 +57,11 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
         }
     }
 
-    let report = run_local_checks(inventory_baseline_path, lane_d_smoke_baseline)?;
+    let report = run_local_checks(
+        inventory_baseline_path,
+        lane_d_smoke_baseline,
+        include_lane_d_readiness,
+    )?;
     text_report::print_check_report(&report);
 
     if let Some(path) = summary_json_path {
@@ -74,12 +82,18 @@ pub(super) struct LocalCheckReport {
     pub(super) inventory_baseline: InventoryBaselineReport,
     pub(super) known_differences: KnownDifferenceLedgerReport,
     pub(super) lane_d_smoke: Option<LaneDSmokeCheckReport>,
+    pub(super) lane_d_readiness: Option<LaneDReadinessCheckReport>,
 }
 
 pub(super) struct LaneDSmokeCheckReport {
     pub(super) baseline_path: PathBuf,
     pub(super) summary: LaneDSummary,
     pub(super) baseline: LaneDBaselineReport,
+}
+
+pub(super) struct LaneDReadinessCheckReport {
+    pub(super) summary: LaneDSummary,
+    pub(super) readiness: LaneDCheckedBaselineReadinessReport,
 }
 
 enum LaneDSmokeBaseline {
@@ -95,6 +109,10 @@ impl LocalCheckReport {
                 .lane_d_smoke
                 .as_ref()
                 .is_none_or(LaneDSmokeCheckReport::is_clean)
+            && self
+                .lane_d_readiness
+                .as_ref()
+                .is_none_or(LaneDReadinessCheckReport::is_clean)
     }
 
     fn failed_checks(&self) -> usize {
@@ -104,10 +122,14 @@ impl LocalCheckReport {
                 .lane_d_smoke
                 .as_ref()
                 .map_or(0, |report| usize::from(!report.is_clean()))
+            + self
+                .lane_d_readiness
+                .as_ref()
+                .map_or(0, |report| usize::from(!report.is_clean()))
     }
 
     pub(super) fn total_checks(&self) -> usize {
-        2 + usize::from(self.lane_d_smoke.is_some())
+        2 + usize::from(self.lane_d_smoke.is_some()) + usize::from(self.lane_d_readiness.is_some())
     }
 
     pub(super) fn passed_checks(&self) -> usize {
@@ -128,9 +150,45 @@ impl LaneDSmokeCheckReport {
     }
 }
 
+impl LaneDReadinessCheckReport {
+    pub(super) fn is_clean(&self) -> bool {
+        self.summary.failed == 0 && self.readiness.is_ready()
+    }
+
+    pub(super) fn artifact_counts(&self) -> LaneDReadinessArtifactCounts {
+        let mut counts = LaneDReadinessArtifactCounts::default();
+        for entry in &self.readiness.entries {
+            counts.total += 1;
+            match &entry.status {
+                lane_d::LaneDCheckedBaselineReadinessStatus::Ready { .. } => counts.ready += 1,
+                lane_d::LaneDCheckedBaselineReadinessStatus::MissingArtifact => {
+                    counts.missing += 1;
+                }
+                lane_d::LaneDCheckedBaselineReadinessStatus::InvalidArtifact { .. } => {
+                    counts.invalid += 1;
+                }
+                lane_d::LaneDCheckedBaselineReadinessStatus::NotClean { .. } => {
+                    counts.not_clean += 1;
+                }
+            }
+        }
+        counts
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) struct LaneDReadinessArtifactCounts {
+    pub(super) total: usize,
+    pub(super) ready: usize,
+    pub(super) missing: usize,
+    pub(super) invalid: usize,
+    pub(super) not_clean: usize,
+}
+
 fn run_local_checks(
     inventory_baseline_path: Option<PathBuf>,
     lane_d_smoke_baseline: Option<LaneDSmokeBaseline>,
+    include_lane_d_readiness: bool,
 ) -> Result<LocalCheckReport, Box<dyn std::error::Error>> {
     let inventory_baseline_path =
         inventory_baseline_path.unwrap_or_else(default_inventory_baseline_path);
@@ -138,8 +196,25 @@ fn run_local_checks(
     let baseline = load_inventory_baseline(&inventory_baseline_path)?;
     let inventory_baseline = compare_inventory_baseline(&inventory, &baseline);
     let known_differences = divergences::validate_known_difference_ledger()?;
+    let lane_d_summary = if lane_d_smoke_baseline.is_some() || include_lane_d_readiness {
+        Some(run_lane_d_smoke_summary()?)
+    } else {
+        None
+    };
     let lane_d_smoke = if let Some(baseline) = lane_d_smoke_baseline {
-        Some(run_lane_d_smoke_check(baseline)?)
+        Some(run_lane_d_smoke_check(
+            baseline,
+            lane_d_summary
+                .as_ref()
+                .expect("Lane D summary is captured when smoke is requested"),
+        )?)
+    } else {
+        None
+    };
+    let lane_d_readiness = if include_lane_d_readiness {
+        Some(run_lane_d_readiness_check(lane_d_summary.as_ref().expect(
+            "Lane D summary is captured when readiness is requested",
+        )))
     } else {
         None
     };
@@ -150,24 +225,21 @@ fn run_local_checks(
         inventory_baseline,
         known_differences,
         lane_d_smoke,
+        lane_d_readiness,
     })
 }
 
 fn run_lane_d_smoke_check(
     baseline: LaneDSmokeBaseline,
+    summary: &LaneDSummary,
 ) -> Result<LaneDSmokeCheckReport, Box<dyn std::error::Error>> {
     let baseline_path = match baseline {
         LaneDSmokeBaseline::Default => lane_d::default_smoke_baseline_path(),
         LaneDSmokeBaseline::Path(path) => path,
     };
-    let summary = lane_d::run(&LaneDOptions {
-        suite: LaneDSuite::All,
-        profile: LaneDProfile::Smoke,
-        limit: None,
-    })?;
     let baseline = lane_d::load_baseline(&baseline_path)?;
     let baseline = lane_d::compare_baseline(
-        &summary,
+        summary,
         &baseline,
         &LaneDBaselineCompareOptions {
             profile: LaneDProfile::Smoke,
@@ -178,8 +250,23 @@ fn run_lane_d_smoke_check(
 
     Ok(LaneDSmokeCheckReport {
         baseline_path,
-        summary,
+        summary: summary.clone(),
         baseline,
+    })
+}
+
+fn run_lane_d_readiness_check(summary: &LaneDSummary) -> LaneDReadinessCheckReport {
+    LaneDReadinessCheckReport {
+        summary: summary.clone(),
+        readiness: lane_d::check_checked_baseline_readiness(summary),
+    }
+}
+
+fn run_lane_d_smoke_summary() -> Result<LaneDSummary, std::io::Error> {
+    lane_d::run(&LaneDOptions {
+        suite: LaneDSuite::All,
+        profile: LaneDProfile::Smoke,
+        limit: None,
     })
 }
 
@@ -191,8 +278,10 @@ fn print_check_usage() {
     println!(
         "                              Use an explicit Lane D smoke baseline and enable that gate"
     );
+    println!("  --include-lane-d-readiness");
+    println!("                              Also check the Lane D checked-baseline artifact set");
     println!("  --summary-json PATH        Write a stable machine-readable summary");
     println!(
-        "  Run the fast non-oracle local gates: inventory baseline and Lane C ledger validation, with optional Lane D smoke"
+        "  Run the fast non-oracle local gates: inventory baseline and Lane C ledger validation, with optional Lane D gates"
     );
 }

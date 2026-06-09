@@ -22,6 +22,9 @@ fn summary_json(report: &LocalCheckReport) -> String {
     if let Some(lane_d_smoke) = &report.lane_d_smoke {
         checks.push(lane_d_smoke_check_json(lane_d_smoke));
     }
+    if let Some(lane_d_readiness) = &report.lane_d_readiness {
+        checks.push(lane_d_readiness_check_json(lane_d_readiness));
+    }
 
     format!(
         concat!(
@@ -193,6 +196,51 @@ fn lane_d_smoke_check_json(report: &super::LaneDSmokeCheckReport) -> String {
         json_string(lane_d::threshold_profile_name(
             lane_d::LaneDThresholdProfile::LocalDebug
         )),
+    )
+}
+
+fn lane_d_readiness_check_json(report: &super::LaneDReadinessCheckReport) -> String {
+    let counts = report.artifact_counts();
+    format!(
+        concat!(
+            "    {{\n",
+            "      \"name\": \"lane-d-readiness\",\n",
+            "      \"clean\": {},\n",
+            "      \"artifacts\": {{\n",
+            "        \"total\": {},\n",
+            "        \"ready\": {},\n",
+            "        \"missing\": {},\n",
+            "        \"invalid\": {},\n",
+            "        \"not_clean\": {}\n",
+            "      }},\n",
+            "      \"counts\": {{\n",
+            "        \"cases_seen\": {},\n",
+            "        \"cases_skipped_by_profile\": {},\n",
+            "        \"cases_executed\": {},\n",
+            "        \"successes\": {},\n",
+            "        \"failures\": {},\n",
+            "        \"total_elapsed_micros\": {}\n",
+            "      }},\n",
+            "      \"run_options\": {{\n",
+            "        \"suite\": \"{}\",\n",
+            "        \"profile\": \"{}\"\n",
+            "      }}\n",
+            "    }}"
+        ),
+        report.is_clean(),
+        counts.total,
+        counts.ready,
+        counts.missing,
+        counts.invalid,
+        counts.not_clean,
+        report.summary.total_seen,
+        report.summary.skipped_by_profile,
+        report.summary.executed,
+        report.summary.succeeded,
+        report.summary.failed,
+        report.summary.total_elapsed_micros,
+        json_string(lane_d::suite_name(lane_d::LaneDSuite::All)),
+        json_string(lane_d::profile_name(lane_d::LaneDProfile::Smoke)),
     )
 }
 

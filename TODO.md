@@ -581,6 +581,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B follow-up: extend the checked inventory baseline to source-or-category records so semantic category coverage regressions fail `inventory --check-baseline --fail-on-regression`
   - [x] Lane A/B/C follow-up: add `rum-difftest check` as a fast non-oracle aggregate gate over the checked inventory baseline and Lane C ledger validation, with optional stable summary JSON for local preflight scripts
   - [x] Lane A/B/C/D follow-up: let `rum-difftest check --include-lane-d-smoke` opt into the local Lane D smoke baseline gate, with `--lane-d-smoke-baseline PATH` for alternate baseline validation while keeping default `check` free of timing inputs
+  - [x] Lane A/B/C/D follow-up: let `rum-difftest check --include-lane-d-readiness` opt into the Lane D checked-baseline readiness gate and surface the missing runner-specific artifacts in the aggregate text/JSON summary without affecting the default local preflight path
   - [ ] Lane B follow-up: add optional long-lived interactive process reuse once oracle-run throughput needs it
   - [x] Lane C: land a checked known-difference ledger plus `rum-difftest lane-c` validation that fixture `!!! id=...` entries and ledger rows stay synchronized
   - [x] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved

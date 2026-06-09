@@ -29,6 +29,7 @@ fn top_level_help_lists_lane_d_readiness_gate() {
     assert!(stdout.contains("rum-difftest inventory"));
     assert!(stdout.contains("--inventory-baseline"));
     assert!(stdout.contains("--include-lane-d-smoke"));
+    assert!(stdout.contains("--include-lane-d-readiness"));
     assert!(stdout.contains("--check-baseline-readiness"));
     assert!(stdout.contains("--write-baseline"));
     assert!(stdout.contains("--summary-json"));
@@ -59,6 +60,7 @@ fn check_help_and_unknown_flag_paths_are_stable() {
     assert!(stdout_text(&help).contains("--inventory-baseline"));
     assert!(stdout_text(&help).contains("--include-lane-d-smoke"));
     assert!(stdout_text(&help).contains("--lane-d-smoke-baseline"));
+    assert!(stdout_text(&help).contains("--include-lane-d-readiness"));
     assert!(stdout_text(&help).contains("--summary-json"));
 
     let unknown = run_difftest(&["check", "--unknown"]);
@@ -85,6 +87,7 @@ fn check_writes_machine_readable_summary_json() {
     assert!(summary.contains("\"active_ledger_entries\": 2"));
     assert!(summary.contains("\"tracking_target_issues\": 0"));
     assert!(!summary.contains("\"name\": \"lane-d-smoke\""));
+    assert!(!summary.contains("\"name\": \"lane-d-readiness\""));
     fs::remove_dir_all(temp_dir).unwrap();
 }
 
@@ -125,6 +128,41 @@ fn check_writes_lane_d_smoke_summary_when_included() {
     assert!(summary.contains("\"threshold_profile\": \"local-debug\""));
     assert!(summary.contains("\"missing_records\": 0"));
     assert!(summary.contains("\"elapsed_regressions\": 0"));
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
+#[test]
+fn check_can_include_lane_d_readiness_gate() {
+    let temp_dir = unique_temp_dir("check-lane-d-readiness-json");
+    let summary_path = temp_dir.join("summary.json");
+    let output = run_difftest(&[
+        "check",
+        "--include-lane-d-readiness",
+        "--summary-json",
+        summary_path.to_str().unwrap(),
+    ]);
+
+    assert!(!output.status.success());
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("check\tinventory-baseline\tclean"));
+    assert!(stdout.contains("check\tlane-c-ledger\tclean"));
+    assert!(stdout.contains("check\tlane-d-readiness\tdirty"));
+    assert!(stdout.contains("lane-d readiness artifacts: 3"));
+    assert!(stdout.contains("lane-d readiness ready artifacts: 1"));
+    assert!(stdout.contains("lane-d readiness missing artifacts: 2"));
+    assert!(stdout.contains("checks passed: 2"));
+    assert!(stdout.contains("checks failed: 1"));
+
+    let summary = fs::read_to_string(&summary_path).unwrap();
+    assert!(summary.contains("\"clean\": false"));
+    assert!(summary.contains("\"checks_passed\": 2"));
+    assert!(summary.contains("\"checks_failed\": 1"));
+    assert!(summary.contains("\"name\": \"lane-d-readiness\""));
+    assert!(summary.contains("\"total\": 3"));
+    assert!(summary.contains("\"ready\": 1"));
+    assert!(summary.contains("\"missing\": 2"));
+    assert!(summary.contains("\"invalid\": 0"));
+    assert!(summary.contains("\"not_clean\": 0"));
     fs::remove_dir_all(temp_dir).unwrap();
 }
 

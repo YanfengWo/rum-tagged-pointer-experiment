@@ -132,7 +132,10 @@ validation, exits non-zero if either gate is dirty, and can write
 `--summary-json PATH` without starting a Wolfram oracle. It does not run Lane D
 timing inputs by default; opt into the local smoke performance baseline with
 `--include-lane-d-smoke`, or use `--lane-d-smoke-baseline PATH` when validating
-an alternate smoke artifact.
+an alternate smoke artifact. Use `--include-lane-d-readiness` only when the
+aggregate gate should also enforce the checked Lane D artifact set; this
+readiness check is expected to remain dirty until runner-specific
+`ci-debug` / `ci-release` smoke artifacts exist.
 
 Messages and diagnostics start in runtime regression tests unless the
 differential runner can capture and compare them reliably. Lane A can compare

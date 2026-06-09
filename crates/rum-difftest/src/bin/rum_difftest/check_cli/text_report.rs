@@ -1,5 +1,6 @@
 use rum_difftest::divergences::{self, KnownDifferenceLedgerReport};
 use rum_difftest::inventory::display_path;
+use rum_difftest::lane_d;
 
 use super::{LaneDSmokeCheckReport, LocalCheckReport};
 
@@ -9,6 +10,9 @@ pub(super) fn print_check_report(report: &LocalCheckReport) {
     print_lane_c_check(report);
     if let Some(lane_d_smoke) = &report.lane_d_smoke {
         print_lane_d_smoke_check(lane_d_smoke);
+    }
+    if let Some(lane_d_readiness) = &report.lane_d_readiness {
+        print_lane_d_readiness_check(lane_d_readiness);
     }
     println!("checks passed: {}", report.passed_checks());
     println!("checks failed: {}", report.failed_checks());
@@ -118,4 +122,53 @@ fn print_lane_d_smoke_check(report: &LaneDSmokeCheckReport) {
         report.baseline.value_node_regressions.len()
     );
     println!("lane-d baseline issues: {}", report.baseline_issue_count());
+}
+
+fn print_lane_d_readiness_check(report: &super::LaneDReadinessCheckReport) {
+    let status = if report.is_clean() { "clean" } else { "dirty" };
+    let counts = report.artifact_counts();
+    println!("check\tlane-d-readiness\t{status}");
+    println!("lane-d readiness cases seen: {}", report.summary.total_seen);
+    println!(
+        "lane-d readiness cases executed: {}",
+        report.summary.executed
+    );
+    println!("lane-d readiness failures: {}", report.summary.failed);
+    println!("lane-d readiness artifacts: {}", counts.total);
+    println!("lane-d readiness ready artifacts: {}", counts.ready);
+    println!("lane-d readiness missing artifacts: {}", counts.missing);
+    println!("lane-d readiness invalid artifacts: {}", counts.invalid);
+    println!("lane-d readiness not-clean artifacts: {}", counts.not_clean);
+    for entry in &report.readiness.entries {
+        let profile = lane_d::profile_name(entry.profile);
+        let threshold_profile = lane_d::threshold_profile_name(entry.threshold_profile);
+        match &entry.status {
+            lane_d::LaneDCheckedBaselineReadinessStatus::Ready {
+                records_considered,
+                compared,
+            } => println!(
+                "lane-d-readiness-ready\t{profile}\t{threshold_profile}\t{}\t{}\t{}",
+                display_path(&entry.path),
+                records_considered,
+                compared
+            ),
+            lane_d::LaneDCheckedBaselineReadinessStatus::MissingArtifact => println!(
+                "lane-d-readiness-missing\t{profile}\t{threshold_profile}\t{}",
+                display_path(&entry.path)
+            ),
+            lane_d::LaneDCheckedBaselineReadinessStatus::InvalidArtifact { message } => println!(
+                "lane-d-readiness-invalid\t{profile}\t{threshold_profile}\t{}\t{}",
+                display_path(&entry.path),
+                message.replace('\n', "\\n")
+            ),
+            lane_d::LaneDCheckedBaselineReadinessStatus::NotClean { report } => println!(
+                "lane-d-readiness-not-clean\t{profile}\t{threshold_profile}\t{}\tmissing={}\tunused={}\telapsed={}\tvalue_nodes={}",
+                display_path(&entry.path),
+                report.missing_records.len(),
+                report.unused_records.len(),
+                report.elapsed_regressions.len(),
+                report.value_node_regressions.len()
+            ),
+        }
+    }
 }
