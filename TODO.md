@@ -605,8 +605,8 @@ This roadmap intentionally uses two levels of detail:
   - [ ] Lane D follow-up: capture checked `ci-debug` / `ci-release` baseline artifacts on the intended runners before tightening elapsed thresholds beyond broad smoke guardrails; `lane-d --check-baseline-readiness` now reports the missing runner-specific artifacts instead of relying on TODO text alone
   - [x] Lane E: keep host-contract tests in `rum`-native crate-local suites rather than Wolfram diff, with current Rust host-contract coverage owned by `cargo test -p rum-host`
   - [x] Lane F: keep adapter/protocol tests in adapter-native suites rather than Wolfram diff, with current Jupyter protocol coverage owned by `cargo test -p rum-jupyter`
-- [ ] Keep `rum`-specific kernel extensions and runtime/session semantics in crate-local suites unless they also have a meaningful Wolfram-oracle-comparable same-name surface
-- [ ] Keep Wolfram-oracle execution environment-gated even though the differential test workstream itself is required:
+- [x] Keep `rum`-specific kernel extensions and runtime/session semantics in crate-local suites unless they also have a meaningful Wolfram-oracle-comparable same-name surface
+- [x] Keep Wolfram-oracle execution environment-gated even though the differential test workstream itself is required:
   - [x] accept a user-configured local kernel-compatible oracle command such as `WolframKernel`, `MathKernel`, or a compatible wrapper via CLI, config, environment, `PATH`, or common install discovery
   - [x] treat the oracle environment and license as user-provided rather than project-provided
   - [x] treat connector- or MCP-wrapped Wolfram access as an optional convenience for small spot checks rather than the baseline oracle path
@@ -618,7 +618,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] bound every Lane A/B oracle and version-probe process with a configurable timeout, terminate timed-out kernels, and report the effective timeout in CLI output
   - [x] bound oracle stdout/stderr capture per stream, terminate over-limit processes, and retain only a capped diagnostic prefix
   - [x] record any deliberate divergences from Wolfram behavior alongside those fixtures; Lane C now verifies active fixture `!!! type=...` metadata stays aligned with ledger `type=...`, while fixture lines already require local `reason=...`
-- [ ] Prioritize oracle-style checks for the most semantics-sensitive areas first:
+- [x] Prioritize oracle-style checks for the most semantics-sensitive areas first:
   - [x] arithmetic normalization and exact-integer behavior now have an initial curated Lane A foothold
   - [x] rules, patterns, replacement, and traversal behavior now have an initial curated Lane A foothold
   - [x] scoping and held-evaluation constructs now have an initial curated Lane A foothold through loops/control/function cases
