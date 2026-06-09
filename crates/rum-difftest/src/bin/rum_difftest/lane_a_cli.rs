@@ -1,7 +1,8 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use rum_difftest::config::{load_optional_config, resolve_oracle_kernel, resolve_oracle_timeout};
+use rum_difftest::fixtures::seed_root;
 use rum_difftest::lane_a::{self, LaneACaseStatus, LaneAOptions};
 use rum_difftest::oracle::OracleKernel;
 
@@ -24,6 +25,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut include_known_differences = false;
     let mut fail_on_mismatch = false;
     let mut fail_on_seed_drift = false;
+    let mut fail_on_project_seed_drift = false;
     let mut fail_on_resolved_known_difference = false;
     let mut oracle_timeout_seconds = None;
     let mut summary_json_path = None;
@@ -62,6 +64,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             }
             "--fail-on-mismatch" => fail_on_mismatch = true,
             "--fail-on-seed-drift" => fail_on_seed_drift = true,
+            "--fail-on-project-seed-drift" => fail_on_project_seed_drift = true,
             "--fail-on-resolved-known-difference" => {
                 fail_on_resolved_known_difference = true;
             }
@@ -91,12 +94,14 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let oracle_processes = oracle.evaluation_process_count(summary.compared);
     let oracle_batches = summary.compared;
     let oracle_batch_inputs = summary.compared;
+    let project_seed_snapshot_drifts = lane_a_project_seed_snapshot_drifts(&summary);
     let session_batch_transport = OracleLaneSessionBatchTransport {
         name: oracle.session_batch_transport_name(),
         process_count: Some(oracle_processes),
     };
     text_report::print_lane_a_report(
         &summary,
+        project_seed_snapshot_drifts,
         oracle_processes,
         oracle_batches,
         oracle_batch_inputs,
@@ -113,6 +118,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 include_known_differences: options.include_known_differences,
                 fail_on_mismatch,
                 fail_on_seed_drift,
+                fail_on_project_seed_drift,
                 fail_on_resolved_known_difference,
                 issue_sample_kind,
                 session_batch_transport: Some(session_batch_transport),
@@ -132,6 +138,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                     seed_snapshots_checked: summary.seed_snapshots_checked,
                     seed_snapshots_matched_oracle: summary.seed_snapshots_matched_oracle,
                     seed_snapshots_drifted_from_oracle: summary.seed_snapshots_drifted_from_oracle,
+                    project_seed_snapshots_drifted_from_oracle: project_seed_snapshot_drifts,
                     oracle_session_batches: None,
                     oracle_session_steps: None,
                 },
@@ -149,11 +156,33 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     if fail_on_seed_drift && summary.seed_snapshots_drifted_from_oracle > 0 {
         return Ok(ExitCode::FAILURE);
     }
+    if fail_on_project_seed_drift && project_seed_snapshot_drifts > 0 {
+        return Ok(ExitCode::FAILURE);
+    }
     if fail_on_resolved_known_difference && summary.resolved_known_differences > 0 {
         return Ok(ExitCode::FAILURE);
     }
 
     Ok(ExitCode::SUCCESS)
+}
+
+fn lane_a_project_seed_snapshot_drifts(summary: &lane_a::LaneASummary) -> usize {
+    let imported_seed_root = seed_root().canonicalize().unwrap_or_else(|_| seed_root());
+    summary
+        .cases
+        .iter()
+        .filter(|case| {
+            case.seed_matches_oracle == Some(false)
+                && !is_imported_seed_fixture(&case.fixture, &imported_seed_root)
+        })
+        .count()
+}
+
+fn is_imported_seed_fixture(path: &Path, imported_seed_root: &Path) -> bool {
+    path.starts_with(imported_seed_root)
+        || path
+            .canonicalize()
+            .is_ok_and(|canonical| canonical.starts_with(imported_seed_root))
 }
 
 fn lane_a_issue_samples(
@@ -223,6 +252,10 @@ fn print_lane_a_usage() {
     );
     println!("  --fail-on-mismatch        Exit non-zero if any case mismatches or fails");
     println!("  --fail-on-seed-drift      Exit non-zero if any seed snapshot drifts");
+    println!("  --fail-on-project-seed-drift");
+    println!(
+        "                              Exit non-zero if any non-imported seed snapshot drifts"
+    );
     println!("  --fail-on-resolved-known-difference");
     println!(
         "                              Exit non-zero if any included known difference now matches"

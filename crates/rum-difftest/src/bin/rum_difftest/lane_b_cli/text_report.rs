@@ -5,6 +5,7 @@ use super::super::oracle_lane_summary_json::OracleLaneSessionBatchTransport;
 
 pub(super) fn print_lane_b_report(
     summary: &lane_b::LaneBSummary,
+    project_seed_snapshot_drifts: usize,
     session_batch_transport: OracleLaneSessionBatchTransport,
     oracle_batches: usize,
     oracle_batch_inputs: usize,
@@ -36,6 +37,7 @@ pub(super) fn print_lane_b_report(
         "seed snapshots drifted from oracle: {}",
         summary.seed_snapshots_drifted_from_oracle
     );
+    println!("project seed snapshots drifted from oracle: {project_seed_snapshot_drifts}");
     println!("oracle batches: {oracle_batches}");
     println!("oracle batch inputs: {oracle_batch_inputs}");
     println!("oracle session batches: {}", summary.oracle_session_batches);

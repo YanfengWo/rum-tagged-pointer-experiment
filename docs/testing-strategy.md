@@ -203,10 +203,13 @@ seed-drift, and resolved-known-difference breakdown. Use
 `--fail-on-seed-drift` only for deliberate fixture-snapshot audits; normal
 oracle conformance should continue to compare `rum` against fresh oracle output
 rather than against checked seed annotations. Use
+`--fail-on-project-seed-drift` when default Lane A audits should fail for
+project-owned fixture drift while tolerating historical drift in the imported
+`seed/ham-import` snapshot. Use
 `--fail-on-resolved-known-difference` with `--include-known-diffs` when an
 oracle audit should fail if active known-difference rows now match and are ready
 for ledger cleanup. Lane A/B summary JSON records the active
-`fail_on_mismatch`, `fail_on_seed_drift`, and
+`fail_on_mismatch`, `fail_on_seed_drift`, `fail_on_project_seed_drift`, and
 `fail_on_resolved_known_difference` gate options so automation can distinguish
 comparison cleanliness from the requested exit policy. It also reports
 `oracle_processes`, `oracle_batches`, and `oracle_batch_inputs` so process-reuse

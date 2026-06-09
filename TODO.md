@@ -626,6 +626,10 @@ This roadmap intentionally uses two levels of detail:
     local Wolfram oracle and refresh stale project-owned association/template
     expectations, leaving the remaining default-run seed drift isolated to the
     imported `seed/ham-import` snapshot
+  - [x] Lane A/B follow-up: add `--fail-on-project-seed-drift` plus text/JSON
+    project seed-drift counts, so default oracle audits can protect
+    project-owned fixtures without failing on immutable imported seed snapshot
+    drift
   - [x] Lane A follow-up: add a curated structure-selector fixture for stable
     `Part` / `Extract` / `ReplacePart` / `Depth` / `Level` conformance, and
     guard it with the checked inventory category baseline
