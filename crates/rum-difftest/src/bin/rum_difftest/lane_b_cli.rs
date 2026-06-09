@@ -10,7 +10,7 @@ use super::oracle_lane_cli::{
 use super::oracle_lane_summary_json::{
     OracleLaneIssueSample, OracleLaneIssueSampleKindFilter, OracleLaneIssueSamples,
     OracleLaneSessionBatchTransport, OracleLaneSummaryCounts, OracleLaneSummaryJsonContext,
-    write_summary_json,
+    OracleLaneTransportCounts, write_summary_json,
 };
 
 #[path = "lane_b_cli/text_report.rs"]
@@ -74,27 +74,16 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 issue_sample_kind: cli.issue_sample_kind,
                 issue_sample_source: cli.issue_sample_source,
                 session_batch_transport: Some(session_batch_transport),
-                counts: OracleLaneSummaryCounts {
-                    total_seen: summary.total_seen,
-                    compared: summary.compared,
-                    matches: summary.matches,
-                    mismatches: summary.mismatches,
-                    rum_failures: summary.rum_failures,
-                    oracle_failures: summary.oracle_failures,
-                    oracle_processes,
-                    oracle_batches,
-                    oracle_batch_inputs,
-                    skipped_known_differences: summary.skipped_known_differences,
-                    confirmed_known_differences: summary.confirmed_known_differences,
-                    resolved_known_differences: summary.resolved_known_differences,
+                counts: OracleLaneSummaryCounts::from_lane_b(
+                    &summary,
+                    OracleLaneTransportCounts {
+                        oracle_processes,
+                        oracle_batches,
+                        oracle_batch_inputs,
+                    },
                     project_non_matches,
-                    seed_snapshots_checked: summary.seed_snapshots_checked,
-                    seed_snapshots_matched_oracle: summary.seed_snapshots_matched_oracle,
-                    seed_snapshots_drifted_from_oracle: summary.seed_snapshots_drifted_from_oracle,
-                    project_seed_snapshots_drifted_from_oracle: project_seed_snapshot_drifts,
-                    oracle_session_batches: Some(summary.oracle_session_batches),
-                    oracle_session_steps: Some(summary.oracle_session_steps),
-                },
+                    project_seed_snapshot_drifts,
+                ),
                 issue_samples: lane_b_issue_samples(
                     &summary,
                     cli.max_issue_samples,

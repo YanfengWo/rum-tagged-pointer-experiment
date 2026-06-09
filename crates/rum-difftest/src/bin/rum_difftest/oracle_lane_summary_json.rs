@@ -12,6 +12,9 @@ pub(super) use crate::json_cli::parse_max_issue_samples;
 
 pub(super) const DEFAULT_MAX_ISSUE_SAMPLES: usize = 5;
 
+#[path = "oracle_lane_summary_json/counts.rs"]
+mod counts;
+
 pub(super) struct OracleLaneSummaryJsonContext<'a> {
     pub(super) lane: &'a str,
     pub(super) oracle: &'a OracleKernel,
@@ -36,6 +39,13 @@ pub(super) struct OracleLaneSummaryJsonContext<'a> {
 pub(super) struct OracleLaneSessionBatchTransport {
     pub(super) name: &'static str,
     pub(super) process_count: Option<usize>,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct OracleLaneTransportCounts {
+    pub(super) oracle_processes: usize,
+    pub(super) oracle_batches: usize,
+    pub(super) oracle_batch_inputs: usize,
 }
 
 #[derive(Clone, Copy)]
