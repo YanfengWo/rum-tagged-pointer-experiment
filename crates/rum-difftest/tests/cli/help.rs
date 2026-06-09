@@ -12,7 +12,17 @@ fn top_level_help_lists_lane_d_readiness_gate() {
     assert!(stdout.contains("--inventory-baseline"));
     assert!(stdout.contains("--include-lane-d-smoke"));
     assert!(stdout.contains("--include-lane-d-readiness"));
+    assert!(stdout.contains("--fail-on-open-known-difference"));
     assert!(stdout.contains("--artifact-hygiene-root"));
+    assert!(stdout.contains("--issue-sample-check"));
+    assert!(stdout.contains("--issue-sample-kind"));
+    assert!(stdout.contains("--issue-sample-source"));
+    assert!(stdout.contains("--include-known-diffs"));
+    assert!(stdout.contains("--fail-on-mismatch"));
+    assert!(stdout.contains("--fail-on-project-mismatch"));
+    assert!(stdout.contains("--fail-on-seed-drift"));
+    assert!(stdout.contains("--fail-on-project-seed-drift"));
+    assert!(stdout.contains("--fail-on-resolved-known-difference"));
     assert!(stdout.contains("--check-baseline-readiness"));
     assert!(stdout.contains("--write-baseline"));
     assert!(stdout.contains("--summary-json"));

@@ -65,15 +65,15 @@ fn expect_value(
 
 fn print_usage() {
     println!(
-        "rum-difftest check [--inventory-baseline PATH] [--include-lane-d-smoke] [--lane-d-smoke-baseline PATH] [--include-lane-d-readiness] [--artifact-hygiene-root PATH] [--summary-json PATH] [--max-issue-samples N]"
+        "rum-difftest check [--inventory-baseline PATH] [--include-lane-d-smoke] [--lane-d-smoke-baseline PATH] [--include-lane-d-readiness] [--fail-on-open-known-difference] [--artifact-hygiene-root PATH] [--summary-json PATH] [--max-issue-samples N] [--issue-sample-check NAME] [--issue-sample-kind KIND]"
     );
     println!(
-        "rum-difftest lane-a [--oracle-kernel PATH|--oracle-command PATH] [--oracle-timeout-seconds N] [--config PATH] [--fixture PATH] [--limit N] [--summary-json PATH] [--max-issue-samples N]"
+        "rum-difftest lane-a [--oracle-kernel PATH|--oracle-command PATH] [--oracle-timeout-seconds N] [--config PATH] [--fixture PATH] [--source NAME] [--category NAME] [--limit N] [--include-known-diffs] [--summary-json PATH] [--max-issue-samples N] [--issue-sample-kind KIND] [--issue-sample-source SRC] [--fail-on-mismatch] [--fail-on-project-mismatch] [--fail-on-seed-drift] [--fail-on-project-seed-drift] [--fail-on-resolved-known-difference]"
     );
     println!(
-        "rum-difftest lane-b [--oracle-kernel PATH|--oracle-command PATH] [--oracle-timeout-seconds N] [--config PATH] [--fixture PATH] [--limit N] [--summary-json PATH] [--max-issue-samples N]"
+        "rum-difftest lane-b [--oracle-kernel PATH|--oracle-command PATH] [--oracle-timeout-seconds N] [--config PATH] [--fixture PATH] [--source NAME] [--category NAME] [--limit N] [--include-known-diffs] [--summary-json PATH] [--max-issue-samples N] [--issue-sample-kind KIND] [--issue-sample-source SRC] [--fail-on-mismatch] [--fail-on-project-mismatch] [--fail-on-seed-drift] [--fail-on-project-seed-drift] [--fail-on-resolved-known-difference]"
     );
-    println!("rum-difftest lane-c [--summary-json PATH]");
+    println!("rum-difftest lane-c [--summary-json PATH] [--fail-on-open-known-difference]");
     println!(
         "rum-difftest lane-d [--suite all|timing|memory] [--profile smoke|full] [--limit N] [--baseline PATH] [--write-baseline PATH] [--check-baseline-readiness] [--summary-json PATH]"
     );
