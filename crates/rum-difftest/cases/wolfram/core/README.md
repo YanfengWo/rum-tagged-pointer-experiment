@@ -46,6 +46,8 @@ The current first pass includes:
   comparisons, and comparison-operator forms
 - a predicate-surface suite for structural, numeric, sign, prime, algebraic,
   and real-valued predicate compatibility
+- a collection/shape predicate suite for set-style containment, shape checks,
+  truth aggregates, and `SubsetQ` argument-order parity
 - a focused functional-combinator suite covering current CL-04 operator and iteration subsets
 - a focused rules/patterns/replacement/traversal suite for Lane A stateless
   conformance

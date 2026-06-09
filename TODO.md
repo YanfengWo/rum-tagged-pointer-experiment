@@ -572,7 +572,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A follow-up: compare single-expression values, messages, and printed output instead of values only
   - [x] Lane A follow-up: curate resolved imported seed known differences such as `specific_override` into `cases/` before pruning seed-linked active ledger rows, preserving `seed/` as unchanged historical input via the retired seed manifest
   - [x] Lane A/B follow-up: add a shared InputForm-like renderer for common list, rule, delayed-rule, and association output shapes before oracle comparison
-  - [x] Land a first curated `cases/wolfram/core/` fixture set covering arithmetic/structures, truth/comparison, predicate surface, strings, associations, loops/control objects, functional combinators, rules/patterns/replacement/traversal, and failure/status smoke checks
+  - [x] Land a first curated `cases/wolfram/core/` fixture set covering arithmetic/structures, truth/comparison, predicate surface, collection/shape predicates, strings, associations, loops/control objects, functional combinators, rules/patterns/replacement/traversal, and failure/status smoke checks
   - [x] Lane A follow-up: make the default runner include both imported seed golden files and curated project-owned `cases/wolfram/core/` fixtures, while keeping `--fixture PATH` for single-file focus
   - [x] Lane B: land a first stateful session fixture format and runner for ordered definition / option / message / precedence checks
   - [x] Lane B follow-up: replace replay-based Wolfram state simulation with a single-kernel session oracle transport per fixture before relying on deeper stateful edges
@@ -691,6 +691,10 @@ This roadmap intentionally uses two levels of detail:
     structural, numeric, sign, prime, algebraic-integer, and real-valued
     predicate compatibility, and guard it with the checked inventory category
     baseline
+  - [x] Lane A follow-up: add a curated collection/shape predicate fixture for
+    stable set-style containment, array-shape, truth-aggregate, and `SubsetQ`
+    argument-order compatibility, and guard it with the checked inventory
+    category baseline
   - [x] Lane A follow-up: broaden the curated definition-precedence fixture
     with stable downvalue replacement, literal-vs-typed dispatch, and upvalue
     precedence cases, and guard the higher coverage floor in the inventory

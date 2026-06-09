@@ -1,0 +1,24 @@
+# Curated Lane A file: collection and shape predicates
+# Format: input ||| expected_output
+DuplicateFreeQ[{a, b, c}] ||| True
+DuplicateFreeQ[{a, b, a}] ||| False
+ContainsAll[{a, b, c}, {b, a}] ||| True
+ContainsAny[{a, b}, {x, b}] ||| True
+ContainsNone[{a, b}, {x, y}] ||| True
+ContainsOnly[{a, a, b}, {a, b, c}] ||| True
+ContainsExactly[{a, b, a}, {b, a, a}] ||| True
+SubsetQ[{a, b}, {a, b, c}] ||| False
+SubsetQ[{a, b, c}, {b, a}] ||| True
+IntersectingQ[{a, b}, {x, b}] ||| True
+DisjointQ[{a, b}, {x, y}] ||| True
+Between[3/2, {1, 2}] ||| True
+VectorQ[{a, b}] ||| True
+MatrixQ[{{a, b}, {c, d}}] ||| True
+MatrixQ[{{a}, {b, c}}] ||| False
+ArrayQ[{{a, b}, {c, d}}, 2] ||| True
+ArrayQ[{{a}, {b, c}}] ||| False
+AllTrue[{1, 2, 3}, Positive] ||| True
+AnyTrue[{1, -2, 3}, Negative] ||| True
+NoneTrue[{1, 2, 3}, Negative] ||| True
+CoprimeQ[8, 15] ||| True
+CoprimeQ[6, 10, 15] ||| False

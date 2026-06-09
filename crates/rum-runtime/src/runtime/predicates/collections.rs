@@ -75,11 +75,11 @@ impl Session {
             });
         };
 
-        let rhs_set = expr_set(rhs);
+        let lhs_set = expr_set(lhs);
         Ok(predicate_bool_expr(
-            expr_set(lhs)
+            expr_set(rhs)
                 .into_iter()
-                .all(|item| rhs_set.contains(&item)),
+                .all(|item| lhs_set.contains(&item)),
         ))
     }
 

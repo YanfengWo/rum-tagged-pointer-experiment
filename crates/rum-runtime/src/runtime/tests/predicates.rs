@@ -748,6 +748,14 @@ fn list_relation_and_shape_predicates_cover_current_exact_subsets() {
             .unwrap()
             .value
             .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("SubsetQ[{a, b, c}, {b, a}]")
+            .unwrap()
+            .value
+            .to_string(),
         "True"
     );
     assert_eq!(
