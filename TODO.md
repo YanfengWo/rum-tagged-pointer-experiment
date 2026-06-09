@@ -576,6 +576,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B follow-up: add a checked inventory baseline plus `inventory --check-baseline --fail-on-regression` so fixture count, total entry, normal-entry, and known-difference regression gates are executable without Wolfram
   - [x] Lane A/B follow-up: add `inventory --write-baseline PATH` so intentional fixture additions or reshuffles can refresh the stable non-oracle coverage baseline without hand-editing threshold rows
   - [x] Lane A/B follow-up: extend `rum-difftest inventory` with stable semantic category counts in text and JSON output so high-risk fixture coverage is easier to audit without parsing file paths
+  - [x] Lane A/B follow-up: extend the checked inventory baseline to source-or-category records so semantic category coverage regressions fail `inventory --check-baseline --fail-on-regression`
   - [ ] Lane B follow-up: add optional long-lived interactive process reuse once oracle-run throughput needs it
   - [x] Lane C: land a checked known-difference ledger plus `rum-difftest lane-c` validation that fixture `!!! id=...` entries and ledger rows stay synchronized
   - [x] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved

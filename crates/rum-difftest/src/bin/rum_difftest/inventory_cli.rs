@@ -147,16 +147,18 @@ fn print_baseline_report(path: &Path, report: &InventoryBaselineReport) {
     );
     for regression in &report.regressions {
         println!(
-            "inventory-baseline-regression\t{}\t{}\t{}",
+            "inventory-baseline-regression\t{}\t{}\t{}\t{}",
             regression.record.lane,
-            regression.record.source,
+            regression.record.dimension.field_name(),
+            regression.record.name,
             regression.issues.join(" | ")
         );
         if let Some(actual) = &regression.actual {
             println!(
-                "inventory-baseline-actual\t{}\t{}\tfixtures={}\tentries={}\tnormal={}\tknown_differences={}",
+                "inventory-baseline-actual\t{}\t{}\t{}\tfixtures={}\tentries={}\tnormal={}\tknown_differences={}",
                 regression.record.lane,
-                regression.record.source,
+                regression.record.dimension.field_name(),
+                regression.record.name,
                 actual.fixtures,
                 actual.entries,
                 actual.normal_entries,
@@ -223,12 +225,14 @@ fn baseline_json(path: Option<&Path>, report: Option<&InventoryBaselineReport>) 
                     concat!(
                         "      {{",
                         "\"lane\": \"{}\", ",
-                        "\"source\": \"{}\", ",
+                        "\"dimension\": \"{}\", ",
+                        "\"name\": \"{}\", ",
                         "\"issues\": [{}]",
                         "}}"
                     ),
                     json_string(&regression.record.lane),
-                    json_string(&regression.record.source),
+                    json_string(regression.record.dimension.field_name()),
+                    json_string(&regression.record.name),
                     regression
                         .issues
                         .iter()

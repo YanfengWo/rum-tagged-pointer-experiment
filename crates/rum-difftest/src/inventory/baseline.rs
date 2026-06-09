@@ -8,9 +8,8 @@ use crate::fixtures::{crate_root, load_text};
 
 use super::{FixtureInventoryReport, FixtureInventoryTotals};
 
-const REQUIRED_FIELDS: [&str; 6] = [
+const REQUIRED_FIELDS: [&str; 5] = [
     "lane",
-    "source",
     "min_fixtures",
     "min_entries",
     "min_normal_entries",
@@ -25,11 +24,34 @@ pub struct InventoryBaseline {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InventoryBaselineRecord {
     pub lane: String,
-    pub source: String,
+    pub dimension: InventoryBaselineDimension,
+    pub name: String,
     pub min_fixtures: usize,
     pub min_entries: usize,
     pub min_normal_entries: usize,
     pub max_known_difference_entries: usize,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum InventoryBaselineDimension {
+    Source,
+    Category,
+}
+
+impl InventoryBaselineDimension {
+    pub fn field_name(self) -> &'static str {
+        match self {
+            Self::Source => "source",
+            Self::Category => "category",
+        }
+    }
+
+    fn missing_message_name(self) -> &'static str {
+        match self {
+            Self::Source => "source",
+            Self::Category => "category",
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -69,8 +91,16 @@ pub enum InventoryBaselineError {
         field: String,
         value: String,
     },
-    #[error("duplicate inventory baseline record for lane `{lane}`, source `{source_name}`")]
-    DuplicateRecord { lane: String, source_name: String },
+    #[error("inventory baseline line must include exactly one of `source` or `category`: {line}")]
+    InvalidDimension { line: String },
+    #[error(
+        "duplicate inventory baseline record for lane `{lane}`, {dimension} `{dimension_name}`"
+    )]
+    DuplicateRecord {
+        lane: String,
+        dimension: String,
+        dimension_name: String,
+    },
 }
 
 pub fn default_inventory_baseline_path() -> PathBuf {
@@ -130,7 +160,8 @@ pub fn parse_inventory_baseline(text: &str) -> Result<InventoryBaseline, Invento
 
         let record = InventoryBaselineRecord {
             lane: fields["lane"].clone(),
-            source: fields["source"].clone(),
+            dimension: parse_dimension(line, &fields)?,
+            name: parse_dimension_name(line, &fields)?.to_string(),
             min_fixtures: parse_usize(line, "min_fixtures", &fields["min_fixtures"])?,
             min_entries: parse_usize(line, "min_entries", &fields["min_entries"])?,
             min_normal_entries: parse_usize(
@@ -144,11 +175,12 @@ pub fn parse_inventory_baseline(text: &str) -> Result<InventoryBaseline, Invento
                 &fields["max_known_difference_entries"],
             )?,
         };
-        let key = (record.lane.clone(), record.source.clone());
+        let key = (record.lane.clone(), record.dimension, record.name.clone());
         if seen.insert(key.clone(), ()).is_some() {
             return Err(InventoryBaselineError::DuplicateRecord {
                 lane: key.0,
-                source_name: key.1,
+                dimension: key.1.field_name().to_string(),
+                dimension_name: key.2,
             });
         }
         records.push(record);
@@ -161,9 +193,30 @@ pub fn capture_inventory_baseline(inventory: &FixtureInventoryReport) -> Invento
     let mut records = Vec::new();
 
     for lane in &inventory.lanes {
-        push_record_from_totals(&mut records, &lane.lane, "all", &lane.totals());
+        push_record_from_totals(
+            &mut records,
+            &lane.lane,
+            InventoryBaselineDimension::Source,
+            "all",
+            &lane.totals(),
+        );
         for (source, totals) in lane.totals_by_source() {
-            push_record_from_totals(&mut records, &lane.lane, source, &totals);
+            push_record_from_totals(
+                &mut records,
+                &lane.lane,
+                InventoryBaselineDimension::Source,
+                source,
+                &totals,
+            );
+        }
+        for (category, totals) in lane.totals_by_category() {
+            push_record_from_totals(
+                &mut records,
+                &lane.lane,
+                InventoryBaselineDimension::Category,
+                category,
+                &totals,
+            );
         }
     }
 
@@ -173,6 +226,8 @@ pub fn capture_inventory_baseline(inventory: &FixtureInventoryReport) -> Invento
 pub fn format_inventory_baseline(baseline: &InventoryBaseline) -> String {
     let mut output = String::from(
         "# Stable non-oracle fixture coverage baseline.\n\
+         # Records target either source groups (`source=...`) or semantic categories\n\
+         # (`category=...`).\n\
          # `min_*` fields are lower bounds. `max_known_difference_entries` is an upper\n\
          # bound so resolved known differences can decrease without failing the gate.\n",
     );
@@ -189,16 +244,19 @@ pub fn compare_inventory_baseline(
     inventory: &FixtureInventoryReport,
     baseline: &InventoryBaseline,
 ) -> InventoryBaselineReport {
-    let actual = actual_totals_by_lane_source(inventory);
+    let actual = actual_totals_by_lane_dimension(inventory);
     let mut regressions = Vec::new();
 
     for record in &baseline.records {
-        let key = (record.lane.clone(), record.source.clone());
+        let key = (record.lane.clone(), record.dimension, record.name.clone());
         let actual_totals = actual.get(&key).cloned();
         let mut issues = Vec::new();
         match &actual_totals {
             Some(totals) => collect_regression_issues(record, totals, &mut issues),
-            None => issues.push("missing lane/source in current inventory".to_string()),
+            None => issues.push(format!(
+                "missing lane/{} in current inventory",
+                record.dimension.missing_message_name()
+            )),
         }
         if !issues.is_empty() {
             regressions.push(InventoryBaselineRegression {
@@ -218,12 +276,14 @@ pub fn compare_inventory_baseline(
 fn push_record_from_totals(
     records: &mut Vec<InventoryBaselineRecord>,
     lane: &str,
-    source: &str,
+    dimension: InventoryBaselineDimension,
+    name: &str,
     totals: &FixtureInventoryTotals,
 ) {
     records.push(InventoryBaselineRecord {
         lane: lane.to_string(),
-        source: source.to_string(),
+        dimension,
+        name: name.to_string(),
         min_fixtures: totals.fixtures,
         min_entries: totals.entries,
         min_normal_entries: totals.normal_entries,
@@ -233,9 +293,10 @@ fn push_record_from_totals(
 
 fn format_inventory_baseline_record(record: &InventoryBaselineRecord) -> String {
     format!(
-        "lane={} source={} min_fixtures={} min_entries={} min_normal_entries={} max_known_difference_entries={}",
+        "lane={} {}={} min_fixtures={} min_entries={} min_normal_entries={} max_known_difference_entries={}",
         record.lane,
-        record.source,
+        record.dimension.field_name(),
+        record.name,
         record.min_fixtures,
         record.min_entries,
         record.min_normal_entries,
@@ -243,14 +304,38 @@ fn format_inventory_baseline_record(record: &InventoryBaselineRecord) -> String 
     )
 }
 
-fn actual_totals_by_lane_source(
+fn actual_totals_by_lane_dimension(
     inventory: &FixtureInventoryReport,
-) -> BTreeMap<(String, String), FixtureInventoryTotals> {
+) -> BTreeMap<(String, InventoryBaselineDimension, String), FixtureInventoryTotals> {
     let mut totals = BTreeMap::new();
     for lane in &inventory.lanes {
-        totals.insert((lane.lane.clone(), "all".to_string()), lane.totals());
+        totals.insert(
+            (
+                lane.lane.clone(),
+                InventoryBaselineDimension::Source,
+                "all".to_string(),
+            ),
+            lane.totals(),
+        );
         for (source, source_totals) in lane.totals_by_source() {
-            totals.insert((lane.lane.clone(), source.to_string()), source_totals);
+            totals.insert(
+                (
+                    lane.lane.clone(),
+                    InventoryBaselineDimension::Source,
+                    source.to_string(),
+                ),
+                source_totals,
+            );
+        }
+        for (category, category_totals) in lane.totals_by_category() {
+            totals.insert(
+                (
+                    lane.lane.clone(),
+                    InventoryBaselineDimension::Category,
+                    category.to_string(),
+                ),
+                category_totals,
+            );
         }
     }
     totals
@@ -297,6 +382,32 @@ fn parse_fields(line: &str) -> Result<BTreeMap<String, String>, InventoryBaselin
     Ok(fields)
 }
 
+fn parse_dimension(
+    line: &str,
+    fields: &BTreeMap<String, String>,
+) -> Result<InventoryBaselineDimension, InventoryBaselineError> {
+    match (
+        fields.contains_key("source"),
+        fields.contains_key("category"),
+    ) {
+        (true, false) => Ok(InventoryBaselineDimension::Source),
+        (false, true) => Ok(InventoryBaselineDimension::Category),
+        _ => Err(InventoryBaselineError::InvalidDimension {
+            line: line.to_string(),
+        }),
+    }
+}
+
+fn parse_dimension_name<'a>(
+    line: &str,
+    fields: &'a BTreeMap<String, String>,
+) -> Result<&'a str, InventoryBaselineError> {
+    match parse_dimension(line, fields)? {
+        InventoryBaselineDimension::Source => Ok(&fields["source"]),
+        InventoryBaselineDimension::Category => Ok(&fields["category"]),
+    }
+}
+
 fn parse_usize(line: &str, field: &str, value: &str) -> Result<usize, InventoryBaselineError> {
     value
         .parse::<usize>()
@@ -319,7 +430,7 @@ mod tests {
         let report = compare_inventory_baseline(&inventory, &baseline);
 
         assert!(report.is_clean(), "{report:?}");
-        assert_eq!(report.records_considered, 5);
+        assert_eq!(report.records_considered, 31);
     }
 
     #[test]
@@ -337,6 +448,24 @@ mod tests {
     }
 
     #[test]
+    fn inventory_baseline_reports_category_regressions() {
+        let inventory = collect_fixture_inventory().unwrap();
+        let baseline = parse_inventory_baseline(
+            "lane=lane-a category=associations-core min_fixtures=1 min_entries=999 min_normal_entries=999 max_known_difference_entries=0\n",
+        )
+        .unwrap();
+        let report = compare_inventory_baseline(&inventory, &baseline);
+
+        assert!(!report.is_clean());
+        assert_eq!(report.regressions.len(), 1);
+        assert_eq!(
+            report.regressions[0].record.dimension,
+            InventoryBaselineDimension::Category
+        );
+        assert_eq!(report.regressions[0].record.name, "associations-core");
+    }
+
+    #[test]
     fn captured_inventory_baseline_round_trips_and_is_clean() {
         let inventory = collect_fixture_inventory().unwrap();
         let baseline = capture_inventory_baseline(&inventory);
@@ -345,8 +474,9 @@ mod tests {
         let report = compare_inventory_baseline(&inventory, &reparsed);
 
         assert_eq!(reparsed, baseline);
-        assert_eq!(baseline.records.len(), 5);
+        assert_eq!(baseline.records.len(), 31);
         assert!(formatted.contains("lane=lane-a source=all min_fixtures=24"));
+        assert!(formatted.contains("lane=lane-a category=associations-core min_fixtures=1"));
         assert!(report.is_clean(), "{report:?}");
     }
 

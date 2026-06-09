@@ -25,7 +25,8 @@ Lane A/B fixtures. It reports fixture counts, source groups, semantic
 categories, normal entries, and known-difference entries, and supports
 `--summary-json PATH` for scripts or dashboards.
 `--check-baseline --fail-on-regression` compares against
-`coverage/inventory-baseline.txt`; `min_*` fields are lower bounds, while
+`coverage/inventory-baseline.txt`; baseline rows can target `source=...` or
+`category=...`, `min_*` fields are lower bounds, and
 `max_known_difference_entries` is an upper bound. `--write-baseline PATH`
 captures the current inventory in the same stable baseline format.
 

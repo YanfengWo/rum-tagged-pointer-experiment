@@ -55,11 +55,13 @@ categories, normal entries, and known-difference entries. It does not execute
 dashboards that need stable coverage counts without parsing runner logs.
 `--check-baseline` compares the current inventory against
 [coverage/inventory-baseline.txt](./coverage/inventory-baseline.txt).
-Baseline `min_*` counts are lower bounds; `max_known_difference_entries` is an
-upper bound so resolved known differences can decrease without failing the
-gate. Use `--fail-on-regression` to make a non-clean baseline comparison exit
-non-zero. `--write-baseline PATH` captures the current inventory in the same
-stable baseline format for intentional fixture additions or reshuffles.
+Baseline records can target source groups with `source=...` or semantic
+categories with `category=...`. `min_*` counts are lower bounds;
+`max_known_difference_entries` is an upper bound so resolved known differences
+can decrease without failing the gate. Use `--fail-on-regression` to make a
+non-clean baseline comparison exit non-zero. `--write-baseline PATH` captures
+the current inventory in the same stable baseline format for intentional
+fixture additions or reshuffles.
 
 This crate is also deliberately not the place for every `rum` test. If a
 feature is `rum`-specific rather than Wolfram-oracle-comparable, its primary

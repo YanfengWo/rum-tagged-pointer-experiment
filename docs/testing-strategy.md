@@ -123,7 +123,8 @@ categories, normal entries, and known-difference entries; `--summary-json PATH`
 exposes the same stable counts for scripts or dashboards. Use
 `inventory --check-baseline --fail-on-regression` as a local gate against the
 checked fixture-coverage baseline when reviewing fixture pruning or large
-coverage reshuffles. `inventory --write-baseline PATH` captures the current
+coverage reshuffles. The checked baseline covers both source groups and
+semantic categories. `inventory --write-baseline PATH` captures the current
 inventory in that baseline format when a coverage change is intentional.
 
 Messages and diagnostics start in runtime regression tests unless the

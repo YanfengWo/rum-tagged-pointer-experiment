@@ -1,8 +1,36 @@
 # Stable non-oracle fixture coverage baseline.
+# Records target either source groups (`source=...`) or semantic categories
+# (`category=...`).
 # `min_*` fields are lower bounds. `max_known_difference_entries` is an upper
 # bound so resolved known differences can decrease without failing the gate.
 lane=lane-a source=all min_fixtures=24 min_entries=313 min_normal_entries=310 max_known_difference_entries=3
 lane=lane-a source=curated-core min_fixtures=15 min_entries=144 min_normal_entries=144 max_known_difference_entries=0
 lane=lane-a source=seed-golden min_fixtures=9 min_entries=169 min_normal_entries=166 max_known_difference_entries=3
+lane=lane-a category=arithmetic min_fixtures=1 min_entries=34 min_normal_entries=33 max_known_difference_entries=1
+lane=lane-a category=associations-core min_fixtures=1 min_entries=22 min_normal_entries=22 max_known_difference_entries=0
+lane=lane-a category=control min_fixtures=1 min_entries=31 min_normal_entries=31 max_known_difference_entries=0
+lane=lane-a category=control-loops min_fixtures=1 min_entries=11 min_normal_entries=11 max_known_difference_entries=0
+lane=lane-a category=control-objects min_fixtures=1 min_entries=7 min_normal_entries=7 max_known_difference_entries=0
+lane=lane-a category=definitions min_fixtures=1 min_entries=8 min_normal_entries=7 max_known_difference_entries=1
+lane=lane-a category=definitions-precedence min_fixtures=1 min_entries=1 min_normal_entries=1 max_known_difference_entries=0
+lane=lane-a category=evaluation-control min_fixtures=1 min_entries=4 min_normal_entries=3 max_known_difference_entries=1
+lane=lane-a category=failure-status min_fixtures=1 min_entries=12 min_normal_entries=12 max_known_difference_entries=0
+lane=lane-a category=functional-combinators min_fixtures=1 min_entries=20 min_normal_entries=20 max_known_difference_entries=0
+lane=lane-a category=lists min_fixtures=1 min_entries=38 min_normal_entries=38 max_known_difference_entries=0
+lane=lane-a category=ordering min_fixtures=1 min_entries=12 min_normal_entries=12 max_known_difference_entries=0
+lane=lane-a category=patterns min_fixtures=1 min_entries=17 min_normal_entries=17 max_known_difference_entries=0
+lane=lane-a category=rules-patterns-traversal min_fixtures=1 min_entries=11 min_normal_entries=11 max_known_difference_entries=0
+lane=lane-a category=scoping min_fixtures=1 min_entries=10 min_normal_entries=10 max_known_difference_entries=0
+lane=lane-a category=smoke-arithmetic min_fixtures=1 min_entries=7 min_normal_entries=7 max_known_difference_entries=0
+lane=lane-a category=smoke-control min_fixtures=1 min_entries=7 min_normal_entries=7 max_known_difference_entries=0
+lane=lane-a category=smoke-strings min_fixtures=1 min_entries=7 min_normal_entries=7 max_known_difference_entries=0
+lane=lane-a category=smoke-structures min_fixtures=1 min_entries=7 min_normal_entries=7 max_known_difference_entries=0
+lane=lane-a category=strings min_fixtures=1 min_entries=15 min_normal_entries=15 max_known_difference_entries=0
+lane=lane-a category=strings-patterns min_fixtures=1 min_entries=9 min_normal_entries=9 max_known_difference_entries=0
+lane=lane-a category=strings-similarity min_fixtures=1 min_entries=6 min_normal_entries=6 max_known_difference_entries=0
+lane=lane-a category=strings-surface min_fixtures=1 min_entries=11 min_normal_entries=11 max_known_difference_entries=0
+lane=lane-a category=strings-templates min_fixtures=1 min_entries=6 min_normal_entries=6 max_known_difference_entries=0
 lane=lane-b source=all min_fixtures=2 min_entries=69 min_normal_entries=69 max_known_difference_entries=0
 lane=lane-b source=stateful min_fixtures=2 min_entries=69 min_normal_entries=69 max_known_difference_entries=0
+lane=lane-b category=definitions-messages min_fixtures=1 min_entries=57 min_normal_entries=57 max_known_difference_entries=0
+lane=lane-b category=package-defaults min_fixtures=1 min_entries=12 min_normal_entries=12 max_known_difference_entries=0
