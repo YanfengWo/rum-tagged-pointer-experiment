@@ -345,6 +345,11 @@ This roadmap intentionally uses two levels of detail:
       - Deferred assertion/I/O long-tail: obscure `Assert` controls and
         fuller host-I/O option, prompt, request, parse/error semantics, and
         option-list diagnostic shape.
+      - Deferred holding/control-object long-tail: align `Sequence` splicing
+        inside held heads such as `Hold[...]`, top-level / held `Unevaluated`
+        capture boundaries, and Lane A oracle handling for top-level
+        `Sequence[...]` outputs whose arguments would otherwise splice into
+        the oracle `ToString[..., InputForm]` wrapper.
     - [x] `CL-01`: close the current mainline as substantially covered by the
       implemented expression model, exact path selectors, current `Part` /
       `Extract` / `ReplacePart` selector subset, current structural sequence

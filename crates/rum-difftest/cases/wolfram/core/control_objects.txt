@@ -1,6 +1,12 @@
 # Curated Lane A file: control objects
 # Format: input ||| expected_output
 1; 2; 3 ||| 3
+Evaluate[Identity[1]] ||| 1
+Hold[Evaluate[Identity[1]]] ||| Hold[1]
+f[Sequence[1, 2], 3] ||| f[1, 2, 3]
+Hold[Evaluate[Sequence[1, 2]], 3] ||| Hold[1, 2, 3]
+ReleaseHold[Hold[Identity[1]]] ||| 1
+ReleaseHold[HoldComplete[Identity[1]]] ||| 1
 Function[x, x + 1][2] ||| 3
 Switch[2, _String, bad, _Integer, ok] ||| ok
 Catch[Throw[5]] ||| 5
