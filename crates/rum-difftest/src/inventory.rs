@@ -202,6 +202,7 @@ mod tests {
             lane_a.totals_by_category()["collection-shape-predicates"].entries,
             22
         );
+        assert_eq!(lane_a.totals_by_category()["control-loops"].entries, 21);
         assert_eq!(lane_a.totals_by_category()["control-objects"].entries, 13);
         assert_eq!(lane_a.totals_by_category()["context-namespace"].entries, 14);
         assert_eq!(
