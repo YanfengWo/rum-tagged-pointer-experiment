@@ -3,8 +3,8 @@
 # (`category=...`).
 # `min_*` fields are lower bounds. `max_known_difference_entries` is an upper
 # bound so resolved known differences can decrease without failing the gate.
-lane=lane-a source=all min_fixtures=28 min_entries=345 min_normal_entries=340 max_known_difference_entries=5
-lane=lane-a source=curated-core min_fixtures=19 min_entries=176 min_normal_entries=174 max_known_difference_entries=2
+lane=lane-a source=all min_fixtures=28 min_entries=349 min_normal_entries=344 max_known_difference_entries=5
+lane=lane-a source=curated-core min_fixtures=19 min_entries=180 min_normal_entries=178 max_known_difference_entries=2
 lane=lane-a source=seed-golden min_fixtures=9 min_entries=169 min_normal_entries=166 max_known_difference_entries=3
 lane=lane-a category=arithmetic min_fixtures=1 min_entries=34 min_normal_entries=33 max_known_difference_entries=1
 lane=lane-a category=associations-core min_fixtures=1 min_entries=22 min_normal_entries=22 max_known_difference_entries=0
@@ -12,7 +12,7 @@ lane=lane-a category=control min_fixtures=1 min_entries=31 min_normal_entries=31
 lane=lane-a category=control-loops min_fixtures=1 min_entries=11 min_normal_entries=11 max_known_difference_entries=0
 lane=lane-a category=control-objects min_fixtures=1 min_entries=7 min_normal_entries=7 max_known_difference_entries=0
 lane=lane-a category=definitions min_fixtures=1 min_entries=8 min_normal_entries=7 max_known_difference_entries=1
-lane=lane-a category=definitions-precedence min_fixtures=1 min_entries=1 min_normal_entries=1 max_known_difference_entries=0
+lane=lane-a category=definitions-precedence min_fixtures=1 min_entries=5 min_normal_entries=5 max_known_difference_entries=0
 lane=lane-a category=evaluation-control min_fixtures=1 min_entries=4 min_normal_entries=3 max_known_difference_entries=1
 lane=lane-a category=exact-arithmetic min_fixtures=1 min_entries=9 min_normal_entries=9 max_known_difference_entries=0
 lane=lane-a category=failure-status min_fixtures=1 min_entries=12 min_normal_entries=12 max_known_difference_entries=0

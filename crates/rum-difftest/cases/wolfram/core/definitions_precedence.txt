@@ -1,3 +1,7 @@
 # Curated Lane A file: definition precedence
 # Format: input ||| expected_output
 f[1] = 10; f[x_] := x + 1; f[1] ||| 10
+d[x_Integer] := integer[x]; d[x_] := generic[x]; d[1] := one; {d[1], d[3], d[a]} ||| {one, integer[3], generic[a]}
+r[x_] := first[x]; r[y_] := second[y]; r[a] ||| second[a]
+t[x_Integer] := integer[x]; t[x_] := any[x]; {t[7], t[a]} ||| {integer[7], any[a]}
+g[x_] := base[x]; u /: g[u[x_Integer]] := up[x]; {g[u[3]], g[q[3]]} ||| {up[3], base[q[3]]}

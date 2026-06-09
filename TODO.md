@@ -665,6 +665,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A follow-up: add a curated threading fixture for stable `Thread`
     / `MapThread` / current listable-dispatch conformance, and guard it with
     the checked inventory category baseline
+  - [x] Lane A follow-up: broaden the curated definition-precedence fixture
+    with stable downvalue replacement, literal-vs-typed dispatch, and upvalue
+    precedence cases, and guard the higher coverage floor in the inventory
+    baseline
   - [ ] Lane B follow-up: add optional long-lived interactive process reuse once oracle-run throughput needs it
   - [x] Lane C: land a checked known-difference ledger plus `rum-difftest lane-c` validation that fixture `!!! id=...` entries and ledger rows stay synchronized
   - [x] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved
