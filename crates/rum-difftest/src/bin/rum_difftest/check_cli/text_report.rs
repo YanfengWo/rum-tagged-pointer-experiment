@@ -14,8 +14,12 @@ pub(super) fn print_check_report(report: &LocalCheckReport) {
     if let Some(lane_d_readiness) = &report.lane_d_readiness {
         print_lane_d_readiness_check(lane_d_readiness);
     }
+    for skipped in report.skipped_checks() {
+        println!("check\t{}\tskipped\t{}", skipped.name, skipped.reason);
+    }
     println!("checks passed: {}", report.passed_checks());
     println!("checks failed: {}", report.failed_checks());
+    println!("checks skipped: {}", report.skipped_checks_count());
 }
 
 fn print_inventory_baseline_check(report: &LocalCheckReport) {

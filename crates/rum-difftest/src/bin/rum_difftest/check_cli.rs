@@ -103,6 +103,12 @@ pub(super) struct LaneDReadinessCheckReport {
     pub(super) readiness: LaneDCheckedBaselineReadinessReport,
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct SkippedCheck {
+    pub(super) name: &'static str,
+    pub(super) reason: &'static str,
+}
+
 enum LaneDSmokeBaseline {
     Default,
     Path(PathBuf),
@@ -141,6 +147,27 @@ impl LocalCheckReport {
 
     pub(super) fn passed_checks(&self) -> usize {
         self.total_checks() - self.failed_checks()
+    }
+
+    pub(super) fn skipped_checks(&self) -> Vec<SkippedCheck> {
+        let mut skipped = Vec::new();
+        if self.lane_d_smoke.is_none() {
+            skipped.push(SkippedCheck {
+                name: "lane-d-smoke",
+                reason: "opt-in with --include-lane-d-smoke or --lane-d-smoke-baseline PATH",
+            });
+        }
+        if self.lane_d_readiness.is_none() {
+            skipped.push(SkippedCheck {
+                name: "lane-d-readiness",
+                reason: "opt-in with --include-lane-d-readiness",
+            });
+        }
+        skipped
+    }
+
+    pub(super) fn skipped_checks_count(&self) -> usize {
+        usize::from(self.lane_d_smoke.is_none()) + usize::from(self.lane_d_readiness.is_none())
     }
 }
 

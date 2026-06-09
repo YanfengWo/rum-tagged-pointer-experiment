@@ -14,9 +14,15 @@ fn check_runs_fast_non_oracle_gates() {
     assert!(stdout.contains("inventory baseline regressions: 0"));
     assert!(stdout.contains("check\tlane-c-ledger\tclean"));
     assert!(stdout.contains("lane-c issues: 0"));
+    assert!(stdout.contains(
+        "check\tlane-d-smoke\tskipped\topt-in with --include-lane-d-smoke or --lane-d-smoke-baseline PATH"
+    ));
+    assert!(
+        stdout.contains("check\tlane-d-readiness\tskipped\topt-in with --include-lane-d-readiness")
+    );
     assert!(stdout.contains("checks passed: 2"));
     assert!(stdout.contains("checks failed: 0"));
-    assert!(!stdout.contains("check\tlane-d-smoke"));
+    assert!(stdout.contains("checks skipped: 2"));
 }
 
 #[test]
@@ -53,6 +59,7 @@ fn check_writes_machine_readable_summary_json() {
     assert!(summary.contains("\"clean\": true"));
     assert!(summary.contains("\"checks_passed\": 2"));
     assert!(summary.contains("\"checks_failed\": 0"));
+    assert!(summary.contains("\"checks_skipped\": 2"));
     assert!(summary.contains("\"name\": \"inventory-baseline\""));
     assert!(summary.contains("\"records_considered\": 32"));
     assert!(summary.contains("\"name\": \"lane-c-ledger\""));
@@ -63,8 +70,13 @@ fn check_writes_machine_readable_summary_json() {
     assert!(summary.contains("\"issue_samples_total\": 0"));
     assert!(summary.contains("\"issue_samples_truncated\": false"));
     assert!(summary.contains("\"issue_samples\": ["));
-    assert!(!summary.contains("\"name\": \"lane-d-smoke\""));
-    assert!(!summary.contains("\"name\": \"lane-d-readiness\""));
+    assert!(summary.contains("\"skipped_checks\": ["));
+    assert!(summary.contains("\"name\": \"lane-d-smoke\""));
+    assert!(summary.contains(
+        "\"reason\": \"opt-in with --include-lane-d-smoke or --lane-d-smoke-baseline PATH\""
+    ));
+    assert!(summary.contains("\"name\": \"lane-d-readiness\""));
+    assert!(summary.contains("\"reason\": \"opt-in with --include-lane-d-readiness\""));
     fs::remove_dir_all(temp_dir).unwrap();
 }
 
@@ -77,10 +89,14 @@ fn check_can_include_lane_d_smoke_gate() {
     assert!(stdout.contains("check\tinventory-baseline\tclean"));
     assert!(stdout.contains("check\tlane-c-ledger\tclean"));
     assert!(stdout.contains("check\tlane-d-smoke\tclean"));
+    assert!(
+        stdout.contains("check\tlane-d-readiness\tskipped\topt-in with --include-lane-d-readiness")
+    );
     assert!(stdout.contains("lane-d smoke baseline: perf/baselines/smoke.txt"));
     assert!(stdout.contains("lane-d baseline issues: 0"));
     assert!(stdout.contains("checks passed: 3"));
     assert!(stdout.contains("checks failed: 0"));
+    assert!(stdout.contains("checks skipped: 1"));
 }
 
 #[test]
@@ -98,6 +114,7 @@ fn check_writes_lane_d_smoke_summary_when_included() {
     let summary = fs::read_to_string(&summary_path).unwrap();
     assert!(summary.contains("\"checks_passed\": 3"));
     assert!(summary.contains("\"checks_failed\": 0"));
+    assert!(summary.contains("\"checks_skipped\": 1"));
     assert!(summary.contains("\"name\": \"lane-d-smoke\""));
     assert!(summary.contains("\"path\": \"perf/baselines/smoke.txt\""));
     assert!(summary.contains("\"suite\": \"all\""));
@@ -105,6 +122,8 @@ fn check_writes_lane_d_smoke_summary_when_included() {
     assert!(summary.contains("\"threshold_profile\": \"local-debug\""));
     assert!(summary.contains("\"missing_records\": 0"));
     assert!(summary.contains("\"elapsed_regressions\": 0"));
+    assert!(summary.contains("\"name\": \"lane-d-readiness\""));
+    assert!(summary.contains("\"reason\": \"opt-in with --include-lane-d-readiness\""));
     fs::remove_dir_all(temp_dir).unwrap();
 }
 
@@ -124,16 +143,24 @@ fn check_can_include_lane_d_readiness_gate() {
     assert!(stdout.contains("check\tinventory-baseline\tclean"));
     assert!(stdout.contains("check\tlane-c-ledger\tclean"));
     assert!(stdout.contains("check\tlane-d-readiness\tdirty"));
+    assert!(stdout.contains(
+        "check\tlane-d-smoke\tskipped\topt-in with --include-lane-d-smoke or --lane-d-smoke-baseline PATH"
+    ));
     assert!(stdout.contains("lane-d readiness artifacts: 3"));
     assert!(stdout.contains("lane-d readiness ready artifacts: 1"));
     assert!(stdout.contains("lane-d readiness missing artifacts: 2"));
     assert!(stdout.contains("checks passed: 2"));
     assert!(stdout.contains("checks failed: 1"));
+    assert!(stdout.contains("checks skipped: 1"));
 
     let summary = fs::read_to_string(&summary_path).unwrap();
     assert!(summary.contains("\"clean\": false"));
     assert!(summary.contains("\"checks_passed\": 2"));
     assert!(summary.contains("\"checks_failed\": 1"));
+    assert!(summary.contains("\"checks_skipped\": 1"));
+    assert!(summary.contains(
+        "\"reason\": \"opt-in with --include-lane-d-smoke or --lane-d-smoke-baseline PATH\""
+    ));
     assert!(summary.contains("\"name\": \"lane-d-readiness\""));
     assert!(summary.contains("\"total\": 3"));
     assert!(summary.contains("\"ready\": 1"));

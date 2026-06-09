@@ -5,7 +5,7 @@ use rum_difftest::inventory::{FixtureInventoryTotals, display_path};
 
 use crate::json_cli::{json_string, write_json_file};
 
-use super::LocalCheckReport;
+use super::{LocalCheckReport, SkippedCheck};
 
 #[path = "summary_json/issue_samples.rs"]
 mod issue_samples;
@@ -33,6 +33,7 @@ fn summary_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
     if let Some(lane_d_readiness) = &report.lane_d_readiness {
         checks.push(lane_d_json::lane_d_readiness_check_json(lane_d_readiness));
     }
+    let skipped_checks = report.skipped_checks();
     let issue_samples = issue_samples::issue_samples_json(report, max_issue_samples);
 
     format!(
@@ -42,7 +43,11 @@ fn summary_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
             "  \"clean\": {},\n",
             "  \"checks_passed\": {},\n",
             "  \"checks_failed\": {},\n",
+            "  \"checks_skipped\": {},\n",
             "  \"checks\": [\n",
+            "{}\n",
+            "  ],\n",
+            "  \"skipped_checks\": [\n",
             "{}\n",
             "  ],\n",
             "  \"issue_samples_limit\": {},\n",
@@ -57,13 +62,29 @@ fn summary_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
         report.is_clean(),
         report.passed_checks(),
         report.failed_checks(),
+        skipped_checks.len(),
         checks.join(",\n"),
+        skipped_checks_json(&skipped_checks),
         max_issue_samples,
         issue_samples.emitted,
         issue_samples.total,
         issue_samples.truncated(),
         issue_samples.samples,
     )
+}
+
+fn skipped_checks_json(checks: &[SkippedCheck]) -> String {
+    checks
+        .iter()
+        .map(|check| {
+            format!(
+                "    {{\"name\": \"{}\", \"reason\": \"{}\"}}",
+                json_string(check.name),
+                json_string(check.reason),
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",\n")
 }
 
 fn inventory_baseline_check_json(report: &LocalCheckReport) -> String {
