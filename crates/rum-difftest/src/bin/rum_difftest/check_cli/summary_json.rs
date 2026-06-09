@@ -36,6 +36,7 @@ fn summary_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
     }
     let skipped_checks = report.skipped_checks();
     let issue_samples = issue_samples::issue_samples_json(report, max_issue_samples);
+    let issue_kind_counts = issue_samples::issue_kind_counts_json(report);
 
     format!(
         concat!(
@@ -56,6 +57,9 @@ fn summary_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
             "  \"issue_samples_emitted\": {},\n",
             "  \"issue_samples_total\": {},\n",
             "  \"issue_samples_truncated\": {},\n",
+            "  \"issue_kind_counts\": [\n",
+            "{}\n",
+            "  ],\n",
             "  \"issue_samples\": [\n",
             "{}\n",
             "  ]\n",
@@ -72,6 +76,7 @@ fn summary_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
         issue_samples.emitted,
         issue_samples.total,
         issue_samples.truncated(),
+        issue_kind_counts,
         issue_samples.samples,
     )
 }

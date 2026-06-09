@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use rum_difftest::inventory::display_path;
 use rum_difftest::lane_d;
 
@@ -28,13 +30,7 @@ pub(super) fn issue_samples_json(
     report: &LocalCheckReport,
     max_issue_samples: usize,
 ) -> IssueSamplesJson {
-    let mut samples = Vec::new();
-    collect_inventory_samples(report, &mut samples);
-    collect_lane_c_samples(report, &mut samples);
-    collect_artifact_hygiene_samples(report, &mut samples);
-    collect_lane_d_smoke_samples(report, &mut samples);
-    collect_lane_d_readiness_samples(report, &mut samples);
-
+    let samples = collect_issue_samples(report);
     let total = samples.len();
     let rendered_samples = samples
         .into_iter()
@@ -48,6 +44,36 @@ pub(super) fn issue_samples_json(
         emitted,
         samples: rendered_samples.join(",\n"),
     }
+}
+
+pub(super) fn issue_kind_counts_json(report: &LocalCheckReport) -> String {
+    let mut counts = BTreeMap::<(&'static str, &'static str), usize>::new();
+    for sample in collect_issue_samples(report) {
+        *counts.entry((sample.check, sample.kind)).or_default() += 1;
+    }
+
+    counts
+        .into_iter()
+        .map(|((check, kind), count)| {
+            format!(
+                "    {{\"check\": \"{}\", \"kind\": \"{}\", \"count\": {}}}",
+                json_string(check),
+                json_string(kind),
+                count,
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",\n")
+}
+
+fn collect_issue_samples(report: &LocalCheckReport) -> Vec<CheckIssueSample> {
+    let mut samples = Vec::new();
+    collect_inventory_samples(report, &mut samples);
+    collect_lane_c_samples(report, &mut samples);
+    collect_artifact_hygiene_samples(report, &mut samples);
+    collect_lane_d_smoke_samples(report, &mut samples);
+    collect_lane_d_readiness_samples(report, &mut samples);
+    samples
 }
 
 fn collect_inventory_samples(report: &LocalCheckReport, samples: &mut Vec<CheckIssueSample>) {

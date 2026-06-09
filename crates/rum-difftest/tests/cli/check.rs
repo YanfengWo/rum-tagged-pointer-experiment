@@ -84,6 +84,7 @@ fn check_writes_machine_readable_summary_json() {
     assert_eq!(json_u64(&summary_json, "/issue_samples_emitted"), 0);
     assert_eq!(json_u64(&summary_json, "/issue_samples_total"), 0);
     assert!(!json_bool(&summary_json, "/issue_samples_truncated"));
+    assert!(json_array(&summary_json, "/issue_kind_counts").is_empty());
     assert!(json_array(&summary_json, "/issue_samples").is_empty());
     assert_eq!(json_array(&summary_json, "/skipped_checks").len(), 2);
     assert_eq!(
@@ -211,6 +212,13 @@ fn check_can_include_lane_d_readiness_gate() {
     assert_eq!(json_u64(readiness, "/artifacts/missing"), 2);
     assert_eq!(json_u64(readiness, "/artifacts/invalid"), 0);
     assert_eq!(json_u64(readiness, "/artifacts/not_clean"), 0);
+    assert_eq!(
+        json_u64(
+            issue_kind_count_entry(&summary_json, "lane-d-readiness", "missing_artifact"),
+            "/count"
+        ),
+        2
+    );
     let samples = json_array(&summary_json, "/issue_samples");
     assert!(samples.iter().any(|sample| {
         json_str(sample, "/check") == "lane-d-readiness"
@@ -281,6 +289,13 @@ fn check_exits_nonzero_for_inventory_baseline_regression() {
     assert_eq!(json_u64(&summary_json, "/issue_samples_emitted"), 1);
     assert_eq!(json_u64(&summary_json, "/issue_samples_total"), 4);
     assert!(json_bool(&summary_json, "/issue_samples_truncated"));
+    assert_eq!(
+        json_u64(
+            issue_kind_count_entry(&summary_json, "inventory-baseline", "regression"),
+            "/count"
+        ),
+        4
+    );
     let samples = json_array(&summary_json, "/issue_samples");
     assert_eq!(samples.len(), 1);
     assert_eq!(json_str(&samples[0], "/check"), "inventory-baseline");
@@ -305,4 +320,15 @@ fn skipped_check_entry<'a>(summary: &'a serde_json::Value, name: &str) -> &'a se
         .iter()
         .find(|check| json_str(check, "/name") == name)
         .unwrap_or_else(|| panic!("missing skipped check summary `{name}`: {summary}"))
+}
+
+fn issue_kind_count_entry<'a>(
+    summary: &'a serde_json::Value,
+    check_name: &str,
+    kind: &str,
+) -> &'a serde_json::Value {
+    json_array(summary, "/issue_kind_counts")
+        .iter()
+        .find(|entry| json_str(entry, "/check") == check_name && json_str(entry, "/kind") == kind)
+        .unwrap_or_else(|| panic!("missing issue kind count `{check_name}`/`{kind}`: {summary}"))
 }

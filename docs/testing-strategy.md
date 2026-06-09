@@ -139,8 +139,10 @@ check/kind/location/message fields so scripts can surface representative
 failures without depending on each lane's full internal report shape;
 `--max-issue-samples N` adjusts that aggregate sample cap when the default 5
 entries are too few for a local script, and the JSON reports the sample limit,
-emitted count, total issue count, and truncation status. The text and JSON
-reports also list optional gates that were
+emitted count, total issue count, and truncation status. It also includes an
+untruncated `issue_kind_counts` array grouped by aggregate check and issue kind,
+so scripts can keep stable failure dashboards even when representative samples
+are capped. The text and JSON reports also list optional gates that were
 intentionally skipped, so scripts can distinguish the default fast gate set
 from a broader opt-in run. It does not run Lane D timing inputs by default;
 opt into the local smoke performance baseline with `--include-lane-d-smoke`,

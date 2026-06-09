@@ -55,7 +55,10 @@ scripts that only need repository-state checks. Use `--inventory-baseline PATH`
 to test an alternate fixture-coverage baseline. Use `--include-lane-d-smoke`
 to opt into the local Lane D smoke baseline gate, or
 `--lane-d-smoke-baseline PATH` to run that gate against an alternate smoke
-baseline.
+baseline. The optional summary JSON includes bounded `issue_samples` for
+representative failing locators plus an untruncated `issue_kind_counts` array
+for scripts that need stable aggregate failure categories even when samples are
+capped.
 
 ## Machine-Readable Summaries
 
