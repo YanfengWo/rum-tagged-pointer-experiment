@@ -213,7 +213,7 @@ mod tests {
             0
         );
         assert_eq!(lane_a.totals_by_category()["ordering-surface"].entries, 18);
-        assert_eq!(lane_a.totals_by_category()["options-surface"].entries, 6);
+        assert_eq!(lane_a.totals_by_category()["options-surface"].entries, 14);
         assert_eq!(lane_a.totals_by_category()["scoping-closures"].entries, 8);
         assert_eq!(
             lane_a.totals_by_category()["polynomial-rational"].entries,

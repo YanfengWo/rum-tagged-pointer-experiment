@@ -42,6 +42,8 @@ The current first pass includes:
 - dedicated loop/procedural and control-object suites
 - a structure selector suite for stable `Part` / `Extract` / `ReplacePart` /
   `Depth` / `Level` coverage
+- an options surface suite covering option storage, clearing, multi-target
+  `SetOptions`, list-valued `OptionValue`, and `OptionsPattern` lookup
 - a threading suite for `Thread`, `MapThread`, and current listable-dispatch
   coverage
 - a truth/comparison suite for stable boolean predicates, equality/order
