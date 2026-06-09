@@ -5,6 +5,7 @@ use rum_difftest::divergences;
 
 use super::expect_value;
 use super::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
+use crate::lane_c_json::active_ledger_field_counts_json;
 
 pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut summary_json_path = None;
@@ -223,28 +224,6 @@ fn summary_json(
         report.retired_seed_fixture_mismatches.len(),
         report.tracking_target_issues.len(),
     )
-}
-
-pub(super) fn active_ledger_field_counts_json(
-    report: &divergences::KnownDifferenceLedgerReport,
-    field: &str,
-    json_key: &str,
-    indent: usize,
-) -> String {
-    let spaces = " ".repeat(indent);
-    report
-        .active_ledger_field_counts(field)
-        .into_iter()
-        .map(|(value, entries)| {
-            format!(
-                "{spaces}{{\"{}\": \"{}\", \"entries\": {}}}",
-                json_string(json_key),
-                json_string(&value),
-                entries
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(",\n")
 }
 
 fn print_lane_c_usage() {

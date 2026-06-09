@@ -5,6 +5,7 @@ use rum_difftest::divergences;
 use rum_difftest::inventory::{FixtureInventoryTotals, display_path};
 
 use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, json_string_option, write_json_file};
+use crate::lane_c_json::active_ledger_field_counts_json;
 
 use super::{LocalCheckReport, SkippedCheck, display_check_path};
 
@@ -284,28 +285,6 @@ fn lane_c_check_json(report: &LocalCheckReport) -> String {
         ledger.retired_seed_fixture_mismatches.len(),
         ledger.tracking_target_issues.len(),
     )
-}
-
-fn active_ledger_field_counts_json(
-    report: &divergences::KnownDifferenceLedgerReport,
-    field: &str,
-    json_key: &str,
-    indent: usize,
-) -> String {
-    let spaces = " ".repeat(indent);
-    report
-        .active_ledger_field_counts(field)
-        .into_iter()
-        .map(|(value, entries)| {
-            format!(
-                "{spaces}{{\"{}\": \"{}\", \"entries\": {}}}",
-                json_string(json_key),
-                json_string(&value),
-                entries
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(",\n")
 }
 
 fn totals_json(totals: &FixtureInventoryTotals, indent: usize) -> String {
