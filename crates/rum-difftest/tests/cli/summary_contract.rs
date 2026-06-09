@@ -6,8 +6,14 @@ use super::{json_bool, json_str, parse_summary_json, run_difftest, stderr_text, 
 fn commands_emit_schema_versioned_summary_json() {
     let temp_dir = unique_temp_dir("summary-contract");
     fs::create_dir_all(&temp_dir).unwrap();
-    let cases: &[(&str, &[&str], &str, &str)] = &[
-        ("check", &["check", "--summary-json"], "/command", "check"),
+    let cases: &[(&str, &[&str], &str, &str, bool)] = &[
+        (
+            "check",
+            &["check", "--summary-json"],
+            "/command",
+            "check",
+            true,
+        ),
         (
             "lane-a",
             &[
@@ -20,6 +26,7 @@ fn commands_emit_schema_versioned_summary_json() {
             ],
             "/lane",
             "lane-a",
+            false,
         ),
         (
             "lane-b",
@@ -33,14 +40,22 @@ fn commands_emit_schema_versioned_summary_json() {
             ],
             "/lane",
             "lane-b",
+            false,
         ),
         (
             "inventory",
             &["inventory", "--summary-json"],
             "/lane",
             "inventory",
+            true,
         ),
-        ("lane-c", &["lane-c", "--summary-json"], "/lane", "lane-c"),
+        (
+            "lane-c",
+            &["lane-c", "--summary-json"],
+            "/lane",
+            "lane-c",
+            true,
+        ),
         (
             "lane-d",
             &[
@@ -53,10 +68,11 @@ fn commands_emit_schema_versioned_summary_json() {
             ],
             "/lane",
             "lane-d",
+            true,
         ),
     ];
 
-    for (name, args_prefix, identity_pointer, identity_value) in cases {
+    for (name, args_prefix, identity_pointer, identity_value, expected_clean) in cases {
         let summary_path = temp_dir.join(format!("{name}.json"));
         let mut args = args_prefix.to_vec();
         args.push(summary_path.to_str().unwrap());
@@ -73,6 +89,11 @@ fn commands_emit_schema_versioned_summary_json() {
             json_str(&summary_json, identity_pointer),
             *identity_value,
             "{name} summary did not expose the expected command/lane identity"
+        );
+        assert_eq!(
+            json_bool(&summary_json, "/clean"),
+            *expected_clean,
+            "{name} summary did not expose the expected top-level clean status"
         );
         assert!(
             summary_path.is_file(),
