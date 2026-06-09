@@ -42,6 +42,8 @@ The current first pass includes:
   `Depth` / `Level` coverage
 - a threading suite for `Thread`, `MapThread`, and current listable-dispatch
   coverage
+- a truth/comparison suite for stable boolean predicates, equality/order
+  comparisons, and comparison-operator forms
 - a focused functional-combinator suite covering current CL-04 operator and iteration subsets
 - a focused rules/patterns/replacement/traversal suite for Lane A stateless
   conformance
