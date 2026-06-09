@@ -98,6 +98,8 @@ audit; the filters apply consistently to text output, summary JSON, baseline
 comparison, and `--write-baseline`, and a filter set that matches no fixtures
 fails fast. Baseline comparison narrows the checked baseline records to the
 active filter scope as well, and fails if no baseline records match that scope.
+Filtered `--write-baseline` artifacts include comment lines recording the
+active filters so they are not confused with the repository-wide baseline.
 `--check-baseline` compares the current inventory against
 [coverage/inventory-baseline.txt](./coverage/inventory-baseline.txt).
 The coverage policy is documented in

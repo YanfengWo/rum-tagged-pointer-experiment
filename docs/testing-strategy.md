@@ -125,7 +125,8 @@ exposes the same stable counts for scripts or dashboards. `--lane NAME`,
 `--source NAME`, and `--category NAME` provide focused coverage audits and
 apply to text output, summary JSON, baseline comparison, and baseline capture;
 focused baseline comparisons consider only baseline records matching the active
-filter scope and fail if none match. Use the unfiltered command for the checked
+filter scope and fail if none match. Filtered baseline captures include comment
+lines recording the active filters. Use the unfiltered command for the checked
 default coverage gate. Use
 `inventory --check-baseline --fail-on-regression` as a local gate against the
 checked fixture-coverage baseline when reviewing fixture pruning or large

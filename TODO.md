@@ -599,6 +599,9 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B follow-up: make focused inventory baseline checks consider
     only baseline records matching the active filter scope, and fail fast when
     fixtures match but no checked baseline record covers that scope
+  - [x] Lane A/B follow-up: record active filters in filtered
+    `inventory --write-baseline` artifact comments so intentionally scoped
+    baselines are not confused with the repository-wide checked baseline
   - [x] Lane A/B/C follow-up: add `rum-difftest check` as a fast non-oracle
     aggregate gate over the checked inventory baseline, Lane C ledger
     validation, and oracle-artifact hygiene, with optional stable summary JSON

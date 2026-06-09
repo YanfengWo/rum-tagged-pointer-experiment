@@ -197,6 +197,8 @@ fn inventory_filters_text_json_and_written_baseline() {
     );
 
     let baseline = fs::read_to_string(&baseline_path).unwrap();
+    assert!(baseline.contains("# Filtered non-oracle fixture coverage baseline."));
+    assert!(baseline.contains("# Filters: lane=lane-a source=curated-core category=threading"));
     assert!(baseline.contains("lane=lane-a source=all min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a source=curated-core min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a category=threading min_fixtures=1"));
@@ -309,6 +311,7 @@ fn inventory_writes_reusable_baseline() {
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     assert!(stdout_text(&output).contains("wrote inventory baseline:"));
     let baseline = fs::read_to_string(&baseline_path).unwrap();
+    assert!(!baseline.contains("# Filters:"));
     assert!(baseline.contains("lane=lane-a source=all min_fixtures=28"));
     assert!(baseline.contains("lane=lane-a category=associations-core min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a category=exact-arithmetic min_fixtures=1"));

@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -5,7 +6,7 @@ use rum_difftest::inventory::{
     FixtureInventoryReport, FixtureInventoryTotals, InventoryBaseline, InventoryBaselineDimension,
     InventoryBaselineReport, capture_inventory_baseline, collect_fixture_inventory,
     compare_inventory_baseline, default_inventory_baseline_path, display_path,
-    load_inventory_baseline, write_inventory_baseline,
+    format_inventory_baseline, load_inventory_baseline, write_inventory_baseline,
 };
 
 use super::expect_value;
@@ -81,7 +82,7 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
     }
     if let Some(path) = write_baseline_path {
         let captured_baseline = capture_inventory_baseline(&report);
-        write_inventory_baseline(&path, &captured_baseline)?;
+        write_inventory_baseline_with_filter_context(&path, &captured_baseline, &filter)?;
         println!("wrote inventory baseline: {}", path.display());
     }
     if fail_on_regression {
@@ -179,6 +180,32 @@ fn filter_inventory_baseline(
             .cloned()
             .collect(),
     }
+}
+
+fn write_inventory_baseline_with_filter_context(
+    path: &Path,
+    baseline: &InventoryBaseline,
+    filter: &InventoryFilter,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if !filter.is_active() {
+        write_inventory_baseline(path, baseline)?;
+        return Ok(());
+    }
+
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+    let mut text = format!(
+        "# Filtered non-oracle fixture coverage baseline.\n\
+         # Filters: {}\n\
+         # Use an unfiltered `rum-difftest inventory --write-baseline` for the repository-wide checked baseline.\n",
+        filter.description()
+    );
+    text.push_str(&format_inventory_baseline(baseline));
+    fs::write(path, text)?;
+    Ok(())
 }
 
 fn baseline_record_matches_filter(
