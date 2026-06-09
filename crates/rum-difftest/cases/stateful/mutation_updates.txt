@@ -1,0 +1,21 @@
+# Curated Lane B file: stateful mutation and held update operations
+# Format: input ||| expected_output
+assoc = <|a -> 1|> ||| <|a -> 1|>
+AssociateTo[assoc, b -> 2] ||| <|a -> 1, b -> 2|>
+assoc ||| <|a -> 1, b -> 2|>
+KeyDropFrom[assoc, a] ||| <|b -> 2|>
+assoc ||| <|b -> 2|>
+lst = {} ||| {}
+AppendTo[lst, x] ||| {x}
+AppendTo[lst, y] ||| {x, y}
+lst ||| {x, y}
+n = 1 ||| 1
+n++ ||| 1
+n ||| 2
+n += 5 ||| 7
+n ||| 7
+parts = {<|a -> 1|>, <|a -> 2|>} ||| {<|a -> 1|>, <|a -> 2|>}
+AssociateTo[parts[[1]], b -> 3] ||| {<|a -> 1, b -> 3|>, <|a -> 2|>}
+parts ||| {<|a -> 1, b -> 3|>, <|a -> 2|>}
+KeyDropFrom[parts[[1]], a] ||| <|b -> 3|>
+parts ||| {<|b -> 3|>, <|a -> 2|>}

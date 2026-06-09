@@ -34,9 +34,10 @@ lane=lane-a category=strings-surface min_fixtures=1 min_entries=11 min_normal_en
 lane=lane-a category=strings-templates min_fixtures=1 min_entries=6 min_normal_entries=6 max_known_difference_entries=0
 lane=lane-a category=structure-selectors min_fixtures=1 min_entries=10 min_normal_entries=10 max_known_difference_entries=0
 lane=lane-a category=threading min_fixtures=1 min_entries=10 min_normal_entries=10 max_known_difference_entries=0
-lane=lane-b source=all min_fixtures=4 min_entries=94 min_normal_entries=94 max_known_difference_entries=0
-lane=lane-b source=stateful min_fixtures=4 min_entries=94 min_normal_entries=94 max_known_difference_entries=0
+lane=lane-b source=all min_fixtures=5 min_entries=113 min_normal_entries=113 max_known_difference_entries=0
+lane=lane-b source=stateful min_fixtures=5 min_entries=113 min_normal_entries=113 max_known_difference_entries=0
 lane=lane-b category=definitions-messages min_fixtures=1 min_entries=57 min_normal_entries=57 max_known_difference_entries=0
+lane=lane-b category=mutation-updates min_fixtures=1 min_entries=19 min_normal_entries=19 max_known_difference_entries=0
 lane=lane-b category=package-defaults min_fixtures=1 min_entries=12 min_normal_entries=12 max_known_difference_entries=0
 lane=lane-b category=scoping-control min_fixtures=1 min_entries=14 min_normal_entries=14 max_known_difference_entries=0
 lane=lane-b category=zz-fixture-isolation min_fixtures=1 min_entries=11 min_normal_entries=11 max_known_difference_entries=0

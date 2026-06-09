@@ -114,8 +114,9 @@ fn inventory_reports_default_fixture_coverage() {
     assert!(stdout.contains("lane-a category functional-combinators: fixtures=1"));
     assert!(stdout.contains("lane-a category structure-selectors: fixtures=1"));
     assert!(stdout.contains("lane-a category threading: fixtures=1"));
-    assert!(stdout.contains("lane-b source stateful: fixtures=4"));
+    assert!(stdout.contains("lane-b source stateful: fixtures=5"));
     assert!(stdout.contains("lane-b category definitions-messages: fixtures=1"));
+    assert!(stdout.contains("lane-b category mutation-updates: fixtures=1"));
     assert!(stdout.contains("lane-b category scoping-control: fixtures=1"));
     assert!(stdout.contains("lane-b category zz-fixture-isolation: fixtures=1"));
 }
@@ -138,7 +139,7 @@ fn inventory_checked_baseline_is_clean_for_current_fixtures() {
 
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     let stdout = stdout_text(&output);
-    assert!(stdout.contains("inventory baseline records considered: 37"));
+    assert!(stdout.contains("inventory baseline records considered: 38"));
     assert!(stdout.contains("inventory baseline regressions: 0"));
 }
 
@@ -185,7 +186,8 @@ fn inventory_writes_reusable_baseline() {
     assert!(baseline.contains("lane=lane-a category=polynomial-rational min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a category=structure-selectors min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a category=threading min_fixtures=1"));
-    assert!(baseline.contains("lane=lane-b source=stateful min_fixtures=4"));
+    assert!(baseline.contains("lane=lane-b source=stateful min_fixtures=5"));
+    assert!(baseline.contains("lane=lane-b category=mutation-updates min_fixtures=1"));
     assert!(baseline.contains("lane=lane-b category=scoping-control min_fixtures=1"));
     assert!(baseline.contains("lane=lane-b category=zz-fixture-isolation min_fixtures=1"));
 
@@ -216,10 +218,10 @@ fn inventory_writes_machine_readable_summary_json() {
     let summary = fs::read_to_string(&summary_path).unwrap();
     let summary_json = parse_summary_json(&summary);
     assert_eq!(json_str(&summary_json, "/lane"), "inventory");
-    assert_eq!(json_u64(&summary_json, "/totals/fixtures"), 32);
-    assert_eq!(json_u64(&summary_json, "/totals/entries"), 439);
+    assert_eq!(json_u64(&summary_json, "/totals/fixtures"), 33);
+    assert_eq!(json_u64(&summary_json, "/totals/entries"), 458);
     assert!(json_bool(&summary_json, "/baseline/clean"));
-    assert_eq!(json_u64(&summary_json, "/baseline/records_considered"), 37);
+    assert_eq!(json_u64(&summary_json, "/baseline/records_considered"), 38);
     let lanes = json_array(&summary_json, "/lanes");
     let lane_a = lanes
         .iter()
@@ -262,8 +264,13 @@ fn inventory_writes_machine_readable_summary_json() {
         .iter()
         .find(|lane| json_str(lane, "/lane") == "lane-b")
         .expect("inventory summary should include lane-b");
-    assert_eq!(json_u64(lane_b, "/totals/fixtures"), 4);
-    assert_eq!(json_u64(lane_b, "/totals/entries"), 94);
+    assert_eq!(json_u64(lane_b, "/totals/fixtures"), 5);
+    assert_eq!(json_u64(lane_b, "/totals/entries"), 113);
+    assert!(
+        json_array(lane_b, "/categories")
+            .iter()
+            .any(|category| json_str(category, "/category") == "mutation-updates")
+    );
     assert!(
         json_array(lane_b, "/categories")
             .iter()

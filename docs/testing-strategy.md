@@ -104,7 +104,8 @@ single broad diff bucket:
   includes both imported seed golden files and curated project-owned
   `cases/wolfram/core` fixtures.
 - Lane B: stateful session scripts, including definitions, options, messages,
-  contexts, package loading, and repeated evaluations.
+  contexts, package loading, mutation/update operations, and repeated
+  evaluations.
 - Lane C: checked known-difference ledger, tying divergences to matrix entries
   or TODO notes with explicit close criteria.
 - Lane D: local performance baseline inputs and runners. These are not
