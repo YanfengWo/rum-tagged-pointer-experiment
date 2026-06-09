@@ -13,6 +13,16 @@ pub fn write_json_file(path: &Path, contents: String) -> Result<(), Box<dyn std:
     Ok(())
 }
 
+pub fn parse_max_issue_samples(value: &str) -> Result<usize, Box<dyn std::error::Error>> {
+    let max_issue_samples = value
+        .parse::<usize>()
+        .map_err(|_| format!("--max-issue-samples expects a positive integer, got `{value}`"))?;
+    if max_issue_samples == 0 {
+        return Err("--max-issue-samples expects a positive integer, got `0`".into());
+    }
+    Ok(max_issue_samples)
+}
+
 pub fn json_string(value: &str) -> String {
     let mut escaped = String::new();
     for ch in value.chars() {
@@ -35,6 +45,24 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use super::*;
+
+    #[test]
+    fn parse_max_issue_samples_accepts_positive_integers() {
+        assert_eq!(parse_max_issue_samples("1").unwrap(), 1);
+        assert_eq!(parse_max_issue_samples("25").unwrap(), 25);
+    }
+
+    #[test]
+    fn parse_max_issue_samples_rejects_zero_and_non_numbers() {
+        assert_eq!(
+            parse_max_issue_samples("0").unwrap_err().to_string(),
+            "--max-issue-samples expects a positive integer, got `0`"
+        );
+        assert_eq!(
+            parse_max_issue_samples("many").unwrap_err().to_string(),
+            "--max-issue-samples expects a positive integer, got `many`"
+        );
+    }
 
     #[test]
     fn json_string_escapes_json_control_characters() {

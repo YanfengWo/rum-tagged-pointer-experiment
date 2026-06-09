@@ -5,6 +5,8 @@ use rum_difftest::oracle::OracleKernel;
 
 use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
 
+pub(super) use crate::json_cli::parse_max_issue_samples;
+
 pub(super) const DEFAULT_MAX_ISSUE_SAMPLES: usize = 5;
 
 pub(super) struct OracleLaneSummaryJsonContext<'a> {
@@ -337,16 +339,6 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
         context.issue_samples.truncated(),
         issue_samples_json(context.issue_samples.samples()),
     )
-}
-
-pub(super) fn parse_max_issue_samples(value: &str) -> Result<usize, Box<dyn std::error::Error>> {
-    let max_issue_samples = value
-        .parse::<usize>()
-        .map_err(|_| format!("--max-issue-samples expects a positive integer, got `{value}`"))?;
-    if max_issue_samples == 0 {
-        return Err("--max-issue-samples expects a positive integer, got `0`".into());
-    }
-    Ok(max_issue_samples)
 }
 
 pub(super) fn parse_issue_sample_kind(

@@ -15,6 +15,7 @@ use rum_difftest::lane_d::{
 };
 
 use super::expect_value;
+use super::json_cli::parse_max_issue_samples;
 
 #[path = "check_cli/summary_json.rs"]
 mod summary_json;
@@ -358,16 +359,6 @@ fn run_lane_d_smoke_summary() -> Result<LaneDSummary, std::io::Error> {
         profile: LaneDProfile::Smoke,
         limit: None,
     })
-}
-
-fn parse_max_issue_samples(value: &str) -> Result<usize, Box<dyn std::error::Error>> {
-    let max_issue_samples = value
-        .parse::<usize>()
-        .map_err(|_| format!("--max-issue-samples expects a positive integer, got `{value}`"))?;
-    if max_issue_samples == 0 {
-        return Err("--max-issue-samples expects a positive integer, got `0`".into());
-    }
-    Ok(max_issue_samples)
 }
 
 fn parse_issue_sample_check(value: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
