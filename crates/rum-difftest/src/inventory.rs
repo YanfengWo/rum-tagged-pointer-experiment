@@ -208,7 +208,7 @@ mod tests {
             lane_a.totals_by_category()["definitions-precedence"].entries,
             8
         );
-        assert_eq!(lane_a.totals_by_category()["exact-arithmetic"].entries, 9);
+        assert_eq!(lane_a.totals_by_category()["exact-arithmetic"].entries, 20);
         assert_eq!(
             lane_a.totals_by_category()["messages-attributes"].entries,
             9
