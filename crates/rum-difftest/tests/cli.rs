@@ -108,13 +108,14 @@ fn inventory_reports_default_fixture_coverage() {
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     let stdout = stdout_text(&output);
     assert!(stdout.contains("fixture inventory"));
-    assert!(stdout.contains("lane-a fixtures: 36"));
+    assert!(stdout.contains("lane-a fixtures: 37"));
     assert!(stdout.contains("lane-a source seed-golden: fixtures=9"));
-    assert!(stdout.contains("lane-a source curated-core: fixtures=27"));
+    assert!(stdout.contains("lane-a source curated-core: fixtures=28"));
     assert!(stdout.contains("lane-a category associations-core: fixtures=1"));
     assert!(stdout.contains("lane-a category collection-shape-predicates: fixtures=1"));
     assert!(stdout.contains("lane-a category context-namespace: fixtures=1"));
     assert!(stdout.contains("lane-a category exact-arithmetic: fixtures=1"));
+    assert!(stdout.contains("lane-a category lists-surface: fixtures=1"));
     assert!(stdout.contains("lane-a category messages-attributes: fixtures=1"));
     assert!(stdout.contains("lane-a category options-surface: fixtures=1"));
     assert!(stdout.contains("lane-a category ordering-surface: fixtures=1"));
@@ -262,7 +263,7 @@ fn inventory_checked_baseline_is_clean_for_current_fixtures() {
 
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     let stdout = stdout_text(&output);
-    assert!(stdout.contains("inventory baseline records considered: 48"));
+    assert!(stdout.contains("inventory baseline records considered: 49"));
     assert!(stdout.contains("inventory baseline regressions: 0"));
 }
 
@@ -279,7 +280,7 @@ fn inventory_checked_baseline_respects_lane_filter() {
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     let stdout = stdout_text(&output);
     assert!(stdout.contains("inventory filters: lane=lane-a"));
-    assert!(stdout.contains("inventory baseline records considered: 39"));
+    assert!(stdout.contains("inventory baseline records considered: 40"));
     assert!(stdout.contains("inventory baseline regressions: 0"));
     assert!(!stdout.contains("inventory-baseline-regression\tlane-b"));
 }
@@ -322,11 +323,12 @@ fn inventory_writes_reusable_baseline() {
     assert!(stdout_text(&output).contains("wrote inventory baseline:"));
     let baseline = fs::read_to_string(&baseline_path).unwrap();
     assert!(!baseline.contains("# Filters:"));
-    assert!(baseline.contains("lane=lane-a source=all min_fixtures=36"));
+    assert!(baseline.contains("lane=lane-a source=all min_fixtures=37"));
     assert!(baseline.contains("lane=lane-a category=associations-core min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a category=collection-shape-predicates min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a category=context-namespace min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a category=exact-arithmetic min_fixtures=1"));
+    assert!(baseline.contains("lane=lane-a category=lists-surface min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a category=messages-attributes min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a category=options-surface min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a category=ordering-surface min_fixtures=1"));
@@ -373,17 +375,17 @@ fn inventory_writes_machine_readable_summary_json() {
     assert_json_null(&summary_json, "/filters/lane");
     assert_json_null(&summary_json, "/filters/source");
     assert_json_null(&summary_json, "/filters/category");
-    assert_eq!(json_u64(&summary_json, "/totals/fixtures"), 43);
-    assert_eq!(json_u64(&summary_json, "/totals/entries"), 598);
+    assert_eq!(json_u64(&summary_json, "/totals/fixtures"), 44);
+    assert_eq!(json_u64(&summary_json, "/totals/entries"), 617);
     assert!(json_bool(&summary_json, "/baseline/clean"));
-    assert_eq!(json_u64(&summary_json, "/baseline/records_considered"), 48);
+    assert_eq!(json_u64(&summary_json, "/baseline/records_considered"), 49);
     let lanes = json_array(&summary_json, "/lanes");
     let lane_a = lanes
         .iter()
         .find(|lane| json_str(lane, "/lane") == "lane-a")
         .expect("inventory summary should include lane-a");
-    assert_eq!(json_u64(lane_a, "/totals/fixtures"), 36);
-    assert_eq!(json_u64(lane_a, "/totals/entries"), 458);
+    assert_eq!(json_u64(lane_a, "/totals/fixtures"), 37);
+    assert_eq!(json_u64(lane_a, "/totals/entries"), 477);
     assert_eq!(json_u64(lane_a, "/totals/known_difference_entries"), 5);
     assert!(
         json_array(lane_a, "/sources")
@@ -409,6 +411,11 @@ fn inventory_writes_machine_readable_summary_json() {
         json_array(lane_a, "/categories")
             .iter()
             .any(|category| json_str(category, "/category") == "exact-arithmetic")
+    );
+    assert!(
+        json_array(lane_a, "/categories")
+            .iter()
+            .any(|category| json_str(category, "/category") == "lists-surface")
     );
     assert!(
         json_array(lane_a, "/categories")

@@ -51,6 +51,8 @@ The current first pass includes:
 - an ordering surface suite for `Order`, `OrderedQ`, and current
   numerical/lexicographic/alphabetic ordering helpers
 - a focused functional-combinator suite covering current CL-04 operator and iteration subsets
+- a list surface suite covering stable `Range`, `Table`, sequence operations,
+  structural `Join` / `Flatten`, `Reverse`, and `Transpose` behavior
 - a focused rules/patterns/replacement/traversal suite for Lane A stateless
   conformance
 - a failure/status suite covering stable CL-06 confirmation and status-object checks

@@ -9,7 +9,8 @@ high-risk semantic areas that should not disappear during fixture refactors.
 
 The current category records cover these priorities:
 
-- Lane A one-shot same-name semantics: arithmetic, lists, ordering, scoping,
+- Lane A one-shot same-name semantics: arithmetic, lists and list-surface
+  transforms, ordering, scoping,
   scoping/closure behavior, definitions and definition precedence, patterns,
   rules/traversal, structure selectors, threading, context/namespace behavior,
   associations, functional combinators, control objects, messages/attributes,

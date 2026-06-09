@@ -572,7 +572,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A follow-up: compare single-expression values, messages, and printed output instead of values only
   - [x] Lane A follow-up: curate resolved imported seed known differences such as `specific_override` into `cases/` before pruning seed-linked active ledger rows, preserving `seed/` as unchanged historical input via the retired seed manifest
   - [x] Lane A/B follow-up: add a shared InputForm-like renderer for common list, rule, delayed-rule, and association output shapes before oracle comparison
-  - [x] Land a first curated `cases/wolfram/core/` fixture set covering arithmetic/structures, truth/comparison, predicate surface, collection/shape predicates, ordering, strings, associations, loops/control objects, functional combinators, rules/patterns/replacement/traversal, and failure/status smoke checks
+  - [x] Land a first curated `cases/wolfram/core/` fixture set covering arithmetic/structures, list surface, truth/comparison, predicate surface, collection/shape predicates, ordering, strings, associations, loops/control objects, functional combinators, rules/patterns/replacement/traversal, and failure/status smoke checks
   - [x] Lane A follow-up: make the default runner include both imported seed golden files and curated project-owned `cases/wolfram/core/` fixtures, while keeping `--fixture PATH` for single-file focus
   - [x] Lane B: land a first stateful session fixture format and runner for ordered definition / option / message / precedence checks
   - [x] Lane B follow-up: replace replay-based Wolfram state simulation with a single-kernel session oracle transport per fixture before relying on deeper stateful edges
@@ -713,6 +713,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A follow-up: add a curated context/namespace fixture for stable
     `Context`, `Begin` / `End`, `BeginPackage`, and `Names` conformance, and
     guard it with the checked inventory category baseline
+  - [x] Lane A follow-up: add a curated list-surface fixture for stable
+    `Range`, `Table`, `Take` / `Drop`, `Join`, `Flatten`, `Reverse`, and
+    `Transpose` conformance, and guard it with the checked inventory category
+    baseline
   - [x] Resolve the project-owned Lane A known differences for exact
     `Factorial[8]`, `Abs[-7]`, and integer-list `Range[5]` by implementing
     the current exact-numeric / integer-range runtime subset and promoting

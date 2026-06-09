@@ -1,0 +1,21 @@
+# Curated Lane A file: list surface
+# Format: input ||| expected_output
+Range[2, 6, 2] ||| {2, 4, 6}
+Range[5, 1, -2] ||| {5, 3, 1}
+Table[i^2, {i, 3}] ||| {1, 4, 9}
+Table[i*j, {i, 2}, {j, i}] ||| {{1}, {2, 4}}
+Take[{a, b, c, d}, 2] ||| {a, b}
+Take[{a, b, c, d}, -2] ||| {c, d}
+Drop[{a, b, c, d}, {2, 3}] ||| {a, d}
+TakeDrop[{a, b, c, d}, 2] ||| {{a, b}, {c, d}}
+Insert[{a, b, c}, x, 2] ||| {a, x, b, c}
+Append[f[a, b], x] ||| f[a, b, x]
+Prepend[f[a, b], x] ||| f[x, a, b]
+Join[f[a, b], f[c]] ||| f[a, b, c]
+Join[{{a}, {b}}, {{c}, {d}}, 2] ||| {{a, c}, {b, d}}
+Flatten[{a, {b, c}, {{d}}}, 1] ||| {a, b, c, {d}}
+Flatten[f[a, f[b, c]], Infinity] ||| f[a, b, c]
+Flatten[f[{a, b}, {c}], Infinity, List] ||| f[a, b, c]
+Reverse[{{a, b}, {c, d}}, {1, 2}] ||| {{d, c}, {b, a}}
+Transpose[{{a, b}, {c, d}}] ||| {{a, c}, {b, d}}
+Transpose[{{}}] ||| {}
