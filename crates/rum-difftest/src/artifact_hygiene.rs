@@ -10,14 +10,19 @@ pub struct OracleArtifactIssue {
 }
 
 pub fn validate_oracle_artifact_hygiene() -> Result<Vec<OracleArtifactIssue>, std::io::Error> {
-    let root = crate_root();
+    validate_oracle_artifact_hygiene_in(&crate_root())
+}
+
+pub fn validate_oracle_artifact_hygiene_in(
+    root: &Path,
+) -> Result<Vec<OracleArtifactIssue>, std::io::Error> {
     let mut files = Vec::new();
-    collect_files(&root, &mut files)?;
+    collect_files(root, &mut files)?;
 
     let mut issues = files
         .into_iter()
         .filter_map(|path| {
-            let relative = path.strip_prefix(&root).unwrap_or(&path).to_path_buf();
+            let relative = path.strip_prefix(root).unwrap_or(&path).to_path_buf();
             oracle_artifact_issue(&relative)
         })
         .collect::<Vec<_>>();
@@ -100,6 +105,8 @@ fn issue(path: &Path, reason: &str) -> OracleArtifactIssue {
 
 #[cfg(test)]
 mod tests {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     use super::*;
 
     #[test]
@@ -160,5 +167,50 @@ mod tests {
             ))
         );
         assert!(oracle_artifact_issue(Path::new("cases/stateful/package_defaults.txt")).is_none());
+    }
+
+    #[test]
+    fn validates_artifacts_under_an_isolated_root() {
+        let root = unique_temp_root("rum-difftest-artifact-hygiene");
+        fs::create_dir_all(root.join("nested")).unwrap();
+        fs::create_dir_all(root.join("session-batches-0002/batch-0001")).unwrap();
+        fs::create_dir_all(root.join("cases/stateful")).unwrap();
+        fs::write(root.join("oracle_wrapper.wls"), "").unwrap();
+        fs::write(root.join("nested/case-0001.wl"), "").unwrap();
+        fs::write(
+            root.join("session-batches-0002/batch-0001/manifest.txt"),
+            "",
+        )
+        .unwrap();
+        fs::write(root.join("cases/stateful/package_defaults.txt"), "").unwrap();
+
+        let issues = validate_oracle_artifact_hygiene_in(&root).unwrap();
+        fs::remove_dir_all(&root).unwrap();
+
+        assert_eq!(
+            issues,
+            vec![
+                issue(
+                    Path::new("nested/case-0001.wl"),
+                    "generated oracle input file"
+                ),
+                issue(
+                    Path::new("oracle_wrapper.wls"),
+                    "generated oracle wrapper script"
+                ),
+                issue(
+                    Path::new("session-batches-0002/batch-0001/manifest.txt"),
+                    "generated Lane B oracle session directory"
+                ),
+            ]
+        );
+    }
+
+    fn unique_temp_root(prefix: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("{prefix}-{}-{nanos}", std::process::id()))
     }
 }
