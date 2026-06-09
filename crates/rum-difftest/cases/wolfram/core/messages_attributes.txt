@@ -12,6 +12,12 @@ SetAttributes[attrHoldRest, HoldRest]; attrHoldRest[Identity[1], Identity[2]] ||
 SetAttributes[attrHoldAll, HoldAll]; attrHoldAll[Identity[1], Identity[2]] ||| attrHoldAll[Identity[1], Identity[2]]
 SetAttributes[attrSeq, SequenceHold]; attrSeq[Sequence[1, 2], 3] ||| attrSeq[Sequence[1, 2], 3]
 SetAttributes[attrCombo, {HoldFirst, SequenceHold}]; attrCombo[Sequence[Identity[1], 2], Identity[3]] ||| attrCombo[Sequence[Identity[1], 2], 3]
+SetAttributes[attrOrderless, Orderless]; {attrOrderless[b, a, c], MatchQ[attrOrderless[b, a], attrOrderless[a, b]]} ||| {attrOrderless[a, b, c], True}
+SetAttributes[attrFlat, Flat]; {attrFlat[a, attrFlat[b, c], d], MatchQ[attrFlat[a, attrFlat[b, c]], attrFlat[a, b, c]]} ||| {attrFlat[a, b, c, d], True}
+SetAttributes[attrListable, Listable]; {attrListable[{a, b}, c], attrListable[{a, b}, {c, d}], attrListable[{}, x]} ||| {{attrListable[a, c], attrListable[b, c]}, {attrListable[a, c], attrListable[b, d]}, {}}
+SetAttributes[attrListable, Listable]; Quiet[Check[attrListable[{a, b}, {c}], fallback, Thread::tdlen]] ||| fallback
+SetAttributes[attrHoldAllComplete, HoldAllComplete]; attrHoldAllComplete[Evaluate[Identity[1]], Identity[2], Sequence[3, 4]] ||| attrHoldAllComplete[Evaluate[Identity[1]], Identity[2], Sequence[3, 4]]
+SetAttributes[attrGate, HoldAllComplete]; attrUp /: attrGate[attrUp[x_Integer]] := x; attrGate[attrUp[7]] ||| attrGate[attrUp[7]]
 Protect[p]; ToString[Attributes[p], InputForm] ||| "{Protected}"
 Protect[p]; Unprotect[p]; ToString[Attributes[p], InputForm] ||| "{}"
 SetAttributes[attrProtected, HoldFirst]; Protect[attrProtected]; ToString[Attributes[attrProtected], InputForm] ||| "{HoldFirst, Protected}"

@@ -212,7 +212,7 @@ mod tests {
         assert_eq!(lane_a.totals_by_category()["exact-arithmetic"].entries, 20);
         assert_eq!(
             lane_a.totals_by_category()["messages-attributes"].entries,
-            16
+            22
         );
         assert_eq!(
             lane_a.totals_by_category()["messages-attributes"].known_difference_entries,

@@ -718,8 +718,10 @@ This roadmap intentionally uses two levels of detail:
     lookup, `Block`-localized option state, and system option consumers while
     keeping it under the checked inventory category baseline
   - [x] Lane A follow-up: add a curated messages/attributes fixture for stable
-    `Message` / `Quiet` / `Check` and basic attribute conformance, then retire
-    the `HoldFirst` plus `HoldRest` normalization known-difference row after
+    `Message` / `Quiet` / `Check`, basic hold/sequence/protection attribute
+    conformance, and broader attribute application coverage through
+    `Orderless`, `Flat`, `Listable`, and `HoldAllComplete`; then retire the
+    `HoldFirst` plus `HoldRest` normalization known-difference row after
     runtime parity landed
   - [x] Lane A follow-up: add a curated context/namespace fixture for stable
     `Context`, `Begin` / `End`, `BeginPackage`, and `Names` conformance, and
