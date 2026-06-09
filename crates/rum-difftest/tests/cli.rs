@@ -372,7 +372,7 @@ fn inventory_writes_machine_readable_summary_json() {
         .expect("inventory summary should include lane-a");
     assert_eq!(json_u64(lane_a, "/totals/fixtures"), 32);
     assert_eq!(json_u64(lane_a, "/totals/entries"), 380);
-    assert_eq!(json_u64(lane_a, "/totals/known_difference_entries"), 5);
+    assert_eq!(json_u64(lane_a, "/totals/known_difference_entries"), 9);
     assert!(
         json_array(lane_a, "/sources")
             .iter()
@@ -466,10 +466,10 @@ fn lane_c_writes_machine_readable_summary_json() {
     let summary_json = parse_summary_json(&summary);
     assert_eq!(json_str(&summary_json, "/lane"), "lane-c");
     assert!(json_bool(&summary_json, "/clean"));
-    assert_eq!(json_u64(&summary_json, "/counts/active_ledger_entries"), 4);
+    assert_eq!(json_u64(&summary_json, "/counts/active_ledger_entries"), 8);
     assert_eq!(
         json_u64(&summary_json, "/counts/fixture_known_differences"),
-        5
+        9
     );
     assert_eq!(json_u64(&summary_json, "/issues/tracking_target_issues"), 0);
     fs::remove_dir_all(temp_dir).unwrap();

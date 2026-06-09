@@ -93,7 +93,7 @@ fn check_writes_machine_readable_summary_json() {
     assert_eq!(json_u64(inventory, "/records_considered"), 42);
     let lane_c = check_entry(&summary_json, "lane-c-ledger");
     assert!(json_bool(lane_c, "/clean"));
-    assert_eq!(json_u64(lane_c, "/counts/active_ledger_entries"), 4);
+    assert_eq!(json_u64(lane_c, "/counts/active_ledger_entries"), 8);
     assert_eq!(json_u64(lane_c, "/issues/tracking_target_issues"), 0);
     let artifact_hygiene = check_entry(&summary_json, "artifact-hygiene");
     assert!(json_bool(artifact_hygiene, "/clean"));

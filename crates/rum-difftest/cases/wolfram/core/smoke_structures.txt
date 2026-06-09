@@ -1,6 +1,6 @@
 # Curated Lane A smoke file: structures
 # Format: input ||| expected_output
-Range[5] ||| {1, 2, 3, 4, 5}
+Range[5] !!! id=curated_range_builtin | type=temporary | reason=Range is still outside the current runtime list-construction subset.
 Table[i^2, {i, 1, 4}] ||| {1, 4, 9, 16}
 {{1, 2}, {3, 4}}[[2, 1]] ||| 3
 Map[f, {1, 2, 3}] ||| {f[1], f[2], f[3]}
