@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use rum_difftest::oracle::OracleKernel;
@@ -95,6 +96,7 @@ pub(super) struct OracleLaneIssueSamples {
     pub(super) limit: usize,
     pub(super) total: usize,
     pub(super) counts: OracleLaneIssueCounts,
+    source_counts: Vec<OracleLaneIssueSourceCounts>,
     samples: Vec<OracleLaneIssueSample>,
 }
 
@@ -105,9 +107,24 @@ pub(super) struct OracleLaneIssueCounts {
     pub(super) resolved_known_difference: usize,
 }
 
+pub(super) struct OracleLaneIssueSourceCounts {
+    source: &'static str,
+    project_owned_fixture: bool,
+    counts: OracleLaneIssueCounts,
+}
+
 impl OracleLaneIssueCounts {
     fn total(self) -> usize {
         self.non_match + self.seed_snapshot_drift + self.resolved_known_difference
+    }
+
+    fn increment(&mut self, kind: &str) {
+        match kind {
+            "non_match" => self.non_match += 1,
+            "seed_snapshot_drift" => self.seed_snapshot_drift += 1,
+            "resolved_known_difference" => self.resolved_known_difference += 1,
+            _ => {}
+        }
     }
 }
 
@@ -118,6 +135,7 @@ impl OracleLaneIssueSamples {
         samples: Vec<OracleLaneIssueSample>,
     ) -> Self {
         let counts = OracleLaneIssueCounts::from_samples(&samples);
+        let source_counts = OracleLaneIssueSourceCounts::from_samples(&samples);
         let mut samples = samples
             .into_iter()
             .filter(|sample| issue_sample_kind.includes(sample.kind))
@@ -128,6 +146,7 @@ impl OracleLaneIssueSamples {
             limit,
             total,
             counts,
+            source_counts,
             samples,
         }
     }
@@ -143,20 +162,42 @@ impl OracleLaneIssueSamples {
     fn samples(&self) -> &[OracleLaneIssueSample] {
         &self.samples
     }
+
+    fn source_counts(&self) -> &[OracleLaneIssueSourceCounts] {
+        &self.source_counts
+    }
 }
 
 impl OracleLaneIssueCounts {
     fn from_samples(samples: &[OracleLaneIssueSample]) -> Self {
         let mut counts = Self::default();
         for sample in samples {
-            match sample.kind {
-                "non_match" => counts.non_match += 1,
-                "seed_snapshot_drift" => counts.seed_snapshot_drift += 1,
-                "resolved_known_difference" => counts.resolved_known_difference += 1,
-                _ => {}
-            }
+            counts.increment(sample.kind);
         }
         counts
+    }
+}
+
+impl OracleLaneIssueSourceCounts {
+    fn from_samples(samples: &[OracleLaneIssueSample]) -> Vec<Self> {
+        let mut by_source: BTreeMap<&'static str, (bool, OracleLaneIssueCounts)> = BTreeMap::new();
+        for sample in samples {
+            let (project_owned_fixture, counts) =
+                by_source.entry(sample.fixture_source).or_insert((
+                    sample.project_owned_fixture,
+                    OracleLaneIssueCounts::default(),
+                ));
+            *project_owned_fixture |= sample.project_owned_fixture;
+            counts.increment(sample.kind);
+        }
+        by_source
+            .into_iter()
+            .map(|(source, (project_owned_fixture, counts))| Self {
+                source,
+                project_owned_fixture,
+                counts,
+            })
+            .collect()
     }
 }
 
@@ -220,6 +261,9 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
             "    \"seed_snapshot_drift\": {},\n",
             "    \"resolved_known_difference\": {}\n",
             "  }},\n",
+            "  \"issue_source_counts\": [\n",
+            "{}\n",
+            "  ],\n",
             "  \"issue_samples_limit\": {},\n",
             "  \"issue_samples_emitted\": {},\n",
             "  \"issue_samples_total\": {},\n",
@@ -267,6 +311,7 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
         context.issue_samples.counts.non_match,
         context.issue_samples.counts.seed_snapshot_drift,
         context.issue_samples.counts.resolved_known_difference,
+        issue_source_counts_json(context.issue_samples.source_counts()),
         context.issue_samples.limit,
         context.issue_samples.emitted(),
         context.issue_samples.total,
@@ -331,6 +376,33 @@ fn issue_samples_json(samples: &[OracleLaneIssueSample]) -> String {
                 json_string_option(sample.known_difference_id.as_deref()),
                 json_string_option(sample.known_difference_type.as_deref()),
                 sample.seed_drift,
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",\n")
+}
+
+fn issue_source_counts_json(source_counts: &[OracleLaneIssueSourceCounts]) -> String {
+    source_counts
+        .iter()
+        .map(|source_counts| {
+            format!(
+                concat!(
+                    "    {{",
+                    "\"fixture_source\": \"{}\", ",
+                    "\"project_owned_fixture\": {}, ",
+                    "\"total\": {}, ",
+                    "\"non_match\": {}, ",
+                    "\"seed_snapshot_drift\": {}, ",
+                    "\"resolved_known_difference\": {}",
+                    "}}"
+                ),
+                json_string(source_counts.source),
+                source_counts.project_owned_fixture,
+                source_counts.counts.total(),
+                source_counts.counts.non_match,
+                source_counts.counts.seed_snapshot_drift,
+                source_counts.counts.resolved_known_difference,
             )
         })
         .collect::<Vec<_>>()

@@ -634,6 +634,9 @@ This roadmap intentionally uses two levels of detail:
     `project_owned_fixture` on summary JSON issue samples, so automation can
     route imported seed, curated project, stateful, and custom fixture locators
     without reimplementing path classification
+  - [x] Lane A/B follow-up: add unfiltered `issue_source_counts` to summary
+    JSON so automation can see non-match, seed-drift, and resolved-known
+    issue distribution by fixture source without widening sampled locators
   - [x] Lane A follow-up: add a curated structure-selector fixture for stable
     `Part` / `Extract` / `ReplacePart` / `Depth` / `Level` conformance, and
     guard it with the checked inventory category baseline

@@ -200,8 +200,9 @@ audits; and the summary records the selected kind, sample limit, emitted count,
 filtered issue-sample count, and truncation status. Each emitted sample records
 `fixture_source` and `project_owned_fixture` so automation can distinguish
 imported seed drift from project-owned fixture drift without reparsing paths.
-The sibling `issue_counts` object remains unfiltered so automation can still
-see the full non-match, seed-drift, and resolved-known-difference breakdown. Use
+The sibling `issue_counts` object and `issue_source_counts` array remain
+unfiltered so automation can still see the full non-match, seed-drift, and
+resolved-known-difference breakdown overall and by fixture source. Use
 `--fail-on-seed-drift` only for deliberate fixture-snapshot audits; normal
 oracle conformance should continue to compare `rum` against fresh oracle output
 rather than against checked seed annotations. Use

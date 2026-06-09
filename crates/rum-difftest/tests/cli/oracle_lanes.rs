@@ -111,6 +111,20 @@ fn oracle_lanes_write_machine_readable_summary_json() {
             json_u64(&summary_json, "/issue_counts/resolved_known_difference"),
             0
         );
+        let source_counts = json_array(&summary_json, "/issue_source_counts");
+        assert_eq!(source_counts.len(), 1);
+        if lane == "lane-a" {
+            assert_eq!(
+                json_str(&source_counts[0], "/fixture_source"),
+                "curated-core"
+            );
+        } else {
+            assert_eq!(json_str(&source_counts[0], "/fixture_source"), "stateful");
+        }
+        assert!(json_bool(&source_counts[0], "/project_owned_fixture"));
+        assert_eq!(json_u64(&source_counts[0], "/total"), 1);
+        assert_eq!(json_u64(&source_counts[0], "/non_match"), 1);
+        assert_eq!(json_u64(&source_counts[0], "/seed_snapshot_drift"), 0);
         assert_eq!(json_u64(&summary_json, "/issue_samples_limit"), 5);
         assert_eq!(json_u64(&summary_json, "/issue_samples_emitted"), 1);
         assert_eq!(json_u64(&summary_json, "/issue_samples_total"), 1);
@@ -204,6 +218,19 @@ fn oracle_lanes_filter_summary_json_issue_samples_by_kind() {
         assert_eq!(json_u64(&seed_drift_json, "/issue_counts/non_match"), 1);
         assert_eq!(
             json_u64(&seed_drift_json, "/issue_counts/seed_snapshot_drift"),
+            1
+        );
+        let seed_drift_source_counts = json_array(&seed_drift_json, "/issue_source_counts");
+        assert_eq!(seed_drift_source_counts.len(), 1);
+        assert!(json_str(&seed_drift_source_counts[0], "/fixture_source").ends_with("-custom"));
+        assert!(json_bool(
+            &seed_drift_source_counts[0],
+            "/project_owned_fixture"
+        ));
+        assert_eq!(json_u64(&seed_drift_source_counts[0], "/total"), 2);
+        assert_eq!(json_u64(&seed_drift_source_counts[0], "/non_match"), 1);
+        assert_eq!(
+            json_u64(&seed_drift_source_counts[0], "/seed_snapshot_drift"),
             1
         );
         let seed_drift_samples = json_array(&seed_drift_json, "/issue_samples");
@@ -506,6 +533,15 @@ fn lane_a_project_seed_drift_gate_ignores_imported_seed_snapshots() {
         ),
         0
     );
+    let source_counts = json_array(&summary_json, "/issue_source_counts");
+    assert_eq!(source_counts.len(), 1);
+    assert_eq!(
+        json_str(&source_counts[0], "/fixture_source"),
+        "seed-golden"
+    );
+    assert!(!json_bool(&source_counts[0], "/project_owned_fixture"));
+    assert_eq!(json_u64(&source_counts[0], "/total"), 1);
+    assert_eq!(json_u64(&source_counts[0], "/non_match"), 1);
     let samples = json_array(&summary_json, "/issue_samples");
     assert_eq!(json_str(&samples[0], "/fixture_source"), "seed-golden");
     assert!(!json_bool(&samples[0], "/project_owned_fixture"));
