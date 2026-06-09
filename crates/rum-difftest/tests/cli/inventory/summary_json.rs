@@ -21,6 +21,8 @@ fn inventory_writes_machine_readable_summary_json() {
     let summary = fs::read_to_string(&summary_path).unwrap();
     let summary_json = parse_summary_json(&summary);
     assert_eq!(json_str(&summary_json, "/lane"), "inventory");
+    assert!(json_bool(&summary_json, "/clean"));
+    assert!(json_bool(&summary_json, "/baseline_checked"));
     assert_json_null(&summary_json, "/filters/lane");
     assert_json_null(&summary_json, "/filters/source");
     assert_json_null(&summary_json, "/filters/category");
@@ -122,5 +124,25 @@ fn inventory_writes_machine_readable_summary_json() {
             .iter()
             .any(|category| json_str(category, "/category") == "scoping-control")
     );
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
+#[test]
+fn inventory_summary_without_baseline_reports_unchecked_clean_state() {
+    let temp_dir = unique_temp_dir("inventory-json-no-baseline");
+    let summary_path = temp_dir.join("summary.json");
+    let output = run_difftest(&[
+        "inventory",
+        "--summary-json",
+        summary_path.to_str().unwrap(),
+    ]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    let summary = fs::read_to_string(&summary_path).unwrap();
+    let summary_json = parse_summary_json(&summary);
+    assert_eq!(json_str(&summary_json, "/lane"), "inventory");
+    assert!(json_bool(&summary_json, "/clean"));
+    assert!(!json_bool(&summary_json, "/baseline_checked"));
+    assert_json_null(&summary_json, "/baseline");
     fs::remove_dir_all(temp_dir).unwrap();
 }

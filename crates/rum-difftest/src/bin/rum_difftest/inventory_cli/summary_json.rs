@@ -30,11 +30,15 @@ fn summary_json(
     baseline_report: Option<&InventoryBaselineReport>,
 ) -> String {
     let totals = report.totals();
+    let baseline_checked = baseline_report.is_some();
+    let clean = baseline_report.is_none_or(InventoryBaselineReport::is_clean);
     format!(
         concat!(
             "{{\n",
             "  \"lane\": \"inventory\",\n",
             "  \"schema_version\": {},\n",
+            "  \"clean\": {},\n",
+            "  \"baseline_checked\": {},\n",
             "  \"filters\": {},\n",
             "  \"totals\": {},\n",
             "  \"baseline\": {},\n",
@@ -44,6 +48,8 @@ fn summary_json(
             "}}\n"
         ),
         SUMMARY_SCHEMA_VERSION,
+        clean,
+        baseline_checked,
         filters_json(filter),
         inventory_totals_json(&totals, 2),
         baseline_json(baseline_path, baseline_report),

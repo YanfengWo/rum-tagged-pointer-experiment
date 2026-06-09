@@ -619,6 +619,10 @@ This roadmap intentionally uses two levels of detail:
     `--category` filters that apply consistently to text output, summary JSON,
     baseline comparison, and baseline capture, with fail-fast empty-filter
     handling for typoed coverage audits
+  - [x] Lane A/B follow-up: add top-level `clean` and `baseline_checked`
+    fields to `inventory --summary-json`, so scripts can distinguish a clean
+    inventory report from a clean checked-baseline gate without special-casing
+    a missing `baseline` object
   - [x] Lane A/B follow-up: make focused inventory baseline checks consider
     only baseline records matching the active filter scope, and fail fast when
     fixtures match but no checked baseline record covers that scope

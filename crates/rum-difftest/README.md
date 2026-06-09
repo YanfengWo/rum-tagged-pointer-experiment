@@ -109,7 +109,10 @@ cargo run -p rum-difftest -- inventory --lane lane-a --source curated-core --cat
 The command summarizes Lane A and Lane B fixture files, source groups, semantic
 categories, normal entries, and known-difference entries. It does not execute
 `rum` or a Wolfram oracle. The JSON output is intended for scripts or
-dashboards that need stable coverage counts without parsing runner logs. Use
+dashboards that need stable coverage counts without parsing runner logs; its
+top-level `clean` field is `true` when no baseline comparison was requested
+or when the requested baseline comparison is clean, and `baseline_checked`
+states whether that clean result included a baseline gate. Use
 `--lane NAME`, `--source NAME`, and `--category NAME` for a focused coverage
 audit; the filters apply consistently to text output, summary JSON, baseline
 comparison, and `--write-baseline`, and a filter set that matches no fixtures

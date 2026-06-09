@@ -121,7 +121,10 @@ single broad diff bucket:
 Use `rum-difftest inventory` as the non-oracle coverage-audit command for
 default Lane A/B fixtures. It reports fixture counts, source groups, semantic
 categories, normal entries, and known-difference entries; `--summary-json PATH`
-exposes the same stable counts for scripts or dashboards. `--lane NAME`,
+exposes the same stable counts for scripts or dashboards. The inventory JSON
+also exposes top-level `clean` and `baseline_checked` fields so scripts can
+distinguish a successful coverage inventory from a successful checked baseline
+gate without special-casing a missing `baseline` object. `--lane NAME`,
 `--source NAME`, and `--category NAME` provide focused coverage audits and
 apply to text output, summary JSON, baseline comparison, and baseline capture;
 focused baseline comparisons consider only baseline records matching the active
