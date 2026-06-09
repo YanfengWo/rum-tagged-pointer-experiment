@@ -197,13 +197,14 @@ emitted count, total issue count, and truncation status. Lane A/B summary JSON
 reports `oracle_processes`, `oracle_batches`, and `oracle_batch_inputs` so
 process-reuse work can be evaluated against real batching rather than guessed
 from fixture counts. Lane B also keeps its session-specific batch and step
-counts for compatibility. Text and JSON reports expose the concrete
-session-batch transport name and process count, distinguishing the local
-single-process `OracleKernel` transport from generic per-batch fallback
-behavior. Lane A submits compared cases through the same batch interface as
-isolated single-expression batches, and its JSON report exposes the same
-concrete transport metadata so the local `OracleKernel` path can amortize
-process startup without sharing case state.
+counts for compatibility. Text reports mirror those generic oracle
+batch/input counts for quick local inspection. Text and JSON reports expose
+the concrete session-batch transport name and process count, distinguishing
+the local single-process `OracleKernel` transport from generic per-batch
+fallback behavior. Lane A submits compared cases through the same batch
+interface as isolated single-expression batches, and its JSON report exposes
+the same concrete transport metadata so the local `OracleKernel` path can
+amortize process startup without sharing case state.
 The Lane B runner submits prepared fixture groups through an oracle batch
 interface; the generic fallback still evaluates each fixture batch
 independently, while the local `OracleKernel` transport executes all Lane B

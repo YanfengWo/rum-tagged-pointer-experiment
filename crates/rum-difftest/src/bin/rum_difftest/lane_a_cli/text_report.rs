@@ -3,6 +3,8 @@ use rum_difftest::lane_a::{self, CaseValue, LaneACaseStatus};
 pub(super) fn print_lane_a_report(
     summary: &lane_a::LaneASummary,
     oracle_evaluation_processes: usize,
+    oracle_batches: usize,
+    oracle_batch_inputs: usize,
 ) {
     println!("cases seen: {}", summary.total_seen);
     println!("cases compared: {}", summary.compared);
@@ -31,6 +33,8 @@ pub(super) fn print_lane_a_report(
         "seed snapshots drifted from oracle: {}",
         summary.seed_snapshots_drifted_from_oracle
     );
+    println!("oracle batches: {oracle_batches}");
+    println!("oracle batch inputs: {oracle_batch_inputs}");
     println!("oracle evaluation processes: {oracle_evaluation_processes}");
 
     print_non_matching_cases(summary);

@@ -607,9 +607,9 @@ This roadmap intentionally uses two levels of detail:
     assertions alone
   - [x] Lane A/B follow-up: expose oracle process counts in lane summary JSON
     plus concrete batch transport metadata and generic batch/input counts, and
-    keep Lane A text output showing process counts, making the current
-    case-isolated batch Lane A transport and single-process Lane B batch
-    transport auditable before any future interactive reuse work
+    keep Lane A/B text output showing process, batch, and batch-input counts,
+    making the current case-isolated batch Lane A transport and single-process
+    Lane B batch transport auditable before any future interactive reuse work
   - [x] Lane A follow-up: add a curated structure-selector fixture for stable
     `Part` / `Extract` / `ReplacePart` / `Depth` / `Level` conformance, and
     guard it with the checked inventory category baseline

@@ -77,11 +77,18 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
 
     print_oracle_header("lane-b", &oracle);
     let oracle_processes = oracle.session_batch_process_count(summary.oracle_session_batches);
+    let oracle_batches = summary.oracle_session_batches;
+    let oracle_batch_inputs = summary.oracle_session_steps;
     let session_batch_transport = OracleLaneSessionBatchTransport {
         name: oracle.session_batch_transport_name(),
         process_count: Some(oracle_processes),
     };
-    text_report::print_lane_b_report(&summary, session_batch_transport);
+    text_report::print_lane_b_report(
+        &summary,
+        session_batch_transport,
+        oracle_batches,
+        oracle_batch_inputs,
+    );
 
     if let Some(path) = &summary_json_path {
         write_summary_json(
@@ -101,8 +108,8 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                     rum_failures: summary.rum_failures,
                     oracle_failures: summary.oracle_failures,
                     oracle_processes,
-                    oracle_batches: summary.oracle_session_batches,
-                    oracle_batch_inputs: summary.oracle_session_steps,
+                    oracle_batches,
+                    oracle_batch_inputs,
                     skipped_known_differences: summary.skipped_known_differences,
                     confirmed_known_differences: summary.confirmed_known_differences,
                     resolved_known_differences: summary.resolved_known_differences,

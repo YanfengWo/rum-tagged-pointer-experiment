@@ -71,6 +71,8 @@ fn oracle_lanes_write_machine_readable_summary_json() {
         assert_eq!(json_u64(&summary_json, "/counts/oracle_processes"), 1);
         assert_eq!(json_u64(&summary_json, "/counts/oracle_batches"), 1);
         assert_eq!(json_u64(&summary_json, "/counts/oracle_batch_inputs"), 1);
+        assert!(stdout.contains("oracle batches: 1"));
+        assert!(stdout.contains("oracle batch inputs: 1"));
         assert_eq!(json_u64(&summary_json, "/issue_samples_limit"), 5);
         assert_eq!(json_u64(&summary_json, "/issue_samples_emitted"), 1);
         assert_eq!(json_u64(&summary_json, "/issue_samples_total"), 1);
