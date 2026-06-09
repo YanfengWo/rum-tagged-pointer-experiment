@@ -262,6 +262,14 @@ mod tests {
             0
         );
         assert_eq!(
+            lane_a.totals_by_category()["strings-similarity"].normal_entries,
+            15
+        );
+        assert_eq!(
+            lane_a.totals_by_category()["strings-similarity"].known_difference_entries,
+            0
+        );
+        assert_eq!(
             lane_a.totals_by_category()["strings-surface"].normal_entries,
             10
         );

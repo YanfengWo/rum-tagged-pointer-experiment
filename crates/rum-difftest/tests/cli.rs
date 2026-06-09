@@ -378,7 +378,7 @@ fn inventory_writes_machine_readable_summary_json() {
     assert_json_null(&summary_json, "/filters/source");
     assert_json_null(&summary_json, "/filters/category");
     assert_eq!(json_u64(&summary_json, "/totals/fixtures"), 45);
-    assert_eq!(json_u64(&summary_json, "/totals/entries"), 645);
+    assert_eq!(json_u64(&summary_json, "/totals/entries"), 654);
     assert!(json_bool(&summary_json, "/baseline/clean"));
     assert_eq!(json_u64(&summary_json, "/baseline/records_considered"), 50);
     let lanes = json_array(&summary_json, "/lanes");
@@ -387,7 +387,7 @@ fn inventory_writes_machine_readable_summary_json() {
         .find(|lane| json_str(lane, "/lane") == "lane-a")
         .expect("inventory summary should include lane-a");
     assert_eq!(json_u64(lane_a, "/totals/fixtures"), 38);
-    assert_eq!(json_u64(lane_a, "/totals/entries"), 505);
+    assert_eq!(json_u64(lane_a, "/totals/entries"), 514);
     assert_eq!(json_u64(lane_a, "/totals/known_difference_entries"), 5);
     assert!(
         json_array(lane_a, "/sources")
