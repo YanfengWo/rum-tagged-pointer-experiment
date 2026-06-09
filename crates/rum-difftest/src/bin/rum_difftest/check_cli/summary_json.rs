@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use rum_difftest::artifact_hygiene::ArtifactHygieneIssue;
 use rum_difftest::divergences;
 use rum_difftest::inventory::{FixtureInventoryTotals, display_path};
 
@@ -200,19 +201,23 @@ fn artifact_hygiene_check_json(report: &LocalCheckReport) -> String {
         ),
         report.artifact_hygiene_issues.is_empty(),
         report.artifact_hygiene_issues.len(),
-        report
-            .artifact_hygiene_issues
-            .iter()
-            .map(|issue| {
-                format!(
-                    "        {{\"path\": \"{}\", \"reason\": \"{}\"}}",
-                    json_string(&issue.path.display().to_string()),
-                    json_string(&issue.reason),
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(",\n"),
+        artifact_hygiene_issue_details_json(&report.artifact_hygiene_issues),
     )
+}
+
+fn artifact_hygiene_issue_details_json(issues: &[ArtifactHygieneIssue]) -> String {
+    issues
+        .iter()
+        .map(|issue| {
+            format!(
+                "        {{\"path\": \"{}\", \"kind\": \"{}\", \"reason\": \"{}\"}}",
+                json_string(&issue.path.display().to_string()),
+                json_string(issue.kind.as_str()),
+                json_string(&issue.reason),
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",\n")
 }
 
 fn lane_c_check_json(report: &LocalCheckReport) -> String {
@@ -317,4 +322,36 @@ fn totals_json(totals: &FixtureInventoryTotals, indent: usize) -> String {
         totals.normal_entries,
         totals.known_difference_entries,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use rum_difftest::artifact_hygiene::{ArtifactHygieneIssue, ArtifactHygieneIssueKind};
+
+    use super::*;
+
+    #[test]
+    fn artifact_hygiene_issue_details_include_kind() {
+        let details = artifact_hygiene_issue_details_json(&[
+            ArtifactHygieneIssue {
+                path: PathBuf::from("case-0001.wl"),
+                kind: ArtifactHygieneIssueKind::OracleArtifact,
+                reason: "generated oracle input file".to_string(),
+            },
+            ArtifactHygieneIssue {
+                path: PathBuf::from("cases/stateful/probe.tmp"),
+                kind: ArtifactHygieneIssueKind::StrayFixtureFile,
+                reason: "unexpected fixture tree file".to_string(),
+            },
+        ]);
+
+        assert!(details.contains(
+            "{\"path\": \"case-0001.wl\", \"kind\": \"oracle_artifact\", \"reason\": \"generated oracle input file\"}"
+        ));
+        assert!(details.contains(
+            "{\"path\": \"cases/stateful/probe.tmp\", \"kind\": \"stray_fixture_file\", \"reason\": \"unexpected fixture tree file\"}"
+        ));
+    }
 }

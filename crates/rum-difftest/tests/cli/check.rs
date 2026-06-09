@@ -19,6 +19,8 @@ fn check_runs_fast_non_oracle_gates() {
     assert!(stdout.contains("lane-c issues: 0"));
     assert!(stdout.contains("check\tartifact-hygiene\tclean"));
     assert!(stdout.contains("artifact hygiene issues: 0"));
+    assert!(stdout.contains("artifact hygiene oracle artifacts: 0"));
+    assert!(stdout.contains("artifact hygiene stray fixture files: 0"));
     assert!(stdout.contains(
         "check\tlane-d-smoke\tskipped\topt-in with --include-lane-d-smoke or --lane-d-smoke-baseline PATH"
     ));

@@ -16,6 +16,15 @@ pub enum ArtifactHygieneIssueKind {
     StrayFixtureFile,
 }
 
+impl ArtifactHygieneIssueKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ArtifactHygieneIssueKind::OracleArtifact => "oracle_artifact",
+            ArtifactHygieneIssueKind::StrayFixtureFile => "stray_fixture_file",
+        }
+    }
+}
+
 pub fn validate_artifact_hygiene() -> Result<Vec<ArtifactHygieneIssue>, std::io::Error> {
     validate_artifact_hygiene_in(&crate_root())
 }
@@ -211,6 +220,18 @@ mod tests {
                 ArtifactHygieneIssueKind::OracleArtifact,
                 "generated oracle wrapper script"
             ))
+        );
+    }
+
+    #[test]
+    fn artifact_hygiene_issue_kinds_have_stable_summary_names() {
+        assert_eq!(
+            ArtifactHygieneIssueKind::OracleArtifact.as_str(),
+            "oracle_artifact"
+        );
+        assert_eq!(
+            ArtifactHygieneIssueKind::StrayFixtureFile.as_str(),
+            "stray_fixture_file"
         );
     }
 

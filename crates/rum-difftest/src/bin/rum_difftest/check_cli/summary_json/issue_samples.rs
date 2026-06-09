@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use rum_difftest::artifact_hygiene::{ArtifactHygieneIssue, ArtifactHygieneIssueKind};
+use rum_difftest::artifact_hygiene::ArtifactHygieneIssue;
 use rum_difftest::inventory::display_path;
 use rum_difftest::lane_d;
 
@@ -306,13 +306,9 @@ fn collect_artifact_hygiene_issue_samples(
     samples: &mut Vec<CheckIssueSample>,
 ) {
     for issue in issues {
-        let kind = match issue.kind {
-            ArtifactHygieneIssueKind::OracleArtifact => KIND_ORACLE_ARTIFACT,
-            ArtifactHygieneIssueKind::StrayFixtureFile => KIND_STRAY_FIXTURE_FILE,
-        };
         samples.push(CheckIssueSample {
             check: CHECK_ARTIFACT_HYGIENE,
-            kind,
+            kind: issue.kind.as_str(),
             location: issue.path.display().to_string(),
             message: issue.reason.clone(),
         });
@@ -436,6 +432,8 @@ fn sample_json(sample: CheckIssueSample) -> String {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+
+    use rum_difftest::artifact_hygiene::ArtifactHygieneIssueKind;
 
     use super::*;
 
