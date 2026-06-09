@@ -7,5 +7,12 @@ m::tag = "value `1`"; Check[Quiet[Message[m::tag, 3]], fallback] ||| Null
 SetAttributes[held, HoldFirst]; heldArg = 2; held[x_] := Hold[x]; held[heldArg] ||| Hold[heldArg]
 SetAttributes[held, HoldFirst]; heldArg = 2; ClearAttributes[held, HoldFirst]; held[x_] := Hold[x]; held[heldArg] ||| Hold[2]
 SetAttributes[{a, b}, {HoldFirst, HoldRest}]; ToString[{Attributes[a], Attributes[b]}, InputForm] ||| "{{HoldAll}, {HoldAll}}"
+SetAttributes[attrHoldFirst, HoldFirst]; attrHoldFirst[Identity[1], Identity[2]] ||| attrHoldFirst[Identity[1], 2]
+SetAttributes[attrHoldRest, HoldRest]; attrHoldRest[Identity[1], Identity[2]] ||| attrHoldRest[1, Identity[2]]
+SetAttributes[attrHoldAll, HoldAll]; attrHoldAll[Identity[1], Identity[2]] ||| attrHoldAll[Identity[1], Identity[2]]
+SetAttributes[attrSeq, SequenceHold]; attrSeq[Sequence[1, 2], 3] ||| attrSeq[Sequence[1, 2], 3]
+SetAttributes[attrCombo, {HoldFirst, SequenceHold}]; attrCombo[Sequence[Identity[1], 2], Identity[3]] ||| attrCombo[Sequence[Identity[1], 2], 3]
 Protect[p]; ToString[Attributes[p], InputForm] ||| "{Protected}"
 Protect[p]; Unprotect[p]; ToString[Attributes[p], InputForm] ||| "{}"
+SetAttributes[attrProtected, HoldFirst]; Protect[attrProtected]; ToString[Attributes[attrProtected], InputForm] ||| "{HoldFirst, Protected}"
+SetAttributes[attrProtectedClear, HoldFirst]; Protect[attrProtectedClear]; Unprotect[attrProtectedClear]; ToString[Attributes[attrProtectedClear], InputForm] ||| "{HoldFirst}"
