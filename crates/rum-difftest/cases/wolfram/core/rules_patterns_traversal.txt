@@ -2,21 +2,31 @@
 # Format: input ||| expected_output
 MatchQ[f[1, 2], f[_Integer, _Integer]] ||| True
 MatchQ[f[1, a], f[_Integer, _Integer]] ||| False
+MatchQ["hi", x_Integer] ||| False
 MatchQ[7, x_Integer /; MatchQ[x, 7]] ||| True
 MatchQ[8, x_Integer /; MatchQ[x, 7]] ||| False
 MatchQ[7, PatternTest[x_Integer, Function[MatchQ[Slot[1], 7]]]] ||| True
 MatchQ[8, PatternTest[x_Integer, Function[MatchQ[Slot[1], 7]]]] ||| False
 MatchQ[7, Alternatives[x_String, x_Integer]] ||| True
 MatchQ[a, Alternatives[x_String, x_Integer]] ||| False
+MatchQ[f[7], f[Alternatives[x_String, x_Integer]]] ||| True
 MatchQ[7, Except[x_Integer]] ||| False
 MatchQ[a, Except[x_Integer]] ||| True
+MatchQ[7, Except[x_String, x_Integer]] ||| True
 MatchQ[f[], f[Optional[x_Integer, 7]]] ||| True
+MatchQ[f[1], f[Optional[x_Integer, 0], y_Integer]] ||| True
+MatchQ[f["hi"], f[Optional[x_Integer, 0]]] ||| False
 MatchQ[f[1, 2], f[x__]] ||| True
 MatchQ[f[], f[x__]] ||| False
 MatchQ[f[], f[x___]] ||| True
 MatchQ[f[1, 2, 3], f[x__, y_Integer]] ||| True
+MatchQ[f[1], f[Repeated[x_Integer, {2}]]] ||| False
+MatchQ[f[], f[RepeatedNull[x_Integer]]] ||| True
+MatchQ[f[1, 2], f[PatternTest[x__, Function[MatchQ[List[SlotSequence[1]], List[2, 1]]]]]] ||| False
 MatchQ[f[a, b], f[PatternSequence[x_, y_]]] ||| True
 MatchQ[f[], f[PatternSequence[]]] ||| True
+MatchQ[Blank[], Verbatim[Blank[]]] ||| True
+MatchQ[7, Verbatim[Blank[]]] ||| False
 ToString[{a, b, c} /. b -> x, InputForm] ||| "{a, x, c}"
 ToString[7 /. (x_Integer /; MatchQ[x, 7]) -> y, InputForm] ||| "y"
 ToString[8 /. (x_Integer /; MatchQ[x, 7]) -> y, InputForm] ||| "8"
@@ -24,6 +34,11 @@ ToString[7 /. PatternTest[x_Integer, Function[MatchQ[Slot[1], 7]]] -> y, InputFo
 ToString[a /. Except[x_Integer] -> y, InputForm] ||| "y"
 ToString[f[1, 2] /. f[Repeated[_Integer]] -> ok, InputForm] ||| "ok"
 ToString[f[a, b] /. f[PatternSequence[x_, y_]] :> List[x, y], InputForm] ||| "{a, b}"
+ToString[f[a, b, c] /. f[x__, y__] :> {List[x], List[y]}, InputForm] ||| "{{a}, {b, c}}"
+ToString[f[a, b, c] /. f[Longest[x__], y__] :> {List[x], List[y]}, InputForm] ||| "{{a, b}, {c}}"
+ToString[f[a, b, c] /. f[Shortest[x__], y__] :> {List[x], List[y]}, InputForm] ||| "{{a}, {b, c}}"
+ToString[f[a, b, c, d] /. f[x__, Longest[y__], z__] :> {List[x], List[y], List[z]}, InputForm] ||| "{{a}, {b, c}, {d}}"
+ToString[f[Blank[]] /. f[Verbatim[Blank[]]] -> ok, InputForm] ||| "ok"
 ToString[Replace[{a, b}, {x_, y_} :> {y, x}], InputForm] ||| "{b, a}"
 ToString[Replace[f[g[1], 2], x_Integer :> h[x], {1, Infinity}], InputForm] ||| "f[g[h[1]], h[2]]"
 ToString[Replace[f[a], {x_String :> 0, f[x_] :> g[x]}, {0}], InputForm] ||| "g[a]"
@@ -32,6 +47,11 @@ ToString[Replace[f[], _ -> x, {-2}], InputForm] ||| "x"
 ToString[Replace[f[g[]], _ -> x, {-2}], InputForm] ||| "f[x]"
 ToString[Replace[f[g[]], _ -> x, {-3}], InputForm] ||| "x"
 ToString[f[1] //. {f[x_Integer] -> g[x], g[x_Integer] -> x}, InputForm] ||| "1"
+ToString[ReplaceList[f[x_] :> x][f[a]], InputForm] ||| "{a}"
+ToString[ReplaceList[f[a, b], {f[x_, y_] :> x, f[x_, y_] :> y}], InputForm] ||| "{a, b}"
+ToString[ReplaceList[f[a, b], {f[x_, y_] :> x, f[x_, y_] :> y}, 1], InputForm] ||| "{a}"
+ToString[ReplaceList[f[a, b, c], f[x__, y__] :> {List[x], List[y]}], InputForm] ||| "{{{a}, {b, c}}, {{a, b}, {c}}}"
+ToString[ReplaceList[a + b + c, Plus[PatternSequence[a, x_], b] :> x], InputForm] ||| "{c}"
 ToString[Cases[f[g[1], 2, "hi"], x_Integer], InputForm] ||| "{2}"
 ToString[Cases[f[1, g[2], 3], _Integer, Infinity], InputForm] ||| "{1, 2, 3}"
 ToString[Cases[f[1, g[2], 3], _Integer, {2}], InputForm] ||| "{2}"
@@ -50,6 +70,7 @@ ToString[Cases[f[7, "hi", a], Alternatives[x_Integer, x_String]], InputForm] |||
 ToString[Cases[f[7, a, "hi"], Except[x_Integer], 1], InputForm] ||| "{a, \"hi\"}"
 ToString[Cases[f[g[], g[1], g[1, 2]], g[Optional[x_Integer, 0]] :> x], InputForm] ||| "{0, 1}"
 ToString[Cases[f[g[1, 2], g[3]], g[x__] :> {x}], InputForm] ||| "{{1, 2}, {3}}"
+ToString[Cases[List[Blank[], a, BlankSequence[]], Verbatim[Blank[]]], InputForm] ||| "{_}"
 ToString[DeleteCases[{1, a, 2, b, 3}, _Integer], InputForm] ||| "{a, b}"
 ToString[DeleteCases[f[g[1], 2, "hi"], x_Integer], InputForm] ||| "f[g[1], \"hi\"]"
 ToString[DeleteCases[f[g[1], 2, h[3]], x_Integer, Infinity], InputForm] ||| "f[g[], h[]]"
