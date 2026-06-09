@@ -6,7 +6,7 @@ use rum_difftest::lane_d::{
 };
 
 use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
-use crate::lane_d_json::{readiness_artifact_counts, readiness_entries_json};
+use crate::lane_d_json::{baseline_report_json, readiness_artifact_counts, readiness_entries_json};
 
 pub(super) struct WrittenBaselineSummary {
     pub(super) path: PathBuf,
@@ -90,28 +90,7 @@ fn baseline_summary_json(path: Option<&Path>, report: Option<&LaneDBaselineRepor
     let path = path
         .map(|path| path.display().to_string())
         .unwrap_or_default();
-    format!(
-        concat!(
-            "{{\n",
-            "    \"path\": \"{}\",\n",
-            "    \"clean\": {},\n",
-            "    \"records_considered\": {},\n",
-            "    \"compared\": {},\n",
-            "    \"missing_records\": {},\n",
-            "    \"unused_records\": {},\n",
-            "    \"elapsed_regressions\": {},\n",
-            "    \"value_node_regressions\": {}\n",
-            "  }}"
-        ),
-        json_string(&path),
-        report.is_clean(),
-        report.records_considered,
-        report.compared,
-        report.missing_records.len(),
-        report.unused_records.len(),
-        report.elapsed_regressions.len(),
-        report.value_node_regressions.len(),
-    )
+    baseline_report_json(&path, report, "    ", "  ")
 }
 
 fn readiness_summary_json(report: Option<&LaneDCheckedBaselineReadinessReport>) -> String {

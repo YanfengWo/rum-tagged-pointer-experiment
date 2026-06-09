@@ -2,7 +2,7 @@ use rum_difftest::inventory::display_path;
 use rum_difftest::lane_d;
 
 use crate::json_cli::json_string;
-use crate::lane_d_json::readiness_entries_json;
+use crate::lane_d_json::{baseline_report_json, readiness_entries_json};
 
 pub(super) fn lane_d_smoke_check_json(report: &super::super::LaneDSmokeCheckReport) -> String {
     format!(
@@ -10,16 +10,7 @@ pub(super) fn lane_d_smoke_check_json(report: &super::super::LaneDSmokeCheckRepo
             "    {{\n",
             "      \"name\": \"lane-d-smoke\",\n",
             "      \"clean\": {},\n",
-            "      \"baseline\": {{\n",
-            "        \"path\": \"{}\",\n",
-            "        \"clean\": {},\n",
-            "        \"records_considered\": {},\n",
-            "        \"compared\": {},\n",
-            "        \"missing_records\": {},\n",
-            "        \"unused_records\": {},\n",
-            "        \"elapsed_regressions\": {},\n",
-            "        \"value_node_regressions\": {}\n",
-            "      }},\n",
+            "      \"baseline\": {},\n",
             "      \"counts\": {{\n",
             "        \"cases_seen\": {},\n",
             "        \"cases_skipped_by_profile\": {},\n",
@@ -36,14 +27,12 @@ pub(super) fn lane_d_smoke_check_json(report: &super::super::LaneDSmokeCheckRepo
             "    }}"
         ),
         report.is_clean(),
-        json_string(&display_path(&report.baseline_path)),
-        report.baseline.is_clean(),
-        report.baseline.records_considered,
-        report.baseline.compared,
-        report.baseline.missing_records.len(),
-        report.baseline.unused_records.len(),
-        report.baseline.elapsed_regressions.len(),
-        report.baseline.value_node_regressions.len(),
+        baseline_report_json(
+            &display_path(&report.baseline_path),
+            &report.baseline,
+            "        ",
+            "      "
+        ),
         report.summary.total_seen,
         report.summary.skipped_by_profile,
         report.summary.executed,

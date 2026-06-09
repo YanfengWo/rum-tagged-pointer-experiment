@@ -1,7 +1,8 @@
 use std::path::Path;
 
 use rum_difftest::lane_d::{
-    self, LaneDCheckedBaselineReadinessReport, LaneDCheckedBaselineReadinessStatus,
+    self, LaneDBaselineReport, LaneDCheckedBaselineReadinessReport,
+    LaneDCheckedBaselineReadinessStatus,
 };
 
 use crate::json_cli::json_string;
@@ -29,6 +30,45 @@ pub fn readiness_artifact_counts(
         }
     }
     counts
+}
+
+pub fn baseline_report_json(
+    path: &str,
+    report: &LaneDBaselineReport,
+    field_indent: &str,
+    close_indent: &str,
+) -> String {
+    format!(
+        concat!(
+            "{{\n",
+            "{}\"path\": \"{}\",\n",
+            "{}\"clean\": {},\n",
+            "{}\"records_considered\": {},\n",
+            "{}\"compared\": {},\n",
+            "{}\"missing_records\": {},\n",
+            "{}\"unused_records\": {},\n",
+            "{}\"elapsed_regressions\": {},\n",
+            "{}\"value_node_regressions\": {}\n",
+            "{}}}"
+        ),
+        field_indent,
+        json_string(path),
+        field_indent,
+        report.is_clean(),
+        field_indent,
+        report.records_considered,
+        field_indent,
+        report.compared,
+        field_indent,
+        report.missing_records.len(),
+        field_indent,
+        report.unused_records.len(),
+        field_indent,
+        report.elapsed_regressions.len(),
+        field_indent,
+        report.value_node_regressions.len(),
+        close_indent,
+    )
 }
 
 pub fn readiness_entries_json(
@@ -136,6 +176,21 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
+
+    #[test]
+    fn baseline_report_json_renders_counts_and_path() {
+        let json = baseline_report_json(
+            "perf/baselines/smoke.txt",
+            &clean_baseline_report(),
+            "  ",
+            "",
+        );
+
+        assert!(json.starts_with("{\n  \"path\": \"perf/baselines/smoke.txt\""));
+        assert!(json.contains("  \"clean\": true"));
+        assert!(json.contains("  \"records_considered\": 0"));
+        assert!(json.ends_with("\n}"));
+    }
 
     #[test]
     fn readiness_artifact_counts_distinguish_statuses() {
