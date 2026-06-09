@@ -1,15 +1,17 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 use rum_difftest::lane_d::{
-    self, LaneDBaselineCaptureOptions, LaneDBaselineCompareOptions, LaneDCaseStatus, LaneDOptions,
-    LaneDProfile, LaneDSuite, LaneDThresholdProfile,
+    self, LaneDBaselineCaptureOptions, LaneDBaselineCompareOptions, LaneDOptions, LaneDProfile,
+    LaneDSuite, LaneDThresholdProfile,
 };
 
 use super::expect_value;
 
 #[path = "lane_d_cli/summary_json.rs"]
 mod summary_json;
+#[path = "lane_d_cli/text_report.rs"]
+mod text_report;
 
 pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut suite = LaneDSuite::All;
@@ -104,41 +106,7 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         profile,
         limit,
     })?;
-
-    println!("lane-d suite: {}", lane_d::suite_name(suite));
-    println!("lane-d profile: {}", lane_d::profile_name(profile));
-    println!(
-        "lane-d threshold profile: {}",
-        lane_d::threshold_profile_name(threshold_profile)
-    );
-    println!("cases seen: {}", summary.total_seen);
-    println!("cases skipped by profile: {}", summary.skipped_by_profile);
-    println!("cases executed: {}", summary.executed);
-    println!("successes: {}", summary.succeeded);
-    println!("failures: {}", summary.failed);
-    println!("total elapsed micros: {}", summary.total_elapsed_micros);
-
-    for case in &summary.cases {
-        let status = match &case.status {
-            LaneDCaseStatus::Success => "success",
-            LaneDCaseStatus::Failure { .. } => "failure",
-        };
-        println!(
-            "case\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
-            case.index,
-            case.suite,
-            case.category.as_deref().unwrap_or("-"),
-            status,
-            case.elapsed_micros,
-            case.value_nodes
-                .map(|value| value.to_string())
-                .unwrap_or_else(|| "-".to_string()),
-            case.input
-        );
-        if let LaneDCaseStatus::Failure { message } = &case.status {
-            println!("failure\t{}\t{}", case.index, message.replace('\n', "\\n"));
-        }
-    }
+    text_report::print_run_summary(suite, profile, threshold_profile, &summary);
 
     let baseline_report = if let Some(path) = &baseline_path {
         let baseline = lane_d::load_baseline(path)?;
@@ -151,14 +119,14 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 require_all_records: limit.is_none(),
             },
         );
-        print_baseline_report(path, &report);
+        text_report::print_baseline_report(path, &report);
         Some(report)
     } else {
         None
     };
     let readiness_report = if check_baseline_readiness {
         let report = lane_d::check_checked_baseline_readiness(&summary);
-        print_checked_baseline_readiness_report(&report);
+        text_report::print_checked_baseline_readiness_report(&report);
         Some(report)
     } else {
         None
@@ -187,15 +155,14 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             lane_d::capture_baseline_from_runs(&summaries, &capture_options)?
         };
         lane_d::write_baseline(path, &baseline)?;
-        println!("baseline written: {}", path.display());
-        println!("baseline written records: {}", baseline.records.len());
-        println!("baseline capture runs: {capture_runs}");
-        println!(
-            "baseline threshold profile: {}",
-            lane_d::threshold_profile_name(threshold_profile)
+        text_report::print_written_baseline_report(
+            path,
+            baseline.records.len(),
+            capture_runs,
+            threshold_profile,
+            baseline_elapsed_multiplier,
+            baseline_min_elapsed_micros,
         );
-        println!("baseline elapsed multiplier: {baseline_elapsed_multiplier}");
-        println!("baseline min elapsed micros: {baseline_min_elapsed_micros}");
         written_baseline = Some(summary_json::WrittenBaselineSummary {
             path: path.clone(),
             records: baseline.records.len(),
@@ -239,94 +206,6 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     }
 
     Ok(ExitCode::SUCCESS)
-}
-
-fn print_baseline_report(path: &Path, report: &lane_d::LaneDBaselineReport) {
-    println!("baseline: {}", path.display());
-    println!("baseline records considered: {}", report.records_considered);
-    println!("baseline compared cases: {}", report.compared);
-    println!("baseline missing records: {}", report.missing_records.len());
-    println!("baseline unused records: {}", report.unused_records.len());
-    println!(
-        "baseline elapsed regressions: {}",
-        report.elapsed_regressions.len()
-    );
-    println!(
-        "baseline value-node regressions: {}",
-        report.value_node_regressions.len()
-    );
-    for missing in &report.missing_records {
-        println!(
-            "baseline-missing\t{}\t{}\t{}",
-            missing.index, missing.suite, missing.input
-        );
-    }
-    for unused in &report.unused_records {
-        println!(
-            "baseline-unused\t{}\t{}\t{}\t{}",
-            lane_d::profile_name(unused.profile),
-            lane_d::threshold_profile_name(unused.threshold_profile),
-            unused.suite,
-            unused.input
-        );
-    }
-    for regression in &report.elapsed_regressions {
-        println!(
-            "baseline-regression\telapsed\t{}\t{}\t{}\t{}\t{}",
-            regression.case.index,
-            regression.case.suite,
-            regression.case.elapsed_micros,
-            regression.max_elapsed_micros,
-            regression.case.input
-        );
-    }
-    for regression in &report.value_node_regressions {
-        println!(
-            "baseline-regression\tvalue-nodes\t{}\t{}\t{}\t{}\t{}",
-            regression.case.index,
-            regression.case.suite,
-            regression.case.value_nodes.unwrap_or(0),
-            regression.max_value_nodes,
-            regression.case.input
-        );
-    }
-}
-
-fn print_checked_baseline_readiness_report(report: &lane_d::LaneDCheckedBaselineReadinessReport) {
-    println!("checked baseline readiness: {}", report.is_ready());
-    println!("checked baseline artifacts: {}", report.entries.len());
-    for entry in &report.entries {
-        let profile = lane_d::profile_name(entry.profile);
-        let threshold_profile = lane_d::threshold_profile_name(entry.threshold_profile);
-        match &entry.status {
-            lane_d::LaneDCheckedBaselineReadinessStatus::Ready {
-                records_considered,
-                compared,
-            } => println!(
-                "checked-baseline-ready\t{profile}\t{threshold_profile}\t{}\t{}\t{}",
-                entry.path.display(),
-                records_considered,
-                compared
-            ),
-            lane_d::LaneDCheckedBaselineReadinessStatus::MissingArtifact => println!(
-                "checked-baseline-missing\t{profile}\t{threshold_profile}\t{}",
-                entry.path.display()
-            ),
-            lane_d::LaneDCheckedBaselineReadinessStatus::InvalidArtifact { message } => println!(
-                "checked-baseline-invalid\t{profile}\t{threshold_profile}\t{}\t{}",
-                entry.path.display(),
-                message.replace('\n', "\\n")
-            ),
-            lane_d::LaneDCheckedBaselineReadinessStatus::NotClean { report } => println!(
-                "checked-baseline-not-clean\t{profile}\t{threshold_profile}\t{}\tmissing={}\tunused={}\telapsed={}\tvalue_nodes={}",
-                entry.path.display(),
-                report.missing_records.len(),
-                report.unused_records.len(),
-                report.elapsed_regressions.len(),
-                report.value_node_regressions.len()
-            ),
-        }
-    }
 }
 
 fn print_lane_d_usage() {
