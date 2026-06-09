@@ -17,8 +17,9 @@ Current fixture focus:
   repeated `Needs` no-reload behavior
 - `options_state.txt`: ordered `SetOptions` default mutation plus
   `OptionsPattern[target]` option-value scope behavior
-- `scoping_control.txt`: ordered `Block` / `Module` / `With` behavior and
-  control-flow restoration across steps
+- `scoping_control.txt`: ordered `Block` / `Module` / `With`,
+  `WithCleanup` / `AbortProtect`, and `CheckAbort` default-option restoration
+  across steps
 - `zz_fixture_isolation.txt`: cleanup between fixture batches in the
   multi-batch oracle transport
 

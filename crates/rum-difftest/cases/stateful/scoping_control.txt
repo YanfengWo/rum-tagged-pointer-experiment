@@ -22,3 +22,19 @@ Catch[Block[{statefulValue = 12}, Throw[statefulValue, scopedTag]], scopedTag] |
 statefulValue ||| 10
 Catch[Block[{statefulValue = 12}, statefulValue = 13; Throw[statefulValue, scopedTag]], scopedTag] ||| 13
 statefulValue ||| 10
+cleanupState = 0 ||| 0
+WithCleanup[cleanupState = 1, cleanupState = 2] ||| 1
+cleanupState ||| 2
+Catch[WithCleanup[cleanupState = 3; Throw[cleanupState, scopedTag], cleanupState = 4], scopedTag] ||| 3
+cleanupState ||| 4
+WithCleanup[cleanupState = 5, cleanupState = 6, cleanupState = 7] ||| 6
+cleanupState ||| 7
+CheckAbort[WithCleanup[Abort[], cleanupState = 8], rescued] ||| rescued
+cleanupState ||| 8
+abortState = 0 ||| 0
+CheckAbort[AbortProtect[abortState = 1; Abort[]; abortState = 2; abortState], rescued] ||| rescued
+abortState ||| 2
+SetOptions[CheckAbort, PropagateAborts -> True] ||| {PropagateAborts -> True}
+CheckAbort[CheckAbort[Abort[], rescued, {}], outer, PropagateAborts -> False] ||| outer
+CheckAbort[CheckAbort[Abort[], rescued, PropagateAborts -> False], outer, PropagateAborts -> False] ||| rescued
+SetOptions[CheckAbort, PropagateAborts -> Automatic] ||| {PropagateAborts -> Automatic}

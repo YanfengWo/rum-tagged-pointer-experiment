@@ -309,7 +309,7 @@ mod tests {
         assert_eq!(lane_b.totals_by_category()["mutation-updates"].entries, 54);
         assert_eq!(lane_b.totals_by_category()["options-state"].entries, 29);
         assert_eq!(lane_b.totals_by_category()["package-defaults"].entries, 24);
-        assert_eq!(lane_b.totals_by_category()["scoping-control"].entries, 22);
+        assert_eq!(lane_b.totals_by_category()["scoping-control"].entries, 38);
         assert_eq!(
             lane_b.totals_by_category()["zz-fixture-isolation"].entries,
             11
