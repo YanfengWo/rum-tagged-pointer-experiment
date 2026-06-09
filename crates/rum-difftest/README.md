@@ -133,6 +133,7 @@ cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --inc
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-a-summary.json
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --source curated-core --category context-namespace
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --fail-on-seed-drift
+cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --fail-on-project-mismatch
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --fail-on-project-seed-drift
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --include-known-diffs --fail-on-resolved-known-difference
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-a-seed-drift.json --issue-sample-kind seed-drift --max-issue-samples 50
@@ -186,6 +187,9 @@ Use `--fail-on-seed-drift` when intentionally auditing fixture seed snapshots
 against the current oracle. Use `--fail-on-project-seed-drift` when a default
 run should fail only for non-`seed/ham-import` fixture drift, preserving the
 imported seed snapshot as historical input.
+Use `--fail-on-project-mismatch` when a default run should fail for
+project-owned fixture mismatches or failures while still reporting imported
+seed mismatches as historical-reference noise.
 When `--include-known-diffs` is used, the report includes known-difference
 ID/type/reason metadata and counts confirmed vs resolved known differences.
 Resolved known differences are listed by ID and fixture location so stale
@@ -199,7 +203,7 @@ known-difference counts, and seed-drift counts, including
 `counts.oracle_batch_inputs` so scripts can see that the current Lane A
 `OracleKernel` transport runs compared cases through a single case-isolated
 batch process. The JSON options section records failure gate flags such as
-`fail_on_mismatch`, `fail_on_seed_drift`,
+`fail_on_mismatch`, `fail_on_project_mismatch`, `fail_on_seed_drift`,
 `fail_on_project_seed_drift`, and
 `fail_on_resolved_known_difference`, plus optional `source` / `category`
 filters, so scripts can interpret non-zero exits without inferring which gate
@@ -231,6 +235,7 @@ cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --inc
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-b-summary.json
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --source stateful --category mutation-updates
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --fail-on-seed-drift
+cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --fail-on-project-mismatch
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --fail-on-project-seed-drift
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --include-known-diffs --fail-on-resolved-known-difference
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-b-seed-drift.json --issue-sample-kind seed-drift --max-issue-samples 50
@@ -250,6 +255,8 @@ for seed-vs-oracle drift, not as the comparison oracle. Use
 `--fail-on-seed-drift` when intentionally auditing stateful fixture snapshots
 against the current oracle. `--fail-on-project-seed-drift` is also available
 and ignores only fixtures under the imported `seed/ham-import` snapshot.
+`--fail-on-project-mismatch` is available as the same project-owned non-match
+gate as Lane A, mainly for symmetry and custom/imported fixture workflows.
 Use `--source NAME` and `--category NAME` to run a focused slice of the
 default stateful fixture set, using the same source labels and semantic
 category names reported by `inventory`; a filter set that matches no fixtures

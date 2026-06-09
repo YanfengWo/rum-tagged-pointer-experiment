@@ -23,6 +23,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut limit = None;
     let mut include_known_differences = false;
     let mut fail_on_mismatch = false;
+    let mut fail_on_project_mismatch = false;
     let mut fail_on_seed_drift = false;
     let mut fail_on_project_seed_drift = false;
     let mut fail_on_resolved_known_difference = false;
@@ -66,6 +67,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 issue_sample_kind = parse_issue_sample_kind(&value)?;
             }
             "--fail-on-mismatch" => fail_on_mismatch = true,
+            "--fail-on-project-mismatch" => fail_on_project_mismatch = true,
             "--fail-on-seed-drift" => fail_on_seed_drift = true,
             "--fail-on-project-seed-drift" => fail_on_project_seed_drift = true,
             "--fail-on-resolved-known-difference" => {
@@ -99,6 +101,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let oracle_processes = oracle.session_batch_process_count(summary.oracle_session_batches);
     let oracle_batches = summary.oracle_session_batches;
     let oracle_batch_inputs = summary.oracle_session_steps;
+    let project_non_matches = lane_b_project_non_matches(&summary);
     let project_seed_snapshot_drifts = lane_b_project_seed_snapshot_drifts(&summary);
     let session_batch_transport = OracleLaneSessionBatchTransport {
         name: oracle.session_batch_transport_name(),
@@ -106,6 +109,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     };
     text_report::print_lane_b_report(
         &summary,
+        project_non_matches,
         project_seed_snapshot_drifts,
         session_batch_transport,
         oracle_batches,
@@ -124,6 +128,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 limit: options.limit,
                 include_known_differences: options.include_known_differences,
                 fail_on_mismatch,
+                fail_on_project_mismatch,
                 fail_on_seed_drift,
                 fail_on_project_seed_drift,
                 fail_on_resolved_known_difference,
@@ -142,6 +147,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                     skipped_known_differences: summary.skipped_known_differences,
                     confirmed_known_differences: summary.confirmed_known_differences,
                     resolved_known_differences: summary.resolved_known_differences,
+                    project_non_matches,
                     seed_snapshots_checked: summary.seed_snapshots_checked,
                     seed_snapshots_matched_oracle: summary.seed_snapshots_matched_oracle,
                     seed_snapshots_drifted_from_oracle: summary.seed_snapshots_drifted_from_oracle,
@@ -160,6 +166,9 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     if fail_on_mismatch && has_issues {
         return Ok(ExitCode::FAILURE);
     }
+    if fail_on_project_mismatch && project_non_matches > 0 {
+        return Ok(ExitCode::FAILURE);
+    }
     if fail_on_seed_drift && summary.seed_snapshots_drifted_from_oracle > 0 {
         return Ok(ExitCode::FAILURE);
     }
@@ -171,6 +180,17 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     }
 
     Ok(ExitCode::SUCCESS)
+}
+
+fn lane_b_project_non_matches(summary: &lane_b::LaneBSummary) -> usize {
+    summary
+        .steps
+        .iter()
+        .filter(|step| {
+            step.status != LaneBStepStatus::Match
+                && !matches!(lane_b::fixture_source(&step.fixture), "seed-golden")
+        })
+        .count()
 }
 
 fn lane_b_project_seed_snapshot_drifts(summary: &lane_b::LaneBSummary) -> usize {
@@ -251,6 +271,10 @@ fn print_lane_b_usage() {
         "  --issue-sample-kind KIND   Filter samples: all, non-match, seed-drift, resolved-known-difference"
     );
     println!("  --fail-on-mismatch        Exit non-zero if any step mismatches or fails");
+    println!("  --fail-on-project-mismatch");
+    println!(
+        "                              Exit non-zero if any non-imported step mismatches or fails"
+    );
     println!("  --fail-on-seed-drift      Exit non-zero if any seed snapshot drifts");
     println!("  --fail-on-project-seed-drift");
     println!(

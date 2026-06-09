@@ -2,6 +2,7 @@ use rum_difftest::lane_a::{self, CaseValue, LaneACaseStatus};
 
 pub(super) fn print_lane_a_report(
     summary: &lane_a::LaneASummary,
+    project_non_matches: usize,
     project_seed_snapshot_drifts: usize,
     oracle_evaluation_processes: usize,
     oracle_batches: usize,
@@ -13,6 +14,7 @@ pub(super) fn print_lane_a_report(
     println!("mismatches: {}", summary.mismatches);
     println!("rum failures: {}", summary.rum_failures);
     println!("oracle failures: {}", summary.oracle_failures);
+    println!("project non-matches: {project_non_matches}");
     println!(
         "skipped known differences: {}",
         summary.skipped_known_differences

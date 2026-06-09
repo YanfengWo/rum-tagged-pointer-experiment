@@ -658,6 +658,10 @@ This roadmap intentionally uses two levels of detail:
     project seed-drift counts, so default oracle audits can protect
     project-owned fixtures without failing on immutable imported seed snapshot
     drift
+  - [x] Lane A/B follow-up: add `--fail-on-project-mismatch` plus text/JSON
+    project non-match counts, so full default oracle audits can gate
+    project-owned fixtures while preserving imported seed failures as
+    historical-reference input
   - [x] Lane A/B follow-up: include `fixture_source` and
     `project_owned_fixture` on summary JSON issue samples, so automation can
     route imported seed, curated project, stateful, and custom fixture locators
