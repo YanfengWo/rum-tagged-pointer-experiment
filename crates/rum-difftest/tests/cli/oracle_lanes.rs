@@ -55,6 +55,7 @@ fn oracle_lanes_write_machine_readable_summary_json() {
         assert!(stdout.contains("summary json:"));
         let summary = fs::read_to_string(&summary_path).unwrap();
         assert!(summary.contains(&format!("\"lane\": \"{lane}\"")));
+        assert!(summary.contains("\"schema_version\": 1"));
         assert!(summary.contains("\"clean\": false"));
         assert!(summary.contains("\"executable\": \"/bin/true\""));
         assert!(summary.contains("\"version_policy\": \"user-provided/unpinned\""));

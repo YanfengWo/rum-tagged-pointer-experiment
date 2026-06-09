@@ -5,7 +5,7 @@ use rum_difftest::lane_d::{
     LaneDCheckedBaselineReadinessStatus, LaneDProfile, LaneDSuite, LaneDThresholdProfile,
 };
 
-use crate::json_cli::{json_string, write_json_file};
+use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
 
 pub(super) struct WrittenBaselineSummary {
     pub(super) path: PathBuf,
@@ -47,6 +47,7 @@ fn summary_json(context: &LaneDSummaryJsonContext<'_>) -> String {
         concat!(
             "{{\n",
             "  \"lane\": \"lane-d\",\n",
+            "  \"schema_version\": {},\n",
             "  \"suite\": \"{}\",\n",
             "  \"profile\": \"{}\",\n",
             "  \"threshold_profile\": \"{}\",\n",
@@ -64,6 +65,7 @@ fn summary_json(context: &LaneDSummaryJsonContext<'_>) -> String {
             "  \"written_baseline\": {}\n",
             "}}\n"
         ),
+        SUMMARY_SCHEMA_VERSION,
         json_string(lane_d::suite_name(context.suite)),
         json_string(lane_d::profile_name(context.profile)),
         json_string(lane_d::threshold_profile_name(context.threshold_profile)),

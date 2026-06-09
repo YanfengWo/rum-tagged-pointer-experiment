@@ -5,7 +5,7 @@ use rum_difftest::inventory::{
     display_path,
 };
 
-use crate::json_cli::{json_string, write_json_file};
+use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
 
 pub(super) fn write_summary_json(
     path: &Path,
@@ -26,6 +26,7 @@ fn summary_json(
         concat!(
             "{{\n",
             "  \"lane\": \"inventory\",\n",
+            "  \"schema_version\": {},\n",
             "  \"totals\": {},\n",
             "  \"baseline\": {},\n",
             "  \"lanes\": [\n",
@@ -33,6 +34,7 @@ fn summary_json(
             "  ]\n",
             "}}\n"
         ),
+        SUMMARY_SCHEMA_VERSION,
         totals_json(&totals, 2),
         baseline_json(baseline_path, baseline_report),
         report

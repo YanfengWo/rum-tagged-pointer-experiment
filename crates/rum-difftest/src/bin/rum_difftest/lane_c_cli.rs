@@ -4,7 +4,7 @@ use std::process::ExitCode;
 use rum_difftest::divergences;
 
 use super::expect_value;
-use super::json_cli::{json_string, write_json_file};
+use super::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
 
 pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut summary_json_path = None;
@@ -137,6 +137,7 @@ fn summary_json(report: &divergences::KnownDifferenceLedgerReport) -> String {
         concat!(
             "{{\n",
             "  \"lane\": \"lane-c\",\n",
+            "  \"schema_version\": {},\n",
             "  \"clean\": {},\n",
             "  \"known_difference_ledger\": \"{}\",\n",
             "  \"retired_seed_differences\": \"{}\",\n",
@@ -156,6 +157,7 @@ fn summary_json(report: &divergences::KnownDifferenceLedgerReport) -> String {
             "  }}\n",
             "}}\n"
         ),
+        SUMMARY_SCHEMA_VERSION,
         report.is_clean(),
         json_string(
             &divergences::known_difference_ledger_path()

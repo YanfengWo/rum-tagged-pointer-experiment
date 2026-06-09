@@ -2,7 +2,7 @@ use std::path::Path;
 
 use rum_difftest::oracle::OracleKernel;
 
-use crate::json_cli::{json_string, write_json_file};
+use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
 
 pub(super) const DEFAULT_MAX_ISSUE_SAMPLES: usize = 5;
 
@@ -96,6 +96,7 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
         concat!(
             "{{\n",
             "  \"lane\": \"{}\",\n",
+            "  \"schema_version\": {},\n",
             "  \"clean\": {},\n",
             "  \"oracle\": {{\n",
             "    \"executable\": \"{}\",\n",
@@ -136,6 +137,7 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
             "}}\n"
         ),
         json_string(context.lane),
+        SUMMARY_SCHEMA_VERSION,
         clean,
         json_string(&context.oracle.executable().display().to_string()),
         context.oracle.timeout().as_secs(),

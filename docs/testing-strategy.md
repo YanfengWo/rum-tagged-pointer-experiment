@@ -145,6 +145,11 @@ also enforce the checked Lane D artifact set; this readiness check is expected
 to remain dirty until runner-specific `ci-debug` / `ci-release` smoke
 artifacts exist.
 
+Every `rum-difftest --summary-json` shape includes a top-level
+`schema_version` field. Increment that value when a report change is
+intentionally incompatible for scripts or dashboards; additive fields that
+preserve existing consumers should remain on the current version.
+
 Messages and diagnostics start in runtime regression tests unless the
 differential runner can capture and compare them reliably. Lane A can compare
 single-expression message and print output, while Lane B provides ordered

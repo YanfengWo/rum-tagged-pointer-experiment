@@ -157,6 +157,7 @@ fn inventory_writes_machine_readable_summary_json() {
     assert!(stdout_text(&output).contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
     assert!(summary.contains("\"lane\": \"inventory\""));
+    assert!(summary.contains("\"schema_version\": 1"));
     assert!(summary.contains("\"baseline\": {"));
     assert!(summary.contains("\"clean\": true"));
     assert!(summary.contains("\"records_considered\": 32"));
@@ -193,6 +194,7 @@ fn lane_c_writes_machine_readable_summary_json() {
     assert!(stdout_text(&output).contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
     assert!(summary.contains("\"lane\": \"lane-c\""));
+    assert!(summary.contains("\"schema_version\": 1"));
     assert!(summary.contains("\"clean\": true"));
     assert!(summary.contains("\"active_ledger_entries\": 2"));
     assert!(summary.contains("\"fixture_known_differences\": 3"));
@@ -218,6 +220,7 @@ fn lane_d_writes_machine_readable_summary_json() {
     assert!(stdout_text(&output).contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
     assert!(summary.contains("\"lane\": \"lane-d\""));
+    assert!(summary.contains("\"schema_version\": 1"));
     assert!(summary.contains("\"suite\": \"timing\""));
     assert!(summary.contains("\"profile\": \"smoke\""));
     assert!(summary.contains("\"threshold_profile\": \"local-debug\""));

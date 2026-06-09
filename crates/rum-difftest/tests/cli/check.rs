@@ -56,6 +56,7 @@ fn check_writes_machine_readable_summary_json() {
     assert!(stdout_text(&output).contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
     assert!(summary.contains("\"command\": \"check\""));
+    assert!(summary.contains("\"schema_version\": 1"));
     assert!(summary.contains("\"clean\": true"));
     assert!(summary.contains("\"checks_passed\": 2"));
     assert!(summary.contains("\"checks_failed\": 0"));

@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::Path;
 
+pub const SUMMARY_SCHEMA_VERSION: usize = 1;
+
 pub fn write_json_file(path: &Path, contents: String) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(parent) = path.parent() {
         if !parent.as_os_str().is_empty() {

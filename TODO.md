@@ -590,6 +590,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B/C/D follow-up: let `rum-difftest check --include-lane-d-readiness` opt into the Lane D checked-baseline readiness gate and surface the missing runner-specific artifacts in the aggregate text/JSON summary without affecting the default local preflight path
   - [x] Lane A/B/C/D follow-up: add bounded `issue_samples` to `rum-difftest check --summary-json`, with `--max-issue-samples N` plus emitted/total/truncated metadata for local scripts that need a wider or narrower representative sample, so aggregate-gate failures expose inventory, Lane C, Lane D smoke, and Lane D readiness locators without freezing each lane's full report shape
   - [x] Lane A/B/C/D follow-up: make `rum-difftest check` report skipped optional gates in text/JSON output, so default local preflight coverage is explicit instead of inferred from missing Lane D sections
+  - [x] Lane A/B/C/D follow-up: add a top-level `schema_version` to every `--summary-json` output so local scripts and dashboards can detect intentionally incompatible report-shape changes
   - [ ] Lane B follow-up: add optional long-lived interactive process reuse once oracle-run throughput needs it
   - [x] Lane C: land a checked known-difference ledger plus `rum-difftest lane-c` validation that fixture `!!! id=...` entries and ledger rows stay synchronized
   - [x] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved

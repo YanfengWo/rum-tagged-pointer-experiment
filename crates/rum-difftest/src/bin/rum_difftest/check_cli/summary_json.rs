@@ -3,7 +3,7 @@ use std::path::Path;
 use rum_difftest::divergences;
 use rum_difftest::inventory::{FixtureInventoryTotals, display_path};
 
-use crate::json_cli::{json_string, write_json_file};
+use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
 
 use super::{LocalCheckReport, SkippedCheck};
 
@@ -40,6 +40,7 @@ fn summary_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
         concat!(
             "{{\n",
             "  \"command\": \"check\",\n",
+            "  \"schema_version\": {},\n",
             "  \"clean\": {},\n",
             "  \"checks_passed\": {},\n",
             "  \"checks_failed\": {},\n",
@@ -59,6 +60,7 @@ fn summary_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
             "  ]\n",
             "}}\n"
         ),
+        SUMMARY_SCHEMA_VERSION,
         report.is_clean(),
         report.passed_checks(),
         report.failed_checks(),
