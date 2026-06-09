@@ -196,7 +196,9 @@ freezing full per-case or per-step report rows. `--max-issue-samples N`
 adjusts the default 5-entry cap; `--issue-sample-kind` can narrow those samples
 to `non-match`, `seed-drift`, or `resolved-known-difference` during targeted
 audits; and the summary records the selected kind, sample limit, emitted count,
-total issue count, and truncation status. Use
+filtered issue-sample count, and truncation status. The sibling `issue_counts`
+object remains unfiltered so automation can still see the full non-match,
+seed-drift, and resolved-known-difference breakdown. Use
 `--fail-on-seed-drift` only for deliberate fixture-snapshot audits; normal
 oracle conformance should continue to compare `rum` against fresh oracle output
 rather than against checked seed annotations. Lane A/B summary JSON records the

@@ -89,16 +89,40 @@ impl OracleLaneIssueSampleKindFilter {
 pub(super) struct OracleLaneIssueSamples {
     pub(super) limit: usize,
     pub(super) total: usize,
+    pub(super) counts: OracleLaneIssueCounts,
     samples: Vec<OracleLaneIssueSample>,
 }
 
+#[derive(Clone, Copy, Default)]
+pub(super) struct OracleLaneIssueCounts {
+    pub(super) non_match: usize,
+    pub(super) seed_snapshot_drift: usize,
+    pub(super) resolved_known_difference: usize,
+}
+
+impl OracleLaneIssueCounts {
+    fn total(self) -> usize {
+        self.non_match + self.seed_snapshot_drift + self.resolved_known_difference
+    }
+}
+
 impl OracleLaneIssueSamples {
-    pub(super) fn new(limit: usize, mut samples: Vec<OracleLaneIssueSample>) -> Self {
+    pub(super) fn new(
+        limit: usize,
+        issue_sample_kind: OracleLaneIssueSampleKindFilter,
+        samples: Vec<OracleLaneIssueSample>,
+    ) -> Self {
+        let counts = OracleLaneIssueCounts::from_samples(&samples);
+        let mut samples = samples
+            .into_iter()
+            .filter(|sample| issue_sample_kind.includes(sample.kind))
+            .collect::<Vec<_>>();
         let total = samples.len();
         samples.truncate(limit);
         Self {
             limit,
             total,
+            counts,
             samples,
         }
     }
@@ -113,6 +137,21 @@ impl OracleLaneIssueSamples {
 
     fn samples(&self) -> &[OracleLaneIssueSample] {
         &self.samples
+    }
+}
+
+impl OracleLaneIssueCounts {
+    fn from_samples(samples: &[OracleLaneIssueSample]) -> Self {
+        let mut counts = Self::default();
+        for sample in samples {
+            match sample.kind {
+                "non_match" => counts.non_match += 1,
+                "seed_snapshot_drift" => counts.seed_snapshot_drift += 1,
+                "resolved_known_difference" => counts.resolved_known_difference += 1,
+                _ => {}
+            }
+        }
+        counts
     }
 }
 
@@ -167,6 +206,12 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
             "    \"oracle_session_batches\": {},\n",
             "    \"oracle_session_steps\": {}\n",
             "  }},\n",
+            "  \"issue_counts\": {{\n",
+            "    \"total\": {},\n",
+            "    \"non_match\": {},\n",
+            "    \"seed_snapshot_drift\": {},\n",
+            "    \"resolved_known_difference\": {}\n",
+            "  }},\n",
             "  \"issue_samples_limit\": {},\n",
             "  \"issue_samples_emitted\": {},\n",
             "  \"issue_samples_total\": {},\n",
@@ -207,6 +252,10 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
         counts.seed_snapshots_drifted_from_oracle,
         json_usize_option(counts.oracle_session_batches),
         json_usize_option(counts.oracle_session_steps),
+        context.issue_samples.counts.total(),
+        context.issue_samples.counts.non_match,
+        context.issue_samples.counts.seed_snapshot_drift,
+        context.issue_samples.counts.resolved_known_difference,
         context.issue_samples.limit,
         context.issue_samples.emitted(),
         context.issue_samples.total,

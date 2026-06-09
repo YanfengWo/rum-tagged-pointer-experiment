@@ -84,6 +84,16 @@ fn oracle_lanes_write_machine_readable_summary_json() {
         assert_eq!(json_u64(&summary_json, "/counts/oracle_batch_inputs"), 1);
         assert!(stdout.contains("oracle batches: 1"));
         assert!(stdout.contains("oracle batch inputs: 1"));
+        assert_eq!(json_u64(&summary_json, "/issue_counts/total"), 1);
+        assert_eq!(json_u64(&summary_json, "/issue_counts/non_match"), 1);
+        assert_eq!(
+            json_u64(&summary_json, "/issue_counts/seed_snapshot_drift"),
+            0
+        );
+        assert_eq!(
+            json_u64(&summary_json, "/issue_counts/resolved_known_difference"),
+            0
+        );
         assert_eq!(json_u64(&summary_json, "/issue_samples_limit"), 5);
         assert_eq!(json_u64(&summary_json, "/issue_samples_emitted"), 1);
         assert_eq!(json_u64(&summary_json, "/issue_samples_total"), 1);
@@ -167,6 +177,12 @@ fn oracle_lanes_filter_summary_json_issue_samples_by_kind() {
             "seed-drift"
         );
         assert_eq!(json_u64(&seed_drift_json, "/issue_samples_total"), 1);
+        assert_eq!(json_u64(&seed_drift_json, "/issue_counts/total"), 2);
+        assert_eq!(json_u64(&seed_drift_json, "/issue_counts/non_match"), 1);
+        assert_eq!(
+            json_u64(&seed_drift_json, "/issue_counts/seed_snapshot_drift"),
+            1
+        );
         let seed_drift_samples = json_array(&seed_drift_json, "/issue_samples");
         assert_eq!(seed_drift_samples.len(), 1);
         assert_eq!(
@@ -198,6 +214,12 @@ fn oracle_lanes_filter_summary_json_issue_samples_by_kind() {
             "non-match"
         );
         assert_eq!(json_u64(&non_match_json, "/issue_samples_total"), 1);
+        assert_eq!(json_u64(&non_match_json, "/issue_counts/total"), 2);
+        assert_eq!(json_u64(&non_match_json, "/issue_counts/non_match"), 1);
+        assert_eq!(
+            json_u64(&non_match_json, "/issue_counts/seed_snapshot_drift"),
+            1
+        );
         let non_match_samples = json_array(&non_match_json, "/issue_samples");
         assert_eq!(non_match_samples.len(), 1);
         assert_eq!(json_str(&non_match_samples[0], "/kind"), "non_match");

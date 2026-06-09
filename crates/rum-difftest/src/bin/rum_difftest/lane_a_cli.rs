@@ -156,44 +156,14 @@ fn lane_a_issue_samples(
     let mut samples = Vec::new();
     for (index, case) in summary.cases.iter().enumerate() {
         if case.status != LaneACaseStatus::Match {
-            push_lane_a_sample(
-                &mut samples,
-                issue_sample_kind,
-                "non_match",
-                index + 1,
-                case,
-            );
+            samples.push(lane_a_sample("non_match", index + 1, case));
         } else if case.seed_matches_oracle == Some(false) {
-            push_lane_a_sample(
-                &mut samples,
-                issue_sample_kind,
-                "seed_snapshot_drift",
-                index + 1,
-                case,
-            );
+            samples.push(lane_a_sample("seed_snapshot_drift", index + 1, case));
         } else if case.known_difference.is_some() {
-            push_lane_a_sample(
-                &mut samples,
-                issue_sample_kind,
-                "resolved_known_difference",
-                index + 1,
-                case,
-            );
+            samples.push(lane_a_sample("resolved_known_difference", index + 1, case));
         }
     }
-    OracleLaneIssueSamples::new(max_issue_samples, samples)
-}
-
-fn push_lane_a_sample(
-    samples: &mut Vec<OracleLaneIssueSample>,
-    issue_sample_kind: OracleLaneIssueSampleKindFilter,
-    kind: &'static str,
-    index: usize,
-    case: &lane_a::LaneACaseReport,
-) {
-    if issue_sample_kind.includes(kind) {
-        samples.push(lane_a_sample(kind, index, case));
-    }
+    OracleLaneIssueSamples::new(max_issue_samples, issue_sample_kind, samples)
 }
 
 fn lane_a_sample(

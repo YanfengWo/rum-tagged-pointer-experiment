@@ -616,7 +616,8 @@ This roadmap intentionally uses two levels of detail:
     and recording active failure gates in summary JSON options
   - [x] Lane A/B follow-up: add `--issue-sample-kind` filtering for
     non-match, seed-drift, and resolved-known-difference locators so targeted
-    oracle audits are not drowned out by unrelated issue categories
+    oracle audits are not drowned out by unrelated issue categories, while
+    keeping an unfiltered issue-count breakdown in summary JSON
   - [x] Lane A follow-up: add a curated structure-selector fixture for stable
     `Part` / `Extract` / `ReplacePart` / `Depth` / `Level` conformance, and
     guard it with the checked inventory category baseline

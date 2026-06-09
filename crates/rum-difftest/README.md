@@ -178,11 +178,12 @@ batch process. The JSON options section records failure gate flags such as
 `fail_on_mismatch` and `fail_on_seed_drift`, so scripts can interpret non-zero
 exits without inferring which gate was active. The JSON oracle section also
 reports the concrete batch transport name and process count. It also includes
-a bounded `issue_samples` locator list for the first non-matching,
-seed-drifted, or resolved known-difference cases. It does not freeze the full
-per-case report shape. Use `--issue-sample-kind non-match`, `seed-drift`, or
+an unfiltered `issue_counts` breakdown plus a bounded `issue_samples` locator
+list for the first non-matching, seed-drifted, or resolved known-difference
+cases. It does not freeze the full per-case report shape. Use
+`--issue-sample-kind non-match`, `seed-drift`, or
 `resolved-known-difference` to focus the bounded locator list during targeted
-audits.
+audits while still retaining the full issue-count breakdown.
 
 ## Lane B Runner
 
@@ -218,9 +219,10 @@ so fixed divergences are visible before removing ledger rows. `--summary-json
 PATH` writes the same stable machine-readable summary shape as Lane A, with
 oracle configuration, run options, comparison counts, known-difference counts,
 seed-drift counts, failure gate options, oracle process/batch/input counts,
-and bounded `issue_samples` locators, without freezing the full per-step report
-rows. The same `--issue-sample-kind` filters available in Lane A apply here.
-Lane B also reports oracle batch/input counts and the concrete session-batch
+unfiltered issue-count breakdowns, and bounded `issue_samples` locators,
+without freezing the full per-step report rows. The same `--issue-sample-kind`
+filters available in Lane A apply here. Lane B also reports oracle batch/input
+counts and the concrete session-batch
 transport name/process count in text output, so the current single-process
 batch transport is distinguishable from a future interactive reuse transport
 without requiring JSON parsing.
