@@ -1,9 +1,10 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use rum_difftest::inventory::{
-    FixtureInventoryReport, FixtureInventoryTotals, LaneFixtureInventory,
-    collect_fixture_inventory, display_path,
+    FixtureInventoryReport, FixtureInventoryTotals, InventoryBaselineReport, LaneFixtureInventory,
+    collect_fixture_inventory, compare_inventory_baseline, default_inventory_baseline_path,
+    display_path, load_inventory_baseline,
 };
 
 use super::expect_value;
@@ -11,6 +12,9 @@ use super::json_cli::{json_string, write_json_file};
 
 pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut summary_json_path = None;
+    let mut baseline_path = None;
+    let mut check_baseline = false;
+    let mut fail_on_regression = false;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -18,6 +22,11 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
             "--summary-json" => {
                 summary_json_path = Some(PathBuf::from(expect_value(&mut iter, "--summary-json")?));
             }
+            "--baseline" => {
+                baseline_path = Some(PathBuf::from(expect_value(&mut iter, "--baseline")?));
+            }
+            "--check-baseline" => check_baseline = true,
+            "--fail-on-regression" => fail_on_regression = true,
             "--help" | "-h" => {
                 print_inventory_usage();
                 return Ok(ExitCode::SUCCESS);
@@ -28,9 +37,34 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
 
     let report = collect_fixture_inventory()?;
     print_inventory(&report);
+    let effective_baseline_path =
+        baseline_path.or_else(|| check_baseline.then(default_inventory_baseline_path));
+    let baseline_report = if let Some(path) = &effective_baseline_path {
+        let baseline = load_inventory_baseline(path)?;
+        let baseline_report = compare_inventory_baseline(&report, &baseline);
+        print_baseline_report(path, &baseline_report);
+        Some(baseline_report)
+    } else {
+        None
+    };
     if let Some(path) = summary_json_path {
-        write_json_file(&path, summary_json(&report))?;
+        write_json_file(
+            &path,
+            summary_json(
+                &report,
+                effective_baseline_path.as_deref(),
+                baseline_report.as_ref(),
+            ),
+        )?;
         println!("summary json: {}", path.display());
+    }
+    if fail_on_regression {
+        let Some(baseline_report) = baseline_report else {
+            return Err("--fail-on-regression requires --baseline PATH or --check-baseline".into());
+        };
+        if !baseline_report.is_clean() {
+            return Ok(ExitCode::FAILURE);
+        }
     }
 
     Ok(ExitCode::SUCCESS)
@@ -78,23 +112,108 @@ fn print_totals(label: &str, totals: &FixtureInventoryTotals) {
     );
 }
 
-fn summary_json(report: &FixtureInventoryReport) -> String {
+fn print_baseline_report(path: &Path, report: &InventoryBaselineReport) {
+    println!("inventory baseline: {}", display_path(path));
+    println!(
+        "inventory baseline records considered: {}",
+        report.records_considered
+    );
+    println!(
+        "inventory baseline regressions: {}",
+        report.regressions.len()
+    );
+    for regression in &report.regressions {
+        println!(
+            "inventory-baseline-regression\t{}\t{}\t{}",
+            regression.record.lane,
+            regression.record.source,
+            regression.issues.join(" | ")
+        );
+        if let Some(actual) = &regression.actual {
+            println!(
+                "inventory-baseline-actual\t{}\t{}\tfixtures={}\tentries={}\tnormal={}\tknown_differences={}",
+                regression.record.lane,
+                regression.record.source,
+                actual.fixtures,
+                actual.entries,
+                actual.normal_entries,
+                actual.known_difference_entries
+            );
+        }
+    }
+}
+
+fn summary_json(
+    report: &FixtureInventoryReport,
+    baseline_path: Option<&Path>,
+    baseline_report: Option<&InventoryBaselineReport>,
+) -> String {
     let totals = report.totals();
     format!(
         concat!(
             "{{\n",
             "  \"lane\": \"inventory\",\n",
             "  \"totals\": {},\n",
+            "  \"baseline\": {},\n",
             "  \"lanes\": [\n",
             "{}\n",
             "  ]\n",
             "}}\n"
         ),
         totals_json(&totals, 2),
+        baseline_json(baseline_path, baseline_report),
         report
             .lanes
             .iter()
             .map(lane_json)
+            .collect::<Vec<_>>()
+            .join(",\n"),
+    )
+}
+
+fn baseline_json(path: Option<&Path>, report: Option<&InventoryBaselineReport>) -> String {
+    let Some(report) = report else {
+        return "null".to_string();
+    };
+    let path = path.map(display_path).unwrap_or_default();
+    format!(
+        concat!(
+            "{{\n",
+            "    \"path\": \"{}\",\n",
+            "    \"clean\": {},\n",
+            "    \"records_considered\": {},\n",
+            "    \"regressions\": {},\n",
+            "    \"regression_details\": [\n",
+            "{}\n",
+            "    ]\n",
+            "  }}"
+        ),
+        json_string(&path),
+        report.is_clean(),
+        report.records_considered,
+        report.regressions.len(),
+        report
+            .regressions
+            .iter()
+            .map(|regression| {
+                format!(
+                    concat!(
+                        "      {{",
+                        "\"lane\": \"{}\", ",
+                        "\"source\": \"{}\", ",
+                        "\"issues\": [{}]",
+                        "}}"
+                    ),
+                    json_string(&regression.record.lane),
+                    json_string(&regression.record.source),
+                    regression
+                        .issues
+                        .iter()
+                        .map(|issue| format!("\"{}\"", json_string(issue)))
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                )
+            })
             .collect::<Vec<_>>()
             .join(",\n"),
     )
@@ -175,5 +294,8 @@ fn totals_json(totals: &FixtureInventoryTotals, indent: usize) -> String {
 
 fn print_inventory_usage() {
     println!("rum-difftest inventory");
+    println!("  --baseline PATH           Compare fixture inventory against a baseline");
+    println!("  --check-baseline          Compare against the checked default baseline");
+    println!("  --fail-on-regression      Exit non-zero if baseline comparison is not clean");
     println!("  --summary-json PATH       Write a stable machine-readable fixture inventory");
 }

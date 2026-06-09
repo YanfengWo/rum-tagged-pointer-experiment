@@ -573,6 +573,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B follow-up: surface included known-difference metadata in reports and count confirmed vs resolved known differences so closable ledger rows are visible during oracle runs
   - [x] Lane A/B follow-up: add `--summary-json PATH` machine-readable status output with oracle configuration, run options, comparison counts, known-difference counts, and seed-drift counts for scripts or CI dashboards
   - [x] Lane A/B follow-up: add a non-oracle `rum-difftest inventory` coverage-audit command with source-group, normal-entry, known-difference, and machine-readable summary counts for default fixture sets
+  - [x] Lane A/B follow-up: add a checked inventory baseline plus `inventory --check-baseline --fail-on-regression` so fixture count, total entry, normal-entry, and known-difference regression gates are executable without Wolfram
   - [ ] Lane B follow-up: add optional long-lived interactive process reuse once oracle-run throughput needs it
   - [x] Lane C: land a checked known-difference ledger plus `rum-difftest lane-c` validation that fixture `!!! id=...` entries and ledger rows stay synchronized
   - [x] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved

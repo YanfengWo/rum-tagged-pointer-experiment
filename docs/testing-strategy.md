@@ -120,7 +120,10 @@ single broad diff bucket:
 Use `rum-difftest inventory` as the non-oracle coverage-audit command for
 default Lane A/B fixtures. It reports fixture counts, source groups, normal
 entries, and known-difference entries; `--summary-json PATH` exposes the same
-stable counts for scripts or dashboards.
+stable counts for scripts or dashboards. Use
+`inventory --check-baseline --fail-on-regression` as a local gate against the
+checked fixture-coverage baseline when reviewing fixture pruning or large
+coverage reshuffles.
 
 Messages and diagnostics start in runtime regression tests unless the
 differential runner can capture and compare them reliably. Lane A can compare

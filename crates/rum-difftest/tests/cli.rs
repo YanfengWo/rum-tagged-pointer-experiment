@@ -82,11 +82,57 @@ fn inventory_reports_default_fixture_coverage() {
 }
 
 #[test]
+fn inventory_help_lists_baseline_gate() {
+    let output = run_difftest(&["inventory", "--help"]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("--baseline"));
+    assert!(stdout.contains("--check-baseline"));
+    assert!(stdout.contains("--fail-on-regression"));
+}
+
+#[test]
+fn inventory_checked_baseline_is_clean_for_current_fixtures() {
+    let output = run_difftest(&["inventory", "--check-baseline", "--fail-on-regression"]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("inventory baseline records considered: 5"));
+    assert!(stdout.contains("inventory baseline regressions: 0"));
+}
+
+#[test]
+fn inventory_fail_on_regression_exits_nonzero_for_reduced_coverage() {
+    let temp_dir = unique_temp_dir("inventory-baseline");
+    let baseline_path = temp_dir.join("inventory-baseline.txt");
+    fs::create_dir_all(&temp_dir).unwrap();
+    fs::write(
+        &baseline_path,
+        "lane=lane-a source=curated-core min_fixtures=999 min_entries=999 min_normal_entries=999 max_known_difference_entries=0\n",
+    )
+    .unwrap();
+    let output = run_difftest(&[
+        "inventory",
+        "--baseline",
+        baseline_path.to_str().unwrap(),
+        "--fail-on-regression",
+    ]);
+
+    assert!(!output.status.success());
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("inventory baseline regressions: 1"));
+    assert!(stdout.contains("inventory-baseline-regression\tlane-a\tcurated-core"));
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
+#[test]
 fn inventory_writes_machine_readable_summary_json() {
     let temp_dir = unique_temp_dir("inventory-json");
     let summary_path = temp_dir.join("summary.json");
     let output = run_difftest(&[
         "inventory",
+        "--check-baseline",
         "--summary-json",
         summary_path.to_str().unwrap(),
     ]);
@@ -95,6 +141,9 @@ fn inventory_writes_machine_readable_summary_json() {
     assert!(stdout_text(&output).contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
     assert!(summary.contains("\"lane\": \"inventory\""));
+    assert!(summary.contains("\"baseline\": {"));
+    assert!(summary.contains("\"clean\": true"));
+    assert!(summary.contains("\"records_considered\": 5"));
     assert!(summary.contains("\"lane\": \"lane-a\""));
     assert!(summary.contains("\"source\": \"seed-golden\""));
     assert!(summary.contains("\"source\": \"curated-core\""));

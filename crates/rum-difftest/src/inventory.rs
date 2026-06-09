@@ -6,6 +6,11 @@ use crate::fixtures::{
     lane_b_default_fixture_paths, load_text, parse_golden_file, stateful_dir,
 };
 
+#[path = "inventory/baseline.rs"]
+mod baseline;
+
+pub use baseline::*;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FixtureInventoryReport {
     pub lanes: Vec<LaneFixtureInventory>,

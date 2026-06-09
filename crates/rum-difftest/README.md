@@ -44,13 +44,19 @@ adding or pruning cases:
 
 ```bash
 cargo run -p rum-difftest -- inventory
+cargo run -p rum-difftest -- inventory --check-baseline --fail-on-regression
 cargo run -p rum-difftest -- inventory --summary-json /tmp/rum-difftest-inventory.json
 ```
 
 The command summarizes Lane A and Lane B fixture files, source groups, normal
 entries, and known-difference entries. It does not execute `rum` or a Wolfram
 oracle. The JSON output is intended for scripts or dashboards that need stable
-coverage counts without parsing runner logs.
+coverage counts without parsing runner logs. `--check-baseline` compares the
+current inventory against [coverage/inventory-baseline.txt](./coverage/inventory-baseline.txt).
+Baseline `min_*` counts are lower bounds; `max_known_difference_entries` is an
+upper bound so resolved known differences can decrease without failing the
+gate. Use `--fail-on-regression` to make a non-clean baseline comparison exit
+non-zero.
 
 This crate is also deliberately not the place for every `rum` test. If a
 feature is `rum`-specific rather than Wolfram-oracle-comparable, its primary
