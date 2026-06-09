@@ -12,8 +12,9 @@ Current fixture focus:
   precedence, context basics, and definition lifecycle
 - `message_switches.txt`: ordered `Off` / `On`, `$MessageList`, `Check`, and
   `Quiet` message-stream behavior
-- `package_defaults.txt`: file-backed package loading and package-scoped
-  defaults
+- `package_defaults.txt`: file-backed package loading, `$Packages` /
+  `$ContextPath` state, package-scoped defaults, unqualified symbol lookup, and
+  repeated `Needs` no-reload behavior
 - `options_state.txt`: ordered `SetOptions` default mutation plus
   `OptionsPattern[target]` option-value scope behavior
 - `scoping_control.txt`: ordered `Block` / `Module` / `With` behavior and
