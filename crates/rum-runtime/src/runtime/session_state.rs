@@ -314,6 +314,8 @@ impl Default for Session {
             messages: Vec::new(),
             prints: Vec::new(),
             last_message_list: Vec::new(),
+            current_message_list_checkpoint: None,
+            current_message_list_dirty: false,
             handled_non_loader_eval_errors: Vec::new(),
             reap_scopes: Vec::new(),
             monitor_scopes: Vec::new(),

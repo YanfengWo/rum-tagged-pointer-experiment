@@ -10,6 +10,8 @@ Current fixture focus:
 
 - `definitions_messages.txt`: assignments, options, messages, attributes,
   precedence, context basics, and definition lifecycle
+- `message_switches.txt`: ordered `Off` / `On`, `$MessageList`, `Check`, and
+  `Quiet` message-stream behavior
 - `package_defaults.txt`: file-backed package loading and package-scoped
   defaults
 - `options_state.txt`: ordered `SetOptions` default mutation plus

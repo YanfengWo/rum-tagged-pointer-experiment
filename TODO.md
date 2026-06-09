@@ -773,6 +773,10 @@ This roadmap intentionally uses two levels of detail:
     ordered `SetOptions` default mutation, local option overrides, and
     `OptionsPattern[target]` option-value scopes against a real Wolfram
     session oracle
+  - [x] broaden Lane B stateful message coverage with an explicit fixture for
+    ordered `Off` / `On` message switches, same-input `$MessageList`
+    visibility, and `Check` / `Quiet` message-stream behavior against a real
+    Wolfram session oracle
   - [x] string semantics now have an initial curated Lane A foothold that covers multiple CL-07 subfamilies
 
 ### Long-Tail Workstream: Full String Language Parity

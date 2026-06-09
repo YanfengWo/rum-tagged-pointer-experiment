@@ -335,6 +335,36 @@ fn message_list_reports_last_top_level_messages() {
 }
 
 #[test]
+fn message_list_reports_messages_emitted_so_far_in_current_input() {
+    let mut session = Session::new();
+
+    let outcome = session
+        .eval_text("Message[FindFile::notfound]; $MessageList")
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[HoldForm[FindFile::notfound]]"
+    );
+    assert_eq!(outcome.messages.len(), 1);
+}
+
+#[test]
+fn request_message_list_reports_messages_emitted_so_far_in_current_input() {
+    let mut session = Session::new();
+
+    let response = session
+        .eval_request("Message[FindFile::notfound]; $MessageList")
+        .unwrap();
+
+    assert_eq!(
+        response.value.to_string(),
+        "List[HoldForm[FindFile::notfound]]"
+    );
+    assert_eq!(response.messages.len(), 1);
+}
+
+#[test]
 fn quiet_keeps_suppressed_messages_out_of_message_list() {
     let mut session = Session::new();
 

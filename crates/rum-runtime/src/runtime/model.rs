@@ -308,6 +308,8 @@ pub struct Session {
     pub(super) messages: Vec<RuntimeMessage>,
     pub(super) prints: Vec<String>,
     pub(super) last_message_list: Vec<RuntimeMessage>,
+    pub(super) current_message_list_checkpoint: Option<usize>,
+    pub(super) current_message_list_dirty: bool,
     pub(super) handled_non_loader_eval_errors: Vec<RuntimeMessage>,
     pub(super) reap_scopes: Vec<ReapScope>,
     pub(super) monitor_scopes: Vec<MonitorScope>,

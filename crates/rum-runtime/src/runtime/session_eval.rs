@@ -144,12 +144,19 @@ impl Session {
         let message_checkpoint = self.messages.len();
         let print_checkpoint = self.prints.len();
         let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
+        let previous_message_list_checkpoint = self
+            .current_message_list_checkpoint
+            .replace(message_checkpoint);
+        let previous_message_list_dirty =
+            std::mem::replace(&mut self.current_message_list_dirty, false);
         let result = (|| {
             let syntax = parse_expr(input)?;
             let expr = self.lower_syntax_expr(&syntax)?;
             let result = self.evaluate(expr);
             self.finalize_top_level_eval_value(result, handled_error_checkpoint)
         })();
+        self.current_message_list_checkpoint = previous_message_list_checkpoint;
+        self.current_message_list_dirty = previous_message_list_dirty;
 
         match result {
             Ok(value) => {

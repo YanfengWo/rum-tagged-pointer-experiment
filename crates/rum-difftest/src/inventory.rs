@@ -270,12 +270,13 @@ mod tests {
         assert_eq!(lane_a.totals_by_category()["threading"].entries, 10);
         assert_eq!(lane_a.totals_by_category()["truth-comparison"].entries, 17);
         assert_eq!(lane_a.totals().known_difference_entries, 5);
-        assert_eq!(lane_b.totals().fixtures, 6);
-        assert_eq!(lane_b.totals_by_source()["stateful"].fixtures, 6);
+        assert_eq!(lane_b.totals().fixtures, 7);
+        assert_eq!(lane_b.totals_by_source()["stateful"].fixtures, 7);
         assert_eq!(
             lane_b.totals_by_category()["definitions-messages"].entries,
             57
         );
+        assert_eq!(lane_b.totals_by_category()["message-switches"].entries, 14);
         assert_eq!(lane_b.totals_by_category()["mutation-updates"].entries, 19);
         assert_eq!(lane_b.totals_by_category()["options-state"].entries, 13);
         assert_eq!(lane_b.totals_by_category()["scoping-control"].entries, 14);

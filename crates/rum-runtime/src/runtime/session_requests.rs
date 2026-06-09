@@ -114,10 +114,17 @@ impl Session {
         let expr = self
             .lower_syntax_expr(parsed.syntax())
             .map_err(|err| self.finish_request_failure(checkpoint, err))?;
+        let previous_message_list_checkpoint = self
+            .current_message_list_checkpoint
+            .replace(checkpoint.message_checkpoint);
+        let previous_message_list_dirty =
+            std::mem::replace(&mut self.current_message_list_dirty, false);
         let outcome = self.evaluate(expr);
-        let value = match self
-            .finalize_top_level_eval_value(outcome, checkpoint.handled_error_checkpoint)
-        {
+        let finalized =
+            self.finalize_top_level_eval_value(outcome, checkpoint.handled_error_checkpoint);
+        self.current_message_list_checkpoint = previous_message_list_checkpoint;
+        self.current_message_list_dirty = previous_message_list_dirty;
+        let value = match finalized {
             Ok(value) => value,
             Err(EvalError::InputRequired { .. }) => {
                 self.pending_eval_request = Some(checkpoint.into());
@@ -168,10 +175,19 @@ impl Session {
                 trace: Vec::new(),
             })?;
 
+        let previous_message_list_checkpoint = self
+            .current_message_list_checkpoint
+            .replace(checkpoint.message_checkpoint);
+        let previous_message_list_dirty = std::mem::replace(
+            &mut self.current_message_list_dirty,
+            self.messages.len() > checkpoint.message_checkpoint,
+        );
         let outcome = self.resume_suspended_evaluation(input.clone());
-        let value = match self
-            .finalize_top_level_eval_value(outcome, checkpoint.handled_error_checkpoint)
-        {
+        let finalized =
+            self.finalize_top_level_eval_value(outcome, checkpoint.handled_error_checkpoint);
+        self.current_message_list_checkpoint = previous_message_list_checkpoint;
+        self.current_message_list_dirty = previous_message_list_dirty;
+        let value = match finalized {
             Ok(value) => value,
             Err(EvalError::InputRequired { .. }) => {
                 self.pending_eval_request = Some(checkpoint.into());

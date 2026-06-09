@@ -125,8 +125,9 @@ fn inventory_reports_default_fixture_coverage() {
     assert!(stdout.contains("lane-a category structure-selectors: fixtures=1"));
     assert!(stdout.contains("lane-a category threading: fixtures=1"));
     assert!(stdout.contains("lane-a category truth-comparison: fixtures=1"));
-    assert!(stdout.contains("lane-b source stateful: fixtures=6"));
+    assert!(stdout.contains("lane-b source stateful: fixtures=7"));
     assert!(stdout.contains("lane-b category definitions-messages: fixtures=1"));
+    assert!(stdout.contains("lane-b category message-switches: fixtures=1"));
     assert!(stdout.contains("lane-b category mutation-updates: fixtures=1"));
     assert!(stdout.contains("lane-b category options-state: fixtures=1"));
     assert!(stdout.contains("lane-b category scoping-control: fixtures=1"));
@@ -261,7 +262,7 @@ fn inventory_checked_baseline_is_clean_for_current_fixtures() {
 
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     let stdout = stdout_text(&output);
-    assert!(stdout.contains("inventory baseline records considered: 47"));
+    assert!(stdout.contains("inventory baseline records considered: 48"));
     assert!(stdout.contains("inventory baseline regressions: 0"));
 }
 
@@ -335,7 +336,8 @@ fn inventory_writes_reusable_baseline() {
     assert!(baseline.contains("lane=lane-a category=structure-selectors min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a category=threading min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a category=truth-comparison min_fixtures=1"));
-    assert!(baseline.contains("lane=lane-b source=stateful min_fixtures=6"));
+    assert!(baseline.contains("lane=lane-b source=stateful min_fixtures=7"));
+    assert!(baseline.contains("lane=lane-b category=message-switches min_fixtures=1"));
     assert!(baseline.contains("lane=lane-b category=mutation-updates min_fixtures=1"));
     assert!(baseline.contains("lane=lane-b category=options-state min_fixtures=1"));
     assert!(baseline.contains("lane=lane-b category=scoping-control min_fixtures=1"));
@@ -371,10 +373,10 @@ fn inventory_writes_machine_readable_summary_json() {
     assert_json_null(&summary_json, "/filters/lane");
     assert_json_null(&summary_json, "/filters/source");
     assert_json_null(&summary_json, "/filters/category");
-    assert_eq!(json_u64(&summary_json, "/totals/fixtures"), 42);
-    assert_eq!(json_u64(&summary_json, "/totals/entries"), 584);
+    assert_eq!(json_u64(&summary_json, "/totals/fixtures"), 43);
+    assert_eq!(json_u64(&summary_json, "/totals/entries"), 598);
     assert!(json_bool(&summary_json, "/baseline/clean"));
-    assert_eq!(json_u64(&summary_json, "/baseline/records_considered"), 47);
+    assert_eq!(json_u64(&summary_json, "/baseline/records_considered"), 48);
     let lanes = json_array(&summary_json, "/lanes");
     let lane_a = lanes
         .iter()
@@ -437,8 +439,13 @@ fn inventory_writes_machine_readable_summary_json() {
         .iter()
         .find(|lane| json_str(lane, "/lane") == "lane-b")
         .expect("inventory summary should include lane-b");
-    assert_eq!(json_u64(lane_b, "/totals/fixtures"), 6);
-    assert_eq!(json_u64(lane_b, "/totals/entries"), 126);
+    assert_eq!(json_u64(lane_b, "/totals/fixtures"), 7);
+    assert_eq!(json_u64(lane_b, "/totals/entries"), 140);
+    assert!(
+        json_array(lane_b, "/categories")
+            .iter()
+            .any(|category| json_str(category, "/category") == "message-switches")
+    );
     assert!(
         json_array(lane_b, "/categories")
             .iter()

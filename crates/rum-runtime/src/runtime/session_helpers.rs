@@ -141,6 +141,7 @@ impl Session {
             return;
         }
 
+        self.current_message_list_dirty = true;
         self.messages.push(RuntimeMessage {
             symbol: symbol.to_string(),
             tag: tag.to_string(),

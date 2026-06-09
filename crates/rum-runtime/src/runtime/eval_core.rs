@@ -77,12 +77,7 @@ impl Session {
                     return Ok(Expr::call(system_expr("List"), paths));
                 }
                 "$MessageList" => {
-                    let messages = self
-                        .last_message_list
-                        .iter()
-                        .cloned()
-                        .map(held_runtime_message_name_expr)
-                        .collect::<Vec<_>>();
+                    let messages = self.current_message_list();
                     return Ok(Expr::call(system_expr("List"), messages));
                 }
                 _ => {}
@@ -112,6 +107,25 @@ impl Session {
             _ if self.removed_symbols.contains(&symbol) => Ok(removed_symbol_expr(&symbol)),
             _ => Ok(Expr::Atom(Atom::Symbol(symbol))),
         }
+    }
+
+    fn current_message_list(&self) -> Vec<Expr> {
+        if let Some(checkpoint) = self
+            .current_message_list_checkpoint
+            .filter(|_| self.current_message_list_dirty)
+        {
+            return self.messages[checkpoint..]
+                .iter()
+                .cloned()
+                .map(held_runtime_message_name_expr)
+                .collect();
+        }
+
+        self.last_message_list
+            .iter()
+            .cloned()
+            .map(held_runtime_message_name_expr)
+            .collect()
     }
 
     pub(super) fn evaluate_call(&mut self, head: Expr, args: Vec<Expr>) -> Result<Expr, EvalError> {

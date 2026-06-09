@@ -48,6 +48,7 @@ fn render_call(head: &Expr, args: &[Expr]) -> String {
         Some("Plus") => render_plus(args),
         Some("Times") => render_times(args),
         Some("Power") if args.len() == 2 => render_power(&args[0], &args[1]),
+        Some("MessageName") if args.len() == 2 => render_message_name(&args[0], &args[1]),
         _ => {
             let rendered_args = args
                 .iter()
@@ -56,6 +57,27 @@ fn render_call(head: &Expr, args: &[Expr]) -> String {
                 .join(", ");
             format!("{}[{rendered_args}]", render_expr(head, Precedence::Lowest))
         }
+    }
+}
+
+fn render_message_name(symbol: &Expr, tag: &Expr) -> String {
+    let Some(tag) = message_tag_text(tag) else {
+        let rendered_args = [symbol, tag]
+            .iter()
+            .map(|arg| render_expr(arg, Precedence::Lowest))
+            .collect::<Vec<_>>()
+            .join(", ");
+        return format!("MessageName[{rendered_args}]");
+    };
+
+    format!("{}::{tag}", render_expr(symbol, Precedence::Atom))
+}
+
+fn message_tag_text(expr: &Expr) -> Option<String> {
+    match expr {
+        Expr::Atom(Atom::String(tag)) => Some(tag.clone()),
+        Expr::Atom(Atom::Symbol(tag)) => Some(tag.name().to_string()),
+        _ => None,
     }
 }
 
@@ -353,6 +375,19 @@ mod tests {
         );
 
         assert_eq!(render_input_form_like(&expr), "<|a -> lhs, b :> rhs|>");
+    }
+
+    #[test]
+    fn renders_message_name_like_input_form() {
+        let held_message = Expr::call(
+            Expr::system_symbol("HoldForm"),
+            vec![Expr::call(
+                Expr::system_symbol("MessageName"),
+                vec![Expr::symbol("f"), Expr::string("argx")],
+            )],
+        );
+
+        assert_eq!(render_input_form_like(&held_message), "HoldForm[f::argx]");
     }
 
     #[test]
