@@ -61,4 +61,4 @@ The current first pass includes:
   conformance
 - a failure/status suite covering stable CL-06 confirmation and status-object checks
 - focused string-language suites for surface operations, string-patterns,
-  templating, and similarity helpers
+  templating / formatting helpers, and similarity helpers

@@ -255,7 +255,7 @@ mod tests {
         );
         assert_eq!(
             lane_a.totals_by_category()["strings-templates"].normal_entries,
-            6
+            10
         );
         assert_eq!(
             lane_a.totals_by_category()["strings-templates"].known_difference_entries,

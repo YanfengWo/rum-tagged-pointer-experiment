@@ -794,6 +794,10 @@ This roadmap intentionally uses two levels of detail:
     visibility, and `Check` / `Quiet` message-stream behavior against a real
     Wolfram session oracle
   - [x] string semantics now have an initial curated Lane A foothold that covers multiple CL-07 subfamilies
+  - [x] Broaden the curated Lane A string-template/formatting fixture with
+    stable `ToString[StringForm[...]]`, association-backed `TemplateApply`,
+    nested `StringRiffle`, and list-valued `StringPadLeft` cases while avoiding
+    Wolfram oracle timeout-prone `TextString[...]` forms in default fixtures
 
 ### Long-Tail Workstream: Full String Language Parity
 
