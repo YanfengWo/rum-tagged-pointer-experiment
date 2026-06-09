@@ -159,7 +159,9 @@ into `cases/`, then move seed-linked IDs from the active ledger into the
 retired seed manifest. Lane A/B `--summary-json PATH` writes a stable
 machine-readable summary for scripts or CI dashboards, covering oracle
 configuration, run options, comparison counts, known-difference counts, and
-seed-drift counts without freezing per-case or per-step report rows.
+seed-drift counts. It includes a bounded `issue_samples` locator list for the
+first non-matching, seed-drifted, or resolved known-difference items without
+freezing full per-case or per-step report rows.
 
 Lane D currently executes imported timing and memory seed suites through local
 `rum` sessions and reports raw metrics. Its default `smoke` profile skips

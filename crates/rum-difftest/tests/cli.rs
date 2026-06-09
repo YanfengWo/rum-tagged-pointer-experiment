@@ -213,6 +213,11 @@ fn oracle_lanes_write_machine_readable_summary_json() {
         assert!(summary.contains("\"limit\": 1"));
         assert!(summary.contains("\"items_compared\": 1"));
         assert!(summary.contains("\"oracle_failures\": 1"));
+        assert!(summary.contains("\"issue_samples\": ["));
+        assert!(summary.contains("\"kind\": \"non_match\""));
+        assert!(summary.contains("\"index\": 1"));
+        assert!(summary.contains("\"status\": \"OracleFailure\""));
+        assert!(summary.contains("\"seed_drift\": false"));
         fs::remove_dir_all(temp_dir).unwrap();
     }
 }

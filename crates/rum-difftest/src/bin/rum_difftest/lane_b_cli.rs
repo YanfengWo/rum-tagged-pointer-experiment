@@ -8,8 +8,11 @@ use rum_difftest::oracle::OracleKernel;
 
 use super::oracle_cli::print_oracle_header;
 use super::oracle_lane_summary_json::{
-    OracleLaneSummaryCounts, OracleLaneSummaryJsonContext, write_summary_json,
+    OracleLaneIssueSample, OracleLaneSummaryCounts, OracleLaneSummaryJsonContext,
+    write_summary_json,
 };
+
+const MAX_ISSUE_SAMPLES: usize = 5;
 
 pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut config_path = None;
@@ -176,6 +179,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                     seed_snapshots_matched_oracle: summary.seed_snapshots_matched_oracle,
                     seed_snapshots_drifted_from_oracle: summary.seed_snapshots_drifted_from_oracle,
                 },
+                issue_samples: lane_b_issue_samples(&summary),
             },
         )?;
         println!("summary json: {}", path.display());
@@ -188,6 +192,43 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     }
 
     Ok(ExitCode::SUCCESS)
+}
+
+fn lane_b_issue_samples(summary: &lane_b::LaneBSummary) -> Vec<OracleLaneIssueSample> {
+    let mut samples = Vec::new();
+    for step in &summary.steps {
+        if step.status != LaneBStepStatus::Match {
+            samples.push(lane_b_sample("non_match", step));
+        } else if step.seed_matches_oracle == Some(false) {
+            samples.push(lane_b_sample("seed_snapshot_drift", step));
+        } else if step.known_difference.is_some() {
+            samples.push(lane_b_sample("resolved_known_difference", step));
+        }
+
+        if samples.len() >= MAX_ISSUE_SAMPLES {
+            break;
+        }
+    }
+    samples
+}
+
+fn lane_b_sample(kind: &'static str, step: &lane_b::LaneBStepReport) -> OracleLaneIssueSample {
+    OracleLaneIssueSample {
+        kind,
+        fixture: step.fixture.display().to_string(),
+        index: Some(step.step_index),
+        input: step.input.clone(),
+        status: format!("{:?}", step.status),
+        known_difference_id: step
+            .known_difference
+            .as_ref()
+            .map(|known_difference| known_difference.id.clone()),
+        known_difference_type: step
+            .known_difference
+            .as_ref()
+            .map(|known_difference| known_difference.kind.clone()),
+        seed_drift: step.seed_matches_oracle == Some(false),
+    }
 }
 
 fn expect_value(

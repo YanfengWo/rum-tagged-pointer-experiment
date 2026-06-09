@@ -130,7 +130,9 @@ imported divergences are visible before curation. Keep `seed/` unchanged;
 migrate promoted cases under `cases/` before pruning seed-linked ledger rows.
 `--summary-json PATH` writes a stable machine-readable summary with oracle
 configuration, run options, comparison counts, known-difference counts, and
-seed-drift counts. It does not freeze the per-case report shape.
+seed-drift counts. It also includes a bounded `issue_samples` locator list for
+the first non-matching, seed-drifted, or resolved known-difference cases. It
+does not freeze the full per-case report shape.
 
 ## Lane B Runner
 
@@ -161,7 +163,8 @@ differences. Resolved known differences are listed by ID and fixture location
 so fixed divergences are visible before removing ledger rows. `--summary-json
 PATH` writes the same stable machine-readable summary shape as Lane A, with
 oracle configuration, run options, comparison counts, known-difference counts,
-and seed-drift counts, without freezing per-step report rows.
+seed-drift counts, and bounded `issue_samples` locators, without freezing the
+full per-step report rows.
 Long-lived interactive process reuse remains a future throughput refinement.
 
 ## Lane C Runner
