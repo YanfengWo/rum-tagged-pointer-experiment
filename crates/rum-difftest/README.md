@@ -36,6 +36,9 @@ checked-in tree.
 `cargo test -p rum-difftest` includes an artifact hygiene check that rejects
 the Lane A/B temporary wrapper scripts, case/step input files, session
 directories, and message/print capture files if they appear under this crate.
+The same hygiene check also rejects stray files under `cases/` that are not
+recognized fixture files, README files, or stateful package support files, so
+temporary probe fixtures should live outside the crate tree.
 
 ## Fast Local Check
 
@@ -49,7 +52,7 @@ cargo run -p rum-difftest -- check --include-lane-d-smoke
 ```
 
 The command runs the checked inventory baseline, Lane C known-difference
-ledger validation, and oracle-artifact hygiene, then exits non-zero if any
+ledger validation, and artifact hygiene, then exits non-zero if any
 default gate is dirty. It does not launch a Wolfram oracle. By default it also
 avoids Lane D timing inputs, so it is suitable for quick local preflight and
 scripts that only need repository-state checks. Use `--inventory-baseline PATH`
@@ -64,8 +67,9 @@ counts even when samples are capped. Use `--issue-sample-check NAME` and
 aggregate-gate debugging; the summary still reports the unfiltered issue total
 and untruncated check/kind counts. `KIND` is a checked aggregate issue kind
 such as `regression`, `missing_ledger_entry`, `oracle_artifact`,
-`open_known_difference`, `missing_record`, or `missing_artifact`; invalid kind
-names fail fast instead of silently producing an empty locator list. Use
+`stray_fixture_file`, `open_known_difference`, `missing_record`, or
+`missing_artifact`; invalid kind names fail fast instead of silently producing
+an empty locator list. Use
 `--fail-on-open-known-difference` when a local or CI script should fail if the
 active Lane C ledger contains any `status=open` row; deferred and intentional
 rows remain allowed by that gate.

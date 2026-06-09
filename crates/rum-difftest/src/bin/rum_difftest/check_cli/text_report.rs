@@ -120,12 +120,12 @@ fn print_artifact_hygiene_check(report: &LocalCheckReport) {
     };
     println!("check\tartifact-hygiene\t{status}");
     println!(
-        "oracle artifact issues: {}",
+        "artifact hygiene issues: {}",
         report.artifact_hygiene_issues.len()
     );
     for issue in &report.artifact_hygiene_issues {
         println!(
-            "oracle-artifact-issue\t{}\t{}",
+            "artifact-hygiene-issue\t{}\t{}",
             issue.path.display(),
             issue.reason
         );

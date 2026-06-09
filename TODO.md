@@ -619,7 +619,7 @@ This roadmap intentionally uses two levels of detail:
     baselines are not confused with the repository-wide checked baseline
   - [x] Lane A/B/C follow-up: add `rum-difftest check` as a fast non-oracle
     aggregate gate over the checked inventory baseline, Lane C ledger
-    validation, and oracle-artifact hygiene, with optional stable summary JSON
+    validation, and artifact hygiene, with optional stable summary JSON
     for local preflight scripts
   - [x] Lane A/B/C/D follow-up: let `rum-difftest check --include-lane-d-smoke` opt into the local Lane D smoke baseline gate, with `--lane-d-smoke-baseline PATH` for alternate baseline validation while keeping default `check` free of timing inputs
   - [x] Lane A/B/C/D follow-up: let `rum-difftest check --include-lane-d-readiness` opt into the Lane D checked-baseline readiness gate and surface the missing runner-specific artifacts in the aggregate text/JSON summary without affecting the default local preflight path
@@ -768,7 +768,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] treat the oracle environment and license as user-provided rather than project-provided
   - [x] treat connector- or MCP-wrapped Wolfram access as an optional convenience for small spot checks rather than the baseline oracle path
   - [x] do not make default development or CI flows depend on Wolfram tooling being installed
-  - [x] do not commit oracle-generated expected outputs into the repository; `rum-difftest` now has an artifact hygiene test that rejects checked-in Lane A/B oracle wrapper, case/step, session, message, and print-capture artifacts
+  - [x] do not commit oracle-generated expected outputs into the repository; `rum-difftest` now has an artifact hygiene test that rejects checked-in Lane A/B oracle wrapper, case/step, session, message, and print-capture artifacts plus stray non-fixture files under `cases/`
   - [x] regenerate oracle comparison material on each diff run rather than relying on checked-in snapshots; Lane A/B compare `rum` against the fresh oracle result, treat fixture `expected` fields as seed annotations, and report seed-vs-oracle drift separately
   - [x] allow oracle runs against non-pinned user versions as a compatibility check, not only against one project-standard Wolfram release; Lane A/B report the `user-provided/unpinned` version policy and config rejects oracle-version pin keys
   - [x] record the resolved oracle executable and best-effort Wolfram `$Version` in Lane A/B CLI output without making version probing a pass/fail gate

@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use rum_difftest::artifact_hygiene::ArtifactHygieneIssueKind;
 use rum_difftest::inventory::display_path;
 use rum_difftest::lane_d;
 
@@ -31,6 +32,7 @@ const KIND_RETIRED_SEED_FIXTURE_MISMATCH: &str = "retired_seed_fixture_mismatch"
 const KIND_TRACKING_TARGET_ISSUE: &str = "tracking_target_issue";
 const KIND_OPEN_KNOWN_DIFFERENCE: &str = "open_known_difference";
 const KIND_ORACLE_ARTIFACT: &str = "oracle_artifact";
+const KIND_STRAY_FIXTURE_FILE: &str = "stray_fixture_file";
 const KIND_MISSING_RECORD: &str = "missing_record";
 const KIND_UNUSED_RECORD: &str = "unused_record";
 const KIND_ELAPSED_REGRESSION: &str = "elapsed_regression";
@@ -50,6 +52,7 @@ pub(super) const ISSUE_SAMPLE_KIND_VALUES: &[&str] = &[
     KIND_TRACKING_TARGET_ISSUE,
     KIND_OPEN_KNOWN_DIFFERENCE,
     KIND_ORACLE_ARTIFACT,
+    KIND_STRAY_FIXTURE_FILE,
     KIND_MISSING_RECORD,
     KIND_UNUSED_RECORD,
     KIND_ELAPSED_REGRESSION,
@@ -284,9 +287,13 @@ fn collect_artifact_hygiene_samples(
     samples: &mut Vec<CheckIssueSample>,
 ) {
     for issue in &report.artifact_hygiene_issues {
+        let kind = match issue.kind {
+            ArtifactHygieneIssueKind::OracleArtifact => KIND_ORACLE_ARTIFACT,
+            ArtifactHygieneIssueKind::StrayFixtureFile => KIND_STRAY_FIXTURE_FILE,
+        };
         samples.push(CheckIssueSample {
             check: CHECK_ARTIFACT_HYGIENE,
-            kind: KIND_ORACLE_ARTIFACT,
+            kind,
             location: issue.path.display().to_string(),
             message: issue.reason.clone(),
         });

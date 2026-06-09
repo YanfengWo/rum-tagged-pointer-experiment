@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use rum_difftest::artifact_hygiene::{self, OracleArtifactIssue};
+use rum_difftest::artifact_hygiene::{self, ArtifactHygieneIssue};
 use rum_difftest::divergences::{self, KnownDifferenceLedgerReport};
 use rum_difftest::inventory::{
     FixtureInventoryReport, InventoryBaselineReport, collect_fixture_inventory,
@@ -104,7 +104,7 @@ pub(super) struct LocalCheckReport {
     pub(super) inventory_baseline: InventoryBaselineReport,
     pub(super) known_differences: KnownDifferenceLedgerReport,
     pub(super) fail_on_open_known_difference: bool,
-    pub(super) artifact_hygiene_issues: Vec<OracleArtifactIssue>,
+    pub(super) artifact_hygiene_issues: Vec<ArtifactHygieneIssue>,
     pub(super) lane_d_smoke: Option<LaneDSmokeCheckReport>,
     pub(super) lane_d_readiness: Option<LaneDReadinessCheckReport>,
 }
@@ -259,7 +259,7 @@ fn run_local_checks(
     let baseline = load_inventory_baseline(&inventory_baseline_path)?;
     let inventory_baseline = compare_inventory_baseline(&inventory, &baseline);
     let known_differences = divergences::validate_known_difference_ledger()?;
-    let artifact_hygiene_issues = artifact_hygiene::validate_oracle_artifact_hygiene()?;
+    let artifact_hygiene_issues = artifact_hygiene::validate_artifact_hygiene()?;
     let lane_d_summary = if lane_d_smoke_baseline.is_some() || include_lane_d_readiness {
         Some(run_lane_d_smoke_summary()?)
     } else {
