@@ -100,12 +100,15 @@ Current implementation status:
 - `rum` values use a shared InputForm-like renderer that covers common list,
   rule, delayed-rule, and association output shapes
 - it does not yet claim full top-level display parity for broader Wolfram
-  syntax sugar
+  syntax sugar, though the shared renderer now covers common
+  `Plus` / `Times` / `Power` InputForm-style infix output needed by simple
+  polynomial and rational-expression diffs
 - a first pass of `rum`-owned curated Lane A files now exists under
   [cases/wolfram/core](./cases/wolfram/core/README.md)
 - that curated set currently covers arithmetic/structures, exact-arithmetic
-  edge cases, loops/control, associations, functional combinators,
-  failure/status, and multiple string subfamilies
+  edge cases, a small polynomial/rational-expression subset, loops/control,
+  associations, functional combinators, failure/status, and multiple string
+  subfamilies
 - the current `lane-a` comparison still has display limits beyond the shared
   renderer's common structural forms, so curated files should avoid cases whose
   only useful signal is obscure Wolfram `InputForm` sugar

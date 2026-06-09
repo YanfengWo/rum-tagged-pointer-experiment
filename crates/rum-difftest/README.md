@@ -152,8 +152,10 @@ stdout/stderr stream is also capped at 8 MiB; a process that exceeds the cap is
 terminated while the retained diagnostic prefix is reported. `rum` values
 are rendered through the shared difftest InputForm-like renderer, which covers
 common list, rule, delayed-rule, and association output shapes before
-comparison. It is intentionally not yet a complete Wolfram display
-implementation or transport model. Fixture `expected` fields are seed
+comparison. It also covers common `Plus` / `Times` / `Power` infix forms used
+by simple polynomial and rational-expression diffs. It is intentionally not
+yet a complete Wolfram display implementation or transport model. Fixture
+`expected` fields are seed
 annotations, not the pass/fail oracle: the runner compares `rum` against the
 fresh oracle result on every run and reports seed-vs-oracle drift separately.
 When `--include-known-diffs` is used, the report includes known-difference
@@ -311,6 +313,8 @@ The first curated Lane A files now live under
 
 - arithmetic and structural smoke checks, plus focused exact-arithmetic edge
   cases
+- a small polynomial/rational-expression suite for renderer-supported
+  `Expand` / `Together` outputs
 - loops, control objects, and failure/status flows
 - associations and keyed-data basics
 - definition precedence promoted from resolved imported seed coverage

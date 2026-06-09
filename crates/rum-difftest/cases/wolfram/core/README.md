@@ -32,6 +32,9 @@ The current first pass includes:
 - small cross-domain smoke suites
 - a focused exact-arithmetic suite covering negative integer division
   semantics, rational powers, and modular exponentiation
+- a small polynomial/rational-expression suite covering renderer-supported
+  `Expand` / `Together` outputs that currently avoid broader term-ordering
+  differences
 - association and keyed-data smoke coverage
 - a definition-precedence suite promoted from resolved imported seed coverage
 - dedicated loop/procedural and control-object suites

@@ -1,0 +1,5 @@
+# Curated Lane A file: polynomial and rational-expression smoke
+# Format: input ||| expected_output
+Expand[(x + 1) * (x - 1)] ||| -1 + x^2
+Together[1/x + 1/y] ||| (x + y)/(x*y)
+Together[((x/y)^-1) + 1] ||| (x + y)/x
