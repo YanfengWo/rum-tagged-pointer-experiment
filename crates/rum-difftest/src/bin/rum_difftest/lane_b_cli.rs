@@ -1,8 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 use rum_difftest::config::{load_optional_config, resolve_oracle_kernel, resolve_oracle_timeout};
-use rum_difftest::fixtures::{seed_root, stateful_dir};
 use rum_difftest::lane_b::{self, LaneBOptions, LaneBStepStatus};
 use rum_difftest::oracle::OracleKernel;
 
@@ -31,6 +30,8 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut summary_json_path = None;
     let mut max_issue_samples = DEFAULT_MAX_ISSUE_SAMPLES;
     let mut issue_sample_kind = OracleLaneIssueSampleKindFilter::All;
+    let mut source = None;
+    let mut category = None;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -40,6 +41,8 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 oracle_kernel = Some(PathBuf::from(expect_value(&mut iter, &arg)?))
             }
             "--fixture" => fixture = Some(PathBuf::from(expect_value(&mut iter, "--fixture")?)),
+            "--source" => source = Some(expect_value(&mut iter, "--source")?),
+            "--category" => category = Some(expect_value(&mut iter, "--category")?),
             "--limit" => {
                 let value = expect_value(&mut iter, "--limit")?;
                 limit = Some(value.parse::<usize>()?);
@@ -86,6 +89,8 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let options = LaneBOptions {
         fixture,
         limit,
+        source,
+        category,
         include_known_differences,
     };
     let summary = lane_b::run(&mut oracle, &options)?;
@@ -114,8 +119,8 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 lane: "lane-b",
                 oracle: &oracle,
                 fixture: options.fixture.as_deref(),
-                source: None,
-                category: None,
+                source: options.source.as_deref(),
+                category: options.category.as_deref(),
                 limit: options.limit,
                 include_known_differences: options.include_known_differences,
                 fail_on_mismatch,
@@ -174,30 +179,9 @@ fn lane_b_project_seed_snapshot_drifts(summary: &lane_b::LaneBSummary) -> usize 
         .iter()
         .filter(|step| {
             step.seed_matches_oracle == Some(false)
-                && !matches!(lane_b_fixture_source(&step.fixture), "seed-golden")
+                && !matches!(lane_b::fixture_source(&step.fixture), "seed-golden")
         })
         .count()
-}
-
-fn lane_b_fixture_source(path: &Path) -> &'static str {
-    let seed_root = seed_root().canonicalize().unwrap_or_else(|_| seed_root());
-    let stateful_root = stateful_dir()
-        .canonicalize()
-        .unwrap_or_else(|_| stateful_dir());
-    if path_is_under(path, &seed_root) {
-        "seed-golden"
-    } else if path_is_under(path, &stateful_root) {
-        "stateful"
-    } else {
-        "lane-b-custom"
-    }
-}
-
-fn path_is_under(path: &Path, root: &Path) -> bool {
-    path.starts_with(root)
-        || path
-            .canonicalize()
-            .is_ok_and(|canonical| canonical.starts_with(root))
 }
 
 fn lane_b_issue_samples(
@@ -219,7 +203,7 @@ fn lane_b_issue_samples(
 }
 
 fn lane_b_sample(kind: &'static str, step: &lane_b::LaneBStepReport) -> OracleLaneIssueSample {
-    let fixture_source = lane_b_fixture_source(&step.fixture);
+    let fixture_source = lane_b::fixture_source(&step.fixture);
     OracleLaneIssueSample {
         kind,
         fixture: step.fixture.display().to_string(),
@@ -253,6 +237,8 @@ fn print_lane_b_usage() {
     println!("rum-difftest lane-b [--oracle-command PATH]");
     println!("rum-difftest lane-b [--config PATH]");
     println!("  --fixture PATH            Run a single stateful fixture file");
+    println!("  --source NAME             Filter default fixtures by source");
+    println!("  --category NAME           Filter default fixtures by semantic category");
     println!("  --limit N                 Stop after N compared steps");
     println!("  --include-known-diffs     Include `!!!` steps in the run");
     println!("  --include-known-differences");

@@ -630,8 +630,8 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B/C/D follow-up: keep aggregate check/sample kind filter
     validation backed by the same name catalog used by `check --summary-json`
     issue-sample collection, avoiding parser/reporter drift
-  - [x] Lane A follow-up: add `--source` / `--category` filters for focused
-    oracle audits over the default fixture set, reusing the same source labels
+  - [x] Lane A/B follow-up: add `--source` / `--category` filters for focused
+    oracle audits over the default fixture sets, reusing the same source labels
     and semantic category names exposed by `inventory`
   - [x] Lane A/B follow-up: expose oracle process counts in lane summary JSON
     plus concrete batch transport metadata and generic batch/input counts, and

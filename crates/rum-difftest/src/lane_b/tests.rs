@@ -122,6 +122,40 @@ fn compares_input_form_like_outputs_in_stateful_steps() {
 }
 
 #[test]
+fn filters_default_fixtures_by_source_and_category() {
+    let options = LaneBOptions {
+        source: Some("stateful".to_string()),
+        category: Some("mutation-updates".to_string()),
+        ..LaneBOptions::default()
+    };
+
+    let paths = collect_fixture_paths(&options).unwrap();
+
+    assert_eq!(paths.len(), 1);
+    assert!(paths[0].ends_with("cases/stateful/mutation_updates.txt"));
+    assert_eq!(fixture_source(&paths[0]), "stateful");
+    assert_eq!(fixture_category(&paths[0]), "mutation-updates");
+}
+
+#[test]
+fn filtered_lane_b_fixture_collection_fails_when_empty() {
+    let options = LaneBOptions {
+        source: Some("stateful".to_string()),
+        category: Some("not-a-category".to_string()),
+        ..LaneBOptions::default()
+    };
+
+    let err = collect_fixture_paths(&options).unwrap_err();
+
+    assert_eq!(err.kind(), std::io::ErrorKind::NotFound);
+    assert!(
+        err.to_string().contains(
+            "lane-b filters matched no fixtures: source=stateful category=not-a-category"
+        )
+    );
+}
+
+#[test]
 fn summarizes_included_known_difference_status() {
     let mut summary = empty_summary();
     let known_difference = Some(LaneBKnownDifference {

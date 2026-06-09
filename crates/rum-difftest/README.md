@@ -229,6 +229,7 @@ cargo run -p rum-difftest -- lane-b --oracle-command WolframKernel
 cargo run -p rum-difftest -- lane-b --oracle-command WolframKernel --oracle-timeout-seconds 60
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --include-known-diffs
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-b-summary.json
+cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --source stateful --category mutation-updates
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --fail-on-seed-drift
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --fail-on-project-seed-drift
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --include-known-diffs --fail-on-resolved-known-difference
@@ -249,6 +250,10 @@ for seed-vs-oracle drift, not as the comparison oracle. Use
 `--fail-on-seed-drift` when intentionally auditing stateful fixture snapshots
 against the current oracle. `--fail-on-project-seed-drift` is also available
 and ignores only fixtures under the imported `seed/ham-import` snapshot.
+Use `--source NAME` and `--category NAME` to run a focused slice of the
+default stateful fixture set, using the same source labels and semantic
+category names reported by `inventory`; a filter set that matches no fixtures
+fails fast.
 When `--include-known-diffs` is used, the report includes the known-difference
 ID/type/reason for non-matching steps and counts confirmed vs resolved known
 differences. Resolved known differences are listed by ID and fixture location
@@ -256,10 +261,11 @@ so fixed divergences are visible before removing ledger rows. `--summary-json
 PATH` writes the same stable machine-readable summary shape as Lane A, with
 oracle configuration, run options, comparison counts, known-difference counts,
 seed-drift counts, failure gate options, oracle process/batch/input counts,
-unfiltered issue-count/source breakdowns, and bounded `issue_samples`
-locators, without freezing the full per-step report rows. The same
-`--issue-sample-kind` filters available in Lane A apply here, including each
-sample's `fixture_source` and `project_owned_fixture` fields. The same
+unfiltered issue-count/source breakdowns, optional `source` / `category`
+filters, and bounded `issue_samples` locators, without freezing the full
+per-step report rows. The same `--issue-sample-kind` filters available in
+Lane A apply here, including each sample's `fixture_source` and
+`project_owned_fixture` fields. The same
 `--fail-on-resolved-known-difference` cleanup gate applies to included
 stateful known differences. Lane B also reports oracle batch/input counts and
 the concrete session-batch
