@@ -614,6 +614,9 @@ This roadmap intentionally uses two levels of detail:
     snapshot audit gate, keeping normal oracle conformance based on fresh
     `rum`-vs-Wolfram comparisons while letting seed refresh passes fail fast
     and recording active failure gates in summary JSON options
+  - [x] Lane A/B follow-up: add `--issue-sample-kind` filtering for
+    non-match, seed-drift, and resolved-known-difference locators so targeted
+    oracle audits are not drowned out by unrelated issue categories
   - [x] Lane A follow-up: add a curated structure-selector fixture for stable
     `Part` / `Extract` / `ReplacePart` / `Depth` / `Level` conformance, and
     guard it with the checked inventory category baseline

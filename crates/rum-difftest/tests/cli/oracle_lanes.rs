@@ -17,6 +17,7 @@ fn oracle_lane_help_lists_timeout_and_sample_controls() {
         assert!(stdout.contains("--oracle-timeout-seconds"));
         assert!(stdout.contains("--summary-json"));
         assert!(stdout.contains("--max-issue-samples"));
+        assert!(stdout.contains("--issue-sample-kind"));
         assert!(stdout.contains("--fail-on-seed-drift"));
     }
 }
@@ -39,6 +40,10 @@ fn oracle_lane_rejects_invalid_numeric_controls() {
     let samples = run_difftest(&["lane-b", "--max-issue-samples", "0"]);
     assert!(!samples.status.success());
     assert!(stderr_text(&samples).contains("--max-issue-samples expects a positive integer"));
+
+    let sample_kind = run_difftest(&["lane-a", "--issue-sample-kind", "unknown"]);
+    assert!(!sample_kind.status.success());
+    assert!(stderr_text(&sample_kind).contains("--issue-sample-kind expects one of"));
 }
 
 #[test]
@@ -69,6 +74,7 @@ fn oracle_lanes_write_machine_readable_summary_json() {
             "user-provided/unpinned"
         );
         assert_eq!(json_u64(&summary_json, "/options/limit"), 1);
+        assert_eq!(json_str(&summary_json, "/options/issue_sample_kind"), "all");
         assert!(!json_bool(&summary_json, "/options/fail_on_mismatch"));
         assert!(!json_bool(&summary_json, "/options/fail_on_seed_drift"));
         assert_eq!(json_u64(&summary_json, "/counts/items_compared"), 1);
@@ -116,6 +122,85 @@ fn oracle_lanes_write_machine_readable_summary_json() {
             assert_json_null(&summary_json, "/counts/oracle_session_batches");
             assert_json_null(&summary_json, "/counts/oracle_session_steps");
         }
+        fs::remove_dir_all(temp_dir).unwrap();
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn oracle_lanes_filter_summary_json_issue_samples_by_kind() {
+    for lane in ["lane-a", "lane-b"] {
+        let temp_dir = unique_temp_dir(&format!("{lane}-issue-kind"));
+        let oracle_path = temp_dir.join("fake-oracle.sh");
+        let fixture_path = temp_dir.join("issue-kind.txt");
+        let seed_drift_summary_path = temp_dir.join("seed-drift-summary.json");
+        let non_match_summary_path = temp_dir.join("non-match-summary.json");
+        fs::create_dir_all(&temp_dir).unwrap();
+        write_fixed_value_batch_oracle(&oracle_path);
+        fs::write(
+            &fixture_path,
+            "1 + 1 ||| stale-seed\n1 + 2 ||| stale-seed\n",
+        )
+        .unwrap();
+
+        let seed_drift = run_difftest(&[
+            lane,
+            "--oracle-command",
+            oracle_path.to_str().unwrap(),
+            "--fixture",
+            fixture_path.to_str().unwrap(),
+            "--summary-json",
+            seed_drift_summary_path.to_str().unwrap(),
+            "--issue-sample-kind",
+            "seed-drift",
+        ]);
+
+        assert!(
+            seed_drift.status.success(),
+            "stderr: {}",
+            stderr_text(&seed_drift)
+        );
+        let seed_drift_summary = fs::read_to_string(&seed_drift_summary_path).unwrap();
+        let seed_drift_json = parse_summary_json(&seed_drift_summary);
+        assert_eq!(
+            json_str(&seed_drift_json, "/options/issue_sample_kind"),
+            "seed-drift"
+        );
+        assert_eq!(json_u64(&seed_drift_json, "/issue_samples_total"), 1);
+        let seed_drift_samples = json_array(&seed_drift_json, "/issue_samples");
+        assert_eq!(seed_drift_samples.len(), 1);
+        assert_eq!(
+            json_str(&seed_drift_samples[0], "/kind"),
+            "seed_snapshot_drift"
+        );
+
+        let non_match = run_difftest(&[
+            lane,
+            "--oracle-command",
+            oracle_path.to_str().unwrap(),
+            "--fixture",
+            fixture_path.to_str().unwrap(),
+            "--summary-json",
+            non_match_summary_path.to_str().unwrap(),
+            "--issue-sample-kind",
+            "non-match",
+        ]);
+
+        assert!(
+            non_match.status.success(),
+            "stderr: {}",
+            stderr_text(&non_match)
+        );
+        let non_match_summary = fs::read_to_string(&non_match_summary_path).unwrap();
+        let non_match_json = parse_summary_json(&non_match_summary);
+        assert_eq!(
+            json_str(&non_match_json, "/options/issue_sample_kind"),
+            "non-match"
+        );
+        assert_eq!(json_u64(&non_match_json, "/issue_samples_total"), 1);
+        let non_match_samples = json_array(&non_match_json, "/issue_samples");
+        assert_eq!(non_match_samples.len(), 1);
+        assert_eq!(json_str(&non_match_samples[0], "/kind"), "non_match");
         fs::remove_dir_all(temp_dir).unwrap();
     }
 }

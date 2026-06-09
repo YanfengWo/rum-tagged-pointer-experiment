@@ -14,6 +14,7 @@ pub(super) struct OracleLaneSummaryJsonContext<'a> {
     pub(super) include_known_differences: bool,
     pub(super) fail_on_mismatch: bool,
     pub(super) fail_on_seed_drift: bool,
+    pub(super) issue_sample_kind: OracleLaneIssueSampleKindFilter,
     pub(super) session_batch_transport: Option<OracleLaneSessionBatchTransport>,
     pub(super) counts: OracleLaneSummaryCounts,
     pub(super) issue_samples: OracleLaneIssueSamples,
@@ -55,6 +56,34 @@ pub(super) struct OracleLaneIssueSample {
     pub(super) known_difference_id: Option<String>,
     pub(super) known_difference_type: Option<String>,
     pub(super) seed_drift: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum OracleLaneIssueSampleKindFilter {
+    All,
+    NonMatch,
+    SeedDrift,
+    ResolvedKnownDifference,
+}
+
+impl OracleLaneIssueSampleKindFilter {
+    pub(super) fn includes(self, kind: &str) -> bool {
+        match self {
+            Self::All => true,
+            Self::NonMatch => kind == "non_match",
+            Self::SeedDrift => kind == "seed_snapshot_drift",
+            Self::ResolvedKnownDifference => kind == "resolved_known_difference",
+        }
+    }
+
+    fn as_json_value(self) -> &'static str {
+        match self {
+            Self::All => "all",
+            Self::NonMatch => "non-match",
+            Self::SeedDrift => "seed-drift",
+            Self::ResolvedKnownDifference => "resolved-known-difference",
+        }
+    }
 }
 
 pub(super) struct OracleLaneIssueSamples {
@@ -116,7 +145,8 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
             "    \"limit\": {},\n",
             "    \"include_known_differences\": {},\n",
             "    \"fail_on_mismatch\": {},\n",
-            "    \"fail_on_seed_drift\": {}\n",
+            "    \"fail_on_seed_drift\": {},\n",
+            "    \"issue_sample_kind\": \"{}\"\n",
             "  }},\n",
             "  \"counts\": {{\n",
             "    \"items_seen\": {},\n",
@@ -159,6 +189,7 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
         context.include_known_differences,
         context.fail_on_mismatch,
         context.fail_on_seed_drift,
+        json_string(context.issue_sample_kind.as_json_value()),
         counts.total_seen,
         counts.compared,
         counts.matches,
@@ -192,6 +223,23 @@ pub(super) fn parse_max_issue_samples(value: &str) -> Result<usize, Box<dyn std:
         return Err("--max-issue-samples expects a positive integer, got `0`".into());
     }
     Ok(max_issue_samples)
+}
+
+pub(super) fn parse_issue_sample_kind(
+    value: &str,
+) -> Result<OracleLaneIssueSampleKindFilter, Box<dyn std::error::Error>> {
+    match value {
+        "all" => Ok(OracleLaneIssueSampleKindFilter::All),
+        "non-match" | "non_match" => Ok(OracleLaneIssueSampleKindFilter::NonMatch),
+        "seed-drift" | "seed_snapshot_drift" => Ok(OracleLaneIssueSampleKindFilter::SeedDrift),
+        "resolved-known-difference" | "resolved_known_difference" => {
+            Ok(OracleLaneIssueSampleKindFilter::ResolvedKnownDifference)
+        }
+        _ => Err(format!(
+            "--issue-sample-kind expects one of all, non-match, seed-drift, resolved-known-difference; got `{value}`"
+        )
+        .into()),
+    }
 }
 
 fn issue_samples_json(samples: &[OracleLaneIssueSample]) -> String {

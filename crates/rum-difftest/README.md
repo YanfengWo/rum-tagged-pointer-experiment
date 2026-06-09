@@ -116,6 +116,7 @@ cargo run -p rum-difftest -- lane-a --oracle-command WolframKernel --oracle-time
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --include-known-diffs
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-a-summary.json
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --fail-on-seed-drift
+cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-a-seed-drift.json --issue-sample-kind seed-drift --max-issue-samples 50
 ```
 
 You can also point it at a config file:
@@ -179,7 +180,9 @@ exits without inferring which gate was active. The JSON oracle section also
 reports the concrete batch transport name and process count. It also includes
 a bounded `issue_samples` locator list for the first non-matching,
 seed-drifted, or resolved known-difference cases. It does not freeze the full
-per-case report shape.
+per-case report shape. Use `--issue-sample-kind non-match`, `seed-drift`, or
+`resolved-known-difference` to focus the bounded locator list during targeted
+audits.
 
 ## Lane B Runner
 
@@ -193,6 +196,7 @@ cargo run -p rum-difftest -- lane-b --oracle-command WolframKernel --oracle-time
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --include-known-diffs
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-b-summary.json
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --fail-on-seed-drift
+cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-b-seed-drift.json --issue-sample-kind seed-drift --max-issue-samples 50
 ```
 
 Lane B keeps one `rum` session per fixture file and evaluates the matching
@@ -213,9 +217,10 @@ differences. Resolved known differences are listed by ID and fixture location
 so fixed divergences are visible before removing ledger rows. `--summary-json
 PATH` writes the same stable machine-readable summary shape as Lane A, with
 oracle configuration, run options, comparison counts, known-difference counts,
-seed-drift counts, failure gate options, oracle process/batch/input counts, and bounded
-`issue_samples` locators, without freezing the full per-step report rows. Lane
-B also reports oracle batch/input counts and the concrete session-batch
+seed-drift counts, failure gate options, oracle process/batch/input counts,
+and bounded `issue_samples` locators, without freezing the full per-step report
+rows. The same `--issue-sample-kind` filters available in Lane A apply here.
+Lane B also reports oracle batch/input counts and the concrete session-batch
 transport name/process count in text output, so the current single-process
 batch transport is distinguishable from a future interactive reuse transport
 without requiring JSON parsing.

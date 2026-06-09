@@ -7,9 +7,10 @@ use rum_difftest::oracle::OracleKernel;
 
 use super::oracle_cli::print_oracle_header;
 use super::oracle_lane_summary_json::{
-    DEFAULT_MAX_ISSUE_SAMPLES, OracleLaneIssueSample, OracleLaneIssueSamples,
-    OracleLaneSessionBatchTransport, OracleLaneSummaryCounts, OracleLaneSummaryJsonContext,
-    parse_max_issue_samples, write_summary_json,
+    DEFAULT_MAX_ISSUE_SAMPLES, OracleLaneIssueSample, OracleLaneIssueSampleKindFilter,
+    OracleLaneIssueSamples, OracleLaneSessionBatchTransport, OracleLaneSummaryCounts,
+    OracleLaneSummaryJsonContext, parse_issue_sample_kind, parse_max_issue_samples,
+    write_summary_json,
 };
 
 #[path = "lane_a_cli/text_report.rs"]
@@ -26,6 +27,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut oracle_timeout_seconds = None;
     let mut summary_json_path = None;
     let mut max_issue_samples = DEFAULT_MAX_ISSUE_SAMPLES;
+    let mut issue_sample_kind = OracleLaneIssueSampleKindFilter::All;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -52,6 +54,10 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             "--max-issue-samples" => {
                 let value = expect_value(&mut iter, "--max-issue-samples")?;
                 max_issue_samples = parse_max_issue_samples(&value)?;
+            }
+            "--issue-sample-kind" => {
+                let value = expect_value(&mut iter, "--issue-sample-kind")?;
+                issue_sample_kind = parse_issue_sample_kind(&value)?;
             }
             "--fail-on-mismatch" => fail_on_mismatch = true,
             "--fail-on-seed-drift" => fail_on_seed_drift = true,
@@ -103,6 +109,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 include_known_differences: options.include_known_differences,
                 fail_on_mismatch,
                 fail_on_seed_drift,
+                issue_sample_kind,
                 session_batch_transport: Some(session_batch_transport),
                 counts: OracleLaneSummaryCounts {
                     total_seen: summary.total_seen,
@@ -123,7 +130,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                     oracle_session_batches: None,
                     oracle_session_steps: None,
                 },
-                issue_samples: lane_a_issue_samples(&summary, max_issue_samples),
+                issue_samples: lane_a_issue_samples(&summary, max_issue_samples, issue_sample_kind),
             },
         )?;
         println!("summary json: {}", path.display());
@@ -144,18 +151,49 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
 fn lane_a_issue_samples(
     summary: &lane_a::LaneASummary,
     max_issue_samples: usize,
+    issue_sample_kind: OracleLaneIssueSampleKindFilter,
 ) -> OracleLaneIssueSamples {
     let mut samples = Vec::new();
     for (index, case) in summary.cases.iter().enumerate() {
         if case.status != LaneACaseStatus::Match {
-            samples.push(lane_a_sample("non_match", index + 1, case));
+            push_lane_a_sample(
+                &mut samples,
+                issue_sample_kind,
+                "non_match",
+                index + 1,
+                case,
+            );
         } else if case.seed_matches_oracle == Some(false) {
-            samples.push(lane_a_sample("seed_snapshot_drift", index + 1, case));
+            push_lane_a_sample(
+                &mut samples,
+                issue_sample_kind,
+                "seed_snapshot_drift",
+                index + 1,
+                case,
+            );
         } else if case.known_difference.is_some() {
-            samples.push(lane_a_sample("resolved_known_difference", index + 1, case));
+            push_lane_a_sample(
+                &mut samples,
+                issue_sample_kind,
+                "resolved_known_difference",
+                index + 1,
+                case,
+            );
         }
     }
     OracleLaneIssueSamples::new(max_issue_samples, samples)
+}
+
+fn push_lane_a_sample(
+    samples: &mut Vec<OracleLaneIssueSample>,
+    issue_sample_kind: OracleLaneIssueSampleKindFilter,
+    kind: &'static str,
+    index: usize,
+    case: &lane_a::LaneACaseReport,
+) {
+    if issue_sample_kind.includes(kind) {
+        samples.push(lane_a_sample(kind, index, case));
+    }
 }
 
 fn lane_a_sample(
@@ -202,6 +240,9 @@ fn print_lane_a_usage() {
     println!("                              Kill an oracle invocation after N seconds");
     println!("  --summary-json PATH        Write a stable machine-readable summary");
     println!("  --max-issue-samples N      Bound summary JSON issue samples (default 5)");
+    println!(
+        "  --issue-sample-kind KIND   Filter samples: all, non-match, seed-drift, resolved-known-difference"
+    );
     println!("  --fail-on-mismatch        Exit non-zero if any case mismatches or fails");
     println!("  --fail-on-seed-drift      Exit non-zero if any seed snapshot drifts");
 }
