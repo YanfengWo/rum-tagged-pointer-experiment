@@ -32,6 +32,30 @@ d[1] := "one" ||| Null
 d[1] ||| "one"
 u /: wrap[u[x_]] := x + 10 ||| Null
 wrap[u[5]] ||| 15
+patCond[x_Integer /; MatchQ[x, 7]] := x ||| Null
+patCond[7] ||| 7
+patCond[8] ||| patCond[8]
+patGoodQ[x_] := MatchQ[x, 7] ||| Null
+patTest[PatternTest[x_Integer, patGoodQ]] := x ||| Null
+patTest[7] ||| 7
+patTest[8] ||| patTest[8]
+patAlt[Alternatives[x_String, x_Integer]] := x ||| Null
+patAlt[7] ||| 7
+patAlt["hi"] ||| "hi"
+patAlt[a] ||| patAlt[a]
+patExcept[Except[x_Integer]] := ok ||| Null
+patExcept[a] ||| ok
+patExcept[1] ||| patExcept[1]
+patOptional[Optional[x_Integer, 7]] := x ||| Null
+patOptional[] ||| 7
+patOptional[3] ||| 3
+patOptional["hi"] ||| patOptional["hi"]
+Default[patDefaultOptional, 1] = 9 ||| 9
+patDefaultOptional[Optional[x_Integer]] := x ||| Null
+patDefaultOptional[] ||| 9
+patRepeated[Repeated[_Integer]] := ok ||| Null
+patRepeated[1, 2] ||| ok
+patRepeated[] ||| patRepeated[]
 Print[2] ||| Null
 Default[deflane] = 7 ||| 7
 Default[deflane] ||| 7
