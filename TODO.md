@@ -13,7 +13,7 @@ This roadmap intentionally uses two levels of detail:
 - [x] Keep the workspace compiling and passing tests as the project evolves
 - [x] Establish source-organization guidelines and convert major `include!`-style roots into real module boundaries
 - [ ] Keep source organization aligned with the strengthened code-organization rules: human-readable modules, maintainable file sizes, feature-oriented subfolders, incremental-compilation-friendly boundaries, and unit-test-friendly function design
-- [ ] Resolve the source-size audit against `docs/code-organization-guidelines.md`: the 2026-06-10 follow-up check shows no Rust source files over `35k` bytes, 1 file in the `20k`-`35k` split-plan range, and 137 files in the `10k`-`20k` warning range
+- [ ] Resolve the source-size audit against `docs/code-organization-guidelines.md`: the 2026-06-10 follow-up check shows no Rust source files over `35k` bytes, 1 file in the `20k`-`35k` split-plan range, and 136 files in the `10k`-`20k` warning range
   - [x] Split or document explicit exceptions for the original `>35k` architecture-debt files; no Rust source files remained over `35k` bytes immediately after the 2026-05 split pass
   - [x] Add split plans for the original Rust files in the `20k`-`35k` split-plan range; no Rust source files remained in that range immediately after the initial split pass
   - [x] Difftest oracle-lane CLI test split follow-up: split the regrown `crates/rum-difftest/tests/cli/oracle_lanes.rs` coverage by help / parsing diagnostics, filters, summary JSON, issue-sample filtering, and failure-gate behavior while keeping the shared fake oracle helper in the facade
@@ -67,6 +67,9 @@ This roadmap intentionally uses two levels of detail:
   - [x] Difftest Lane D JSON helper test split follow-up: keep
     `lane_d_json.rs` focused on baseline/readiness JSON helpers and move its
     unit tests into a focused child test module
+  - [x] Difftest aggregate-check summary JSON test split follow-up: keep
+    `check_cli/summary_json.rs` focused on top-level summary rendering and
+    move artifact-hygiene detail coverage into a focused child test module
   - [ ] Names/SyntaxInformation test split follow-up: split the regrown `crates/rum-runtime/src/runtime/tests/names_and_syntax_information.rs` coverage along real behavior boundaries
   - [x] CL-05 association split follow-up: split the remaining oversized association test file along real conceptual boundaries; `crates/rum-runtime/src/runtime/tests/associations.rs` is down to warning range after moving key transforms, key sets, mutation surface, `KeyValuePattern`, aggregate, missing, and diagnostics coverage into focused test modules
   - [x] Debug tools split follow-up: replace the oversized `crates/rum-runtime/src/runtime/debug_tools.rs` file with a `debug_tools/` module tree split by basic display helpers, trace, message switches, reaping, resource limits, monitor, evaluation data, test reports, property projection, and shared render helpers
@@ -118,7 +121,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] String search split follow-up: keep `strings/patterns/search.rs` focused on string search/replace/count/delete/apply entry points and move delayed replacement/case rule output evaluation helpers into a focused child module
   - [x] Debug trace split follow-up: keep `debug_tools/trace.rs` focused on `Trace` / `TracePrint` capture, filtering, and rendering, and move structured trace tree construction into a focused child module
   - [x] Jupyter adapter test split follow-up: keep `tests/adapter.rs` focused on direct adapter execute, inspect, completion, tracing, and completeness APIs, and move envelope dispatch / IOPub lifecycle coverage into a focused child module
-  - [ ] Revisit the 137 `10k`-`20k` warning-range files opportunistically when touching nearby subsystems, prioritizing active runtime files over stable tests
+  - [ ] Revisit the 136 `10k`-`20k` warning-range files opportunistically when touching nearby subsystems, prioritizing active runtime files over stable tests
 
 ### Phase 1: Syntax Frontend
 
