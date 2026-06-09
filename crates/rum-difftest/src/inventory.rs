@@ -226,6 +226,10 @@ mod tests {
         );
         assert_eq!(lane_a.totals_by_category()["predicate-surface"].entries, 21);
         assert_eq!(
+            lane_a.totals_by_category()["rules-patterns-traversal"].entries,
+            60
+        );
+        assert_eq!(
             lane_a.totals_by_category()["functional-combinators"].entries,
             20
         );

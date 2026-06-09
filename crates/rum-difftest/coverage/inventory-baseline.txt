@@ -3,8 +3,8 @@
 # (`category=...`).
 # `min_*` fields are lower bounds. `max_known_difference_entries` is an upper
 # bound so resolved known differences can decrease without failing the gate.
-lane=lane-a source=all min_fixtures=38 min_entries=595 min_normal_entries=590 max_known_difference_entries=5
-lane=lane-a source=curated-core min_fixtures=29 min_entries=426 min_normal_entries=424 max_known_difference_entries=2
+lane=lane-a source=all min_fixtures=38 min_entries=644 min_normal_entries=639 max_known_difference_entries=5
+lane=lane-a source=curated-core min_fixtures=29 min_entries=475 min_normal_entries=473 max_known_difference_entries=2
 lane=lane-a source=seed-golden min_fixtures=9 min_entries=169 min_normal_entries=166 max_known_difference_entries=3
 lane=lane-a category=arithmetic min_fixtures=1 min_entries=34 min_normal_entries=33 max_known_difference_entries=1
 lane=lane-a category=associations-core min_fixtures=1 min_entries=22 min_normal_entries=22 max_known_difference_entries=0
@@ -29,7 +29,7 @@ lane=lane-a category=ordering-surface min_fixtures=1 min_entries=18 min_normal_e
 lane=lane-a category=patterns min_fixtures=1 min_entries=17 min_normal_entries=17 max_known_difference_entries=0
 lane=lane-a category=polynomial-rational min_fixtures=1 min_entries=10 min_normal_entries=10 max_known_difference_entries=0
 lane=lane-a category=predicate-surface min_fixtures=1 min_entries=21 min_normal_entries=21 max_known_difference_entries=0
-lane=lane-a category=rules-patterns-traversal min_fixtures=1 min_entries=11 min_normal_entries=11 max_known_difference_entries=0
+lane=lane-a category=rules-patterns-traversal min_fixtures=1 min_entries=60 min_normal_entries=60 max_known_difference_entries=0
 lane=lane-a category=scoping min_fixtures=1 min_entries=10 min_normal_entries=10 max_known_difference_entries=0
 lane=lane-a category=scoping-closures min_fixtures=1 min_entries=18 min_normal_entries=18 max_known_difference_entries=0
 lane=lane-a category=smoke-arithmetic min_fixtures=1 min_entries=7 min_normal_entries=7 max_known_difference_entries=0
