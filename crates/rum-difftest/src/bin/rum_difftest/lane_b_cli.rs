@@ -22,6 +22,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut limit = None;
     let mut include_known_differences = false;
     let mut fail_on_mismatch = false;
+    let mut fail_on_seed_drift = false;
     let mut oracle_timeout_seconds = None;
     let mut summary_json_path = None;
     let mut max_issue_samples = DEFAULT_MAX_ISSUE_SAMPLES;
@@ -53,6 +54,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 max_issue_samples = parse_max_issue_samples(&value)?;
             }
             "--fail-on-mismatch" => fail_on_mismatch = true,
+            "--fail-on-seed-drift" => fail_on_seed_drift = true,
             "--help" | "-h" => {
                 print_lane_b_usage();
                 return Ok(ExitCode::SUCCESS);
@@ -130,6 +132,9 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     if fail_on_mismatch && has_issues {
         return Ok(ExitCode::FAILURE);
     }
+    if fail_on_seed_drift && summary.seed_snapshots_drifted_from_oracle > 0 {
+        return Ok(ExitCode::FAILURE);
+    }
 
     Ok(ExitCode::SUCCESS)
 }
@@ -192,4 +197,5 @@ fn print_lane_b_usage() {
     println!("  --summary-json PATH        Write a stable machine-readable summary");
     println!("  --max-issue-samples N      Bound summary JSON issue samples (default 5)");
     println!("  --fail-on-mismatch        Exit non-zero if any step mismatches or fails");
+    println!("  --fail-on-seed-drift      Exit non-zero if any seed snapshot drifts");
 }

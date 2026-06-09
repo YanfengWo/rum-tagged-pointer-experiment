@@ -610,6 +610,9 @@ This roadmap intentionally uses two levels of detail:
     keep Lane A/B text output showing process, batch, and batch-input counts,
     making the current case-isolated batch Lane A transport and single-process
     Lane B batch transport auditable before any future interactive reuse work
+  - [x] Lane A/B follow-up: add `--fail-on-seed-drift` as an opt-in fixture
+    snapshot audit gate, keeping normal oracle conformance based on fresh
+    `rum`-vs-Wolfram comparisons while letting seed refresh passes fail fast
   - [x] Lane A follow-up: add a curated structure-selector fixture for stable
     `Part` / `Extract` / `ReplacePart` / `Depth` / `Level` conformance, and
     guard it with the checked inventory category baseline

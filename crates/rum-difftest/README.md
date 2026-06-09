@@ -115,6 +115,7 @@ cargo run -p rum-difftest -- lane-a --oracle-command WolframKernel
 cargo run -p rum-difftest -- lane-a --oracle-command WolframKernel --oracle-timeout-seconds 60
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --include-known-diffs
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-a-summary.json
+cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --fail-on-seed-drift
 ```
 
 You can also point it at a config file:
@@ -158,6 +159,8 @@ yet a complete Wolfram display implementation or transport model. Fixture
 `expected` fields are seed
 annotations, not the pass/fail oracle: the runner compares `rum` against the
 fresh oracle result on every run and reports seed-vs-oracle drift separately.
+Use `--fail-on-seed-drift` when intentionally auditing fixture seed snapshots
+against the current oracle.
 When `--include-known-diffs` is used, the report includes known-difference
 ID/type/reason metadata and counts confirmed vs resolved known differences.
 Resolved known differences are listed by ID and fixture location so stale
@@ -187,6 +190,7 @@ cargo run -p rum-difftest -- lane-b --oracle-command WolframKernel
 cargo run -p rum-difftest -- lane-b --oracle-command WolframKernel --oracle-timeout-seconds 60
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --include-known-diffs
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-b-summary.json
+cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --fail-on-seed-drift
 ```
 
 Lane B keeps one `rum` session per fixture file and evaluates the matching
@@ -198,7 +202,9 @@ per-step message and print streams. Like Lane A, its CLI reports the resolved
 oracle executable and best-effort Wolfram `$Version` without making version
 probing a pass/fail gate, and applies the same per-session oracle timeout.
 Fixture `expected` fields are treated as seed annotations and are checked only
-for seed-vs-oracle drift, not as the comparison oracle.
+for seed-vs-oracle drift, not as the comparison oracle. Use
+`--fail-on-seed-drift` when intentionally auditing stateful fixture snapshots
+against the current oracle.
 When `--include-known-diffs` is used, the report includes the known-difference
 ID/type/reason for non-matching steps and counts confirmed vs resolved known
 differences. Resolved known differences are listed by ID and fixture location
