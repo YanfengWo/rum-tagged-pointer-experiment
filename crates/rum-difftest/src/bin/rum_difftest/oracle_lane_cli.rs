@@ -1,10 +1,15 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use rum_difftest::config::{load_optional_config, resolve_oracle_kernel, resolve_oracle_timeout};
+use rum_difftest::oracle::OracleKernel;
+
 use super::oracle_lane_summary_json::{
     DEFAULT_MAX_ISSUE_SAMPLES, OracleLaneIssueSampleKindFilter, parse_issue_sample_kind,
     parse_issue_sample_source, parse_max_issue_samples,
 };
+
+const MISSING_ORACLE_KERNEL_MESSAGE: &str = "no oracle kernel configured; pass --oracle-kernel/--oracle-command PATH or set oracle_kernel/oracle_command in a config file";
 
 #[derive(Debug)]
 pub(super) enum OracleLaneCliArgs {
@@ -150,6 +155,17 @@ pub(super) fn parse_oracle_lane_cli_args(
     Ok(OracleLaneCliArgs::Run(Box::new(options)))
 }
 
+pub(super) fn oracle_kernel_from_cli_options(
+    options: &mut OracleLaneCliOptions,
+) -> Result<OracleKernel, Box<dyn std::error::Error>> {
+    let config = load_optional_config(options.config_path.as_deref())?;
+    let oracle_kernel = resolve_oracle_kernel(options.oracle_kernel.take(), &config)
+        .ok_or(MISSING_ORACLE_KERNEL_MESSAGE)?;
+    let oracle_timeout = resolve_oracle_timeout(options.oracle_timeout_seconds, &config)?;
+
+    Ok(OracleKernel::with_timeout(&oracle_kernel, oracle_timeout)?)
+}
+
 fn expect_value(
     iter: &mut impl Iterator<Item = String>,
     flag: &str,
@@ -285,6 +301,21 @@ mod tests {
                 .to_string(),
             "unknown lane-b flag `--bogus`"
         );
+    }
+
+    #[test]
+    fn oracle_kernel_from_cli_options_uses_explicit_kernel_and_timeout() {
+        let mut options = OracleLaneCliOptions {
+            oracle_kernel: Some(PathBuf::from("fake-WolframKernel")),
+            oracle_timeout_seconds: Some(7),
+            ..OracleLaneCliOptions::default()
+        };
+
+        let oracle = oracle_kernel_from_cli_options(&mut options).unwrap();
+
+        assert_eq!(oracle.executable(), PathBuf::from("fake-WolframKernel"));
+        assert_eq!(oracle.timeout().as_secs(), 7);
+        assert!(options.oracle_kernel.is_none());
     }
 
     #[test]

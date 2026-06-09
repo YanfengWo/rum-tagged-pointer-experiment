@@ -1,13 +1,11 @@
 use std::process::ExitCode;
 
-use rum_difftest::config::{load_optional_config, resolve_oracle_kernel, resolve_oracle_timeout};
 use rum_difftest::lane_b::{self, LaneBOptions, LaneBStepStatus};
-use rum_difftest::oracle::OracleKernel;
 
 use super::oracle_cli::print_oracle_header;
 use super::oracle_lane_cli::{
-    OracleLaneCliArgs, OracleLaneFailureGateCounts, oracle_lane_failure_exit_code,
-    parse_oracle_lane_cli_args,
+    OracleLaneCliArgs, OracleLaneFailureGateCounts, oracle_kernel_from_cli_options,
+    oracle_lane_failure_exit_code, parse_oracle_lane_cli_args,
 };
 use super::oracle_lane_summary_json::{
     OracleLaneIssueSample, OracleLaneIssueSampleKindFilter, OracleLaneIssueSamples,
@@ -19,7 +17,7 @@ use super::oracle_lane_summary_json::{
 mod text_report;
 
 pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
-    let cli = match parse_oracle_lane_cli_args(args, "lane-b")? {
+    let mut cli = match parse_oracle_lane_cli_args(args, "lane-b")? {
         OracleLaneCliArgs::Help => {
             print_lane_b_usage();
             return Ok(ExitCode::SUCCESS);
@@ -28,13 +26,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     };
     let failure_gate_options = cli.failure_gate_options();
 
-    let config = load_optional_config(cli.config_path.as_deref())?;
-    let oracle_kernel = resolve_oracle_kernel(cli.oracle_kernel, &config).ok_or(
-        "no oracle kernel configured; pass --oracle-kernel/--oracle-command PATH or set oracle_kernel/oracle_command in a config file",
-    )?;
-    let oracle_timeout = resolve_oracle_timeout(cli.oracle_timeout_seconds, &config)?;
-
-    let mut oracle = OracleKernel::with_timeout(&oracle_kernel, oracle_timeout)?;
+    let mut oracle = oracle_kernel_from_cli_options(&mut cli)?;
     let options = LaneBOptions {
         fixture: cli.fixture,
         limit: cli.limit,
