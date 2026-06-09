@@ -30,6 +30,8 @@ pub(super) struct OracleLaneSummaryCounts {
     pub(super) seed_snapshots_checked: usize,
     pub(super) seed_snapshots_matched_oracle: usize,
     pub(super) seed_snapshots_drifted_from_oracle: usize,
+    pub(super) oracle_session_batches: Option<usize>,
+    pub(super) oracle_session_steps: Option<usize>,
 }
 
 pub(super) struct OracleLaneIssueSample {
@@ -111,7 +113,9 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
             "    \"resolved_known_differences\": {},\n",
             "    \"seed_snapshots_checked\": {},\n",
             "    \"seed_snapshots_matched_oracle\": {},\n",
-            "    \"seed_snapshots_drifted_from_oracle\": {}\n",
+            "    \"seed_snapshots_drifted_from_oracle\": {},\n",
+            "    \"oracle_session_batches\": {},\n",
+            "    \"oracle_session_steps\": {}\n",
             "  }},\n",
             "  \"issue_samples_limit\": {},\n",
             "  \"issue_samples_emitted\": {},\n",
@@ -142,6 +146,8 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
         counts.seed_snapshots_checked,
         counts.seed_snapshots_matched_oracle,
         counts.seed_snapshots_drifted_from_oracle,
+        json_usize_option(counts.oracle_session_batches),
+        json_usize_option(counts.oracle_session_steps),
         context.issue_samples.limit,
         context.issue_samples.emitted(),
         context.issue_samples.total,

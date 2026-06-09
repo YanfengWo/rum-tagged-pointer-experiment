@@ -69,6 +69,15 @@ fn oracle_lanes_write_machine_readable_summary_json() {
         assert!(summary.contains("\"index\": 1"));
         assert!(summary.contains("\"status\": \"OracleFailure\""));
         assert!(summary.contains("\"seed_drift\": false"));
+        if lane == "lane-b" {
+            assert!(stdout_text(&output).contains("oracle session batches: 1"));
+            assert!(stdout_text(&output).contains("oracle session steps: 1"));
+            assert!(summary.contains("\"oracle_session_batches\": 1"));
+            assert!(summary.contains("\"oracle_session_steps\": 1"));
+        } else {
+            assert!(summary.contains("\"oracle_session_batches\": null"));
+            assert!(summary.contains("\"oracle_session_steps\": null"));
+        }
         fs::remove_dir_all(temp_dir).unwrap();
     }
 }
@@ -97,6 +106,10 @@ fn oracle_lanes_bound_summary_json_issue_samples() {
         assert!(summary.contains("\"issue_samples_total\": 2"));
         assert!(summary.contains("\"issue_samples_truncated\": true"));
         assert_eq!(summary.matches("\"kind\": \"non_match\"").count(), 1);
+        if lane == "lane-b" {
+            assert!(summary.contains("\"oracle_session_batches\": 1"));
+            assert!(summary.contains("\"oracle_session_steps\": 2"));
+        }
         fs::remove_dir_all(temp_dir).unwrap();
     }
 }

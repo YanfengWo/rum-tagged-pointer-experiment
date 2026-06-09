@@ -574,6 +574,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B follow-up: surface included known-difference metadata in reports and count confirmed vs resolved known differences so closable ledger rows are visible during oracle runs
   - [x] Lane A/B follow-up: add `--summary-json PATH` machine-readable status output with oracle configuration, run options, comparison counts, known-difference counts, and seed-drift counts for scripts or CI dashboards
   - [x] Lane A/B follow-up: extend `--summary-json PATH` with bounded issue-sample locators for non-matches, seed snapshot drift, and resolved known differences, plus `--max-issue-samples N` and emitted/total/truncated metadata, without freezing full per-case/per-step report rows
+  - [x] Lane B follow-up: expose oracle session batch and step counts in text/JSON reports so optional long-lived oracle process reuse has an observable throughput baseline
   - [x] Lane A/B follow-up: add a non-oracle `rum-difftest inventory` coverage-audit command with source-group, normal-entry, known-difference, and machine-readable summary counts for default fixture sets
   - [x] Lane A/B follow-up: add a checked inventory baseline plus `inventory --check-baseline --fail-on-regression` so fixture count, total entry, normal-entry, and known-difference regression gates are executable without Wolfram
   - [x] Lane A/B follow-up: add `inventory --write-baseline PATH` so intentional fixture additions or reshuffles can refresh the stable non-oracle coverage baseline without hand-editing threshold rows

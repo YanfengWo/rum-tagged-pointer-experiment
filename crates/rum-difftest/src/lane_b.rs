@@ -35,6 +35,8 @@ pub struct LaneBSummary {
     pub seed_snapshots_checked: usize,
     pub seed_snapshots_matched_oracle: usize,
     pub seed_snapshots_drifted_from_oracle: usize,
+    pub oracle_session_batches: usize,
+    pub oracle_session_steps: usize,
     pub steps: Vec<LaneBStepReport>,
 }
 
@@ -93,6 +95,8 @@ pub fn run<O: Oracle>(
         seed_snapshots_checked: 0,
         seed_snapshots_matched_oracle: 0,
         seed_snapshots_drifted_from_oracle: 0,
+        oracle_session_batches: 0,
+        oracle_session_steps: 0,
         steps: Vec::new(),
     };
 
@@ -139,6 +143,7 @@ pub fn run<O: Oracle>(
             }
         }
 
+        record_oracle_session_batch(&mut summary, &prepared_steps);
         let oracle_results = run_oracle_session(oracle, &prepared_steps);
         for (prepared, oracle_result) in prepared_steps.into_iter().zip(oracle_results) {
             let step = run_step(&mut session, prepared, oracle_result);
@@ -193,6 +198,14 @@ fn record_step_result(summary: &mut LaneBSummary, step: &LaneBStepReport) {
         }
         None => {}
     }
+}
+
+fn record_oracle_session_batch(summary: &mut LaneBSummary, steps: &[PreparedLaneBStep]) {
+    if steps.is_empty() {
+        return;
+    }
+    summary.oracle_session_batches += 1;
+    summary.oracle_session_steps += steps.len();
 }
 
 fn run_step(

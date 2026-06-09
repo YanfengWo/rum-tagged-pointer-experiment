@@ -100,6 +100,8 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                     seed_snapshots_checked: summary.seed_snapshots_checked,
                     seed_snapshots_matched_oracle: summary.seed_snapshots_matched_oracle,
                     seed_snapshots_drifted_from_oracle: summary.seed_snapshots_drifted_from_oracle,
+                    oracle_session_batches: None,
+                    oracle_session_steps: None,
                 },
                 issue_samples: lane_a_issue_samples(&summary, max_issue_samples),
             },

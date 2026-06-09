@@ -29,6 +29,8 @@ pub(super) fn print_lane_b_report(summary: &lane_b::LaneBSummary) {
         "seed snapshots drifted from oracle: {}",
         summary.seed_snapshots_drifted_from_oracle
     );
+    println!("oracle session batches: {}", summary.oracle_session_batches);
+    println!("oracle session steps: {}", summary.oracle_session_steps);
 
     print_non_matching_steps(summary);
     print_resolved_known_differences(summary);

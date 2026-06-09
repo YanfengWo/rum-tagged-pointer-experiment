@@ -249,6 +249,33 @@ fn summarizes_included_known_difference_status() {
     assert_eq!(summary.resolved_known_differences, 1);
 }
 
+#[test]
+fn tracks_non_empty_oracle_session_batches() {
+    let mut summary = empty_summary();
+    let prepared = vec![
+        PreparedLaneBStep {
+            fixture: PathBuf::from("stateful.txt"),
+            step_index: 1,
+            input: "x = 2".to_string(),
+            expected_seed: Some("2".to_string()),
+            known_difference: None,
+        },
+        PreparedLaneBStep {
+            fixture: PathBuf::from("stateful.txt"),
+            step_index: 2,
+            input: "x + 3".to_string(),
+            expected_seed: Some("5".to_string()),
+            known_difference: None,
+        },
+    ];
+
+    record_oracle_session_batch(&mut summary, &[]);
+    record_oracle_session_batch(&mut summary, &prepared);
+
+    assert_eq!(summary.oracle_session_batches, 1);
+    assert_eq!(summary.oracle_session_steps, 2);
+}
+
 fn empty_summary() -> LaneBSummary {
     LaneBSummary {
         total_seen: 0,
@@ -263,6 +290,8 @@ fn empty_summary() -> LaneBSummary {
         seed_snapshots_checked: 0,
         seed_snapshots_matched_oracle: 0,
         seed_snapshots_drifted_from_oracle: 0,
+        oracle_session_batches: 0,
+        oracle_session_steps: 0,
         steps: Vec::new(),
     }
 }
