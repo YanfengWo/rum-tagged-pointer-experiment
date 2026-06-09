@@ -129,13 +129,16 @@ inventory in that baseline format when a coverage change is intentional.
 Use `rum-difftest check` as the fast non-oracle aggregate gate for local
 preflight scripts: it runs the checked inventory baseline plus Lane C ledger
 validation, exits non-zero if either gate is dirty, and can write
-`--summary-json PATH` without starting a Wolfram oracle. It does not run Lane D
-timing inputs by default; opt into the local smoke performance baseline with
-`--include-lane-d-smoke`, or use `--lane-d-smoke-baseline PATH` when validating
-an alternate smoke artifact. Use `--include-lane-d-readiness` only when the
-aggregate gate should also enforce the checked Lane D artifact set; this
-readiness check is expected to remain dirty until runner-specific
-`ci-debug` / `ci-release` smoke artifacts exist.
+`--summary-json PATH` without starting a Wolfram oracle. The aggregate JSON
+includes bounded `issue_samples` with check/kind/location/message fields so
+scripts can surface representative failures without depending on each lane's
+full internal report shape. It does not run Lane D timing inputs by default;
+opt into the local smoke performance baseline with `--include-lane-d-smoke`, or
+use `--lane-d-smoke-baseline PATH` when validating an alternate smoke artifact.
+Use `--include-lane-d-readiness` only when the aggregate gate should also
+enforce the checked Lane D artifact set; this readiness check is expected to
+remain dirty until runner-specific `ci-debug` / `ci-release` smoke artifacts
+exist.
 
 Messages and diagnostics start in runtime regression tests unless the
 differential runner can capture and compare them reliably. Lane A can compare

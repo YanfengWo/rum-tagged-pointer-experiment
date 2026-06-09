@@ -7,6 +7,9 @@ use crate::json_cli::{json_string, write_json_file};
 
 use super::LocalCheckReport;
 
+#[path = "summary_json/issue_samples.rs"]
+mod issue_samples;
+
 pub(super) fn write_summary_json(
     path: &Path,
     report: &LocalCheckReport,
@@ -35,6 +38,9 @@ fn summary_json(report: &LocalCheckReport) -> String {
             "  \"checks_failed\": {},\n",
             "  \"checks\": [\n",
             "{}\n",
+            "  ],\n",
+            "  \"issue_samples\": [\n",
+            "{}\n",
             "  ]\n",
             "}}\n"
         ),
@@ -42,6 +48,7 @@ fn summary_json(report: &LocalCheckReport) -> String {
         report.passed_checks(),
         report.failed_checks(),
         checks.join(",\n"),
+        issue_samples::issue_samples_json(report),
     )
 }
 
