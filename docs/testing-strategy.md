@@ -177,7 +177,9 @@ machine-readable summary for scripts or CI dashboards, covering oracle
 configuration, run options, comparison counts, known-difference counts, and
 seed-drift counts. It includes a bounded `issue_samples` locator list for the
 first non-matching, seed-drifted, or resolved known-difference items without
-freezing full per-case or per-step report rows.
+freezing full per-case or per-step report rows. `--max-issue-samples N`
+adjusts the default 5-entry cap, and the summary records the sample limit,
+emitted count, total issue count, and truncation status.
 
 Lane D currently executes imported timing and memory seed suites through local
 `rum` sessions and reports raw metrics. Its default `smoke` profile skips

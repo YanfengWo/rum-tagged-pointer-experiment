@@ -7,11 +7,10 @@ use rum_difftest::oracle::OracleKernel;
 
 use super::oracle_cli::print_oracle_header;
 use super::oracle_lane_summary_json::{
-    OracleLaneIssueSample, OracleLaneSummaryCounts, OracleLaneSummaryJsonContext,
+    DEFAULT_MAX_ISSUE_SAMPLES, OracleLaneIssueSample, OracleLaneIssueSamples,
+    OracleLaneSummaryCounts, OracleLaneSummaryJsonContext, parse_max_issue_samples,
     write_summary_json,
 };
-
-const MAX_ISSUE_SAMPLES: usize = 5;
 
 #[path = "lane_a_cli/text_report.rs"]
 mod text_report;
@@ -25,6 +24,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut fail_on_mismatch = false;
     let mut oracle_timeout_seconds = None;
     let mut summary_json_path = None;
+    let mut max_issue_samples = DEFAULT_MAX_ISSUE_SAMPLES;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -47,6 +47,10 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             }
             "--summary-json" => {
                 summary_json_path = Some(PathBuf::from(expect_value(&mut iter, "--summary-json")?));
+            }
+            "--max-issue-samples" => {
+                let value = expect_value(&mut iter, "--max-issue-samples")?;
+                max_issue_samples = parse_max_issue_samples(&value)?;
             }
             "--fail-on-mismatch" => fail_on_mismatch = true,
             "--help" | "-h" => {
@@ -97,7 +101,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                     seed_snapshots_matched_oracle: summary.seed_snapshots_matched_oracle,
                     seed_snapshots_drifted_from_oracle: summary.seed_snapshots_drifted_from_oracle,
                 },
-                issue_samples: lane_a_issue_samples(&summary),
+                issue_samples: lane_a_issue_samples(&summary, max_issue_samples),
             },
         )?;
         println!("summary json: {}", path.display());
@@ -112,7 +116,10 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     Ok(ExitCode::SUCCESS)
 }
 
-fn lane_a_issue_samples(summary: &lane_a::LaneASummary) -> Vec<OracleLaneIssueSample> {
+fn lane_a_issue_samples(
+    summary: &lane_a::LaneASummary,
+    max_issue_samples: usize,
+) -> OracleLaneIssueSamples {
     let mut samples = Vec::new();
     for (index, case) in summary.cases.iter().enumerate() {
         if case.status != LaneACaseStatus::Match {
@@ -122,12 +129,8 @@ fn lane_a_issue_samples(summary: &lane_a::LaneASummary) -> Vec<OracleLaneIssueSa
         } else if case.known_difference.is_some() {
             samples.push(lane_a_sample("resolved_known_difference", index + 1, case));
         }
-
-        if samples.len() >= MAX_ISSUE_SAMPLES {
-            break;
-        }
     }
-    samples
+    OracleLaneIssueSamples::new(max_issue_samples, samples)
 }
 
 fn lane_a_sample(
@@ -173,5 +176,6 @@ fn print_lane_a_usage() {
     println!("  --oracle-timeout-seconds N");
     println!("                              Kill an oracle invocation after N seconds");
     println!("  --summary-json PATH        Write a stable machine-readable summary");
+    println!("  --max-issue-samples N      Bound summary JSON issue samples (default 5)");
     println!("  --fail-on-mismatch        Exit non-zero if any case mismatches or fails");
 }

@@ -4,6 +4,8 @@ use rum_difftest::oracle::OracleKernel;
 
 use crate::json_cli::{json_string, write_json_file};
 
+pub(super) const DEFAULT_MAX_ISSUE_SAMPLES: usize = 5;
+
 pub(super) struct OracleLaneSummaryJsonContext<'a> {
     pub(super) lane: &'a str,
     pub(super) oracle: &'a OracleKernel,
@@ -11,7 +13,7 @@ pub(super) struct OracleLaneSummaryJsonContext<'a> {
     pub(super) limit: Option<usize>,
     pub(super) include_known_differences: bool,
     pub(super) counts: OracleLaneSummaryCounts,
-    pub(super) issue_samples: Vec<OracleLaneIssueSample>,
+    pub(super) issue_samples: OracleLaneIssueSamples,
 }
 
 #[derive(Clone, Copy)]
@@ -39,6 +41,36 @@ pub(super) struct OracleLaneIssueSample {
     pub(super) known_difference_id: Option<String>,
     pub(super) known_difference_type: Option<String>,
     pub(super) seed_drift: bool,
+}
+
+pub(super) struct OracleLaneIssueSamples {
+    pub(super) limit: usize,
+    pub(super) total: usize,
+    samples: Vec<OracleLaneIssueSample>,
+}
+
+impl OracleLaneIssueSamples {
+    pub(super) fn new(limit: usize, mut samples: Vec<OracleLaneIssueSample>) -> Self {
+        let total = samples.len();
+        samples.truncate(limit);
+        Self {
+            limit,
+            total,
+            samples,
+        }
+    }
+
+    pub(super) fn emitted(&self) -> usize {
+        self.samples.len()
+    }
+
+    pub(super) fn truncated(&self) -> bool {
+        self.emitted() < self.total
+    }
+
+    fn samples(&self) -> &[OracleLaneIssueSample] {
+        &self.samples
+    }
 }
 
 pub(super) fn write_summary_json(
@@ -81,6 +113,10 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
             "    \"seed_snapshots_matched_oracle\": {},\n",
             "    \"seed_snapshots_drifted_from_oracle\": {}\n",
             "  }},\n",
+            "  \"issue_samples_limit\": {},\n",
+            "  \"issue_samples_emitted\": {},\n",
+            "  \"issue_samples_total\": {},\n",
+            "  \"issue_samples_truncated\": {},\n",
             "  \"issue_samples\": [\n",
             "{}\n",
             "  ]\n",
@@ -106,8 +142,22 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
         counts.seed_snapshots_checked,
         counts.seed_snapshots_matched_oracle,
         counts.seed_snapshots_drifted_from_oracle,
-        issue_samples_json(&context.issue_samples),
+        context.issue_samples.limit,
+        context.issue_samples.emitted(),
+        context.issue_samples.total,
+        context.issue_samples.truncated(),
+        issue_samples_json(context.issue_samples.samples()),
     )
+}
+
+pub(super) fn parse_max_issue_samples(value: &str) -> Result<usize, Box<dyn std::error::Error>> {
+    let max_issue_samples = value
+        .parse::<usize>()
+        .map_err(|_| format!("--max-issue-samples expects a positive integer, got `{value}`"))?;
+    if max_issue_samples == 0 {
+        return Err("--max-issue-samples expects a positive integer, got `0`".into());
+    }
+    Ok(max_issue_samples)
 }
 
 fn issue_samples_json(samples: &[OracleLaneIssueSample]) -> String {
