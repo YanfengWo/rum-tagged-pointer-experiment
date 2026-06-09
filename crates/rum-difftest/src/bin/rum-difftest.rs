@@ -4,6 +4,8 @@ use std::process::ExitCode;
 mod check_cli;
 #[path = "rum_difftest/inventory_cli.rs"]
 mod inventory_cli;
+#[path = "rum_difftest/inventory_json.rs"]
+mod inventory_json;
 #[path = "rum_difftest/json_cli.rs"]
 mod json_cli;
 #[path = "rum_difftest/lane_a_cli.rs"]

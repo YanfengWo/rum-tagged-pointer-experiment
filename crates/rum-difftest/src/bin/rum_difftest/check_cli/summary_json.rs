@@ -2,8 +2,9 @@ use std::path::Path;
 
 use rum_difftest::artifact_hygiene::{self, ArtifactHygieneIssue};
 use rum_difftest::divergences;
-use rum_difftest::inventory::{FixtureInventoryTotals, display_path};
+use rum_difftest::inventory::display_path;
 
+use crate::inventory_json::inventory_totals_json;
 use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, json_string_option, write_json_file};
 use crate::lane_c_json::active_ledger_field_counts_json;
 
@@ -149,7 +150,7 @@ fn inventory_baseline_check_json(report: &LocalCheckReport) -> String {
         ),
         report.inventory_baseline.is_clean(),
         json_string(&display_path(&report.inventory_baseline_path)),
-        totals_json(&totals, 6),
+        inventory_totals_json(&totals, 6),
         report.inventory_baseline.records_considered,
         report.inventory_baseline.regressions.len(),
         report
@@ -284,25 +285,6 @@ fn lane_c_check_json(report: &LocalCheckReport) -> String {
         ledger.metadata_mismatches.len(),
         ledger.retired_seed_fixture_mismatches.len(),
         ledger.tracking_target_issues.len(),
-    )
-}
-
-fn totals_json(totals: &FixtureInventoryTotals, indent: usize) -> String {
-    let spaces = " ".repeat(indent);
-    format!(
-        concat!(
-            "{{\n",
-            "{0}  \"fixtures\": {1},\n",
-            "{0}  \"entries\": {2},\n",
-            "{0}  \"normal_entries\": {3},\n",
-            "{0}  \"known_difference_entries\": {4}\n",
-            "{0}}}"
-        ),
-        spaces,
-        totals.fixtures,
-        totals.entries,
-        totals.normal_entries,
-        totals.known_difference_entries,
     )
 }
 

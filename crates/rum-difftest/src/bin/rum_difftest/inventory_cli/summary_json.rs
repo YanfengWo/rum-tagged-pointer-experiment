@@ -5,6 +5,7 @@ use rum_difftest::inventory::{
     display_path,
 };
 
+use crate::inventory_json::inventory_totals_json;
 use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, json_string_option, write_json_file};
 
 use super::InventoryFilter;
@@ -44,7 +45,7 @@ fn summary_json(
         ),
         SUMMARY_SCHEMA_VERSION,
         filters_json(filter),
-        totals_json(&totals, 2),
+        inventory_totals_json(&totals, 2),
         baseline_json(baseline_path, baseline_report),
         report
             .lanes
@@ -138,7 +139,7 @@ fn lane_json(lane: &LaneFixtureInventory) -> String {
             "    }}"
         ),
         json_string(&lane.lane),
-        totals_json(&lane.totals(), 6),
+        inventory_totals_json(&lane.totals(), 6),
         lane.totals_by_source()
             .iter()
             .map(|(source, totals)| source_json(source, totals))
@@ -180,7 +181,7 @@ fn source_json(source: &str, totals: &FixtureInventoryTotals) -> String {
     format!(
         "        {{\"source\": \"{}\", \"totals\": {}}}",
         json_string(source),
-        totals_json(totals, 8)
+        inventory_totals_json(totals, 8)
     )
 }
 
@@ -188,25 +189,6 @@ fn category_json(category: &str, totals: &FixtureInventoryTotals) -> String {
     format!(
         "        {{\"category\": \"{}\", \"totals\": {}}}",
         json_string(category),
-        totals_json(totals, 8)
-    )
-}
-
-fn totals_json(totals: &FixtureInventoryTotals, indent: usize) -> String {
-    let spaces = " ".repeat(indent);
-    format!(
-        concat!(
-            "{{\n",
-            "{0}  \"fixtures\": {1},\n",
-            "{0}  \"entries\": {2},\n",
-            "{0}  \"normal_entries\": {3},\n",
-            "{0}  \"known_difference_entries\": {4}\n",
-            "{0}}}"
-        ),
-        spaces,
-        totals.fixtures,
-        totals.entries,
-        totals.normal_entries,
-        totals.known_difference_entries,
+        inventory_totals_json(totals, 8)
     )
 }
