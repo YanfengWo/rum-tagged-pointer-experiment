@@ -69,7 +69,8 @@ and untruncated check/kind counts. `KIND` is a checked aggregate issue kind
 such as `regression`, `missing_ledger_entry`, `oracle_artifact`,
 `stray_fixture_file`, `open_known_difference`, `missing_record`, or
 `missing_artifact`; invalid kind names fail fast instead of silently producing
-an empty locator list. Use
+an empty locator list. Issue-sample controls require `--summary-json PATH`,
+because they only affect the machine-readable locator list. Use
 `--fail-on-open-known-difference` when a local or CI script should fail if the
 active Lane C ledger contains any `status=open` row; deferred and intentional
 rows remain allowed by that gate.
@@ -88,6 +89,9 @@ smoke that runs `check`, fake-oracle `lane-a` / `lane-b`, `inventory`,
 `lane-c`, and `lane-d` summary paths together, including a failing aggregate
 `check`, so schema-versioned JSON emission stays consistent across command
 families.
+Commands reject issue-sample controls such as `--max-issue-samples`,
+`--issue-sample-kind`, `--issue-sample-check`, and `--issue-sample-source`
+unless `--summary-json PATH` is also present.
 
 ## Fixture Inventory
 
@@ -234,7 +238,8 @@ the full per-case report shape. Use
 audits while still retaining the full issue-count breakdown. Use
 `--issue-sample-source seed-golden|curated-core|lane-a-custom` to focus those
 bounded locators by fixture source without changing the unfiltered issue
-counts or source-count breakdown.
+counts or source-count breakdown. These issue-sample controls require
+`--summary-json PATH`.
 Use `--fail-on-resolved-known-difference` with `--include-known-diffs` when
 an oracle audit should fail if an active known-difference row now matches and
 is ready for ledger cleanup.
@@ -292,7 +297,8 @@ per-step report rows. The same `--issue-sample-kind` filters available in
 Lane A apply here, including each sample's `fixture_source` and
 `project_owned_fixture` fields. `--issue-sample-source
 seed-golden|stateful|lane-b-custom` narrows bounded locators by fixture source
-while retaining unfiltered issue/source counts. The same
+while retaining unfiltered issue/source counts. These issue-sample controls
+require `--summary-json PATH`. The same
 `--fail-on-resolved-known-difference` cleanup gate applies to included
 stateful known differences. Lane B also reports oracle batch/input counts and
 the concrete session-batch
@@ -354,7 +360,10 @@ elapsed guardrail failures, and result-node guardrail failures into a non-zero
 exit. `--write-baseline PATH` captures the current run as a baseline artifact,
 refusing to write if any executed case fails. `--capture-runs N` repeats the
 same run before writing and uses per-case median elapsed samples plus the
-slowest observed sample for guardrails. `--threshold-profile` selects the
+slowest observed sample for guardrails. Capture-only controls such as
+`--capture-runs`, `--baseline-elapsed-multiplier`, and
+`--baseline-min-elapsed-micros` require `--write-baseline PATH` so scripts do
+not silently discard calibration settings. `--threshold-profile` selects the
 baseline threshold record set and capture defaults: `local-debug` for local dev
 runs, `ci-debug` for debug builds on CI machines, and `ci-release` for release
 builds on CI/release machines. `--check-baseline-readiness` checks the default

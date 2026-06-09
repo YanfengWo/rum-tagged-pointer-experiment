@@ -157,7 +157,9 @@ emitted count, filtered issue count, unfiltered issue count, and truncation
 status. `--issue-sample-check NAME` and `--issue-sample-kind KIND` can narrow
 only the bounded locator list during targeted aggregate-gate debugging. `KIND`
 uses checked aggregate issue-kind names so typoed filters fail fast instead of
-silently producing an empty locator list. The
+silently producing an empty locator list. Aggregate issue-sample controls
+require `--summary-json PATH` because they only affect the machine-readable
+locator list. The
 JSON also includes untruncated `issue_check_counts` and `issue_kind_counts`
 arrays grouped by aggregate check and by aggregate check plus issue kind, so
 scripts can keep stable failure dashboards even when representative samples are
@@ -225,6 +227,8 @@ audits; and the summary records the selected kind, sample limit, emitted count,
 filtered issue-sample count, and truncation status. Each emitted sample records
 `fixture_source` and `project_owned_fixture` so automation can distinguish
 imported seed drift from project-owned fixture drift without reparsing paths.
+Lane A/B issue-sample controls require `--summary-json PATH` because they only
+affect the machine-readable locator list.
 The sibling `issue_counts` object and `issue_source_counts` array remain
 unfiltered so automation can still see the full non-match, seed-drift, and
 resolved-known-difference breakdown overall and by fixture source. Use
@@ -267,7 +271,10 @@ rows, stale rows, elapsed-threshold failures, and result-node-threshold
 failures into a non-zero exit. `--write-baseline PATH` captures the current
 successful run as a baseline artifact with configurable elapsed guardrails.
 `--capture-runs N` repeats the same run and writes median elapsed samples plus
-slowest-sample guardrails. `--threshold-profile` selects the baseline
+slowest-sample guardrails. Capture-only guardrail controls such as
+`--capture-runs`, `--baseline-elapsed-multiplier`, and
+`--baseline-min-elapsed-micros` require `--write-baseline PATH`.
+`--threshold-profile` selects the baseline
 threshold record set and capture defaults, separating local debug runs from
 CI debug and CI/release runners. `--check-baseline-readiness` checks the
 default checked smoke baseline artifacts for all threshold profiles and should

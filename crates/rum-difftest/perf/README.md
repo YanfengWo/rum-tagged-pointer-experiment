@@ -83,7 +83,10 @@ exit non-zero. Lane D still does not compare against Wolfram.
 artifact; captured `baseline_elapsed_micros` uses the median elapsed sample for
 each case, while `max_elapsed_micros` uses the slowest observed sample times
 the configured multiplier. The capture path validates that every run produced
-the same case sequence.
+the same case sequence. Capture-only guardrail controls such as
+`--capture-runs`, `--baseline-elapsed-multiplier`, and
+`--baseline-min-elapsed-micros` require `--write-baseline PATH` so calibration
+settings cannot be silently ignored.
 
 By default capture sets `max_elapsed_micros` to `max(observed * 10, 250000)`
 for `local-debug` and records the largest observed result node count as

@@ -652,6 +652,9 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B/C/D follow-up: keep aggregate check/sample kind filter
     validation backed by the same name catalog used by `check --summary-json`
     issue-sample collection, avoiding parser/reporter drift
+  - [x] Lane A/B/C/D follow-up: reject check and oracle-lane issue-sample
+    controls unless `--summary-json PATH` is present, so script-only locator
+    filters cannot be silently ignored
   - [x] Lane A/B follow-up: add `--source` / `--category` filters for focused
     oracle audits over the default fixture sets, reusing the same source labels
     and semantic category names exposed by `inventory`
@@ -765,6 +768,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane D follow-up: add CI-machine-specific threshold profiles before tightening elapsed thresholds beyond broad smoke guardrails
   - [x] Lane D follow-up: add `--summary-json PATH` machine-readable status output with stable run counts, clean status, and optional baseline/readiness/write-baseline summary counts for scripts or CI dashboards
   - [x] Lane D follow-up: expose checked-baseline readiness artifact entries and suggested capture commands in text/JSON output so missing `ci-debug` / `ci-release` artifacts are actionable without reading roadmap prose
+  - [x] Lane D follow-up: reject capture-only calibration controls such as
+    `--capture-runs`, `--baseline-elapsed-multiplier`, and
+    `--baseline-min-elapsed-micros` unless `--write-baseline PATH` is present,
+    so calibration options cannot be silently ignored
   - [ ] Lane D follow-up: capture checked `ci-debug` / `ci-release` baseline artifacts on the intended runners before tightening elapsed thresholds beyond broad smoke guardrails; `lane-d --check-baseline-readiness` now reports the missing runner-specific artifacts instead of relying on TODO text alone
   - [x] Lane E: keep host-contract tests in `rum`-native crate-local suites rather than Wolfram diff, with current Rust host-contract coverage owned by `cargo test -p rum-host`
   - [x] Lane F: keep adapter/protocol tests in adapter-native suites rather than Wolfram diff, with current Jupyter protocol coverage owned by `cargo test -p rum-jupyter`
