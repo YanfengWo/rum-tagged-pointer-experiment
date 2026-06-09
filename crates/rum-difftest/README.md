@@ -49,11 +49,12 @@ cargo run -p rum-difftest -- inventory --write-baseline /tmp/rum-difftest-invent
 cargo run -p rum-difftest -- inventory --summary-json /tmp/rum-difftest-inventory.json
 ```
 
-The command summarizes Lane A and Lane B fixture files, source groups, normal
-entries, and known-difference entries. It does not execute `rum` or a Wolfram
-oracle. The JSON output is intended for scripts or dashboards that need stable
-coverage counts without parsing runner logs. `--check-baseline` compares the
-current inventory against [coverage/inventory-baseline.txt](./coverage/inventory-baseline.txt).
+The command summarizes Lane A and Lane B fixture files, source groups, semantic
+categories, normal entries, and known-difference entries. It does not execute
+`rum` or a Wolfram oracle. The JSON output is intended for scripts or
+dashboards that need stable coverage counts without parsing runner logs.
+`--check-baseline` compares the current inventory against
+[coverage/inventory-baseline.txt](./coverage/inventory-baseline.txt).
 Baseline `min_*` counts are lower bounds; `max_known_difference_entries` is an
 upper bound so resolved known differences can decrease without failing the
 gate. Use `--fail-on-regression` to make a non-clean baseline comparison exit

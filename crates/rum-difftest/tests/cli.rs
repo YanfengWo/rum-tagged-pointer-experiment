@@ -79,7 +79,10 @@ fn inventory_reports_default_fixture_coverage() {
     assert!(stdout.contains("lane-a fixtures: 24"));
     assert!(stdout.contains("lane-a source seed-golden: fixtures=9"));
     assert!(stdout.contains("lane-a source curated-core: fixtures=15"));
+    assert!(stdout.contains("lane-a category associations-core: fixtures=1"));
+    assert!(stdout.contains("lane-a category functional-combinators: fixtures=1"));
     assert!(stdout.contains("lane-b source stateful: fixtures=2"));
+    assert!(stdout.contains("lane-b category definitions-messages: fixtures=1"));
 }
 
 #[test]
@@ -176,6 +179,9 @@ fn inventory_writes_machine_readable_summary_json() {
     assert!(summary.contains("\"lane\": \"lane-a\""));
     assert!(summary.contains("\"source\": \"seed-golden\""));
     assert!(summary.contains("\"source\": \"curated-core\""));
+    assert!(summary.contains("\"categories\": ["));
+    assert!(summary.contains("\"category\": \"associations-core\""));
+    assert!(summary.contains("\"category\": \"functional-combinators\""));
     assert!(summary.contains("\"fixtures\": 24"));
     assert!(summary.contains("\"known_difference_entries\": 3"));
     fs::remove_dir_all(temp_dir).unwrap();

@@ -118,9 +118,9 @@ single broad diff bucket:
   `cargo test -p rum-jupyter` for the Jupyter protocol boundary.
 
 Use `rum-difftest inventory` as the non-oracle coverage-audit command for
-default Lane A/B fixtures. It reports fixture counts, source groups, normal
-entries, and known-difference entries; `--summary-json PATH` exposes the same
-stable counts for scripts or dashboards. Use
+default Lane A/B fixtures. It reports fixture counts, source groups, semantic
+categories, normal entries, and known-difference entries; `--summary-json PATH`
+exposes the same stable counts for scripts or dashboards. Use
 `inventory --check-baseline --fail-on-regression` as a local gate against the
 checked fixture-coverage baseline when reviewing fixture pruning or large
 coverage reshuffles. `inventory --write-baseline PATH` captures the current

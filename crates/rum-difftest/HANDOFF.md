@@ -21,9 +21,10 @@ drive that environment as an oracle.
 into separate lanes with different oracles.
 
 `rum-difftest inventory` is the non-oracle coverage-audit command for default
-Lane A/B fixtures. It reports fixture counts, source groups, normal entries,
-and known-difference entries, and supports `--summary-json PATH` for scripts or
-dashboards. `--check-baseline --fail-on-regression` compares against
+Lane A/B fixtures. It reports fixture counts, source groups, semantic
+categories, normal entries, and known-difference entries, and supports
+`--summary-json PATH` for scripts or dashboards.
+`--check-baseline --fail-on-regression` compares against
 `coverage/inventory-baseline.txt`; `min_*` fields are lower bounds, while
 `max_known_difference_entries` is an upper bound. `--write-baseline PATH`
 captures the current inventory in the same stable baseline format.

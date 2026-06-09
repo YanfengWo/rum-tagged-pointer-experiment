@@ -26,6 +26,7 @@ pub struct LaneFixtureInventory {
 pub struct FixtureInventory {
     pub path: PathBuf,
     pub source: String,
+    pub category: String,
     pub entries: usize,
     pub normal_entries: usize,
     pub known_difference_entries: usize,
@@ -75,13 +76,15 @@ impl LaneFixtureInventory {
     pub fn totals_by_source(&self) -> BTreeMap<&str, FixtureInventoryTotals> {
         let mut totals = BTreeMap::new();
         for fixture in &self.fixtures {
-            let entry = totals
-                .entry(fixture.source.as_str())
-                .or_insert_with(FixtureInventoryTotals::default);
-            entry.fixtures += 1;
-            entry.entries += fixture.entries;
-            entry.normal_entries += fixture.normal_entries;
-            entry.known_difference_entries += fixture.known_difference_entries;
+            add_fixture_totals(&mut totals, fixture.source.as_str(), fixture);
+        }
+        totals
+    }
+
+    pub fn totals_by_category(&self) -> BTreeMap<&str, FixtureInventoryTotals> {
+        let mut totals = BTreeMap::new();
+        for fixture in &self.fixtures {
+            add_fixture_totals(&mut totals, fixture.category.as_str(), fixture);
         }
         totals
     }
@@ -122,6 +125,7 @@ fn collect_lane_inventory(
         }
         fixtures.push(FixtureInventory {
             source: source_for(&path),
+            category: category_for(&path),
             path,
             entries: entries.len(),
             normal_entries,
@@ -132,6 +136,25 @@ fn collect_lane_inventory(
         lane: lane.to_string(),
         fixtures,
     })
+}
+
+fn add_fixture_totals<'a>(
+    totals: &mut BTreeMap<&'a str, FixtureInventoryTotals>,
+    group: &'a str,
+    fixture: &FixtureInventory,
+) {
+    let entry = totals.entry(group).or_default();
+    entry.fixtures += 1;
+    entry.entries += fixture.entries;
+    entry.normal_entries += fixture.normal_entries;
+    entry.known_difference_entries += fixture.known_difference_entries;
+}
+
+fn category_for(path: &Path) -> String {
+    path.file_stem()
+        .and_then(|stem| stem.to_str())
+        .map(|stem| stem.replace('_', "-"))
+        .unwrap_or_else(|| "unknown".to_string())
 }
 
 fn lane_a_source(path: &Path) -> String {
@@ -173,8 +196,17 @@ mod tests {
         assert_eq!(lane_a.totals().fixtures, 24);
         assert_eq!(lane_a.totals_by_source()["seed-golden"].fixtures, 9);
         assert_eq!(lane_a.totals_by_source()["curated-core"].fixtures, 15);
+        assert_eq!(lane_a.totals_by_category()["associations-core"].entries, 22);
+        assert_eq!(
+            lane_a.totals_by_category()["functional-combinators"].entries,
+            20
+        );
         assert_eq!(lane_a.totals().known_difference_entries, 3);
         assert_eq!(lane_b.totals().fixtures, 2);
         assert_eq!(lane_b.totals_by_source()["stateful"].fixtures, 2);
+        assert_eq!(
+            lane_b.totals_by_category()["definitions-messages"].entries,
+            57
+        );
     }
 }

@@ -99,12 +99,24 @@ fn print_inventory(report: &FixtureInventoryReport) {
                 totals.known_difference_entries
             );
         }
+        for (category, totals) in lane.totals_by_category() {
+            println!(
+                "{} category {}: fixtures={} entries={} normal={} known_differences={}",
+                lane.lane,
+                category,
+                totals.fixtures,
+                totals.entries,
+                totals.normal_entries,
+                totals.known_difference_entries
+            );
+        }
         for fixture in &lane.fixtures {
             println!(
-                "{} fixture {}\t{}\tentries={}\tnormal={}\tknown_differences={}",
+                "{} fixture {}\t{}\tcategory={}\tentries={}\tnormal={}\tknown_differences={}",
                 lane.lane,
                 fixture.source,
                 display_path(&fixture.path),
+                fixture.category,
                 fixture.entries,
                 fixture.normal_entries,
                 fixture.known_difference_entries
@@ -239,6 +251,9 @@ fn lane_json(lane: &LaneFixtureInventory) -> String {
             "      \"sources\": [\n",
             "{}\n",
             "      ],\n",
+            "      \"categories\": [\n",
+            "{}\n",
+            "      ],\n",
             "      \"fixtures\": [\n",
             "{}\n",
             "      ]\n",
@@ -251,6 +266,11 @@ fn lane_json(lane: &LaneFixtureInventory) -> String {
             .map(|(source, totals)| source_json(source, totals))
             .collect::<Vec<_>>()
             .join(",\n"),
+        lane.totals_by_category()
+            .iter()
+            .map(|(category, totals)| category_json(category, totals))
+            .collect::<Vec<_>>()
+            .join(",\n"),
         lane.fixtures
             .iter()
             .map(|fixture| {
@@ -259,6 +279,7 @@ fn lane_json(lane: &LaneFixtureInventory) -> String {
                         "        {{",
                         "\"path\": \"{}\", ",
                         "\"source\": \"{}\", ",
+                        "\"category\": \"{}\", ",
                         "\"entries\": {}, ",
                         "\"normal_entries\": {}, ",
                         "\"known_difference_entries\": {}",
@@ -266,6 +287,7 @@ fn lane_json(lane: &LaneFixtureInventory) -> String {
                     ),
                     json_string(&display_path(&fixture.path)),
                     json_string(&fixture.source),
+                    json_string(&fixture.category),
                     fixture.entries,
                     fixture.normal_entries,
                     fixture.known_difference_entries,
@@ -280,6 +302,14 @@ fn source_json(source: &str, totals: &FixtureInventoryTotals) -> String {
     format!(
         "        {{\"source\": \"{}\", \"totals\": {}}}",
         json_string(source),
+        totals_json(totals, 8)
+    )
+}
+
+fn category_json(category: &str, totals: &FixtureInventoryTotals) -> String {
+    format!(
+        "        {{\"category\": \"{}\", \"totals\": {}}}",
+        json_string(category),
         totals_json(totals, 8)
     )
 }
