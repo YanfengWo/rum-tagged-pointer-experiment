@@ -577,6 +577,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane B follow-up: expose oracle session batch and step counts in text/JSON reports so optional long-lived oracle process reuse has an observable throughput baseline
   - [x] Lane B follow-up: route prepared fixture groups through an `evaluate_session_batches` oracle interface, preserving the current per-fixture default while creating the API boundary needed for a later single-process multi-batch Wolfram transport
   - [x] Lane B follow-up: implement the `OracleKernel` multi-batch session transport as one Wolfram process per Lane B run, with fixture-boundary cleanup of Global-context symbols, newly introduced contexts, `$Packages`, `$Context`, and `$ContextPath`
+  - [x] Lane B follow-up: pin the multi-batch transport parser and per-step stream assembly with local unit tests, including malformed markers and missing-result count mismatches
   - [x] Lane A/B follow-up: add a non-oracle `rum-difftest inventory` coverage-audit command with source-group, normal-entry, known-difference, and machine-readable summary counts for default fixture sets
   - [x] Lane A/B follow-up: add a checked inventory baseline plus `inventory --check-baseline --fail-on-regression` so fixture count, total entry, normal-entry, and known-difference regression gates are executable without Wolfram
   - [x] Lane A/B follow-up: add `inventory --write-baseline PATH` so intentional fixture additions or reshuffles can refresh the stable non-oracle coverage baseline without hand-editing threshold rows

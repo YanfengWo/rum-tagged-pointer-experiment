@@ -242,3 +242,7 @@ fn join_nonempty_lines(parts: &[&str]) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
+
+#[cfg(test)]
+#[path = "session_batches/tests.rs"]
+mod tests;
