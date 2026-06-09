@@ -1,0 +1,8 @@
+# Curated Lane A file: options surface
+# Format: input ||| expected_output
+Options[o] = {alpha -> 1, beta -> 2}; Options[o] ||| {alpha -> 1, beta -> 2}
+Options[o] = {alpha -> 1, beta -> 2}; SetOptions[o, beta -> 9]; Options[o] ||| {alpha -> 1, beta -> 9}
+Options[o] = {alpha -> 1, beta -> 2}; OptionValue[o, alpha] ||| 1
+Options[o] = {alpha -> 1, beta -> 2}; OptionValue[o, {beta -> 9}, beta] ||| 9
+Options[o] = {alpha -> 1, beta -> 2}; o[x_, OptionsPattern[]] := {x, OptionValue[alpha], OptionValue[beta]}; o[item, beta -> 9] ||| {item, 1, 9}
+Options[f] = {alpha -> 1}; g[x_, OptionsPattern[f]] := {x, OptionValue[alpha]}; g[item, alpha -> 9] ||| {item, 9}
