@@ -16,6 +16,7 @@ use rum_difftest::lane_d::{
 
 use super::expect_value;
 use super::json_cli::parse_max_issue_samples;
+use crate::lane_d_json;
 
 #[path = "check_cli/summary_json.rs"]
 mod summary_json;
@@ -229,34 +230,9 @@ impl LaneDReadinessCheckReport {
         self.summary.failed == 0 && self.readiness.is_ready()
     }
 
-    pub(super) fn artifact_counts(&self) -> LaneDReadinessArtifactCounts {
-        let mut counts = LaneDReadinessArtifactCounts::default();
-        for entry in &self.readiness.entries {
-            counts.total += 1;
-            match &entry.status {
-                lane_d::LaneDCheckedBaselineReadinessStatus::Ready { .. } => counts.ready += 1,
-                lane_d::LaneDCheckedBaselineReadinessStatus::MissingArtifact => {
-                    counts.missing += 1;
-                }
-                lane_d::LaneDCheckedBaselineReadinessStatus::InvalidArtifact { .. } => {
-                    counts.invalid += 1;
-                }
-                lane_d::LaneDCheckedBaselineReadinessStatus::NotClean { .. } => {
-                    counts.not_clean += 1;
-                }
-            }
-        }
-        counts
+    pub(super) fn artifact_counts(&self) -> lane_d_json::LaneDReadinessArtifactCounts {
+        lane_d_json::readiness_artifact_counts(&self.readiness)
     }
-}
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(super) struct LaneDReadinessArtifactCounts {
-    pub(super) total: usize,
-    pub(super) ready: usize,
-    pub(super) missing: usize,
-    pub(super) invalid: usize,
-    pub(super) not_clean: usize,
 }
 
 pub(super) fn display_check_path(path: &Path) -> String {

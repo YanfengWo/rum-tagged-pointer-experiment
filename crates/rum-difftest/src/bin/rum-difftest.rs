@@ -14,6 +14,8 @@ mod lane_b_cli;
 mod lane_c_cli;
 #[path = "rum_difftest/lane_d_cli.rs"]
 mod lane_d_cli;
+#[path = "rum_difftest/lane_d_json.rs"]
+mod lane_d_json;
 #[path = "rum_difftest/oracle_cli.rs"]
 mod oracle_cli;
 #[path = "rum_difftest/oracle_lane_summary_json.rs"]
