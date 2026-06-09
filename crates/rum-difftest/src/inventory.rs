@@ -202,11 +202,15 @@ mod tests {
             20
         );
         assert_eq!(lane_a.totals().known_difference_entries, 3);
-        assert_eq!(lane_b.totals().fixtures, 2);
-        assert_eq!(lane_b.totals_by_source()["stateful"].fixtures, 2);
+        assert_eq!(lane_b.totals().fixtures, 3);
+        assert_eq!(lane_b.totals_by_source()["stateful"].fixtures, 3);
         assert_eq!(
             lane_b.totals_by_category()["definitions-messages"].entries,
             57
+        );
+        assert_eq!(
+            lane_b.totals_by_category()["zz-fixture-isolation"].entries,
+            11
         );
     }
 }

@@ -62,8 +62,9 @@ fn inventory_reports_default_fixture_coverage() {
     assert!(stdout.contains("lane-a source curated-core: fixtures=15"));
     assert!(stdout.contains("lane-a category associations-core: fixtures=1"));
     assert!(stdout.contains("lane-a category functional-combinators: fixtures=1"));
-    assert!(stdout.contains("lane-b source stateful: fixtures=2"));
+    assert!(stdout.contains("lane-b source stateful: fixtures=3"));
     assert!(stdout.contains("lane-b category definitions-messages: fixtures=1"));
+    assert!(stdout.contains("lane-b category zz-fixture-isolation: fixtures=1"));
 }
 
 #[test]
@@ -84,7 +85,7 @@ fn inventory_checked_baseline_is_clean_for_current_fixtures() {
 
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     let stdout = stdout_text(&output);
-    assert!(stdout.contains("inventory baseline records considered: 31"));
+    assert!(stdout.contains("inventory baseline records considered: 32"));
     assert!(stdout.contains("inventory baseline regressions: 0"));
 }
 
@@ -127,7 +128,8 @@ fn inventory_writes_reusable_baseline() {
     let baseline = fs::read_to_string(&baseline_path).unwrap();
     assert!(baseline.contains("lane=lane-a source=all min_fixtures=24"));
     assert!(baseline.contains("lane=lane-a category=associations-core min_fixtures=1"));
-    assert!(baseline.contains("lane=lane-b source=stateful min_fixtures=2"));
+    assert!(baseline.contains("lane=lane-b source=stateful min_fixtures=3"));
+    assert!(baseline.contains("lane=lane-b category=zz-fixture-isolation min_fixtures=1"));
 
     let check = run_difftest(&[
         "inventory",
@@ -157,7 +159,7 @@ fn inventory_writes_machine_readable_summary_json() {
     assert!(summary.contains("\"lane\": \"inventory\""));
     assert!(summary.contains("\"baseline\": {"));
     assert!(summary.contains("\"clean\": true"));
-    assert!(summary.contains("\"records_considered\": 31"));
+    assert!(summary.contains("\"records_considered\": 32"));
     assert!(summary.contains("\"lane\": \"lane-a\""));
     assert!(summary.contains("\"source\": \"seed-golden\""));
     assert!(summary.contains("\"source\": \"curated-core\""));

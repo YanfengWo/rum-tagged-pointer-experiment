@@ -7,10 +7,11 @@ same first-pass line format as Lane A:
 - `input !!! id=name | type=... | reason=...`
 
 The runner keeps one `rum` session for all steps in a file. The Wolfram oracle
-path evaluates the same ordered steps in one local kernel process for that
-fixture, so definitions, options, messages, attributes, and precedence checks
-run against real session state instead of replayed setup expressions. Lane B
-compares values, per-step messages, and per-step print output.
+path evaluates the same ordered steps as fixture batches in one local kernel
+process per Lane B run, with cleanup between fixture batches, so definitions,
+options, messages, attributes, and precedence checks run against real session
+state instead of replayed setup expressions. Lane B compares values, per-step
+messages, and per-step print output.
 
 Fixture-local package files live under `packages/`. They are support files for
 explicit `Needs[..., File[...]]` / `Get[...]` cases and are not collected as

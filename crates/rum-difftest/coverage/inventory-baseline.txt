@@ -30,7 +30,8 @@ lane=lane-a category=strings-patterns min_fixtures=1 min_entries=9 min_normal_en
 lane=lane-a category=strings-similarity min_fixtures=1 min_entries=6 min_normal_entries=6 max_known_difference_entries=0
 lane=lane-a category=strings-surface min_fixtures=1 min_entries=11 min_normal_entries=11 max_known_difference_entries=0
 lane=lane-a category=strings-templates min_fixtures=1 min_entries=6 min_normal_entries=6 max_known_difference_entries=0
-lane=lane-b source=all min_fixtures=2 min_entries=69 min_normal_entries=69 max_known_difference_entries=0
-lane=lane-b source=stateful min_fixtures=2 min_entries=69 min_normal_entries=69 max_known_difference_entries=0
+lane=lane-b source=all min_fixtures=3 min_entries=80 min_normal_entries=80 max_known_difference_entries=0
+lane=lane-b source=stateful min_fixtures=3 min_entries=80 min_normal_entries=80 max_known_difference_entries=0
 lane=lane-b category=definitions-messages min_fixtures=1 min_entries=57 min_normal_entries=57 max_known_difference_entries=0
 lane=lane-b category=package-defaults min_fixtures=1 min_entries=12 min_normal_entries=12 max_known_difference_entries=0
+lane=lane-b category=zz-fixture-isolation min_fixtures=1 min_entries=11 min_normal_entries=11 max_known_difference_entries=0
