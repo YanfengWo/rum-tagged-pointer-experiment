@@ -12,19 +12,41 @@ struct CheckIssueSample {
     message: String,
 }
 
-pub(super) fn issue_samples_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
+pub(super) struct IssueSamplesJson {
+    pub(super) total: usize,
+    pub(super) emitted: usize,
+    pub(super) samples: String,
+}
+
+impl IssueSamplesJson {
+    pub(super) fn truncated(&self) -> bool {
+        self.emitted < self.total
+    }
+}
+
+pub(super) fn issue_samples_json(
+    report: &LocalCheckReport,
+    max_issue_samples: usize,
+) -> IssueSamplesJson {
     let mut samples = Vec::new();
     collect_inventory_samples(report, &mut samples);
     collect_lane_c_samples(report, &mut samples);
     collect_lane_d_smoke_samples(report, &mut samples);
     collect_lane_d_readiness_samples(report, &mut samples);
 
-    samples
+    let total = samples.len();
+    let rendered_samples = samples
         .into_iter()
         .take(max_issue_samples)
         .map(sample_json)
-        .collect::<Vec<_>>()
-        .join(",\n")
+        .collect::<Vec<_>>();
+    let emitted = rendered_samples.len();
+
+    IssueSamplesJson {
+        total,
+        emitted,
+        samples: rendered_samples.join(",\n"),
+    }
 }
 
 fn collect_inventory_samples(report: &LocalCheckReport, samples: &mut Vec<CheckIssueSample>) {

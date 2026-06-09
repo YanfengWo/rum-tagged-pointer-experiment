@@ -31,6 +31,7 @@ fn summary_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
     if let Some(lane_d_readiness) = &report.lane_d_readiness {
         checks.push(lane_d_readiness_check_json(lane_d_readiness));
     }
+    let issue_samples = issue_samples::issue_samples_json(report, max_issue_samples);
 
     format!(
         concat!(
@@ -42,6 +43,10 @@ fn summary_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
             "  \"checks\": [\n",
             "{}\n",
             "  ],\n",
+            "  \"issue_samples_limit\": {},\n",
+            "  \"issue_samples_emitted\": {},\n",
+            "  \"issue_samples_total\": {},\n",
+            "  \"issue_samples_truncated\": {},\n",
             "  \"issue_samples\": [\n",
             "{}\n",
             "  ]\n",
@@ -51,7 +56,11 @@ fn summary_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
         report.passed_checks(),
         report.failed_checks(),
         checks.join(",\n"),
-        issue_samples::issue_samples_json(report, max_issue_samples),
+        max_issue_samples,
+        issue_samples.emitted,
+        issue_samples.total,
+        issue_samples.truncated(),
+        issue_samples.samples,
     )
 }
 

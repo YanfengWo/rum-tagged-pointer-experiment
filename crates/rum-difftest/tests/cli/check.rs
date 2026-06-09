@@ -58,6 +58,10 @@ fn check_writes_machine_readable_summary_json() {
     assert!(summary.contains("\"name\": \"lane-c-ledger\""));
     assert!(summary.contains("\"active_ledger_entries\": 2"));
     assert!(summary.contains("\"tracking_target_issues\": 0"));
+    assert!(summary.contains("\"issue_samples_limit\": 5"));
+    assert!(summary.contains("\"issue_samples_emitted\": 0"));
+    assert!(summary.contains("\"issue_samples_total\": 0"));
+    assert!(summary.contains("\"issue_samples_truncated\": false"));
     assert!(summary.contains("\"issue_samples\": ["));
     assert!(!summary.contains("\"name\": \"lane-d-smoke\""));
     assert!(!summary.contains("\"name\": \"lane-d-readiness\""));
@@ -198,6 +202,10 @@ fn check_exits_nonzero_for_inventory_baseline_regression() {
     assert!(stdout.contains("checks passed: 1"));
     assert!(stdout.contains("checks failed: 1"));
     let summary = fs::read_to_string(&summary_path).unwrap();
+    assert!(summary.contains("\"issue_samples_limit\": 1"));
+    assert!(summary.contains("\"issue_samples_emitted\": 1"));
+    assert!(summary.contains("\"issue_samples_total\": 3"));
+    assert!(summary.contains("\"issue_samples_truncated\": true"));
     assert!(summary.contains("\"check\": \"inventory-baseline\""));
     assert!(summary.contains("\"kind\": \"regression\""));
     assert!(summary.contains("\"location\": \"lane-a/source/curated-core\""));
