@@ -54,42 +54,49 @@ fn oracle_lanes_write_machine_readable_summary_json() {
         let stdout = stdout_text(&output);
         assert!(stdout.contains("summary json:"));
         let summary = fs::read_to_string(&summary_path).unwrap();
-        parse_summary_json(&summary);
-        assert!(summary.contains(&format!("\"lane\": \"{lane}\"")));
-        assert!(summary.contains("\"schema_version\": 1"));
-        assert!(summary.contains("\"clean\": false"));
-        assert!(summary.contains("\"executable\": \"/bin/true\""));
-        assert!(summary.contains("\"version_policy\": \"user-provided/unpinned\""));
-        assert!(summary.contains("\"limit\": 1"));
-        assert!(summary.contains("\"items_compared\": 1"));
-        assert!(summary.contains("\"oracle_failures\": 1"));
-        assert!(summary.contains("\"oracle_processes\": 1"));
-        assert!(summary.contains("\"issue_samples_limit\": 5"));
-        assert!(summary.contains("\"issue_samples_emitted\": 1"));
-        assert!(summary.contains("\"issue_samples_total\": 1"));
-        assert!(summary.contains("\"issue_samples_truncated\": false"));
-        assert!(summary.contains("\"issue_samples\": ["));
-        assert!(summary.contains("\"kind\": \"non_match\""));
-        assert!(summary.contains("\"index\": 1"));
-        assert!(summary.contains("\"status\": \"OracleFailure\""));
-        assert!(summary.contains("\"seed_drift\": false"));
+        let summary_json = parse_summary_json(&summary);
+        assert_eq!(json_str(&summary_json, "/lane"), lane);
+        assert!(!json_bool(&summary_json, "/clean"));
+        assert_eq!(json_str(&summary_json, "/oracle/executable"), "/bin/true");
+        assert_eq!(
+            json_str(&summary_json, "/oracle/version_policy"),
+            "user-provided/unpinned"
+        );
+        assert_eq!(json_u64(&summary_json, "/options/limit"), 1);
+        assert_eq!(json_u64(&summary_json, "/counts/items_compared"), 1);
+        assert_eq!(json_u64(&summary_json, "/counts/oracle_failures"), 1);
+        assert_eq!(json_u64(&summary_json, "/counts/oracle_processes"), 1);
+        assert_eq!(json_u64(&summary_json, "/issue_samples_limit"), 5);
+        assert_eq!(json_u64(&summary_json, "/issue_samples_emitted"), 1);
+        assert_eq!(json_u64(&summary_json, "/issue_samples_total"), 1);
+        assert!(!json_bool(&summary_json, "/issue_samples_truncated"));
+        let samples = json_array(&summary_json, "/issue_samples");
+        assert_eq!(samples.len(), 1);
+        assert_eq!(json_str(&samples[0], "/kind"), "non_match");
+        assert_eq!(json_u64(&samples[0], "/index"), 1);
+        assert_eq!(json_str(&samples[0], "/status"), "OracleFailure");
+        assert!(!json_bool(&samples[0], "/seed_drift"));
         if lane == "lane-b" {
             assert!(stdout.contains("oracle session batches: 1"));
             assert!(stdout.contains("oracle session steps: 1"));
             assert!(stdout.contains("oracle session transport: kernel-single-process-batches"));
             assert!(stdout.contains("oracle session processes: 1"));
-            assert!(
-                summary.contains("\"session_batch_transport\": \"kernel-single-process-batches\"")
+            assert_eq!(
+                json_str(&summary_json, "/oracle/session_batch_transport"),
+                "kernel-single-process-batches"
             );
-            assert!(summary.contains("\"session_batch_processes\": 1"));
-            assert!(summary.contains("\"oracle_session_batches\": 1"));
-            assert!(summary.contains("\"oracle_session_steps\": 1"));
+            assert_eq!(
+                json_u64(&summary_json, "/oracle/session_batch_processes"),
+                1
+            );
+            assert_eq!(json_u64(&summary_json, "/counts/oracle_session_batches"), 1);
+            assert_eq!(json_u64(&summary_json, "/counts/oracle_session_steps"), 1);
         } else {
             assert!(stdout.contains("oracle evaluation processes: 1"));
-            assert!(summary.contains("\"session_batch_transport\": null"));
-            assert!(summary.contains("\"session_batch_processes\": null"));
-            assert!(summary.contains("\"oracle_session_batches\": null"));
-            assert!(summary.contains("\"oracle_session_steps\": null"));
+            assert_json_null(&summary_json, "/oracle/session_batch_transport");
+            assert_json_null(&summary_json, "/oracle/session_batch_processes");
+            assert_json_null(&summary_json, "/counts/oracle_session_batches");
+            assert_json_null(&summary_json, "/counts/oracle_session_steps");
         }
         fs::remove_dir_all(temp_dir).unwrap();
     }
@@ -114,19 +121,59 @@ fn oracle_lanes_bound_summary_json_issue_samples() {
 
         assert!(output.status.success(), "stderr: {}", stderr_text(&output));
         let summary = fs::read_to_string(&summary_path).unwrap();
-        parse_summary_json(&summary);
-        assert!(summary.contains("\"issue_samples_limit\": 1"));
-        assert!(summary.contains("\"issue_samples_emitted\": 1"));
-        assert!(summary.contains("\"issue_samples_total\": 2"));
-        assert!(summary.contains("\"issue_samples_truncated\": true"));
-        assert_eq!(summary.matches("\"kind\": \"non_match\"").count(), 1);
+        let summary_json = parse_summary_json(&summary);
+        assert_eq!(json_u64(&summary_json, "/issue_samples_limit"), 1);
+        assert_eq!(json_u64(&summary_json, "/issue_samples_emitted"), 1);
+        assert_eq!(json_u64(&summary_json, "/issue_samples_total"), 2);
+        assert!(json_bool(&summary_json, "/issue_samples_truncated"));
+        let samples = json_array(&summary_json, "/issue_samples");
+        assert_eq!(samples.len(), 1);
+        assert_eq!(json_str(&samples[0], "/kind"), "non_match");
         if lane == "lane-b" {
-            assert!(summary.contains("\"oracle_processes\": 1"));
-            assert!(summary.contains("\"oracle_session_batches\": 1"));
-            assert!(summary.contains("\"oracle_session_steps\": 2"));
+            assert_eq!(json_u64(&summary_json, "/counts/oracle_processes"), 1);
+            assert_eq!(json_u64(&summary_json, "/counts/oracle_session_batches"), 1);
+            assert_eq!(json_u64(&summary_json, "/counts/oracle_session_steps"), 2);
         } else {
-            assert!(summary.contains("\"oracle_processes\": 2"));
+            assert_eq!(json_u64(&summary_json, "/counts/oracle_processes"), 2);
         }
         fs::remove_dir_all(temp_dir).unwrap();
     }
+}
+
+fn json_str<'a>(value: &'a serde_json::Value, pointer: &str) -> &'a str {
+    value
+        .pointer(pointer)
+        .and_then(|value| value.as_str())
+        .unwrap_or_else(|| panic!("expected JSON string at {pointer}: {value}"))
+}
+
+fn json_u64(value: &serde_json::Value, pointer: &str) -> u64 {
+    value
+        .pointer(pointer)
+        .and_then(|value| value.as_u64())
+        .unwrap_or_else(|| panic!("expected JSON integer at {pointer}: {value}"))
+}
+
+fn json_bool(value: &serde_json::Value, pointer: &str) -> bool {
+    value
+        .pointer(pointer)
+        .and_then(|value| value.as_bool())
+        .unwrap_or_else(|| panic!("expected JSON bool at {pointer}: {value}"))
+}
+
+fn json_array<'a>(value: &'a serde_json::Value, pointer: &str) -> &'a [serde_json::Value] {
+    value
+        .pointer(pointer)
+        .and_then(|value| value.as_array())
+        .map(Vec::as_slice)
+        .unwrap_or_else(|| panic!("expected JSON array at {pointer}: {value}"))
+}
+
+fn assert_json_null(value: &serde_json::Value, pointer: &str) {
+    assert!(
+        value
+            .pointer(pointer)
+            .is_some_and(serde_json::Value::is_null),
+        "expected JSON null at {pointer}: {value}"
+    );
 }
