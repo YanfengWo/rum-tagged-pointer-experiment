@@ -1,12 +1,37 @@
 # Curated Lane A file: structure selectors and levels
 # Format: input ||| expected_output
 Part[f[a, b, c], 2] ||| b
+Part[f[g[a], h[b]], 2, 1] ||| b
 Part[f[a, b, c], -1] ||| c
 Part[f[a, b, c], 0] ||| f
+ToString[Part[f[a, b, c], {1, -1}], InputForm] ||| "f[a, c]"
+ToString[Part[f[a, b], {}], InputForm] ||| "f[]"
 ToString[Part[f[a, b, c], 1 ;; 2], InputForm] ||| "f[a, b]"
+ToString[Part[f[g[a, b], h[c, d]], All, 2], InputForm] ||| "f[b, d]"
+ToString[Part[f[a, b, c, d], 2 ;; All ;; 2], InputForm] ||| "f[b, d]"
+ToString[Part[f[a, b], 0 ;; -1], InputForm] ||| "f[]"
+ToString[Part[f[a, b], {0, 1, 2}], InputForm] ||| "f[f, a, b]"
+ToString[Part[f[a, b], 1 ;; 0], InputForm] ||| "f[]"
+ToString[Part[f[a, b], All ;; 1 ;; -1], InputForm] ||| "f[a]"
+ToString[Part[f[a, b], 2 ;; All ;; -1], InputForm] ||| "f[b]"
 Extract[f[g[a, b], h[c]], {1, 2}] ||| b
+ToString[Extract[f[a, b], {}], InputForm] ||| "{}"
+ToString[Extract[f[a, b], {{}}], InputForm] ||| "{f[a, b]}"
+ToString[Extract[f[a, b], {{{}}}], InputForm] ||| "{f[]}"
+ToString[Extract[f[a, b], {{{1}}, {{2}}}], InputForm] ||| "{f[a], f[b]}"
 ToString[Extract[f[g[a, b], h[c]], {{1, 1}, {2, 1}}], InputForm] ||| "{a, c}"
+ToString[Extract[f[a, b], {{1}, {2}}, List], InputForm] ||| "{{a}, {b}}"
+ToString[Extract[f[g[a, b], h[c, d]], {All, 2}], InputForm] ||| "f[b, d]"
+ToString[Extract[f[g[a, b], h[c, d]], {{{1}, {2}}}], InputForm] ||| "{f[g[b]]}"
+ToString[ReplacePart[f[a, b], 2 -> x], InputForm] ||| "f[a, x]"
+ToString[ReplacePart[f[a, b], {0} -> g], InputForm] ||| "g[a, b]"
 ToString[ReplacePart[f[g[a], h[b]], {{1, 1} -> x, {2, 1} -> y}], InputForm] ||| "f[g[x], h[y]]"
+Depth[5] ||| 1
+Depth[f[]] ||| 2
+Depth[{}] ||| 2
 Depth[f[a, g[b]]] ||| 3
+Depth[f[][a], Heads -> True] ||| 3
 ToString[Level[f[a, g[b]], {2}], InputForm] ||| "{b}"
 ToString[Level[f[a, g[b]], {0, 1}], InputForm] ||| "{a, g[b], f[a, g[b]]}"
+ToString[Level[f[a, g[b]], {-1}], InputForm] ||| "{a, b}"
+ToString[Level[f[a, g[b]], {1}, Heads -> True], InputForm] ||| "{f, a, g[b]}"

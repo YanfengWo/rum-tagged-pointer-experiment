@@ -232,7 +232,7 @@ mod tests {
         assert_eq!(lane_a.totals_by_category()["lists-surface"].entries, 19);
         assert_eq!(
             lane_a.totals_by_category()["structure-selectors"].entries,
-            10
+            35
         );
         assert_eq!(
             lane_a.totals_by_category()["smoke-strings"].normal_entries,

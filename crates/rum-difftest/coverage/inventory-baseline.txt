@@ -3,8 +3,8 @@
 # (`category=...`).
 # `min_*` fields are lower bounds. `max_known_difference_entries` is an upper
 # bound so resolved known differences can decrease without failing the gate.
-lane=lane-a source=all min_fixtures=38 min_entries=570 min_normal_entries=565 max_known_difference_entries=5
-lane=lane-a source=curated-core min_fixtures=29 min_entries=401 min_normal_entries=399 max_known_difference_entries=2
+lane=lane-a source=all min_fixtures=38 min_entries=595 min_normal_entries=590 max_known_difference_entries=5
+lane=lane-a source=curated-core min_fixtures=29 min_entries=426 min_normal_entries=424 max_known_difference_entries=2
 lane=lane-a source=seed-golden min_fixtures=9 min_entries=169 min_normal_entries=166 max_known_difference_entries=3
 lane=lane-a category=arithmetic min_fixtures=1 min_entries=34 min_normal_entries=33 max_known_difference_entries=1
 lane=lane-a category=associations-core min_fixtures=1 min_entries=22 min_normal_entries=22 max_known_difference_entries=0
@@ -41,7 +41,7 @@ lane=lane-a category=strings-patterns min_fixtures=1 min_entries=22 min_normal_e
 lane=lane-a category=strings-similarity min_fixtures=1 min_entries=15 min_normal_entries=15 max_known_difference_entries=0
 lane=lane-a category=strings-surface min_fixtures=1 min_entries=11 min_normal_entries=10 max_known_difference_entries=1
 lane=lane-a category=strings-templates min_fixtures=1 min_entries=10 min_normal_entries=10 max_known_difference_entries=0
-lane=lane-a category=structure-selectors min_fixtures=1 min_entries=10 min_normal_entries=10 max_known_difference_entries=0
+lane=lane-a category=structure-selectors min_fixtures=1 min_entries=35 min_normal_entries=35 max_known_difference_entries=0
 lane=lane-a category=threading min_fixtures=1 min_entries=10 min_normal_entries=10 max_known_difference_entries=0
 lane=lane-a category=truth-comparison min_fixtures=1 min_entries=17 min_normal_entries=17 max_known_difference_entries=0
 lane=lane-b source=all min_fixtures=7 min_entries=140 min_normal_entries=140 max_known_difference_entries=0
