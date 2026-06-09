@@ -148,28 +148,28 @@ fn lane_b_filters_default_fixtures_by_source_and_category() {
 
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     let stdout = stdout_text(&output);
-    assert!(stdout.contains("steps seen: 19"));
-    assert!(stdout.contains("steps compared: 19"));
-    assert!(stdout.contains("oracle failures: 19"));
+    assert!(stdout.contains("steps seen: 54"));
+    assert!(stdout.contains("steps compared: 54"));
+    assert!(stdout.contains("oracle failures: 54"));
     assert!(stdout.contains("oracle session batches: 1"));
-    assert!(stdout.contains("oracle session steps: 19"));
+    assert!(stdout.contains("oracle session steps: 54"));
     let summary = fs::read_to_string(&summary_path).unwrap();
     let summary_json = parse_summary_json(&summary);
-    assert_eq!(json_u64(&summary_json, "/counts/items_seen"), 19);
+    assert_eq!(json_u64(&summary_json, "/counts/items_seen"), 54);
     assert_eq!(json_str(&summary_json, "/options/source"), "stateful");
     assert_eq!(
         json_str(&summary_json, "/options/category"),
         "mutation-updates"
     );
-    assert_eq!(json_u64(&summary_json, "/counts/items_compared"), 19);
-    assert_eq!(json_u64(&summary_json, "/counts/oracle_failures"), 19);
+    assert_eq!(json_u64(&summary_json, "/counts/items_compared"), 54);
+    assert_eq!(json_u64(&summary_json, "/counts/oracle_failures"), 54);
     assert_eq!(json_u64(&summary_json, "/counts/oracle_session_batches"), 1);
-    assert_eq!(json_u64(&summary_json, "/counts/oracle_session_steps"), 19);
+    assert_eq!(json_u64(&summary_json, "/counts/oracle_session_steps"), 54);
     let source_counts = json_array(&summary_json, "/issue_source_counts");
     assert_eq!(source_counts.len(), 1);
     assert_eq!(json_str(&source_counts[0], "/fixture_source"), "stateful");
     assert!(json_bool(&source_counts[0], "/project_owned_fixture"));
-    assert_eq!(json_u64(&source_counts[0], "/total"), 19);
+    assert_eq!(json_u64(&source_counts[0], "/total"), 54);
     fs::remove_dir_all(temp_dir).unwrap();
 }
 
