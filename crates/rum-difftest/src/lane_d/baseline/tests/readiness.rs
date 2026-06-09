@@ -45,6 +45,16 @@ fn checked_baseline_readiness_reports_clean_and_missing_artifacts() {
             missing_path.display()
         )
     );
+    assert_eq!(
+        checked_baseline_capture_command(&checked_artifact(
+            LaneDThresholdProfile::CiRelease,
+            &temp_dir.join("smoke-ci-release.txt")
+        )),
+        format!(
+            "cargo run --release -p rum-difftest -- lane-d --suite all --profile smoke --threshold-profile ci-release --capture-runs 5 --write-baseline {} --fail-on-error",
+            temp_dir.join("smoke-ci-release.txt").display()
+        )
+    );
     fs::remove_dir_all(temp_dir).unwrap();
 }
 

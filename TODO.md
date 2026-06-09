@@ -824,6 +824,10 @@ This roadmap intentionally uses two levels of detail:
     `--capture-runs`, `--baseline-elapsed-multiplier`, and
     `--baseline-min-elapsed-micros` unless `--write-baseline PATH` is present,
     so calibration options cannot be silently ignored
+  - [x] Lane D follow-up: make checked-baseline readiness suggestions
+    runner-aware by using release-mode `cargo run --release` commands for
+    `ci-release` artifact capture while keeping local/debug profiles on debug
+    cargo runs
   - [ ] Lane D follow-up: capture checked `ci-debug` / `ci-release` baseline artifacts on the intended runners before tightening elapsed thresholds beyond broad smoke guardrails; `lane-d --check-baseline-readiness` now reports the missing runner-specific artifacts instead of relying on TODO text alone
   - [x] Lane E: keep host-contract tests in `rum`-native crate-local suites rather than Wolfram diff, with current Rust host-contract coverage owned by `cargo test -p rum-host`
   - [x] Lane F: keep adapter/protocol tests in adapter-native suites rather than Wolfram diff, with current Jupyter protocol coverage owned by `cargo test -p rum-jupyter`

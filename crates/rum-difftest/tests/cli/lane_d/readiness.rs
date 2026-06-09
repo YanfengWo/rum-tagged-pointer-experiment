@@ -43,5 +43,17 @@ fn lane_d_readiness_summary_lists_artifacts_and_capture_commands() {
         }),
         "expected a ci-debug missing artifact entry: {entries:?}"
     );
+    assert!(
+        entries.iter().any(|entry| {
+            json_str(entry, "/status") == "missing"
+                && json_str(entry, "/threshold_profile") == "ci-release"
+                && json_str(entry, "/path").contains("smoke-ci-release.txt")
+                && json_str(entry, "/suggested_capture_command")
+                    .starts_with("cargo run --release -p rum-difftest -- lane-d")
+                && json_str(entry, "/suggested_capture_command")
+                    .contains("--threshold-profile ci-release")
+        }),
+        "expected a ci-release missing artifact entry with release capture command: {entries:?}"
+    );
     fs::remove_dir_all(temp_dir).unwrap();
 }

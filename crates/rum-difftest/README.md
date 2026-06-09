@@ -349,6 +349,7 @@ cargo run -p rum-difftest -- lane-d --baseline crates/rum-difftest/perf/baseline
 cargo run -p rum-difftest -- lane-d --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
 cargo run -p rum-difftest -- lane-d --capture-runs 5 --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
 cargo run -p rum-difftest -- lane-d --threshold-profile ci-debug --capture-runs 5 --write-baseline /tmp/rum-lane-d-ci-debug.txt --fail-on-error
+cargo run --release -p rum-difftest -- lane-d --threshold-profile ci-release --capture-runs 5 --write-baseline /tmp/rum-lane-d-ci-release.txt --fail-on-error
 cargo run -p rum-difftest -- lane-d --check-baseline-readiness
 cargo run -p rum-difftest -- lane-d --summary-json /tmp/rum-lane-d-summary.json
 ```
@@ -374,7 +375,9 @@ checked smoke baseline artifacts for all threshold profiles and exits non-zero
 until the `ci-debug` / `ci-release` artifacts have been captured on the
 intended runners. The default expected paths are
 `perf/baselines/smoke.txt`, `perf/baselines/smoke-ci-debug.txt`, and
-`perf/baselines/smoke-ci-release.txt`. `--summary-json PATH` writes a stable
+`perf/baselines/smoke-ci-release.txt`; readiness suggestions use
+`cargo run --release` for the `ci-release` artifact so it is not accidentally
+captured from a debug build. `--summary-json PATH` writes a stable
 machine-readable summary for scripts or CI dashboards. That JSON exposes the
 selected suite/profile/threshold profile, run counts, clean status, and
 optional baseline/readiness/write-baseline summary counts; it intentionally

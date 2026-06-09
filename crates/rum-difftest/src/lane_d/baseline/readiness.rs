@@ -60,8 +60,15 @@ pub fn check_checked_baseline_readiness_for(
 }
 
 pub fn checked_baseline_capture_command(artifact: &LaneDCheckedBaselineArtifact) -> String {
+    let cargo_run = match artifact.threshold_profile {
+        LaneDThresholdProfile::LocalDebug | LaneDThresholdProfile::CiDebug => {
+            "cargo run -p rum-difftest"
+        }
+        LaneDThresholdProfile::CiRelease => "cargo run --release -p rum-difftest",
+    };
     format!(
-        "cargo run -p rum-difftest -- lane-d --suite all --profile {} --threshold-profile {} --capture-runs 5 --write-baseline {} --fail-on-error",
+        "{} -- lane-d --suite all --profile {} --threshold-profile {} --capture-runs 5 --write-baseline {} --fail-on-error",
+        cargo_run,
         profile_name(artifact.profile),
         threshold_profile_name(artifact.threshold_profile),
         artifact.path.display()

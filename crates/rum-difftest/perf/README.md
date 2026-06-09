@@ -62,7 +62,8 @@ covers the current smoke lane. Text output and `--summary-json PATH` include
 one readiness entry per expected artifact plus a suggested `lane-d
 --write-baseline` command for each artifact, so CI runners can surface the
 exact capture command for missing `ci-debug` / `ci-release` baselines. The
-current default artifact paths are:
+`ci-release` suggestion uses `cargo run --release` to avoid capturing a release
+threshold profile from a debug build. The current default artifact paths are:
 
 - [baselines/smoke.txt](./baselines/smoke.txt): `local-debug`
 - `baselines/smoke-ci-debug.txt`: `ci-debug`, to be captured on the intended

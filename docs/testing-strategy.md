@@ -284,7 +284,9 @@ default checked smoke baseline artifacts for all threshold profiles and should
 remain red until runner-specific `ci-debug` / `ci-release` artifacts are
 captured on the intended machines. Its text and JSON reports list each expected
 artifact and a suggested capture command, so missing runner-specific baselines
-are actionable in CI logs. Lane D remains a local `rum` performance lane; it
+are actionable in CI logs. The `ci-release` suggestion uses
+`cargo run --release` so the release threshold profile is not captured from a
+debug build. Lane D remains a local `rum` performance lane; it
 should not use a Wolfram oracle.
 
 ## Oracle Policy
