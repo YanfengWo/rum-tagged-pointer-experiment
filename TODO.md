@@ -622,6 +622,10 @@ This roadmap intentionally uses two levels of detail:
     non-match, seed-drift, and resolved-known-difference locators so targeted
     oracle audits are not drowned out by unrelated issue categories, while
     keeping an unfiltered issue-count breakdown in summary JSON
+  - [x] Lane A follow-up: audit curated fixture seed annotations against the
+    local Wolfram oracle and refresh stale project-owned association/template
+    expectations, leaving the remaining default-run seed drift isolated to the
+    imported `seed/ham-import` snapshot
   - [x] Lane A follow-up: add a curated structure-selector fixture for stable
     `Part` / `Extract` / `ReplacePart` / `Depth` / `Level` conformance, and
     guard it with the checked inventory category baseline

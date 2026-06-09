@@ -1,6 +1,6 @@
 # Curated Lane A file: strings templates
 # Format: input ||| expected_output
-StringForm["a``b``", 1, x] ||| "a1bx"
+StringForm["a``b``", 1, x] ||| StringForm["a``b``", 1, x]
 TemplateApply["x = ``", 7] ||| "x = 7"
 StringRiffle[{"a", "b", "c"}] ||| "a b c"
 StringPadLeft["7", 3] ||| "  7"

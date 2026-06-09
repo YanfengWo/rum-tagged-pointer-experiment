@@ -5,8 +5,8 @@ AssociationQ[<|a -> 1|>] ||| True
 Normal[<|a -> 1, b -> 2|>] ||| {a -> 1, b -> 2}
 Lookup[<|a -> 1, b -> 2|>, b] ||| 2
 Lookup[<|a -> 1|>, b, 99] ||| 99
-Lookup[<|a -> 1|>, b, 99, Hold] ||| Hold[99]
-Lookup[<|a -> <|b -> 2|>|>, {Key[a], Key[b]}] ||| 2
+Lookup[<|a -> 1|>, b, 99, Hold] ||| 99
+Lookup[<|a -> <|b -> 2|>|>, {Key[a], Key[b]}] ||| {<|b -> 2|>, Missing["KeyAbsent", b]}
 Keys[<|a -> 1, b -> 2|>] ||| {a, b}
 Keys[{a -> 1, b -> 2}, Hold] ||| {Hold[a], Hold[b]}
 Values[<|a -> 1, b -> 2|>] ||| {1, 2}
@@ -16,7 +16,7 @@ Normal[KeyDrop[<|a -> 1, b -> 2, c -> 3|>, b]] ||| {a -> 1, c -> 3}
 Normal[KeySelect[<|a -> 1, b -> 2, c -> 3|>, MatchQ[#, Alternatives[a, c]] &]] ||| {a -> 1, c -> 3}
 Normal[KeySort[<|b -> 2, a -> 1, c -> 3|>]] ||| {a -> 1, b -> 2, c -> 3}
 Normal[KeySort[<|bb -> 2, a -> 1|>, Function[Less[StringLength[ToString[Slot[1]]], StringLength[ToString[Slot[2]]]]]]] ||| {a -> 1, bb -> 2}
-KeySortBy[ToString][{bb -> 2, a -> 1}] ||| {a -> 1, bb -> 2}
+KeySortBy[ToString][{bb -> 2, a -> 1}] ||| <|a -> 1, bb -> 2|>
 Key[a][<|a -> 1, b -> 2|>] ||| 1
 Key[b][<|a -> 1|>] ||| Missing["KeyAbsent", b]
 Missing[] ||| Missing[]
