@@ -78,8 +78,11 @@ as `WolframKernel`, `MathKernel`, or a wrapper with the same `-noprompt
 `RUM_DIFFTEST_ORACLE_KERNEL`, then `PATH`, then common local install paths. It
 writes its oracle wrapper script and per-case input files to a temporary
 directory for each run, compares values, messages, and printed output
-in-memory, and removes those artifacts afterward. The CLI reports the resolved
-oracle executable, the effective per-invocation timeout, the explicit
+in-memory, and removes those artifacts afterward. By default, Lane A runs both
+the imported seed golden files under `seed/ham-import/golden/` and the curated
+project-owned fixtures under `cases/wolfram/core/`; use `--fixture PATH` for a
+single file. The CLI reports the resolved oracle executable, the effective
+per-invocation timeout, the explicit
 `user-provided/unpinned` version policy, and best-effort Wolfram `$Version`;
 version probe failures are reported but do not fail the diff run, and config
 does not support version pin keys. The timeout defaults to 120 seconds and can

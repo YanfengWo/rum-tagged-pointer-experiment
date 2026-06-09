@@ -94,6 +94,10 @@ Use a Wolfram oracle for one-shot expression checks:
 
 This lane should start from the imported `ham` golden files under
 [seed/ham-import/golden](./seed/ham-import/golden).
+The default Lane A runner now includes both those imported seed files and the
+curated project-owned files under
+[cases/wolfram/core](./cases/wolfram/core/README.md); pass `--fixture PATH`
+when a run should target one file.
 
 Run `lane-a --include-known-diffs` when auditing imported one-shot
 divergences. Included known-difference cases carry their fixture metadata into

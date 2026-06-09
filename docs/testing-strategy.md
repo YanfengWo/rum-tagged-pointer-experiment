@@ -100,7 +100,9 @@ single broad diff bucket:
 - Lane A: single-expression, stateless Wolfram comparisons over values,
   messages, and printed output. `rum` results use the shared difftest
   InputForm-like renderer for common structural output shapes. This is the
-  first place to put compact canonical and boundary cases.
+  first place to put compact canonical and boundary cases. Its default runner
+  includes both imported seed golden files and curated project-owned
+  `cases/wolfram/core` fixtures.
 - Lane B: stateful session scripts, including definitions, options, messages,
   contexts, package loading, and repeated evaluations.
 - Lane C: checked known-difference ledger, tying divergences to matrix entries

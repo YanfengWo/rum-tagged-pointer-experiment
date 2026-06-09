@@ -1,12 +1,11 @@
 use std::collections::BTreeMap;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use rum_runtime::Session;
 use rum_stdlib::install_core;
 use rum_terminal::{render_request_failure, render_runtime_message};
 
-use crate::fixtures::{GoldenEntry, golden_dir, load_text, parse_golden_file};
+use crate::fixtures::{GoldenEntry, lane_a_default_fixture_paths, load_text, parse_golden_file};
 use crate::oracle::{Oracle, OracleError};
 use crate::value_render::render_input_form_like;
 
@@ -279,11 +278,7 @@ fn collect_fixture_paths(single_fixture: Option<&Path>) -> Result<Vec<PathBuf>, 
         return Ok(vec![path.to_path_buf()]);
     }
 
-    let mut files = fs::read_dir(golden_dir())?
-        .map(|entry| entry.map(|entry| entry.path()))
-        .collect::<Result<Vec<_>, _>>()?;
-    files.sort();
-    Ok(files)
+    lane_a_default_fixture_paths()
 }
 
 #[cfg(test)]

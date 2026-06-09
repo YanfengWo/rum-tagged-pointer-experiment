@@ -57,8 +57,36 @@ pub fn golden_dir() -> PathBuf {
     seed_root().join("golden")
 }
 
+pub fn curated_wolfram_core_dir() -> PathBuf {
+    crate_root().join("cases/wolfram/core")
+}
+
 pub fn stateful_dir() -> PathBuf {
     crate_root().join("cases/stateful")
+}
+
+pub fn lane_a_default_fixture_paths() -> Result<Vec<PathBuf>, std::io::Error> {
+    let mut files = text_files_in(golden_dir())?;
+    files.extend(text_files_in(curated_wolfram_core_dir())?);
+    files.sort();
+    Ok(files)
+}
+
+pub fn lane_b_default_fixture_paths() -> Result<Vec<PathBuf>, std::io::Error> {
+    text_files_in(stateful_dir())
+}
+
+fn text_files_in(dir: PathBuf) -> Result<Vec<PathBuf>, std::io::Error> {
+    let mut files = fs::read_dir(dir)?
+        .map(|entry| entry.map(|entry| entry.path()))
+        .filter(|entry| {
+            entry.as_ref().map_or(true, |path| {
+                path.extension().and_then(|ext| ext.to_str()) == Some("txt")
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    files.sort();
+    Ok(files)
 }
 
 pub fn parse_golden_file(text: &str) -> Result<Vec<GoldenEntry>, FixtureParseError> {
@@ -165,11 +193,7 @@ mod tests {
         let mut normal = 0usize;
         let mut known_diffs = 0usize;
 
-        let mut files = fs::read_dir(golden_dir())
-            .unwrap()
-            .map(|entry| entry.unwrap().path())
-            .collect::<Vec<_>>();
-        files.sort();
+        let files = text_files_in(golden_dir()).unwrap();
 
         assert_eq!(files.len(), 9);
 
@@ -205,13 +229,7 @@ mod tests {
 
     #[test]
     fn parses_curated_lane_a_smoke_fixtures() {
-        let core_dir = crate_root().join("cases/wolfram/core");
-        let mut files = fs::read_dir(core_dir)
-            .unwrap()
-            .map(|entry| entry.unwrap().path())
-            .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("txt"))
-            .collect::<Vec<_>>();
-        files.sort();
+        let files = text_files_in(curated_wolfram_core_dir()).unwrap();
 
         assert!(files.len() >= 4);
 
@@ -227,13 +245,25 @@ mod tests {
     }
 
     #[test]
+    fn lane_a_default_fixture_paths_include_seed_and_curated_cases() {
+        let files = lane_a_default_fixture_paths().unwrap();
+
+        assert_eq!(files.len(), 24);
+        assert!(
+            files
+                .iter()
+                .any(|path| path.ends_with("golden/arithmetic.txt"))
+        );
+        assert!(
+            files
+                .iter()
+                .any(|path| path.ends_with("cases/wolfram/core/smoke_arithmetic.txt"))
+        );
+    }
+
+    #[test]
     fn parses_curated_stateful_fixtures() {
-        let mut files = fs::read_dir(stateful_dir())
-            .unwrap()
-            .map(|entry| entry.unwrap().path())
-            .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("txt"))
-            .collect::<Vec<_>>();
-        files.sort();
+        let files = lane_b_default_fixture_paths().unwrap();
 
         assert!(
             !files.is_empty(),
