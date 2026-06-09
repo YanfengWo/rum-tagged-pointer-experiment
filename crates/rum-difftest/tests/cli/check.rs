@@ -13,7 +13,7 @@ fn check_runs_fast_non_oracle_gates() {
     let stdout = stdout_text(&output);
     assert!(stdout.contains("rum-difftest check"));
     assert!(stdout.contains("check\tinventory-baseline\tclean"));
-    assert!(stdout.contains("inventory baseline records considered: 45"));
+    assert!(stdout.contains("inventory baseline records considered: 46"));
     assert!(stdout.contains("inventory baseline regressions: 0"));
     assert!(stdout.contains("check\tlane-c-ledger\tclean"));
     assert!(stdout.contains("lane-c issues: 0"));
@@ -91,7 +91,7 @@ fn check_writes_machine_readable_summary_json() {
 
     let inventory = check_entry(&summary_json, "inventory-baseline");
     assert!(json_bool(inventory, "/clean"));
-    assert_eq!(json_u64(inventory, "/records_considered"), 45);
+    assert_eq!(json_u64(inventory, "/records_considered"), 46);
     let lane_c = check_entry(&summary_json, "lane-c-ledger");
     assert!(json_bool(lane_c, "/clean"));
     assert_eq!(json_u64(lane_c, "/counts/active_ledger_entries"), 4);

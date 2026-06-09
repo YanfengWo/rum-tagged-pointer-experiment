@@ -3,8 +3,8 @@
 # (`category=...`).
 # `min_*` fields are lower bounds. `max_known_difference_entries` is an upper
 # bound so resolved known differences can decrease without failing the gate.
-lane=lane-a source=all min_fixtures=35 min_entries=440 min_normal_entries=435 max_known_difference_entries=5
-lane=lane-a source=curated-core min_fixtures=26 min_entries=271 min_normal_entries=269 max_known_difference_entries=2
+lane=lane-a source=all min_fixtures=36 min_entries=458 min_normal_entries=453 max_known_difference_entries=5
+lane=lane-a source=curated-core min_fixtures=27 min_entries=289 min_normal_entries=287 max_known_difference_entries=2
 lane=lane-a source=seed-golden min_fixtures=9 min_entries=169 min_normal_entries=166 max_known_difference_entries=3
 lane=lane-a category=arithmetic min_fixtures=1 min_entries=34 min_normal_entries=33 max_known_difference_entries=1
 lane=lane-a category=associations-core min_fixtures=1 min_entries=22 min_normal_entries=22 max_known_difference_entries=0
@@ -23,6 +23,7 @@ lane=lane-a category=lists min_fixtures=1 min_entries=38 min_normal_entries=38 m
 lane=lane-a category=messages-attributes min_fixtures=1 min_entries=9 min_normal_entries=9 max_known_difference_entries=0
 lane=lane-a category=options-surface min_fixtures=1 min_entries=6 min_normal_entries=6 max_known_difference_entries=0
 lane=lane-a category=ordering min_fixtures=1 min_entries=12 min_normal_entries=12 max_known_difference_entries=0
+lane=lane-a category=ordering-surface min_fixtures=1 min_entries=18 min_normal_entries=18 max_known_difference_entries=0
 lane=lane-a category=patterns min_fixtures=1 min_entries=17 min_normal_entries=17 max_known_difference_entries=0
 lane=lane-a category=polynomial-rational min_fixtures=1 min_entries=3 min_normal_entries=3 max_known_difference_entries=0
 lane=lane-a category=predicate-surface min_fixtures=1 min_entries=21 min_normal_entries=21 max_known_difference_entries=0

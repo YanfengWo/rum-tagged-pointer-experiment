@@ -1,0 +1,20 @@
+# Curated Lane A file: ordering surface
+# Format: input ||| expected_output
+Order[a, b] ||| 1
+Order[b, a] ||| -1
+Order[2, 10] ||| 1
+NumericalOrder[10, 2] ||| -1
+LexicographicOrder[{1, 2}, {1, 3}] ||| 1
+LexicographicOrder["2", "10"] ||| -1
+AlphabeticOrder["a", "b"] ||| 1
+OrderedQ[{a, b, b, c}] ||| True
+OrderedQ[{b, a}] ||| False
+OrderedQ[f[a, b]] ||| True
+OrderedQ[f[b, a]] ||| False
+Order[f[2], f[10]] ||| 1
+OrderedQ[{f[2], f[10]}] ||| True
+OrderedQ[{f[10], f[2]}] ||| False
+Order[Plus[a, b], Times[a, b]] ||| -1
+Order[Power[a, b], Plus[a, b]] ||| 1
+OrderedQ[{a/b, a*b}] ||| True
+OrderedQ[{a*b, a/b}] ||| False
