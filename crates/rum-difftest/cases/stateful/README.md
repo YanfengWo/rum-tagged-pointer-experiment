@@ -6,6 +6,17 @@ same first-pass line format as Lane A:
 - `input ||| expected_output`
 - `input !!! id=name | type=... | reason=...`
 
+Current fixture focus:
+
+- `definitions_messages.txt`: assignments, options, messages, attributes,
+  precedence, context basics, and definition lifecycle
+- `package_defaults.txt`: file-backed package loading and package-scoped
+  defaults
+- `scoping_control.txt`: ordered `Block` / `Module` / `With` behavior and
+  control-flow restoration across steps
+- `zz_fixture_isolation.txt`: cleanup between fixture batches in the
+  multi-batch oracle transport
+
 The runner keeps one `rum` session for all steps in a file. The Wolfram oracle
 path evaluates the same ordered steps as fixture batches in one local kernel
 process per Lane B run, with cleanup between fixture batches, so definitions,

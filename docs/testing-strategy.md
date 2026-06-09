@@ -161,9 +161,10 @@ Messages and diagnostics start in runtime regression tests unless the
 differential runner can capture and compare them reliably. Lane A can compare
 single-expression message and print output, while Lane B provides ordered
 session comparisons against one local Wolfram kernel process per fixture,
-including InputForm-like result values, per-step messages, and per-step print
-output. That makes focused message and print behavior eligible for either lane
-when the behavior is Wolfram-oracle-comparable.
+including InputForm-like result values, per-step messages, per-step print
+output, and ordered state restoration checks for stateful scoping/control
+fixtures. That makes focused message and print behavior eligible for either
+lane when the behavior is Wolfram-oracle-comparable.
 
 Lane C is the synchronization check for `!!! id=...` fixture entries. Keep
 active known differences in

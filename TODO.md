@@ -650,6 +650,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] scoping and held-evaluation constructs now have an initial curated Lane A foothold through loops/control/function cases
   - [x] messages, attributes, and definition precedence now have an extended Lane B stateful foothold, including exact emitted-message checks, message-list length, `SetAttributes` / `ClearAttributes`, held argument evaluation, typed/generic/literal downvalue precedence, and UpValue dispatch
   - [x] Lane B now has broader stateful smoke coverage for prints, default values, repeated delayed evaluation, context `Begin` / `End`, definition lifecycle `Clear`, and `Protect` / `Unprotect`
+  - [x] Lane B now has a curated stateful scoping/control fixture covering ordered `Block` / `Module` / `With` behavior and `Throw`-mediated restoration against a real Wolfram session oracle
   - [x] close the current Lane B known differences from `definitions_messages.txt`: exact Wolfram `$MessageList` `HoldForm[...]` shape, literal downvalue priority after an existing typed downvalue, and indexed default lookup fallback
   - [x] broaden Lane B package-loading/default-value coverage with an explicit file-backed package fixture covering qualified package values/functions, package-scoped defaults, indexed default fallback, and repeated `Needs` no-reload behavior
   - [x] string semantics now have an initial curated Lane A foothold that covers multiple CL-07 subfamilies

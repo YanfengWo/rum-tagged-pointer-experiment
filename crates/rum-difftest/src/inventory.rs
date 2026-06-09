@@ -207,12 +207,13 @@ mod tests {
         );
         assert_eq!(lane_a.totals_by_category()["threading"].entries, 10);
         assert_eq!(lane_a.totals().known_difference_entries, 3);
-        assert_eq!(lane_b.totals().fixtures, 3);
-        assert_eq!(lane_b.totals_by_source()["stateful"].fixtures, 3);
+        assert_eq!(lane_b.totals().fixtures, 4);
+        assert_eq!(lane_b.totals_by_source()["stateful"].fixtures, 4);
         assert_eq!(
             lane_b.totals_by_category()["definitions-messages"].entries,
             57
         );
+        assert_eq!(lane_b.totals_by_category()["scoping-control"].entries, 14);
         assert_eq!(
             lane_b.totals_by_category()["zz-fixture-isolation"].entries,
             11

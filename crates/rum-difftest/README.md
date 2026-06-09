@@ -190,11 +190,11 @@ cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --sum
 Lane B keeps one `rum` session per fixture file and evaluates the matching
 Wolfram steps in one local kernel process for that fixture. This avoids the
 older replay-based state simulation and gives definition, option, message,
-attribute, and precedence checks a real ordered-session oracle. The runner
-compares InputForm-like result values plus per-step message and print streams.
-Like Lane A, its CLI reports the resolved oracle executable and best-effort
-Wolfram `$Version` without making version probing a pass/fail gate, and applies
-the same per-session oracle timeout.
+attribute, precedence, scoping, and control-flow restoration checks a real
+ordered-session oracle. The runner compares InputForm-like result values plus
+per-step message and print streams. Like Lane A, its CLI reports the resolved
+oracle executable and best-effort Wolfram `$Version` without making version
+probing a pass/fail gate, and applies the same per-session oracle timeout.
 Fixture `expected` fields are treated as seed annotations and are checked only
 for seed-vs-oracle drift, not as the comparison oracle.
 When `--include-known-diffs` is used, the report includes the known-difference

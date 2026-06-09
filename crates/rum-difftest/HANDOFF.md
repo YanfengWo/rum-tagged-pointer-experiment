@@ -161,6 +161,10 @@ This lane should cover:
 - iterator leakage and scoping restoration
 - message accumulation and clearing
 
+Current curated Lane B fixtures cover definitions/messages, package defaults,
+stateful scoping/control restoration, and fixture-boundary cleanup for the
+multi-batch oracle transport.
+
 Run `lane-b --include-known-diffs` when auditing current divergences. Included
 known-difference steps carry their fixture metadata into the report, and the
 summary counts confirmed vs resolved known differences so fixed rows can be

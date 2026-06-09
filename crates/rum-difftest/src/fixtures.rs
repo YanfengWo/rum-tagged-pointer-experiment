@@ -279,6 +279,12 @@ mod tests {
             !files.is_empty(),
             "stateful fixture directory should contain at least one fixture"
         );
+        assert!(
+            files
+                .iter()
+                .any(|path| path.ends_with("cases/stateful/scoping_control.txt")),
+            "Lane B default fixtures should include stateful scoping/control coverage"
+        );
 
         for file in files {
             let text = load_text(&file).unwrap();
