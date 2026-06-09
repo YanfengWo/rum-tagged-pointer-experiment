@@ -12,7 +12,8 @@ The current category records cover these priorities:
 - Lane A one-shot same-name semantics: arithmetic, lists, ordering, scoping,
   definitions and definition precedence, patterns, rules/traversal, structure
   selectors, threading, associations, functional combinators, control objects,
-  option handling, failure/status objects, and string-language subsets.
+  messages/attributes, option handling, failure/status objects, and
+  string-language subsets.
 - Lane B stateful semantics: definitions/messages, package/default-value
   behavior, and fixture-boundary isolation for the multi-batch oracle
   transport.
