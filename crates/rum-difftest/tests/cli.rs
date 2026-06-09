@@ -67,12 +67,13 @@ fn inventory_reports_default_fixture_coverage() {
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     let stdout = stdout_text(&output);
     assert!(stdout.contains("fixture inventory"));
-    assert!(stdout.contains("lane-a fixtures: 25"));
+    assert!(stdout.contains("lane-a fixtures: 26"));
     assert!(stdout.contains("lane-a source seed-golden: fixtures=9"));
-    assert!(stdout.contains("lane-a source curated-core: fixtures=16"));
+    assert!(stdout.contains("lane-a source curated-core: fixtures=17"));
     assert!(stdout.contains("lane-a category associations-core: fixtures=1"));
     assert!(stdout.contains("lane-a category functional-combinators: fixtures=1"));
     assert!(stdout.contains("lane-a category structure-selectors: fixtures=1"));
+    assert!(stdout.contains("lane-a category threading: fixtures=1"));
     assert!(stdout.contains("lane-b source stateful: fixtures=3"));
     assert!(stdout.contains("lane-b category definitions-messages: fixtures=1"));
     assert!(stdout.contains("lane-b category zz-fixture-isolation: fixtures=1"));
@@ -96,7 +97,7 @@ fn inventory_checked_baseline_is_clean_for_current_fixtures() {
 
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     let stdout = stdout_text(&output);
-    assert!(stdout.contains("inventory baseline records considered: 33"));
+    assert!(stdout.contains("inventory baseline records considered: 34"));
     assert!(stdout.contains("inventory baseline regressions: 0"));
 }
 
@@ -137,9 +138,10 @@ fn inventory_writes_reusable_baseline() {
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     assert!(stdout_text(&output).contains("wrote inventory baseline:"));
     let baseline = fs::read_to_string(&baseline_path).unwrap();
-    assert!(baseline.contains("lane=lane-a source=all min_fixtures=25"));
+    assert!(baseline.contains("lane=lane-a source=all min_fixtures=26"));
     assert!(baseline.contains("lane=lane-a category=associations-core min_fixtures=1"));
     assert!(baseline.contains("lane=lane-a category=structure-selectors min_fixtures=1"));
+    assert!(baseline.contains("lane=lane-a category=threading min_fixtures=1"));
     assert!(baseline.contains("lane=lane-b source=stateful min_fixtures=3"));
     assert!(baseline.contains("lane=lane-b category=zz-fixture-isolation min_fixtures=1"));
 
@@ -173,14 +175,14 @@ fn inventory_writes_machine_readable_summary_json() {
     assert!(summary.contains("\"schema_version\": 1"));
     assert!(summary.contains("\"baseline\": {"));
     assert!(summary.contains("\"clean\": true"));
-    assert!(summary.contains("\"records_considered\": 33"));
+    assert!(summary.contains("\"records_considered\": 34"));
     assert!(summary.contains("\"lane\": \"lane-a\""));
     assert!(summary.contains("\"source\": \"seed-golden\""));
     assert!(summary.contains("\"source\": \"curated-core\""));
     assert!(summary.contains("\"categories\": ["));
     assert!(summary.contains("\"category\": \"associations-core\""));
     assert!(summary.contains("\"category\": \"functional-combinators\""));
-    assert!(summary.contains("\"fixtures\": 25"));
+    assert!(summary.contains("\"fixtures\": 26"));
     assert!(summary.contains("\"known_difference_entries\": 3"));
     fs::remove_dir_all(temp_dir).unwrap();
 }

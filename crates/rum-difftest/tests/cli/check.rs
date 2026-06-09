@@ -10,7 +10,7 @@ fn check_runs_fast_non_oracle_gates() {
     let stdout = stdout_text(&output);
     assert!(stdout.contains("rum-difftest check"));
     assert!(stdout.contains("check\tinventory-baseline\tclean"));
-    assert!(stdout.contains("inventory baseline records considered: 33"));
+    assert!(stdout.contains("inventory baseline records considered: 34"));
     assert!(stdout.contains("inventory baseline regressions: 0"));
     assert!(stdout.contains("check\tlane-c-ledger\tclean"));
     assert!(stdout.contains("lane-c issues: 0"));
@@ -63,7 +63,7 @@ fn check_writes_machine_readable_summary_json() {
     assert!(summary.contains("\"checks_failed\": 0"));
     assert!(summary.contains("\"checks_skipped\": 2"));
     assert!(summary.contains("\"name\": \"inventory-baseline\""));
-    assert!(summary.contains("\"records_considered\": 33"));
+    assert!(summary.contains("\"records_considered\": 34"));
     assert!(summary.contains("\"name\": \"lane-c-ledger\""));
     assert!(summary.contains("\"active_ledger_entries\": 2"));
     assert!(summary.contains("\"tracking_target_issues\": 0"));

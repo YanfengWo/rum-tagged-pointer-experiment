@@ -35,6 +35,8 @@ The current first pass includes:
 - dedicated loop/procedural and control-object suites
 - a structure selector suite for stable `Part` / `Extract` / `ReplacePart` /
   `Depth` / `Level` coverage
+- a threading suite for `Thread`, `MapThread`, and current listable-dispatch
+  coverage
 - a focused functional-combinator suite covering current CL-04 operator and iteration subsets
 - a focused rules/patterns/replacement/traversal suite for Lane A stateless
   conformance

@@ -193,9 +193,9 @@ mod tests {
             .find(|lane| lane.lane == "lane-b")
             .unwrap();
 
-        assert_eq!(lane_a.totals().fixtures, 25);
+        assert_eq!(lane_a.totals().fixtures, 26);
         assert_eq!(lane_a.totals_by_source()["seed-golden"].fixtures, 9);
-        assert_eq!(lane_a.totals_by_source()["curated-core"].fixtures, 16);
+        assert_eq!(lane_a.totals_by_source()["curated-core"].fixtures, 17);
         assert_eq!(lane_a.totals_by_category()["associations-core"].entries, 22);
         assert_eq!(
             lane_a.totals_by_category()["functional-combinators"].entries,
@@ -205,6 +205,7 @@ mod tests {
             lane_a.totals_by_category()["structure-selectors"].entries,
             10
         );
+        assert_eq!(lane_a.totals_by_category()["threading"].entries, 10);
         assert_eq!(lane_a.totals().known_difference_entries, 3);
         assert_eq!(lane_b.totals().fixtures, 3);
         assert_eq!(lane_b.totals_by_source()["stateful"].fixtures, 3);
