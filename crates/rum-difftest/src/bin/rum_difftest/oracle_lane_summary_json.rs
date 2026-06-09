@@ -12,8 +12,15 @@ pub(super) struct OracleLaneSummaryJsonContext<'a> {
     pub(super) fixture: Option<&'a Path>,
     pub(super) limit: Option<usize>,
     pub(super) include_known_differences: bool,
+    pub(super) session_batch_transport: Option<OracleLaneSessionBatchTransport>,
     pub(super) counts: OracleLaneSummaryCounts,
     pub(super) issue_samples: OracleLaneIssueSamples,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct OracleLaneSessionBatchTransport {
+    pub(super) name: &'static str,
+    pub(super) process_count: Option<usize>,
 }
 
 #[derive(Clone, Copy)]
@@ -94,7 +101,9 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
             "    \"executable\": \"{}\",\n",
             "    \"version_policy\": \"user-provided/unpinned\",\n",
             "    \"timeout_seconds\": {},\n",
-            "    \"output_limit_bytes_per_stream\": {}\n",
+            "    \"output_limit_bytes_per_stream\": {},\n",
+            "    \"session_batch_transport\": {},\n",
+            "    \"session_batch_processes\": {}\n",
             "  }},\n",
             "  \"options\": {{\n",
             "    \"fixture\": {},\n",
@@ -131,6 +140,8 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
         json_string(&context.oracle.executable().display().to_string()),
         context.oracle.timeout().as_secs(),
         context.oracle.output_limit_bytes(),
+        json_session_batch_transport_name(context.session_batch_transport),
+        json_session_batch_processes(context.session_batch_transport),
         json_path_option(context.fixture),
         json_usize_option(context.limit),
         context.include_known_differences,
@@ -201,6 +212,16 @@ fn json_path_option(value: Option<&Path>) -> String {
     value
         .map(|path| format!("\"{}\"", json_string(&path.display().to_string())))
         .unwrap_or_else(|| "null".to_string())
+}
+
+fn json_session_batch_transport_name(value: Option<OracleLaneSessionBatchTransport>) -> String {
+    value
+        .map(|transport| format!("\"{}\"", json_string(transport.name)))
+        .unwrap_or_else(|| "null".to_string())
+}
+
+fn json_session_batch_processes(value: Option<OracleLaneSessionBatchTransport>) -> String {
+    json_usize_option(value.and_then(|transport| transport.process_count))
 }
 
 fn json_string_option(value: Option<&str>) -> String {

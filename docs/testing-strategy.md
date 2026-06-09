@@ -181,11 +181,14 @@ freezing full per-case or per-step report rows. `--max-issue-samples N`
 adjusts the default 5-entry cap, and the summary records the sample limit,
 emitted count, total issue count, and truncation status. Lane B also reports
 oracle session batch and step counts so process-reuse work can be evaluated
-against real fixture batching rather than guessed from fixture counts. The
-Lane B runner submits prepared fixture groups through an oracle batch interface;
-the generic fallback still evaluates each fixture batch independently, while
-the local `OracleKernel` transport executes all Lane B fixture batches in one
-Wolfram process and resets Global-context symbols, newly introduced contexts,
+against real fixture batching rather than guessed from fixture counts. Its
+text and JSON reports also expose the concrete session-batch transport name
+and process count, distinguishing the local single-process `OracleKernel`
+transport from generic per-batch fallback behavior. The Lane B runner submits
+prepared fixture groups through an oracle batch interface; the generic fallback
+still evaluates each fixture batch independently, while the local
+`OracleKernel` transport executes all Lane B fixture batches in one Wolfram
+process and resets Global-context symbols, newly introduced contexts,
 `$Packages`, `$Context`, and `$ContextPath` between fixture batches.
 
 Lane D currently executes imported timing and memory seed suites through local

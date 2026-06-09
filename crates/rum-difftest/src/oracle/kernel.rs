@@ -203,6 +203,14 @@ impl OracleKernel {
             self.output_limit_bytes,
         )
     }
+
+    pub fn session_batch_transport_name(&self) -> &'static str {
+        "kernel-single-process-batches"
+    }
+
+    pub fn session_batch_process_count(&self, batch_count: usize) -> usize {
+        usize::from(batch_count > 0)
+    }
 }
 
 impl Oracle for OracleKernel {

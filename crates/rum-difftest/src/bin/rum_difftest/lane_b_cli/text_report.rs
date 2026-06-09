@@ -1,7 +1,12 @@
 use rum_difftest::lane_a::CaseValue;
 use rum_difftest::lane_b::{self, LaneBStepStatus};
 
-pub(super) fn print_lane_b_report(summary: &lane_b::LaneBSummary) {
+use super::super::oracle_lane_summary_json::OracleLaneSessionBatchTransport;
+
+pub(super) fn print_lane_b_report(
+    summary: &lane_b::LaneBSummary,
+    session_batch_transport: OracleLaneSessionBatchTransport,
+) {
     println!("steps seen: {}", summary.total_seen);
     println!("steps compared: {}", summary.compared);
     println!("matches: {}", summary.matches);
@@ -31,6 +36,10 @@ pub(super) fn print_lane_b_report(summary: &lane_b::LaneBSummary) {
     );
     println!("oracle session batches: {}", summary.oracle_session_batches);
     println!("oracle session steps: {}", summary.oracle_session_steps);
+    println!("oracle session transport: {}", session_batch_transport.name);
+    if let Some(process_count) = session_batch_transport.process_count {
+        println!("oracle session processes: {process_count}");
+    }
 
     print_non_matching_steps(summary);
     print_resolved_known_differences(summary);

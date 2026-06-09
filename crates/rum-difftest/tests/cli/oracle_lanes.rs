@@ -51,7 +51,8 @@ fn oracle_lanes_write_machine_readable_summary_json() {
         ]);
 
         assert!(output.status.success(), "stderr: {}", stderr_text(&output));
-        assert!(stdout_text(&output).contains("summary json:"));
+        let stdout = stdout_text(&output);
+        assert!(stdout.contains("summary json:"));
         let summary = fs::read_to_string(&summary_path).unwrap();
         assert!(summary.contains(&format!("\"lane\": \"{lane}\"")));
         assert!(summary.contains("\"clean\": false"));
@@ -70,11 +71,19 @@ fn oracle_lanes_write_machine_readable_summary_json() {
         assert!(summary.contains("\"status\": \"OracleFailure\""));
         assert!(summary.contains("\"seed_drift\": false"));
         if lane == "lane-b" {
-            assert!(stdout_text(&output).contains("oracle session batches: 1"));
-            assert!(stdout_text(&output).contains("oracle session steps: 1"));
+            assert!(stdout.contains("oracle session batches: 1"));
+            assert!(stdout.contains("oracle session steps: 1"));
+            assert!(stdout.contains("oracle session transport: kernel-single-process-batches"));
+            assert!(stdout.contains("oracle session processes: 1"));
+            assert!(
+                summary.contains("\"session_batch_transport\": \"kernel-single-process-batches\"")
+            );
+            assert!(summary.contains("\"session_batch_processes\": 1"));
             assert!(summary.contains("\"oracle_session_batches\": 1"));
             assert!(summary.contains("\"oracle_session_steps\": 1"));
         } else {
+            assert!(summary.contains("\"session_batch_transport\": null"));
+            assert!(summary.contains("\"session_batch_processes\": null"));
             assert!(summary.contains("\"oracle_session_batches\": null"));
             assert!(summary.contains("\"oracle_session_steps\": null"));
         }
