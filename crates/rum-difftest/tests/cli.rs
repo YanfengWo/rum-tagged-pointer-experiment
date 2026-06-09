@@ -14,6 +14,8 @@ mod lane_c;
 mod lane_d;
 #[path = "cli/oracle_lanes.rs"]
 mod oracle_lanes;
+#[path = "cli/summary_contract.rs"]
+mod summary_contract;
 
 fn run_difftest(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_rum-difftest"))
