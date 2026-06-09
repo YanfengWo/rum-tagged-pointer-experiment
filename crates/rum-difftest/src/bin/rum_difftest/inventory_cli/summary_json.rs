@@ -8,7 +8,7 @@ use rum_difftest::inventory::{
 use crate::inventory_json::{inventory_regression_details_json, inventory_totals_json};
 use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, json_string_option, write_json_file};
 
-use super::InventoryFilter;
+use super::filters::InventoryFilter;
 
 pub(super) fn write_summary_json(
     path: &Path,
