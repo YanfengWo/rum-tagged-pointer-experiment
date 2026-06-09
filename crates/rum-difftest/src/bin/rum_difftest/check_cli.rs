@@ -31,7 +31,10 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
     let mut include_lane_d_readiness = false;
     let mut summary_json_path = None;
     let mut max_issue_samples = summary_json::DEFAULT_MAX_ISSUE_SAMPLES;
+    let mut max_issue_samples_specified = false;
     let mut issue_sample_filter = summary_json::CheckIssueSampleFilter::default();
+    let mut issue_sample_check_specified = false;
+    let mut issue_sample_kind_specified = false;
     let mut fail_on_open_known_difference = false;
     let mut artifact_hygiene_root = None;
 
@@ -71,14 +74,17 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
             }
             "--max-issue-samples" => {
                 let value = expect_value(&mut iter, "--max-issue-samples")?;
+                max_issue_samples_specified = true;
                 max_issue_samples = parse_max_issue_samples(&value)?;
             }
             "--issue-sample-check" => {
                 let value = expect_value(&mut iter, "--issue-sample-check")?;
+                issue_sample_check_specified = true;
                 issue_sample_filter.check = parse_issue_sample_check(&value)?;
             }
             "--issue-sample-kind" => {
                 let value = expect_value(&mut iter, "--issue-sample-kind")?;
+                issue_sample_kind_specified = true;
                 issue_sample_filter.kind = parse_issue_sample_kind(&value)?;
             }
             "--help" | "-h" => {
@@ -86,6 +92,17 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
                 return Ok(ExitCode::SUCCESS);
             }
             other => return Err(format!("unknown check flag `{other}`").into()),
+        }
+    }
+    if summary_json_path.is_none() {
+        if max_issue_samples_specified {
+            return Err("--max-issue-samples requires --summary-json PATH".into());
+        }
+        if issue_sample_check_specified {
+            return Err("--issue-sample-check requires --summary-json PATH".into());
+        }
+        if issue_sample_kind_specified {
+            return Err("--issue-sample-kind requires --summary-json PATH".into());
         }
     }
 

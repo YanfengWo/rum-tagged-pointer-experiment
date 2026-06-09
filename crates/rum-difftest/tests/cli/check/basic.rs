@@ -69,3 +69,39 @@ fn check_help_and_unknown_flag_paths_are_stable() {
         stderr_text(&invalid_kind)
     );
 }
+
+#[test]
+fn check_rejects_issue_sample_options_without_summary_json_before_running() {
+    let cases: &[(&[&str], &str)] = &[
+        (
+            &["check", "--max-issue-samples", "1"],
+            "--max-issue-samples requires --summary-json PATH",
+        ),
+        (
+            &["check", "--issue-sample-check", "inventory-baseline"],
+            "--issue-sample-check requires --summary-json PATH",
+        ),
+        (
+            &["check", "--issue-sample-kind", "regression"],
+            "--issue-sample-kind requires --summary-json PATH",
+        ),
+    ];
+
+    for (args, expected_error) in cases {
+        let output = run_difftest(args);
+        assert!(
+            !output.status.success(),
+            "expected failure for {args:?}, stdout: {}",
+            stdout_text(&output)
+        );
+        assert!(
+            stderr_text(&output).contains(expected_error),
+            "expected `{expected_error}` for {args:?}, stderr: {}",
+            stderr_text(&output)
+        );
+        assert!(
+            stdout_text(&output).is_empty(),
+            "expected no gate output for {args:?}"
+        );
+    }
+}
