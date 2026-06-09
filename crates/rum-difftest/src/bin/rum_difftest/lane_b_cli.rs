@@ -5,7 +5,10 @@ use rum_difftest::lane_b::{self, LaneBOptions, LaneBStepStatus};
 use rum_difftest::oracle::OracleKernel;
 
 use super::oracle_cli::print_oracle_header;
-use super::oracle_lane_cli::{OracleLaneCliArgs, parse_oracle_lane_cli_args};
+use super::oracle_lane_cli::{
+    OracleLaneCliArgs, OracleLaneFailureGateCounts, oracle_lane_failure_exit_code,
+    parse_oracle_lane_cli_args,
+};
 use super::oracle_lane_summary_json::{
     OracleLaneIssueSample, OracleLaneIssueSampleKindFilter, OracleLaneIssueSamples,
     OracleLaneSessionBatchTransport, OracleLaneSummaryCounts, OracleLaneSummaryJsonContext,
@@ -23,6 +26,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         }
         OracleLaneCliArgs::Run(options) => *options,
     };
+    let failure_gate_options = cli.failure_gate_options();
 
     let config = load_optional_config(cli.config_path.as_deref())?;
     let oracle_kernel = resolve_oracle_kernel(cli.oracle_kernel, &config).ok_or(
@@ -110,25 +114,18 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         println!("summary json: {}", path.display());
     }
 
-    let has_issues =
-        summary.mismatches > 0 || summary.rum_failures > 0 || summary.oracle_failures > 0;
-    if cli.fail_on_mismatch && has_issues {
-        return Ok(ExitCode::FAILURE);
-    }
-    if cli.fail_on_project_mismatch && project_non_matches > 0 {
-        return Ok(ExitCode::FAILURE);
-    }
-    if cli.fail_on_seed_drift && summary.seed_snapshots_drifted_from_oracle > 0 {
-        return Ok(ExitCode::FAILURE);
-    }
-    if cli.fail_on_project_seed_drift && project_seed_snapshot_drifts > 0 {
-        return Ok(ExitCode::FAILURE);
-    }
-    if cli.fail_on_resolved_known_difference && summary.resolved_known_differences > 0 {
-        return Ok(ExitCode::FAILURE);
-    }
-
-    Ok(ExitCode::SUCCESS)
+    Ok(oracle_lane_failure_exit_code(
+        failure_gate_options,
+        OracleLaneFailureGateCounts {
+            mismatches: summary.mismatches,
+            rum_failures: summary.rum_failures,
+            oracle_failures: summary.oracle_failures,
+            project_non_matches,
+            seed_snapshots_drifted_from_oracle: summary.seed_snapshots_drifted_from_oracle,
+            project_seed_snapshots_drifted_from_oracle: project_seed_snapshot_drifts,
+            resolved_known_differences: summary.resolved_known_differences,
+        },
+    ))
 }
 
 fn lane_b_project_non_matches(summary: &lane_b::LaneBSummary) -> usize {

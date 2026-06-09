@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::process::ExitCode;
 
 use super::oracle_lane_summary_json::{
     DEFAULT_MAX_ISSUE_SAMPLES, OracleLaneIssueSampleKindFilter, parse_issue_sample_kind,
@@ -32,6 +33,26 @@ pub(super) struct OracleLaneCliOptions {
     pub(super) fail_on_resolved_known_difference: bool,
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+pub(super) struct OracleLaneFailureGateOptions {
+    fail_on_mismatch: bool,
+    fail_on_project_mismatch: bool,
+    fail_on_seed_drift: bool,
+    fail_on_project_seed_drift: bool,
+    fail_on_resolved_known_difference: bool,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub(super) struct OracleLaneFailureGateCounts {
+    pub(super) mismatches: usize,
+    pub(super) rum_failures: usize,
+    pub(super) oracle_failures: usize,
+    pub(super) project_non_matches: usize,
+    pub(super) seed_snapshots_drifted_from_oracle: usize,
+    pub(super) project_seed_snapshots_drifted_from_oracle: usize,
+    pub(super) resolved_known_differences: usize,
+}
+
 impl Default for OracleLaneCliOptions {
     fn default() -> Self {
         Self {
@@ -52,6 +73,18 @@ impl Default for OracleLaneCliOptions {
             fail_on_seed_drift: false,
             fail_on_project_seed_drift: false,
             fail_on_resolved_known_difference: false,
+        }
+    }
+}
+
+impl OracleLaneCliOptions {
+    pub(super) fn failure_gate_options(&self) -> OracleLaneFailureGateOptions {
+        OracleLaneFailureGateOptions {
+            fail_on_mismatch: self.fail_on_mismatch,
+            fail_on_project_mismatch: self.fail_on_project_mismatch,
+            fail_on_seed_drift: self.fail_on_seed_drift,
+            fail_on_project_seed_drift: self.fail_on_project_seed_drift,
+            fail_on_resolved_known_difference: self.fail_on_resolved_known_difference,
         }
     }
 }
@@ -123,6 +156,31 @@ fn expect_value(
 ) -> Result<String, Box<dyn std::error::Error>> {
     iter.next()
         .ok_or_else(|| format!("{flag} expects a value").into())
+}
+
+pub(super) fn oracle_lane_failure_exit_code(
+    options: OracleLaneFailureGateOptions,
+    counts: OracleLaneFailureGateCounts,
+) -> ExitCode {
+    let has_mismatch_issues =
+        counts.mismatches > 0 || counts.rum_failures > 0 || counts.oracle_failures > 0;
+    if options.fail_on_mismatch && has_mismatch_issues {
+        return ExitCode::FAILURE;
+    }
+    if options.fail_on_project_mismatch && counts.project_non_matches > 0 {
+        return ExitCode::FAILURE;
+    }
+    if options.fail_on_seed_drift && counts.seed_snapshots_drifted_from_oracle > 0 {
+        return ExitCode::FAILURE;
+    }
+    if options.fail_on_project_seed_drift && counts.project_seed_snapshots_drifted_from_oracle > 0 {
+        return ExitCode::FAILURE;
+    }
+    if options.fail_on_resolved_known_difference && counts.resolved_known_differences > 0 {
+        return ExitCode::FAILURE;
+    }
+
+    ExitCode::SUCCESS
 }
 
 #[cfg(test)]
@@ -226,6 +284,58 @@ mod tests {
                 .unwrap_err()
                 .to_string(),
             "unknown lane-b flag `--bogus`"
+        );
+    }
+
+    #[test]
+    fn oracle_lane_failure_exit_code_honors_shared_gate_flags() {
+        let mut options = OracleLaneCliOptions::default();
+        let counts = OracleLaneFailureGateCounts {
+            mismatches: 1,
+            project_non_matches: 1,
+            seed_snapshots_drifted_from_oracle: 1,
+            project_seed_snapshots_drifted_from_oracle: 1,
+            resolved_known_differences: 1,
+            ..OracleLaneFailureGateCounts::default()
+        };
+
+        assert_eq!(
+            oracle_lane_failure_exit_code(options.failure_gate_options(), counts),
+            ExitCode::SUCCESS
+        );
+
+        options.fail_on_mismatch = true;
+        assert_eq!(
+            oracle_lane_failure_exit_code(options.failure_gate_options(), counts),
+            ExitCode::FAILURE
+        );
+
+        options.fail_on_mismatch = false;
+        options.fail_on_project_mismatch = true;
+        assert_eq!(
+            oracle_lane_failure_exit_code(options.failure_gate_options(), counts),
+            ExitCode::FAILURE
+        );
+
+        options.fail_on_project_mismatch = false;
+        options.fail_on_seed_drift = true;
+        assert_eq!(
+            oracle_lane_failure_exit_code(options.failure_gate_options(), counts),
+            ExitCode::FAILURE
+        );
+
+        options.fail_on_seed_drift = false;
+        options.fail_on_project_seed_drift = true;
+        assert_eq!(
+            oracle_lane_failure_exit_code(options.failure_gate_options(), counts),
+            ExitCode::FAILURE
+        );
+
+        options.fail_on_project_seed_drift = false;
+        options.fail_on_resolved_known_difference = true;
+        assert_eq!(
+            oracle_lane_failure_exit_code(options.failure_gate_options(), counts),
+            ExitCode::FAILURE
         );
     }
 }
