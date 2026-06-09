@@ -1,5 +1,12 @@
 # Curated Lane A file: polynomial and rational-expression smoke
 # Format: input ||| expected_output
 Expand[(x + 1) * (x - 1)] ||| -1 + x^2
+Coefficient[(x + y)^3, x] ||| 3*y^2
+Coefficient[(x + y)^3, x, 2] ||| 3*y
+CoefficientList[x^2 + 2*x*y + y^2 + 1, x] ||| {1 + y^2, 2*y, 1}
+CoefficientList[x^2 + 2*x*y + y^2 + 1, {x, y}] ||| {{1, 0, 1}, {0, 2, 0}, {1, 0, 0}}
 Together[1/x + 1/y] ||| (x + y)/(x*y)
 Together[((x/y)^-1) + 1] ||| (x + y)/x
+Together[(x^2 - 1)/(x - 1)] ||| 1 + x
+Together[(x^2 - y^2)/(x - y)] ||| x + y
+Factor[2*x^2 + 4*x*y + 2*y^2] ||| 2*(x + y)^2

@@ -759,6 +759,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] arithmetic normalization and exact-integer behavior now have an initial curated Lane A foothold
   - [x] Lane A now has a focused exact-arithmetic fixture covering negative `Mod` / `Quotient`, signed `GCD` / `LCM`, rational powers, and `PowerMod` against a real Wolfram oracle
   - [x] Extend the shared difftest InputForm-like renderer with common `Plus` / `Times` / `Power` infix output, then add a first curated Lane A polynomial/rational-expression fixture for stable `Expand` / `Together` cases; leave broader polynomial term-ordering parity for later
+  - [x] Broaden the curated Lane A polynomial/rational-expression fixture with
+    stable `Coefficient`, `CoefficientList`, `Together` cancellation, and
+    current `Factor` cases while continuing to avoid string-level
+    term-ordering differences
   - [x] rules, patterns, replacement, and traversal behavior now have an initial curated Lane A foothold
   - [x] scoping and held-evaluation constructs now have an initial curated Lane A foothold through loops/control/function cases
   - [x] Lane A now has a focused scoping/closure fixture covering stable `With`

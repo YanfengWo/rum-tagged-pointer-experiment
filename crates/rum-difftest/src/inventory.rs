@@ -216,7 +216,7 @@ mod tests {
         assert_eq!(lane_a.totals_by_category()["scoping-closures"].entries, 8);
         assert_eq!(
             lane_a.totals_by_category()["polynomial-rational"].entries,
-            3
+            10
         );
         assert_eq!(lane_a.totals_by_category()["predicate-surface"].entries, 21);
         assert_eq!(
