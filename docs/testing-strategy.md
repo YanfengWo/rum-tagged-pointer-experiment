@@ -168,7 +168,9 @@ sessions are acceptable for tiny manual spot checks but are not the baseline
 oracle. Every local oracle invocation has a finite timeout: 120 seconds by
 default, overridable through `--oracle-timeout-seconds`,
 `oracle_timeout_seconds`, or `RUM_DIFFTEST_ORACLE_TIMEOUT_SECONDS`. The runner
-terminates timed-out kernels and records them as oracle failures.
+terminates timed-out kernels and records them as oracle failures. Oracle
+stdout/stderr capture is bounded to 8 MiB per stream; exceeding the limit also
+terminates the process and produces an oracle failure with truncated diagnostics.
 
 Rules:
 
@@ -183,6 +185,8 @@ Rules:
 - Record the oracle command and version in run output when practical.
 - Record the effective oracle timeout in run output and keep the same timeout
   policy for Lane A cases, Lane B fixture sessions, and version probes.
+- Keep oracle output capture bounded and report the effective per-stream limit
+  so malformed wrappers cannot turn a conformance run into unbounded memory use.
 - Treat version differences as compatibility data, not as a reason to pin the
   project to one hidden oracle environment. Lane A/B should keep the
   `user-provided/unpinned` version policy visible and should not accept config

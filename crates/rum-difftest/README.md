@@ -84,7 +84,9 @@ version probe failures are reported but do not fail the diff run, and config
 does not support version pin keys. The timeout defaults to 120 seconds and can
 be overridden by `--oracle-timeout-seconds`, `oracle_timeout_seconds`, or
 `RUM_DIFFTEST_ORACLE_TIMEOUT_SECONDS`, in that precedence order. Timed-out
-kernel processes are terminated and reported as oracle failures. `rum` values
+kernel processes are terminated and reported as oracle failures. Each oracle
+stdout/stderr stream is also capped at 8 MiB; a process that exceeds the cap is
+terminated while the retained diagnostic prefix is reported. `rum` values
 are rendered through the shared difftest InputForm-like renderer, which covers
 common list, rule, delayed-rule, and association output shapes before
 comparison. It is intentionally not yet a complete Wolfram display

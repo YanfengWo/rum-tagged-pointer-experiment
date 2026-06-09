@@ -6,6 +6,10 @@ pub fn print_oracle_header(lane: &str, oracle: &OracleKernel) {
         "{lane} oracle timeout seconds: {}",
         oracle.timeout().as_secs()
     );
+    println!(
+        "{lane} oracle output limit bytes per stream: {}",
+        oracle.output_limit_bytes()
+    );
     println!("{lane} oracle version policy: user-provided/unpinned");
     match oracle.version() {
         Ok(version) if !version.is_empty() => {

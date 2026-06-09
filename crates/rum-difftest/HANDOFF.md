@@ -35,6 +35,8 @@ For the Wolfram-backed lanes, keep these policy constraints explicit:
   and should not accept config keys that pin one required oracle version
 - every oracle invocation should have a finite timeout, with timed-out kernel
   processes terminated rather than leaving the diff run hung indefinitely
+- oracle stdout/stderr capture should stay bounded so a noisy or broken wrapper
+  cannot exhaust agent or CI memory before the timeout fires
 
 And keep the exclusion boundary explicit too:
 
@@ -57,6 +59,8 @@ Current implementation status:
 - oracle timeouts default to 120 seconds and resolve from CLI, config,
   `RUM_DIFFTEST_ORACLE_TIMEOUT_SECONDS`, then the default; Lane A cases, Lane B
   fixture sessions, and `$Version` probes use the same timeout executor
+- each oracle stdout/stderr stream has a fixed 8 MiB capture limit; the runner
+  terminates an over-limit process and reports the retained diagnostic prefix
 - it drives a local kernel executable directly and stores generated oracle
   inputs/wrappers only in a temporary run directory
 - Lane A/B CLI output records the resolved oracle executable and best-effort

@@ -14,6 +14,7 @@ pub fn query_kernel_version(
     executable: &Path,
     temp_dir: &Path,
     timeout: Duration,
+    output_limit_bytes: usize,
 ) -> Result<String, OracleError> {
     let wrapper_path = temp_dir.join("oracle_version.wls");
     fs::write(&wrapper_path, ORACLE_VERSION_WRAPPER).map_err(|source| OracleError::Io {
@@ -23,7 +24,7 @@ pub fn query_kernel_version(
 
     let mut command = Command::new(executable);
     command.arg("-noprompt").arg("-script").arg(&wrapper_path);
-    let output = run_with_timeout(&mut command, executable, timeout)?;
+    let output = run_with_timeout(&mut command, executable, timeout, output_limit_bytes)?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
     let stderr = String::from_utf8_lossy(&output.stderr).into_owned();

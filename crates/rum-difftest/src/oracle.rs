@@ -16,6 +16,7 @@ use process::run_with_timeout;
 use temp_dir::TempDir;
 
 pub const DEFAULT_ORACLE_TIMEOUT: Duration = Duration::from_secs(120);
+pub const DEFAULT_ORACLE_OUTPUT_LIMIT_BYTES: usize = 8 * 1024 * 1024;
 
 const RESULT_MARKER: &str = "__RUM_DIFFTEST_RESULT__=";
 const SESSION_RESULT_MARKER: &str = "__RUM_DIFFTEST_SESSION_RESULT__=";
@@ -76,6 +77,7 @@ pub struct OracleKernel {
     session_wrapper_path: PathBuf,
     next_case_id: usize,
     timeout: Duration,
+    output_limit_bytes: usize,
 }
 
 impl OracleKernel {
@@ -86,6 +88,14 @@ impl OracleKernel {
     pub fn with_timeout(
         executable: impl Into<PathBuf>,
         timeout: Duration,
+    ) -> Result<Self, OracleError> {
+        Self::with_limits(executable, timeout, DEFAULT_ORACLE_OUTPUT_LIMIT_BYTES)
+    }
+
+    pub fn with_limits(
+        executable: impl Into<PathBuf>,
+        timeout: Duration,
+        output_limit_bytes: usize,
     ) -> Result<Self, OracleError> {
         let executable = executable.into();
         let temp_dir = TempDir::new("rum-difftest")?;
@@ -109,6 +119,7 @@ impl OracleKernel {
             session_wrapper_path,
             next_case_id: 0,
             timeout,
+            output_limit_bytes,
         })
     }
 
@@ -120,8 +131,17 @@ impl OracleKernel {
         self.timeout
     }
 
+    pub fn output_limit_bytes(&self) -> usize {
+        self.output_limit_bytes
+    }
+
     pub fn version(&self) -> Result<String, OracleError> {
-        version::query_kernel_version(&self.executable, self.temp_dir.path(), self.timeout)
+        version::query_kernel_version(
+            &self.executable,
+            self.temp_dir.path(),
+            self.timeout,
+            self.output_limit_bytes,
+        )
     }
 }
 
@@ -143,7 +163,12 @@ impl Oracle for OracleKernel {
             .arg("-script")
             .arg(&self.wrapper_path)
             .arg(&input_path);
-        let output = run_with_timeout(&mut command, &self.executable, self.timeout)?;
+        let output = run_with_timeout(
+            &mut command,
+            &self.executable,
+            self.timeout,
+            self.output_limit_bytes,
+        )?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
         let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
@@ -228,7 +253,12 @@ impl Oracle for OracleKernel {
             .arg("-script")
             .arg(&self.session_wrapper_path)
             .arg(&manifest_path);
-        let output = run_with_timeout(&mut command, &self.executable, self.timeout)?;
+        let output = run_with_timeout(
+            &mut command,
+            &self.executable,
+            self.timeout,
+            self.output_limit_bytes,
+        )?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
         let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
@@ -369,6 +399,16 @@ pub enum OracleError {
     TimedOut {
         executable: PathBuf,
         timeout_millis: u128,
+        stdout: String,
+        stderr: String,
+    },
+    #[error(
+        "oracle executable `{executable}` exceeded the {output_limit_bytes}-byte capture limit for {streams}\ntruncated stdout:\n{stdout}\ntruncated stderr:\n{stderr}"
+    )]
+    OutputLimitExceeded {
+        executable: PathBuf,
+        output_limit_bytes: usize,
+        streams: &'static str,
         stdout: String,
         stderr: String,
     },

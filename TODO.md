@@ -594,6 +594,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] allow oracle runs against non-pinned user versions as a compatibility check, not only against one project-standard Wolfram release; Lane A/B report the `user-provided/unpinned` version policy and config rejects oracle-version pin keys
   - [x] record the resolved oracle executable and best-effort Wolfram `$Version` in Lane A/B CLI output without making version probing a pass/fail gate
   - [x] bound every Lane A/B oracle and version-probe process with a configurable timeout, terminate timed-out kernels, and report the effective timeout in CLI output
+  - [x] bound oracle stdout/stderr capture per stream, terminate over-limit processes, and retain only a capped diagnostic prefix
   - [x] record any deliberate divergences from Wolfram behavior alongside those fixtures; Lane C now verifies active fixture `!!! type=...` metadata stays aligned with ledger `type=...`, while fixture lines already require local `reason=...`
 - [ ] Prioritize oracle-style checks for the most semantics-sensitive areas first:
   - [x] arithmetic normalization and exact-integer behavior now have an initial curated Lane A foothold
