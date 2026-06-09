@@ -8,7 +8,7 @@ fn default_inventory_baseline_is_clean_for_current_fixtures() {
     let report = compare_inventory_baseline(&inventory, &baseline);
 
     assert!(report.is_clean(), "{report:?}");
-    assert_eq!(report.records_considered, 35);
+    assert_eq!(report.records_considered, 36);
 }
 
 #[test]
@@ -52,9 +52,10 @@ fn captured_inventory_baseline_round_trips_and_is_clean() {
     let report = compare_inventory_baseline(&inventory, &reparsed);
 
     assert_eq!(reparsed, baseline);
-    assert_eq!(baseline.records.len(), 35);
-    assert!(formatted.contains("lane=lane-a source=all min_fixtures=26"));
+    assert_eq!(baseline.records.len(), 36);
+    assert!(formatted.contains("lane=lane-a source=all min_fixtures=27"));
     assert!(formatted.contains("lane=lane-a category=associations-core min_fixtures=1"));
+    assert!(formatted.contains("lane=lane-a category=exact-arithmetic min_fixtures=1"));
     assert!(formatted.contains("lane=lane-a category=structure-selectors min_fixtures=1"));
     assert!(formatted.contains("lane=lane-a category=threading min_fixtures=1"));
     assert!(formatted.contains("lane=lane-b category=scoping-control min_fixtures=1"));

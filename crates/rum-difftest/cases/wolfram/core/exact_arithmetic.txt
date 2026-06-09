@@ -1,0 +1,11 @@
+# Curated Lane A file: exact arithmetic edge cases
+# Format: input ||| expected_output
+6 / 4 ||| 3/2
+2^-3 ||| 1/8
+Mod[-3, 2] ||| 1
+Mod[3, -2] ||| -1
+Quotient[-3, 2] ||| -2
+Quotient[3, -2] ||| -2
+GCD[18, -24, 30] ||| 6
+LCM[6, -8, 15] ||| 120
+PowerMod[3, 5, 7] ||| 5

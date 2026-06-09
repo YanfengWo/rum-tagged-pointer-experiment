@@ -646,6 +646,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] record any deliberate divergences from Wolfram behavior alongside those fixtures; Lane C now verifies active fixture `!!! type=...` metadata stays aligned with ledger `type=...`, while fixture lines already require local `reason=...`
 - [x] Prioritize oracle-style checks for the most semantics-sensitive areas first:
   - [x] arithmetic normalization and exact-integer behavior now have an initial curated Lane A foothold
+  - [x] Lane A now has a focused exact-arithmetic fixture covering negative `Mod` / `Quotient`, signed `GCD` / `LCM`, rational powers, and `PowerMod` against a real Wolfram oracle
   - [x] rules, patterns, replacement, and traversal behavior now have an initial curated Lane A foothold
   - [x] scoping and held-evaluation constructs now have an initial curated Lane A foothold through loops/control/function cases
   - [x] messages, attributes, and definition precedence now have an extended Lane B stateful foothold, including exact emitted-message checks, message-list length, `SetAttributes` / `ClearAttributes`, held argument evaluation, typed/generic/literal downvalue precedence, and UpValue dispatch

@@ -103,9 +103,9 @@ Current implementation status:
   syntax sugar
 - a first pass of `rum`-owned curated Lane A files now exists under
   [cases/wolfram/core](./cases/wolfram/core/README.md)
-- that curated set currently covers arithmetic/structures, loops/control,
-  associations, functional combinators, failure/status, and multiple string
-  subfamilies
+- that curated set currently covers arithmetic/structures, exact-arithmetic
+  edge cases, loops/control, associations, functional combinators,
+  failure/status, and multiple string subfamilies
 - the current `lane-a` comparison still has display limits beyond the shared
   renderer's common structural forms, so curated files should avoid cases whose
   only useful signal is obscure Wolfram `InputForm` sugar

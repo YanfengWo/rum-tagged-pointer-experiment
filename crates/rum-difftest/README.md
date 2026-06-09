@@ -309,7 +309,8 @@ Wolfram diff lane for Python binding behavior.
 The first curated Lane A files now live under
 [cases/wolfram/core](./cases/wolfram/core/README.md). They currently cover:
 
-- arithmetic and structural smoke checks
+- arithmetic and structural smoke checks, plus focused exact-arithmetic edge
+  cases
 - loops, control objects, and failure/status flows
 - associations and keyed-data basics
 - definition precedence promoted from resolved imported seed coverage
