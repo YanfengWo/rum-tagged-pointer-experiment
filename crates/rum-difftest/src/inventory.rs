@@ -203,7 +203,7 @@ mod tests {
             22
         );
         assert_eq!(lane_a.totals_by_category()["control-loops"].entries, 21);
-        assert_eq!(lane_a.totals_by_category()["control-objects"].entries, 13);
+        assert_eq!(lane_a.totals_by_category()["control-objects"].entries, 45);
         assert_eq!(lane_a.totals_by_category()["context-namespace"].entries, 14);
         assert_eq!(
             lane_a.totals_by_category()["definitions-precedence"].entries,

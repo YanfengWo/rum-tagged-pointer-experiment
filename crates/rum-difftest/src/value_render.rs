@@ -49,6 +49,10 @@ fn render_call(head: &Expr, args: &[Expr]) -> String {
         Some("Times") => render_times(args),
         Some("Power") if args.len() == 2 => render_power(&args[0], &args[1]),
         Some("MessageName") if args.len() == 2 => render_message_name(&args[0], &args[1]),
+        Some("Blank") => render_blank("_", args),
+        Some("BlankSequence") => render_blank("__", args),
+        Some("BlankNullSequence") => render_blank("___", args),
+        Some("Pattern") if args.len() == 2 => render_pattern(&args[0], &args[1]),
         _ => {
             let rendered_args = args
                 .iter()
@@ -58,6 +62,52 @@ fn render_call(head: &Expr, args: &[Expr]) -> String {
             format!("{}[{rendered_args}]", render_expr(head, Precedence::Lowest))
         }
     }
+}
+
+fn render_blank(prefix: &str, args: &[Expr]) -> String {
+    match args {
+        [] => prefix.to_string(),
+        [head] => format!("{prefix}{}", render_expr(head, Precedence::Atom)),
+        _ => render_head_form(prefix_to_blank_head(prefix), args),
+    }
+}
+
+fn render_pattern(name: &Expr, pattern: &Expr) -> String {
+    if let (Some(name), Some(blank)) = (symbol_head_name(name), render_blank_like(pattern)) {
+        format!("{name}{blank}")
+    } else {
+        render_head_form("Pattern", &[name.clone(), pattern.clone()])
+    }
+}
+
+fn render_blank_like(expr: &Expr) -> Option<String> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    match symbol_head_name(head) {
+        Some("Blank") => Some(render_blank("_", args)),
+        Some("BlankSequence") => Some(render_blank("__", args)),
+        Some("BlankNullSequence") => Some(render_blank("___", args)),
+        _ => None,
+    }
+}
+
+fn prefix_to_blank_head(prefix: &str) -> &str {
+    match prefix {
+        "_" => "Blank",
+        "__" => "BlankSequence",
+        "___" => "BlankNullSequence",
+        _ => unreachable!("only known blank prefixes are rendered"),
+    }
+}
+
+fn render_head_form(head: &str, args: &[Expr]) -> String {
+    let rendered_args = args
+        .iter()
+        .map(|arg| render_expr(arg, Precedence::Lowest))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("{head}[{rendered_args}]")
 }
 
 fn render_message_name(symbol: &Expr, tag: &Expr) -> String {
@@ -375,6 +425,30 @@ mod tests {
         );
 
         assert_eq!(render_input_form_like(&expr), "<|a -> lhs, b :> rhs|>");
+    }
+
+    #[test]
+    fn renders_blank_patterns_like_input_form() {
+        let typed_blank = Expr::call(
+            Expr::system_symbol("Blank"),
+            vec![Expr::system_symbol("String")],
+        );
+        assert_eq!(render_input_form_like(&typed_blank), "_String");
+
+        let sequence_blank = Expr::call(Expr::system_symbol("BlankSequence"), Vec::new());
+        assert_eq!(render_input_form_like(&sequence_blank), "__");
+
+        let named_typed_blank = Expr::call(
+            Expr::system_symbol("Pattern"),
+            vec![
+                Expr::symbol("x"),
+                Expr::call(
+                    Expr::system_symbol("BlankNullSequence"),
+                    vec![Expr::system_symbol("Integer")],
+                ),
+            ],
+        );
+        assert_eq!(render_input_form_like(&named_typed_blank), "x___Integer");
     }
 
     #[test]
