@@ -3,7 +3,9 @@ use std::path::Path;
 
 use rum_difftest::oracle::OracleKernel;
 
-use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
+use crate::json_cli::{
+    SUMMARY_SCHEMA_VERSION, json_string, json_string_option, json_usize_option, write_json_file,
+};
 
 pub(super) use crate::json_cli::parse_max_issue_samples;
 
@@ -451,18 +453,6 @@ fn json_session_batch_transport_name(value: Option<OracleLaneSessionBatchTranspo
 
 fn json_session_batch_processes(value: Option<OracleLaneSessionBatchTransport>) -> String {
     json_usize_option(value.and_then(|transport| transport.process_count))
-}
-
-fn json_string_option(value: Option<&str>) -> String {
-    value
-        .map(|value| format!("\"{}\"", json_string(value)))
-        .unwrap_or_else(|| "null".to_string())
-}
-
-fn json_usize_option(value: Option<usize>) -> String {
-    value
-        .map(|value| value.to_string())
-        .unwrap_or_else(|| "null".to_string())
 }
 
 #[cfg(test)]

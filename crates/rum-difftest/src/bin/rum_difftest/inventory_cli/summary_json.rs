@@ -5,7 +5,7 @@ use rum_difftest::inventory::{
     display_path,
 };
 
-use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
+use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, json_string_option, write_json_file};
 
 use super::InventoryFilter;
 
@@ -68,12 +68,6 @@ fn filters_json(filter: &InventoryFilter) -> String {
         json_string_option(filter.source.as_deref()),
         json_string_option(filter.category.as_deref()),
     )
-}
-
-fn json_string_option(value: Option<&str>) -> String {
-    value
-        .map(|value| format!("\"{}\"", json_string(value)))
-        .unwrap_or_else(|| "null".to_string())
 }
 
 fn baseline_json(path: Option<&Path>, report: Option<&InventoryBaselineReport>) -> String {

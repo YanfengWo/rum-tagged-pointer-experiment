@@ -4,7 +4,7 @@ use rum_difftest::artifact_hygiene::{self, ArtifactHygieneIssue};
 use rum_difftest::divergences;
 use rum_difftest::inventory::{FixtureInventoryTotals, display_path};
 
-use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
+use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, json_string_option, write_json_file};
 
 use super::{LocalCheckReport, SkippedCheck, display_check_path};
 
@@ -114,12 +114,6 @@ fn summary_json(
         issue_kind_counts,
         issue_samples.samples,
     )
-}
-
-fn json_string_option(value: Option<&str>) -> String {
-    value
-        .map(|value| format!("\"{}\"", json_string(value)))
-        .unwrap_or_else(|| "null".to_string())
 }
 
 fn skipped_checks_json(checks: &[SkippedCheck]) -> String {

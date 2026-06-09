@@ -39,6 +39,18 @@ pub fn json_string(value: &str) -> String {
     escaped
 }
 
+pub fn json_string_option(value: Option<&str>) -> String {
+    value
+        .map(|value| format!("\"{}\"", json_string(value)))
+        .unwrap_or_else(|| "null".to_string())
+}
+
+pub fn json_usize_option(value: Option<usize>) -> String {
+    value
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "null".to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
@@ -70,6 +82,14 @@ mod tests {
             json_string("quote\" slash\\ newline\n carriage\r tab\t bell\u{0007}"),
             "quote\\\" slash\\\\ newline\\n carriage\\r tab\\t bell\\u0007"
         );
+    }
+
+    #[test]
+    fn json_option_helpers_render_null_or_values() {
+        assert_eq!(json_string_option(None), "null");
+        assert_eq!(json_string_option(Some("a\"b")), "\"a\\\"b\"");
+        assert_eq!(json_usize_option(None), "null");
+        assert_eq!(json_usize_option(Some(42)), "42");
     }
 
     #[test]
