@@ -52,8 +52,9 @@ CLI/report helper boundaries:
 - `oracle_lane_cli.rs` owns Lane A/B shared CLI parsing, oracle kernel setup,
   and common failure-gate exit-code policy. Keep lane-specific execution,
   counts, and text reports in `lane_a_cli.rs` / `lane_b_cli.rs`.
-- `oracle_lane_summary_json.rs` owns the shared Lane A/B summary JSON shape and
-  oracle-lane issue sample filtering/counting.
+- `oracle_lane_summary_json.rs` owns the shared Lane A/B summary JSON facade;
+  its child modules own summary-count construction and oracle-lane issue sample
+  filtering/counting/parser helpers.
 - `inventory_json.rs`, `lane_c_json.rs`, and `lane_d_json.rs` own JSON
   fragments shared between their lane command and aggregate `check`.
 - When adding a report field used by more than one command, prefer extending
