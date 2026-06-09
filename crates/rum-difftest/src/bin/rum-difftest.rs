@@ -75,7 +75,7 @@ fn print_usage() {
     );
     println!("rum-difftest lane-c [--summary-json PATH] [--fail-on-open-known-difference]");
     println!(
-        "rum-difftest lane-d [--suite all|timing|memory] [--profile smoke|full] [--limit N] [--baseline PATH] [--write-baseline PATH] [--check-baseline-readiness] [--summary-json PATH]"
+        "rum-difftest lane-d [--suite all|timing|memory] [--profile smoke|full] [--threshold-profile local-debug|ci-debug|ci-release] [--limit N] [--baseline PATH] [--write-baseline PATH] [--capture-runs N] [--baseline-elapsed-multiplier N] [--baseline-min-elapsed-micros N] [--check-baseline-readiness] [--summary-json PATH] [--fail-on-error] [--fail-on-regression]"
     );
     println!(
         "rum-difftest inventory [--lane NAME] [--source NAME] [--category NAME] [--baseline PATH] [--check-baseline] [--fail-on-regression] [--write-baseline PATH] [--summary-json PATH]"

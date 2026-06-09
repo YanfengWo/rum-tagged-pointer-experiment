@@ -23,8 +23,14 @@ fn top_level_help_lists_lane_d_readiness_gate() {
     assert!(stdout.contains("--fail-on-seed-drift"));
     assert!(stdout.contains("--fail-on-project-seed-drift"));
     assert!(stdout.contains("--fail-on-resolved-known-difference"));
+    assert!(stdout.contains("--threshold-profile"));
+    assert!(stdout.contains("--capture-runs"));
+    assert!(stdout.contains("--baseline-elapsed-multiplier"));
+    assert!(stdout.contains("--baseline-min-elapsed-micros"));
     assert!(stdout.contains("--check-baseline-readiness"));
     assert!(stdout.contains("--write-baseline"));
+    assert!(stdout.contains("--fail-on-error"));
+    assert!(stdout.contains("--fail-on-regression"));
     assert!(stdout.contains("--summary-json"));
     assert!(stdout.contains("--lane"));
     assert!(stdout.contains("--source"));
