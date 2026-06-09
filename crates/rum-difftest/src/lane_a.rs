@@ -1,18 +1,19 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use rum_runtime::Session;
-use rum_stdlib::install_core;
-use rum_terminal::{render_request_failure, render_runtime_message};
-
 use crate::fixtures::{
     GoldenEntry, curated_wolfram_core_dir, lane_a_default_fixture_paths, load_text,
     parse_golden_file, seed_root,
 };
-use crate::oracle::{Oracle, OracleError};
-use crate::value_render::render_input_form_like;
+use crate::oracle::Oracle;
 
-const SESSION_BATCH_RESULT_MARKER: &str = "__RUM_DIFFTEST_SESSION_BATCH_RESULT__=";
+#[path = "lane_a/oracle_batches.rs"]
+mod oracle_batches;
+#[path = "lane_a/values.rs"]
+mod values;
+
+use oracle_batches::run_oracle_case_batches;
+use values::{case_from_oracle_output, case_values_match, run_rum_case};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LaneAOptions {
@@ -207,120 +208,6 @@ fn record_case_result(summary: &mut LaneASummary, case: &LaneACaseReport) {
     }
 }
 
-fn run_oracle_case_batches<O: Oracle>(
-    oracle: &mut O,
-    cases: &[PreparedLaneACase],
-) -> Vec<CaseValue> {
-    let input_batches = cases
-        .iter()
-        .map(|case| vec![case.input.clone()])
-        .collect::<Vec<_>>();
-
-    match oracle.evaluate_session_batches(&input_batches) {
-        Ok(outputs) if outputs.len() == cases.len() => outputs
-            .into_iter()
-            .map(|batch| match batch.as_slice() {
-                [output] => case_from_oracle_output(output.clone()),
-                _ => CaseValue::Failure {
-                    message: format!(
-                        "oracle returned {} session results for 1 Lane A case",
-                        batch.len()
-                    ),
-                },
-            })
-            .collect(),
-        Ok(outputs) => vec![
-            CaseValue::Failure {
-                message: format!(
-                    "oracle returned {} session batches for {} Lane A cases",
-                    outputs.len(),
-                    cases.len()
-                ),
-            };
-            cases.len()
-        ],
-        Err(err) => partial_timeout_case_values(&err, cases)
-            .unwrap_or_else(|| failure_case_values(cases.len(), render_oracle_error(&err))),
-    }
-}
-
-fn partial_timeout_case_values(
-    error: &OracleError,
-    cases: &[PreparedLaneACase],
-) -> Option<Vec<CaseValue>> {
-    let OracleError::TimedOut {
-        executable,
-        timeout_millis,
-        stdout,
-        stderr,
-    } = error
-    else {
-        return None;
-    };
-
-    let mut values = vec![None; cases.len()];
-    for line in stdout.lines() {
-        let Some(payload) = line.strip_prefix(SESSION_BATCH_RESULT_MARKER) else {
-            continue;
-        };
-        let Some((batch_text, rest)) = payload.split_once('\t') else {
-            continue;
-        };
-        let Some((step_text, value)) = rest.split_once('\t') else {
-            continue;
-        };
-        let Ok(batch_index) = batch_text.parse::<usize>() else {
-            continue;
-        };
-        let Ok(step_index) = step_text.parse::<usize>() else {
-            continue;
-        };
-        if batch_index == 0 || batch_index > values.len() || step_index != 1 {
-            continue;
-        }
-        values[batch_index - 1] = Some(value.trim().to_owned());
-    }
-
-    let completed = values.iter().filter(|value| value.is_some()).count();
-    if completed == 0 {
-        return None;
-    }
-
-    let first_incomplete = values
-        .iter()
-        .position(Option::is_none)
-        .map(|index| (index + 1, cases[index].input.as_str()));
-    let timeout_context = PartialTimeoutContext {
-        executable: executable.display().to_string(),
-        timeout_millis: *timeout_millis,
-        completed,
-        total: cases.len(),
-        first_incomplete,
-        stdout_len: stdout.len(),
-        stderr_len: stderr.len(),
-    };
-    Some(
-        values
-            .into_iter()
-            .enumerate()
-            .map(|(index, value)| match value {
-                Some(value) => CaseValue::Value {
-                    value,
-                    messages: Vec::new(),
-                    printed_output: None,
-                },
-                None => CaseValue::Failure {
-                    message: timeout_context.message(index + 1),
-                },
-            })
-            .collect(),
-    )
-}
-
-fn failure_case_values(count: usize, message: String) -> Vec<CaseValue> {
-    vec![CaseValue::Failure { message }; count]
-}
-
 fn run_case(prepared: PreparedLaneACase, oracle_result: CaseValue) -> LaneACaseReport {
     let rum = run_rum_case(&prepared.input);
     let status = match (&rum, &oracle_result) {
@@ -348,109 +235,6 @@ fn run_case(prepared: PreparedLaneACase, oracle_result: CaseValue) -> LaneACaseR
         rum,
         oracle: oracle_result,
         status,
-    }
-}
-
-fn run_rum_case(input: &str) -> CaseValue {
-    let mut session = Session::new();
-    install_core(&mut session);
-
-    match session.eval_request(input) {
-        Ok(response) => CaseValue::Value {
-            value: render_input_form_like(&response.value),
-            messages: response
-                .messages
-                .iter()
-                .map(render_runtime_message)
-                .collect(),
-            printed_output: (!response.prints.is_empty()).then(|| response.prints.join("\n")),
-        },
-        Err(failure) => CaseValue::Failure {
-            message: render_request_failure(&failure),
-        },
-    }
-}
-
-fn case_from_oracle_output(output: crate::oracle::OracleEvaluation) -> CaseValue {
-    CaseValue::Value {
-        value: output.result,
-        messages: normalize_oracle_messages(&output.stderr),
-        printed_output: (!output.printed_output.is_empty()).then_some(output.printed_output),
-    }
-}
-
-fn case_values_match(rum: &CaseValue, oracle: &CaseValue) -> bool {
-    match (rum, oracle) {
-        (
-            CaseValue::Value {
-                value: rum_value,
-                messages: rum_messages,
-                printed_output: rum_printed_output,
-            },
-            CaseValue::Value {
-                value: oracle_value,
-                messages: oracle_messages,
-                printed_output: oracle_printed_output,
-            },
-        ) => {
-            rum_value == oracle_value
-                && rum_messages == oracle_messages
-                && rum_printed_output == oracle_printed_output
-        }
-        _ => false,
-    }
-}
-
-fn normalize_oracle_messages(text: &str) -> Vec<String> {
-    text.lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(|line| format!("! {line}"))
-        .collect()
-}
-
-fn render_oracle_error(error: &OracleError) -> String {
-    match error {
-        OracleError::TimedOut {
-            executable,
-            timeout_millis,
-            stdout,
-            stderr,
-        } => format!(
-            "oracle executable `{}` timed out after {timeout_millis} ms (captured stdout bytes: {}, stderr bytes: {})",
-            executable.display(),
-            stdout.len(),
-            stderr.len()
-        ),
-        _ => error.to_string(),
-    }
-}
-
-struct PartialTimeoutContext<'a> {
-    executable: String,
-    timeout_millis: u128,
-    completed: usize,
-    total: usize,
-    first_incomplete: Option<(usize, &'a str)>,
-    stdout_len: usize,
-    stderr_len: usize,
-}
-
-impl PartialTimeoutContext<'_> {
-    fn message(&self, batch_index: usize) -> String {
-        let first_incomplete = self
-            .first_incomplete
-            .map(|(index, input)| format!("; first incomplete batch {index}: {input}"))
-            .unwrap_or_default();
-        format!(
-            "oracle executable `{}` timed out after {} ms after completing {} of {} Lane A batches{first_incomplete}; this case is batch {batch_index}; captured stdout bytes: {}, stderr bytes: {}",
-            self.executable,
-            self.timeout_millis,
-            self.completed,
-            self.total,
-            self.stdout_len,
-            self.stderr_len
-        )
     }
 }
 
