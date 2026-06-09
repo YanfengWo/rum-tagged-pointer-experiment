@@ -714,8 +714,9 @@ This roadmap intentionally uses two levels of detail:
     and guard it with the checked inventory category baseline
   - [x] Lane A follow-up: broaden the curated options-surface fixture with
     stable string-name `Options`, option clearing, multi-target `SetOptions`,
-    list-valued `OptionValue`, and `OptionsPattern` lookup cases while keeping
-    it under the checked inventory category baseline
+    list-valued `OptionValue`, `OptionsPattern` lookup, delayed option-rule
+    lookup, `Block`-localized option state, and system option consumers while
+    keeping it under the checked inventory category baseline
   - [x] Lane A follow-up: add a curated messages/attributes fixture for stable
     `Message` / `Quiet` / `Check` and basic attribute conformance, then retire
     the `HoldFirst` plus `HoldRest` normalization known-difference row after
