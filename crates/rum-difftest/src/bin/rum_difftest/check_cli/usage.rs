@@ -8,6 +8,8 @@ pub(super) fn print_check_usage() {
     );
     println!("  --include-lane-d-readiness");
     println!("                              Also check the Lane D checked-baseline artifact set");
+    println!("  --fail-on-open-known-difference");
+    println!("                              Fail if any active Lane C ledger row has status=open");
     println!("  --summary-json PATH        Write a stable machine-readable summary");
     println!("  --max-issue-samples N      Bound aggregate JSON issue samples (default 5)");
     println!("  --issue-sample-check NAME  Filter JSON issue samples by check name, or all");

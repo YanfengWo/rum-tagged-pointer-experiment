@@ -28,6 +28,7 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
     let mut summary_json_path = None;
     let mut max_issue_samples = summary_json::DEFAULT_MAX_ISSUE_SAMPLES;
     let mut issue_sample_filter = summary_json::CheckIssueSampleFilter::default();
+    let mut fail_on_open_known_difference = false;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -50,6 +51,9 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
             }
             "--include-lane-d-readiness" => {
                 include_lane_d_readiness = true;
+            }
+            "--fail-on-open-known-difference" => {
+                fail_on_open_known_difference = true;
             }
             "--summary-json" => {
                 summary_json_path = Some(PathBuf::from(expect_value(&mut iter, "--summary-json")?));
@@ -78,6 +82,7 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
         inventory_baseline_path,
         lane_d_smoke_baseline,
         include_lane_d_readiness,
+        fail_on_open_known_difference,
     )?;
     text_report::print_check_report(&report);
 
@@ -98,6 +103,7 @@ pub(super) struct LocalCheckReport {
     pub(super) inventory: FixtureInventoryReport,
     pub(super) inventory_baseline: InventoryBaselineReport,
     pub(super) known_differences: KnownDifferenceLedgerReport,
+    pub(super) fail_on_open_known_difference: bool,
     pub(super) artifact_hygiene_issues: Vec<OracleArtifactIssue>,
     pub(super) lane_d_smoke: Option<LaneDSmokeCheckReport>,
     pub(super) lane_d_readiness: Option<LaneDReadinessCheckReport>,
@@ -128,7 +134,7 @@ enum LaneDSmokeBaseline {
 impl LocalCheckReport {
     fn is_clean(&self) -> bool {
         self.inventory_baseline.is_clean()
-            && self.known_differences.is_clean()
+            && self.lane_c_check_clean()
             && self.artifact_hygiene_issues.is_empty()
             && self
                 .lane_d_smoke
@@ -142,7 +148,7 @@ impl LocalCheckReport {
 
     fn failed_checks(&self) -> usize {
         usize::from(!self.inventory_baseline.is_clean())
-            + usize::from(!self.known_differences.is_clean())
+            + usize::from(!self.lane_c_check_clean())
             + usize::from(!self.artifact_hygiene_issues.is_empty())
             + self
                 .lane_d_smoke
@@ -181,6 +187,15 @@ impl LocalCheckReport {
 
     pub(super) fn skipped_checks_count(&self) -> usize {
         usize::from(self.lane_d_smoke.is_none()) + usize::from(self.lane_d_readiness.is_none())
+    }
+
+    pub(super) fn open_known_differences(&self) -> usize {
+        self.known_differences.active_ledger_status_count("open")
+    }
+
+    pub(super) fn lane_c_check_clean(&self) -> bool {
+        self.known_differences.is_clean()
+            && (!self.fail_on_open_known_difference || self.open_known_differences() == 0)
     }
 }
 
@@ -236,6 +251,7 @@ fn run_local_checks(
     inventory_baseline_path: Option<PathBuf>,
     lane_d_smoke_baseline: Option<LaneDSmokeBaseline>,
     include_lane_d_readiness: bool,
+    fail_on_open_known_difference: bool,
 ) -> Result<LocalCheckReport, Box<dyn std::error::Error>> {
     let inventory_baseline_path =
         inventory_baseline_path.unwrap_or_else(default_inventory_baseline_path);
@@ -272,6 +288,7 @@ fn run_local_checks(
         inventory,
         inventory_baseline,
         known_differences,
+        fail_on_open_known_difference,
         artifact_hygiene_issues,
         lane_d_smoke,
         lane_d_readiness,

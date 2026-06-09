@@ -44,6 +44,7 @@ Use `check` as the default fast, non-oracle health gate for this crate:
 ```bash
 cargo run -p rum-difftest -- check
 cargo run -p rum-difftest -- check --summary-json /tmp/rum-difftest-check.json
+cargo run -p rum-difftest -- check --fail-on-open-known-difference
 cargo run -p rum-difftest -- check --include-lane-d-smoke
 ```
 
@@ -63,8 +64,11 @@ counts even when samples are capped. Use `--issue-sample-check NAME` and
 aggregate-gate debugging; the summary still reports the unfiltered issue total
 and untruncated check/kind counts. `KIND` is a checked aggregate issue kind
 such as `regression`, `missing_ledger_entry`, `oracle_artifact`,
-`missing_record`, or `missing_artifact`; invalid kind names fail fast instead
-of silently producing an empty locator list.
+`open_known_difference`, `missing_record`, or `missing_artifact`; invalid kind
+names fail fast instead of silently producing an empty locator list. Use
+`--fail-on-open-known-difference` when a local or CI script should fail if the
+active Lane C ledger contains any `status=open` row; deferred and intentional
+rows remain allowed by that gate.
 
 ## Machine-Readable Summaries
 

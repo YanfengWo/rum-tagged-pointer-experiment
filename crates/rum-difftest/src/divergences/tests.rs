@@ -93,6 +93,8 @@ fn ledger_report_counts_active_records_by_field() {
         report.active_ledger_field_counts("status"),
         BTreeMap::from([("deferred".to_string(), 1), ("open".to_string(), 2)])
     );
+    assert_eq!(report.active_ledger_status_count("open"), 2);
+    assert_eq!(report.active_ledger_status_count("intentional"), 0);
     assert_eq!(
         report.active_ledger_field_counts("type"),
         BTreeMap::from([("intentional".to_string(), 1), ("temporary".to_string(), 2),])

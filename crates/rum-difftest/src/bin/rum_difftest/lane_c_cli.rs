@@ -8,6 +8,7 @@ use super::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
 
 pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut summary_json_path = None;
+    let mut fail_on_open_known_difference = false;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -19,6 +20,7 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             "--summary-json" => {
                 summary_json_path = Some(PathBuf::from(expect_value(&mut iter, "--summary-json")?));
             }
+            "--fail-on-open-known-difference" => fail_on_open_known_difference = true,
             other => return Err(format!("unknown lane-c flag `{other}`").into()),
         }
     }
@@ -70,6 +72,17 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         "tracking target issues: {}",
         report.tracking_target_issues.len()
     );
+    if fail_on_open_known_difference {
+        let status = if report.active_ledger_status_count("open") == 0 {
+            "clean"
+        } else {
+            "dirty"
+        };
+        println!(
+            "open known-difference gate: {status} open={}",
+            report.active_ledger_status_count("open")
+        );
+    }
 
     for reference in &report.missing_ledger_entries {
         println!(
@@ -127,18 +140,29 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     }
 
     if let Some(path) = summary_json_path {
-        write_json_file(&path, summary_json(&report))?;
+        write_json_file(&path, summary_json(&report, fail_on_open_known_difference))?;
         println!("summary json: {}", path.display());
     }
 
-    if report.is_clean() {
+    if lane_c_is_clean(&report, fail_on_open_known_difference) {
         Ok(ExitCode::SUCCESS)
     } else {
         Ok(ExitCode::FAILURE)
     }
 }
 
-fn summary_json(report: &divergences::KnownDifferenceLedgerReport) -> String {
+fn lane_c_is_clean(
+    report: &divergences::KnownDifferenceLedgerReport,
+    fail_on_open_known_difference: bool,
+) -> bool {
+    report.is_clean()
+        && (!fail_on_open_known_difference || report.active_ledger_status_count("open") == 0)
+}
+
+fn summary_json(
+    report: &divergences::KnownDifferenceLedgerReport,
+    fail_on_open_known_difference: bool,
+) -> String {
     format!(
         concat!(
             "{{\n",
@@ -158,6 +182,10 @@ fn summary_json(report: &divergences::KnownDifferenceLedgerReport) -> String {
             "    \"retired_seed_entries\": {},\n",
             "    \"fixture_known_differences\": {}\n",
             "  }},\n",
+            "  \"failure_gates\": {{\n",
+            "    \"fail_on_open_known_difference\": {},\n",
+            "    \"open_known_differences\": {}\n",
+            "  }},\n",
             "  \"issues\": {{\n",
             "    \"missing_ledger_entries\": {},\n",
             "    \"unreferenced_ledger_entries\": {},\n",
@@ -170,7 +198,7 @@ fn summary_json(report: &divergences::KnownDifferenceLedgerReport) -> String {
             "}}\n"
         ),
         SUMMARY_SCHEMA_VERSION,
-        report.is_clean(),
+        lane_c_is_clean(report, fail_on_open_known_difference),
         json_string(
             &divergences::known_difference_ledger_path()
                 .display()
@@ -186,6 +214,8 @@ fn summary_json(report: &divergences::KnownDifferenceLedgerReport) -> String {
         active_ledger_field_counts_json(report, "type", "type", 6),
         report.retired_seed_records.len(),
         report.fixture_references.len(),
+        fail_on_open_known_difference,
+        report.active_ledger_status_count("open"),
         report.missing_ledger_entries.len(),
         report.unreferenced_ledger_entries.len(),
         report.unreferenced_retired_seed_entries.len(),
@@ -221,6 +251,8 @@ pub(super) fn active_ledger_field_counts_json(
 fn print_lane_c_usage() {
     println!("rum-difftest lane-c");
     println!("  --summary-json PATH       Write a stable machine-readable summary");
+    println!("  --fail-on-open-known-difference");
+    println!("                            Exit non-zero if any active ledger row has status=open");
     println!(
         "  Validate fixture `!!! id=...`, retired seed rows, fixture/type metadata, and active `tracked_by=path:needle` targets"
     );

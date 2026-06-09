@@ -33,6 +33,9 @@ cargo run -p rum-difftest -- lane-c
 The text output and `--summary-json PATH` report include active ledger counts
 by `status` and `type`, so scripts can distinguish open, deferred, intentional,
 temporary, and similar divergence classes without parsing ledger rows.
+Use `--fail-on-open-known-difference` when a script should fail if any active
+ledger row still has `status=open`; this does not reject deferred or
+intentional rows.
 
 The validator checks that every checked fixture `!!! id=...` appears in the
 active ledger or the retired seed manifest, that every ledger entry is still

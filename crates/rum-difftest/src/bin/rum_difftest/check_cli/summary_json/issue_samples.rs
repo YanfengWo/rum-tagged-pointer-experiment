@@ -29,6 +29,7 @@ const KIND_FIXTURE_MISMATCH: &str = "fixture_mismatch";
 const KIND_METADATA_MISMATCH: &str = "metadata_mismatch";
 const KIND_RETIRED_SEED_FIXTURE_MISMATCH: &str = "retired_seed_fixture_mismatch";
 const KIND_TRACKING_TARGET_ISSUE: &str = "tracking_target_issue";
+const KIND_OPEN_KNOWN_DIFFERENCE: &str = "open_known_difference";
 const KIND_ORACLE_ARTIFACT: &str = "oracle_artifact";
 const KIND_MISSING_RECORD: &str = "missing_record";
 const KIND_UNUSED_RECORD: &str = "unused_record";
@@ -47,6 +48,7 @@ pub(super) const ISSUE_SAMPLE_KIND_VALUES: &[&str] = &[
     KIND_METADATA_MISMATCH,
     KIND_RETIRED_SEED_FIXTURE_MISMATCH,
     KIND_TRACKING_TARGET_ISSUE,
+    KIND_OPEN_KNOWN_DIFFERENCE,
     KIND_ORACLE_ARTIFACT,
     KIND_MISSING_RECORD,
     KIND_UNUSED_RECORD,
@@ -254,6 +256,26 @@ fn collect_lane_c_samples(report: &LocalCheckReport, samples: &mut Vec<CheckIssu
             location: issue.target.clone(),
             message: format!("{}: {}", issue.id, issue.message),
         });
+    }
+    if report.fail_on_open_known_difference {
+        for record in &ledger.records {
+            if record
+                .fields
+                .get("status")
+                .is_some_and(|status| status == "open")
+            {
+                samples.push(CheckIssueSample {
+                    check: CHECK_LANE_C_LEDGER,
+                    kind: KIND_OPEN_KNOWN_DIFFERENCE,
+                    location: record
+                        .fields
+                        .get("fixture")
+                        .cloned()
+                        .unwrap_or_else(|| "<unknown fixture>".to_string()),
+                    message: record.id.clone(),
+                });
+            }
+        }
     }
 }
 

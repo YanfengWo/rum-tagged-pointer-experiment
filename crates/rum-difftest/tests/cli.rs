@@ -448,6 +448,7 @@ fn lane_c_help_and_unknown_flag_paths_are_stable() {
     assert!(help.status.success());
     assert!(stdout_text(&help).contains("rum-difftest lane-c"));
     assert!(stdout_text(&help).contains("--summary-json"));
+    assert!(stdout_text(&help).contains("--fail-on-open-known-difference"));
 
     let unknown = run_difftest(&["lane-c", "--unknown"]);
     assert!(!unknown.status.success());
@@ -458,10 +459,17 @@ fn lane_c_help_and_unknown_flag_paths_are_stable() {
 fn lane_c_writes_machine_readable_summary_json() {
     let temp_dir = unique_temp_dir("lane-c-json");
     let summary_path = temp_dir.join("summary.json");
-    let output = run_difftest(&["lane-c", "--summary-json", summary_path.to_str().unwrap()]);
+    let output = run_difftest(&[
+        "lane-c",
+        "--fail-on-open-known-difference",
+        "--summary-json",
+        summary_path.to_str().unwrap(),
+    ]);
 
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
-    assert!(stdout_text(&output).contains("summary json:"));
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("open known-difference gate: clean open=0"));
+    assert!(stdout.contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
     let summary_json = parse_summary_json(&summary);
     assert_eq!(json_str(&summary_json, "/lane"), "lane-c");
@@ -490,6 +498,14 @@ fn lane_c_writes_machine_readable_summary_json() {
     assert_eq!(
         json_u64(&summary_json, "/counts/fixture_known_differences"),
         5
+    );
+    assert!(json_bool(
+        &summary_json,
+        "/failure_gates/fail_on_open_known_difference"
+    ));
+    assert_eq!(
+        json_u64(&summary_json, "/failure_gates/open_known_differences"),
+        0
     );
     assert_eq!(json_u64(&summary_json, "/issues/tracking_target_issues"), 0);
     fs::remove_dir_all(temp_dir).unwrap();

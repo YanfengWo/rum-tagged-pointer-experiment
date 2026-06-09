@@ -69,6 +69,13 @@ impl KnownDifferenceLedgerReport {
         }
         counts
     }
+
+    pub fn active_ledger_status_count(&self, status: &str) -> usize {
+        self.active_ledger_field_counts("status")
+            .get(status)
+            .copied()
+            .unwrap_or(0)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

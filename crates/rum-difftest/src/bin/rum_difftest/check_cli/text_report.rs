@@ -54,7 +54,7 @@ fn print_inventory_baseline_check(report: &LocalCheckReport) {
 }
 
 fn print_lane_c_check(report: &LocalCheckReport) {
-    let status = if report.known_differences.is_clean() {
+    let status = if report.lane_c_check_clean() {
         "clean"
     } else {
         "dirty"
@@ -89,6 +89,17 @@ fn print_lane_c_check(report: &LocalCheckReport) {
         "lane-c issues: {}",
         lane_c_issue_count(&report.known_differences)
     );
+    if report.fail_on_open_known_difference {
+        let status = if report.open_known_differences() == 0 {
+            "clean"
+        } else {
+            "dirty"
+        };
+        println!(
+            "open known-difference gate: {status} open={}",
+            report.open_known_differences()
+        );
+    }
 }
 
 fn lane_c_issue_count(report: &KnownDifferenceLedgerReport) -> usize {

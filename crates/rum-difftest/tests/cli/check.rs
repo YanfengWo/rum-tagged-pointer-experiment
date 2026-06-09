@@ -39,6 +39,7 @@ fn check_help_and_unknown_flag_paths_are_stable() {
     assert!(stdout_text(&help).contains("--include-lane-d-smoke"));
     assert!(stdout_text(&help).contains("--lane-d-smoke-baseline"));
     assert!(stdout_text(&help).contains("--include-lane-d-readiness"));
+    assert!(stdout_text(&help).contains("--fail-on-open-known-difference"));
     assert!(stdout_text(&help).contains("--summary-json"));
     assert!(stdout_text(&help).contains("--max-issue-samples"));
     assert!(stdout_text(&help).contains("--issue-sample-check"));
@@ -94,6 +95,11 @@ fn check_writes_machine_readable_summary_json() {
     let lane_c = check_entry(&summary_json, "lane-c-ledger");
     assert!(json_bool(lane_c, "/clean"));
     assert_eq!(json_u64(lane_c, "/counts/active_ledger_entries"), 4);
+    assert!(!json_bool(
+        lane_c,
+        "/failure_gates/fail_on_open_known_difference"
+    ));
+    assert_eq!(json_u64(lane_c, "/failure_gates/open_known_differences"), 0);
     assert_eq!(
         json_str(
             &json_array(lane_c, "/counts/active_ledger_status_counts")[0],
@@ -146,6 +152,36 @@ fn check_writes_machine_readable_summary_json() {
         ),
         "opt-in with --include-lane-d-readiness"
     );
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
+#[test]
+fn check_can_fail_on_open_known_differences_when_requested() {
+    let temp_dir = unique_temp_dir("check-open-known-diffs-json");
+    let summary_path = temp_dir.join("summary.json");
+    let output = run_difftest(&[
+        "check",
+        "--fail-on-open-known-difference",
+        "--summary-json",
+        summary_path.to_str().unwrap(),
+    ]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("open known-difference gate: clean open=0"));
+    assert!(stdout.contains("checks failed: 0"));
+
+    let summary = fs::read_to_string(&summary_path).unwrap();
+    let summary_json = parse_summary_json(&summary);
+    assert!(json_bool(&summary_json, "/clean"));
+    let lane_c = check_entry(&summary_json, "lane-c-ledger");
+    assert!(json_bool(lane_c, "/clean"));
+    assert!(json_bool(
+        lane_c,
+        "/failure_gates/fail_on_open_known_difference"
+    ));
+    assert_eq!(json_u64(lane_c, "/failure_gates/open_known_differences"), 0);
+    assert!(json_array(&summary_json, "/issue_samples").is_empty());
     fs::remove_dir_all(temp_dir).unwrap();
 }
 

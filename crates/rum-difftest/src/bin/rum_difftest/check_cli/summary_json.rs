@@ -235,6 +235,10 @@ fn lane_c_check_json(report: &LocalCheckReport) -> String {
             "        \"retired_seed_entries\": {},\n",
             "        \"fixture_known_differences\": {}\n",
             "      }},\n",
+            "      \"failure_gates\": {{\n",
+            "        \"fail_on_open_known_difference\": {},\n",
+            "        \"open_known_differences\": {}\n",
+            "      }},\n",
             "      \"issues\": {{\n",
             "        \"missing_ledger_entries\": {},\n",
             "        \"unreferenced_ledger_entries\": {},\n",
@@ -246,7 +250,7 @@ fn lane_c_check_json(report: &LocalCheckReport) -> String {
             "      }}\n",
             "    }}"
         ),
-        ledger.is_clean(),
+        report.lane_c_check_clean(),
         json_string(
             &divergences::known_difference_ledger_path()
                 .display()
@@ -262,6 +266,8 @@ fn lane_c_check_json(report: &LocalCheckReport) -> String {
         active_ledger_field_counts_json(ledger, "type", "type", 10),
         ledger.retired_seed_records.len(),
         ledger.fixture_references.len(),
+        report.fail_on_open_known_difference,
+        report.open_known_differences(),
         ledger.missing_ledger_entries.len(),
         ledger.unreferenced_ledger_entries.len(),
         ledger.unreferenced_retired_seed_entries.len(),
