@@ -53,6 +53,7 @@ The crate now includes a first-pass `lane-a` runner:
 ```bash
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel
 cargo run -p rum-difftest -- lane-a --oracle-command WolframKernel
+cargo run -p rum-difftest -- lane-a --oracle-command WolframKernel --oracle-timeout-seconds 60
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --include-known-diffs
 ```
 
@@ -67,6 +68,7 @@ Supported config keys today:
 ```text
 oracle_kernel = "/path/to/WolframKernel"
 oracle_command = "WolframKernel"
+oracle_timeout_seconds = 120
 ```
 
 The current runner accepts a kernel-compatible executable path or command such
@@ -76,9 +78,13 @@ as `WolframKernel`, `MathKernel`, or a wrapper with the same `-noprompt
 writes its oracle wrapper script and per-case input files to a temporary
 directory for each run, compares values, messages, and printed output
 in-memory, and removes those artifacts afterward. The CLI reports the resolved
-oracle executable, the explicit `user-provided/unpinned` version policy, and
-best-effort Wolfram `$Version`; version probe failures are reported but do not
-fail the diff run, and config does not support version pin keys. `rum` values
+oracle executable, the effective per-invocation timeout, the explicit
+`user-provided/unpinned` version policy, and best-effort Wolfram `$Version`;
+version probe failures are reported but do not fail the diff run, and config
+does not support version pin keys. The timeout defaults to 120 seconds and can
+be overridden by `--oracle-timeout-seconds`, `oracle_timeout_seconds`, or
+`RUM_DIFFTEST_ORACLE_TIMEOUT_SECONDS`, in that precedence order. Timed-out
+kernel processes are terminated and reported as oracle failures. `rum` values
 are rendered through the shared difftest InputForm-like renderer, which covers
 common list, rule, delayed-rule, and association output shapes before
 comparison. It is intentionally not yet a complete Wolfram display
@@ -99,6 +105,7 @@ fixtures:
 ```bash
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel
 cargo run -p rum-difftest -- lane-b --oracle-command WolframKernel
+cargo run -p rum-difftest -- lane-b --oracle-command WolframKernel --oracle-timeout-seconds 60
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --include-known-diffs
 ```
 
@@ -108,7 +115,8 @@ older replay-based state simulation and gives definition, option, message,
 attribute, and precedence checks a real ordered-session oracle. The runner
 compares InputForm-like result values plus per-step message and print streams.
 Like Lane A, its CLI reports the resolved oracle executable and best-effort
-Wolfram `$Version` without making version probing a pass/fail gate.
+Wolfram `$Version` without making version probing a pass/fail gate, and applies
+the same per-session oracle timeout.
 Fixture `expected` fields are treated as seed annotations and are checked only
 for seed-vs-oracle drift, not as the comparison oracle.
 When `--include-known-diffs` is used, the report includes the known-difference

@@ -1,12 +1,16 @@
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use thiserror::Error;
+
+use crate::oracle::DEFAULT_ORACLE_TIMEOUT;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct DiffTestConfig {
     pub oracle_kernel: Option<PathBuf>,
+    pub oracle_timeout_seconds: Option<u64>,
 }
 
 #[derive(Debug, Error)]
@@ -21,6 +25,8 @@ pub enum ConfigError {
     InvalidLine { line: String },
     #[error("unknown config key `{key}`")]
     UnknownKey { key: String },
+    #[error("`{key}` expects a positive integer, got `{value}`")]
+    InvalidPositiveInteger { key: String, value: String },
 }
 
 pub fn load_config(path: impl AsRef<Path>) -> Result<DiffTestConfig, ConfigError> {
@@ -56,6 +62,9 @@ pub fn parse_config(text: &str) -> Result<DiffTestConfig, ConfigError> {
                     config.oracle_kernel = Some(PathBuf::from(value));
                 }
             }
+            "oracle_timeout_seconds" => {
+                config.oracle_timeout_seconds = Some(parse_positive_integer(key, &value)?);
+            }
             _ => {
                 return Err(ConfigError::UnknownKey {
                     key: key.to_owned(),
@@ -65,6 +74,38 @@ pub fn parse_config(text: &str) -> Result<DiffTestConfig, ConfigError> {
     }
 
     Ok(config)
+}
+
+pub fn resolve_oracle_timeout(
+    cli_timeout_seconds: Option<u64>,
+    config: &DiffTestConfig,
+) -> Result<Duration, ConfigError> {
+    resolve_oracle_timeout_with_env(
+        cli_timeout_seconds,
+        config,
+        env::var_os("RUM_DIFFTEST_ORACLE_TIMEOUT_SECONDS").as_deref(),
+    )
+}
+
+fn resolve_oracle_timeout_with_env(
+    cli_timeout_seconds: Option<u64>,
+    config: &DiffTestConfig,
+    env_timeout_seconds: Option<&std::ffi::OsStr>,
+) -> Result<Duration, ConfigError> {
+    let seconds = if let Some(seconds) = cli_timeout_seconds {
+        validate_positive_integer("oracle timeout", seconds)?
+    } else if let Some(seconds) = config.oracle_timeout_seconds {
+        seconds
+    } else if let Some(value) = env_timeout_seconds {
+        parse_positive_integer(
+            "RUM_DIFFTEST_ORACLE_TIMEOUT_SECONDS",
+            &value.to_string_lossy(),
+        )?
+    } else {
+        DEFAULT_ORACLE_TIMEOUT.as_secs()
+    };
+
+    Ok(Duration::from_secs(seconds))
 }
 
 pub fn resolve_oracle_kernel(
@@ -184,6 +225,26 @@ fn unquote(value: &str) -> String {
     value.to_owned()
 }
 
+fn parse_positive_integer(key: &str, value: &str) -> Result<u64, ConfigError> {
+    let parsed = value
+        .parse::<u64>()
+        .map_err(|_| ConfigError::InvalidPositiveInteger {
+            key: key.to_owned(),
+            value: value.to_owned(),
+        })?;
+    validate_positive_integer(key, parsed)
+}
+
+fn validate_positive_integer(key: &str, value: u64) -> Result<u64, ConfigError> {
+    if value == 0 {
+        return Err(ConfigError::InvalidPositiveInteger {
+            key: key.to_owned(),
+            value: value.to_string(),
+        });
+    }
+    Ok(value)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,6 +266,76 @@ mod tests {
     fn parses_oracle_command_alias_from_config() {
         let config = parse_config("oracle_command = 'WolframKernel'").unwrap();
         assert_eq!(config.oracle_kernel, Some(PathBuf::from("WolframKernel")));
+    }
+
+    #[test]
+    fn parses_oracle_timeout_from_config() {
+        let config = parse_config("oracle_timeout_seconds = 45").unwrap();
+        assert_eq!(config.oracle_timeout_seconds, Some(45));
+        assert_eq!(
+            resolve_oracle_timeout(None, &config).unwrap(),
+            Duration::from_secs(45)
+        );
+    }
+
+    #[test]
+    fn cli_oracle_timeout_overrides_config() {
+        let config = DiffTestConfig {
+            oracle_kernel: None,
+            oracle_timeout_seconds: Some(45),
+        };
+        assert_eq!(
+            resolve_oracle_timeout_with_env(Some(9), &config, Some(std::ffi::OsStr::new("3")))
+                .unwrap(),
+            Duration::from_secs(9)
+        );
+    }
+
+    #[test]
+    fn config_oracle_timeout_overrides_environment() {
+        let config = DiffTestConfig {
+            oracle_kernel: None,
+            oracle_timeout_seconds: Some(45),
+        };
+        assert_eq!(
+            resolve_oracle_timeout_with_env(None, &config, Some(std::ffi::OsStr::new("3")))
+                .unwrap(),
+            Duration::from_secs(45)
+        );
+    }
+
+    #[test]
+    fn environment_oracle_timeout_overrides_default() {
+        assert_eq!(
+            resolve_oracle_timeout_with_env(
+                None,
+                &DiffTestConfig::default(),
+                Some(std::ffi::OsStr::new("3"))
+            )
+            .unwrap(),
+            Duration::from_secs(3)
+        );
+        assert_eq!(
+            resolve_oracle_timeout_with_env(None, &DiffTestConfig::default(), None).unwrap(),
+            DEFAULT_ORACLE_TIMEOUT
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_oracle_timeouts() {
+        for value in ["0", "-1", "later"] {
+            let err = parse_config(&format!("oracle_timeout_seconds = {value}")).unwrap_err();
+            assert!(matches!(err, ConfigError::InvalidPositiveInteger { .. }));
+        }
+        let err = resolve_oracle_timeout(Some(0), &DiffTestConfig::default()).unwrap_err();
+        assert!(matches!(err, ConfigError::InvalidPositiveInteger { .. }));
+        let err = resolve_oracle_timeout_with_env(
+            None,
+            &DiffTestConfig::default(),
+            Some(std::ffi::OsStr::new("never")),
+        )
+        .unwrap_err();
+        assert!(matches!(err, ConfigError::InvalidPositiveInteger { .. }));
     }
 
     #[test]

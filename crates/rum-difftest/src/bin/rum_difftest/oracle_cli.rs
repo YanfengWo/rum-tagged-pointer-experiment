@@ -2,6 +2,10 @@ use rum_difftest::oracle::OracleKernel;
 
 pub fn print_oracle_header(lane: &str, oracle: &OracleKernel) {
     println!("{lane} oracle: {}", oracle.executable().display());
+    println!(
+        "{lane} oracle timeout seconds: {}",
+        oracle.timeout().as_secs()
+    );
     println!("{lane} oracle version policy: user-provided/unpinned");
     match oracle.version() {
         Ok(version) if !version.is_empty() => {

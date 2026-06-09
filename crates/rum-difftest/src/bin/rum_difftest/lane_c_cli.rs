@@ -3,8 +3,7 @@ use std::process::ExitCode;
 use rum_difftest::divergences;
 
 pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
-    let mut iter = args.into_iter();
-    while let Some(arg) = iter.next() {
+    if let Some(arg) = args.first() {
         match arg.as_str() {
             "--help" | "-h" => {
                 print_lane_c_usage();

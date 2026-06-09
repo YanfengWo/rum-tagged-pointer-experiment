@@ -10,21 +10,11 @@ use crate::fixtures::{GoldenEntry, golden_dir, load_text, parse_golden_file};
 use crate::oracle::{Oracle, OracleError};
 use crate::value_render::render_input_form_like;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LaneAOptions {
     pub fixture: Option<PathBuf>,
     pub limit: Option<usize>,
     pub include_known_differences: bool,
-}
-
-impl Default for LaneAOptions {
-    fn default() -> Self {
-        Self {
-            fixture: None,
-            limit: None,
-            include_known_differences: false,
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

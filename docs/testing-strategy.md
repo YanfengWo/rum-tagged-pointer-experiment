@@ -165,7 +165,10 @@ Oracle runs use a user-provided local Wolfram kernel such as `WolframKernel`,
 `oracle_command`, the `RUM_DIFFTEST_ORACLE_KERNEL` environment variable, `PATH`
 discovery, and common local install paths. Connector-hosted or MCP-wrapped
 sessions are acceptable for tiny manual spot checks but are not the baseline
-oracle.
+oracle. Every local oracle invocation has a finite timeout: 120 seconds by
+default, overridable through `--oracle-timeout-seconds`,
+`oracle_timeout_seconds`, or `RUM_DIFFTEST_ORACLE_TIMEOUT_SECONDS`. The runner
+terminates timed-out kernels and records them as oracle failures.
 
 Rules:
 
@@ -178,6 +181,8 @@ Rules:
   pass/fail decisions must compare `rum` against fresh oracle output and report
   seed-vs-oracle drift separately.
 - Record the oracle command and version in run output when practical.
+- Record the effective oracle timeout in run output and keep the same timeout
+  policy for Lane A cases, Lane B fixture sessions, and version probes.
 - Treat version differences as compatibility data, not as a reason to pin the
   project to one hidden oracle environment. Lane A/B should keep the
   `user-provided/unpinned` version policy visible and should not accept config

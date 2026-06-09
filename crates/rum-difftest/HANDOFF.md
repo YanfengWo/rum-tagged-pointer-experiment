@@ -33,6 +33,8 @@ For the Wolfram-backed lanes, keep these policy constraints explicit:
   compatibility with users' existing Wolfram environments
 - Lane A/B should report the `user-provided/unpinned` oracle-version policy
   and should not accept config keys that pin one required oracle version
+- every oracle invocation should have a finite timeout, with timed-out kernel
+  processes terminated rather than leaving the diff run hung indefinitely
 
 And keep the exclusion boundary explicit too:
 
@@ -45,12 +47,16 @@ And keep the exclusion boundary explicit too:
 Current implementation status:
 
 - a first-pass `lane-a` runner now exists
-- it accepts `--oracle-kernel PATH`, `--oracle-command PATH`, or
-  `--config PATH`
+- it accepts `--oracle-kernel PATH`, `--oracle-command PATH`,
+  `--oracle-timeout-seconds N`, or `--config PATH`
 - config currently supports `oracle_kernel = "/path/to/WolframKernel"` and
-  `oracle_command = "WolframKernel"`
+  `oracle_command = "WolframKernel"`, plus
+  `oracle_timeout_seconds = 120`
 - oracle resolution also checks `RUM_DIFFTEST_ORACLE_KERNEL`, `PATH`, and
   common local Wolfram install paths
+- oracle timeouts default to 120 seconds and resolve from CLI, config,
+  `RUM_DIFFTEST_ORACLE_TIMEOUT_SECONDS`, then the default; Lane A cases, Lane B
+  fixture sessions, and `$Version` probes use the same timeout executor
 - it drives a local kernel executable directly and stores generated oracle
   inputs/wrappers only in a temporary run directory
 - Lane A/B CLI output records the resolved oracle executable and best-effort

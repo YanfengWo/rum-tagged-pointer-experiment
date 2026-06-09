@@ -1,30 +1,29 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
 
-use super::OracleError;
+use super::{OracleError, process::run_with_timeout};
 
 const VERSION_MARKER: &str = "__RUM_DIFFTEST_VERSION__=";
 const ORACLE_VERSION_WRAPPER: &str = r#"WriteString[$Output, "__RUM_DIFFTEST_VERSION__=", $Version, "\n"];
 Exit[];
 "#;
 
-pub fn query_kernel_version(executable: &Path, temp_dir: &Path) -> Result<String, OracleError> {
+pub fn query_kernel_version(
+    executable: &Path,
+    temp_dir: &Path,
+    timeout: Duration,
+) -> Result<String, OracleError> {
     let wrapper_path = temp_dir.join("oracle_version.wls");
     fs::write(&wrapper_path, ORACLE_VERSION_WRAPPER).map_err(|source| OracleError::Io {
         path: wrapper_path.clone(),
         source,
     })?;
 
-    let output = Command::new(executable)
-        .arg("-noprompt")
-        .arg("-script")
-        .arg(&wrapper_path)
-        .output()
-        .map_err(|source| OracleError::Spawn {
-            executable: executable.to_path_buf(),
-            source,
-        })?;
+    let mut command = Command::new(executable);
+    command.arg("-noprompt").arg("-script").arg(&wrapper_path);
+    let output = run_with_timeout(&mut command, executable, timeout)?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
     let stderr = String::from_utf8_lossy(&output.stderr).into_owned();

@@ -1,15 +1,21 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
 
 use thiserror::Error;
 
+#[path = "oracle/process.rs"]
+mod process;
 #[path = "oracle/temp_dir.rs"]
 mod temp_dir;
 #[path = "oracle/version.rs"]
 mod version;
 
+use process::run_with_timeout;
 use temp_dir::TempDir;
+
+pub const DEFAULT_ORACLE_TIMEOUT: Duration = Duration::from_secs(120);
 
 const RESULT_MARKER: &str = "__RUM_DIFFTEST_RESULT__=";
 const SESSION_RESULT_MARKER: &str = "__RUM_DIFFTEST_SESSION_RESULT__=";
@@ -69,10 +75,18 @@ pub struct OracleKernel {
     wrapper_path: PathBuf,
     session_wrapper_path: PathBuf,
     next_case_id: usize,
+    timeout: Duration,
 }
 
 impl OracleKernel {
     pub fn new(executable: impl Into<PathBuf>) -> Result<Self, OracleError> {
+        Self::with_timeout(executable, DEFAULT_ORACLE_TIMEOUT)
+    }
+
+    pub fn with_timeout(
+        executable: impl Into<PathBuf>,
+        timeout: Duration,
+    ) -> Result<Self, OracleError> {
         let executable = executable.into();
         let temp_dir = TempDir::new("rum-difftest")?;
         let wrapper_path = temp_dir.path().join("oracle_wrapper.wls");
@@ -94,6 +108,7 @@ impl OracleKernel {
             wrapper_path,
             session_wrapper_path,
             next_case_id: 0,
+            timeout,
         })
     }
 
@@ -101,8 +116,12 @@ impl OracleKernel {
         &self.executable
     }
 
+    pub fn timeout(&self) -> Duration {
+        self.timeout
+    }
+
     pub fn version(&self) -> Result<String, OracleError> {
-        version::query_kernel_version(&self.executable, self.temp_dir.path())
+        version::query_kernel_version(&self.executable, self.temp_dir.path(), self.timeout)
     }
 }
 
@@ -118,16 +137,13 @@ impl Oracle for OracleKernel {
             source,
         })?;
 
-        let output = Command::new(&self.executable)
+        let mut command = Command::new(&self.executable);
+        command
             .arg("-noprompt")
             .arg("-script")
             .arg(&self.wrapper_path)
-            .arg(&input_path)
-            .output()
-            .map_err(|source| OracleError::Spawn {
-                executable: self.executable.clone(),
-                source,
-            })?;
+            .arg(&input_path);
+        let output = run_with_timeout(&mut command, &self.executable, self.timeout)?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
         let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
@@ -206,16 +222,13 @@ impl Oracle for OracleKernel {
             source,
         })?;
 
-        let output = Command::new(&self.executable)
+        let mut command = Command::new(&self.executable);
+        command
             .arg("-noprompt")
             .arg("-script")
             .arg(&self.session_wrapper_path)
-            .arg(&manifest_path)
-            .output()
-            .map_err(|source| OracleError::Spawn {
-                executable: self.executable.clone(),
-                source,
-            })?;
+            .arg(&manifest_path);
+        let output = run_with_timeout(&mut command, &self.executable, self.timeout)?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
         let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
@@ -325,6 +338,39 @@ pub enum OracleError {
         executable: PathBuf,
         #[source]
         source: std::io::Error,
+    },
+    #[error("failed while waiting for oracle executable `{executable}`: {source}")]
+    Wait {
+        executable: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to terminate timed-out oracle executable `{executable}`: {source}")]
+    Kill {
+        executable: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to capture oracle executable `{executable}` {stream}: {source}")]
+    OutputCapture {
+        executable: PathBuf,
+        stream: &'static str,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("oracle executable `{executable}` {stream} reader panicked")]
+    OutputReaderPanicked {
+        executable: PathBuf,
+        stream: &'static str,
+    },
+    #[error(
+        "oracle executable `{executable}` timed out after {timeout_millis} ms\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    )]
+    TimedOut {
+        executable: PathBuf,
+        timeout_millis: u128,
+        stdout: String,
+        stderr: String,
     },
     #[error(
         "oracle executable `{executable}` failed with status {code:?}\nstdout:\n{stdout}\nstderr:\n{stderr}"

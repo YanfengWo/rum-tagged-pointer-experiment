@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use rum_difftest::lane_d::{
@@ -208,7 +208,7 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     Ok(ExitCode::SUCCESS)
 }
 
-fn print_baseline_report(path: &PathBuf, report: &lane_d::LaneDBaselineReport) {
+fn print_baseline_report(path: &Path, report: &lane_d::LaneDBaselineReport) {
     println!("baseline: {}", path.display());
     println!("baseline records considered: {}", report.records_considered);
     println!("baseline compared cases: {}", report.compared);

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use rum_difftest::config::{load_optional_config, resolve_oracle_kernel};
+use rum_difftest::config::{load_optional_config, resolve_oracle_kernel, resolve_oracle_timeout};
 use rum_difftest::lane_a::CaseValue;
 use rum_difftest::lane_b::{self, LaneBOptions, LaneBStepStatus};
 use rum_difftest::oracle::OracleKernel;
@@ -15,6 +15,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut limit = None;
     let mut include_known_differences = false;
     let mut fail_on_mismatch = false;
+    let mut oracle_timeout_seconds = None;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -31,6 +32,10 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             "--include-known-diffs" | "--include-known-differences" => {
                 include_known_differences = true
             }
+            "--oracle-timeout-seconds" => {
+                let value = expect_value(&mut iter, "--oracle-timeout-seconds")?;
+                oracle_timeout_seconds = Some(value.parse::<u64>()?);
+            }
             "--fail-on-mismatch" => fail_on_mismatch = true,
             "--help" | "-h" => {
                 print_lane_b_usage();
@@ -41,11 +46,12 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     }
 
     let config = load_optional_config(config_path.as_deref())?;
-    let oracle_kernel = resolve_oracle_kernel(oracle_kernel, &config).ok_or_else(|| {
-        "no oracle kernel configured; pass --oracle-kernel/--oracle-command PATH or set oracle_kernel/oracle_command in a config file"
-    })?;
+    let oracle_kernel = resolve_oracle_kernel(oracle_kernel, &config).ok_or(
+        "no oracle kernel configured; pass --oracle-kernel/--oracle-command PATH or set oracle_kernel/oracle_command in a config file",
+    )?;
+    let oracle_timeout = resolve_oracle_timeout(oracle_timeout_seconds, &config)?;
 
-    let mut oracle = OracleKernel::new(&oracle_kernel)?;
+    let mut oracle = OracleKernel::with_timeout(&oracle_kernel, oracle_timeout)?;
     let summary = lane_b::run(
         &mut oracle,
         &LaneBOptions {
@@ -168,6 +174,8 @@ fn print_lane_b_usage() {
     println!("  --include-known-diffs     Include `!!!` steps in the run");
     println!("  --include-known-differences");
     println!("                              Alias for --include-known-diffs");
+    println!("  --oracle-timeout-seconds N");
+    println!("                              Kill an oracle invocation after N seconds");
     println!("  --fail-on-mismatch        Exit non-zero if any step mismatches or fails");
 }
 
