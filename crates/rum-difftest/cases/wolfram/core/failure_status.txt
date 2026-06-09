@@ -1,14 +1,43 @@
 # Curated Lane A file: failure and status
 # Format: input ||| expected_output
 MissingQ[Missing["KeyAbsent"]] ||| True
+MissingQ[Missing[]] ||| True
 MissingQ[1] ||| False
 FailureQ[Failure["oops", <||>]] ||| True
 FailureQ[$Failed] ||| True
+FailureQ[$Aborted] ||| True
+FailureQ[$Canceled] ||| False
+FailureQ[Failure["oops"]] ||| True
+FailureQ[Failure["oops", bad]] ||| True
+FailureQ[Failure[1, {"Code" -> 500}]] ||| True
+Failure["oops", {"Code" -> 500}]["Code"] ||| 500
+Failure["oops", {"Code" -> 500, "Body" -> 7}]["Missing"] ||| Missing["NotAvailable", "Missing"]
+Failure["oops", {"Code" -> 500}][All] ||| <|"Code" -> 500|>
+Failure["oops", {"Code" -> 500, "Body" -> 7}]["Properties"] ||| {"Body", "Code", "Message", "StyledMessage"}
+Failure["oops", {"Code" -> 500}]["Message"] ||| "A failure of type \"oops\" occurred."
+Failure["oops", {}]["Tag"] ||| "oops"
+Failure["oops", {"Tag" -> override}]["Tag"] ||| override
 CheckAbort[Abort[], rescued] ||| rescued
+CheckAbort[Abort[], rescued, {PropagateAborts -> False}] ||| rescued
+CheckAbort[Abort[], rescued, "PropagateAborts" -> False] ||| rescued
+CheckAbort[CheckAbort[Abort[], rescued, {PropagateAborts -> True}], outer] ||| outer
+CheckAbort[Abort[], rescued, {}, {}] ||| rescued
 x = 0; WithCleanup[x = 1, x = 2]; x ||| 2
 Success["ok", <|"Code" -> 200, "Body" -> 7|>]["Code"] ||| 200
+Success["ok", <|Code -> 200, Body -> 7|>][Code] ||| 200
+Success["ok", <|"Code" -> 200, "Body" -> 7|>][Code] ||| Missing["KeyAbsent", Code]
 Success["ok", <|"Code" -> 200, "Body" -> 7|>][{"Body", "Missing"}] ||| {7, Missing["KeyAbsent", "Missing"]}
 Success["ok", <|"Code" -> 200, "Body" -> 7|>]["Properties"] ||| {"Code", "Body"}
+Success["ok", <|"Code" -> 200|>][All] ||| Missing["KeyAbsent", All]
+Success["ok", <|"Code" -> 200|>]["Missing"] ||| Missing["KeyAbsent", "Missing"]
 Enclose[Confirm[$Failed, info], "Information"] ||| info
 Enclose[ConfirmBy[2, IntegerQ]] ||| 2
 Enclose[ConfirmMatch[2, _Integer]] ||| 2
+Enclose[ConfirmAssert[True]] ||| Null
+Enclose[ConfirmAssert[False, info], "Information"] ||| info
+side = 0; Enclose[Confirm[1, side = 1]]; side ||| 0
+Enclose[ConfirmBy[x, IntegerQ, info], "Function"] ||| IntegerQ
+Enclose[Confirm[Missing[]], "ConfirmationType"] ||| "Confirm"
+Enclose[Confirm[Failure["tag", <|"Code" -> 1|>]], "ConfirmationType"] ||| "Confirm"
+Enclose[Confirm[Failure["tag", <|"Code" -> 1|>]], "Message"] ||| "A failure of type \"tag\" occurred."
+Enclose[ConfirmAssert[False], "HeldTest"] ||| Hold[False]

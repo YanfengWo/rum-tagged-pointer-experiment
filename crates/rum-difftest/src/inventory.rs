@@ -218,6 +218,7 @@ mod tests {
             lane_a.totals_by_category()["messages-attributes"].known_difference_entries,
             0
         );
+        assert_eq!(lane_a.totals_by_category()["failure-status"].entries, 41);
         assert_eq!(lane_a.totals_by_category()["ordering-surface"].entries, 18);
         assert_eq!(lane_a.totals_by_category()["options-surface"].entries, 14);
         assert_eq!(lane_a.totals_by_category()["scoping-closures"].entries, 18);
