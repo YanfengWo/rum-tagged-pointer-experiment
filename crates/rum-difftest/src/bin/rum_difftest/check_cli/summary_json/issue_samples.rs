@@ -7,6 +7,56 @@ use crate::json_cli::json_string;
 
 use super::{super::LocalCheckReport, CheckIssueSampleFilter};
 
+const CHECK_INVENTORY_BASELINE: &str = "inventory-baseline";
+const CHECK_LANE_C_LEDGER: &str = "lane-c-ledger";
+const CHECK_ARTIFACT_HYGIENE: &str = "artifact-hygiene";
+const CHECK_LANE_D_SMOKE: &str = "lane-d-smoke";
+const CHECK_LANE_D_READINESS: &str = "lane-d-readiness";
+
+pub(super) const ISSUE_SAMPLE_CHECK_VALUES: &[&str] = &[
+    CHECK_INVENTORY_BASELINE,
+    CHECK_LANE_C_LEDGER,
+    CHECK_ARTIFACT_HYGIENE,
+    CHECK_LANE_D_SMOKE,
+    CHECK_LANE_D_READINESS,
+];
+
+const KIND_REGRESSION: &str = "regression";
+const KIND_MISSING_LEDGER_ENTRY: &str = "missing_ledger_entry";
+const KIND_UNREFERENCED_LEDGER_ENTRY: &str = "unreferenced_ledger_entry";
+const KIND_UNREFERENCED_RETIRED_SEED_ENTRY: &str = "unreferenced_retired_seed_entry";
+const KIND_FIXTURE_MISMATCH: &str = "fixture_mismatch";
+const KIND_METADATA_MISMATCH: &str = "metadata_mismatch";
+const KIND_RETIRED_SEED_FIXTURE_MISMATCH: &str = "retired_seed_fixture_mismatch";
+const KIND_TRACKING_TARGET_ISSUE: &str = "tracking_target_issue";
+const KIND_ORACLE_ARTIFACT: &str = "oracle_artifact";
+const KIND_MISSING_RECORD: &str = "missing_record";
+const KIND_UNUSED_RECORD: &str = "unused_record";
+const KIND_ELAPSED_REGRESSION: &str = "elapsed_regression";
+const KIND_VALUE_NODE_REGRESSION: &str = "value_node_regression";
+const KIND_MISSING_ARTIFACT: &str = "missing_artifact";
+const KIND_INVALID_ARTIFACT: &str = "invalid_artifact";
+const KIND_NOT_CLEAN_ARTIFACT: &str = "not_clean_artifact";
+
+pub(super) const ISSUE_SAMPLE_KIND_VALUES: &[&str] = &[
+    KIND_REGRESSION,
+    KIND_MISSING_LEDGER_ENTRY,
+    KIND_UNREFERENCED_LEDGER_ENTRY,
+    KIND_UNREFERENCED_RETIRED_SEED_ENTRY,
+    KIND_FIXTURE_MISMATCH,
+    KIND_METADATA_MISMATCH,
+    KIND_RETIRED_SEED_FIXTURE_MISMATCH,
+    KIND_TRACKING_TARGET_ISSUE,
+    KIND_ORACLE_ARTIFACT,
+    KIND_MISSING_RECORD,
+    KIND_UNUSED_RECORD,
+    KIND_ELAPSED_REGRESSION,
+    KIND_VALUE_NODE_REGRESSION,
+    KIND_MISSING_ARTIFACT,
+    KIND_INVALID_ARTIFACT,
+    KIND_NOT_CLEAN_ARTIFACT,
+];
+
 struct CheckIssueSample {
     check: &'static str,
     kind: &'static str,
@@ -99,8 +149,8 @@ fn collect_inventory_samples(report: &LocalCheckReport, samples: &mut Vec<CheckI
     for regression in &report.inventory_baseline.regressions {
         for issue in &regression.issues {
             samples.push(CheckIssueSample {
-                check: "inventory-baseline",
-                kind: "regression",
+                check: CHECK_INVENTORY_BASELINE,
+                kind: KIND_REGRESSION,
                 location: format!(
                     "{}/{}/{}",
                     regression.record.lane,
@@ -117,16 +167,16 @@ fn collect_lane_c_samples(report: &LocalCheckReport, samples: &mut Vec<CheckIssu
     let ledger = &report.known_differences;
     for reference in &ledger.missing_ledger_entries {
         samples.push(CheckIssueSample {
-            check: "lane-c-ledger",
-            kind: "missing_ledger_entry",
+            check: CHECK_LANE_C_LEDGER,
+            kind: KIND_MISSING_LEDGER_ENTRY,
             location: reference.fixture.display().to_string(),
             message: reference.id.clone(),
         });
     }
     for record in &ledger.unreferenced_ledger_entries {
         samples.push(CheckIssueSample {
-            check: "lane-c-ledger",
-            kind: "unreferenced_ledger_entry",
+            check: CHECK_LANE_C_LEDGER,
+            kind: KIND_UNREFERENCED_LEDGER_ENTRY,
             location: record
                 .fields
                 .get("fixture")
@@ -137,16 +187,16 @@ fn collect_lane_c_samples(report: &LocalCheckReport, samples: &mut Vec<CheckIssu
     }
     for record in &ledger.unreferenced_retired_seed_entries {
         samples.push(CheckIssueSample {
-            check: "lane-c-ledger",
-            kind: "unreferenced_retired_seed_entry",
+            check: CHECK_LANE_C_LEDGER,
+            kind: KIND_UNREFERENCED_RETIRED_SEED_ENTRY,
             location: record.seed_fixture().display().to_string(),
             message: record.id.clone(),
         });
     }
     for mismatch in &ledger.fixture_mismatches {
         samples.push(CheckIssueSample {
-            check: "lane-c-ledger",
-            kind: "fixture_mismatch",
+            check: CHECK_LANE_C_LEDGER,
+            kind: KIND_FIXTURE_MISMATCH,
             location: mismatch.actual_fixture.display().to_string(),
             message: format!(
                 "{} expected {}",
@@ -157,8 +207,8 @@ fn collect_lane_c_samples(report: &LocalCheckReport, samples: &mut Vec<CheckIssu
     }
     for mismatch in &ledger.metadata_mismatches {
         samples.push(CheckIssueSample {
-            check: "lane-c-ledger",
-            kind: "metadata_mismatch",
+            check: CHECK_LANE_C_LEDGER,
+            kind: KIND_METADATA_MISMATCH,
             location: mismatch.id.clone(),
             message: format!(
                 "{} expected {}, got {}",
@@ -168,8 +218,8 @@ fn collect_lane_c_samples(report: &LocalCheckReport, samples: &mut Vec<CheckIssu
     }
     for mismatch in &ledger.retired_seed_fixture_mismatches {
         samples.push(CheckIssueSample {
-            check: "lane-c-ledger",
-            kind: "retired_seed_fixture_mismatch",
+            check: CHECK_LANE_C_LEDGER,
+            kind: KIND_RETIRED_SEED_FIXTURE_MISMATCH,
             location: mismatch.actual_fixture.display().to_string(),
             message: format!(
                 "{} expected {}",
@@ -180,8 +230,8 @@ fn collect_lane_c_samples(report: &LocalCheckReport, samples: &mut Vec<CheckIssu
     }
     for issue in &ledger.tracking_target_issues {
         samples.push(CheckIssueSample {
-            check: "lane-c-ledger",
-            kind: "tracking_target_issue",
+            check: CHECK_LANE_C_LEDGER,
+            kind: KIND_TRACKING_TARGET_ISSUE,
             location: issue.target.clone(),
             message: format!("{}: {}", issue.id, issue.message),
         });
@@ -194,8 +244,8 @@ fn collect_artifact_hygiene_samples(
 ) {
     for issue in &report.artifact_hygiene_issues {
         samples.push(CheckIssueSample {
-            check: "artifact-hygiene",
-            kind: "oracle_artifact",
+            check: CHECK_ARTIFACT_HYGIENE,
+            kind: KIND_ORACLE_ARTIFACT,
             location: issue.path.display().to_string(),
             message: issue.reason.clone(),
         });
@@ -209,24 +259,24 @@ fn collect_lane_d_smoke_samples(report: &LocalCheckReport, samples: &mut Vec<Che
 
     for case in &smoke.baseline.missing_records {
         samples.push(CheckIssueSample {
-            check: "lane-d-smoke",
-            kind: "missing_record",
+            check: CHECK_LANE_D_SMOKE,
+            kind: KIND_MISSING_RECORD,
             location: format!("{}#{}", case.suite, case.index),
             message: case.input.clone(),
         });
     }
     for record in &smoke.baseline.unused_records {
         samples.push(CheckIssueSample {
-            check: "lane-d-smoke",
-            kind: "unused_record",
+            check: CHECK_LANE_D_SMOKE,
+            kind: KIND_UNUSED_RECORD,
             location: record.suite.clone(),
             message: record.input.clone(),
         });
     }
     for regression in &smoke.baseline.elapsed_regressions {
         samples.push(CheckIssueSample {
-            check: "lane-d-smoke",
-            kind: "elapsed_regression",
+            check: CHECK_LANE_D_SMOKE,
+            kind: KIND_ELAPSED_REGRESSION,
             location: format!("{}#{}", regression.case.suite, regression.case.index),
             message: format!(
                 "{} > max {}",
@@ -236,8 +286,8 @@ fn collect_lane_d_smoke_samples(report: &LocalCheckReport, samples: &mut Vec<Che
     }
     for regression in &smoke.baseline.value_node_regressions {
         samples.push(CheckIssueSample {
-            check: "lane-d-smoke",
-            kind: "value_node_regression",
+            check: CHECK_LANE_D_SMOKE,
+            kind: KIND_VALUE_NODE_REGRESSION,
             location: format!("{}#{}", regression.case.suite, regression.case.index),
             message: format!(
                 "{} > max {}",
@@ -267,24 +317,24 @@ fn collect_lane_d_readiness_samples(
             lane_d::LaneDCheckedBaselineReadinessStatus::Ready { .. } => {}
             lane_d::LaneDCheckedBaselineReadinessStatus::MissingArtifact => {
                 samples.push(CheckIssueSample {
-                    check: "lane-d-readiness",
-                    kind: "missing_artifact",
+                    check: CHECK_LANE_D_READINESS,
+                    kind: KIND_MISSING_ARTIFACT,
                     location,
                     message: "checked baseline artifact is missing".to_string(),
                 });
             }
             lane_d::LaneDCheckedBaselineReadinessStatus::InvalidArtifact { message } => {
                 samples.push(CheckIssueSample {
-                    check: "lane-d-readiness",
-                    kind: "invalid_artifact",
+                    check: CHECK_LANE_D_READINESS,
+                    kind: KIND_INVALID_ARTIFACT,
                     location,
                     message: message.clone(),
                 });
             }
             lane_d::LaneDCheckedBaselineReadinessStatus::NotClean { report } => {
                 samples.push(CheckIssueSample {
-                    check: "lane-d-readiness",
-                    kind: "not_clean_artifact",
+                    check: CHECK_LANE_D_READINESS,
+                    kind: KIND_NOT_CLEAN_ARTIFACT,
                     location,
                     message: format!(
                         "missing={} unused={} elapsed={} value_nodes={}",

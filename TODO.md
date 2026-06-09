@@ -614,6 +614,9 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B/C/D follow-up: validate aggregate `--issue-sample-kind`
     values against the known check issue-kind set so typoed filters fail fast
     instead of silently producing empty sampled locators
+  - [x] Lane A/B/C/D follow-up: keep aggregate check/sample kind filter
+    validation backed by the same name catalog used by `check --summary-json`
+    issue-sample collection, avoiding parser/reporter drift
   - [x] Lane A/B follow-up: expose oracle process counts in lane summary JSON
     plus concrete batch transport metadata and generic batch/input counts, and
     keep Lane A/B text output showing process, batch, and batch-input counts,

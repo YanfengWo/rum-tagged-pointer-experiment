@@ -20,6 +20,14 @@ pub(super) struct CheckIssueSampleFilter {
     pub(crate) kind: Option<String>,
 }
 
+pub(super) fn issue_sample_check_values() -> &'static [&'static str] {
+    issue_samples::ISSUE_SAMPLE_CHECK_VALUES
+}
+
+pub(super) fn issue_sample_kind_values() -> &'static [&'static str] {
+    issue_samples::ISSUE_SAMPLE_KIND_VALUES
+}
+
 pub(super) fn write_summary_json(
     path: &Path,
     report: &LocalCheckReport,
