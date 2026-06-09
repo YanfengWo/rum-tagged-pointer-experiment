@@ -76,7 +76,8 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let summary = lane_a::run(&mut oracle, &options)?;
 
     print_oracle_header("lane-a", &oracle);
-    text_report::print_lane_a_report(&summary);
+    let oracle_processes = oracle.evaluation_process_count(summary.compared);
+    text_report::print_lane_a_report(&summary, oracle_processes);
 
     if let Some(path) = &summary_json_path {
         write_summary_json(
@@ -95,6 +96,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                     mismatches: summary.mismatches,
                     rum_failures: summary.rum_failures,
                     oracle_failures: summary.oracle_failures,
+                    oracle_processes,
                     skipped_known_differences: summary.skipped_known_differences,
                     confirmed_known_differences: summary.confirmed_known_differences,
                     resolved_known_differences: summary.resolved_known_differences,

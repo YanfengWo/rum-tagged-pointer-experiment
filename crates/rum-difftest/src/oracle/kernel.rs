@@ -208,6 +208,10 @@ impl OracleKernel {
         "kernel-single-process-batches"
     }
 
+    pub fn evaluation_process_count(&self, evaluation_count: usize) -> usize {
+        evaluation_count
+    }
+
     pub fn session_batch_process_count(&self, batch_count: usize) -> usize {
         usize::from(batch_count > 0)
     }

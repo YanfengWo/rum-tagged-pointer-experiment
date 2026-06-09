@@ -162,9 +162,11 @@ imported divergences are visible before curation. Keep `seed/` unchanged;
 migrate promoted cases under `cases/` before pruning seed-linked ledger rows.
 `--summary-json PATH` writes a stable machine-readable summary with oracle
 configuration, run options, comparison counts, known-difference counts, and
-seed-drift counts. It also includes a bounded `issue_samples` locator list for
-the first non-matching, seed-drifted, or resolved known-difference cases. It
-does not freeze the full per-case report shape.
+seed-drift counts, including `counts.oracle_processes` so scripts can see that
+the current Lane A transport starts one oracle process per compared case. It
+also includes a bounded `issue_samples` locator list for the first non-matching,
+seed-drifted, or resolved known-difference cases. It does not freeze the full
+per-case report shape.
 
 ## Lane B Runner
 
@@ -195,8 +197,11 @@ differences. Resolved known differences are listed by ID and fixture location
 so fixed divergences are visible before removing ledger rows. `--summary-json
 PATH` writes the same stable machine-readable summary shape as Lane A, with
 oracle configuration, run options, comparison counts, known-difference counts,
-seed-drift counts, and bounded `issue_samples` locators, without freezing the
-full per-step report rows.
+seed-drift counts, `counts.oracle_processes`, and bounded `issue_samples`
+locators, without freezing the full per-step report rows. Lane B also reports
+the concrete session-batch transport name and process count so the current
+single-process batch transport is distinguishable from a future interactive
+reuse transport.
 Long-lived interactive process reuse remains a future throughput refinement.
 
 ## Lane C Runner

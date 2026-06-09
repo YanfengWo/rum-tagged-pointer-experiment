@@ -63,6 +63,7 @@ fn oracle_lanes_write_machine_readable_summary_json() {
         assert!(summary.contains("\"limit\": 1"));
         assert!(summary.contains("\"items_compared\": 1"));
         assert!(summary.contains("\"oracle_failures\": 1"));
+        assert!(summary.contains("\"oracle_processes\": 1"));
         assert!(summary.contains("\"issue_samples_limit\": 5"));
         assert!(summary.contains("\"issue_samples_emitted\": 1"));
         assert!(summary.contains("\"issue_samples_total\": 1"));
@@ -84,6 +85,7 @@ fn oracle_lanes_write_machine_readable_summary_json() {
             assert!(summary.contains("\"oracle_session_batches\": 1"));
             assert!(summary.contains("\"oracle_session_steps\": 1"));
         } else {
+            assert!(stdout.contains("oracle evaluation processes: 1"));
             assert!(summary.contains("\"session_batch_transport\": null"));
             assert!(summary.contains("\"session_batch_processes\": null"));
             assert!(summary.contains("\"oracle_session_batches\": null"));
@@ -119,8 +121,11 @@ fn oracle_lanes_bound_summary_json_issue_samples() {
         assert!(summary.contains("\"issue_samples_truncated\": true"));
         assert_eq!(summary.matches("\"kind\": \"non_match\"").count(), 1);
         if lane == "lane-b" {
+            assert!(summary.contains("\"oracle_processes\": 1"));
             assert!(summary.contains("\"oracle_session_batches\": 1"));
             assert!(summary.contains("\"oracle_session_steps\": 2"));
+        } else {
+            assert!(summary.contains("\"oracle_processes\": 2"));
         }
         fs::remove_dir_all(temp_dir).unwrap();
     }
