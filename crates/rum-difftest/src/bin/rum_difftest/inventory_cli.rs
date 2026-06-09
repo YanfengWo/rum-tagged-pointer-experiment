@@ -47,6 +47,9 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
             other => return Err(format!("unknown inventory flag `{other}`").into()),
         }
     }
+    if fail_on_regression && baseline_path.is_none() && !check_baseline {
+        return Err("--fail-on-regression requires --baseline PATH or --check-baseline".into());
+    }
 
     let mut report = collect_fixture_inventory()?;
     apply_inventory_filter(&mut report, &filter)?;
@@ -86,9 +89,9 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
         println!("wrote inventory baseline: {}", path.display());
     }
     if fail_on_regression {
-        let Some(baseline_report) = baseline_report else {
-            return Err("--fail-on-regression requires --baseline PATH or --check-baseline".into());
-        };
+        let baseline_report = baseline_report
+            .as_ref()
+            .expect("inventory baseline report is present after fail-on-regression validation");
         if !baseline_report.is_clean() {
             return Ok(ExitCode::FAILURE);
         }

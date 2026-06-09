@@ -56,6 +56,30 @@ fn inventory_help_lists_baseline_gate() {
 }
 
 #[test]
+fn inventory_rejects_fail_on_regression_without_baseline_before_collecting() {
+    let temp_dir = unique_temp_dir("inventory-invalid-baseline-gate");
+    let summary_path = temp_dir.join("summary.json");
+    fs::create_dir_all(&temp_dir).unwrap();
+
+    let output = run_difftest(&[
+        "inventory",
+        "--fail-on-regression",
+        "--summary-json",
+        summary_path.to_str().unwrap(),
+    ]);
+
+    assert!(!output.status.success());
+    assert!(
+        stderr_text(&output)
+            .contains("--fail-on-regression requires --baseline PATH or --check-baseline")
+    );
+    assert!(stdout_text(&output).is_empty());
+    assert!(!summary_path.exists());
+
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
+#[test]
 fn inventory_filters_text_json_and_written_baseline() {
     let temp_dir = unique_temp_dir("inventory-filter");
     let summary_path = temp_dir.join("summary.json");
