@@ -45,6 +45,21 @@ current value is `1`. Increment it for intentionally incompatible report-shape
 changes. CLI regression tests should parse generated summary files as JSON and
 assert the schema version, not only match string fragments.
 
+CLI/report helper boundaries:
+
+- `json_cli.rs` owns summary-file writing, schema-version constants, primitive
+  JSON escaping / `null` helpers, and shared sample-limit parsing.
+- `oracle_lane_cli.rs` owns Lane A/B shared CLI parsing, oracle kernel setup,
+  and common failure-gate exit-code policy. Keep lane-specific execution,
+  counts, and text reports in `lane_a_cli.rs` / `lane_b_cli.rs`.
+- `oracle_lane_summary_json.rs` owns the shared Lane A/B summary JSON shape and
+  oracle-lane issue sample filtering/counting.
+- `inventory_json.rs`, `lane_c_json.rs`, and `lane_d_json.rs` own JSON
+  fragments shared between their lane command and aggregate `check`.
+- When adding a report field used by more than one command, prefer extending
+  one of these helper modules over copying string-rendering logic into each
+  CLI.
+
 For the Wolfram-backed lanes, keep these policy constraints explicit:
 
 - the oracle command should be user-configured and may point to
