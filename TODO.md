@@ -503,7 +503,10 @@ This roadmap intentionally uses two levels of detail:
   [docs/testing-strategy.md](./docs/testing-strategy.md)
 - [ ] Strengthen boundary and edge-case coverage for parser, lowering, evaluator, matcher, scoping, threading, loader, and message semantics
 - [ ] Add broader regression corpora and golden fixtures for syntax formatting, lowering, evaluation, runtime messages, and transport-facing APIs
-- [ ] Establish explicit coverage goals for high-risk semantic areas instead of relying only on opportunistic test growth
+- [x] Establish explicit coverage goals for high-risk semantic areas instead of
+  relying only on opportunistic test growth; the checked `rum-difftest`
+  inventory baseline now guards source and semantic-category minima, with the
+  policy documented in `crates/rum-difftest/coverage/README.md`
 - [ ] Add differential-conformance fixtures that compare selected `rum` results against Wolfram behavior for the supported subset, with same-name language features treated as compatibility targets by default
 - [ ] `CL-Y` Real-project Wolfram package/script support, using the local
   `mma-hol` project as the first concrete sample:

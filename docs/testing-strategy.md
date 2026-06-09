@@ -124,8 +124,11 @@ exposes the same stable counts for scripts or dashboards. Use
 `inventory --check-baseline --fail-on-regression` as a local gate against the
 checked fixture-coverage baseline when reviewing fixture pruning or large
 coverage reshuffles. The checked baseline covers both source groups and
-semantic categories. `inventory --write-baseline PATH` captures the current
-inventory in that baseline format when a coverage change is intentional.
+semantic categories; see
+[`crates/rum-difftest/coverage/README.md`](../crates/rum-difftest/coverage/README.md)
+for the executable coverage-goal policy. `inventory --write-baseline PATH`
+captures the current inventory in that baseline format when a coverage change
+is intentional.
 Use `rum-difftest check` as the fast non-oracle aggregate gate for local
 preflight scripts: it runs the checked inventory baseline plus Lane C ledger
 validation, exits non-zero if either gate is dirty, and can write
