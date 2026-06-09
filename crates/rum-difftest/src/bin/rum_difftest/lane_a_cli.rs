@@ -9,8 +9,8 @@ use super::oracle_cli::print_oracle_header;
 use super::oracle_lane_summary_json::{
     DEFAULT_MAX_ISSUE_SAMPLES, OracleLaneIssueSample, OracleLaneIssueSampleKindFilter,
     OracleLaneIssueSamples, OracleLaneSessionBatchTransport, OracleLaneSummaryCounts,
-    OracleLaneSummaryJsonContext, parse_issue_sample_kind, parse_max_issue_samples,
-    write_summary_json,
+    OracleLaneSummaryJsonContext, parse_issue_sample_kind, parse_issue_sample_source,
+    parse_max_issue_samples, write_summary_json,
 };
 
 #[path = "lane_a_cli/text_report.rs"]
@@ -31,6 +31,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut summary_json_path = None;
     let mut max_issue_samples = DEFAULT_MAX_ISSUE_SAMPLES;
     let mut issue_sample_kind = OracleLaneIssueSampleKindFilter::All;
+    let mut issue_sample_source = None;
     let mut source = None;
     let mut category = None;
 
@@ -65,6 +66,10 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             "--issue-sample-kind" => {
                 let value = expect_value(&mut iter, "--issue-sample-kind")?;
                 issue_sample_kind = parse_issue_sample_kind(&value)?;
+            }
+            "--issue-sample-source" => {
+                let value = expect_value(&mut iter, "--issue-sample-source")?;
+                issue_sample_source = parse_issue_sample_source(&value)?;
             }
             "--fail-on-mismatch" => fail_on_mismatch = true,
             "--fail-on-project-mismatch" => fail_on_project_mismatch = true,
@@ -133,6 +138,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 fail_on_project_seed_drift,
                 fail_on_resolved_known_difference,
                 issue_sample_kind,
+                issue_sample_source,
                 session_batch_transport: Some(session_batch_transport),
                 counts: OracleLaneSummaryCounts {
                     total_seen: summary.total_seen,
@@ -155,7 +161,12 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                     oracle_session_batches: None,
                     oracle_session_steps: None,
                 },
-                issue_samples: lane_a_issue_samples(&summary, max_issue_samples, issue_sample_kind),
+                issue_samples: lane_a_issue_samples(
+                    &summary,
+                    max_issue_samples,
+                    issue_sample_kind,
+                    issue_sample_source,
+                ),
             },
         )?;
         println!("summary json: {}", path.display());
@@ -208,6 +219,7 @@ fn lane_a_issue_samples(
     summary: &lane_a::LaneASummary,
     max_issue_samples: usize,
     issue_sample_kind: OracleLaneIssueSampleKindFilter,
+    issue_sample_source: Option<&str>,
 ) -> OracleLaneIssueSamples {
     let mut samples = Vec::new();
     for (index, case) in summary.cases.iter().enumerate() {
@@ -219,7 +231,12 @@ fn lane_a_issue_samples(
             samples.push(lane_a_sample("resolved_known_difference", index + 1, case));
         }
     }
-    OracleLaneIssueSamples::new(max_issue_samples, issue_sample_kind, samples)
+    OracleLaneIssueSamples::new(
+        max_issue_samples,
+        issue_sample_kind,
+        issue_sample_source,
+        samples,
+    )
 }
 
 fn lane_a_sample(
@@ -274,6 +291,7 @@ fn print_lane_a_usage() {
     println!(
         "  --issue-sample-kind KIND   Filter samples: all, non-match, seed-drift, resolved-known-difference"
     );
+    println!("  --issue-sample-source SRC  Filter samples by fixture source");
     println!("  --fail-on-mismatch        Exit non-zero if any case mismatches or fails");
     println!("  --fail-on-project-mismatch");
     println!(

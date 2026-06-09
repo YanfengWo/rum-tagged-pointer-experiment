@@ -669,6 +669,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B follow-up: add unfiltered `issue_source_counts` to summary
     JSON so automation can see non-match, seed-drift, and resolved-known
     issue distribution by fixture source without widening sampled locators
+  - [x] Lane A/B follow-up: add `--issue-sample-source` filtering for bounded
+    oracle-lane issue locators so full default audits can focus samples on
+    project-owned or imported fixture sources without changing unfiltered
+    issue/source counts
   - [x] Lane A follow-up: add a curated structure-selector fixture for stable
     `Part` / `Extract` / `ReplacePart` / `Depth` / `Level` conformance, and
     guard it with the checked inventory category baseline

@@ -137,6 +137,7 @@ cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --fai
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --fail-on-project-seed-drift
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --include-known-diffs --fail-on-resolved-known-difference
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-a-seed-drift.json --issue-sample-kind seed-drift --max-issue-samples 50
+cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-a-project-issues.json --issue-sample-source curated-core
 ```
 
 You can also point it at a config file:
@@ -217,7 +218,10 @@ same unfiltered issue breakdown grouped by fixture source. It does not freeze
 the full per-case report shape. Use
 `--issue-sample-kind non-match`, `seed-drift`, or
 `resolved-known-difference` to focus the bounded locator list during targeted
-audits while still retaining the full issue-count breakdown.
+audits while still retaining the full issue-count breakdown. Use
+`--issue-sample-source seed-golden|curated-core|lane-a-custom` to focus those
+bounded locators by fixture source without changing the unfiltered issue
+counts or source-count breakdown.
 Use `--fail-on-resolved-known-difference` with `--include-known-diffs` when
 an oracle audit should fail if an active known-difference row now matches and
 is ready for ledger cleanup.
@@ -239,6 +243,7 @@ cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --fai
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --fail-on-project-seed-drift
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --include-known-diffs --fail-on-resolved-known-difference
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-b-seed-drift.json --issue-sample-kind seed-drift --max-issue-samples 50
+cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-b-stateful-issues.json --issue-sample-source stateful
 ```
 
 Lane B keeps one `rum` session per fixture file and evaluates the matching
@@ -272,7 +277,9 @@ unfiltered issue-count/source breakdowns, optional `source` / `category`
 filters, and bounded `issue_samples` locators, without freezing the full
 per-step report rows. The same `--issue-sample-kind` filters available in
 Lane A apply here, including each sample's `fixture_source` and
-`project_owned_fixture` fields. The same
+`project_owned_fixture` fields. `--issue-sample-source
+seed-golden|stateful|lane-b-custom` narrows bounded locators by fixture source
+while retaining unfiltered issue/source counts. The same
 `--fail-on-resolved-known-difference` cleanup gate applies to included
 stateful known differences. Lane B also reports oracle batch/input counts and
 the concrete session-batch

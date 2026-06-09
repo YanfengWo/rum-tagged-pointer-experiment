@@ -18,6 +18,7 @@ fn oracle_lane_help_lists_timeout_and_sample_controls() {
         assert!(stdout.contains("--summary-json"));
         assert!(stdout.contains("--max-issue-samples"));
         assert!(stdout.contains("--issue-sample-kind"));
+        assert!(stdout.contains("--issue-sample-source"));
         assert!(stdout.contains("--fail-on-seed-drift"));
         assert!(stdout.contains("--fail-on-project-mismatch"));
         assert!(stdout.contains("--fail-on-project-seed-drift"));
@@ -59,6 +60,10 @@ fn oracle_lane_rejects_invalid_numeric_controls() {
     let sample_kind = run_difftest(&["lane-a", "--issue-sample-kind", "unknown"]);
     assert!(!sample_kind.status.success());
     assert!(stderr_text(&sample_kind).contains("--issue-sample-kind expects one of"));
+
+    let sample_source = run_difftest(&["lane-a", "--issue-sample-source", "unknown"]);
+    assert!(!sample_source.status.success());
+    assert!(stderr_text(&sample_source).contains("--issue-sample-source expects one of"));
 }
 
 #[test]
@@ -219,6 +224,7 @@ fn oracle_lanes_write_machine_readable_summary_json() {
         assert_json_null(&summary_json, "/options/source");
         assert_json_null(&summary_json, "/options/category");
         assert_eq!(json_str(&summary_json, "/options/issue_sample_kind"), "all");
+        assert_json_null(&summary_json, "/options/issue_sample_source");
         assert!(!json_bool(&summary_json, "/options/fail_on_mismatch"));
         assert!(!json_bool(
             &summary_json,
@@ -425,6 +431,80 @@ fn oracle_lanes_filter_summary_json_issue_samples_by_kind() {
         assert_eq!(json_str(&non_match_samples[0], "/kind"), "non_match");
         assert!(json_str(&non_match_samples[0], "/fixture_source").ends_with("-custom"));
         assert!(json_bool(&non_match_samples[0], "/project_owned_fixture"));
+        fs::remove_dir_all(temp_dir).unwrap();
+    }
+}
+
+#[test]
+fn oracle_lanes_filter_summary_json_issue_samples_by_source() {
+    for lane in ["lane-a", "lane-b"] {
+        let temp_dir = unique_temp_dir(&format!("{lane}-issue-source"));
+        let fixture_path = temp_dir.join("issue-source.txt");
+        let matching_summary_path = temp_dir.join("matching-summary.json");
+        let empty_summary_path = temp_dir.join("empty-summary.json");
+        let custom_source = if lane == "lane-a" {
+            "lane-a-custom"
+        } else {
+            "lane-b-custom"
+        };
+        fs::create_dir_all(&temp_dir).unwrap();
+        fs::write(&fixture_path, "1 + 1 ||| 2\n1 + 2 ||| 3\n").unwrap();
+
+        let matching = run_difftest(&[
+            lane,
+            "--oracle-command",
+            "/bin/true",
+            "--fixture",
+            fixture_path.to_str().unwrap(),
+            "--summary-json",
+            matching_summary_path.to_str().unwrap(),
+            "--issue-sample-source",
+            custom_source,
+        ]);
+
+        assert!(
+            matching.status.success(),
+            "stderr: {}",
+            stderr_text(&matching)
+        );
+        let matching_summary = fs::read_to_string(&matching_summary_path).unwrap();
+        let matching_json = parse_summary_json(&matching_summary);
+        assert_eq!(
+            json_str(&matching_json, "/options/issue_sample_source"),
+            custom_source
+        );
+        assert_eq!(json_u64(&matching_json, "/issue_counts/total"), 2);
+        assert_eq!(json_u64(&matching_json, "/issue_samples_total"), 2);
+        let matching_samples = json_array(&matching_json, "/issue_samples");
+        assert_eq!(matching_samples.len(), 2);
+        assert!(
+            matching_samples
+                .iter()
+                .all(|sample| json_str(sample, "/fixture_source") == custom_source)
+        );
+
+        let empty = run_difftest(&[
+            lane,
+            "--oracle-command",
+            "/bin/true",
+            "--fixture",
+            fixture_path.to_str().unwrap(),
+            "--summary-json",
+            empty_summary_path.to_str().unwrap(),
+            "--issue-sample-source",
+            "seed-golden",
+        ]);
+
+        assert!(empty.status.success(), "stderr: {}", stderr_text(&empty));
+        let empty_summary = fs::read_to_string(&empty_summary_path).unwrap();
+        let empty_json = parse_summary_json(&empty_summary);
+        assert_eq!(
+            json_str(&empty_json, "/options/issue_sample_source"),
+            "seed-golden"
+        );
+        assert_eq!(json_u64(&empty_json, "/issue_counts/total"), 2);
+        assert_eq!(json_u64(&empty_json, "/issue_samples_total"), 0);
+        assert!(json_array(&empty_json, "/issue_samples").is_empty());
         fs::remove_dir_all(temp_dir).unwrap();
     }
 }

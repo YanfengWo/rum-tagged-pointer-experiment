@@ -21,6 +21,7 @@ pub(super) struct OracleLaneSummaryJsonContext<'a> {
     pub(super) fail_on_project_seed_drift: bool,
     pub(super) fail_on_resolved_known_difference: bool,
     pub(super) issue_sample_kind: OracleLaneIssueSampleKindFilter,
+    pub(super) issue_sample_source: Option<&'a str>,
     pub(super) session_batch_transport: Option<OracleLaneSessionBatchTransport>,
     pub(super) counts: OracleLaneSummaryCounts,
     pub(super) issue_samples: OracleLaneIssueSamples,
@@ -136,6 +137,7 @@ impl OracleLaneIssueSamples {
     pub(super) fn new(
         limit: usize,
         issue_sample_kind: OracleLaneIssueSampleKindFilter,
+        issue_sample_source: Option<&str>,
         samples: Vec<OracleLaneIssueSample>,
     ) -> Self {
         let counts = OracleLaneIssueCounts::from_samples(&samples);
@@ -143,6 +145,9 @@ impl OracleLaneIssueSamples {
         let mut samples = samples
             .into_iter()
             .filter(|sample| issue_sample_kind.includes(sample.kind))
+            .filter(|sample| {
+                issue_sample_source.is_none_or(|source| sample.fixture_source == source)
+            })
             .collect::<Vec<_>>();
         let total = samples.len();
         samples.truncate(limit);
@@ -240,7 +245,8 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
             "    \"fail_on_seed_drift\": {},\n",
             "    \"fail_on_project_seed_drift\": {},\n",
             "    \"fail_on_resolved_known_difference\": {},\n",
-            "    \"issue_sample_kind\": \"{}\"\n",
+            "    \"issue_sample_kind\": \"{}\",\n",
+            "    \"issue_sample_source\": {}\n",
             "  }},\n",
             "  \"counts\": {{\n",
             "    \"items_seen\": {},\n",
@@ -300,6 +306,7 @@ fn summary_json(context: &OracleLaneSummaryJsonContext<'_>) -> String {
         context.fail_on_project_seed_drift,
         context.fail_on_resolved_known_difference,
         json_string(context.issue_sample_kind.as_json_value()),
+        json_string_option(context.issue_sample_source),
         counts.total_seen,
         counts.compared,
         counts.matches,
@@ -354,6 +361,23 @@ pub(super) fn parse_issue_sample_kind(
         }
         _ => Err(format!(
             "--issue-sample-kind expects one of all, non-match, seed-drift, resolved-known-difference; got `{value}`"
+        )
+        .into()),
+    }
+}
+
+pub(super) fn parse_issue_sample_source(
+    value: &str,
+) -> Result<Option<&'static str>, Box<dyn std::error::Error>> {
+    match value {
+        "all" => Ok(None),
+        "seed-golden" => Ok(Some("seed-golden")),
+        "curated-core" => Ok(Some("curated-core")),
+        "lane-a-custom" => Ok(Some("lane-a-custom")),
+        "stateful" => Ok(Some("stateful")),
+        "lane-b-custom" => Ok(Some("lane-b-custom")),
+        _ => Err(format!(
+            "--issue-sample-source expects one of all, seed-golden, curated-core, lane-a-custom, stateful, lane-b-custom; got `{value}`"
         )
         .into()),
     }
