@@ -6,7 +6,9 @@ use rum_difftest::lane_d::{
 };
 
 use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
-use crate::lane_d_json::{baseline_report_json, readiness_artifact_counts, readiness_entries_json};
+use crate::lane_d_json::{
+    baseline_report_json, readiness_artifact_counts, readiness_entries_json, run_counts_json,
+};
 
 pub(super) struct WrittenBaselineSummary {
     pub(super) path: PathBuf,
@@ -53,14 +55,7 @@ fn summary_json(context: &LaneDSummaryJsonContext<'_>) -> String {
             "  \"profile\": \"{}\",\n",
             "  \"threshold_profile\": \"{}\",\n",
             "  \"clean\": {},\n",
-            "  \"counts\": {{\n",
-            "    \"cases_seen\": {},\n",
-            "    \"cases_skipped_by_profile\": {},\n",
-            "    \"cases_executed\": {},\n",
-            "    \"successes\": {},\n",
-            "    \"failures\": {},\n",
-            "    \"total_elapsed_micros\": {}\n",
-            "  }},\n",
+            "  \"counts\": {},\n",
             "  \"baseline\": {},\n",
             "  \"checked_baseline_readiness\": {},\n",
             "  \"written_baseline\": {}\n",
@@ -71,12 +66,7 @@ fn summary_json(context: &LaneDSummaryJsonContext<'_>) -> String {
         json_string(lane_d::profile_name(context.profile)),
         json_string(lane_d::threshold_profile_name(context.threshold_profile)),
         clean,
-        context.summary.total_seen,
-        context.summary.skipped_by_profile,
-        context.summary.executed,
-        context.summary.succeeded,
-        context.summary.failed,
-        context.summary.total_elapsed_micros,
+        run_counts_json(context.summary, "    ", "  "),
         baseline_summary_json(context.baseline_path, context.baseline_report),
         readiness_summary_json(context.readiness_report),
         written_baseline_summary_json(context.written_baseline),

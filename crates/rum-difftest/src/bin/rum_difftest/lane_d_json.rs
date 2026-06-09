@@ -2,7 +2,7 @@ use std::path::Path;
 
 use rum_difftest::lane_d::{
     self, LaneDBaselineReport, LaneDCheckedBaselineReadinessReport,
-    LaneDCheckedBaselineReadinessStatus,
+    LaneDCheckedBaselineReadinessStatus, LaneDSummary,
 };
 
 use crate::json_cli::json_string;
@@ -67,6 +67,34 @@ pub fn baseline_report_json(
         report.elapsed_regressions.len(),
         field_indent,
         report.value_node_regressions.len(),
+        close_indent,
+    )
+}
+
+pub fn run_counts_json(summary: &LaneDSummary, field_indent: &str, close_indent: &str) -> String {
+    format!(
+        concat!(
+            "{{\n",
+            "{}\"cases_seen\": {},\n",
+            "{}\"cases_skipped_by_profile\": {},\n",
+            "{}\"cases_executed\": {},\n",
+            "{}\"successes\": {},\n",
+            "{}\"failures\": {},\n",
+            "{}\"total_elapsed_micros\": {}\n",
+            "{}}}"
+        ),
+        field_indent,
+        summary.total_seen,
+        field_indent,
+        summary.skipped_by_profile,
+        field_indent,
+        summary.executed,
+        field_indent,
+        summary.succeeded,
+        field_indent,
+        summary.failed,
+        field_indent,
+        summary.total_elapsed_micros,
         close_indent,
     )
 }
@@ -193,6 +221,19 @@ mod tests {
     }
 
     #[test]
+    fn run_counts_json_renders_summary_counts() {
+        let json = run_counts_json(&summary(), "  ", "");
+
+        assert!(json.starts_with("{\n  \"cases_seen\": 5"));
+        assert!(json.contains("  \"cases_skipped_by_profile\": 1"));
+        assert!(json.contains("  \"cases_executed\": 4"));
+        assert!(json.contains("  \"successes\": 3"));
+        assert!(json.contains("  \"failures\": 1"));
+        assert!(json.contains("  \"total_elapsed_micros\": 99"));
+        assert!(json.ends_with("\n}"));
+    }
+
+    #[test]
     fn readiness_artifact_counts_distinguish_statuses() {
         let report = LaneDCheckedBaselineReadinessReport {
             entries: vec![
@@ -268,6 +309,18 @@ mod tests {
             unused_records: Vec::new(),
             elapsed_regressions: Vec::new(),
             value_node_regressions: Vec::new(),
+        }
+    }
+
+    fn summary() -> LaneDSummary {
+        LaneDSummary {
+            total_seen: 5,
+            executed: 4,
+            skipped_by_profile: 1,
+            succeeded: 3,
+            failed: 1,
+            total_elapsed_micros: 99,
+            cases: Vec::new(),
         }
     }
 }
