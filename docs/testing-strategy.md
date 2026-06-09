@@ -138,8 +138,12 @@ captures the current inventory in that baseline format when a coverage change
 is intentional.
 Use `rum-difftest check` as the fast non-oracle aggregate gate for local
 preflight scripts: it runs the checked inventory baseline, Lane C ledger
-validation, and oracle-artifact hygiene, exits non-zero if any default gate is
+validation, and artifact hygiene, exits non-zero if any default gate is
 dirty, and can write `--summary-json PATH` without starting a Wolfram oracle.
+The artifact-hygiene gate rejects generated oracle wrapper/input/session
+artifacts plus stray non-fixture files under `cases/`; text output and the
+artifact-hygiene JSON check entry expose stable `oracle_artifact` and
+`stray_fixture_file` counts, and JSON issue details include the issue kind.
 The aggregate JSON includes bounded `issue_samples` with
 check/kind/location/message fields so scripts can surface representative
 failures without depending on each lane's full internal report shape;
@@ -289,8 +293,8 @@ Rules:
 - Do not require Wolfram tooling for default `cargo test --workspace`.
 - Do not commit generated oracle output.
 - Keep `rum-difftest` artifact hygiene tests enabled so generated oracle
-  wrappers, input files, session directories, and stream captures stay out of
-  the repository.
+  wrappers, input files, session directories, stream captures, and stray
+  non-fixture files under `cases/` stay out of the repository.
 - Treat checked fixture `expected` fields as seed annotations. Lane A/B
   pass/fail decisions must compare `rum` against fresh oracle output and report
   seed-vs-oracle drift separately.

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use rum_difftest::artifact_hygiene::ArtifactHygieneIssue;
+use rum_difftest::artifact_hygiene::{self, ArtifactHygieneIssue};
 use rum_difftest::divergences;
 use rum_difftest::inventory::{FixtureInventoryTotals, display_path};
 
@@ -188,12 +188,17 @@ fn inventory_baseline_check_json(report: &LocalCheckReport) -> String {
 }
 
 fn artifact_hygiene_check_json(report: &LocalCheckReport) -> String {
+    let counts = artifact_hygiene::count_artifact_hygiene_issues(&report.artifact_hygiene_issues);
     format!(
         concat!(
             "    {{\n",
             "      \"name\": \"artifact-hygiene\",\n",
             "      \"clean\": {},\n",
             "      \"issues\": {},\n",
+            "      \"issue_kind_counts\": {{\n",
+            "        \"oracle_artifact\": {},\n",
+            "        \"stray_fixture_file\": {}\n",
+            "      }},\n",
             "      \"issue_details\": [\n",
             "{}\n",
             "      ]\n",
@@ -201,6 +206,8 @@ fn artifact_hygiene_check_json(report: &LocalCheckReport) -> String {
         ),
         report.artifact_hygiene_issues.is_empty(),
         report.artifact_hygiene_issues.len(),
+        counts.oracle_artifacts,
+        counts.stray_fixture_files,
         artifact_hygiene_issue_details_json(&report.artifact_hygiene_issues),
     )
 }

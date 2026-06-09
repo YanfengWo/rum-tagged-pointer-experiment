@@ -126,6 +126,14 @@ fn check_writes_machine_readable_summary_json() {
     let artifact_hygiene = check_entry(&summary_json, "artifact-hygiene");
     assert!(json_bool(artifact_hygiene, "/clean"));
     assert_eq!(json_u64(artifact_hygiene, "/issues"), 0);
+    assert_eq!(
+        json_u64(artifact_hygiene, "/issue_kind_counts/oracle_artifact"),
+        0
+    );
+    assert_eq!(
+        json_u64(artifact_hygiene, "/issue_kind_counts/stray_fixture_file"),
+        0
+    );
     assert!(json_array(artifact_hygiene, "/issue_details").is_empty());
 
     assert_eq!(json_u64(&summary_json, "/issue_samples_limit"), 5);

@@ -1,4 +1,4 @@
-use rum_difftest::artifact_hygiene::{ArtifactHygieneIssue, ArtifactHygieneIssueKind};
+use rum_difftest::artifact_hygiene;
 use rum_difftest::divergences::{self, KnownDifferenceLedgerReport};
 use rum_difftest::inventory::display_path;
 use rum_difftest::lane_d;
@@ -124,7 +124,7 @@ fn print_artifact_hygiene_check(report: &LocalCheckReport) {
         "artifact hygiene issues: {}",
         report.artifact_hygiene_issues.len()
     );
-    let counts = artifact_hygiene_issue_counts(&report.artifact_hygiene_issues);
+    let counts = artifact_hygiene::count_artifact_hygiene_issues(&report.artifact_hygiene_issues);
     println!(
         "artifact hygiene oracle artifacts: {}",
         counts.oracle_artifacts
@@ -141,23 +141,6 @@ fn print_artifact_hygiene_check(report: &LocalCheckReport) {
             issue.reason
         );
     }
-}
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct ArtifactHygieneIssueCounts {
-    oracle_artifacts: usize,
-    stray_fixture_files: usize,
-}
-
-fn artifact_hygiene_issue_counts(issues: &[ArtifactHygieneIssue]) -> ArtifactHygieneIssueCounts {
-    let mut counts = ArtifactHygieneIssueCounts::default();
-    for issue in issues {
-        match issue.kind {
-            ArtifactHygieneIssueKind::OracleArtifact => counts.oracle_artifacts += 1,
-            ArtifactHygieneIssueKind::StrayFixtureFile => counts.stray_fixture_files += 1,
-        }
-    }
-    counts
 }
 
 fn print_lane_d_smoke_check(report: &LaneDSmokeCheckReport) {
@@ -248,35 +231,5 @@ fn print_lane_d_readiness_check(report: &super::LaneDReadinessCheckReport) {
                 report.value_node_regressions.len()
             ),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::PathBuf;
-
-    use super::*;
-
-    fn issue(kind: ArtifactHygieneIssueKind) -> ArtifactHygieneIssue {
-        ArtifactHygieneIssue {
-            path: PathBuf::from("artifact"),
-            kind,
-            reason: "test issue".to_string(),
-        }
-    }
-
-    #[test]
-    fn artifact_hygiene_issue_counts_distinguish_kinds() {
-        assert_eq!(
-            artifact_hygiene_issue_counts(&[
-                issue(ArtifactHygieneIssueKind::OracleArtifact),
-                issue(ArtifactHygieneIssueKind::StrayFixtureFile),
-                issue(ArtifactHygieneIssueKind::StrayFixtureFile),
-            ]),
-            ArtifactHygieneIssueCounts {
-                oracle_artifacts: 1,
-                stray_fixture_files: 2,
-            }
-        );
     }
 }

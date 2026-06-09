@@ -16,6 +16,12 @@ pub enum ArtifactHygieneIssueKind {
     StrayFixtureFile,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ArtifactHygieneIssueCounts {
+    pub oracle_artifacts: usize,
+    pub stray_fixture_files: usize,
+}
+
 impl ArtifactHygieneIssueKind {
     pub fn as_str(self) -> &'static str {
         match self {
@@ -23,6 +29,19 @@ impl ArtifactHygieneIssueKind {
             ArtifactHygieneIssueKind::StrayFixtureFile => "stray_fixture_file",
         }
     }
+}
+
+pub fn count_artifact_hygiene_issues(
+    issues: &[ArtifactHygieneIssue],
+) -> ArtifactHygieneIssueCounts {
+    let mut counts = ArtifactHygieneIssueCounts::default();
+    for issue in issues {
+        match issue.kind {
+            ArtifactHygieneIssueKind::OracleArtifact => counts.oracle_artifacts += 1,
+            ArtifactHygieneIssueKind::StrayFixtureFile => counts.stray_fixture_files += 1,
+        }
+    }
+    counts
 }
 
 pub fn validate_artifact_hygiene() -> Result<Vec<ArtifactHygieneIssue>, std::io::Error> {
@@ -232,6 +251,33 @@ mod tests {
         assert_eq!(
             ArtifactHygieneIssueKind::StrayFixtureFile.as_str(),
             "stray_fixture_file"
+        );
+    }
+
+    #[test]
+    fn counts_artifact_hygiene_issue_kinds() {
+        assert_eq!(
+            count_artifact_hygiene_issues(&[
+                issue(
+                    Path::new("case-0001.wl"),
+                    ArtifactHygieneIssueKind::OracleArtifact,
+                    "generated oracle input file"
+                ),
+                issue(
+                    Path::new("cases/stateful/probe-a.tmp"),
+                    ArtifactHygieneIssueKind::StrayFixtureFile,
+                    "unexpected fixture tree file"
+                ),
+                issue(
+                    Path::new("cases/stateful/probe-b.tmp"),
+                    ArtifactHygieneIssueKind::StrayFixtureFile,
+                    "unexpected fixture tree file"
+                ),
+            ]),
+            ArtifactHygieneIssueCounts {
+                oracle_artifacts: 1,
+                stray_fixture_files: 2,
+            }
         );
     }
 
