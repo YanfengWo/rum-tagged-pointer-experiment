@@ -72,11 +72,18 @@ pub enum LaneACaseStatus {
     OracleFailure,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct PreparedLaneACase {
+    fixture: PathBuf,
+    input: String,
+    expected_seed: Option<String>,
+    known_difference: Option<LaneAKnownDifference>,
+}
+
 pub fn run<O: Oracle>(
     oracle: &mut O,
     options: &LaneAOptions,
 ) -> Result<LaneASummary, std::io::Error> {
-    let fixtures = collect_fixture_paths(options.fixture.as_deref())?;
     let mut summary = LaneASummary {
         total_seen: 0,
         compared: 0,
@@ -92,6 +99,24 @@ pub fn run<O: Oracle>(
         seed_snapshots_drifted_from_oracle: 0,
         cases: Vec::new(),
     };
+    let prepared_cases = prepare_cases(options, &mut summary)?;
+
+    let oracle_results = run_oracle_case_batches(oracle, &prepared_cases);
+    for (prepared, oracle_result) in prepared_cases.into_iter().zip(oracle_results) {
+        let case = run_case(prepared, oracle_result);
+        record_case_result(&mut summary, &case);
+        summary.cases.push(case);
+    }
+
+    Ok(summary)
+}
+
+fn prepare_cases(
+    options: &LaneAOptions,
+    summary: &mut LaneASummary,
+) -> Result<Vec<PreparedLaneACase>, std::io::Error> {
+    let fixtures = collect_fixture_paths(options.fixture.as_deref())?;
+    let mut prepared_cases = Vec::new();
 
     'outer: for fixture in fixtures {
         let text = load_text(&fixture)?;
@@ -115,17 +140,23 @@ pub fn run<O: Oracle>(
                 }
             };
 
-            let case = run_case(oracle, &fixture, input, expected_seed, known_difference);
-            record_case_result(&mut summary, &case);
-            summary.cases.push(case);
+            prepared_cases.push(PreparedLaneACase {
+                fixture: fixture.clone(),
+                input,
+                expected_seed,
+                known_difference,
+            });
 
-            if options.limit.is_some_and(|limit| summary.compared >= limit) {
+            if options
+                .limit
+                .is_some_and(|limit| prepared_cases.len() >= limit)
+            {
                 break 'outer;
             }
         }
     }
 
-    Ok(summary)
+    Ok(prepared_cases)
 }
 
 impl LaneAKnownDifference {
@@ -169,15 +200,49 @@ fn record_case_result(summary: &mut LaneASummary, case: &LaneACaseReport) {
     }
 }
 
-fn run_case<O: Oracle>(
+fn run_oracle_case_batches<O: Oracle>(
     oracle: &mut O,
-    fixture: &Path,
-    input: String,
-    expected_seed: Option<String>,
-    known_difference: Option<LaneAKnownDifference>,
-) -> LaneACaseReport {
-    let rum = run_rum_case(&input);
-    let oracle_result = run_oracle_case(oracle, &input);
+    cases: &[PreparedLaneACase],
+) -> Vec<CaseValue> {
+    let input_batches = cases
+        .iter()
+        .map(|case| vec![case.input.clone()])
+        .collect::<Vec<_>>();
+
+    match oracle.evaluate_session_batches(&input_batches) {
+        Ok(outputs) if outputs.len() == cases.len() => outputs
+            .into_iter()
+            .map(|batch| match batch.as_slice() {
+                [output] => case_from_oracle_output(output.clone()),
+                _ => CaseValue::Failure {
+                    message: format!(
+                        "oracle returned {} session results for 1 Lane A case",
+                        batch.len()
+                    ),
+                },
+            })
+            .collect(),
+        Ok(outputs) => vec![
+            CaseValue::Failure {
+                message: format!(
+                    "oracle returned {} session batches for {} Lane A cases",
+                    outputs.len(),
+                    cases.len()
+                ),
+            };
+            cases.len()
+        ],
+        Err(err) => vec![
+            CaseValue::Failure {
+                message: render_oracle_error(&err),
+            };
+            cases.len()
+        ],
+    }
+}
+
+fn run_case(prepared: PreparedLaneACase, oracle_result: CaseValue) -> LaneACaseReport {
+    let rum = run_rum_case(&prepared.input);
     let status = match (&rum, &oracle_result) {
         (CaseValue::Value { .. }, CaseValue::Value { .. }) => {
             if case_values_match(&rum, &oracle_result) {
@@ -189,16 +254,16 @@ fn run_case<O: Oracle>(
         (CaseValue::Failure { .. }, _) => LaneACaseStatus::RumFailure,
         (_, CaseValue::Failure { .. }) => LaneACaseStatus::OracleFailure,
     };
-    let seed_matches_oracle = match (&expected_seed, &oracle_result) {
+    let seed_matches_oracle = match (&prepared.expected_seed, &oracle_result) {
         (Some(expected), CaseValue::Value { value, .. }) => Some(expected == value),
         _ => None,
     };
 
     LaneACaseReport {
-        fixture: fixture.to_path_buf(),
-        input,
-        expected_seed,
-        known_difference,
+        fixture: prepared.fixture,
+        input: prepared.input,
+        expected_seed: prepared.expected_seed,
+        known_difference: prepared.known_difference,
         seed_matches_oracle,
         rum,
         oracle: oracle_result,
@@ -226,16 +291,11 @@ fn run_rum_case(input: &str) -> CaseValue {
     }
 }
 
-fn run_oracle_case<O: Oracle>(oracle: &mut O, input: &str) -> CaseValue {
-    match oracle.evaluate(input) {
-        Ok(output) => CaseValue::Value {
-            value: output.result,
-            messages: normalize_oracle_messages(&output.stderr),
-            printed_output: (!output.printed_output.is_empty()).then_some(output.printed_output),
-        },
-        Err(err) => CaseValue::Failure {
-            message: render_oracle_error(&err),
-        },
+fn case_from_oracle_output(output: crate::oracle::OracleEvaluation) -> CaseValue {
+    CaseValue::Value {
+        value: output.result,
+        messages: normalize_oracle_messages(&output.stderr),
+        printed_output: (!output.printed_output.is_empty()).then_some(output.printed_output),
     }
 }
 

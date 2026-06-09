@@ -579,6 +579,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B follow-up: extend `--summary-json PATH` with bounded issue-sample locators for non-matches, seed snapshot drift, and resolved known differences, plus `--max-issue-samples N` and emitted/total/truncated metadata, without freezing full per-case/per-step report rows
   - [x] Lane B follow-up: expose oracle session batch and step counts in text/JSON reports so optional long-lived oracle process reuse has an observable throughput baseline
   - [x] Lane B follow-up: route prepared fixture groups through an `evaluate_session_batches` oracle interface, preserving the current per-fixture default while creating the API boundary needed for a later single-process multi-batch Wolfram transport
+  - [x] Lane A follow-up: route prepared single-expression cases through the
+    same `evaluate_session_batches` oracle interface as isolated one-case
+    batches, so the local `OracleKernel` path can amortize process startup
+    without sharing state across Lane A cases
   - [x] Lane B follow-up: implement the `OracleKernel` multi-batch session transport as one Wolfram process per Lane B run, with fixture-boundary cleanup of Global-context symbols, newly introduced contexts, `$Packages`, `$Context`, and `$ContextPath`
   - [x] Lane B follow-up: pin the multi-batch transport parser and per-step stream assembly with local unit tests, including malformed markers and missing-result count mismatches
   - [x] Lane B follow-up: add a fixture-boundary isolation fixture that detects leaked ordinary symbols, user contexts, and package contexts across multi-batch oracle transport batches while still proving state persists within one fixture
@@ -602,7 +606,7 @@ This roadmap intentionally uses two levels of detail:
     machine-readable report regressions cannot pass through string-fragment
     assertions alone
   - [x] Lane A/B follow-up: expose oracle process counts in lane summary JSON
-    and Lane A text output, making the current process-per-case Lane A
+    and Lane A text output, making the current case-isolated batch Lane A
     transport and single-process Lane B batch transport auditable before any
     future interactive reuse work
   - [x] Lane A follow-up: add a curated structure-selector fixture for stable

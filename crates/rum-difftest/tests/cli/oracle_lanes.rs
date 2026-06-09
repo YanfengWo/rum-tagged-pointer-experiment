@@ -137,7 +137,7 @@ fn oracle_lanes_bound_summary_json_issue_samples() {
             assert_eq!(json_u64(&summary_json, "/counts/oracle_session_batches"), 1);
             assert_eq!(json_u64(&summary_json, "/counts/oracle_session_steps"), 2);
         } else {
-            assert_eq!(json_u64(&summary_json, "/counts/oracle_processes"), 2);
+            assert_eq!(json_u64(&summary_json, "/counts/oracle_processes"), 1);
         }
         fs::remove_dir_all(temp_dir).unwrap();
     }

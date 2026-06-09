@@ -209,7 +209,7 @@ impl OracleKernel {
     }
 
     pub fn evaluation_process_count(&self, evaluation_count: usize) -> usize {
-        evaluation_count
+        usize::from(evaluation_count > 0)
     }
 
     pub fn session_batch_process_count(&self, batch_count: usize) -> usize {

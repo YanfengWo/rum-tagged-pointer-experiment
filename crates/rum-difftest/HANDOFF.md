@@ -134,8 +134,9 @@ curation signal; keep `seed/` unchanged and migrate promoted coverage into
 `lane-a --summary-json PATH` writes a stable machine-readable summary with
 oracle configuration, run options, comparison counts, known-difference counts,
 seed-drift counts, and `counts.oracle_processes` without freezing per-case
-report rows. The current Lane A kernel transport reports one oracle process per
-compared case.
+report rows. The current Lane A `OracleKernel` transport reports one oracle
+process for a non-empty run by submitting compared cases as isolated
+single-expression batches.
 
 Priority areas:
 

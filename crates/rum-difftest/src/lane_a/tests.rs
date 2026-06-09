@@ -4,41 +4,13 @@ use crate::oracle::{Oracle, OracleError, OracleEvaluation};
 
 use super::*;
 
-struct FakeOracle;
-
-impl Oracle for FakeOracle {
-    fn evaluate(&mut self, input: &str) -> Result<OracleEvaluation, OracleError> {
-        Ok(OracleEvaluation {
-            result: match input {
-                "2 + 3" => "5".to_string(),
-                _ => "0".to_string(),
-            },
-            printed_output: String::new(),
-            stderr: String::new(),
-        })
-    }
-}
-
-struct StaticOracle {
-    output: OracleEvaluation,
-}
-
-impl Oracle for StaticOracle {
-    fn evaluate(&mut self, _input: &str) -> Result<OracleEvaluation, OracleError> {
-        Ok(self.output.clone())
-    }
+struct BatchOracle {
+    batches_seen: Vec<Vec<String>>,
 }
 
 #[test]
 fn compares_single_case_against_oracle() {
-    let mut oracle = FakeOracle;
-    let report = run_case(
-        &mut oracle,
-        Path::new("fixture.txt"),
-        "2 + 3".to_string(),
-        Some("5".to_string()),
-        None,
-    );
+    let report = run_case(prepared_case("2 + 3", Some("5"), None), value("5", "", ""));
 
     assert_eq!(report.status, LaneACaseStatus::Match);
     assert_eq!(report.seed_matches_oracle, Some(true));
@@ -46,13 +18,9 @@ fn compares_single_case_against_oracle() {
 
 #[test]
 fn stale_seed_snapshot_does_not_affect_fresh_oracle_match() {
-    let mut oracle = FakeOracle;
     let report = run_case(
-        &mut oracle,
-        Path::new("fixture.txt"),
-        "2 + 3".to_string(),
-        Some("old snapshot".to_string()),
-        None,
+        prepared_case("2 + 3", Some("old snapshot"), None),
+        value("5", "", ""),
     );
 
     assert_eq!(report.status, LaneACaseStatus::Match);
@@ -68,54 +36,24 @@ fn stale_seed_snapshot_does_not_affect_fresh_oracle_match() {
 
 #[test]
 fn compares_input_form_like_list_and_rule_outputs() {
-    let mut list_oracle = StaticOracle {
-        output: OracleEvaluation {
-            result: "{1, 2}".to_string(),
-            printed_output: String::new(),
-            stderr: String::new(),
-        },
-    };
     let list_report = run_case(
-        &mut list_oracle,
-        Path::new("fixture.txt"),
-        "{1, 2}".to_string(),
-        Some("{1, 2}".to_string()),
-        None,
+        prepared_case("{1, 2}", Some("{1, 2}"), None),
+        value("{1, 2}", "", ""),
     );
     assert_eq!(list_report.status, LaneACaseStatus::Match);
 
-    let mut rule_list_oracle = StaticOracle {
-        output: OracleEvaluation {
-            result: "{a -> 1, b -> 2}".to_string(),
-            printed_output: String::new(),
-            stderr: String::new(),
-        },
-    };
     let rule_list_report = run_case(
-        &mut rule_list_oracle,
-        Path::new("fixture.txt"),
-        "Normal[<|a -> 1, b -> 2|>]".to_string(),
-        Some("{a -> 1, b -> 2}".to_string()),
-        None,
+        prepared_case("Normal[<|a -> 1, b -> 2|>]", Some("{a -> 1, b -> 2}"), None),
+        value("{a -> 1, b -> 2}", "", ""),
     );
     assert_eq!(rule_list_report.status, LaneACaseStatus::Match);
 }
 
 #[test]
 fn compares_messages_and_printed_output_when_values_match() {
-    let mut message_oracle = StaticOracle {
-        output: OracleEvaluation {
-            result: "2".to_string(),
-            printed_output: String::new(),
-            stderr: "test::msg: message text".to_string(),
-        },
-    };
     let message_report = run_case(
-        &mut message_oracle,
-        Path::new("fixture.txt"),
-        "1 + 1".to_string(),
-        Some("2".to_string()),
-        None,
+        prepared_case("1 + 1", Some("2"), None),
+        value("2", "test::msg: message text", ""),
     );
     assert_eq!(message_report.status, LaneACaseStatus::Mismatch);
     assert_eq!(
@@ -127,21 +65,30 @@ fn compares_messages_and_printed_output_when_values_match() {
         }
     );
 
-    let mut print_oracle = StaticOracle {
-        output: OracleEvaluation {
-            result: "2".to_string(),
-            printed_output: "extra output".to_string(),
-            stderr: String::new(),
-        },
-    };
     let print_report = run_case(
-        &mut print_oracle,
-        Path::new("fixture.txt"),
-        "1 + 1".to_string(),
-        Some("2".to_string()),
-        None,
+        prepared_case("1 + 1", Some("2"), None),
+        value("2", "", "extra output"),
     );
     assert_eq!(print_report.status, LaneACaseStatus::Mismatch);
+}
+
+#[test]
+fn submits_lane_a_cases_as_isolated_oracle_batches() {
+    let mut oracle = BatchOracle {
+        batches_seen: Vec::new(),
+    };
+    let cases = vec![
+        prepared_case("first", Some("1"), None),
+        prepared_case("second", Some("2"), None),
+    ];
+
+    let outputs = run_oracle_case_batches(&mut oracle, &cases);
+
+    assert_eq!(
+        oracle.batches_seen,
+        vec![vec!["first".to_string()], vec!["second".to_string()]]
+    );
+    assert_eq!(outputs, vec![value("1", "", ""), value("2", "", "")]);
 }
 
 #[test]
@@ -218,5 +165,56 @@ fn empty_summary() -> LaneASummary {
         seed_snapshots_matched_oracle: 0,
         seed_snapshots_drifted_from_oracle: 0,
         cases: Vec::new(),
+    }
+}
+
+fn prepared_case(
+    input: &str,
+    expected_seed: Option<&str>,
+    known_difference: Option<LaneAKnownDifference>,
+) -> PreparedLaneACase {
+    PreparedLaneACase {
+        fixture: Path::new("fixture.txt").to_path_buf(),
+        input: input.to_string(),
+        expected_seed: expected_seed.map(str::to_string),
+        known_difference,
+    }
+}
+
+fn value(result: &str, stderr: &str, printed_output: &str) -> CaseValue {
+    case_from_oracle_output(OracleEvaluation {
+        result: result.to_string(),
+        printed_output: printed_output.to_string(),
+        stderr: stderr.to_string(),
+    })
+}
+
+impl Oracle for BatchOracle {
+    fn evaluate(&mut self, _input: &str) -> Result<OracleEvaluation, OracleError> {
+        panic!("Lane A should use evaluate_session_batches")
+    }
+
+    fn evaluate_session_batches(
+        &mut self,
+        batches: &[Vec<String>],
+    ) -> Result<Vec<Vec<OracleEvaluation>>, OracleError> {
+        self.batches_seen = batches.to_vec();
+        Ok(batches
+            .iter()
+            .map(|batch| {
+                batch
+                    .iter()
+                    .map(|input| OracleEvaluation {
+                        result: match input.as_str() {
+                            "first" => "1".to_string(),
+                            "second" => "2".to_string(),
+                            _ => "0".to_string(),
+                        },
+                        printed_output: String::new(),
+                        stderr: String::new(),
+                    })
+                    .collect()
+            })
+            .collect())
     }
 }
