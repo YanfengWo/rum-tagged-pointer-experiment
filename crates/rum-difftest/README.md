@@ -165,9 +165,11 @@ migrate promoted cases under `cases/` before pruning seed-linked ledger rows.
 configuration, run options, comparison counts, known-difference counts, and
 seed-drift counts, including `counts.oracle_processes` so scripts can see that
 the current Lane A `OracleKernel` transport runs compared cases through a
-single case-isolated batch process. It also includes a bounded `issue_samples`
-locator list for the first non-matching, seed-drifted, or resolved
-known-difference cases. It does not freeze the full per-case report shape.
+single case-isolated batch process. The JSON oracle section also reports the
+concrete batch transport name and process count. It also includes a bounded
+`issue_samples` locator list for the first non-matching, seed-drifted, or
+resolved known-difference cases. It does not freeze the full per-case report
+shape.
 
 ## Lane B Runner
 

@@ -96,8 +96,14 @@ fn oracle_lanes_write_machine_readable_summary_json() {
             assert_eq!(json_u64(&summary_json, "/counts/oracle_session_steps"), 1);
         } else {
             assert!(stdout.contains("oracle evaluation processes: 1"));
-            assert_json_null(&summary_json, "/oracle/session_batch_transport");
-            assert_json_null(&summary_json, "/oracle/session_batch_processes");
+            assert_eq!(
+                json_str(&summary_json, "/oracle/session_batch_transport"),
+                "kernel-single-process-batches"
+            );
+            assert_eq!(
+                json_u64(&summary_json, "/oracle/session_batch_processes"),
+                1
+            );
             assert_json_null(&summary_json, "/counts/oracle_session_batches");
             assert_json_null(&summary_json, "/counts/oracle_session_steps");
         }

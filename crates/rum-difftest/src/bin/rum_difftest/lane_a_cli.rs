@@ -8,8 +8,8 @@ use rum_difftest::oracle::OracleKernel;
 use super::oracle_cli::print_oracle_header;
 use super::oracle_lane_summary_json::{
     DEFAULT_MAX_ISSUE_SAMPLES, OracleLaneIssueSample, OracleLaneIssueSamples,
-    OracleLaneSummaryCounts, OracleLaneSummaryJsonContext, parse_max_issue_samples,
-    write_summary_json,
+    OracleLaneSessionBatchTransport, OracleLaneSummaryCounts, OracleLaneSummaryJsonContext,
+    parse_max_issue_samples, write_summary_json,
 };
 
 #[path = "lane_a_cli/text_report.rs"]
@@ -77,6 +77,10 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
 
     print_oracle_header("lane-a", &oracle);
     let oracle_processes = oracle.evaluation_process_count(summary.compared);
+    let session_batch_transport = OracleLaneSessionBatchTransport {
+        name: oracle.session_batch_transport_name(),
+        process_count: Some(oracle_processes),
+    };
     text_report::print_lane_a_report(&summary, oracle_processes);
 
     if let Some(path) = &summary_json_path {
@@ -88,7 +92,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 fixture: options.fixture.as_deref(),
                 limit: options.limit,
                 include_known_differences: options.include_known_differences,
-                session_batch_transport: None,
+                session_batch_transport: Some(session_batch_transport),
                 counts: OracleLaneSummaryCounts {
                     total_seen: summary.total_seen,
                     compared: summary.compared,

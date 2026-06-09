@@ -200,9 +200,10 @@ text and JSON reports also expose the concrete session-batch transport name
 and process count, distinguishing the local single-process `OracleKernel`
 transport from generic per-batch fallback behavior. Lane A submits compared
 cases through the same batch interface as isolated single-expression batches,
-so the local `OracleKernel` path can amortize process startup without sharing
-case state. The Lane B runner submits prepared fixture groups through an oracle
-batch interface; the generic fallback still evaluates each fixture batch
+and its JSON report exposes the same concrete transport metadata so the local
+`OracleKernel` path can amortize process startup without sharing case state.
+The Lane B runner submits prepared fixture groups through an oracle batch
+interface; the generic fallback still evaluates each fixture batch
 independently, while the local `OracleKernel` transport executes all Lane B
 fixture batches in one Wolfram process and resets Global-context symbols,
 newly introduced contexts,

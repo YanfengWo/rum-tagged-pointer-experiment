@@ -136,7 +136,8 @@ oracle configuration, run options, comparison counts, known-difference counts,
 seed-drift counts, and `counts.oracle_processes` without freezing per-case
 report rows. The current Lane A `OracleKernel` transport reports one oracle
 process for a non-empty run by submitting compared cases as isolated
-single-expression batches.
+single-expression batches, and the JSON oracle section reports the concrete
+batch transport name plus process count.
 
 Priority areas:
 
