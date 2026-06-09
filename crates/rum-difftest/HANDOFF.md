@@ -91,6 +91,8 @@ Current implementation status:
 - Lane A/B CLI output records the resolved oracle executable and best-effort
   Wolfram `$Version`, plus the explicit `user-provided/unpinned` version
   policy; version probe failures are reported but do not fail the diff run
+- Lane A/B text output reports oracle process, batch, and batch-input counts
+  so local runs expose current batching behavior without requiring JSON parsing
 - it now compares result values, messages, and printed output for each case
 - fixture `expected` fields are seed annotations only; Lane A/B pass/fail
   compares `rum` against fresh oracle output and reports seed-vs-oracle drift
@@ -134,8 +136,9 @@ curation signal; keep `seed/` unchanged and migrate promoted coverage into
 `lane-a --summary-json PATH` writes a stable machine-readable summary with
 oracle configuration, run options, comparison counts, known-difference counts,
 seed-drift counts, and oracle process/batch/input counts without freezing
-per-case report rows. The current Lane A `OracleKernel` transport reports one
-oracle process for a non-empty run by submitting compared cases as isolated
+per-case report rows. The text report mirrors the same oracle process, batch,
+and batch-input counts. The current Lane A `OracleKernel` transport reports
+one oracle process for a non-empty run by submitting compared cases as isolated
 single-expression batches, and the JSON oracle section reports the concrete
 batch transport name plus process count.
 
@@ -166,8 +169,8 @@ fixture location.
 `lane-b --summary-json PATH` writes the same stable machine-readable summary
 shape as Lane A, including oracle process/batch/input counts, without freezing
 per-step report rows. Lane B also reports the concrete session-batch transport
-and process count so the current single-process batch path is visible before
-any future interactive reuse transport is added.
+and process count in text and JSON output so the current single-process batch
+path is visible before any future interactive reuse transport is added.
 
 Recommended format:
 
