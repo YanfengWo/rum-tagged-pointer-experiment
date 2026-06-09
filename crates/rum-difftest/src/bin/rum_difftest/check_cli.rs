@@ -21,6 +21,25 @@ mod text_report;
 #[path = "check_cli/usage.rs"]
 mod usage;
 
+const ISSUE_SAMPLE_KIND_VALUES: &[&str] = &[
+    "regression",
+    "missing_ledger_entry",
+    "unreferenced_ledger_entry",
+    "unreferenced_retired_seed_entry",
+    "fixture_mismatch",
+    "metadata_mismatch",
+    "retired_seed_fixture_mismatch",
+    "tracking_target_issue",
+    "oracle_artifact",
+    "missing_record",
+    "unused_record",
+    "elapsed_regression",
+    "value_node_regression",
+    "missing_artifact",
+    "invalid_artifact",
+    "not_clean_artifact",
+];
+
 pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut inventory_baseline_path = None;
     let mut lane_d_smoke_baseline = None;
@@ -348,8 +367,12 @@ fn parse_issue_sample_kind(value: &str) -> Result<Option<String>, Box<dyn std::e
     if value == "all" {
         return Ok(None);
     }
-    if value.is_empty() {
-        return Err("--issue-sample-kind expects a non-empty kind or `all`".into());
+    if ISSUE_SAMPLE_KIND_VALUES.contains(&value) {
+        return Ok(Some(value.to_string()));
     }
-    Ok(Some(value.to_string()))
+    Err(format!(
+        "--issue-sample-kind expects one of all, {}; got `{value}`",
+        ISSUE_SAMPLE_KIND_VALUES.join(", ")
+    )
+    .into())
 }

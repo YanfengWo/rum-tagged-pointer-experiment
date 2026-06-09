@@ -60,7 +60,10 @@ representative failing locators plus an untruncated `issue_kind_counts` array
 for scripts that need stable aggregate failure categories even when samples are
 capped. Use `--issue-sample-check NAME` and `--issue-sample-kind KIND` to focus
 the bounded locator list during aggregate-gate debugging; the summary still
-reports the unfiltered issue total and untruncated kind counts.
+reports the unfiltered issue total and untruncated kind counts. `KIND` is a
+checked aggregate issue kind such as `regression`, `missing_ledger_entry`,
+`oracle_artifact`, `missing_record`, or `missing_artifact`; invalid kind names
+fail fast instead of silently producing an empty locator list.
 
 ## Machine-Readable Summaries
 

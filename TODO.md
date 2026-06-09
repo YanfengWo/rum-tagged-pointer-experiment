@@ -611,6 +611,9 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B/C/D follow-up: add `--issue-sample-check` and
     `--issue-sample-kind` filters to `rum-difftest check --summary-json`,
     preserving unfiltered totals/counts while narrowing representative locators
+  - [x] Lane A/B/C/D follow-up: validate aggregate `--issue-sample-kind`
+    values against the known check issue-kind set so typoed filters fail fast
+    instead of silently producing empty sampled locators
   - [x] Lane A/B follow-up: expose oracle process counts in lane summary JSON
     plus concrete batch transport metadata and generic batch/input counts, and
     keep Lane A/B text output showing process, batch, and batch-input counts,

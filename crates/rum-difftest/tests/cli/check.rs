@@ -60,6 +60,14 @@ fn check_help_and_unknown_flag_paths_are_stable() {
         "stderr: {}",
         stderr_text(&invalid_check)
     );
+
+    let invalid_kind = run_difftest(&["check", "--issue-sample-kind", "missing-artifact"]);
+    assert!(!invalid_kind.status.success());
+    assert!(
+        stderr_text(&invalid_kind).contains("--issue-sample-kind expects one of all"),
+        "stderr: {}",
+        stderr_text(&invalid_kind)
+    );
 }
 
 #[test]

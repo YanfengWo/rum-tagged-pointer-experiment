@@ -141,7 +141,9 @@ failures without depending on each lane's full internal report shape;
 entries are too few for a local script, and the JSON reports the sample limit,
 emitted count, filtered issue count, unfiltered issue count, and truncation
 status. `--issue-sample-check NAME` and `--issue-sample-kind KIND` can narrow
-only the bounded locator list during targeted aggregate-gate debugging. The
+only the bounded locator list during targeted aggregate-gate debugging. `KIND`
+uses checked aggregate issue-kind names so typoed filters fail fast instead of
+silently producing an empty locator list. The
 JSON also includes an untruncated `issue_kind_counts` array grouped by
 aggregate check and issue kind, so scripts can keep stable failure dashboards
 even when representative samples are capped or filtered. The text and JSON
