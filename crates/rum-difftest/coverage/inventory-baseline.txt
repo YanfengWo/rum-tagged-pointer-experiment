@@ -3,14 +3,14 @@
 # (`category=...`).
 # `min_*` fields are lower bounds. `max_known_difference_entries` is an upper
 # bound so resolved known differences can decrease without failing the gate.
-lane=lane-a source=all min_fixtures=38 min_entries=536 min_normal_entries=531 max_known_difference_entries=5
-lane=lane-a source=curated-core min_fixtures=29 min_entries=367 min_normal_entries=365 max_known_difference_entries=2
+lane=lane-a source=all min_fixtures=38 min_entries=542 min_normal_entries=537 max_known_difference_entries=5
+lane=lane-a source=curated-core min_fixtures=29 min_entries=373 min_normal_entries=371 max_known_difference_entries=2
 lane=lane-a source=seed-golden min_fixtures=9 min_entries=169 min_normal_entries=166 max_known_difference_entries=3
 lane=lane-a category=arithmetic min_fixtures=1 min_entries=34 min_normal_entries=33 max_known_difference_entries=1
 lane=lane-a category=associations-core min_fixtures=1 min_entries=22 min_normal_entries=22 max_known_difference_entries=0
 lane=lane-a category=calculus-symbolic min_fixtures=1 min_entries=9 min_normal_entries=9 max_known_difference_entries=0
 lane=lane-a category=collection-shape-predicates min_fixtures=1 min_entries=22 min_normal_entries=22 max_known_difference_entries=0
-lane=lane-a category=context-namespace min_fixtures=1 min_entries=8 min_normal_entries=8 max_known_difference_entries=0
+lane=lane-a category=context-namespace min_fixtures=1 min_entries=14 min_normal_entries=14 max_known_difference_entries=0
 lane=lane-a category=control min_fixtures=1 min_entries=31 min_normal_entries=31 max_known_difference_entries=0
 lane=lane-a category=control-loops min_fixtures=1 min_entries=11 min_normal_entries=11 max_known_difference_entries=0
 lane=lane-a category=control-objects min_fixtures=1 min_entries=13 min_normal_entries=13 max_known_difference_entries=0

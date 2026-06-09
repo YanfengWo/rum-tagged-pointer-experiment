@@ -85,19 +85,19 @@ fn lane_a_filters_default_fixtures_by_source_and_category() {
 
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     let stdout = stdout_text(&output);
-    assert!(stdout.contains("cases seen: 8"));
-    assert!(stdout.contains("cases compared: 8"));
-    assert!(stdout.contains("oracle failures: 8"));
+    assert!(stdout.contains("cases seen: 14"));
+    assert!(stdout.contains("cases compared: 14"));
+    assert!(stdout.contains("oracle failures: 14"));
     let summary = fs::read_to_string(&summary_path).unwrap();
     let summary_json = parse_summary_json(&summary);
-    assert_eq!(json_u64(&summary_json, "/counts/items_seen"), 8);
+    assert_eq!(json_u64(&summary_json, "/counts/items_seen"), 14);
     assert_eq!(json_str(&summary_json, "/options/source"), "curated-core");
     assert_eq!(
         json_str(&summary_json, "/options/category"),
         "context-namespace"
     );
-    assert_eq!(json_u64(&summary_json, "/counts/items_compared"), 8);
-    assert_eq!(json_u64(&summary_json, "/counts/oracle_failures"), 8);
+    assert_eq!(json_u64(&summary_json, "/counts/items_compared"), 14);
+    assert_eq!(json_u64(&summary_json, "/counts/oracle_failures"), 14);
     let source_counts = json_array(&summary_json, "/issue_source_counts");
     assert_eq!(source_counts.len(), 1);
     assert_eq!(
@@ -105,7 +105,7 @@ fn lane_a_filters_default_fixtures_by_source_and_category() {
         "curated-core"
     );
     assert!(json_bool(&source_counts[0], "/project_owned_fixture"));
-    assert_eq!(json_u64(&source_counts[0], "/total"), 8);
+    assert_eq!(json_u64(&source_counts[0], "/total"), 14);
     fs::remove_dir_all(temp_dir).unwrap();
 }
 
