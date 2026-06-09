@@ -24,11 +24,89 @@ fn top_level_help_lists_lane_d_readiness_gate() {
 
     assert!(output.status.success());
     let stdout = stdout_text(&output);
+    assert!(stdout.contains("rum-difftest check"));
     assert!(stdout.contains("rum-difftest lane-d"));
     assert!(stdout.contains("rum-difftest inventory"));
+    assert!(stdout.contains("--inventory-baseline"));
     assert!(stdout.contains("--check-baseline-readiness"));
     assert!(stdout.contains("--write-baseline"));
     assert!(stdout.contains("--summary-json"));
+}
+
+#[test]
+fn check_runs_fast_non_oracle_gates() {
+    let output = run_difftest(&["check"]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("rum-difftest check"));
+    assert!(stdout.contains("check\tinventory-baseline\tclean"));
+    assert!(stdout.contains("inventory baseline records considered: 31"));
+    assert!(stdout.contains("inventory baseline regressions: 0"));
+    assert!(stdout.contains("check\tlane-c-ledger\tclean"));
+    assert!(stdout.contains("lane-c issues: 0"));
+    assert!(stdout.contains("checks passed: 2"));
+    assert!(stdout.contains("checks failed: 0"));
+}
+
+#[test]
+fn check_help_and_unknown_flag_paths_are_stable() {
+    let help = run_difftest(&["check", "--help"]);
+    assert!(help.status.success());
+    assert!(stdout_text(&help).contains("rum-difftest check"));
+    assert!(stdout_text(&help).contains("--inventory-baseline"));
+    assert!(stdout_text(&help).contains("--summary-json"));
+
+    let unknown = run_difftest(&["check", "--unknown"]);
+    assert!(!unknown.status.success());
+    assert!(stderr_text(&unknown).contains("unknown check flag `--unknown`"));
+}
+
+#[test]
+fn check_writes_machine_readable_summary_json() {
+    let temp_dir = unique_temp_dir("check-json");
+    let summary_path = temp_dir.join("summary.json");
+    let output = run_difftest(&["check", "--summary-json", summary_path.to_str().unwrap()]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    assert!(stdout_text(&output).contains("summary json:"));
+    let summary = fs::read_to_string(&summary_path).unwrap();
+    assert!(summary.contains("\"command\": \"check\""));
+    assert!(summary.contains("\"clean\": true"));
+    assert!(summary.contains("\"checks_passed\": 2"));
+    assert!(summary.contains("\"checks_failed\": 0"));
+    assert!(summary.contains("\"name\": \"inventory-baseline\""));
+    assert!(summary.contains("\"records_considered\": 31"));
+    assert!(summary.contains("\"name\": \"lane-c-ledger\""));
+    assert!(summary.contains("\"active_ledger_entries\": 2"));
+    assert!(summary.contains("\"tracking_target_issues\": 0"));
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
+#[test]
+fn check_exits_nonzero_for_inventory_baseline_regression() {
+    let temp_dir = unique_temp_dir("check-inventory-baseline");
+    let baseline_path = temp_dir.join("inventory-baseline.txt");
+    fs::create_dir_all(&temp_dir).unwrap();
+    fs::write(
+        &baseline_path,
+        "lane=lane-a source=curated-core min_fixtures=999 min_entries=999 min_normal_entries=999 max_known_difference_entries=0\n",
+    )
+    .unwrap();
+
+    let output = run_difftest(&[
+        "check",
+        "--inventory-baseline",
+        baseline_path.to_str().unwrap(),
+    ]);
+
+    assert!(!output.status.success());
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("check\tinventory-baseline\tdirty"));
+    assert!(stdout.contains("inventory baseline regressions: 1"));
+    assert!(stdout.contains("checks passed: 1"));
+    assert!(stdout.contains("checks failed: 1"));
+    fs::remove_dir_all(temp_dir).unwrap();
 }
 
 #[test]

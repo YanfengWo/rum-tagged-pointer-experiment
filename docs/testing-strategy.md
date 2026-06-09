@@ -126,6 +126,10 @@ checked fixture-coverage baseline when reviewing fixture pruning or large
 coverage reshuffles. The checked baseline covers both source groups and
 semantic categories. `inventory --write-baseline PATH` captures the current
 inventory in that baseline format when a coverage change is intentional.
+Use `rum-difftest check` as the fast non-oracle aggregate gate for local
+preflight scripts: it runs the checked inventory baseline plus Lane C ledger
+validation, exits non-zero if either gate is dirty, and can write
+`--summary-json PATH` without starting a Wolfram oracle or a Lane D timing run.
 
 Messages and diagnostics start in runtime regression tests unless the
 differential runner can capture and compare them reliably. Lane A can compare

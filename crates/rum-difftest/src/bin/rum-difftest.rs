@@ -1,5 +1,7 @@
 use std::process::ExitCode;
 
+#[path = "rum_difftest/check_cli.rs"]
+mod check_cli;
 #[path = "rum_difftest/inventory_cli.rs"]
 mod inventory_cli;
 #[path = "rum_difftest/json_cli.rs"]
@@ -31,6 +33,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
 
     match args.next().as_deref() {
+        Some("check") => check_cli::run_check(args.collect()),
         Some("inventory") => inventory_cli::run_inventory(args.collect()),
         Some("lane-a") => lane_a_cli::run_lane_a(args.collect()),
         Some("lane-b") => lane_b_cli::run_lane_b(args.collect()),
@@ -53,6 +56,7 @@ fn expect_value(
 }
 
 fn print_usage() {
+    println!("rum-difftest check [--inventory-baseline PATH] [--summary-json PATH]");
     println!(
         "rum-difftest lane-a [--oracle-kernel PATH|--oracle-command PATH] [--oracle-timeout-seconds N] [--config PATH] [--fixture PATH] [--limit N] [--summary-json PATH]"
     );
