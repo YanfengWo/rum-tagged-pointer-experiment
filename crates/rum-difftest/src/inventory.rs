@@ -254,6 +254,14 @@ mod tests {
             0
         );
         assert_eq!(
+            lane_a.totals_by_category()["strings-patterns"].normal_entries,
+            22
+        );
+        assert_eq!(
+            lane_a.totals_by_category()["strings-patterns"].known_difference_entries,
+            0
+        );
+        assert_eq!(
             lane_a.totals_by_category()["strings-templates"].normal_entries,
             10
         );
