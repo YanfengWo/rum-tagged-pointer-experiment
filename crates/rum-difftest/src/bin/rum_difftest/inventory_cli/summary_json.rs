@@ -5,7 +5,7 @@ use rum_difftest::inventory::{
     display_path,
 };
 
-use crate::inventory_json::inventory_totals_json;
+use crate::inventory_json::{inventory_regression_details_json, inventory_totals_json};
 use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, json_string_option, write_json_file};
 
 use super::InventoryFilter;
@@ -92,32 +92,7 @@ fn baseline_json(path: Option<&Path>, report: Option<&InventoryBaselineReport>) 
         report.is_clean(),
         report.records_considered,
         report.regressions.len(),
-        report
-            .regressions
-            .iter()
-            .map(|regression| {
-                format!(
-                    concat!(
-                        "      {{",
-                        "\"lane\": \"{}\", ",
-                        "\"dimension\": \"{}\", ",
-                        "\"name\": \"{}\", ",
-                        "\"issues\": [{}]",
-                        "}}"
-                    ),
-                    json_string(&regression.record.lane),
-                    json_string(regression.record.dimension.field_name()),
-                    json_string(&regression.record.name),
-                    regression
-                        .issues
-                        .iter()
-                        .map(|issue| format!("\"{}\"", json_string(issue)))
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(",\n"),
+        inventory_regression_details_json(&report.regressions, 6),
     )
 }
 

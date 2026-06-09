@@ -4,7 +4,7 @@ use rum_difftest::artifact_hygiene::{self, ArtifactHygieneIssue};
 use rum_difftest::divergences;
 use rum_difftest::inventory::display_path;
 
-use crate::inventory_json::inventory_totals_json;
+use crate::inventory_json::{inventory_regression_details_json, inventory_totals_json};
 use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, json_string_option, write_json_file};
 use crate::lane_c_json::active_ledger_field_counts_json;
 
@@ -153,33 +153,7 @@ fn inventory_baseline_check_json(report: &LocalCheckReport) -> String {
         inventory_totals_json(&totals, 6),
         report.inventory_baseline.records_considered,
         report.inventory_baseline.regressions.len(),
-        report
-            .inventory_baseline
-            .regressions
-            .iter()
-            .map(|regression| {
-                format!(
-                    concat!(
-                        "        {{",
-                        "\"lane\": \"{}\", ",
-                        "\"dimension\": \"{}\", ",
-                        "\"name\": \"{}\", ",
-                        "\"issues\": [{}]",
-                        "}}"
-                    ),
-                    json_string(&regression.record.lane),
-                    json_string(regression.record.dimension.field_name()),
-                    json_string(&regression.record.name),
-                    regression
-                        .issues
-                        .iter()
-                        .map(|issue| format!("\"{}\"", json_string(issue)))
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(",\n"),
+        inventory_regression_details_json(&report.inventory_baseline.regressions, 8),
     )
 }
 
