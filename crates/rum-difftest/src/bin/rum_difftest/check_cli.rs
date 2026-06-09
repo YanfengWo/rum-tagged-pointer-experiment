@@ -194,8 +194,8 @@ impl LocalCheckReport {
     }
 
     pub(super) fn lane_c_check_clean(&self) -> bool {
-        self.known_differences.is_clean()
-            && (!self.fail_on_open_known_difference || self.open_known_differences() == 0)
+        self.known_differences
+            .is_clean_with_open_known_difference_gate(self.fail_on_open_known_difference)
     }
 }
 

@@ -155,8 +155,7 @@ fn lane_c_is_clean(
     report: &divergences::KnownDifferenceLedgerReport,
     fail_on_open_known_difference: bool,
 ) -> bool {
-    report.is_clean()
-        && (!fail_on_open_known_difference || report.active_ledger_status_count("open") == 0)
+    report.is_clean_with_open_known_difference_gate(fail_on_open_known_difference)
 }
 
 fn summary_json(

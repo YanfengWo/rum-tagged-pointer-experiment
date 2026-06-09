@@ -76,6 +76,14 @@ impl KnownDifferenceLedgerReport {
             .copied()
             .unwrap_or(0)
     }
+
+    pub fn is_clean_with_open_known_difference_gate(
+        &self,
+        fail_on_open_known_difference: bool,
+    ) -> bool {
+        self.is_clean()
+            && (!fail_on_open_known_difference || self.active_ledger_status_count("open") == 0)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -95,6 +95,8 @@ fn ledger_report_counts_active_records_by_field() {
     );
     assert_eq!(report.active_ledger_status_count("open"), 2);
     assert_eq!(report.active_ledger_status_count("intentional"), 0);
+    assert!(report.is_clean_with_open_known_difference_gate(false));
+    assert!(!report.is_clean_with_open_known_difference_gate(true));
     assert_eq!(
         report.active_ledger_field_counts("type"),
         BTreeMap::from([("intentional".to_string(), 1), ("temporary".to_string(), 2),])
