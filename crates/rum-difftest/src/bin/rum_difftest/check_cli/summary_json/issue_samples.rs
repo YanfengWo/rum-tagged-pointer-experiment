@@ -5,7 +5,7 @@ use rum_difftest::lane_d;
 
 use crate::json_cli::json_string;
 
-use super::super::LocalCheckReport;
+use super::{super::LocalCheckReport, CheckIssueSampleFilter};
 
 struct CheckIssueSample {
     check: &'static str,
@@ -15,6 +15,7 @@ struct CheckIssueSample {
 }
 
 pub(super) struct IssueSamplesJson {
+    pub(super) unfiltered_total: usize,
     pub(super) total: usize,
     pub(super) emitted: usize,
     pub(super) samples: String,
@@ -29,8 +30,14 @@ impl IssueSamplesJson {
 pub(super) fn issue_samples_json(
     report: &LocalCheckReport,
     max_issue_samples: usize,
+    filter: &CheckIssueSampleFilter,
 ) -> IssueSamplesJson {
     let samples = collect_issue_samples(report);
+    let unfiltered_total = samples.len();
+    let samples = samples
+        .into_iter()
+        .filter(|sample| filter_includes(filter, sample))
+        .collect::<Vec<_>>();
     let total = samples.len();
     let rendered_samples = samples
         .into_iter()
@@ -40,6 +47,7 @@ pub(super) fn issue_samples_json(
     let emitted = rendered_samples.len();
 
     IssueSamplesJson {
+        unfiltered_total,
         total,
         emitted,
         samples: rendered_samples.join(",\n"),
@@ -64,6 +72,17 @@ pub(super) fn issue_kind_counts_json(report: &LocalCheckReport) -> String {
         })
         .collect::<Vec<_>>()
         .join(",\n")
+}
+
+fn filter_includes(filter: &CheckIssueSampleFilter, sample: &CheckIssueSample) -> bool {
+    filter
+        .check
+        .as_deref()
+        .is_none_or(|check| check == sample.check)
+        && filter
+            .kind
+            .as_deref()
+            .is_none_or(|kind| kind == sample.kind)
 }
 
 fn collect_issue_samples(report: &LocalCheckReport) -> Vec<CheckIssueSample> {

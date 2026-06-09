@@ -27,6 +27,7 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
     let mut include_lane_d_readiness = false;
     let mut summary_json_path = None;
     let mut max_issue_samples = summary_json::DEFAULT_MAX_ISSUE_SAMPLES;
+    let mut issue_sample_filter = summary_json::CheckIssueSampleFilter::default();
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -57,6 +58,14 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
                 let value = expect_value(&mut iter, "--max-issue-samples")?;
                 max_issue_samples = parse_max_issue_samples(&value)?;
             }
+            "--issue-sample-check" => {
+                let value = expect_value(&mut iter, "--issue-sample-check")?;
+                issue_sample_filter.check = parse_issue_sample_check(&value)?;
+            }
+            "--issue-sample-kind" => {
+                let value = expect_value(&mut iter, "--issue-sample-kind")?;
+                issue_sample_filter.kind = parse_issue_sample_kind(&value)?;
+            }
             "--help" | "-h" => {
                 usage::print_check_usage();
                 return Ok(ExitCode::SUCCESS);
@@ -73,7 +82,7 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
     text_report::print_check_report(&report);
 
     if let Some(path) = summary_json_path {
-        summary_json::write_summary_json(&path, &report, max_issue_samples)?;
+        summary_json::write_summary_json(&path, &report, max_issue_samples, &issue_sample_filter)?;
         println!("summary json: {}", path.display());
     }
 
@@ -318,4 +327,29 @@ fn parse_max_issue_samples(value: &str) -> Result<usize, Box<dyn std::error::Err
         return Err("--max-issue-samples expects a positive integer, got `0`".into());
     }
     Ok(max_issue_samples)
+}
+
+fn parse_issue_sample_check(value: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    match value {
+        "all" => Ok(None),
+        "inventory-baseline"
+        | "lane-c-ledger"
+        | "artifact-hygiene"
+        | "lane-d-smoke"
+        | "lane-d-readiness" => Ok(Some(value.to_string())),
+        _ => Err(format!(
+            "--issue-sample-check expects one of all, inventory-baseline, lane-c-ledger, artifact-hygiene, lane-d-smoke, lane-d-readiness; got `{value}`"
+        )
+        .into()),
+    }
+}
+
+fn parse_issue_sample_kind(value: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    if value == "all" {
+        return Ok(None);
+    }
+    if value.is_empty() {
+        return Err("--issue-sample-kind expects a non-empty kind or `all`".into());
+    }
+    Ok(Some(value.to_string()))
 }

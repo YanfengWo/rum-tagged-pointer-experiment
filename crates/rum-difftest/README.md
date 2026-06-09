@@ -58,7 +58,9 @@ to opt into the local Lane D smoke baseline gate, or
 baseline. The optional summary JSON includes bounded `issue_samples` for
 representative failing locators plus an untruncated `issue_kind_counts` array
 for scripts that need stable aggregate failure categories even when samples are
-capped.
+capped. Use `--issue-sample-check NAME` and `--issue-sample-kind KIND` to focus
+the bounded locator list during aggregate-gate debugging; the summary still
+reports the unfiltered issue total and untruncated kind counts.
 
 ## Machine-Readable Summaries
 
