@@ -144,7 +144,10 @@ location so newly matching divergences can be removed from fixtures and the
 ledger intentionally. For imported `seed/` rows, treat resolved output as a
 curation signal: keep the historical seed unchanged, migrate promoted coverage
 into `cases/`, then move seed-linked IDs from the active ledger into the
-retired seed manifest.
+retired seed manifest. Lane A/B `--summary-json PATH` writes a stable
+machine-readable summary for scripts or CI dashboards, covering oracle
+configuration, run options, comparison counts, known-difference counts, and
+seed-drift counts without freezing per-case or per-step report rows.
 
 Lane D currently executes imported timing and memory seed suites through local
 `rum` sessions and reports raw metrics. Its default `smoke` profile skips

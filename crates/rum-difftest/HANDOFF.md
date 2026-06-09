@@ -102,6 +102,9 @@ fixed rows can be removed from the ledger deliberately. Resolved rows are
 listed by ID and fixture location. For imported seed rows, treat this as a
 curation signal; keep `seed/` unchanged and migrate promoted coverage into
 `cases/` before pruning seed-linked ledger rows.
+`lane-a --summary-json PATH` writes a stable machine-readable summary with
+oracle configuration, run options, comparison counts, known-difference counts,
+and seed-drift counts without freezing per-case report rows.
 
 Priority areas:
 
@@ -127,6 +130,8 @@ known-difference steps carry their fixture metadata into the report, and the
 summary counts confirmed vs resolved known differences so fixed rows can be
 removed from the ledger deliberately. Resolved rows are listed by ID and
 fixture location.
+`lane-b --summary-json PATH` writes the same stable machine-readable summary
+shape as Lane A, without freezing per-step report rows.
 
 Recommended format:
 

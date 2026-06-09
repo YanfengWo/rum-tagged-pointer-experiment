@@ -7,6 +7,9 @@ use rum_difftest::lane_b::{self, LaneBOptions, LaneBStepStatus};
 use rum_difftest::oracle::OracleKernel;
 
 use super::oracle_cli::print_oracle_header;
+use super::oracle_lane_summary_json::{
+    OracleLaneSummaryCounts, OracleLaneSummaryJsonContext, write_summary_json,
+};
 
 pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut config_path = None;
@@ -16,6 +19,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut include_known_differences = false;
     let mut fail_on_mismatch = false;
     let mut oracle_timeout_seconds = None;
+    let mut summary_json_path = None;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -36,6 +40,9 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 let value = expect_value(&mut iter, "--oracle-timeout-seconds")?;
                 oracle_timeout_seconds = Some(value.parse::<u64>()?);
             }
+            "--summary-json" => {
+                summary_json_path = Some(PathBuf::from(expect_value(&mut iter, "--summary-json")?));
+            }
             "--fail-on-mismatch" => fail_on_mismatch = true,
             "--help" | "-h" => {
                 print_lane_b_usage();
@@ -52,14 +59,12 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let oracle_timeout = resolve_oracle_timeout(oracle_timeout_seconds, &config)?;
 
     let mut oracle = OracleKernel::with_timeout(&oracle_kernel, oracle_timeout)?;
-    let summary = lane_b::run(
-        &mut oracle,
-        &LaneBOptions {
-            fixture,
-            limit,
-            include_known_differences,
-        },
-    )?;
+    let options = LaneBOptions {
+        fixture,
+        limit,
+        include_known_differences,
+    };
+    let summary = lane_b::run(&mut oracle, &options)?;
 
     print_oracle_header("lane-b", &oracle);
     println!("steps seen: {}", summary.total_seen);
@@ -148,6 +153,34 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         print_case_value("oracle", &step.oracle);
     }
 
+    if let Some(path) = &summary_json_path {
+        write_summary_json(
+            path,
+            &OracleLaneSummaryJsonContext {
+                lane: "lane-b",
+                oracle: &oracle,
+                fixture: options.fixture.as_deref(),
+                limit: options.limit,
+                include_known_differences: options.include_known_differences,
+                counts: OracleLaneSummaryCounts {
+                    total_seen: summary.total_seen,
+                    compared: summary.compared,
+                    matches: summary.matches,
+                    mismatches: summary.mismatches,
+                    rum_failures: summary.rum_failures,
+                    oracle_failures: summary.oracle_failures,
+                    skipped_known_differences: summary.skipped_known_differences,
+                    confirmed_known_differences: summary.confirmed_known_differences,
+                    resolved_known_differences: summary.resolved_known_differences,
+                    seed_snapshots_checked: summary.seed_snapshots_checked,
+                    seed_snapshots_matched_oracle: summary.seed_snapshots_matched_oracle,
+                    seed_snapshots_drifted_from_oracle: summary.seed_snapshots_drifted_from_oracle,
+                },
+            },
+        )?;
+        println!("summary json: {}", path.display());
+    }
+
     let has_issues =
         summary.mismatches > 0 || summary.rum_failures > 0 || summary.oracle_failures > 0;
     if fail_on_mismatch && has_issues {
@@ -176,6 +209,7 @@ fn print_lane_b_usage() {
     println!("                              Alias for --include-known-diffs");
     println!("  --oracle-timeout-seconds N");
     println!("                              Kill an oracle invocation after N seconds");
+    println!("  --summary-json PATH        Write a stable machine-readable summary");
     println!("  --fail-on-mismatch        Exit non-zero if any step mismatches or fails");
 }
 

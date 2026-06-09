@@ -55,6 +55,7 @@ cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel
 cargo run -p rum-difftest -- lane-a --oracle-command WolframKernel
 cargo run -p rum-difftest -- lane-a --oracle-command WolframKernel --oracle-timeout-seconds 60
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --include-known-diffs
+cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-a-summary.json
 ```
 
 You can also point it at a config file:
@@ -98,6 +99,9 @@ ID/type/reason metadata and counts confirmed vs resolved known differences.
 Resolved known differences are listed by ID and fixture location so stale
 imported divergences are visible before curation. Keep `seed/` unchanged;
 migrate promoted cases under `cases/` before pruning seed-linked ledger rows.
+`--summary-json PATH` writes a stable machine-readable summary with oracle
+configuration, run options, comparison counts, known-difference counts, and
+seed-drift counts. It does not freeze the per-case report shape.
 
 ## Lane B Runner
 
@@ -109,6 +113,7 @@ cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel
 cargo run -p rum-difftest -- lane-b --oracle-command WolframKernel
 cargo run -p rum-difftest -- lane-b --oracle-command WolframKernel --oracle-timeout-seconds 60
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --include-known-diffs
+cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-b-summary.json
 ```
 
 Lane B keeps one `rum` session per fixture file and evaluates the matching
@@ -124,7 +129,10 @@ for seed-vs-oracle drift, not as the comparison oracle.
 When `--include-known-diffs` is used, the report includes the known-difference
 ID/type/reason for non-matching steps and counts confirmed vs resolved known
 differences. Resolved known differences are listed by ID and fixture location
-so fixed divergences are visible before removing ledger rows.
+so fixed divergences are visible before removing ledger rows. `--summary-json
+PATH` writes the same stable machine-readable summary shape as Lane A, with
+oracle configuration, run options, comparison counts, known-difference counts,
+and seed-drift counts, without freezing per-step report rows.
 Long-lived interactive process reuse remains a future throughput refinement.
 
 ## Lane C Runner

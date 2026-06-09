@@ -45,7 +45,9 @@ fn oracle_lane_help_lists_timeout_control() {
         let output = run_difftest(&[lane, "--help"]);
 
         assert!(output.status.success());
-        assert!(stdout_text(&output).contains("--oracle-timeout-seconds"));
+        let stdout = stdout_text(&output);
+        assert!(stdout.contains("--oracle-timeout-seconds"));
+        assert!(stdout.contains("--summary-json"));
     }
 }
 
@@ -63,6 +65,35 @@ fn oracle_lane_rejects_zero_timeout() {
 
     assert!(!output.status.success());
     assert!(stderr_text(&output).contains("expects a positive integer"));
+}
+
+#[test]
+fn oracle_lanes_write_machine_readable_summary_json() {
+    for lane in ["lane-a", "lane-b"] {
+        let temp_dir = unique_temp_dir(&format!("{lane}-json"));
+        let summary_path = temp_dir.join("summary.json");
+        let output = run_difftest(&[
+            lane,
+            "--oracle-command",
+            "/bin/true",
+            "--limit",
+            "1",
+            "--summary-json",
+            summary_path.to_str().unwrap(),
+        ]);
+
+        assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+        assert!(stdout_text(&output).contains("summary json:"));
+        let summary = fs::read_to_string(&summary_path).unwrap();
+        assert!(summary.contains(&format!("\"lane\": \"{lane}\"")));
+        assert!(summary.contains("\"clean\": false"));
+        assert!(summary.contains("\"executable\": \"/bin/true\""));
+        assert!(summary.contains("\"version_policy\": \"user-provided/unpinned\""));
+        assert!(summary.contains("\"limit\": 1"));
+        assert!(summary.contains("\"items_compared\": 1"));
+        assert!(summary.contains("\"oracle_failures\": 1"));
+        fs::remove_dir_all(temp_dir).unwrap();
+    }
 }
 
 #[test]

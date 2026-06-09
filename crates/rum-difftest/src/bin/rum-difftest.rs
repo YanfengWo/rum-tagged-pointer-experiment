@@ -12,6 +12,8 @@ mod lane_c_cli;
 mod lane_d_cli;
 #[path = "rum_difftest/oracle_cli.rs"]
 mod oracle_cli;
+#[path = "rum_difftest/oracle_lane_summary_json.rs"]
+mod oracle_lane_summary_json;
 
 fn main() -> ExitCode {
     match run() {
@@ -49,10 +51,10 @@ fn expect_value(
 
 fn print_usage() {
     println!(
-        "rum-difftest lane-a [--oracle-kernel PATH|--oracle-command PATH] [--oracle-timeout-seconds N] [--config PATH] [--fixture PATH] [--limit N]"
+        "rum-difftest lane-a [--oracle-kernel PATH|--oracle-command PATH] [--oracle-timeout-seconds N] [--config PATH] [--fixture PATH] [--limit N] [--summary-json PATH]"
     );
     println!(
-        "rum-difftest lane-b [--oracle-kernel PATH|--oracle-command PATH] [--oracle-timeout-seconds N] [--config PATH] [--fixture PATH] [--limit N]"
+        "rum-difftest lane-b [--oracle-kernel PATH|--oracle-command PATH] [--oracle-timeout-seconds N] [--config PATH] [--fixture PATH] [--limit N] [--summary-json PATH]"
     );
     println!("rum-difftest lane-c [--summary-json PATH]");
     println!(
