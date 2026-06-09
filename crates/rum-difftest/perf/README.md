@@ -58,7 +58,11 @@ are treated as `local-debug` for compatibility with older artifacts.
 
 `--check-baseline-readiness` checks the default checked smoke baseline artifact
 set and exits non-zero if any expected file is missing, invalid, or no longer
-covers the current smoke lane. The current default artifact paths are:
+covers the current smoke lane. Text output and `--summary-json PATH` include
+one readiness entry per expected artifact plus a suggested `lane-d
+--write-baseline` command for each artifact, so CI runners can surface the
+exact capture command for missing `ci-debug` / `ci-release` baselines. The
+current default artifact paths are:
 
 - [baselines/smoke.txt](./baselines/smoke.txt): `local-debug`
 - `baselines/smoke-ci-debug.txt`: `ci-debug`, to be captured on the intended

@@ -35,6 +35,16 @@ fn checked_baseline_readiness_reports_clean_and_missing_artifacts() {
         report.entries[1].status,
         LaneDCheckedBaselineReadinessStatus::MissingArtifact
     ));
+    assert_eq!(
+        checked_baseline_capture_command(&checked_artifact(
+            LaneDThresholdProfile::CiDebug,
+            &missing_path
+        )),
+        format!(
+            "cargo run -p rum-difftest -- lane-d --suite all --profile smoke --threshold-profile ci-debug --capture-runs 5 --write-baseline {} --fail-on-error",
+            missing_path.display()
+        )
+    );
     fs::remove_dir_all(temp_dir).unwrap();
 }
 

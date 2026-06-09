@@ -269,6 +269,8 @@ fn check_can_include_lane_d_readiness_gate() {
     assert!(stdout.contains("lane-d readiness artifacts: 3"));
     assert!(stdout.contains("lane-d readiness ready artifacts: 1"));
     assert!(stdout.contains("lane-d readiness missing artifacts: 2"));
+    assert!(stdout.contains("lane-d-readiness-missing"));
+    assert!(stdout.contains("--threshold-profile ci-debug"));
     assert!(stdout.contains("checks passed: 3"));
     assert!(stdout.contains("checks failed: 1"));
     assert!(stdout.contains("checks skipped: 1"));
@@ -293,6 +295,18 @@ fn check_can_include_lane_d_readiness_gate() {
     assert_eq!(json_u64(readiness, "/artifacts/missing"), 2);
     assert_eq!(json_u64(readiness, "/artifacts/invalid"), 0);
     assert_eq!(json_u64(readiness, "/artifacts/not_clean"), 0);
+    let artifact_entries = json_array(readiness, "/artifacts/entries");
+    assert_eq!(artifact_entries.len(), 3);
+    assert!(
+        artifact_entries.iter().any(|entry| {
+            json_str(entry, "/status") == "missing"
+                && json_str(entry, "/threshold_profile") == "ci-release"
+                && json_str(entry, "/path").contains("smoke-ci-release.txt")
+                && json_str(entry, "/suggested_capture_command")
+                    .contains("--threshold-profile ci-release")
+        }),
+        "expected a ci-release missing artifact entry: {artifact_entries:?}"
+    );
     assert_eq!(
         json_u64(
             issue_check_count_entry(&summary_json, "lane-d-readiness"),

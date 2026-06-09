@@ -16,7 +16,8 @@ pub use compare::compare_baseline;
 pub use io::{format_baseline, load_baseline, parse_baseline, write_baseline};
 pub use readiness::{
     check_checked_baseline_readiness, check_checked_baseline_readiness_for,
-    default_checked_baseline_artifacts, default_smoke_baseline_path,
+    checked_baseline_capture_command, default_checked_baseline_artifacts,
+    default_smoke_baseline_path,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]

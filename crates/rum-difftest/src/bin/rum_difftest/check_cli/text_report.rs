@@ -198,8 +198,13 @@ fn print_lane_d_readiness_check(report: &super::LaneDReadinessCheckReport) {
                 compared
             ),
             lane_d::LaneDCheckedBaselineReadinessStatus::MissingArtifact => println!(
-                "lane-d-readiness-missing\t{profile}\t{threshold_profile}\t{}",
-                display_path(&entry.path)
+                "lane-d-readiness-missing\t{profile}\t{threshold_profile}\t{}\t{}",
+                display_path(&entry.path),
+                lane_d::checked_baseline_capture_command(&lane_d::LaneDCheckedBaselineArtifact {
+                    profile: entry.profile,
+                    threshold_profile: entry.threshold_profile,
+                    path: entry.path.clone(),
+                })
             ),
             lane_d::LaneDCheckedBaselineReadinessStatus::InvalidArtifact { message } => println!(
                 "lane-d-readiness-invalid\t{profile}\t{threshold_profile}\t{}\t{}",

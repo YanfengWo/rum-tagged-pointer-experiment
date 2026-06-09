@@ -143,7 +143,10 @@ fn readiness_summary_json(report: Option<&LaneDCheckedBaselineReadinessReport>) 
             "    \"ready_artifacts\": {},\n",
             "    \"missing_artifacts\": {},\n",
             "    \"invalid_artifacts\": {},\n",
-            "    \"not_clean_artifacts\": {}\n",
+            "    \"not_clean_artifacts\": {},\n",
+            "    \"entries\": [\n",
+            "{}\n",
+            "    ]\n",
             "  }}"
         ),
         report.is_ready(),
@@ -152,7 +155,84 @@ fn readiness_summary_json(report: Option<&LaneDCheckedBaselineReadinessReport>) 
         missing_artifacts,
         invalid_artifacts,
         not_clean_artifacts,
+        readiness_entries_json(report),
     )
+}
+
+fn readiness_entries_json(report: &LaneDCheckedBaselineReadinessReport) -> String {
+    report
+        .entries
+        .iter()
+        .map(readiness_entry_json)
+        .collect::<Vec<_>>()
+        .join(",\n")
+}
+
+fn readiness_entry_json(entry: &lane_d::LaneDCheckedBaselineReadinessEntry) -> String {
+    let capture_command =
+        lane_d::checked_baseline_capture_command(&lane_d::LaneDCheckedBaselineArtifact {
+            profile: entry.profile,
+            threshold_profile: entry.threshold_profile,
+            path: entry.path.clone(),
+        });
+    let detail_fields = match &entry.status {
+        LaneDCheckedBaselineReadinessStatus::Ready {
+            records_considered,
+            compared,
+        } => format!(
+            concat!(
+                ",\n",
+                "        \"records_considered\": {},\n",
+                "        \"compared\": {}"
+            ),
+            records_considered, compared
+        ),
+        LaneDCheckedBaselineReadinessStatus::MissingArtifact => String::new(),
+        LaneDCheckedBaselineReadinessStatus::InvalidArtifact { message } => format!(
+            concat!(",\n", "        \"message\": \"{}\""),
+            json_string(message)
+        ),
+        LaneDCheckedBaselineReadinessStatus::NotClean { report } => format!(
+            concat!(
+                ",\n",
+                "        \"missing_records\": {},\n",
+                "        \"unused_records\": {},\n",
+                "        \"elapsed_regressions\": {},\n",
+                "        \"value_node_regressions\": {}"
+            ),
+            report.missing_records.len(),
+            report.unused_records.len(),
+            report.elapsed_regressions.len(),
+            report.value_node_regressions.len(),
+        ),
+    };
+    format!(
+        concat!(
+            "      {{\n",
+            "        \"profile\": \"{}\",\n",
+            "        \"threshold_profile\": \"{}\",\n",
+            "        \"path\": \"{}\",\n",
+            "        \"status\": \"{}\",\n",
+            "        \"suggested_capture_command\": \"{}\"",
+            "{}\n",
+            "      }}"
+        ),
+        json_string(lane_d::profile_name(entry.profile)),
+        json_string(lane_d::threshold_profile_name(entry.threshold_profile)),
+        json_string(&entry.path.display().to_string()),
+        readiness_status_name(&entry.status),
+        json_string(&capture_command),
+        detail_fields,
+    )
+}
+
+fn readiness_status_name(status: &LaneDCheckedBaselineReadinessStatus) -> &'static str {
+    match status {
+        LaneDCheckedBaselineReadinessStatus::Ready { .. } => "ready",
+        LaneDCheckedBaselineReadinessStatus::MissingArtifact => "missing",
+        LaneDCheckedBaselineReadinessStatus::InvalidArtifact { .. } => "invalid",
+        LaneDCheckedBaselineReadinessStatus::NotClean { .. } => "not_clean",
+    }
 }
 
 fn written_baseline_summary_json(summary: Option<&WrittenBaselineSummary>) -> String {

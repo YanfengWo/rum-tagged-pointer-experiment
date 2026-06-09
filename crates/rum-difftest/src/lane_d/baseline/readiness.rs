@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use crate::fixtures::crate_root;
 use crate::lane_d::{
     LaneDProfile, LaneDSummary, LaneDThresholdProfile, compare_baseline, load_baseline,
+    profile_name, threshold_profile_name,
 };
 
 use super::{
@@ -56,6 +57,15 @@ pub fn check_checked_baseline_readiness_for(
         .collect();
 
     LaneDCheckedBaselineReadinessReport { entries }
+}
+
+pub fn checked_baseline_capture_command(artifact: &LaneDCheckedBaselineArtifact) -> String {
+    format!(
+        "cargo run -p rum-difftest -- lane-d --suite all --profile {} --threshold-profile {} --capture-runs 5 --write-baseline {} --fail-on-error",
+        profile_name(artifact.profile),
+        threshold_profile_name(artifact.threshold_profile),
+        artifact.path.display()
+    )
 }
 
 fn check_checked_baseline_artifact(

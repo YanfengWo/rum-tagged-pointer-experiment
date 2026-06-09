@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use rum_difftest::lane_d::{
-    self, LaneDCaseStatus, LaneDCheckedBaselineReadinessReport,
+    self, LaneDCaseStatus, LaneDCheckedBaselineReadinessEntry, LaneDCheckedBaselineReadinessReport,
     LaneDCheckedBaselineReadinessStatus, LaneDProfile, LaneDSuite, LaneDSummary,
     LaneDThresholdProfile,
 };
@@ -117,10 +117,13 @@ pub(super) fn print_checked_baseline_readiness_report(
                 records_considered,
                 compared
             ),
-            LaneDCheckedBaselineReadinessStatus::MissingArtifact => println!(
-                "checked-baseline-missing\t{profile}\t{threshold_profile}\t{}",
-                entry.path.display()
-            ),
+            LaneDCheckedBaselineReadinessStatus::MissingArtifact => {
+                println!(
+                    "checked-baseline-missing\t{profile}\t{threshold_profile}\t{}\t{}",
+                    entry.path.display(),
+                    capture_command_for_entry(entry)
+                )
+            }
             LaneDCheckedBaselineReadinessStatus::InvalidArtifact { message } => println!(
                 "checked-baseline-invalid\t{profile}\t{threshold_profile}\t{}\t{}",
                 entry.path.display(),
@@ -136,6 +139,14 @@ pub(super) fn print_checked_baseline_readiness_report(
             ),
         }
     }
+}
+
+fn capture_command_for_entry(entry: &LaneDCheckedBaselineReadinessEntry) -> String {
+    lane_d::checked_baseline_capture_command(&lane_d::LaneDCheckedBaselineArtifact {
+        profile: entry.profile,
+        threshold_profile: entry.threshold_profile,
+        path: entry.path.clone(),
+    })
 }
 
 pub(super) fn print_written_baseline_report(
