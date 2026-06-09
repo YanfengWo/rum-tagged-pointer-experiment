@@ -133,6 +133,7 @@ Lane C checks the known-difference ledger:
 
 ```bash
 cargo run -p rum-difftest -- lane-c
+cargo run -p rum-difftest -- lane-c --summary-json /tmp/rum-lane-c-summary.json
 ```
 
 The runner validates that every checked fixture `!!! id=...` is present in
@@ -147,6 +148,10 @@ keeping resolved seed rows in the active ledger. Ledger rows must also carry
 machine-checked `path:needle` shape, keeping deliberate or deferred Wolfram
 divergences tied to live roadmap ownership and explicit removal criteria
 instead of scattered comments.
+`--summary-json PATH` writes a stable machine-readable summary for scripts or
+CI dashboards. That JSON intentionally exposes lane status, checked artifact
+paths, and issue counts only; it does not freeze the full internal ledger row
+shape.
 
 ## Lane D Runner
 

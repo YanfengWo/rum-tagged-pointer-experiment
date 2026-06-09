@@ -1,4 +1,7 @@
+use std::fs;
+use std::path::PathBuf;
 use std::process::{Command, Output};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 fn run_difftest(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_rum-difftest"))
@@ -64,10 +67,28 @@ fn lane_c_help_and_unknown_flag_paths_are_stable() {
     let help = run_difftest(&["lane-c", "--help"]);
     assert!(help.status.success());
     assert!(stdout_text(&help).contains("rum-difftest lane-c"));
+    assert!(stdout_text(&help).contains("--summary-json"));
 
     let unknown = run_difftest(&["lane-c", "--unknown"]);
     assert!(!unknown.status.success());
     assert!(stderr_text(&unknown).contains("unknown lane-c flag `--unknown`"));
+}
+
+#[test]
+fn lane_c_writes_machine_readable_summary_json() {
+    let temp_dir = unique_temp_dir("lane-c-json");
+    let summary_path = temp_dir.join("summary.json");
+    let output = run_difftest(&["lane-c", "--summary-json", summary_path.to_str().unwrap()]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    assert!(stdout_text(&output).contains("summary json:"));
+    let summary = fs::read_to_string(&summary_path).unwrap();
+    assert!(summary.contains("\"lane\": \"lane-c\""));
+    assert!(summary.contains("\"clean\": true"));
+    assert!(summary.contains("\"active_ledger_entries\": 2"));
+    assert!(summary.contains("\"fixture_known_differences\": 3"));
+    assert!(summary.contains("\"tracking_target_issues\": 0"));
+    fs::remove_dir_all(temp_dir).unwrap();
 }
 
 #[test]
@@ -86,4 +107,12 @@ fn unknown_subcommand_reports_structured_error() {
 
     assert!(!output.status.success());
     assert!(stderr_text(&output).contains("unknown subcommand `not-a-lane`"));
+}
+
+fn unique_temp_dir(prefix: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    std::env::temp_dir().join(format!("{prefix}-{}-{nanos}", std::process::id()))
 }

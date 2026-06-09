@@ -160,6 +160,9 @@ ID moves between fixture files, and active fixture/ledger `type=...` metadata
 mismatches. Each active ledger row must include machine-checked
 `tracked_by=path:needle` and `close_when` metadata so divergences remain owned
 by a live roadmap item and have explicit removal criteria.
+`rum-difftest lane-c --summary-json PATH` writes a stable machine-readable
+summary with lane status, checked artifact paths, and issue counts for scripts
+or CI dashboards without freezing the full internal ledger row shape.
 
 ### Lane D: Performance Regression
 

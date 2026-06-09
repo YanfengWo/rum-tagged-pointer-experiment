@@ -1,13 +1,23 @@
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use rum_difftest::divergences;
 
+use super::expect_value;
+
 pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
-    if let Some(arg) = args.first() {
+    let mut summary_json_path = None;
+
+    let mut iter = args.into_iter();
+    while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--help" | "-h" => {
                 print_lane_c_usage();
                 return Ok(ExitCode::SUCCESS);
+            }
+            "--summary-json" => {
+                summary_json_path = Some(PathBuf::from(expect_value(&mut iter, "--summary-json")?));
             }
             other => return Err(format!("unknown lane-c flag `{other}`").into()),
         }
@@ -110,6 +120,11 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         );
     }
 
+    if let Some(path) = summary_json_path {
+        write_summary_json(&path, &report)?;
+        println!("summary json: {}", path.display());
+    }
+
     if report.is_clean() {
         Ok(ExitCode::SUCCESS)
     } else {
@@ -117,8 +132,86 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     }
 }
 
+fn write_summary_json(
+    path: &Path,
+    report: &divergences::KnownDifferenceLedgerReport,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+    fs::write(path, summary_json(report))?;
+    Ok(())
+}
+
+fn summary_json(report: &divergences::KnownDifferenceLedgerReport) -> String {
+    format!(
+        concat!(
+            "{{\n",
+            "  \"lane\": \"lane-c\",\n",
+            "  \"clean\": {},\n",
+            "  \"known_difference_ledger\": \"{}\",\n",
+            "  \"retired_seed_differences\": \"{}\",\n",
+            "  \"counts\": {{\n",
+            "    \"active_ledger_entries\": {},\n",
+            "    \"retired_seed_entries\": {},\n",
+            "    \"fixture_known_differences\": {}\n",
+            "  }},\n",
+            "  \"issues\": {{\n",
+            "    \"missing_ledger_entries\": {},\n",
+            "    \"unreferenced_ledger_entries\": {},\n",
+            "    \"unreferenced_retired_seed_entries\": {},\n",
+            "    \"fixture_mismatches\": {},\n",
+            "    \"metadata_mismatches\": {},\n",
+            "    \"retired_seed_fixture_mismatches\": {},\n",
+            "    \"tracking_target_issues\": {}\n",
+            "  }}\n",
+            "}}\n"
+        ),
+        report.is_clean(),
+        json_string(
+            &divergences::known_difference_ledger_path()
+                .display()
+                .to_string()
+        ),
+        json_string(
+            &divergences::retired_seed_difference_path()
+                .display()
+                .to_string()
+        ),
+        report.records.len(),
+        report.retired_seed_records.len(),
+        report.fixture_references.len(),
+        report.missing_ledger_entries.len(),
+        report.unreferenced_ledger_entries.len(),
+        report.unreferenced_retired_seed_entries.len(),
+        report.fixture_mismatches.len(),
+        report.metadata_mismatches.len(),
+        report.retired_seed_fixture_mismatches.len(),
+        report.tracking_target_issues.len(),
+    )
+}
+
+fn json_string(value: &str) -> String {
+    let mut escaped = String::new();
+    for ch in value.chars() {
+        match ch {
+            '"' => escaped.push_str("\\\""),
+            '\\' => escaped.push_str("\\\\"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            ch if ch.is_control() => escaped.push_str(&format!("\\u{:04x}", ch as u32)),
+            ch => escaped.push(ch),
+        }
+    }
+    escaped
+}
+
 fn print_lane_c_usage() {
     println!("rum-difftest lane-c");
+    println!("  --summary-json PATH       Write a stable machine-readable summary");
     println!(
         "  Validate fixture `!!! id=...`, retired seed rows, fixture/type metadata, and active `tracked_by=path:needle` targets"
     );

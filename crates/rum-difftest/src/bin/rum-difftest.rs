@@ -52,7 +52,7 @@ fn print_usage() {
     println!(
         "rum-difftest lane-b [--oracle-kernel PATH|--oracle-command PATH] [--oracle-timeout-seconds N] [--config PATH] [--fixture PATH] [--limit N]"
     );
-    println!("rum-difftest lane-c");
+    println!("rum-difftest lane-c [--summary-json PATH]");
     println!(
         "rum-difftest lane-d [--suite all|timing|memory] [--profile smoke|full] [--limit N] [--baseline PATH] [--write-baseline PATH] [--check-baseline-readiness]"
     );
