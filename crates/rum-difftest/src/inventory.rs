@@ -303,7 +303,7 @@ mod tests {
         assert_eq!(lane_b.totals_by_source()["stateful"].fixtures, 7);
         assert_eq!(
             lane_b.totals_by_category()["definitions-messages"].entries,
-            81
+            98
         );
         assert_eq!(lane_b.totals_by_category()["message-switches"].entries, 28);
         assert_eq!(lane_b.totals_by_category()["mutation-updates"].entries, 54);

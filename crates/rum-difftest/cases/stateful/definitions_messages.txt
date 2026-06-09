@@ -16,6 +16,14 @@ m::tag = "value `1`" ||| "value `1`"
 Message[m::tag, 3] ||| Null
 Message[m::tag, 4]; ToString[$MessageList, InputForm] ||| "{HoldForm[m::tag]}"
 Message[m::tag, 5]; Length[$MessageList] ||| 1
+msgLife::argx = "bad `1`" ||| "bad `1`"
+Message[msgLife::argx, 5] ||| Null
+msgLife::usage = "usage `1`" ||| "usage `1`"
+Message[msgLife::usage, 6] ||| Null
+Unset[msgLife::usage] ||| Null
+Clear[msgLife] ||| Null
+Message[msgLife::argx, 7] ||| Null
+ClearAll[msgLife] ||| Null
 SetAttributes[held, HoldFirst] ||| Null
 ToString[Attributes[held], InputForm] ||| "{HoldFirst}"
 heldArg = 2 ||| 2
@@ -81,3 +89,12 @@ ToString[Protect[prot], InputForm] ||| "{\"prot\"}"
 ToString[Attributes[prot], InputForm] ||| "{Protected}"
 ToString[Unprotect[prot], InputForm] ||| "{\"prot\"}"
 ToString[Attributes[prot], InputForm] ||| "{}"
+SetAttributes[clearState, HoldFirst] ||| Null
+clearState[x_] := Hold[x] ||| Null
+clearArg = 7 ||| 7
+clearState[clearArg] ||| Hold[clearArg]
+Clear[clearState] ||| Null
+ToString[Attributes[clearState], InputForm] ||| "{HoldFirst}"
+clearState[clearArg] ||| clearState[clearArg]
+ClearAll[clearState] ||| Null
+ToString[Attributes[clearState], InputForm] ||| "{}"

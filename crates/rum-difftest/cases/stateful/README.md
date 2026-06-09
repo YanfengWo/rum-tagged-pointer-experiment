@@ -8,8 +8,9 @@ same first-pass line format as Lane A:
 
 Current fixture focus:
 
-- `definitions_messages.txt`: assignments, options, messages, attributes,
-  precedence, context basics, and definition lifecycle
+- `definitions_messages.txt`: assignments, options, Wolfram-compatible
+  `sym::tag` message lifecycle, attributes, precedence, context basics, and
+  definition lifecycle
 - `message_switches.txt`: ordered `Off` / `On`, `$MessageList`, `Check`,
   `Quiet`, and selector-list message-stream behavior
 - `package_defaults.txt`: file-backed package loading, `$Packages` /
