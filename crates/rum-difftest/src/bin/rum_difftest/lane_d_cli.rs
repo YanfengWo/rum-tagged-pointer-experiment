@@ -7,6 +7,9 @@ use rum_difftest::lane_d::{
 };
 
 use super::expect_value;
+use super::json_cli::{
+    parse_nonnegative_u128_flag, parse_positive_u128_flag, parse_positive_usize_flag,
+};
 
 #[path = "lane_d_cli/summary_json.rs"]
 mod summary_json;
@@ -48,7 +51,7 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             }
             "--limit" => {
                 let value = expect_value(&mut iter, "--limit")?;
-                limit = Some(value.parse::<usize>()?);
+                limit = Some(parse_positive_usize_flag("--limit", &value)?);
             }
             "--baseline" => {
                 baseline_path = Some(PathBuf::from(expect_value(&mut iter, "--baseline")?));
@@ -59,15 +62,21 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             }
             "--capture-runs" => {
                 let value = expect_value(&mut iter, "--capture-runs")?;
-                capture_runs = value.parse::<usize>()?;
+                capture_runs = parse_positive_usize_flag("--capture-runs", &value)?;
             }
             "--baseline-elapsed-multiplier" => {
                 let value = expect_value(&mut iter, "--baseline-elapsed-multiplier")?;
-                baseline_elapsed_multiplier = Some(value.parse::<u128>()?);
+                baseline_elapsed_multiplier = Some(parse_positive_u128_flag(
+                    "--baseline-elapsed-multiplier",
+                    &value,
+                )?);
             }
             "--baseline-min-elapsed-micros" => {
                 let value = expect_value(&mut iter, "--baseline-min-elapsed-micros")?;
-                baseline_min_elapsed_micros = Some(value.parse::<u128>()?);
+                baseline_min_elapsed_micros = Some(parse_nonnegative_u128_flag(
+                    "--baseline-min-elapsed-micros",
+                    &value,
+                )?);
             }
             "--check-baseline-readiness" => check_baseline_readiness = true,
             "--summary-json" => {
@@ -81,9 +90,6 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             }
             other => return Err(format!("unknown lane-d flag `{other}`").into()),
         }
-    }
-    if capture_runs == 0 {
-        return Err("--capture-runs must be at least 1".into());
     }
     if capture_runs > 1 && write_baseline_path.is_none() {
         return Err("--capture-runs requires --write-baseline PATH".into());

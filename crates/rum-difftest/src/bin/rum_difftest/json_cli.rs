@@ -36,6 +36,28 @@ pub fn parse_positive_u64_flag(flag: &str, value: &str) -> Result<u64, Box<dyn s
     Ok(parsed)
 }
 
+pub fn parse_positive_u128_flag(
+    flag: &str,
+    value: &str,
+) -> Result<u128, Box<dyn std::error::Error>> {
+    let parsed = value
+        .parse::<u128>()
+        .map_err(|_| format!("{flag} expects a positive integer, got `{value}`"))?;
+    if parsed == 0 {
+        return Err(format!("{flag} expects a positive integer, got `0`").into());
+    }
+    Ok(parsed)
+}
+
+pub fn parse_nonnegative_u128_flag(
+    flag: &str,
+    value: &str,
+) -> Result<u128, Box<dyn std::error::Error>> {
+    value
+        .parse::<u128>()
+        .map_err(|_| format!("{flag} expects a non-negative integer, got `{value}`").into())
+}
+
 pub fn parse_max_issue_samples(value: &str) -> Result<usize, Box<dyn std::error::Error>> {
     parse_positive_usize_flag("--max-issue-samples", value)
 }
@@ -126,6 +148,26 @@ mod tests {
                 .unwrap_err()
                 .to_string(),
             "--timeout expects a positive integer, got `many`"
+        );
+        assert_eq!(parse_positive_u128_flag("--multiplier", "11").unwrap(), 11);
+        assert_eq!(
+            parse_positive_u128_flag("--multiplier", "0")
+                .unwrap_err()
+                .to_string(),
+            "--multiplier expects a positive integer, got `0`"
+        );
+        assert_eq!(
+            parse_positive_u128_flag("--multiplier", "many")
+                .unwrap_err()
+                .to_string(),
+            "--multiplier expects a positive integer, got `many`"
+        );
+        assert_eq!(parse_nonnegative_u128_flag("--min", "0").unwrap(), 0);
+        assert_eq!(
+            parse_nonnegative_u128_flag("--min", "-1")
+                .unwrap_err()
+                .to_string(),
+            "--min expects a non-negative integer, got `-1`"
         );
     }
 
