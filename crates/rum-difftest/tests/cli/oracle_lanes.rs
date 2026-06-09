@@ -118,6 +118,12 @@ fn oracle_lanes_write_machine_readable_summary_json() {
         let samples = json_array(&summary_json, "/issue_samples");
         assert_eq!(samples.len(), 1);
         assert_eq!(json_str(&samples[0], "/kind"), "non_match");
+        if lane == "lane-a" {
+            assert_eq!(json_str(&samples[0], "/fixture_source"), "curated-core");
+        } else {
+            assert_eq!(json_str(&samples[0], "/fixture_source"), "stateful");
+        }
+        assert!(json_bool(&samples[0], "/project_owned_fixture"));
         assert_eq!(json_u64(&samples[0], "/index"), 1);
         assert_eq!(json_str(&samples[0], "/status"), "OracleFailure");
         assert!(!json_bool(&samples[0], "/seed_drift"));
@@ -206,6 +212,8 @@ fn oracle_lanes_filter_summary_json_issue_samples_by_kind() {
             json_str(&seed_drift_samples[0], "/kind"),
             "seed_snapshot_drift"
         );
+        assert!(json_str(&seed_drift_samples[0], "/fixture_source").ends_with("-custom"));
+        assert!(json_bool(&seed_drift_samples[0], "/project_owned_fixture"));
 
         let non_match = run_difftest(&[
             lane,
@@ -240,6 +248,8 @@ fn oracle_lanes_filter_summary_json_issue_samples_by_kind() {
         let non_match_samples = json_array(&non_match_json, "/issue_samples");
         assert_eq!(non_match_samples.len(), 1);
         assert_eq!(json_str(&non_match_samples[0], "/kind"), "non_match");
+        assert!(json_str(&non_match_samples[0], "/fixture_source").ends_with("-custom"));
+        assert!(json_bool(&non_match_samples[0], "/project_owned_fixture"));
         fs::remove_dir_all(temp_dir).unwrap();
     }
 }
@@ -384,6 +394,8 @@ fn oracle_lanes_can_fail_on_seed_snapshot_drift() {
         );
         let samples = json_array(&summary_json, "/issue_samples");
         assert_eq!(json_str(&samples[0], "/kind"), "seed_snapshot_drift");
+        assert!(json_str(&samples[0], "/fixture_source").ends_with("-custom"));
+        assert!(json_bool(&samples[0], "/project_owned_fixture"));
         assert!(json_bool(&samples[0], "/seed_drift"));
 
         let failure = run_difftest(&[
@@ -494,6 +506,9 @@ fn lane_a_project_seed_drift_gate_ignores_imported_seed_snapshots() {
         ),
         0
     );
+    let samples = json_array(&summary_json, "/issue_samples");
+    assert_eq!(json_str(&samples[0], "/fixture_source"), "seed-golden");
+    assert!(!json_bool(&samples[0], "/project_owned_fixture"));
     fs::remove_dir_all(temp_dir).unwrap();
 }
 

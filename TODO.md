@@ -630,6 +630,10 @@ This roadmap intentionally uses two levels of detail:
     project seed-drift counts, so default oracle audits can protect
     project-owned fixtures without failing on immutable imported seed snapshot
     drift
+  - [x] Lane A/B follow-up: include `fixture_source` and
+    `project_owned_fixture` on summary JSON issue samples, so automation can
+    route imported seed, curated project, stateful, and custom fixture locators
+    without reimplementing path classification
   - [x] Lane A follow-up: add a curated structure-selector fixture for stable
     `Part` / `Extract` / `ReplacePart` / `Depth` / `Level` conformance, and
     guard it with the checked inventory category baseline

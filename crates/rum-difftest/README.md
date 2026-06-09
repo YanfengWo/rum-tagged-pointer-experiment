@@ -186,7 +186,8 @@ without inferring which gate was active. The JSON oracle section also reports
 the concrete batch transport name and process count. It also includes
 an unfiltered `issue_counts` breakdown plus a bounded `issue_samples` locator
 list for the first non-matching, seed-drifted, or resolved known-difference
-cases. It does not freeze the full per-case report shape. Use
+cases, including each sample's `fixture_source` and
+`project_owned_fixture`. It does not freeze the full per-case report shape. Use
 `--issue-sample-kind non-match`, `seed-drift`, or
 `resolved-known-difference` to focus the bounded locator list during targeted
 audits while still retaining the full issue-count breakdown.
@@ -234,7 +235,8 @@ oracle configuration, run options, comparison counts, known-difference counts,
 seed-drift counts, failure gate options, oracle process/batch/input counts,
 unfiltered issue-count breakdowns, and bounded `issue_samples` locators,
 without freezing the full per-step report rows. The same `--issue-sample-kind`
-filters available in Lane A apply here. The same
+filters available in Lane A apply here, including each sample's
+`fixture_source` and `project_owned_fixture` fields. The same
 `--fail-on-resolved-known-difference` cleanup gate applies to included
 stateful known differences. Lane B also reports oracle batch/input counts and
 the concrete session-batch

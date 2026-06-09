@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use rum_difftest::config::{load_optional_config, resolve_oracle_kernel, resolve_oracle_timeout};
-use rum_difftest::fixtures::seed_root;
+use rum_difftest::fixtures::{curated_wolfram_core_dir, seed_root};
 use rum_difftest::lane_a::{self, LaneACaseStatus, LaneAOptions};
 use rum_difftest::oracle::OracleKernel;
 
@@ -167,22 +167,35 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
 }
 
 fn lane_a_project_seed_snapshot_drifts(summary: &lane_a::LaneASummary) -> usize {
-    let imported_seed_root = seed_root().canonicalize().unwrap_or_else(|_| seed_root());
     summary
         .cases
         .iter()
         .filter(|case| {
             case.seed_matches_oracle == Some(false)
-                && !is_imported_seed_fixture(&case.fixture, &imported_seed_root)
+                && !matches!(lane_a_fixture_source(&case.fixture), "seed-golden")
         })
         .count()
 }
 
-fn is_imported_seed_fixture(path: &Path, imported_seed_root: &Path) -> bool {
-    path.starts_with(imported_seed_root)
+fn lane_a_fixture_source(path: &Path) -> &'static str {
+    let seed_root = seed_root().canonicalize().unwrap_or_else(|_| seed_root());
+    let curated_root = curated_wolfram_core_dir()
+        .canonicalize()
+        .unwrap_or_else(|_| curated_wolfram_core_dir());
+    if path_is_under(path, &seed_root) {
+        "seed-golden"
+    } else if path_is_under(path, &curated_root) {
+        "curated-core"
+    } else {
+        "lane-a-custom"
+    }
+}
+
+fn path_is_under(path: &Path, root: &Path) -> bool {
+    path.starts_with(root)
         || path
             .canonicalize()
-            .is_ok_and(|canonical| canonical.starts_with(imported_seed_root))
+            .is_ok_and(|canonical| canonical.starts_with(root))
 }
 
 fn lane_a_issue_samples(
@@ -208,9 +221,12 @@ fn lane_a_sample(
     index: usize,
     case: &lane_a::LaneACaseReport,
 ) -> OracleLaneIssueSample {
+    let fixture_source = lane_a_fixture_source(&case.fixture);
     OracleLaneIssueSample {
         kind,
         fixture: case.fixture.display().to_string(),
+        fixture_source,
+        project_owned_fixture: fixture_source != "seed-golden",
         index: Some(index),
         input: case.input.clone(),
         status: format!("{:?}", case.status),

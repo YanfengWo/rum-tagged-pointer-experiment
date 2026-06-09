@@ -197,9 +197,11 @@ freezing full per-case or per-step report rows. `--max-issue-samples N`
 adjusts the default 5-entry cap; `--issue-sample-kind` can narrow those samples
 to `non-match`, `seed-drift`, or `resolved-known-difference` during targeted
 audits; and the summary records the selected kind, sample limit, emitted count,
-filtered issue-sample count, and truncation status. The sibling `issue_counts`
-object remains unfiltered so automation can still see the full non-match,
-seed-drift, and resolved-known-difference breakdown. Use
+filtered issue-sample count, and truncation status. Each emitted sample records
+`fixture_source` and `project_owned_fixture` so automation can distinguish
+imported seed drift from project-owned fixture drift without reparsing paths.
+The sibling `issue_counts` object remains unfiltered so automation can still
+see the full non-match, seed-drift, and resolved-known-difference breakdown. Use
 `--fail-on-seed-drift` only for deliberate fixture-snapshot audits; normal
 oracle conformance should continue to compare `rum` against fresh oracle output
 rather than against checked seed annotations. Use

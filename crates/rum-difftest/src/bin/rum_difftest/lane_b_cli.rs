@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use rum_difftest::config::{load_optional_config, resolve_oracle_kernel, resolve_oracle_timeout};
-use rum_difftest::fixtures::seed_root;
+use rum_difftest::fixtures::{seed_root, stateful_dir};
 use rum_difftest::lane_b::{self, LaneBOptions, LaneBStepStatus};
 use rum_difftest::oracle::OracleKernel;
 
@@ -167,22 +167,35 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
 }
 
 fn lane_b_project_seed_snapshot_drifts(summary: &lane_b::LaneBSummary) -> usize {
-    let imported_seed_root = seed_root().canonicalize().unwrap_or_else(|_| seed_root());
     summary
         .steps
         .iter()
         .filter(|step| {
             step.seed_matches_oracle == Some(false)
-                && !is_imported_seed_fixture(&step.fixture, &imported_seed_root)
+                && !matches!(lane_b_fixture_source(&step.fixture), "seed-golden")
         })
         .count()
 }
 
-fn is_imported_seed_fixture(path: &Path, imported_seed_root: &Path) -> bool {
-    path.starts_with(imported_seed_root)
+fn lane_b_fixture_source(path: &Path) -> &'static str {
+    let seed_root = seed_root().canonicalize().unwrap_or_else(|_| seed_root());
+    let stateful_root = stateful_dir()
+        .canonicalize()
+        .unwrap_or_else(|_| stateful_dir());
+    if path_is_under(path, &seed_root) {
+        "seed-golden"
+    } else if path_is_under(path, &stateful_root) {
+        "stateful"
+    } else {
+        "lane-b-custom"
+    }
+}
+
+fn path_is_under(path: &Path, root: &Path) -> bool {
+    path.starts_with(root)
         || path
             .canonicalize()
-            .is_ok_and(|canonical| canonical.starts_with(imported_seed_root))
+            .is_ok_and(|canonical| canonical.starts_with(root))
 }
 
 fn lane_b_issue_samples(
@@ -204,9 +217,12 @@ fn lane_b_issue_samples(
 }
 
 fn lane_b_sample(kind: &'static str, step: &lane_b::LaneBStepReport) -> OracleLaneIssueSample {
+    let fixture_source = lane_b_fixture_source(&step.fixture);
     OracleLaneIssueSample {
         kind,
         fixture: step.fixture.display().to_string(),
+        fixture_source,
+        project_owned_fixture: fixture_source != "seed-golden",
         index: Some(step.step_index),
         input: step.input.clone(),
         status: format!("{:?}", step.status),
