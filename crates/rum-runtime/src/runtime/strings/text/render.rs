@@ -39,6 +39,15 @@ fn render_to_string_expr_with_precedence(
                 return expr.to_string();
             }
 
+            if format == ToStringFormat::OutputLike
+                && is_system_symbol_name(head, "StringForm")
+                && !args.is_empty()
+            {
+                if let Some(template) = expr_as_string(&args[0]) {
+                    return string_form_value(template, &args[1..]);
+                }
+            }
+
             if let Some(entries) = association_entries_from_expr(expr) {
                 let rendered = format!(
                     "<|{}|>",

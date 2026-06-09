@@ -21,7 +21,12 @@ impl Session {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        Ok(Expr::string(string_form_value(template, &args[1..])))
+        Ok(Expr::call(
+            head.clone(),
+            std::iter::once(Expr::string(template))
+                .chain(args[1..].iter().cloned())
+                .collect(),
+        ))
     }
 
     pub(in crate::runtime) fn eval_string_template(
@@ -105,7 +110,7 @@ impl Session {
     }
 }
 
-fn string_form_value(template: &str, args: &[Expr]) -> String {
+pub(in crate::runtime::strings) fn string_form_value(template: &str, args: &[Expr]) -> String {
     let mut remaining = template;
     let mut output = String::new();
     let mut replacements = args.iter();

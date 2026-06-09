@@ -5,6 +5,8 @@ mod similarity;
 mod template;
 mod text;
 
+pub(in crate::runtime::strings) use template::string_form_value;
+
 pub(in crate::runtime) fn render_input_like_expr(expr: &Expr) -> String {
     text::render_input_like_expr(expr)
 }

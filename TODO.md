@@ -701,7 +701,7 @@ This roadmap intentionally uses two levels of detail:
     `Factorial[8]`, `Abs[-7]`, and integer-list `Range[5]` by implementing
     the current exact-numeric / integer-range runtime subset and promoting
     those curated smoke cases back to normal oracle fixtures
-  - [ ] Resolve current project-owned Lane A known differences for same-name
+  - [x] Resolve current project-owned Lane A known differences for same-name
     curated smoke cases that are useful compatibility targets but outside the
     current implemented subset: the `StringForm` expression/display boundary
   - [ ] Lane B follow-up: add optional long-lived interactive process reuse once oracle-run throughput needs it
