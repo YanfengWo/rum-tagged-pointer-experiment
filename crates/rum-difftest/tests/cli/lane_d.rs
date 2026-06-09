@@ -97,13 +97,36 @@ fn lane_d_rejects_invalid_baseline_gate_options_before_running() {
     let baseline_path = temp_dir.join("baseline.txt");
     fs::create_dir_all(&temp_dir).unwrap();
 
-    let missing_write_baseline = run_difftest(&["lane-d", "--capture-runs", "2"]);
-    assert!(!missing_write_baseline.status.success());
+    for args in [
+        &["lane-d", "--capture-runs", "1"][..],
+        &["lane-d", "--capture-runs", "2"][..],
+    ] {
+        let missing_write_baseline = run_difftest(args);
+        assert!(!missing_write_baseline.status.success());
+        assert!(
+            stderr_text(&missing_write_baseline)
+                .contains("--capture-runs requires --write-baseline PATH")
+        );
+        assert!(stdout_text(&missing_write_baseline).is_empty());
+    }
+
+    let missing_multiplier_baseline =
+        run_difftest(&["lane-d", "--baseline-elapsed-multiplier", "2"]);
+    assert!(!missing_multiplier_baseline.status.success());
     assert!(
-        stderr_text(&missing_write_baseline)
-            .contains("--capture-runs requires --write-baseline PATH")
+        stderr_text(&missing_multiplier_baseline)
+            .contains("--baseline-elapsed-multiplier requires --write-baseline PATH")
     );
-    assert!(stdout_text(&missing_write_baseline).is_empty());
+    assert!(stdout_text(&missing_multiplier_baseline).is_empty());
+
+    let missing_min_elapsed_baseline =
+        run_difftest(&["lane-d", "--baseline-min-elapsed-micros", "0"]);
+    assert!(!missing_min_elapsed_baseline.status.success());
+    assert!(
+        stderr_text(&missing_min_elapsed_baseline)
+            .contains("--baseline-min-elapsed-micros requires --write-baseline PATH")
+    );
+    assert!(stdout_text(&missing_min_elapsed_baseline).is_empty());
 
     let zero_capture_runs = run_difftest(&[
         "lane-d",

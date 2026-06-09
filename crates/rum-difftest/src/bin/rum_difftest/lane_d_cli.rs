@@ -24,8 +24,11 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut baseline_path = None;
     let mut write_baseline_path = None;
     let mut capture_runs = 1usize;
+    let mut capture_runs_specified = false;
     let mut baseline_elapsed_multiplier = None;
+    let mut baseline_elapsed_multiplier_specified = false;
     let mut baseline_min_elapsed_micros = None;
+    let mut baseline_min_elapsed_micros_specified = false;
     let mut fail_on_error = false;
     let mut fail_on_regression = false;
     let mut check_baseline_readiness = false;
@@ -62,10 +65,12 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             }
             "--capture-runs" => {
                 let value = expect_value(&mut iter, "--capture-runs")?;
+                capture_runs_specified = true;
                 capture_runs = parse_positive_usize_flag("--capture-runs", &value)?;
             }
             "--baseline-elapsed-multiplier" => {
                 let value = expect_value(&mut iter, "--baseline-elapsed-multiplier")?;
+                baseline_elapsed_multiplier_specified = true;
                 baseline_elapsed_multiplier = Some(parse_positive_u128_flag(
                     "--baseline-elapsed-multiplier",
                     &value,
@@ -73,6 +78,7 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             }
             "--baseline-min-elapsed-micros" => {
                 let value = expect_value(&mut iter, "--baseline-min-elapsed-micros")?;
+                baseline_min_elapsed_micros_specified = true;
                 baseline_min_elapsed_micros = Some(parse_nonnegative_u128_flag(
                     "--baseline-min-elapsed-micros",
                     &value,
@@ -91,8 +97,14 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             other => return Err(format!("unknown lane-d flag `{other}`").into()),
         }
     }
-    if capture_runs > 1 && write_baseline_path.is_none() {
+    if capture_runs_specified && write_baseline_path.is_none() {
         return Err("--capture-runs requires --write-baseline PATH".into());
+    }
+    if baseline_elapsed_multiplier_specified && write_baseline_path.is_none() {
+        return Err("--baseline-elapsed-multiplier requires --write-baseline PATH".into());
+    }
+    if baseline_min_elapsed_micros_specified && write_baseline_path.is_none() {
+        return Err("--baseline-min-elapsed-micros requires --write-baseline PATH".into());
     }
     if check_baseline_readiness
         && (suite != LaneDSuite::All || profile != LaneDProfile::Smoke || limit.is_some())
