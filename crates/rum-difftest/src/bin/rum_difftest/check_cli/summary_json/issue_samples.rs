@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use rum_difftest::artifact_hygiene::ArtifactHygieneIssueKind;
+use rum_difftest::artifact_hygiene::{ArtifactHygieneIssue, ArtifactHygieneIssueKind};
 use rum_difftest::inventory::display_path;
 use rum_difftest::lane_d;
 
@@ -110,8 +110,14 @@ pub(super) fn issue_samples_json(
 }
 
 pub(super) fn issue_kind_counts_json(report: &LocalCheckReport) -> String {
+    issue_kind_counts_json_from_samples(collect_issue_samples(report))
+}
+
+fn issue_kind_counts_json_from_samples(
+    samples: impl IntoIterator<Item = CheckIssueSample>,
+) -> String {
     let mut counts = BTreeMap::<(&'static str, &'static str), usize>::new();
-    for sample in collect_issue_samples(report) {
+    for sample in samples {
         *counts.entry((sample.check, sample.kind)).or_default() += 1;
     }
 
@@ -130,8 +136,14 @@ pub(super) fn issue_kind_counts_json(report: &LocalCheckReport) -> String {
 }
 
 pub(super) fn issue_check_counts_json(report: &LocalCheckReport) -> String {
+    issue_check_counts_json_from_samples(collect_issue_samples(report))
+}
+
+fn issue_check_counts_json_from_samples(
+    samples: impl IntoIterator<Item = CheckIssueSample>,
+) -> String {
     let mut counts = BTreeMap::<&'static str, usize>::new();
-    for sample in collect_issue_samples(report) {
+    for sample in samples {
         *counts.entry(sample.check).or_default() += 1;
     }
 
@@ -286,7 +298,14 @@ fn collect_artifact_hygiene_samples(
     report: &LocalCheckReport,
     samples: &mut Vec<CheckIssueSample>,
 ) {
-    for issue in &report.artifact_hygiene_issues {
+    collect_artifact_hygiene_issue_samples(&report.artifact_hygiene_issues, samples);
+}
+
+fn collect_artifact_hygiene_issue_samples(
+    issues: &[ArtifactHygieneIssue],
+    samples: &mut Vec<CheckIssueSample>,
+) {
+    for issue in issues {
         let kind = match issue.kind {
             ArtifactHygieneIssueKind::OracleArtifact => KIND_ORACLE_ARTIFACT,
             ArtifactHygieneIssueKind::StrayFixtureFile => KIND_STRAY_FIXTURE_FILE,
@@ -412,4 +431,101 @@ fn sample_json(sample: CheckIssueSample) -> String {
         json_string(&sample.location),
         json_string(&sample.message),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::*;
+
+    fn hygiene_issue(
+        path: &str,
+        kind: ArtifactHygieneIssueKind,
+        reason: &str,
+    ) -> ArtifactHygieneIssue {
+        ArtifactHygieneIssue {
+            path: PathBuf::from(path),
+            kind,
+            reason: reason.to_string(),
+        }
+    }
+
+    fn sample(kind: &'static str, location: &str) -> CheckIssueSample {
+        CheckIssueSample {
+            check: CHECK_ARTIFACT_HYGIENE,
+            kind,
+            location: location.to_string(),
+            message: format!("{kind} issue"),
+        }
+    }
+
+    #[test]
+    fn artifact_hygiene_samples_distinguish_issue_kinds() {
+        let issues = vec![
+            hygiene_issue(
+                "case-0001.wl",
+                ArtifactHygieneIssueKind::OracleArtifact,
+                "generated oracle input file",
+            ),
+            hygiene_issue(
+                "cases/stateful/probe.tmp",
+                ArtifactHygieneIssueKind::StrayFixtureFile,
+                "unexpected fixture tree file",
+            ),
+        ];
+
+        let mut samples = Vec::new();
+        collect_artifact_hygiene_issue_samples(&issues, &mut samples);
+
+        assert_eq!(samples.len(), 2);
+        assert_eq!(samples[0].check, CHECK_ARTIFACT_HYGIENE);
+        assert_eq!(samples[0].kind, KIND_ORACLE_ARTIFACT);
+        assert_eq!(samples[0].location, issues[0].path.display().to_string());
+        assert_eq!(samples[0].message, "generated oracle input file");
+        assert_eq!(samples[1].check, CHECK_ARTIFACT_HYGIENE);
+        assert_eq!(samples[1].kind, KIND_STRAY_FIXTURE_FILE);
+        assert_eq!(samples[1].location, issues[1].path.display().to_string());
+        assert_eq!(samples[1].message, "unexpected fixture tree file");
+    }
+
+    #[test]
+    fn artifact_hygiene_stray_samples_can_be_filtered_and_rendered() {
+        let filter = CheckIssueSampleFilter {
+            check: Some(CHECK_ARTIFACT_HYGIENE.to_string()),
+            kind: Some(KIND_STRAY_FIXTURE_FILE.to_string()),
+        };
+        let stray = sample(KIND_STRAY_FIXTURE_FILE, "cases/stateful/probe.tmp");
+        let oracle = sample(KIND_ORACLE_ARTIFACT, "case-0001.wl");
+
+        assert!(filter_includes(&filter, &stray));
+        assert!(!filter_includes(&filter, &oracle));
+
+        let rendered = sample_json(stray);
+        assert!(rendered.contains("\"check\": \"artifact-hygiene\""));
+        assert!(rendered.contains("\"kind\": \"stray_fixture_file\""));
+        assert!(rendered.contains("\"location\": \"cases/stateful/probe.tmp\""));
+    }
+
+    #[test]
+    fn artifact_hygiene_counts_include_stray_fixture_files() {
+        let kind_counts = issue_kind_counts_json_from_samples(vec![
+            sample(KIND_STRAY_FIXTURE_FILE, "cases/stateful/probe-a.tmp"),
+            sample(KIND_ORACLE_ARTIFACT, "case-0001.wl"),
+            sample(KIND_STRAY_FIXTURE_FILE, "cases/stateful/probe-b.tmp"),
+        ]);
+        assert!(kind_counts.contains(
+            "{\"check\": \"artifact-hygiene\", \"kind\": \"oracle_artifact\", \"count\": 1}"
+        ));
+        assert!(kind_counts.contains(
+            "{\"check\": \"artifact-hygiene\", \"kind\": \"stray_fixture_file\", \"count\": 2}"
+        ));
+
+        let check_counts = issue_check_counts_json_from_samples(vec![
+            sample(KIND_STRAY_FIXTURE_FILE, "cases/stateful/probe-a.tmp"),
+            sample(KIND_ORACLE_ARTIFACT, "case-0001.wl"),
+            sample(KIND_STRAY_FIXTURE_FILE, "cases/stateful/probe-b.tmp"),
+        ]);
+        assert!(check_counts.contains("{\"check\": \"artifact-hygiene\", \"count\": 3}"));
+    }
 }
