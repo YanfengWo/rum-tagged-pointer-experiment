@@ -44,7 +44,9 @@ fn render_call(head: &Expr, args: &[Expr]) -> String {
         Some("List") => render_wrapped("{", "}", args),
         Some("Association") => render_wrapped("<|", "|>", args),
         Some("Rule") if args.len() == 2 => render_infix(&args[0], " -> ", &args[1]),
-        Some("RuleDelayed") if args.len() == 2 => render_infix(&args[0], " :> ", &args[1]),
+        Some("RuleDelayed") if args.len() == 2 => render_rule_delayed(&args[0], &args[1]),
+        Some("Set") if args.len() == 2 => render_infix(&args[0], " = ", &args[1]),
+        Some("SetDelayed") if args.len() == 2 => render_infix(&args[0], " := ", &args[1]),
         Some("Plus") => render_plus(args),
         Some("Times") => render_times(args),
         Some("Power") if args.len() == 2 => render_power(&args[0], &args[1]),
@@ -146,6 +148,22 @@ fn render_infix(lhs: &Expr, op: &str, rhs: &Expr) -> String {
         render_expr(lhs, Precedence::Lowest),
         render_expr(rhs, Precedence::Lowest)
     )
+}
+
+fn render_rule_delayed(lhs: &Expr, rhs: &Expr) -> String {
+    let rhs = if is_assignment_like(rhs) {
+        format!("({})", render_expr(rhs, Precedence::Lowest))
+    } else {
+        render_expr(rhs, Precedence::Lowest)
+    };
+    format!("{} :> {rhs}", render_expr(lhs, Precedence::Lowest))
+}
+
+fn is_assignment_like(expr: &Expr) -> bool {
+    match expr {
+        Expr::Call { head, .. } => matches!(symbol_head_name(head), Some("Set" | "SetDelayed")),
+        Expr::Atom(_) => false,
+    }
 }
 
 fn render_plus(args: &[Expr]) -> String {
@@ -425,6 +443,30 @@ mod tests {
         );
 
         assert_eq!(render_input_form_like(&expr), "<|a -> lhs, b :> rhs|>");
+    }
+
+    #[test]
+    fn renders_assignment_forms_like_input_form() {
+        let set = Expr::call(
+            Expr::system_symbol("Set"),
+            vec![
+                Expr::symbol("x"),
+                Expr::call(
+                    Expr::system_symbol("Plus"),
+                    vec![Expr::symbol("x"), Expr::integer(BigInt::from(1_i32))],
+                ),
+            ],
+        );
+        assert_eq!(render_input_form_like(&set), "x = x + 1");
+
+        let delayed_rule_with_set = Expr::call(
+            Expr::system_symbol("RuleDelayed"),
+            vec![Expr::symbol("a"), set],
+        );
+        assert_eq!(
+            render_input_form_like(&delayed_rule_with_set),
+            "a :> (x = x + 1)"
+        );
     }
 
     #[test]

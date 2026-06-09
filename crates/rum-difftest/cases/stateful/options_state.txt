@@ -13,3 +13,19 @@ optWrapper[] ||| 7
 SetOptions[optTarget, alpha -> 8] ||| {alpha -> 8}
 optWrapper[] ||| 8
 optWrapper[alpha -> 3] ||| 3
+Options[optF] = {a -> 0, b -> 2} ||| {a -> 0, b -> 2}
+Options[optG] = {a -> 1, b -> 3} ||| {a -> 1, b -> 3}
+SetOptions[{optF, optG}, {a -> 9, b -> 8}] ||| {{a -> 9, b -> 8}, {a -> 9, b -> 8}}
+Options[optF] ||| {a -> 9, b -> 8}
+Options[optG] ||| {a -> 9, b -> 8}
+Options[optListValue] = {a -> 1, b -> 2} ||| {a -> 1, b -> 2}
+optListValue[x_, OptionsPattern[]] := {OptionValue[{a, b}], OptionValue[{"a", "b"}]} ||| Null
+optListValue[item] ||| {{1, 2}, {1, 2}}
+optListValue[item, a -> 9] ||| {{9, 2}, {9, 2}}
+OptionValue[optListValue, {a -> 7, b -> 6}, {a, b}] ||| {7, 6}
+Options[optDelayed] = {a :> (delayedCount = delayedCount + 1)} ||| {a :> (delayedCount = delayedCount + 1)}
+delayedCount = 0 ||| 0
+OptionValue[optDelayed, a] ||| 1
+OptionValue[optDelayed, a] ||| 2
+SetOptions[optDelayed, a :> (delayedCount = delayedCount + 10)] ||| {a :> (delayedCount = delayedCount + 10)}
+OptionValue[optDelayed, a] ||| 12

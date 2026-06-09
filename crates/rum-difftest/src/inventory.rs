@@ -307,7 +307,7 @@ mod tests {
         );
         assert_eq!(lane_b.totals_by_category()["message-switches"].entries, 25);
         assert_eq!(lane_b.totals_by_category()["mutation-updates"].entries, 19);
-        assert_eq!(lane_b.totals_by_category()["options-state"].entries, 13);
+        assert_eq!(lane_b.totals_by_category()["options-state"].entries, 29);
         assert_eq!(lane_b.totals_by_category()["scoping-control"].entries, 22);
         assert_eq!(
             lane_b.totals_by_category()["zz-fixture-isolation"].entries,
