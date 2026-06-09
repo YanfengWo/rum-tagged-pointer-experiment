@@ -1,126 +1,37 @@
-use std::path::PathBuf;
 use std::process::ExitCode;
 
 use rum_difftest::lane_d::{
-    self, LaneDBaselineCaptureOptions, LaneDBaselineCompareOptions, LaneDOptions, LaneDProfile,
-    LaneDSuite, LaneDThresholdProfile,
+    self, LaneDBaselineCaptureOptions, LaneDBaselineCompareOptions, LaneDOptions,
 };
 
-use super::expect_value;
-use super::json_cli::{
-    parse_nonnegative_u128_flag, parse_positive_u128_flag, parse_positive_usize_flag,
-};
-
+#[path = "lane_d_cli/args.rs"]
+mod args;
 #[path = "lane_d_cli/summary_json.rs"]
 mod summary_json;
 #[path = "lane_d_cli/text_report.rs"]
 mod text_report;
 
 pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
-    let mut suite = LaneDSuite::All;
-    let mut profile = LaneDProfile::Smoke;
-    let mut threshold_profile = LaneDThresholdProfile::LocalDebug;
-    let mut limit = None;
-    let mut baseline_path = None;
-    let mut write_baseline_path = None;
-    let mut capture_runs = 1usize;
-    let mut capture_runs_specified = false;
-    let mut baseline_elapsed_multiplier = None;
-    let mut baseline_elapsed_multiplier_specified = false;
-    let mut baseline_min_elapsed_micros = None;
-    let mut baseline_min_elapsed_micros_specified = false;
-    let mut fail_on_error = false;
-    let mut fail_on_regression = false;
-    let mut check_baseline_readiness = false;
-    let mut summary_json_path = None;
-
-    let mut iter = args.into_iter();
-    while let Some(arg) = iter.next() {
-        match arg.as_str() {
-            "--suite" => {
-                let value = expect_value(&mut iter, "--suite")?;
-                suite = lane_d::parse_suite_name(&value)
-                    .ok_or_else(|| format!("unknown lane-d suite `{value}`"))?;
-            }
-            "--profile" => {
-                let value = expect_value(&mut iter, "--profile")?;
-                profile = lane_d::parse_profile_name(&value)
-                    .ok_or_else(|| format!("unknown lane-d profile `{value}`"))?;
-            }
-            "--threshold-profile" => {
-                let value = expect_value(&mut iter, "--threshold-profile")?;
-                threshold_profile = lane_d::parse_threshold_profile_name(&value)
-                    .ok_or_else(|| format!("unknown lane-d threshold profile `{value}`"))?;
-            }
-            "--limit" => {
-                let value = expect_value(&mut iter, "--limit")?;
-                limit = Some(parse_positive_usize_flag("--limit", &value)?);
-            }
-            "--baseline" => {
-                baseline_path = Some(PathBuf::from(expect_value(&mut iter, "--baseline")?));
-            }
-            "--write-baseline" => {
-                write_baseline_path =
-                    Some(PathBuf::from(expect_value(&mut iter, "--write-baseline")?));
-            }
-            "--capture-runs" => {
-                let value = expect_value(&mut iter, "--capture-runs")?;
-                capture_runs_specified = true;
-                capture_runs = parse_positive_usize_flag("--capture-runs", &value)?;
-            }
-            "--baseline-elapsed-multiplier" => {
-                let value = expect_value(&mut iter, "--baseline-elapsed-multiplier")?;
-                baseline_elapsed_multiplier_specified = true;
-                baseline_elapsed_multiplier = Some(parse_positive_u128_flag(
-                    "--baseline-elapsed-multiplier",
-                    &value,
-                )?);
-            }
-            "--baseline-min-elapsed-micros" => {
-                let value = expect_value(&mut iter, "--baseline-min-elapsed-micros")?;
-                baseline_min_elapsed_micros_specified = true;
-                baseline_min_elapsed_micros = Some(parse_nonnegative_u128_flag(
-                    "--baseline-min-elapsed-micros",
-                    &value,
-                )?);
-            }
-            "--check-baseline-readiness" => check_baseline_readiness = true,
-            "--summary-json" => {
-                summary_json_path = Some(PathBuf::from(expect_value(&mut iter, "--summary-json")?));
-            }
-            "--fail-on-error" => fail_on_error = true,
-            "--fail-on-regression" => fail_on_regression = true,
-            "--help" | "-h" => {
-                print_lane_d_usage();
-                return Ok(ExitCode::SUCCESS);
-            }
-            other => return Err(format!("unknown lane-d flag `{other}`").into()),
+    let cli = match args::parse_lane_d_cli_args(args)? {
+        args::LaneDCliArgs::Help => {
+            args::print_lane_d_usage();
+            return Ok(ExitCode::SUCCESS);
         }
-    }
-    if capture_runs_specified && write_baseline_path.is_none() {
-        return Err("--capture-runs requires --write-baseline PATH".into());
-    }
-    if baseline_elapsed_multiplier_specified && write_baseline_path.is_none() {
-        return Err("--baseline-elapsed-multiplier requires --write-baseline PATH".into());
-    }
-    if baseline_min_elapsed_micros_specified && write_baseline_path.is_none() {
-        return Err("--baseline-min-elapsed-micros requires --write-baseline PATH".into());
-    }
-    if check_baseline_readiness
-        && (suite != LaneDSuite::All || profile != LaneDProfile::Smoke || limit.is_some())
-    {
-        return Err(
-            "--check-baseline-readiness expects --suite all --profile smoke without --limit".into(),
-        );
-    }
-    if fail_on_regression && baseline_path.is_none() {
-        return Err("--fail-on-regression requires --baseline PATH".into());
-    }
-    let capture_defaults = LaneDBaselineCaptureOptions::for_threshold_profile(threshold_profile);
-    let baseline_elapsed_multiplier =
-        baseline_elapsed_multiplier.unwrap_or(capture_defaults.elapsed_multiplier);
-    let baseline_min_elapsed_micros =
-        baseline_min_elapsed_micros.unwrap_or(capture_defaults.min_elapsed_micros);
+        args::LaneDCliArgs::Run(cli) => cli,
+    };
+    let suite = cli.suite;
+    let profile = cli.profile;
+    let threshold_profile = cli.threshold_profile;
+    let limit = cli.limit;
+    let baseline_path = cli.baseline_path;
+    let write_baseline_path = cli.write_baseline_path;
+    let capture_runs = cli.capture_runs;
+    let baseline_elapsed_multiplier = cli.baseline_elapsed_multiplier;
+    let baseline_min_elapsed_micros = cli.baseline_min_elapsed_micros;
+    let fail_on_error = cli.fail_on_error;
+    let fail_on_regression = cli.fail_on_regression;
+    let check_baseline_readiness = cli.check_baseline_readiness;
+    let summary_json_path = cli.summary_json_path;
 
     let summary = lane_d::run(&LaneDOptions {
         suite,
@@ -227,27 +138,4 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     }
 
     Ok(ExitCode::SUCCESS)
-}
-
-fn print_lane_d_usage() {
-    println!("rum-difftest lane-d");
-    println!("  --suite all|timing|memory  Select imported performance input suite");
-    println!("  --profile smoke|full       Select daily-safe smoke inputs or explicit full inputs");
-    println!("  --threshold-profile local-debug|ci-debug|ci-release");
-    println!("                             Select baseline threshold records and capture defaults");
-    println!("  --limit N                  Stop after N executed expressions");
-    println!("  --baseline PATH            Compare against a Lane D baseline artifact");
-    println!("  --write-baseline PATH      Capture the current run as a Lane D baseline artifact");
-    println!("  --capture-runs N           Number of runs to aggregate when writing a baseline");
-    println!("  --baseline-elapsed-multiplier N");
-    println!("                             Multiplier for captured max elapsed guardrails");
-    println!("  --baseline-min-elapsed-micros N");
-    println!("                             Minimum captured max elapsed guardrail");
-    println!("  --check-baseline-readiness");
-    println!(
-        "                             Check default checked smoke baselines for all threshold profiles"
-    );
-    println!("  --summary-json PATH        Write a stable machine-readable summary");
-    println!("  --fail-on-error            Exit non-zero if any expression fails");
-    println!("  --fail-on-regression       Exit non-zero if baseline comparison is not clean");
 }
