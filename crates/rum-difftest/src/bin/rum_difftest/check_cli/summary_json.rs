@@ -26,6 +26,7 @@ fn summary_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
     let mut checks = vec![
         inventory_baseline_check_json(report),
         lane_c_check_json(report),
+        artifact_hygiene_check_json(report),
     ];
     if let Some(lane_d_smoke) = &report.lane_d_smoke {
         checks.push(lane_d_json::lane_d_smoke_check_json(lane_d_smoke));
@@ -133,6 +134,35 @@ fn inventory_baseline_check_json(report: &LocalCheckReport) -> String {
                         .map(|issue| format!("\"{}\"", json_string(issue)))
                         .collect::<Vec<_>>()
                         .join(", "),
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",\n"),
+    )
+}
+
+fn artifact_hygiene_check_json(report: &LocalCheckReport) -> String {
+    format!(
+        concat!(
+            "    {{\n",
+            "      \"name\": \"artifact-hygiene\",\n",
+            "      \"clean\": {},\n",
+            "      \"issues\": {},\n",
+            "      \"issue_details\": [\n",
+            "{}\n",
+            "      ]\n",
+            "    }}"
+        ),
+        report.artifact_hygiene_issues.is_empty(),
+        report.artifact_hygiene_issues.len(),
+        report
+            .artifact_hygiene_issues
+            .iter()
+            .map(|issue| {
+                format!(
+                    "        {{\"path\": \"{}\", \"reason\": \"{}\"}}",
+                    json_string(&issue.path.display().to_string()),
+                    json_string(&issue.reason),
                 )
             })
             .collect::<Vec<_>>()

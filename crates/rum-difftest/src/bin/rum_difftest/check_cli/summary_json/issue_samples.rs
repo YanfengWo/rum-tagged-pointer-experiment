@@ -31,6 +31,7 @@ pub(super) fn issue_samples_json(
     let mut samples = Vec::new();
     collect_inventory_samples(report, &mut samples);
     collect_lane_c_samples(report, &mut samples);
+    collect_artifact_hygiene_samples(report, &mut samples);
     collect_lane_d_smoke_samples(report, &mut samples);
     collect_lane_d_readiness_samples(report, &mut samples);
 
@@ -138,6 +139,20 @@ fn collect_lane_c_samples(report: &LocalCheckReport, samples: &mut Vec<CheckIssu
             kind: "tracking_target_issue",
             location: issue.target.clone(),
             message: format!("{}: {}", issue.id, issue.message),
+        });
+    }
+}
+
+fn collect_artifact_hygiene_samples(
+    report: &LocalCheckReport,
+    samples: &mut Vec<CheckIssueSample>,
+) {
+    for issue in &report.artifact_hygiene_issues {
+        samples.push(CheckIssueSample {
+            check: "artifact-hygiene",
+            kind: "oracle_artifact",
+            location: issue.path.display().to_string(),
+            message: issue.reason.clone(),
         });
     }
 }

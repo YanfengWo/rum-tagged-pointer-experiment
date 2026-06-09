@@ -47,14 +47,15 @@ cargo run -p rum-difftest -- check --summary-json /tmp/rum-difftest-check.json
 cargo run -p rum-difftest -- check --include-lane-d-smoke
 ```
 
-The command runs the checked inventory baseline and Lane C known-difference
-ledger validation, then exits non-zero if either gate is dirty. It does not
-launch a Wolfram oracle. By default it also avoids Lane D timing inputs, so it
-is suitable for quick local preflight and scripts that only need
-repository-state checks. Use `--inventory-baseline PATH` to test an alternate
-fixture-coverage baseline. Use `--include-lane-d-smoke` to opt into the local
-Lane D smoke baseline gate, or `--lane-d-smoke-baseline PATH` to run that gate
-against an alternate smoke baseline.
+The command runs the checked inventory baseline, Lane C known-difference
+ledger validation, and oracle-artifact hygiene, then exits non-zero if any
+default gate is dirty. It does not launch a Wolfram oracle. By default it also
+avoids Lane D timing inputs, so it is suitable for quick local preflight and
+scripts that only need repository-state checks. Use `--inventory-baseline PATH`
+to test an alternate fixture-coverage baseline. Use `--include-lane-d-smoke`
+to opt into the local Lane D smoke baseline gate, or
+`--lane-d-smoke-baseline PATH` to run that gate against an alternate smoke
+baseline.
 
 ## Machine-Readable Summaries
 

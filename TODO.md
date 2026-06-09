@@ -588,7 +588,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B follow-up: add `inventory --write-baseline PATH` so intentional fixture additions or reshuffles can refresh the stable non-oracle coverage baseline without hand-editing threshold rows
   - [x] Lane A/B follow-up: extend `rum-difftest inventory` with stable semantic category counts in text and JSON output so high-risk fixture coverage is easier to audit without parsing file paths
   - [x] Lane A/B follow-up: extend the checked inventory baseline to source-or-category records so semantic category coverage regressions fail `inventory --check-baseline --fail-on-regression`
-  - [x] Lane A/B/C follow-up: add `rum-difftest check` as a fast non-oracle aggregate gate over the checked inventory baseline and Lane C ledger validation, with optional stable summary JSON for local preflight scripts
+  - [x] Lane A/B/C follow-up: add `rum-difftest check` as a fast non-oracle
+    aggregate gate over the checked inventory baseline, Lane C ledger
+    validation, and oracle-artifact hygiene, with optional stable summary JSON
+    for local preflight scripts
   - [x] Lane A/B/C/D follow-up: let `rum-difftest check --include-lane-d-smoke` opt into the local Lane D smoke baseline gate, with `--lane-d-smoke-baseline PATH` for alternate baseline validation while keeping default `check` free of timing inputs
   - [x] Lane A/B/C/D follow-up: let `rum-difftest check --include-lane-d-readiness` opt into the Lane D checked-baseline readiness gate and surface the missing runner-specific artifacts in the aggregate text/JSON summary without affecting the default local preflight path
   - [x] Lane A/B/C/D follow-up: add bounded `issue_samples` to `rum-difftest check --summary-json`, with `--max-issue-samples N` plus emitted/total/truncated metadata for local scripts that need a wider or narrower representative sample, so aggregate-gate failures expose inventory, Lane C, Lane D smoke, and Lane D readiness locators without freezing each lane's full report shape

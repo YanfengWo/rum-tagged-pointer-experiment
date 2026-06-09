@@ -130,15 +130,16 @@ for the executable coverage-goal policy. `inventory --write-baseline PATH`
 captures the current inventory in that baseline format when a coverage change
 is intentional.
 Use `rum-difftest check` as the fast non-oracle aggregate gate for local
-preflight scripts: it runs the checked inventory baseline plus Lane C ledger
-validation, exits non-zero if either gate is dirty, and can write
-`--summary-json PATH` without starting a Wolfram oracle. The aggregate JSON
-includes bounded `issue_samples` with check/kind/location/message fields so
-scripts can surface representative failures without depending on each lane's
-full internal report shape; `--max-issue-samples N` adjusts that aggregate
-sample cap when the default 5 entries are too few for a local script, and the
-JSON reports the sample limit, emitted count, total issue count, and truncation
-status. The text and JSON reports also list optional gates that were
+preflight scripts: it runs the checked inventory baseline, Lane C ledger
+validation, and oracle-artifact hygiene, exits non-zero if any default gate is
+dirty, and can write `--summary-json PATH` without starting a Wolfram oracle.
+The aggregate JSON includes bounded `issue_samples` with
+check/kind/location/message fields so scripts can surface representative
+failures without depending on each lane's full internal report shape;
+`--max-issue-samples N` adjusts that aggregate sample cap when the default 5
+entries are too few for a local script, and the JSON reports the sample limit,
+emitted count, total issue count, and truncation status. The text and JSON
+reports also list optional gates that were
 intentionally skipped, so scripts can distinguish the default fast gate set
 from a broader opt-in run. It does not run Lane D timing inputs by default;
 opt into the local smoke performance baseline with `--include-lane-d-smoke`,

@@ -8,6 +8,7 @@ pub(super) fn print_check_report(report: &LocalCheckReport) {
     println!("rum-difftest check");
     print_inventory_baseline_check(report);
     print_lane_c_check(report);
+    print_artifact_hygiene_check(report);
     if let Some(lane_d_smoke) = &report.lane_d_smoke {
         print_lane_d_smoke_check(lane_d_smoke);
     }
@@ -89,6 +90,26 @@ fn lane_c_issue_count(report: &KnownDifferenceLedgerReport) -> usize {
         + report.metadata_mismatches.len()
         + report.retired_seed_fixture_mismatches.len()
         + report.tracking_target_issues.len()
+}
+
+fn print_artifact_hygiene_check(report: &LocalCheckReport) {
+    let status = if report.artifact_hygiene_issues.is_empty() {
+        "clean"
+    } else {
+        "dirty"
+    };
+    println!("check\tartifact-hygiene\t{status}");
+    println!(
+        "oracle artifact issues: {}",
+        report.artifact_hygiene_issues.len()
+    );
+    for issue in &report.artifact_hygiene_issues {
+        println!(
+            "oracle-artifact-issue\t{}\t{}",
+            issue.path.display(),
+            issue.reason
+        );
+    }
 }
 
 fn print_lane_d_smoke_check(report: &LaneDSmokeCheckReport) {

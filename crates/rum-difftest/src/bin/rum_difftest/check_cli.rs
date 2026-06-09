@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use rum_difftest::artifact_hygiene::{self, OracleArtifactIssue};
 use rum_difftest::divergences::{self, KnownDifferenceLedgerReport};
 use rum_difftest::inventory::{
     FixtureInventoryReport, InventoryBaselineReport, collect_fixture_inventory,
@@ -88,6 +89,7 @@ pub(super) struct LocalCheckReport {
     pub(super) inventory: FixtureInventoryReport,
     pub(super) inventory_baseline: InventoryBaselineReport,
     pub(super) known_differences: KnownDifferenceLedgerReport,
+    pub(super) artifact_hygiene_issues: Vec<OracleArtifactIssue>,
     pub(super) lane_d_smoke: Option<LaneDSmokeCheckReport>,
     pub(super) lane_d_readiness: Option<LaneDReadinessCheckReport>,
 }
@@ -118,6 +120,7 @@ impl LocalCheckReport {
     fn is_clean(&self) -> bool {
         self.inventory_baseline.is_clean()
             && self.known_differences.is_clean()
+            && self.artifact_hygiene_issues.is_empty()
             && self
                 .lane_d_smoke
                 .as_ref()
@@ -131,6 +134,7 @@ impl LocalCheckReport {
     fn failed_checks(&self) -> usize {
         usize::from(!self.inventory_baseline.is_clean())
             + usize::from(!self.known_differences.is_clean())
+            + usize::from(!self.artifact_hygiene_issues.is_empty())
             + self
                 .lane_d_smoke
                 .as_ref()
@@ -142,7 +146,7 @@ impl LocalCheckReport {
     }
 
     pub(super) fn total_checks(&self) -> usize {
-        2 + usize::from(self.lane_d_smoke.is_some()) + usize::from(self.lane_d_readiness.is_some())
+        3 + usize::from(self.lane_d_smoke.is_some()) + usize::from(self.lane_d_readiness.is_some())
     }
 
     pub(super) fn passed_checks(&self) -> usize {
@@ -230,6 +234,7 @@ fn run_local_checks(
     let baseline = load_inventory_baseline(&inventory_baseline_path)?;
     let inventory_baseline = compare_inventory_baseline(&inventory, &baseline);
     let known_differences = divergences::validate_known_difference_ledger()?;
+    let artifact_hygiene_issues = artifact_hygiene::validate_oracle_artifact_hygiene()?;
     let lane_d_summary = if lane_d_smoke_baseline.is_some() || include_lane_d_readiness {
         Some(run_lane_d_smoke_summary()?)
     } else {
@@ -258,6 +263,7 @@ fn run_local_checks(
         inventory,
         inventory_baseline,
         known_differences,
+        artifact_hygiene_issues,
         lane_d_smoke,
         lane_d_readiness,
     })

@@ -31,11 +31,12 @@ categories, normal entries, and known-difference entries, and supports
 documented in `coverage/README.md`. `--write-baseline PATH` captures the
 current inventory in the same stable baseline format.
 `rum-difftest check` is the fast non-oracle aggregate gate over that checked
-inventory baseline plus Lane C ledger validation. It exits non-zero if either
-gate is dirty and can write `--summary-json PATH` for scripts without starting
-a Wolfram oracle. It intentionally skips Lane D timing inputs unless
-`--include-lane-d-smoke` is passed; `--lane-d-smoke-baseline PATH` runs the same
-optional gate against an alternate smoke baseline artifact.
+inventory baseline, Lane C ledger validation, and oracle-artifact hygiene. It
+exits non-zero if any default gate is dirty and can write `--summary-json PATH`
+for scripts without starting a Wolfram oracle. It intentionally skips Lane D
+timing inputs unless `--include-lane-d-smoke` is passed;
+`--lane-d-smoke-baseline PATH` runs the same optional gate against an alternate
+smoke baseline artifact.
 Use `--include-lane-d-readiness` when the aggregate gate should also check the
 checked Lane D runner-artifact set.
 
