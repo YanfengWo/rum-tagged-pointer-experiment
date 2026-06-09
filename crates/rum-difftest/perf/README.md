@@ -63,9 +63,9 @@ one readiness entry per expected artifact plus a suggested `lane-d
 --write-baseline` command for each artifact, so CI runners can surface the
 exact capture command for missing `ci-debug` / `ci-release` baselines. The
 `ci-release` suggestion uses `cargo run --release` to avoid capturing a release
-threshold profile from a debug build, and JSON entries expose `cargo_profile`
-as `debug` or `release` for CI dashboards. The current default artifact paths
-are:
+threshold profile from a debug build, and both text readiness rows and JSON
+entries expose `cargo_profile` as `debug` or `release` for CI dashboards. The
+current default artifact paths are:
 
 - [baselines/smoke.txt](./baselines/smoke.txt): `local-debug`
 - `baselines/smoke-ci-debug.txt`: `ci-debug`, to be captured on the intended

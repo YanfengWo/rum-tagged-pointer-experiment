@@ -107,30 +107,31 @@ pub(super) fn print_checked_baseline_readiness_report(
     for entry in &report.entries {
         let profile = lane_d::profile_name(entry.profile);
         let threshold_profile = lane_d::threshold_profile_name(entry.threshold_profile);
+        let cargo_profile = lane_d::checked_baseline_cargo_profile(entry.threshold_profile);
         match &entry.status {
             LaneDCheckedBaselineReadinessStatus::Ready {
                 records_considered,
                 compared,
             } => println!(
-                "checked-baseline-ready\t{profile}\t{threshold_profile}\t{}\t{}\t{}",
+                "checked-baseline-ready\t{profile}\t{threshold_profile}\t{cargo_profile}\t{}\t{}\t{}",
                 entry.path.display(),
                 records_considered,
                 compared
             ),
             LaneDCheckedBaselineReadinessStatus::MissingArtifact => {
                 println!(
-                    "checked-baseline-missing\t{profile}\t{threshold_profile}\t{}\t{}",
+                    "checked-baseline-missing\t{profile}\t{threshold_profile}\t{cargo_profile}\t{}\t{}",
                     entry.path.display(),
                     capture_command_for_entry(entry)
                 )
             }
             LaneDCheckedBaselineReadinessStatus::InvalidArtifact { message } => println!(
-                "checked-baseline-invalid\t{profile}\t{threshold_profile}\t{}\t{}",
+                "checked-baseline-invalid\t{profile}\t{threshold_profile}\t{cargo_profile}\t{}\t{}",
                 entry.path.display(),
                 message.replace('\n', "\\n")
             ),
             LaneDCheckedBaselineReadinessStatus::NotClean { report } => println!(
-                "checked-baseline-not-clean\t{profile}\t{threshold_profile}\t{}\tmissing={}\tunused={}\telapsed={}\tvalue_nodes={}",
+                "checked-baseline-not-clean\t{profile}\t{threshold_profile}\t{cargo_profile}\t{}\tmissing={}\tunused={}\telapsed={}\tvalue_nodes={}",
                 entry.path.display(),
                 report.missing_records.len(),
                 report.unused_records.len(),

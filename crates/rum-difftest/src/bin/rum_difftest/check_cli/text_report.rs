@@ -202,18 +202,19 @@ fn print_lane_d_readiness_check(report: &super::LaneDReadinessCheckReport) {
     for entry in &report.readiness.entries {
         let profile = lane_d::profile_name(entry.profile);
         let threshold_profile = lane_d::threshold_profile_name(entry.threshold_profile);
+        let cargo_profile = lane_d::checked_baseline_cargo_profile(entry.threshold_profile);
         match &entry.status {
             lane_d::LaneDCheckedBaselineReadinessStatus::Ready {
                 records_considered,
                 compared,
             } => println!(
-                "lane-d-readiness-ready\t{profile}\t{threshold_profile}\t{}\t{}\t{}",
+                "lane-d-readiness-ready\t{profile}\t{threshold_profile}\t{cargo_profile}\t{}\t{}\t{}",
                 display_path(&entry.path),
                 records_considered,
                 compared
             ),
             lane_d::LaneDCheckedBaselineReadinessStatus::MissingArtifact => println!(
-                "lane-d-readiness-missing\t{profile}\t{threshold_profile}\t{}\t{}",
+                "lane-d-readiness-missing\t{profile}\t{threshold_profile}\t{cargo_profile}\t{}\t{}",
                 display_path(&entry.path),
                 lane_d::checked_baseline_capture_command(&lane_d::LaneDCheckedBaselineArtifact {
                     profile: entry.profile,
@@ -222,12 +223,12 @@ fn print_lane_d_readiness_check(report: &super::LaneDReadinessCheckReport) {
                 })
             ),
             lane_d::LaneDCheckedBaselineReadinessStatus::InvalidArtifact { message } => println!(
-                "lane-d-readiness-invalid\t{profile}\t{threshold_profile}\t{}\t{}",
+                "lane-d-readiness-invalid\t{profile}\t{threshold_profile}\t{cargo_profile}\t{}\t{}",
                 display_path(&entry.path),
                 message.replace('\n', "\\n")
             ),
             lane_d::LaneDCheckedBaselineReadinessStatus::NotClean { report } => println!(
-                "lane-d-readiness-not-clean\t{profile}\t{threshold_profile}\t{}\tmissing={}\tunused={}\telapsed={}\tvalue_nodes={}",
+                "lane-d-readiness-not-clean\t{profile}\t{threshold_profile}\t{cargo_profile}\t{}\tmissing={}\tunused={}\telapsed={}\tvalue_nodes={}",
                 display_path(&entry.path),
                 report.missing_records.len(),
                 report.unused_records.len(),

@@ -19,6 +19,8 @@ fn lane_d_readiness_summary_lists_artifacts_and_capture_commands() {
     assert!(!output.status.success());
     let stdout = stdout_text(&output);
     assert!(stdout.contains("checked-baseline-missing"));
+    assert!(stdout.contains("checked-baseline-missing\tsmoke\tci-debug\tdebug"));
+    assert!(stdout.contains("checked-baseline-missing\tsmoke\tci-release\trelease"));
     assert!(stdout.contains("--threshold-profile ci-debug"));
     assert!(stdout.contains("--write-baseline"));
 

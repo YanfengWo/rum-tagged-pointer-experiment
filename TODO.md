@@ -831,6 +831,9 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane D follow-up: expose each checked-baseline readiness artifact's
     expected cargo profile as stable JSON metadata so dashboards do not need to
     parse suggested capture commands
+  - [x] Lane D follow-up: expose each checked-baseline readiness artifact's
+    expected cargo profile in text readiness rows as well, so CI logs and
+    aggregate `check` output do not need to parse suggested capture commands
   - [ ] Lane D follow-up: capture checked `ci-debug` / `ci-release` baseline artifacts on the intended runners before tightening elapsed thresholds beyond broad smoke guardrails; `lane-d --check-baseline-readiness` now reports the missing runner-specific artifacts instead of relying on TODO text alone
   - [x] Lane E: keep host-contract tests in `rum`-native crate-local suites rather than Wolfram diff, with current Rust host-contract coverage owned by `cargo test -p rum-host`
   - [x] Lane F: keep adapter/protocol tests in adapter-native suites rather than Wolfram diff, with current Jupyter protocol coverage owned by `cargo test -p rum-jupyter`

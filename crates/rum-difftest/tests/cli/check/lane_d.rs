@@ -91,6 +91,8 @@ fn check_can_include_lane_d_readiness_gate() {
     assert!(stdout.contains("lane-d readiness ready artifacts: 1"));
     assert!(stdout.contains("lane-d readiness missing artifacts: 2"));
     assert!(stdout.contains("lane-d-readiness-missing"));
+    assert!(stdout.contains("lane-d-readiness-missing\tsmoke\tci-debug\tdebug"));
+    assert!(stdout.contains("lane-d-readiness-missing\tsmoke\tci-release\trelease"));
     assert!(stdout.contains("--threshold-profile ci-debug"));
     assert!(stdout.contains("checks passed: 3"));
     assert!(stdout.contains("checks failed: 1"));
