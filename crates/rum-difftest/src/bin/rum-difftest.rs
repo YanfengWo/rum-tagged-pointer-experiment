@@ -1,5 +1,7 @@
 use std::process::ExitCode;
 
+#[path = "rum_difftest/json_cli.rs"]
+mod json_cli;
 #[path = "rum_difftest/lane_a_cli.rs"]
 mod lane_a_cli;
 #[path = "rum_difftest/lane_b_cli.rs"]
@@ -54,7 +56,7 @@ fn print_usage() {
     );
     println!("rum-difftest lane-c [--summary-json PATH]");
     println!(
-        "rum-difftest lane-d [--suite all|timing|memory] [--profile smoke|full] [--limit N] [--baseline PATH] [--write-baseline PATH] [--check-baseline-readiness]"
+        "rum-difftest lane-d [--suite all|timing|memory] [--profile smoke|full] [--limit N] [--baseline PATH] [--write-baseline PATH] [--check-baseline-readiness] [--summary-json PATH]"
     );
     println!("rum-difftest --help");
 }

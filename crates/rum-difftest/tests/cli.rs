@@ -26,6 +26,7 @@ fn top_level_help_lists_lane_d_readiness_gate() {
     let stdout = stdout_text(&output);
     assert!(stdout.contains("rum-difftest lane-d"));
     assert!(stdout.contains("--check-baseline-readiness"));
+    assert!(stdout.contains("--summary-json"));
 }
 
 #[test]
@@ -33,7 +34,9 @@ fn lane_d_help_lists_readiness_gate() {
     let output = run_difftest(&["lane-d", "--help"]);
 
     assert!(output.status.success());
-    assert!(stdout_text(&output).contains("--check-baseline-readiness"));
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("--check-baseline-readiness"));
+    assert!(stdout.contains("--summary-json"));
 }
 
 #[test]
@@ -88,6 +91,35 @@ fn lane_c_writes_machine_readable_summary_json() {
     assert!(summary.contains("\"active_ledger_entries\": 2"));
     assert!(summary.contains("\"fixture_known_differences\": 3"));
     assert!(summary.contains("\"tracking_target_issues\": 0"));
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
+#[test]
+fn lane_d_writes_machine_readable_summary_json() {
+    let temp_dir = unique_temp_dir("lane-d-json");
+    let summary_path = temp_dir.join("summary.json");
+    let output = run_difftest(&[
+        "lane-d",
+        "--suite",
+        "timing",
+        "--limit",
+        "2",
+        "--summary-json",
+        summary_path.to_str().unwrap(),
+    ]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    assert!(stdout_text(&output).contains("summary json:"));
+    let summary = fs::read_to_string(&summary_path).unwrap();
+    assert!(summary.contains("\"lane\": \"lane-d\""));
+    assert!(summary.contains("\"suite\": \"timing\""));
+    assert!(summary.contains("\"profile\": \"smoke\""));
+    assert!(summary.contains("\"threshold_profile\": \"local-debug\""));
+    assert!(summary.contains("\"clean\": true"));
+    assert!(summary.contains("\"cases_executed\": 2"));
+    assert!(summary.contains("\"failures\": 0"));
+    assert!(summary.contains("\"baseline\": null"));
+    assert!(summary.contains("\"checked_baseline_readiness\": null"));
     fs::remove_dir_all(temp_dir).unwrap();
 }
 

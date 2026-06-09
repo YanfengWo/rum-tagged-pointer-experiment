@@ -106,7 +106,10 @@ single broad diff bucket:
 - Lane C: checked known-difference ledger, tying divergences to matrix entries
   or TODO notes with explicit close criteria.
 - Lane D: local performance baseline inputs and runners. These are not
-  semantic conformance tests and should not use a Wolfram oracle.
+  semantic conformance tests and should not use a Wolfram oracle. `lane-d
+  --summary-json PATH` writes a stable machine-readable summary for scripts or
+  CI dashboards, covering run counts and optional baseline/readiness gate
+  counts without freezing per-case result rows.
 - Lane E: host-contract tests stay in host/native crate suites, currently
   `cargo test -p rum-host` for the Rust host boundary.
 - Lane F: adapter/protocol tests stay in adapter-native suites, currently

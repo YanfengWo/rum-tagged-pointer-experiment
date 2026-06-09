@@ -581,6 +581,7 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane D follow-up: add baseline capture workflow before tightening elapsed thresholds beyond broad smoke guardrails
   - [x] Lane D follow-up: add multi-run baseline calibration before tightening elapsed thresholds beyond broad smoke guardrails
   - [x] Lane D follow-up: add CI-machine-specific threshold profiles before tightening elapsed thresholds beyond broad smoke guardrails
+  - [x] Lane D follow-up: add `--summary-json PATH` machine-readable status output with stable run counts, clean status, and optional baseline/readiness/write-baseline summary counts for scripts or CI dashboards
   - [ ] Lane D follow-up: capture checked `ci-debug` / `ci-release` baseline artifacts on the intended runners before tightening elapsed thresholds beyond broad smoke guardrails; `lane-d --check-baseline-readiness` now reports the missing runner-specific artifacts instead of relying on TODO text alone
   - [x] Lane E: keep host-contract tests in `rum`-native crate-local suites rather than Wolfram diff, with current Rust host-contract coverage owned by `cargo test -p rum-host`
   - [x] Lane F: keep adapter/protocol tests in adapter-native suites rather than Wolfram diff, with current Jupyter protocol coverage owned by `cargo test -p rum-jupyter`

@@ -1,10 +1,10 @@
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 use rum_difftest::divergences;
 
 use super::expect_value;
+use super::json_cli::{json_string, write_json_file};
 
 pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut summary_json_path = None;
@@ -121,7 +121,7 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     }
 
     if let Some(path) = summary_json_path {
-        write_summary_json(&path, &report)?;
+        write_json_file(&path, summary_json(&report))?;
         println!("summary json: {}", path.display());
     }
 
@@ -130,19 +130,6 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     } else {
         Ok(ExitCode::FAILURE)
     }
-}
-
-fn write_summary_json(
-    path: &Path,
-    report: &divergences::KnownDifferenceLedgerReport,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if let Some(parent) = path.parent() {
-        if !parent.as_os_str().is_empty() {
-            fs::create_dir_all(parent)?;
-        }
-    }
-    fs::write(path, summary_json(report))?;
-    Ok(())
 }
 
 fn summary_json(report: &divergences::KnownDifferenceLedgerReport) -> String {
@@ -191,22 +178,6 @@ fn summary_json(report: &divergences::KnownDifferenceLedgerReport) -> String {
         report.retired_seed_fixture_mismatches.len(),
         report.tracking_target_issues.len(),
     )
-}
-
-fn json_string(value: &str) -> String {
-    let mut escaped = String::new();
-    for ch in value.chars() {
-        match ch {
-            '"' => escaped.push_str("\\\""),
-            '\\' => escaped.push_str("\\\\"),
-            '\n' => escaped.push_str("\\n"),
-            '\r' => escaped.push_str("\\r"),
-            '\t' => escaped.push_str("\\t"),
-            ch if ch.is_control() => escaped.push_str(&format!("\\u{:04x}", ch as u32)),
-            ch => escaped.push(ch),
-        }
-    }
-    escaped
 }
 
 fn print_lane_c_usage() {

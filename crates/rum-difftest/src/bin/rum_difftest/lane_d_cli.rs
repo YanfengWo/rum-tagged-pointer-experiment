@@ -8,6 +8,9 @@ use rum_difftest::lane_d::{
 
 use super::expect_value;
 
+#[path = "lane_d_cli/summary_json.rs"]
+mod summary_json;
+
 pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut suite = LaneDSuite::All;
     let mut profile = LaneDProfile::Smoke;
@@ -21,6 +24,7 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut fail_on_error = false;
     let mut fail_on_regression = false;
     let mut check_baseline_readiness = false;
+    let mut summary_json_path = None;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -64,6 +68,9 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 baseline_min_elapsed_micros = Some(value.parse::<u128>()?);
             }
             "--check-baseline-readiness" => check_baseline_readiness = true,
+            "--summary-json" => {
+                summary_json_path = Some(PathBuf::from(expect_value(&mut iter, "--summary-json")?));
+            }
             "--fail-on-error" => fail_on_error = true,
             "--fail-on-regression" => fail_on_regression = true,
             "--help" | "-h" => {
@@ -157,6 +164,7 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         None
     };
 
+    let mut written_baseline = None;
     if let Some(path) = &write_baseline_path {
         let run_options = LaneDOptions {
             suite,
@@ -188,6 +196,31 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         );
         println!("baseline elapsed multiplier: {baseline_elapsed_multiplier}");
         println!("baseline min elapsed micros: {baseline_min_elapsed_micros}");
+        written_baseline = Some(summary_json::WrittenBaselineSummary {
+            path: path.clone(),
+            records: baseline.records.len(),
+            capture_runs,
+            threshold_profile,
+            elapsed_multiplier: baseline_elapsed_multiplier,
+            min_elapsed_micros: baseline_min_elapsed_micros,
+        });
+    }
+
+    if let Some(path) = &summary_json_path {
+        summary_json::write_summary_json(
+            path,
+            &summary_json::LaneDSummaryJsonContext {
+                suite,
+                profile,
+                threshold_profile,
+                summary: &summary,
+                baseline_path: baseline_path.as_deref(),
+                baseline_report: baseline_report.as_ref(),
+                readiness_report: readiness_report.as_ref(),
+                written_baseline: written_baseline.as_ref(),
+            },
+        )?;
+        println!("summary json: {}", path.display());
     }
 
     if fail_on_error && summary.failed > 0 {
@@ -314,6 +347,7 @@ fn print_lane_d_usage() {
     println!(
         "                             Check default checked smoke baselines for all threshold profiles"
     );
+    println!("  --summary-json PATH        Write a stable machine-readable summary");
     println!("  --fail-on-error            Exit non-zero if any expression fails");
     println!("  --fail-on-regression       Exit non-zero if baseline comparison is not clean");
 }

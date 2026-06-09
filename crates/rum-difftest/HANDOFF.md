@@ -202,6 +202,10 @@ need to be captured on the intended runners before tightening thresholds.
 artifact set: `perf/baselines/smoke.txt`,
 `perf/baselines/smoke-ci-debug.txt`, and
 `perf/baselines/smoke-ci-release.txt`.
+`lane-d --summary-json PATH` writes a stable machine-readable summary for
+scripts or CI dashboards, covering selected suite/profile/threshold profile,
+run counts, clean status, and optional baseline/readiness/write-baseline
+summary counts without freezing per-case result rows.
 
 ### Lane E: Host Contract Tests
 
