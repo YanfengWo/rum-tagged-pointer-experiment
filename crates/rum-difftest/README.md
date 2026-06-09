@@ -45,6 +45,7 @@ adding or pruning cases:
 ```bash
 cargo run -p rum-difftest -- inventory
 cargo run -p rum-difftest -- inventory --check-baseline --fail-on-regression
+cargo run -p rum-difftest -- inventory --write-baseline /tmp/rum-difftest-inventory-baseline.txt
 cargo run -p rum-difftest -- inventory --summary-json /tmp/rum-difftest-inventory.json
 ```
 
@@ -56,7 +57,8 @@ current inventory against [coverage/inventory-baseline.txt](./coverage/inventory
 Baseline `min_*` counts are lower bounds; `max_known_difference_entries` is an
 upper bound so resolved known differences can decrease without failing the
 gate. Use `--fail-on-regression` to make a non-clean baseline comparison exit
-non-zero.
+non-zero. `--write-baseline PATH` captures the current inventory in the same
+stable baseline format for intentional fixture additions or reshuffles.
 
 This crate is also deliberately not the place for every `rum` test. If a
 feature is `rum`-specific rather than Wolfram-oracle-comparable, its primary

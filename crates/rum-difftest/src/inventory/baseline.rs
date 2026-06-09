@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 use thiserror::Error;
@@ -87,6 +88,27 @@ pub fn load_inventory_baseline(
     parse_inventory_baseline(&text)
 }
 
+pub fn write_inventory_baseline(
+    path: impl AsRef<Path>,
+    baseline: &InventoryBaseline,
+) -> Result<(), InventoryBaselineError> {
+    let path = path.as_ref();
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent).map_err(|source| InventoryBaselineError::Io {
+                path: parent.to_path_buf(),
+                source,
+            })?;
+        }
+    }
+    fs::write(path, format_inventory_baseline(baseline)).map_err(|source| {
+        InventoryBaselineError::Io {
+            path: path.to_path_buf(),
+            source,
+        }
+    })
+}
+
 pub fn parse_inventory_baseline(text: &str) -> Result<InventoryBaseline, InventoryBaselineError> {
     let mut records = Vec::new();
     let mut seen = BTreeMap::new();
@@ -135,6 +157,34 @@ pub fn parse_inventory_baseline(text: &str) -> Result<InventoryBaseline, Invento
     Ok(InventoryBaseline { records })
 }
 
+pub fn capture_inventory_baseline(inventory: &FixtureInventoryReport) -> InventoryBaseline {
+    let mut records = Vec::new();
+
+    for lane in &inventory.lanes {
+        push_record_from_totals(&mut records, &lane.lane, "all", &lane.totals());
+        for (source, totals) in lane.totals_by_source() {
+            push_record_from_totals(&mut records, &lane.lane, source, &totals);
+        }
+    }
+
+    InventoryBaseline { records }
+}
+
+pub fn format_inventory_baseline(baseline: &InventoryBaseline) -> String {
+    let mut output = String::from(
+        "# Stable non-oracle fixture coverage baseline.\n\
+         # `min_*` fields are lower bounds. `max_known_difference_entries` is an upper\n\
+         # bound so resolved known differences can decrease without failing the gate.\n",
+    );
+
+    for record in &baseline.records {
+        output.push_str(&format_inventory_baseline_record(record));
+        output.push('\n');
+    }
+
+    output
+}
+
 pub fn compare_inventory_baseline(
     inventory: &FixtureInventoryReport,
     baseline: &InventoryBaseline,
@@ -163,6 +213,34 @@ pub fn compare_inventory_baseline(
         records_considered: baseline.records.len(),
         regressions,
     }
+}
+
+fn push_record_from_totals(
+    records: &mut Vec<InventoryBaselineRecord>,
+    lane: &str,
+    source: &str,
+    totals: &FixtureInventoryTotals,
+) {
+    records.push(InventoryBaselineRecord {
+        lane: lane.to_string(),
+        source: source.to_string(),
+        min_fixtures: totals.fixtures,
+        min_entries: totals.entries,
+        min_normal_entries: totals.normal_entries,
+        max_known_difference_entries: totals.known_difference_entries,
+    });
+}
+
+fn format_inventory_baseline_record(record: &InventoryBaselineRecord) -> String {
+    format!(
+        "lane={} source={} min_fixtures={} min_entries={} min_normal_entries={} max_known_difference_entries={}",
+        record.lane,
+        record.source,
+        record.min_fixtures,
+        record.min_entries,
+        record.min_normal_entries,
+        record.max_known_difference_entries
+    )
 }
 
 fn actual_totals_by_lane_source(
@@ -256,6 +334,20 @@ mod tests {
         assert!(!report.is_clean());
         assert_eq!(report.regressions.len(), 1);
         assert!(report.regressions[0].issues[0].contains("fixtures"));
+    }
+
+    #[test]
+    fn captured_inventory_baseline_round_trips_and_is_clean() {
+        let inventory = collect_fixture_inventory().unwrap();
+        let baseline = capture_inventory_baseline(&inventory);
+        let formatted = format_inventory_baseline(&baseline);
+        let reparsed = parse_inventory_baseline(&formatted).unwrap();
+        let report = compare_inventory_baseline(&inventory, &reparsed);
+
+        assert_eq!(reparsed, baseline);
+        assert_eq!(baseline.records.len(), 5);
+        assert!(formatted.contains("lane=lane-a source=all min_fixtures=24"));
+        assert!(report.is_clean(), "{report:?}");
     }
 
     #[test]

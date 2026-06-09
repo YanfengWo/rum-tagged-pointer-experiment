@@ -3,8 +3,9 @@ use std::process::ExitCode;
 
 use rum_difftest::inventory::{
     FixtureInventoryReport, FixtureInventoryTotals, InventoryBaselineReport, LaneFixtureInventory,
-    collect_fixture_inventory, compare_inventory_baseline, default_inventory_baseline_path,
-    display_path, load_inventory_baseline,
+    capture_inventory_baseline, collect_fixture_inventory, compare_inventory_baseline,
+    default_inventory_baseline_path, display_path, load_inventory_baseline,
+    write_inventory_baseline,
 };
 
 use super::expect_value;
@@ -15,6 +16,7 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
     let mut baseline_path = None;
     let mut check_baseline = false;
     let mut fail_on_regression = false;
+    let mut write_baseline_path = None;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -24,6 +26,10 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
             }
             "--baseline" => {
                 baseline_path = Some(PathBuf::from(expect_value(&mut iter, "--baseline")?));
+            }
+            "--write-baseline" => {
+                write_baseline_path =
+                    Some(PathBuf::from(expect_value(&mut iter, "--write-baseline")?));
             }
             "--check-baseline" => check_baseline = true,
             "--fail-on-regression" => fail_on_regression = true,
@@ -57,6 +63,11 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
             ),
         )?;
         println!("summary json: {}", path.display());
+    }
+    if let Some(path) = write_baseline_path {
+        let captured_baseline = capture_inventory_baseline(&report);
+        write_inventory_baseline(&path, &captured_baseline)?;
+        println!("wrote inventory baseline: {}", path.display());
     }
     if fail_on_regression {
         let Some(baseline_report) = baseline_report else {
@@ -297,5 +308,6 @@ fn print_inventory_usage() {
     println!("  --baseline PATH           Compare fixture inventory against a baseline");
     println!("  --check-baseline          Compare against the checked default baseline");
     println!("  --fail-on-regression      Exit non-zero if baseline comparison is not clean");
+    println!("  --write-baseline PATH     Capture the current inventory as a baseline");
     println!("  --summary-json PATH       Write a stable machine-readable fixture inventory");
 }

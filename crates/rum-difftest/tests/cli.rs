@@ -27,6 +27,7 @@ fn top_level_help_lists_lane_d_readiness_gate() {
     assert!(stdout.contains("rum-difftest lane-d"));
     assert!(stdout.contains("rum-difftest inventory"));
     assert!(stdout.contains("--check-baseline-readiness"));
+    assert!(stdout.contains("--write-baseline"));
     assert!(stdout.contains("--summary-json"));
 }
 
@@ -90,6 +91,7 @@ fn inventory_help_lists_baseline_gate() {
     assert!(stdout.contains("--baseline"));
     assert!(stdout.contains("--check-baseline"));
     assert!(stdout.contains("--fail-on-regression"));
+    assert!(stdout.contains("--write-baseline"));
 }
 
 #[test]
@@ -123,6 +125,33 @@ fn inventory_fail_on_regression_exits_nonzero_for_reduced_coverage() {
     let stdout = stdout_text(&output);
     assert!(stdout.contains("inventory baseline regressions: 1"));
     assert!(stdout.contains("inventory-baseline-regression\tlane-a\tcurated-core"));
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
+#[test]
+fn inventory_writes_reusable_baseline() {
+    let temp_dir = unique_temp_dir("inventory-write-baseline");
+    let baseline_path = temp_dir.join("inventory-baseline.txt");
+    let output = run_difftest(&[
+        "inventory",
+        "--write-baseline",
+        baseline_path.to_str().unwrap(),
+    ]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    assert!(stdout_text(&output).contains("wrote inventory baseline:"));
+    let baseline = fs::read_to_string(&baseline_path).unwrap();
+    assert!(baseline.contains("lane=lane-a source=all min_fixtures=24"));
+    assert!(baseline.contains("lane=lane-b source=stateful min_fixtures=2"));
+
+    let check = run_difftest(&[
+        "inventory",
+        "--baseline",
+        baseline_path.to_str().unwrap(),
+        "--fail-on-regression",
+    ]);
+    assert!(check.status.success(), "stderr: {}", stderr_text(&check));
+    assert!(stdout_text(&check).contains("inventory baseline regressions: 0"));
     fs::remove_dir_all(temp_dir).unwrap();
 }
 

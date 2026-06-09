@@ -123,7 +123,8 @@ entries, and known-difference entries; `--summary-json PATH` exposes the same
 stable counts for scripts or dashboards. Use
 `inventory --check-baseline --fail-on-regression` as a local gate against the
 checked fixture-coverage baseline when reviewing fixture pruning or large
-coverage reshuffles.
+coverage reshuffles. `inventory --write-baseline PATH` captures the current
+inventory in that baseline format when a coverage change is intentional.
 
 Messages and diagnostics start in runtime regression tests unless the
 differential runner can capture and compare them reliably. Lane A can compare
