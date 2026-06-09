@@ -332,8 +332,9 @@ This roadmap intentionally uses two levels of detail:
       return values, and curated Lane B coverage for stateful `WithCleanup`,
       `AbortProtect`, `CheckAbort` default-option restoration, option
       lifecycle / `Block`-localized option state, message selector-list stream
-      handling, and Wolfram-compatible `sym::tag` message lifecycle. Treat the
-      remaining items below as non-blocking
+      handling, Wolfram-compatible `sym::tag` message lifecycle, and package
+      private-context / package-option state. Treat the remaining items below
+      as non-blocking
       long-tail parity work rather than active Wave 3 blockers.
       - Deferred cleanup/control long-tail: deeper `WithCleanup` /
         `Failsafe` / `CheckAbort` / `AbortProtect` parity beyond the current
