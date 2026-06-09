@@ -37,6 +37,21 @@ checked-in tree.
 the Lane A/B temporary wrapper scripts, case/step input files, session
 directories, and message/print capture files if they appear under this crate.
 
+## Fixture Inventory
+
+Use `inventory` to inspect the default non-oracle fixture coverage before
+adding or pruning cases:
+
+```bash
+cargo run -p rum-difftest -- inventory
+cargo run -p rum-difftest -- inventory --summary-json /tmp/rum-difftest-inventory.json
+```
+
+The command summarizes Lane A and Lane B fixture files, source groups, normal
+entries, and known-difference entries. It does not execute `rum` or a Wolfram
+oracle. The JSON output is intended for scripts or dashboards that need stable
+coverage counts without parsing runner logs.
+
 This crate is also deliberately not the place for every `rum` test. If a
 feature is `rum`-specific rather than Wolfram-oracle-comparable, its primary
 tests should stay in the crate that owns that contract. That includes:

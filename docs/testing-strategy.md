@@ -117,6 +117,11 @@ single broad diff bucket:
 - Lane F: adapter/protocol tests stay in adapter-native suites, currently
   `cargo test -p rum-jupyter` for the Jupyter protocol boundary.
 
+Use `rum-difftest inventory` as the non-oracle coverage-audit command for
+default Lane A/B fixtures. It reports fixture counts, source groups, normal
+entries, and known-difference entries; `--summary-json PATH` exposes the same
+stable counts for scripts or dashboards.
+
 Messages and diagnostics start in runtime regression tests unless the
 differential runner can capture and compare them reliably. Lane A can compare
 single-expression message and print output, while Lane B provides ordered

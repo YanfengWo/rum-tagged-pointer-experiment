@@ -20,6 +20,11 @@ drive that environment as an oracle.
 `rum-difftest` should not be one monolithic test bucket. It should be split
 into separate lanes with different oracles.
 
+`rum-difftest inventory` is the non-oracle coverage-audit command for default
+Lane A/B fixtures. It reports fixture counts, source groups, normal entries,
+and known-difference entries, and supports `--summary-json PATH` for scripts or
+dashboards.
+
 For the Wolfram-backed lanes, keep these policy constraints explicit:
 
 - the oracle command should be user-configured and may point to

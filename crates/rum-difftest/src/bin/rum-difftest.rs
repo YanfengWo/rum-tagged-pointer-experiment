@@ -1,5 +1,7 @@
 use std::process::ExitCode;
 
+#[path = "rum_difftest/inventory_cli.rs"]
+mod inventory_cli;
 #[path = "rum_difftest/json_cli.rs"]
 mod json_cli;
 #[path = "rum_difftest/lane_a_cli.rs"]
@@ -29,6 +31,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
 
     match args.next().as_deref() {
+        Some("inventory") => inventory_cli::run_inventory(args.collect()),
         Some("lane-a") => lane_a_cli::run_lane_a(args.collect()),
         Some("lane-b") => lane_b_cli::run_lane_b(args.collect()),
         Some("lane-c") => lane_c_cli::run_lane_c(args.collect()),
@@ -60,5 +63,6 @@ fn print_usage() {
     println!(
         "rum-difftest lane-d [--suite all|timing|memory] [--profile smoke|full] [--limit N] [--baseline PATH] [--write-baseline PATH] [--check-baseline-readiness] [--summary-json PATH]"
     );
+    println!("rum-difftest inventory [--summary-json PATH]");
     println!("rum-difftest --help");
 }

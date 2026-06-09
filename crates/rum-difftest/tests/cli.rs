@@ -25,6 +25,7 @@ fn top_level_help_lists_lane_d_readiness_gate() {
     assert!(output.status.success());
     let stdout = stdout_text(&output);
     assert!(stdout.contains("rum-difftest lane-d"));
+    assert!(stdout.contains("rum-difftest inventory"));
     assert!(stdout.contains("--check-baseline-readiness"));
     assert!(stdout.contains("--summary-json"));
 }
@@ -65,6 +66,41 @@ fn oracle_lane_rejects_zero_timeout() {
 
     assert!(!output.status.success());
     assert!(stderr_text(&output).contains("expects a positive integer"));
+}
+
+#[test]
+fn inventory_reports_default_fixture_coverage() {
+    let output = run_difftest(&["inventory"]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("fixture inventory"));
+    assert!(stdout.contains("lane-a fixtures: 24"));
+    assert!(stdout.contains("lane-a source seed-golden: fixtures=9"));
+    assert!(stdout.contains("lane-a source curated-core: fixtures=15"));
+    assert!(stdout.contains("lane-b source stateful: fixtures=2"));
+}
+
+#[test]
+fn inventory_writes_machine_readable_summary_json() {
+    let temp_dir = unique_temp_dir("inventory-json");
+    let summary_path = temp_dir.join("summary.json");
+    let output = run_difftest(&[
+        "inventory",
+        "--summary-json",
+        summary_path.to_str().unwrap(),
+    ]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    assert!(stdout_text(&output).contains("summary json:"));
+    let summary = fs::read_to_string(&summary_path).unwrap();
+    assert!(summary.contains("\"lane\": \"inventory\""));
+    assert!(summary.contains("\"lane\": \"lane-a\""));
+    assert!(summary.contains("\"source\": \"seed-golden\""));
+    assert!(summary.contains("\"source\": \"curated-core\""));
+    assert!(summary.contains("\"fixtures\": 24"));
+    assert!(summary.contains("\"known_difference_entries\": 3"));
+    fs::remove_dir_all(temp_dir).unwrap();
 }
 
 #[test]

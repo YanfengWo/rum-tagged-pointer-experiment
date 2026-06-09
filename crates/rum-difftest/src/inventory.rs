@@ -1,0 +1,175 @@
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+
+use crate::fixtures::{
+    GoldenEntry, crate_root, curated_wolfram_core_dir, golden_dir, lane_a_default_fixture_paths,
+    lane_b_default_fixture_paths, load_text, parse_golden_file, stateful_dir,
+};
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FixtureInventoryReport {
+    pub lanes: Vec<LaneFixtureInventory>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LaneFixtureInventory {
+    pub lane: String,
+    pub fixtures: Vec<FixtureInventory>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FixtureInventory {
+    pub path: PathBuf,
+    pub source: String,
+    pub entries: usize,
+    pub normal_entries: usize,
+    pub known_difference_entries: usize,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct FixtureInventoryTotals {
+    pub fixtures: usize,
+    pub entries: usize,
+    pub normal_entries: usize,
+    pub known_difference_entries: usize,
+}
+
+pub fn collect_fixture_inventory() -> Result<FixtureInventoryReport, std::io::Error> {
+    Ok(FixtureInventoryReport {
+        lanes: vec![
+            collect_lane_inventory("lane-a", lane_a_default_fixture_paths()?, lane_a_source)?,
+            collect_lane_inventory("lane-b", lane_b_default_fixture_paths()?, lane_b_source)?,
+        ],
+    })
+}
+
+impl FixtureInventoryReport {
+    pub fn totals(&self) -> FixtureInventoryTotals {
+        self.lanes
+            .iter()
+            .fold(FixtureInventoryTotals::default(), |mut totals, lane| {
+                totals.add(&lane.totals());
+                totals
+            })
+    }
+}
+
+impl LaneFixtureInventory {
+    pub fn totals(&self) -> FixtureInventoryTotals {
+        self.fixtures
+            .iter()
+            .fold(FixtureInventoryTotals::default(), |mut totals, fixture| {
+                totals.fixtures += 1;
+                totals.entries += fixture.entries;
+                totals.normal_entries += fixture.normal_entries;
+                totals.known_difference_entries += fixture.known_difference_entries;
+                totals
+            })
+    }
+
+    pub fn totals_by_source(&self) -> BTreeMap<&str, FixtureInventoryTotals> {
+        let mut totals = BTreeMap::new();
+        for fixture in &self.fixtures {
+            let entry = totals
+                .entry(fixture.source.as_str())
+                .or_insert_with(FixtureInventoryTotals::default);
+            entry.fixtures += 1;
+            entry.entries += fixture.entries;
+            entry.normal_entries += fixture.normal_entries;
+            entry.known_difference_entries += fixture.known_difference_entries;
+        }
+        totals
+    }
+}
+
+impl FixtureInventoryTotals {
+    fn add(&mut self, other: &FixtureInventoryTotals) {
+        self.fixtures += other.fixtures;
+        self.entries += other.entries;
+        self.normal_entries += other.normal_entries;
+        self.known_difference_entries += other.known_difference_entries;
+    }
+}
+
+pub fn display_path(path: &Path) -> String {
+    path.strip_prefix(crate_root())
+        .unwrap_or(path)
+        .display()
+        .to_string()
+}
+
+fn collect_lane_inventory(
+    lane: &str,
+    files: Vec<PathBuf>,
+    source_for: fn(&Path) -> String,
+) -> Result<LaneFixtureInventory, std::io::Error> {
+    let mut fixtures = Vec::with_capacity(files.len());
+    for path in files {
+        let text = load_text(&path)?;
+        let entries = parse_golden_file(&text).map_err(std::io::Error::other)?;
+        let mut normal_entries = 0usize;
+        let mut known_difference_entries = 0usize;
+        for entry in &entries {
+            match entry {
+                GoldenEntry::Normal { .. } => normal_entries += 1,
+                GoldenEntry::KnownDifference { .. } => known_difference_entries += 1,
+            }
+        }
+        fixtures.push(FixtureInventory {
+            source: source_for(&path),
+            path,
+            entries: entries.len(),
+            normal_entries,
+            known_difference_entries,
+        });
+    }
+    Ok(LaneFixtureInventory {
+        lane: lane.to_string(),
+        fixtures,
+    })
+}
+
+fn lane_a_source(path: &Path) -> String {
+    if path.starts_with(golden_dir()) {
+        "seed-golden".to_string()
+    } else if path.starts_with(curated_wolfram_core_dir()) {
+        "curated-core".to_string()
+    } else {
+        "lane-a-custom".to_string()
+    }
+}
+
+fn lane_b_source(path: &Path) -> String {
+    if path.starts_with(stateful_dir()) {
+        "stateful".to_string()
+    } else {
+        "lane-b-custom".to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn inventory_covers_default_lane_a_and_lane_b_fixtures() {
+        let report = collect_fixture_inventory().unwrap();
+        let lane_a = report
+            .lanes
+            .iter()
+            .find(|lane| lane.lane == "lane-a")
+            .unwrap();
+        let lane_b = report
+            .lanes
+            .iter()
+            .find(|lane| lane.lane == "lane-b")
+            .unwrap();
+
+        assert_eq!(lane_a.totals().fixtures, 24);
+        assert_eq!(lane_a.totals_by_source()["seed-golden"].fixtures, 9);
+        assert_eq!(lane_a.totals_by_source()["curated-core"].fixtures, 15);
+        assert_eq!(lane_a.totals().known_difference_entries, 3);
+        assert_eq!(lane_b.totals().fixtures, 2);
+        assert_eq!(lane_b.totals_by_source()["stateful"].fixtures, 2);
+    }
+}

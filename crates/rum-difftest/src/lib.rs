@@ -2,6 +2,7 @@ pub mod artifact_hygiene;
 pub mod config;
 pub mod divergences;
 pub mod fixtures;
+pub mod inventory;
 pub mod lane_a;
 pub mod lane_b;
 pub mod lane_d;
