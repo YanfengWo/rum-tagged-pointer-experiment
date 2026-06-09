@@ -11,6 +11,6 @@ pub(super) fn print_check_usage() {
     println!("  --summary-json PATH        Write a stable machine-readable summary");
     println!("  --max-issue-samples N      Bound aggregate JSON issue samples (default 5)");
     println!(
-        "  Run the fast non-oracle local gates: inventory baseline and Lane C ledger validation, with optional Lane D gates"
+        "  Run the fast non-oracle local gates: inventory baseline, Lane C ledger validation, and artifact hygiene, with optional Lane D gates"
     );
 }

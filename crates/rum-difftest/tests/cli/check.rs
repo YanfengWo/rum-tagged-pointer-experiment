@@ -41,6 +41,7 @@ fn check_help_and_unknown_flag_paths_are_stable() {
     assert!(stdout_text(&help).contains("--include-lane-d-readiness"));
     assert!(stdout_text(&help).contains("--summary-json"));
     assert!(stdout_text(&help).contains("--max-issue-samples"));
+    assert!(stdout_text(&help).contains("artifact hygiene"));
 
     let unknown = run_difftest(&["check", "--unknown"]);
     assert!(!unknown.status.success());
