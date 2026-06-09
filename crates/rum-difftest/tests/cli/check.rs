@@ -1,6 +1,9 @@
 use std::fs;
 
-use super::{parse_summary_json, run_difftest, stderr_text, stdout_text, unique_temp_dir};
+use super::{
+    json_array, json_bool, json_str, json_u64, parse_summary_json, run_difftest, stderr_text,
+    stdout_text, unique_temp_dir,
+};
 
 #[test]
 fn check_runs_fast_non_oracle_gates() {
@@ -55,30 +58,41 @@ fn check_writes_machine_readable_summary_json() {
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     assert!(stdout_text(&output).contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
-    parse_summary_json(&summary);
-    assert!(summary.contains("\"command\": \"check\""));
-    assert!(summary.contains("\"schema_version\": 1"));
-    assert!(summary.contains("\"clean\": true"));
-    assert!(summary.contains("\"checks_passed\": 2"));
-    assert!(summary.contains("\"checks_failed\": 0"));
-    assert!(summary.contains("\"checks_skipped\": 2"));
-    assert!(summary.contains("\"name\": \"inventory-baseline\""));
-    assert!(summary.contains("\"records_considered\": 34"));
-    assert!(summary.contains("\"name\": \"lane-c-ledger\""));
-    assert!(summary.contains("\"active_ledger_entries\": 2"));
-    assert!(summary.contains("\"tracking_target_issues\": 0"));
-    assert!(summary.contains("\"issue_samples_limit\": 5"));
-    assert!(summary.contains("\"issue_samples_emitted\": 0"));
-    assert!(summary.contains("\"issue_samples_total\": 0"));
-    assert!(summary.contains("\"issue_samples_truncated\": false"));
-    assert!(summary.contains("\"issue_samples\": ["));
-    assert!(summary.contains("\"skipped_checks\": ["));
-    assert!(summary.contains("\"name\": \"lane-d-smoke\""));
-    assert!(summary.contains(
-        "\"reason\": \"opt-in with --include-lane-d-smoke or --lane-d-smoke-baseline PATH\""
-    ));
-    assert!(summary.contains("\"name\": \"lane-d-readiness\""));
-    assert!(summary.contains("\"reason\": \"opt-in with --include-lane-d-readiness\""));
+    let summary_json = parse_summary_json(&summary);
+    assert_eq!(json_str(&summary_json, "/command"), "check");
+    assert!(json_bool(&summary_json, "/clean"));
+    assert_eq!(json_u64(&summary_json, "/checks_passed"), 2);
+    assert_eq!(json_u64(&summary_json, "/checks_failed"), 0);
+    assert_eq!(json_u64(&summary_json, "/checks_skipped"), 2);
+
+    let inventory = check_entry(&summary_json, "inventory-baseline");
+    assert!(json_bool(inventory, "/clean"));
+    assert_eq!(json_u64(inventory, "/records_considered"), 34);
+    let lane_c = check_entry(&summary_json, "lane-c-ledger");
+    assert!(json_bool(lane_c, "/clean"));
+    assert_eq!(json_u64(lane_c, "/counts/active_ledger_entries"), 2);
+    assert_eq!(json_u64(lane_c, "/issues/tracking_target_issues"), 0);
+
+    assert_eq!(json_u64(&summary_json, "/issue_samples_limit"), 5);
+    assert_eq!(json_u64(&summary_json, "/issue_samples_emitted"), 0);
+    assert_eq!(json_u64(&summary_json, "/issue_samples_total"), 0);
+    assert!(!json_bool(&summary_json, "/issue_samples_truncated"));
+    assert!(json_array(&summary_json, "/issue_samples").is_empty());
+    assert_eq!(json_array(&summary_json, "/skipped_checks").len(), 2);
+    assert_eq!(
+        json_str(
+            skipped_check_entry(&summary_json, "lane-d-smoke"),
+            "/reason"
+        ),
+        "opt-in with --include-lane-d-smoke or --lane-d-smoke-baseline PATH"
+    );
+    assert_eq!(
+        json_str(
+            skipped_check_entry(&summary_json, "lane-d-readiness"),
+            "/reason"
+        ),
+        "opt-in with --include-lane-d-readiness"
+    );
     fs::remove_dir_all(temp_dir).unwrap();
 }
 
@@ -114,19 +128,31 @@ fn check_writes_lane_d_smoke_summary_when_included() {
 
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     let summary = fs::read_to_string(&summary_path).unwrap();
-    parse_summary_json(&summary);
-    assert!(summary.contains("\"checks_passed\": 3"));
-    assert!(summary.contains("\"checks_failed\": 0"));
-    assert!(summary.contains("\"checks_skipped\": 1"));
-    assert!(summary.contains("\"name\": \"lane-d-smoke\""));
-    assert!(summary.contains("\"path\": \"perf/baselines/smoke.txt\""));
-    assert!(summary.contains("\"suite\": \"all\""));
-    assert!(summary.contains("\"profile\": \"smoke\""));
-    assert!(summary.contains("\"threshold_profile\": \"local-debug\""));
-    assert!(summary.contains("\"missing_records\": 0"));
-    assert!(summary.contains("\"elapsed_regressions\": 0"));
-    assert!(summary.contains("\"name\": \"lane-d-readiness\""));
-    assert!(summary.contains("\"reason\": \"opt-in with --include-lane-d-readiness\""));
+    let summary_json = parse_summary_json(&summary);
+    assert_eq!(json_u64(&summary_json, "/checks_passed"), 3);
+    assert_eq!(json_u64(&summary_json, "/checks_failed"), 0);
+    assert_eq!(json_u64(&summary_json, "/checks_skipped"), 1);
+    let smoke = check_entry(&summary_json, "lane-d-smoke");
+    assert!(json_bool(smoke, "/clean"));
+    assert_eq!(
+        json_str(smoke, "/baseline/path"),
+        "perf/baselines/smoke.txt"
+    );
+    assert_eq!(json_str(smoke, "/run_options/suite"), "all");
+    assert_eq!(json_str(smoke, "/run_options/profile"), "smoke");
+    assert_eq!(
+        json_str(smoke, "/run_options/threshold_profile"),
+        "local-debug"
+    );
+    assert_eq!(json_u64(smoke, "/baseline/missing_records"), 0);
+    assert_eq!(json_u64(smoke, "/baseline/elapsed_regressions"), 0);
+    assert_eq!(
+        json_str(
+            skipped_check_entry(&summary_json, "lane-d-readiness"),
+            "/reason"
+        ),
+        "opt-in with --include-lane-d-readiness"
+    );
     fs::remove_dir_all(temp_dir).unwrap();
 }
 
@@ -157,23 +183,31 @@ fn check_can_include_lane_d_readiness_gate() {
     assert!(stdout.contains("checks skipped: 1"));
 
     let summary = fs::read_to_string(&summary_path).unwrap();
-    parse_summary_json(&summary);
-    assert!(summary.contains("\"clean\": false"));
-    assert!(summary.contains("\"checks_passed\": 2"));
-    assert!(summary.contains("\"checks_failed\": 1"));
-    assert!(summary.contains("\"checks_skipped\": 1"));
-    assert!(summary.contains(
-        "\"reason\": \"opt-in with --include-lane-d-smoke or --lane-d-smoke-baseline PATH\""
-    ));
-    assert!(summary.contains("\"name\": \"lane-d-readiness\""));
-    assert!(summary.contains("\"total\": 3"));
-    assert!(summary.contains("\"ready\": 1"));
-    assert!(summary.contains("\"missing\": 2"));
-    assert!(summary.contains("\"invalid\": 0"));
-    assert!(summary.contains("\"not_clean\": 0"));
-    assert!(summary.contains("\"check\": \"lane-d-readiness\""));
-    assert!(summary.contains("\"kind\": \"missing_artifact\""));
-    assert!(summary.contains("smoke-ci-debug.txt"));
+    let summary_json = parse_summary_json(&summary);
+    assert!(!json_bool(&summary_json, "/clean"));
+    assert_eq!(json_u64(&summary_json, "/checks_passed"), 2);
+    assert_eq!(json_u64(&summary_json, "/checks_failed"), 1);
+    assert_eq!(json_u64(&summary_json, "/checks_skipped"), 1);
+    assert_eq!(
+        json_str(
+            skipped_check_entry(&summary_json, "lane-d-smoke"),
+            "/reason"
+        ),
+        "opt-in with --include-lane-d-smoke or --lane-d-smoke-baseline PATH"
+    );
+    let readiness = check_entry(&summary_json, "lane-d-readiness");
+    assert!(!json_bool(readiness, "/clean"));
+    assert_eq!(json_u64(readiness, "/artifacts/total"), 3);
+    assert_eq!(json_u64(readiness, "/artifacts/ready"), 1);
+    assert_eq!(json_u64(readiness, "/artifacts/missing"), 2);
+    assert_eq!(json_u64(readiness, "/artifacts/invalid"), 0);
+    assert_eq!(json_u64(readiness, "/artifacts/not_clean"), 0);
+    let samples = json_array(&summary_json, "/issue_samples");
+    assert!(samples.iter().any(|sample| {
+        json_str(sample, "/check") == "lane-d-readiness"
+            && json_str(sample, "/kind") == "missing_artifact"
+            && json_str(sample, "/location").contains("smoke-ci-debug.txt")
+    }));
     fs::remove_dir_all(temp_dir).unwrap();
 }
 
@@ -233,18 +267,33 @@ fn check_exits_nonzero_for_inventory_baseline_regression() {
     assert!(stdout.contains("checks passed: 1"));
     assert!(stdout.contains("checks failed: 1"));
     let summary = fs::read_to_string(&summary_path).unwrap();
-    parse_summary_json(&summary);
-    assert!(summary.contains("\"issue_samples_limit\": 1"));
-    assert!(summary.contains("\"issue_samples_emitted\": 1"));
-    assert!(summary.contains("\"issue_samples_total\": 3"));
-    assert!(summary.contains("\"issue_samples_truncated\": true"));
-    assert!(summary.contains("\"check\": \"inventory-baseline\""));
-    assert!(summary.contains("\"kind\": \"regression\""));
-    assert!(summary.contains("\"location\": \"lane-a/source/curated-core\""));
-    assert!(summary.contains("\"message\": \"fixtures "));
+    let summary_json = parse_summary_json(&summary);
+    assert_eq!(json_u64(&summary_json, "/issue_samples_limit"), 1);
+    assert_eq!(json_u64(&summary_json, "/issue_samples_emitted"), 1);
+    assert_eq!(json_u64(&summary_json, "/issue_samples_total"), 3);
+    assert!(json_bool(&summary_json, "/issue_samples_truncated"));
+    let samples = json_array(&summary_json, "/issue_samples");
+    assert_eq!(samples.len(), 1);
+    assert_eq!(json_str(&samples[0], "/check"), "inventory-baseline");
+    assert_eq!(json_str(&samples[0], "/kind"), "regression");
     assert_eq!(
-        summary.matches("\"check\": \"inventory-baseline\"").count(),
-        1
+        json_str(&samples[0], "/location"),
+        "lane-a/source/curated-core"
     );
+    assert!(json_str(&samples[0], "/message").starts_with("fixtures "));
     fs::remove_dir_all(temp_dir).unwrap();
+}
+
+fn check_entry<'a>(summary: &'a serde_json::Value, name: &str) -> &'a serde_json::Value {
+    json_array(summary, "/checks")
+        .iter()
+        .find(|check| json_str(check, "/name") == name)
+        .unwrap_or_else(|| panic!("missing check summary `{name}`: {summary}"))
+}
+
+fn skipped_check_entry<'a>(summary: &'a serde_json::Value, name: &str) -> &'a serde_json::Value {
+    json_array(summary, "/skipped_checks")
+        .iter()
+        .find(|check| json_str(check, "/name") == name)
+        .unwrap_or_else(|| panic!("missing skipped check summary `{name}`: {summary}"))
 }

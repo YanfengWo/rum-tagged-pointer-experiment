@@ -1,6 +1,9 @@
 use std::fs;
 
-use super::{parse_summary_json, run_difftest, stderr_text, stdout_text, unique_temp_dir};
+use super::{
+    assert_json_null, json_array, json_bool, json_str, json_u64, parse_summary_json, run_difftest,
+    stderr_text, stdout_text, unique_temp_dir,
+};
 
 #[test]
 fn oracle_lane_help_lists_timeout_and_sample_controls() {
@@ -138,42 +141,4 @@ fn oracle_lanes_bound_summary_json_issue_samples() {
         }
         fs::remove_dir_all(temp_dir).unwrap();
     }
-}
-
-fn json_str<'a>(value: &'a serde_json::Value, pointer: &str) -> &'a str {
-    value
-        .pointer(pointer)
-        .and_then(|value| value.as_str())
-        .unwrap_or_else(|| panic!("expected JSON string at {pointer}: {value}"))
-}
-
-fn json_u64(value: &serde_json::Value, pointer: &str) -> u64 {
-    value
-        .pointer(pointer)
-        .and_then(|value| value.as_u64())
-        .unwrap_or_else(|| panic!("expected JSON integer at {pointer}: {value}"))
-}
-
-fn json_bool(value: &serde_json::Value, pointer: &str) -> bool {
-    value
-        .pointer(pointer)
-        .and_then(|value| value.as_bool())
-        .unwrap_or_else(|| panic!("expected JSON bool at {pointer}: {value}"))
-}
-
-fn json_array<'a>(value: &'a serde_json::Value, pointer: &str) -> &'a [serde_json::Value] {
-    value
-        .pointer(pointer)
-        .and_then(|value| value.as_array())
-        .map(Vec::as_slice)
-        .unwrap_or_else(|| panic!("expected JSON array at {pointer}: {value}"))
-}
-
-fn assert_json_null(value: &serde_json::Value, pointer: &str) {
-    assert!(
-        value
-            .pointer(pointer)
-            .is_some_and(serde_json::Value::is_null),
-        "expected JSON null at {pointer}: {value}"
-    );
 }

@@ -33,6 +33,44 @@ fn parse_summary_json(summary: &str) -> serde_json::Value {
     value
 }
 
+fn json_str<'a>(value: &'a serde_json::Value, pointer: &str) -> &'a str {
+    value
+        .pointer(pointer)
+        .and_then(|value| value.as_str())
+        .unwrap_or_else(|| panic!("expected JSON string at {pointer}: {value}"))
+}
+
+fn json_u64(value: &serde_json::Value, pointer: &str) -> u64 {
+    value
+        .pointer(pointer)
+        .and_then(|value| value.as_u64())
+        .unwrap_or_else(|| panic!("expected JSON integer at {pointer}: {value}"))
+}
+
+fn json_bool(value: &serde_json::Value, pointer: &str) -> bool {
+    value
+        .pointer(pointer)
+        .and_then(|value| value.as_bool())
+        .unwrap_or_else(|| panic!("expected JSON bool at {pointer}: {value}"))
+}
+
+fn json_array<'a>(value: &'a serde_json::Value, pointer: &str) -> &'a [serde_json::Value] {
+    value
+        .pointer(pointer)
+        .and_then(|value| value.as_array())
+        .map(Vec::as_slice)
+        .unwrap_or_else(|| panic!("expected JSON array at {pointer}: {value}"))
+}
+
+fn assert_json_null(value: &serde_json::Value, pointer: &str) {
+    assert!(
+        value
+            .pointer(pointer)
+            .is_some_and(serde_json::Value::is_null),
+        "expected JSON null at {pointer}: {value}"
+    );
+}
+
 #[test]
 fn top_level_help_lists_lane_d_readiness_gate() {
     let output = run_difftest(&["--help"]);
@@ -170,20 +208,39 @@ fn inventory_writes_machine_readable_summary_json() {
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     assert!(stdout_text(&output).contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
-    parse_summary_json(&summary);
-    assert!(summary.contains("\"lane\": \"inventory\""));
-    assert!(summary.contains("\"schema_version\": 1"));
-    assert!(summary.contains("\"baseline\": {"));
-    assert!(summary.contains("\"clean\": true"));
-    assert!(summary.contains("\"records_considered\": 34"));
-    assert!(summary.contains("\"lane\": \"lane-a\""));
-    assert!(summary.contains("\"source\": \"seed-golden\""));
-    assert!(summary.contains("\"source\": \"curated-core\""));
-    assert!(summary.contains("\"categories\": ["));
-    assert!(summary.contains("\"category\": \"associations-core\""));
-    assert!(summary.contains("\"category\": \"functional-combinators\""));
-    assert!(summary.contains("\"fixtures\": 26"));
-    assert!(summary.contains("\"known_difference_entries\": 3"));
+    let summary_json = parse_summary_json(&summary);
+    assert_eq!(json_str(&summary_json, "/lane"), "inventory");
+    assert_eq!(json_u64(&summary_json, "/totals/fixtures"), 29);
+    assert_eq!(json_u64(&summary_json, "/totals/entries"), 413);
+    assert!(json_bool(&summary_json, "/baseline/clean"));
+    assert_eq!(json_u64(&summary_json, "/baseline/records_considered"), 34);
+    let lanes = json_array(&summary_json, "/lanes");
+    let lane_a = lanes
+        .iter()
+        .find(|lane| json_str(lane, "/lane") == "lane-a")
+        .expect("inventory summary should include lane-a");
+    assert_eq!(json_u64(lane_a, "/totals/fixtures"), 26);
+    assert_eq!(json_u64(lane_a, "/totals/known_difference_entries"), 3);
+    assert!(
+        json_array(lane_a, "/sources")
+            .iter()
+            .any(|source| json_str(source, "/source") == "seed-golden")
+    );
+    assert!(
+        json_array(lane_a, "/sources")
+            .iter()
+            .any(|source| json_str(source, "/source") == "curated-core")
+    );
+    assert!(
+        json_array(lane_a, "/categories")
+            .iter()
+            .any(|category| json_str(category, "/category") == "associations-core")
+    );
+    assert!(
+        json_array(lane_a, "/categories")
+            .iter()
+            .any(|category| json_str(category, "/category") == "functional-combinators")
+    );
     fs::remove_dir_all(temp_dir).unwrap();
 }
 
@@ -208,13 +265,15 @@ fn lane_c_writes_machine_readable_summary_json() {
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     assert!(stdout_text(&output).contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
-    parse_summary_json(&summary);
-    assert!(summary.contains("\"lane\": \"lane-c\""));
-    assert!(summary.contains("\"schema_version\": 1"));
-    assert!(summary.contains("\"clean\": true"));
-    assert!(summary.contains("\"active_ledger_entries\": 2"));
-    assert!(summary.contains("\"fixture_known_differences\": 3"));
-    assert!(summary.contains("\"tracking_target_issues\": 0"));
+    let summary_json = parse_summary_json(&summary);
+    assert_eq!(json_str(&summary_json, "/lane"), "lane-c");
+    assert!(json_bool(&summary_json, "/clean"));
+    assert_eq!(json_u64(&summary_json, "/counts/active_ledger_entries"), 2);
+    assert_eq!(
+        json_u64(&summary_json, "/counts/fixture_known_differences"),
+        3
+    );
+    assert_eq!(json_u64(&summary_json, "/issues/tracking_target_issues"), 0);
     fs::remove_dir_all(temp_dir).unwrap();
 }
 
@@ -235,17 +294,16 @@ fn lane_d_writes_machine_readable_summary_json() {
     assert!(output.status.success(), "stderr: {}", stderr_text(&output));
     assert!(stdout_text(&output).contains("summary json:"));
     let summary = fs::read_to_string(&summary_path).unwrap();
-    parse_summary_json(&summary);
-    assert!(summary.contains("\"lane\": \"lane-d\""));
-    assert!(summary.contains("\"schema_version\": 1"));
-    assert!(summary.contains("\"suite\": \"timing\""));
-    assert!(summary.contains("\"profile\": \"smoke\""));
-    assert!(summary.contains("\"threshold_profile\": \"local-debug\""));
-    assert!(summary.contains("\"clean\": true"));
-    assert!(summary.contains("\"cases_executed\": 2"));
-    assert!(summary.contains("\"failures\": 0"));
-    assert!(summary.contains("\"baseline\": null"));
-    assert!(summary.contains("\"checked_baseline_readiness\": null"));
+    let summary_json = parse_summary_json(&summary);
+    assert_eq!(json_str(&summary_json, "/lane"), "lane-d");
+    assert_eq!(json_str(&summary_json, "/suite"), "timing");
+    assert_eq!(json_str(&summary_json, "/profile"), "smoke");
+    assert_eq!(json_str(&summary_json, "/threshold_profile"), "local-debug");
+    assert!(json_bool(&summary_json, "/clean"));
+    assert_eq!(json_u64(&summary_json, "/counts/cases_executed"), 2);
+    assert_eq!(json_u64(&summary_json, "/counts/failures"), 0);
+    assert_json_null(&summary_json, "/baseline");
+    assert_json_null(&summary_json, "/checked_baseline_readiness");
     fs::remove_dir_all(temp_dir).unwrap();
 }
 
