@@ -248,7 +248,7 @@ mod tests {
     fn lane_a_default_fixture_paths_include_seed_and_curated_cases() {
         let files = lane_a_default_fixture_paths().unwrap();
 
-        assert_eq!(files.len(), 33);
+        assert_eq!(files.len(), 34);
         assert!(
             files
                 .iter()
@@ -288,6 +288,11 @@ mod tests {
             files
                 .iter()
                 .any(|path| path.ends_with("cases/wolfram/core/polynomial_rational.txt"))
+        );
+        assert!(
+            files
+                .iter()
+                .any(|path| path.ends_with("cases/wolfram/core/predicate_surface.txt"))
         );
         assert!(
             files

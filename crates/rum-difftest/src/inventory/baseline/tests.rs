@@ -8,7 +8,7 @@ fn default_inventory_baseline_is_clean_for_current_fixtures() {
     let report = compare_inventory_baseline(&inventory, &baseline);
 
     assert!(report.is_clean(), "{report:?}");
-    assert_eq!(report.records_considered, 43);
+    assert_eq!(report.records_considered, 44);
 }
 
 #[test]
@@ -52,14 +52,15 @@ fn captured_inventory_baseline_round_trips_and_is_clean() {
     let report = compare_inventory_baseline(&inventory, &reparsed);
 
     assert_eq!(reparsed, baseline);
-    assert_eq!(baseline.records.len(), 43);
-    assert!(formatted.contains("lane=lane-a source=all min_fixtures=33"));
+    assert_eq!(baseline.records.len(), 44);
+    assert!(formatted.contains("lane=lane-a source=all min_fixtures=34"));
     assert!(formatted.contains("lane=lane-a category=associations-core min_fixtures=1"));
     assert!(formatted.contains("lane=lane-a category=context-namespace min_fixtures=1"));
     assert!(formatted.contains("lane=lane-a category=exact-arithmetic min_fixtures=1"));
     assert!(formatted.contains("lane=lane-a category=messages-attributes min_fixtures=1"));
     assert!(formatted.contains("lane=lane-a category=options-surface min_fixtures=1"));
     assert!(formatted.contains("lane=lane-a category=polynomial-rational min_fixtures=1"));
+    assert!(formatted.contains("lane=lane-a category=predicate-surface min_fixtures=1"));
     assert!(formatted.contains("lane=lane-a category=scoping-closures min_fixtures=1"));
     assert!(formatted.contains("lane=lane-a category=structure-selectors min_fixtures=1"));
     assert!(formatted.contains("lane=lane-a category=threading min_fixtures=1"));

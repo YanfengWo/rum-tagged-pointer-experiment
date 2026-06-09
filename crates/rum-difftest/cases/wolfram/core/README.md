@@ -44,6 +44,8 @@ The current first pass includes:
   coverage
 - a truth/comparison suite for stable boolean predicates, equality/order
   comparisons, and comparison-operator forms
+- a predicate-surface suite for structural, numeric, sign, prime, algebraic,
+  and real-valued predicate compatibility
 - a focused functional-combinator suite covering current CL-04 operator and iteration subsets
 - a focused rules/patterns/replacement/traversal suite for Lane A stateless
   conformance
