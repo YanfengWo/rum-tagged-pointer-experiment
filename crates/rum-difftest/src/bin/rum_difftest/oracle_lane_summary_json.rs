@@ -441,9 +441,7 @@ fn issue_source_counts_json(source_counts: &[OracleLaneIssueSourceCounts]) -> St
 }
 
 fn json_session_batch_transport_name(value: Option<OracleLaneSessionBatchTransport>) -> String {
-    value
-        .map(|transport| format!("\"{}\"", json_string(transport.name)))
-        .unwrap_or_else(|| "null".to_string())
+    json_string_option(value.map(|transport| transport.name))
 }
 
 fn json_session_batch_processes(value: Option<OracleLaneSessionBatchTransport>) -> String {
