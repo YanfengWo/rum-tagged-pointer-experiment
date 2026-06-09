@@ -57,7 +57,7 @@ fn expect_value(
 
 fn print_usage() {
     println!(
-        "rum-difftest check [--inventory-baseline PATH] [--include-lane-d-smoke] [--lane-d-smoke-baseline PATH] [--include-lane-d-readiness] [--summary-json PATH] [--max-issue-samples N]"
+        "rum-difftest check [--inventory-baseline PATH] [--include-lane-d-smoke] [--lane-d-smoke-baseline PATH] [--include-lane-d-readiness] [--artifact-hygiene-root PATH] [--summary-json PATH] [--max-issue-samples N]"
     );
     println!(
         "rum-difftest lane-a [--oracle-kernel PATH|--oracle-command PATH] [--oracle-timeout-seconds N] [--config PATH] [--fixture PATH] [--limit N] [--summary-json PATH] [--max-issue-samples N]"

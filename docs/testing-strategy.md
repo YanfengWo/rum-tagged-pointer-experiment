@@ -144,6 +144,10 @@ The artifact-hygiene gate rejects generated oracle wrapper/input/session
 artifacts plus stray non-fixture files under `cases/`; text output and the
 artifact-hygiene JSON check entry expose stable `oracle_artifact` and
 `stray_fixture_file` counts, and JSON issue details include the issue kind.
+The default root is the `rum-difftest` crate root; use
+`--artifact-hygiene-root PATH` only for isolated diagnostics or tests that need
+to exercise dirty artifact-hygiene reporting without writing probe files into
+the real repository tree.
 The aggregate JSON includes bounded `issue_samples` with
 check/kind/location/message fields so scripts can surface representative
 failures without depending on each lane's full internal report shape;

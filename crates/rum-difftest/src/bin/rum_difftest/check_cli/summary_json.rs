@@ -6,7 +6,7 @@ use rum_difftest::inventory::{FixtureInventoryTotals, display_path};
 
 use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
 
-use super::{LocalCheckReport, SkippedCheck};
+use super::{LocalCheckReport, SkippedCheck, display_check_path};
 
 #[path = "summary_json/issue_samples.rs"]
 mod issue_samples;
@@ -194,6 +194,7 @@ fn artifact_hygiene_check_json(report: &LocalCheckReport) -> String {
             "    {{\n",
             "      \"name\": \"artifact-hygiene\",\n",
             "      \"clean\": {},\n",
+            "      \"root\": \"{}\",\n",
             "      \"issues\": {},\n",
             "      \"issue_kind_counts\": {{\n",
             "        \"oracle_artifact\": {},\n",
@@ -205,6 +206,7 @@ fn artifact_hygiene_check_json(report: &LocalCheckReport) -> String {
             "    }}"
         ),
         report.artifact_hygiene_issues.is_empty(),
+        json_string(&display_check_path(&report.artifact_hygiene_root)),
         report.artifact_hygiene_issues.len(),
         counts.oracle_artifacts,
         counts.stray_fixture_files,

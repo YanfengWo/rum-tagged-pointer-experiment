@@ -1,11 +1,13 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use rum_difftest::artifact_hygiene::{self, ArtifactHygieneIssue};
 use rum_difftest::divergences::{self, KnownDifferenceLedgerReport};
+use rum_difftest::fixtures;
 use rum_difftest::inventory::{
     FixtureInventoryReport, InventoryBaselineReport, collect_fixture_inventory,
-    compare_inventory_baseline, default_inventory_baseline_path, load_inventory_baseline,
+    compare_inventory_baseline, default_inventory_baseline_path, display_path,
+    load_inventory_baseline,
 };
 use rum_difftest::lane_d::{
     self, LaneDBaselineCompareOptions, LaneDBaselineReport, LaneDCheckedBaselineReadinessReport,
@@ -29,6 +31,7 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
     let mut max_issue_samples = summary_json::DEFAULT_MAX_ISSUE_SAMPLES;
     let mut issue_sample_filter = summary_json::CheckIssueSampleFilter::default();
     let mut fail_on_open_known_difference = false;
+    let mut artifact_hygiene_root = None;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -54,6 +57,12 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
             }
             "--fail-on-open-known-difference" => {
                 fail_on_open_known_difference = true;
+            }
+            "--artifact-hygiene-root" => {
+                artifact_hygiene_root = Some(PathBuf::from(expect_value(
+                    &mut iter,
+                    "--artifact-hygiene-root",
+                )?));
             }
             "--summary-json" => {
                 summary_json_path = Some(PathBuf::from(expect_value(&mut iter, "--summary-json")?));
@@ -83,6 +92,7 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
         lane_d_smoke_baseline,
         include_lane_d_readiness,
         fail_on_open_known_difference,
+        artifact_hygiene_root,
     )?;
     text_report::print_check_report(&report);
 
@@ -104,6 +114,7 @@ pub(super) struct LocalCheckReport {
     pub(super) inventory_baseline: InventoryBaselineReport,
     pub(super) known_differences: KnownDifferenceLedgerReport,
     pub(super) fail_on_open_known_difference: bool,
+    pub(super) artifact_hygiene_root: PathBuf,
     pub(super) artifact_hygiene_issues: Vec<ArtifactHygieneIssue>,
     pub(super) lane_d_smoke: Option<LaneDSmokeCheckReport>,
     pub(super) lane_d_readiness: Option<LaneDReadinessCheckReport>,
@@ -247,11 +258,21 @@ pub(super) struct LaneDReadinessArtifactCounts {
     pub(super) not_clean: usize,
 }
 
+pub(super) fn display_check_path(path: &Path) -> String {
+    let path = display_path(path);
+    if path.is_empty() {
+        ".".to_string()
+    } else {
+        path
+    }
+}
+
 fn run_local_checks(
     inventory_baseline_path: Option<PathBuf>,
     lane_d_smoke_baseline: Option<LaneDSmokeBaseline>,
     include_lane_d_readiness: bool,
     fail_on_open_known_difference: bool,
+    artifact_hygiene_root: Option<PathBuf>,
 ) -> Result<LocalCheckReport, Box<dyn std::error::Error>> {
     let inventory_baseline_path =
         inventory_baseline_path.unwrap_or_else(default_inventory_baseline_path);
@@ -259,7 +280,9 @@ fn run_local_checks(
     let baseline = load_inventory_baseline(&inventory_baseline_path)?;
     let inventory_baseline = compare_inventory_baseline(&inventory, &baseline);
     let known_differences = divergences::validate_known_difference_ledger()?;
-    let artifact_hygiene_issues = artifact_hygiene::validate_artifact_hygiene()?;
+    let artifact_hygiene_root = artifact_hygiene_root.unwrap_or_else(fixtures::crate_root);
+    let artifact_hygiene_issues =
+        artifact_hygiene::validate_artifact_hygiene_in(&artifact_hygiene_root)?;
     let lane_d_summary = if lane_d_smoke_baseline.is_some() || include_lane_d_readiness {
         Some(run_lane_d_smoke_summary()?)
     } else {
@@ -289,6 +312,7 @@ fn run_local_checks(
         inventory_baseline,
         known_differences,
         fail_on_open_known_difference,
+        artifact_hygiene_root,
         artifact_hygiene_issues,
         lane_d_smoke,
         lane_d_readiness,

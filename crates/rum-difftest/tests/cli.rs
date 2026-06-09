@@ -83,6 +83,7 @@ fn top_level_help_lists_lane_d_readiness_gate() {
     assert!(stdout.contains("--inventory-baseline"));
     assert!(stdout.contains("--include-lane-d-smoke"));
     assert!(stdout.contains("--include-lane-d-readiness"));
+    assert!(stdout.contains("--artifact-hygiene-root"));
     assert!(stdout.contains("--check-baseline-readiness"));
     assert!(stdout.contains("--write-baseline"));
     assert!(stdout.contains("--summary-json"));

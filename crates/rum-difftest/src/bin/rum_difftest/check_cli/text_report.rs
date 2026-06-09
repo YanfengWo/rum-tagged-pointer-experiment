@@ -3,7 +3,7 @@ use rum_difftest::divergences::{self, KnownDifferenceLedgerReport};
 use rum_difftest::inventory::display_path;
 use rum_difftest::lane_d;
 
-use super::{LaneDSmokeCheckReport, LocalCheckReport};
+use super::{LaneDSmokeCheckReport, LocalCheckReport, display_check_path};
 
 pub(super) fn print_check_report(report: &LocalCheckReport) {
     println!("rum-difftest check");
@@ -120,6 +120,10 @@ fn print_artifact_hygiene_check(report: &LocalCheckReport) {
         "dirty"
     };
     println!("check\tartifact-hygiene\t{status}");
+    println!(
+        "artifact hygiene root: {}",
+        display_check_path(&report.artifact_hygiene_root)
+    );
     println!(
         "artifact hygiene issues: {}",
         report.artifact_hygiene_issues.len()
