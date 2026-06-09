@@ -29,3 +29,15 @@ OptionValue[optDelayed, a] ||| 1
 OptionValue[optDelayed, a] ||| 2
 SetOptions[optDelayed, a :> (delayedCount = delayedCount + 10)] ||| {a :> (delayedCount = delayedCount + 10)}
 OptionValue[optDelayed, a] ||| 12
+Options[optLifecycle] = {a -> 1} ||| {a -> 1}
+Options["optLifecycle"] ||| {a -> 1}
+Clear[optLifecycle] ||| Null
+Options[optLifecycle] ||| {a -> 1}
+Unset[Options[optLifecycle]] ||| Null
+Options[optLifecycle] ||| {}
+Options[optLifecycle] = {a -> 2} ||| {a -> 2}
+ClearAll[optLifecycle] ||| Null
+Options[optLifecycle] ||| {}
+Options[optBlock] = {a -> 1} ||| {a -> 1}
+Block[{optBlock}, Options[optBlock] = {a -> 9}; OptionValue[optBlock, a]] ||| 9
+OptionValue[optBlock, a] ||| 1

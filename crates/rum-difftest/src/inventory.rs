@@ -305,9 +305,9 @@ mod tests {
             lane_b.totals_by_category()["definitions-messages"].entries,
             81
         );
-        assert_eq!(lane_b.totals_by_category()["message-switches"].entries, 25);
+        assert_eq!(lane_b.totals_by_category()["message-switches"].entries, 28);
         assert_eq!(lane_b.totals_by_category()["mutation-updates"].entries, 54);
-        assert_eq!(lane_b.totals_by_category()["options-state"].entries, 29);
+        assert_eq!(lane_b.totals_by_category()["options-state"].entries, 41);
         assert_eq!(lane_b.totals_by_category()["package-defaults"].entries, 24);
         assert_eq!(lane_b.totals_by_category()["scoping-control"].entries, 38);
         assert_eq!(

@@ -25,3 +25,6 @@ Quiet[Message[msgState::argx, 8]] ||| Null
 Check[Quiet[Message[msgState::argx, 9]], caught] ||| Null
 Quiet[Message[msgState::argx, 16], msgState::argx] ||| Null
 Check[Quiet[Message[msgState::argx, 17], msgState::argx], caught, msgState::argx] ||| Null
+Check[(Message[msgState::argx, 18]; Message[msgState::other, 19]), caught, msgState::other] ||| caught
+Quiet[(Message[msgState::argx, 20]; Message[msgState::other, 21]), msgState::argx] ||| Null
+Quiet[(Message[msgState::argx, 22]; Message[msgState::other, 23]), {msgState::argx, msgState::other}] ||| Null

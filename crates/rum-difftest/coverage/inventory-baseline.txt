@@ -44,12 +44,12 @@ lane=lane-a category=strings-templates min_fixtures=1 min_entries=10 min_normal_
 lane=lane-a category=structure-selectors min_fixtures=1 min_entries=35 min_normal_entries=35 max_known_difference_entries=0
 lane=lane-a category=threading min_fixtures=1 min_entries=10 min_normal_entries=10 max_known_difference_entries=0
 lane=lane-a category=truth-comparison min_fixtures=1 min_entries=17 min_normal_entries=17 max_known_difference_entries=0
-lane=lane-b source=all min_fixtures=7 min_entries=262 min_normal_entries=262 max_known_difference_entries=0
-lane=lane-b source=stateful min_fixtures=7 min_entries=262 min_normal_entries=262 max_known_difference_entries=0
+lane=lane-b source=all min_fixtures=7 min_entries=277 min_normal_entries=277 max_known_difference_entries=0
+lane=lane-b source=stateful min_fixtures=7 min_entries=277 min_normal_entries=277 max_known_difference_entries=0
 lane=lane-b category=definitions-messages min_fixtures=1 min_entries=81 min_normal_entries=81 max_known_difference_entries=0
-lane=lane-b category=message-switches min_fixtures=1 min_entries=25 min_normal_entries=25 max_known_difference_entries=0
+lane=lane-b category=message-switches min_fixtures=1 min_entries=28 min_normal_entries=28 max_known_difference_entries=0
 lane=lane-b category=mutation-updates min_fixtures=1 min_entries=54 min_normal_entries=54 max_known_difference_entries=0
-lane=lane-b category=options-state min_fixtures=1 min_entries=29 min_normal_entries=29 max_known_difference_entries=0
+lane=lane-b category=options-state min_fixtures=1 min_entries=41 min_normal_entries=41 max_known_difference_entries=0
 lane=lane-b category=package-defaults min_fixtures=1 min_entries=24 min_normal_entries=24 max_known_difference_entries=0
 lane=lane-b category=scoping-control min_fixtures=1 min_entries=38 min_normal_entries=38 max_known_difference_entries=0
 lane=lane-b category=zz-fixture-isolation min_fixtures=1 min_entries=11 min_normal_entries=11 max_known_difference_entries=0

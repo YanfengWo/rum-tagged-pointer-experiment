@@ -330,8 +330,9 @@ This roadmap intentionally uses two levels of detail:
       failure message including delayed source `MessageTemplate` resume, plus
       `$AssertFunction = None` no-callback behavior, discarded callback
       return values, and curated Lane B coverage for stateful `WithCleanup`,
-      `AbortProtect`, and `CheckAbort` default-option restoration. Treat the
-      remaining items below as non-blocking
+      `AbortProtect`, `CheckAbort` default-option restoration, option
+      lifecycle / `Block`-localized option state, and message selector-list
+      stream handling. Treat the remaining items below as non-blocking
       long-tail parity work rather than active Wave 3 blockers.
       - Deferred cleanup/control long-tail: deeper `WithCleanup` /
         `Failsafe` / `CheckAbort` / `AbortProtect` parity beyond the current
