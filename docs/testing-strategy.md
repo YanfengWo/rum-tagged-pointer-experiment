@@ -124,7 +124,9 @@ categories, normal entries, and known-difference entries; `--summary-json PATH`
 exposes the same stable counts for scripts or dashboards. `--lane NAME`,
 `--source NAME`, and `--category NAME` provide focused coverage audits and
 apply to text output, summary JSON, baseline comparison, and baseline capture;
-use the unfiltered command for the checked default coverage gate. Use
+focused baseline comparisons consider only baseline records matching the active
+filter scope and fail if none match. Use the unfiltered command for the checked
+default coverage gate. Use
 `inventory --check-baseline --fail-on-regression` as a local gate against the
 checked fixture-coverage baseline when reviewing fixture pruning or large
 coverage reshuffles. The checked baseline covers both source groups and

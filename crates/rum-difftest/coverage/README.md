@@ -43,6 +43,8 @@ cargo run -p rum-difftest -- inventory --lane lane-a --source curated-core --cat
 ```
 
 These filters also apply to `--summary-json`, `--baseline`, and
-`--write-baseline`. Keep the checked repository baseline generated from the
+`--write-baseline`. Focused baseline comparisons only consider checked
+baseline records that match the active filter scope, and fail fast if no
+records match. Keep the checked repository baseline generated from the
 unfiltered inventory unless an intentionally scoped baseline artifact is being
 created for a local review.

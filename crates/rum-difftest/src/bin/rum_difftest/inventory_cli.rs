@@ -2,10 +2,10 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use rum_difftest::inventory::{
-    FixtureInventoryReport, FixtureInventoryTotals, InventoryBaselineReport,
-    capture_inventory_baseline, collect_fixture_inventory, compare_inventory_baseline,
-    default_inventory_baseline_path, display_path, load_inventory_baseline,
-    write_inventory_baseline,
+    FixtureInventoryReport, FixtureInventoryTotals, InventoryBaseline, InventoryBaselineDimension,
+    InventoryBaselineReport, capture_inventory_baseline, collect_fixture_inventory,
+    compare_inventory_baseline, default_inventory_baseline_path, display_path,
+    load_inventory_baseline, write_inventory_baseline,
 };
 
 use super::expect_value;
@@ -54,6 +54,15 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
         baseline_path.or_else(|| check_baseline.then(default_inventory_baseline_path));
     let baseline_report = if let Some(path) = &effective_baseline_path {
         let baseline = load_inventory_baseline(path)?;
+        let baseline = filter_inventory_baseline(&baseline, &filter);
+        if filter.is_active() && baseline.records.is_empty() {
+            return Err(format!(
+                "inventory filters matched no baseline records in {}: {}",
+                display_path(path),
+                filter.description()
+            )
+            .into());
+        }
         let baseline_report = compare_inventory_baseline(&report, &baseline);
         print_baseline_report(path, &baseline_report);
         Some(baseline_report)
@@ -152,6 +161,44 @@ fn apply_inventory_filter(
         .into());
     }
     Ok(())
+}
+
+fn filter_inventory_baseline(
+    baseline: &InventoryBaseline,
+    filter: &InventoryFilter,
+) -> InventoryBaseline {
+    if !filter.is_active() {
+        return baseline.clone();
+    }
+
+    InventoryBaseline {
+        records: baseline
+            .records
+            .iter()
+            .filter(|record| baseline_record_matches_filter(record, filter))
+            .cloned()
+            .collect(),
+    }
+}
+
+fn baseline_record_matches_filter(
+    record: &rum_difftest::inventory::InventoryBaselineRecord,
+    filter: &InventoryFilter,
+) -> bool {
+    if filter
+        .lane
+        .as_deref()
+        .is_some_and(|lane| lane != record.lane)
+    {
+        return false;
+    }
+    if let Some(category) = filter.category.as_deref() {
+        return record.dimension == InventoryBaselineDimension::Category && record.name == category;
+    }
+    if let Some(source) = filter.source.as_deref() {
+        return record.dimension == InventoryBaselineDimension::Source && record.name == source;
+    }
+    true
 }
 
 fn print_inventory(report: &FixtureInventoryReport, filter: &InventoryFilter) {

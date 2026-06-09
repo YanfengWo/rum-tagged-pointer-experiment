@@ -96,7 +96,8 @@ dashboards that need stable coverage counts without parsing runner logs. Use
 `--lane NAME`, `--source NAME`, and `--category NAME` for a focused coverage
 audit; the filters apply consistently to text output, summary JSON, baseline
 comparison, and `--write-baseline`, and a filter set that matches no fixtures
-fails fast.
+fails fast. Baseline comparison narrows the checked baseline records to the
+active filter scope as well, and fails if no baseline records match that scope.
 `--check-baseline` compares the current inventory against
 [coverage/inventory-baseline.txt](./coverage/inventory-baseline.txt).
 The coverage policy is documented in
