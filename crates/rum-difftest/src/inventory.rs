@@ -233,7 +233,7 @@ mod tests {
         );
         assert_eq!(
             lane_a.totals_by_category()["functional-combinators"].entries,
-            20
+            37
         );
         assert_eq!(lane_a.totals_by_category()["lists-surface"].entries, 19);
         assert_eq!(

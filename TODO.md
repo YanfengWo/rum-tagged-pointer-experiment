@@ -488,7 +488,9 @@ This roadmap intentionally uses two levels of detail:
       traversal, targeted mapping, fold / nest / fixed-point, callable
       operator-wrapper, and dense `ArrayFilter` / `ArrayReduce` subsets, plus
       curated Wolfram Lane A coverage for representative Thread, Comap,
-      MapIndexed, ArrayFilter, and ArrayReduce cases. Treat sparse-array
+      `Through`, `Operate`, operator wrappers, association-aware `Apply` /
+      `MapApply`, MapIndexed, fold / nest / fixed-point, ArrayFilter, and
+      ArrayReduce cases. Treat sparse-array
       parity, broader ArrayPad-style storage / padding compatibility, and
       obscure functional-combinator diagnostic or option-shape corners as
       non-blocking long-tail work rather than active CL-04 blockers.

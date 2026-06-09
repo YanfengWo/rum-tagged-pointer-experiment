@@ -54,7 +54,9 @@ The current first pass includes:
   truth aggregates, and `SubsetQ` argument-order parity
 - an ordering surface suite for `Order`, `OrderedQ`, and current
   numerical/lexicographic/alphabetic ordering helpers
-- a focused functional-combinator suite covering current CL-04 operator and iteration subsets
+- a focused functional-combinator suite covering current CL-04 callable
+  operators, `Through` / `Operate`, association-aware `Apply` / `MapApply`,
+  sequence folds, and nest / fixed-point subsets
 - a list surface suite covering stable `Range`, `Table`, sequence operations,
   structural `Join` / `Flatten`, `Reverse`, and `Transpose` behavior
 - a focused rules/patterns/replacement/traversal suite for Lane A stateless

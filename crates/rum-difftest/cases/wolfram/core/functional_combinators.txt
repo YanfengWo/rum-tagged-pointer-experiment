@@ -3,18 +3,35 @@
 Plus @@ {1, 2, 3} ||| 6
 Length @* Identity @ f[a, b] ||| 2
 ReverseApplied[f][a, b, c] ||| f[c, b, a]
+OperatorApplied[f][y][x] ||| f[x, y]
+OperatorApplied[f, 3][a][b, c] ||| f[a, b, c]
+CurryApplied[3][f][a, b][c] ||| f[a, b, c]
+CurryApplied[f, {2, 1, 2}][a][b] ||| f[b, a, b]
 First[Comap[{f, g}][x]] ||| f[x]
+Through[{f, g}[x, y]] ||| {f[x, y], g[x, y]}
 Apply[f, p[q][x], 1, Heads -> True] ||| f[q][x]
+Apply[f, <|a -> 1, b -> 2|>] ||| f[1, 2]
+Apply[f, <|a -> g[1, 2], b -> h[3]|>, {1}] ||| <|a -> f[1, 2], b -> f[3]|>
 Last[MapApply[f, {{a, b}, {c, d}}]] ||| f[c, d]
+MapApply[f, <|a -> {1, 2}, b -> {3, 4}|>] ||| <|a -> f[1, 2], b -> f[3, 4]|>
 First[Last[First[MapIndexed[f, {a, b}]]]] ||| 1
+MapAll[f, {a, b}] ||| f[{f[a], f[b]}]
 Operate[q, p[f][x], 2] ||| q[p][f][x]
+Operate[q, f[x], 0] ||| q[f[x]]
 Length[TakeWhile[{1, 2, -1, 3}, Positive]] ||| 2
 LengthWhile[<|a -> 1, b -> 2, c -> -1|>, Positive] ||| 2
+Accumulate[{1, 2, 3}] ||| {1, 3, 6}
+BlockMap[Apply[Plus], {1, 2, 3, 4}, 2] ||| {3, 7}
+Fold[f][{a, b, c}] ||| f[f[a, b], c]
 Last[FoldList[f, x, {a, b}]] ||| f[f[x, a], b]
+FoldWhile[Subtract, 10, {1, 2, 20}, Positive] ||| -13
 SequenceFold[Plus, {1}, {2, 3}] ||| 6
 Nest[f, x, 2] ||| f[f[x]]
+Nest[f, 2][x] ||| f[f[x]]
 Last[NestList[f, x, 2]] ||| f[f[x]]
+step[0] = 1; step[2] = 1; step[1] = 1; NestWhileList[step, 2, UnsameQ, 2] ||| {2, 1, 1}
 FixedPoint[Identity, f[x]] ||| f[x]
+step[2] = 1; step[1] = 1; FixedPointList[step, 2] ||| {2, 1, 1}
 First[MapThread[f][{{a, b}, {c, d}}]] ||| f[a, c]
 First[Thread[f[{a, b}, c]]] ||| f[a, c]
 Part[MapAt[f, {{a, b}, {c, d}}, {All, 2}], 2, 2] ||| f[d]
