@@ -5,8 +5,6 @@ use crate::json_cli::json_string;
 
 use super::super::LocalCheckReport;
 
-const MAX_ISSUE_SAMPLES: usize = 5;
-
 struct CheckIssueSample {
     check: &'static str,
     kind: &'static str,
@@ -14,7 +12,7 @@ struct CheckIssueSample {
     message: String,
 }
 
-pub(super) fn issue_samples_json(report: &LocalCheckReport) -> String {
+pub(super) fn issue_samples_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
     let mut samples = Vec::new();
     collect_inventory_samples(report, &mut samples);
     collect_lane_c_samples(report, &mut samples);
@@ -23,7 +21,7 @@ pub(super) fn issue_samples_json(report: &LocalCheckReport) -> String {
 
     samples
         .into_iter()
-        .take(MAX_ISSUE_SAMPLES)
+        .take(max_issue_samples)
         .map(sample_json)
         .collect::<Vec<_>>()
         .join(",\n")

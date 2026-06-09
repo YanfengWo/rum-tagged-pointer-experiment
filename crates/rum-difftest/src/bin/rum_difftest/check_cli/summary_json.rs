@@ -10,14 +10,17 @@ use super::LocalCheckReport;
 #[path = "summary_json/issue_samples.rs"]
 mod issue_samples;
 
+pub(super) const DEFAULT_MAX_ISSUE_SAMPLES: usize = 5;
+
 pub(super) fn write_summary_json(
     path: &Path,
     report: &LocalCheckReport,
+    max_issue_samples: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    write_json_file(path, summary_json(report))
+    write_json_file(path, summary_json(report, max_issue_samples))
 }
 
-fn summary_json(report: &LocalCheckReport) -> String {
+fn summary_json(report: &LocalCheckReport, max_issue_samples: usize) -> String {
     let mut checks = vec![
         inventory_baseline_check_json(report),
         lane_c_check_json(report),
@@ -48,7 +51,7 @@ fn summary_json(report: &LocalCheckReport) -> String {
         report.passed_checks(),
         report.failed_checks(),
         checks.join(",\n"),
-        issue_samples::issue_samples_json(report),
+        issue_samples::issue_samples_json(report, max_issue_samples),
     )
 }
 

@@ -29,10 +29,15 @@ fn check_help_and_unknown_flag_paths_are_stable() {
     assert!(stdout_text(&help).contains("--lane-d-smoke-baseline"));
     assert!(stdout_text(&help).contains("--include-lane-d-readiness"));
     assert!(stdout_text(&help).contains("--summary-json"));
+    assert!(stdout_text(&help).contains("--max-issue-samples"));
 
     let unknown = run_difftest(&["check", "--unknown"]);
     assert!(!unknown.status.success());
     assert!(stderr_text(&unknown).contains("unknown check flag `--unknown`"));
+
+    let invalid_max = run_difftest(&["check", "--max-issue-samples", "0"]);
+    assert!(!invalid_max.status.success());
+    assert!(stderr_text(&invalid_max).contains("--max-issue-samples expects a positive integer"));
 }
 
 #[test]
@@ -182,6 +187,8 @@ fn check_exits_nonzero_for_inventory_baseline_regression() {
         baseline_path.to_str().unwrap(),
         "--summary-json",
         summary_path.to_str().unwrap(),
+        "--max-issue-samples",
+        "1",
     ]);
 
     assert!(!output.status.success());
@@ -194,6 +201,10 @@ fn check_exits_nonzero_for_inventory_baseline_regression() {
     assert!(summary.contains("\"check\": \"inventory-baseline\""));
     assert!(summary.contains("\"kind\": \"regression\""));
     assert!(summary.contains("\"location\": \"lane-a/source/curated-core\""));
-    assert!(summary.contains("fixtures"));
+    assert!(summary.contains("\"message\": \"fixtures "));
+    assert_eq!(
+        summary.matches("\"check\": \"inventory-baseline\"").count(),
+        1
+    );
     fs::remove_dir_all(temp_dir).unwrap();
 }

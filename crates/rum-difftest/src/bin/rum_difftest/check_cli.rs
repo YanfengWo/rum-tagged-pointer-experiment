@@ -17,12 +17,15 @@ use super::expect_value;
 mod summary_json;
 #[path = "check_cli/text_report.rs"]
 mod text_report;
+#[path = "check_cli/usage.rs"]
+mod usage;
 
 pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut inventory_baseline_path = None;
     let mut lane_d_smoke_baseline = None;
     let mut include_lane_d_readiness = false;
     let mut summary_json_path = None;
+    let mut max_issue_samples = summary_json::DEFAULT_MAX_ISSUE_SAMPLES;
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -49,8 +52,12 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
             "--summary-json" => {
                 summary_json_path = Some(PathBuf::from(expect_value(&mut iter, "--summary-json")?));
             }
+            "--max-issue-samples" => {
+                let value = expect_value(&mut iter, "--max-issue-samples")?;
+                max_issue_samples = parse_max_issue_samples(&value)?;
+            }
             "--help" | "-h" => {
-                print_check_usage();
+                usage::print_check_usage();
                 return Ok(ExitCode::SUCCESS);
             }
             other => return Err(format!("unknown check flag `{other}`").into()),
@@ -65,7 +72,7 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
     text_report::print_check_report(&report);
 
     if let Some(path) = summary_json_path {
-        summary_json::write_summary_json(&path, &report)?;
+        summary_json::write_summary_json(&path, &report, max_issue_samples)?;
         println!("summary json: {}", path.display());
     }
 
@@ -270,18 +277,12 @@ fn run_lane_d_smoke_summary() -> Result<LaneDSummary, std::io::Error> {
     })
 }
 
-fn print_check_usage() {
-    println!("rum-difftest check");
-    println!("  --inventory-baseline PATH  Use an explicit inventory baseline");
-    println!("  --include-lane-d-smoke     Also run the local Lane D smoke baseline gate");
-    println!("  --lane-d-smoke-baseline PATH");
-    println!(
-        "                              Use an explicit Lane D smoke baseline and enable that gate"
-    );
-    println!("  --include-lane-d-readiness");
-    println!("                              Also check the Lane D checked-baseline artifact set");
-    println!("  --summary-json PATH        Write a stable machine-readable summary");
-    println!(
-        "  Run the fast non-oracle local gates: inventory baseline and Lane C ledger validation, with optional Lane D gates"
-    );
+fn parse_max_issue_samples(value: &str) -> Result<usize, Box<dyn std::error::Error>> {
+    let max_issue_samples = value
+        .parse::<usize>()
+        .map_err(|_| format!("--max-issue-samples expects a positive integer, got `{value}`"))?;
+    if max_issue_samples == 0 {
+        return Err("--max-issue-samples expects a positive integer, got `0`".into());
+    }
+    Ok(max_issue_samples)
 }
