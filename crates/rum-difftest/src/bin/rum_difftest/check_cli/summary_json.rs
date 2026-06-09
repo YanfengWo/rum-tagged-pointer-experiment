@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use rum_difftest::divergences;
 use rum_difftest::inventory::{FixtureInventoryTotals, display_path};
+use rum_difftest::{divergences, lane_d};
 
 use crate::json_cli::{json_string, write_json_file};
 
@@ -15,6 +15,14 @@ pub(super) fn write_summary_json(
 }
 
 fn summary_json(report: &LocalCheckReport) -> String {
+    let mut checks = vec![
+        inventory_baseline_check_json(report),
+        lane_c_check_json(report),
+    ];
+    if let Some(lane_d_smoke) = &report.lane_d_smoke {
+        checks.push(lane_d_smoke_check_json(lane_d_smoke));
+    }
+
     format!(
         concat!(
             "{{\n",
@@ -23,16 +31,14 @@ fn summary_json(report: &LocalCheckReport) -> String {
             "  \"checks_passed\": {},\n",
             "  \"checks_failed\": {},\n",
             "  \"checks\": [\n",
-            "{},\n",
             "{}\n",
             "  ]\n",
             "}}\n"
         ),
         report.is_clean(),
-        2 - report.failed_checks(),
+        report.passed_checks(),
         report.failed_checks(),
-        inventory_baseline_check_json(report),
-        lane_c_check_json(report),
+        checks.join(",\n"),
     )
 }
 
@@ -133,6 +139,60 @@ fn lane_c_check_json(report: &LocalCheckReport) -> String {
         ledger.metadata_mismatches.len(),
         ledger.retired_seed_fixture_mismatches.len(),
         ledger.tracking_target_issues.len(),
+    )
+}
+
+fn lane_d_smoke_check_json(report: &super::LaneDSmokeCheckReport) -> String {
+    format!(
+        concat!(
+            "    {{\n",
+            "      \"name\": \"lane-d-smoke\",\n",
+            "      \"clean\": {},\n",
+            "      \"baseline\": {{\n",
+            "        \"path\": \"{}\",\n",
+            "        \"clean\": {},\n",
+            "        \"records_considered\": {},\n",
+            "        \"compared\": {},\n",
+            "        \"missing_records\": {},\n",
+            "        \"unused_records\": {},\n",
+            "        \"elapsed_regressions\": {},\n",
+            "        \"value_node_regressions\": {}\n",
+            "      }},\n",
+            "      \"counts\": {{\n",
+            "        \"cases_seen\": {},\n",
+            "        \"cases_skipped_by_profile\": {},\n",
+            "        \"cases_executed\": {},\n",
+            "        \"successes\": {},\n",
+            "        \"failures\": {},\n",
+            "        \"total_elapsed_micros\": {}\n",
+            "      }},\n",
+            "      \"run_options\": {{\n",
+            "        \"suite\": \"{}\",\n",
+            "        \"profile\": \"{}\",\n",
+            "        \"threshold_profile\": \"{}\"\n",
+            "      }}\n",
+            "    }}"
+        ),
+        report.is_clean(),
+        json_string(&display_path(&report.baseline_path)),
+        report.baseline.is_clean(),
+        report.baseline.records_considered,
+        report.baseline.compared,
+        report.baseline.missing_records.len(),
+        report.baseline.unused_records.len(),
+        report.baseline.elapsed_regressions.len(),
+        report.baseline.value_node_regressions.len(),
+        report.summary.total_seen,
+        report.summary.skipped_by_profile,
+        report.summary.executed,
+        report.summary.succeeded,
+        report.summary.failed,
+        report.summary.total_elapsed_micros,
+        json_string(lane_d::suite_name(lane_d::LaneDSuite::All)),
+        json_string(lane_d::profile_name(lane_d::LaneDProfile::Smoke)),
+        json_string(lane_d::threshold_profile_name(
+            lane_d::LaneDThresholdProfile::LocalDebug
+        )),
     )
 }
 

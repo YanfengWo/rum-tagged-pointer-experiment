@@ -32,7 +32,9 @@ captures the current inventory in the same stable baseline format.
 `rum-difftest check` is the fast non-oracle aggregate gate over that checked
 inventory baseline plus Lane C ledger validation. It exits non-zero if either
 gate is dirty and can write `--summary-json PATH` for scripts without starting
-a Wolfram oracle or Lane D timing run.
+a Wolfram oracle. It intentionally skips Lane D timing inputs unless
+`--include-lane-d-smoke` is passed; `--lane-d-smoke-baseline PATH` runs the same
+optional gate against an alternate smoke baseline artifact.
 
 For the Wolfram-backed lanes, keep these policy constraints explicit:
 

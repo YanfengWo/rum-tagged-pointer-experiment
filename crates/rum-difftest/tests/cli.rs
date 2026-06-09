@@ -28,6 +28,7 @@ fn top_level_help_lists_lane_d_readiness_gate() {
     assert!(stdout.contains("rum-difftest lane-d"));
     assert!(stdout.contains("rum-difftest inventory"));
     assert!(stdout.contains("--inventory-baseline"));
+    assert!(stdout.contains("--include-lane-d-smoke"));
     assert!(stdout.contains("--check-baseline-readiness"));
     assert!(stdout.contains("--write-baseline"));
     assert!(stdout.contains("--summary-json"));
@@ -47,6 +48,7 @@ fn check_runs_fast_non_oracle_gates() {
     assert!(stdout.contains("lane-c issues: 0"));
     assert!(stdout.contains("checks passed: 2"));
     assert!(stdout.contains("checks failed: 0"));
+    assert!(!stdout.contains("check\tlane-d-smoke"));
 }
 
 #[test]
@@ -55,6 +57,8 @@ fn check_help_and_unknown_flag_paths_are_stable() {
     assert!(help.status.success());
     assert!(stdout_text(&help).contains("rum-difftest check"));
     assert!(stdout_text(&help).contains("--inventory-baseline"));
+    assert!(stdout_text(&help).contains("--include-lane-d-smoke"));
+    assert!(stdout_text(&help).contains("--lane-d-smoke-baseline"));
     assert!(stdout_text(&help).contains("--summary-json"));
 
     let unknown = run_difftest(&["check", "--unknown"]);
@@ -80,6 +84,74 @@ fn check_writes_machine_readable_summary_json() {
     assert!(summary.contains("\"name\": \"lane-c-ledger\""));
     assert!(summary.contains("\"active_ledger_entries\": 2"));
     assert!(summary.contains("\"tracking_target_issues\": 0"));
+    assert!(!summary.contains("\"name\": \"lane-d-smoke\""));
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
+#[test]
+fn check_can_include_lane_d_smoke_gate() {
+    let output = run_difftest(&["check", "--include-lane-d-smoke"]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("check\tinventory-baseline\tclean"));
+    assert!(stdout.contains("check\tlane-c-ledger\tclean"));
+    assert!(stdout.contains("check\tlane-d-smoke\tclean"));
+    assert!(stdout.contains("lane-d smoke baseline: perf/baselines/smoke.txt"));
+    assert!(stdout.contains("lane-d baseline issues: 0"));
+    assert!(stdout.contains("checks passed: 3"));
+    assert!(stdout.contains("checks failed: 0"));
+}
+
+#[test]
+fn check_writes_lane_d_smoke_summary_when_included() {
+    let temp_dir = unique_temp_dir("check-lane-d-json");
+    let summary_path = temp_dir.join("summary.json");
+    let output = run_difftest(&[
+        "check",
+        "--include-lane-d-smoke",
+        "--summary-json",
+        summary_path.to_str().unwrap(),
+    ]);
+
+    assert!(output.status.success(), "stderr: {}", stderr_text(&output));
+    let summary = fs::read_to_string(&summary_path).unwrap();
+    assert!(summary.contains("\"checks_passed\": 3"));
+    assert!(summary.contains("\"checks_failed\": 0"));
+    assert!(summary.contains("\"name\": \"lane-d-smoke\""));
+    assert!(summary.contains("\"path\": \"perf/baselines/smoke.txt\""));
+    assert!(summary.contains("\"suite\": \"all\""));
+    assert!(summary.contains("\"profile\": \"smoke\""));
+    assert!(summary.contains("\"threshold_profile\": \"local-debug\""));
+    assert!(summary.contains("\"missing_records\": 0"));
+    assert!(summary.contains("\"elapsed_regressions\": 0"));
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
+#[test]
+fn check_lane_d_smoke_baseline_regression_exits_nonzero() {
+    let temp_dir = unique_temp_dir("check-lane-d-baseline");
+    let baseline_path = temp_dir.join("lane-d-baseline.txt");
+    fs::create_dir_all(&temp_dir).unwrap();
+    fs::write(
+        &baseline_path,
+        "profile=smoke | suite=timing | category=trivial | input=1 + 1 | baseline_elapsed_micros=0 | max_elapsed_micros=0 | max_value_nodes=0\n",
+    )
+    .unwrap();
+
+    let output = run_difftest(&[
+        "check",
+        "--lane-d-smoke-baseline",
+        baseline_path.to_str().unwrap(),
+    ]);
+
+    assert!(!output.status.success());
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("check\tlane-d-smoke\tdirty"));
+    assert!(stdout.contains("lane-d baseline missing records:"));
+    assert!(stdout.contains("lane-d baseline issues:"));
+    assert!(stdout.contains("checks passed: 2"));
+    assert!(stdout.contains("checks failed: 1"));
     fs::remove_dir_all(temp_dir).unwrap();
 }
 
