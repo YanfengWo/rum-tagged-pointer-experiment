@@ -231,19 +231,19 @@ mod tests {
         );
         assert_eq!(
             lane_a.totals_by_category()["smoke-arithmetic"].normal_entries,
-            5
+            7
         );
         assert_eq!(
             lane_a.totals_by_category()["smoke-arithmetic"].known_difference_entries,
-            2
+            0
         );
         assert_eq!(
             lane_a.totals_by_category()["smoke-structures"].normal_entries,
-            6
+            7
         );
         assert_eq!(
             lane_a.totals_by_category()["smoke-structures"].known_difference_entries,
-            1
+            0
         );
         assert_eq!(
             lane_a.totals_by_category()["strings-templates"].normal_entries,
@@ -262,7 +262,7 @@ mod tests {
             1
         );
         assert_eq!(lane_a.totals_by_category()["threading"].entries, 10);
-        assert_eq!(lane_a.totals().known_difference_entries, 9);
+        assert_eq!(lane_a.totals().known_difference_entries, 6);
         assert_eq!(lane_b.totals().fixtures, 5);
         assert_eq!(lane_b.totals_by_source()["stateful"].fixtures, 5);
         assert_eq!(

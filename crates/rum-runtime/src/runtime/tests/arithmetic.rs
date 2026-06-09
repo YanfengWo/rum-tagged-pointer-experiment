@@ -14,6 +14,27 @@ fn exact_integer_arithmetic_evaluates_core_heads() {
         session.eval_text("Power[2, 10]").unwrap().value.to_string(),
         "1024"
     );
+    assert_eq!(session.eval_text("Abs[-7]").unwrap().value.to_string(), "7");
+    assert_eq!(
+        session.eval_text("Abs[-3/2]").unwrap().value.to_string(),
+        "3/2"
+    );
+    assert_eq!(
+        session.eval_text("Factorial[0]").unwrap().value.to_string(),
+        "1"
+    );
+    assert_eq!(
+        session.eval_text("Factorial[8]").unwrap().value.to_string(),
+        "40320"
+    );
+    assert_eq!(
+        session
+            .eval_text("Factorial[-1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Factorial[-1]"
+    );
 }
 
 #[test]

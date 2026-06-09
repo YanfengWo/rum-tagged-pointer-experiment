@@ -10,24 +10,24 @@
 
 profile=smoke | suite=timing | category=trivial | input=1 + 1 | baseline_elapsed_micros=800 | max_elapsed_micros=250000 | max_value_nodes=1
 profile=smoke | suite=timing | category=trivial | input=2^10 | baseline_elapsed_micros=131 | max_elapsed_micros=250000 | max_value_nodes=1
-profile=smoke | suite=timing | category=trivial | input=Factorial[10] | baseline_elapsed_micros=227 | max_elapsed_micros=250000 | max_value_nodes=3
-profile=smoke | suite=timing | category=small | input=Range[100] | baseline_elapsed_micros=100 | max_elapsed_micros=1000000 | max_value_nodes=3
+profile=smoke | suite=timing | category=trivial | input=Factorial[10] | baseline_elapsed_micros=227 | max_elapsed_micros=250000 | max_value_nodes=1
+profile=smoke | suite=timing | category=small | input=Range[100] | baseline_elapsed_micros=100 | max_elapsed_micros=1000000 | max_value_nodes=102
 profile=smoke | suite=timing | category=small | input=Table[i^2, {i, 1, 100}] | baseline_elapsed_micros=14591 | max_elapsed_micros=1000000 | max_value_nodes=102
 profile=smoke | suite=timing | category=small | input=Sort[{5, 3, 1, 4, 1, 5, 9, 2, 6}] | baseline_elapsed_micros=372 | max_elapsed_micros=1000000 | max_value_nodes=11
 profile=smoke | suite=timing | category=small | input=Fold[Plus, 0, Range[100]] | baseline_elapsed_micros=205 | max_elapsed_micros=1000000 | max_value_nodes=1
 profile=smoke | suite=timing | category=small | input=Nest[# + 1 &, 0, 100] | baseline_elapsed_micros=12575 | max_elapsed_micros=1000000 | max_value_nodes=1
-profile=smoke | suite=timing | category=medium | input=Factorial[100] | baseline_elapsed_micros=44 | max_elapsed_micros=5000000 | max_value_nodes=3
-profile=smoke | suite=timing | category=medium | input=Range[1000] | baseline_elapsed_micros=39 | max_elapsed_micros=5000000 | max_value_nodes=3
+profile=smoke | suite=timing | category=medium | input=Factorial[100] | baseline_elapsed_micros=44 | max_elapsed_micros=5000000 | max_value_nodes=1
+profile=smoke | suite=timing | category=medium | input=Range[1000] | baseline_elapsed_micros=39 | max_elapsed_micros=5000000 | max_value_nodes=1002
 profile=smoke | suite=timing | category=medium | input=Table[i^2, {i, 1, 1000}] | baseline_elapsed_micros=226507 | max_elapsed_micros=5000000 | max_value_nodes=1002
 profile=smoke | suite=timing | category=medium | input=Sum[i, {i, 1, 1000}] | baseline_elapsed_micros=160 | max_elapsed_micros=5000000 | max_value_nodes=8
 profile=smoke | suite=timing | category=medium | input=Nest[# + 1 &, 0, 1000] | baseline_elapsed_micros=31368 | max_elapsed_micros=5000000 | max_value_nodes=3
-profile=smoke | suite=timing | category=medium | input=FoldList[Plus, 0, Range[100]] | baseline_elapsed_micros=247 | max_elapsed_micros=5000000 | max_value_nodes=4
+profile=smoke | suite=timing | category=medium | input=FoldList[Plus, 0, Range[100]] | baseline_elapsed_micros=247 | max_elapsed_micros=5000000 | max_value_nodes=103
 profile=smoke | suite=timing | category=medium | input=NestList[# * 2 &, 1, 20] | baseline_elapsed_micros=2575 | max_elapsed_micros=5000000 | max_value_nodes=23
 profile=smoke | suite=memory | category=minimal | input=1 + 1 | baseline_elapsed_micros=52 | max_elapsed_micros=250000 | max_value_nodes=1
-profile=smoke | suite=memory | category=minimal | input=Factorial[20] | baseline_elapsed_micros=42 | max_elapsed_micros=250000 | max_value_nodes=3
-profile=smoke | suite=memory | category=small_list | input=Range[100] | baseline_elapsed_micros=37 | max_elapsed_micros=1000000 | max_value_nodes=3
+profile=smoke | suite=memory | category=minimal | input=Factorial[20] | baseline_elapsed_micros=42 | max_elapsed_micros=250000 | max_value_nodes=1
+profile=smoke | suite=memory | category=small_list | input=Range[100] | baseline_elapsed_micros=37 | max_elapsed_micros=1000000 | max_value_nodes=102
 profile=smoke | suite=memory | category=small_list | input=Table[i, {i, 1, 100}] | baseline_elapsed_micros=6565 | max_elapsed_micros=1000000 | max_value_nodes=102
-profile=smoke | suite=memory | category=medium | input=Range[1000] | baseline_elapsed_micros=40 | max_elapsed_micros=5000000 | max_value_nodes=3
+profile=smoke | suite=memory | category=medium | input=Range[1000] | baseline_elapsed_micros=40 | max_elapsed_micros=5000000 | max_value_nodes=1002
 profile=smoke | suite=memory | category=medium | input=Table[i^2, {i, 1, 1000}] | baseline_elapsed_micros=223446 | max_elapsed_micros=5000000 | max_value_nodes=1002
 profile=smoke | suite=memory | category=medium | input=NestList[# + 1 &, 0, 1000] | baseline_elapsed_micros=29315 | max_elapsed_micros=5000000 | max_value_nodes=3
-profile=smoke | suite=memory | category=medium | input=FoldList[Plus, 0, Range[1000]] | baseline_elapsed_micros=179 | max_elapsed_micros=5000000 | max_value_nodes=4
+profile=smoke | suite=memory | category=medium | input=FoldList[Plus, 0, Range[1000]] | baseline_elapsed_micros=179 | max_elapsed_micros=5000000 | max_value_nodes=1003

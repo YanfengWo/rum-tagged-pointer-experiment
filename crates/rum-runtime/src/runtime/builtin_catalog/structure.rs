@@ -75,6 +75,11 @@ pub(super) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::TakeList,
     ),
     BuiltinSpec::ordinary(
+        "Range",
+        "Constructs a plain list of exact integers from the current one-, two-, and three-argument subset.",
+        BuiltinHandler::Range,
+    ),
+    BuiltinSpec::ordinary(
         "Flatten",
         "Flattens nested expressions through the current non-negative level, single-head-spec, and level-list subset.",
         BuiltinHandler::Flatten,

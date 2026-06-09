@@ -42,6 +42,16 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Divide,
     ),
     BuiltinSpec::ordinary(
+        "Abs",
+        "Returns the absolute value of exact integers and rationals.",
+        BuiltinHandler::Abs,
+    ),
+    BuiltinSpec::ordinary(
+        "Factorial",
+        "Computes factorials for non-negative exact integers.",
+        BuiltinHandler::Factorial,
+    ),
+    BuiltinSpec::ordinary(
         "Mod",
         "Returns the modulus of one integer with respect to another.",
         BuiltinHandler::Mod,

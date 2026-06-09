@@ -65,6 +65,44 @@ impl Session {
         self.combine_multiplicative_args(&system_expr("Times"), &[args[0].clone(), reciprocal])
     }
 
+    pub(super) fn eval_abs(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("Abs", args, 1));
+        }
+
+        let Some(value) = expr_as_exact_rational(&args[0]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        Ok(Expr::rational(
+            Rational::new(bigint_abs(value.numerator()), value.denominator().clone())
+                .expect("absolute exact rational keeps a non-zero denominator"),
+        ))
+    }
+
+    pub(super) fn eval_factorial(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("Factorial", args, 1));
+        }
+
+        let Some(value) = expr_as_exact_integer(&args[0]) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        if value < BigInt::from(0_u8) {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
+
+        let one = BigInt::from(1_u8);
+        let mut remaining = value;
+        let mut result = one.clone();
+        while remaining > one {
+            result *= remaining.clone();
+            remaining -= BigInt::from(1_u8);
+        }
+
+        Ok(Expr::integer(result))
+    }
+
     pub(super) fn eval_mod(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
             return Ok(self.invalid_call_with_exact_arg_count("Mod", args, 2));

@@ -154,8 +154,11 @@ once in its primary implementation group. Other groups may mention it as
   across every structural walker, `Flatten` beyond the current same-head /
   single-head-spec non-negative-level / `Infinity` plus level-list subset,
   `Join` beyond the current top-level same-head / association /
-  positive-integer level subset, general boolean/comparison evaluation beyond
-  the current exact-numeric order-chain reductions
+  positive-integer level subset, `Range` beyond the current exact-integer
+  one-, two-, and three-argument subset, `Abs` / `Factorial` beyond the
+  current exact numeric / non-negative exact-integer subset, general
+  boolean/comparison evaluation beyond the current exact-numeric order-chain
+  reductions
 - `planned`: richer expression introspection, broader list-manipulation
   surface, fuller truth-value and predicate surface
 
@@ -169,7 +172,8 @@ once in its primary implementation group. Other groups may mention it as
     `Rest`, `Most`, `Take`, `Drop`, `TakeDrop`, `Insert`, `Delete`,
     `TakeList`, `Flatten`, `Join`, `Reverse`, `Transpose`,
     `DeleteDuplicates`, `DeleteDuplicatesBy`, `Sort`, `SortBy`, `Union`,
-    `Complement`, `Append`, `Prepend`, `FullForm`, `Symbol`, `Construct`,
+    `Complement`, `Append`, `Prepend`, `Range`, `FullForm`, `Symbol`,
+    `Construct`, `Abs`, `Factorial`,
     `Equal`, `Unequal`, `Less`, `Greater`, `LessEqual`,
     `GreaterEqual`, `And`, `Or`, `Nand`, `Nor`, `Xor`, `Equivalent`, `Implies`, `Not`, `NumericQ`, `EvenQ`, `OddQ`,
     `Positive`, `Negative`, `NonPositive`, `NonNegative`, `PossibleZeroQ`,
@@ -184,7 +188,7 @@ once in its primary implementation group. Other groups may mention it as
   - `planned`: `Heads`
 - `cross-tracked elsewhere`: `Apply`, `Array`, `Cases`, `Count`,
   `DeleteCases`, `FreeQ`, `Map`, `MapAll`, `MapAt`, `MemberQ`, `Outer`,
-  `Position`, `Range`, `Select`, `Table`
+  `Position`, `Select`, `Table`
 
 ## CL-02: Definitions, Attributes, Assignments, and Scoping
 

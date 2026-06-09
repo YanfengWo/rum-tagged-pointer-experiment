@@ -5,5 +5,5 @@
 2^10 ||| 1024
 GCD[84, 126] ||| 42
 LCM[9, 12] ||| 36
-Factorial[8] !!! id=curated_factorial_builtin | type=temporary | reason=Factorial is not implemented in the current runtime arithmetic subset.
-Abs[-7] !!! id=curated_abs_builtin | type=temporary | reason=Abs is not implemented in the current runtime arithmetic subset.
+Factorial[8] ||| 40320
+Abs[-7] ||| 7

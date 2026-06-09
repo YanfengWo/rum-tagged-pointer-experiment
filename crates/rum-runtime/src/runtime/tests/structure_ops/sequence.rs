@@ -1,6 +1,44 @@
 use super::*;
 
 #[test]
+fn range_constructs_plain_integer_lists_for_current_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session.eval_text("Range[5]").unwrap().value.to_string(),
+        "List[1, 2, 3, 4, 5]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Range[2, 6, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 4, 6]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Range[5, 1, -2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[5, 3, 1]"
+    );
+    assert_eq!(
+        session.eval_text("Range[5, 1]").unwrap().value.to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Range[1, 5, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Range[1, 5, 0]"
+    );
+}
+
+#[test]
 fn take_drop_insert_delete_and_take_list_cover_current_structural_subset() {
     let mut session = Session::new();
 
