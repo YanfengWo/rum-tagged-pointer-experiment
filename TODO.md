@@ -595,6 +595,9 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B/C/D follow-up: make `rum-difftest check` report skipped optional gates in text/JSON output, so default local preflight coverage is explicit instead of inferred from missing Lane D sections
   - [x] Lane A/B/C/D follow-up: add a top-level `schema_version` to every `--summary-json` output so local scripts and dashboards can detect intentionally incompatible report-shape changes
   - [x] Lane A/B/C/D follow-up: make CLI summary-output tests parse generated `--summary-json` files as JSON, so machine-readable report regressions cannot pass through string-fragment assertions alone
+  - [x] Lane A follow-up: add a curated structure-selector fixture for stable
+    `Part` / `Extract` / `ReplacePart` / `Depth` / `Level` conformance, and
+    guard it with the checked inventory category baseline
   - [ ] Lane B follow-up: add optional long-lived interactive process reuse once oracle-run throughput needs it
   - [x] Lane C: land a checked known-difference ledger plus `rum-difftest lane-c` validation that fixture `!!! id=...` entries and ledger rows stay synchronized
   - [x] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved

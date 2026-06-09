@@ -33,6 +33,8 @@ The current first pass includes:
 - association and keyed-data smoke coverage
 - a definition-precedence suite promoted from resolved imported seed coverage
 - dedicated loop/procedural and control-object suites
+- a structure selector suite for stable `Part` / `Extract` / `ReplacePart` /
+  `Depth` / `Level` coverage
 - a focused functional-combinator suite covering current CL-04 operator and iteration subsets
 - a focused rules/patterns/replacement/traversal suite for Lane A stateless
   conformance

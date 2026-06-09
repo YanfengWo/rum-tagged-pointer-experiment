@@ -1,0 +1,12 @@
+# Curated Lane A file: structure selectors and levels
+# Format: input ||| expected_output
+Part[f[a, b, c], 2] ||| b
+Part[f[a, b, c], -1] ||| c
+Part[f[a, b, c], 0] ||| f
+ToString[Part[f[a, b, c], 1 ;; 2], InputForm] ||| "f[a, b]"
+Extract[f[g[a, b], h[c]], {1, 2}] ||| b
+ToString[Extract[f[g[a, b], h[c]], {{1, 1}, {2, 1}}], InputForm] ||| "{a, c}"
+ToString[ReplacePart[f[g[a], h[b]], {{1, 1} -> x, {2, 1} -> y}], InputForm] ||| "f[g[x], h[y]]"
+Depth[f[a, g[b]]] ||| 3
+ToString[Level[f[a, g[b]], {2}], InputForm] ||| "{b}"
+ToString[Level[f[a, g[b]], {0, 1}], InputForm] ||| "{a, g[b], f[a, g[b]]}"
