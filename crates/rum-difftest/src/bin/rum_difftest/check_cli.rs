@@ -3,13 +3,15 @@ use std::process::ExitCode;
 
 use rum_difftest::divergences::{self, KnownDifferenceLedgerReport};
 use rum_difftest::inventory::{
-    FixtureInventoryReport, FixtureInventoryTotals, InventoryBaselineReport,
-    collect_fixture_inventory, compare_inventory_baseline, default_inventory_baseline_path,
-    display_path, load_inventory_baseline,
+    FixtureInventoryReport, InventoryBaselineReport, collect_fixture_inventory,
+    compare_inventory_baseline, default_inventory_baseline_path, display_path,
+    load_inventory_baseline,
 };
 
 use super::expect_value;
-use super::json_cli::{json_string, write_json_file};
+
+#[path = "check_cli/summary_json.rs"]
+mod summary_json;
 
 pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut inventory_baseline_path = None;
@@ -39,7 +41,7 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
     print_check_report(&report);
 
     if let Some(path) = summary_json_path {
-        write_json_file(&path, summary_json(&report))?;
+        summary_json::write_summary_json(&path, &report)?;
         println!("summary json: {}", path.display());
     }
 
@@ -50,11 +52,11 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
     }
 }
 
-struct LocalCheckReport {
-    inventory_baseline_path: PathBuf,
-    inventory: FixtureInventoryReport,
-    inventory_baseline: InventoryBaselineReport,
-    known_differences: KnownDifferenceLedgerReport,
+pub(super) struct LocalCheckReport {
+    pub(super) inventory_baseline_path: PathBuf,
+    pub(super) inventory: FixtureInventoryReport,
+    pub(super) inventory_baseline: InventoryBaselineReport,
+    pub(super) known_differences: KnownDifferenceLedgerReport,
 }
 
 impl LocalCheckReport {
@@ -161,147 +163,6 @@ fn lane_c_issue_count(report: &KnownDifferenceLedgerReport) -> usize {
         + report.metadata_mismatches.len()
         + report.retired_seed_fixture_mismatches.len()
         + report.tracking_target_issues.len()
-}
-
-fn summary_json(report: &LocalCheckReport) -> String {
-    format!(
-        concat!(
-            "{{\n",
-            "  \"command\": \"check\",\n",
-            "  \"clean\": {},\n",
-            "  \"checks_passed\": {},\n",
-            "  \"checks_failed\": {},\n",
-            "  \"checks\": [\n",
-            "{},\n",
-            "{}\n",
-            "  ]\n",
-            "}}\n"
-        ),
-        report.is_clean(),
-        2 - report.failed_checks(),
-        report.failed_checks(),
-        inventory_baseline_check_json(report),
-        lane_c_check_json(report),
-    )
-}
-
-fn inventory_baseline_check_json(report: &LocalCheckReport) -> String {
-    let totals = report.inventory.totals();
-    format!(
-        concat!(
-            "    {{\n",
-            "      \"name\": \"inventory-baseline\",\n",
-            "      \"clean\": {},\n",
-            "      \"path\": \"{}\",\n",
-            "      \"fixture_totals\": {},\n",
-            "      \"records_considered\": {},\n",
-            "      \"regressions\": {},\n",
-            "      \"regression_details\": [\n",
-            "{}\n",
-            "      ]\n",
-            "    }}"
-        ),
-        report.inventory_baseline.is_clean(),
-        json_string(&display_path(&report.inventory_baseline_path)),
-        totals_json(&totals, 6),
-        report.inventory_baseline.records_considered,
-        report.inventory_baseline.regressions.len(),
-        report
-            .inventory_baseline
-            .regressions
-            .iter()
-            .map(|regression| {
-                format!(
-                    concat!(
-                        "        {{",
-                        "\"lane\": \"{}\", ",
-                        "\"dimension\": \"{}\", ",
-                        "\"name\": \"{}\", ",
-                        "\"issues\": [{}]",
-                        "}}"
-                    ),
-                    json_string(&regression.record.lane),
-                    json_string(regression.record.dimension.field_name()),
-                    json_string(&regression.record.name),
-                    regression
-                        .issues
-                        .iter()
-                        .map(|issue| format!("\"{}\"", json_string(issue)))
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(",\n"),
-    )
-}
-
-fn lane_c_check_json(report: &LocalCheckReport) -> String {
-    let ledger = &report.known_differences;
-    format!(
-        concat!(
-            "    {{\n",
-            "      \"name\": \"lane-c-ledger\",\n",
-            "      \"clean\": {},\n",
-            "      \"known_difference_ledger\": \"{}\",\n",
-            "      \"retired_seed_differences\": \"{}\",\n",
-            "      \"counts\": {{\n",
-            "        \"active_ledger_entries\": {},\n",
-            "        \"retired_seed_entries\": {},\n",
-            "        \"fixture_known_differences\": {}\n",
-            "      }},\n",
-            "      \"issues\": {{\n",
-            "        \"missing_ledger_entries\": {},\n",
-            "        \"unreferenced_ledger_entries\": {},\n",
-            "        \"unreferenced_retired_seed_entries\": {},\n",
-            "        \"fixture_mismatches\": {},\n",
-            "        \"metadata_mismatches\": {},\n",
-            "        \"retired_seed_fixture_mismatches\": {},\n",
-            "        \"tracking_target_issues\": {}\n",
-            "      }}\n",
-            "    }}"
-        ),
-        ledger.is_clean(),
-        json_string(
-            &divergences::known_difference_ledger_path()
-                .display()
-                .to_string()
-        ),
-        json_string(
-            &divergences::retired_seed_difference_path()
-                .display()
-                .to_string()
-        ),
-        ledger.records.len(),
-        ledger.retired_seed_records.len(),
-        ledger.fixture_references.len(),
-        ledger.missing_ledger_entries.len(),
-        ledger.unreferenced_ledger_entries.len(),
-        ledger.unreferenced_retired_seed_entries.len(),
-        ledger.fixture_mismatches.len(),
-        ledger.metadata_mismatches.len(),
-        ledger.retired_seed_fixture_mismatches.len(),
-        ledger.tracking_target_issues.len(),
-    )
-}
-
-fn totals_json(totals: &FixtureInventoryTotals, indent: usize) -> String {
-    let spaces = " ".repeat(indent);
-    format!(
-        concat!(
-            "{{\n",
-            "{0}  \"fixtures\": {1},\n",
-            "{0}  \"entries\": {2},\n",
-            "{0}  \"normal_entries\": {3},\n",
-            "{0}  \"known_difference_entries\": {4}\n",
-            "{0}}}"
-        ),
-        spaces,
-        totals.fixtures,
-        totals.entries,
-        totals.normal_entries,
-        totals.known_difference_entries,
-    )
 }
 
 fn print_check_usage() {
