@@ -72,6 +72,15 @@ fn print_lane_c_check(report: &LocalCheckReport) {
         "active ledger entries: {}",
         report.known_differences.records.len()
     );
+    for (status, entries) in report
+        .known_differences
+        .active_ledger_field_counts("status")
+    {
+        println!("active ledger status {status}: {entries}");
+    }
+    for (kind, entries) in report.known_differences.active_ledger_field_counts("type") {
+        println!("active ledger type {kind}: {entries}");
+    }
     println!(
         "fixture known differences: {}",
         report.known_differences.fixture_references.len()

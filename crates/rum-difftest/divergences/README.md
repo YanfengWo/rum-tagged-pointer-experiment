@@ -30,6 +30,10 @@ Validate the ledger with:
 cargo run -p rum-difftest -- lane-c
 ```
 
+The text output and `--summary-json PATH` report include active ledger counts
+by `status` and `type`, so scripts can distinguish open, deferred, intentional,
+temporary, and similar divergence classes without parsing ledger rows.
+
 The validator checks that every checked fixture `!!! id=...` appears in the
 active ledger or the retired seed manifest, that every ledger entry is still
 referenced by a fixture, that `fixture=...` metadata matches the actual fixture

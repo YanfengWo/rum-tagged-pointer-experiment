@@ -34,6 +34,12 @@ pub fn run_lane_c(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         divergences::retired_seed_difference_path().display()
     );
     println!("active ledger entries: {}", report.records.len());
+    for (status, entries) in report.active_ledger_field_counts("status") {
+        println!("active ledger status {status}: {entries}");
+    }
+    for (kind, entries) in report.active_ledger_field_counts("type") {
+        println!("active ledger type {kind}: {entries}");
+    }
     println!(
         "retired seed entries: {}",
         report.retired_seed_records.len()
@@ -143,6 +149,12 @@ fn summary_json(report: &divergences::KnownDifferenceLedgerReport) -> String {
             "  \"retired_seed_differences\": \"{}\",\n",
             "  \"counts\": {{\n",
             "    \"active_ledger_entries\": {},\n",
+            "    \"active_ledger_status_counts\": [\n",
+            "{}\n",
+            "    ],\n",
+            "    \"active_ledger_type_counts\": [\n",
+            "{}\n",
+            "    ],\n",
             "    \"retired_seed_entries\": {},\n",
             "    \"fixture_known_differences\": {}\n",
             "  }},\n",
@@ -170,6 +182,8 @@ fn summary_json(report: &divergences::KnownDifferenceLedgerReport) -> String {
                 .to_string()
         ),
         report.records.len(),
+        active_ledger_field_counts_json(report, "status", "status", 6),
+        active_ledger_field_counts_json(report, "type", "type", 6),
         report.retired_seed_records.len(),
         report.fixture_references.len(),
         report.missing_ledger_entries.len(),
@@ -180,6 +194,28 @@ fn summary_json(report: &divergences::KnownDifferenceLedgerReport) -> String {
         report.retired_seed_fixture_mismatches.len(),
         report.tracking_target_issues.len(),
     )
+}
+
+pub(super) fn active_ledger_field_counts_json(
+    report: &divergences::KnownDifferenceLedgerReport,
+    field: &str,
+    json_key: &str,
+    indent: usize,
+) -> String {
+    let spaces = " ".repeat(indent);
+    report
+        .active_ledger_field_counts(field)
+        .into_iter()
+        .map(|(value, entries)| {
+            format!(
+                "{spaces}{{\"{}\": \"{}\", \"entries\": {}}}",
+                json_string(json_key),
+                json_string(&value),
+                entries
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",\n")
 }
 
 fn print_lane_c_usage() {

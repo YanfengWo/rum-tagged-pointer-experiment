@@ -53,6 +53,53 @@ fn known_difference_ledger_covers_checked_fixture_ids() {
 }
 
 #[test]
+fn ledger_report_counts_active_records_by_field() {
+    let report = KnownDifferenceLedgerReport {
+        records: vec![
+            KnownDifferenceRecord {
+                id: "case-a".to_string(),
+                fields: BTreeMap::from([
+                    ("status".to_string(), "open".to_string()),
+                    ("type".to_string(), "temporary".to_string()),
+                ]),
+            },
+            KnownDifferenceRecord {
+                id: "case-b".to_string(),
+                fields: BTreeMap::from([
+                    ("status".to_string(), "deferred".to_string()),
+                    ("type".to_string(), "temporary".to_string()),
+                ]),
+            },
+            KnownDifferenceRecord {
+                id: "case-c".to_string(),
+                fields: BTreeMap::from([
+                    ("status".to_string(), "open".to_string()),
+                    ("type".to_string(), "intentional".to_string()),
+                ]),
+            },
+        ],
+        retired_seed_records: Vec::new(),
+        fixture_references: Vec::new(),
+        missing_ledger_entries: Vec::new(),
+        unreferenced_ledger_entries: Vec::new(),
+        unreferenced_retired_seed_entries: Vec::new(),
+        fixture_mismatches: Vec::new(),
+        metadata_mismatches: Vec::new(),
+        retired_seed_fixture_mismatches: Vec::new(),
+        tracking_target_issues: Vec::new(),
+    };
+
+    assert_eq!(
+        report.active_ledger_field_counts("status"),
+        BTreeMap::from([("deferred".to_string(), 1), ("open".to_string(), 2)])
+    );
+    assert_eq!(
+        report.active_ledger_field_counts("type"),
+        BTreeMap::from([("intentional".to_string(), 1), ("temporary".to_string(), 2),])
+    );
+}
+
+#[test]
 fn parses_retired_seed_difference_records() {
     let records = parse_retired_seed_differences(
         r#"

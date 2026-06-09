@@ -59,6 +59,16 @@ impl KnownDifferenceLedgerReport {
             && self.retired_seed_fixture_mismatches.is_empty()
             && self.tracking_target_issues.is_empty()
     }
+
+    pub fn active_ledger_field_counts(&self, field: &str) -> BTreeMap<String, usize> {
+        let mut counts = BTreeMap::new();
+        for record in &self.records {
+            if let Some(value) = record.fields.get(field) {
+                *counts.entry(value.clone()).or_insert(0) += 1;
+            }
+        }
+        counts
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

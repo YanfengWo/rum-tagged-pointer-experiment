@@ -226,6 +226,12 @@ fn lane_c_check_json(report: &LocalCheckReport) -> String {
             "      \"retired_seed_differences\": \"{}\",\n",
             "      \"counts\": {{\n",
             "        \"active_ledger_entries\": {},\n",
+            "        \"active_ledger_status_counts\": [\n",
+            "{}\n",
+            "        ],\n",
+            "        \"active_ledger_type_counts\": [\n",
+            "{}\n",
+            "        ],\n",
             "        \"retired_seed_entries\": {},\n",
             "        \"fixture_known_differences\": {}\n",
             "      }},\n",
@@ -252,6 +258,8 @@ fn lane_c_check_json(report: &LocalCheckReport) -> String {
                 .to_string()
         ),
         ledger.records.len(),
+        active_ledger_field_counts_json(ledger, "status", "status", 10),
+        active_ledger_field_counts_json(ledger, "type", "type", 10),
         ledger.retired_seed_records.len(),
         ledger.fixture_references.len(),
         ledger.missing_ledger_entries.len(),
@@ -262,6 +270,28 @@ fn lane_c_check_json(report: &LocalCheckReport) -> String {
         ledger.retired_seed_fixture_mismatches.len(),
         ledger.tracking_target_issues.len(),
     )
+}
+
+fn active_ledger_field_counts_json(
+    report: &divergences::KnownDifferenceLedgerReport,
+    field: &str,
+    json_key: &str,
+    indent: usize,
+) -> String {
+    let spaces = " ".repeat(indent);
+    report
+        .active_ledger_field_counts(field)
+        .into_iter()
+        .map(|(value, entries)| {
+            format!(
+                "{spaces}{{\"{}\": \"{}\", \"entries\": {}}}",
+                json_string(json_key),
+                json_string(&value),
+                entries
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",\n")
 }
 
 fn totals_json(totals: &FixtureInventoryTotals, indent: usize) -> String {

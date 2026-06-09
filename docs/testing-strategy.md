@@ -192,8 +192,9 @@ Lane C also checks active fixture/ledger `type=...` metadata alignment so an
 intentional or temporary divergence is recorded beside the fixture input and in
 the central ledger. `rum-difftest lane-c --summary-json PATH` writes a stable
 machine-readable summary for scripts or CI dashboards; that summary exposes
-lane status, checked artifact paths, and issue counts rather than the full
-internal ledger row shape.
+lane status, checked artifact paths, issue counts, and active-ledger
+`status`/`type` count breakdowns rather than the full internal ledger row
+shape.
 
 Use Lane A/B `--include-known-diffs` when auditing open divergences against a
 local Wolfram oracle. Both lanes report included known-difference metadata and

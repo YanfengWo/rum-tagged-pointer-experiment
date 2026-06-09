@@ -468,6 +468,26 @@ fn lane_c_writes_machine_readable_summary_json() {
     assert!(json_bool(&summary_json, "/clean"));
     assert_eq!(json_u64(&summary_json, "/counts/active_ledger_entries"), 4);
     assert_eq!(
+        json_str(
+            &json_array(&summary_json, "/counts/active_ledger_status_counts")[0],
+            "/status"
+        ),
+        "deferred"
+    );
+    assert_eq!(
+        json_u64(
+            &json_array(&summary_json, "/counts/active_ledger_status_counts")[0],
+            "/entries"
+        ),
+        4
+    );
+    let type_counts = json_array(&summary_json, "/counts/active_ledger_type_counts");
+    assert_eq!(type_counts.len(), 2);
+    assert_eq!(json_str(&type_counts[0], "/type"), "intentional");
+    assert_eq!(json_u64(&type_counts[0], "/entries"), 1);
+    assert_eq!(json_str(&type_counts[1], "/type"), "temporary");
+    assert_eq!(json_u64(&type_counts[1], "/entries"), 3);
+    assert_eq!(
         json_u64(&summary_json, "/counts/fixture_known_differences"),
         5
     );
