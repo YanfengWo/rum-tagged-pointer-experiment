@@ -37,6 +37,7 @@ fn lane_d_readiness_summary_lists_artifacts_and_capture_commands() {
         entries.iter().any(|entry| {
             json_str(entry, "/status") == "missing"
                 && json_str(entry, "/threshold_profile") == "ci-debug"
+                && json_str(entry, "/cargo_profile") == "debug"
                 && json_str(entry, "/path").contains("smoke-ci-debug.txt")
                 && json_str(entry, "/suggested_capture_command")
                     .contains("--threshold-profile ci-debug")
@@ -47,6 +48,7 @@ fn lane_d_readiness_summary_lists_artifacts_and_capture_commands() {
         entries.iter().any(|entry| {
             json_str(entry, "/status") == "missing"
                 && json_str(entry, "/threshold_profile") == "ci-release"
+                && json_str(entry, "/cargo_profile") == "release"
                 && json_str(entry, "/path").contains("smoke-ci-release.txt")
                 && json_str(entry, "/suggested_capture_command")
                     .starts_with("cargo run --release -p rum-difftest -- lane-d")

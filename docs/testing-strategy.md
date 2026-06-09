@@ -286,7 +286,8 @@ captured on the intended machines. Its text and JSON reports list each expected
 artifact and a suggested capture command, so missing runner-specific baselines
 are actionable in CI logs. The `ci-release` suggestion uses
 `cargo run --release` so the release threshold profile is not captured from a
-debug build. Lane D remains a local `rum` performance lane; it
+debug build, and the same JSON entry exposes `cargo_profile` as `debug` or
+`release` for dashboards. Lane D remains a local `rum` performance lane; it
 should not use a Wolfram oracle.
 
 ## Oracle Policy

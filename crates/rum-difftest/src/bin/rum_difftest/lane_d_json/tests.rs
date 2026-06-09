@@ -68,7 +68,7 @@ fn readiness_entries_json_renders_detail_fields() {
                 records_considered: 7,
                 compared: 6,
             }),
-            entry(LaneDCheckedBaselineReadinessStatus::InvalidArtifact {
+            release_entry(LaneDCheckedBaselineReadinessStatus::InvalidArtifact {
                 message: "bad \"json\"".to_string(),
             }),
         ],
@@ -83,16 +83,31 @@ fn readiness_entries_json_renders_detail_fields() {
     assert!(json.contains("    \"records_considered\": 7"));
     assert!(json.contains("    \"compared\": 6"));
     assert!(json.contains("    \"path\": \"displayed/baseline.txt\""));
+    assert!(json.contains("    \"cargo_profile\": \"debug\""));
     assert!(json.contains("    \"status\": \"invalid\""));
+    assert!(json.contains("    \"cargo_profile\": \"release\""));
     assert!(json.contains("    \"message\": \"bad \\\"json\\\"\""));
 }
 
 fn entry(
     status: LaneDCheckedBaselineReadinessStatus,
 ) -> lane_d::LaneDCheckedBaselineReadinessEntry {
+    entry_with_threshold(lane_d::LaneDThresholdProfile::LocalDebug, status)
+}
+
+fn release_entry(
+    status: LaneDCheckedBaselineReadinessStatus,
+) -> lane_d::LaneDCheckedBaselineReadinessEntry {
+    entry_with_threshold(lane_d::LaneDThresholdProfile::CiRelease, status)
+}
+
+fn entry_with_threshold(
+    threshold_profile: lane_d::LaneDThresholdProfile,
+    status: LaneDCheckedBaselineReadinessStatus,
+) -> lane_d::LaneDCheckedBaselineReadinessEntry {
     lane_d::LaneDCheckedBaselineReadinessEntry {
         profile: lane_d::LaneDProfile::Smoke,
-        threshold_profile: lane_d::LaneDThresholdProfile::LocalDebug,
+        threshold_profile,
         path: PathBuf::from("baseline.txt"),
         status,
     }

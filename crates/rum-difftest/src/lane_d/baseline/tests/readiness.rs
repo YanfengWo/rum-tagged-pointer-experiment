@@ -46,6 +46,18 @@ fn checked_baseline_readiness_reports_clean_and_missing_artifacts() {
         )
     );
     assert_eq!(
+        checked_baseline_cargo_profile(LaneDThresholdProfile::LocalDebug),
+        "debug"
+    );
+    assert_eq!(
+        checked_baseline_cargo_profile(LaneDThresholdProfile::CiDebug),
+        "debug"
+    );
+    assert_eq!(
+        checked_baseline_cargo_profile(LaneDThresholdProfile::CiRelease),
+        "release"
+    );
+    assert_eq!(
         checked_baseline_capture_command(&checked_artifact(
             LaneDThresholdProfile::CiRelease,
             &temp_dir.join("smoke-ci-release.txt")

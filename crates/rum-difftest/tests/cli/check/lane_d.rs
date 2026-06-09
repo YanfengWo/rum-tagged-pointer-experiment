@@ -122,6 +122,7 @@ fn check_can_include_lane_d_readiness_gate() {
         artifact_entries.iter().any(|entry| {
             json_str(entry, "/status") == "missing"
                 && json_str(entry, "/threshold_profile") == "ci-release"
+                && json_str(entry, "/cargo_profile") == "release"
                 && json_str(entry, "/path").contains("smoke-ci-release.txt")
                 && json_str(entry, "/suggested_capture_command")
                     .starts_with("cargo run --release -p rum-difftest -- lane-d")

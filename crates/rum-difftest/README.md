@@ -377,7 +377,9 @@ intended runners. The default expected paths are
 `perf/baselines/smoke.txt`, `perf/baselines/smoke-ci-debug.txt`, and
 `perf/baselines/smoke-ci-release.txt`; readiness suggestions use
 `cargo run --release` for the `ci-release` artifact so it is not accidentally
-captured from a debug build. `--summary-json PATH` writes a stable
+captured from a debug build. Readiness JSON entries also expose a
+`cargo_profile` field (`debug` or `release`) so dashboards do not need to parse
+the suggested command. `--summary-json PATH` writes a stable
 machine-readable summary for scripts or CI dashboards. That JSON exposes the
 selected suite/profile/threshold profile, run counts, clean status, and
 optional baseline/readiness/write-baseline summary counts; it intentionally

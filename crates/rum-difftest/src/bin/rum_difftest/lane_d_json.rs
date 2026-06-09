@@ -177,6 +177,7 @@ fn readiness_entry_json(
             "{}{{\n",
             "{}\"profile\": \"{}\",\n",
             "{}\"threshold_profile\": \"{}\",\n",
+            "{}\"cargo_profile\": \"{}\",\n",
             "{}\"path\": \"{}\",\n",
             "{}\"status\": \"{}\",\n",
             "{}\"suggested_capture_command\": \"{}\"",
@@ -188,6 +189,10 @@ fn readiness_entry_json(
         json_string(lane_d::profile_name(entry.profile)),
         field_indent,
         json_string(lane_d::threshold_profile_name(entry.threshold_profile)),
+        field_indent,
+        json_string(lane_d::checked_baseline_cargo_profile(
+            entry.threshold_profile
+        )),
         field_indent,
         json_string(&path_display(&entry.path)),
         field_indent,

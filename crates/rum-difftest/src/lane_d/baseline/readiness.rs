@@ -60,11 +60,10 @@ pub fn check_checked_baseline_readiness_for(
 }
 
 pub fn checked_baseline_capture_command(artifact: &LaneDCheckedBaselineArtifact) -> String {
-    let cargo_run = match artifact.threshold_profile {
-        LaneDThresholdProfile::LocalDebug | LaneDThresholdProfile::CiDebug => {
-            "cargo run -p rum-difftest"
-        }
-        LaneDThresholdProfile::CiRelease => "cargo run --release -p rum-difftest",
+    let cargo_run = match checked_baseline_cargo_profile(artifact.threshold_profile) {
+        "debug" => "cargo run -p rum-difftest",
+        "release" => "cargo run --release -p rum-difftest",
+        other => unreachable!("unknown Lane D cargo profile `{other}`"),
     };
     format!(
         "{} -- lane-d --suite all --profile {} --threshold-profile {} --capture-runs 5 --write-baseline {} --fail-on-error",
@@ -73,6 +72,13 @@ pub fn checked_baseline_capture_command(artifact: &LaneDCheckedBaselineArtifact)
         threshold_profile_name(artifact.threshold_profile),
         artifact.path.display()
     )
+}
+
+pub fn checked_baseline_cargo_profile(threshold_profile: LaneDThresholdProfile) -> &'static str {
+    match threshold_profile {
+        LaneDThresholdProfile::LocalDebug | LaneDThresholdProfile::CiDebug => "debug",
+        LaneDThresholdProfile::CiRelease => "release",
+    }
 }
 
 fn check_checked_baseline_artifact(
