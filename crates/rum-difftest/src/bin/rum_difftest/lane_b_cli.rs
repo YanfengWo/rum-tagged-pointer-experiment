@@ -2,7 +2,6 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use rum_difftest::config::{load_optional_config, resolve_oracle_kernel, resolve_oracle_timeout};
-use rum_difftest::lane_a::CaseValue;
 use rum_difftest::lane_b::{self, LaneBOptions, LaneBStepStatus};
 use rum_difftest::oracle::OracleKernel;
 
@@ -13,6 +12,9 @@ use super::oracle_lane_summary_json::{
 };
 
 const MAX_ISSUE_SAMPLES: usize = 5;
+
+#[path = "lane_b_cli/text_report.rs"]
+mod text_report;
 
 pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut config_path = None;
@@ -70,91 +72,7 @@ pub fn run_lane_b(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let summary = lane_b::run(&mut oracle, &options)?;
 
     print_oracle_header("lane-b", &oracle);
-    println!("steps seen: {}", summary.total_seen);
-    println!("steps compared: {}", summary.compared);
-    println!("matches: {}", summary.matches);
-    println!("mismatches: {}", summary.mismatches);
-    println!("rum failures: {}", summary.rum_failures);
-    println!("oracle failures: {}", summary.oracle_failures);
-    println!(
-        "skipped known differences: {}",
-        summary.skipped_known_differences
-    );
-    println!(
-        "confirmed known differences: {}",
-        summary.confirmed_known_differences
-    );
-    println!(
-        "resolved known differences: {}",
-        summary.resolved_known_differences
-    );
-    println!("seed snapshots checked: {}", summary.seed_snapshots_checked);
-    println!(
-        "seed snapshots matched oracle: {}",
-        summary.seed_snapshots_matched_oracle
-    );
-    println!(
-        "seed snapshots drifted from oracle: {}",
-        summary.seed_snapshots_drifted_from_oracle
-    );
-
-    for step in summary
-        .steps
-        .iter()
-        .filter(|step| step.status != LaneBStepStatus::Match)
-        .take(5)
-    {
-        println!("---");
-        println!("fixture: {}", step.fixture.display());
-        println!("step: {}", step.step_index);
-        println!("input: {}", step.input);
-        println!("status: {:?}", step.status);
-        if let Some(known_difference) = &step.known_difference {
-            println!(
-                "known difference: id={} type={}",
-                known_difference.id, known_difference.kind
-            );
-            println!("known reason: {}", known_difference.reason);
-        }
-        if let Some(expected_seed) = &step.expected_seed {
-            println!("seed expected: {expected_seed}");
-        }
-        print_case_value("rum", &step.rum);
-        print_case_value("oracle", &step.oracle);
-    }
-    for step in summary
-        .steps
-        .iter()
-        .filter(|step| step.status == LaneBStepStatus::Match && step.known_difference.is_some())
-        .take(5)
-    {
-        if let Some(known_difference) = &step.known_difference {
-            println!("---");
-            println!(
-                "resolved known difference: id={} type={}",
-                known_difference.id, known_difference.kind
-            );
-            println!("fixture: {}", step.fixture.display());
-            println!("step: {}", step.step_index);
-            println!("input: {}", step.input);
-        }
-    }
-    for step in summary
-        .steps
-        .iter()
-        .filter(|step| step.seed_matches_oracle == Some(false))
-        .take(5)
-    {
-        println!("---");
-        println!("seed snapshot drift");
-        println!("fixture: {}", step.fixture.display());
-        println!("step: {}", step.step_index);
-        println!("input: {}", step.input);
-        if let Some(expected_seed) = &step.expected_seed {
-            println!("seed expected: {expected_seed}");
-        }
-        print_case_value("oracle", &step.oracle);
-    }
+    text_report::print_lane_b_report(&summary);
 
     if let Some(path) = &summary_json_path {
         write_summary_json(
@@ -252,23 +170,4 @@ fn print_lane_b_usage() {
     println!("                              Kill an oracle invocation after N seconds");
     println!("  --summary-json PATH        Write a stable machine-readable summary");
     println!("  --fail-on-mismatch        Exit non-zero if any step mismatches or fails");
-}
-
-fn print_case_value(label: &str, value: &CaseValue) {
-    match value {
-        CaseValue::Value {
-            value,
-            messages,
-            printed_output,
-        } => {
-            println!("{label} value: {value}");
-            if !messages.is_empty() {
-                println!("{label} messages: {}", messages.join(" | "));
-            }
-            if let Some(printed_output) = printed_output {
-                println!("{label} printed: {printed_output}");
-            }
-        }
-        CaseValue::Failure { message } => println!("{label} failure: {message}"),
-    }
 }
