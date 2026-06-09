@@ -203,6 +203,10 @@ mod tests {
             22
         );
         assert_eq!(lane_a.totals_by_category()["context-namespace"].entries, 8);
+        assert_eq!(
+            lane_a.totals_by_category()["definitions-precedence"].entries,
+            8
+        );
         assert_eq!(lane_a.totals_by_category()["exact-arithmetic"].entries, 9);
         assert_eq!(
             lane_a.totals_by_category()["messages-attributes"].entries,

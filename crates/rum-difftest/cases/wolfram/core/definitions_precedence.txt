@@ -4,4 +4,7 @@ f[1] = 10; f[x_] := x + 1; f[1] ||| 10
 d[x_Integer] := integer[x]; d[x_] := generic[x]; d[1] := one; {d[1], d[3], d[a]} ||| {one, integer[3], generic[a]}
 r[x_] := first[x]; r[y_] := second[y]; r[a] ||| second[a]
 t[x_Integer] := integer[x]; t[x_] := any[x]; {t[7], t[a]} ||| {integer[7], any[a]}
+rev[x_] := any[x]; rev[x_Integer] := integer[x]; {rev[7], rev[a]} ||| {integer[7], any[a]}
+typed[x_] := any[x]; typed[x_String] := string[x]; typed[x_Integer] := integer[x]; {typed["s"], typed[2], typed[q]} ||| {string["s"], integer[2], any[q]}
+literal[x_] := any[x]; literal[x_String] := string[x]; literal["a"] := exact; {literal["a"], literal["b"], literal[c]} ||| {exact, string["b"], any[c]}
 g[x_] := base[x]; u /: g[u[x_Integer]] := up[x]; {g[u[3]], g[q[3]]} ||| {up[3], base[q[3]]}

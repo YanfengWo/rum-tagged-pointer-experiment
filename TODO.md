@@ -700,9 +700,9 @@ This roadmap intentionally uses two levels of detail:
     alphabetic ordering helpers, and guard it with the checked inventory
     category baseline
   - [x] Lane A follow-up: broaden the curated definition-precedence fixture
-    with stable downvalue replacement, literal-vs-typed dispatch, and upvalue
-    precedence cases, and guard the higher coverage floor in the inventory
-    baseline
+    with stable downvalue replacement, literal-vs-typed dispatch, reversed
+    generic-vs-typed downvalue insertion, and upvalue precedence cases, and
+    guard the higher coverage floor in the inventory baseline
   - [x] Lane A follow-up: add a curated options-surface fixture for stable
     `Options` / `SetOptions` / `OptionValue` / `OptionsPattern` conformance,
     and guard it with the checked inventory category baseline
@@ -860,6 +860,9 @@ rather than a verbatim import of every review comment.
 ### P2
 
 - [ ] Realign runtime test file names and contents so review-critical tests live in the modules their names imply instead of drifting into misleading buckets
+- [ ] Fix definition specificity ordering for `SubValues` and `UpValues` so later
+  typed rules can outrank earlier generic rules, matching the Wolfram behavior
+  exposed by the curated Lane A definition-precedence oracle sweep
 - [ ] Revisit matcher compilation/storage strategy after semantics stabilize, including whether definition insertion should cache more matcher state instead of recompiling on hot paths
 - [ ] Profile evaluator hot paths such as fixed-point iteration, heads lookup, and expression ordering before deciding whether additional low-level performance work is justified
 - [ ] Revisit ergonomics of large request/error payloads only after measurement shows that the current shapes are a real cost rather than a static-analysis curiosity
