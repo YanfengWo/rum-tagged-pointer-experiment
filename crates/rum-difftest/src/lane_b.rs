@@ -10,9 +10,12 @@ use crate::lane_a::CaseValue;
 use crate::oracle::Oracle;
 use crate::value_render::render_input_form_like;
 
+#[path = "lane_b/oracle_batches.rs"]
+mod oracle_batches;
 #[path = "lane_b/values.rs"]
 mod values;
-use values::{case_from_oracle_output, case_values_match, render_oracle_error};
+use oracle_batches::run_oracle_session_batches;
+use values::case_values_match;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LaneBOptions {
@@ -77,11 +80,15 @@ struct PreparedLaneBStep {
     known_difference: Option<LaneBKnownDifference>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct PreparedLaneBFixture {
+    steps: Vec<PreparedLaneBStep>,
+}
+
 pub fn run<O: Oracle>(
     oracle: &mut O,
     options: &LaneBOptions,
 ) -> Result<LaneBSummary, std::io::Error> {
-    let fixtures = collect_fixture_paths(options.fixture.as_deref())?;
     let mut summary = LaneBSummary {
         total_seen: 0,
         compared: 0,
@@ -99,13 +106,35 @@ pub fn run<O: Oracle>(
         oracle_session_steps: 0,
         steps: Vec::new(),
     };
+    let prepared_fixtures = prepare_fixture_batches(options, &mut summary)?;
+
+    record_oracle_session_batches(&mut summary, &prepared_fixtures);
+    let oracle_batches = run_oracle_session_batches(oracle, &prepared_fixtures);
+    for (prepared_fixture, oracle_results) in prepared_fixtures.into_iter().zip(oracle_batches) {
+        let mut session = Session::new();
+        install_core(&mut session);
+        for (prepared, oracle_result) in prepared_fixture.steps.into_iter().zip(oracle_results) {
+            let step = run_step(&mut session, prepared, oracle_result);
+            record_step_result(&mut summary, &step);
+            summary.steps.push(step);
+        }
+    }
+
+    Ok(summary)
+}
+
+fn prepare_fixture_batches(
+    options: &LaneBOptions,
+    summary: &mut LaneBSummary,
+) -> Result<Vec<PreparedLaneBFixture>, std::io::Error> {
+    let fixtures = collect_fixture_paths(options.fixture.as_deref())?;
+    let mut prepared_fixtures = Vec::new();
+    let mut prepared_count = 0usize;
 
     'outer: for fixture in fixtures {
         let text = load_text(&fixture)?;
         let entries = parse_golden_file(&text).map_err(std::io::Error::other)?;
         let mut prepared_steps = Vec::new();
-        let mut session = Session::new();
-        install_core(&mut session);
         let mut step_index = 0usize;
 
         for entry in entries {
@@ -134,29 +163,24 @@ pub fn run<O: Oracle>(
                 expected_seed,
                 known_difference,
             });
+            prepared_count += 1;
 
-            if options
-                .limit
-                .is_some_and(|limit| summary.compared + prepared_steps.len() >= limit)
-            {
+            if options.limit.is_some_and(|limit| prepared_count >= limit) {
                 break;
             }
         }
 
-        record_oracle_session_batch(&mut summary, &prepared_steps);
-        let oracle_results = run_oracle_session(oracle, &prepared_steps);
-        for (prepared, oracle_result) in prepared_steps.into_iter().zip(oracle_results) {
-            let step = run_step(&mut session, prepared, oracle_result);
-            record_step_result(&mut summary, &step);
-            summary.steps.push(step);
-
-            if options.limit.is_some_and(|limit| summary.compared >= limit) {
-                break 'outer;
-            }
+        if !prepared_steps.is_empty() {
+            prepared_fixtures.push(PreparedLaneBFixture {
+                steps: prepared_steps,
+            });
+        }
+        if options.limit.is_some_and(|limit| prepared_count >= limit) {
+            break 'outer;
         }
     }
 
-    Ok(summary)
+    Ok(prepared_fixtures)
 }
 
 impl LaneBKnownDifference {
@@ -200,12 +224,14 @@ fn record_step_result(summary: &mut LaneBSummary, step: &LaneBStepReport) {
     }
 }
 
-fn record_oracle_session_batch(summary: &mut LaneBSummary, steps: &[PreparedLaneBStep]) {
-    if steps.is_empty() {
-        return;
+fn record_oracle_session_batches(summary: &mut LaneBSummary, fixtures: &[PreparedLaneBFixture]) {
+    for fixture in fixtures {
+        if fixture.steps.is_empty() {
+            continue;
+        }
+        summary.oracle_session_batches += 1;
+        summary.oracle_session_steps += fixture.steps.len();
     }
-    summary.oracle_session_batches += 1;
-    summary.oracle_session_steps += steps.len();
 }
 
 fn run_step(
@@ -264,34 +290,6 @@ fn run_rum_step(session: &mut Session, input: &str) -> CaseValue {
         Err(failure) => CaseValue::Failure {
             message: render_request_failure(&failure),
         },
-    }
-}
-
-fn run_oracle_session<O: Oracle>(oracle: &mut O, steps: &[PreparedLaneBStep]) -> Vec<CaseValue> {
-    let inputs = steps
-        .iter()
-        .map(|step| step.input.clone())
-        .collect::<Vec<_>>();
-    match oracle.evaluate_session(&inputs) {
-        Ok(outputs) if outputs.len() == steps.len() => {
-            outputs.into_iter().map(case_from_oracle_output).collect()
-        }
-        Ok(outputs) => vec![
-            CaseValue::Failure {
-                message: format!(
-                    "oracle returned {} session results for {} steps",
-                    outputs.len(),
-                    steps.len()
-                ),
-            };
-            steps.len()
-        ],
-        Err(err) => vec![
-            CaseValue::Failure {
-                message: render_oracle_error(&err),
-            };
-            steps.len()
-        ],
     }
 }
 

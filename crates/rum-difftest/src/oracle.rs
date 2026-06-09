@@ -37,6 +37,17 @@ pub trait Oracle {
         }
         Ok(outputs)
     }
+
+    fn evaluate_session_batches(
+        &mut self,
+        batches: &[Vec<String>],
+    ) -> Result<Vec<Vec<OracleEvaluation>>, OracleError> {
+        let mut outputs = Vec::with_capacity(batches.len());
+        for batch in batches {
+            outputs.push(self.evaluate_session(batch)?);
+        }
+        Ok(outputs)
+    }
 }
 
 #[derive(Debug, Error)]

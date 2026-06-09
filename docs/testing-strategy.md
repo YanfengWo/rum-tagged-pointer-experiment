@@ -181,7 +181,10 @@ freezing full per-case or per-step report rows. `--max-issue-samples N`
 adjusts the default 5-entry cap, and the summary records the sample limit,
 emitted count, total issue count, and truncation status. Lane B also reports
 oracle session batch and step counts so process-reuse work can be evaluated
-against real fixture batching rather than guessed from fixture counts.
+against real fixture batching rather than guessed from fixture counts. The
+Lane B runner submits prepared fixture groups through an oracle batch interface;
+the default transport still evaluates each fixture batch independently until a
+safe multi-batch Wolfram transport with explicit fixture isolation is added.
 
 Lane D currently executes imported timing and memory seed suites through local
 `rum` sessions and reports raw metrics. Its default `smoke` profile skips
