@@ -4,6 +4,7 @@ use std::process::ExitCode;
 use rum_difftest::config::{load_optional_config, resolve_oracle_kernel, resolve_oracle_timeout};
 use rum_difftest::oracle::OracleKernel;
 
+use super::json_cli::{parse_positive_u64_flag, parse_positive_usize_flag};
 use super::oracle_lane_summary_json::{
     DEFAULT_MAX_ISSUE_SAMPLES, OracleLaneIssueSampleKindFilter, parse_issue_sample_kind,
     parse_issue_sample_source, parse_max_issue_samples,
@@ -115,14 +116,15 @@ pub(super) fn parse_oracle_lane_cli_args(
             "--category" => options.category = Some(expect_value(&mut iter, "--category")?),
             "--limit" => {
                 let value = expect_value(&mut iter, "--limit")?;
-                options.limit = Some(value.parse::<usize>()?);
+                options.limit = Some(parse_positive_usize_flag("--limit", &value)?);
             }
             "--include-known-diffs" | "--include-known-differences" => {
                 options.include_known_differences = true;
             }
             "--oracle-timeout-seconds" => {
                 let value = expect_value(&mut iter, "--oracle-timeout-seconds")?;
-                options.oracle_timeout_seconds = Some(value.parse::<u64>()?);
+                options.oracle_timeout_seconds =
+                    Some(parse_positive_u64_flag("--oracle-timeout-seconds", &value)?);
             }
             "--summary-json" => {
                 options.summary_json_path =

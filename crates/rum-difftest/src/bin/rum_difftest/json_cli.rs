@@ -13,14 +13,31 @@ pub fn write_json_file(path: &Path, contents: String) -> Result<(), Box<dyn std:
     Ok(())
 }
 
-pub fn parse_max_issue_samples(value: &str) -> Result<usize, Box<dyn std::error::Error>> {
-    let max_issue_samples = value
+pub fn parse_positive_usize_flag(
+    flag: &str,
+    value: &str,
+) -> Result<usize, Box<dyn std::error::Error>> {
+    let parsed = value
         .parse::<usize>()
-        .map_err(|_| format!("--max-issue-samples expects a positive integer, got `{value}`"))?;
-    if max_issue_samples == 0 {
-        return Err("--max-issue-samples expects a positive integer, got `0`".into());
+        .map_err(|_| format!("{flag} expects a positive integer, got `{value}`"))?;
+    if parsed == 0 {
+        return Err(format!("{flag} expects a positive integer, got `0`").into());
     }
-    Ok(max_issue_samples)
+    Ok(parsed)
+}
+
+pub fn parse_positive_u64_flag(flag: &str, value: &str) -> Result<u64, Box<dyn std::error::Error>> {
+    let parsed = value
+        .parse::<u64>()
+        .map_err(|_| format!("{flag} expects a positive integer, got `{value}`"))?;
+    if parsed == 0 {
+        return Err(format!("{flag} expects a positive integer, got `0`").into());
+    }
+    Ok(parsed)
+}
+
+pub fn parse_max_issue_samples(value: &str) -> Result<usize, Box<dyn std::error::Error>> {
+    parse_positive_usize_flag("--max-issue-samples", value)
 }
 
 pub fn json_string(value: &str) -> String {
@@ -79,6 +96,36 @@ mod tests {
         assert_eq!(
             parse_max_issue_samples("many").unwrap_err().to_string(),
             "--max-issue-samples expects a positive integer, got `many`"
+        );
+    }
+
+    #[test]
+    fn positive_integer_flag_helpers_report_flag_specific_errors() {
+        assert_eq!(parse_positive_usize_flag("--limit", "3").unwrap(), 3);
+        assert_eq!(
+            parse_positive_usize_flag("--limit", "0")
+                .unwrap_err()
+                .to_string(),
+            "--limit expects a positive integer, got `0`"
+        );
+        assert_eq!(
+            parse_positive_usize_flag("--limit", "many")
+                .unwrap_err()
+                .to_string(),
+            "--limit expects a positive integer, got `many`"
+        );
+        assert_eq!(parse_positive_u64_flag("--timeout", "9").unwrap(), 9);
+        assert_eq!(
+            parse_positive_u64_flag("--timeout", "0")
+                .unwrap_err()
+                .to_string(),
+            "--timeout expects a positive integer, got `0`"
+        );
+        assert_eq!(
+            parse_positive_u64_flag("--timeout", "many")
+                .unwrap_err()
+                .to_string(),
+            "--timeout expects a positive integer, got `many`"
         );
     }
 

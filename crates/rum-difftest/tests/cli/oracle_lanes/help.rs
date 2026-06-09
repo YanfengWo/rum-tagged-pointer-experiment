@@ -44,7 +44,25 @@ fn oracle_lane_rejects_invalid_numeric_controls() {
     ]);
 
     assert!(!timeout.status.success());
-    assert!(stderr_text(&timeout).contains("expects a positive integer"));
+    assert!(
+        stderr_text(&timeout)
+            .contains("--oracle-timeout-seconds expects a positive integer, got `0`")
+    );
+
+    let invalid_timeout = run_difftest(&["lane-a", "--oracle-timeout-seconds", "soon"]);
+    assert!(!invalid_timeout.status.success());
+    assert!(
+        stderr_text(&invalid_timeout)
+            .contains("--oracle-timeout-seconds expects a positive integer, got `soon`")
+    );
+
+    let zero_limit = run_difftest(&["lane-a", "--limit", "0"]);
+    assert!(!zero_limit.status.success());
+    assert!(stderr_text(&zero_limit).contains("--limit expects a positive integer, got `0`"));
+
+    let invalid_limit = run_difftest(&["lane-b", "--limit", "many"]);
+    assert!(!invalid_limit.status.success());
+    assert!(stderr_text(&invalid_limit).contains("--limit expects a positive integer, got `many`"));
 
     let samples = run_difftest(&["lane-b", "--max-issue-samples", "0"]);
     assert!(!samples.status.success());
