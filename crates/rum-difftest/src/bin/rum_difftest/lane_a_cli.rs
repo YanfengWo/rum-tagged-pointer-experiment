@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::process::ExitCode;
 
 use rum_difftest::config::{load_optional_config, resolve_oracle_kernel, resolve_oracle_timeout};
@@ -6,99 +5,38 @@ use rum_difftest::lane_a::{self, LaneACaseStatus, LaneAOptions};
 use rum_difftest::oracle::OracleKernel;
 
 use super::oracle_cli::print_oracle_header;
+use super::oracle_lane_cli::{OracleLaneCliArgs, parse_oracle_lane_cli_args};
 use super::oracle_lane_summary_json::{
-    DEFAULT_MAX_ISSUE_SAMPLES, OracleLaneIssueSample, OracleLaneIssueSampleKindFilter,
-    OracleLaneIssueSamples, OracleLaneSessionBatchTransport, OracleLaneSummaryCounts,
-    OracleLaneSummaryJsonContext, parse_issue_sample_kind, parse_issue_sample_source,
-    parse_max_issue_samples, write_summary_json,
+    OracleLaneIssueSample, OracleLaneIssueSampleKindFilter, OracleLaneIssueSamples,
+    OracleLaneSessionBatchTransport, OracleLaneSummaryCounts, OracleLaneSummaryJsonContext,
+    write_summary_json,
 };
 
 #[path = "lane_a_cli/text_report.rs"]
 mod text_report;
 
 pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
-    let mut config_path = None;
-    let mut oracle_kernel = None;
-    let mut fixture = None;
-    let mut limit = None;
-    let mut include_known_differences = false;
-    let mut fail_on_mismatch = false;
-    let mut fail_on_project_mismatch = false;
-    let mut fail_on_seed_drift = false;
-    let mut fail_on_project_seed_drift = false;
-    let mut fail_on_resolved_known_difference = false;
-    let mut oracle_timeout_seconds = None;
-    let mut summary_json_path = None;
-    let mut max_issue_samples = DEFAULT_MAX_ISSUE_SAMPLES;
-    let mut issue_sample_kind = OracleLaneIssueSampleKindFilter::All;
-    let mut issue_sample_source = None;
-    let mut source = None;
-    let mut category = None;
-
-    let mut iter = args.into_iter();
-    while let Some(arg) = iter.next() {
-        match arg.as_str() {
-            "--config" => config_path = Some(PathBuf::from(expect_value(&mut iter, "--config")?)),
-            "--oracle-kernel" | "--oracle-command" => {
-                oracle_kernel = Some(PathBuf::from(expect_value(&mut iter, &arg)?))
-            }
-            "--fixture" => fixture = Some(PathBuf::from(expect_value(&mut iter, "--fixture")?)),
-            "--source" => source = Some(expect_value(&mut iter, "--source")?),
-            "--category" => category = Some(expect_value(&mut iter, "--category")?),
-            "--limit" => {
-                let value = expect_value(&mut iter, "--limit")?;
-                limit = Some(value.parse::<usize>()?);
-            }
-            "--include-known-diffs" | "--include-known-differences" => {
-                include_known_differences = true
-            }
-            "--oracle-timeout-seconds" => {
-                let value = expect_value(&mut iter, "--oracle-timeout-seconds")?;
-                oracle_timeout_seconds = Some(value.parse::<u64>()?);
-            }
-            "--summary-json" => {
-                summary_json_path = Some(PathBuf::from(expect_value(&mut iter, "--summary-json")?));
-            }
-            "--max-issue-samples" => {
-                let value = expect_value(&mut iter, "--max-issue-samples")?;
-                max_issue_samples = parse_max_issue_samples(&value)?;
-            }
-            "--issue-sample-kind" => {
-                let value = expect_value(&mut iter, "--issue-sample-kind")?;
-                issue_sample_kind = parse_issue_sample_kind(&value)?;
-            }
-            "--issue-sample-source" => {
-                let value = expect_value(&mut iter, "--issue-sample-source")?;
-                issue_sample_source = parse_issue_sample_source(&value)?;
-            }
-            "--fail-on-mismatch" => fail_on_mismatch = true,
-            "--fail-on-project-mismatch" => fail_on_project_mismatch = true,
-            "--fail-on-seed-drift" => fail_on_seed_drift = true,
-            "--fail-on-project-seed-drift" => fail_on_project_seed_drift = true,
-            "--fail-on-resolved-known-difference" => {
-                fail_on_resolved_known_difference = true;
-            }
-            "--help" | "-h" => {
-                print_lane_a_usage();
-                return Ok(ExitCode::SUCCESS);
-            }
-            other => return Err(format!("unknown lane-a flag `{other}`").into()),
+    let cli = match parse_oracle_lane_cli_args(args, "lane-a")? {
+        OracleLaneCliArgs::Help => {
+            print_lane_a_usage();
+            return Ok(ExitCode::SUCCESS);
         }
-    }
+        OracleLaneCliArgs::Run(options) => *options,
+    };
 
-    let config = load_optional_config(config_path.as_deref())?;
-    let oracle_kernel = resolve_oracle_kernel(oracle_kernel, &config).ok_or(
+    let config = load_optional_config(cli.config_path.as_deref())?;
+    let oracle_kernel = resolve_oracle_kernel(cli.oracle_kernel, &config).ok_or(
         "no oracle kernel configured; pass --oracle-kernel/--oracle-command PATH or set oracle_kernel/oracle_command in a config file",
     )?;
-    let oracle_timeout = resolve_oracle_timeout(oracle_timeout_seconds, &config)?;
+    let oracle_timeout = resolve_oracle_timeout(cli.oracle_timeout_seconds, &config)?;
 
     let mut oracle = OracleKernel::with_timeout(&oracle_kernel, oracle_timeout)?;
     let options = LaneAOptions {
-        fixture,
-        limit,
-        source,
-        category,
-        include_known_differences,
+        fixture: cli.fixture,
+        limit: cli.limit,
+        source: cli.source,
+        category: cli.category,
+        include_known_differences: cli.include_known_differences,
     };
     let summary = lane_a::run(&mut oracle, &options)?;
 
@@ -121,7 +59,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         oracle_batch_inputs,
     );
 
-    if let Some(path) = &summary_json_path {
+    if let Some(path) = &cli.summary_json_path {
         write_summary_json(
             path,
             &OracleLaneSummaryJsonContext {
@@ -132,13 +70,13 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 category: options.category.as_deref(),
                 limit: options.limit,
                 include_known_differences: options.include_known_differences,
-                fail_on_mismatch,
-                fail_on_project_mismatch,
-                fail_on_seed_drift,
-                fail_on_project_seed_drift,
-                fail_on_resolved_known_difference,
-                issue_sample_kind,
-                issue_sample_source,
+                fail_on_mismatch: cli.fail_on_mismatch,
+                fail_on_project_mismatch: cli.fail_on_project_mismatch,
+                fail_on_seed_drift: cli.fail_on_seed_drift,
+                fail_on_project_seed_drift: cli.fail_on_project_seed_drift,
+                fail_on_resolved_known_difference: cli.fail_on_resolved_known_difference,
+                issue_sample_kind: cli.issue_sample_kind,
+                issue_sample_source: cli.issue_sample_source,
                 session_batch_transport: Some(session_batch_transport),
                 counts: OracleLaneSummaryCounts {
                     total_seen: summary.total_seen,
@@ -163,9 +101,9 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 },
                 issue_samples: lane_a_issue_samples(
                     &summary,
-                    max_issue_samples,
-                    issue_sample_kind,
-                    issue_sample_source,
+                    cli.max_issue_samples,
+                    cli.issue_sample_kind,
+                    cli.issue_sample_source,
                 ),
             },
         )?;
@@ -174,19 +112,19 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
 
     let has_issues =
         summary.mismatches > 0 || summary.rum_failures > 0 || summary.oracle_failures > 0;
-    if fail_on_mismatch && has_issues {
+    if cli.fail_on_mismatch && has_issues {
         return Ok(ExitCode::FAILURE);
     }
-    if fail_on_project_mismatch && project_non_matches > 0 {
+    if cli.fail_on_project_mismatch && project_non_matches > 0 {
         return Ok(ExitCode::FAILURE);
     }
-    if fail_on_seed_drift && summary.seed_snapshots_drifted_from_oracle > 0 {
+    if cli.fail_on_seed_drift && summary.seed_snapshots_drifted_from_oracle > 0 {
         return Ok(ExitCode::FAILURE);
     }
-    if fail_on_project_seed_drift && project_seed_snapshot_drifts > 0 {
+    if cli.fail_on_project_seed_drift && project_seed_snapshot_drifts > 0 {
         return Ok(ExitCode::FAILURE);
     }
-    if fail_on_resolved_known_difference && summary.resolved_known_differences > 0 {
+    if cli.fail_on_resolved_known_difference && summary.resolved_known_differences > 0 {
         return Ok(ExitCode::FAILURE);
     }
 
@@ -263,14 +201,6 @@ fn lane_a_sample(
             .map(|known_difference| known_difference.kind.clone()),
         seed_drift: case.seed_matches_oracle == Some(false),
     }
-}
-
-fn expect_value(
-    iter: &mut impl Iterator<Item = String>,
-    flag: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
-    iter.next()
-        .ok_or_else(|| format!("{flag} expects a value").into())
 }
 
 fn print_lane_a_usage() {
