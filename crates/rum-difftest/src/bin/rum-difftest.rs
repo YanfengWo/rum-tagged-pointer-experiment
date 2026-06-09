@@ -70,7 +70,7 @@ fn print_usage() {
         "rum-difftest lane-d [--suite all|timing|memory] [--profile smoke|full] [--limit N] [--baseline PATH] [--write-baseline PATH] [--check-baseline-readiness] [--summary-json PATH]"
     );
     println!(
-        "rum-difftest inventory [--baseline PATH] [--check-baseline] [--fail-on-regression] [--write-baseline PATH] [--summary-json PATH]"
+        "rum-difftest inventory [--lane NAME] [--source NAME] [--category NAME] [--baseline PATH] [--check-baseline] [--fail-on-regression] [--write-baseline PATH] [--summary-json PATH]"
     );
     println!("rum-difftest --help");
 }

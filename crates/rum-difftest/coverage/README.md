@@ -34,3 +34,15 @@ cargo run -p rum-difftest -- inventory --write-baseline /tmp/rum-inventory-basel
 Review the semantic category deltas before updating the checked baseline. Do
 not lower category minima just to make a local deletion pass; either replace
 the lost coverage or document why that semantic target is no longer active.
+
+For focused audits while adding or pruning one fixture family, use the
+inventory filters instead of visually scanning the full report:
+
+```bash
+cargo run -p rum-difftest -- inventory --lane lane-a --source curated-core --category threading
+```
+
+These filters also apply to `--summary-json`, `--baseline`, and
+`--write-baseline`. Keep the checked repository baseline generated from the
+unfiltered inventory unless an intentionally scoped baseline artifact is being
+created for a local review.

@@ -19,6 +19,7 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
     let mut check_baseline = false;
     let mut fail_on_regression = false;
     let mut write_baseline_path = None;
+    let mut filter = InventoryFilter::default();
 
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
@@ -33,6 +34,9 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
                 write_baseline_path =
                     Some(PathBuf::from(expect_value(&mut iter, "--write-baseline")?));
             }
+            "--lane" => filter.lane = Some(expect_value(&mut iter, "--lane")?),
+            "--source" => filter.source = Some(expect_value(&mut iter, "--source")?),
+            "--category" => filter.category = Some(expect_value(&mut iter, "--category")?),
             "--check-baseline" => check_baseline = true,
             "--fail-on-regression" => fail_on_regression = true,
             "--help" | "-h" => {
@@ -43,8 +47,9 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
         }
     }
 
-    let report = collect_fixture_inventory()?;
-    print_inventory(&report);
+    let mut report = collect_fixture_inventory()?;
+    apply_inventory_filter(&mut report, &filter)?;
+    print_inventory(&report, &filter);
     let effective_baseline_path =
         baseline_path.or_else(|| check_baseline.then(default_inventory_baseline_path));
     let baseline_report = if let Some(path) = &effective_baseline_path {
@@ -59,6 +64,7 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
         summary_json::write_summary_json(
             &path,
             &report,
+            &filter,
             effective_baseline_path.as_deref(),
             baseline_report.as_ref(),
         )?;
@@ -81,9 +87,79 @@ pub fn run_inventory(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::
     Ok(ExitCode::SUCCESS)
 }
 
-fn print_inventory(report: &FixtureInventoryReport) {
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(super) struct InventoryFilter {
+    pub(super) lane: Option<String>,
+    pub(super) source: Option<String>,
+    pub(super) category: Option<String>,
+}
+
+impl InventoryFilter {
+    pub(super) fn is_active(&self) -> bool {
+        self.lane.is_some() || self.source.is_some() || self.category.is_some()
+    }
+
+    fn description(&self) -> String {
+        [
+            self.lane.as_deref().map(|value| format!("lane={value}")),
+            self.source
+                .as_deref()
+                .map(|value| format!("source={value}")),
+            self.category
+                .as_deref()
+                .map(|value| format!("category={value}")),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(" ")
+    }
+}
+
+fn apply_inventory_filter(
+    report: &mut FixtureInventoryReport,
+    filter: &InventoryFilter,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if !filter.is_active() {
+        return Ok(());
+    }
+
+    report.lanes.retain(|lane| {
+        filter
+            .lane
+            .as_deref()
+            .is_none_or(|value| value == lane.lane)
+    });
+    for lane in &mut report.lanes {
+        lane.fixtures.retain(|fixture| {
+            filter
+                .source
+                .as_deref()
+                .is_none_or(|value| value == fixture.source)
+                && filter
+                    .category
+                    .as_deref()
+                    .is_none_or(|value| value == fixture.category)
+        });
+    }
+    report.lanes.retain(|lane| !lane.fixtures.is_empty());
+
+    if report.totals().fixtures == 0 {
+        return Err(format!(
+            "inventory filters matched no fixtures: {}",
+            filter.description()
+        )
+        .into());
+    }
+    Ok(())
+}
+
+fn print_inventory(report: &FixtureInventoryReport, filter: &InventoryFilter) {
     let totals = report.totals();
     println!("fixture inventory");
+    if filter.is_active() {
+        println!("inventory filters: {}", filter.description());
+    }
     print_totals("total", &totals);
     for lane in &report.lanes {
         println!("---");
@@ -175,4 +251,7 @@ fn print_inventory_usage() {
     println!("  --fail-on-regression      Exit non-zero if baseline comparison is not clean");
     println!("  --write-baseline PATH     Capture the current inventory as a baseline");
     println!("  --summary-json PATH       Write a stable machine-readable fixture inventory");
+    println!("  --lane NAME               Restrict inventory to one lane");
+    println!("  --source NAME             Restrict inventory to one fixture source");
+    println!("  --category NAME           Restrict inventory to one semantic category");
 }

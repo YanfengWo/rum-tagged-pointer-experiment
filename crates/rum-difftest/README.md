@@ -86,12 +86,17 @@ cargo run -p rum-difftest -- inventory
 cargo run -p rum-difftest -- inventory --check-baseline --fail-on-regression
 cargo run -p rum-difftest -- inventory --write-baseline /tmp/rum-difftest-inventory-baseline.txt
 cargo run -p rum-difftest -- inventory --summary-json /tmp/rum-difftest-inventory.json
+cargo run -p rum-difftest -- inventory --lane lane-a --source curated-core --category threading
 ```
 
 The command summarizes Lane A and Lane B fixture files, source groups, semantic
 categories, normal entries, and known-difference entries. It does not execute
 `rum` or a Wolfram oracle. The JSON output is intended for scripts or
-dashboards that need stable coverage counts without parsing runner logs.
+dashboards that need stable coverage counts without parsing runner logs. Use
+`--lane NAME`, `--source NAME`, and `--category NAME` for a focused coverage
+audit; the filters apply consistently to text output, summary JSON, baseline
+comparison, and `--write-baseline`, and a filter set that matches no fixtures
+fails fast.
 `--check-baseline` compares the current inventory against
 [coverage/inventory-baseline.txt](./coverage/inventory-baseline.txt).
 The coverage policy is documented in

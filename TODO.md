@@ -592,6 +592,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] Lane A/B follow-up: add `inventory --write-baseline PATH` so intentional fixture additions or reshuffles can refresh the stable non-oracle coverage baseline without hand-editing threshold rows
   - [x] Lane A/B follow-up: extend `rum-difftest inventory` with stable semantic category counts in text and JSON output so high-risk fixture coverage is easier to audit without parsing file paths
   - [x] Lane A/B follow-up: extend the checked inventory baseline to source-or-category records so semantic category coverage regressions fail `inventory --check-baseline --fail-on-regression`
+  - [x] Lane A/B follow-up: add focused `inventory --lane` / `--source` /
+    `--category` filters that apply consistently to text output, summary JSON,
+    baseline comparison, and baseline capture, with fail-fast empty-filter
+    handling for typoed coverage audits
   - [x] Lane A/B/C follow-up: add `rum-difftest check` as a fast non-oracle
     aggregate gate over the checked inventory baseline, Lane C ledger
     validation, and oracle-artifact hygiene, with optional stable summary JSON

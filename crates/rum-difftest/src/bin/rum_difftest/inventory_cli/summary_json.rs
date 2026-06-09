@@ -7,17 +7,24 @@ use rum_difftest::inventory::{
 
 use crate::json_cli::{SUMMARY_SCHEMA_VERSION, json_string, write_json_file};
 
+use super::InventoryFilter;
+
 pub(super) fn write_summary_json(
     path: &Path,
     report: &FixtureInventoryReport,
+    filter: &InventoryFilter,
     baseline_path: Option<&Path>,
     baseline_report: Option<&InventoryBaselineReport>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    write_json_file(path, summary_json(report, baseline_path, baseline_report))
+    write_json_file(
+        path,
+        summary_json(report, filter, baseline_path, baseline_report),
+    )
 }
 
 fn summary_json(
     report: &FixtureInventoryReport,
+    filter: &InventoryFilter,
     baseline_path: Option<&Path>,
     baseline_report: Option<&InventoryBaselineReport>,
 ) -> String {
@@ -27,6 +34,7 @@ fn summary_json(
             "{{\n",
             "  \"lane\": \"inventory\",\n",
             "  \"schema_version\": {},\n",
+            "  \"filters\": {},\n",
             "  \"totals\": {},\n",
             "  \"baseline\": {},\n",
             "  \"lanes\": [\n",
@@ -35,6 +43,7 @@ fn summary_json(
             "}}\n"
         ),
         SUMMARY_SCHEMA_VERSION,
+        filters_json(filter),
         totals_json(&totals, 2),
         baseline_json(baseline_path, baseline_report),
         report
@@ -44,6 +53,27 @@ fn summary_json(
             .collect::<Vec<_>>()
             .join(",\n"),
     )
+}
+
+fn filters_json(filter: &InventoryFilter) -> String {
+    format!(
+        concat!(
+            "{{\n",
+            "    \"lane\": {},\n",
+            "    \"source\": {},\n",
+            "    \"category\": {}\n",
+            "  }}"
+        ),
+        json_string_option(filter.lane.as_deref()),
+        json_string_option(filter.source.as_deref()),
+        json_string_option(filter.category.as_deref()),
+    )
+}
+
+fn json_string_option(value: Option<&str>) -> String {
+    value
+        .map(|value| format!("\"{}\"", json_string(value)))
+        .unwrap_or_else(|| "null".to_string())
 }
 
 fn baseline_json(path: Option<&Path>, report: Option<&InventoryBaselineReport>) -> String {
