@@ -12,6 +12,8 @@ Current fixture focus:
   precedence, context basics, and definition lifecycle
 - `package_defaults.txt`: file-backed package loading and package-scoped
   defaults
+- `options_state.txt`: ordered `SetOptions` default mutation plus
+  `OptionsPattern[target]` option-value scope behavior
 - `scoping_control.txt`: ordered `Block` / `Module` / `With` behavior and
   control-flow restoration across steps
 - `zz_fixture_isolation.txt`: cleanup between fixture batches in the

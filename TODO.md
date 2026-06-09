@@ -769,6 +769,10 @@ This roadmap intentionally uses two levels of detail:
     `AddTo` / `+=` behavior against a real Wolfram session oracle
   - [x] close the current Lane B known differences from `definitions_messages.txt`: exact Wolfram `$MessageList` `HoldForm[...]` shape, literal downvalue priority after an existing typed downvalue, and indexed default lookup fallback
   - [x] broaden Lane B package-loading/default-value coverage with an explicit file-backed package fixture covering qualified package values/functions, package-scoped defaults, indexed default fallback, and repeated `Needs` no-reload behavior
+  - [x] broaden Lane B stateful option coverage with an explicit fixture for
+    ordered `SetOptions` default mutation, local option overrides, and
+    `OptionsPattern[target]` option-value scopes against a real Wolfram
+    session oracle
   - [x] string semantics now have an initial curated Lane A foothold that covers multiple CL-07 subfamilies
 
 ### Long-Tail Workstream: Full String Language Parity

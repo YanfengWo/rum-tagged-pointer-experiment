@@ -14,9 +14,10 @@ The current category records cover these priorities:
   rules/traversal, structure selectors, threading, context/namespace behavior,
   associations, functional combinators, control objects, messages/attributes,
   option handling, failure/status objects, and string-language subsets.
-- Lane B stateful semantics: definitions/messages, package/default-value
-  behavior, and fixture-boundary isolation for the multi-batch oracle
-  transport.
+- Lane B stateful semantics: definitions/messages, mutation/update state,
+  option-default mutation and option-value scopes, package/default-value
+  behavior, scoped control-flow restoration, and fixture-boundary isolation
+  for the multi-batch oracle transport.
 
 Use the baseline as a regression gate, not as a claim of exhaustive parity:
 
