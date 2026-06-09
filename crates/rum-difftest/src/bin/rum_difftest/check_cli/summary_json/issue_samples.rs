@@ -124,6 +124,25 @@ pub(super) fn issue_kind_counts_json(report: &LocalCheckReport) -> String {
         .join(",\n")
 }
 
+pub(super) fn issue_check_counts_json(report: &LocalCheckReport) -> String {
+    let mut counts = BTreeMap::<&'static str, usize>::new();
+    for sample in collect_issue_samples(report) {
+        *counts.entry(sample.check).or_default() += 1;
+    }
+
+    counts
+        .into_iter()
+        .map(|(check, count)| {
+            format!(
+                "    {{\"check\": \"{}\", \"count\": {}}}",
+                json_string(check),
+                count,
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",\n")
+}
+
 fn filter_includes(filter: &CheckIssueSampleFilter, sample: &CheckIssueSample) -> bool {
     filter
         .check

@@ -59,6 +59,7 @@ fn summary_json(
     let skipped_checks = report.skipped_checks();
     let issue_samples =
         issue_samples::issue_samples_json(report, max_issue_samples, issue_sample_filter);
+    let issue_check_counts = issue_samples::issue_check_counts_json(report);
     let issue_kind_counts = issue_samples::issue_kind_counts_json(report);
 
     format!(
@@ -83,6 +84,9 @@ fn summary_json(
             "  \"issue_samples_unfiltered_total\": {},\n",
             "  \"issue_samples_total\": {},\n",
             "  \"issue_samples_truncated\": {},\n",
+            "  \"issue_check_counts\": [\n",
+            "{}\n",
+            "  ],\n",
             "  \"issue_kind_counts\": [\n",
             "{}\n",
             "  ],\n",
@@ -105,6 +109,7 @@ fn summary_json(
         issue_samples.unfiltered_total,
         issue_samples.total,
         issue_samples.truncated(),
+        issue_check_counts,
         issue_kind_counts,
         issue_samples.samples,
     )

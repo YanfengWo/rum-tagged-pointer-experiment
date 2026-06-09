@@ -56,14 +56,15 @@ to test an alternate fixture-coverage baseline. Use `--include-lane-d-smoke`
 to opt into the local Lane D smoke baseline gate, or
 `--lane-d-smoke-baseline PATH` to run that gate against an alternate smoke
 baseline. The optional summary JSON includes bounded `issue_samples` for
-representative failing locators plus an untruncated `issue_kind_counts` array
-for scripts that need stable aggregate failure categories even when samples are
-capped. Use `--issue-sample-check NAME` and `--issue-sample-kind KIND` to focus
-the bounded locator list during aggregate-gate debugging; the summary still
-reports the unfiltered issue total and untruncated kind counts. `KIND` is a
-checked aggregate issue kind such as `regression`, `missing_ledger_entry`,
-`oracle_artifact`, `missing_record`, or `missing_artifact`; invalid kind names
-fail fast instead of silently producing an empty locator list.
+representative failing locators plus untruncated `issue_check_counts` and
+`issue_kind_counts` arrays for scripts that need stable aggregate failure
+counts even when samples are capped. Use `--issue-sample-check NAME` and
+`--issue-sample-kind KIND` to focus the bounded locator list during
+aggregate-gate debugging; the summary still reports the unfiltered issue total
+and untruncated check/kind counts. `KIND` is a checked aggregate issue kind
+such as `regression`, `missing_ledger_entry`, `oracle_artifact`,
+`missing_record`, or `missing_artifact`; invalid kind names fail fast instead
+of silently producing an empty locator list.
 
 ## Machine-Readable Summaries
 

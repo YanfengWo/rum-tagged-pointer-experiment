@@ -108,6 +108,7 @@ fn check_writes_machine_readable_summary_json() {
     );
     assert_eq!(json_u64(&summary_json, "/issue_samples_total"), 0);
     assert!(!json_bool(&summary_json, "/issue_samples_truncated"));
+    assert!(json_array(&summary_json, "/issue_check_counts").is_empty());
     assert!(json_array(&summary_json, "/issue_kind_counts").is_empty());
     assert!(json_array(&summary_json, "/issue_samples").is_empty());
     assert_eq!(json_array(&summary_json, "/skipped_checks").len(), 2);
@@ -238,6 +239,13 @@ fn check_can_include_lane_d_readiness_gate() {
     assert_eq!(json_u64(readiness, "/artifacts/not_clean"), 0);
     assert_eq!(
         json_u64(
+            issue_check_count_entry(&summary_json, "lane-d-readiness"),
+            "/count"
+        ),
+        2
+    );
+    assert_eq!(
+        json_u64(
             issue_kind_count_entry(&summary_json, "lane-d-readiness", "missing_artifact"),
             "/count"
         ),
@@ -319,6 +327,13 @@ fn check_exits_nonzero_for_inventory_baseline_regression() {
     assert!(json_bool(&summary_json, "/issue_samples_truncated"));
     assert_eq!(
         json_u64(
+            issue_check_count_entry(&summary_json, "inventory-baseline"),
+            "/count"
+        ),
+        4
+    );
+    assert_eq!(
+        json_u64(
             issue_kind_count_entry(&summary_json, "inventory-baseline", "regression"),
             "/count"
         ),
@@ -384,6 +399,20 @@ fn check_filters_summary_json_issue_samples_by_check_and_kind() {
     assert!(json_bool(&summary_json, "/issue_samples_truncated"));
     assert_eq!(
         json_u64(
+            issue_check_count_entry(&summary_json, "inventory-baseline"),
+            "/count"
+        ),
+        4
+    );
+    assert_eq!(
+        json_u64(
+            issue_check_count_entry(&summary_json, "lane-d-readiness"),
+            "/count"
+        ),
+        2
+    );
+    assert_eq!(
+        json_u64(
             issue_kind_count_entry(&summary_json, "inventory-baseline", "regression"),
             "/count"
         ),
@@ -415,6 +444,16 @@ fn skipped_check_entry<'a>(summary: &'a serde_json::Value, name: &str) -> &'a se
         .iter()
         .find(|check| json_str(check, "/name") == name)
         .unwrap_or_else(|| panic!("missing skipped check summary `{name}`: {summary}"))
+}
+
+fn issue_check_count_entry<'a>(
+    summary: &'a serde_json::Value,
+    check_name: &str,
+) -> &'a serde_json::Value {
+    json_array(summary, "/issue_check_counts")
+        .iter()
+        .find(|entry| json_str(entry, "/check") == check_name)
+        .unwrap_or_else(|| panic!("missing issue check count `{check_name}`: {summary}"))
 }
 
 fn issue_kind_count_entry<'a>(
