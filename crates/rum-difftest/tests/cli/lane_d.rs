@@ -92,6 +92,42 @@ fn lane_d_readiness_rejects_limited_runs() {
 }
 
 #[test]
+fn lane_d_rejects_invalid_baseline_gate_options_before_running() {
+    let temp_dir = unique_temp_dir("lane-d-invalid-baseline-gates");
+    let baseline_path = temp_dir.join("baseline.txt");
+    fs::create_dir_all(&temp_dir).unwrap();
+
+    let missing_write_baseline = run_difftest(&["lane-d", "--capture-runs", "2"]);
+    assert!(!missing_write_baseline.status.success());
+    assert!(
+        stderr_text(&missing_write_baseline)
+            .contains("--capture-runs requires --write-baseline PATH")
+    );
+    assert!(stdout_text(&missing_write_baseline).is_empty());
+
+    let zero_capture_runs = run_difftest(&[
+        "lane-d",
+        "--capture-runs",
+        "0",
+        "--write-baseline",
+        baseline_path.to_str().unwrap(),
+    ]);
+    assert!(!zero_capture_runs.status.success());
+    assert!(stderr_text(&zero_capture_runs).contains("--capture-runs must be at least 1"));
+    assert!(stdout_text(&zero_capture_runs).is_empty());
+    assert!(!baseline_path.exists());
+
+    let missing_baseline = run_difftest(&["lane-d", "--fail-on-regression"]);
+    assert!(!missing_baseline.status.success());
+    assert!(
+        stderr_text(&missing_baseline).contains("--fail-on-regression requires --baseline PATH")
+    );
+    assert!(stdout_text(&missing_baseline).is_empty());
+
+    fs::remove_dir_all(temp_dir).unwrap();
+}
+
+#[test]
 fn lane_d_readiness_summary_lists_artifacts_and_capture_commands() {
     let temp_dir = unique_temp_dir("lane-d-readiness-json");
     let summary_path = temp_dir.join("summary.json");

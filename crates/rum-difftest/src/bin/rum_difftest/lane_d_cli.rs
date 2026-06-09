@@ -95,6 +95,9 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             "--check-baseline-readiness expects --suite all --profile smoke without --limit".into(),
         );
     }
+    if fail_on_regression && baseline_path.is_none() {
+        return Err("--fail-on-regression requires --baseline PATH".into());
+    }
     let capture_defaults = LaneDBaselineCaptureOptions::for_threshold_profile(threshold_profile);
     let baseline_elapsed_multiplier =
         baseline_elapsed_multiplier.unwrap_or(capture_defaults.elapsed_multiplier);
@@ -194,9 +197,9 @@ pub fn run_lane_d(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         return Ok(ExitCode::FAILURE);
     }
     if fail_on_regression {
-        let Some(report) = baseline_report else {
-            return Err("--fail-on-regression requires --baseline PATH".into());
-        };
+        let report = baseline_report
+            .as_ref()
+            .expect("baseline report is present after fail-on-regression validation");
         if !report.is_clean() {
             return Ok(ExitCode::FAILURE);
         }
