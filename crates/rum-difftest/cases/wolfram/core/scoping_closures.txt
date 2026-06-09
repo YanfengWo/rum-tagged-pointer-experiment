@@ -1,0 +1,10 @@
+# Curated Lane A file: scoping and closures
+# Format: input ||| expected_output
+With[{x = 1}, Hold[x]] ||| Hold[1]
+With[{x = 1}, 7 /. x_Integer :> x] ||| 7
+Module[{x = 1}, x + 2] ||| 3
+UnsameQ[Module[{x}, Hold[x]], Module[{x}, Hold[x]]] ||| True
+f = Module[{x = 0}, Function[x = x + 1]]; {f[], f[], f[]} ||| {1, 2, 3}
+Clear[inc]; Module[{x = 0}, inc[] := (x = x + 1)]; {inc[], inc[]} ||| {1, 2}
+x = 10; f[] := x; {Block[{x = 2}, f[]], f[]} ||| {2, 10}
+x = 1; {Catch[Block[{x = 2}, Throw[x, tag]], tag], x} ||| {2, 1}

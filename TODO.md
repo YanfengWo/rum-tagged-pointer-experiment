@@ -713,6 +713,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] Extend the shared difftest InputForm-like renderer with common `Plus` / `Times` / `Power` infix output, then add a first curated Lane A polynomial/rational-expression fixture for stable `Expand` / `Together` cases; leave broader polynomial term-ordering parity for later
   - [x] rules, patterns, replacement, and traversal behavior now have an initial curated Lane A foothold
   - [x] scoping and held-evaluation constructs now have an initial curated Lane A foothold through loops/control/function cases
+  - [x] Lane A now has a focused scoping/closure fixture covering stable `With`
+    lexical substitution, `Module` fresh-symbol and closure-state behavior,
+    `Block` dynamic scope lookup, and `Throw` restoration against a real
+    Wolfram oracle
   - [x] messages, attributes, and definition precedence now have an extended Lane B stateful foothold, including exact emitted-message checks, message-list length, `SetAttributes` / `ClearAttributes`, held argument evaluation, typed/generic/literal downvalue precedence, and UpValue dispatch
   - [x] Lane B now has broader stateful smoke coverage for prints, default values, repeated delayed evaluation, context `Begin` / `End`, definition lifecycle `Clear`, and `Protect` / `Unprotect`
   - [x] Lane B now has a curated stateful scoping/control fixture covering ordered `Block` / `Module` / `With` behavior and `Throw`-mediated restoration against a real Wolfram session oracle
