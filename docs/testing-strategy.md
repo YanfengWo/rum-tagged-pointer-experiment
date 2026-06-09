@@ -201,20 +201,24 @@ object remains unfiltered so automation can still see the full non-match,
 seed-drift, and resolved-known-difference breakdown. Use
 `--fail-on-seed-drift` only for deliberate fixture-snapshot audits; normal
 oracle conformance should continue to compare `rum` against fresh oracle output
-rather than against checked seed annotations. Lane A/B summary JSON records the
-active `fail_on_mismatch` and `fail_on_seed_drift` gate options so automation
-can distinguish comparison cleanliness from the requested exit policy. It also
-reports `oracle_processes`, `oracle_batches`, and `oracle_batch_inputs` so
-process-reuse work can be evaluated against real batching rather than guessed
-from fixture counts. Lane B also keeps its session-specific batch and step
-counts for compatibility. Text reports mirror those generic oracle
-batch/input counts for quick local inspection. Text and JSON reports expose
-the concrete session-batch transport name and process count, distinguishing
-the local single-process `OracleKernel` transport from generic per-batch
-fallback behavior. Lane A submits compared cases through the same batch
-interface as isolated single-expression batches, and its JSON report exposes
-the same concrete transport metadata so the local `OracleKernel` path can
-amortize process startup without sharing case state.
+rather than against checked seed annotations. Use
+`--fail-on-resolved-known-difference` with `--include-known-diffs` when an
+oracle audit should fail if active known-difference rows now match and are ready
+for ledger cleanup. Lane A/B summary JSON records the active
+`fail_on_mismatch`, `fail_on_seed_drift`, and
+`fail_on_resolved_known_difference` gate options so automation can distinguish
+comparison cleanliness from the requested exit policy. It also reports
+`oracle_processes`, `oracle_batches`, and `oracle_batch_inputs` so process-reuse
+work can be evaluated against real batching rather than guessed from fixture
+counts. Lane B also keeps its session-specific batch and step counts for
+compatibility. Text reports mirror those generic oracle batch/input counts for
+quick local inspection. Text and JSON reports expose the concrete session-batch
+transport name and process count, distinguishing the local single-process
+`OracleKernel` transport from generic per-batch fallback behavior. Lane A
+submits compared cases through the same batch interface as isolated
+single-expression batches, and its JSON report exposes the same concrete
+transport metadata so the local `OracleKernel` path can amortize process
+startup without sharing case state.
 The Lane B runner submits prepared fixture groups through an oracle batch
 interface; the generic fallback still evaluates each fixture batch
 independently, while the local `OracleKernel` transport executes all Lane B

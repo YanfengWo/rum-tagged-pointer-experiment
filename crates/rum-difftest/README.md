@@ -116,6 +116,7 @@ cargo run -p rum-difftest -- lane-a --oracle-command WolframKernel --oracle-time
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --include-known-diffs
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-a-summary.json
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --fail-on-seed-drift
+cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --include-known-diffs --fail-on-resolved-known-difference
 cargo run -p rum-difftest -- lane-a --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-a-seed-drift.json --issue-sample-kind seed-drift --max-issue-samples 50
 ```
 
@@ -175,15 +176,19 @@ known-difference counts, and seed-drift counts, including
 `counts.oracle_batch_inputs` so scripts can see that the current Lane A
 `OracleKernel` transport runs compared cases through a single case-isolated
 batch process. The JSON options section records failure gate flags such as
-`fail_on_mismatch` and `fail_on_seed_drift`, so scripts can interpret non-zero
-exits without inferring which gate was active. The JSON oracle section also
-reports the concrete batch transport name and process count. It also includes
+`fail_on_mismatch`, `fail_on_seed_drift`, and
+`fail_on_resolved_known_difference`, so scripts can interpret non-zero exits
+without inferring which gate was active. The JSON oracle section also reports
+the concrete batch transport name and process count. It also includes
 an unfiltered `issue_counts` breakdown plus a bounded `issue_samples` locator
 list for the first non-matching, seed-drifted, or resolved known-difference
 cases. It does not freeze the full per-case report shape. Use
 `--issue-sample-kind non-match`, `seed-drift`, or
 `resolved-known-difference` to focus the bounded locator list during targeted
 audits while still retaining the full issue-count breakdown.
+Use `--fail-on-resolved-known-difference` with `--include-known-diffs` when
+an oracle audit should fail if an active known-difference row now matches and
+is ready for ledger cleanup.
 
 ## Lane B Runner
 
@@ -197,6 +202,7 @@ cargo run -p rum-difftest -- lane-b --oracle-command WolframKernel --oracle-time
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --include-known-diffs
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-b-summary.json
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --fail-on-seed-drift
+cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --include-known-diffs --fail-on-resolved-known-difference
 cargo run -p rum-difftest -- lane-b --oracle-kernel /path/to/WolframKernel --summary-json /tmp/rum-lane-b-seed-drift.json --issue-sample-kind seed-drift --max-issue-samples 50
 ```
 
@@ -221,8 +227,10 @@ oracle configuration, run options, comparison counts, known-difference counts,
 seed-drift counts, failure gate options, oracle process/batch/input counts,
 unfiltered issue-count breakdowns, and bounded `issue_samples` locators,
 without freezing the full per-step report rows. The same `--issue-sample-kind`
-filters available in Lane A apply here. Lane B also reports oracle batch/input
-counts and the concrete session-batch
+filters available in Lane A apply here. The same
+`--fail-on-resolved-known-difference` cleanup gate applies to included
+stateful known differences. Lane B also reports oracle batch/input counts and
+the concrete session-batch
 transport name/process count in text output, so the current single-process
 batch transport is distinguishable from a future interactive reuse transport
 without requiring JSON parsing.

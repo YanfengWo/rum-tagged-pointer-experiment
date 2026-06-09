@@ -614,6 +614,10 @@ This roadmap intentionally uses two levels of detail:
     snapshot audit gate, keeping normal oracle conformance based on fresh
     `rum`-vs-Wolfram comparisons while letting seed refresh passes fail fast
     and recording active failure gates in summary JSON options
+  - [x] Lane A/B follow-up: add `--fail-on-resolved-known-difference` as an
+    opt-in known-difference cleanup gate, so oracle audits can fail when
+    included active ledger rows now match fresh Wolfram behavior and should be
+    retired
   - [x] Lane A/B follow-up: add `--issue-sample-kind` filtering for
     non-match, seed-drift, and resolved-known-difference locators so targeted
     oracle audits are not drowned out by unrelated issue categories, while

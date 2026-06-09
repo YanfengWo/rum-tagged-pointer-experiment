@@ -24,6 +24,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
     let mut include_known_differences = false;
     let mut fail_on_mismatch = false;
     let mut fail_on_seed_drift = false;
+    let mut fail_on_resolved_known_difference = false;
     let mut oracle_timeout_seconds = None;
     let mut summary_json_path = None;
     let mut max_issue_samples = DEFAULT_MAX_ISSUE_SAMPLES;
@@ -61,6 +62,9 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
             }
             "--fail-on-mismatch" => fail_on_mismatch = true,
             "--fail-on-seed-drift" => fail_on_seed_drift = true,
+            "--fail-on-resolved-known-difference" => {
+                fail_on_resolved_known_difference = true;
+            }
             "--help" | "-h" => {
                 print_lane_a_usage();
                 return Ok(ExitCode::SUCCESS);
@@ -109,6 +113,7 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
                 include_known_differences: options.include_known_differences,
                 fail_on_mismatch,
                 fail_on_seed_drift,
+                fail_on_resolved_known_difference,
                 issue_sample_kind,
                 session_batch_transport: Some(session_batch_transport),
                 counts: OracleLaneSummaryCounts {
@@ -142,6 +147,9 @@ pub fn run_lane_a(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Err
         return Ok(ExitCode::FAILURE);
     }
     if fail_on_seed_drift && summary.seed_snapshots_drifted_from_oracle > 0 {
+        return Ok(ExitCode::FAILURE);
+    }
+    if fail_on_resolved_known_difference && summary.resolved_known_differences > 0 {
         return Ok(ExitCode::FAILURE);
     }
 
@@ -215,4 +223,8 @@ fn print_lane_a_usage() {
     );
     println!("  --fail-on-mismatch        Exit non-zero if any case mismatches or fails");
     println!("  --fail-on-seed-drift      Exit non-zero if any seed snapshot drifts");
+    println!("  --fail-on-resolved-known-difference");
+    println!(
+        "                              Exit non-zero if any included known difference now matches"
+    );
 }
