@@ -838,7 +838,9 @@ This roadmap intentionally uses two levels of detail:
   - [x] Resolve current project-owned Lane A known differences for same-name
     curated smoke cases that are useful compatibility targets but outside the
     current implemented subset: the `StringForm` expression/display boundary
-  - [ ] Lane B follow-up: add optional long-lived interactive process reuse once oracle-run throughput needs it
+  - [ ] Lane B deferred throughput follow-up: add optional long-lived
+    interactive process reuse only after measured oracle-run throughput shows
+    that the current single-process multi-batch transport is insufficient
   - [x] Lane C: land a checked known-difference ledger plus `rum-difftest lane-c` validation that fixture `!!! id=...` entries and ledger rows stay synchronized
   - [x] Lane C follow-up: add richer metadata links from ledger entries back to matrix/TODO items and close criteria as divergences are resolved
   - [x] Lane C follow-up: validate ledger `fixture=...` metadata against the actual fixture file containing each known-difference ID
