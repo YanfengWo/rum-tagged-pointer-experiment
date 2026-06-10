@@ -110,6 +110,9 @@ impl Session {
             self.message_definitions
                 .retain(|key, _| key.symbol != *symbol);
         }
+        if !items.is_empty() {
+            self.bump_attribute_revision();
+        }
 
         self.resume_block_initializers(items, args[1].clone(), saved_state, 0)
     }
@@ -185,6 +188,7 @@ impl Session {
                 self.message_definitions.insert(key, definition);
             }
         }
+        self.bump_attribute_revision();
     }
 
     fn resume_with_bindings(

@@ -129,6 +129,15 @@ fn eval_flag_renders_source_aware_syntax_diagnostics() {
 }
 
 #[test]
+fn eval_flag_renders_prints_before_final_value() {
+    let output = run_cli(&["--eval", "Print[\"hello\"]; 1 + 1"]);
+
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "hello\n2\n");
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
 fn file_flag_renders_source_aware_syntax_diagnostics() {
     let file = TempFile::new("f[1 2]");
     let path = file.path().to_string_lossy().into_owned();

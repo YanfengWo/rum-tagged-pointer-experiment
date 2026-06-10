@@ -199,11 +199,15 @@ impl Session {
                 }
             }
             TaggedDefinitionTarget::DownValue(symbol) => {
+                let matcher = self.compile_matcher_for_expr(&lhs);
+                let matcher_attribute_revision = self.attribute_revision;
                 let definition = self.definitions.entry(symbol.clone()).or_default();
                 let down_value = DownValue {
                     lhs: lhs.clone(),
                     rhs: rhs.clone(),
                     delayed,
+                    matcher,
+                    matcher_attribute_revision,
                 };
                 if symbol.context() == SYSTEM_CONTEXT && symbol.name() == heads::patterns::DEFAULT {
                     replace_or_append_definition(
@@ -222,6 +226,8 @@ impl Session {
                 });
             }
             TaggedDefinitionTarget::SubValue(symbol) => {
+                let matcher = self.compile_matcher_for_expr(&lhs);
+                let matcher_attribute_revision = self.attribute_revision;
                 let definition = self.definitions.entry(symbol.clone()).or_default();
                 replace_or_insert_sub_value(
                     &mut definition.sub_values,
@@ -230,6 +236,8 @@ impl Session {
                         lhs: lhs.clone(),
                         rhs: rhs.clone(),
                         delayed,
+                        matcher,
+                        matcher_attribute_revision,
                     },
                 );
                 self.push_trace(TraceEvent::DefinitionStored {
@@ -239,6 +247,8 @@ impl Session {
                 });
             }
             TaggedDefinitionTarget::UpValue(symbol) => {
+                let matcher = self.compile_matcher_for_expr(&lhs);
+                let matcher_attribute_revision = self.attribute_revision;
                 let definition = self.definitions.entry(symbol.clone()).or_default();
                 replace_or_insert_up_value(
                     &mut definition.up_values,
@@ -247,6 +257,8 @@ impl Session {
                         lhs: lhs.clone(),
                         rhs: rhs.clone(),
                         delayed,
+                        matcher,
+                        matcher_attribute_revision,
                     },
                 );
                 self.push_trace(TraceEvent::DefinitionStored {

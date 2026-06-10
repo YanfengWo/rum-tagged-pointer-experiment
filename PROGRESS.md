@@ -135,6 +135,29 @@ are not active project-owned examples.
   workloads, preferably with borrowed traversal/matcher paths or profiler-guided
   clone accounting before adding more special cases.
 
+## 2026-06-10 Evaluator Performance Audit Follow-up
+
+- Added `docs/evaluator-performance-audit.md` as a historical external review
+  of the Bool proof-load bottleneck. The audit was captured for rum commit
+  `fddf4fd` and sibling `mma-hol` HEAD `96cf163`, and confirmed that allocator
+  traffic, owned expression cloning, fixed-point loop cloning, catalog scans,
+  definition dispatch cloning, and matcher binding snapshots dominate the
+  release profile.
+- Implemented the first quick-win series from that audit: hash-backed builtin
+  catalog lookup; delayed fixed-point resume-state cloning; symbol+index
+  definition dispatch that avoids cloning whole `SymbolDefinition` values;
+  cached stored-definition matchers guarded by an attribute revision; and
+  matcher failure rollback using a small binding undo trail instead of cloning
+  the entire binding map at every matcher entry.
+- Fixed the CLI tooling side issue from the audit: `rum-cli --eval` and
+  `--file` now render `Print` output before the final value, so load-time
+  bisection markers are visible.
+- Re-ran the dependency-preloaded Bool release smoke after these changes:
+  `AbsoluteTiming[Get["Bool.wl"]]` was about 46.84s and external wall time was
+  48.26s, down from the previous comparable `real 62.82s`. This is a real
+  improvement, but still far from WolframKernel's roughly 2.4s reference; the
+  structural representation work remains open.
+
 ## Completed Architecture Work
 
 - The workspace was split into responsibility-oriented crates:

@@ -115,6 +115,10 @@ fn print_outcome(outcome: &SessionEvalResponse) {
         eprintln!("{}", render_runtime_message(message));
     }
 
+    for printed in &outcome.prints {
+        println!("{printed}");
+    }
+
     println!("{}", outcome.value);
 }
 

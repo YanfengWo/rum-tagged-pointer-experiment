@@ -94,10 +94,11 @@ Completed history, archived planning detail, and operational lessons live in
   `kernel_tests.wl`, `bootstrap_tests.wl`, and `equal_tests.wl` core layer.
   The current concrete blocker is Bool top-level proof performance:
   dependency-preloaded `Bool.wl` now completes, including a release smoke, but
-  debug loading is still too slow for routine iteration. Continue with
-  profiler-guided evaluator work around owned-expression cloning, recursive
-  pure-function traversal, and repeated derived-rule workloads such as `MP`,
-  `GEN`, `SPEC`, and `BETACONV`.
+  debug loading is still too slow for routine iteration. The first evaluator
+  audit quick wins are in place; continue with profiler-guided structural work
+  around shared expression representation, symbol interning, evaluated-epoch
+  caches, recursive pure-function traversal, and repeated derived-rule
+  workloads such as `MP`, `GEN`, `SPEC`, and `BETACONV`.
 - [ ] Treat `mma-hol` stable-mode snapshot helpers (`DumpSave`, `Contexts[]`,
   `$ContextPath` / `$Packages`, file timestamps, and timing reports) as a
   required developer-workflow gate for `rum-hol` migration. Cold `run_all.wls`
@@ -179,12 +180,15 @@ Completed history, archived planning detail, and operational lessons live in
 
 - [ ] Revisit `rum-core::Atom::Integer` only if performance measurements show
   that pure `BigInt` should become a small-int plus bigint hybrid.
-- [ ] Revisit matcher compilation/storage strategy after semantics stabilize,
-  including whether definition insertion should cache more matcher state.
+- [ ] Revisit matcher compilation/storage strategy after the attribute-revision
+  cached-definition matcher path has more downstream mileage, especially
+  whether replacement rules and sequence/orderless backtracking need similar
+  caching or representation support.
 - [ ] Continue probe-first evaluator optimization around large HOL proof terms:
-  borrowed traversal/matcher paths, clone accounting, repeated derived-rule
-  workloads, and debug-vs-release smoke policy before adding broader low-level
-  performance work.
+  shared expression representation, symbol interning, evaluated-epoch caches,
+  remaining clone accounting, repeated derived-rule workloads, and
+  debug-vs-release smoke policy before adding broader low-level performance
+  work.
 - [ ] Revisit large request/error payload ergonomics only after measurement
   shows that current shapes are a real cost.
 

@@ -30,13 +30,13 @@ impl Session {
         value: Expr,
         bindings: BTreeMap<Symbol, Expr>,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        let snapshot = bindings.clone();
+        let snapshot = BindingSnapshot::capture(&bindings, &matcher);
         let outcome = self.match_compiled_inner_owned(matcher, value, bindings)?;
 
         if outcome.matched {
             Ok(outcome)
         } else {
-            Ok(match_outcome(false, snapshot))
+            Ok(match_outcome(false, snapshot.restore(outcome.bindings)))
         }
     }
 
@@ -71,7 +71,6 @@ impl Session {
             return Ok(match_outcome(false, bindings));
         };
 
-        let snapshot = bindings.clone();
         let value_for_retry = value.clone();
         let alternatives_for_retry = alternatives.clone();
         let alternative_result = self.match_compiled_owned(alternative, value, bindings);
@@ -82,7 +81,7 @@ impl Session {
                 session.match_compiled_alternatives_owned(
                     alternatives_for_retry,
                     value_for_retry,
-                    snapshot,
+                    outcome.bindings,
                     index + 1,
                 )
             }
@@ -171,20 +170,18 @@ impl Session {
         value: Expr,
         bindings: BTreeMap<Symbol, Expr>,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        let snapshot = bindings.clone();
         let inner_result = self.match_compiled_owned(inner, value.clone(), bindings);
         self.drive_internal_value(inner_result, move |session, outcome| {
             if !outcome.matched {
                 return Ok(outcome);
             }
 
-            let accepted_bindings = outcome.bindings.clone();
             let excluded_result = session.match_compiled_owned(excluded, value, outcome.bindings);
             session.drive_internal_value(excluded_result, move |_, excluded_outcome| {
                 Ok(if excluded_outcome.matched {
-                    match_outcome(false, snapshot)
+                    match_outcome(false, excluded_outcome.bindings)
                 } else {
-                    match_outcome(true, accepted_bindings)
+                    match_outcome(true, excluded_outcome.bindings)
                 })
             })
         })
@@ -313,7 +310,6 @@ impl Session {
             );
         }
 
-        let snapshot = bindings.clone();
         let candidates_for_retry = candidates.clone();
         let remaining_entries_for_retry = remaining_entries.clone();
         let key_pattern_for_retry = key_pattern.clone();
@@ -332,12 +328,11 @@ impl Session {
                     delayed,
                     remaining_entries_for_retry,
                     candidates_for_retry,
-                    snapshot,
+                    key_outcome.bindings,
                     candidate_index + 1,
                 );
             }
 
-            let snapshot_for_value_failure = snapshot.clone();
             let candidates_for_value_failure = candidates_for_success.clone();
             let remaining_entries_for_value_failure = remaining_entries_for_success.clone();
             let key_pattern_for_value_failure = key_pattern_for_retry.clone();
@@ -353,7 +348,7 @@ impl Session {
                         delayed,
                         remaining_entries_for_value_failure,
                         candidates_for_value_failure,
-                        snapshot_for_value_failure,
+                        value_outcome.bindings,
                         candidate_index + 1,
                     );
                 }
@@ -465,6 +460,93 @@ impl Session {
             }
             MatcherNode::Call { head, args } => {
                 self.match_compiled_call_owned(*head, args, value, bindings)
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct BindingSnapshot {
+    entries: Vec<(Symbol, Option<Expr>)>,
+}
+
+impl BindingSnapshot {
+    fn capture(bindings: &BTreeMap<Symbol, Expr>, matcher: &MatcherNode) -> Self {
+        let mut names = BTreeSet::new();
+        collect_matcher_binding_names(matcher, &mut names);
+        let entries = names
+            .into_iter()
+            .map(|name| {
+                let previous = bindings.get(&name).cloned();
+                (name, previous)
+            })
+            .collect();
+        Self { entries }
+    }
+
+    fn restore(self, mut bindings: BTreeMap<Symbol, Expr>) -> BTreeMap<Symbol, Expr> {
+        for (name, previous) in self.entries {
+            match previous {
+                Some(value) => {
+                    bindings.insert(name, value);
+                }
+                None => {
+                    bindings.remove(&name);
+                }
+            }
+        }
+        bindings
+    }
+}
+
+fn collect_matcher_binding_names(matcher: &MatcherNode, names: &mut BTreeSet<Symbol>) {
+    match matcher {
+        MatcherNode::Exact(_) | MatcherNode::Blank { .. } => {}
+        MatcherNode::KeyValuePattern(entries) => {
+            for (key, value, _) in entries {
+                collect_matcher_binding_names(key, names);
+                collect_matcher_binding_names(value, names);
+            }
+        }
+        MatcherNode::Named { name, inner } => {
+            names.insert(name.clone());
+            collect_matcher_binding_names(inner, names);
+        }
+        MatcherNode::Condition { inner, .. } | MatcherNode::PatternTest { inner, .. } => {
+            collect_matcher_binding_names(inner, names);
+        }
+        MatcherNode::Except { excluded, inner } => {
+            collect_matcher_binding_names(excluded, names);
+            collect_matcher_binding_names(inner, names);
+        }
+        MatcherNode::Alternatives(alternatives) => {
+            for alternative in alternatives {
+                collect_matcher_binding_names(alternative, names);
+            }
+        }
+        MatcherNode::Call { head, args } => {
+            collect_matcher_binding_names(head, names);
+            for arg in args {
+                collect_matcher_arg_binding_names(arg, names);
+            }
+        }
+    }
+}
+
+fn collect_matcher_arg_binding_names(arg: &MatcherArg, names: &mut BTreeSet<Symbol>) {
+    match arg {
+        MatcherArg::Single(matcher) => collect_matcher_binding_names(matcher, names),
+        MatcherArg::Sequence(spec) => {
+            if let Some(name) = &spec.name {
+                names.insert(name.clone());
+            }
+            collect_matcher_binding_names(&spec.matcher, names);
+        }
+        MatcherArg::Optional(spec) => collect_matcher_arg_binding_names(&spec.inner, names),
+        MatcherArg::PatternSequenceGroup(items)
+        | MatcherArg::OrderlessPatternSequenceGroup(items) => {
+            for item in items {
+                collect_matcher_arg_binding_names(item, names);
             }
         }
     }

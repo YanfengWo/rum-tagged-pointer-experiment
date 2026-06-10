@@ -120,6 +120,7 @@ impl Session {
         if !spec.attributes.is_empty() {
             self.attributes
                 .insert(Symbol::new(SYSTEM_CONTEXT, spec.name), spec.attributes);
+            self.bump_attribute_revision();
         }
     }
 

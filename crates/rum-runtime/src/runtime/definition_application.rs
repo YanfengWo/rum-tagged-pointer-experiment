@@ -10,14 +10,13 @@ impl Session {
             return Ok(None);
         };
 
-        let Some(definition) = self.definitions.get(symbol).cloned() else {
+        let Some(definition) = self.definitions.get(symbol) else {
             return Ok(None);
         };
 
         if is_system_symbol_name(head, heads::patterns::DEFAULT) {
-            if let Some(value) =
-                self.try_apply_direct_default_value(args, &definition.down_values)?
-            {
+            let down_values = definition.down_values.clone();
+            if let Some(value) = self.try_apply_direct_default_value(args, &down_values)? {
                 return Ok(Some(value));
             }
         }
@@ -26,30 +25,29 @@ impl Session {
         let normalized_candidate =
             self.normalize_definition_candidate_for_matching(head, &candidate);
 
-        self.try_apply_down_values_from_list(
-            candidate,
-            normalized_candidate,
-            definition.down_values,
-            0,
-        )
+        self.try_apply_down_values_from_symbol(candidate, normalized_candidate, symbol.clone(), 0)
     }
 
-    fn try_apply_down_values_from_list(
+    fn try_apply_down_values_from_symbol(
         &mut self,
         candidate: Expr,
         normalized_candidate: Expr,
-        down_values: Vec<DownValue>,
+        symbol: Symbol,
         index: usize,
     ) -> Result<Option<Expr>, EvalError> {
-        let Some(down_value) = down_values.get(index) else {
+        let Some(down_value) = self
+            .definitions
+            .get(&symbol)
+            .and_then(|definition| definition.down_values.get(index))
+        else {
             return Ok(None);
         };
 
         if !Self::definition_lhs_could_match_candidate(&down_value.lhs, &normalized_candidate) {
-            return self.try_apply_down_values_from_list(
+            return self.try_apply_down_values_from_symbol(
                 candidate,
                 normalized_candidate,
-                down_values,
+                symbol,
                 index + 1,
             );
         }
@@ -60,16 +58,20 @@ impl Session {
         {
             Ok(outcome)
         } else {
-            let matcher = self.compile_matcher_for_expr(&down_value.lhs);
+            let matcher = if down_value.matcher_attribute_revision == self.attribute_revision {
+                down_value.matcher.clone()
+            } else {
+                self.compile_matcher_for_expr(&down_value.lhs)
+            };
             self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new())
         };
 
         self.drive_internal_value(match_result, move |session, outcome| {
             if !outcome.matched {
-                return session.try_apply_down_values_from_list(
+                return session.try_apply_down_values_from_symbol(
                     candidate,
                     normalized_candidate,
-                    down_values,
+                    symbol,
                     index + 1,
                 );
             }
@@ -125,12 +127,13 @@ impl Session {
         position: usize,
     ) -> Result<Option<Expr>, EvalError> {
         let default_symbol = Symbol::system(heads::patterns::DEFAULT);
-        let Some(definition) = self.definitions.get(&default_symbol).cloned() else {
+        let Some(definition) = self.definitions.get(&default_symbol) else {
             return Ok(None);
         };
+        let down_values = definition.down_values.clone();
 
         self.evaluate_first_exact_default_value(
-            &definition.down_values,
+            &down_values,
             vec![
                 default_value_lhs(head.clone(), Some(position)),
                 default_value_lhs(head, None),
@@ -164,10 +167,10 @@ impl Session {
         let mut up_values = Vec::new();
 
         for symbol in collect_upvalue_candidate_symbols(args) {
-            let Some(definition) = self.definitions.get(&symbol).cloned() else {
+            let Some(definition) = self.definitions.get(&symbol) else {
                 continue;
             };
-            up_values.extend(definition.up_values);
+            up_values.extend(definition.up_values.iter().cloned());
         }
 
         self.try_apply_up_values_from_list(candidate, normalized_candidate, up_values, 0)
@@ -199,7 +202,11 @@ impl Session {
         {
             Ok(outcome)
         } else {
-            let matcher = self.compile_matcher_for_expr(&up_value.lhs);
+            let matcher = if up_value.matcher_attribute_revision == self.attribute_revision {
+                up_value.matcher.clone()
+            } else {
+                self.compile_matcher_for_expr(&up_value.lhs)
+            };
             self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new())
         };
 
@@ -236,38 +243,37 @@ impl Session {
             return Ok(None);
         };
 
-        let Some(definition) = self.definitions.get(&symbol).cloned() else {
+        if !self.definitions.contains_key(&symbol) {
             return Ok(None);
-        };
+        }
 
         let candidate = Expr::call(head.clone(), args.to_vec());
         let normalized_candidate =
             self.normalize_definition_candidate_for_matching(head, &candidate);
 
-        self.try_apply_sub_values_from_list(
-            candidate,
-            normalized_candidate,
-            definition.sub_values,
-            0,
-        )
+        self.try_apply_sub_values_from_symbol(candidate, normalized_candidate, symbol, 0)
     }
 
-    fn try_apply_sub_values_from_list(
+    fn try_apply_sub_values_from_symbol(
         &mut self,
         candidate: Expr,
         normalized_candidate: Expr,
-        sub_values: Vec<SubValue>,
+        symbol: Symbol,
         index: usize,
     ) -> Result<Option<Expr>, EvalError> {
-        let Some(sub_value) = sub_values.get(index) else {
+        let Some(sub_value) = self
+            .definitions
+            .get(&symbol)
+            .and_then(|definition| definition.sub_values.get(index))
+        else {
             return Ok(None);
         };
 
         if !Self::definition_lhs_could_match_candidate(&sub_value.lhs, &normalized_candidate) {
-            return self.try_apply_sub_values_from_list(
+            return self.try_apply_sub_values_from_symbol(
                 candidate,
                 normalized_candidate,
-                sub_values,
+                symbol,
                 index + 1,
             );
         }
@@ -278,16 +284,20 @@ impl Session {
         {
             Ok(outcome)
         } else {
-            let matcher = self.compile_matcher_for_expr(&sub_value.lhs);
+            let matcher = if sub_value.matcher_attribute_revision == self.attribute_revision {
+                sub_value.matcher.clone()
+            } else {
+                self.compile_matcher_for_expr(&sub_value.lhs)
+            };
             self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new())
         };
 
         self.drive_internal_value(match_result, move |session, outcome| {
             if !outcome.matched {
-                return session.try_apply_sub_values_from_list(
+                return session.try_apply_sub_values_from_symbol(
                     candidate,
                     normalized_candidate,
-                    sub_values,
+                    symbol,
                     index + 1,
                 );
             }

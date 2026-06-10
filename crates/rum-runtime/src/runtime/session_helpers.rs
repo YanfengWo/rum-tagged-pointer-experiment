@@ -51,6 +51,7 @@ impl Session {
 
     pub(super) fn restore_loader_snapshot(&mut self, snapshot: LoaderSnapshot) {
         self.attributes = snapshot.attributes;
+        self.bump_attribute_revision();
         self.options = snapshot.options;
         self.syntax_information = snapshot.syntax_information;
         self.declared_stubs = snapshot.declared_stubs;

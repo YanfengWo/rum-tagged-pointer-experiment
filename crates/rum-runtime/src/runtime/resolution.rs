@@ -121,6 +121,12 @@ impl Session {
         symbol: Symbol,
         attributes: AttributeSet,
     ) {
+        let previous = self.attribute_set_for_symbol(&symbol);
+        if previous == attributes {
+            return;
+        }
+
+        self.attribute_revision = self.attribute_revision.saturating_add(1);
         let default = default_system_attribute_set(&symbol);
 
         if attributes == default {
@@ -128,6 +134,10 @@ impl Session {
         } else {
             self.attributes.insert(symbol, attributes);
         }
+    }
+
+    pub(super) fn bump_attribute_revision(&mut self) {
+        self.attribute_revision = self.attribute_revision.saturating_add(1);
     }
 
     pub(super) fn resolve_load_target(&self, spec: &str) -> Result<PathBuf, EvalError> {
@@ -218,17 +228,26 @@ impl Session {
                 fixed_point_seen.push(current.clone());
             }
 
-            let current_for_resume = current.clone();
-            let seen_for_resume = fixed_point_seen.clone();
             let next_result = self.evaluate_once(current.clone());
-            let next = self.suspend_with_frame(next_result, move |session, next| {
-                session.resume_fixed_point_from(
-                    current_for_resume,
-                    evaluation_passes,
-                    seen_for_resume,
-                    next,
-                )
-            })?;
+            let next = match next_result {
+                Ok(value) => value,
+                Err(EvalError::InputRequired { request }) => {
+                    let current_for_resume = current.clone();
+                    let seen_for_resume = fixed_point_seen.clone();
+                    self.suspend_with_frame(
+                        Err(EvalError::InputRequired { request }),
+                        move |session, next| {
+                            session.resume_fixed_point_from(
+                                current_for_resume,
+                                evaluation_passes,
+                                seen_for_resume,
+                                next,
+                            )
+                        },
+                    )?
+                }
+                Err(error) => return Err(error),
+            };
 
             if next == current {
                 return Ok(next);
@@ -274,17 +293,26 @@ impl Session {
                 fixed_point_seen.push(current.clone());
             }
 
-            let current_for_resume = current.clone();
-            let seen_for_resume = fixed_point_seen.clone();
             let next_result = self.evaluate_once(current.clone());
-            let next = self.suspend_with_frame(next_result, move |session, next| {
-                session.resume_fixed_point_from(
-                    current_for_resume,
-                    evaluation_passes,
-                    seen_for_resume,
-                    next,
-                )
-            })?;
+            let next = match next_result {
+                Ok(value) => value,
+                Err(EvalError::InputRequired { request }) => {
+                    let current_for_resume = current.clone();
+                    let seen_for_resume = fixed_point_seen.clone();
+                    self.suspend_with_frame(
+                        Err(EvalError::InputRequired { request }),
+                        move |session, next| {
+                            session.resume_fixed_point_from(
+                                current_for_resume,
+                                evaluation_passes,
+                                seen_for_resume,
+                                next,
+                            )
+                        },
+                    )?
+                }
+                Err(error) => return Err(error),
+            };
 
             if next == current {
                 return Ok(next);

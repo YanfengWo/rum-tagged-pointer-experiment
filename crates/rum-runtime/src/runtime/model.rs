@@ -297,6 +297,7 @@ impl MessageSelector {
 pub struct Session {
     pub(super) builtins: BTreeMap<String, BuiltinSpec>,
     pub(super) attributes: BTreeMap<Symbol, AttributeSet>,
+    pub(super) attribute_revision: u64,
     pub(super) options: BTreeMap<Symbol, SymbolOptions>,
     pub(super) syntax_information: BTreeMap<Symbol, Expr>,
     pub(super) declared_stubs: BTreeSet<Symbol>,
@@ -514,6 +515,8 @@ pub struct UpValue {
     pub lhs: Expr,
     pub rhs: Expr,
     pub delayed: bool,
+    pub(super) matcher: MatcherNode,
+    pub(super) matcher_attribute_revision: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -521,6 +524,8 @@ pub struct DownValue {
     pub lhs: Expr,
     pub rhs: Expr,
     pub delayed: bool,
+    pub(super) matcher: MatcherNode,
+    pub(super) matcher_attribute_revision: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -528,6 +533,8 @@ pub struct SubValue {
     pub lhs: Expr,
     pub rhs: Expr,
     pub delayed: bool,
+    pub(super) matcher: MatcherNode,
+    pub(super) matcher_attribute_revision: u64,
 }
 
 impl SymbolDefinition {

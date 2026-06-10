@@ -294,6 +294,7 @@ impl Default for Session {
         Self {
             builtins: BTreeMap::new(),
             attributes: BTreeMap::new(),
+            attribute_revision: 0,
             options: BTreeMap::new(),
             syntax_information: BTreeMap::new(),
             declared_stubs: BTreeSet::new(),

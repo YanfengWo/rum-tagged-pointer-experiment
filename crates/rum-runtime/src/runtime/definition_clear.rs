@@ -207,7 +207,9 @@ impl Session {
         self.definitions.remove(symbol);
 
         if clear_attributes {
-            self.attributes.remove(symbol);
+            if self.attributes.remove(symbol).is_some() {
+                self.bump_attribute_revision();
+            }
         }
 
         if clear_messages {

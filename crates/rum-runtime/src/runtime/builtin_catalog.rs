@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::OnceLock;
 
 use super::*;
@@ -49,9 +50,16 @@ pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
 }
 
 pub(super) fn default_builtin_dispatch_spec(name: &str) -> Option<BuiltinSpec> {
-    core_builtin_specs()
-        .iter()
-        .find(|spec| spec.name == name)
+    static CORE_BUILTINS_BY_NAME: OnceLock<HashMap<&'static str, BuiltinSpec>> = OnceLock::new();
+
+    CORE_BUILTINS_BY_NAME
+        .get_or_init(|| {
+            core_builtin_specs()
+                .iter()
+                .map(|spec| (spec.name, *spec))
+                .collect()
+        })
+        .get(name)
         .copied()
 }
 
