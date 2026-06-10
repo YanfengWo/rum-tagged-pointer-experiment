@@ -673,6 +673,9 @@ This roadmap intentionally uses two levels of detail:
     same `evaluate_session_batches` oracle interface as isolated one-case
     batches, so the local `OracleKernel` path can amortize process startup
     without sharing state across Lane A cases
+  - [x] Difftest Lane B accounting split follow-up: move stateful summary
+    accounting and oracle batch counters out of the runner facade into a
+    focused child module
   - [x] Lane B follow-up: implement the `OracleKernel` multi-batch session transport as one Wolfram process per Lane B run, with fixture-boundary cleanup of Global-context symbols, newly introduced contexts, `$Packages`, `$Context`, and `$ContextPath`
   - [x] Lane B follow-up: pin the multi-batch transport parser and per-step stream assembly with local unit tests, including malformed markers and missing-result count mismatches
   - [x] Lane B follow-up: add a fixture-boundary isolation fixture that detects leaked ordinary symbols, user contexts, and package contexts across multi-batch oracle transport batches while still proving state persists within one fixture
