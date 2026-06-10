@@ -13,9 +13,8 @@ use rum_difftest::lane_d::{
     LaneDThresholdProfile,
 };
 
-use super::expect_value;
-use super::json_cli::parse_max_issue_samples;
-
+#[path = "check_cli/args.rs"]
+mod args;
 #[path = "check_cli/report.rs"]
 mod report;
 #[path = "check_cli/summary_json.rs"]
@@ -31,97 +30,30 @@ use report::{
 };
 
 pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Error>> {
-    let mut inventory_baseline_path = None;
-    let mut lane_d_smoke_baseline = None;
-    let mut include_lane_d_readiness = false;
-    let mut summary_json_path = None;
-    let mut max_issue_samples = summary_json::DEFAULT_MAX_ISSUE_SAMPLES;
-    let mut max_issue_samples_specified = false;
-    let mut issue_sample_filter = summary_json::CheckIssueSampleFilter::default();
-    let mut issue_sample_check_specified = false;
-    let mut issue_sample_kind_specified = false;
-    let mut fail_on_open_known_difference = false;
-    let mut artifact_hygiene_root = None;
-
-    let mut iter = args.into_iter();
-    while let Some(arg) = iter.next() {
-        match arg.as_str() {
-            "--inventory-baseline" => {
-                inventory_baseline_path = Some(PathBuf::from(expect_value(
-                    &mut iter,
-                    "--inventory-baseline",
-                )?));
-            }
-            "--include-lane-d-smoke" => {
-                if lane_d_smoke_baseline.is_none() {
-                    lane_d_smoke_baseline = Some(LaneDSmokeBaseline::Default);
-                }
-            }
-            "--lane-d-smoke-baseline" => {
-                lane_d_smoke_baseline = Some(LaneDSmokeBaseline::Path(PathBuf::from(
-                    expect_value(&mut iter, "--lane-d-smoke-baseline")?,
-                )));
-            }
-            "--include-lane-d-readiness" => {
-                include_lane_d_readiness = true;
-            }
-            "--fail-on-open-known-difference" => {
-                fail_on_open_known_difference = true;
-            }
-            "--artifact-hygiene-root" => {
-                artifact_hygiene_root = Some(PathBuf::from(expect_value(
-                    &mut iter,
-                    "--artifact-hygiene-root",
-                )?));
-            }
-            "--summary-json" => {
-                summary_json_path = Some(PathBuf::from(expect_value(&mut iter, "--summary-json")?));
-            }
-            "--max-issue-samples" => {
-                let value = expect_value(&mut iter, "--max-issue-samples")?;
-                max_issue_samples_specified = true;
-                max_issue_samples = parse_max_issue_samples(&value)?;
-            }
-            "--issue-sample-check" => {
-                let value = expect_value(&mut iter, "--issue-sample-check")?;
-                issue_sample_check_specified = true;
-                issue_sample_filter.check = parse_issue_sample_check(&value)?;
-            }
-            "--issue-sample-kind" => {
-                let value = expect_value(&mut iter, "--issue-sample-kind")?;
-                issue_sample_kind_specified = true;
-                issue_sample_filter.kind = parse_issue_sample_kind(&value)?;
-            }
-            "--help" | "-h" => {
-                usage::print_check_usage();
-                return Ok(ExitCode::SUCCESS);
-            }
-            other => return Err(format!("unknown check flag `{other}`").into()),
+    let cli = match args::parse_check_cli_args(args)? {
+        args::CheckCliArgs::Help => {
+            usage::print_check_usage();
+            return Ok(ExitCode::SUCCESS);
         }
-    }
-    if summary_json_path.is_none() {
-        if max_issue_samples_specified {
-            return Err("--max-issue-samples requires --summary-json PATH".into());
-        }
-        if issue_sample_check_specified {
-            return Err("--issue-sample-check requires --summary-json PATH".into());
-        }
-        if issue_sample_kind_specified {
-            return Err("--issue-sample-kind requires --summary-json PATH".into());
-        }
-    }
+        args::CheckCliArgs::Run(cli) => cli,
+    };
 
     let report = run_local_checks(
-        inventory_baseline_path,
-        lane_d_smoke_baseline,
-        include_lane_d_readiness,
-        fail_on_open_known_difference,
-        artifact_hygiene_root,
+        cli.inventory_baseline_path,
+        cli.lane_d_smoke_baseline,
+        cli.include_lane_d_readiness,
+        cli.fail_on_open_known_difference,
+        cli.artifact_hygiene_root,
     )?;
     text_report::print_check_report(&report);
 
-    if let Some(path) = summary_json_path {
-        summary_json::write_summary_json(&path, &report, max_issue_samples, &issue_sample_filter)?;
+    if let Some(path) = cli.summary_json_path {
+        summary_json::write_summary_json(
+            &path,
+            &report,
+            cli.max_issue_samples,
+            &cli.issue_sample_filter,
+        )?;
         println!("summary json: {}", path.display());
     }
 
@@ -132,14 +64,9 @@ pub fn run_check(args: Vec<String>) -> Result<ExitCode, Box<dyn std::error::Erro
     }
 }
 
-enum LaneDSmokeBaseline {
-    Default,
-    Path(PathBuf),
-}
-
 fn run_local_checks(
     inventory_baseline_path: Option<PathBuf>,
-    lane_d_smoke_baseline: Option<LaneDSmokeBaseline>,
+    lane_d_smoke_baseline: Option<args::LaneDSmokeBaseline>,
     include_lane_d_readiness: bool,
     fail_on_open_known_difference: bool,
     artifact_hygiene_root: Option<PathBuf>,
@@ -190,12 +117,12 @@ fn run_local_checks(
 }
 
 fn run_lane_d_smoke_check(
-    baseline: LaneDSmokeBaseline,
+    baseline: args::LaneDSmokeBaseline,
     summary: &LaneDSummary,
 ) -> Result<LaneDSmokeCheckReport, Box<dyn std::error::Error>> {
     let baseline_path = match baseline {
-        LaneDSmokeBaseline::Default => lane_d::default_smoke_baseline_path(),
-        LaneDSmokeBaseline::Path(path) => path,
+        args::LaneDSmokeBaseline::Default => lane_d::default_smoke_baseline_path(),
+        args::LaneDSmokeBaseline::Path(path) => path,
     };
     let baseline = lane_d::load_baseline(&baseline_path)?;
     let baseline = lane_d::compare_baseline(
@@ -228,34 +155,4 @@ fn run_lane_d_smoke_summary() -> Result<LaneDSummary, std::io::Error> {
         profile: LaneDProfile::Smoke,
         limit: None,
     })
-}
-
-fn parse_issue_sample_check(value: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    if value == "all" {
-        return Ok(None);
-    }
-    let values = summary_json::issue_sample_check_values();
-    if values.contains(&value) {
-        return Ok(Some(value.to_string()));
-    }
-    Err(format!(
-        "--issue-sample-check expects one of all, {}; got `{value}`",
-        values.join(", ")
-    )
-    .into())
-}
-
-fn parse_issue_sample_kind(value: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    if value == "all" {
-        return Ok(None);
-    }
-    let values = summary_json::issue_sample_kind_values();
-    if values.contains(&value) {
-        return Ok(Some(value.to_string()));
-    }
-    Err(format!(
-        "--issue-sample-kind expects one of all, {}; got `{value}`",
-        values.join(", ")
-    )
-    .into())
 }

@@ -51,8 +51,12 @@ This roadmap intentionally uses two levels of detail:
     classification, and move artifact/fixture-tree coverage into a focused
     child test module
   - [x] Difftest aggregate check CLI split follow-up: keep `check_cli.rs`
-    focused on argument parsing and local gate execution, and move shared
+    focused on local gate execution and report orchestration, and move shared
     report models/status accounting/path display helpers into `check_cli/report.rs`
+  - [x] Difftest aggregate check CLI args split follow-up: keep
+    `check_cli.rs` out of flag parsing and move check-command options,
+    issue-sample filter validation, and Lane D smoke-baseline selector parsing
+    into `check_cli/args.rs`
   - [x] Difftest oracle-lane failure-gate test split follow-up: keep
     `tests/cli/oracle_lanes/failure_gates.rs` as a facade and move resolved
     known-difference, seed-drift, and project-mismatch gate coverage into
