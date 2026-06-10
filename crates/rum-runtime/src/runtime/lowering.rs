@@ -171,6 +171,7 @@ where
             heads::arithmetic::TIMES,
             vec![Expr::integer(BigInt::from(-1)), lowered],
         )),
+        PrefixOp::Not => Ok(canonical_call("Not", vec![lowered])),
         PrefixOp::PreIncrement => Ok(canonical_call("PreIncrement", vec![lowered])),
         PrefixOp::PreDecrement => Ok(canonical_call("PreDecrement", vec![lowered])),
     }
@@ -185,6 +186,10 @@ pub(super) fn lower_binary_sugar<F>(
 where
     F: FnMut(&str) -> Option<Symbol>,
 {
+    if comparison_head(op).is_some() {
+        return lower_comparison_chain(op, lhs, rhs, resolve_symbol);
+    }
+
     let lowered_lhs = lower_syntax_expr_with(lhs, resolve_symbol)?;
     let lowered_rhs = lower_syntax_expr_with(rhs, resolve_symbol)?;
 
@@ -244,7 +249,15 @@ where
             heads::patterns::CONDITION,
             vec![lowered_lhs, lowered_rhs],
         )),
+        BinaryOp::Or => Ok(canonical_call("Or", vec![lowered_lhs, lowered_rhs])),
+        BinaryOp::And => Ok(canonical_call("And", vec![lowered_lhs, lowered_rhs])),
+        BinaryOp::Pattern => Ok(canonical_call(
+            heads::patterns::PATTERN,
+            vec![lowered_lhs, lowered_rhs],
+        )),
+        BinaryOp::StringJoin => Ok(canonical_call("StringJoin", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::Apply => Ok(Expr::call(lowered_lhs, vec![lowered_rhs])),
+        BinaryOp::Map => Ok(canonical_call("Map", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::ApplyHead => Ok(canonical_call("Apply", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::MapApply => Ok(canonical_call("MapApply", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::Composition => Ok(canonical_call(
@@ -287,6 +300,97 @@ where
             heads::arithmetic::POWER,
             vec![lowered_lhs, lowered_rhs],
         )),
+        BinaryOp::SameQ
+        | BinaryOp::UnsameQ
+        | BinaryOp::Equal
+        | BinaryOp::Unequal
+        | BinaryOp::Less
+        | BinaryOp::Greater
+        | BinaryOp::LessEqual
+        | BinaryOp::GreaterEqual => unreachable!("comparison ops handled before lowering operands"),
+    }
+}
+
+fn comparison_head(op: BinaryOp) -> Option<&'static str> {
+    match op {
+        BinaryOp::SameQ => Some("SameQ"),
+        BinaryOp::UnsameQ => Some("UnsameQ"),
+        BinaryOp::Equal => Some("Equal"),
+        BinaryOp::Unequal => Some("Unequal"),
+        BinaryOp::Less => Some("Less"),
+        BinaryOp::Greater => Some("Greater"),
+        BinaryOp::LessEqual => Some("LessEqual"),
+        BinaryOp::GreaterEqual => Some("GreaterEqual"),
+        _ => None,
+    }
+}
+
+fn lower_comparison_chain<F>(
+    op: BinaryOp,
+    lhs: &SyntaxExpr,
+    rhs: &SyntaxExpr,
+    resolve_symbol: &mut F,
+) -> Result<Expr, EvalError>
+where
+    F: FnMut(&str) -> Option<Symbol>,
+{
+    let mut operands = Vec::new();
+    let mut ops = Vec::new();
+    collect_comparison_chain(lhs, &mut operands, &mut ops);
+    ops.push(op);
+    collect_comparison_chain(rhs, &mut operands, &mut ops);
+
+    if ops.len() == 1 {
+        return Ok(canonical_call(
+            comparison_head(op).expect("checked comparison op"),
+            vec![
+                lower_syntax_expr_with(lhs, resolve_symbol)?,
+                lower_syntax_expr_with(rhs, resolve_symbol)?,
+            ],
+        ));
+    }
+
+    if ops.iter().all(|candidate| *candidate == ops[0]) {
+        let args = operands
+            .into_iter()
+            .map(|operand| lower_syntax_expr_with(operand, resolve_symbol))
+            .collect::<Result<Vec<_>, _>>()?;
+        return Ok(canonical_call(
+            comparison_head(ops[0]).expect("comparison chain op"),
+            args,
+        ));
+    }
+
+    let lowered_operands = operands
+        .into_iter()
+        .map(|operand| lower_syntax_expr_with(operand, resolve_symbol))
+        .collect::<Result<Vec<_>, _>>()?;
+    let comparisons = ops
+        .into_iter()
+        .zip(lowered_operands.windows(2))
+        .map(|(chain_op, pair)| {
+            canonical_call(
+                comparison_head(chain_op).expect("comparison chain op"),
+                vec![pair[0].clone(), pair[1].clone()],
+            )
+        })
+        .collect();
+
+    Ok(canonical_call("And", comparisons))
+}
+
+fn collect_comparison_chain<'a>(
+    expr: &'a SyntaxExpr,
+    operands: &mut Vec<&'a SyntaxExpr>,
+    ops: &mut Vec<BinaryOp>,
+) {
+    match &expr.kind {
+        SyntaxExprKind::Binary { op, lhs, rhs } if comparison_head(*op).is_some() => {
+            collect_comparison_chain(lhs, operands, ops);
+            ops.push(*op);
+            collect_comparison_chain(rhs, operands, ops);
+        }
+        _ => operands.push(expr),
     }
 }
 

@@ -34,7 +34,9 @@ impl SyntaxError {
     pub fn is_incomplete(&self) -> bool {
         matches!(
             self,
-            Self::Incomplete { .. } | Self::UnclosedDelimiter { .. }
+            Self::Incomplete { .. }
+                | Self::UnclosedDelimiter { .. }
+                | Self::UnterminatedComment { .. }
         )
     }
 

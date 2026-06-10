@@ -110,20 +110,110 @@ fn parses_apply_and_composition_operator_precedence() {
 
 #[test]
 fn parses_apply_level_operators_as_right_associative() {
-    let parsed = parse_expr("f @@ g @@@ x").unwrap();
-    assert_eq!(parsed.to_string(), "f @@ g @@@ x");
+    let parsed = parse_expr("f /@ g @@ h @@@ x").unwrap();
+    assert_eq!(parsed.to_string(), "f /@ g @@ h @@@ x");
 
     assert_eq!(
         parsed,
         SyntaxExpr::binary(
-            BinaryOp::ApplyHead,
+            BinaryOp::Map,
             SyntaxExpr::symbol("f", z()),
             SyntaxExpr::binary(
-                BinaryOp::MapApply,
+                BinaryOp::ApplyHead,
                 SyntaxExpr::symbol("g", z()),
-                SyntaxExpr::symbol("x", z()),
+                SyntaxExpr::binary(
+                    BinaryOp::MapApply,
+                    SyntaxExpr::symbol("h", z()),
+                    SyntaxExpr::symbol("x", z()),
+                    z(),
+                ),
                 z(),
             ),
+            z(),
+        )
+    );
+}
+
+#[test]
+fn parses_logical_and_comparison_operator_precedence() {
+    let parsed = parse_expr("! MatchQ[k, pat] && 0 <= i < depth || done").unwrap();
+    assert_eq!(
+        parsed.to_string(),
+        "!MatchQ[k, pat] && 0 <= i < depth || done"
+    );
+
+    let same_chain = parse_expr("x === y === z").unwrap();
+    assert_eq!(same_chain.to_string(), "x === y === z");
+
+    let mixed_chain = parse_expr("x == y != z").unwrap();
+    assert_eq!(mixed_chain.to_string(), "x == y != z");
+}
+
+#[test]
+fn parses_string_join_infix_sugar() {
+    let parsed = parse_expr("\"a\" <> ToString[i]").unwrap();
+    assert_eq!(parsed.to_string(), "\"a\" <> ToString[i]");
+
+    assert_eq!(
+        parsed,
+        SyntaxExpr::binary(
+            BinaryOp::StringJoin,
+            SyntaxExpr::string("a", z()),
+            SyntaxExpr::call(
+                SyntaxExpr::symbol("ToString", z()),
+                vec![SyntaxExpr::symbol("i", z())],
+                z(),
+            ),
+            z(),
+        )
+    );
+}
+
+#[test]
+fn parses_colon_named_pattern_sugar() {
+    let parsed = parse_expr("theta : {___Rule}").unwrap();
+    assert_eq!(parsed.to_string(), "theta : {___Rule}");
+
+    assert_eq!(
+        parsed,
+        SyntaxExpr::binary(
+            BinaryOp::Pattern,
+            SyntaxExpr::symbol("theta", z()),
+            SyntaxExpr::list(
+                vec![SyntaxExpr::blank(
+                    BlankKind::BlankNullSequence,
+                    Some(SyntaxExpr::symbol("Rule", z())),
+                    z(),
+                )],
+                z(),
+            ),
+            z(),
+        )
+    );
+}
+
+#[test]
+fn parses_function_postfix_as_map_lhs() {
+    let parsed = parse_expr("typeSubstImpl[theta, #] & /@ args").unwrap();
+    assert_eq!(parsed.to_string(), "(typeSubstImpl[theta, #] &) /@ args");
+
+    assert_eq!(
+        parsed,
+        SyntaxExpr::binary(
+            BinaryOp::Map,
+            SyntaxExpr::postfix(
+                PostfixOp::Function,
+                SyntaxExpr::call(
+                    SyntaxExpr::symbol("typeSubstImpl", z()),
+                    vec![
+                        SyntaxExpr::symbol("theta", z()),
+                        SyntaxExpr::slot(SlotSpec::Anonymous, z())
+                    ],
+                    z(),
+                ),
+                z(),
+            ),
+            SyntaxExpr::symbol("args", z()),
             z(),
         )
     );

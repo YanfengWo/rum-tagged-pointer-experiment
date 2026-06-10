@@ -19,13 +19,31 @@ fn lowering_golden_forms_cover_rules_patterns_slots_and_scoping() {
         ("<|a -> 1, b -> 2|>", "Association[Rule[a, 1], Rule[b, 2]]"),
         ("a; b;", "CompoundExpression[a, b, Null]"),
         ("f @ g @ x", "f[g[x]]"),
+        ("f /@ expr", "Map[f, expr]"),
         ("f @@ expr", "Apply[f, expr]"),
         ("f @@@ expr", "MapApply[f, expr]"),
         ("f @* g @ x", "Composition[f, g][x]"),
         ("f /* g @ x", "RightComposition[f, g][x]"),
         (
+            "! MatchQ[k, pat] && 0 <= i < depth",
+            "And[Not[MatchQ[k, pat]], And[LessEqual[0, i], Less[i, depth]]]",
+        ),
+        ("a || b && c", "Or[a, And[b, c]]"),
+        ("x === y === z", "SameQ[x, y, z]"),
+        ("x =!= y =!= z", "UnsameQ[x, y, z]"),
+        ("x == y != z", "And[Equal[x, y], Unequal[y, z]]"),
+        (
+            "typeSubstImpl[theta, #] & /@ args",
+            "Map[Function[typeSubstImpl[theta, Slot[1]]], args]",
+        ),
+        ("\"a\" <> ToString[i]", "StringJoin[\"a\", ToString[i]]"),
+        (
             "x_Integer := f[x]",
             "SetDelayed[Pattern[x, Blank[Integer]], f[x]]",
+        ),
+        (
+            "typeSubst[theta : {___Rule}, ty_] := rhs",
+            "SetDelayed[typeSubst[Pattern[theta, List[BlankNullSequence[Rule]]], Pattern[ty, Blank[]]], rhs]",
         ),
         (
             "expr /. x_Integer -> y",

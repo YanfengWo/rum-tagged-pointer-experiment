@@ -266,6 +266,31 @@ fn begin_package_and_end_package_restore_outer_context_and_export_package_contex
 }
 
 #[test]
+fn begin_package_usage_messages_make_public_symbols_visible_from_private_context() {
+    let mut session = Session::new();
+
+    session.eval_text("BeginPackage[\"Demo`\"]").unwrap();
+    session.eval_text("foo::usage = \"foo[x]\"").unwrap();
+    session.eval_text("Begin[\"`Private`\"]").unwrap();
+    session.eval_text("foo[x_] := x").unwrap();
+    session.eval_text("End[]").unwrap();
+    session.eval_text("EndPackage[]").unwrap();
+
+    assert_eq!(
+        session.eval_text("Demo`foo[7]").unwrap().value.to_string(),
+        "7"
+    );
+    assert_eq!(
+        session
+            .eval_text("Demo`Private`foo[7]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Demo`Private`foo[7]"
+    );
+}
+
+#[test]
 fn begin_package_expands_relative_context_specs_against_the_current_context() {
     let mut session = Session::new();
     session.set_current_context("Outer`");
@@ -365,6 +390,20 @@ fn split_script_into_forms_stops_hard_syntax_errors_from_poisoning_later_forms()
     let forms = split_script_into_forms("1 2\n3").unwrap();
 
     assert_eq!(forms, vec!["1 2".to_string(), "3".to_string()]);
+}
+
+#[test]
+fn split_script_into_forms_skips_initial_shebang_trivia() {
+    let forms = split_script_into_forms("#!/usr/bin/env wolframscript\n\n1\n2").unwrap();
+
+    assert_eq!(forms, vec!["1".to_string(), "2".to_string()]);
+}
+
+#[test]
+fn split_script_into_forms_treats_multiline_comments_as_incomplete_trivia() {
+    let forms = split_script_into_forms("1\n(* multi\n   line *)\n2").unwrap();
+
+    assert_eq!(forms, vec!["1".to_string(), "2".to_string()]);
 }
 
 #[test]

@@ -34,6 +34,35 @@ are not active project-owned examples.
 - Added runtime regressions plus curated Lane A `definitions_precedence`
   coverage for generic-before-typed `UpValue` and `SubValue` definitions.
 
+## 2026-06-10 CL-Y Cold Lane First Pass
+
+- Added first-pass `mma-hol` cold-lane coverage for exact `Total`,
+  `Denominator`, `Merge[..., Total]`, `Apply[LCM|GCD, list]`, `/@` map syntax,
+  and ordinary Unicode letter identifiers.
+- `Total` now reduces list totals through the existing exact `Plus` semantics,
+  so grouped association coefficients in `Merge[..., Total]` no longer remain
+  inert.
+- `Denominator` now covers exact integers and rationals, which is enough for the
+  current Farkas-certificate denominator extraction shape.
+
+## 2026-06-10 CL-Y Clean Source Smoke
+
+- Used a clean archive of sibling `mma-hol` HEAD `83d768f` instead of the dirty
+  working tree for the cold source smoke.
+- Cleared the next loader/source blockers exposed by that smoke: initial
+  shebang trivia, multiline comments in the script splitter, logical and
+  comparison infix operators, `:` named-pattern syntax, `Function` postfix
+  followed by `/@`, string-join `<>`, package usage-message public-symbol
+  visibility from private contexts, and string-key `Part` selectors for
+  association-backed `Failure` payloads.
+- The current smoke loads `ErrorUtil.wl`, `Types.wl`, `Terms.wl`, `Kernel.wl`,
+  and `tests/harness.wl` in sequence. Narrowed test summaries are now:
+  `errorutil_tests.wl` `List[10, 0]`, `types_tests.wl` `List[10, 6]`,
+  `terms_tests.wl` `List[16, 13]`, and `kernel_tests.wl` `List[8, 15]`.
+- The next CL-Y work is no longer parser/loader triage in the abstract. It is
+  to expose first-failure details from the harness and promote only the
+  concrete semantic gaps behind the remaining type, term, and kernel failures.
+
 ## Completed Architecture Work
 
 - The workspace was split into responsibility-oriented crates:

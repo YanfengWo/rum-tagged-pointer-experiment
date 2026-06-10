@@ -241,22 +241,45 @@ Owns Jupyter-facing protocol and transport concerns:
 This crate is intentionally optional. It is a host adapter, not part of the
 core evaluator.
 
-Its architectural role is twofold:
+For `v0.1`, its architectural role is twofold:
 
-- provide a real, broadly accessible frontend that is easy to stand up across
-  platforms
-- act as a capability-validation adapter for the kernel, proving that host
-  requests, structured diagnostics, resumable input, transport-friendly
-  results, and lifecycle handling are mature enough for serious embedding
+- provide a basic Notebook tech preview that can execute cells and expose the
+  core request flows through a familiar frontend
+- validate `rum-host` as the host boundary by routing kernel-facing request
+  handling through `HostSession` rather than depending directly on broad
+  `rum-runtime` internals
 
-In other words, `rum-jupyter` matters because it exercises the kernel in a
-general host setting, not because notebook-specific behavior is itself the main
-product.
+The request-handling flows that should be mediated through `rum-host` are:
+
+- execute
+- stdin-driven resume
+- inspect
+- complete
+- is-complete
+
+The protocol work that remains owned by `rum-jupyter` includes:
+
+- Jupyter message models and wire codecs
+- connection-file/bootstrap and kernelspec handling
+- channel/session/signature handling
+- transport loops and backend-specific socket behavior
+- IOPub status, stream, result, display, and error envelopes
+- Notebook-oriented MIME bundle construction
+
+In other words, `rum-jupyter` matters because it exercises the kernel through
+the same public host boundary other adapters should use, not because
+notebook-specific behavior is itself the main product.
 
 For development, `rum-jupyter` now also has a minimal launcher binary and a
 temporary-kernelspec smoke path so we can validate real Jupyter-client
 round-trips without installing a global kernelspec or keeping a long-lived
 notebook service around.
+
+The `v0.1` Notebook commitment is intentionally narrow: basic code-cell
+execution, text results, messages/prints, failures, inspect, completion,
+is-complete, stdin resume, kernel info, and shutdown. Robust interrupt/cancel,
+widgets/comm, debug protocol, rich display updates, graphics, and broad
+frontend compatibility are later work unless deliberately promoted.
 
 ### `rum-host`
 

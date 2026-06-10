@@ -20,6 +20,8 @@ impl Session {
             BuiltinHandler::Divide => self.eval_divide(head, args),
             BuiltinHandler::Abs => self.eval_abs(head, args),
             BuiltinHandler::Factorial => self.eval_factorial(head, args),
+            BuiltinHandler::Total => self.eval_total(head, args),
+            BuiltinHandler::Denominator => self.eval_denominator(head, args),
             BuiltinHandler::Mod => self.eval_mod(head, args),
             BuiltinHandler::Quotient => self.eval_quotient(head, args),
             BuiltinHandler::PowerMod => self.eval_power_mod(head, args),

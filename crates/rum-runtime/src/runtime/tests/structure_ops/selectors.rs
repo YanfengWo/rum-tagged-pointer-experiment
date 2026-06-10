@@ -16,6 +16,22 @@ fn keyed_part_and_extract_cover_association_paths() {
     );
     assert_eq!(
         session
+            .eval_text("Part[Association[\"tag\" -> 7], \"tag\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "7"
+    );
+    assert_eq!(
+        session
+            .eval_text("Part[Failure[\"x\", Association[\"tag\" -> 7]], 2, \"tag\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "7"
+    );
+    assert_eq!(
+        session
             .eval_text("Part[Association[a -> 1, b -> 2], {Key[b], Key[a]}]")
             .unwrap()
             .value

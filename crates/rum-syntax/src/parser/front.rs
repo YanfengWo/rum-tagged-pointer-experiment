@@ -36,9 +36,24 @@ impl Parser {
     pub(super) fn parse_function_expr(&mut self) -> Result<SyntaxExpr, SyntaxError> {
         let mut expr = self.parse_binary_expr(0)?;
 
-        while let Some(ampersand_span) = self.consume_ampersand() {
-            let span = expr.span().merge(ampersand_span);
-            expr = SyntaxExpr::postfix(PostfixOp::Function, expr, span);
+        loop {
+            while let Some(ampersand_span) = self.consume_ampersand() {
+                let span = expr.span().merge(ampersand_span);
+                expr = SyntaxExpr::postfix(PostfixOp::Function, expr, span);
+            }
+
+            let Some(op) = self.current_binary_op() else {
+                break;
+            };
+
+            if !can_follow_function_postfix(op) {
+                break;
+            }
+
+            self.bump();
+            let rhs = self.parse_binary_expr(next_min_precedence_for_binary_op(op))?;
+            let span = expr.span().merge(rhs.span());
+            expr = SyntaxExpr::binary(op, expr, rhs, span);
         }
 
         Ok(expr)
@@ -72,12 +87,7 @@ impl Parser {
 
             self.bump();
 
-            let next_min_precedence = match op {
-                BinaryOp::ReplaceAll | BinaryOp::ReplaceRepeated => BinaryOp::Rule.precedence(),
-                BinaryOp::Rule | BinaryOp::RuleDelayed => BinaryOp::Set.precedence(),
-                _ if op.is_right_associative() => op.precedence(),
-                _ => op.precedence() + 1,
-            };
+            let next_min_precedence = next_min_precedence_for_binary_op(op);
 
             let rhs =
                 if matches!(op, BinaryOp::CompoundExpression) && !self.token_starts_expression() {
@@ -118,6 +128,12 @@ impl Parser {
                 let expr = self.parse_binary_expr(PrefixOp::Minus.precedence())?;
                 let span = token.span.merge(expr.span());
                 Ok(SyntaxExpr::prefix(PrefixOp::Minus, expr, span))
+            }
+            TokenKind::Bang => {
+                self.bump();
+                let expr = self.parse_binary_expr(PrefixOp::Not.precedence())?;
+                let span = token.span.merge(expr.span());
+                Ok(SyntaxExpr::prefix(PrefixOp::Not, expr, span))
             }
             TokenKind::MinusMinus => {
                 self.bump();
@@ -356,4 +372,20 @@ impl Parser {
             }),
         }
     }
+}
+
+fn next_min_precedence_for_binary_op(op: BinaryOp) -> u8 {
+    match op {
+        BinaryOp::ReplaceAll | BinaryOp::ReplaceRepeated => BinaryOp::Rule.precedence(),
+        BinaryOp::Rule | BinaryOp::RuleDelayed => BinaryOp::Set.precedence(),
+        _ if op.is_right_associative() => op.precedence(),
+        _ => op.precedence() + 1,
+    }
+}
+
+fn can_follow_function_postfix(op: BinaryOp) -> bool {
+    matches!(
+        op,
+        BinaryOp::Apply | BinaryOp::Map | BinaryOp::ApplyHead | BinaryOp::MapApply
+    )
 }

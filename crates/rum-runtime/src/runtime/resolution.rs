@@ -101,6 +101,10 @@ impl Session {
                 .get(symbol)
                 .is_some_and(|options| !options.is_empty())
             || self.syntax_information.contains_key(symbol)
+            || self
+                .message_definitions
+                .keys()
+                .any(|key| &key.symbol == symbol)
             || self.builtin_spec_for_symbol(symbol).is_some()
             || is_known_system_symbol(symbol)
     }

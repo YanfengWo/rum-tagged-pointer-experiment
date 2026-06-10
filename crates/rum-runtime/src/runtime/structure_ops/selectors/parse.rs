@@ -77,6 +77,10 @@ pub(super) fn parse_scalar_part_selector(expr: &Expr) -> Option<PartSelector> {
 }
 
 fn parse_key_part_selector(expr: &Expr) -> Option<Expr> {
+    if matches!(expr, Expr::Atom(Atom::String(_))) {
+        return Some(expr.clone());
+    }
+
     let Expr::Call { head, args } = expr else {
         return None;
     };

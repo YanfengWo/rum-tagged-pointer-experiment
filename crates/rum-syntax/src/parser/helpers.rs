@@ -137,6 +137,7 @@ impl Parser {
                 | TokenKind::PlusPlus
                 | TokenKind::Minus
                 | TokenKind::MinusMinus
+                | TokenKind::Bang
                 | TokenKind::Span
         ) || self.token_starts_primary()
     }
@@ -158,7 +159,20 @@ impl Parser {
             TokenKind::Arrow => Some(BinaryOp::Rule),
             TokenKind::RuleDelayed => Some(BinaryOp::RuleDelayed),
             TokenKind::Condition => Some(BinaryOp::Condition),
+            TokenKind::Or => Some(BinaryOp::Or),
+            TokenKind::And => Some(BinaryOp::And),
+            TokenKind::Same => Some(BinaryOp::SameQ),
+            TokenKind::Unsame => Some(BinaryOp::UnsameQ),
+            TokenKind::Equal => Some(BinaryOp::Equal),
+            TokenKind::Unequal => Some(BinaryOp::Unequal),
+            TokenKind::Less => Some(BinaryOp::Less),
+            TokenKind::Greater => Some(BinaryOp::Greater),
+            TokenKind::LessEqual => Some(BinaryOp::LessEqual),
+            TokenKind::GreaterEqual => Some(BinaryOp::GreaterEqual),
+            TokenKind::Colon => Some(BinaryOp::Pattern),
+            TokenKind::StringJoin => Some(BinaryOp::StringJoin),
             TokenKind::At => Some(BinaryOp::Apply),
+            TokenKind::SlashAt => Some(BinaryOp::Map),
             TokenKind::AtAt => Some(BinaryOp::ApplyHead),
             TokenKind::AtAtAt => Some(BinaryOp::MapApply),
             TokenKind::AtStar => Some(BinaryOp::Composition),

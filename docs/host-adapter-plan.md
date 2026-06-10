@@ -32,8 +32,9 @@ This crate is meant to become the reference host boundary for:
 - `rum-host`
   - owns the narrow public embedding surface built on top of `rum-runtime`
 - `rum-jupyter`
-  - remains an optional protocol adapter and should eventually reuse
-    `rum-host`-level pieces where that reduces duplication
+  - remains an optional protocol adapter, but should consume `rum-host` for
+    request handling before its basic Notebook behavior is treated as part of
+    the `v0.1` delivery surface
 - future Python adapter
   - should wrap `rum-host` rather than binding directly to broad
     `rum-runtime` internals
@@ -157,11 +158,12 @@ The first validation wave for `rum-host` includes:
 - suspend/resume tests through the host facade
 - structured outcome, failure-code, message, print, parse, inspect,
   completion, and completeness coverage
+- migration of `rum-jupyter` request handling to the host facade, keeping
+  Jupyter protocol, transport, and MIME details in `rum-jupyter`
 - one small example embedding binary or example module, with the current
   `crates/rum-host/examples/basic_embedding.rs` serving as the minimal smoke
   example; broader showcase work should be driven by concrete external
   pressure such as `mma-hol`
-- selective reuse by `rum-jupyter` only after the surface proves useful
 
 ## Suggested Build Order
 
@@ -170,31 +172,42 @@ The first validation wave for `rum-host` includes:
 3. create a small `rum-host` crate with builders and eval/resume flow
 4. add host-focused regression tests
 5. expand to inspect/complete/is-complete
-6. keep Python frozen unless a concrete downstream need reopens it
+6. migrate `rum-jupyter` request handling onto `rum-host`
+7. add one documented real-Notebook smoke/deploy path
+8. keep Python frozen unless a concrete downstream need reopens it
 
 Items 1 through 5 now have an initial implementation. The first hardening pass
 has also split the `rum-host` facade model into request, outcome, and
 inspection modules, added public adapter-contract regression coverage, and
 landed a minimal Rust embedding example. The next work should validate the
-surface through richer examples and downstream adapter pressure, not expand the
-public surface by default.
+surface through `rum-jupyter` migration and concrete downstream pressure, not
+expand the public surface by default.
 
-## Jupyter Reuse Assessment
+## Jupyter Migration Target
 
-`rum-jupyter` should not be force-migrated to `rum-host` immediately. It
-currently owns notebook-specific MIME bundles, IOPub lifecycle behavior,
-message routing, signatures, and transport frames, all of which are outside
-`rum-host`.
+The earlier "reuse later" stance has been superseded by the `v0.1` boundary:
+`rum-jupyter` should route kernel-facing request handling through `rum-host`
+before basic Notebook behavior is treated as delivered.
 
-The likely reuse points are narrower:
+The migration should move these responsibilities behind `rum-host`:
 
-- cursor-symbol extraction for inspect/complete requests
-- conversion from runtime request outcomes into stable host-level success,
-  input-suspension, and failure facades
-- future shared examples or smoke tests that exercise host request semantics
+- session construction and core-builtin installation
+- eval and stdin resume
+- inspect, complete, and is-complete
+- stable success, input-suspension, failure, message, print, trace, and
+  structured-output facades
+- public adapter-facing result and failure shapes that currently expose
+  `rum-runtime` types
 
-The first `rum-host` crate should prove these seams before `rum-jupyter` takes
-a dependency on it.
+The migration should leave these responsibilities in `rum-jupyter`:
+
+- Jupyter request/response models
+- ZeroMQ/native transport and heartbeat handling
+- connection-file parsing, bootstrap, and kernelspec/deploy scripts
+- channel/session/signature handling
+- wire codecs and validation
+- IOPub lifecycle envelopes and MIME bundle construction
+- graceful handling of unsupported Jupyter messages
 
 ## Initial Open Questions
 
@@ -202,5 +215,6 @@ a dependency on it.
   escape hatch, or keep all expression data behind rendered/facade values?
 - which additional structured outputs should be guaranteed stable in v1 of
   `rum-host` beyond result, print, message, and trace?
-- when should `rum-jupyter` begin reusing `rum-host` helpers versus continuing
-  to call `rum-runtime` directly?
+- does the basic Notebook path need a small `HostStructuredOutput` extension,
+  or are the current text-only result, print, message, and trace outputs enough
+  for `v0.1`?

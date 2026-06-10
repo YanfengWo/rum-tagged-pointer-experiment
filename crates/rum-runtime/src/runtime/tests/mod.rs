@@ -104,6 +104,7 @@ mod lowering_golden;
 mod messages;
 mod messages_part2;
 mod messages_part3;
+mod mma_hol_cold_lane;
 mod names_and_syntax_information;
 mod options_and_protection;
 mod package_tools;

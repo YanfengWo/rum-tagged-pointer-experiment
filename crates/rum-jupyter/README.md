@@ -2,8 +2,14 @@
 
 `rum-jupyter` is the Jupyter protocol adapter for `rum`.
 
-For development we can smoke-test it without installing any global kernelspec and without
-keeping a long-running notebook server around.
+For `v0.1`, it should route kernel-facing request handling through `rum-host`
+and provide a basic Notebook tech preview. Jupyter protocol, transport,
+kernelspec, IOPub, and MIME concerns remain owned by this crate.
+
+The current local smoke path still uses `jupyter-console` because it is quick
+and does not require a long-running notebook server. A documented real-Notebook
+deploy path is part of the migration work tracked in
+[Jupyter Host Migration Audit](../../docs/jupyter-host-migration-audit.md).
 
 ## One-Command Smoke Test
 

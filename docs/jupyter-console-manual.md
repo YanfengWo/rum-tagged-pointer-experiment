@@ -6,6 +6,11 @@ It is meant for local developer validation when we want to watch a real Jupyter
 frontend talk to the kernel, but do not want to install a global kernelspec or
 keep a long-running notebook server around.
 
+This is not the full `v0.1` Notebook acceptance path. The `v0.1` target is a
+`rum-host`-backed basic Notebook tech preview; see
+[Jupyter Host Migration Audit](./jupyter-host-migration-audit.md). Until that
+path lands, this console smoke remains the fastest adapter sanity check.
+
 ## Prerequisites
 
 - a working local Python environment with `jupyter-console` and

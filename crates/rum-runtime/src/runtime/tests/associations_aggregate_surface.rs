@@ -10,7 +10,7 @@ fn merge_catenate_counts_groupby_and_positionindex_cover_first_pass_subset() {
             .unwrap()
             .value
             .to_string(),
-        "Association[Rule[a, Total[List[1, 3]]], Rule[b, Total[List[2]]]]"
+        "Association[Rule[a, 4], Rule[b, 2]]"
     );
     assert_eq!(
         session
@@ -18,7 +18,7 @@ fn merge_catenate_counts_groupby_and_positionindex_cover_first_pass_subset() {
             .unwrap()
             .value
             .to_string(),
-        "Association[Rule[a, Total[List[1, 2]]], Rule[b, Total[List[3]]]]"
+        "Association[Rule[a, 3], Rule[b, 3]]"
     );
     assert_eq!(
         session
@@ -26,7 +26,7 @@ fn merge_catenate_counts_groupby_and_positionindex_cover_first_pass_subset() {
             .unwrap()
             .value
             .to_string(),
-        "Association[Rule[a, Total[List[1, 2]]], Rule[b, Total[List[3]]]]"
+        "Association[Rule[a, 3], Rule[b, 3]]"
     );
     assert_eq!(
         session
@@ -34,7 +34,7 @@ fn merge_catenate_counts_groupby_and_positionindex_cover_first_pass_subset() {
             .unwrap()
             .value
             .to_string(),
-        "Association[Rule[a, Total[List[1, 2]]], Rule[b, Total[List[3]]]]"
+        "Association[Rule[a, 3], Rule[b, 3]]"
     );
     assert_eq!(
         session
@@ -42,7 +42,7 @@ fn merge_catenate_counts_groupby_and_positionindex_cover_first_pass_subset() {
             .unwrap()
             .value
             .to_string(),
-        "Association[Rule[a, Total[List[1, 2]]]]"
+        "Association[Rule[a, 3]]"
     );
     assert_eq!(
         session
@@ -50,7 +50,7 @@ fn merge_catenate_counts_groupby_and_positionindex_cover_first_pass_subset() {
             .unwrap()
             .value
             .to_string(),
-        "Association[Rule[a, Total[List[1, 3]]], Rule[b, Total[List[2]]]]"
+        "Association[Rule[a, 4], Rule[b, 2]]"
     );
     assert_eq!(
         session

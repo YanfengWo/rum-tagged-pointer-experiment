@@ -263,6 +263,8 @@ pub enum BuiltinHandler {
     Divide,
     Abs,
     Factorial,
+    Total,
+    Denominator,
     Mod,
     Quotient,
     PowerMod,

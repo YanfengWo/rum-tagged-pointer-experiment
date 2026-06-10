@@ -14,8 +14,8 @@ Completed history, archived planning detail, and operational lessons live in
   `mma-hol`, or another concrete downstream blocker justifies them.
 - [ ] Keep project-owned Python adapter work frozen until a real downstream
   need justifies reopening API, packaging, and binding decisions.
-- [ ] Keep Jupyter optional and capability-validating; do not let notebook
-  polish drive kernel architecture.
+- [ ] Keep Jupyter scoped as a `rum-host`-backed basic Notebook tech preview:
+  useful for contract validation, not a full notebook product.
 
 ## Immediate Correctness And Debt
 
@@ -40,6 +40,9 @@ Completed history, archived planning detail, and operational lessons live in
   a stabilization cut.
 - [ ] Keep `rum-host` as the Rust embedding boundary for sessions, requests,
   configuration, structured outcomes, failures, and suspend/resume.
+- [ ] Migrate `rum-jupyter` to consume `rum-host` for eval, resume, inspect,
+  complete, and is-complete before treating basic Notebook behavior as a
+  `v0.1` delivery surface.
 - [ ] Treat any future adapters as peers to `rum-jupyter`, layered on the same
   host-facing runtime API rather than special cases inside `rum-runtime`.
 - [ ] Keep source organization aligned with
@@ -77,16 +80,52 @@ Completed history, archived planning detail, and operational lessons live in
 - [ ] Use `mma-hol` as the preferred near-term showcase and pressure test:
   audit the Wolfram-language surface it needs, then promote only concrete
   blockers into focused kernel tasks.
-- [ ] Turn `mma-hol/tests/run_all.wls` into the first real-project smoke lane
-  once loader/script prerequisites are ready.
+- [ ] Frame the long-running downstream target as an `mma-hol`-to-`rum-hol`
+  migration path: cold proof-script correctness, stable snapshot development
+  loop, and a basic notebook theorem demo are the three acceptance surfaces.
+- [ ] Keep `mma-hol/tests/run_all.wls` as the first full real-project smoke
+  lane. The clean-HEAD cold source smoke now gets through the core package and
+  harness load path, but the full script still needs a bounded driver and
+  failure triage before it can become a routine check.
+- [ ] Use the updated `CL-Y` audit in
+  [docs/core-language-support-matrix.md](./docs/core-language-support-matrix.md)
+  as the source of truth for `mma-hol` blockers. The next cold-lane work is to
+  inspect the first failing assertions in `types_tests.wl`, `terms_tests.wl`,
+  and `kernel_tests.wl`, then promote only those concrete semantic gaps.
+- [ ] Treat `mma-hol` stable-mode snapshot helpers (`DumpSave`, `Contexts[]`,
+  `$ContextPath` / `$Packages`, file timestamps, and timing reports) as a
+  required developer-workflow gate for `rum-hol` migration. Cold `run_all.wls`
+  remains the semantic baseline; Strict mode is not a snapshot restore target;
+  `rum` `DumpSave` is a textual snapshot format rather than Wolfram `.mx`
+  compatibility.
 - [ ] Preserve the already-demonstrated `Module` closure pattern where
   exported definitions retain access to fresh private mutable state after the
   enclosing `Module` returns.
 - [ ] Track the already-matrix-covered `Throw` / `Catch` / `Failure` /
   `FailureQ` / `Stack[]` path as part of the `mma-hol` smoke lane.
-- [ ] Keep small glue helpers such as `FromDigits` and text-only `Row` on the
-  compatibility radar, but prefer sample-code cleanup when a dependency is
-  accidental rather than important.
+- [ ] Keep small glue helpers such as text-only `Row`, script-time helpers,
+  and lint-only `Import[..., "Text"]` on the compatibility radar, but prefer
+  sample-code cleanup when a dependency is accidental rather than important.
+
+## Basic Notebook Tech Preview
+
+- [ ] Make `rum-jupyter` depend on `rum-host` instead of broad `rum-runtime`
+  for request handling and public result, failure, input, inspect, completion,
+  and completeness shapes.
+- [ ] Preserve Jupyter-owned concerns in `rum-jupyter`: kernelspec/bootstrap,
+  ZeroMQ/native transport, signing, wire codecs, message envelopes, IOPub
+  lifecycle, and MIME bundles.
+- [ ] Provide one documented deploy path for a real Notebook frontend; other
+  frontends and installation styles are user-managed unless explicitly
+  promoted.
+- [ ] Support the minimal Notebook workflow: code cell execution,
+  `text/plain` results, messages/prints, failures as Jupyter errors, inspect,
+  complete, is-complete, stdin resume, `kernel_info`, and shutdown.
+- [ ] Handle common unsupported Jupyter messages gracefully rather than
+  terminating the kernel process.
+- [ ] Keep robust interrupt/cancel, widgets/comm, debug protocol, rich
+  display/update/clear-output behavior, and broad frontend compatibility
+  outside `v0.1` unless deliberately promoted.
 
 ## Harness And Conformance
 

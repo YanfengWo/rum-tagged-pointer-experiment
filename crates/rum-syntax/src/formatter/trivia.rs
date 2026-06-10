@@ -525,6 +525,7 @@ fn is_prefix_position(previous: &SyntaxTokenKind) -> bool {
             | SyntaxTokenKind::ReplaceRepeated
             | SyntaxTokenKind::Condition
             | SyntaxTokenKind::TagSet
+            | SyntaxTokenKind::SlashAt
             | SyntaxTokenKind::Star
             | SyntaxTokenKind::Slash
             | SyntaxTokenKind::Caret

@@ -68,6 +68,7 @@ IDs instead of re-enumerating every function name.
 - `CL-07`: string language
 - `CL-08`: package, namespace, options, and protection tooling
 - `CL-09`: tuning, debugging, and verification surface
+- `CL-Y`: `mma-hol` real-project pressure lane
 - `CL-X`: explicit exclusions for this project phase
 
 ## Current Roadmap State
@@ -77,6 +78,11 @@ phase. Remaining `partial` / `planned` notes below describe known subset
 boundaries, demand-driven parity tails, or future feature breadth. They should
 not be read as active blockers unless `TODO.md` or a concrete downstream
 project promotes one of them back into scheduled work.
+
+`CL-Y` is different from the page-defined mainlines: it is a concrete
+real-project acceptance lane. Items promoted by `CL-Y` should still be small,
+evidence-backed kernel or harness tasks, not a broad promise to implement every
+Wolfram feature that appears in a neighboring project.
 
 ## Overlap Policy
 
@@ -299,8 +305,8 @@ once in its primary implementation group. Other groups may mention it as
 ### Mechanisms
 
 - `implemented`: pure functions, operator-form lowering for `&`, application
-  sugar `@`, `@@`, `@@@`, composition sugar `@*`, `/*`, and slot forms `#`,
-  `##`, and `#name`
+  sugar `@`, `/@`, `@@`, `@@@`, composition sugar `@*`, `/*`, and slot forms
+  `#`, `##`, and `#name`
 - `partial`: current threading surface through `Thread`, the existing
   `Listable` subset, first-pass runtime support for `BlockMap`, `SubsetMap`,
   `Comap`, `ComapApply`, `Accumulate`, `MapIndexed`, `Map`, `MapAll`,
@@ -791,6 +797,154 @@ once in its primary implementation group. Other groups may mention it as
 - `cross-tracked elsewhere`: `AbortProtect`, `Check`, `CheckAbort`,
   `Failure`, `Message`, `Missing`, `PropagateAborts`, `Quiet`
 
+## CL-Y: `mma-hol` Real-Project Pressure Lane
+
+### Audit Snapshot
+
+Last scanned: 2026-06-10.
+
+Local source snapshot:
+
+- repository: `/Users/fft/Developments/mma-hol`
+- HEAD: `83d768f`
+- worktree note: `stdlib/Real/Mul.wl` had local edits during the scan; several
+  `.tmp_*` probe files were present and ignored as project artifacts
+- scanned scope: tracked and working-tree `*.wl` / `*.wls` source under the
+  project, excluding temporary probe files; the current source/test corpus is
+  about 51k lines
+
+Primary acceptance candidate:
+
+- `tests/run_all.wls` should become the first cold real-project smoke lane.
+  It loads core packages, automation packages, stdlib packages, and the current
+  Real frontier files `RatAux.wl`, `Field.wl`, `Mul.wl`, and `Inv.wl`.
+
+Secondary harness candidates:
+
+- `tests/build_snapshot.wls`, `tests/run_fast.wls`, and
+  `tests/extend_snapshot.wls` exercise snapshot-style development flow via
+  `DumpSave`, `Get`, `Contexts[]`, file timestamps, and context-path restore.
+  Treat these as a required developer-workflow lane for an eventual
+  `mma-hol`-to-`rum-hol` migration, even though the cold `run_all.wls` lane
+  remains the semantic baseline.
+- `tests/lint_private.wls` is useful but not a kernel acceptance blocker; it
+  adds `Import[..., "Text"]`, `Reap`, and `Sow` pressure.
+
+Strict/stable snapshot boundary:
+
+- `mma-hol` now distinguishes strict and stable kernel encapsulation. Strict
+  mode keeps kernel state behind `Module` / `Unique` generated symbols and is
+  deliberately not a cross-session `DumpSave` restore target.
+- Stable mode uses fixed `HOL` private-context symbols for kernel state. That
+  is the only mode `rum` should target for snapshot-backed `mma-hol` runs.
+- `rum` already has a first-pass textual `Save` / `DumpSave` / `Get` layer that
+  can round-trip simple definitions, attributes, options, syntax information,
+  messages, and name-pattern/context selections. It is not Wolfram `.mx` binary
+  compatibility and should be treated as a `rum` snapshot format.
+- The current stable snapshot scripts are not supported end-to-end yet:
+  expression-level `Contexts[]`, assignment that mutates the runtime
+  `$ContextPath` / `$Packages` session fields, and small harness helpers such
+  as `FileDate`, `FileByteCount`, `AbsoluteTime`, and `Round` still need focused
+  support before `tests/build_snapshot.wls` / `tests/run_fast.wls` can be used
+  as the practical development loop for `rum-hol`.
+
+### Required Language Shape
+
+The current `mma-hol` tree needs the following host-language clusters:
+
+- package/script loading: `BeginPackage`, `Begin`, `End`, `EndPackage`,
+  `Needs`, `Get`, `$Path`, `$InputFileName`, `FileNameJoin`,
+  `DirectoryName`, `ParentDirectory`, `FileNames`, `FileNameTake`, and `Exit`
+- lexical and dynamic state: heavy `Module`, closure capture through private
+  gensyms, `Unique`, `With`, `Block`, `SetAttributes`, and `ValueQ`
+- rules and patterns: named blanks, typed blanks, blank sequences,
+  `Condition`, rule and delayed-rule replacement, `MatchQ`, `Cases` with
+  levelspecs, and list-of-rule substitution flows
+- association-backed bookkeeping: `Association`, `AssociationQ`, `Lookup`,
+  `KeyExistsQ`, `KeyDrop`, `KeySelect`, `KeySort`, `KeyValueMap`, `Keys`,
+  `Values`, `Merge`, `AssociateTo`, `Normal`, `Missing`, and `MissingQ`
+- procedural and functional control: `If`, `Which`, `Switch`, `Do`, `Table`,
+  `While`, `Break`, `Return`, `Catch`, `Throw`, `Map`, `Apply`, `MapThread`,
+  `Fold`, `Nest`, `Scan`, `Select`, `SelectFirst`, `AllTrue`, `AnyTrue`, and
+  `Outer`
+- exact host-level arithmetic for automation: exact integers/rationals,
+  `Plus`, `Times`, `Subtract`, `Divide`, `Power`, `Mod`, `Quotient`, `GCD`,
+  `LCM`, and the small aggregation helpers listed below
+- list/set plumbing: `Append`, `AppendTo`, `Prepend`, `Join`, `Flatten`,
+  `Reverse`, `Transpose`, `Union`, `Complement`, `Delete`, `DeleteCases`,
+  `DeleteDuplicates`, `DeleteDuplicatesBy`, `Sort`, `SortBy`, `Range`,
+  `Take`, `Drop`, `Most`, `Rest`, `First`, `Last`, and `Length`
+- string/tokenizer helpers: `Characters`, `StringLength`, `StringTake`,
+  `StringJoin`, `StringContainsQ`, `StringMatchQ`, `StringPosition`,
+  `StringRiffle`, `StringSplit`, `StringStartsQ`, `DigitQ`, `LetterQ`,
+  `Whitespace`, and `ToString`
+- diagnostics and test output: `Failure`, `FailureQ`, `Stack[]`, `Print`,
+  `Row`, `AbsoluteTime`, and `Round`
+- source compatibility: ordinary source identifiers may use Wolfram-style
+  Unicode letters and HOL glyph-like names; this is parser/source compatibility
+  pressure, not a request for notebook front-end rendering
+
+### Newly Promoted Or Reconfirmed Blockers
+
+These are the concrete `CL-Y` items that should be checked before declaring
+the `mma-hol` lane healthy:
+
+- `Total`: first-pass exact/list support is implemented and now lets
+  `Merge[..., Total]` reduce grouped exact numeric coefficients instead of
+  preserving `Total[List[...]]` as an inert head.
+- `Denominator`: first-pass exact integer/rational support is implemented for
+  the `Denominator /@ Values[prov]` shape used before Farkas-certificate
+  `LCM`.
+- `Apply[LCM|GCD, list]`: covered by runtime regression in the actual
+  `mma-hol` usage shape.
+- `/@` map syntax and Unicode letter identifiers: first-pass source support is
+  implemented for ordinary Unicode letter/digit symbols such as Greek local
+  names used by `mma-hol`; escaped Wolfram box/name syntax is still outside the
+  current source subset.
+- `Contexts[]`, `DumpSave`, `$ContextPath`, and `$Packages`: these are not
+  needed for the first cold `run_all.wls` semantic smoke, but are required for
+  the stable-mode snapshot-backed `run_fast.wls` workflow and for practical
+  `rum-hol` development. `DumpSave` exists as a textual `rum` snapshot
+  primitive, but the full context enumeration and context-path restore workflow
+  is not yet complete.
+- script/package source compatibility: initial shebang lines and multiline
+  comments are handled by the loader splitter, infix logical/comparison syntax
+  lowers to the existing boolean/comparison builtins, `:` named-pattern sugar,
+  `Function`-postfix map forms such as `f[#] & /@ xs`, and string-join `<>`
+  are implemented for the current `mma-hol` sources.
+- package public-symbol visibility: usage messages now make package public
+  symbols visible while evaluating private context definitions, so private
+  implementation code binds exported definitions to the intended public names.
+- association key selectors: string keys can be used as `Part` selectors for
+  association-backed payloads, including `Failure[..., assoc][[2, "key"]]`
+  harness shapes.
+- `FileDate`, `FileByteCount`, `AbsoluteTime`, and `Round`: harness utilities
+  for snapshot freshness and timing reports; keep them scoped to script/harness
+  support rather than general system monitoring.
+- `Import[..., "Text"]`, `Reap`, and `Sow`: needed by the private-context lint
+  script, but below the cold run and snapshot lanes in priority.
+- clean-HEAD source smoke: using a clean archive of `mma-hol` HEAD `83d768f`,
+  the current runtime loads `ErrorUtil.wl`, `Types.wl`, `Terms.wl`,
+  `Kernel.wl`, and `tests/harness.wl` in sequence. `errorutil_tests.wl`
+  reports `List[10, 0]`; `types_tests.wl` reports `List[10, 6]`;
+  `terms_tests.wl` reports `List[16, 13]`; and `kernel_tests.wl` reports
+  `List[8, 15]`. The full `run_all.wls` path compiles/runs past the earlier
+  loader blockers but still needs a bounded smoke driver and first-failure
+  visibility before it can be a routine acceptance check.
+
+### Non-Goals
+
+`CL-Y` does not promote these areas by itself:
+
+- full CAS or mathematical-analysis coverage in `rum`; `mma-hol` owns the HOL
+  mathematics, while `rum` only needs to execute the Wolfram-style host code
+- notebook UI, boxes, graphics, dynamic front-end behavior, or rich theorem
+  rendering
+- compatibility with temporary probe files, debug transcripts, or dirty
+  one-off local experiments in the neighboring checkout
+- broad file/network/system APIs beyond the small script and snapshot helpers
+  explicitly used by the smoke lanes
+
 ## CL-X: Explicit Exclusions For This Project Phase
 
 These names are explicitly pointed to by the scoped pages, but are currently
@@ -893,10 +1047,13 @@ of the page-defined official matrix above.
   `StringEndsQ`, `StringStartsQ`, `StringTrim`, `TagSetDelayed`, `TagUnset`,
   `$Context`, `$Failed`, `$InputFileName`, `$MessageList`, `$Path`, `File`,
   `FileNameJoin`, `DirectoryName`, `ParentDirectory`, `FileNames`,
-  `FileNameTake`, `Exit`
-- `planned`: real-project script/package glue for `CL-Y`, including
-  text-only `Row`, fuller path helper parity, and parser compatibility for
-  Wolfram-style Unicode identifier characters used as ordinary source symbols
+  `FileNameTake`, `Exit`, `Total`, `Denominator`
+- `planned`: remaining real-project script/package glue promoted by `CL-Y`,
+  currently including script timing and file-metadata helpers, `Contexts[]` /
+  snapshot workflow support, `Import[..., "Text"]` for linting, text-only
+  `Row`, a bounded `mma-hol` smoke driver, and the concrete semantic gaps
+  exposed by the current `types_tests.wl`, `terms_tests.wl`, and
+  `kernel_tests.wl` cold-source failures
 
 ## Maintenance Notes
 

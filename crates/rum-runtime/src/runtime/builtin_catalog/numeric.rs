@@ -52,6 +52,16 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Factorial,
     ),
     BuiltinSpec::ordinary(
+        "Total",
+        "Totals list elements through the current exact Plus semantics.",
+        BuiltinHandler::Total,
+    ),
+    BuiltinSpec::ordinary(
+        "Denominator",
+        "Returns the denominator of exact integers and rationals.",
+        BuiltinHandler::Denominator,
+    ),
+    BuiltinSpec::ordinary(
         "Mod",
         "Returns the modulus of one integer with respect to another.",
         BuiltinHandler::Mod,

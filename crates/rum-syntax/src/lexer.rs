@@ -64,16 +64,26 @@ impl<'a> Lexer<'a> {
             '<' => {
                 if self.consume_str("<|") {
                     TokenKind::LAssociation
+                } else if self.consume_str("<=") {
+                    TokenKind::LessEqual
+                } else if self.consume_str("<>") {
+                    TokenKind::StringJoin
                 } else {
-                    return Err(SyntaxError::UnexpectedCharacter {
-                        found: ch,
-                        span: Span::new(start, self.offset),
-                    });
+                    self.single(TokenKind::Less)
+                }
+            }
+            '>' => {
+                if self.consume_str(">=") {
+                    TokenKind::GreaterEqual
+                } else {
+                    self.single(TokenKind::Greater)
                 }
             }
             '|' => {
                 if self.consume_str("|>") {
                     TokenKind::RAssociation
+                } else if self.consume_str("||") {
+                    TokenKind::Or
                 } else {
                     return Err(SyntaxError::UnexpectedCharacter {
                         found: ch,
@@ -119,7 +129,20 @@ impl<'a> Lexer<'a> {
                 }
             }
             '^' => self.single(TokenKind::Caret),
-            '&' => self.single(TokenKind::Ampersand),
+            '&' => {
+                if self.consume_str("&&") {
+                    TokenKind::And
+                } else {
+                    self.single(TokenKind::Ampersand)
+                }
+            }
+            '!' => {
+                if self.consume_str("!=") {
+                    TokenKind::Unequal
+                } else {
+                    self.single(TokenKind::Bang)
+                }
+            }
             '#' => self.single(TokenKind::Hash),
             '-' => {
                 if self.consume_str("->") {
@@ -140,14 +163,17 @@ impl<'a> Lexer<'a> {
                 } else if self.consume_str(":>") {
                     TokenKind::RuleDelayed
                 } else {
-                    return Err(SyntaxError::UnexpectedCharacter {
-                        found: ch,
-                        span: Span::new(start, self.offset),
-                    });
+                    self.single(TokenKind::Colon)
                 }
             }
             '=' => {
-                if self.consume_str("=.") {
+                if self.consume_str("=!=") {
+                    TokenKind::Unsame
+                } else if self.consume_str("===") {
+                    TokenKind::Same
+                } else if self.consume_str("==") {
+                    TokenKind::Equal
+                } else if self.consume_str("=.") {
                     TokenKind::Unset
                 } else {
                     self.single(TokenKind::Set)
@@ -156,6 +182,8 @@ impl<'a> Lexer<'a> {
             '/' => {
                 if self.consume_str("//.") {
                     TokenKind::ReplaceRepeated
+                } else if self.consume_str("/@") {
+                    TokenKind::SlashAt
                 } else if self.consume_str("//=") {
                     TokenKind::SlashSlashEqual
                 } else if self.consume_str("/=") {
@@ -327,6 +355,11 @@ impl<'a> Lexer<'a> {
         let start = trivia.len();
 
         loop {
+            if self.offset == 0 && self.input.starts_with("#!") {
+                trivia.push(self.collect_shebang_comment());
+                continue;
+            }
+
             let whitespace_start = self.offset;
 
             while matches!(self.peek_char(), Some(ch) if ch.is_whitespace()) {
@@ -348,6 +381,17 @@ impl<'a> Lexer<'a> {
 
             return Ok(start..trivia.len());
         }
+    }
+
+    fn collect_shebang_comment(&mut self) -> TriviaPiece {
+        let start = self.offset;
+
+        while matches!(self.peek_char(), Some(ch) if ch != '\n' && ch != '\r') {
+            self.bump_char();
+        }
+
+        let span = Span::new(start, self.offset);
+        TriviaPiece::comment(span, self.input[start..self.offset].to_string())
     }
 
     fn collect_comment(&mut self) -> Result<TriviaPiece, SyntaxError> {
@@ -401,11 +445,11 @@ impl<'a> Lexer<'a> {
 }
 
 fn is_symbol_start(ch: char) -> bool {
-    ch.is_ascii_alphabetic() || ch == '$'
+    ch.is_alphabetic() || ch == '$'
 }
 
 fn is_symbol_continue(ch: char) -> bool {
-    ch.is_ascii_alphanumeric() || matches!(ch, '$' | '`')
+    ch.is_alphanumeric() || matches!(ch, '$' | '`')
 }
 
 #[cfg(test)]
@@ -416,7 +460,7 @@ mod tests {
     #[test]
     fn lexes_multi_char_operators() {
         let tokens = lex(
-            "x::tag := y //. z /. q -> w /; p f /: g =. a[[1]] b;;c <|d -> e|> h@i j@@k l@@@m n@*o p/*q",
+            "x::tag := y //. z /. q -> w /; p f /: g =. a[[1]] b;;c <|d -> e|> h@i j@@k l@@@m n@*o p/*q r/@s a&&b c||d !e f===g h=!=i j==k l!=m n<o p>q r<=s t>=u v:_ \"a\"<>\"b\"",
         )
         .unwrap();
 
@@ -505,6 +549,76 @@ mod tests {
                 .iter()
                 .any(|token| matches!(token.kind, TokenKind::SlashStar))
         );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::SlashAt))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::And))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Or))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Bang))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Same))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Unsame))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Equal))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Unequal))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Less))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Greater))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::LessEqual))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::GreaterEqual))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::Colon))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::StringJoin))
+        );
     }
 
     #[test]
@@ -517,12 +631,44 @@ mod tests {
     }
 
     #[test]
+    fn lexes_unicode_letter_symbols_used_by_wolfram_source() {
+        let source = "Module[{\u{03C3} = <||>, \u{03B1}Ty = tyVar[\"A\"]}, \u{03C3}[\u{03B1}Ty]]";
+        let tokens = lex(source).unwrap();
+        let sigma = '\u{03C3}'.to_string();
+        let alpha_ty = format!("{}Ty", '\u{03B1}');
+
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(&token.kind, TokenKind::Symbol(value) if value == &sigma))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(&token.kind, TokenKind::Symbol(value) if value == &alpha_ty))
+        );
+    }
+
+    #[test]
     fn skips_comments_and_nested_comments_as_trivia() {
         let tokens = lex("f[(* outer (* inner *) *)x, y]").unwrap();
 
         assert!(matches!(&tokens[0].kind, TokenKind::Symbol(value) if value == "f"));
         assert!(matches!(&tokens[2].kind, TokenKind::Symbol(value) if value == "x"));
         assert!(matches!(&tokens[4].kind, TokenKind::Symbol(value) if value == "y"));
+    }
+
+    #[test]
+    fn treats_initial_shebang_as_script_comment_trivia() {
+        let source = "#!/usr/bin/env wolframscript\nPrint[1]";
+        let lexed = lex_with_trivia(source).unwrap();
+        let trivia = lexed.trivia();
+
+        assert_eq!(trivia[0].kind, TriviaKind::Comment);
+        assert_eq!(trivia[0].text, "#!/usr/bin/env wolframscript");
+
+        let tokens = lex(source).unwrap();
+        assert!(matches!(&tokens[0].kind, TokenKind::Symbol(value) if value == "Print"));
     }
 
     #[test]

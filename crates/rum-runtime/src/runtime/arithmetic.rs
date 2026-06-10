@@ -112,6 +112,42 @@ impl Session {
         Ok(Expr::integer(result))
     }
 
+    pub(super) fn eval_total(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
+
+        let Expr::Call {
+            head: list_head,
+            args: items,
+        } = &args[0]
+        else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        if !is_system_symbol_name(list_head, "List") {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
+
+        self.evaluate(Expr::call(system_expr("Plus"), items.clone()))
+    }
+
+    pub(super) fn eval_denominator(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("Denominator", args, 1));
+        }
+
+        match &args[0] {
+            Expr::Atom(Atom::Integer(_)) => Ok(Expr::integer(1_i32.into())),
+            Expr::Atom(Atom::Rational(value)) => Ok(Expr::integer(value.denominator().clone())),
+            _ => Ok(Expr::call(head.clone(), args.to_vec())),
+        }
+    }
+
     fn enforce_integer_work_limit_for_factorial(&self, value: &BigInt) -> Result<(), EvalError> {
         let one = BigInt::from(1_u8);
         let work_units = if value > &one {

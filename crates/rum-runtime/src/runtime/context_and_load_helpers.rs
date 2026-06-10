@@ -126,6 +126,9 @@ pub(super) fn split_script_into_forms(source: &str) -> Result<Vec<String>, EvalE
                 forms.push(current.trim().to_string());
                 current.clear();
             }
+            Err(SyntaxError::EmptyInput) => {
+                current.clear();
+            }
             Err(err) if err.is_incomplete() => {}
             Err(_) => {
                 forms.push(current.trim().to_string());
@@ -139,6 +142,7 @@ pub(super) fn split_script_into_forms(source: &str) -> Result<Vec<String>, EvalE
             Ok(_) => {
                 forms.push(current.trim().to_string());
             }
+            Err(SyntaxError::EmptyInput) => {}
             Err(err) if err.is_incomplete() => return Err(err.into()),
             Err(_) => {
                 forms.push(current.trim().to_string());

@@ -29,8 +29,8 @@ substantial:
   `ReplaceAll`, `ReplaceRepeated`, and current first passes of `Replace`,
   `ReplaceList`, and `ReplaceAt`
 - `rum-cli` and `rum-repl` are usable developer tools
-- `rum-jupyter` is an early adapter layer built on top of host-facing session
-  APIs, not part of the evaluator core
+- `rum-jupyter` is an early adapter layer being migrated onto `rum-host`, not
+  part of the evaluator core
 
 The main thing still in flight is not "whether evaluation exists" but how much
 of the intended Wolfram-style semantics has been tightened and how much surface
@@ -87,6 +87,7 @@ The repository is a Cargo workspace with these top-level crates:
 - [Testing Strategy](./docs/testing-strategy.md)
 - [Lowering Canonical Forms](./docs/lowering-canonical-forms.md)
 - [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md)
+- [Jupyter Host Migration Audit](./docs/jupyter-host-migration-audit.md)
 - [Formatter Style Notes](./docs/formatter-style.md)
 - [Code Organization Guidelines](./docs/code-organization-guidelines.md)
 - [Jupyter Console Manual Smoke](./docs/jupyter-console-manual.md)
@@ -175,8 +176,10 @@ cargo run -p rum-host --example basic_embedding
 
 Near-term work is concentrated in these areas:
 
-- hardening the new `rum-host` embedding boundary and using it to shape Rust
-  and future Python host adapters
+- hardening the new `rum-host` embedding boundary and migrating `rum-jupyter`
+  request handling onto that facade
+- using `mma-hol` as the preferred real-project pressure test for the
+  supported Wolfram-style language surface
 - further tightening evaluator semantics where behavior is still somewhat ad hoc
 - continuing to expand the rule / matcher language
 - keeping the `CL-01` through `CL-09` mainlines documented as closed while
@@ -184,15 +187,16 @@ Near-term work is concentrated in these areas:
   back into scheduled work
 - broadening conformance, regression, and adapter-focused test coverage
 
-`rum-jupyter` remains useful and actively maintained, but it is not the primary
-driver of the core language roadmap.
+`rum-jupyter` remains useful and actively maintained as a basic Notebook tech
+preview and `rum-host` contract validator, but it is not the primary driver of
+the core language roadmap.
 
 ## Notes For Evaluators
 
 Two practical points are worth keeping in mind during review:
 
-- `rum-jupyter` is intentionally optional and layered on top of host-facing
-  runtime APIs; protocol details should not be treated as evaluator semantics
+- `rum-jupyter` is intentionally optional and should be layered through
+  `rum-host`; protocol details should not be treated as evaluator semantics
 - some roadmap and audit documents are intentionally candid about remaining
   gaps; they are meant to make review easier, not to imply the current system
   is only a stub

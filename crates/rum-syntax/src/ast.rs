@@ -188,6 +188,7 @@ pub enum BlankKind {
 pub enum PrefixOp {
     Plus,
     Minus,
+    Not,
     PreIncrement,
     PreDecrement,
 }
@@ -209,7 +210,20 @@ pub enum BinaryOp {
     Rule,
     RuleDelayed,
     Condition,
+    Or,
+    And,
+    SameQ,
+    UnsameQ,
+    Equal,
+    Unequal,
+    Less,
+    Greater,
+    LessEqual,
+    GreaterEqual,
+    Pattern,
+    StringJoin,
     Apply,
+    Map,
     ApplyHead,
     MapApply,
     Composition,
@@ -244,6 +258,7 @@ impl PrefixOp {
         match self {
             Self::Plus => "+",
             Self::Minus => "-",
+            Self::Not => "!",
             Self::PreIncrement => "++",
             Self::PreDecrement => "--",
         }
@@ -252,6 +267,7 @@ impl PrefixOp {
     pub(crate) fn precedence(self) -> u8 {
         match self {
             Self::Plus | Self::Minus => 65,
+            Self::Not => 65,
             Self::PreIncrement | Self::PreDecrement => 80,
         }
     }
@@ -275,7 +291,20 @@ impl BinaryOp {
             Self::Rule => "->",
             Self::RuleDelayed => ":>",
             Self::Condition => "/;",
+            Self::Or => "||",
+            Self::And => "&&",
+            Self::SameQ => "===",
+            Self::UnsameQ => "=!=",
+            Self::Equal => "==",
+            Self::Unequal => "!=",
+            Self::Less => "<",
+            Self::Greater => ">",
+            Self::LessEqual => "<=",
+            Self::GreaterEqual => ">=",
+            Self::Pattern => ":",
+            Self::StringJoin => "<>",
             Self::Apply => "@",
+            Self::Map => "/@",
             Self::ApplyHead => "@@",
             Self::MapApply => "@@@",
             Self::Composition => "@*",
@@ -298,7 +327,19 @@ impl BinaryOp {
             Self::ReplaceAll | Self::ReplaceRepeated => 20,
             Self::Rule | Self::RuleDelayed => 30,
             Self::Condition => 40,
-            Self::Apply | Self::ApplyHead | Self::MapApply => 72,
+            Self::Or => 41,
+            Self::And => 42,
+            Self::SameQ
+            | Self::UnsameQ
+            | Self::Equal
+            | Self::Unequal
+            | Self::Less
+            | Self::Greater
+            | Self::LessEqual
+            | Self::GreaterEqual => 45,
+            Self::Pattern => 80,
+            Self::StringJoin => 55,
+            Self::Apply | Self::Map | Self::ApplyHead | Self::MapApply => 72,
             Self::Composition | Self::RightComposition => 73,
             Self::Add | Self::Subtract => 50,
             Self::Times | Self::Divide => 60,
@@ -321,7 +362,10 @@ impl BinaryOp {
                 | Self::Rule
                 | Self::RuleDelayed
                 | Self::Condition
+                | Self::Or
+                | Self::And
                 | Self::Apply
+                | Self::Map
                 | Self::ApplyHead
                 | Self::MapApply
                 | Self::Composition
