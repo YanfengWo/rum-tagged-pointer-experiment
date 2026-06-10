@@ -98,30 +98,39 @@ impl Session {
         for offset in 0..remaining_args.len() {
             let arg = remaining_args[offset].clone();
             let index = start_index + offset;
-            let remaining_for_resume = remaining_args
-                .iter()
-                .skip(offset + 1)
-                .cloned()
-                .collect::<Vec<_>>();
 
             let plan = plan_call_argument_preparation(attributes, index, &arg);
             let prepared_arg = if plan.should_evaluate {
-                let head_for_resume = head.clone();
-                let attributes_for_resume = attributes;
-                let evaluated_for_resume = evaluated_args.clone();
                 let allow_sequence_splice = plan.allow_sequence_splice;
                 let evaluated_result = self.evaluate(plan.expr);
-                self.suspend_with_frame(evaluated_result, move |session, value| {
-                    session.resume_call_after_argument(
-                        head_for_resume,
-                        attributes_for_resume,
-                        evaluated_for_resume,
-                        remaining_for_resume,
-                        index + 1,
-                        value,
-                        allow_sequence_splice,
-                    )
-                })?
+                match evaluated_result {
+                    Ok(value) => value,
+                    Err(EvalError::InputRequired { request }) => {
+                        let head_for_resume = head.clone();
+                        let attributes_for_resume = attributes;
+                        let evaluated_for_resume = evaluated_args.clone();
+                        let remaining_for_resume = remaining_args
+                            .iter()
+                            .skip(offset + 1)
+                            .cloned()
+                            .collect::<Vec<_>>();
+                        self.suspend_with_frame(
+                            Err(EvalError::InputRequired { request }),
+                            move |session, value| {
+                                session.resume_call_after_argument(
+                                    head_for_resume,
+                                    attributes_for_resume,
+                                    evaluated_for_resume,
+                                    remaining_for_resume,
+                                    index + 1,
+                                    value,
+                                    allow_sequence_splice,
+                                )
+                            },
+                        )?
+                    }
+                    Err(error) => return Err(error),
+                }
             } else {
                 plan.expr
             };

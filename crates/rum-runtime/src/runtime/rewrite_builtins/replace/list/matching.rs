@@ -117,12 +117,12 @@ impl Session {
         };
 
         let replaced = substitute_rule_bindings(&rule.rhs, &current_bindings);
-        self.push_trace(TraceEvent::RuleApplied {
-            source: RuleApplicationSource::ReplaceList,
-            input: target.to_string(),
-            rule: rule.lhs.to_string(),
-            result: replaced.to_string(),
-        });
+        self.push_rule_applied_trace(
+            RuleApplicationSource::ReplaceList,
+            &target,
+            &rule.lhs,
+            &replaced,
+        );
         let replaced_result = self.evaluate(replaced);
         self.drive_evaluated_value::<Expr, Vec<Expr>, _>(replaced_result, move |session, value| {
             let mut collected = collected;

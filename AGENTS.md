@@ -46,6 +46,21 @@ Before substantial work, read the smallest set needed for the task:
 `docs/next-session-handoff.md` is intentionally empty unless an active handoff
 is being prepared.
 
+## Current Downstream Lane
+
+The active `mma-hol` pressure test is the Bool proof-load path. The canonical
+status lives in [PROGRESS.md](./PROGRESS.md) and [TODO.md](./TODO.md).
+
+For valid Bool probes, preload the lower HOL files before `Bool.wl`
+(`ErrorUtil.wl`, `Types.wl`, `Terms.wl`, `Kernel.wl`, `Bootstrap.wl`, and
+`Equal.wl`). A fresh direct `Get["Bool.wl"]` still exercises package autoload
+boundaries and is not the representative performance smoke.
+
+Keep performance work probe-first: identify the hot path, make the smallest
+targeted change, then rerun the same timing smoke to reject negative
+optimizations. The current remaining cost is large-HOL-term derived-rule work,
+not parser or loader failure.
+
 ## Development Commands
 
 Use the local Rust toolchain declared by the workspace. The current expected

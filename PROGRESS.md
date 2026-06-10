@@ -83,13 +83,57 @@ are not active project-owned examples.
   `errorutil_tests.wl` `List[10, 0]`, `types_tests.wl` `List[36, 0]`,
   `terms_tests.wl` `List[67, 0]`, `kernel_tests.wl` `List[71, 0]`,
   `bootstrap_tests.wl` `List[45, 0]`, and `equal_tests.wl` `List[17, 0]`.
-- The next concrete blocker is the Bool layer: `Bool.wl` loads, but
-  `bool_tests.wl` is not yet a bounded routine smoke. After the `Return` fix,
-  `GEN[x, REFL[x]]` reaches the complex `BETACONV` / kernel `BETA` path and
-  still exceeds an interactive probe window. Continue by profiling or
-  instrumenting deep term traversal around `rhsOfConcl[aptm]`, `Part` access,
-  `betaSubst`, `typeOf`, and `mkEq`, preferably under `TimeConstrained` or a
-  host-level timeout.
+- The next concrete blocker is the Bool layer. Valid probes must preload the
+  lower HOL files before `Bool.wl`; a fresh direct `Get["Bool.wl"]` still hits
+  package-dependency/autoload mismatches and is not the representative proof
+  benchmark. After the first Bool optimization pass, full dependency-preloaded
+  `Bool.wl` completes in release, but debug loading is still too slow for a
+  routine smoke and `bool_tests.wl` has not yet been promoted into a bounded
+  check.
+
+## 2026-06-10 Bool Block Profiling
+
+- Re-ran the Bool blocker against the fixed clean `mma-hol` snapshot. The issue
+  is no longer a parser/loader failure or a semantic short-circuit: with the
+  definition-boundary `Return` fix in place, the Bool proofs enter their real
+  beta/derived-rule path.
+- Isolated full `Bool.wl` loading to the first heavyweight top-level theorem:
+  a temporary slice through line 580, before `condTThm`, loads; adding
+  `condTThm` makes loading exceed an interactive window. A direct `condTThm`
+  body probe still timed out under a 60s internal `TimeConstrained` window.
+- Ruled out `Part` as the primary hotspot. `rhsOfConcl[APTHM[condDefThm, T]]`
+  returns a large redex successfully; the cost is in repeated `BETACONV`,
+  `BETA`/`INST`, `TRANS`, `SYM`, `CONJ`, and `DISCH` over large HOL terms.
+- `GEN[x, REFL[x]]` is not a dead loop in isolation: under the Bool pre-theorem
+  slice it completes, but still costs several seconds beyond package load.
+- WolframKernel loads the same full `Bool.wl` in roughly 2.4s on this machine,
+  while rum still exceeded 150s for full Bool loading before interruption. This
+  makes the remaining blocker a rum evaluator performance problem, not just an
+  expensive downstream proof script.
+- Kept targeted evaluator optimizations after probe/measure cycles:
+  non-held definition matching skips recursive candidate normalization; simple
+  fixed-arity patterns use a conservative fast matcher and shape prefilter;
+  trace strings are materialized only when tracing is enabled; only small
+  expressions keep full fixed-point/call-stack cycle histories; clearly stable
+  expression trees can return without another dispatch pass; suspend/resume
+  clones are delayed until an input request actually occurs.
+- Local debug microbenchmarks improved materially: the large Bool `BETACONV`
+  redex dropped from roughly 1.8s to roughly 0.4s, `CONJ[ASSUME[p], ASSUME[q]]`
+  from roughly 7.6s to roughly 1.8s, and a `DISCH[T=T, REFL[a]]` subpath from
+  roughly 25s to roughly 8s. The dependency-preloaded prefix before `condTThm`
+  is now around 4.5s in debug instead of the earlier mid-teens.
+- Full dependency-preloaded `Bool.wl` now completes, but is still expensive:
+  around 231s in debug and around 60s in release on the measured machine. This
+  is progress, not closure. The remaining hot path is dominated by repeated
+  derived-rule work in `MP`, `GEN`, `SPEC`, `BETACONV`, and witness/equality
+  construction over large HOL terms.
+- Dead-end or low-yield probes so far: treating `Part` as the primary hotspot,
+  a broad top-level stable-evaluation shortcut, and optimizing direct fresh
+  `Get["Bool.wl"]` before resolving the dependency/autoload mismatch.
+- The next likely performance cut is deeper than surface dispatch: reduce
+  owned-expression cloning in recursive pure-function and derived-rule
+  workloads, preferably with borrowed traversal/matcher paths or profiler-guided
+  clone accounting before adding more special cases.
 
 ## Completed Architecture Work
 

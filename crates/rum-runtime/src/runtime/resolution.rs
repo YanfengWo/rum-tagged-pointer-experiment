@@ -198,37 +198,43 @@ impl Session {
 
     pub fn evaluate(&mut self, expr: Expr) -> Result<Expr, EvalError> {
         let mut current = expr;
+        let mut evaluation_passes = 0;
         let mut fixed_point_seen = Vec::new();
 
         loop {
-            if fixed_point_seen.len() >= self.resource_limits.evaluation_pass_limit {
+            if evaluation_passes >= self.resource_limits.evaluation_pass_limit {
                 return Err(EvalError::EvaluationPassLimitExceeded {
                     limit: self.resource_limits.evaluation_pass_limit,
                 });
             }
+            evaluation_passes += 1;
 
-            if fixed_point_seen.iter().any(|previous| previous == &current) {
-                return Err(EvalError::EvaluationCycleDetected {
-                    expr: current.to_string(),
-                });
+            if should_track_evaluation_cycle(&current) {
+                if fixed_point_seen.iter().any(|previous| previous == &current) {
+                    return Err(EvalError::EvaluationCycleDetected {
+                        expr: current.to_string(),
+                    });
+                }
+                fixed_point_seen.push(current.clone());
             }
 
-            fixed_point_seen.push(current.clone());
             let current_for_resume = current.clone();
             let seen_for_resume = fixed_point_seen.clone();
             let next_result = self.evaluate_once(current.clone());
             let next = self.suspend_with_frame(next_result, move |session, next| {
-                session.resume_fixed_point_from(current_for_resume, seen_for_resume, next)
+                session.resume_fixed_point_from(
+                    current_for_resume,
+                    evaluation_passes,
+                    seen_for_resume,
+                    next,
+                )
             })?;
 
             if next == current {
                 return Ok(next);
             }
 
-            self.push_trace_transition(TraceEvent::EvaluationPass {
-                before: current.to_string(),
-                after: next.to_string(),
-            });
+            self.push_evaluation_pass_trace(&current, &next);
 
             current = next;
         }
@@ -237,6 +243,7 @@ impl Session {
     pub(super) fn resume_fixed_point_from(
         &mut self,
         current: Expr,
+        evaluation_passes: usize,
         fixed_point_seen: Vec<Expr>,
         next: Expr,
     ) -> Result<Expr, EvalError> {
@@ -244,46 +251,77 @@ impl Session {
             return Ok(next);
         }
 
-        self.push_trace_transition(TraceEvent::EvaluationPass {
-            before: current.to_string(),
-            after: next.to_string(),
-        });
+        self.push_evaluation_pass_trace(&current, &next);
 
         let mut current = next;
+        let mut evaluation_passes = evaluation_passes;
         let mut fixed_point_seen = fixed_point_seen;
 
         loop {
-            if fixed_point_seen.len() >= self.resource_limits.evaluation_pass_limit {
+            if evaluation_passes >= self.resource_limits.evaluation_pass_limit {
                 return Err(EvalError::EvaluationPassLimitExceeded {
                     limit: self.resource_limits.evaluation_pass_limit,
                 });
             }
+            evaluation_passes += 1;
 
-            if fixed_point_seen.iter().any(|previous| previous == &current) {
-                return Err(EvalError::EvaluationCycleDetected {
-                    expr: current.to_string(),
-                });
+            if should_track_evaluation_cycle(&current) {
+                if fixed_point_seen.iter().any(|previous| previous == &current) {
+                    return Err(EvalError::EvaluationCycleDetected {
+                        expr: current.to_string(),
+                    });
+                }
+                fixed_point_seen.push(current.clone());
             }
 
-            fixed_point_seen.push(current.clone());
             let current_for_resume = current.clone();
             let seen_for_resume = fixed_point_seen.clone();
             let next_result = self.evaluate_once(current.clone());
             let next = self.suspend_with_frame(next_result, move |session, next| {
-                session.resume_fixed_point_from(current_for_resume, seen_for_resume, next)
+                session.resume_fixed_point_from(
+                    current_for_resume,
+                    evaluation_passes,
+                    seen_for_resume,
+                    next,
+                )
             })?;
 
             if next == current {
                 return Ok(next);
             }
 
-            self.push_trace_transition(TraceEvent::EvaluationPass {
-                before: current.to_string(),
-                after: next.to_string(),
-            });
+            self.push_evaluation_pass_trace(&current, &next);
             current = next;
         }
     }
+}
+
+const EVALUATION_CYCLE_HISTORY_NODE_LIMIT: usize = 8;
+
+pub(super) fn should_track_evaluation_cycle(expr: &Expr) -> bool {
+    expr_node_count_with_limit(expr, EVALUATION_CYCLE_HISTORY_NODE_LIMIT).is_some()
+}
+
+fn expr_node_count_with_limit(expr: &Expr, limit: usize) -> Option<usize> {
+    fn walk(expr: &Expr, remaining: &mut usize) -> bool {
+        if *remaining == 0 {
+            return false;
+        }
+        *remaining -= 1;
+
+        match expr {
+            Expr::Atom(_) => true,
+            Expr::Call { head, args } => {
+                if !walk(head, remaining) {
+                    return false;
+                }
+                args.iter().all(|arg| walk(arg, remaining))
+            }
+        }
+    }
+
+    let mut remaining = limit;
+    walk(expr, &mut remaining).then_some(limit - remaining)
 }
 
 pub(super) fn symbol_generation_key(context: &str, name: &str) -> (String, String) {

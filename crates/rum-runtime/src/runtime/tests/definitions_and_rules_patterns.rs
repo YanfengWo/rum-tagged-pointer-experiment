@@ -91,6 +91,16 @@ fn matchq_honors_except_patterns() {
 }
 
 #[test]
+fn except_downvalue_prefilter_stays_conservative() {
+    let mut session = Session::new();
+
+    session.eval_text("g[Except[x_Integer]] := ok").unwrap();
+
+    assert_eq!(session.eval_text("g[a]").unwrap().value.to_string(), "ok");
+    assert_eq!(session.eval_text("g[7]").unwrap().value.to_string(), "g[7]");
+}
+
+#[test]
 fn matchq_honors_optional_and_repeated_patterns() {
     let mut session = Session::new();
 

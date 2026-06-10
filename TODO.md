@@ -92,9 +92,12 @@ Completed history, archived planning detail, and operational lessons live in
   as the source of truth for `mma-hol` blockers. The next cold-lane work is to
   push past the now-green `types_tests.wl`, `terms_tests.wl`,
   `kernel_tests.wl`, `bootstrap_tests.wl`, and `equal_tests.wl` core layer.
-  The current concrete blocker is the Bool `GEN` / `BETACONV` path, which needs
-  bounded profiling or instrumentation around deep term traversal before
-  promoting any broader optimization work.
+  The current concrete blocker is Bool top-level proof performance:
+  dependency-preloaded `Bool.wl` now completes, including a release smoke, but
+  debug loading is still too slow for routine iteration. Continue with
+  profiler-guided evaluator work around owned-expression cloning, recursive
+  pure-function traversal, and repeated derived-rule workloads such as `MP`,
+  `GEN`, `SPEC`, and `BETACONV`.
 - [ ] Treat `mma-hol` stable-mode snapshot helpers (`DumpSave`, `Contexts[]`,
   `$ContextPath` / `$Packages`, file timestamps, and timing reports) as a
   required developer-workflow gate for `rum-hol` migration. Cold `run_all.wls`
@@ -178,8 +181,10 @@ Completed history, archived planning detail, and operational lessons live in
   that pure `BigInt` should become a small-int plus bigint hybrid.
 - [ ] Revisit matcher compilation/storage strategy after semantics stabilize,
   including whether definition insertion should cache more matcher state.
-- [ ] Profile evaluator hot paths such as fixed-point iteration, heads lookup,
-  and expression ordering before adding low-level performance work.
+- [ ] Continue probe-first evaluator optimization around large HOL proof terms:
+  borrowed traversal/matcher paths, clone accounting, repeated derived-rule
+  workloads, and debug-vs-release smoke policy before adding broader low-level
+  performance work.
 - [ ] Revisit large request/error payload ergonomics only after measurement
   shows that current shapes are a real cost.
 

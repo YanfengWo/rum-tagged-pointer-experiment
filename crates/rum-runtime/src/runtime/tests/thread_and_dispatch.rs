@@ -94,6 +94,37 @@ fn orderless_attribute_canonicalizes_calls_and_rules() {
 }
 
 #[test]
+fn held_downvalue_matching_normalizes_nested_attribute_heads() {
+    let mut session = Session::new();
+
+    session.eval_text("SetAttributes[f, HoldAll]").unwrap();
+    session.eval_text("SetAttributes[h, Orderless]").unwrap();
+    session.eval_text("f[h[a_, b_]] := {a, b}").unwrap();
+
+    assert_eq!(
+        session.eval_text("f[h[2, 1]]").unwrap().value.to_string(),
+        "List[1, 2]"
+    );
+}
+
+#[test]
+fn stable_call_shortcut_preserves_symbol_and_upvalue_evaluation() {
+    let mut session = Session::new();
+
+    session.eval_text("x = 1").unwrap();
+    assert_eq!(
+        session.eval_text("inert[x]").unwrap().value.to_string(),
+        "inert[1]"
+    );
+
+    session.eval_text("u /: inert[u] := hit").unwrap();
+    assert_eq!(
+        session.eval_text("inert[u]").unwrap().value.to_string(),
+        "hit"
+    );
+}
+
+#[test]
 fn flat_attribute_flattens_calls_and_matches_flat_patterns() {
     let mut session = Session::new();
 
