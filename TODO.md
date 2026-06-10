@@ -24,6 +24,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] Difftest oracle-lane CLI parser test split follow-up: keep `oracle_lane_cli.rs` focused on parser/option plumbing and move its unit tests into `oracle_lane_cli/tests.rs`
   - [x] Difftest oracle-lane summary JSON split follow-up: keep `oracle_lane_summary_json.rs` focused on the public JSON shape by moving count construction plus issue-sample filtering/counting/parser tests into focused child modules; the facade is back under the preferred-size threshold
   - [x] Difftest aggregate issue-sample collector split follow-up: keep `check_cli/summary_json/issue_samples.rs` focused on filters, counts, and JSON rendering, and move cross-gate sample collection into `issue_samples/collectors.rs`
+  - [x] Difftest aggregate issue-sample collector split follow-up: keep
+    `issue_samples/collectors.rs` as a gate-dispatch facade and move
+    inventory, Lane C, artifact-hygiene, and Lane D sample collectors into
+    focused child modules
   - [x] Difftest value renderer split follow-up: keep `value_render.rs`
     focused on public dispatch and structural rendering, and move arithmetic
     InputForm-like rendering plus renderer tests into focused child modules
