@@ -38,6 +38,24 @@ fn exact_integer_arithmetic_evaluates_core_heads() {
 }
 
 #[test]
+fn factorial_respects_integer_work_limit() {
+    let mut session = Session::new();
+    session.set_integer_work_limit(3);
+
+    let limited = session.eval_text("Factorial[5]").unwrap();
+    assert_eq!(
+        limited.value.to_string(),
+        "TerminatedEvaluation[\"ResourceLimit\"]"
+    );
+    assert!(
+        limited
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+}
+
+#[test]
 fn exact_division_and_negative_integer_powers_produce_rationals() {
     let mut session = Session::new();
 

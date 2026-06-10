@@ -129,6 +129,134 @@ fn inner_arrayfilter_and_arrayreduce_cover_current_subset() {
 }
 
 #[test]
+fn array_and_outer_cover_current_dense_generation_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("List[Context[Array], Context[Outer]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"System`\", \"System`\"]"
+    );
+    assert_eq!(
+        session.eval_text("Array[f, 3]").unwrap().value.to_string(),
+        "List[f[1], f[2], f[3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Array[f, {2, 3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[f[1, 1], f[1, 2], f[1, 3]], List[f[2, 1], f[2, 2], f[2, 3]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Array[f, {2}, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[0], f[1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Array[f, {2}, {10}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[10], f[11]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Array[f, {2}, 1, g]")
+            .unwrap()
+            .value
+            .to_string(),
+        "g[f[1], f[2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Array[f, {2}, a]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[a], f[Plus[1, a]]]"
+    );
+    assert_eq!(
+        session.eval_text("Array[f, {}]").unwrap().value.to_string(),
+        "f[]"
+    );
+
+    assert_eq!(
+        session
+            .eval_text("Outer[f, {a, b}, {x, y}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[f[a, x], f[a, y]], List[f[b, x], f[b, y]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Outer[f, {a, b}, {{x, y}, {u, v}}, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[f[a, List[x, y]], f[a, List[u, v]]], List[f[b, List[x, y]], f[b, List[u, v]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Outer[f, g[a, b], g[x, y]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "g[g[f[a, x], f[a, y]], g[f[b, x], f[b, y]]]"
+    );
+}
+
+#[test]
+fn array_and_outer_respect_resource_limits() {
+    let mut array_session = Session::new();
+    array_session.set_generated_element_limit(3);
+    let array = array_session.eval_text("Array[f, 5]").unwrap();
+    assert_eq!(
+        array.value.to_string(),
+        "TerminatedEvaluation[\"ResourceLimit\"]"
+    );
+    assert!(
+        array
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+
+    let mut outer_session = Session::new();
+    outer_session.set_iteration_work_limit(3);
+    let outer = outer_session.eval_text("Outer[f, {a, b}, {x, y}]").unwrap();
+    assert_eq!(
+        outer.value.to_string(),
+        "TerminatedEvaluation[\"ResourceLimit\"]"
+    );
+    assert!(
+        outer
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+
+    let mut memory_session = Session::new();
+    assert_eq!(
+        memory_session
+            .eval_text("MemoryConstrained[Array[f, {100}], 20, memfail]")
+            .unwrap()
+            .value
+            .to_string(),
+        "memfail"
+    );
+}
+
+#[test]
 fn array_functional_builtins_report_current_argument_forms() {
     let mut session = Session::new();
 
@@ -177,5 +305,23 @@ fn array_functional_builtins_report_current_argument_forms() {
             .messages
             .iter()
             .any(|message| message.symbol == "ArrayReduce" && message.tag == "argform")
+    );
+
+    let array = session.eval_text("Array[f, bad]").unwrap();
+    assert_eq!(array.value.to_string(), "Array[f, bad]");
+    assert!(
+        array
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Array" && message.tag == "argform")
+    );
+
+    let outer = session.eval_text("Outer[f, {a}, g[b]]").unwrap();
+    assert_eq!(outer.value.to_string(), "Outer[f, List[a], g[b]]");
+    assert!(
+        outer
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Outer" && message.tag == "heads")
     );
 }

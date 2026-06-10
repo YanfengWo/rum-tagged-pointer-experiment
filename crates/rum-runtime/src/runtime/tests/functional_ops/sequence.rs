@@ -62,6 +62,30 @@ fn accumulate_blockmap_takewhile_and_fold_family_cover_current_subset() {
     );
     assert_eq!(
         session
+            .eval_text("List[Context[Select], Select[{1, 2, 3}, OddQ], Select[{1, 2, 3}, OddQ, 1], Select[OddQ][{1, 2, 3}], Select[OddQ, 1][{1, 2, 3}]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"System`\", List[1, 3], List[1], List[1, 3], List[1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Select[f[1, 2, 3], OddQ, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Select[<|a -> 1, b -> 2, c -> 3|>, OddQ]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1], Rule[c, 3]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Fold[f][{a, b, c}]")
             .unwrap()
             .value
@@ -176,6 +200,28 @@ fn sequence_functional_builtins_report_current_argument_forms() {
             .messages
             .iter()
             .any(|message| message.symbol == "LengthWhile" && message.tag == "argtu")
+    );
+
+    let select_limit = session.eval_text("Select[{1, 2, 3}, OddQ, All]").unwrap();
+    assert_eq!(
+        select_limit.value.to_string(),
+        "Select[List[1, 2, 3], OddQ, All]"
+    );
+    assert!(
+        select_limit
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Select" && message.tag == "argform")
+    );
+
+    let mut limited_session = Session::new();
+    limited_session.set_iteration_work_limit(2);
+    let limited = limited_session
+        .eval_text("Select[{2, 4, 6}, OddQ]")
+        .unwrap();
+    assert_eq!(
+        limited.value.to_string(),
+        "TerminatedEvaluation[\"ResourceLimit\"]"
     );
 
     let fold_while = session.eval_text("FoldWhile[f, x, list, test, 0]").unwrap();

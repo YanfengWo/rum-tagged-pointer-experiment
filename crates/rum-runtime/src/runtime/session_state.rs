@@ -246,6 +246,12 @@ pub enum EvalError {
     TimeConstraintExceeded,
     #[error("evaluation exceeded MemoryConstrained limit ({limit})")]
     MemoryConstraintExceeded { limit: usize },
+    #[error("evaluation exceeded generated element limit ({limit})")]
+    GeneratedElementLimitExceeded { limit: usize },
+    #[error("evaluation exceeded integer work limit ({limit})")]
+    IntegerWorkLimitExceeded { limit: usize },
+    #[error("evaluation exceeded iteration work limit ({limit})")]
+    IterationWorkLimitExceeded { limit: usize },
     #[error("ReplaceRepeated exceeded iteration limit ({limit})")]
     IterationLimitExceeded { limit: usize },
     #[error("evaluation exceeded fixed-point pass limit ({limit})")]

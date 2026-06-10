@@ -201,7 +201,7 @@ fn ledger_validation_accepts_project_tracking_targets() {
         id: "case-a".to_string(),
         fields: BTreeMap::from([(
             "tracked_by".to_string(),
-            "TODO.md:Lane C follow-up: add richer metadata links".to_string(),
+            "TODO.md:Add differential-conformance fixtures".to_string(),
         )]),
     }];
 

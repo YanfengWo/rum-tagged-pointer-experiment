@@ -28,7 +28,7 @@ fn inventory_covers_default_lane_a_and_lane_b_fixtures() {
     assert_eq!(lane_a.totals_by_category()["context-namespace"].entries, 14);
     assert_eq!(
         lane_a.totals_by_category()["definitions-precedence"].entries,
-        14
+        16
     );
     assert_eq!(lane_a.totals_by_category()["exact-arithmetic"].entries, 20);
     assert_eq!(

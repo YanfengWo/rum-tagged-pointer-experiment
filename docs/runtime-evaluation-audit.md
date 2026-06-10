@@ -36,7 +36,9 @@ Within `Session::evaluate`, the runtime currently behaves like this:
 3. abort with `EvaluationCycleDetected` if the same expression reappears in the
    same fixed-point loop
 4. guard recursive re-entry with an evaluation stack and recursion limit
-5. dispatch atoms and calls separately
+5. enforce current host resource budgets for selected generated outputs,
+   integer work loops, and iteration work loops
+6. dispatch atoms and calls separately
 
 ### Symbol Evaluation
 

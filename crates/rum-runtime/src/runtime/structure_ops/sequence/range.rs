@@ -10,11 +10,40 @@ impl Session {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        let Some(values) = integer_range_values(start, end, step) else {
+        let Some(count) = integer_range_count(&start, &end, &step) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
+        self.enforce_range_memory_constraint(&count)?;
+        self.enforce_generated_element_limit(&count)?;
 
-        Ok(Expr::call(system_expr(heads::structure::LIST), values))
+        let count = bigint_count_to_usize(&count)
+            .expect("generated element limit precheck keeps Range count representable");
+        Ok(Expr::call(
+            system_expr(heads::structure::LIST),
+            integer_range_values(start, step, count),
+        ))
+    }
+
+    fn enforce_range_memory_constraint(&self, count: &BigInt) -> Result<(), EvalError> {
+        let Some(limit) = self.current_memory_limit else {
+            return Ok(());
+        };
+        if count > &BigInt::from(usize::MAX) {
+            return Err(EvalError::MemoryConstraintExceeded { limit });
+        }
+
+        let count = bigint_count_to_usize(count)
+            .expect("Range count was checked against usize::MAX before conversion");
+        self.enforce_active_memory_limit_for_projected_bytes(range_memory_proxy_bytes(count))
+    }
+
+    fn enforce_generated_element_limit(&self, count: &BigInt) -> Result<(), EvalError> {
+        let limit = self.resource_limits.generated_element_limit;
+        if count > &BigInt::from(limit) {
+            return Err(EvalError::GeneratedElementLimitExceeded { limit });
+        }
+
+        Ok(())
     }
 }
 
@@ -39,26 +68,44 @@ fn range_spec(args: &[Expr]) -> Option<(BigInt, BigInt, BigInt)> {
     }
 }
 
-fn integer_range_values(start: BigInt, end: BigInt, step: BigInt) -> Option<Vec<Expr>> {
+fn integer_range_count(start: &BigInt, end: &BigInt, step: &BigInt) -> Option<BigInt> {
     let zero = BigInt::from(0_u8);
-    if step == zero {
+    if step == &zero {
         return None;
     }
 
-    let mut values = Vec::new();
-    let mut current = start;
-
-    if step > zero {
-        while current <= end {
-            values.push(Expr::integer(current.clone()));
-            current += step.clone();
+    let one = BigInt::from(1_u8);
+    if step > &zero {
+        if start > end {
+            return Some(zero);
         }
-    } else {
-        while current >= end {
-            values.push(Expr::integer(current.clone()));
-            current += step.clone();
-        }
+        return Some(((end - start) / step) + one);
     }
 
-    Some(values)
+    if start < end {
+        return Some(zero);
+    }
+
+    Some(((start - end) / -step) + one)
+}
+
+fn integer_range_values(start: BigInt, step: BigInt, count: usize) -> Vec<Expr> {
+    let mut values = Vec::with_capacity(count);
+    let mut current = start;
+
+    for _ in 0..count {
+        values.push(Expr::integer(current.clone()));
+        current += step.clone();
+    }
+
+    values
+}
+
+fn bigint_count_to_usize(count: &BigInt) -> Option<usize> {
+    count.to_string().parse().ok()
+}
+
+fn range_memory_proxy_bytes(count: usize) -> usize {
+    let element_bytes = std::mem::size_of::<Expr>().saturating_add(std::mem::size_of::<BigInt>());
+    std::mem::size_of::<Expr>().saturating_add(count.saturating_mul(element_bytes))
 }

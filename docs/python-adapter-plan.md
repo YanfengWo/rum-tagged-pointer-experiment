@@ -1,170 +1,57 @@
-# Python Adapter Plan
+# Frozen Python Adapter Notes
 
-## Goal
+Project-owned Python adapter work is frozen for the current stabilization
+phase.
 
-The planned Python adapter is an optional project-owned binding layer for
-embedding `rum` in Python applications.
+Python remains a plausible future host for `rum`, especially for AI, data,
+automation, and notebook-adjacent workflows. It is not an active roadmap item,
+and the repository should not grow Python binding code, packaging workflows, or
+Python-specific examples until a concrete downstream need justifies reopening
+the work.
 
-Its job is to expose a small, Python-friendly API for:
+## Standing Rule
 
-- evaluation
-- suspend/resume with host-provided input
-- inspect/complete/is-complete style editor flows
-- structured results, messages, and prints
+If Python support is revived later, it should bind to `rum-host`, not directly
+to broad `rum-runtime` internals.
 
-It should target practical Python scenarios such as:
-
-- AI and tool-orchestration workflows
-- data and notebook-adjacent scripting
-- lightweight DSL execution from Python hosts
-- test and automation harnesses
-
-## Primary Architectural Rule
-
-Python should bind to `rum-host`, not directly to broad `rum-runtime`
-internals.
-
-The intended stack is:
+The intended stack remains:
 
 - `rum-runtime`
   - kernel semantics and session machinery
 - `rum-host`
-  - stable Rust embedding contract, now with an initial facade for parse,
-    eval, resume, inspect, complete, is-complete, failures, messages, and
-    structured outputs
-- planned Python adapter
+  - stable Rust embedding contract for parse, eval, resume, inspect,
+    complete, is-complete, failures, messages, and structured outputs
+- optional future Python adapter
   - thin Python-facing layer on top of `rum-host`
 
-This keeps Python ergonomics important without allowing Python binding details
-to reshape the evaluator core.
+## Frozen Non-Goals
 
-## Non-Goals
+Do not spend active roadmap time on:
 
-The Python adapter should not:
+- a `rum-python` crate
+- `pyo3` integration
+- Python packaging or wheel workflows
+- Python-specific public API design
+- Python examples that require maintained project-owned adapter code
 
-- become the canonical public API for all hosts
-- expose large slices of evaluator internals directly into Python
-- force Python-specific object models into `rum-runtime`
-- absorb notebook protocol behavior that belongs in `rum-jupyter`
-- turn `rum` into a Python-first framework
+Do not let Python concerns reshape `rum-runtime`.
 
-## Planned Crate Boundary
+## Revival Criteria
 
-The adapter will likely live in its own optional crate, tentatively named
-`rum-python`.
+Reopen Python adapter work only when at least one of these is true:
 
-That crate should:
+- a concrete downstream project needs Python embedding
+- `rum-host` has a stable enough v0.1 contract to wrap without exposing
+  evaluator internals
+- a small Python smoke surface can be implemented without expanding kernel
+  scope
 
-- depend on `rum-host`
-- use `pyo3`
-- keep Python packaging/build concerns isolated from kernel crates
-- expose a small set of Python classes and conversion helpers
+If revived, start with:
 
-It should not:
+- `Session.eval(text)`
+- `Session.resume_with_input(text)`
+- inspect / complete / is-complete only after eval/resume is stable
+- rendered values and simple structured messages before any raw `Expr` interop
 
-- bypass `rum-host`
-- directly re-export arbitrary `rum-runtime` modules
-- leak `pyo3` concerns into unrelated workspace crates
-
-## Proposed Python Surface
-
-The first-pass Python-facing API should stay intentionally small.
-
-Suggested objects:
-
-- `SessionBuilder`
-- `Session`
-- `EvalOutcome`
-- `EvalFailure`
-- `InputRequest`
-- `StructuredOutput`
-- `RuntimeMessage`
-
-Suggested methods:
-
-- `Session.eval(text: str) -> EvalOutcome`
-- `Session.resume_with_input(text: str) -> EvalOutcome`
-- `Session.inspect(text: str, cursor: int | None = None) -> ...`
-- `Session.complete(text: str, cursor: int | None = None) -> ...`
-- `Session.is_complete(text: str) -> ...`
-
-The surface may later include:
-
-- builder-based session configuration
-- convenience conversion helpers
-- explicit lifecycle helpers for long-running sessions
-
-## Data Shape Guidance
-
-The first Python API should bias toward predictable host-friendly wrappers
-rather than exposing every internal Rust type.
-
-Suggested approach:
-
-- values exposed as canonical text first
-- messages exposed as simple Python objects with stable fields
-- prints exposed as strings
-- structured outputs exposed as simple wrapper objects or dictionaries
-- suspension exposed as a dedicated `InputRequest` object
-
-`Expr` should only be exposed into Python if a later real use case justifies
-the contract cost.
-
-## Error Model
-
-The Python adapter should distinguish:
-
-- successful evaluation outcomes
-- structured evaluation failures
-- Python binding misuse
-
-Suggested default policy:
-
-- normal kernel issues stay inside `EvalOutcome` / `EvalFailure`
-- Python-side misuse raises Python exceptions
-- suspend/resume remains a normal kernel flow, not a Python exception path
-
-## Packaging Direction
-
-Packaging should be postponed until the API shape is stable enough to justify
-it.
-
-When that time comes, the likely direction is:
-
-- `pyo3`
-- `maturin` or a similarly standard build workflow
-- optional wheels only after the Rust host contract proves stable
-
-That keeps wheel/distribution concerns out of the current kernel-first phase.
-
-## Validation Strategy
-
-The first validation wave should include:
-
-- smoke tests for session creation and repeated eval
-- suspend/resume tests through Python
-- completion/inspect/is-complete smoke coverage
-- message/print/result shape assertions
-- one small example integration for tool-oriented usage, with
-  [Python AI Policy](../examples/python-ai-policy/PLAN.md) as the current
-  long-range showcase candidate once the Python adapter is stable enough
-
-## Suggested Build Order
-
-1. harden the initial `rum-host` contract through Rust-side examples and tests
-2. identify which host-facing Rust facade types Python should wrap directly
-3. create a minimal `rum-python` crate with `SessionBuilder`, `Session`, and
-   eval/resume only
-4. add Python smoke tests
-5. expand to inspect/complete/is-complete
-6. revisit packaging and distribution only after that
-
-## Initial Open Questions
-
-- should Python results default to canonical text only, or include richer
-  structured fields from day one?
-- how much of `StructuredOutput` should be surfaced as Python-native
-  dictionaries versus typed wrapper classes?
-- should the first adapter expose any direct `Expr` interop at all?
-- when should `rum-jupyter` and the Python adapter share helper code through
-  `rum-host`-level abstractions?
+The old detailed Python AI policy showcase plan was removed. AI/data policy
+work remains an application direction, not a project-owned example commitment.

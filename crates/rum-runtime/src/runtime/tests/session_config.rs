@@ -17,6 +17,9 @@ fn session_with_config_normalizes_contexts_paths_and_limits() {
             recursion_limit: 17,
             replace_repeated_limit: 23,
             evaluation_pass_limit: 31,
+            generated_element_limit: 37,
+            integer_work_limit: 41,
+            iteration_work_limit: 43,
         })
         .with_current_context("Rules")
         .with_context_path(["System", "Rules", "Global", "Rules"])
@@ -44,6 +47,9 @@ fn session_with_config_normalizes_contexts_paths_and_limits() {
             recursion_limit: 17,
             replace_repeated_limit: 23,
             evaluation_pass_limit: 31,
+            generated_element_limit: 37,
+            integer_work_limit: 41,
+            iteration_work_limit: 43,
         }
     );
     assert!(session.configuration().tracing_enabled);
@@ -66,6 +72,9 @@ fn apply_config_updates_host_settings_without_clearing_existing_definitions() {
                 recursion_limit: 9,
                 replace_repeated_limit: 10,
                 evaluation_pass_limit: 11,
+                generated_element_limit: 12,
+                integer_work_limit: 13,
+                iteration_work_limit: 14,
             }),
     );
 
@@ -85,6 +94,9 @@ fn apply_config_updates_host_settings_without_clearing_existing_definitions() {
             recursion_limit: 9,
             replace_repeated_limit: 10,
             evaluation_pass_limit: 11,
+            generated_element_limit: 12,
+            integer_work_limit: 13,
+            iteration_work_limit: 14,
         }
     );
     assert!(session.configuration().tracing_enabled);

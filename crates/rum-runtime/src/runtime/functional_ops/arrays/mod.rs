@@ -1,6 +1,7 @@
 use super::*;
 
 mod filter;
+mod generators;
 mod spec;
 mod tensor;
 

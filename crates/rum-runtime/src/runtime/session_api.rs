@@ -44,6 +44,18 @@ impl Session {
         self.resource_limits.evaluation_pass_limit = limit;
     }
 
+    pub fn set_generated_element_limit(&mut self, limit: usize) {
+        self.resource_limits.generated_element_limit = limit;
+    }
+
+    pub fn set_integer_work_limit(&mut self, limit: usize) {
+        self.resource_limits.integer_work_limit = limit;
+    }
+
+    pub fn set_iteration_work_limit(&mut self, limit: usize) {
+        self.resource_limits.iteration_work_limit = limit;
+    }
+
     pub fn set_resource_limits(&mut self, limits: ResourceLimits) {
         self.resource_limits = limits;
     }

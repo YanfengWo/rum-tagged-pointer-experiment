@@ -129,6 +129,15 @@ fn error_output(failure: &SessionRequestFailure) -> KernelErrorOutput {
         SessionRequestError::MemoryConstraintExceeded { .. } => {
             ("MemoryConstraintExceeded".to_string(), None)
         }
+        SessionRequestError::GeneratedElementLimitExceeded { .. } => {
+            ("GeneratedElementLimitExceeded".to_string(), None)
+        }
+        SessionRequestError::IntegerWorkLimitExceeded { .. } => {
+            ("IntegerWorkLimitExceeded".to_string(), None)
+        }
+        SessionRequestError::IterationWorkLimitExceeded { .. } => {
+            ("IterationWorkLimitExceeded".to_string(), None)
+        }
         SessionRequestError::IterationLimitExceeded { .. } => {
             ("IterationLimitExceeded".to_string(), None)
         }
@@ -268,6 +277,42 @@ mod tests {
                 );
             }
             other => panic!("expected error output, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn error_output_covers_resource_limit_failures() {
+        for (error, expected_name) in [
+            (
+                SessionRequestError::GeneratedElementLimitExceeded { limit: 10 },
+                "GeneratedElementLimitExceeded",
+            ),
+            (
+                SessionRequestError::IntegerWorkLimitExceeded { limit: 20 },
+                "IntegerWorkLimitExceeded",
+            ),
+            (
+                SessionRequestError::IterationWorkLimitExceeded { limit: 30 },
+                "IterationWorkLimitExceeded",
+            ),
+        ] {
+            let outcome = KernelExecuteOutcome::Failure(SessionRequestFailure {
+                error,
+                messages: Vec::new(),
+                prints: Vec::new(),
+                trace: Vec::new(),
+            });
+
+            let response = build_execute_response(Some(1), outcome);
+
+            assert_eq!(response.status, KernelReplyStatus::Error);
+            assert_eq!(
+                response
+                    .error
+                    .as_ref()
+                    .map(|error| error.error_name.as_str()),
+                Some(expected_name)
+            );
         }
     }
 

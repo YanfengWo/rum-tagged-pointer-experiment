@@ -3,6 +3,9 @@ use super::*;
 pub(super) const DEFAULT_REPLACE_REPEATED_LIMIT: usize = 256;
 pub(super) const DEFAULT_RECURSION_LIMIT: usize = 256;
 pub(super) const DEFAULT_EVALUATION_PASS_LIMIT: usize = 256;
+pub(super) const DEFAULT_GENERATED_ELEMENT_LIMIT: usize = 100_000;
+pub(super) const DEFAULT_INTEGER_WORK_LIMIT: usize = 100_000;
+pub(super) const DEFAULT_ITERATION_WORK_LIMIT: usize = 100_000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HoldAttribute {
@@ -629,8 +632,11 @@ pub enum BuiltinHandler {
     FixedPointList,
     Through,
     Operate,
+    Array,
     ArrayFilter,
     ArrayReduce,
+    Outer,
+    Select,
     Apply,
     MapApply,
     OperatorApplied,

@@ -91,16 +91,40 @@ impl Session {
         if value < BigInt::from(0_u8) {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         }
+        self.enforce_integer_work_limit_for_factorial(&value)?;
 
         let one = BigInt::from(1_u8);
         let mut remaining = value;
         let mut result = one.clone();
+        let mut checks_until_resource_poll = 0_usize;
         while remaining > one {
             result *= remaining.clone();
             remaining -= BigInt::from(1_u8);
+
+            if checks_until_resource_poll == 0 {
+                self.enforce_active_resource_limits_for_expr(&Expr::integer(result.clone()))?;
+                checks_until_resource_poll = 256;
+            } else {
+                checks_until_resource_poll -= 1;
+            }
         }
 
         Ok(Expr::integer(result))
+    }
+
+    fn enforce_integer_work_limit_for_factorial(&self, value: &BigInt) -> Result<(), EvalError> {
+        let one = BigInt::from(1_u8);
+        let work_units = if value > &one {
+            value - one
+        } else {
+            BigInt::from(0_u8)
+        };
+        let limit = self.resource_limits.integer_work_limit;
+        if work_units > BigInt::from(limit) {
+            return Err(EvalError::IntegerWorkLimitExceeded { limit });
+        }
+
+        Ok(())
     }
 
     pub(super) fn eval_mod(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {

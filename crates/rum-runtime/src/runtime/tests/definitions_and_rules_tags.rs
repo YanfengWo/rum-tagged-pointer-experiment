@@ -129,6 +129,56 @@ fn redefining_same_subvalue_replaces_the_older_rule_in_place() {
 }
 
 #[test]
+fn typed_upvalues_are_prioritized_over_earlier_generic_upvalues() {
+    let mut session = Session::new();
+
+    session.eval_text("u /: h[u[x_]] := any[x]").unwrap();
+    session
+        .eval_text("u /: h[u[x_Integer]] := integer[x]")
+        .unwrap();
+
+    assert_eq!(
+        session.eval_text("h[u[7]]").unwrap().value.to_string(),
+        "integer[7]"
+    );
+    assert_eq!(
+        session.eval_text("h[u[a]]").unwrap().value.to_string(),
+        "any[a]"
+    );
+    assert_eq!(
+        session.eval_text("UpValues[u]").unwrap().value.to_string(),
+        "List[RuleDelayed[HoldPattern[h[u[Pattern[x, Blank[Integer]]]]], integer[x]], RuleDelayed[HoldPattern[h[u[Pattern[x, Blank[]]]]], any[x]]]"
+    );
+}
+
+#[test]
+fn typed_subvalues_are_prioritized_over_earlier_generic_subvalues() {
+    let mut session = Session::new();
+
+    session.eval_text("sv[x_][y_] := any[x, y]").unwrap();
+    session
+        .eval_text("sv[x_][y_Integer] := integer[x, y]")
+        .unwrap();
+
+    assert_eq!(
+        session.eval_text("sv[a][7]").unwrap().value.to_string(),
+        "integer[a, 7]"
+    );
+    assert_eq!(
+        session.eval_text("sv[a][b]").unwrap().value.to_string(),
+        "any[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SubValues[sv]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[HoldPattern[sv[Pattern[x, Blank[]]][Pattern[y, Blank[Integer]]]], integer[x, y]], RuleDelayed[HoldPattern[sv[Pattern[x, Blank[]]][Pattern[y, Blank[]]]], any[x, y]]]"
+    );
+}
+
+#[test]
 fn subvalues_list_and_apply_nested_head_definitions() {
     let mut session = Session::new();
 

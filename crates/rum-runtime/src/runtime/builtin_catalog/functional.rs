@@ -189,6 +189,11 @@ pub(super) const FUNCTIONAL_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Operate,
     ),
     BuiltinSpec::ordinary(
+        "Array",
+        "Constructs a dense list-like array by applying a function to generated indices in the current first-pass subset.",
+        BuiltinHandler::Array,
+    ),
+    BuiltinSpec::ordinary(
         "ArrayFilter",
         "Applies a function to local list-array neighborhoods in the current first-pass subset.",
         BuiltinHandler::ArrayFilter,
@@ -197,5 +202,15 @@ pub(super) const FUNCTIONAL_BUILTINS: &[BuiltinSpec] = &[
         "ArrayReduce",
         "Reduces rectangular list arrays across selected dimensions in the current first-pass subset.",
         BuiltinHandler::ArrayReduce,
+    ),
+    BuiltinSpec::ordinary(
+        "Outer",
+        "Forms outer combinations of same-head expressions in the current dense-array subset.",
+        BuiltinHandler::Outer,
+    ),
+    BuiltinSpec::ordinary(
+        "Select",
+        "Selects elements satisfying a criterion in the current sequence subset.",
+        BuiltinHandler::Select,
     ),
 ];

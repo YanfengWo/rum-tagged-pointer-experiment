@@ -51,6 +51,58 @@ fn table_supports_count_iterators_and_nested_iterators() {
 }
 
 #[test]
+fn do_and_table_respect_resource_limits() {
+    let mut table_session = Session::new();
+    table_session.set_generated_element_limit(3);
+    let table = table_session.eval_text("Table[x, 5]").unwrap();
+    assert_eq!(
+        table.value.to_string(),
+        "TerminatedEvaluation[\"ResourceLimit\"]"
+    );
+    assert!(
+        table
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+
+    let mut do_session = Session::new();
+    do_session.set_iteration_work_limit(3);
+    let do_result = do_session.eval_text("Do[Null, 5]").unwrap();
+    assert_eq!(
+        do_result.value.to_string(),
+        "TerminatedEvaluation[\"ResourceLimit\"]"
+    );
+    assert!(
+        do_result
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+
+    let mut iterator_session = Session::new();
+    iterator_session.set_generated_element_limit(3);
+    assert_eq!(
+        iterator_session
+            .eval_text("Table[i, {i, 5}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "TerminatedEvaluation[\"ResourceLimit\"]"
+    );
+
+    let mut memory_session = Session::new();
+    assert_eq!(
+        memory_session
+            .eval_text("MemoryConstrained[Table[x, 100], 20, memfail]")
+            .unwrap()
+            .value
+            .to_string(),
+        "memfail"
+    );
+}
+
+#[test]
 fn table_propagates_return_to_function_boundaries() {
     let mut session = Session::new();
 

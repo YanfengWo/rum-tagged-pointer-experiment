@@ -135,16 +135,19 @@ bundles, Jupyter wire schemas, and Python binding policy.
 
 ## Relationship To Python
 
-Python should come after `rum-host`, not before it.
+Python adapter work is frozen for the current stabilization phase.
 
-The planned order is:
+If it is revived later, Python should come after `rum-host`, not before it.
+The order would be:
 
 1. continue hardening the Rust host contract in `rum-host`
 2. validate it through Rust-side embedding examples and tests
-3. add a thin `pyo3`-based Python adapter on top of that contract
+3. only then decide whether a thin Python adapter is worth adding on top of
+   that contract
 
-That keeps Python ergonomics important without letting Python binding details
-reshape core runtime boundaries too early.
+Until a concrete downstream need appears, do not spend roadmap time on Python
+API shape, packaging, or examples. This keeps Python ergonomics possible later
+without letting binding details reshape core runtime boundaries too early.
 
 ## Validation Strategy
 
@@ -156,9 +159,8 @@ The first validation wave for `rum-host` includes:
   completion, and completeness coverage
 - one small example embedding binary or example module, with the current
   `crates/rum-host/examples/basic_embedding.rs` serving as the minimal smoke
-  example and
-  [Rust Wasm Prototype](../examples/rust-wasm-proto/PLAN.md) as the current
-  long-range showcase candidate once the host boundary is stable enough
+  example; broader showcase work should be driven by concrete external
+  pressure such as `mma-hol`
 - selective reuse by `rum-jupyter` only after the surface proves useful
 
 ## Suggested Build Order
@@ -168,7 +170,7 @@ The first validation wave for `rum-host` includes:
 3. create a small `rum-host` crate with builders and eval/resume flow
 4. add host-focused regression tests
 5. expand to inspect/complete/is-complete
-6. only then plan Python on top
+6. keep Python frozen unless a concrete downstream need reopens it
 
 Items 1 through 5 now have an initial implementation. The first hardening pass
 has also split the `rum-host` facade model into request, outcome, and

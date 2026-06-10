@@ -161,6 +161,9 @@ impl Session {
             EvalError::RecursionLimitExceeded { .. } => "reclim",
             EvalError::TimeConstraintExceeded => "timelim",
             EvalError::MemoryConstraintExceeded { .. } => "memlim",
+            EvalError::GeneratedElementLimitExceeded { .. }
+            | EvalError::IntegerWorkLimitExceeded { .. }
+            | EvalError::IterationWorkLimitExceeded { .. } => "reslim",
             EvalError::IterationLimitExceeded { .. } => "iterlim",
             EvalError::EvaluationPassLimitExceeded { .. } => "passlim",
             _ => return None,
@@ -179,6 +182,9 @@ impl Session {
         match error {
             EvalError::RecursionLimitExceeded { .. } => Some("RecursionLimit"),
             EvalError::EvaluationPassLimitExceeded { .. } => Some("IterationLimit"),
+            EvalError::GeneratedElementLimitExceeded { .. }
+            | EvalError::IntegerWorkLimitExceeded { .. }
+            | EvalError::IterationWorkLimitExceeded { .. } => Some("ResourceLimit"),
             _ => None,
         }
     }

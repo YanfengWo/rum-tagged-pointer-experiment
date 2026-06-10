@@ -39,6 +39,33 @@ fn range_constructs_plain_integer_lists_for_current_subset() {
 }
 
 #[test]
+fn range_respects_generated_element_limit_before_allocating() {
+    let mut session = Session::new();
+    session.set_generated_element_limit(3);
+
+    let limited = session.eval_text("Range[5]").unwrap();
+    assert_eq!(
+        limited.value.to_string(),
+        "TerminatedEvaluation[\"ResourceLimit\"]"
+    );
+    assert!(
+        limited
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+
+    assert_eq!(
+        session
+            .eval_text("MemoryConstrained[Range[100], 20, memfail]")
+            .unwrap()
+            .value
+            .to_string(),
+        "memfail"
+    );
+}
+
+#[test]
 fn take_drop_insert_delete_and_take_list_cover_current_structural_subset() {
     let mut session = Session::new();
 

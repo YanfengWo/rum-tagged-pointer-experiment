@@ -118,6 +118,49 @@ fn characters_character_range_and_tostring_cover_basic_text_flows() {
 }
 
 #[test]
+fn string_generators_respect_resource_limits() {
+    let mut character_range_session = Session::new();
+    character_range_session.set_generated_element_limit(2);
+    let character_range = character_range_session
+        .eval_text("CharacterRange[\"x\", \"z\"]")
+        .unwrap();
+    assert_eq!(
+        character_range.value.to_string(),
+        "TerminatedEvaluation[\"ResourceLimit\"]"
+    );
+    assert!(
+        character_range
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+
+    let mut repeat_session = Session::new();
+    repeat_session.set_generated_element_limit(3);
+    let repeat = repeat_session.eval_text("StringRepeat[\"ab\", 2]").unwrap();
+    assert_eq!(
+        repeat.value.to_string(),
+        "TerminatedEvaluation[\"ResourceLimit\"]"
+    );
+    assert!(
+        repeat
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+
+    let mut memory_session = Session::new();
+    assert_eq!(
+        memory_session
+            .eval_text("MemoryConstrained[StringRepeat[\"x\", 100], 20, memfail]")
+            .unwrap()
+            .value
+            .to_string(),
+        "memfail"
+    );
+}
+
+#[test]
 fn input_like_renderer_uses_part_and_map_family_syntax() {
     let part = Expr::call(
         system_expr("Part"),

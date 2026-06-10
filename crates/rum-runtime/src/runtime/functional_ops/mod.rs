@@ -117,6 +117,10 @@ fn position_expr_from_path(path: &[isize]) -> Expr {
     )
 }
 
+fn generated_expr_nodes_memory_proxy_bytes(count: usize) -> usize {
+    count.saturating_mul(std::mem::size_of::<Expr>())
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum NestWhileTestArity {
     Count(usize),

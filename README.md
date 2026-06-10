@@ -82,6 +82,7 @@ The repository is a Cargo workspace with these top-level crates:
 
 - [Architecture](./ARCHITECTURE.md)
 - [TODO / Roadmap](./TODO.md)
+- [Progress Log](./PROGRESS.md)
 - [Core-Language Support Matrix](./docs/core-language-support-matrix.md)
 - [Testing Strategy](./docs/testing-strategy.md)
 - [Lowering Canonical Forms](./docs/lowering-canonical-forms.md)
@@ -90,19 +91,18 @@ The repository is a Cargo workspace with these top-level crates:
 - [Code Organization Guidelines](./docs/code-organization-guidelines.md)
 - [Jupyter Console Manual Smoke](./docs/jupyter-console-manual.md)
 
-## Future Example Plans
+## Application Directions
 
-The `examples/` directory currently contains planning documents for future
-showcase projects. These are not active implementation targets yet; they should
-wait until the core runtime and host-adapter APIs are stable enough.
+The project is not currently maintaining detailed showcase-project plans.
+Future examples should be driven by concrete downstream needs rather than by
+speculative roadmap breadth.
 
-- [Python AI Policy](./examples/python-ai-policy/PLAN.md): a future
-  Python-hosted AI-infrastructure policy / rewrite / validation example built
-  around a narrow canonical request IR and thin project adapters.
-- [Rust Wasm Prototype](./examples/rust-wasm-proto/PLAN.md): a future
-  Rust-hosted WebAssembly validation and semantics prototype where Rust owns
-  host infrastructure and `rum` owns symbolic validation, step rules,
-  diagnostics, and explanation.
+Plausible application directions include:
+
+- symbolic policy, validation, and rewrite layers for AI, data, or workflow
+  tooling
+- compiler, runtime, or DSL semantics prototypes where a Rust host owns system
+  infrastructure and `rum` owns symbolic rules, diagnostics, and explanation
 
 ## Development Environment
 

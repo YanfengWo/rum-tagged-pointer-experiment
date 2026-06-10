@@ -6,6 +6,9 @@ pub struct ResourceLimits {
     pub recursion_limit: usize,
     pub replace_repeated_limit: usize,
     pub evaluation_pass_limit: usize,
+    pub generated_element_limit: usize,
+    pub integer_work_limit: usize,
+    pub iteration_work_limit: usize,
 }
 
 impl Default for ResourceLimits {
@@ -14,6 +17,9 @@ impl Default for ResourceLimits {
             recursion_limit: DEFAULT_RECURSION_LIMIT,
             replace_repeated_limit: DEFAULT_REPLACE_REPEATED_LIMIT,
             evaluation_pass_limit: DEFAULT_EVALUATION_PASS_LIMIT,
+            generated_element_limit: DEFAULT_GENERATED_ELEMENT_LIMIT,
+            integer_work_limit: DEFAULT_INTEGER_WORK_LIMIT,
+            iteration_work_limit: DEFAULT_ITERATION_WORK_LIMIT,
         }
     }
 }
@@ -249,6 +255,15 @@ impl fmt::Display for SessionRequestError {
             Self::MemoryConstraintExceeded { limit } => {
                 write!(f, "evaluation exceeded MemoryConstrained limit ({limit})")
             }
+            Self::GeneratedElementLimitExceeded { limit } => {
+                write!(f, "evaluation exceeded generated element limit ({limit})")
+            }
+            Self::IntegerWorkLimitExceeded { limit } => {
+                write!(f, "evaluation exceeded integer work limit ({limit})")
+            }
+            Self::IterationWorkLimitExceeded { limit } => {
+                write!(f, "evaluation exceeded iteration work limit ({limit})")
+            }
             Self::IterationLimitExceeded { limit } => {
                 write!(f, "ReplaceRepeated exceeded iteration limit ({limit})")
             }
@@ -399,6 +414,15 @@ pub enum SessionRequestError {
     },
     TimeConstraintExceeded,
     MemoryConstraintExceeded {
+        limit: usize,
+    },
+    GeneratedElementLimitExceeded {
+        limit: usize,
+    },
+    IntegerWorkLimitExceeded {
+        limit: usize,
+    },
+    IterationWorkLimitExceeded {
         limit: usize,
     },
     IterationLimitExceeded {

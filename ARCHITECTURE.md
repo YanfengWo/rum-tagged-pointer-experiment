@@ -297,13 +297,15 @@ The design intent is for `rum-host` to become the primary Rust embedding
 boundary, with future Python support layered on top of it rather than binding
 directly to a broad `rum-runtime` surface.
 
-### `rum-python` (planned)
+### Python Adapter (frozen)
 
-`rum-python` is the planned optional Python adapter crate.
+Project-owned Python adapter work is frozen for the current stabilization
+phase.
 
-Its role is to provide a thin Python-facing layer on top of `rum-host` for
-evaluation, suspend/resume, and editor-style request flows in Python
-applications.
+Python remains a plausible future host for AI, data, automation, and
+notebook-adjacent workflows, but it is not an active roadmap item. If the work
+is revived later, it should still provide a thin Python-facing layer on top of
+`rum-host` for evaluation, suspend/resume, and editor-style request flows.
 
 It should:
 
@@ -317,8 +319,9 @@ It should not:
 - make Python the primary architectural driver for the kernel
 - absorb notebook protocol behavior that belongs in `rum-jupyter`
 
-The design intent is for Python support to remain optional and downstream of
-the Rust host boundary, not a second path around it.
+The design intent is for Python support to remain optional, downstream of the
+Rust host boundary, and inactive until a concrete use case justifies the API
+and packaging cost.
 
 ### `rum-difftest`
 
@@ -385,10 +388,10 @@ It should also be the basis for any future:
 - embedding API
 - external protocol or link layer
 
-The planned Rust realization of that boundary is documented in
-[Host Adapter Plan](./docs/host-adapter-plan.md).
-The planned Python layer above it is documented in
-[Python Adapter Plan](./docs/python-adapter-plan.md).
+The Rust realization of that boundary is documented in
+[Host Adapter Plan](./docs/host-adapter-plan.md). Frozen Python adapter notes
+are kept in [Python Adapter Plan](./docs/python-adapter-plan.md) for future
+reference, but they are not active roadmap commitments.
 
 ## Reference Host Scenarios
 
@@ -396,22 +399,18 @@ The architecture can keep a small number of reference host scenarios in mind
 when judging API ergonomics without turning those scenarios into product-scope
 commitments.
 
-For a future Python host, the reference scenario is AI- and data-tooling-
-oriented applications that need deterministic rule evaluation, symbolic
-normalization, structured diagnostics, and resumable execution around model,
-tool, or workflow orchestration. The current concrete planning target is
-[Python AI Policy](./examples/python-ai-policy/PLAN.md): a small offline
-AI-infrastructure policy / rewrite / validation example with a thin Python
-adapter and a narrow canonical request IR.
+For a possible future Python host, the reference scenario is AI- and
+data-tooling-oriented applications that need deterministic rule evaluation,
+symbolic normalization, structured diagnostics, and resumable execution around
+model, tool, or workflow orchestration. This is an application direction, not a
+project-owned example plan.
 
-For a future Rust host, the reference scenario is a compiler/runtime-style
+For a Rust host, the reference scenario is a compiler/runtime/DSL-style
 prototype that needs stable session lifecycles, predictable resource
 boundaries, transport-friendly outcomes, and embedding-friendly request flows.
-The current concrete planning target is
-[Rust Wasm Prototype](./examples/rust-wasm-proto/PLAN.md): a Rust-hosted
-WebAssembly validation and semantics prototype where Rust owns IR, fixtures,
-memory, and host plumbing while `rum` owns symbolic validation, step rules,
-traps, diagnostics, and explanation.
+`mma-hol` is the preferred near-term external pressure test: `rum` should use
+it to identify missing kernel semantics without adopting that project's own
+scale or roadmap.
 
 These scenarios are design pressure, not product definition. They should help
 the project choose a clean and useful host boundary, but they should not turn

@@ -83,11 +83,7 @@ impl Session {
         &self,
         expr: &Expr,
     ) -> Result<(), EvalError> {
-        if let Some(deadline) = self.current_time_deadline {
-            if Instant::now() >= deadline {
-                return Err(EvalError::TimeConstraintExceeded);
-            }
-        }
+        self.enforce_active_time_limit()?;
 
         if let Some(limit) = self.current_memory_limit {
             let projected = self
@@ -96,6 +92,66 @@ impl Session {
             if projected > limit {
                 return Err(EvalError::MemoryConstraintExceeded { limit });
             }
+        }
+
+        Ok(())
+    }
+
+    pub(in crate::runtime) fn enforce_active_time_limit(&self) -> Result<(), EvalError> {
+        if let Some(deadline) = self.current_time_deadline {
+            if Instant::now() >= deadline {
+                return Err(EvalError::TimeConstraintExceeded);
+            }
+        }
+
+        Ok(())
+    }
+
+    pub(in crate::runtime) fn enforce_active_memory_limit_for_projected_bytes(
+        &self,
+        bytes: usize,
+    ) -> Result<(), EvalError> {
+        if let Some(limit) = self.current_memory_limit {
+            let projected = self.current_memory_proxy_bytes().saturating_add(bytes);
+            if projected > limit {
+                return Err(EvalError::MemoryConstraintExceeded { limit });
+            }
+        }
+
+        Ok(())
+    }
+
+    pub(in crate::runtime) fn enforce_generated_element_limit_for_count(
+        &self,
+        count: usize,
+    ) -> Result<(), EvalError> {
+        let limit = self.resource_limits.generated_element_limit;
+        if count > limit {
+            return Err(EvalError::GeneratedElementLimitExceeded { limit });
+        }
+
+        Ok(())
+    }
+
+    pub(in crate::runtime) fn enforce_generated_element_limit_for_big_count(
+        &self,
+        count: &BigInt,
+    ) -> Result<(), EvalError> {
+        let limit = self.resource_limits.generated_element_limit;
+        if count > &BigInt::from(limit) {
+            return Err(EvalError::GeneratedElementLimitExceeded { limit });
+        }
+
+        Ok(())
+    }
+
+    pub(in crate::runtime) fn enforce_iteration_work_limit_for_big_count(
+        &self,
+        count: &BigInt,
+    ) -> Result<(), EvalError> {
+        let limit = self.resource_limits.iteration_work_limit;
+        if count > &BigInt::from(limit) {
+            return Err(EvalError::IterationWorkLimitExceeded { limit });
         }
 
         Ok(())

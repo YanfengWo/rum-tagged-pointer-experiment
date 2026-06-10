@@ -388,6 +388,15 @@ fn session_request_error_from_eval_error_with_source(
         EvalError::MemoryConstraintExceeded { limit } => {
             SessionRequestError::MemoryConstraintExceeded { limit: *limit }
         }
+        EvalError::GeneratedElementLimitExceeded { limit } => {
+            SessionRequestError::GeneratedElementLimitExceeded { limit: *limit }
+        }
+        EvalError::IntegerWorkLimitExceeded { limit } => {
+            SessionRequestError::IntegerWorkLimitExceeded { limit: *limit }
+        }
+        EvalError::IterationWorkLimitExceeded { limit } => {
+            SessionRequestError::IterationWorkLimitExceeded { limit: *limit }
+        }
         EvalError::IterationLimitExceeded { limit } => {
             SessionRequestError::IterationLimitExceeded { limit: *limit }
         }

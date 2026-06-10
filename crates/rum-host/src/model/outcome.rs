@@ -48,6 +48,9 @@ pub enum HostFailureCode {
     RecursionLimitExceeded,
     TimeConstraintExceeded,
     MemoryConstraintExceeded,
+    GeneratedElementLimitExceeded,
+    IntegerWorkLimitExceeded,
+    IterationWorkLimitExceeded,
     IterationLimitExceeded,
     EvaluationPassLimitExceeded,
     Exit,
@@ -234,6 +237,15 @@ fn failure_code(error: &SessionRequestError) -> HostFailureCode {
         SessionRequestError::TimeConstraintExceeded => HostFailureCode::TimeConstraintExceeded,
         SessionRequestError::MemoryConstraintExceeded { .. } => {
             HostFailureCode::MemoryConstraintExceeded
+        }
+        SessionRequestError::GeneratedElementLimitExceeded { .. } => {
+            HostFailureCode::GeneratedElementLimitExceeded
+        }
+        SessionRequestError::IntegerWorkLimitExceeded { .. } => {
+            HostFailureCode::IntegerWorkLimitExceeded
+        }
+        SessionRequestError::IterationWorkLimitExceeded { .. } => {
+            HostFailureCode::IterationWorkLimitExceeded
         }
         SessionRequestError::IterationLimitExceeded { .. } => {
             HostFailureCode::IterationLimitExceeded

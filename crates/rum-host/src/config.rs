@@ -7,6 +7,9 @@ pub struct HostResourceLimits {
     pub recursion_limit: usize,
     pub replace_repeated_limit: usize,
     pub evaluation_pass_limit: usize,
+    pub generated_element_limit: usize,
+    pub integer_work_limit: usize,
+    pub iteration_work_limit: usize,
 }
 
 impl Default for HostResourceLimits {
@@ -21,6 +24,9 @@ impl From<ResourceLimits> for HostResourceLimits {
             recursion_limit: limits.recursion_limit,
             replace_repeated_limit: limits.replace_repeated_limit,
             evaluation_pass_limit: limits.evaluation_pass_limit,
+            generated_element_limit: limits.generated_element_limit,
+            integer_work_limit: limits.integer_work_limit,
+            iteration_work_limit: limits.iteration_work_limit,
         }
     }
 }
@@ -31,6 +37,9 @@ impl From<HostResourceLimits> for ResourceLimits {
             recursion_limit: limits.recursion_limit,
             replace_repeated_limit: limits.replace_repeated_limit,
             evaluation_pass_limit: limits.evaluation_pass_limit,
+            generated_element_limit: limits.generated_element_limit,
+            integer_work_limit: limits.integer_work_limit,
+            iteration_work_limit: limits.iteration_work_limit,
         }
     }
 }

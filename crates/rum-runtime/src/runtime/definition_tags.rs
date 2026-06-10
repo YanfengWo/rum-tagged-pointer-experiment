@@ -223,7 +223,7 @@ impl Session {
             }
             TaggedDefinitionTarget::SubValue(symbol) => {
                 let definition = self.definitions.entry(symbol.clone()).or_default();
-                replace_or_append_definition(
+                replace_or_insert_sub_value(
                     &mut definition.sub_values,
                     &lhs,
                     SubValue {
@@ -231,7 +231,6 @@ impl Session {
                         rhs: rhs.clone(),
                         delayed,
                     },
-                    |entry| &entry.lhs,
                 );
                 self.push_trace(TraceEvent::DefinitionStored {
                     symbol: symbol.to_string(),
@@ -241,7 +240,7 @@ impl Session {
             }
             TaggedDefinitionTarget::UpValue(symbol) => {
                 let definition = self.definitions.entry(symbol.clone()).or_default();
-                replace_or_append_definition(
+                replace_or_insert_up_value(
                     &mut definition.up_values,
                     &lhs,
                     UpValue {
@@ -249,7 +248,6 @@ impl Session {
                         rhs: rhs.clone(),
                         delayed,
                     },
-                    |entry| &entry.lhs,
                 );
                 self.push_trace(TraceEvent::DefinitionStored {
                     symbol: symbol.to_string(),
@@ -262,27 +260,46 @@ impl Session {
 }
 
 fn replace_or_insert_down_value(entries: &mut Vec<DownValue>, lhs: &Expr, new_entry: DownValue) {
+    replace_or_insert_definition_by_specificity(entries, lhs, new_entry, |entry| &entry.lhs);
+}
+
+fn replace_or_insert_sub_value(entries: &mut Vec<SubValue>, lhs: &Expr, new_entry: SubValue) {
+    replace_or_insert_definition_by_specificity(entries, lhs, new_entry, |entry| &entry.lhs);
+}
+
+fn replace_or_insert_up_value(entries: &mut Vec<UpValue>, lhs: &Expr, new_entry: UpValue) {
+    replace_or_insert_definition_by_specificity(entries, lhs, new_entry, |entry| &entry.lhs);
+}
+
+fn replace_or_insert_definition_by_specificity<T, F>(
+    entries: &mut Vec<T>,
+    lhs: &Expr,
+    new_entry: T,
+    lhs_of: F,
+) where
+    F: Fn(&T) -> &Expr,
+{
     if let Some(index) = entries
         .iter()
-        .position(|entry| lhs_patterns_equivalent(&entry.lhs, lhs))
+        .position(|entry| lhs_patterns_equivalent(lhs_of(entry), lhs))
     {
         entries[index] = new_entry;
         return;
     }
 
-    let new_specificity = down_value_specificity(lhs);
+    let new_specificity = definition_specificity(lhs);
     let index = entries
         .iter()
-        .position(|entry| new_specificity > down_value_specificity(&entry.lhs))
+        .position(|entry| new_specificity > definition_specificity(lhs_of(entry)))
         .unwrap_or(entries.len());
     entries.insert(index, new_entry);
 }
 
-fn down_value_specificity(expr: &Expr) -> usize {
+fn definition_specificity(expr: &Expr) -> usize {
     match expr {
         Expr::Atom(_) => 4,
         Expr::Call { head, args } if is_system_symbol_name(head, "Pattern") && args.len() == 2 => {
-            down_value_specificity(&args[1])
+            definition_specificity(&args[1])
         }
         Expr::Call { head, args } if is_system_symbol_name(head, "Blank") => {
             if args.is_empty() {
@@ -297,18 +314,18 @@ fn down_value_specificity(expr: &Expr) -> usize {
                 || is_system_symbol_name(head, "RepeatedNull"))
                 && !args.is_empty() =>
         {
-            down_value_specificity(&args[0])
+            definition_specificity(&args[0])
         }
         Expr::Call { head, args }
             if (is_system_symbol_name(head, "Condition")
                 || is_system_symbol_name(head, "PatternTest"))
                 && !args.is_empty() =>
         {
-            1 + down_value_specificity(&args[0])
+            1 + definition_specificity(&args[0])
         }
         Expr::Call { head, args } => {
-            3 + down_value_specificity(head)
-                + args.iter().map(down_value_specificity).sum::<usize>()
+            3 + definition_specificity(head)
+                + args.iter().map(definition_specificity).sum::<usize>()
         }
     }
 }

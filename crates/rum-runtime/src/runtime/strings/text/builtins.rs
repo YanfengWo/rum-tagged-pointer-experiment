@@ -378,7 +378,13 @@ impl Session {
             return Ok(list_expr(Vec::new()));
         }
 
-        let mut items = Vec::new();
+        let count = character_range_count(start, end);
+        self.enforce_active_memory_limit_for_projected_bytes(character_range_memory_proxy_bytes(
+            count,
+        ))?;
+        self.enforce_generated_element_limit_for_count(count)?;
+
+        let mut items = Vec::with_capacity(count);
         for value in (start as u32)..=(end as u32) {
             let Some(ch) = char::from_u32(value) else {
                 continue;
@@ -428,6 +434,12 @@ impl Session {
         let Some(count) = expr_as_non_negative_usize(&args[1]) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
+
+        let output_bytes = generated_string_bytes(value, count);
+        self.enforce_active_memory_limit_for_projected_bytes(generated_string_memory_proxy_bytes(
+            output_bytes,
+        ))?;
+        self.enforce_generated_element_limit_for_count(output_bytes)?;
 
         Ok(Expr::string(value.repeat(count)))
     }
@@ -482,4 +494,36 @@ impl Session {
 
         Expr::call(head.clone(), args.to_vec())
     }
+}
+
+fn character_range_count(start: char, end: char) -> usize {
+    let raw_start = start as u32;
+    let raw_end = end as u32;
+    let raw_count = raw_end.saturating_sub(raw_start).saturating_add(1);
+    let surrogate_start = 0xD800_u32;
+    let surrogate_end = 0xDFFF_u32;
+    let invalid_overlap = if raw_start <= surrogate_end && raw_end >= surrogate_start {
+        let overlap_start = raw_start.max(surrogate_start);
+        let overlap_end = raw_end.min(surrogate_end);
+        overlap_end.saturating_sub(overlap_start).saturating_add(1)
+    } else {
+        0
+    };
+
+    usize::try_from(raw_count.saturating_sub(invalid_overlap)).unwrap_or(usize::MAX)
+}
+
+fn character_range_memory_proxy_bytes(count: usize) -> usize {
+    let element_bytes = std::mem::size_of::<Expr>()
+        .saturating_add(std::mem::size_of::<String>())
+        .saturating_add(4);
+    std::mem::size_of::<Expr>().saturating_add(count.saturating_mul(element_bytes))
+}
+
+fn generated_string_bytes(value: &str, count: usize) -> usize {
+    value.len().saturating_mul(count)
+}
+
+fn generated_string_memory_proxy_bytes(bytes: usize) -> usize {
+    std::mem::size_of::<Expr>().saturating_add(bytes)
 }

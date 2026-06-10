@@ -309,7 +309,8 @@ once in its primary implementation group. Other groups may mention it as
   `Nest`, `NestWhile`, `NestList`, `NestWhileList`, `FixedPoint`,
   `FixedPointList`, `Apply`, `MapApply`, `OperatorApplied`, `CurryApplied`,
   `ReverseApplied`, `Composition`, `RightComposition`, `Through`, `Operate`,
-  `ArrayFilter`, and `ArrayReduce`, plus current `levelspec` / `Heads`
+  `Array`, `Outer`, `Select`, `ArrayFilter`, and `ArrayReduce`, plus current
+  `levelspec` / `Heads`
   support for the `Apply`, `Map`, and `Comap` families, current
   negative-level empty-expression depth alignment for the `Apply` / `Map`
   traversal families, current
@@ -321,7 +322,9 @@ once in its primary implementation group. Other groups may mention it as
   `Padding -> "Fixed"`, `Padding -> "Periodic"`, constant-padding forms,
   cyclic padding lists, matching per-axis asymmetric padding pairs, and
   explicit even-template anchoring for `ArrayFilter`, and current
-  dimension-spec plus grouped-dimension support for `ArrayReduce`
+  dimension-spec plus grouped-dimension support for `ArrayReduce`, current
+  dense same-head `Array` / `Outer` generation subset, and current `Select`
+  expression / association / operator-form subset
 - `planned`: sparse-array parity, broader ArrayPad-style padding / storage
   compatibility, and obscure higher-order traversal, threading diagnostic, or
   operator/combinator convenience corners beyond the current mainline subset
@@ -335,15 +338,14 @@ once in its primary implementation group. Other groups may mention it as
   `FoldWhile`, `SequenceFold`, `SequenceFoldList`, `Nest`, `NestWhile`,
   `NestList`, `NestWhileList`, `FixedPoint`, `FixedPointList`, `Apply`,
   `MapApply`, `OperatorApplied`, `CurryApplied`, `ReverseApplied`, `Through`,
-  `Operate`, `ArrayFilter`, `ArrayReduce`, `Composition`,
-  `RightComposition`
+  `Operate`, `Array`, `Outer`, `Select`, `ArrayFilter`, `ArrayReduce`,
+  `Composition`, `RightComposition`
 - `planned`: `ArrayFilter` / `ArrayReduce` sparse-array parity, any future
   broader ArrayPad-style padding or storage compatibility layers beyond the
   current dense-array subset, and lower-priority diagnostic / option-shape
   polish for rarely used functional-combinator corners
-- `cross-tracked elsewhere`: `Append`, `Array`, `AssociationMap`, `Cases`,
-  `CountsBy`, `GroupBy`, `Identity`, `KeySortBy`, `Outer`, `Position`,
-  `Select`
+- `cross-tracked elsewhere`: `Append`, `AssociationMap`, `Cases`,
+  `CountsBy`, `GroupBy`, `Identity`, `KeySortBy`, `Position`
 
 ## CL-05: Associations and Keyed Data
 
@@ -529,7 +531,8 @@ once in its primary implementation group. Other groups may mention it as
   `Message` rendering for held arguments, function/fail-function host-input resume,
   inert direct `TerminatedEvaluation` constructor / application behavior plus
   generated top-level/request/evaluation-data `TerminatedEvaluation` for
-  recursion and fixed-point iteration limits, current string-tag `Success`
+  recursion, fixed-point iteration, and current host resource limits,
+  current string-tag `Success`
   projection boundary, active-throw cleanup `Throw` bypass for the matching
   `Catch` frame plus request-level cleanup/primary throw reporting, top-level
   and cleanup-time `Throw::nocatch` diagnostics with cleanup-before-primary
@@ -555,8 +558,9 @@ once in its primary implementation group. Other groups may mention it as
   `WithCleanup` / `Failsafe` / `CheckAbort` / `AbortProtect` parity, richer
   `Assert` controls beyond the current session
   flag plus `$AssertFunction` hook, broader generated-resource
-  `TerminatedEvaluation` parity beyond the current recursion/fixed-point limit
-  subset, and fuller host-I/O semantics
+  `TerminatedEvaluation` parity beyond the current recursion/fixed-point,
+  generated-element, integer-work, and iteration-work limit subset, and fuller
+  host-I/O semantics
 - `cross-tracked elsewhere`: `Block`, `Function`, `Module`, `Rule`,
   `RuleDelayed`, `With`
 
