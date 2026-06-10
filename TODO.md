@@ -35,6 +35,9 @@ This roadmap intentionally uses two levels of detail:
     case preparation, result accounting, and fixture filters, and move oracle
     batch/partial-timeout handling plus rum/oracle value normalization into
     focused child modules
+  - [x] Difftest Lane A fixture-path split follow-up: move fixture
+    source/category classification and default fixture filtering out of the
+    runner facade into a focused child module
   - [x] Difftest Lane A unit-test split follow-up: keep
     `lane_a/tests.rs` as a shared-helper facade and move runner,
     batch-oracle, fixture-filter, and known-difference accounting coverage into
