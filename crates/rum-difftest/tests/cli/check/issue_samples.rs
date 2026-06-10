@@ -83,5 +83,8 @@ fn check_filters_summary_json_issue_samples_by_check_and_kind() {
     assert_eq!(samples.len(), 1);
     assert_eq!(json_str(&samples[0], "/check"), "lane-d-readiness");
     assert_eq!(json_str(&samples[0], "/kind"), "missing_artifact");
+    assert_eq!(json_str(&samples[0], "/profile"), "smoke");
+    assert_eq!(json_str(&samples[0], "/threshold_profile"), "ci-debug");
+    assert_eq!(json_str(&samples[0], "/cargo_profile"), "debug");
     fs::remove_dir_all(temp_dir).unwrap();
 }

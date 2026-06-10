@@ -65,7 +65,10 @@ exact capture command for missing `ci-debug` / `ci-release` baselines. The
 `ci-release` suggestion uses `cargo run --release` to avoid capturing a release
 threshold profile from a debug build, and both text readiness rows and JSON
 entries expose `cargo_profile` as `debug` or `release` for CI dashboards. The
-current default artifact paths are:
+aggregate `rum-difftest check --include-lane-d-readiness --summary-json PATH`
+issue samples also include `profile`, `threshold_profile`, and `cargo_profile`
+fields for missing, invalid, or dirty readiness artifacts. The current default
+artifact paths are:
 
 - [baselines/smoke.txt](./baselines/smoke.txt): `local-debug`
 - `baselines/smoke-ci-debug.txt`: `ci-debug`, to be captured on the intended

@@ -152,6 +152,17 @@ fn check_can_include_lane_d_readiness_gate() {
         json_str(sample, "/check") == "lane-d-readiness"
             && json_str(sample, "/kind") == "missing_artifact"
             && json_str(sample, "/location").contains("smoke-ci-debug.txt")
+            && json_str(sample, "/profile") == "smoke"
+            && json_str(sample, "/threshold_profile") == "ci-debug"
+            && json_str(sample, "/cargo_profile") == "debug"
+    }));
+    assert!(samples.iter().any(|sample| {
+        json_str(sample, "/check") == "lane-d-readiness"
+            && json_str(sample, "/kind") == "missing_artifact"
+            && json_str(sample, "/location").contains("smoke-ci-release.txt")
+            && json_str(sample, "/profile") == "smoke"
+            && json_str(sample, "/threshold_profile") == "ci-release"
+            && json_str(sample, "/cargo_profile") == "release"
     }));
     fs::remove_dir_all(temp_dir).unwrap();
 }

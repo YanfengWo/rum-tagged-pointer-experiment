@@ -6,10 +6,13 @@ use super::{super::LocalCheckReport, CheckIssueSampleFilter};
 
 #[path = "issue_samples/collectors.rs"]
 mod collectors;
+#[path = "issue_samples/model.rs"]
+mod model;
 
 #[cfg(test)]
 use collectors::collect_artifact_hygiene_issue_samples;
 use collectors::collect_issue_samples;
+use model::{CheckIssueSample, IssueSamplesJson, filter_includes, sample_json};
 
 const CHECK_INVENTORY_BASELINE: &str = "inventory-baseline";
 const CHECK_LANE_C_LEDGER: &str = "lane-c-ledger";
@@ -64,26 +67,6 @@ pub(super) const ISSUE_SAMPLE_KIND_VALUES: &[&str] = &[
     KIND_INVALID_ARTIFACT,
     KIND_NOT_CLEAN_ARTIFACT,
 ];
-
-struct CheckIssueSample {
-    check: &'static str,
-    kind: &'static str,
-    location: String,
-    message: String,
-}
-
-pub(super) struct IssueSamplesJson {
-    pub(super) unfiltered_total: usize,
-    pub(super) total: usize,
-    pub(super) emitted: usize,
-    pub(super) samples: String,
-}
-
-impl IssueSamplesJson {
-    pub(super) fn truncated(&self) -> bool {
-        self.emitted < self.total
-    }
-}
 
 pub(super) fn issue_samples_json(
     report: &LocalCheckReport,
@@ -163,34 +146,6 @@ fn issue_check_counts_json_from_samples(
         .join(",\n")
 }
 
-fn filter_includes(filter: &CheckIssueSampleFilter, sample: &CheckIssueSample) -> bool {
-    filter
-        .check
-        .as_deref()
-        .is_none_or(|check| check == sample.check)
-        && filter
-            .kind
-            .as_deref()
-            .is_none_or(|kind| kind == sample.kind)
-}
-
-fn sample_json(sample: CheckIssueSample) -> String {
-    format!(
-        concat!(
-            "    {{",
-            "\"check\": \"{}\", ",
-            "\"kind\": \"{}\", ",
-            "\"location\": \"{}\", ",
-            "\"message\": \"{}\"",
-            "}}"
-        ),
-        json_string(sample.check),
-        json_string(sample.kind),
-        json_string(&sample.location),
-        json_string(&sample.message),
-    )
-}
-
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
@@ -212,12 +167,12 @@ mod tests {
     }
 
     fn sample(kind: &'static str, location: &str) -> CheckIssueSample {
-        CheckIssueSample {
-            check: CHECK_ARTIFACT_HYGIENE,
+        CheckIssueSample::new(
+            CHECK_ARTIFACT_HYGIENE,
             kind,
-            location: location.to_string(),
-            message: format!("{kind} issue"),
-        }
+            location,
+            format!("{kind} issue"),
+        )
     }
 
     #[test]
