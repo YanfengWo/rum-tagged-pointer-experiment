@@ -64,6 +64,9 @@ This roadmap intentionally uses two levels of detail:
     focused on Lane D run orchestration, and move flag parsing, cross-flag
     validation, capture default resolution, and usage text into a focused
     child module
+  - [x] Difftest Lane D runner split follow-up: keep `lane_d.rs` as a
+    public facade and move run models, name parsing, seed-suite path discovery,
+    execution, and runner tests into focused child modules
   - [x] Difftest Lane D JSON helper test split follow-up: keep
     `lane_d_json.rs` focused on baseline/readiness JSON helpers and move its
     unit tests into a focused child test module
