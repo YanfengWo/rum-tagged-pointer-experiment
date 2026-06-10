@@ -84,6 +84,10 @@ This roadmap intentionally uses two levels of detail:
   - [x] Difftest aggregate-check summary JSON test split follow-up: keep
     `check_cli/summary_json.rs` focused on top-level summary rendering and
     move artifact-hygiene detail coverage into a focused child test module
+  - [x] Difftest aggregate-check summary JSON split follow-up: keep
+    `check_cli/summary_json.rs` focused on top-level summary assembly and move
+    inventory, Lane C, artifact-hygiene, and skipped-check rendering helpers
+    into a focused child module
   - [ ] Names/SyntaxInformation test split follow-up: split the regrown `crates/rum-runtime/src/runtime/tests/names_and_syntax_information.rs` coverage along real behavior boundaries
   - [x] CL-05 association split follow-up: split the remaining oversized association test file along real conceptual boundaries; `crates/rum-runtime/src/runtime/tests/associations.rs` is down to warning range after moving key transforms, key sets, mutation surface, `KeyValuePattern`, aggregate, missing, and diagnostics coverage into focused test modules
   - [x] Debug tools split follow-up: replace the oversized `crates/rum-runtime/src/runtime/debug_tools.rs` file with a `debug_tools/` module tree split by basic display helpers, trace, message switches, reaping, resource limits, monitor, evaluation data, test reports, property projection, and shared render helpers
