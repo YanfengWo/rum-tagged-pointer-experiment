@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::process::ExitCode;
 
 use rum_difftest::config::{load_optional_config, resolve_oracle_kernel, resolve_oracle_timeout};
 use rum_difftest::oracle::OracleKernel;
@@ -11,6 +10,13 @@ use super::oracle_lane_summary_json::{
 };
 
 const MISSING_ORACLE_KERNEL_MESSAGE: &str = "no oracle kernel configured; pass --oracle-kernel/--oracle-command PATH or set oracle_kernel/oracle_command in a config file";
+
+#[path = "oracle_lane_cli/failure_gates.rs"]
+mod failure_gates;
+
+pub(super) use failure_gates::{
+    OracleLaneFailureGateCounts, OracleLaneFailureGateOptions, oracle_lane_failure_exit_code,
+};
 
 #[derive(Debug)]
 pub(super) enum OracleLaneCliArgs {
@@ -37,26 +43,6 @@ pub(super) struct OracleLaneCliOptions {
     pub(super) fail_on_seed_drift: bool,
     pub(super) fail_on_project_seed_drift: bool,
     pub(super) fail_on_resolved_known_difference: bool,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub(super) struct OracleLaneFailureGateOptions {
-    fail_on_mismatch: bool,
-    fail_on_project_mismatch: bool,
-    fail_on_seed_drift: bool,
-    fail_on_project_seed_drift: bool,
-    fail_on_resolved_known_difference: bool,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub(super) struct OracleLaneFailureGateCounts {
-    pub(super) mismatches: usize,
-    pub(super) rum_failures: usize,
-    pub(super) oracle_failures: usize,
-    pub(super) project_non_matches: usize,
-    pub(super) seed_snapshots_drifted_from_oracle: usize,
-    pub(super) project_seed_snapshots_drifted_from_oracle: usize,
-    pub(super) resolved_known_differences: usize,
 }
 
 impl Default for OracleLaneCliOptions {
@@ -191,31 +177,6 @@ fn expect_value(
 ) -> Result<String, Box<dyn std::error::Error>> {
     iter.next()
         .ok_or_else(|| format!("{flag} expects a value").into())
-}
-
-pub(super) fn oracle_lane_failure_exit_code(
-    options: OracleLaneFailureGateOptions,
-    counts: OracleLaneFailureGateCounts,
-) -> ExitCode {
-    let has_mismatch_issues =
-        counts.mismatches > 0 || counts.rum_failures > 0 || counts.oracle_failures > 0;
-    if options.fail_on_mismatch && has_mismatch_issues {
-        return ExitCode::FAILURE;
-    }
-    if options.fail_on_project_mismatch && counts.project_non_matches > 0 {
-        return ExitCode::FAILURE;
-    }
-    if options.fail_on_seed_drift && counts.seed_snapshots_drifted_from_oracle > 0 {
-        return ExitCode::FAILURE;
-    }
-    if options.fail_on_project_seed_drift && counts.project_seed_snapshots_drifted_from_oracle > 0 {
-        return ExitCode::FAILURE;
-    }
-    if options.fail_on_resolved_known_difference && counts.resolved_known_differences > 0 {
-        return ExitCode::FAILURE;
-    }
-
-    ExitCode::SUCCESS
 }
 
 #[cfg(test)]
