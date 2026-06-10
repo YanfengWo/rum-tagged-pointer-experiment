@@ -188,6 +188,11 @@ Missing or incomplete areas include:
 
 - richer tag-based ownership and attachment edge cases beyond the current
   `TagSet` / `UpSet` subset
+- definition lhs normalization still misses non-pattern own-value constants in
+  held lhs positions. Wolfram evaluates `p = a; f[p] := rhs` into a definition
+  for `f[a]`; the latest `mma-hol` probe showed that `rum` currently leaves the
+  literal symbol in the stored pattern for shapes such as
+  `const["=", $boolEqTy]`.
 - exact front-end-style definition introspection and print-layer rendering
 - broader metadata-driven semantics so fewer evaluator decisions remain
   handwritten
@@ -238,6 +243,10 @@ Known gaps include:
 
 - not every evaluator decision is yet driven by unified metadata or shared
   normalization helpers
+- the same-expression cycle guard is too eager for state-progressing recursive
+  definitions. Hand-written parser functions such as `parseTypeExpr[]` consume
+  input state before recursively calling themselves, but the current guard sees
+  only a re-entered call shape and reports a cycle.
 - some remaining held/spec-driven families still need the same normalization
   treatment already applied to messages, loaders, definitions, scoping, and
   traversal config

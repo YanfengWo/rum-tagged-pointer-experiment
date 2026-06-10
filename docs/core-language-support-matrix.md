@@ -801,23 +801,27 @@ once in its primary implementation group. Other groups may mention it as
 
 ### Audit Snapshot
 
-Last scanned: 2026-06-10.
+Last scanned: 2026-06-11.
 
 Local source snapshot:
 
 - repository: `/Users/fft/Developments/mma-hol`
-- HEAD: `83d768f`
-- worktree note: `stdlib/Real/Mul.wl` had local edits during the scan; several
-  `.tmp_*` probe files were present and ignored as project artifacts
-- scanned scope: tracked and working-tree `*.wl` / `*.wls` source under the
-  project, excluding temporary probe files; the current source/test corpus is
-  about 51k lines
+- fixed probe clone: `/private/tmp/rum-mma-hol-latest.FtARYw/mma-hol`
+- HEAD: `698e3d0` (`M7-7 (Real) Complete.wl: Dedekind completeness +
+  Archimedean + Q-density`)
+- worktree note: the live sibling repository was clean at clone time and has
+  no configured remote; the fixed `/private/tmp` clone was then modified only
+  for probe-only syntax/semantic normalizations called out below
+- scanned scope: tracked `*.wl` / `*.wls` source under the project; the current
+  run order includes Real `Cut`, `RatAux`, `Field`, `Mul`, `Inv`, and
+  `Complete`
 
 Primary acceptance candidate:
 
 - `tests/run_all.wls` should become the first cold real-project smoke lane.
   It loads core packages, automation packages, stdlib packages, and the current
-  Real frontier files `RatAux.wl`, `Field.wl`, `Mul.wl`, and `Inv.wl`.
+  Real frontier files `Cut.wl`, `RatAux.wl`, `Field.wl`, `Mul.wl`, `Inv.wl`,
+  and `Complete.wl`.
 
 Secondary harness candidates:
 
@@ -866,7 +870,8 @@ The current `mma-hol` tree needs the following host-language clusters:
 - procedural and functional control: `If`, `Which`, `Switch`, `Do`, `Table`,
   `While`, `Break`, `Return`, `Catch`, `Throw`, `Map`, `Apply`, `MapThread`,
   `Fold`, `Nest`, `Scan`, `Select`, `SelectFirst`, `AllTrue`, `AnyTrue`, and
-  `Outer`
+  `Outer`. The latest probe specifically requires `Table` to substitute
+  iterator values into held subexpressions such as the lhs of `Rule`.
 - exact host-level arithmetic for automation: exact integers/rationals,
   `Plus`, `Times`, `Subtract`, `Divide`, `Power`, `Mod`, `Quotient`, `GCD`,
   `LCM`, and the small aggregation helpers listed below
@@ -898,9 +903,15 @@ the `mma-hol` lane healthy:
 - `Apply[LCM|GCD, list]`: covered by runtime regression in the actual
   `mma-hol` usage shape.
 - `/@` map syntax and Unicode letter identifiers: first-pass source support is
-  implemented for ordinary Unicode letter/digit symbols such as Greek local
-  names used by `mma-hol`; escaped Wolfram box/name syntax is still outside the
-  current source subset.
+  implemented for ordinary map forms and ordinary Unicode letter/digit symbols
+  such as Greek local names used by `mma-hol`; escaped Wolfram box/name syntax
+  is still outside the current source subset. The latest probe exposed a
+  remaining precedence gap for assignment RHS forms such as
+  `ks = #[[1]] & /@ args`, which should parse as assignment to the mapped
+  result.
+- pattern syntax sugar: explicit `Alternatives[...]` and `PatternTest[...]`
+  are supported by the matcher, but the current source parser still rejects the
+  Wolfram shorthands `p1 | p2` and `_?pred` used by latest `mma-hol` sources.
 - `Contexts[]`, `DumpSave`, `$ContextPath`, and `$Packages`: these are not
   needed for the first cold `run_all.wls` semantic smoke, but are required for
   the stable-mode snapshot-backed `run_fast.wls` workflow and for practical
@@ -942,6 +953,21 @@ the `mma-hol` lane healthy:
   the complex `BETACONV` / kernel `BETA` path and still needs bounded profiling
   around deep term traversal. The full `run_all.wls` path still needs a bounded
   smoke driver before it can be a routine acceptance check.
+- latest fixed-clone smoke: using `mma-hol` HEAD `698e3d0`, the core and Bool
+  layer are green (`kernel_tests.wl` `List[71, 0]`, `bool_tests.wl`
+  `List[73, 0]`). With probe-only normalizations for pattern `|`, `_?`,
+  assignment RHS map forms, `Table` plus held `Rule`, and one definition-lhs
+  constant pattern, `drule_tests.wl` reports `List[43, 0]` and
+  `tactics_tests.wl` reports `List[49, 0]`. The next blockers to fix in `rum`
+  are therefore parser/evaluator correctness, not downstream proof-script
+  surgery.
+- evaluator compatibility newly promoted by the latest probe: definition lhs
+  non-pattern constants must evaluate through own values before rule storage
+  (`p = a; f[p] := ...` should define `f[a]`, as in Wolfram); the cycle guard
+  must not reject state-progressing recursive definitions such as
+  `parseTypeExpr[]` and `parseAtom[]`; and recursive/simplifier workloads need
+  quieter or more precise recursion-limit behavior before `Simp` and the
+  stdlib proof packages can be used as reliable failure signals.
 
 ### Non-Goals
 

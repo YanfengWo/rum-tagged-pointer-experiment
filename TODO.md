@@ -89,10 +89,16 @@ Completed history, archived planning detail, and operational lessons live in
   failure triage before it can become a routine check.
 - [ ] Use the updated `CL-Y` audit in
   [docs/core-language-support-matrix.md](./docs/core-language-support-matrix.md)
-  as the source of truth for `mma-hol` blockers. The next cold-lane work is to
-  push past the now-green `types_tests.wl`, `terms_tests.wl`,
-  `kernel_tests.wl`, `bootstrap_tests.wl`, and `equal_tests.wl` core layer.
-  The current concrete blocker is Bool top-level proof performance:
+  as the source of truth for `mma-hol` blockers. The current latest-HEAD cold
+  probe gets through the core and Bool test layers, and probe-only source
+  normalizations get `Drule` and `Tactics` green. The next correctness work is
+  no longer Bool performance; it is the promoted parser/evaluator compatibility
+  set exposed by `mma-hol` HEAD `698e3d0`: pattern `|` and `_?` syntax sugar,
+  assignment RHS `& /@` precedence, `Table` substitution into held `Rule` lhs
+  positions, definition lhs own-value evaluation for non-pattern constants,
+  and the over-eager same-expression cycle guard that blocks recursive parser
+  functions such as `parseTypeExpr[]`. Bool performance is now a follow-up
+  lane:
   dependency-preloaded `Bool.wl` now completes in about 2.36-2.40s warmed
   external default-release wall time. A prior local `target-cpu=native` release
   build measured about 2.29-2.35s warmed external wall time before the latest
@@ -105,7 +111,9 @@ Completed history, archived planning detail, and operational lessons live in
   Low-yield probes already rejected include symbol fingerprint hashing, shallow
   definition matcher
   metadata, codegen-units=1, and thin LTO; continue with fresh profiling before
-  deeper low-level work.
+  deeper low-level work. If performance work resumes, start from borrowed
+  matcher fast paths or delayed definition-candidate materialization before
+  considering broader DAG/arena representation changes.
 - [ ] Treat `mma-hol` stable-mode snapshot helpers (`DumpSave`, `Contexts[]`,
   `$ContextPath` / `$Packages`, file timestamps, and timing reports) as a
   required developer-workflow gate for `rum-hol` migration. Cold `run_all.wls`

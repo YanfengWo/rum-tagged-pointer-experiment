@@ -284,6 +284,52 @@ are not active project-owned examples.
 - Rejected a one-entry call-stability MRU cache after measurement. Runtime tests
   passed, but warmed Bool smoke regressed to about `real 2.41-2.44`, so the
   probe was reverted.
+- Deferred deeper performance directions until a future profiling pass:
+  borrowed fast paths for compiled matcher application, delayed materialization
+  of definition candidates before rule traces/options need an owned expression,
+  narrower pointer/shape fast paths for exact expression comparisons, and
+  head-specific investigation of repeated `cached_expr_is_evaluation_stable`
+  calls. A whole-expression DAG/arena remains a last-resort architecture change
+  rather than the next default step.
+
+## 2026-06-11 Latest `mma-hol` Cold Probe
+
+- Cloned sibling `mma-hol` clean HEAD `698e3d0` (`M7-7 (Real)
+  Complete.wl: Dedekind completeness + Archimedean + Q-density`) to
+  `/private/tmp/rum-mma-hol-latest.FtARYw/mma-hol` and used that fixed clone as
+  the probe target so live downstream development can continue independently.
+- Baseline low layers still pass on the latest tree: dependency-preloaded
+  `kernel_tests.wl` reported `List[71, 0]`; dependency-preloaded
+  `bool_tests.wl` reported `List[73, 0]` with external wall time about
+  `20.69s` for cold package load plus tests.
+- Temporary source normalizations in the `/private/tmp` clone let the probe
+  move past syntax sugar without changing `rum`: pattern `|` was rewritten to
+  explicit `Alternatives[...]`; several assignment RHS `& /@` forms were
+  rewritten to `Map[...]`; `_?pred` was rewritten to
+  `PatternTest[_, pred]`; one `Table[heldLhs -> rhs, ...]` mapping was
+  rewritten to `MapThread[Rule, ...]`; and a Meson recognizer using
+  `$boolEqTy` in a definition lhs was rewritten to compare a captured `ty_` on
+  the RHS.
+- With those probe-only normalizations, `drule_tests.wl` reported
+  `List[43, 0]` and `tactics_tests.wl` reported `List[49, 0]`. This suggests
+  the Bool/Drule/Tactics semantic base is now mostly healthy once the promoted
+  source/evaluator compatibility gaps below are fixed.
+- The promoted compatibility gaps from this latest probe are:
+  Wolfram pattern infix `|` lowering to `Alternatives`, `_?` lowering to
+  `PatternTest`, correct precedence for assignment RHS forms like
+  `ks = #[[1]] & /@ args`, `Table` iterator substitution inside held `Rule`
+  lhs positions, evaluation of non-pattern own-value constants in definition
+  lhs forms such as `p = a; f[p] := ...`, and a less eager evaluation-cycle
+  guard for state-progressing recursive definitions such as
+  `parseTypeExpr[]`.
+- Additional follow-up observations: `Printer` has a low-risk display mismatch
+  for a naked registered infix constant (`formatTerm[=]` renders `"="` instead
+  of `"(=)"`); `Parser` tests currently stop at the same recursive parser
+  cycle issue; `PropTaut` and `Meson` can load and execute small non-parser
+  probes after the syntax/lhs normalizations; `Simp` loads but emits many
+  recursion-limit messages during tests; and the first stdlib type packages
+  (`Pair`, `Sum`, `Option`) then expose derived-theorem failures that should be
+  revisited after the evaluator/source fixes, not before.
 
 ## Completed Architecture Work
 
