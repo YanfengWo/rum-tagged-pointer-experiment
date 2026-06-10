@@ -189,3 +189,7 @@ fn parse_issue_sample_kind(value: &str) -> Result<Option<String>, Box<dyn std::e
     )
     .into())
 }
+
+#[cfg(test)]
+#[path = "args/tests.rs"]
+mod tests;
