@@ -59,9 +59,10 @@ boundaries and is not the representative performance smoke.
 Keep performance work probe-first: identify the hot path, make the smallest
 targeted change, then rerun the same timing smoke to reject negative
 optimizations. The current remaining cost is large-HOL-term derived-rule work,
-not parser or loader failure. A symbol-level evaluation epoch cache is already
-in place; whole-expression exact normal-form caching was measured and rejected
-because owned-tree `Expr` hashing/equality became a new hot cost.
+not parser or loader failure. A symbol-level evaluation epoch cache and shared
+call-tree `Expr` representation are already in place. Whole-expression exact
+normal-form caching was measured and rejected because owned-tree
+hashing/equality became a new hot cost.
 
 ## Development Commands
 

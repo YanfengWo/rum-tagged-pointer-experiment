@@ -129,7 +129,10 @@ impl Session {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         }
 
-        self.evaluate(Expr::call(system_expr("Plus"), items.clone()))
+        self.evaluate(Expr::call_with_shared_args(
+            system_expr("Plus"),
+            items.clone(),
+        ))
     }
 
     pub(super) fn eval_denominator(

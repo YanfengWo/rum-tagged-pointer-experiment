@@ -123,8 +123,8 @@ impl Session {
             Expr::Atom(_) => Ok(ReplaceOutcome { expr, depth: 1 }),
             Expr::Call { head, args } if is_system_symbol_name(&head, "Association") => self
                 .replace_association_children_owned(
-                    *head,
-                    args,
+                    head.into_owned(),
+                    args.into_vec(),
                     rules,
                     levels,
                     child_level,
@@ -133,8 +133,8 @@ impl Session {
                     0,
                 ),
             Expr::Call { head, args } => self.replace_call_children_owned(
-                *head,
-                args,
+                head.into_owned(),
+                args.into_vec(),
                 rules,
                 levels,
                 child_level,

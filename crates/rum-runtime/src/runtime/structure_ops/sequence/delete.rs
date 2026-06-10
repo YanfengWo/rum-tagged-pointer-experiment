@@ -44,7 +44,7 @@ impl Session {
         }
 
         Ok(delete_canonical_paths(
-            Expr::call(expr_head.as_ref().clone(), expr_args.clone()),
+            Expr::call_with_shared_args(expr_head.as_ref().clone(), expr_args.clone()),
             canonical_paths,
         ))
     }
@@ -200,11 +200,11 @@ fn delete_canonical_path(expr: Expr, path: &[isize]) -> Expr {
         Expr::Atom(_) => expr,
         Expr::Call { head, args } if *first == 0 => {
             if rest.is_empty() {
-                return expression_without_head(args);
+                return expression_without_head(args.into_vec());
             }
 
             let replaced_head = delete_canonical_path(head.as_ref().clone(), rest);
-            Expr::call(replaced_head, args)
+            Expr::call_with_shared_args(replaced_head, args)
         }
         Expr::Call { head, mut args } => {
             let index = (*first as usize).saturating_sub(1);

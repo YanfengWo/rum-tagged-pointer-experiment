@@ -15,7 +15,7 @@ impl Session {
                     args: items,
                 },
             ] if is_system_symbol_name(list_head, heads::structure::LIST) => items.clone(),
-            _ => args.to_vec(),
+            _ => args.to_vec().into(),
         };
 
         let Some(entries) = parse_association_entry_forms_deep(&source_items) else {

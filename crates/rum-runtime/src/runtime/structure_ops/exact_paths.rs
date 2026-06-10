@@ -179,7 +179,7 @@ pub(super) fn replace_exact_path(expr: Expr, path: &[isize], rhs: Expr) -> Expr 
         let replaced_head = replace_exact_path(structural_head_expr(&expr), rest, rhs);
         return match expr {
             Expr::Atom(_) => Expr::call(replaced_head, Vec::new()),
-            Expr::Call { args, .. } => Expr::call(replaced_head, args),
+            Expr::Call { args, .. } => Expr::call_with_shared_args(replaced_head, args),
         };
     }
 

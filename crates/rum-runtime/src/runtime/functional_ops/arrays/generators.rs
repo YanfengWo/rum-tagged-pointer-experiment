@@ -288,7 +288,7 @@ fn parse_array_origins(origin: Option<&Expr>, rank: usize) -> Option<Vec<Expr>> 
             if args.len() != rank {
                 return None;
             }
-            return Some(args.clone());
+            return Some(args.to_vec());
         }
     }
 

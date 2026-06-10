@@ -183,6 +183,26 @@ are not active project-owned examples.
   This is a modest but repeatable improvement, not a substitute for the shared
   expression / symbol interning work.
 
+## 2026-06-10 Shared Call Tree Follow-up
+
+- Replaced the owned `Expr::Call { head: Box<Expr>, args: Vec<Expr> }`
+  representation with shared call nodes:
+  `Expr::Call { head: SharedExpr, args: SharedArgs }`, backed by `Arc`.
+  `SharedArgs` preserves borrowed iteration and copy-on-write mutation for the
+  existing runtime code shape; old owned-Vec boundaries now explicitly call
+  `to_vec`/`into_vec`, while pure expression rebuilds can reuse shared args.
+- Kept `Expr::call(head, Vec<Expr>)` as the normal source-compatible
+  constructor and added shared constructors for paths that can preserve an
+  existing argument spine. The expression type remains `Send`/`Sync` friendly by
+  using `Arc`, not `Rc`.
+- Re-ran the same dependency-preloaded Bool release smoke after this change.
+  External wall times were `real 8.09`, `8.07`, and `8.13`; internal
+  `AbsoluteTiming[Get["Bool.wl"]]` was about 7.68-7.74s. This is the first
+  large structural win on the Bool blocker, down from the prior 43.8-44.7s
+  range. Remaining work should now re-profile before choosing between symbol
+  interning, node-level evaluated-state bits, and derived-rule workload
+  specialization.
+
 ## Completed Architecture Work
 
 - The workspace was split into responsibility-oriented crates:

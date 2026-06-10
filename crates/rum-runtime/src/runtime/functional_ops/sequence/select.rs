@@ -161,7 +161,7 @@ fn sequence_like_from_expr(expr: &Expr) -> Option<SelectSource> {
 
     Some(SelectSource::Call {
         head: head.as_ref().clone(),
-        items: args.clone(),
+        items: args.to_vec(),
     })
 }
 

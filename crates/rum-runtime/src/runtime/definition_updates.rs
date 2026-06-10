@@ -123,7 +123,7 @@ impl Session {
             }
             Expr::Call { head, mut args } => {
                 args.push(item.clone());
-                Expr::call(head.as_ref().clone(), args)
+                Expr::call_with_shared_args(head.as_ref().clone(), args)
             }
         };
 
@@ -153,7 +153,7 @@ impl Session {
             }
             Expr::Call { head, mut args } => {
                 args.insert(0, item.clone());
-                Expr::call(head.as_ref().clone(), args)
+                Expr::call_with_shared_args(head.as_ref().clone(), args)
             }
         };
 
@@ -431,7 +431,7 @@ fn bulk_part_update_replacements<'a>(
                     && is_system_symbol_name(head, "List")
                     && args.len() == paths.len() =>
             {
-                args.clone()
+                args.to_vec()
             }
             _ => vec![updated; paths.len()],
         },

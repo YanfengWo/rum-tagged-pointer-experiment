@@ -252,11 +252,11 @@ impl Session {
             return Ok(trace);
         };
         if !is_system_symbol_name(&head, "List") {
-            return Ok(Expr::call(head.as_ref().clone(), args));
+            return Ok(Expr::call_shared(head, args));
         }
 
         let filtered = self.filter_structured_trace_items(
-            args,
+            args.into_vec(),
             pattern.as_ref(),
             levels.as_ref(),
             include_heads,
@@ -276,13 +276,20 @@ impl Session {
         for item in items {
             match item {
                 Expr::Call { head, args } if is_system_symbol_name(&head, "List") => {
-                    let nested =
-                        self.filter_structured_trace_items(args, pattern, levels, include_heads)?;
+                    let nested = self.filter_structured_trace_items(
+                        args.into_vec(),
+                        pattern,
+                        levels,
+                        include_heads,
+                    )?;
                     if !nested.is_empty() {
                         if nested.len() == 1 {
                             if let Expr::Call { head, args } = &nested[0] {
                                 if is_system_symbol_name(head, "List") {
-                                    filtered.push(Expr::call(system_expr("List"), args.clone()));
+                                    filtered.push(Expr::call_with_shared_args(
+                                        system_expr("List"),
+                                        args.clone(),
+                                    ));
                                     continue;
                                 }
                             }
@@ -455,7 +462,7 @@ fn collect_structured_trace_lines(trace: &Expr, depth: usize, lines: &mut Vec<(u
 }
 fn normalize_trace_patterns(expr: &Expr) -> Vec<Expr> {
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "List") => args.clone(),
+        Expr::Call { head, args } if is_system_symbol_name(head, "List") => args.to_vec(),
         other => vec![other.clone()],
     }
 }

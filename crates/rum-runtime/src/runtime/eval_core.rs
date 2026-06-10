@@ -42,7 +42,7 @@ impl Session {
 
         match expr {
             Expr::Atom(Atom::Symbol(symbol)) => self.evaluate_symbol(symbol),
-            Expr::Call { head, args } => self.evaluate_call(*head, args),
+            Expr::Call { head, args } => self.evaluate_call(head.into_owned(), args.into_vec()),
             other => Ok(other),
         }
     }

@@ -77,7 +77,7 @@ impl ContinuationValue for Vec<Expr> {
             Expr::Call { head, args }
                 if is_system_symbol_name(&head, "InternalContinuationVec") =>
             {
-                args
+                args.into_vec()
             }
             other => vec![other],
         }
@@ -180,7 +180,9 @@ impl ContinuationValue for Option<Vec<Expr>> {
                 );
 
                 match list_expr {
-                    Expr::Call { head, args } if is_system_symbol_name(&head, "List") => Some(args),
+                    Expr::Call { head, args } if is_system_symbol_name(&head, "List") => {
+                        Some(args.into_vec())
+                    }
                     other => Some(vec![other]),
                 }
             }
@@ -190,7 +192,9 @@ impl ContinuationValue for Option<Vec<Expr>> {
                 debug_assert!(args.is_empty(), "none continuation payloads are empty");
                 None
             }
-            Expr::Call { head, args } if is_system_symbol_name(&head, "List") => Some(args),
+            Expr::Call { head, args } if is_system_symbol_name(&head, "List") => {
+                Some(args.into_vec())
+            }
             other => Some(vec![other]),
         }
     }

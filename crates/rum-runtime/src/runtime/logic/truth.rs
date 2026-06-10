@@ -354,7 +354,7 @@ fn negate_logical_expr(expr: Expr) -> Expr {
 
         if args.len() == 2 {
             if let Some(opposite) = negated_relation_head_name(&head) {
-                return Expr::call(system_expr(opposite), args);
+                return Expr::call_with_shared_args(system_expr(opposite), args);
             }
         }
 

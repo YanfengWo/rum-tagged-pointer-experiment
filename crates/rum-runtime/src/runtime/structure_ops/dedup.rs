@@ -48,7 +48,7 @@ impl Session {
             args.to_vec(),
             expr_head.as_ref().clone(),
             function.clone(),
-            expr_args.clone(),
+            expr_args.to_vec(),
             0,
             Vec::new(),
             Vec::new(),

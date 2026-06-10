@@ -93,14 +93,13 @@ Completed history, archived planning detail, and operational lessons live in
   push past the now-green `types_tests.wl`, `terms_tests.wl`,
   `kernel_tests.wl`, `bootstrap_tests.wl`, and `equal_tests.wl` core layer.
   The current concrete blocker is Bool top-level proof performance:
-  dependency-preloaded `Bool.wl` now completes, including a release smoke, but
-  debug loading is still too slow for routine iteration. The first evaluator
-  audit quick wins and the symbol-level evaluation epoch cache are in place;
-  continue with profiler-guided structural work around shared expression
-  representation, symbol interning, node-level evaluated-state caching after
-  representation support exists, recursive pure-function traversal, and
-  repeated derived-rule workloads such as `MP`, `GEN`, `SPEC`, and
-  `BETACONV`.
+  dependency-preloaded `Bool.wl` now completes in about 8.1s external release
+  wall time after the shared call-tree representation, down from the prior
+  43.8-44.7s range. The first evaluator audit quick wins, symbol-level
+  evaluation epoch cache, and shared call-tree representation are in place;
+  continue with fresh profiling before choosing between symbol interning,
+  node-level evaluated-state caching, recursive pure-function traversal, and
+  repeated derived-rule workloads such as `MP`, `GEN`, `SPEC`, and `BETACONV`.
 - [ ] Treat `mma-hol` stable-mode snapshot helpers (`DumpSave`, `Contexts[]`,
   `$ContextPath` / `$Packages`, file timestamps, and timing reports) as a
   required developer-workflow gate for `rum-hol` migration. Cold `run_all.wls`
@@ -187,11 +186,11 @@ Completed history, archived planning detail, and operational lessons live in
   whether replacement rules and sequence/orderless backtracking need similar
   caching or representation support.
 - [ ] Continue probe-first evaluator optimization around large HOL proof terms:
-  shared expression representation, symbol interning, node-level evaluated
-  state after representation support exists, remaining clone accounting,
+  symbol interning, node-level evaluated state, remaining clone accounting,
   repeated derived-rule workloads, and debug-vs-release smoke policy before
   adding broader low-level performance work. A symbol-level evaluation epoch
-  cache is already in place; whole-expression exact caching was measured and
+  cache and shared call-tree representation are already in place;
+  whole-expression exact caching was measured and
   rejected because owned-tree hashing/equality became a new cost.
 - [ ] Revisit large request/error payload ergonomics only after measurement
   shows that current shapes are a real cost.

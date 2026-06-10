@@ -174,7 +174,7 @@ impl Session {
                 Expr::Call { head, args } => {
                     let mut new_args = args.clone();
                     new_args.push(item.clone());
-                    Expr::call(head.as_ref().clone(), new_args)
+                    Expr::call_with_shared_args(head.as_ref().clone(), new_args)
                 }
             }),
             [item] => Ok(unary_operator_form("Append", item.clone())),

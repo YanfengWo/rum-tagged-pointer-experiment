@@ -166,7 +166,7 @@ impl Session {
             Expr::Call { head, args } => {
                 let mut children = Vec::new();
                 if traversal.include_heads {
-                    children.push((*head, false));
+                    children.push((head.into_owned(), false));
                 }
                 children.extend(args.into_iter().map(|arg| (arg, true)));
 

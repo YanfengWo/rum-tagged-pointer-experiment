@@ -222,10 +222,10 @@ fn evaluate_do_spec_expr(session: &mut Session, raw_spec: Expr) -> Result<Expr, 
                     normalized.extend(rest.iter().cloned());
                     Expr::call(system_expr("List"), normalized)
                 } else {
-                    Expr::call(system_expr("List"), args)
+                    Expr::call_with_shared_args(system_expr("List"), args)
                 }
             } else {
-                Expr::call(system_expr("List"), args)
+                Expr::call_with_shared_args(system_expr("List"), args)
             };
 
             session.evaluate(evaluated)
@@ -272,7 +272,7 @@ fn parse_do_spec(
                     checked_iteration_count(session, &BigInt::from(args.len()), consumer)?;
                     return Ok(Some(DoSpec::Iterator {
                         symbol,
-                        values: args.clone(),
+                        values: args.to_vec(),
                     }));
                 }
             }

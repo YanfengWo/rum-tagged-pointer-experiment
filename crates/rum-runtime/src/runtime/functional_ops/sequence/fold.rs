@@ -174,7 +174,7 @@ fn iterable_items(expr: &Expr) -> Option<Vec<Expr>> {
                 .map(|(_, value)| value)
                 .collect(),
         ),
-        Expr::Call { args, .. } => Some(args.clone()),
+        Expr::Call { args, .. } => Some(args.to_vec()),
         Expr::Atom(_) => None,
     }
 }

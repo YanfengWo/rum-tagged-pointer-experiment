@@ -317,7 +317,7 @@ fn join_level_targets_unchecked(exprs: &[&Expr]) -> Expr {
         exprs
             .iter()
             .flat_map(|expr| match expr {
-                Expr::Call { args, .. } => args.clone(),
+                Expr::Call { args, .. } => args.to_vec(),
                 Expr::Atom(_) => Vec::new(),
             })
             .collect(),

@@ -75,7 +75,7 @@ impl Session {
         let symbol = expr_as_symbol(head)?.clone();
         (!args.is_empty()).then_some(AssociationSetLValueTarget::FunctionCall {
             symbol,
-            selectors: args.clone(),
+            selectors: args.to_vec(),
         })
     }
 

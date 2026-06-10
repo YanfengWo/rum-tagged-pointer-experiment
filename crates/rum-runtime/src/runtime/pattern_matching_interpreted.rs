@@ -123,7 +123,9 @@ impl Session {
                 args: value_args,
             } => {
                 let head_expr = head.clone();
-                let head_result = self.match_expr_interpreted_owned(head, *value_head, bindings);
+                let value_head = value_head.into_owned();
+                let value_args = value_args.into_vec();
+                let head_result = self.match_expr_interpreted_owned(head, value_head, bindings);
                 self.drive_internal_value(head_result, move |session, outcome| {
                     if !outcome.matched {
                         return Ok(outcome);
@@ -298,9 +300,12 @@ impl Session {
             (Expr::Atom(lhs), Expr::Atom(rhs)) => {
                 Ok(interpreted_match_outcome(lhs == rhs, bindings))
             }
-            (Expr::Call { head, args }, value) => {
-                self.match_call_interpreted_owned(*head, args, value, bindings)
-            }
+            (Expr::Call { head, args }, value) => self.match_call_interpreted_owned(
+                head.into_owned(),
+                args.into_vec(),
+                value,
+                bindings,
+            ),
             _ => Ok(interpreted_match_outcome(false, bindings)),
         }
     }

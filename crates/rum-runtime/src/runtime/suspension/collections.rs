@@ -25,7 +25,9 @@ impl ContinuationValue for CasesCollectionOutcome {
                 let matches_expr = args.pop().expect("cases-collection payload stores matches");
 
                 let matches = match matches_expr {
-                    Expr::Call { head, args } if is_system_symbol_name(&head, "List") => args,
+                    Expr::Call { head, args } if is_system_symbol_name(&head, "List") => {
+                        args.into_vec()
+                    }
                     other => vec![other],
                 };
 
@@ -72,7 +74,9 @@ impl ContinuationValue for PositionCollectionOutcome {
                     .expect("position-collection payload stores positions");
 
                 let positions = match positions_expr {
-                    Expr::Call { head, args } if is_system_symbol_name(&head, "List") => args,
+                    Expr::Call { head, args } if is_system_symbol_name(&head, "List") => {
+                        args.into_vec()
+                    }
                     other => vec![other],
                 };
 

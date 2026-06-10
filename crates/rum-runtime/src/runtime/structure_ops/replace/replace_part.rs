@@ -247,7 +247,7 @@ impl Session {
                     }
                 }
 
-                Ok(Expr::call(replaced_head, args))
+                Ok(Expr::call_with_shared_args(replaced_head, args))
             }
         }
     }

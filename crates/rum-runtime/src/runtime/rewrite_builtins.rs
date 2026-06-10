@@ -90,7 +90,7 @@ impl ContinuationValue for DeleteCasesOutcome {
                             .expect("delete-cases splice payload stores items");
                         let items = match items_expr {
                             Expr::Call { head, args } if is_system_symbol_name(&head, "List") => {
-                                args
+                                args.into_vec()
                             }
                             other => vec![other],
                         };

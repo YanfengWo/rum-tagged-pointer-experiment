@@ -48,7 +48,7 @@ impl Session {
                     args.to_vec(),
                     expr_head.as_ref().clone(),
                     function.clone(),
-                    expr_args.clone(),
+                    expr_args.to_vec(),
                     0,
                     Vec::new(),
                 )
@@ -122,7 +122,7 @@ impl Session {
             return Ok(self.invalid_ordering_normal_call(symbol, args, 1));
         };
 
-        let mut sorted = expr_args.clone();
+        let mut sorted = expr_args.to_vec();
         sorted.sort_by(compare_structural_order);
         Ok(Expr::call(expr_head.as_ref().clone(), sorted))
     }

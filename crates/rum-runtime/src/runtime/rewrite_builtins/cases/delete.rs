@@ -164,8 +164,8 @@ impl Session {
             ),
             Expr::Call { head, args } if is_system_symbol_name(&head, "Association") => self
                 .delete_cases_association_children(
-                    *head,
-                    args,
+                    head.into_owned(),
+                    args.into_vec(),
                     pattern,
                     traversal,
                     level + 1,
@@ -175,8 +175,8 @@ impl Session {
                     false,
                 ),
             Expr::Call { head, args } => self.delete_cases_call_children(
-                *head,
-                args,
+                head.into_owned(),
+                args.into_vec(),
                 pattern,
                 traversal,
                 level + 1,
@@ -246,10 +246,10 @@ impl Session {
             }
 
             let depth = max_child_depth.saturating_add(1);
-            let expr = Expr::Call {
-                head: Box::new(rebuilt_head.unwrap_or_else(|| system_expr("Sequence"))),
-                args: rebuilt_args,
-            };
+            let expr = Expr::call(
+                rebuilt_head.unwrap_or_else(|| system_expr("Sequence")),
+                rebuilt_args,
+            );
             let finish_result = self.finish_delete_cases_at_current_node(
                 expr,
                 pattern,
@@ -313,10 +313,10 @@ impl Session {
                 }
 
                 return Ok(DeleteCasesOutcome {
-                    result: DeleteCasesResult::Keep(Expr::Call {
-                        head: Box::new(next_head.unwrap_or_else(|| system_expr("Sequence"))),
-                        args: next_args,
-                    }),
+                    result: DeleteCasesResult::Keep(Expr::call(
+                        next_head.unwrap_or_else(|| system_expr("Sequence")),
+                        next_args,
+                    )),
                     depth: next_max_child_depth.saturating_add(1),
                     deleted_count: deleted_before_next - subtree_start,
                     exhausted: true,
@@ -412,10 +412,10 @@ impl Session {
             }
 
             let depth = max_child_depth.saturating_add(1);
-            let expr = Expr::Call {
-                head: Box::new(rebuilt_head.unwrap_or_else(|| system_expr("Association"))),
-                args: rebuilt_entries,
-            };
+            let expr = Expr::call(
+                rebuilt_head.unwrap_or_else(|| system_expr("Association")),
+                rebuilt_entries,
+            );
             let finish_result = self.finish_delete_cases_at_current_node(
                 expr,
                 pattern,
@@ -500,10 +500,10 @@ impl Session {
                 next_entries.extend(untouched_rest);
 
                 return Ok(DeleteCasesOutcome {
-                    result: DeleteCasesResult::Keep(Expr::Call {
-                        head: Box::new(next_head.unwrap_or_else(|| system_expr("Association"))),
-                        args: next_entries,
-                    }),
+                    result: DeleteCasesResult::Keep(Expr::call(
+                        next_head.unwrap_or_else(|| system_expr("Association")),
+                        next_entries,
+                    )),
                     depth: next_max_child_depth.saturating_add(1),
                     deleted_count: deleted_before_next - subtree_start,
                     exhausted: true,

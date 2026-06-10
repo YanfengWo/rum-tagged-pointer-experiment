@@ -116,7 +116,7 @@ pub(super) fn parse_array_filter_padding_leaf(expr: &Expr) -> Option<ArrayFilter
             Some(ArrayFilterPaddingLeaf::Periodic)
         }
         Expr::Call { head, args } if is_system_symbol_name(head, "List") && !args.is_empty() => {
-            Some(ArrayFilterPaddingLeaf::Cycle(args.clone()))
+            Some(ArrayFilterPaddingLeaf::Cycle(args.to_vec()))
         }
         other => Some(ArrayFilterPaddingLeaf::Constant(other.clone())),
     }

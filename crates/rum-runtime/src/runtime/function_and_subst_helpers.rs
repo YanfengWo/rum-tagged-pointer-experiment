@@ -53,7 +53,7 @@ pub(super) fn release_hold_once(expr: &Expr) -> Option<Expr> {
     {
         return Some(match args.as_slice() {
             [single] => single.clone(),
-            _ => sequence_expr(args.clone()),
+            _ => sequence_expr(args.to_vec()),
         });
     }
 

@@ -363,7 +363,7 @@ impl Session {
             return None;
         };
 
-        Some((expr_as_symbol(head)?.clone(), args.clone()))
+        Some((expr_as_symbol(head)?.clone(), args.to_vec()))
     }
 
     fn partition_arguments_and_options(

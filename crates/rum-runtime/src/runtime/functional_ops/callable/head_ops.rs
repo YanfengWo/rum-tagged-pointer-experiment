@@ -100,7 +100,7 @@ fn operate_on_head_level(expr: &Expr, operator: &Expr, level: usize) -> Expr {
     match expr {
         Expr::Call { head, args } => {
             if level == 1 {
-                Expr::call(
+                Expr::call_with_shared_args(
                     Expr::call(operator.clone(), vec![head.as_ref().clone()]),
                     args.clone(),
                 )
@@ -109,7 +109,7 @@ fn operate_on_head_level(expr: &Expr, operator: &Expr, level: usize) -> Expr {
                 if replaced_head == **head {
                     expr.clone()
                 } else {
-                    Expr::call(replaced_head, args.clone())
+                    Expr::call_with_shared_args(replaced_head, args.clone())
                 }
             }
         }

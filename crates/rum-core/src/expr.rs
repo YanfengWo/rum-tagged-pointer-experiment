@@ -1,4 +1,6 @@
 use std::fmt;
+use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
 
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
@@ -243,11 +245,152 @@ fn write_escaped_string(f: &mut fmt::Formatter<'_>, value: &str) -> fmt::Result 
     f.write_str("\"")
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, Serialize, Deserialize)]
+pub struct SharedExpr(Arc<Expr>);
+
+impl SharedExpr {
+    pub fn new(expr: Expr) -> Self {
+        Self(Arc::new(expr))
+    }
+
+    pub fn into_owned(self) -> Expr {
+        Arc::try_unwrap(self.0).unwrap_or_else(|expr| expr.as_ref().clone())
+    }
+
+    pub fn ptr_eq(lhs: &Self, rhs: &Self) -> bool {
+        Arc::ptr_eq(&lhs.0, &rhs.0)
+    }
+}
+
+impl PartialEq for SharedExpr {
+    fn eq(&self, other: &Self) -> bool {
+        Self::ptr_eq(self, other) || self.as_ref() == other.as_ref()
+    }
+}
+
+impl From<Expr> for SharedExpr {
+    fn from(expr: Expr) -> Self {
+        Self::new(expr)
+    }
+}
+
+impl AsRef<Expr> for SharedExpr {
+    fn as_ref(&self) -> &Expr {
+        &self.0
+    }
+}
+
+impl Deref for SharedExpr {
+    type Target = Expr;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl fmt::Display for SharedExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self.as_ref(), f)
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, Serialize, Deserialize)]
+pub struct SharedArgs(Arc<Vec<Expr>>);
+
+impl SharedArgs {
+    pub fn new(args: Vec<Expr>) -> Self {
+        Self(Arc::new(args))
+    }
+
+    pub fn into_vec(self) -> Vec<Expr> {
+        Arc::try_unwrap(self.0).unwrap_or_else(|args| args.as_ref().clone())
+    }
+
+    pub fn ptr_eq(lhs: &Self, rhs: &Self) -> bool {
+        Arc::ptr_eq(&lhs.0, &rhs.0)
+    }
+}
+
+impl PartialEq for SharedArgs {
+    fn eq(&self, other: &Self) -> bool {
+        Self::ptr_eq(self, other) || self.as_ref() == other.as_ref()
+    }
+}
+
+impl From<Vec<Expr>> for SharedArgs {
+    fn from(args: Vec<Expr>) -> Self {
+        Self::new(args)
+    }
+}
+
+impl AsRef<[Expr]> for SharedArgs {
+    fn as_ref(&self) -> &[Expr] {
+        self.0.as_slice()
+    }
+}
+
+impl Deref for SharedArgs {
+    type Target = Vec<Expr>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for SharedArgs {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        Arc::make_mut(&mut self.0)
+    }
+}
+
+impl IntoIterator for SharedArgs {
+    type Item = Expr;
+    type IntoIter = std::vec::IntoIter<Expr>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.into_vec().into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a SharedArgs {
+    type Item = &'a Expr;
+    type IntoIter = std::slice::Iter<'a, Expr>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+#[derive(Clone, Debug, Hash, Serialize, Deserialize)]
 pub enum Expr {
     Atom(Atom),
-    Call { head: Box<Expr>, args: Vec<Expr> },
+    Call { head: SharedExpr, args: SharedArgs },
 }
+
+impl PartialEq for Expr {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Atom(lhs), Self::Atom(rhs)) => lhs == rhs,
+            (
+                Self::Call {
+                    head: lhs_head,
+                    args: lhs_args,
+                },
+                Self::Call {
+                    head: rhs_head,
+                    args: rhs_args,
+                },
+            ) => {
+                (SharedExpr::ptr_eq(lhs_head, rhs_head) || lhs_head.as_ref() == rhs_head.as_ref())
+                    && (SharedArgs::ptr_eq(lhs_args, rhs_args)
+                        || lhs_args.as_ref() == rhs_args.as_ref())
+            }
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Expr {}
 
 impl Expr {
     pub fn integer(value: BigInt) -> Self {
@@ -280,8 +423,37 @@ impl Expr {
 
     pub fn call(head: Expr, args: Vec<Expr>) -> Self {
         Self::Call {
-            head: Box::new(head),
+            head: SharedExpr::new(head),
+            args: SharedArgs::new(args),
+        }
+    }
+
+    pub fn call_shared(head: SharedExpr, args: SharedArgs) -> Self {
+        Self::Call { head, args }
+    }
+
+    pub fn call_with_shared_args(head: Expr, args: SharedArgs) -> Self {
+        Self::Call {
+            head: SharedExpr::new(head),
             args,
+        }
+    }
+
+    pub fn unwrap_shared_expr(expr: SharedExpr) -> Self {
+        expr.into_owned()
+    }
+
+    pub fn unwrap_shared_args(args: SharedArgs) -> Vec<Expr> {
+        args.into_vec()
+    }
+
+    pub fn into_call_parts(self) -> Option<(Self, Vec<Self>)> {
+        match self {
+            Self::Call { head, args } => Some((
+                Self::unwrap_shared_expr(head),
+                Self::unwrap_shared_args(args),
+            )),
+            Self::Atom(_) => None,
         }
     }
 }

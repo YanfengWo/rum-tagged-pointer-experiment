@@ -203,8 +203,10 @@ impl Session {
                 head: value_head,
                 args: value_args,
             } => {
-                let flat_head = (*value_head).clone();
-                let head_result = self.match_compiled_owned(head, *value_head, bindings);
+                let flat_head = value_head.as_ref().clone();
+                let value_head = value_head.into_owned();
+                let value_args = value_args.into_vec();
+                let head_result = self.match_compiled_owned(head, value_head, bindings);
                 self.drive_internal_value(head_result, move |session, outcome| {
                     if !outcome.matched {
                         return Ok(outcome);

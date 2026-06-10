@@ -185,7 +185,7 @@ fn sequence_like_from_expr(expr: &Expr) -> Option<SequenceLikeExpr> {
 
     Some(SequenceLikeExpr::Call {
         head: head.as_ref().clone(),
-        items: args.clone(),
+        items: args.to_vec(),
     })
 }
 

@@ -582,11 +582,19 @@ impl Session {
         match expr {
             Expr::Atom(_) => Ok(expr),
             Expr::Call { head, args } => {
-                let head_result = self.apply_replace_all_owned(*head, rules.clone(), source);
+                let remaining_args = args.into_vec();
+                let head_result =
+                    self.apply_replace_all_owned(head.into_owned(), rules.clone(), source);
                 self.drive_evaluated_value::<Expr, Expr, _>(
                     head_result,
                     move |session, new_head| {
-                        session.apply_replace_all_args(new_head, Vec::new(), args, rules, source)
+                        session.apply_replace_all_args(
+                            new_head,
+                            Vec::new(),
+                            remaining_args,
+                            rules,
+                            source,
+                        )
                     },
                 )
             }
