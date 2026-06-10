@@ -268,6 +268,8 @@ impl Session {
                 });
             }
         }
+
+        self.bump_evaluation_epoch();
     }
 }
 

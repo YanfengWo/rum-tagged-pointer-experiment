@@ -121,6 +121,8 @@ impl Session {
             self.attributes
                 .insert(Symbol::new(SYSTEM_CONTEXT, spec.name), spec.attributes);
             self.bump_attribute_revision();
+        } else {
+            self.bump_evaluation_epoch();
         }
     }
 
@@ -229,6 +231,7 @@ impl Session {
 
         if !self.loaded_packages.iter().any(|loaded| loaded == &context) {
             self.loaded_packages.push(context);
+            self.bump_evaluation_epoch();
         }
     }
 

@@ -158,6 +158,31 @@ are not active project-owned examples.
   improvement, but still far from WolframKernel's roughly 2.4s reference; the
   structural representation work remains open.
 
+## 2026-06-10 Evaluation Epoch Cache Follow-up
+
+- Rebuilt the post-quick-win Bool baseline before making deeper changes:
+  dependency-preloaded `AbsoluteTiming[Get["Bool.wl"]]` reported about 46.21s,
+  with external wall time `real 47.64`.
+- Collected a fresh macOS `sample` profile from that build. The profile still
+  showed allocator traffic, owned `Expr` cloning/dropping, structural compares,
+  `run_call_dispatch_stage`, `try_apply_down_values_from_symbol`, and
+  `expr_is_evaluation_stable` on the hot path. Parser and loader work remained
+  absent from the hot stacks.
+- Added a session-level evaluation epoch and two exact symbol-keyed caches for
+  stability scanning: atom-symbol evaluation stability and symbol-head
+  call-effect decisions. The epoch is bumped and the caches are cleared when
+  definitions, attributes, registered builtins, declared package stubs, loaded
+  packages, removed symbols, or dynamic-scope definition state changes.
+- Tested and rejected a whole-expression exact normal-form cache. With the
+  current owned-tree `Expr`, hashing and equality on large expressions became a
+  visible new profile cost; keeping only symbol-level caches was faster on the
+  Bool smoke.
+- Final dependency-preloaded Bool release smoke after this pass:
+  `AbsoluteTiming[Get["Bool.wl"]]` about 43.09s and external wall time
+  `real 44.49`, with earlier confirmation runs at `real 44.72` and `43.79`.
+  This is a modest but repeatable improvement, not a substitute for the shared
+  expression / symbol interning work.
+
 ## Completed Architecture Work
 
 - The workspace was split into responsibility-oriented crates:

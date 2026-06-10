@@ -429,6 +429,7 @@ impl Session {
         let definition = self.definitions.entry(target).or_default();
         definition.own_value = Some(updated.clone());
         definition.delayed_own_value = None;
+        self.bump_evaluation_epoch();
 
         Ok(updated)
     }
@@ -542,6 +543,7 @@ impl Session {
         let definition = self.definitions.entry(target).or_default();
         definition.own_value = Some(updated_target.clone());
         definition.delayed_own_value = None;
+        self.bump_evaluation_epoch();
 
         let value = match result {
             HeldAssociationPartMutationResult::UpdatedTarget => updated_target,

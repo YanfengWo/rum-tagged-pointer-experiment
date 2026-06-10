@@ -126,7 +126,7 @@ impl Session {
             return;
         }
 
-        self.attribute_revision = self.attribute_revision.saturating_add(1);
+        self.bump_attribute_revision();
         let default = default_system_attribute_set(&symbol);
 
         if attributes == default {
@@ -138,6 +138,7 @@ impl Session {
 
     pub(super) fn bump_attribute_revision(&mut self) {
         self.attribute_revision = self.attribute_revision.saturating_add(1);
+        self.bump_evaluation_epoch();
     }
 
     pub(super) fn resolve_load_target(&self, spec: &str) -> Result<PathBuf, EvalError> {
@@ -330,7 +331,7 @@ pub(super) fn should_track_evaluation_cycle(expr: &Expr) -> bool {
     expr_node_count_with_limit(expr, EVALUATION_CYCLE_HISTORY_NODE_LIMIT).is_some()
 }
 
-fn expr_node_count_with_limit(expr: &Expr, limit: usize) -> Option<usize> {
+pub(super) fn expr_node_count_with_limit(expr: &Expr, limit: usize) -> Option<usize> {
     fn walk(expr: &Expr, remaining: &mut usize) -> bool {
         if *remaining == 0 {
             return false;

@@ -298,6 +298,9 @@ pub struct Session {
     pub(super) builtins: BTreeMap<String, BuiltinSpec>,
     pub(super) attributes: BTreeMap<Symbol, AttributeSet>,
     pub(super) attribute_revision: u64,
+    pub(super) evaluation_epoch: u64,
+    pub(super) stable_symbol_cache: HashMap<Symbol, SymbolStabilityCacheEntry>,
+    pub(super) symbol_call_effect_cache: HashMap<SymbolCallEffectKey, CallEffectCacheEntry>,
     pub(super) options: BTreeMap<Symbol, SymbolOptions>,
     pub(super) syntax_information: BTreeMap<Symbol, Expr>,
     pub(super) declared_stubs: BTreeSet<Symbol>,
@@ -339,6 +342,24 @@ pub struct Session {
     pub(super) pending_input_request: Option<RuntimeInputRequest>,
     pub(super) pending_eval_request: Option<PendingEvalRequest>,
     pub(super) pending_suspension: Option<SuspendedEvaluation>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct SymbolStabilityCacheEntry {
+    pub(super) epoch: u64,
+    pub(super) stable: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub(super) struct SymbolCallEffectKey {
+    pub(super) symbol: Symbol,
+    pub(super) args_empty: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct CallEffectCacheEntry {
+    pub(super) epoch: u64,
+    pub(super) has_effect: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

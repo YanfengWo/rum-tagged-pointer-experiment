@@ -63,12 +63,17 @@ impl Session {
             Err(_) => return Ok(self.invalid_call_with_exact_arg_count("DeclarePackage", args, 2)),
         };
 
+        let mut inserted_stub = false;
         for name in spec.names {
-            self.declared_stubs
+            inserted_stub |= self
+                .declared_stubs
                 .insert(Symbol::new(spec.context.clone(), name));
         }
 
         self.context_path = prepend_context(&spec.context, &self.context_path);
+        if inserted_stub {
+            self.bump_evaluation_epoch();
+        }
         Ok(Expr::string(spec.context))
     }
 

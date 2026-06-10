@@ -36,7 +36,7 @@ impl Session {
     }
 
     pub(super) fn evaluate_inner(&mut self, expr: Expr) -> Result<Expr, EvalError> {
-        if self.expr_is_evaluation_stable(&expr) {
+        if self.cached_expr_is_evaluation_stable(&expr) {
             return Ok(expr);
         }
 
@@ -137,19 +137,39 @@ impl Session {
             .collect()
     }
 
-    pub(super) fn expr_is_evaluation_stable(&self, expr: &Expr) -> bool {
+    pub(super) fn expr_is_evaluation_stable_uncached(&mut self, expr: &Expr) -> bool {
         match expr {
             Expr::Atom(Atom::Symbol(symbol)) => self.symbol_is_atom_evaluation_stable(symbol),
             Expr::Atom(_) => true,
             Expr::Call { head, args } => {
-                self.expr_is_evaluation_stable(head)
+                self.expr_is_evaluation_stable_uncached(head)
                     && !self.call_head_has_evaluation_effect(head, args)
-                    && args.iter().all(|arg| self.expr_is_evaluation_stable(arg))
+                    && args
+                        .iter()
+                        .all(|arg| self.expr_is_evaluation_stable_uncached(arg))
             }
         }
     }
 
-    fn symbol_is_atom_evaluation_stable(&self, symbol: &Symbol) -> bool {
+    fn symbol_is_atom_evaluation_stable(&mut self, symbol: &Symbol) -> bool {
+        if let Some(entry) = self.stable_symbol_cache.get(symbol) {
+            if entry.epoch == self.evaluation_epoch {
+                return entry.stable;
+            }
+        }
+
+        let stable = self.symbol_is_atom_evaluation_stable_uncached(symbol);
+        self.stable_symbol_cache.insert(
+            symbol.clone(),
+            SymbolStabilityCacheEntry {
+                epoch: self.evaluation_epoch,
+                stable,
+            },
+        );
+        stable
+    }
+
+    fn symbol_is_atom_evaluation_stable_uncached(&self, symbol: &Symbol) -> bool {
         if symbol.context() == SYSTEM_CONTEXT
             && matches!(
                 symbol.name(),
@@ -184,7 +204,11 @@ impl Session {
         })
     }
 
-    fn call_head_has_evaluation_effect(&self, head: &Expr, args: &[Expr]) -> bool {
+    fn call_head_has_evaluation_effect(&mut self, head: &Expr, args: &[Expr]) -> bool {
+        if let Some(symbol) = expr_as_symbol(head) {
+            return self.symbol_call_head_has_evaluation_effect(symbol, args.is_empty());
+        }
+
         let attributes = self.attribute_set_for_head(head);
         if attributes.contains(Attribute::Listable)
             || attributes.contains(Attribute::Orderless)
@@ -204,9 +228,47 @@ impl Session {
             return true;
         }
 
-        let Some(symbol) = expr_as_symbol(head) else {
-            return true;
+        true
+    }
+
+    fn symbol_call_head_has_evaluation_effect(
+        &mut self,
+        symbol: &Symbol,
+        args_empty: bool,
+    ) -> bool {
+        let key = SymbolCallEffectKey {
+            symbol: symbol.clone(),
+            args_empty,
         };
+        if let Some(entry) = self.symbol_call_effect_cache.get(&key) {
+            if entry.epoch == self.evaluation_epoch {
+                return entry.has_effect;
+            }
+        }
+
+        let has_effect = self.symbol_call_head_has_evaluation_effect_uncached(symbol, args_empty);
+        self.symbol_call_effect_cache.insert(
+            key,
+            CallEffectCacheEntry {
+                epoch: self.evaluation_epoch,
+                has_effect,
+            },
+        );
+        has_effect
+    }
+
+    fn symbol_call_head_has_evaluation_effect_uncached(
+        &self,
+        symbol: &Symbol,
+        args_empty: bool,
+    ) -> bool {
+        let attributes = self.attribute_set_for_symbol(symbol);
+        if attributes.contains(Attribute::Listable)
+            || attributes.contains(Attribute::Orderless)
+            || attributes.contains(Attribute::Flat)
+        {
+            return true;
+        }
 
         if self.builtin_dispatch_spec_for_symbol(symbol).is_some() {
             return true;
@@ -215,7 +277,7 @@ impl Session {
         self.definitions.get(symbol).is_some_and(|definition| {
             !definition.down_values.is_empty()
                 || !definition.sub_values.is_empty()
-                || (!args.is_empty() && !definition.up_values.is_empty())
+                || (!args_empty && !definition.up_values.is_empty())
         })
     }
 

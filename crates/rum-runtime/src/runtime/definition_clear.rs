@@ -91,12 +91,16 @@ impl Session {
                 self.syntax_information.remove(&symbol);
             }
             UnsetDefinitionTarget::OwnValue(symbol) => {
+                let mut changed = false;
                 if let Some(definition) = self.definitions.get_mut(&symbol) {
-                    definition.own_value = None;
-                    definition.delayed_own_value = None;
+                    changed = definition.own_value.take().is_some()
+                        || definition.delayed_own_value.take().is_some();
                 }
 
                 self.prune_definition_if_empty(&symbol);
+                if changed {
+                    self.bump_evaluation_epoch();
+                }
             }
             UnsetDefinitionTarget::DownValue { symbol, lhs } => {
                 self.remove_matching_down_values(&symbol, &lhs);
@@ -125,6 +129,9 @@ impl Session {
                     let changed = definition.own_value.take().is_some()
                         || definition.delayed_own_value.take().is_some();
                     self.prune_definition_if_empty(&symbol);
+                    if changed {
+                        self.bump_evaluation_epoch();
+                    }
                     Ok(changed)
                 } else {
                     Ok(false)
@@ -158,7 +165,11 @@ impl Session {
         definition
             .down_values
             .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
-        definition.down_values.len() != original_len
+        let changed = definition.down_values.len() != original_len;
+        if changed {
+            self.bump_evaluation_epoch();
+        }
+        changed
     }
 
     pub(super) fn remove_matching_up_values(&mut self, symbol: &Symbol, lhs: &Expr) -> bool {
@@ -170,7 +181,11 @@ impl Session {
         definition
             .up_values
             .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
-        definition.up_values.len() != original_len
+        let changed = definition.up_values.len() != original_len;
+        if changed {
+            self.bump_evaluation_epoch();
+        }
+        changed
     }
 
     pub(super) fn remove_matching_sub_values(&mut self, symbol: &Symbol, lhs: &Expr) -> bool {
@@ -182,7 +197,11 @@ impl Session {
         definition
             .sub_values
             .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
-        definition.sub_values.len() != original_len
+        let changed = definition.sub_values.len() != original_len;
+        if changed {
+            self.bump_evaluation_epoch();
+        }
+        changed
     }
 
     pub(super) fn prune_definition_if_empty(&mut self, symbol: &Symbol) {
@@ -192,6 +211,7 @@ impl Session {
             .is_some_and(SymbolDefinition::is_empty)
         {
             self.definitions.remove(symbol);
+            self.bump_evaluation_epoch();
         }
     }
 
@@ -204,7 +224,7 @@ impl Session {
         clear_syntax_information: bool,
         clear_default_values: bool,
     ) {
-        self.definitions.remove(symbol);
+        let mut changed = self.definitions.remove(symbol).is_some();
 
         if clear_attributes {
             if self.attributes.remove(symbol).is_some() {
@@ -226,18 +246,26 @@ impl Session {
         }
 
         if clear_default_values {
-            self.remove_default_values_for_symbol(symbol);
+            changed |= self.remove_default_values_for_symbol(symbol);
+        }
+
+        if changed {
+            self.bump_evaluation_epoch();
         }
     }
 
     pub(super) fn remove_symbol_state(&mut self, symbol: &Symbol) {
         self.mark_symbol_removed(symbol);
         self.clear_symbol_state(symbol, true, true, true, true, true);
-        self.declared_stubs.remove(symbol);
+        if self.declared_stubs.remove(symbol) {
+            self.bump_evaluation_epoch();
+        }
     }
 
     fn mark_symbol_removed(&mut self, symbol: &Symbol) {
-        self.removed_symbols.insert(symbol.clone());
+        if self.removed_symbols.insert(symbol.clone()) {
+            self.bump_evaluation_epoch();
+        }
 
         if symbol.context() == SYSTEM_CONTEXT {
             return;
@@ -250,18 +278,22 @@ impl Session {
             .insert(key, current_generation.max(removed_generation) + 1);
     }
 
-    pub(super) fn remove_default_values_for_symbol(&mut self, symbol: &Symbol) {
+    pub(super) fn remove_default_values_for_symbol(&mut self, symbol: &Symbol) -> bool {
         let default_symbol = Symbol::system("Default");
         let Some(definition) = self.definitions.get_mut(&default_symbol) else {
-            return;
+            return false;
         };
 
+        let original_len = definition.down_values.len();
         definition
             .down_values
             .retain(|entry| !default_value_lhs_targets_symbol(&entry.lhs, symbol));
+        let changed = definition.down_values.len() != original_len;
 
         if definition.is_empty() {
             self.definitions.remove(&default_symbol);
         }
+
+        changed
     }
 }
