@@ -191,6 +191,103 @@ fn remove_reports_protected_symbols_without_clearing_state() {
 }
 
 #[test]
+fn set_list_destructuring_assigns_leaf_targets() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("ClearAll[a, b]; {a, b} = {1, 2}; {a, b, DownValues[List], OwnValues[a], OwnValues[b]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2, List[], List[RuleDelayed[HoldPattern[a], 1]], List[RuleDelayed[HoldPattern[b], 2]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ClearAll[a, b, c]; {{a, b}, c} = {{1, 2}, 3}; {a, b, c}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2, 3]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Module[{dom, rng}, {dom, rng} = {x, y}; {dom, rng}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[x, y]"
+    );
+
+    let mismatch = session
+        .eval_text("ClearAll[a, b]; {a, b} = {1, 2, 3}")
+        .unwrap();
+    assert_eq!(mismatch.value.to_string(), "List[1, 2, 3]");
+    assert!(
+        mismatch
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Set" && message.tag == "shape")
+    );
+    assert_eq!(
+        session.eval_text("{a, b}").unwrap().value.to_string(),
+        "List[a, b]"
+    );
+}
+
+#[test]
+fn definition_lhs_evaluates_call_heads_before_storing_rules() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "ClearAll[g, h, f, q, x]; h = f; g[h[x_]] := 1; {g[f[a]], g[h[a]], DownValues[g]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 1, List[RuleDelayed[HoldPattern[g[f[Pattern[x, Blank[]]]]], 1]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "ClearAll[g, h, f, q, x]; h = f; f = q; g[h[x_]] := 1; {g[q[a]], DownValues[g]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, List[RuleDelayed[HoldPattern[g[q[Pattern[x, Blank[]]]]], 1]]]"
+    );
+}
+
+#[test]
+fn definition_lhs_evaluates_outer_call_head_before_selecting_definition_owner() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "ClearAll[h, f, x]; h = f; h[x_] := 2; {f[a], h[a], DownValues[f], DownValues[h]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 2, List[RuleDelayed[HoldPattern[f[Pattern[x, Blank[]]]], 2]], List[]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "ClearAll[h, f, x]; h := f; h[x_] := 2; {f[a], h[a], DownValues[f], DownValues[h]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 2, List[RuleDelayed[HoldPattern[f[Pattern[x, Blank[]]]], 2]], List[]]"
+    );
+}
+
+#[test]
 fn protected_symbols_block_definition_and_clear_writes() {
     let mut session = Session::new();
 

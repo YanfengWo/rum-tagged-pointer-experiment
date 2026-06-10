@@ -65,6 +65,7 @@ mod associations_mutation;
 mod associations_mutation_diagnostics;
 mod associations_mutation_surface;
 mod associations_part2;
+mod associations_set_lvalue;
 mod calculus;
 mod context_and_loader;
 mod debug_tools;

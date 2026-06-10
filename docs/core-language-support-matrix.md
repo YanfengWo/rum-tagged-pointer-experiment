@@ -918,6 +918,14 @@ the `mma-hol` lane healthy:
 - association key selectors: string keys can be used as `Part` selectors for
   association-backed payloads, including `Failure[..., assoc][[2, "key"]]`
   harness shapes.
+- association and list assignment shapes: evaluated association keys,
+  association key lvalues such as `a[k] = v` / `a[[Key[k]]] = v`, and list
+  destructuring assignment such as `{x, y} = rhs` are implemented for the
+  current `Types.wl` / `Terms.wl` usage.
+- definition lhs and `Return` boundaries: definition lhs call heads are
+  normalized through own values before rule storage, which covers the strict
+  kernel's private theorem-tag patterns, and `Return[...]` is consumed at
+  definition application boundaries instead of leaking to callers.
 - `FileDate`, `FileByteCount`, `AbsoluteTime`, and `Round`: harness utilities
   for snapshot freshness and timing reports; keep them scoped to script/harness
   support rather than general system monitoring.
@@ -926,11 +934,14 @@ the `mma-hol` lane healthy:
 - clean-HEAD source smoke: using a clean archive of `mma-hol` HEAD `83d768f`,
   the current runtime loads `ErrorUtil.wl`, `Types.wl`, `Terms.wl`,
   `Kernel.wl`, and `tests/harness.wl` in sequence. `errorutil_tests.wl`
-  reports `List[10, 0]`; `types_tests.wl` reports `List[10, 6]`;
-  `terms_tests.wl` reports `List[16, 13]`; and `kernel_tests.wl` reports
-  `List[8, 15]`. The full `run_all.wls` path compiles/runs past the earlier
-  loader blockers but still needs a bounded smoke driver and first-failure
-  visibility before it can be a routine acceptance check.
+  reports `List[10, 0]`; `types_tests.wl` reports `List[36, 0]`;
+  `terms_tests.wl` reports `List[67, 0]`; `kernel_tests.wl` reports
+  `List[71, 0]`; `bootstrap_tests.wl` reports `List[45, 0]`; and
+  `equal_tests.wl` reports `List[17, 0]`. The next observed blocker is the Bool
+  layer: after fixing definition-boundary `Return`, `GEN[x, REFL[x]]` reaches
+  the complex `BETACONV` / kernel `BETA` path and still needs bounded profiling
+  around deep term traversal. The full `run_all.wls` path still needs a bounded
+  smoke driver before it can be a routine acceptance check.
 
 ### Non-Goals
 
@@ -1051,9 +1062,9 @@ of the page-defined official matrix above.
 - `planned`: remaining real-project script/package glue promoted by `CL-Y`,
   currently including script timing and file-metadata helpers, `Contexts[]` /
   snapshot workflow support, `Import[..., "Text"]` for linting, text-only
-  `Row`, a bounded `mma-hol` smoke driver, and the concrete semantic gaps
-  exposed by the current `types_tests.wl`, `terms_tests.wl`, and
-  `kernel_tests.wl` cold-source failures
+  `Row`, a bounded `mma-hol` smoke driver, and the Bool-layer
+  `GEN` / `BETACONV` deep term traversal blocker exposed after the current
+  core `types` / `terms` / `kernel` assertions were cleared
 
 ## Maintenance Notes
 

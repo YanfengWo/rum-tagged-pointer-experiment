@@ -249,7 +249,8 @@ impl Session {
             self.eval_needs(&[Expr::string(context.clone())])?;
         }
 
-        self.context_path = prepend_context(&config.target_context, &self.context_path);
+        self.context_path =
+            begin_package_context_path(&config.target_context, &config.dependencies);
 
         Ok(result)
     }
@@ -335,4 +336,21 @@ impl Session {
             }),
         }
     }
+}
+
+fn begin_package_context_path(target_context: &str, dependencies: &[String]) -> Vec<String> {
+    let mut path = vec![normalize_context_name(target_context)];
+
+    for dependency in dependencies {
+        let dependency = normalize_context_name(dependency);
+        if !path.iter().any(|existing| existing == &dependency) {
+            path.push(dependency);
+        }
+    }
+
+    if !path.iter().any(|existing| existing == SYSTEM_CONTEXT) {
+        path.push(SYSTEM_CONTEXT.to_string());
+    }
+
+    path
 }

@@ -341,6 +341,46 @@ fn catch_throw_and_return_support_first_pass_nonlocal_control_flow() {
 }
 
 #[test]
+fn return_is_consumed_at_definition_application_boundaries() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("ClearAll[f, g]; g[] := Return[1]; f[] := (g[]; 2); {g[], f[]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ClearAll[f, h]; h := Return[1]; f[] := (h; 2); {h, f[]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ClearAll[a, f, g]; a /: f[a] := Return[5]; g[] := (f[a]; 6); {f[a], g[]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[5, 6]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "ClearAll[f, g]; f[x_][y_] := Return[7]; g[] := (f[1][2]; 8); {f[1][2], g[]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[7, 8]"
+    );
+}
+
+#[test]
 fn throw_through_block_restores_dynamic_scope_before_catch_handles_it() {
     let mut session = Session::new();
 

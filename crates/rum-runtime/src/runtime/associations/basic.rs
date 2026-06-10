@@ -18,11 +18,44 @@ impl Session {
             _ => args.to_vec(),
         };
 
-        let Some(association) = render_association_preserving_rule_heads(&source_items) else {
+        let Some(entries) = parse_association_entry_forms_deep(&source_items) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
-        Ok(association)
+        self.resume_association_key_evaluation(entries, Vec::new(), 0)
+    }
+
+    fn resume_association_key_evaluation(
+        &mut self,
+        entries: Vec<AssociationEntryForm>,
+        mut evaluated_entries: Vec<AssociationEntryForm>,
+        index: usize,
+    ) -> Result<Expr, EvalError> {
+        if index >= entries.len() {
+            return Ok(render_association_entry_forms_preserving_heads(
+                evaluated_entries,
+            ));
+        }
+
+        let entry = entries[index].clone();
+        let key_result = self.evaluate(entry.key.clone());
+        let key = self.suspend_with_frame(key_result, {
+            let entries = entries.clone();
+            let evaluated_entries = evaluated_entries.clone();
+            let entry_for_resume = entry.clone();
+            move |session, key| {
+                let mut entry = entry_for_resume.clone();
+                entry.key = key;
+                let mut evaluated_entries = evaluated_entries;
+                evaluated_entries.push(entry);
+                session.resume_association_key_evaluation(entries, evaluated_entries, index + 1)
+            }
+        })?;
+
+        let mut entry = entry;
+        entry.key = key;
+        evaluated_entries.push(entry);
+        self.resume_association_key_evaluation(entries, evaluated_entries, index + 1)
     }
 
     pub(in crate::runtime) fn eval_association_q(
@@ -65,19 +98,118 @@ impl Session {
         let [expr, key, rest @ ..] = args else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
+
+        let expr_result = self.evaluate(expr.clone());
+        let expr = self.suspend_with_frame(expr_result, {
+            let head = head.clone();
+            let key = key.clone();
+            let rest = rest.to_vec();
+            move |session, expr| session.eval_lookup_with_evaluated_data(head, expr, key, rest)
+        })?;
+
+        self.eval_lookup_with_evaluated_data(head.clone(), expr, key.clone(), rest.to_vec())
+    }
+
+    fn eval_lookup_with_evaluated_data(
+        &mut self,
+        head: Expr,
+        expr: Expr,
+        key: Expr,
+        rest: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let key_result = self.evaluate(key);
+        let key = self.suspend_with_frame(key_result, {
+            let head = head.clone();
+            let expr = expr.clone();
+            let rest = rest.clone();
+            move |session, key| session.finish_eval_lookup(head, expr, key, rest)
+        })?;
+
+        self.finish_eval_lookup(head, expr, key, rest)
+    }
+
+    fn finish_eval_lookup(
+        &mut self,
+        head: Expr,
+        expr: Expr,
+        key: Expr,
+        rest: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
         let default = rest.first().cloned();
-        let wrapper = rest.get(1);
-        let Some(value) = lookup_value(expr, key, default, wrapper) else {
-            if !lookup_data_is_valid(expr) {
+        let wrapper = rest.get(1).cloned();
+        let Some(plan) = lookup_plan(&expr, &key) else {
+            if !lookup_data_is_valid(&expr) {
                 self.push_message(
                     "Lookup",
                     "invrl",
-                    invalid_association_or_rule_list_message(expr),
+                    invalid_association_or_rule_list_message(&expr),
                 );
             }
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+            let mut args = vec![expr, key];
+            args.extend(rest);
+            return Ok(Expr::call(head, args));
         };
 
+        let default = if plan.has_missing {
+            if let Some(default) = default {
+                let default_result = self.evaluate(default);
+                Some(self.suspend_with_frame(default_result, {
+                    let head = head.clone();
+                    let expr = expr.clone();
+                    let key = key.clone();
+                    let wrapper = wrapper.clone();
+                    move |session, default| {
+                        session.finish_lookup_after_delayed_values(
+                            head,
+                            expr,
+                            key,
+                            Some(default),
+                            wrapper,
+                        )
+                    }
+                })?)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        self.finish_lookup_after_delayed_values(head, expr, key, default, wrapper)
+    }
+
+    fn finish_lookup_after_delayed_values(
+        &mut self,
+        head: Expr,
+        expr: Expr,
+        key: Expr,
+        default: Option<Expr>,
+        wrapper: Option<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let Some(plan) = lookup_plan(&expr, &key) else {
+            return Ok(Expr::call(head, vec![expr, key]));
+        };
+        let wrapper = if plan.has_hit {
+            if let Some(wrapper) = wrapper {
+                let wrapper_result = self.evaluate(wrapper);
+                Some(self.suspend_with_frame(wrapper_result, {
+                    let expr = expr.clone();
+                    let key = key.clone();
+                    let default = default.clone();
+                    move |_, wrapper| {
+                        Ok(lookup_value(&expr, &key, default.clone(), Some(&wrapper))
+                            .expect("lookup plan should stay valid for unchanged inputs"))
+                    }
+                })?)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let value = lookup_value(&expr, &key, default, wrapper.as_ref())
+            .expect("lookup plan should stay valid for unchanged inputs");
         Ok(value)
     }
 
@@ -409,6 +541,59 @@ fn lookup_value(
     None
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct LookupPlan {
+    has_hit: bool,
+    has_missing: bool,
+}
+
+impl LookupPlan {
+    fn combine(self, other: Self) -> Self {
+        Self {
+            has_hit: self.has_hit || other.has_hit,
+            has_missing: self.has_missing || other.has_missing,
+        }
+    }
+}
+
+fn lookup_plan(data: &Expr, key_spec: &Expr) -> Option<LookupPlan> {
+    let direct_entries = single_rule_or_keyed_entries_from_expr(data);
+    if direct_entries.is_none() {
+        if let Some(items) = call_items_with_head(data, &system_expr("List")) {
+            if items
+                .iter()
+                .all(|item| keyed_entries_from_expr(item).is_some())
+            {
+                return items
+                    .iter()
+                    .map(|item| lookup_plan(item, key_spec))
+                    .collect::<Option<Vec<_>>>()
+                    .map(|plans| {
+                        plans
+                            .into_iter()
+                            .fold(LookupPlan::default(), LookupPlan::combine)
+                    });
+            }
+        }
+    }
+
+    if let Some(keys) = call_items_with_head(key_spec, &system_expr("List")) {
+        return keys
+            .iter()
+            .map(|key| lookup_plan(data, key))
+            .collect::<Option<Vec<_>>>()
+            .map(|plans| {
+                plans
+                    .into_iter()
+                    .fold(LookupPlan::default(), LookupPlan::combine)
+            });
+    }
+
+    direct_entries
+        .as_ref()
+        .map(|entries| lookup_entries_plan(entries, key_spec))
+}
+
 fn wrap_keyed_result(value: Expr, wrapper: Option<&Expr>) -> Expr {
     match wrapper.cloned() {
         Some(head) => Expr::call(head, vec![value]),
@@ -431,6 +616,21 @@ fn lookup_entries_value(
     }
 
     default.unwrap_or_else(|| missing_key_absent_expr(lookup_key.clone()))
+}
+
+fn lookup_entries_plan(entries: &[(Expr, Expr)], key_spec: &Expr) -> LookupPlan {
+    let lookup_key = lookup_key_expr(key_spec);
+    if entries.iter().any(|(entry_key, _)| entry_key == lookup_key) {
+        LookupPlan {
+            has_hit: true,
+            has_missing: false,
+        }
+    } else {
+        LookupPlan {
+            has_hit: false,
+            has_missing: true,
+        }
+    }
 }
 
 fn lookup_key_expr(key_spec: &Expr) -> &Expr {

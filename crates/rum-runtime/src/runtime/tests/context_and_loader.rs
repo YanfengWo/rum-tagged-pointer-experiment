@@ -291,6 +291,58 @@ fn begin_package_usage_messages_make_public_symbols_visible_from_private_context
 }
 
 #[test]
+fn begin_package_dependencies_stay_on_private_context_path_when_already_loaded() {
+    let mut session = Session::new();
+
+    session.eval_text("BeginPackage[\"DepA`\"]").unwrap();
+    session
+        .eval_text("depHead::usage = \"depHead[x]\"")
+        .unwrap();
+    session.eval_text("EndPackage[]").unwrap();
+    session.eval_text("BeginPackage[\"DepB`\"]").unwrap();
+    session.eval_text("depValue::usage = \"depValue\"").unwrap();
+    session.eval_text("EndPackage[]").unwrap();
+
+    session
+        .eval_text("BeginPackage[\"Main`\", {\"DepA`\", \"DepB`\"}]")
+        .unwrap();
+    assert_eq!(
+        session.eval_text("$ContextPath").unwrap().value.to_string(),
+        "List[\"Main`\", \"DepA`\", \"DepB`\", \"System`\"]"
+    );
+    session.eval_text("Begin[\"`Private`\"]").unwrap();
+    session.eval_text("depHead[x_] := x").unwrap();
+    session.eval_text("local = depHead[depValue]").unwrap();
+    session.eval_text("End[]").unwrap();
+    session.eval_text("EndPackage[]").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("DepA`depHead[7]")
+            .unwrap()
+            .value
+            .to_string(),
+        "7"
+    );
+    assert_eq!(
+        session
+            .eval_text("Main`Private`local")
+            .unwrap()
+            .value
+            .to_string(),
+        "DepB`depValue"
+    );
+    assert_eq!(
+        session
+            .eval_text("Main`Private`depHead[7]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Main`Private`depHead[7]"
+    );
+}
+
+#[test]
 fn begin_package_expands_relative_context_specs_against_the_current_context() {
     let mut session = Session::new();
     session.set_current_context("Outer`");

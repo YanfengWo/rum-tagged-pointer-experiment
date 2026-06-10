@@ -55,13 +55,41 @@ are not active project-owned examples.
   followed by `/@`, string-join `<>`, package usage-message public-symbol
   visibility from private contexts, and string-key `Part` selectors for
   association-backed `Failure` payloads.
-- The current smoke loads `ErrorUtil.wl`, `Types.wl`, `Terms.wl`, `Kernel.wl`,
-  and `tests/harness.wl` in sequence. Narrowed test summaries are now:
+- That pass loaded `ErrorUtil.wl`, `Types.wl`, `Terms.wl`, `Kernel.wl`,
+  and `tests/harness.wl` in sequence. Narrowed test summaries were:
   `errorutil_tests.wl` `List[10, 0]`, `types_tests.wl` `List[10, 6]`,
   `terms_tests.wl` `List[16, 13]`, and `kernel_tests.wl` `List[8, 15]`.
-- The next CL-Y work is no longer parser/loader triage in the abstract. It is
-  to expose first-failure details from the harness and promote only the
-  concrete semantic gaps behind the remaining type, term, and kernel failures.
+- At that point, the CL-Y work was no longer parser/loader triage in the
+  abstract. The next step was to expose first-failure details from the harness
+  and promote only the concrete semantic gaps behind the remaining type, term,
+  and kernel failures.
+
+## 2026-06-10 CL-Y Core Assertion Triage
+
+- Cleared the first core semantic failures exposed by the clean `mma-hol`
+  snapshot: `Lookup` now holds and evaluates association/default/wrapper
+  arguments in the needed order; `Association[...]` evaluates keys before
+  canonical entry storage; `BeginPackage[..., deps]` keeps dependency contexts
+  available on `$ContextPath`; association key lvalues and list destructuring
+  `Set` now cover the current `Types.wl` / `Terms.wl` mutation shapes.
+- Definition installation now evaluates call heads in definition lhs positions
+  before selecting the definition owner. This matches Wolfram behavior for
+  forms such as `h = f; g[h[x_]] := ...` and fixes the strict kernel theorem
+  tag patterns generated through `Module` / `Unique`.
+- Definition RHS evaluation now consumes `Return[...]` at definition
+  application boundaries, matching Wolfram's `g[] := Return[1]; f[] := (g[]; 2)`
+  behavior. This removed the immediate `"P"` short-circuit in `HOL`Bool`GEN`.
+- Current clean-snapshot summaries after these fixes:
+  `errorutil_tests.wl` `List[10, 0]`, `types_tests.wl` `List[36, 0]`,
+  `terms_tests.wl` `List[67, 0]`, `kernel_tests.wl` `List[71, 0]`,
+  `bootstrap_tests.wl` `List[45, 0]`, and `equal_tests.wl` `List[17, 0]`.
+- The next concrete blocker is the Bool layer: `Bool.wl` loads, but
+  `bool_tests.wl` is not yet a bounded routine smoke. After the `Return` fix,
+  `GEN[x, REFL[x]]` reaches the complex `BETACONV` / kernel `BETA` path and
+  still exceeds an interactive probe window. Continue by profiling or
+  instrumenting deep term traversal around `rhsOfConcl[aptm]`, `Part` access,
+  `betaSubst`, `typeOf`, and `mkEq`, preferably under `TimeConstrained` or a
+  host-level timeout.
 
 ## Completed Architecture Work
 

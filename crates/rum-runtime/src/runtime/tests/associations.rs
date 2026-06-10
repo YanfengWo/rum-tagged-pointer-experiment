@@ -14,6 +14,24 @@ fn association_and_associationq_cover_first_pass_rule_subset() {
     );
     assert_eq!(
         session
+            .eval_text("key = f[1]; assoc = Association[key -> v]; {Keys[assoc, Hold], Lookup[assoc, f[1]]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Hold[f[1]]], v]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "x = 0; key = (x = x + 1); assoc = Association[key :> (x = x + 10)]; {Keys[assoc, Hold], x, Lookup[assoc, 1], x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Hold[1]], 1, 11, 11]"
+    );
+    assert_eq!(
+        session
             .eval_text("Association[a -> 1, b -> 2, a -> 3]")
             .unwrap()
             .value
@@ -182,6 +200,22 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
     );
     assert_eq!(
         session
+            .eval_text("x = 0; {Lookup[Association[a -> 1], a, (x = x + 1)], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 0]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {Lookup[Association[a -> 1], {a, b, c}, (x = x + 1)], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1, 1, 1], 1]"
+    );
+    assert_eq!(
+        session
             .eval_text("Lookup[Association[a -> 1], b]")
             .unwrap()
             .value
@@ -203,6 +237,22 @@ fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
             .value
             .to_string(),
         "99"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; w = Hold; {Lookup[Association[a -> 1], a, 0, (x = x + 1; w)], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Hold[1], 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 0; {Lookup[Association[a -> 1], b, 0, (x = x + 1; Hold)], x}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[0, 0]"
     );
     assert_eq!(
         session

@@ -67,10 +67,8 @@ impl Session {
                 rule: down_value.lhs.to_string(),
                 result: substituted.to_string(),
             });
-            let substituted_result =
-                session.evaluate_with_option_value_scope(option_scope, substituted);
             session
-                .suspend_with_frame(substituted_result, |_, value| Ok(value))
+                .evaluate_definition_rhs(option_scope, substituted)
                 .map(Some)
         })
     }
@@ -133,10 +131,7 @@ impl Session {
             let Some(rhs) = exact_down_value_rhs(down_values, &lhs) else {
                 continue;
             };
-            let value = self.evaluate(rhs);
-            return self
-                .suspend_with_frame(value, |_, value| Ok(value))
-                .map(Some);
+            return self.evaluate_definition_rhs(None, rhs).map(Some);
         }
 
         Ok(None)
@@ -194,10 +189,8 @@ impl Session {
                 rule: up_value.lhs.to_string(),
                 result: substituted.to_string(),
             });
-            let substituted_result =
-                session.evaluate_with_option_value_scope(option_scope, substituted);
             session
-                .suspend_with_frame(substituted_result, |_, value| Ok(value))
+                .evaluate_definition_rhs(option_scope, substituted)
                 .map(Some)
         })
     }
@@ -260,12 +253,37 @@ impl Session {
                 rule: sub_value.lhs.to_string(),
                 result: substituted.to_string(),
             });
-            let substituted_result =
-                session.evaluate_with_option_value_scope(option_scope, substituted);
             session
-                .suspend_with_frame(substituted_result, |_, value| Ok(value))
+                .evaluate_definition_rhs(option_scope, substituted)
                 .map(Some)
         })
+    }
+
+    pub(super) fn evaluate_definition_rhs(
+        &mut self,
+        option_scope: Option<OptionValueScope>,
+        rhs: Expr,
+    ) -> Result<Expr, EvalError> {
+        let rhs_result = self.evaluate_with_option_value_scope(option_scope, rhs);
+        let outcome = self.suspend_with_result_frame(rhs_result, |session, outcome| {
+            session.finish_definition_rhs_evaluation(outcome)
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.finish_definition_rhs_evaluation(outcome),
+        }
+    }
+
+    fn finish_definition_rhs_evaluation(
+        &mut self,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) => Ok(value),
+            Err(EvalError::Return { value }) => Ok(value),
+            Err(error) => Err(error),
+        }
     }
 
     pub(super) fn apply_replace_all(

@@ -11,9 +11,10 @@ pub(super) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
         "Tests whether an expression is an Association with rule entries.",
         BuiltinHandler::AssociationQ,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_hold(
         "Lookup",
         "Looks up a key in an association in the current first-pass subset.",
+        HoldAttribute::HoldAll,
         BuiltinHandler::Lookup,
     ),
     BuiltinSpec::ordinary(

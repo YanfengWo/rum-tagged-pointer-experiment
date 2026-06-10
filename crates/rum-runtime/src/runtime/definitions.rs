@@ -145,6 +145,20 @@ impl Session {
             }
         }
 
+        if !delayed {
+            if let Some(value) =
+                self.try_set_list_destructuring_lvalue(symbol, lhs.clone(), rhs.clone())?
+            {
+                return Ok(value);
+            }
+
+            if let Some(value) = self.try_set_association_lvalue(lhs.clone(), rhs.clone())? {
+                return Ok(value);
+            }
+        }
+
+        let lhs = self.normalize_definition_lhs_call_heads(&lhs);
+
         match self.normalize_definition_assignment_target(&lhs) {
             Some(DefinitionAssignmentTarget::Message(key)) => {
                 if !self.ensure_symbol_not_protected_for_write(symbol, &key.symbol) {
@@ -169,8 +183,117 @@ impl Session {
             None => Ok(Expr::call(system_expr(symbol), vec![lhs, rhs])),
         }
     }
+
+    fn try_set_list_destructuring_lvalue(
+        &mut self,
+        symbol: &str,
+        lhs: Expr,
+        rhs: Expr,
+    ) -> Result<Option<Expr>, EvalError> {
+        if list_expr_args(&lhs).is_none() {
+            return Ok(None);
+        }
+
+        if !list_destructuring_shapes_match(&lhs, &rhs) {
+            self.push_message(
+                symbol,
+                "shape",
+                format!("Lists {lhs} and {rhs} are not the same shape."),
+            );
+            return Ok(Some(rhs));
+        }
+
+        self.store_list_destructuring_assignments(symbol, &lhs, &rhs)?;
+        Ok(Some(rhs))
+    }
+
+    fn store_list_destructuring_assignments(
+        &mut self,
+        symbol: &str,
+        lhs: &Expr,
+        rhs: &Expr,
+    ) -> Result<(), EvalError> {
+        if let Some(lhs_items) = list_expr_args(lhs) {
+            let rhs_items = list_expr_args(rhs).expect("destructuring shape checked before store");
+            for (lhs_item, rhs_item) in lhs_items.iter().zip(rhs_items) {
+                self.store_list_destructuring_assignments(symbol, lhs_item, rhs_item)?;
+            }
+            return Ok(());
+        }
+
+        self.finish_definition_assignment(symbol, lhs.clone(), rhs.clone(), false)?;
+        Ok(())
+    }
+
+    fn normalize_definition_lhs_call_heads(&self, expr: &Expr) -> Expr {
+        match expr {
+            Expr::Atom(atom) => Expr::Atom(atom.clone()),
+            Expr::Call { head, args } => Expr::call(
+                self.normalize_definition_lhs_head_expr(head),
+                args.iter()
+                    .map(|arg| self.normalize_definition_lhs_call_heads(arg))
+                    .collect(),
+            ),
+        }
+    }
+
+    fn normalize_definition_lhs_head_expr(&self, head: &Expr) -> Expr {
+        let normalized_head = self.normalize_definition_lhs_call_heads(head);
+        self.resolve_definition_lhs_head_value(normalized_head, &mut BTreeSet::new())
+    }
+
+    fn resolve_definition_lhs_head_value(
+        &self,
+        expr: Expr,
+        visited: &mut BTreeSet<Symbol>,
+    ) -> Expr {
+        let Expr::Atom(Atom::Symbol(symbol)) = expr else {
+            return expr;
+        };
+
+        if !visited.insert(symbol.clone()) {
+            return Expr::Atom(Atom::Symbol(symbol));
+        }
+
+        let Some(value) = self.definitions.get(&symbol).and_then(|definition| {
+            definition
+                .own_value
+                .clone()
+                .or_else(|| definition.delayed_own_value.clone())
+        }) else {
+            return Expr::Atom(Atom::Symbol(symbol));
+        };
+
+        let normalized_value = self.normalize_definition_lhs_call_heads(&value);
+        self.resolve_definition_lhs_head_value(normalized_value, visited)
+    }
 }
 
 fn is_path_symbol_expr(expr: &Expr) -> bool {
     matches!(expr, Expr::Atom(Atom::Symbol(symbol)) if symbol.context() == SYSTEM_CONTEXT && symbol.name() == "$Path")
+}
+
+fn list_expr_args(expr: &Expr) -> Option<&[Expr]> {
+    match expr {
+        Expr::Call { head, args } if is_system_symbol_name(head, heads::structure::LIST) => {
+            Some(args)
+        }
+        _ => None,
+    }
+}
+
+fn list_destructuring_shapes_match(lhs: &Expr, rhs: &Expr) -> bool {
+    let Some(lhs_items) = list_expr_args(lhs) else {
+        return true;
+    };
+
+    let Some(rhs_items) = list_expr_args(rhs) else {
+        return false;
+    };
+
+    lhs_items.len() == rhs_items.len()
+        && lhs_items
+            .iter()
+            .zip(rhs_items)
+            .all(|(lhs_item, rhs_item)| list_destructuring_shapes_match(lhs_item, rhs_item))
 }

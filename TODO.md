@@ -90,8 +90,11 @@ Completed history, archived planning detail, and operational lessons live in
 - [ ] Use the updated `CL-Y` audit in
   [docs/core-language-support-matrix.md](./docs/core-language-support-matrix.md)
   as the source of truth for `mma-hol` blockers. The next cold-lane work is to
-  inspect the first failing assertions in `types_tests.wl`, `terms_tests.wl`,
-  and `kernel_tests.wl`, then promote only those concrete semantic gaps.
+  push past the now-green `types_tests.wl`, `terms_tests.wl`,
+  `kernel_tests.wl`, `bootstrap_tests.wl`, and `equal_tests.wl` core layer.
+  The current concrete blocker is the Bool `GEN` / `BETACONV` path, which needs
+  bounded profiling or instrumentation around deep term traversal before
+  promoting any broader optimization work.
 - [ ] Treat `mma-hol` stable-mode snapshot helpers (`DumpSave`, `Contexts[]`,
   `$ContextPath` / `$Packages`, file timestamps, and timing reports) as a
   required developer-workflow gate for `rum-hol` migration. Cold `run_all.wls`

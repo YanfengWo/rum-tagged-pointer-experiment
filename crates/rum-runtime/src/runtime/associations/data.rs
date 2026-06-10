@@ -393,7 +393,9 @@ fn parse_association_entry_forms(items: &[Expr]) -> Option<Vec<AssociationEntryF
     items.iter().map(parse_association_entry_form).collect()
 }
 
-fn parse_association_entry_forms_deep(items: &[Expr]) -> Option<Vec<AssociationEntryForm>> {
+pub(in crate::runtime) fn parse_association_entry_forms_deep(
+    items: &[Expr],
+) -> Option<Vec<AssociationEntryForm>> {
     let mut entries = Vec::new();
     for item in items {
         entries.extend(parse_association_item_forms_deep(item)?);
