@@ -3,7 +3,10 @@ use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use rum_core::{Atom, BigInt, Expr, GLOBAL_CONTEXT, Rational, SYSTEM_CONTEXT, Symbol, heads};
+use rum_core::{
+    Atom, BigInt, Expr, GLOBAL_CONTEXT, Rational, SYSTEM_CONTEXT, SharedArgs, SharedExpr, Symbol,
+    heads,
+};
 use rum_syntax::{
     BinaryOp, BlankKind, ParsedSource, PostfixOp, PrefixOp, SlotSpec, StructuredSourceDiagnostic,
     SyntaxError, SyntaxExpr, SyntaxExprKind, parse_expr, parse_with_diagnostics,

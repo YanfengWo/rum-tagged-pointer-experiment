@@ -1,5 +1,8 @@
 use super::*;
-use std::time::Instant;
+use std::{
+    hash::{BuildHasherDefault, Hash, Hasher},
+    time::Instant,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ResourceLimits {
@@ -301,6 +304,7 @@ pub struct Session {
     pub(super) evaluation_epoch: u64,
     pub(super) stable_symbol_cache: HashMap<Symbol, SymbolStabilityCacheEntry>,
     pub(super) symbol_call_effect_cache: HashMap<SymbolCallEffectKey, CallEffectCacheEntry>,
+    pub(super) call_stability_cache: CallStabilityCache,
     pub(super) options: BTreeMap<Symbol, SymbolOptions>,
     pub(super) syntax_information: BTreeMap<Symbol, Expr>,
     pub(super) declared_stubs: BTreeSet<Symbol>,
@@ -315,6 +319,7 @@ pub struct Session {
     pub(super) loaded_packages: Vec<String>,
     pub(super) load_stack: Vec<PathBuf>,
     pub(super) definitions: BTreeMap<Symbol, SymbolDefinition>,
+    pub(super) has_up_value_definitions: bool,
     pub(super) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
     pub(super) next_generated_symbol_id: u64,
     pub(super) resource_limits: ResourceLimits,
@@ -360,6 +365,65 @@ pub(super) struct SymbolCallEffectKey {
 pub(super) struct CallEffectCacheEntry {
     pub(super) epoch: u64,
     pub(super) has_effect: bool,
+}
+
+pub(super) type CallStabilityCache = HashMap<
+    CallStabilityCacheKey,
+    CallStabilityCacheEntry,
+    BuildHasherDefault<CallStabilityCacheHasher>,
+>;
+
+#[derive(Clone, Copy, Debug, Default)]
+pub(super) struct CallStabilityCacheHasher(u64);
+
+impl Hasher for CallStabilityCacheHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        let mut hash = 0xcbf29ce484222325_u64;
+        for byte in bytes {
+            hash ^= u64::from(*byte);
+            hash = hash.wrapping_mul(0x100000001b3);
+        }
+        self.0 = hash;
+    }
+
+    fn write_u64(&mut self, value: u64) {
+        self.0 = value;
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct CallStabilityCacheKey {
+    head: usize,
+    args: usize,
+}
+
+impl Hash for CallStabilityCacheKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let head = self.head as u64;
+        let args = self.args as u64;
+        state.write_u64(head.rotate_left(17) ^ args.wrapping_mul(0x9e3779b97f4a7c15));
+    }
+}
+
+impl CallStabilityCacheKey {
+    pub(super) fn new(head: &SharedExpr, args: &SharedArgs) -> Self {
+        Self {
+            head: head.ptr_key(),
+            args: args.ptr_key(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(super) struct CallStabilityCacheEntry {
+    pub(super) epoch: u64,
+    pub(super) head: SharedExpr,
+    pub(super) args: SharedArgs,
+    pub(super) stable: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

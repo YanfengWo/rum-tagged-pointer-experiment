@@ -161,6 +161,10 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Option<Expr>, EvalError> {
+        if !self.has_up_value_definitions {
+            return Ok(None);
+        }
+
         let candidate = Expr::call(head.clone(), args.to_vec());
         let normalized_candidate =
             self.normalize_definition_candidate_for_matching(head, &candidate);

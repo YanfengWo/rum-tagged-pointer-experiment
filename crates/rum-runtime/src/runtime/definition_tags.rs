@@ -261,6 +261,7 @@ impl Session {
                         matcher_attribute_revision,
                     },
                 );
+                self.has_up_value_definitions = true;
                 self.push_trace(TraceEvent::DefinitionStored {
                     symbol: symbol.to_string(),
                     kind: DefinitionKind::UpValue,

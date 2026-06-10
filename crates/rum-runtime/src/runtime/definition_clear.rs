@@ -1,6 +1,13 @@
 use super::*;
 
 impl Session {
+    pub(super) fn refresh_has_up_value_definitions(&mut self) {
+        self.has_up_value_definitions = self
+            .definitions
+            .values()
+            .any(|definition| !definition.up_values.is_empty());
+    }
+
     pub(super) fn eval_unset(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
             [target] => match self.normalize_unset_target(target) {
@@ -173,16 +180,26 @@ impl Session {
     }
 
     pub(super) fn remove_matching_up_values(&mut self, symbol: &Symbol, lhs: &Expr) -> bool {
-        let Some(definition) = self.definitions.get_mut(symbol) else {
-            return false;
-        };
+        let changed;
+        let symbol_has_no_more_up_values;
 
-        let original_len = definition.up_values.len();
-        definition
-            .up_values
-            .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
-        let changed = definition.up_values.len() != original_len;
+        {
+            let Some(definition) = self.definitions.get_mut(symbol) else {
+                return false;
+            };
+
+            let original_len = definition.up_values.len();
+            definition
+                .up_values
+                .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
+            changed = definition.up_values.len() != original_len;
+            symbol_has_no_more_up_values = definition.up_values.is_empty();
+        }
+
         if changed {
+            if symbol_has_no_more_up_values {
+                self.refresh_has_up_value_definitions();
+            }
             self.bump_evaluation_epoch();
         }
         changed
@@ -224,7 +241,11 @@ impl Session {
         clear_syntax_information: bool,
         clear_default_values: bool,
     ) {
-        let mut changed = self.definitions.remove(symbol).is_some();
+        let removed_definition = self.definitions.remove(symbol);
+        let removed_up_values = removed_definition
+            .as_ref()
+            .is_some_and(|definition| !definition.up_values.is_empty());
+        let mut changed = removed_definition.is_some();
 
         if clear_attributes {
             if self.attributes.remove(symbol).is_some() {
@@ -247,6 +268,10 @@ impl Session {
 
         if clear_default_values {
             changed |= self.remove_default_values_for_symbol(symbol);
+        }
+
+        if removed_up_values {
+            self.refresh_has_up_value_definitions();
         }
 
         if changed {

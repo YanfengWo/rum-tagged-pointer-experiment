@@ -260,6 +260,10 @@ impl SharedExpr {
     pub fn ptr_eq(lhs: &Self, rhs: &Self) -> bool {
         Arc::ptr_eq(&lhs.0, &rhs.0)
     }
+
+    pub fn ptr_key(&self) -> usize {
+        Arc::as_ptr(&self.0) as usize
+    }
 }
 
 impl PartialEq for SharedExpr {
@@ -308,6 +312,10 @@ impl SharedArgs {
 
     pub fn ptr_eq(lhs: &Self, rhs: &Self) -> bool {
         Arc::ptr_eq(&lhs.0, &rhs.0)
+    }
+
+    pub fn ptr_key(&self) -> usize {
+        Arc::as_ptr(&self.0) as usize
     }
 }
 

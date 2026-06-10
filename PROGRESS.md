@@ -203,6 +203,67 @@ are not active project-owned examples.
   interning, node-level evaluated-state bits, and derived-rule workload
   specialization.
 
+## 2026-06-11 Bool Performance Retest
+
+- Re-ran the post-23:30 Bool timing work after a separate system-heavy task
+  finished; the late 2026-06-10 timing samples were treated as contaminated
+  and not used for decisions.
+- Kept the evaluator-side wins that survived clean retesting: call-stability
+  caching over shared call trees; the global no-upvalue fast path; planned
+  builtin handler dispatch; early stable-expression return from the fixed-point
+  evaluator; and copy-on-write binding substitution for rule RHS/template
+  substitution.
+- Rechecked the late-session decisions that affected the retained diff:
+  rule-RHS binding-substitution copy-on-write survived clean A/B timing, while
+  skipping call-stability cache entries for leaf calls was effectively neutral
+  and was not kept. Other low-yield probes remain reverted: lazy epoch cache
+  clearing, fast/default hasher experiments, fixed-array dispatch stages, a
+  registered-builtin fallback shortcut, and slot-substitution copy-on-write.
+- Final dependency-preloaded Bool release smoke on the clean retest:
+  first run `real 3.99`; five warmed runs `real 3.57`, `3.51`, `3.52`,
+  `3.53`, and `3.51`. Internal
+  `AbsoluteTiming[Get["Bool.wl"]]` for those warmed runs was about
+  `3.17-3.22s`, with median about `3.19s`. This is down from the shared
+  call-tree baseline of about `8.1s` external wall time, but still does not
+  reach the local WolframKernel reference of roughly `2.4s`.
+- Clean A/B checks: disabling rule-RHS binding-substitution copy-on-write
+  regressed warmed Bool to about `3.59-3.61s` external wall and `3.24-3.26s`
+  internal timing; disabling the leaf-call cache skip was effectively neutral,
+  so the skip was not kept.
+
+## 2026-06-11 Bool Optimization Direction Sweep
+
+- Re-ran the next five optimization directions in order after the clean
+  retest baseline: clean profile, symbol fingerprint/ID, definition matcher
+  metadata, expression construction/allocation, and release flags.
+- The clean profile confirmed that parser/loader work is no longer the blocker.
+  The visible hot costs were allocator/free traffic, string/structural compare,
+  SipHash on symbol-keyed maps, stability checks, expression clone/drop/call,
+  lexical substitution, rule binding substitution, and definition matcher work.
+- Tested a conservative `Symbol` fingerprint field that preserved lexicographic
+  `Ord` while hashing only a precomputed deterministic `u64`. It removed the
+  visible SipHash string-write hotspot, but warmed Bool wall time stayed in the
+  same `3.50-3.57s` range and the larger `Symbol` plus custom serde complexity
+  was not kept.
+- Tested per-definition matcher metadata for root arity and syntactic fast-path
+  eligibility. Runtime tests passed, but warmed Bool stayed around
+  `3.53-3.57s`; the additional definition size and branching were not kept.
+- Kept the expression-construction win: lexical substitution now uses an
+  internal copy-on-write traversal, returning unchanged subtrees instead of
+  eagerly rebuilding every visited call. This directly addressed the allocator
+  and clone-heavy `Module`/`With` path called out in the external evaluator
+  audit.
+- Final dependency-preloaded Bool release smoke after lexical-substitution
+  COW: first run `real 3.13`; warmed runs `real 2.45`, `2.51`, `2.46`, and
+  `2.45`. Internal `AbsoluteTiming[Get["Bool.wl"]]` on those warmed runs was
+  about `2.30-2.36s`. This reaches the same order as the local WolframKernel
+  reference, previously measured at roughly `2.4s`.
+- Release-flag probes: `RUSTFLAGS="-C target-cpu=native"` improved warmed wall
+  time further to about `2.29-2.35s` on this machine. `codegen-units=1` and
+  thin LTO did not produce a clear additional runtime win over native-only, and
+  increased clean build/link time substantially. Treat native CPU builds as an
+  optional local benchmark/deployment knob, not the portable default profile.
+
 ## Completed Architecture Work
 
 - The workspace was split into responsibility-oriented crates:

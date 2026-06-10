@@ -6,13 +6,15 @@ mod symbolic;
 impl Session {
     pub(super) fn build_call_dispatch_plan(&self, head: &Expr) -> CallDispatchPlan {
         let attributes = self.attribute_set_for_head(head);
-        let builtin_dispatch = expr_as_symbol(head)
-            .and_then(|symbol| self.builtin_dispatch_spec_for_symbol(symbol))
-            .map(|spec| spec.dispatch);
+        let builtin_spec =
+            expr_as_symbol(head).and_then(|symbol| self.builtin_dispatch_spec_for_symbol(symbol));
+        let builtin_dispatch = builtin_spec.map(|spec| spec.dispatch);
+        let builtin_handler = builtin_spec.and_then(|spec| spec.handler);
 
         if builtin_dispatch == Some(BuiltinDispatch::SpecialForm) {
             return CallDispatchPlan {
                 attributes,
+                builtin_handler,
                 stages: vec![CallDispatchStage::SpecialForm],
             };
         }
@@ -46,7 +48,11 @@ impl Session {
             stages.push(CallDispatchStage::Function);
         }
 
-        CallDispatchPlan { attributes, stages }
+        CallDispatchPlan {
+            attributes,
+            builtin_handler,
+            stages,
+        }
     }
 
     pub(super) fn run_call_dispatch_stage(
@@ -54,14 +60,13 @@ impl Session {
         stage: CallDispatchStage,
         head: &Expr,
         attributes: AttributeSet,
+        builtin_handler: Option<BuiltinHandler>,
         state: &mut CallDispatchState,
     ) -> Result<Option<Expr>, EvalError> {
         match stage {
-            CallDispatchStage::SpecialForm => self.try_dispatch_builtin_call(
-                BuiltinDispatch::SpecialForm,
-                head,
-                state.raw_args.as_slice(),
-            ),
+            CallDispatchStage::SpecialForm => {
+                self.try_dispatch_builtin_call(builtin_handler, head, state.raw_args.as_slice())
+            }
             CallDispatchStage::PrepareArguments => {
                 let raw_args = std::mem::take(&mut state.raw_args);
                 let mut evaluated_args =
@@ -90,34 +95,20 @@ impl Session {
                 self.try_apply_down_values(head, state.evaluated_args())
             }
             CallDispatchStage::SubValues => self.try_apply_sub_values(head, state.evaluated_args()),
-            CallDispatchStage::OrdinaryBuiltin => self.try_dispatch_builtin_call(
-                BuiltinDispatch::Ordinary,
-                head,
-                state.evaluated_args(),
-            ),
+            CallDispatchStage::OrdinaryBuiltin => {
+                self.try_dispatch_builtin_call(builtin_handler, head, state.evaluated_args())
+            }
             CallDispatchStage::Function => self.try_apply_function(head, state.evaluated_args()),
         }
     }
 
     pub(super) fn try_dispatch_builtin_call(
         &mut self,
-        dispatch: BuiltinDispatch,
+        builtin_handler: Option<BuiltinHandler>,
         head: &Expr,
         args: &[Expr],
     ) -> Result<Option<Expr>, EvalError> {
-        let Some(symbol) = expr_as_symbol(head) else {
-            return Ok(None);
-        };
-
-        let Some(spec) = self.builtin_dispatch_spec_for_symbol(symbol) else {
-            return Ok(None);
-        };
-
-        if spec.dispatch != dispatch {
-            return Ok(None);
-        }
-
-        let Some(handler) = spec.handler else {
+        let Some(handler) = builtin_handler else {
             return Ok(None);
         };
 

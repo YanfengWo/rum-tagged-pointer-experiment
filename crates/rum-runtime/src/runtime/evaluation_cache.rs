@@ -9,10 +9,42 @@ impl Session {
     pub(super) fn clear_evaluation_caches(&mut self) {
         self.stable_symbol_cache.clear();
         self.symbol_call_effect_cache.clear();
+        self.call_stability_cache.clear();
     }
 
     pub(super) fn cached_expr_is_evaluation_stable(&mut self, expr: &Expr) -> bool {
-        self.expr_is_evaluation_stable_uncached(expr)
+        match expr {
+            Expr::Call { head, args } => self.call_is_evaluation_stable(head, args),
+            Expr::Atom(_) => self.expr_is_evaluation_stable_uncached(expr),
+        }
+    }
+
+    pub(super) fn call_is_evaluation_stable(
+        &mut self,
+        head: &SharedExpr,
+        args: &SharedArgs,
+    ) -> bool {
+        let key = CallStabilityCacheKey::new(head, args);
+        if let Some(entry) = self.call_stability_cache.get(&key) {
+            if entry.epoch == self.evaluation_epoch
+                && SharedExpr::ptr_eq(&entry.head, head)
+                && SharedArgs::ptr_eq(&entry.args, args)
+            {
+                return entry.stable;
+            }
+        }
+
+        let stable = self.call_is_evaluation_stable_uncached(head, args);
+        self.call_stability_cache.insert(
+            key,
+            CallStabilityCacheEntry {
+                epoch: self.evaluation_epoch,
+                head: head.clone(),
+                args: args.clone(),
+                stable,
+            },
+        );
+        stable
     }
 }
 

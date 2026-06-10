@@ -220,6 +220,11 @@ impl Session {
             }
             evaluation_passes += 1;
 
+            self.enforce_active_resource_limits_for_expr(&current)?;
+            if self.cached_expr_is_evaluation_stable(&current) {
+                return Ok(current);
+            }
+
             if should_track_evaluation_cycle(&current) {
                 if fixed_point_seen.iter().any(|previous| previous == &current) {
                     return Err(EvalError::EvaluationCycleDetected {
@@ -229,7 +234,7 @@ impl Session {
                 fixed_point_seen.push(current.clone());
             }
 
-            let next_result = self.evaluate_once(current.clone());
+            let next_result = self.evaluate_once_unstable_after_input_check(current.clone());
             let next = match next_result {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
@@ -285,6 +290,11 @@ impl Session {
             }
             evaluation_passes += 1;
 
+            self.enforce_active_resource_limits_for_expr(&current)?;
+            if self.cached_expr_is_evaluation_stable(&current) {
+                return Ok(current);
+            }
+
             if should_track_evaluation_cycle(&current) {
                 if fixed_point_seen.iter().any(|previous| previous == &current) {
                     return Err(EvalError::EvaluationCycleDetected {
@@ -294,7 +304,7 @@ impl Session {
                 fixed_point_seen.push(current.clone());
             }
 
-            let next_result = self.evaluate_once(current.clone());
+            let next_result = self.evaluate_once_unstable_after_input_check(current.clone());
             let next = match next_result {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {

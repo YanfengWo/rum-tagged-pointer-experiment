@@ -30,6 +30,7 @@ pub(super) enum CallDispatchStage {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct CallDispatchPlan {
     pub(super) attributes: AttributeSet,
+    pub(super) builtin_handler: Option<BuiltinHandler>,
     pub(super) stages: Vec<CallDispatchStage>,
 }
 
@@ -89,6 +90,7 @@ pub(super) struct LoaderSnapshot {
     pub(super) package_search_paths: Vec<PathBuf>,
     pub(super) loaded_packages: Vec<String>,
     pub(super) definitions: BTreeMap<Symbol, SymbolDefinition>,
+    pub(super) has_up_value_definitions: bool,
     pub(super) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
     pub(super) next_generated_symbol_id: u64,
     pub(super) trace_events: Vec<TraceEvent>,
@@ -298,6 +300,7 @@ impl Default for Session {
             evaluation_epoch: 0,
             stable_symbol_cache: HashMap::new(),
             symbol_call_effect_cache: HashMap::new(),
+            call_stability_cache: CallStabilityCache::default(),
             options: BTreeMap::new(),
             syntax_information: BTreeMap::new(),
             declared_stubs: BTreeSet::new(),
@@ -312,6 +315,7 @@ impl Default for Session {
             loaded_packages: Vec::new(),
             load_stack: Vec::new(),
             definitions: BTreeMap::new(),
+            has_up_value_definitions: false,
             message_definitions: BTreeMap::new(),
             next_generated_symbol_id: 0,
             resource_limits: ResourceLimits::default(),

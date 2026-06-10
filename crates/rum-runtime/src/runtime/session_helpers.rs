@@ -39,6 +39,7 @@ impl Session {
             package_search_paths: self.package_search_paths.clone(),
             loaded_packages: self.loaded_packages.clone(),
             definitions: self.definitions.clone(),
+            has_up_value_definitions: self.has_up_value_definitions,
             message_definitions: self.message_definitions.clone(),
             next_generated_symbol_id: self.next_generated_symbol_id,
             trace_events: self.trace_events.clone(),
@@ -64,6 +65,7 @@ impl Session {
         self.package_search_paths = snapshot.package_search_paths;
         self.loaded_packages = snapshot.loaded_packages;
         self.definitions = snapshot.definitions;
+        self.has_up_value_definitions = snapshot.has_up_value_definitions;
         self.message_definitions = snapshot.message_definitions;
         self.next_generated_symbol_id = snapshot.next_generated_symbol_id;
         self.trace_events = snapshot.trace_events;

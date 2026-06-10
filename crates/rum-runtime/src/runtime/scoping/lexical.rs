@@ -111,6 +111,7 @@ impl Session {
                 .retain(|key, _| key.symbol != *symbol);
         }
         if !items.is_empty() {
+            self.refresh_has_up_value_definitions();
             self.bump_attribute_revision();
         }
 
@@ -188,6 +189,7 @@ impl Session {
                 self.message_definitions.insert(key, definition);
             }
         }
+        self.refresh_has_up_value_definitions();
         self.bump_attribute_revision();
     }
 

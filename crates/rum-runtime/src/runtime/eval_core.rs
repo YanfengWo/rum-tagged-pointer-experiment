@@ -1,9 +1,10 @@
 use super::*;
 
 impl Session {
-    pub(super) fn evaluate_once(&mut self, expr: Expr) -> Result<Expr, EvalError> {
-        self.enforce_active_resource_limits_for_expr(&expr)?;
-
+    pub(super) fn evaluate_once_unstable_after_input_check(
+        &mut self,
+        expr: Expr,
+    ) -> Result<Expr, EvalError> {
         let track_cycle = should_track_evaluation_cycle(&expr);
         if track_cycle && self.evaluation_stack.iter().any(|active| active == &expr) {
             return Err(EvalError::EvaluationCycleDetected {
@@ -21,7 +22,7 @@ impl Session {
             self.evaluation_stack.push(expr.clone());
         }
         self.evaluation_depth += 1;
-        let result = self.evaluate_inner(expr);
+        let result = self.evaluate_inner_unstable(expr);
         self.evaluation_depth -= 1;
         if track_cycle {
             self.evaluation_stack.pop();
@@ -35,11 +36,7 @@ impl Session {
         }
     }
 
-    pub(super) fn evaluate_inner(&mut self, expr: Expr) -> Result<Expr, EvalError> {
-        if self.cached_expr_is_evaluation_stable(&expr) {
-            return Ok(expr);
-        }
-
+    pub(super) fn evaluate_inner_unstable(&mut self, expr: Expr) -> Result<Expr, EvalError> {
         match expr {
             Expr::Atom(Atom::Symbol(symbol)) => self.evaluate_symbol(symbol),
             Expr::Call { head, args } => self.evaluate_call(head.into_owned(), args.into_vec()),
@@ -141,14 +138,20 @@ impl Session {
         match expr {
             Expr::Atom(Atom::Symbol(symbol)) => self.symbol_is_atom_evaluation_stable(symbol),
             Expr::Atom(_) => true,
-            Expr::Call { head, args } => {
-                self.expr_is_evaluation_stable_uncached(head)
-                    && !self.call_head_has_evaluation_effect(head, args)
-                    && args
-                        .iter()
-                        .all(|arg| self.expr_is_evaluation_stable_uncached(arg))
-            }
+            Expr::Call { head, args } => self.call_is_evaluation_stable_uncached(head, args),
         }
+    }
+
+    pub(super) fn call_is_evaluation_stable_uncached(
+        &mut self,
+        head: &SharedExpr,
+        args: &SharedArgs,
+    ) -> bool {
+        self.cached_expr_is_evaluation_stable(head)
+            && !self.call_head_has_evaluation_effect(head, args)
+            && args
+                .iter()
+                .all(|arg| self.cached_expr_is_evaluation_stable(arg))
     }
 
     fn symbol_is_atom_evaluation_stable(&mut self, symbol: &Symbol) -> bool {
@@ -330,8 +333,13 @@ impl Session {
         }
 
         let mut state = state;
-        let stage_result =
-            self.run_call_dispatch_stage(stage, &evaluated_head, plan.attributes, &mut state);
+        let stage_result = self.run_call_dispatch_stage(
+            stage,
+            &evaluated_head,
+            plan.attributes,
+            plan.builtin_handler,
+            &mut state,
+        );
 
         self.drive_internal_value(stage_result, move |session, outcome| match outcome {
             Some(result) => Ok(result),
