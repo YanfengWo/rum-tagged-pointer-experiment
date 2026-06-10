@@ -302,8 +302,8 @@ pub struct Session {
     pub(super) attributes: BTreeMap<Symbol, AttributeSet>,
     pub(super) attribute_revision: u64,
     pub(super) evaluation_epoch: u64,
-    pub(super) stable_symbol_cache: HashMap<Symbol, SymbolStabilityCacheEntry>,
-    pub(super) symbol_call_effect_cache: HashMap<SymbolCallEffectKey, CallEffectCacheEntry>,
+    pub(super) stable_symbol_cache: SymbolStabilityCache,
+    pub(super) symbol_call_effect_cache: SymbolCallEffectCache,
     pub(super) call_stability_cache: CallStabilityCache,
     pub(super) options: BTreeMap<Symbol, SymbolOptions>,
     pub(super) syntax_information: BTreeMap<Symbol, Expr>,
@@ -355,6 +355,9 @@ pub(super) struct SymbolStabilityCacheEntry {
     pub(super) stable: bool,
 }
 
+pub(super) type SymbolStabilityCache =
+    HashMap<Symbol, SymbolStabilityCacheEntry, BuildHasherDefault<RuntimeCacheHasher>>;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(super) struct SymbolCallEffectKey {
     pub(super) symbol: Symbol,
@@ -367,22 +370,23 @@ pub(super) struct CallEffectCacheEntry {
     pub(super) has_effect: bool,
 }
 
-pub(super) type CallStabilityCache = HashMap<
-    CallStabilityCacheKey,
-    CallStabilityCacheEntry,
-    BuildHasherDefault<CallStabilityCacheHasher>,
->;
+pub(super) type SymbolCallEffectCache =
+    HashMap<SymbolCallEffectKey, CallEffectCacheEntry, BuildHasherDefault<RuntimeCacheHasher>>;
 
 #[derive(Clone, Copy, Debug, Default)]
-pub(super) struct CallStabilityCacheHasher(u64);
+pub(super) struct RuntimeCacheHasher(u64);
 
-impl Hasher for CallStabilityCacheHasher {
+impl Hasher for RuntimeCacheHasher {
     fn finish(&self) -> u64 {
         self.0
     }
 
     fn write(&mut self, bytes: &[u8]) {
-        let mut hash = 0xcbf29ce484222325_u64;
+        let mut hash = if self.0 == 0 {
+            0xcbf29ce484222325_u64
+        } else {
+            self.0
+        };
         for byte in bytes {
             hash ^= u64::from(*byte);
             hash = hash.wrapping_mul(0x100000001b3);
@@ -394,6 +398,9 @@ impl Hasher for CallStabilityCacheHasher {
         self.0 = value;
     }
 }
+
+pub(super) type CallStabilityCache =
+    HashMap<CallStabilityCacheKey, CallStabilityCacheEntry, BuildHasherDefault<RuntimeCacheHasher>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct CallStabilityCacheKey {
@@ -600,6 +607,7 @@ pub struct UpValue {
     pub lhs: Expr,
     pub rhs: Expr,
     pub delayed: bool,
+    pub(super) rhs_may_splice_without_bindings: bool,
     pub(super) matcher: MatcherNode,
     pub(super) matcher_attribute_revision: u64,
 }
@@ -609,6 +617,7 @@ pub struct DownValue {
     pub lhs: Expr,
     pub rhs: Expr,
     pub delayed: bool,
+    pub(super) rhs_may_splice_without_bindings: bool,
     pub(super) matcher: MatcherNode,
     pub(super) matcher_attribute_revision: u64,
 }
@@ -618,6 +627,7 @@ pub struct SubValue {
     pub lhs: Expr,
     pub rhs: Expr,
     pub delayed: bool,
+    pub(super) rhs_may_splice_without_bindings: bool,
     pub(super) matcher: MatcherNode,
     pub(super) matcher_attribute_revision: u64,
 }
@@ -637,6 +647,7 @@ pub(super) struct RewriteRule {
     pub(super) lhs: Expr,
     pub(super) rhs: Expr,
     pub(super) delayed: bool,
+    pub(super) rhs_may_splice_without_bindings: bool,
     pub(super) matcher: MatcherNode,
 }
 

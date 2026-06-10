@@ -54,6 +54,30 @@ pub(super) fn substitute_rule_bindings(expr: &Expr, bindings: &BTreeMap<Symbol, 
     substitute_rule_bindings_changed(expr, bindings).unwrap_or_else(|| expr.clone())
 }
 
+pub(super) fn substitute_rule_bindings_for_rhs(
+    expr: &Expr,
+    bindings: &BTreeMap<Symbol, Expr>,
+    may_splice_without_bindings: bool,
+) -> Expr {
+    if bindings.is_empty() && !may_splice_without_bindings {
+        expr.clone()
+    } else {
+        substitute_rule_bindings(expr, bindings)
+    }
+}
+
+pub(super) fn rule_rhs_may_splice_without_bindings(expr: &Expr) -> bool {
+    match expr {
+        Expr::Call { head, args } => {
+            rule_rhs_may_splice_without_bindings(head)
+                || args.iter().any(|arg| {
+                    sequence_items(arg).is_some() || rule_rhs_may_splice_without_bindings(arg)
+                })
+        }
+        Expr::Atom(_) => false,
+    }
+}
+
 fn substitute_rule_bindings_changed(
     expr: &Expr,
     bindings: &BTreeMap<Symbol, Expr>,

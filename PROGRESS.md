@@ -264,6 +264,27 @@ are not active project-owned examples.
   increased clean build/link time substantially. Treat native CPU builds as an
   optional local benchmark/deployment knob, not the portable default profile.
 
+## 2026-06-11 Bool Evaluator/Representation Follow-Up
+
+- Committed the lexical-substitution COW sweep as `bfadc4b` and continued from
+  a clean default-release baseline of about `real 2.45` on the dependency-
+  preloaded Bool smoke.
+- Kept a lightweight runtime cache hasher for epoch-scoped symbol/effect caches.
+  This removed the remaining default SipHash cost from those hot caches without
+  changing cache keys or semantics. Warmed default-release Bool smoke moved to
+  roughly `real 2.41-2.45`.
+- Kept owned call-argument preparation: the evaluator now consumes the owned
+  remaining argument vector during normal call preparation instead of cloning
+  each argument before planning. Warmed Bool smoke improved to about
+  `real 2.38-2.42`.
+- Kept an empty-binding rule-RHS fast path. Definition and rewrite-rule storage
+  now precomputes whether a RHS may need literal `Sequence` splicing even when
+  matcher bindings are empty; rule application can reuse the shared RHS directly
+  when it is safe. Warmed Bool smoke improved to about `real 2.36-2.40`.
+- Rejected a one-entry call-stability MRU cache after measurement. Runtime tests
+  passed, but warmed Bool smoke regressed to about `real 2.41-2.44`, so the
+  probe was reverted.
+
 ## Completed Architecture Work
 
 - The workspace was split into responsibility-oriented crates:

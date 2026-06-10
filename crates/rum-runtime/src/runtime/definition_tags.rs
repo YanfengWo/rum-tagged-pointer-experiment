@@ -206,6 +206,7 @@ impl Session {
                     lhs: lhs.clone(),
                     rhs: rhs.clone(),
                     delayed,
+                    rhs_may_splice_without_bindings: rule_rhs_may_splice_without_bindings(&rhs),
                     matcher,
                     matcher_attribute_revision,
                 };
@@ -236,6 +237,7 @@ impl Session {
                         lhs: lhs.clone(),
                         rhs: rhs.clone(),
                         delayed,
+                        rhs_may_splice_without_bindings: rule_rhs_may_splice_without_bindings(&rhs),
                         matcher,
                         matcher_attribute_revision,
                     },
@@ -257,6 +259,7 @@ impl Session {
                         lhs: lhs.clone(),
                         rhs: rhs.clone(),
                         delayed,
+                        rhs_may_splice_without_bindings: rule_rhs_may_splice_without_bindings(&rhs),
                         matcher,
                         matcher_attribute_revision,
                     },

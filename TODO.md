@@ -93,16 +93,17 @@ Completed history, archived planning detail, and operational lessons live in
   push past the now-green `types_tests.wl`, `terms_tests.wl`,
   `kernel_tests.wl`, `bootstrap_tests.wl`, and `equal_tests.wl` core layer.
   The current concrete blocker is Bool top-level proof performance:
-  dependency-preloaded `Bool.wl` now completes in about 2.45-2.51s warmed
-  external default-release wall time, with internal
-  `AbsoluteTiming[Get["Bool.wl"]]` around 2.30-2.36s. A local
-  `target-cpu=native` release build measured about 2.29-2.35s warmed external
-  wall time, but is not a portable default profile. The first evaluator audit
-  quick wins, symbol-level evaluation epoch cache, shared call-tree
+  dependency-preloaded `Bool.wl` now completes in about 2.36-2.40s warmed
+  external default-release wall time. A prior local `target-cpu=native` release
+  build measured about 2.29-2.35s warmed external wall time before the latest
+  follow-up cuts, but is not a portable default profile. The first evaluator
+  audit quick wins, symbol-level evaluation epoch cache, shared call-tree
   representation, call-stability cache, upvalue fast path,
   stable-expression early return, rule-RHS binding-substitution copy-on-write,
-  and lexical-substitution copy-on-write are in place. Low-yield probes already
-  rejected include symbol fingerprint hashing, shallow definition matcher
+  lexical-substitution copy-on-write, lightweight runtime cache hashing, owned
+  call-argument preparation, and empty-binding rule-RHS fast paths are in place.
+  Low-yield probes already rejected include symbol fingerprint hashing, shallow
+  definition matcher
   metadata, codegen-units=1, and thin LTO; continue with fresh profiling before
   deeper low-level work.
 - [ ] Treat `mma-hol` stable-mode snapshot helpers (`DumpSave`, `Contexts[]`,

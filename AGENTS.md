@@ -61,12 +61,14 @@ targeted change, then rerun the same timing smoke to reject negative
 optimizations. The current remaining cost is large-HOL-term derived-rule work,
 not parser or loader failure. A symbol-level evaluation epoch cache and shared
 call-tree `Expr` representation are already in place; after lexical
-substitution copy-on-write, the current clean Bool smoke is about 2.45-2.51s
-warmed external default-release wall time, or about 2.29-2.35s with a local
-`target-cpu=native` build. Whole-expression exact normal-form caching,
-symbol fingerprint hashing, shallow definition matcher metadata, and heavier
-LTO/codegen flag probes were measured and rejected or left as optional local
-knobs rather than default commitments.
+substitution copy-on-write plus the retained evaluator/representation follow-up
+cuts, the current clean Bool smoke is about 2.36-2.40s warmed external
+default-release wall time. A prior local `target-cpu=native` build measured
+about 2.29-2.35s before the latest follow-up cuts. Whole-expression exact
+normal-form caching, symbol fingerprint hashing, shallow definition matcher
+metadata, a one-entry call-stability MRU, and heavier LTO/codegen flag probes
+were measured and rejected or left as optional local knobs rather than default
+commitments.
 
 ## Development Commands
 

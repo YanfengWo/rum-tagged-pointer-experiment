@@ -302,7 +302,11 @@ impl Session {
                         return Ok(None);
                     }
 
-                    let transformed = substitute_rule_bindings(&rule.rhs, &outcome.bindings);
+                    let transformed = substitute_rule_bindings_for_rhs(
+                        &rule.rhs,
+                        &outcome.bindings,
+                        rule.rhs_may_splice_without_bindings,
+                    );
                     let transformed_result = session.evaluate(transformed);
                     session
                         .suspend_with_frame(transformed_result, |_, value| Ok(value))

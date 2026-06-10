@@ -76,7 +76,11 @@ impl Session {
                 );
             }
 
-            let substituted = substitute_rule_bindings(&down_value.rhs, &outcome.bindings);
+            let substituted = substitute_rule_bindings_for_rhs(
+                &down_value.rhs,
+                &outcome.bindings,
+                down_value.rhs_may_splice_without_bindings,
+            );
             let option_scope =
                 session.option_value_scope_for_definition(&down_value.lhs, &candidate);
             session.push_rule_applied_trace(
@@ -224,7 +228,11 @@ impl Session {
                 );
             }
 
-            let substituted = substitute_rule_bindings(&up_value.rhs, &outcome.bindings);
+            let substituted = substitute_rule_bindings_for_rhs(
+                &up_value.rhs,
+                &outcome.bindings,
+                up_value.rhs_may_splice_without_bindings,
+            );
             let option_scope = session.option_value_scope_for_definition(&up_value.lhs, &candidate);
             session.push_rule_applied_trace(
                 RuleApplicationSource::UpValue,
@@ -306,7 +314,11 @@ impl Session {
                 );
             }
 
-            let substituted = substitute_rule_bindings(&sub_value.rhs, &outcome.bindings);
+            let substituted = substitute_rule_bindings_for_rhs(
+                &sub_value.rhs,
+                &outcome.bindings,
+                sub_value.rhs_may_splice_without_bindings,
+            );
             let option_scope =
                 session.option_value_scope_for_definition(&sub_value.lhs, &candidate);
             session.push_rule_applied_trace(
@@ -655,7 +667,11 @@ impl Session {
                 );
             }
 
-            let replaced = substitute_rule_bindings(&rule.rhs, &outcome.bindings);
+            let replaced = substitute_rule_bindings_for_rhs(
+                &rule.rhs,
+                &outcome.bindings,
+                rule.rhs_may_splice_without_bindings,
+            );
             session.push_rule_applied_trace(source, &expr, &rule.lhs, &replaced);
             Ok(Some(replaced))
         })

@@ -10,7 +10,7 @@ struct CallArgumentPlan {
 fn plan_call_argument_preparation(
     attributes: AttributeSet,
     index: usize,
-    arg: &Expr,
+    arg: Expr,
 ) -> CallArgumentPlan {
     let hold = attributes.hold_attribute();
     let blocks_evaluate_override = attributes.blocks_evaluate_override();
@@ -18,13 +18,13 @@ fn plan_call_argument_preparation(
     if hold.holds_argument(index) {
         if blocks_evaluate_override {
             return CallArgumentPlan {
-                expr: arg.clone(),
+                expr: arg,
                 should_evaluate: false,
                 allow_sequence_splice: false,
             };
         }
 
-        if let Some(inner) = unevaluated_wrapper_arg(arg) {
+        if let Some(inner) = unevaluated_wrapper_arg(&arg) {
             return CallArgumentPlan {
                 expr: inner.clone(),
                 should_evaluate: false,
@@ -32,7 +32,7 @@ fn plan_call_argument_preparation(
             };
         }
 
-        if let Some(inner) = evaluate_wrapper_arg(arg) {
+        if let Some(inner) = evaluate_wrapper_arg(&arg) {
             return CallArgumentPlan {
                 expr: inner.clone(),
                 should_evaluate: true,
@@ -41,13 +41,13 @@ fn plan_call_argument_preparation(
         }
 
         return CallArgumentPlan {
-            expr: arg.clone(),
+            expr: arg,
             should_evaluate: false,
             allow_sequence_splice: false,
         };
     }
 
-    if let Some(inner) = unevaluated_wrapper_arg(arg) {
+    if let Some(inner) = unevaluated_wrapper_arg(&arg) {
         return CallArgumentPlan {
             expr: inner.clone(),
             should_evaluate: false,
@@ -56,7 +56,7 @@ fn plan_call_argument_preparation(
     }
 
     CallArgumentPlan {
-        expr: arg.clone(),
+        expr: arg,
         should_evaluate: true,
         allow_sequence_splice: true,
     }
@@ -94,12 +94,12 @@ impl Session {
         start_index: usize,
     ) -> Result<Vec<Expr>, EvalError> {
         let sequence_hold = attributes.sequence_hold();
+        let mut remaining_args = remaining_args.into_iter().enumerate();
 
-        for offset in 0..remaining_args.len() {
-            let arg = remaining_args[offset].clone();
+        while let Some((offset, arg)) = remaining_args.next() {
             let index = start_index + offset;
 
-            let plan = plan_call_argument_preparation(attributes, index, &arg);
+            let plan = plan_call_argument_preparation(attributes, index, arg);
             let prepared_arg = if plan.should_evaluate {
                 let allow_sequence_splice = plan.allow_sequence_splice;
                 let evaluated_result = self.evaluate(plan.expr);
@@ -110,9 +110,8 @@ impl Session {
                         let attributes_for_resume = attributes;
                         let evaluated_for_resume = evaluated_args.clone();
                         let remaining_for_resume = remaining_args
-                            .iter()
-                            .skip(offset + 1)
-                            .cloned()
+                            .by_ref()
+                            .map(|(_, arg)| arg)
                             .collect::<Vec<_>>();
                         self.suspend_with_frame(
                             Err(EvalError::InputRequired { request }),
@@ -231,7 +230,7 @@ mod tests {
     fn planner_keeps_held_arguments_verbatim_under_holdallcomplete() {
         let arg = Expr::call(system_expr("Evaluate"), vec![Expr::integer(1_i64.into())]);
         let attributes = AttributeSet::from_attribute(Attribute::HoldAllComplete);
-        let plan = plan_call_argument_preparation(attributes, 0, &arg);
+        let plan = plan_call_argument_preparation(attributes, 0, arg.clone());
 
         assert_eq!(
             plan,
@@ -248,7 +247,7 @@ mod tests {
         let inner = Expr::Atom(Atom::Symbol(Symbol::from_name("x")));
         let arg = Expr::call(system_expr("Evaluate"), vec![inner.clone()]);
         let attributes = AttributeSet::from_attribute(Attribute::HoldAll);
-        let plan = plan_call_argument_preparation(attributes, 0, &arg);
+        let plan = plan_call_argument_preparation(attributes, 0, arg);
 
         assert_eq!(
             plan,
@@ -264,7 +263,7 @@ mod tests {
     fn planner_respects_unevaluated_wrapper_for_nonheld_arguments() {
         let inner = Expr::Atom(Atom::Symbol(Symbol::from_name("x")));
         let arg = Expr::call(system_expr("Unevaluated"), vec![inner.clone()]);
-        let plan = plan_call_argument_preparation(AttributeSet::empty(), 0, &arg);
+        let plan = plan_call_argument_preparation(AttributeSet::empty(), 0, arg);
 
         assert_eq!(
             plan,

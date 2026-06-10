@@ -501,6 +501,7 @@ pub(super) fn normalize_single_rewrite_rule(expr: &Expr) -> Option<RewriteRule> 
                 lhs: args[0].clone(),
                 rhs: args[1].clone(),
                 delayed,
+                rhs_may_splice_without_bindings: rule_rhs_may_splice_without_bindings(&args[1]),
                 matcher: compile_matcher(&args[0]),
             })
         }

@@ -118,7 +118,11 @@ impl Session {
             );
         };
 
-        let replaced = substitute_rule_bindings(&rule.rhs, &current_bindings);
+        let replaced = substitute_rule_bindings_for_rhs(
+            &rule.rhs,
+            &current_bindings,
+            rule.rhs_may_splice_without_bindings,
+        );
         self.push_rule_applied_trace(
             RuleApplicationSource::ReplaceList,
             &target,
