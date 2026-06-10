@@ -104,6 +104,33 @@ fn parse_oracle_lane_cli_args_reports_help_and_lane_specific_unknown_flags() {
 }
 
 #[test]
+fn parse_oracle_lane_cli_args_rejects_issue_sample_controls_without_summary_json() {
+    let cases = [
+        (
+            vec!["--max-issue-samples".into(), "1".into()],
+            "--max-issue-samples requires --summary-json PATH",
+        ),
+        (
+            vec!["--issue-sample-kind".into(), "non-match".into()],
+            "--issue-sample-kind requires --summary-json PATH",
+        ),
+        (
+            vec!["--issue-sample-source".into(), "curated-core".into()],
+            "--issue-sample-source requires --summary-json PATH",
+        ),
+    ];
+
+    for (args, expected) in cases {
+        assert_eq!(
+            parse_oracle_lane_cli_args(args, "lane-a")
+                .unwrap_err()
+                .to_string(),
+            expected
+        );
+    }
+}
+
+#[test]
 fn oracle_kernel_from_cli_options_uses_explicit_kernel_and_timeout() {
     let mut options = OracleLaneCliOptions {
         oracle_kernel: Some(PathBuf::from("fake-WolframKernel")),
