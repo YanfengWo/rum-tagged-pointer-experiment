@@ -72,6 +72,9 @@ This roadmap intentionally uses two levels of detail:
     focused on Lane D run orchestration, and move flag parsing, cross-flag
     validation, capture default resolution, and usage text into a focused
     child module
+  - [x] Difftest Lane D CLI args split follow-up: keep `lane_d_cli/args.rs`
+    as a facade and move option models/default validation, flag parsing, and
+    usage text into focused child modules
   - [x] Difftest Lane D runner split follow-up: keep `lane_d.rs` as a
     public facade and move run models, name parsing, seed-suite path discovery,
     execution, and runner tests into focused child modules
