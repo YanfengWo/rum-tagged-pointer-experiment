@@ -48,6 +48,14 @@ fn table_supports_count_iterators_and_nested_iterators() {
             .to_string(),
         "List[1, 2, 1, 2]"
     );
+    assert_eq!(
+        session
+            .eval_text("argLevels = {0, 1}; fvVars = {a, b}; Table[argLevels[[i]] -> fvVars[[i]], {i, 1, Length[argLevels]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[0, a], Rule[1, b]]"
+    );
 }
 
 #[test]

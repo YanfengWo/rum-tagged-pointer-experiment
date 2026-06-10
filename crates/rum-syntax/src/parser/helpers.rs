@@ -170,6 +170,8 @@ impl Parser {
             TokenKind::LessEqual => Some(BinaryOp::LessEqual),
             TokenKind::GreaterEqual => Some(BinaryOp::GreaterEqual),
             TokenKind::Colon => Some(BinaryOp::Pattern),
+            TokenKind::Bar => Some(BinaryOp::Alternatives),
+            TokenKind::Question => Some(BinaryOp::PatternTest),
             TokenKind::StringJoin => Some(BinaryOp::StringJoin),
             TokenKind::At => Some(BinaryOp::Apply),
             TokenKind::SlashAt => Some(BinaryOp::Map),

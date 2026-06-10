@@ -188,11 +188,10 @@ Missing or incomplete areas include:
 
 - richer tag-based ownership and attachment edge cases beyond the current
   `TagSet` / `UpSet` subset
-- definition lhs normalization still misses non-pattern own-value constants in
-  held lhs positions. Wolfram evaluates `p = a; f[p] := rhs` into a definition
-  for `f[a]`; the latest `mma-hol` probe showed that `rum` currently leaves the
-  literal symbol in the stored pattern for shapes such as
-  `const["=", $boolEqTy]`.
+- definition lhs normalization now covers the current non-pattern own-value
+  constant contract promoted by `mma-hol` (`p = a; f[p] := rhs` stores the
+  definition for `f[a]`), but broader multi-owner and tag-selection edges
+  remain long-tail parity work
 - exact front-end-style definition introspection and print-layer rendering
 - broader metadata-driven semantics so fewer evaluator decisions remain
   handwritten

@@ -28,10 +28,11 @@ impl Session {
         expr: Expr,
     ) -> Result<Expr, EvalError> {
         let normalized = strip_hold_pattern(&expr).clone();
-        let resolved = match normalized {
-            Expr::Atom(Atom::Symbol(_)) => self.evaluate(normalized),
-            other => Ok(other),
-        }?;
+        let resolved = if contains_pattern_syntax(&normalized) {
+            normalized
+        } else {
+            self.evaluate(normalized)?
+        };
 
         Ok(self.normalize_match_expr(&resolved))
     }
@@ -69,4 +70,40 @@ impl Session {
             Ok(system_expr(if outcome.matched { "True" } else { "False" }))
         })
     }
+}
+
+fn contains_pattern_syntax(expr: &Expr) -> bool {
+    let expr = strip_hold_pattern(expr);
+
+    match expr {
+        Expr::Atom(_) => false,
+        Expr::Call { head, args } => {
+            if matches_pattern_head(head) {
+                true
+            } else {
+                contains_pattern_syntax(head) || args.iter().any(contains_pattern_syntax)
+            }
+        }
+    }
+}
+
+fn matches_pattern_head(head: &Expr) -> bool {
+    is_system_symbol_name(head, "Alternatives")
+        || is_system_symbol_name(head, "Blank")
+        || is_system_symbol_name(head, "BlankSequence")
+        || is_system_symbol_name(head, "BlankNullSequence")
+        || is_system_symbol_name(head, "Condition")
+        || is_system_symbol_name(head, "Except")
+        || is_system_symbol_name(head, "HoldPattern")
+        || is_system_symbol_name(head, "KeyValuePattern")
+        || is_system_symbol_name(head, "Longest")
+        || is_system_symbol_name(head, "Optional")
+        || is_system_symbol_name(head, "OrderlessPatternSequence")
+        || is_system_symbol_name(head, "Pattern")
+        || is_system_symbol_name(head, "PatternSequence")
+        || is_system_symbol_name(head, "PatternTest")
+        || is_system_symbol_name(head, "Repeated")
+        || is_system_symbol_name(head, "RepeatedNull")
+        || is_system_symbol_name(head, "Shortest")
+        || is_system_symbol_name(head, "Verbatim")
 }

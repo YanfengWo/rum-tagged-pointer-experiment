@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use super::*;
 
 pub(in crate::runtime) struct SuspendedEvaluation {
-    pub(in crate::runtime) active_stack: Vec<Expr>,
+    pub(in crate::runtime) active_stack: Vec<EvaluationStackEntry>,
     pub(in crate::runtime) frames: VecDeque<Box<dyn SuspensionFrame>>,
 }
 
@@ -43,7 +43,7 @@ where
 }
 
 impl SuspendedEvaluation {
-    fn new(active_stack: Vec<Expr>) -> Self {
+    fn new(active_stack: Vec<EvaluationStackEntry>) -> Self {
         Self {
             active_stack,
             frames: VecDeque::new(),

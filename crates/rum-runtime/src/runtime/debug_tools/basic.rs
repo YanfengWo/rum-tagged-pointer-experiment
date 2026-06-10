@@ -90,8 +90,7 @@ impl Session {
             .evaluation_stack
             .iter()
             .take(self.evaluation_stack.len().saturating_sub(1))
-            .cloned()
-            .map(|expr| Expr::call(system_expr("Hold"), vec![expr]))
+            .map(|entry| Expr::call(system_expr("Hold"), vec![entry.expr.clone()]))
             .collect();
 
         Ok(Expr::call(system_expr("List"), items))

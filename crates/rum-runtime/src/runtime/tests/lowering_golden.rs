@@ -36,6 +36,19 @@ fn lowering_golden_forms_cover_rules_patterns_slots_and_scoping() {
             "typeSubstImpl[theta, #] & /@ args",
             "Map[Function[typeSubstImpl[theta, Slot[1]]], args]",
         ),
+        (
+            "ks = #[[1]] & /@ args",
+            "Set[ks, Map[Function[Part[Slot[1], 1]], args]]",
+        ),
+        (
+            "Map[instType[theta, #[[1]]] -> #[[2]] &, pairs]",
+            "Map[Function[Rule[instType[theta, Part[Slot[1], 1]], Part[Slot[1], 2]]], pairs]",
+        ),
+        (
+            "var[_, _] | const[_, _]",
+            "Alternatives[var[Blank[], Blank[]], const[Blank[], Blank[]]]",
+        ),
+        ("_?propBoolAtomQ", "PatternTest[Blank[], propBoolAtomQ]"),
         ("\"a\" <> ToString[i]", "StringJoin[\"a\", ToString[i]]"),
         (
             "x_Integer := f[x]",

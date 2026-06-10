@@ -6,7 +6,12 @@ impl Session {
         expr: Expr,
     ) -> Result<Expr, EvalError> {
         let track_cycle = should_track_evaluation_cycle(&expr);
-        if track_cycle && self.evaluation_stack.iter().any(|active| active == &expr) {
+        if track_cycle
+            && self
+                .evaluation_stack
+                .iter()
+                .any(|active| active.epoch == self.evaluation_epoch && active.expr == expr)
+        {
             return Err(EvalError::EvaluationCycleDetected {
                 expr: expr.to_string(),
             });
@@ -19,7 +24,10 @@ impl Session {
         }
 
         if track_cycle {
-            self.evaluation_stack.push(expr.clone());
+            self.evaluation_stack.push(EvaluationStackEntry {
+                expr: expr.clone(),
+                epoch: self.evaluation_epoch,
+            });
         }
         self.evaluation_depth += 1;
         let result = self.evaluate_inner_unstable(expr);

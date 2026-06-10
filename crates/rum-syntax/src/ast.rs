@@ -112,8 +112,8 @@ impl SyntaxExpr {
             SyntaxExprKind::Postfix { op, .. } => op.precedence(),
             SyntaxExprKind::Binary { op, .. } => op.precedence(),
             SyntaxExprKind::Prefix { op, .. } => op.precedence(),
-            SyntaxExprKind::Pattern { .. } => 80,
-            SyntaxExprKind::Blank { .. } => 80,
+            SyntaxExprKind::Pattern { .. } => 85,
+            SyntaxExprKind::Blank { .. } => 85,
             SyntaxExprKind::Call { .. } => 90,
             SyntaxExprKind::Integer(_)
             | SyntaxExprKind::String(_)
@@ -221,6 +221,8 @@ pub enum BinaryOp {
     LessEqual,
     GreaterEqual,
     Pattern,
+    Alternatives,
+    PatternTest,
     StringJoin,
     Apply,
     Map,
@@ -302,6 +304,8 @@ impl BinaryOp {
             Self::LessEqual => "<=",
             Self::GreaterEqual => ">=",
             Self::Pattern => ":",
+            Self::Alternatives => "|",
+            Self::PatternTest => "?",
             Self::StringJoin => "<>",
             Self::Apply => "@",
             Self::Map => "/@",
@@ -338,6 +342,8 @@ impl BinaryOp {
             | Self::LessEqual
             | Self::GreaterEqual => 45,
             Self::Pattern => 80,
+            Self::Alternatives => 82,
+            Self::PatternTest => 85,
             Self::StringJoin => 55,
             Self::Apply | Self::Map | Self::ApplyHead | Self::MapApply => 72,
             Self::Composition | Self::RightComposition => 73,
@@ -386,7 +392,7 @@ impl PostfixOp {
 
     pub(crate) fn precedence(self) -> u8 {
         match self {
-            Self::Function => 5,
+            Self::Function => 15,
             Self::Increment | Self::Decrement => 80,
             Self::Unset => 10,
         }

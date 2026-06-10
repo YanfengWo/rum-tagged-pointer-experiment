@@ -48,18 +48,26 @@ is being prepared.
 
 ## Current Downstream Lane
 
-The active `mma-hol` pressure test is the Bool proof-load path. The canonical
-status lives in [PROGRESS.md](./PROGRESS.md) and [TODO.md](./TODO.md).
+The active `mma-hol` pressure test now reaches the clean-clone core through
+Parser/Printer path. The canonical status lives in
+[PROGRESS.md](./PROGRESS.md) and [TODO.md](./TODO.md).
 
-For valid Bool probes, preload the lower HOL files before `Bool.wl`
-(`ErrorUtil.wl`, `Types.wl`, `Terms.wl`, `Kernel.wl`, `Bootstrap.wl`, and
-`Equal.wl`). A fresh direct `Get["Bool.wl"]` still exercises package autoload
-boundaries and is not the representative performance smoke.
+Use the fixed clean clone at `/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol`
+for current probes unless the user asks to refresh from the live sibling tree.
+Preload lower HOL files before higher layers: `ErrorUtil.wl`, `Types.wl`,
+`Terms.wl`, `Kernel.wl`, `Bootstrap.wl`, `Equal.wl`, then `Bool.wl`,
+`Drule.wl`, `Tactics.wl`, `Printer.wl`, and `Parser.wl` as needed.
+
+Current clean-clone smoke results are: `bool_tests.wl` `List[73, 0]`,
+`drule_tests.wl` `List[43, 0]`, `tactics_tests.wl` `List[49, 0]`, and
+`printer_tests.wl` + `parser_tests.wl` `List[126, 0]`. The next CL-Y task is a
+bounded cold `run_all.wls` driver and triage of the first stdlib/auto failure
+beyond Parser/Printer.
 
 Keep performance work probe-first: identify the hot path, make the smallest
 targeted change, then rerun the same timing smoke to reject negative
-optimizations. The current remaining cost is large-HOL-term derived-rule work,
-not parser or loader failure. A symbol-level evaluation epoch cache and shared
+optimizations. Bool performance is no longer the main correctness blocker; it
+is a follow-up lane. A symbol-level evaluation epoch cache and shared
 call-tree `Expr` representation are already in place; after lexical
 substitution copy-on-write plus the retained evaluator/representation follow-up
 cuts, the current clean Bool smoke is about 2.36-2.40s warmed external

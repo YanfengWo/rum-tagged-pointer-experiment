@@ -392,6 +392,22 @@ fn count_memberq_and_freeq_share_standard_traversal_semantics() {
     );
     assert_eq!(
         session
+            .eval_text("spec = Association[\"kind\" -> \"infix\"]; MemberQ[{\"infix\", \"prefix\", \"binder\"}, spec[\"kind\"]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = String; MatchQ[7, x_]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
             .eval_text("FreeQ[f[g[1]], _Integer]")
             .unwrap()
             .value

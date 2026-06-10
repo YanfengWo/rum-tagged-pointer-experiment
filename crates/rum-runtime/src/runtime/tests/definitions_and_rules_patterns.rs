@@ -69,6 +69,40 @@ fn matchq_honors_alternatives_patterns() {
 }
 
 #[test]
+fn rule_lhs_evaluates_values_without_evaluating_pattern_names() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("x = 1; x -> y")
+            .unwrap()
+            .value
+            .to_string(),
+        "Rule[1, y]"
+    );
+    assert_eq!(
+        session.eval_text("x_ -> y").unwrap().value.to_string(),
+        "Rule[Pattern[x, Blank[]], y]"
+    );
+    assert_eq!(
+        session
+            .eval_text("p = a; f[p] :> y")
+            .unwrap()
+            .value
+            .to_string(),
+        "RuleDelayed[f[a], y]"
+    );
+    assert_eq!(
+        session
+            .eval_text("h = Integer; Blank[h] -> y")
+            .unwrap()
+            .value
+            .to_string(),
+        "Rule[Blank[Integer], y]"
+    );
+}
+
+#[test]
 fn matchq_honors_except_patterns() {
     let mut session = Session::new();
 

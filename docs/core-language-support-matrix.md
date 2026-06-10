@@ -807,11 +807,13 @@ Local source snapshot:
 
 - repository: `/Users/fft/Developments/mma-hol`
 - fixed probe clone: `/private/tmp/rum-mma-hol-latest.FtARYw/mma-hol`
+- clean probe clone: `/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol`
 - HEAD: `698e3d0` (`M7-7 (Real) Complete.wl: Dedekind completeness +
   Archimedean + Q-density`)
 - worktree note: the live sibling repository was clean at clone time and has
-  no configured remote; the fixed `/private/tmp` clone was then modified only
-  for probe-only syntax/semantic normalizations called out below
+  no configured remote; the clean `/private/tmp` clone is the current semantic
+  smoke target, while the earlier `latest` clone only records historical
+  probe-only normalizations
 - scanned scope: tracked `*.wl` / `*.wls` source under the project; the current
   run order includes Real `Cut`, `RatAux`, `Field`, `Mul`, `Inv`, and
   `Complete`
@@ -905,13 +907,12 @@ the `mma-hol` lane healthy:
 - `/@` map syntax and Unicode letter identifiers: first-pass source support is
   implemented for ordinary map forms and ordinary Unicode letter/digit symbols
   such as Greek local names used by `mma-hol`; escaped Wolfram box/name syntax
-  is still outside the current source subset. The latest probe exposed a
-  remaining precedence gap for assignment RHS forms such as
-  `ks = #[[1]] & /@ args`, which should parse as assignment to the mapped
-  result.
+  is still outside the current source subset. Assignment RHS forms such as
+  `ks = #[[1]] & /@ args` and rule-function bodies such as
+  `Map[f[#[[1]]] -> #[[2]] &, pairs]` are covered.
 - pattern syntax sugar: explicit `Alternatives[...]` and `PatternTest[...]`
-  are supported by the matcher, but the current source parser still rejects the
-  Wolfram shorthands `p1 | p2` and `_?pred` used by latest `mma-hol` sources.
+  are supported by the matcher, and the source shorthands `p1 | p2` and
+  `_?pred` used by latest `mma-hol` sources now lower to those forms.
 - `Contexts[]`, `DumpSave`, `$ContextPath`, and `$Packages`: these are not
   needed for the first cold `run_all.wls` semantic smoke, but are required for
   the stable-mode snapshot-backed `run_fast.wls` workflow and for practical
@@ -953,21 +954,28 @@ the `mma-hol` lane healthy:
   the complex `BETACONV` / kernel `BETA` path and still needs bounded profiling
   around deep term traversal. The full `run_all.wls` path still needs a bounded
   smoke driver before it can be a routine acceptance check.
-- latest fixed-clone smoke: using `mma-hol` HEAD `698e3d0`, the core and Bool
-  layer are green (`kernel_tests.wl` `List[71, 0]`, `bool_tests.wl`
-  `List[73, 0]`). With probe-only normalizations for pattern `|`, `_?`,
-  assignment RHS map forms, `Table` plus held `Rule`, and one definition-lhs
-  constant pattern, `drule_tests.wl` reports `List[43, 0]` and
-  `tactics_tests.wl` reports `List[49, 0]`. The next blockers to fix in `rum`
-  are therefore parser/evaluator correctness, not downstream proof-script
-  surgery.
-- evaluator compatibility newly promoted by the latest probe: definition lhs
-  non-pattern constants must evaluate through own values before rule storage
-  (`p = a; f[p] := ...` should define `f[a]`, as in Wolfram); the cycle guard
-  must not reject state-progressing recursive definitions such as
-  `parseTypeExpr[]` and `parseAtom[]`; and recursive/simplifier workloads need
-  quieter or more precise recursion-limit behavior before `Simp` and the
-  stdlib proof packages can be used as reliable failure signals.
+- latest clean-clone smoke: using `mma-hol` HEAD `698e3d0`, the core through
+  parser/printer lane is green without source normalizations:
+  `kernel_tests.wl` reports `List[71, 0]`, dependency-preloaded
+  `bool_tests.wl` reports `List[73, 0]` with cold release external wall time
+  about `22.95s`, `drule_tests.wl` reports `List[43, 0]` in about `4.18s`,
+  `tactics_tests.wl` reports `List[49, 0]` in about `5.18s`, and
+  `printer_tests.wl` plus `parser_tests.wl` report `List[126, 0]` in about
+  `4.62s`.
+- evaluator compatibility promoted by the latest probe and now covered in
+  `rum`: definition lhs non-pattern constants evaluate through own values
+  before rule storage (`p = a; f[p] := ...` defines `f[a]`, as in Wolfram);
+  `Table` iterator substitution reaches held `Rule` lhs positions; `Rule` and
+  `RuleDelayed` evaluate their lhs enough for substitution workflows without
+  evaluating pattern names; the cycle guard allows state-progressing recursive
+  definitions such as `parseTypeExpr[]` and `parseAtom[]`; and ordinary
+  expression pattern arguments such as `spec["kind"]` are evaluated before
+  `MemberQ` / `MatchQ` compile them as exact patterns.
+- next CL-Y frontier: build a bounded cold `run_all.wls` driver and triage the
+  first stdlib/auto failures beyond Parser/Printer. Recursive/simplifier
+  workloads may still need quieter or more precise recursion-limit behavior
+  before `Simp` and the real stdlib proof packages become reliable failure
+  signals.
 
 ### Non-Goals
 

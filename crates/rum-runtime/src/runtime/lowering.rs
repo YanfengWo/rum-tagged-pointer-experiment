@@ -255,6 +255,14 @@ where
             heads::patterns::PATTERN,
             vec![lowered_lhs, lowered_rhs],
         )),
+        BinaryOp::Alternatives => Ok(canonical_call(
+            "Alternatives",
+            vec![lowered_lhs, lowered_rhs],
+        )),
+        BinaryOp::PatternTest => Ok(canonical_call(
+            "PatternTest",
+            vec![lowered_lhs, lowered_rhs],
+        )),
         BinaryOp::StringJoin => Ok(canonical_call("StringJoin", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::Apply => Ok(Expr::call(lowered_lhs, vec![lowered_rhs])),
         BinaryOp::Map => Ok(canonical_call("Map", vec![lowered_lhs, lowered_rhs])),

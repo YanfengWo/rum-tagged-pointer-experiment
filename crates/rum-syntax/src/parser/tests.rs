@@ -220,6 +220,27 @@ fn parses_function_postfix_as_map_lhs() {
 }
 
 #[test]
+fn parses_function_postfix_on_set_rhs_before_map() {
+    let parsed = parse_expr("ks = #[[1]] & /@ args").unwrap();
+    assert_eq!(parsed.to_string(), "ks = (Part[#, 1] &) /@ args");
+}
+
+#[test]
+fn parses_pattern_alternatives_sugar() {
+    let parsed = parse_expr("MatchQ[t, var[_, _] | const[_, _]]").unwrap();
+    assert_eq!(parsed.to_string(), "MatchQ[t, var[_, _] | const[_, _]]");
+}
+
+#[test]
+fn parses_pattern_test_sugar() {
+    let parsed = parse_expr("Cases[t, _?propBoolAtomQ, {0, Infinity}]").unwrap();
+    assert_eq!(
+        parsed.to_string(),
+        "Cases[t, _ ? propBoolAtomQ, {0, Infinity}]"
+    );
+}
+
+#[test]
 fn parses_part_and_span_sugar_into_canonical_forms() {
     assert_eq!(
         parse_expr("expr[[1, 2]]").unwrap().to_string(),
@@ -367,6 +388,15 @@ fn parses_slots_and_pure_functions() {
             SyntaxExpr::slot(SlotSpec::Named("x".to_string()), z()),
             z(),
         )
+    );
+}
+
+#[test]
+fn parses_rule_expression_as_pure_function_body() {
+    let parsed = parse_expr("Map[instType[theta, #[[1]]] -> #[[2]] &, pairs]").unwrap();
+    assert_eq!(
+        parsed.to_string(),
+        "Map[instType[theta, Part[#, 1]] -> Part[#, 2] &, pairs]"
     );
 }
 

@@ -6,7 +6,7 @@ pub(super) struct EvaluationRollbackSnapshot {
     option_value_scopes: Vec<OptionValueScope>,
     load_stack: Vec<PathBuf>,
     evaluation_depth: usize,
-    evaluation_stack: Vec<Expr>,
+    evaluation_stack: Vec<EvaluationStackEntry>,
     prints: Vec<String>,
     handled_non_loader_eval_errors: Vec<RuntimeMessage>,
     reap_scopes: Vec<ReapScope>,

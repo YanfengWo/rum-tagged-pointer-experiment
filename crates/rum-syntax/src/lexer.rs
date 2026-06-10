@@ -85,10 +85,7 @@ impl<'a> Lexer<'a> {
                 } else if self.consume_str("||") {
                     TokenKind::Or
                 } else {
-                    return Err(SyntaxError::UnexpectedCharacter {
-                        found: ch,
-                        span: Span::new(start, self.offset),
-                    });
+                    self.single(TokenKind::Bar)
                 }
             }
             '(' => self.single(TokenKind::LParen),
@@ -143,6 +140,7 @@ impl<'a> Lexer<'a> {
                     self.single(TokenKind::Bang)
                 }
             }
+            '?' => self.single(TokenKind::Question),
             '#' => self.single(TokenKind::Hash),
             '-' => {
                 if self.consume_str("->") {

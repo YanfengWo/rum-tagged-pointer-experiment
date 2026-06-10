@@ -324,7 +324,7 @@ pub struct Session {
     pub(super) next_generated_symbol_id: u64,
     pub(super) resource_limits: ResourceLimits,
     pub(super) evaluation_depth: usize,
-    pub(super) evaluation_stack: Vec<Expr>,
+    pub(super) evaluation_stack: Vec<EvaluationStackEntry>,
     pub(super) tracing_enabled: bool,
     pub(super) trace_events: Vec<TraceEvent>,
     pub(super) trace_event_depths: Vec<usize>,
@@ -347,6 +347,12 @@ pub struct Session {
     pub(super) pending_input_request: Option<RuntimeInputRequest>,
     pub(super) pending_eval_request: Option<PendingEvalRequest>,
     pub(super) pending_suspension: Option<SuspendedEvaluation>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct EvaluationStackEntry {
+    pub(super) expr: Expr,
+    pub(super) epoch: u64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

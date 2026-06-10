@@ -90,15 +90,17 @@ Completed history, archived planning detail, and operational lessons live in
 - [ ] Use the updated `CL-Y` audit in
   [docs/core-language-support-matrix.md](./docs/core-language-support-matrix.md)
   as the source of truth for `mma-hol` blockers. The current latest-HEAD cold
-  probe gets through the core and Bool test layers, and probe-only source
-  normalizations get `Drule` and `Tactics` green. The next correctness work is
-  no longer Bool performance; it is the promoted parser/evaluator compatibility
-  set exposed by `mma-hol` HEAD `698e3d0`: pattern `|` and `_?` syntax sugar,
-  assignment RHS `& /@` precedence, `Table` substitution into held `Rule` lhs
-  positions, definition lhs own-value evaluation for non-pattern constants,
-  and the over-eager same-expression cycle guard that blocks recursive parser
-  functions such as `parseTypeExpr[]`. Bool performance is now a follow-up
-  lane:
+  probe now gets through the core, Bool, Drule, Tactics, Printer, and Parser
+  test layers on a clean clone without source normalizations. The promoted
+  parser/evaluator compatibility set exposed by `mma-hol` HEAD `698e3d0` has
+  been folded back into `rum`: pattern `|` and `_?` syntax sugar, assignment
+  RHS `& /@` precedence, `Table` substitution into held `Rule` lhs positions,
+  definition lhs own-value evaluation for non-pattern constants, the
+  state-progressing recursive parser cycle-guard case, and ordinary-expression
+  pattern evaluation for `MemberQ` / `MatchQ` style calls. The next correctness
+  work is a bounded cold `run_all.wls` driver and triage of the first
+  stdlib/auto failures beyond Parser/Printer. Bool performance is now a
+  follow-up lane:
   dependency-preloaded `Bool.wl` now completes in about 2.36-2.40s warmed
   external default-release wall time. A prior local `target-cpu=native` release
   build measured about 2.29-2.35s warmed external wall time before the latest

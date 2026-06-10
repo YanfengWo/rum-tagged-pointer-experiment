@@ -60,7 +60,7 @@ impl Session {
         total = total.saturating_add(
             self.evaluation_stack
                 .iter()
-                .map(expr_memory_proxy_bytes)
+                .map(render_evaluation_stack_entry_memory_proxy_bytes)
                 .sum::<usize>()
                 .saturating_add(vec_spare_capacity_bytes(&self.evaluation_stack)),
         );
@@ -525,10 +525,14 @@ fn render_suspended_evaluation_memory_proxy_bytes(suspended: &SuspendedEvaluatio
             suspended
                 .active_stack
                 .iter()
-                .map(expr_memory_proxy_bytes)
+                .map(render_evaluation_stack_entry_memory_proxy_bytes)
                 .sum::<usize>(),
         )
         .saturating_add(suspended.frames.len().saturating_mul(16))
+}
+
+fn render_evaluation_stack_entry_memory_proxy_bytes(entry: &EvaluationStackEntry) -> usize {
+    std::mem::size_of::<EvaluationStackEntry>().saturating_add(expr_memory_proxy_bytes(&entry.expr))
 }
 
 fn render_option_value_scope_memory_proxy_bytes(scope: &OptionValueScope) -> usize {

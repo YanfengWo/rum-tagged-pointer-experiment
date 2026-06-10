@@ -262,6 +262,36 @@ fn definition_lhs_evaluates_call_heads_before_storing_rules() {
 }
 
 #[test]
+fn definition_lhs_evaluates_non_pattern_constants_before_storing_rules() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("ClearAll[f, p, a]; p = a; f[p] := hit; {f[a], f[p], DownValues[f]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[hit, hit, List[RuleDelayed[HoldPattern[f[a]], hit]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ClearAll[f, x]; x = 1; f[x_] := x; {f[a], DownValues[f]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, List[RuleDelayed[HoldPattern[f[Pattern[x, Blank[]]]], x]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ClearAll[f, h, x]; h = Integer; f[x_h] := x; {f[3], DownValues[f]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[3, List[RuleDelayed[HoldPattern[f[Pattern[x, Blank[Integer]]]], x]]]"
+    );
+}
+
+#[test]
 fn definition_lhs_evaluates_outer_call_head_before_selecting_definition_owner() {
     let mut session = Session::new();
 

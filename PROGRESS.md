@@ -322,14 +322,48 @@ are not active project-owned examples.
   lhs forms such as `p = a; f[p] := ...`, and a less eager evaluation-cycle
   guard for state-progressing recursive definitions such as
   `parseTypeExpr[]`.
-- Additional follow-up observations: `Printer` has a low-risk display mismatch
-  for a naked registered infix constant (`formatTerm[=]` renders `"="` instead
-  of `"(=)"`); `Parser` tests currently stop at the same recursive parser
-  cycle issue; `PropTaut` and `Meson` can load and execute small non-parser
-  probes after the syntax/lhs normalizations; `Simp` loads but emits many
-  recursion-limit messages during tests; and the first stdlib type packages
-  (`Pair`, `Sum`, `Option`) then expose derived-theorem failures that should be
-  revisited after the evaluator/source fixes, not before.
+- Additional follow-up observations from this pre-fix probe: `Printer` had a
+  low-risk display mismatch for a naked registered infix constant
+  (`formatTerm[=]` rendered `"="` instead of `"(=)"`); `Parser` tests stopped
+  at the same recursive parser cycle issue; `PropTaut` and `Meson` could load
+  and execute small non-parser probes after the syntax/lhs normalizations;
+  `Simp` loaded but emitted many recursion-limit messages during tests; and
+  the first stdlib type packages (`Pair`, `Sum`, `Option`) then exposed
+  derived-theorem failures that should be revisited after the evaluator/source
+  fixes, not before.
+
+## 2026-06-11 CL-Y Promoted Compatibility Fixes
+
+- Folded the latest `mma-hol` probe-only normalizations back into `rum`:
+  source `|` now lowers to `Alternatives`, `_?pred` lowers to `PatternTest`,
+  and pure-function postfix parsing now lets rule bodies such as
+  `Map[f[#[[1]]] -> #[[2]] &, pairs]` become `Function[Rule[...]]` while
+  preserving assignment RHS map forms such as `ks = #[[1]] & /@ args`.
+- Aligned rule/definition evaluation for the observed HOL workloads:
+  `Rule` / `RuleDelayed` evaluate their lhs enough for substitution into
+  `Table`-generated held rules; pattern names remain protected while blank
+  heads and non-pattern constants are normalized; and definition lhs constants
+  with ownvalues now store rules under the evaluated form (`p = a; f[p] := ...`
+  defines `f[a]`).
+- Replaced the same-expression cycle guard with an epoch-aware guard so
+  state-progressing recursive definitions can continue after mutations while
+  unchanged direct and mutual recursion still fail fast.
+- Fixed ordinary-expression pattern resolution for `MatchQ` / `MemberQ` style
+  calls: explicit pattern syntax stays held, but non-pattern expressions such
+  as `spec["kind"]` are evaluated before compiling an exact pattern. This
+  cleared the `Printer` registered-infix-constant failure.
+- Current clean-clone `mma-hol` HEAD `698e3d0` smoke results, using
+  `/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol` without source
+  normalizations:
+  `bool_tests.wl` reports `List[73, 0]` with cold release wall time about
+  `22.95s`; `drule_tests.wl` reports `List[43, 0]` in about `4.18s`;
+  `tactics_tests.wl` reports `List[49, 0]` in about `5.18s`; and
+  `printer_tests.wl` plus `parser_tests.wl` report `List[126, 0]` in about
+  `4.62s`.
+- Verification: `cargo fmt --check`, `cargo test -p rum-syntax`,
+  `cargo test -p rum-runtime`, and `cargo test --workspace` pass. The next
+  CL-Y step is a bounded cold `run_all.wls` driver and triage of the first
+  stdlib/auto failure beyond Parser/Printer.
 
 ## Completed Architecture Work
 
