@@ -6,6 +6,27 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-11 PropTaut Performance Attribution
+
+- Added `docs/proptaut-performance-audit.md` and the local macOS `sample`
+  reduction helpers `scripts/sample-self-time.py` and
+  `scripts/sample-attribute-callers.py`. The audit corrected the Bool-lane
+  oracle comparison by separating Wolfram startup from kernel-side
+  `AbsoluteTiming`, and reframed the current `PropTaut` cost as the same
+  systemic evaluator factor rather than a special proof-script cliff.
+- Kept the positive evaluator fast-path follow-up on the `PropTaut`
+  distribution theorem: delayed suspension-frame cloning in hot synchronous
+  paths and reduced definition/rewrite-rule cloning moved the release timing
+  from roughly `48.8s` to roughly `46.5s`.
+- Gated `DefinitionStored` trace rendering so ordinary non-tracing execution
+  no longer formats stored-definition RHS strings. The same `PropTaut` probe
+  then measured about `43.55-43.78s`.
+- Added an opt-in cache-invalidation counter probe behind
+  `RUM_PROFILE_EVALUATION_CACHE=1`. It reports power-of-two checkpoints for
+  `epoch_bumps`, `cache_clears`, `stability_checks`,
+  `call_stability_hits`, and `call_stability_misses` to stderr. With the env
+  var unset, the same `PropTaut` probe stayed in the `43.7-43.8s` range.
+
 ## 2026-06-10 Scope Reset
 
 The project is moving from broad core-language expansion toward a `v0.1`
