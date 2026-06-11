@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+mimalloc = "0.1.52"
 rum-repl = { path = "../rum-repl" }
 rum-runtime = { path = "../rum-runtime" }
 rum-stdlib = { path = "../rum-stdlib" }

@@ -2,11 +2,15 @@ use std::env;
 use std::io;
 use std::process::ExitCode;
 
+use mimalloc::MiMalloc;
 use rum_repl::Repl;
 use rum_runtime::{Session, SessionEvalResponse, SessionRequestError, SessionRequestFailure};
 use rum_stdlib::install_core;
 use rum_syntax::{format_parsed_source, parse_format_cli_args};
 use rum_terminal::{render_request_failure, render_runtime_message};
+
+#[global_allocator]
+static GLOBAL_ALLOCATOR: MiMalloc = MiMalloc;
 
 fn main() -> ExitCode {
     match run() {
