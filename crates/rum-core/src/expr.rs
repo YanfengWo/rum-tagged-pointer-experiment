@@ -10,14 +10,14 @@ pub const SYSTEM_CONTEXT: &str = "System`";
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Symbol {
-    context: String,
-    name: String,
+    context: Arc<str>,
+    name: Arc<str>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     identity: Option<u64>,
 }
 
 impl Symbol {
-    pub fn new(context: impl Into<String>, name: impl Into<String>) -> Self {
+    pub fn new(context: impl Into<Arc<str>>, name: impl Into<Arc<str>>) -> Self {
         Self {
             context: context.into(),
             name: name.into(),
@@ -26,8 +26,8 @@ impl Symbol {
     }
 
     pub fn with_identity(
-        context: impl Into<String>,
-        name: impl Into<String>,
+        context: impl Into<Arc<str>>,
+        name: impl Into<Arc<str>>,
         identity: u64,
     ) -> Self {
         Self {
@@ -37,20 +37,20 @@ impl Symbol {
         }
     }
 
-    pub fn from_name(name: impl Into<String>) -> Self {
+    pub fn from_name(name: impl Into<Arc<str>>) -> Self {
         Self::new(GLOBAL_CONTEXT, name)
     }
 
-    pub fn system(name: impl Into<String>) -> Self {
+    pub fn system(name: impl Into<Arc<str>>) -> Self {
         Self::new(SYSTEM_CONTEXT, name)
     }
 
     pub fn context(&self) -> &str {
-        &self.context
+        self.context.as_ref()
     }
 
     pub fn name(&self) -> &str {
-        &self.name
+        self.name.as_ref()
     }
 
     pub fn identity(&self) -> Option<u64> {
@@ -62,8 +62,8 @@ impl Symbol {
     }
 
     pub fn qualified_name(&self) -> String {
-        if self.context == GLOBAL_CONTEXT || self.context == SYSTEM_CONTEXT {
-            self.name.clone()
+        if self.context() == GLOBAL_CONTEXT || self.context() == SYSTEM_CONTEXT {
+            self.name.to_string()
         } else {
             self.fully_qualified_name()
         }
@@ -417,15 +417,15 @@ impl Expr {
         }
     }
 
-    pub fn symbol(name: impl Into<String>) -> Self {
+    pub fn symbol(name: impl Into<Arc<str>>) -> Self {
         Self::Atom(Atom::Symbol(Symbol::from_name(name)))
     }
 
-    pub fn contextual_symbol(context: impl Into<String>, name: impl Into<String>) -> Self {
+    pub fn contextual_symbol(context: impl Into<Arc<str>>, name: impl Into<Arc<str>>) -> Self {
         Self::Atom(Atom::Symbol(Symbol::new(context, name)))
     }
 
-    pub fn system_symbol(name: impl Into<String>) -> Self {
+    pub fn system_symbol(name: impl Into<Arc<str>>) -> Self {
         Self::Atom(Atom::Symbol(Symbol::system(name)))
     }
 

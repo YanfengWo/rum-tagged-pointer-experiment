@@ -34,6 +34,11 @@ checklist stops helping prioritization, move or summarize it here.
   `262144+` skipped unobserved-symbol writes. A regression test covers the
   prior-read case (`Module[{x}, x; x = 1; x]`) where invalidation must still
   happen.
+- Changed `Symbol` storage from two owned `String`s to shared `Arc<str>`
+  context/name fields while preserving the public `context()`/`name()` API,
+  ordering/hash semantics, display behavior, and serialized field shape. This
+  is a low-risk representation step short of full numeric symbol interning;
+  the same release `PropTaut` probe then measured about `32.60-32.82s`.
 
 ## 2026-06-10 Scope Reset
 

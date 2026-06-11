@@ -176,7 +176,7 @@ impl Session {
         let mut candidates = BTreeSet::new();
 
         for name in self.builtins.keys() {
-            let symbol = Symbol::new(SYSTEM_CONTEXT, name);
+            let symbol = Symbol::new(SYSTEM_CONTEXT, name.as_str());
             self.insert_completion_candidate(&mut candidates, &symbol, prefix, explicit_context);
         }
 
