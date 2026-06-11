@@ -304,6 +304,9 @@ pub struct Session {
     pub(super) attribute_set_cache: AttributeSetCache,
     pub(super) builtin_dispatch_spec_cache: BuiltinDispatchSpecCache,
     pub(super) evaluation_epoch: u64,
+    pub(super) symbol_cache_generation: u64,
+    pub(super) call_stability_generation: u64,
+    pub(super) stability_dirty_bloom: u128,
     pub(super) stable_symbol_cache: SymbolStabilityCache,
     pub(super) symbol_call_effect_cache: SymbolCallEffectCache,
     pub(super) call_stability_cache: CallStabilityCache,
@@ -359,7 +362,7 @@ pub(super) struct EvaluationStackEntry {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct SymbolStabilityCacheEntry {
-    pub(super) epoch: u64,
+    pub(super) generation: u64,
     pub(super) stable: bool,
 }
 
@@ -386,7 +389,7 @@ pub(super) struct SymbolCallEffectKey {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct CallEffectCacheEntry {
-    pub(super) epoch: u64,
+    pub(super) generation: u64,
     pub(super) has_effect: bool,
 }
 
@@ -447,10 +450,12 @@ impl CallStabilityCacheKey {
 
 #[derive(Clone, Debug)]
 pub(super) struct CallStabilityCacheEntry {
-    pub(super) epoch: u64,
+    pub(super) generation: u64,
     pub(super) head: SharedExpr,
     pub(super) args: SharedArgs,
     pub(super) stable: bool,
+    pub(super) bloom: u128,
+    pub(super) dirty_snapshot: u128,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

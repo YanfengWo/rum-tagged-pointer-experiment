@@ -271,7 +271,7 @@ impl Session {
         let definition = self.definitions.entry(fresh_symbol).or_default();
         definition.own_value = Some(value);
         definition.delayed_own_value = None;
-        self.bump_evaluation_epoch();
+        self.bump_evaluation_epoch_for_symbol(&fresh_symbol);
     }
 
     fn resume_block_initializers(
@@ -337,7 +337,7 @@ impl Session {
                 let definition = self.definitions.entry(symbol).or_default();
                 definition.own_value = Some(value);
                 definition.delayed_own_value = None;
-                self.bump_evaluation_epoch();
+                self.bump_evaluation_epoch_for_symbol(&symbol);
                 self.resume_block_initializers(items, body, saved_state, index + 1)
             }
             Err(error) => {

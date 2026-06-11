@@ -147,10 +147,11 @@ impl Session {
 
         match update {
             AssociationSetUpdate::Updated(updated) => {
-                let definition = self.definitions.entry(target.symbol().clone()).or_default();
+                let target_symbol = *target.symbol();
+                let definition = self.definitions.entry(target_symbol).or_default();
                 definition.own_value = Some(updated);
                 definition.delayed_own_value = None;
-                self.bump_evaluation_epoch();
+                self.bump_evaluation_epoch_for_symbol(&target_symbol);
             }
             AssociationSetUpdate::MissingKey(key) => {
                 self.push_message(

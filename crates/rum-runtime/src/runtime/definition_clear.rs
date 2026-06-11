@@ -106,7 +106,7 @@ impl Session {
 
                 self.prune_definition_if_empty(&symbol);
                 if changed {
-                    self.bump_evaluation_epoch();
+                    self.bump_evaluation_epoch_for_symbol(&symbol);
                 }
             }
             UnsetDefinitionTarget::DownValue { symbol, lhs } => {
@@ -137,7 +137,7 @@ impl Session {
                         || definition.delayed_own_value.take().is_some();
                     self.prune_definition_if_empty(&symbol);
                     if changed {
-                        self.bump_evaluation_epoch();
+                        self.bump_evaluation_epoch_for_symbol(&symbol);
                     }
                     Ok(changed)
                 } else {
@@ -174,7 +174,7 @@ impl Session {
             .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
         let changed = definition.down_values.len() != original_len;
         if changed {
-            self.bump_evaluation_epoch();
+            self.bump_evaluation_epoch_for_symbol(symbol);
         }
         changed
     }
@@ -200,7 +200,7 @@ impl Session {
             if symbol_has_no_more_up_values {
                 self.refresh_has_up_value_definitions();
             }
-            self.bump_evaluation_epoch();
+            self.bump_evaluation_epoch_for_symbol(symbol);
         }
         changed
     }
@@ -216,7 +216,7 @@ impl Session {
             .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
         let changed = definition.sub_values.len() != original_len;
         if changed {
-            self.bump_evaluation_epoch();
+            self.bump_evaluation_epoch_for_symbol(symbol);
         }
         changed
     }
@@ -228,7 +228,7 @@ impl Session {
             .is_some_and(SymbolDefinition::is_empty)
         {
             self.definitions.remove(symbol);
-            self.bump_evaluation_epoch();
+            self.bump_evaluation_epoch_for_symbol(symbol);
         }
     }
 
@@ -275,7 +275,7 @@ impl Session {
         }
 
         if changed {
-            self.bump_evaluation_epoch();
+            self.bump_evaluation_epoch_for_symbol(symbol);
         }
     }
 
@@ -283,13 +283,13 @@ impl Session {
         self.mark_symbol_removed(symbol);
         self.clear_symbol_state(symbol, true, true, true, true, true);
         if self.declared_stubs.remove(symbol) {
-            self.bump_evaluation_epoch();
+            self.bump_evaluation_epoch_for_symbol(symbol);
         }
     }
 
     fn mark_symbol_removed(&mut self, symbol: &Symbol) {
-        if self.removed_symbols.insert(symbol.clone()) {
-            self.bump_evaluation_epoch();
+        if self.removed_symbols.insert(*symbol) {
+            self.bump_evaluation_epoch_for_symbol(symbol);
         }
 
         if symbol.context() == SYSTEM_CONTEXT {

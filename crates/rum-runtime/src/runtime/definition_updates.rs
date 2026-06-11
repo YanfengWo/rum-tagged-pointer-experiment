@@ -368,6 +368,7 @@ impl Session {
                 let definition = self.definitions.entry(symbol).or_default();
                 definition.own_value = Some(updated.clone());
                 definition.delayed_own_value = None;
+                self.bump_evaluation_epoch_for_symbol(&symbol);
             }
             HeldUpdateTarget::Part {
                 symbol,
@@ -389,9 +390,9 @@ impl Session {
                 let definition = self.definitions.entry(symbol).or_default();
                 definition.own_value = Some(updated_target);
                 definition.delayed_own_value = None;
+                self.bump_evaluation_epoch_for_symbol(&symbol);
             }
         }
-        self.bump_evaluation_epoch();
 
         Ok(match return_value {
             HeldUpdateReturn::Updated => updated,

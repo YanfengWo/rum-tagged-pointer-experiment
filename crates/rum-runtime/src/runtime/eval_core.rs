@@ -146,34 +146,51 @@ impl Session {
         match expr {
             Expr::Atom(Atom::Symbol(symbol)) => self.symbol_is_atom_evaluation_stable(symbol),
             Expr::Atom(_) => true,
-            Expr::Call { head, args } => self.call_is_evaluation_stable_uncached(head, args),
+            Expr::Call { head, args } => self.call_stability_uncached_with_bloom(head, args).0,
         }
     }
 
-    pub(super) fn call_is_evaluation_stable_uncached(
+    /// Uncached stability walk that also reports the bloom over every symbol
+    /// whose definition state the verdict depends on. On an unstable verdict
+    /// the walk stops at the deciding subterm; the symbols visited up to that
+    /// point are exactly the ones that can flip the verdict back.
+    pub(super) fn call_stability_uncached_with_bloom(
         &mut self,
         head: &SharedExpr,
         args: &SharedArgs,
-    ) -> bool {
-        self.cached_expr_is_evaluation_stable(head)
-            && !self.call_head_has_evaluation_effect(head, args)
-            && args
-                .iter()
-                .all(|arg| self.cached_expr_is_evaluation_stable(arg))
+    ) -> (bool, u128) {
+        let (head_stable, mut bloom) = self.cached_expr_stability_with_bloom(head);
+        if !head_stable {
+            return (false, bloom);
+        }
+
+        if self.call_head_has_evaluation_effect(head, args) {
+            return (false, bloom);
+        }
+
+        for arg in args.iter() {
+            let (arg_stable, arg_bloom) = self.cached_expr_stability_with_bloom(arg);
+            bloom |= arg_bloom;
+            if !arg_stable {
+                return (false, bloom);
+            }
+        }
+
+        (true, bloom)
     }
 
-    fn symbol_is_atom_evaluation_stable(&mut self, symbol: &Symbol) -> bool {
+    pub(super) fn symbol_is_atom_evaluation_stable(&mut self, symbol: &Symbol) -> bool {
         if let Some(entry) = self.stable_symbol_cache.get(symbol) {
-            if entry.epoch == self.evaluation_epoch {
+            if entry.generation == self.symbol_cache_generation {
                 return entry.stable;
             }
         }
 
         let stable = self.symbol_is_atom_evaluation_stable_uncached(symbol);
         self.stable_symbol_cache.insert(
-            symbol.clone(),
+            *symbol,
             SymbolStabilityCacheEntry {
-                epoch: self.evaluation_epoch,
+                generation: self.symbol_cache_generation,
                 stable,
             },
         );
@@ -252,7 +269,7 @@ impl Session {
             args_empty,
         };
         if let Some(entry) = self.symbol_call_effect_cache.get(&key) {
-            if entry.epoch == self.evaluation_epoch {
+            if entry.generation == self.symbol_cache_generation {
                 return entry.has_effect;
             }
         }
@@ -261,7 +278,7 @@ impl Session {
         self.symbol_call_effect_cache.insert(
             key,
             CallEffectCacheEntry {
-                epoch: self.evaluation_epoch,
+                generation: self.symbol_cache_generation,
                 has_effect,
             },
         );
