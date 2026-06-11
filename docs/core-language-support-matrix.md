@@ -647,8 +647,8 @@ once in its primary implementation group. Other groups may mention it as
 ### Mechanisms
 
 - `implemented`: contexts, context-path management, package load tracking,
-  loader rollback on failure, message definition storage, message selection,
-  definition/message inspection
+  loader rollback on parse/evaluation/resource failure, message definition
+  storage, message selection, definition/message inspection
 - `partial`: explicit `Protect` / `Unprotect` now work on top of the shared
   attribute model, `Protected` participates in `Attributes[...]`, and current
   definition/message/clear write paths honor a first-pass protected-symbol

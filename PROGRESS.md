@@ -426,6 +426,22 @@ are not active project-owned examples.
   not yet a green smoke. The next work is `PropTaut` / `Simp` performance, not
   more ad hoc Pair-source debugging.
 
+## 2026-06-11 Loader Resource-Failure Contract
+
+- Split top-level `TerminatedEvaluation` handling from file-load handling.
+  Interactive `eval_text`, `eval_script`, and ordinary eval-request paths still
+  convert recursion, iteration, and current resource-budget errors into
+  `TerminatedEvaluation[...]` values with the existing `General::*` message.
+- `eval_file` / `Get` now evaluate loaded forms with resource termination
+  propagated as a real load error. A resource-limit hit during `Get` therefore
+  returns `$Failed`, emits the outer `Get::load` message, hides the internal
+  failing-form message just like other failed loads, and rolls back definitions
+  and package-loader state.
+- Added a runtime regression that lowers `$RecursionLimit`, triggers recursion
+  inside a loaded file, and verifies that pre-failure assignments, post-failure
+  assignments, and the recursive definition are all absent after the failed
+  load.
+
 ## Completed Architecture Work
 
 - The workspace was split into responsibility-oriented crates:

@@ -1,5 +1,11 @@
 use super::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TerminatedEvaluationHandling {
+    ConvertToValue,
+    PropagateError,
+}
+
 impl Session {
     pub(super) fn finalize_top_level_control_flow(
         &mut self,
@@ -141,6 +147,14 @@ impl Session {
     }
 
     pub fn eval_text(&mut self, input: &str) -> Result<EvalOutcome, EvalError> {
+        self.eval_text_with_terminated_handling(input, TerminatedEvaluationHandling::ConvertToValue)
+    }
+
+    fn eval_text_with_terminated_handling(
+        &mut self,
+        input: &str,
+        terminated_handling: TerminatedEvaluationHandling,
+    ) -> Result<EvalOutcome, EvalError> {
         let message_checkpoint = self.messages.len();
         let print_checkpoint = self.prints.len();
         let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
@@ -153,7 +167,14 @@ impl Session {
             let syntax = parse_expr(input)?;
             let expr = self.lower_syntax_expr(&syntax)?;
             let result = self.evaluate(expr);
-            self.finalize_top_level_eval_value(result, handled_error_checkpoint)
+            match terminated_handling {
+                TerminatedEvaluationHandling::ConvertToValue => {
+                    self.finalize_top_level_eval_value(result, handled_error_checkpoint)
+                }
+                TerminatedEvaluationHandling::PropagateError => {
+                    self.finalize_top_level_control_flow(result)
+                }
+            }
         })();
         self.current_message_list_checkpoint = previous_message_list_checkpoint;
         self.current_message_list_dirty = previous_message_list_dirty;
@@ -183,6 +204,24 @@ impl Session {
     }
 
     pub fn eval_script(&mut self, source: &str) -> Result<EvalOutcome, EvalError> {
+        self.eval_script_with_terminated_handling(
+            source,
+            TerminatedEvaluationHandling::ConvertToValue,
+        )
+    }
+
+    fn eval_script_for_loader(&mut self, source: &str) -> Result<EvalOutcome, EvalError> {
+        self.eval_script_with_terminated_handling(
+            source,
+            TerminatedEvaluationHandling::PropagateError,
+        )
+    }
+
+    fn eval_script_with_terminated_handling(
+        &mut self,
+        source: &str,
+        terminated_handling: TerminatedEvaluationHandling,
+    ) -> Result<EvalOutcome, EvalError> {
         let message_checkpoint = self.messages.len();
         let print_checkpoint = self.prints.len();
         let forms = split_script_into_forms(source)?;
@@ -191,7 +230,7 @@ impl Session {
         let mut prints = Vec::new();
 
         for form in forms {
-            match self.eval_text(&form) {
+            match self.eval_text_with_terminated_handling(&form, terminated_handling) {
                 Ok(outcome) => {
                     value = outcome.value;
                     messages.extend(outcome.messages);
@@ -230,7 +269,7 @@ impl Session {
         let snapshot = self.capture_loader_snapshot();
 
         self.load_stack.push(path);
-        let result = self.eval_script(&source);
+        let result = self.eval_script_for_loader(&source);
         self.load_stack.pop();
 
         if result.is_err() {

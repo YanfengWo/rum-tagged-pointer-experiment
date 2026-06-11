@@ -532,6 +532,51 @@ fn get_rolls_back_loader_side_effects_and_collapses_failed_file_messages() {
 }
 
 #[test]
+fn get_treats_resource_termination_as_failed_load_and_rolls_back() {
+    let dir = TempDirGuard::new("get-resource-limit");
+    let file = dir.write(
+        "resource-limit.rum",
+        "preLimitFlag = 1\ngrow[x_] := grow[f[x]]\ngrow[1]\npostLimitFlag = 2",
+    );
+    let mut session = Session::new();
+    session.set_recursion_limit(32);
+
+    let outcome = session
+        .eval_text(&format!("Get[\"{}\"]", rum_path(&file)))
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "$Failed");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Get" && message.tag == "load")
+    );
+    assert!(
+        !outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reclim")
+    );
+    assert_eq!(
+        session.eval_text("preLimitFlag").unwrap().value.to_string(),
+        "preLimitFlag"
+    );
+    assert_eq!(
+        session
+            .eval_text("postLimitFlag")
+            .unwrap()
+            .value
+            .to_string(),
+        "postLimitFlag"
+    );
+    assert_eq!(
+        session.eval_text("grow[1]").unwrap().value.to_string(),
+        "grow[1]"
+    );
+}
+
+#[test]
 fn needs_loads_package_once_and_tracks_loaded_packages() {
     let dir = TempDirGuard::new("needs-once");
     dir.write(
