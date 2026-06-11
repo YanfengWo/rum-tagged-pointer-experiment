@@ -38,6 +38,44 @@ fn exact_integer_arithmetic_evaluates_core_heads() {
 }
 
 #[test]
+fn round_handles_exact_numbers_decimal_literals_and_half_even_ties() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session.eval_text("Round[3/2]").unwrap().value.to_string(),
+        "2"
+    );
+    assert_eq!(
+        session.eval_text("Round[5/2]").unwrap().value.to_string(),
+        "2"
+    );
+    assert_eq!(
+        session.eval_text("Round[7/2]").unwrap().value.to_string(),
+        "4"
+    );
+    assert_eq!(
+        session.eval_text("Round[-5/2]").unwrap().value.to_string(),
+        "-2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Round[7/3, 1/2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "5/2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Round[0.15, 0.1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1/5"
+    );
+}
+
+#[test]
 fn factorial_respects_integer_work_limit() {
     let mut session = Session::new();
     session.set_integer_work_limit(3);

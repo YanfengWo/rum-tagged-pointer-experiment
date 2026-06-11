@@ -128,12 +128,15 @@ Completed history, archived planning detail, and operational lessons live in
   deeper low-level work. If performance work resumes, start from borrowed
   matcher fast paths or delayed definition-candidate materialization before
   considering broader DAG/arena representation changes.
-- [ ] Treat `mma-hol` stable-mode snapshot helpers (`DumpSave`, `Contexts[]`,
-  `$ContextPath` / `$Packages`, file timestamps, and timing reports) as a
-  required developer-workflow gate for `rum-hol` migration. Cold `run_all.wls`
-  remains the semantic baseline; Strict mode is not a snapshot restore target;
-  `rum` `DumpSave` is a textual snapshot format rather than Wolfram `.mx`
-  compatibility. The current gap audit lives in
+- [ ] Treat `mma-hol` stable-mode snapshot helpers as a required
+  developer-workflow gate for `rum-hol` migration. First-pass `Contexts[]`,
+  file timestamp/size/existence helpers, `AbsoluteTime`, `Round`, simple
+  decimal timing literals, and recursive `FileNames[..., ..., Infinity]` are in
+  place. Remaining work is a focused `DumpSave` / `Get` context round-trip
+  regression plus assignment that mutates `$ContextPath` / `$Packages` runtime
+  session fields. Cold `run_all.wls` remains the semantic baseline; Strict mode
+  is not a snapshot restore target; `rum` `DumpSave` is a textual snapshot
+  format rather than Wolfram `.mx` compatibility. The current gap audit lives in
   [docs/mma-hol-smoke-and-snapshot.md](./docs/mma-hol-smoke-and-snapshot.md).
 - [ ] Preserve the already-demonstrated `Module` closure pattern where
   exported definitions retain access to fresh private mutable state after the

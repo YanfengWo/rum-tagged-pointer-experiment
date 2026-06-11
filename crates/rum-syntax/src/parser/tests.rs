@@ -17,6 +17,12 @@ fn parses_large_integer_literal() {
 }
 
 #[test]
+fn parses_simple_decimal_literal_as_numeric_atom() {
+    let parsed = parse_expr("0.01").unwrap();
+    assert_eq!(parsed, SyntaxExpr::integer("0.01", z()));
+}
+
+#[test]
 fn parses_lists_and_nested_calls() {
     let parsed = parse_expr("f[{1, 2}, g[x]]").unwrap();
     assert_eq!(parsed.to_string(), "f[{1, 2}, g[x]]");

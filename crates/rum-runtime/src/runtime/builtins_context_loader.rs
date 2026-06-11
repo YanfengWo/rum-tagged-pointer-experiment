@@ -71,6 +71,50 @@ impl Session {
         }
     }
 
+    pub(super) fn eval_contexts(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if !args.is_empty() {
+            return Ok(self.invalid_call_with_exact_arg_count("Contexts", args, 0));
+        }
+
+        let mut contexts = BTreeSet::new();
+        contexts.insert(SYSTEM_CONTEXT.to_string());
+        contexts.insert(GLOBAL_CONTEXT.to_string());
+        contexts.insert(normalize_context_name(&self.current_context));
+        contexts.extend(
+            self.context_path
+                .iter()
+                .map(|context| normalize_context_name(context)),
+        );
+        contexts.extend(
+            self.loaded_packages
+                .iter()
+                .map(|context| normalize_context_name(context)),
+        );
+
+        for symbol in self
+            .definitions
+            .keys()
+            .chain(self.attributes.keys())
+            .chain(self.options.keys())
+            .chain(self.syntax_information.keys())
+            .chain(self.declared_stubs.iter())
+            .chain(self.removed_symbols.iter())
+        {
+            contexts.insert(symbol.context().to_string());
+        }
+        for key in self.message_definitions.keys() {
+            contexts.insert(key.symbol.context().to_string());
+        }
+        for (context, _) in self.symbol_generations.keys() {
+            contexts.insert(normalize_context_name(context));
+        }
+
+        Ok(Expr::call(
+            system_expr("List"),
+            contexts.into_iter().map(Expr::string).collect(),
+        ))
+    }
+
     pub(super) fn eval_find_file(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let spec = match self.compile_load_target_from_resolved_args(args) {
             Ok(spec) => spec,

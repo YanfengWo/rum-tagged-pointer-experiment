@@ -113,13 +113,17 @@ impl Session {
     }
 
     pub(in crate::runtime) fn eval_file_names(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let (pattern, dirs) = match args {
-            [] => ("*".to_string(), vec![PathBuf::from(".")]),
+        let (pattern, dirs, depth) = match args {
+            [] => (
+                "*".to_string(),
+                vec![PathBuf::from(".")],
+                FileNamesDepth::Finite(1),
+            ),
             [pattern] => {
                 let Some(pattern) = file_names_pattern(pattern) else {
                     return Ok(Expr::call(system_expr("FileNames"), args.to_vec()));
                 };
-                (pattern, vec![PathBuf::from(".")])
+                (pattern, vec![PathBuf::from(".")], FileNamesDepth::Finite(1))
             }
             [pattern, dirs] => {
                 let Some(pattern) = file_names_pattern(pattern) else {
@@ -128,25 +132,26 @@ impl Session {
                 let Some(dirs) = file_names_directories(dirs) else {
                     return Ok(Expr::call(system_expr("FileNames"), args.to_vec()));
                 };
-                (pattern, dirs)
+                (pattern, dirs, FileNamesDepth::Finite(1))
             }
-            _ => return Ok(self.invalid_call_with_arg_range("FileNames", args, 0, 2)),
+            [pattern, dirs, depth] => {
+                let Some(pattern) = file_names_pattern(pattern) else {
+                    return Ok(Expr::call(system_expr("FileNames"), args.to_vec()));
+                };
+                let Some(dirs) = file_names_directories(dirs) else {
+                    return Ok(Expr::call(system_expr("FileNames"), args.to_vec()));
+                };
+                let Some(depth) = file_names_depth(depth) else {
+                    return Ok(Expr::call(system_expr("FileNames"), args.to_vec()));
+                };
+                (pattern, dirs, depth)
+            }
+            _ => return Ok(self.invalid_call_with_arg_range("FileNames", args, 0, 3)),
         };
 
         let mut matches = Vec::new();
         for dir in dirs {
-            let Ok(entries) = fs::read_dir(&dir) else {
-                continue;
-            };
-            for entry in entries.flatten() {
-                let path = entry.path();
-                let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
-                    continue;
-                };
-                if wildcard_matches(&pattern, name) {
-                    matches.push(normalize_found_path(&path).display().to_string());
-                }
-            }
+            collect_file_name_matches(&pattern, &dir, depth, &mut matches);
         }
         matches.sort();
         matches.dedup();
@@ -155,6 +160,81 @@ impl Session {
             system_expr("List"),
             matches.into_iter().map(Expr::string).collect(),
         ))
+    }
+
+    pub(in crate::runtime) fn eval_file_exists_q(
+        &mut self,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [path_expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("FileExistsQ", args, 1));
+        };
+        let Some(path) = load_spec_from_expr(path_expr) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "FileExistsQ",
+                args,
+                "expected a string or File[\"...\"] path",
+            ));
+        };
+
+        Ok(bool_expr(Path::new(&path).exists()))
+    }
+
+    pub(in crate::runtime) fn eval_file_byte_count(
+        &mut self,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [path_expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("FileByteCount", args, 1));
+        };
+        let Some(path) = load_spec_from_expr(path_expr) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "FileByteCount",
+                args,
+                "expected a string or File[\"...\"] path",
+            ));
+        };
+
+        Ok(fs::metadata(path)
+            .map(|metadata| Expr::integer(BigInt::from(metadata.len())))
+            .unwrap_or_else(|_| system_expr("$Failed")))
+    }
+
+    pub(in crate::runtime) fn eval_file_date(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let path_expr = match args {
+            [path] => path,
+            [path, property] if expr_as_string(property) == Some("Modification") => path,
+            [_, _] => return Ok(Expr::call(system_expr("FileDate"), args.to_vec())),
+            _ => return Ok(self.invalid_call_with_arg_range("FileDate", args, 1, 2)),
+        };
+        let Some(path) = load_spec_from_expr(path_expr) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "FileDate",
+                args,
+                "expected a string or File[\"...\"] path",
+            ));
+        };
+
+        Ok(fs::metadata(path)
+            .and_then(|metadata| metadata.modified())
+            .map(|modified| Expr::call(system_expr("DateObject"), vec![unix_time_expr(modified)]))
+            .unwrap_or_else(|_| system_expr("$Failed")))
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FileNamesDepth {
+    Finite(usize),
+    Infinity,
+}
+
+impl FileNamesDepth {
+    fn next(self) -> Option<Self> {
+        match self {
+            Self::Finite(0) => None,
+            Self::Finite(depth) => Some(Self::Finite(depth - 1)),
+            Self::Infinity => Some(Self::Infinity),
+        }
     }
 }
 
@@ -302,6 +382,44 @@ fn file_names_directories(expr: &Expr) -> Option<Vec<PathBuf>> {
         .iter()
         .map(|item| expr_as_string(item).map(PathBuf::from))
         .collect()
+}
+
+fn file_names_depth(expr: &Expr) -> Option<FileNamesDepth> {
+    if is_system_symbol_name(expr, "Infinity") {
+        return Some(FileNamesDepth::Infinity);
+    }
+    expr_as_non_negative_usize(expr).map(FileNamesDepth::Finite)
+}
+
+fn collect_file_name_matches(
+    pattern: &str,
+    dir: &Path,
+    depth: FileNamesDepth,
+    matches: &mut Vec<String>,
+) {
+    let Some(next_depth) = depth.next() else {
+        return;
+    };
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+            continue;
+        };
+        if wildcard_matches(pattern, name) {
+            matches.push(normalize_found_path(&path).display().to_string());
+        }
+        if entry.file_type().is_ok_and(|file_type| file_type.is_dir()) {
+            collect_file_name_matches(pattern, &path, next_depth, matches);
+        }
+    }
+}
+
+fn bool_expr(value: bool) -> Expr {
+    system_expr(if value { "True" } else { "False" })
 }
 
 fn wildcard_matches(pattern: &str, text: &str) -> bool {

@@ -452,10 +452,24 @@ are not active project-owned examples.
   benchmark.
 - Added `docs/mma-hol-smoke-and-snapshot.md` as the canonical note for the
   driver contract and stable snapshot audit. The snapshot lane remains below
-  the cold semantic smoke, but its concrete missing support is now explicit:
+  the cold semantic smoke. At audit time, its concrete missing support was:
   `Contexts[]`, `$ContextPath` / `$Packages` session-field assignment,
   `FileExistsQ`, `FileDate`, `FileByteCount`, `AbsoluteTime`, `Round`,
   `FileNames[..., ..., Infinity]`, and a focused `DumpSave` / `Get` context
+  round-trip regression.
+
+## 2026-06-11 Stable Snapshot Helper Builtins
+
+- Added the first small-helper tranche for `mma-hol` stable snapshot scripts:
+  `Contexts[]`, `FileExistsQ`, `FileByteCount`, `FileDate[..., "Modification"]`,
+  `AbsoluteTime`, `Round`, and `FileNames[pattern, dir, Infinity]`.
+- Kept the timing-literal support narrow: simple `digits.digits` source forms
+  lower to exact rationals, enough for `Round[..., 0.1]` / `Round[..., 0.01]`
+  without introducing Wolfram machine-real or precision semantics.
+- Added focused runtime regressions for context enumeration, recursive file
+  discovery, file metadata helpers, exact/decimal `Round`, and decimal
+  lowering. Remaining stable snapshot work is `$ContextPath` / `$Packages`
+  session-field assignment plus a focused `DumpSave` / `Get` context
   round-trip regression.
 
 ## Completed Architecture Work

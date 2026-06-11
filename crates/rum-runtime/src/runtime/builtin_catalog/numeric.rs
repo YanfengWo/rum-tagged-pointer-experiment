@@ -47,6 +47,11 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Abs,
     ),
     BuiltinSpec::ordinary(
+        "Round",
+        "Rounds exact numbers to the nearest integer or exact multiple in the current snapshot-helper subset.",
+        BuiltinHandler::Round,
+    ),
+    BuiltinSpec::ordinary(
         "Factorial",
         "Computes factorials for non-negative exact integers.",
         BuiltinHandler::Factorial,

@@ -56,11 +56,31 @@ pub(super) const NAMESPACE_BUILTINS: &[BuiltinSpec] = &[
         "Lists matching files in one or more directories in the current first-pass subset.",
         BuiltinHandler::FileNames,
     ),
+    BuiltinSpec::ordinary(
+        "FileExistsQ",
+        "Tests whether a string or File[...] path exists.",
+        BuiltinHandler::FileExistsQ,
+    ),
+    BuiltinSpec::ordinary(
+        "FileByteCount",
+        "Returns the byte length of a string or File[...] path in the current snapshot-helper subset.",
+        BuiltinHandler::FileByteCount,
+    ),
+    BuiltinSpec::ordinary(
+        "FileDate",
+        "Returns a DateObject for a string or File[...] path's modification time in the current snapshot-helper subset.",
+        BuiltinHandler::FileDate,
+    ),
     BuiltinSpec::ordinary_with_hold(
         "Context",
         "Returns the context of the current session or of a symbol.",
         HoldAttribute::HoldFirst,
         BuiltinHandler::Context,
+    ),
+    BuiltinSpec::ordinary(
+        "Contexts",
+        "Lists known contexts in the current session.",
+        BuiltinHandler::Contexts,
     ),
     BuiltinSpec::ordinary(
         "Names",

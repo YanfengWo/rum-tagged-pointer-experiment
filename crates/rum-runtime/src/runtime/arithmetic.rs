@@ -80,6 +80,38 @@ impl Session {
         ))
     }
 
+    pub(super) fn eval_round(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let (value_expr, multiple_expr) = match args {
+            [value] => (value, None),
+            [value, multiple] => (value, Some(multiple)),
+            _ => return Ok(self.invalid_call_with_arg_range("Round", args, 1, 2)),
+        };
+
+        let Some(value) = expr_as_exact_rational(value_expr) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let multiple = match multiple_expr {
+            None => Rational::from_integer(BigInt::from(1_u8)),
+            Some(multiple_expr) => {
+                let Some(multiple) = expr_as_exact_rational(multiple_expr) else {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                };
+                if multiple.numerator() == &BigInt::from(0_u8) {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                }
+                multiple
+            }
+        };
+
+        let scaled = value
+            .div(&multiple)
+            .expect("zero multiple is rejected before exact division");
+        let rounded = round_exact_rational_to_integer(&scaled);
+        Ok(Expr::rational(
+            Rational::from_integer(rounded).mul(&multiple),
+        ))
+    }
+
     pub(super) fn eval_factorial(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 1 {
             return Ok(self.invalid_call_with_exact_arg_count("Factorial", args, 1));
@@ -373,6 +405,28 @@ fn expr_as_signed_integer_value(expr: &Expr) -> Option<BigInt> {
         }
         _ => None,
     }
+}
+
+fn round_exact_rational_to_integer(value: &Rational) -> BigInt {
+    let numerator = value.numerator();
+    let denominator = value.denominator();
+    let negative = numerator < &BigInt::from(0_u8);
+    let abs_numerator = bigint_abs(numerator);
+    let quotient = &abs_numerator / denominator;
+    let remainder = &abs_numerator % denominator;
+    let twice_remainder = remainder * BigInt::from(2_u8);
+
+    let rounded_abs = if twice_remainder < *denominator {
+        quotient
+    } else if twice_remainder > *denominator {
+        quotient + BigInt::from(1_u8)
+    } else if &quotient % BigInt::from(2_u8) == BigInt::from(0_u8) {
+        quotient
+    } else {
+        quotient + BigInt::from(1_u8)
+    };
+
+    if negative { -rounded_abs } else { rounded_abs }
 }
 
 fn bigint_abs(value: &BigInt) -> BigInt {

@@ -41,12 +41,47 @@ where
 }
 
 fn lower_integer_atom(value: &str) -> Result<Expr, EvalError> {
+    if let Some(rational) = lower_decimal_atom(value)? {
+        return Ok(rational);
+    }
+
     let bigint =
         BigInt::parse_bytes(value.as_bytes(), 10).ok_or_else(|| EvalError::InvalidInteger {
             literal: value.to_owned(),
         })?;
 
     Ok(Expr::integer(bigint))
+}
+
+fn lower_decimal_atom(value: &str) -> Result<Option<Expr>, EvalError> {
+    let Some((whole, fractional)) = value.split_once('.') else {
+        return Ok(None);
+    };
+    if whole.is_empty()
+        || fractional.is_empty()
+        || !whole.chars().all(|ch| ch.is_ascii_digit())
+        || !fractional.chars().all(|ch| ch.is_ascii_digit())
+    {
+        return Err(EvalError::InvalidInteger {
+            literal: value.to_owned(),
+        });
+    }
+
+    let numerator =
+        BigInt::parse_bytes(format!("{whole}{fractional}").as_bytes(), 10).ok_or_else(|| {
+            EvalError::InvalidInteger {
+                literal: value.to_owned(),
+            }
+        })?;
+    let mut denominator = BigInt::from(1_u8);
+    for _ in fractional.chars() {
+        denominator *= BigInt::from(10_u8);
+    }
+
+    Ok(Some(Expr::rational(
+        Rational::new(numerator, denominator)
+            .expect("decimal literal denominator is always positive"),
+    )))
 }
 
 fn lower_syntax_args<F>(args: &[SyntaxExpr], resolve_symbol: &mut F) -> Result<Vec<Expr>, EvalError>

@@ -851,12 +851,14 @@ Strict/stable snapshot boundary:
   can round-trip simple definitions, attributes, options, syntax information,
   messages, and name-pattern/context selections. It is not Wolfram `.mx` binary
   compatibility and should be treated as a `rum` snapshot format.
-- The current stable snapshot scripts are not supported end-to-end yet:
-  expression-level `Contexts[]`, assignment that mutates the runtime
-  `$ContextPath` / `$Packages` session fields, and small harness helpers such
-  as `FileDate`, `FileByteCount`, `AbsoluteTime`, and `Round` still need focused
-  support before `tests/build_snapshot.wls` / `tests/run_fast.wls` can be used
-  as the practical development loop for `rum-hol`.
+- The current stable snapshot scripts are not supported end-to-end yet. The
+  first helper tranche is implemented (`Contexts[]`, file
+  existence/date/size helpers, `AbsoluteTime`, `Round`, and recursive
+  `FileNames[..., ..., Infinity]`), but assignment still needs to mutate the
+  runtime `$ContextPath` / `$Packages` session fields, and the `DumpSave` /
+  `Get` context round-trip needs a focused regression before
+  `tests/build_snapshot.wls` / `tests/run_fast.wls` can be used as the
+  practical development loop for `rum-hol`.
 - The current stable snapshot gap audit lives in
   [docs/mma-hol-smoke-and-snapshot.md](./mma-hol-smoke-and-snapshot.md).
 
@@ -922,9 +924,10 @@ the `mma-hol` lane healthy:
 - `Contexts[]`, `DumpSave`, `$ContextPath`, and `$Packages`: these are not
   needed for the first cold `run_all.wls` semantic smoke, but are required for
   the stable-mode snapshot-backed `run_fast.wls` workflow and for practical
-  `rum-hol` development. `DumpSave` exists as a textual `rum` snapshot
-  primitive, but the full context enumeration and context-path restore workflow
-  is not yet complete.
+  `rum-hol` development. `Contexts[]` now enumerates first-pass session
+  contexts, and `DumpSave` exists as a textual `rum` snapshot primitive; the
+  remaining gap is `$ContextPath` / `$Packages` session-field assignment plus a
+  focused context restore regression.
 - script/package source compatibility: initial shebang lines and multiline
   comments are handled by the loader splitter, infix logical/comparison syntax
   lowers to the existing boolean/comparison builtins, `:` named-pattern sugar,
@@ -944,9 +947,11 @@ the `mma-hol` lane healthy:
   normalized through own values before rule storage, which covers the strict
   kernel's private theorem-tag patterns, and `Return[...]` is consumed at
   definition application boundaries instead of leaking to callers.
-- `FileDate`, `FileByteCount`, `AbsoluteTime`, and `Round`: harness utilities
-  for snapshot freshness and timing reports; keep them scoped to script/harness
-  support rather than general system monitoring.
+- `FileExistsQ`, `FileDate`, `FileByteCount`, `AbsoluteTime`, and `Round`:
+  first-pass harness utilities for snapshot freshness and timing reports;
+  simple decimal timing literals lower to exact rationals. Keep this scoped to
+  script/harness support rather than general system monitoring or full
+  machine-real semantics.
 - `Import[..., "Text"]`, `Reap`, and `Sow`: needed by the private-context lint
   script, but below the cold run and snapshot lanes in priority.
 - clean-HEAD source smoke: using a clean archive of `mma-hol` HEAD `83d768f`,
@@ -1098,16 +1103,17 @@ These are useful surfaces that exist today, but they are not themselves part
 of the page-defined official matrix above.
 
 - `implemented`: `CharacterRange`, `Context`, `FindFile`, `Get`,
-  `InputString`, `Level`, `MessageDefinitions`, `MessageTags`, `Messages`,
-  `NormalizeRules`, `ReleaseHold`, `SetAttributes`, `ClearAttributes`,
-  `StringEndsQ`, `StringStartsQ`, `StringTrim`, `TagSetDelayed`, `TagUnset`,
-  `$Context`, `$Failed`, `$InputFileName`, `$MessageList`, `$Path`, `File`,
-  `FileNameJoin`, `DirectoryName`, `ParentDirectory`, `FileNames`,
-  `FileNameTake`, `Exit`, `Total`, `Denominator`
+  `Contexts`, `InputString`, `Level`, `MessageDefinitions`, `MessageTags`,
+  `Messages`, `NormalizeRules`, `ReleaseHold`, `SetAttributes`,
+  `ClearAttributes`, `StringEndsQ`, `StringStartsQ`, `StringTrim`,
+  `TagSetDelayed`, `TagUnset`, `$Context`, `$Failed`, `$InputFileName`,
+  `$MessageList`, `$Path`, `File`, `FileNameJoin`, `DirectoryName`,
+  `ParentDirectory`, `FileNames`, `FileNameTake`, `FileExistsQ`, `FileDate`,
+  `FileByteCount`, `AbsoluteTime`, `Round`, `Exit`, `Total`, `Denominator`
 - `planned`: remaining real-project script/package glue promoted by `CL-Y`,
-  currently including script timing and file-metadata helpers, `Contexts[]` /
-  snapshot workflow support, `Import[..., "Text"]` for linting, text-only
-  `Row`, a bounded `mma-hol` smoke driver, and the Bool-layer
+  currently including `$ContextPath` / `$Packages` session-field assignment,
+  focused snapshot workflow regression, `Import[..., "Text"]` for linting,
+  text-only `Row`, a bounded `mma-hol` smoke driver, and the Bool-layer
   `GEN` / `BETACONV` deep term traversal blocker exposed after the current
   core `types` / `terms` / `kernel` assertions were cleared
 

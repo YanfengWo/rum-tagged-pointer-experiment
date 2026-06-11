@@ -232,6 +232,15 @@ impl<'a> Lexer<'a> {
             self.bump_char();
         }
 
+        if self.peek_char() == Some('.')
+            && self.peek_next_char().is_some_and(|ch| ch.is_ascii_digit())
+        {
+            self.bump_char();
+            while matches!(self.peek_char(), Some(ch) if ch.is_ascii_digit()) {
+                self.bump_char();
+            }
+        }
+
         TokenKind::Integer(self.input[start..self.offset].to_string())
     }
 
@@ -429,6 +438,12 @@ impl<'a> Lexer<'a> {
 
     fn peek_char(&self) -> Option<char> {
         self.input[self.offset..].chars().next()
+    }
+
+    fn peek_next_char(&self) -> Option<char> {
+        let mut chars = self.input[self.offset..].chars();
+        chars.next()?;
+        chars.next()
     }
 
     fn bump_char(&mut self) -> Option<char> {

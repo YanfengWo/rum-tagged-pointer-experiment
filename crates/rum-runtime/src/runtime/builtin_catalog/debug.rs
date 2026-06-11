@@ -19,6 +19,11 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
         BuiltinHandler::Timing,
     ),
+    BuiltinSpec::ordinary(
+        "AbsoluteTime",
+        "Returns the current Unix time or converts a first-pass DateObject to exact seconds.",
+        BuiltinHandler::AbsoluteTime,
+    ),
     BuiltinSpec::ordinary_with_hold(
         "AbsoluteTiming",
         "Evaluates an expression and returns {elapsed, value} using the current wall-clock exact-rational subset.",

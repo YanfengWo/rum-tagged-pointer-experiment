@@ -31,6 +31,7 @@ fn path_variables_and_file_name_helpers_cover_current_script_environment_subset(
     );
     root.write("nested/a.wl", "");
     root.write("nested/b.txt", "");
+    root.write("nested/deep/c.wl", "abcde");
 
     let mut session = Session::new();
     assert_eq!(
@@ -86,6 +87,57 @@ fn path_variables_and_file_name_helpers_cover_current_script_environment_subset(
     assert_eq!(
         files.value.to_string(),
         format!("List[\"{}\"]", rum_path(&nested_dir.join("a.wl")))
+    );
+
+    let recursive_files = session
+        .eval_text(&format!(
+            "FileNames[\"*.wl\", \"{}\", Infinity]",
+            rum_path(root.path())
+        ))
+        .unwrap();
+    assert_eq!(
+        recursive_files.value.to_string(),
+        format!(
+            "List[\"{}\", \"{}\"]",
+            rum_path(&nested_dir.join("a.wl")),
+            rum_path(&nested_dir.join("deep/c.wl"))
+        )
+    );
+
+    assert_eq!(
+        session
+            .eval_text(&format!(
+                "List[FileExistsQ[File[\"{}\"]], FileExistsQ[\"{}\"]]",
+                rum_path(&nested_dir.join("a.wl")),
+                rum_path(&nested_dir.join("missing.wl"))
+            ))
+            .unwrap()
+            .value
+            .to_string(),
+        "List[True, False]"
+    );
+    assert_eq!(
+        session
+            .eval_text(&format!(
+                "FileByteCount[\"{}\"]",
+                rum_path(&nested_dir.join("deep/c.wl"))
+            ))
+            .unwrap()
+            .value
+            .to_string(),
+        "5"
+    );
+    assert_eq!(
+        session
+            .eval_text(&format!(
+                "List[DateObjectQ[FileDate[\"{}\", \"Modification\"]], NumberQ[AbsoluteTime[FileDate[\"{}\"]]]]",
+                rum_path(&nested_dir.join("deep/c.wl")),
+                rum_path(&nested_dir.join("deep/c.wl"))
+            ))
+            .unwrap()
+            .value
+            .to_string(),
+        "List[True, True]"
     );
 
     let parent = session
@@ -167,6 +219,24 @@ fn context_builtin_reports_session_and_symbol_contexts_without_evaluating_symbol
             .to_string(),
         "Context[\"MissingSymbol\"]"
     );
+}
+
+#[test]
+fn contexts_lists_known_session_contexts() {
+    let mut session = Session::new();
+
+    session.eval_text("BeginPackage[\"Demo`\"]").unwrap();
+    session.eval_text("public = 1").unwrap();
+    session.eval_text("Begin[\"`Private`\"]").unwrap();
+    session.eval_text("hidden = 2").unwrap();
+    session.eval_text("End[]").unwrap();
+    session.eval_text("EndPackage[]").unwrap();
+
+    let contexts = session.eval_text("Contexts[]").unwrap().value.to_string();
+    assert!(contexts.contains("\"System`\""));
+    assert!(contexts.contains("\"Global`\""));
+    assert!(contexts.contains("\"Demo`\""));
+    assert!(contexts.contains("\"Demo`Private`\""));
 }
 
 #[test]

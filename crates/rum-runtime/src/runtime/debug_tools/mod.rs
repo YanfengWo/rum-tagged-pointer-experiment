@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use super::*;
 
@@ -12,6 +12,8 @@ mod resources;
 mod shared;
 mod test_report;
 mod timing;
+
+pub(super) use self::timing::unix_time_expr;
 mod trace;
 
 use self::properties::association_property_by_name;

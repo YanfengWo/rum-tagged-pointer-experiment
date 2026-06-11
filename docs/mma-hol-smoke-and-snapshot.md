@@ -101,36 +101,32 @@ Already covered enough for cold or partial snapshot work:
 
 - `Get`, `Needs`, `$Path`, `$InputFileName`
 - `FileNameJoin`, `DirectoryName`, `ParentDirectory`, `FileNameTake`,
-  first-pass `FileNames`
+  first-pass `FileNames`, including `FileNames[pattern, dir, Infinity]`
 - `StringContainsQ` and current `StringMatchQ` subset
+- `Contexts[]` first-pass session context enumeration
+- `FileExistsQ`, `FileDate[..., "Modification"]`, `FileByteCount`,
+  `AbsoluteTime`, and `Round` for snapshot freshness and timing reports
+- simple `digits.digits` source literals lower to exact rationals, covering
+  timing intervals such as `0.1` / `0.01` without introducing machine-real
+  semantics
 - textual `Save` / `DumpSave` object persistence and `Get` restore for the
   current saved-definition subset
 
 Not yet closed for stable snapshot scripts:
 
-- `Contexts[]`
 - assignment to `$ContextPath` / `$Packages` as runtime session fields, not
   merely inert own values
-- `FileExistsQ`
-- `FileDate`
-- `FileByteCount`
-- `AbsoluteTime`
-- `Round`
-- `FileNames` third-argument depth, including `Infinity`
 - a regression proving
   `DumpSave[snapshotFile, Evaluate[holContexts]]; Get[snapshotFile]` restores
   enough public/private `HOL` contexts for `run_fast.wls`
 
 ### Recommended Next Order
 
-1. Add the small script helper builtins:
-   `Contexts[]`, `FileExistsQ`, `FileDate`, `FileByteCount`,
-   `AbsoluteTime`, and `Round`.
-2. Extend `FileNames` to the `FileNames[pattern, dir, Infinity]` shape used by
-   snapshot staleness checks.
-3. Add a runtime snapshot regression with a tiny synthetic package tree before
+1. Add a runtime snapshot regression with a tiny synthetic package tree before
    trying the full `mma-hol` stable scripts.
-4. Try `tests/build_snapshot.wls` only through the current green cold frontier,
+2. Teach assignment to `$ContextPath` / `$Packages` to mutate the runtime
+   session fields needed after snapshot restore.
+3. Try `tests/build_snapshot.wls` only through the current green cold frontier,
    then use `tests/run_fast.wls` on one small test pattern.
 
 Keep this lane below the cold semantic smoke while `PropTaut` / `Simp` remains

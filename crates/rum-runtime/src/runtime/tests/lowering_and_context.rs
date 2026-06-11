@@ -13,6 +13,13 @@ fn lowers_big_integer_into_core_expr() {
 }
 
 #[test]
+fn lowers_simple_decimal_literals_to_exact_rationals() {
+    let lowered = lower_syntax_expr(&parse_expr("0.01").unwrap()).unwrap();
+
+    assert_eq!(lowered.to_string(), "1/100");
+}
+
+#[test]
 fn lowering_rejects_invalid_integer_literals_before_runtime() {
     let error = lower_syntax_expr(&SyntaxExpr::integer("not-a-number", Span::default()))
         .expect_err("invalid integer syntax atoms should fail during lowering");
