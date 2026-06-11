@@ -34,6 +34,7 @@ Modes:
 Useful controls:
 
 - `--timeout SECONDS` bounds each stage.
+- `--only LABEL` runs one selected stage such as `test/proptaut_tests`.
 - `--limit N` stops after the first `N` selected stages.
 - `--keep-going` continues after failures so later independent test probes can
   report their own status.
@@ -44,10 +45,12 @@ for each stage. That makes the first failing load boundary explicit and avoids
 keeping long-lived session state hidden inside the driver. It should not be
 used to compare elapsed time across commits.
 
-The test stages load the current minimal harness prelude
-(`ErrorUtil.wl`, `Types.wl`, `Terms.wl`, `Kernel.wl`, and
-`tests/harness.wl`) and then run one test file. They classify `List[n, 0]` as
-green and keep the full captured output for failed-test triage.
+The test stages preload the package dependency prefix needed by the selected
+test file, then load `tests/harness.wl` and run one test file. That keeps
+`Needs[...]` package lookup noise out of performance triage; for example,
+`test/proptaut_tests` preloads through `auto/PropTaut.wl` before running the
+test. Test stages classify `List[n, 0]` as green and keep the full captured
+output for failed-test triage.
 
 ## Stable Snapshot Workflow Audit
 
@@ -103,6 +106,7 @@ Already covered enough for cold or partial snapshot work:
 - `FileNameJoin`, `DirectoryName`, `ParentDirectory`, `FileNameTake`,
   first-pass `FileNames`, including `FileNames[pattern, dir, Infinity]`
 - `StringContainsQ` and current `StringMatchQ` subset
+- `StringMatchQ` string wildcards such as `"HOL`*"` for context filtering
 - `Contexts[]` first-pass session context enumeration
 - `FileExistsQ`, `FileDate[..., "Modification"]`, `FileByteCount`,
   `AbsoluteTime`, and `Round` for snapshot freshness and timing reports
@@ -111,23 +115,22 @@ Already covered enough for cold or partial snapshot work:
   semantics
 - textual `Save` / `DumpSave` object persistence and `Get` restore for the
   current saved-definition subset
+- `DumpSave[file, Evaluate[contexts]]` where `contexts` is a list of context
+  strings, plus restore-time `$ContextPath` / `$Packages` session-field
+  assignment, covered by a tiny public/private context regression
 
 Not yet closed for stable snapshot scripts:
 
-- assignment to `$ContextPath` / `$Packages` as runtime session fields, not
-  merely inert own values
-- a regression proving
-  `DumpSave[snapshotFile, Evaluate[holContexts]]; Get[snapshotFile]` restores
-  enough public/private `HOL` contexts for `run_fast.wls`
+- full `tests/build_snapshot.wls` / `tests/run_fast.wls` validation against the
+  current `mma-hol` tree
 
 ### Recommended Next Order
 
-1. Add a runtime snapshot regression with a tiny synthetic package tree before
-   trying the full `mma-hol` stable scripts.
-2. Teach assignment to `$ContextPath` / `$Packages` to mutate the runtime
-   session fields needed after snapshot restore.
-3. Try `tests/build_snapshot.wls` only through the current green cold frontier,
+1. Try `tests/build_snapshot.wls` only through the current green cold frontier,
    then use `tests/run_fast.wls` on one small test pattern.
+2. If that works, promote the stable script probe into the bounded smoke driver
+   as a separate non-performance lane.
+3. Keep any private-context lint probe below the cold and stable snapshot lanes.
 
 Keep this lane below the cold semantic smoke while `PropTaut` / `Simp` remains
 the main `mma-hol` blocker.

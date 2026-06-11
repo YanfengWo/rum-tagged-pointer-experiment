@@ -22,6 +22,36 @@ fn context_variables_and_builtin_inspection_reflect_session_contexts() {
 }
 
 #[test]
+fn context_path_and_packages_assignments_update_session_fields() {
+    let mut session = Session::new();
+
+    session.eval_text("Rules`x = 10").unwrap();
+    session.eval_text("Global`x = 20").unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("$ContextPath = {\"Rules\", \"System`\", \"Rules`\"}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"Rules\", \"System`\", \"Rules`\"]"
+    );
+    assert_eq!(
+        session.eval_text("$ContextPath").unwrap().value.to_string(),
+        "List[\"Rules`\", \"System`\"]"
+    );
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "10");
+
+    session
+        .eval_text("$Packages = {\"Pkg\", \"Pkg`\", \"Other`\"}")
+        .unwrap();
+    assert_eq!(
+        session.eval_text("$Packages").unwrap().value.to_string(),
+        "List[\"Pkg`\", \"Other`\"]"
+    );
+}
+
+#[test]
 fn path_variables_and_file_name_helpers_cover_current_script_environment_subset() {
     let root = TempDirGuard::new("file-name-helpers");
     let package = root.write("Pkg.rum", "BeginPackage[\"Pkg`\"]\nvalue = 7\nEndPackage[]");
@@ -138,6 +168,17 @@ fn path_variables_and_file_name_helpers_cover_current_script_environment_subset(
             .value
             .to_string(),
         "List[True, True]"
+    );
+    assert_eq!(
+        session
+            .eval_text(&format!(
+                "Import[File[\"{}\"], \"Text\"]",
+                rum_path(&nested_dir.join("deep/c.wl"))
+            ))
+            .unwrap()
+            .value
+            .to_string(),
+        "\"abcde\""
     );
 
     let parent = session

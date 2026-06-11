@@ -23,6 +23,11 @@ pub(super) const STRING_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::StringForm,
     ),
     BuiltinSpec::ordinary(
+        "Row",
+        "Renders a list of expressions as a single text string in the current harness subset.",
+        BuiltinHandler::Row,
+    ),
+    BuiltinSpec::ordinary(
         "StringRiffle",
         "Riffles strings together using the current flat and nested-list separator subset.",
         BuiltinHandler::StringRiffle,

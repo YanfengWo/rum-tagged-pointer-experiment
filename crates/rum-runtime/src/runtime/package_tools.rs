@@ -250,6 +250,15 @@ impl Session {
                 }
                 Ok(())
             }
+            Expr::Atom(Atom::String(context)) if context.ends_with('`') => {
+                let context = expand_context_spec(context, &self.current_context);
+                for symbol in self.symbols_in_context(&context) {
+                    if !collected.iter().any(|existing| existing == &symbol) {
+                        collected.push(symbol);
+                    }
+                }
+                Ok(())
+            }
             Expr::Call { head, args } if is_system_symbol_name(head, "List") => {
                 for item in args {
                     self.collect_save_symbols(item, collected)?;
@@ -270,6 +279,43 @@ impl Session {
                 Ok(())
             }
         }
+    }
+
+    fn symbols_in_context(&self, context: &str) -> BTreeSet<Symbol> {
+        let mut symbols = BTreeSet::new();
+
+        symbols.extend(
+            self.definitions
+                .keys()
+                .filter(|symbol| symbol.context() == context)
+                .cloned(),
+        );
+        symbols.extend(
+            self.attributes
+                .keys()
+                .filter(|symbol| symbol.context() == context)
+                .cloned(),
+        );
+        symbols.extend(
+            self.options
+                .keys()
+                .filter(|symbol| symbol.context() == context)
+                .cloned(),
+        );
+        symbols.extend(
+            self.syntax_information
+                .keys()
+                .filter(|symbol| symbol.context() == context)
+                .cloned(),
+        );
+        symbols.extend(
+            self.message_definitions
+                .keys()
+                .filter(|key| key.symbol.context() == context)
+                .map(|key| key.symbol.clone()),
+        );
+
+        symbols
     }
 
     fn resolve_output_path(&self, spec: &str) -> PathBuf {

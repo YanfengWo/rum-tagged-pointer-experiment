@@ -160,6 +160,7 @@ impl Session {
             BuiltinHandler::FileExistsQ => self.eval_file_exists_q(args),
             BuiltinHandler::FileByteCount => self.eval_file_byte_count(args),
             BuiltinHandler::FileDate => self.eval_file_date(args),
+            BuiltinHandler::Import => self.eval_import(args),
             BuiltinHandler::Get => self.eval_get(args),
             BuiltinHandler::Needs => self.eval_needs(args),
             BuiltinHandler::Context => self.eval_context(args),

@@ -143,8 +143,8 @@ fn parse_string_patterns(expr: &Expr) -> Option<Vec<StringPattern>> {
 }
 
 fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
-    if let Some(chars) = expr_as_non_empty_char_vec(expr) {
-        return Some(StringPattern::Literal(chars));
+    if let Some(value) = expr_as_string(expr).filter(|value| !value.is_empty()) {
+        return Some(parse_string_literal_pattern(value));
     }
 
     if is_system_symbol_name(expr, "Blank") {
@@ -312,6 +312,42 @@ fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
     }
 
     None
+}
+
+fn parse_string_literal_pattern(value: &str) -> StringPattern {
+    if !value.chars().any(|ch| matches!(ch, '*' | '?')) {
+        return StringPattern::Literal(value.chars().collect());
+    }
+
+    let mut parts = Vec::new();
+    let mut literal = Vec::new();
+
+    for ch in value.chars() {
+        match ch {
+            '*' => {
+                if !literal.is_empty() {
+                    parts.push(StringPattern::Literal(std::mem::take(&mut literal)));
+                }
+                parts.push(StringPattern::AnySequence { min: 0 });
+            }
+            '?' => {
+                if !literal.is_empty() {
+                    parts.push(StringPattern::Literal(std::mem::take(&mut literal)));
+                }
+                parts.push(StringPattern::AnyCharacter);
+            }
+            other => literal.push(other),
+        }
+    }
+
+    if !literal.is_empty() {
+        parts.push(StringPattern::Literal(literal));
+    }
+
+    match parts.as_slice() {
+        [only] => only.clone(),
+        _ => StringPattern::Sequence(parts),
+    }
 }
 
 fn parse_exact_string_replacement_rules(expr: &Expr) -> Option<Vec<ExactStringReplacementRule>> {
@@ -567,9 +603,4 @@ fn parse_string_repetition_bounds(expr: &Expr) -> Option<(usize, Option<usize>)>
         }
         _ => None,
     }
-}
-
-fn expr_as_non_empty_char_vec(expr: &Expr) -> Option<Vec<char>> {
-    let chars = expr_as_string(expr)?.chars().collect::<Vec<_>>();
-    (!chars.is_empty()).then_some(chars)
 }

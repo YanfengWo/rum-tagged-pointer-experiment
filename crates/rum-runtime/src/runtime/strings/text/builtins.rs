@@ -140,6 +140,37 @@ impl Session {
         Ok(Expr::call(head.clone(), args.to_vec()))
     }
 
+    pub(in crate::runtime) fn eval_row(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let (items_expr, separator) = match args {
+            [items] => (items, String::new()),
+            [items, separator] => (items, row_text_piece(separator)),
+            _ => return Ok(self.invalid_call_with_arg_range("Row", args, 1, 2)),
+        };
+
+        let Expr::Call {
+            head: items_head,
+            args: items,
+        } = items_expr
+        else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        if !is_system_symbol_name(items_head, "List") {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
+
+        Ok(Expr::string(
+            items
+                .iter()
+                .map(row_text_piece)
+                .collect::<Vec<_>>()
+                .join(&separator),
+        ))
+    }
+
     pub(in crate::runtime) fn eval_string_pad_left(
         &mut self,
         head: &Expr,
@@ -494,6 +525,12 @@ impl Session {
 
         Expr::call(head.clone(), args.to_vec())
     }
+}
+
+fn row_text_piece(expr: &Expr) -> String {
+    expr_as_string(expr)
+        .map(str::to_string)
+        .unwrap_or_else(|| render_to_string_expr(expr, ToStringFormat::OutputLike))
 }
 
 fn character_range_count(start: char, end: char) -> usize {

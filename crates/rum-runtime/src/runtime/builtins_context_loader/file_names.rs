@@ -220,6 +220,30 @@ impl Session {
             .map(|modified| Expr::call(system_expr("DateObject"), vec![unix_time_expr(modified)]))
             .unwrap_or_else(|_| system_expr("$Failed")))
     }
+
+    pub(in crate::runtime) fn eval_import(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [path_expr, format_expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Import", args, 2));
+        };
+        if expr_as_string(format_expr) != Some("Text") {
+            return Ok(Expr::call(system_expr("Import"), args.to_vec()));
+        }
+        let Some(path) = load_spec_from_expr(path_expr) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "Import",
+                args,
+                "expected a string or File[\"...\"] path",
+            ));
+        };
+
+        match fs::read_to_string(&path) {
+            Ok(source) => Ok(Expr::string(source)),
+            Err(error) => {
+                self.push_message("Import", "io", format!("could not read `{path}`: {error}"));
+                Ok(system_expr("$Failed"))
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -169,6 +169,32 @@ impl Session {
         delayed: bool,
     ) -> Result<Expr, EvalError> {
         if !delayed {
+            if is_context_path_symbol_expr(&lhs) {
+                let Some(contexts) = expr_as_string_list(&rhs) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        symbol,
+                        &[lhs, rhs],
+                        "expected $ContextPath to be assigned a list of string contexts",
+                    ));
+                };
+                self.context_path = normalize_context_list(contexts);
+                self.bump_evaluation_epoch();
+                return Ok(rhs);
+            }
+
+            if is_packages_symbol_expr(&lhs) {
+                let Some(packages) = expr_as_string_list(&rhs) else {
+                    return Ok(self.invalid_call_with_arg_form(
+                        symbol,
+                        &[lhs, rhs],
+                        "expected $Packages to be assigned a list of string contexts",
+                    ));
+                };
+                self.loaded_packages = normalize_context_list(packages);
+                self.bump_evaluation_epoch();
+                return Ok(rhs);
+            }
+
             if is_path_symbol_expr(&lhs) {
                 let Some(paths) = expr_as_string_list(&rhs) else {
                     return Ok(self.invalid_call_with_arg_form(
@@ -432,8 +458,27 @@ impl Session {
     }
 }
 
+fn is_context_path_symbol_expr(expr: &Expr) -> bool {
+    matches!(expr, Expr::Atom(Atom::Symbol(symbol)) if symbol.context() == SYSTEM_CONTEXT && symbol.name() == "$ContextPath")
+}
+
+fn is_packages_symbol_expr(expr: &Expr) -> bool {
+    matches!(expr, Expr::Atom(Atom::Symbol(symbol)) if symbol.context() == SYSTEM_CONTEXT && symbol.name() == "$Packages")
+}
+
 fn is_path_symbol_expr(expr: &Expr) -> bool {
     matches!(expr, Expr::Atom(Atom::Symbol(symbol)) if symbol.context() == SYSTEM_CONTEXT && symbol.name() == "$Path")
+}
+
+fn normalize_context_list(contexts: Vec<String>) -> Vec<String> {
+    let mut normalized = Vec::new();
+    for context in contexts {
+        let context = normalize_context_name(context);
+        if !normalized.iter().any(|existing| existing == &context) {
+            normalized.push(context);
+        }
+    }
+    normalized
 }
 
 fn rule_lhs_contains_pattern_syntax(expr: &Expr) -> bool {

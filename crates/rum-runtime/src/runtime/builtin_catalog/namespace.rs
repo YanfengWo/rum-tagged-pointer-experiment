@@ -71,6 +71,11 @@ pub(super) const NAMESPACE_BUILTINS: &[BuiltinSpec] = &[
         "Returns a DateObject for a string or File[...] path's modification time in the current snapshot-helper subset.",
         BuiltinHandler::FileDate,
     ),
+    BuiltinSpec::ordinary(
+        "Import",
+        "Imports a string or File[...] path as text in the current lint-helper subset.",
+        BuiltinHandler::Import,
+    ),
     BuiltinSpec::ordinary_with_hold(
         "Context",
         "Returns the context of the current session or of a symbol.",

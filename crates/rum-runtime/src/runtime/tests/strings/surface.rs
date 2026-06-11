@@ -21,6 +21,14 @@ fn string_construction_and_measurement_use_code_point_semantics() {
         eval_to_string(&mut session, "StringLength[{\"a\", \"bc\"}]"),
         "List[1, 2]"
     );
+    assert_eq!(
+        eval_to_string(&mut session, "Row[{\"x = \", 1 + 2, \"!\"}]"),
+        "\"x = 3!\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Row[{a, b, c}, \", \"]"),
+        "\"a, b, c\""
+    );
 }
 
 #[test]
@@ -316,6 +324,14 @@ fn string_character_classes_and_case_mapping_extend_the_string_subset() {
     assert_eq!(
         eval_to_string(&mut session, "StringMatchQ[\" \\t\", Whitespace]"),
         "True"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringMatchQ[\"Snap`Private`\", \"Snap`*\"]"),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringMatchQ[\"Other`\", \"Snap`*\"]"),
+        "False"
     );
     assert_eq!(
         eval_to_string(&mut session, "StringFreeQ[\"abc\", Whitespace]"),

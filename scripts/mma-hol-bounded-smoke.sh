@@ -13,6 +13,7 @@ Options:
   --mode MODE          loads, tests, or all. Defaults to loads.
   --timeout SECONDS    Per-stage wall timeout. Defaults to 60.
   --output-dir PATH    Directory for summary.tsv and per-stage logs.
+  --only LABEL         Run one selected stage label, e.g. test/proptaut_tests.
   --limit N            Stop after N selected stages.
   --keep-going         Continue after a failed stage.
   --list               Print selected stages and exit.
@@ -41,6 +42,7 @@ mma_hol_root=${RUM_MMA_HOL_ROOT:-}
 mode=${RUM_MMA_HOL_MODE:-loads}
 timeout_seconds=${RUM_MMA_HOL_TIMEOUT:-60}
 output_dir=${RUM_MMA_HOL_OUTPUT_DIR:-}
+only_label=${RUM_MMA_HOL_ONLY:-}
 limit=0
 keep_going=0
 list_only=0
@@ -66,6 +68,11 @@ while [[ $# -gt 0 ]]; do
     --output-dir)
       [[ $# -ge 2 ]] || { echo "error: --output-dir expects a path" >&2; exit 2; }
       output_dir=$2
+      shift 2
+      ;;
+    --only)
+      [[ $# -ge 2 ]] || { echo "error: --only expects a stage label" >&2; exit 2; }
+      only_label=$2
       shift 2
       ;;
     --limit)
@@ -263,6 +270,38 @@ test_files=(
   tests/real_complete_tests.wl
 )
 
+test_preload_load_indices=(
+  3
+  0
+  1
+  2
+  4
+  5
+  6
+  7
+  8
+  9
+  10
+  11
+  12
+  12
+  13
+  14
+  15
+  16
+  17
+  18
+  19
+  20
+  21
+  22
+  23
+  24
+  25
+  31
+  31
+)
+
 stage_labels=()
 stage_kinds=()
 stage_indices=()
@@ -290,6 +329,27 @@ case "${mode}" in
   tests) append_test_stages ;;
   all) append_load_stages; append_test_stages ;;
 esac
+
+if [[ -n "${only_label}" ]]; then
+  selected_label=()
+  selected_kind=()
+  selected_index=()
+  for i in "${!stage_labels[@]}"; do
+    if [[ "${stage_labels[$i]}" == "${only_label}" ]]; then
+      selected_label+=("${stage_labels[$i]}")
+      selected_kind+=("${stage_kinds[$i]}")
+      selected_index+=("${stage_indices[$i]}")
+      break
+    fi
+  done
+  if [[ "${#selected_label[@]}" -eq 0 ]]; then
+    echo "error: unknown stage label for --only: ${only_label}" >&2
+    exit 2
+  fi
+  stage_labels=("${selected_label[@]}")
+  stage_kinds=("${selected_kind[@]}")
+  stage_indices=("${selected_index[@]}")
+fi
 
 if [[ "${limit}" -gt 0 && "${limit}" -lt "${#stage_labels[@]}" ]]; then
   stage_labels=("${stage_labels[@]:0:${limit}}")
@@ -353,11 +413,12 @@ load_expr_through() {
 test_expr() {
   local index=$1
   local rel=${test_files[$index]}
+  local preload_index=${test_preload_load_indices[$index]}
+  local i
   append_path_setup
-  append_get "ErrorUtil.wl"
-  append_get "Types.wl"
-  append_get "Terms.wl"
-  append_get "Kernel.wl"
+  for ((i = 0; i <= preload_index; i++)); do
+    append_get "${load_files[$i]}"
+  done
   append_get "tests/harness.wl"
   printf 'HOLTest`resetCounters[]; '
   append_get "${rel}"

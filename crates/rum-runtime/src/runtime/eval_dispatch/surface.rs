@@ -38,6 +38,7 @@ impl Session {
             BuiltinHandler::StringLength => self.eval_string_length(head, args),
             BuiltinHandler::ToUpperCase => self.eval_to_upper_case(head, args),
             BuiltinHandler::StringForm => self.eval_string_form(head, args),
+            BuiltinHandler::Row => self.eval_row(head, args),
             BuiltinHandler::StringRiffle => self.eval_string_riffle(head, args),
             BuiltinHandler::StringPadLeft => self.eval_string_pad_left(head, args),
             BuiltinHandler::StringTemplate => self.eval_string_template(head, args),

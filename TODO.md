@@ -91,7 +91,10 @@ Completed history, archived planning detail, and operational lessons live in
   recursion failure fix. Use
   [`scripts/mma-hol-bounded-smoke.sh`](./scripts/mma-hol-bounded-smoke.sh) for
   bounded diagnostic load/test probes; it is a triage harness, not a timing
-  benchmark.
+  benchmark. The driver now supports `--only LABEL` and preloads the package
+  prefix needed by each selected test stage, so `test/proptaut_tests` reports
+  the intended performance timeout instead of `Needs[...]` package-lookup
+  noise.
 - [ ] Use the updated `CL-Y` audit in
   [docs/core-language-support-matrix.md](./docs/core-language-support-matrix.md)
   as the source of truth for `mma-hol` blockers. The current latest-HEAD cold
@@ -123,29 +126,34 @@ Completed history, archived planning detail, and operational lessons live in
   lexical-substitution copy-on-write, lightweight runtime cache hashing, owned
   call-argument preparation, and empty-binding rule-RHS fast paths are in place.
   Low-yield probes already rejected include symbol fingerprint hashing, shallow
-  definition matcher
-  metadata, codegen-units=1, and thin LTO; continue with fresh profiling before
-  deeper low-level work. If performance work resumes, start from borrowed
-  matcher fast paths or delayed definition-candidate materialization before
-  considering broader DAG/arena representation changes.
+  definition matcher metadata, codegen-units=1, thin LTO, a broad literal
+  `ReplaceAll` shortcut that broke `Rule` evaluation boundaries, a borrowed
+  rewrite-matcher fast path that was neutral on the `PropTaut` distribution
+  probe, and a lightweight builtin-name hasher that regressed that same probe;
+  continue with fresh profiling before deeper low-level work. The current
+  profile points first at stability rescans, allocation/clone traffic, and
+  builtin/evaluator dispatch overhead rather than parser or loader work.
 - [ ] Treat `mma-hol` stable-mode snapshot helpers as a required
   developer-workflow gate for `rum-hol` migration. First-pass `Contexts[]`,
   file timestamp/size/existence helpers, `AbsoluteTime`, `Round`, simple
   decimal timing literals, and recursive `FileNames[..., ..., Infinity]` are in
-  place. Remaining work is a focused `DumpSave` / `Get` context round-trip
-  regression plus assignment that mutates `$ContextPath` / `$Packages` runtime
-  session fields. Cold `run_all.wls` remains the semantic baseline; Strict mode
-  is not a snapshot restore target; `rum` `DumpSave` is a textual snapshot
-  format rather than Wolfram `.mx` compatibility. The current gap audit lives in
+  place. A tiny `DumpSave` / `Get` public/private context round-trip regression
+  and `$ContextPath` / `$Packages` session-field assignment are also in place.
+  Remaining work is full validation against `tests/build_snapshot.wls` /
+  `tests/run_fast.wls` on the current `mma-hol` tree. Cold `run_all.wls`
+  remains the semantic baseline; Strict mode is not a snapshot restore target;
+  `rum` `DumpSave` is a textual snapshot format rather than Wolfram `.mx`
+  compatibility. The current gap audit lives in
   [docs/mma-hol-smoke-and-snapshot.md](./docs/mma-hol-smoke-and-snapshot.md).
 - [ ] Preserve the already-demonstrated `Module` closure pattern where
   exported definitions retain access to fresh private mutable state after the
   enclosing `Module` returns.
 - [ ] Track the already-matrix-covered `Throw` / `Catch` / `Failure` /
   `FailureQ` / `Stack[]` path as part of the `mma-hol` smoke lane.
-- [ ] Keep small glue helpers such as text-only `Row`, script-time helpers,
-  and lint-only `Import[..., "Text"]` on the compatibility radar, but prefer
-  sample-code cleanup when a dependency is accidental rather than important.
+- [ ] Keep the private-context lint script below the cold and snapshot lanes.
+  Text-only `Row`, script-time helpers, `Import[..., "Text"]`, `Reap`, and
+  `Sow` now have first-pass support, but the lint script itself still needs a
+  focused validation pass before it becomes an acceptance gate.
 
 ## Basic Notebook Tech Preview
 

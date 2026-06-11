@@ -472,6 +472,44 @@ are not active project-owned examples.
   session-field assignment plus a focused `DumpSave` / `Get` context
   round-trip regression.
 
+## 2026-06-11 Stable Snapshot Restore And Lint Helpers
+
+- Added session-field assignment for `$ContextPath` and `$Packages`, so stable
+  snapshot restore code can mutate runtime lookup/package state instead of
+  creating inert own values.
+- Extended textual `DumpSave` object handling so context strings from
+  `Evaluate[holContexts]` save all persisted symbols in those contexts. Added a
+  tiny public/private context round-trip regression that restores via `Get`,
+  updates `$ContextPath` / `$Packages`, and calls the restored public symbol.
+- Added text-only `Row`, lint-only `Import[..., "Text"]`, and string-pattern
+  wildcards such as `"Snap`*"` for the stable snapshot context filter shape.
+  The remaining boundary is full validation of `mma-hol` stable scripts and
+  private-context lint, not the small helper availability itself.
+
+## 2026-06-11 `PropTaut` Performance Harness Cleanup
+
+- Re-established the current `PropTaut` performance frontier on clean
+  `mma-hol` HEAD `698e3d0`: package loading through `auto/PropTaut.wl` is about
+  `2.49s`, while the single distribution theorem
+  `(p || (q && r)) = ((p || q) && (p || r))` still takes about `49.7-50.1s`
+  internally in release. The full `proptaut_tests.wl` suite remains a
+  performance gate, not a package-loading gate.
+- Captured a macOS `sample` profile for a repeated distribution probe. The hot
+  stacks are still dominated by allocation/free traffic, structural compare,
+  `cached_expr_is_evaluation_stable`, evaluator dispatch, binding/lexical
+  substitution, and builtin/evaluator lookup. Parser and loader work are not
+  the bottleneck.
+- Rejected two low-yield or unsafe probes: a broad literal `ReplaceAll`
+  shortcut broke `Rule` evaluation boundaries inside `PropTaut`, and a borrowed
+  rewrite-matcher fast path was effectively neutral on the distribution probe.
+  A lightweight hasher for the builtin-name map also regressed the same probe
+  and was reverted.
+- Fixed the bounded `mma-hol` smoke driver so test stages preload their needed
+  package prefix and added `--only LABEL` for single-stage probes. With
+  `RUM_CLI_BIN=target/release/rum-cli`, `test/parser_tests` now runs as a
+  single green stage, while `test/proptaut_tests --timeout 20` reports the
+  intended timeout after preloading through `auto/PropTaut.wl`.
+
 ## Completed Architecture Work
 
 - The workspace was split into responsibility-oriented crates:

@@ -140,6 +140,83 @@ fn dump_save_overwrites_file_and_returns_saved_symbols() {
 }
 
 #[test]
+fn dump_save_context_strings_roundtrip_public_and_private_contexts() {
+    let dir = TempDirGuard::new("dumpsave-contexts");
+    let file = dir.path().join("bootstrap.mx");
+    let mut session = Session::new();
+
+    session
+        .eval_script(
+            r#"
+BeginPackage["Snap`"]
+public::usage = "public"
+Begin["`Private`"]
+helper[x_] := x + 1
+End[]
+public[x_] := Snap`Private`helper[x]
+EndPackage[]
+"#,
+        )
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("Snap`public[4]")
+            .unwrap()
+            .value
+            .to_string(),
+        "5"
+    );
+    assert_eq!(
+        session
+            .eval_text("holContexts = Select[Contexts[], StringMatchQ[#, \"Snap`*\"] &]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"Snap`\", \"Snap`Private`\"]"
+    );
+
+    let dumped = session
+        .eval_text(&format!(
+            "DumpSave[File[\"{}\"], Evaluate[holContexts]]",
+            rum_path(&file)
+        ))
+        .unwrap();
+    assert!(dumped.value.to_string().contains("Snap`public"));
+    assert!(dumped.value.to_string().contains("Snap`Private`helper"));
+
+    let mut restored = Session::new();
+    restored
+        .eval_text(&format!("Get[File[\"{}\"]]", rum_path(&file)))
+        .unwrap();
+    assert_eq!(
+        restored
+            .eval_text("Select[Contexts[], StringMatchQ[#, \"Snap`*\"] &]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"Snap`\", \"Snap`Private`\"]"
+    );
+    restored
+        .eval_text(
+            "$ContextPath = Join[Select[Contexts[], StringMatchQ[#, \"Snap`*\"] &], $ContextPath]",
+        )
+        .unwrap();
+    restored
+        .eval_text(
+            "$Packages = Union[$Packages, Select[Contexts[], StringMatchQ[#, \"Snap`*\"] &]]",
+        )
+        .unwrap();
+    assert_eq!(
+        restored.eval_text("public[9]").unwrap().value.to_string(),
+        "10"
+    );
+    assert_eq!(
+        restored.eval_text("$Packages").unwrap().value.to_string(),
+        "List[\"Snap`\", \"Snap`Private`\"]"
+    );
+}
+
+#[test]
 fn save_and_dumpsave_accept_names_pattern_objects() {
     let dir = TempDirGuard::new("save-name-patterns");
     let save_file = dir.path().join("saved.wl");
