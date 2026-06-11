@@ -326,11 +326,11 @@ impl Session {
         state: CallDispatchState,
         stage_index: usize,
     ) -> Result<Expr, EvalError> {
-        if stage_index >= plan.stages.len() {
+        if stage_index >= plan.len() {
             return Ok(Expr::call(evaluated_head, state.into_final_args()));
         }
 
-        let stage = plan.stages[stage_index];
+        let stage = plan.stage(stage_index);
         if stage == CallDispatchStage::PrepareArguments && state.evaluated_args.is_some() {
             return self.resume_call_with_dispatch_plan(
                 evaluated_head,

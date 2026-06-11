@@ -12,29 +12,26 @@ impl Session {
         let builtin_handler = builtin_spec.and_then(|spec| spec.handler);
 
         if builtin_dispatch == Some(BuiltinDispatch::SpecialForm) {
-            return CallDispatchPlan {
-                attributes,
-                builtin_handler,
-                stages: vec![CallDispatchStage::SpecialForm],
-            };
+            return CallDispatchPlan::special_form(attributes, builtin_handler);
         }
 
-        let mut stages = Vec::with_capacity(6);
+        let mut plan = CallDispatchPlan::new(attributes, builtin_handler);
 
-        stages.push(CallDispatchStage::PrepareArguments);
+        plan.push(CallDispatchStage::PrepareArguments);
 
         if attributes.contains(Attribute::Listable) {
-            stages.push(CallDispatchStage::Listable);
+            plan.push(CallDispatchStage::Listable);
         }
 
         if !attributes.contains(Attribute::HoldAllComplete) {
-            stages.push(CallDispatchStage::UpValues);
+            plan.push(CallDispatchStage::UpValues);
         }
 
-        stages.extend([CallDispatchStage::DownValues, CallDispatchStage::SubValues]);
+        plan.push(CallDispatchStage::DownValues);
+        plan.push(CallDispatchStage::SubValues);
 
         if builtin_dispatch == Some(BuiltinDispatch::Ordinary) {
-            stages.push(CallDispatchStage::OrdinaryBuiltin);
+            plan.push(CallDispatchStage::OrdinaryBuiltin);
         }
 
         if parse_function(head).is_some()
@@ -45,14 +42,10 @@ impl Session {
             || is_callable_operator_wrapper(head)
             || is_callable_failsafe_wrapper(head)
         {
-            stages.push(CallDispatchStage::Function);
+            plan.push(CallDispatchStage::Function);
         }
 
-        CallDispatchPlan {
-            attributes,
-            builtin_handler,
-            stages,
-        }
+        plan
     }
 
     pub(super) fn run_call_dispatch_stage(

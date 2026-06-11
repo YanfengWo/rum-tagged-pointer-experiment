@@ -199,12 +199,12 @@ fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
     let session = Session::new();
 
     let set_plan = session.build_call_dispatch_plan(&system_expr("Set"));
-    assert_eq!(set_plan.stages, vec![CallDispatchStage::SpecialForm]);
+    assert_eq!(set_plan.stages(), [CallDispatchStage::SpecialForm]);
 
     let thread_plan = session.build_call_dispatch_plan(&system_expr("Thread"));
     assert_eq!(
-        thread_plan.stages,
-        vec![
+        thread_plan.stages(),
+        [
             CallDispatchStage::PrepareArguments,
             CallDispatchStage::UpValues,
             CallDispatchStage::DownValues,
@@ -215,8 +215,8 @@ fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
 
     let plus_plan = session.build_call_dispatch_plan(&system_expr("Plus"));
     assert_eq!(
-        plus_plan.stages,
-        vec![
+        plus_plan.stages(),
+        [
             CallDispatchStage::PrepareArguments,
             CallDispatchStage::Listable,
             CallDispatchStage::UpValues,
@@ -229,8 +229,8 @@ fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
     let function_head = Expr::call(system_expr("Function"), vec![system_expr("Null")]);
     let function_plan = session.build_call_dispatch_plan(&function_head);
     assert_eq!(
-        function_plan.stages,
-        vec![
+        function_plan.stages(),
+        [
             CallDispatchStage::PrepareArguments,
             CallDispatchStage::UpValues,
             CallDispatchStage::DownValues,

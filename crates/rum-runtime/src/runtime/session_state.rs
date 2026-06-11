@@ -27,11 +27,53 @@ pub(super) enum CallDispatchStage {
     Function,
 }
 
+const MAX_CALL_DISPATCH_STAGES: usize = 7;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct CallDispatchPlan {
     pub(super) attributes: AttributeSet,
     pub(super) builtin_handler: Option<BuiltinHandler>,
-    pub(super) stages: Vec<CallDispatchStage>,
+    stages: [CallDispatchStage; MAX_CALL_DISPATCH_STAGES],
+    stage_count: usize,
+}
+
+impl CallDispatchPlan {
+    pub(super) fn new(attributes: AttributeSet, builtin_handler: Option<BuiltinHandler>) -> Self {
+        Self {
+            attributes,
+            builtin_handler,
+            stages: [CallDispatchStage::SpecialForm; MAX_CALL_DISPATCH_STAGES],
+            stage_count: 0,
+        }
+    }
+
+    pub(super) fn special_form(
+        attributes: AttributeSet,
+        builtin_handler: Option<BuiltinHandler>,
+    ) -> Self {
+        let mut plan = Self::new(attributes, builtin_handler);
+        plan.push(CallDispatchStage::SpecialForm);
+        plan
+    }
+
+    pub(super) fn push(&mut self, stage: CallDispatchStage) {
+        debug_assert!(self.stage_count < MAX_CALL_DISPATCH_STAGES);
+        self.stages[self.stage_count] = stage;
+        self.stage_count += 1;
+    }
+
+    pub(super) fn len(&self) -> usize {
+        self.stage_count
+    }
+
+    pub(super) fn stage(&self, index: usize) -> CallDispatchStage {
+        self.stages[index]
+    }
+
+    #[cfg(test)]
+    pub(super) fn stages(&self) -> &[CallDispatchStage] {
+        &self.stages[..self.stage_count]
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

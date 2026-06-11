@@ -14,6 +14,10 @@ impl Session {
             return Ok(None);
         };
 
+        if definition.down_values.is_empty() {
+            return Ok(None);
+        }
+
         if is_system_symbol_name(head, heads::patterns::DEFAULT) {
             let down_values = definition.down_values.clone();
             if let Some(value) = self.try_apply_direct_default_value(args, &down_values)? {
@@ -169,9 +173,6 @@ impl Session {
             return Ok(None);
         }
 
-        let candidate = Expr::call(head.clone(), args.to_vec());
-        let normalized_candidate =
-            self.normalize_definition_candidate_for_matching(head, &candidate);
         let mut up_values = Vec::new();
 
         for symbol in collect_upvalue_candidate_symbols(args) {
@@ -180,6 +181,14 @@ impl Session {
             };
             up_values.extend(definition.up_values.iter().cloned());
         }
+
+        if up_values.is_empty() {
+            return Ok(None);
+        }
+
+        let candidate = Expr::call(head.clone(), args.to_vec());
+        let normalized_candidate =
+            self.normalize_definition_candidate_for_matching(head, &candidate);
 
         self.try_apply_up_values_from_list(candidate, normalized_candidate, up_values, 0)
     }
@@ -255,7 +264,11 @@ impl Session {
             return Ok(None);
         };
 
-        if !self.definitions.contains_key(&symbol) {
+        let Some(definition) = self.definitions.get(&symbol) else {
+            return Ok(None);
+        };
+
+        if definition.sub_values.is_empty() {
             return Ok(None);
         }
 

@@ -37,15 +37,17 @@ impl Session {
             return None;
         }
 
-        match (
-            self.builtin_spec_for_symbol(symbol).copied(),
-            default_builtin_dispatch_spec(symbol.name()),
-        ) {
-            (Some(spec), Some(fallback)) => Some(spec.with_fallback_dispatch(fallback)),
-            (Some(spec), None) => Some(spec),
-            (None, Some(fallback)) => Some(fallback),
-            (None, None) => None,
+        if let Some(spec) = self.builtin_spec_for_symbol(symbol).copied() {
+            if spec.dispatch != BuiltinDispatch::None && spec.handler.is_some() {
+                return Some(spec);
+            }
+
+            return default_builtin_dispatch_spec(symbol.name())
+                .map(|fallback| spec.with_fallback_dispatch(fallback))
+                .or(Some(spec));
         }
+
+        default_builtin_dispatch_spec(symbol.name())
     }
 
     pub(super) fn resolve_symbol_name(&self, raw: &str, create_if_missing: bool) -> Option<Symbol> {
