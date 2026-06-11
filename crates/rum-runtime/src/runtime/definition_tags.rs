@@ -183,18 +183,16 @@ impl Session {
                 if delayed {
                     definition.own_value = None;
                     definition.delayed_own_value = Some(rhs.clone());
-                    self.push_trace(TraceEvent::DefinitionStored {
-                        symbol: symbol.to_string(),
-                        kind: DefinitionKind::DelayedOwnValue,
-                        value: rhs.to_string(),
-                    });
+                    self.push_definition_stored_trace(
+                        &symbol,
+                        DefinitionKind::DelayedOwnValue,
+                        || rhs.to_string(),
+                    );
                 } else {
                     definition.own_value = Some(rhs.clone());
                     definition.delayed_own_value = None;
-                    self.push_trace(TraceEvent::DefinitionStored {
-                        symbol: symbol.to_string(),
-                        kind: DefinitionKind::OwnValue,
-                        value: rhs.to_string(),
+                    self.push_definition_stored_trace(&symbol, DefinitionKind::OwnValue, || {
+                        rhs.to_string()
                     });
                 }
             }
@@ -220,10 +218,8 @@ impl Session {
                 } else {
                     replace_or_insert_down_value(&mut definition.down_values, &lhs, down_value);
                 }
-                self.push_trace(TraceEvent::DefinitionStored {
-                    symbol: symbol.to_string(),
-                    kind: DefinitionKind::DownValue,
-                    value: format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs),
+                self.push_definition_stored_trace(&symbol, DefinitionKind::DownValue, || {
+                    format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs)
                 });
             }
             TaggedDefinitionTarget::SubValue(symbol) => {
@@ -242,10 +238,8 @@ impl Session {
                         matcher_attribute_revision,
                     },
                 );
-                self.push_trace(TraceEvent::DefinitionStored {
-                    symbol: symbol.to_string(),
-                    kind: DefinitionKind::SubValue,
-                    value: format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs),
+                self.push_definition_stored_trace(&symbol, DefinitionKind::SubValue, || {
+                    format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs)
                 });
             }
             TaggedDefinitionTarget::UpValue(symbol) => {
@@ -265,10 +259,8 @@ impl Session {
                     },
                 );
                 self.has_up_value_definitions = true;
-                self.push_trace(TraceEvent::DefinitionStored {
-                    symbol: symbol.to_string(),
-                    kind: DefinitionKind::UpValue,
-                    value: format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs),
+                self.push_definition_stored_trace(&symbol, DefinitionKind::UpValue, || {
+                    format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs)
                 });
             }
         }

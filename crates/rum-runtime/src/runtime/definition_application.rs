@@ -867,6 +867,37 @@ impl Session {
         self.push_trace_with_depth(event, depth);
     }
 
+    pub(super) fn push_definition_stored_trace<F>(
+        &mut self,
+        symbol: &Symbol,
+        kind: DefinitionKind,
+        value: F,
+    ) where
+        F: FnOnce() -> String,
+    {
+        if !self.tracing_enabled
+            && (self.monitor_scopes.is_empty() || !self.monitor_callbacks_enabled)
+        {
+            return;
+        }
+
+        let event = if self.tracing_enabled {
+            TraceEvent::DefinitionStored {
+                symbol: symbol.to_string(),
+                kind,
+                value: value(),
+            }
+        } else {
+            TraceEvent::DefinitionStored {
+                symbol: String::new(),
+                kind,
+                value: String::new(),
+            }
+        };
+
+        self.push_trace(event);
+    }
+
     pub(super) fn push_rule_applied_trace(
         &mut self,
         source: RuleApplicationSource,
