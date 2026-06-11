@@ -67,6 +67,13 @@ checklist stops helping prioritization, move or summarize it here.
   recursive definition shape prefilter regressed to about `29.16s`, and
   skipping unchanged literal-`Sequence` checks during RHS substitution stayed
   neutral to slightly worse (`28.35-28.70s`).
+- Re-profiled after the shared System-symbol text change: `Symbol::new`
+  allocation is no longer a leading allocator caller, and the remaining
+  frontier is `Expr::call`, `SharedArgs::{new,into_vec}`, rule-binding
+  substitution, stability scanning, and downvalue matching. Two representation
+  probes were rejected: reusing a static empty `SharedArgs` regressed to about
+  `28.50s`, and skipping evaluation-cache clearing on epoch bumps regressed to
+  about `37.00s` because stale cache-table growth outweighed avoided clears.
 
 ## 2026-06-10 Scope Reset
 
