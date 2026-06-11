@@ -971,11 +971,16 @@ the `mma-hol` lane healthy:
   definitions such as `parseTypeExpr[]` and `parseAtom[]`; and ordinary
   expression pattern arguments such as `spec["kind"]` are evaluated before
   `MemberQ` / `MatchQ` compile them as exact patterns.
-- next CL-Y frontier: build a bounded cold `run_all.wls` driver and triage the
-  first stdlib/auto failures beyond Parser/Printer. Recursive/simplifier
-  workloads may still need quieter or more precise recursion-limit behavior
-  before `Simp` and the real stdlib proof packages become reliable failure
-  signals.
+- next CL-Y frontier: the bounded cold `run_all.wls` probe has moved the lane
+  past generic driver construction and into two concrete blockers. First,
+  `PropTaut` proof construction is slow enough that `proptaut_tests.wl` is not
+  yet a practical smoke signal. Second, the old `stdlib/Pair.wl`
+  non-theorem failure has been traced to the same area: `Simp` initializes
+  `PropTaut`-proved basic and congruence schemata before simplifying
+  `mkPairInjThm`. Rum's default recursion limit now matches the local Wolfram
+  baseline of `1024`, removing the immediate low-limit hard failure, but
+  `Pair` still needs the `PropTaut` / `Simp` performance path fixed before
+  later stdlib package statuses can be trusted.
 
 ### Non-Goals
 

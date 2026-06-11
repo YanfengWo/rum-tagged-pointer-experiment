@@ -365,6 +365,67 @@ are not active project-owned examples.
   CL-Y step is a bounded cold `run_all.wls` driver and triage of the first
   stdlib/auto failure beyond Parser/Printer.
 
+## 2026-06-11 Bounded `mma-hol` `run_all` Probe
+
+- Added a temporary out-of-tree probe script at
+  `/private/tmp/rum_mma_hol_bounded_run_all_probe.wl` and then switched to
+  one-layer `rum-cli --eval` probes because `--file` did not surface enough
+  intermediate progress for long runs.
+- First post-Parser/Printer test frontier is performance, not correctness:
+  `proptaut_tests.wl` reaches
+  `propTaut: distribution ⊢ p ∨ (q ∧ r) = (p ∨ q) ∧ (p ∨ r)` and exceeds a
+  90s suite budget. The isolated distribution formula eventually succeeds
+  (`{True, True}` for theorem status and conclusion alpha-equivalence) but
+  takes about `real 60.68s`. With a 300s suite budget, `proptaut_tests.wl`
+  still times out after reaching `nnfThm: literal unchanged`, so `PropTaut`
+  is the first new performance gate.
+- Package-only loading through `Parser`, `PropTaut`, `Meson`, and `Simp`
+  succeeds under the current probe. The first stdlib package gate is
+  `stdlib/Pair.wl`: with a 60s per-package load budget it times out; with a
+  180s budget it reaches an uncaught HOL error after about `real 119.66s`.
+- The `Pair.wl` failure is semantic/correctness-oriented rather than a parser
+  failure. Non-quiet loading reports `concl: not a theorem` while constructing
+  `pairInjThm`: `HOL`Bool`MP[...]` tries to use `mkPairInjThm`, but
+  `mkPairInjThm` is not a theorem at that point. Running `pair_tests.wl` after
+  the failed load cascades into missing constants/types (`mkPair`, `prod`,
+  `ABS_prod`, `REP_prod`, `FST`, `SND`) because `Get` rolls back the failed
+  package load.
+- Current triage order after Parser/Printer:
+  1. profile/optimize the `PropTaut` proof-construction path enough that the
+     propositional suite becomes a useful signal;
+  2. debug why `Pair.wl` fails to construct `mkPairInjThm`, likely around the
+     `Simp`simpConv` / `CONVRULE` path used to simplify the unfolded
+     `mkPair` equality;
+  3. only after `Pair` loads cleanly, revisit `Sum`, `Option`, `Set`, `Num`,
+     and later Real packages, because their current probe status is polluted by
+     the failed Pair dependency.
+
+## 2026-06-11 `Pair.wl` Recursion-Limit Triage
+
+- Isolated the first `Pair.wl` hard failure to the `mkPairInjThm` construction:
+  the first simplifier conversion over `mkPairDefThm` exceeded rum's old
+  default recursion limit of `256` after about `real 121.13s`, producing
+  `TerminatedEvaluation["RecursionLimit"]` instead of a kernel theorem. The
+  later `pairInjThm` construction then consumed that value as `mkPairInjThm`,
+  leading to the observed `concl: not a theorem` failure.
+- Checked the local Wolfram kernel baseline: `$RecursionLimit` is `1024`.
+  Raised rum's default recursion limit from `256` to `1024` and added a runtime
+  regression test for the default. Explicitly lowered test sessions still
+  produce `TerminatedEvaluation["RecursionLimit"]`, so the resource-limit
+  behavior remains covered.
+- Stage probes with the raised limit show that direct `mkPairDefThm` rewriting
+  is not the bottleneck: `REWRCONV` / `baseUser` / top-level `TRYCONV` are
+  millisecond-to-0.1s operations. The remaining cost is `PropTaut`-backed
+  simplifier schema construction: `basicSimpset[]` takes about `106-110s`, the
+  first `andCongLemma[]` use via `stepAndXX` takes about `99s`, and later
+  `mkPair`-term fixpoints still take tens of seconds.
+- A real `Pair.wl` load with the raised default passed the old `real 119.66s`
+  hard-failure point without reporting the old non-theorem error, but was
+  intentionally terminated after `real 335.35s`. Therefore the correctness
+  blocker is explained and the default-limit fix is in place, but `Pair.wl` is
+  not yet a green smoke. The next work is `PropTaut` / `Simp` performance, not
+  more ad hoc Pair-source debugging.
+
 ## Completed Architecture Work
 
 - The workspace was split into responsibility-oriented crates:

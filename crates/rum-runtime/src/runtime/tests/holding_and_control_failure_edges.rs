@@ -162,6 +162,8 @@ fn failure_symbolic_property_and_predicate_edges_cover_current_subset() {
         "TerminatedEvaluation[\"RecursionLimit\"][\"Properties\"]"
     );
 
+    assert_eq!(Session::new().resource_limits().recursion_limit, 1024);
+
     let mut recursion_session = Session::new();
     recursion_session.set_recursion_limit(32);
     recursion_session

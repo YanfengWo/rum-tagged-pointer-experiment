@@ -85,8 +85,10 @@ Completed history, archived planning detail, and operational lessons live in
   loop, and a basic notebook theorem demo are the three acceptance surfaces.
 - [ ] Keep `mma-hol/tests/run_all.wls` as the first full real-project smoke
   lane. The clean-HEAD cold source smoke now gets through the core package and
-  harness load path, but the full script still needs a bounded driver and
-  failure triage before it can become a routine check.
+  harness load path. The first bounded probe has identified two immediate
+  gates before this can become routine: `PropTaut` proof-construction
+  performance, and `Pair.wl` proof-load performance after the low-limit
+  recursion failure fix.
 - [ ] Use the updated `CL-Y` audit in
   [docs/core-language-support-matrix.md](./docs/core-language-support-matrix.md)
   as the source of truth for `mma-hol` blockers. The current latest-HEAD cold
@@ -97,10 +99,17 @@ Completed history, archived planning detail, and operational lessons live in
   RHS `& /@` precedence, `Table` substitution into held `Rule` lhs positions,
   definition lhs own-value evaluation for non-pattern constants, the
   state-progressing recursive parser cycle-guard case, and ordinary-expression
-  pattern evaluation for `MemberQ` / `MatchQ` style calls. The next correctness
-  work is a bounded cold `run_all.wls` driver and triage of the first
-  stdlib/auto failures beyond Parser/Printer. Bool performance is now a
-  follow-up lane:
+  pattern evaluation for `MemberQ` / `MatchQ` style calls. The next
+  post-Parser/Printer work is concrete: make `proptaut_tests.wl`
+  fast enough to be a useful smoke signal, then make the `PropTaut`-backed
+  `Simp` schema path cheap enough for `stdlib/Pair.wl`. The old Pair hard
+  failure (`mkPairInjThm` consumed as a non-theorem) was traced to rum's too-low
+  default recursion limit and the default has been raised to the local Wolfram
+  baseline of `1024`, but a full `Pair.wl` load is still too slow to call green.
+  After `Pair` loads cleanly, rerun the later `Sum`, `Option`, `Set`, `Num`,
+  and Real package probes because their current statuses are polluted by the
+  failed Pair dependency.
+  Bool performance is now a follow-up lane:
   dependency-preloaded `Bool.wl` now completes in about 2.36-2.40s warmed
   external default-release wall time. A prior local `target-cpu=native` release
   build measured about 2.29-2.35s warmed external wall time before the latest
