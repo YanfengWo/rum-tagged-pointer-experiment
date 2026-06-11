@@ -26,6 +26,14 @@ checklist stops helping prioritization, move or summarize it here.
   `epoch_bumps`, `cache_clears`, `stability_checks`,
   `call_stability_hits`, and `call_stability_misses` to stderr. With the env
   var unset, the same `PropTaut` probe stayed in the `43.7-43.8s` range.
+- Made definition writes skip global evaluation-cache invalidation when the
+  written symbol has not been observed by the current stability scan. This
+  kept the same `PropTaut` result and moved the release probe to about
+  `40.07s`; the cache counter run showed `epoch_bumps/cache_clears` reduced
+  from the previous `262144+` range to the `65536+` range, with
+  `262144+` skipped unobserved-symbol writes. A regression test covers the
+  prior-read case (`Module[{x}, x; x = 1; x]`) where invalidation must still
+  happen.
 
 ## 2026-06-10 Scope Reset
 

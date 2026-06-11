@@ -137,6 +137,20 @@ fn module_generates_fresh_lexical_symbols_and_initializes_sequentially() {
 }
 
 #[test]
+fn module_local_assignment_invalidates_after_prior_read() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Module[{x}, x; x = 1; x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+}
+
+#[test]
 fn module_respects_nested_shadowing_and_pattern_locals() {
     let mut session = Session::new();
 

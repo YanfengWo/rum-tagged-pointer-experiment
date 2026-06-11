@@ -6,6 +6,7 @@ const EVALUATION_CACHE_PROFILE_ENV: &str = "RUM_PROFILE_EVALUATION_CACHE";
 static EVALUATION_CACHE_PROFILE_ENABLED: AtomicU8 = AtomicU8::new(0);
 static EPOCH_BUMP_COUNT: AtomicU64 = AtomicU64::new(0);
 static CACHE_CLEAR_COUNT: AtomicU64 = AtomicU64::new(0);
+static SYMBOL_UNOBSERVED_EPOCH_SKIP_COUNT: AtomicU64 = AtomicU64::new(0);
 static STABILITY_CHECK_COUNT: AtomicU64 = AtomicU64::new(0);
 static CALL_STABILITY_HIT_COUNT: AtomicU64 = AtomicU64::new(0);
 static CALL_STABILITY_MISS_COUNT: AtomicU64 = AtomicU64::new(0);
@@ -15,6 +16,18 @@ impl Session {
         record_evaluation_cache_counter(&EPOCH_BUMP_COUNT, "epoch_bumps");
         self.evaluation_epoch = self.evaluation_epoch.saturating_add(1);
         self.clear_evaluation_caches();
+    }
+
+    pub(super) fn bump_evaluation_epoch_for_symbol(&mut self, symbol: &Symbol) {
+        if self.stable_symbol_cache.contains_key(symbol) {
+            self.bump_evaluation_epoch();
+            return;
+        }
+
+        record_evaluation_cache_counter(
+            &SYMBOL_UNOBSERVED_EPOCH_SKIP_COUNT,
+            "symbol_unobserved_epoch_skips",
+        );
     }
 
     pub(super) fn clear_evaluation_caches(&mut self) {

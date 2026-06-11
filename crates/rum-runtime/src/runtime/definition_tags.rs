@@ -176,7 +176,7 @@ impl Session {
         rhs: Expr,
         delayed: bool,
     ) {
-        match target {
+        let symbol = match target {
             TaggedDefinitionTarget::OwnValue(symbol) => {
                 let definition = self.definitions.entry(symbol.clone()).or_default();
 
@@ -195,6 +195,7 @@ impl Session {
                         rhs.to_string()
                     });
                 }
+                symbol
             }
             TaggedDefinitionTarget::DownValue(symbol) => {
                 let matcher = self.compile_matcher_for_expr(&lhs);
@@ -221,6 +222,7 @@ impl Session {
                 self.push_definition_stored_trace(&symbol, DefinitionKind::DownValue, || {
                     format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs)
                 });
+                symbol
             }
             TaggedDefinitionTarget::SubValue(symbol) => {
                 let matcher = self.compile_matcher_for_expr(&lhs);
@@ -241,6 +243,7 @@ impl Session {
                 self.push_definition_stored_trace(&symbol, DefinitionKind::SubValue, || {
                     format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs)
                 });
+                symbol
             }
             TaggedDefinitionTarget::UpValue(symbol) => {
                 let matcher = self.compile_matcher_for_expr(&lhs);
@@ -262,10 +265,11 @@ impl Session {
                 self.push_definition_stored_trace(&symbol, DefinitionKind::UpValue, || {
                     format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs)
                 });
+                symbol
             }
-        }
+        };
 
-        self.bump_evaluation_epoch();
+        self.bump_evaluation_epoch_for_symbol(&symbol);
     }
 }
 
