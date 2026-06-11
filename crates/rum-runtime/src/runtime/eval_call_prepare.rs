@@ -202,6 +202,18 @@ impl Session {
         self.attribute_set_for_symbol(symbol)
     }
 
+    pub(super) fn cached_attribute_set_for_head(&mut self, head: &Expr) -> AttributeSet {
+        if let Some(function) = parse_function(head) {
+            return function.attributes();
+        }
+
+        let Some(symbol) = expr_as_symbol(head) else {
+            return AttributeSet::empty();
+        };
+
+        self.cached_attribute_set_for_symbol(symbol)
+    }
+
     pub(super) fn normalize_call_args_by_attributes(
         &self,
         head: &Expr,

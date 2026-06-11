@@ -4,10 +4,10 @@ mod control_functional;
 mod surface;
 mod symbolic;
 impl Session {
-    pub(super) fn build_call_dispatch_plan(&self, head: &Expr) -> CallDispatchPlan {
-        let attributes = self.attribute_set_for_head(head);
-        let builtin_spec =
-            expr_as_symbol(head).and_then(|symbol| self.builtin_dispatch_spec_for_symbol(symbol));
+    pub(super) fn build_call_dispatch_plan(&mut self, head: &Expr) -> CallDispatchPlan {
+        let attributes = self.cached_attribute_set_for_head(head);
+        let builtin_spec = expr_as_symbol(head)
+            .and_then(|symbol| self.cached_builtin_dispatch_spec_for_symbol(symbol));
         let builtin_dispatch = builtin_spec.map(|spec| spec.dispatch);
         let builtin_handler = builtin_spec.and_then(|spec| spec.handler);
 

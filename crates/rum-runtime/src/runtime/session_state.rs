@@ -339,6 +339,8 @@ impl Default for Session {
             builtins: BTreeMap::new(),
             attributes: BTreeMap::new(),
             attribute_revision: 0,
+            attribute_set_cache: AttributeSetCache::default(),
+            builtin_dispatch_spec_cache: BuiltinDispatchSpecCache::default(),
             evaluation_epoch: 0,
             stable_symbol_cache: SymbolStabilityCache::default(),
             symbol_call_effect_cache: SymbolCallEffectCache::default(),

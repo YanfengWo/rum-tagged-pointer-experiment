@@ -301,6 +301,8 @@ pub struct Session {
     pub(super) builtins: BTreeMap<String, BuiltinSpec>,
     pub(super) attributes: BTreeMap<Symbol, AttributeSet>,
     pub(super) attribute_revision: u64,
+    pub(super) attribute_set_cache: AttributeSetCache,
+    pub(super) builtin_dispatch_spec_cache: BuiltinDispatchSpecCache,
     pub(super) evaluation_epoch: u64,
     pub(super) stable_symbol_cache: SymbolStabilityCache,
     pub(super) symbol_call_effect_cache: SymbolCallEffectCache,
@@ -363,6 +365,12 @@ pub(super) struct SymbolStabilityCacheEntry {
 
 pub(super) type SymbolStabilityCache =
     HashMap<Symbol, SymbolStabilityCacheEntry, BuildHasherDefault<RuntimeCacheHasher>>;
+
+pub(super) type AttributeSetCache =
+    HashMap<Symbol, AttributeSet, BuildHasherDefault<RuntimeCacheHasher>>;
+
+pub(super) type BuiltinDispatchSpecCache =
+    HashMap<Symbol, Option<BuiltinSpec>, BuildHasherDefault<RuntimeCacheHasher>>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(super) struct SymbolCallEffectKey {

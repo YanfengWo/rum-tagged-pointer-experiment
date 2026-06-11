@@ -52,6 +52,13 @@ checklist stops helping prioritization, move or summarize it here.
   sequence splicing, and `SharedArgs` construction/unwrapping. Association key
   evaluation is no longer the dominant clone caller after the lazy-frame
   change.
+- Added session-local caches for hot attribute-set and builtin-dispatch
+  resolution, invalidated on attribute revision changes and builtin
+  registration. The dispatch planner and stability scanner now use these
+  caches while colder inspection paths keep the direct lookup API. The same
+  release `PropTaut` probe then measured about `28.10-28.32s`. A hand-written
+  `Symbol` comparison probe using `Arc<str>` pointer equality measured worse
+  (`31.55-32.51s`) and was reverted.
 
 ## 2026-06-10 Scope Reset
 

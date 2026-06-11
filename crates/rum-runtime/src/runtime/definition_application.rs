@@ -437,9 +437,13 @@ impl Session {
         })
     }
 
-    fn normalize_definition_candidate_for_matching(&self, head: &Expr, candidate: &Expr) -> Expr {
+    fn normalize_definition_candidate_for_matching(
+        &mut self,
+        head: &Expr,
+        candidate: &Expr,
+    ) -> Expr {
         if matches!(
-            self.attribute_set_for_head(head).hold_attribute(),
+            self.cached_attribute_set_for_head(head).hold_attribute(),
             HoldAttribute::None
         ) {
             candidate.clone()

@@ -196,7 +196,7 @@ fn head_evaluation_can_activate_special_forms_and_held_builtins() {
 
 #[test]
 fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
-    let session = Session::new();
+    let mut session = Session::new();
 
     let set_plan = session.build_call_dispatch_plan(&system_expr("Set"));
     assert_eq!(set_plan.stages(), [CallDispatchStage::SpecialForm]);

@@ -220,7 +220,7 @@ impl Session {
             return self.symbol_call_head_has_evaluation_effect(symbol, args.is_empty());
         }
 
-        let attributes = self.attribute_set_for_head(head);
+        let attributes = self.cached_attribute_set_for_head(head);
         if attributes.contains(Attribute::Listable)
             || attributes.contains(Attribute::Orderless)
             || attributes.contains(Attribute::Flat)
@@ -269,11 +269,11 @@ impl Session {
     }
 
     fn symbol_call_head_has_evaluation_effect_uncached(
-        &self,
+        &mut self,
         symbol: &Symbol,
         args_empty: bool,
     ) -> bool {
-        let attributes = self.attribute_set_for_symbol(symbol);
+        let attributes = self.cached_attribute_set_for_symbol(symbol);
         if attributes.contains(Attribute::Listable)
             || attributes.contains(Attribute::Orderless)
             || attributes.contains(Attribute::Flat)
@@ -281,7 +281,10 @@ impl Session {
             return true;
         }
 
-        if self.builtin_dispatch_spec_for_symbol(symbol).is_some() {
+        if self
+            .cached_builtin_dispatch_spec_for_symbol(symbol)
+            .is_some()
+        {
             return true;
         }
 

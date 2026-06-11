@@ -50,6 +50,20 @@ impl Session {
         default_builtin_dispatch_spec(symbol.name())
     }
 
+    pub(super) fn cached_builtin_dispatch_spec_for_symbol(
+        &mut self,
+        symbol: &Symbol,
+    ) -> Option<BuiltinSpec> {
+        if let Some(spec) = self.builtin_dispatch_spec_cache.get(symbol).copied() {
+            return spec;
+        }
+
+        let spec = self.builtin_dispatch_spec_for_symbol(symbol);
+        self.builtin_dispatch_spec_cache
+            .insert(symbol.clone(), spec);
+        spec
+    }
+
     pub(super) fn resolve_symbol_name(&self, raw: &str, create_if_missing: bool) -> Option<Symbol> {
         if let Some((context, name)) = split_symbol_name(raw) {
             let context = normalize_context_name(context);
@@ -118,6 +132,16 @@ impl Session {
             .unwrap_or_else(|| default_system_attribute_set(symbol))
     }
 
+    pub(super) fn cached_attribute_set_for_symbol(&mut self, symbol: &Symbol) -> AttributeSet {
+        if let Some(attributes) = self.attribute_set_cache.get(symbol).copied() {
+            return attributes;
+        }
+
+        let attributes = self.attribute_set_for_symbol(symbol);
+        self.attribute_set_cache.insert(symbol.clone(), attributes);
+        attributes
+    }
+
     pub(super) fn set_attribute_set_for_symbol(
         &mut self,
         symbol: Symbol,
@@ -140,6 +164,7 @@ impl Session {
 
     pub(super) fn bump_attribute_revision(&mut self) {
         self.attribute_revision = self.attribute_revision.saturating_add(1);
+        self.attribute_set_cache.clear();
         self.bump_evaluation_epoch();
     }
 

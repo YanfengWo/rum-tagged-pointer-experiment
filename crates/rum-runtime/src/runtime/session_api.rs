@@ -116,6 +116,7 @@ impl Session {
 
     pub fn register_builtin(&mut self, spec: BuiltinSpec) {
         self.builtins.insert(spec.name.to_string(), spec);
+        self.builtin_dispatch_spec_cache.clear();
 
         if !spec.attributes.is_empty() {
             self.attributes
