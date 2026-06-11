@@ -40,6 +40,8 @@ Before substantial work, read the smallest set needed for the task:
   evaluator invariants and current semantic boundaries
 - [docs/testing-strategy.md](./docs/testing-strategy.md): test layering,
   Wolfram conformance lanes, and same-name compatibility rules
+- [docs/mma-hol-smoke-and-snapshot.md](./docs/mma-hol-smoke-and-snapshot.md):
+  bounded `mma-hol` smoke driver and stable snapshot gap audit
 - [docs/code-organization-guidelines.md](./docs/code-organization-guidelines.md):
   file-size and module-organization rules
 
@@ -60,9 +62,10 @@ Preload lower HOL files before higher layers: `ErrorUtil.wl`, `Types.wl`,
 
 Current clean-clone smoke results are: `bool_tests.wl` `List[73, 0]`,
 `drule_tests.wl` `List[43, 0]`, `tactics_tests.wl` `List[49, 0]`, and
-`printer_tests.wl` + `parser_tests.wl` `List[126, 0]`. The next CL-Y task is a
-bounded cold `run_all.wls` driver and triage of the first stdlib/auto failure
-beyond Parser/Printer.
+`printer_tests.wl` + `parser_tests.wl` `List[126, 0]`. Use
+`scripts/mma-hol-bounded-smoke.sh` for bounded diagnostic load/test probes; the
+next CL-Y task is triage of the first stdlib/auto failure beyond
+Parser/Printer, currently the `PropTaut` / `Simp` path behind `Pair.wl`.
 
 Keep performance work probe-first: identify the hot path, make the smallest
 targeted change, then rerun the same timing smoke to reject negative

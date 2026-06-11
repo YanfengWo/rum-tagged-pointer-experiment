@@ -52,6 +52,10 @@ Use the lowest layer that can prove the contract being tested.
 5. Real-project smoke tests
    - Own package/script-level confidence such as future `mma-hol` smoke lanes.
    - These prove integration maturity, not full language equivalence.
+   - For `mma-hol`, use
+     [`scripts/mma-hol-bounded-smoke.sh`](../scripts/mma-hol-bounded-smoke.sh)
+     as the bounded diagnostic driver. Treat it as a failure-localization
+     harness with captured logs, not as a benchmark suite.
 
 ## Coverage Axes For Same-Name Behavior
 

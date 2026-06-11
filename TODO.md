@@ -88,7 +88,10 @@ Completed history, archived planning detail, and operational lessons live in
   harness load path. The first bounded probe has identified two immediate
   gates before this can become routine: `PropTaut` proof-construction
   performance, and `Pair.wl` proof-load performance after the low-limit
-  recursion failure fix.
+  recursion failure fix. Use
+  [`scripts/mma-hol-bounded-smoke.sh`](./scripts/mma-hol-bounded-smoke.sh) for
+  bounded diagnostic load/test probes; it is a triage harness, not a timing
+  benchmark.
 - [ ] Use the updated `CL-Y` audit in
   [docs/core-language-support-matrix.md](./docs/core-language-support-matrix.md)
   as the source of truth for `mma-hol` blockers. The current latest-HEAD cold
@@ -130,7 +133,8 @@ Completed history, archived planning detail, and operational lessons live in
   required developer-workflow gate for `rum-hol` migration. Cold `run_all.wls`
   remains the semantic baseline; Strict mode is not a snapshot restore target;
   `rum` `DumpSave` is a textual snapshot format rather than Wolfram `.mx`
-  compatibility.
+  compatibility. The current gap audit lives in
+  [docs/mma-hol-smoke-and-snapshot.md](./docs/mma-hol-smoke-and-snapshot.md).
 - [ ] Preserve the already-demonstrated `Module` closure pattern where
   exported definitions retain access to fresh private mutable state after the
   enclosing `Module` returns.

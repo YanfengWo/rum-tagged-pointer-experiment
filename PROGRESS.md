@@ -442,6 +442,22 @@ are not active project-owned examples.
   assignments, and the recursive definition are all absent after the failed
   load.
 
+## 2026-06-11 `mma-hol` Harness And Snapshot Audit
+
+- Added `scripts/mma-hol-bounded-smoke.sh`, a reusable bounded diagnostic
+  driver for the `mma-hol` lane. It supports package-load probes, independent
+  test-file probes, per-stage wall timeouts, captured stdout/stderr, and a
+  tab-separated summary. The driver intentionally replays load prefixes in
+  fresh `rum-cli` sessions, so it localizes failures but is not a timing
+  benchmark.
+- Added `docs/mma-hol-smoke-and-snapshot.md` as the canonical note for the
+  driver contract and stable snapshot audit. The snapshot lane remains below
+  the cold semantic smoke, but its concrete missing support is now explicit:
+  `Contexts[]`, `$ContextPath` / `$Packages` session-field assignment,
+  `FileExistsQ`, `FileDate`, `FileByteCount`, `AbsoluteTime`, `Round`,
+  `FileNames[..., ..., Infinity]`, and a focused `DumpSave` / `Get` context
+  round-trip regression.
+
 ## Completed Architecture Work
 
 - The workspace was split into responsibility-oriented crates:

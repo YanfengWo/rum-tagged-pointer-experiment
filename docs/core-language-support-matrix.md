@@ -824,6 +824,10 @@ Primary acceptance candidate:
   It loads core packages, automation packages, stdlib packages, and the current
   Real frontier files `Cut.wl`, `RatAux.wl`, `Field.wl`, `Mul.wl`, `Inv.wl`,
   and `Complete.wl`.
+- `scripts/mma-hol-bounded-smoke.sh` is the `rum`-side bounded diagnostic
+  driver for this lane. It runs package-load and test-file probes with
+  per-stage timeouts and captured logs, but its elapsed times are not
+  acceptance benchmarks because load probes replay prefixes in fresh sessions.
 
 Secondary harness candidates:
 
@@ -853,6 +857,8 @@ Strict/stable snapshot boundary:
   as `FileDate`, `FileByteCount`, `AbsoluteTime`, and `Round` still need focused
   support before `tests/build_snapshot.wls` / `tests/run_fast.wls` can be used
   as the practical development loop for `rum-hol`.
+- The current stable snapshot gap audit lives in
+  [docs/mma-hol-smoke-and-snapshot.md](./mma-hol-smoke-and-snapshot.md).
 
 ### Required Language Shape
 
