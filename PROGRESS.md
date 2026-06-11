@@ -44,6 +44,14 @@ checklist stops helping prioritization, move or summarize it here.
   entry list and evaluated prefix for ordinary `Association[...]` construction;
   the same release `PropTaut` probe then measured about `30.06s`. A similar
   `Lookup` lazy-frame probe was neutral to slightly worse and was not kept.
+- Re-profiled current HEAD `ec372d6`: the remaining self-time is again led by
+  `memcmp`, allocator/free traffic, and `cached_expr_is_evaluation_stable`.
+  Leaf attribution now points `memcmp` mostly at stability scanning,
+  attribute lookup, definition matching, and symbol existence checks; allocator
+  traffic is led by `Expr::call`, rule-binding substitution, `Symbol::new`,
+  sequence splicing, and `SharedArgs` construction/unwrapping. Association key
+  evaluation is no longer the dominant clone caller after the lazy-frame
+  change.
 
 ## 2026-06-10 Scope Reset
 
