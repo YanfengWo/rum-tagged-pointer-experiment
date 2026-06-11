@@ -286,7 +286,7 @@ impl Session {
         };
 
         let current_result = self.evaluate(current);
-        let outcome = self.suspend_with_result_frame(current_result, {
+        let outcome = self.suspend_with_result_frame_lazy(current_result, || {
             let args = args.clone();
             move |session, outcome| {
                 session.resume_compound_expression_after_item(args, index, outcome)

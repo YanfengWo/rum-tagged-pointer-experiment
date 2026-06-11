@@ -208,7 +208,7 @@ impl Session {
         let (symbol, rhs) = items[index].clone();
         let substituted_rhs = substitute_lexical_bindings(&rhs, &bindings, &BTreeSet::new());
         let rhs_result = self.evaluate(substituted_rhs);
-        let outcome = self.suspend_with_frame(rhs_result, {
+        let outcome = self.suspend_with_frame_lazy(rhs_result, || {
             let items = items.clone();
             let body = body.clone();
             let bindings = bindings.clone();
@@ -239,7 +239,7 @@ impl Session {
         if let Some(init) = init {
             let renamed_init = substitute_lexical_bindings(&init, &renames, &BTreeSet::new());
             let init_result = self.evaluate(renamed_init);
-            let outcome = self.suspend_with_frame(init_result, {
+            let outcome = self.suspend_with_frame_lazy(init_result, || {
                 let items = items.clone();
                 let body = body.clone();
                 let renames = renames.clone();

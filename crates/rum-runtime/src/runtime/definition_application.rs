@@ -60,19 +60,46 @@ impl Session {
             );
         }
 
-        let down_value = down_value.clone();
-        let match_result = if let Some(outcome) =
+        if let Some(outcome) =
             self.try_fast_definition_match(&down_value.lhs, &normalized_candidate)
         {
-            Ok(outcome)
-        } else {
-            let matcher = if down_value.matcher_attribute_revision == self.attribute_revision {
-                down_value.matcher.clone()
-            } else {
-                self.compile_matcher_for_expr(&down_value.lhs)
+            if !outcome.matched {
+                return self.try_apply_down_values_from_symbol(
+                    candidate,
+                    normalized_candidate,
+                    symbol,
+                    index + 1,
+                );
+            }
+
+            let (lhs, substituted) = {
+                let substituted = substitute_rule_bindings_for_rhs(
+                    &down_value.rhs,
+                    &outcome.bindings,
+                    down_value.rhs_may_splice_without_bindings,
+                );
+                (down_value.lhs.clone(), substituted)
             };
-            self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new())
+            let option_scope = self.option_value_scope_for_definition(&lhs, &candidate);
+            self.push_rule_applied_trace(
+                RuleApplicationSource::DownValue,
+                &candidate,
+                &lhs,
+                &substituted,
+            );
+            return self
+                .evaluate_definition_rhs(option_scope, substituted)
+                .map(Some);
+        }
+
+        let down_value = down_value.clone();
+        let matcher = if down_value.matcher_attribute_revision == self.attribute_revision {
+            down_value.matcher.clone()
+        } else {
+            self.compile_matcher_for_expr(&down_value.lhs)
         };
+        let match_result =
+            self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new());
 
         self.drive_internal_value(match_result, move |session, outcome| {
             if !outcome.matched {
@@ -221,19 +248,45 @@ impl Session {
             );
         }
 
-        let up_value = up_value.clone();
-        let match_result = if let Some(outcome) =
-            self.try_fast_definition_match(&up_value.lhs, &normalized_candidate)
+        if let Some(outcome) = self.try_fast_definition_match(&up_value.lhs, &normalized_candidate)
         {
-            Ok(outcome)
-        } else {
-            let matcher = if up_value.matcher_attribute_revision == self.attribute_revision {
-                up_value.matcher.clone()
-            } else {
-                self.compile_matcher_for_expr(&up_value.lhs)
+            if !outcome.matched {
+                return self.try_apply_up_values_from_list(
+                    candidate,
+                    normalized_candidate,
+                    up_values,
+                    index + 1,
+                );
+            }
+
+            let (lhs, substituted) = {
+                let substituted = substitute_rule_bindings_for_rhs(
+                    &up_value.rhs,
+                    &outcome.bindings,
+                    up_value.rhs_may_splice_without_bindings,
+                );
+                (up_value.lhs.clone(), substituted)
             };
-            self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new())
+            let option_scope = self.option_value_scope_for_definition(&lhs, &candidate);
+            self.push_rule_applied_trace(
+                RuleApplicationSource::UpValue,
+                &candidate,
+                &lhs,
+                &substituted,
+            );
+            return self
+                .evaluate_definition_rhs(option_scope, substituted)
+                .map(Some);
+        }
+
+        let up_value = up_value.clone();
+        let matcher = if up_value.matcher_attribute_revision == self.attribute_revision {
+            up_value.matcher.clone()
+        } else {
+            self.compile_matcher_for_expr(&up_value.lhs)
         };
+        let match_result =
+            self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new());
 
         self.drive_internal_value(match_result, move |session, outcome| {
             if !outcome.matched {
@@ -315,19 +368,45 @@ impl Session {
             );
         }
 
-        let sub_value = sub_value.clone();
-        let match_result = if let Some(outcome) =
-            self.try_fast_definition_match(&sub_value.lhs, &normalized_candidate)
+        if let Some(outcome) = self.try_fast_definition_match(&sub_value.lhs, &normalized_candidate)
         {
-            Ok(outcome)
-        } else {
-            let matcher = if sub_value.matcher_attribute_revision == self.attribute_revision {
-                sub_value.matcher.clone()
-            } else {
-                self.compile_matcher_for_expr(&sub_value.lhs)
+            if !outcome.matched {
+                return self.try_apply_sub_values_from_symbol(
+                    candidate,
+                    normalized_candidate,
+                    symbol,
+                    index + 1,
+                );
+            }
+
+            let (lhs, substituted) = {
+                let substituted = substitute_rule_bindings_for_rhs(
+                    &sub_value.rhs,
+                    &outcome.bindings,
+                    sub_value.rhs_may_splice_without_bindings,
+                );
+                (sub_value.lhs.clone(), substituted)
             };
-            self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new())
+            let option_scope = self.option_value_scope_for_definition(&lhs, &candidate);
+            self.push_rule_applied_trace(
+                RuleApplicationSource::SubValue,
+                &candidate,
+                &lhs,
+                &substituted,
+            );
+            return self
+                .evaluate_definition_rhs(option_scope, substituted)
+                .map(Some);
+        }
+
+        let sub_value = sub_value.clone();
+        let matcher = if sub_value.matcher_attribute_revision == self.attribute_revision {
+            sub_value.matcher.clone()
+        } else {
+            self.compile_matcher_for_expr(&sub_value.lhs)
         };
+        let match_result =
+            self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new());
 
         self.drive_internal_value(match_result, move |session, outcome| {
             if !outcome.matched {
@@ -716,35 +795,66 @@ impl Session {
         source: RuleApplicationSource,
         index: usize,
     ) -> Result<Option<Expr>, EvalError> {
-        let Some(rule) = rules.get(index).cloned() else {
+        let Some(matcher) = rules.get(index).map(|rule| rule.matcher.clone()) else {
             return Ok(None);
         };
 
-        let match_result = self.match_compiled_owned(
-            rule.matcher.clone(),
-            normalized_expr.clone(),
-            BTreeMap::new(),
-        );
+        let match_result =
+            self.match_compiled_owned(matcher, normalized_expr.clone(), BTreeMap::new());
 
-        self.drive_internal_value(match_result, move |session, outcome| {
-            if !outcome.matched {
-                return session.apply_rules_once_from_list(
-                    expr,
-                    normalized_expr,
-                    rules,
-                    source,
-                    index + 1,
+        let outcome = match match_result {
+            Ok(outcome) => outcome,
+            Err(EvalError::InputRequired { request }) => {
+                let rule = rules
+                    .get(index)
+                    .cloned()
+                    .expect("rewrite rule should still exist for suspended match");
+                return self.drive_internal_value::<CompiledMatchOutcome, Option<Expr>, _>(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, outcome| {
+                        if !outcome.matched {
+                            return session.apply_rules_once_from_list(
+                                expr,
+                                normalized_expr,
+                                rules,
+                                source,
+                                index + 1,
+                            );
+                        }
+
+                        let replaced = substitute_rule_bindings_for_rhs(
+                            &rule.rhs,
+                            &outcome.bindings,
+                            rule.rhs_may_splice_without_bindings,
+                        );
+                        session.push_rule_applied_trace(source, &expr, &rule.lhs, &replaced);
+                        Ok(Some(replaced))
+                    },
                 );
             }
+            Err(error) => return Err(error),
+        };
 
-            let replaced = substitute_rule_bindings_for_rhs(
-                &rule.rhs,
-                &outcome.bindings,
-                rule.rhs_may_splice_without_bindings,
+        if !outcome.matched {
+            return self.apply_rules_once_from_list(
+                expr,
+                normalized_expr,
+                rules,
+                source,
+                index + 1,
             );
-            session.push_rule_applied_trace(source, &expr, &rule.lhs, &replaced);
-            Ok(Some(replaced))
-        })
+        }
+
+        let rule = rules
+            .get(index)
+            .expect("rewrite rule should still exist after match");
+        let replaced = substitute_rule_bindings_for_rhs(
+            &rule.rhs,
+            &outcome.bindings,
+            rule.rhs_may_splice_without_bindings,
+        );
+        self.push_rule_applied_trace(source, &expr, &rule.lhs, &replaced);
+        Ok(Some(replaced))
     }
 
     pub(super) fn push_trace(&mut self, event: TraceEvent) {

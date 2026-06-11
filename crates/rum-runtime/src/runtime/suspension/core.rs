@@ -118,6 +118,24 @@ impl Session {
         })
     }
 
+    pub(in crate::runtime) fn suspend_with_frame_lazy<M, F>(
+        &mut self,
+        result: Result<Expr, EvalError>,
+        make_frame: M,
+    ) -> Result<Expr, EvalError>
+    where
+        M: FnOnce() -> F,
+        F: FnOnce(&mut Session, Expr) -> Result<Expr, EvalError> + 'static,
+    {
+        self.suspend_with_result_frame_lazy(result, move || {
+            let frame = make_frame();
+            move |session, outcome| match outcome {
+                Ok(value) => frame(session, value),
+                Err(error) => Err(error),
+            }
+        })
+    }
+
     pub(in crate::runtime) fn suspend_with_result_frame<F>(
         &mut self,
         result: Result<Expr, EvalError>,
@@ -130,6 +148,25 @@ impl Session {
             Ok(value) => Ok(value),
             Err(EvalError::InputRequired { request }) => {
                 self.push_suspension_frame(frame);
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    pub(in crate::runtime) fn suspend_with_result_frame_lazy<M, F>(
+        &mut self,
+        result: Result<Expr, EvalError>,
+        make_frame: M,
+    ) -> Result<Expr, EvalError>
+    where
+        M: FnOnce() -> F,
+        F: FnOnce(&mut Session, Result<Expr, EvalError>) -> Result<Expr, EvalError> + 'static,
+    {
+        match result {
+            Ok(value) => Ok(value),
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(make_frame());
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),

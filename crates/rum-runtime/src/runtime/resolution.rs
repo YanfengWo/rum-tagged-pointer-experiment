@@ -227,7 +227,8 @@ impl Session {
                 return Ok(current);
             }
 
-            if should_track_evaluation_cycle(&current) {
+            let track_cycle = should_track_evaluation_cycle(&current);
+            if track_cycle {
                 if fixed_point_seen.iter().any(|previous| previous == &current) {
                     return Err(EvalError::EvaluationCycleDetected {
                         expr: current.to_string(),
@@ -236,7 +237,10 @@ impl Session {
                 fixed_point_seen.push(current.clone());
             }
 
-            let next_result = self.evaluate_once_unstable_after_input_check(current.clone());
+            let next_result = self.evaluate_once_unstable_after_input_check_with_cycle_tracking(
+                current.clone(),
+                track_cycle,
+            );
             let next = match next_result {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
@@ -297,7 +301,8 @@ impl Session {
                 return Ok(current);
             }
 
-            if should_track_evaluation_cycle(&current) {
+            let track_cycle = should_track_evaluation_cycle(&current);
+            if track_cycle {
                 if fixed_point_seen.iter().any(|previous| previous == &current) {
                     return Err(EvalError::EvaluationCycleDetected {
                         expr: current.to_string(),
@@ -306,7 +311,10 @@ impl Session {
                 fixed_point_seen.push(current.clone());
             }
 
-            let next_result = self.evaluate_once_unstable_after_input_check(current.clone());
+            let next_result = self.evaluate_once_unstable_after_input_check_with_cycle_tracking(
+                current.clone(),
+                track_cycle,
+            );
             let next = match next_result {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {

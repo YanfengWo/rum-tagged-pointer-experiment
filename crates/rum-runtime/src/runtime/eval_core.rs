@@ -1,11 +1,11 @@
 use super::*;
 
 impl Session {
-    pub(super) fn evaluate_once_unstable_after_input_check(
+    pub(super) fn evaluate_once_unstable_after_input_check_with_cycle_tracking(
         &mut self,
         expr: Expr,
+        track_cycle: bool,
     ) -> Result<Expr, EvalError> {
-        let track_cycle = should_track_evaluation_cycle(&expr);
         if track_cycle
             && self
                 .evaluation_stack
