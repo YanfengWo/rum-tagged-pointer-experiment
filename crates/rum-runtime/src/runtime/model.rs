@@ -299,7 +299,7 @@ impl MessageSelector {
 
 pub struct Session {
     pub(super) builtins: BTreeMap<String, BuiltinSpec>,
-    pub(super) attributes: BTreeMap<Symbol, AttributeSet>,
+    pub(super) attributes: AttributeMap,
     pub(super) attribute_revision: u64,
     pub(super) attribute_set_cache: AttributeSetCache,
     pub(super) builtin_dispatch_spec_cache: BuiltinDispatchSpecCache,
@@ -320,7 +320,7 @@ pub struct Session {
     pub(super) package_search_paths: Vec<PathBuf>,
     pub(super) loaded_packages: Vec<String>,
     pub(super) load_stack: Vec<PathBuf>,
-    pub(super) definitions: BTreeMap<Symbol, SymbolDefinition>,
+    pub(super) definitions: DefinitionMap,
     pub(super) has_up_value_definitions: bool,
     pub(super) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
     pub(super) next_generated_symbol_id: u64,
@@ -362,6 +362,12 @@ pub(super) struct SymbolStabilityCacheEntry {
     pub(super) epoch: u64,
     pub(super) stable: bool,
 }
+
+pub(super) type DefinitionMap =
+    HashMap<Symbol, SymbolDefinition, BuildHasherDefault<RuntimeCacheHasher>>;
+
+pub(super) type AttributeMap =
+    HashMap<Symbol, AttributeSet, BuildHasherDefault<RuntimeCacheHasher>>;
 
 pub(super) type SymbolStabilityCache =
     HashMap<Symbol, SymbolStabilityCacheEntry, BuildHasherDefault<RuntimeCacheHasher>>;

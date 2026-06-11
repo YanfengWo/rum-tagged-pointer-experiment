@@ -119,7 +119,7 @@ pub(super) struct BlockSymbolState {
 
 #[derive(Clone, Debug)]
 pub(super) struct LoaderSnapshot {
-    pub(super) attributes: BTreeMap<Symbol, AttributeSet>,
+    pub(super) attributes: AttributeMap,
     pub(super) options: BTreeMap<Symbol, SymbolOptions>,
     pub(super) syntax_information: BTreeMap<Symbol, Expr>,
     pub(super) declared_stubs: BTreeSet<Symbol>,
@@ -131,7 +131,7 @@ pub(super) struct LoaderSnapshot {
     pub(super) context_stack: Vec<ContextFrame>,
     pub(super) package_search_paths: Vec<PathBuf>,
     pub(super) loaded_packages: Vec<String>,
-    pub(super) definitions: BTreeMap<Symbol, SymbolDefinition>,
+    pub(super) definitions: DefinitionMap,
     pub(super) has_up_value_definitions: bool,
     pub(super) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
     pub(super) next_generated_symbol_id: u64,
@@ -337,7 +337,7 @@ impl Default for Session {
     fn default() -> Self {
         Self {
             builtins: BTreeMap::new(),
-            attributes: BTreeMap::new(),
+            attributes: AttributeMap::default(),
             attribute_revision: 0,
             attribute_set_cache: AttributeSetCache::default(),
             builtin_dispatch_spec_cache: BuiltinDispatchSpecCache::default(),
@@ -358,7 +358,7 @@ impl Default for Session {
             package_search_paths: vec![PathBuf::from(".")],
             loaded_packages: Vec::new(),
             load_stack: Vec::new(),
-            definitions: BTreeMap::new(),
+            definitions: DefinitionMap::default(),
             has_up_value_definitions: false,
             message_definitions: BTreeMap::new(),
             next_generated_symbol_id: 0,

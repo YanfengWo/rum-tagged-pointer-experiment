@@ -1,7 +1,9 @@
-use std::collections::HashMap;
+use std::cmp::Ordering;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
@@ -9,61 +11,117 @@ use serde::{Deserialize, Serialize};
 pub const GLOBAL_CONTEXT: &str = "Global`";
 pub const SYSTEM_CONTEXT: &str = "System`";
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+/// A symbol with interned context/name text.
+///
+/// Equality and hashing operate on the interned pair id plus the optional
+/// generated identity, so they are integer operations independent of name
+/// length. Ordering remains lexicographic over `(context, name, identity)`
+/// to preserve canonical ordering semantics.
+#[derive(Clone, Copy, Debug)]
 pub struct Symbol {
-    context: Arc<str>,
-    name: Arc<str>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    id: u32,
     identity: Option<u64>,
+    context: &'static str,
+    name: &'static str,
+}
+
+struct SymbolInterner {
+    strings: HashSet<&'static str>,
+    pairs: HashMap<(usize, usize), u32>,
+}
+
+fn symbol_interner() -> &'static Mutex<SymbolInterner> {
+    static SYMBOL_INTERNER: OnceLock<Mutex<SymbolInterner>> = OnceLock::new();
+    SYMBOL_INTERNER.get_or_init(|| {
+        Mutex::new(SymbolInterner {
+            strings: HashSet::new(),
+            pairs: HashMap::new(),
+        })
+    })
+}
+
+fn intern_text(strings: &mut HashSet<&'static str>, value: &str) -> &'static str {
+    if let Some(existing) = strings.get(value) {
+        existing
+    } else {
+        let leaked: &'static str = Box::leak(value.to_owned().into_boxed_str());
+        strings.insert(leaked);
+        leaked
+    }
+}
+
+fn intern_symbol_parts(context: &str, name: &str) -> (u32, &'static str, &'static str) {
+    let mut interner = symbol_interner()
+        .lock()
+        .expect("symbol interner lock should not be poisoned");
+    let SymbolInterner { strings, pairs } = &mut *interner;
+    let context = intern_text(strings, context);
+    let name = intern_text(strings, name);
+    let key = (context.as_ptr() as usize, name.as_ptr() as usize);
+    let next_id = u32::try_from(pairs.len()).expect("interned symbol count should fit in u32");
+    let id = *pairs.entry(key).or_insert(next_id);
+    (id, context, name)
+}
+
+fn canonical_system_symbols() -> &'static HashMap<&'static str, Symbol> {
+    static CANONICAL_SYSTEM_SYMBOLS: OnceLock<HashMap<&'static str, Symbol>> = OnceLock::new();
+    CANONICAL_SYSTEM_SYMBOLS.get_or_init(|| {
+        crate::heads::CANONICAL_CORE_HEADS
+            .iter()
+            .map(|name| (*name, Symbol::new(SYSTEM_CONTEXT, *name)))
+            .collect()
+    })
 }
 
 impl Symbol {
-    pub fn new(context: impl Into<Arc<str>>, name: impl Into<Arc<str>>) -> Self {
+    pub fn new(context: impl AsRef<str>, name: impl AsRef<str>) -> Self {
+        let (id, context, name) = intern_symbol_parts(context.as_ref(), name.as_ref());
         Self {
-            context: context.into(),
-            name: name.into(),
+            id,
             identity: None,
+            context,
+            name,
         }
     }
 
-    pub fn with_identity(
-        context: impl Into<Arc<str>>,
-        name: impl Into<Arc<str>>,
-        identity: u64,
-    ) -> Self {
+    pub fn with_identity(context: impl AsRef<str>, name: impl AsRef<str>, identity: u64) -> Self {
+        let (id, context, name) = intern_symbol_parts(context.as_ref(), name.as_ref());
         Self {
-            context: context.into(),
-            name: name.into(),
+            id,
             identity: Some(identity),
+            context,
+            name,
         }
     }
 
     pub fn from_name(name: impl AsRef<str>) -> Self {
-        Self {
-            context: shared_global_context(),
-            name: Arc::from(name.as_ref()),
-            identity: None,
-        }
+        Self::new(GLOBAL_CONTEXT, name)
     }
 
     pub fn system(name: impl AsRef<str>) -> Self {
-        Self {
-            context: shared_system_context(),
-            name: shared_system_name(name.as_ref()),
-            identity: None,
+        if let Some(symbol) = canonical_system_symbols().get(name.as_ref()) {
+            return *symbol;
         }
+
+        Self::new(SYSTEM_CONTEXT, name)
     }
 
     pub fn context(&self) -> &str {
-        self.context.as_ref()
+        self.context
     }
 
     pub fn name(&self) -> &str {
-        self.name.as_ref()
+        self.name
     }
 
     pub fn identity(&self) -> Option<u64> {
         self.identity
+    }
+
+    /// Dense id of the interned `(context, name)` pair. Symbols with the
+    /// same text share the id even when their `identity` differs.
+    pub fn interned_id(&self) -> u32 {
+        self.id
     }
 
     pub fn fully_qualified_name(&self) -> String {
@@ -79,39 +137,85 @@ impl Symbol {
     }
 }
 
+impl PartialEq for Symbol {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.identity == other.identity
+    }
+}
+
+impl Eq for Symbol {}
+
+impl Hash for Symbol {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let identity = match self.identity {
+            Some(value) => value.rotate_left(1) | 1,
+            None => 0,
+        };
+        state.write_u64((u64::from(self.id)).wrapping_mul(0x9e3779b97f4a7c15) ^ identity);
+    }
+}
+
+impl PartialOrd for Symbol {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Symbol {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.id == other.id {
+            return self.identity.cmp(&other.identity);
+        }
+
+        let context_order = if std::ptr::eq(self.context, other.context) {
+            Ordering::Equal
+        } else {
+            self.context.cmp(other.context)
+        };
+        context_order
+            .then_with(|| self.name.cmp(other.name))
+            .then_with(|| self.identity.cmp(&other.identity))
+    }
+}
+
+impl Serialize for Symbol {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+
+        let fields = 2 + usize::from(self.identity.is_some());
+        let mut state = serializer.serialize_struct("Symbol", fields)?;
+        state.serialize_field("context", self.context)?;
+        state.serialize_field("name", self.name)?;
+        if let Some(identity) = self.identity {
+            state.serialize_field("identity", &identity)?;
+        }
+        state.end()
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename = "Symbol")]
+struct SymbolDeserializeParts {
+    context: String,
+    name: String,
+    #[serde(default)]
+    identity: Option<u64>,
+}
+
+impl<'de> Deserialize<'de> for Symbol {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let parts = SymbolDeserializeParts::deserialize(deserializer)?;
+        Ok(match parts.identity {
+            Some(identity) => Symbol::with_identity(parts.context, parts.name, identity),
+            None => Symbol::new(parts.context, parts.name),
+        })
+    }
+}
+
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.qualified_name())
     }
-}
-
-fn shared_global_context() -> Arc<str> {
-    static GLOBAL_CONTEXT_ARC: OnceLock<Arc<str>> = OnceLock::new();
-    GLOBAL_CONTEXT_ARC
-        .get_or_init(|| Arc::from(GLOBAL_CONTEXT))
-        .clone()
-}
-
-fn shared_system_context() -> Arc<str> {
-    static SYSTEM_CONTEXT_ARC: OnceLock<Arc<str>> = OnceLock::new();
-    SYSTEM_CONTEXT_ARC
-        .get_or_init(|| Arc::from(SYSTEM_CONTEXT))
-        .clone()
-}
-
-fn shared_system_name(name: &str) -> Arc<str> {
-    static SYSTEM_NAME_ARCS: OnceLock<HashMap<&'static str, Arc<str>>> = OnceLock::new();
-
-    SYSTEM_NAME_ARCS
-        .get_or_init(|| {
-            crate::heads::CANONICAL_CORE_HEADS
-                .iter()
-                .map(|name| (*name, Arc::from(*name)))
-                .collect()
-        })
-        .get(name)
-        .cloned()
-        .unwrap_or_else(|| Arc::from(name))
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -459,7 +563,7 @@ impl Expr {
         Self::Atom(Atom::Symbol(Symbol::from_name(name)))
     }
 
-    pub fn contextual_symbol(context: impl Into<Arc<str>>, name: impl Into<Arc<str>>) -> Self {
+    pub fn contextual_symbol(context: impl AsRef<str>, name: impl AsRef<str>) -> Self {
         Self::Atom(Atom::Symbol(Symbol::new(context, name)))
     }
 
