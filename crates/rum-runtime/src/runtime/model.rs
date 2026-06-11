@@ -312,8 +312,8 @@ pub struct Session {
     pub(super) call_stability_cache: CallStabilityCache,
     pub(super) options: BTreeMap<Symbol, SymbolOptions>,
     pub(super) syntax_information: BTreeMap<Symbol, Expr>,
-    pub(super) declared_stubs: BTreeSet<Symbol>,
-    pub(super) removed_symbols: BTreeSet<Symbol>,
+    pub(super) declared_stubs: SymbolSet,
+    pub(super) removed_symbols: SymbolSet,
     pub(super) symbol_generations: BTreeMap<(String, String), u64>,
     pub(super) once_values: BTreeMap<String, Expr>,
     pub(super) option_value_scopes: Vec<OptionValueScope>,
@@ -365,6 +365,9 @@ pub(super) struct SymbolStabilityCacheEntry {
     pub(super) generation: u64,
     pub(super) stable: bool,
 }
+
+pub(super) type SymbolSet =
+    std::collections::HashSet<Symbol, BuildHasherDefault<RuntimeCacheHasher>>;
 
 pub(super) type DefinitionMap =
     HashMap<Symbol, SymbolDefinition, BuildHasherDefault<RuntimeCacheHasher>>;
