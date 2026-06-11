@@ -63,23 +63,30 @@ Preload lower HOL files before higher layers: `ErrorUtil.wl`, `Types.wl`,
 Current clean-clone smoke results are: `bool_tests.wl` `List[73, 0]`,
 `drule_tests.wl` `List[43, 0]`, `tactics_tests.wl` `List[49, 0]`, and
 `printer_tests.wl` + `parser_tests.wl` `List[126, 0]`. Use
-`scripts/mma-hol-bounded-smoke.sh` for bounded diagnostic load/test probes; the
-next CL-Y task is triage of the first stdlib/auto failure beyond
-Parser/Printer, currently the `PropTaut` / `Simp` path behind `Pair.wl`.
+`scripts/mma-hol-bounded-smoke.sh` for bounded diagnostic load/test probes. The
+first stdlib/auto failure beyond Parser/Printer is still the `PropTaut` /
+`Simp` path behind `Pair.wl`.
 
-Keep performance work probe-first: identify the hot path, make the smallest
-targeted change, then rerun the same timing smoke to reject negative
-optimizations. Bool performance is no longer the main correctness blocker; it
-is a follow-up lane. A symbol-level evaluation epoch cache and shared
-call-tree `Expr` representation are already in place; after lexical
-substitution copy-on-write plus the retained evaluator/representation follow-up
-cuts, the current clean Bool smoke is about 2.36-2.40s warmed external
-default-release wall time. A prior local `target-cpu=native` build measured
-about 2.29-2.35s before the latest follow-up cuts. Whole-expression exact
-normal-form caching, symbol fingerprint hashing, shallow definition matcher
-metadata, a one-entry call-stability MRU, and heavier LTO/codegen flag probes
-were measured and rejected or left as optional local knobs rather than default
-commitments.
+The deep PropTaut performance push is currently paused pending external review.
+Do not resume broad evaluator/representation optimization, or treat a prior
+cross-engine `<2x` target as an active commitment, unless the user explicitly
+reopens that lane. The retained current frontier is the PropTaut distribution
+probe at about `27.40-27.64s` in release versus the local WolframKernel
+internal timing of about `3.80s`; this remains an `mma-hol` gate, but the next
+action is evidence review rather than automatic micro-optimization.
+
+If performance work is reopened, keep it probe-first: identify the hot path,
+make the smallest targeted change, then rerun the same timing smoke to reject
+negative optimizations. Bool performance is no longer the main correctness
+blocker. A symbol-level evaluation epoch cache and shared call-tree `Expr`
+representation are already in place; after lexical substitution copy-on-write
+plus the retained evaluator/representation follow-up cuts, the current clean
+Bool smoke is about 2.36-2.40s warmed external default-release wall time. A
+prior local `target-cpu=native` build measured about 2.29-2.35s before the
+latest follow-up cuts. Whole-expression exact normal-form caching, symbol
+fingerprint hashing, shallow definition matcher metadata, a one-entry
+call-stability MRU, and heavier LTO/codegen flag probes were measured and
+rejected or left as optional local knobs rather than default commitments.
 
 For long-running probes or commands that may spawn children, do not start them
 bare. Use `scripts/run-bounded.py --timeout SECONDS -- <command> ...` or a

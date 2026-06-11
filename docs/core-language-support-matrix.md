@@ -993,7 +993,10 @@ the `mma-hol` lane healthy:
   `mkPairInjThm`. Rum's default recursion limit now matches the local Wolfram
   baseline of `1024`, removing the immediate low-limit hard failure, but
   `Pair` still needs the `PropTaut` / `Simp` performance path fixed before
-  later stdlib package statuses can be trusted.
+  later stdlib package statuses can be trusted. The deep performance lane is
+  currently paused pending external review; use the current matrix entry as a
+  blocker statement, not as an instruction to resume speculative
+  evaluator/representation optimization.
 
 ### Non-Goals
 

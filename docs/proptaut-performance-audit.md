@@ -5,6 +5,13 @@ fast-path diff present that evening. Workload: clean `mma-hol` HEAD `698e3d0`
 clone at `/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol`. Machine: the same
 x86-64 macOS box used for the Bool lane numbers in `PROGRESS.md`.
 
+Maintainer note, 2026-06-12: follow-up retained optimizations after this audit
+reduced the same PropTaut distribution probe to about `27.40-27.64s` in
+release, but the local WolframKernel internal timing remains about `3.80s`.
+The deeper performance lane is paused pending external review; use this report
+as diagnosis history, not as an instruction to continue automatic
+micro-optimization.
+
 This audit answers two questions: where the `PropTaut` time actually goes,
 and why a night of sample-guided micro-probes produced mostly neutral or
 negative results. The short version: the profile was being read in a form

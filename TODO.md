@@ -106,9 +106,9 @@ Completed history, archived planning detail, and operational lessons live in
   definition lhs own-value evaluation for non-pattern constants, the
   state-progressing recursive parser cycle-guard case, and ordinary-expression
   pattern evaluation for `MemberQ` / `MatchQ` style calls. The next
-  post-Parser/Printer work is concrete: make `proptaut_tests.wl`
-  fast enough to be a useful smoke signal, then make the `PropTaut`-backed
-  `Simp` schema path cheap enough for `stdlib/Pair.wl`. The old Pair hard
+  post-Parser/Printer blocker is concrete: `proptaut_tests.wl` is still not
+  fast enough to be a useful smoke signal, and the `PropTaut`-backed `Simp`
+  schema path is still too slow for `stdlib/Pair.wl`. The old Pair hard
   failure (`mkPairInjThm` consumed as a non-theorem) was traced to rum's too-low
   default recursion limit and the default has been raised to the local Wolfram
   baseline of `1024`, but a full `Pair.wl` load is still too slow to call green.
@@ -129,10 +129,14 @@ Completed history, archived planning detail, and operational lessons live in
   definition matcher metadata, codegen-units=1, thin LTO, a broad literal
   `ReplaceAll` shortcut that broke `Rule` evaluation boundaries, a borrowed
   rewrite-matcher fast path that was neutral on the `PropTaut` distribution
-  probe, and a lightweight builtin-name hasher that regressed that same probe;
-  continue with fresh profiling before deeper low-level work. The current
-  profile points first at stability rescans, allocation/clone traffic, and
-  builtin/evaluator dispatch overhead rather than parser or loader work.
+  probe, and a lightweight builtin-name hasher that regressed that same probe.
+  The current retained PropTaut frontier is about `27.40-27.64s` in release
+  versus local WolframKernel internal timing of about `3.80s`. Deep performance
+  work is paused pending external review; do not resume low-level
+  evaluator/representation optimization until that review picks the next
+  evidence-backed cut. The current profile points first at stability rescans,
+  allocation/clone traffic, and builtin/evaluator dispatch overhead rather
+  than parser or loader work.
 - [ ] Treat `mma-hol` stable-mode snapshot helpers as a required
   developer-workflow gate for `rum-hol` migration. First-pass `Contexts[]`,
   file timestamp/size/existence helpers, `AbsoluteTime`, `Round`, simple

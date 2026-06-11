@@ -6,6 +6,27 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-12 Performance Lane Pause And Cleanup
+
+- Cancelled the long-lived PropTaut optimization goal and stopped automatic
+  work toward the earlier `<2x` cross-engine target. That target was not met:
+  the retained release frontier is about `27.40-27.64s` for the PropTaut
+  distribution probe versus the local WolframKernel internal timing of about
+  `3.80s`.
+- Verified the repository was clean before this documentation pass and found no
+  lingering agent-owned `rum-cli`, `run-bounded.py`, `sample`, or `cargo`
+  processes. No generated profiler or bounded-smoke artifacts were present in
+  the workspace outside normal `.git/hooks/*.sample` templates.
+- Reframed the current `mma-hol` status for future agents: `PropTaut` / `Simp`
+  remains the first stdlib/auto gate beyond the green Parser/Printer cold lane,
+  but the next action is external review of the accumulated evidence rather
+  than continuing speculative evaluator/representation micro-optimization.
+- The useful artifacts for that review are
+  [docs/evaluator-performance-audit.md](./docs/evaluator-performance-audit.md),
+  [docs/proptaut-performance-audit.md](./docs/proptaut-performance-audit.md),
+  `scripts/sample-self-time.py`, `scripts/sample-attribute-callers.py`, and
+  the retained/rejected probe history below.
+
 ## 2026-06-11 PropTaut Performance Attribution
 
 - Added `docs/proptaut-performance-audit.md` and the local macOS `sample`
@@ -492,8 +513,8 @@ are not active project-owned examples.
   hard-failure point without reporting the old non-theorem error, but was
   intentionally terminated after `real 335.35s`. Therefore the correctness
   blocker is explained and the default-limit fix is in place, but `Pair.wl` is
-  not yet a green smoke. The next work is `PropTaut` / `Simp` performance, not
-  more ad hoc Pair-source debugging.
+  not yet a green smoke. This identified `PropTaut` / `Simp` performance, not
+  more ad hoc Pair-source debugging, as the remaining Pair lane blocker.
 
 ## 2026-06-11 Loader Resource-Failure Contract
 
