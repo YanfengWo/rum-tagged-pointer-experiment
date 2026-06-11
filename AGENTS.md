@@ -81,6 +81,13 @@ metadata, a one-entry call-stability MRU, and heavier LTO/codegen flag probes
 were measured and rejected or left as optional local knobs rather than default
 commitments.
 
+For long-running probes or commands that may spawn children, do not start them
+bare. Use `scripts/run-bounded.py --timeout SECONDS -- <command> ...` or a
+repo script that delegates to it. The wrapper starts the command in a new
+process group and kills the whole group on timeout or interruption, which
+avoids orphaned `wolframscript`, `WolframKernel`, server, or cargo child
+processes that later require manual cleanup.
+
 ## Development Commands
 
 Use the local Rust toolchain declared by the workspace. The current expected

@@ -143,6 +143,13 @@ Run the full test suite:
 cargo test --workspace
 ```
 
+For long-running local probes, especially commands that may spawn child
+processes, prefer:
+
+```bash
+scripts/run-bounded.py --timeout 120 -- <command> ...
+```
+
 Run the CLI REPL:
 
 ```bash

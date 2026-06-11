@@ -14,7 +14,10 @@ scripts/mma-hol-bounded-smoke.sh --mma-hol /path/to/mma-hol --mode loads
 
 The driver is diagnostic harness engineering, not a performance benchmark. It
 builds `rum-cli` once unless `RUM_CLI_BIN` is set, then runs selected stages
-with a per-stage wall timeout. Each stage writes:
+with a per-stage wall timeout through `scripts/run-bounded.py`. The bounded
+runner starts each probe in a fresh process group and terminates the whole
+group on timeout, so child processes such as external kernels do not survive a
+failed probe. Each stage writes:
 
 - a generated expression in `*.expr`
 - captured stdout in `*.stdout`

@@ -364,38 +364,6 @@ test_expr() {
   printf 'HOLTest`testSummary[]'
 }
 
-stage_slug() {
-  local slug=${1//\//_}
-  slug=${slug//[^A-Za-z0-9_.-]/_}
-  printf '%s' "${slug}"
-}
-
-run_with_timeout() {
-  local timeout=$1
-  local stdout_file=$2
-  local stderr_file=$3
-  shift 3
-
-  "$@" >"${stdout_file}" 2>"${stderr_file}" &
-  local pid=$!
-  local start now
-  start=$(date +%s)
-
-  while kill -0 "${pid}" >/dev/null 2>&1; do
-    now=$(date +%s)
-    if (( now - start >= timeout )); then
-      kill "${pid}" >/dev/null 2>&1 || true
-      sleep 2
-      kill -9 "${pid}" >/dev/null 2>&1 || true
-      wait "${pid}" >/dev/null 2>&1 || true
-      return 124
-    fi
-    sleep 1
-  done
-
-  wait "${pid}"
-}
-
 classify_stage() {
   local kind=$1
   local exit_code=$2
@@ -450,6 +418,18 @@ if [[ ! -x "${rum_cli_bin}" ]]; then
   exit 2
 fi
 
+bounded_runner="${repo_root}/scripts/run-bounded.py"
+if [[ ! -x "${bounded_runner}" ]]; then
+  echo "error: bounded runner is not executable: ${bounded_runner}" >&2
+  exit 2
+fi
+
+stage_slug() {
+  local slug=${1//\//_}
+  slug=${slug//[^A-Za-z0-9_.-]/_}
+  printf '%s' "${slug}"
+}
+
 echo "[rum-mma-hol] root: ${mma_hol_root}"
 echo "[rum-mma-hol] mode: ${mode}; timeout: ${timeout_seconds}s; stages: ${#stage_labels[@]}"
 echo "[rum-mma-hol] logs: ${output_dir}"
@@ -474,8 +454,9 @@ for i in "${!stage_labels[@]}"; do
   printf '[%02d/%02d] %s ... ' "$((i + 1))" "${#stage_labels[@]}" "${label}"
   start=$(date +%s)
   set +e
-  run_with_timeout "${timeout_seconds}" "${stdout_file}" "${stderr_file}" \
-    "${rum_cli_bin}" --eval "$(cat "${expr_file}")"
+  "${bounded_runner}" --timeout "${timeout_seconds}" -- \
+    "${rum_cli_bin}" --eval "$(cat "${expr_file}")" \
+    > "${stdout_file}" 2> "${stderr_file}"
   exit_code=$?
   set -e
   end=$(date +%s)
