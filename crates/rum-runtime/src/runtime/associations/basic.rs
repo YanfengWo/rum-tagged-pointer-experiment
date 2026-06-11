@@ -39,7 +39,7 @@ impl Session {
 
         let entry = entries[index].clone();
         let key_result = self.evaluate(entry.key.clone());
-        let key = self.suspend_with_frame(key_result, {
+        let key = self.suspend_with_frame_lazy(key_result, || {
             let entries = entries.clone();
             let evaluated_entries = evaluated_entries.clone();
             let entry_for_resume = entry.clone();

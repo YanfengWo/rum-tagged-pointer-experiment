@@ -39,6 +39,11 @@ checklist stops helping prioritization, move or summarize it here.
   ordering/hash semantics, display behavior, and serialized field shape. This
   is a low-risk representation step short of full numeric symbol interning;
   the same release `PropTaut` probe then measured about `32.60-32.82s`.
+- Delayed association key-evaluation suspension-frame cloning until an input
+  request actually occurs. This removed synchronous-path cloning of the parsed
+  entry list and evaluated prefix for ordinary `Association[...]` construction;
+  the same release `PropTaut` probe then measured about `30.06s`. A similar
+  `Lookup` lazy-frame probe was neutral to slightly worse and was not kept.
 
 ## 2026-06-10 Scope Reset
 
