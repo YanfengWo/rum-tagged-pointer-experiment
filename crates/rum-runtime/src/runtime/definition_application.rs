@@ -47,7 +47,11 @@ impl Session {
             return Ok(None);
         };
 
-        if !Self::definition_lhs_could_match_candidate(&down_value.lhs, &normalized_candidate) {
+        if !Self::definition_lhs_could_match_candidate(
+            &down_value.lhs,
+            &down_value.matcher,
+            &normalized_candidate,
+        ) {
             return self.try_apply_down_values_from_symbol(
                 candidate,
                 normalized_candidate,
@@ -204,7 +208,11 @@ impl Session {
             return Ok(None);
         };
 
-        if !Self::definition_lhs_could_match_candidate(&up_value.lhs, &normalized_candidate) {
+        if !Self::definition_lhs_could_match_candidate(
+            &up_value.lhs,
+            &up_value.matcher,
+            &normalized_candidate,
+        ) {
             return self.try_apply_up_values_from_list(
                 candidate,
                 normalized_candidate,
@@ -294,7 +302,11 @@ impl Session {
             return Ok(None);
         };
 
-        if !Self::definition_lhs_could_match_candidate(&sub_value.lhs, &normalized_candidate) {
+        if !Self::definition_lhs_could_match_candidate(
+            &sub_value.lhs,
+            &sub_value.matcher,
+            &normalized_candidate,
+        ) {
             return self.try_apply_sub_values_from_symbol(
                 candidate,
                 normalized_candidate,
@@ -357,8 +369,53 @@ impl Session {
         }
     }
 
-    fn definition_lhs_could_match_candidate(lhs: &Expr, candidate: &Expr) -> bool {
+    fn definition_lhs_could_match_candidate(
+        lhs: &Expr,
+        matcher: &MatcherNode,
+        candidate: &Expr,
+    ) -> bool {
+        if !Self::compiled_matcher_could_match_candidate_shape(matcher, candidate) {
+            return false;
+        }
+
         Self::pattern_could_match_value_shape(strip_hold_pattern(lhs), candidate)
+    }
+
+    fn compiled_matcher_could_match_candidate_shape(
+        matcher: &MatcherNode,
+        candidate: &Expr,
+    ) -> bool {
+        let MatcherNode::Call {
+            head: pattern_head,
+            args: pattern_args,
+        } = matcher
+        else {
+            return true;
+        };
+
+        let Expr::Call {
+            head: value_head,
+            args: value_args,
+        } = candidate
+        else {
+            return true;
+        };
+
+        if let MatcherNode::Exact(pattern_head) = pattern_head.as_ref() {
+            if pattern_head != value_head.as_ref() {
+                return false;
+            }
+        }
+
+        if pattern_args
+            .iter()
+            .all(|arg| matches!(arg, MatcherArg::Single(_)))
+            && pattern_args.len() != value_args.len()
+        {
+            return false;
+        }
+
+        true
     }
 
     fn pattern_could_match_value_shape(pattern: &Expr, value: &Expr) -> bool {
