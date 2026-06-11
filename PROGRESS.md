@@ -59,6 +59,14 @@ checklist stops helping prioritization, move or summarize it here.
   release `PropTaut` probe then measured about `28.10-28.32s`. A hand-written
   `Symbol` comparison probe using `Arc<str>` pointer equality measured worse
   (`31.55-32.51s`) and was reverted.
+- Reused shared `Arc<str>` storage for Global/System contexts and
+  canonical core System symbol names through the hot `Symbol::from_name` /
+  `Symbol::system` constructors, and routed obvious System-symbol runtime
+  constructors through that path. The same release `PropTaut` probe then
+  measured about `27.40-27.64s`. Two nearby probes were rejected: removing the
+  recursive definition shape prefilter regressed to about `29.16s`, and
+  skipping unchanged literal-`Sequence` checks during RHS substitution stayed
+  neutral to slightly worse (`28.35-28.70s`).
 
 ## 2026-06-10 Scope Reset
 

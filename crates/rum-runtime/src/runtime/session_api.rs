@@ -120,7 +120,7 @@ impl Session {
 
         if !spec.attributes.is_empty() {
             self.attributes
-                .insert(Symbol::new(SYSTEM_CONTEXT, spec.name), spec.attributes);
+                .insert(Symbol::system(spec.name), spec.attributes);
             self.bump_attribute_revision();
         } else {
             self.bump_evaluation_epoch();
@@ -177,7 +177,7 @@ impl Session {
         let mut candidates = BTreeSet::new();
 
         for name in self.builtins.keys() {
-            let symbol = Symbol::new(SYSTEM_CONTEXT, name.as_str());
+            let symbol = Symbol::system(name.as_str());
             self.insert_completion_candidate(&mut candidates, &symbol, prefix, explicit_context);
         }
 

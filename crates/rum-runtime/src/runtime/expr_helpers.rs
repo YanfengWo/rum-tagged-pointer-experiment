@@ -3,7 +3,7 @@ use super::*;
 pub(super) fn resolve_unqualified_symbol(raw: &str) -> Option<Symbol> {
     split_symbol_name(raw)
         .map(|(context, name)| Symbol::new(normalize_context_name(context), name))
-        .or_else(|| is_known_system_symbol_name(raw).then(|| Symbol::new(SYSTEM_CONTEXT, raw)))
+        .or_else(|| is_known_system_symbol_name(raw).then(|| Symbol::system(raw)))
 }
 
 pub(super) fn system_expr(name: &str) -> Expr {

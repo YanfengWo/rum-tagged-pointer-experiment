@@ -94,7 +94,7 @@ impl Session {
 
     pub(super) fn active_symbol_for_name(&self, context: &str, name: &str) -> Symbol {
         if context == SYSTEM_CONTEXT {
-            return Symbol::new(context, name);
+            return Symbol::system(name);
         }
 
         self.symbol_generations

@@ -1,6 +1,7 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
@@ -37,12 +38,20 @@ impl Symbol {
         }
     }
 
-    pub fn from_name(name: impl Into<Arc<str>>) -> Self {
-        Self::new(GLOBAL_CONTEXT, name)
+    pub fn from_name(name: impl AsRef<str>) -> Self {
+        Self {
+            context: shared_global_context(),
+            name: Arc::from(name.as_ref()),
+            identity: None,
+        }
     }
 
-    pub fn system(name: impl Into<Arc<str>>) -> Self {
-        Self::new(SYSTEM_CONTEXT, name)
+    pub fn system(name: impl AsRef<str>) -> Self {
+        Self {
+            context: shared_system_context(),
+            name: shared_system_name(name.as_ref()),
+            identity: None,
+        }
     }
 
     pub fn context(&self) -> &str {
@@ -74,6 +83,35 @@ impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.qualified_name())
     }
+}
+
+fn shared_global_context() -> Arc<str> {
+    static GLOBAL_CONTEXT_ARC: OnceLock<Arc<str>> = OnceLock::new();
+    GLOBAL_CONTEXT_ARC
+        .get_or_init(|| Arc::from(GLOBAL_CONTEXT))
+        .clone()
+}
+
+fn shared_system_context() -> Arc<str> {
+    static SYSTEM_CONTEXT_ARC: OnceLock<Arc<str>> = OnceLock::new();
+    SYSTEM_CONTEXT_ARC
+        .get_or_init(|| Arc::from(SYSTEM_CONTEXT))
+        .clone()
+}
+
+fn shared_system_name(name: &str) -> Arc<str> {
+    static SYSTEM_NAME_ARCS: OnceLock<HashMap<&'static str, Arc<str>>> = OnceLock::new();
+
+    SYSTEM_NAME_ARCS
+        .get_or_init(|| {
+            crate::heads::CANONICAL_CORE_HEADS
+                .iter()
+                .map(|name| (*name, Arc::from(*name)))
+                .collect()
+        })
+        .get(name)
+        .cloned()
+        .unwrap_or_else(|| Arc::from(name))
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -417,7 +455,7 @@ impl Expr {
         }
     }
 
-    pub fn symbol(name: impl Into<Arc<str>>) -> Self {
+    pub fn symbol(name: impl AsRef<str>) -> Self {
         Self::Atom(Atom::Symbol(Symbol::from_name(name)))
     }
 
@@ -425,7 +463,7 @@ impl Expr {
         Self::Atom(Atom::Symbol(Symbol::new(context, name)))
     }
 
-    pub fn system_symbol(name: impl Into<Arc<str>>) -> Self {
+    pub fn system_symbol(name: impl AsRef<str>) -> Self {
         Self::Atom(Atom::Symbol(Symbol::system(name)))
     }
 

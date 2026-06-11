@@ -71,7 +71,7 @@ fn default_confirmation_tag_expr() -> Expr {
 }
 
 fn fresh_internal_enclose_tag_expr(session: &mut Session) -> Expr {
-    let seed = Symbol::new(SYSTEM_CONTEXT, "InternalEncloseTag");
+    let seed = Symbol::system("InternalEncloseTag");
     Expr::Atom(Atom::Symbol(session.allocate_fresh_symbol(&seed)))
 }
 
