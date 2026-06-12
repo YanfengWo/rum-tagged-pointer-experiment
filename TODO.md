@@ -22,6 +22,12 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Immediate Correctness And Debt
 
+- [ ] Fix `Catch` tag-form evaluation: `tag = "$t$"; Catch[Throw[42, tag], tag]`
+  must return `42` as in WolframKernel (the tag form is evaluated before
+  pattern compilation), instead of escaping. This single defect accounts
+  for all 9 current `meson_tests.wl` failures; repro, analysis, and
+  acceptance criteria are in
+  [docs/next-session-handoff.md](./docs/next-session-handoff.md) Task 1.
 - [ ] Fix lexer unexpected-character spans so structured diagnostics report
   the actual offending byte range instead of zero-width placeholders.
 - [ ] Fix REPL history persistence so multiline inputs reload as single logical
@@ -125,12 +131,15 @@ Completed history, archived planning detail, and operational lessons live in
   Wolfram baseline of `1024`. After `Pair` loads cleanly, rerun the later
   `Sum`, `Option`, `Set`, `Num`, and Real package probes because their
   current statuses are polluted by the failed Pair dependency.
-  Performance status, retained work, rejected probes, the follow-up same-bit
-  dirty-bloom fix, and the next evidence-backed cuts (single-allocation call
-  nodes and evaluated stamps first; better exact dependency tracking only if
-  fresh profiler evidence justifies it) are recorded in `PROGRESS.md` under
-  "2026-06-12 Representation Optimization Pass" and
-  "2026-06-12 Same-Bit Stability Invalidation Follow-Up", and in
+  The ordered next steps for this lane (Catch tag fix for the 9 newly
+  exposed `meson_tests` failures, a Pair/Simp logical-work multiplier hunt
+  before any further constant tuning, and only then the single-allocation
+  call-node / evaluated-stamp rework) live in
+  [docs/next-session-handoff.md](./docs/next-session-handoff.md).
+  Performance status, retained work, and rejected probes are recorded in
+  `PROGRESS.md` under "2026-06-12 Representation Optimization Pass",
+  "2026-06-12 Same-Bit Stability Invalidation Follow-Up", and
+  "2026-06-12 Block Scope Invalidation Fix", and in
   `docs/proptaut-performance-audit.md`; resume from those, not from this
   bullet.
 - [ ] Treat `mma-hol` stable-mode snapshot helpers as a required
