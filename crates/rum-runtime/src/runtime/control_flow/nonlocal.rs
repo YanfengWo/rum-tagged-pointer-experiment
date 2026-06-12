@@ -126,6 +126,27 @@ impl Session {
             return self.finish_catch_match(handler, value, tag);
         };
 
+        let form_result = self.resolve_matcher_pattern_expr_owned(form);
+        let form = self.suspend_with_frame(form_result, {
+            let handler = handler.clone();
+            let value = value.clone();
+            let tag = tag.clone();
+            move |session, form| {
+                session.finish_catch_for_throw_with_form(form, handler, value, tag, explicit_tag)
+            }
+        })?;
+
+        self.finish_catch_for_throw_with_form(form, handler, value, tag, explicit_tag)
+    }
+
+    fn finish_catch_for_throw_with_form(
+        &mut self,
+        form: Expr,
+        handler: Option<Expr>,
+        value: Expr,
+        tag: Expr,
+        explicit_tag: bool,
+    ) -> Result<Expr, EvalError> {
         let match_result = self.match_expr_owned(form, tag.clone(), SymbolExprMap::default());
         self.drive_internal_value(match_result, move |session, outcome| {
             if outcome.matched {
@@ -158,6 +179,46 @@ impl Session {
             });
         };
 
+        let form_result = self.resolve_matcher_pattern_expr_owned(form);
+        let form = self.suspend_with_frame(form_result, {
+            let value = value.clone();
+            let tag = tag.clone();
+            let cleanup_value = cleanup_value.clone();
+            let cleanup_tag = cleanup_tag.clone();
+            move |session, form| {
+                session.finish_catch_for_bypassing_throw_with_form(
+                    form,
+                    value,
+                    tag,
+                    explicit_tag,
+                    cleanup_value,
+                    cleanup_tag,
+                    cleanup_explicit_tag,
+                )
+            }
+        })?;
+
+        self.finish_catch_for_bypassing_throw_with_form(
+            form,
+            value,
+            tag,
+            explicit_tag,
+            cleanup_value,
+            cleanup_tag,
+            cleanup_explicit_tag,
+        )
+    }
+
+    fn finish_catch_for_bypassing_throw_with_form(
+        &mut self,
+        form: Expr,
+        value: Expr,
+        tag: Expr,
+        explicit_tag: bool,
+        cleanup_value: Expr,
+        cleanup_tag: Expr,
+        cleanup_explicit_tag: bool,
+    ) -> Result<Expr, EvalError> {
         let match_result = self.match_expr_owned(form, tag.clone(), SymbolExprMap::default());
         self.drive_internal_value(match_result, move |_, outcome| {
             if outcome.matched {

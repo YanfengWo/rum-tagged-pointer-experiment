@@ -6,6 +6,43 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-12 `Catch` Tag-Form Evaluation Fix
+
+Closed the `mma-hol` Meson semantic bug identified in
+[docs/next-session-handoff.md](./docs/next-session-handoff.md) Task 1.
+`Catch` now resolves its optional tag form through the same matcher-pattern
+normalization path used by `MatchQ` / `MemberQ`: explicit pattern syntax stays
+held, while ordinary expressions are evaluated before compiling the exact
+matcher. The implementation preserves body-first `Catch` behavior; the tag
+form is resolved only when a `Throw` reaches the `Catch` frame.
+
+The regression covers both sides of the symbol-valued tag case:
+`tag = "$t$"; Catch[Throw[42, tag], tag]` now returns `42`, while
+`tag = "$t$"; Catch[Throw[42, "$u$"], tag]` still escapes as a non-matching
+throw with tag `"$u$"`.
+
+Validation:
+
+- `cargo test -p rum-runtime catch_evaluates_symbol_valued_tag_form_before_matching`
+- `cargo test -p rum-runtime holding_and_control_part6::cleanup_throw`
+- `cargo test -p rum-runtime`
+- bounded clean-clone `test/meson_tests` smoke with the release CLI:
+  `List[44, 0]` in `79s` on `mma-hol` HEAD `698e3d0`. The handoff expected
+  `List[43, 0]`, but the current test tree reports 44 cases; the semantic gate
+  is zero failures.
+- bounded clean-clone `test/meson_proveprop_tests` was re-probed after the fix
+  and timed out at `300s` without a stdout summary. The bounded runner killed
+  the process group cleanly, so the remaining status is a performance/scale
+  gate rather than the now-fixed `Catch` tag-form bug.
+
+Known remaining boundary: WolframKernel has a subtler side-effect scope for
+nontrivial `Catch` tag-form evaluation. A tag form like
+`(Print["SIDE"]; x = 2; "$t$")` prints while matching, but the `x = 2`
+assignment does not leak after the `Catch`; rum currently uses ordinary
+matcher-pattern resolution here, so that assignment would persist. This is
+tracked as separate semantic debt because the Meson regression only needs the
+symbol-valued exact-tag case.
+
 ## 2026-06-12 Block Scope Invalidation Fix (External)
 
 Re-examined the same-bit follow-up below with a decomposed re-access probe

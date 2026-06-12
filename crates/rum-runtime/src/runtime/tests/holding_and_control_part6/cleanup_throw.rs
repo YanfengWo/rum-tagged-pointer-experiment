@@ -265,3 +265,28 @@ fn uncaught_throw_request_messages_follow_wolfram_nocatch_shape() {
         .expect_err("Off[Throw::nocatch] suppresses only the diagnostic message");
     assert!(suppressed.messages.is_empty());
 }
+
+#[test]
+fn catch_evaluates_symbol_valued_tag_form_before_matching() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("tag = \"$t$\"; Catch[Throw[42, tag], tag]")
+            .unwrap()
+            .value
+            .to_string(),
+        "42"
+    );
+
+    match session
+        .eval_text("tag = \"$t$\"; Catch[Throw[42, \"$u$\"], tag]")
+        .expect_err("symbol-valued catch tag should not match a different thrown string")
+    {
+        EvalError::Thrown { value, tag, .. } => {
+            assert_eq!(value.to_string(), "42");
+            assert_eq!(tag.to_string(), "\"$u$\"");
+        }
+        other => panic!("expected nonmatching throw to escape, got {other:?}"),
+    }
+}

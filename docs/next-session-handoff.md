@@ -1,10 +1,18 @@
 # Next Session Handoff: Meson Triage, Pair Multiplier Hunt, Representation Work
 
-Date: 2026-06-12. State as of commit `f06c23c`. This note hands the current
-`mma-hol` frontier to the next development session. Read it together with
-the two PROGRESS entries "Representation Optimization Pass (External)" and
-"Block Scope Invalidation Fix (External)", and with
-`docs/proptaut-performance-audit.md` for the diagnosis method.
+Date: 2026-06-12. Initial diagnosis was written against commit `f06c23c`;
+Task 1 has since been completed and the current status is recorded below.
+This note hands the current `mma-hol` frontier to the next development
+session. Read it together with the two PROGRESS entries "Representation
+Optimization Pass (External)" and "Block Scope Invalidation Fix (External)",
+and with `docs/proptaut-performance-audit.md` for the diagnosis method.
+
+Post-Task-1 update, 2026-06-12: the `Catch` tag-form evaluation defect below
+has been fixed in `rum-runtime`. The bounded clean-clone `test/meson_tests`
+smoke now reports `List[44, 0]` in `79s` on `mma-hol` HEAD `698e3d0` (the
+handoff's `43` expected count was stale for the current test tree).
+`test/meson_proveprop_tests` was re-probed afterward and timed out at `300s`
+without a stdout summary. Continue from Task 2 unless Task 1 regresses.
 
 ## Where things stand
 
@@ -13,7 +21,8 @@ the two PROGRESS entries "Representation Optimization Pass (External)" and
 | PropTaut distribution probe | `13.2-13.4s` release internal vs WolframKernel `3.80s` (~3.4x) |
 | Bool-stack load | `0.78s` vs `0.19s` (~4.1x) |
 | `proptaut_tests.wl` | green, ~`238s` |
-| `meson_tests.wl` | **completes** (~`92s`) but reports `List[34, 9]` — 9 semantic failures, all pre-existing |
+| `meson_tests.wl` | green after Task 1: `List[44, 0]` in `79s` on clean `mma-hol` HEAD `698e3d0` |
+| `meson_proveprop_tests.wl` | re-probed after Task 1; timeout at `300s` without a stdout summary |
 | `stdlib/Pair.wl` load | still exceeds `600s` budget |
 | `cargo test --workspace`, `rum-difftest check` | pass |
 
@@ -23,7 +32,7 @@ iteration (`6df7bfe`), and the re-access probe is flat in expression size.
 Constant-factor tuning of the current representation has reached
 diminishing returns; the items below are ordered by expected value.
 
-## Task 1 (correctness, do first): `Catch` does not evaluate its tag form
+## Task 1 (completed): `Catch` does not evaluate its tag form
 
 All 9 `meson_tests.wl` failures are the same defect. Minimal repro:
 
@@ -46,11 +55,17 @@ before compiling an exact matcher). Apply the same treatment to the
 fix used. `Meson.wl` hits it through `mesonAttemptTag = "$mesonAttempt$"`
 used as `Catch[..., mesonAttemptTag]` (Meson.wl lines 544-651).
 
-Acceptance: a runtime regression test for the symbol-valued tag repro
-(both the catching and the deliberately non-matching case), the bounded
-`test/meson_tests` smoke reporting `List[43, 0]`, and
-`test/meson_proveprop_tests` re-probed afterwards (its current status is
-polluted by this bug).
+Completion: a runtime regression test now covers the symbol-valued tag repro
+(both the catching and the deliberately non-matching case), bounded
+`test/meson_tests` reports `List[44, 0]` on the current clean clone, and
+`test/meson_proveprop_tests` has been re-probed. Its current timeout is no
+longer polluted by this bug.
+
+Remaining semantic boundary: WolframKernel appears to evaluate nontrivial tag
+forms in a protected side-effect scope where `Print` is visible but assignment
+effects do not leak after the `Catch`. The Task 1 fix covers the
+symbol-valued exact-tag failure that blocked Meson; that broader side-effect
+rollback behavior remains separate debt.
 
 ## Task 2 (diagnosis before optimization): Pair/Simp multiplier hunt
 

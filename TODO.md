@@ -22,12 +22,12 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Immediate Correctness And Debt
 
-- [ ] Fix `Catch` tag-form evaluation: `tag = "$t$"; Catch[Throw[42, tag], tag]`
-  must return `42` as in WolframKernel (the tag form is evaluated before
-  pattern compilation), instead of escaping. This single defect accounts
-  for all 9 current `meson_tests.wl` failures; repro, analysis, and
-  acceptance criteria are in
-  [docs/next-session-handoff.md](./docs/next-session-handoff.md) Task 1.
+- [ ] Audit `Catch` tag-form side-effect scoping beyond the Meson fix.
+  WolframKernel evaluates nontrivial tag forms for matching and preserves
+  visible effects such as `Print`, but assignment effects inside that tag-form
+  evaluation do not leak after the `Catch`. rum currently uses ordinary
+  matcher-pattern resolution for this path, which fixes symbol-valued exact
+  tags but does not model that rollback boundary.
 - [ ] Fix lexer unexpected-character spans so structured diagnostics report
   the actual offending byte range instead of zero-width placeholders.
 - [ ] Fix REPL history persistence so multiline inputs reload as single logical
@@ -117,12 +117,18 @@ Completed history, archived planning detail, and operational lessons live in
   RHS `& /@` precedence, `Table` substitution into held `Rule` lhs positions,
   definition lhs own-value evaluation for non-pattern constants, the
   state-progressing recursive parser cycle-guard case, and ordinary-expression
-  pattern evaluation for `MemberQ` / `MatchQ` style calls.
+  pattern evaluation for `MemberQ` / `MatchQ` style calls. `Catch` tag-form
+  evaluation has also been fixed: symbol-valued tag forms now evaluate before
+  matcher compilation, closing the 9 `meson_tests` semantic failures recorded
+  in the 2026-06-12 handoff.
   After the 2026-06-12 representation optimization pass (see
   `PROGRESS.md`), `proptaut_tests.wl` is green for the first time (`238s`
   full suite) and the PropTaut distribution probe is about `13.0s` release
   versus the local WolframKernel internal `3.80s` (~3.4x; Bool-stack load
-  `0.78s` vs `0.19s`, ~4.1x). The next downstream gate is `stdlib/Pair.wl`:
+  `0.78s` vs `0.19s`, ~4.1x). After the `Catch` fix, bounded clean-clone
+  `test/meson_tests` reports `List[44, 0]`; the current
+  `test/meson_proveprop_tests` re-probe times out at `300s` without a stdout
+  summary. The next downstream gate is `stdlib/Pair.wl`:
   its load still exceeds a `600s` budget (the earlier `335s` observation was
   an interrupted run, not a completion), with the `PropTaut`-backed `Simp`
   schema path as the suspected dominant cost. The old Pair hard failure
@@ -131,10 +137,10 @@ Completed history, archived planning detail, and operational lessons live in
   Wolfram baseline of `1024`. After `Pair` loads cleanly, rerun the later
   `Sum`, `Option`, `Set`, `Num`, and Real package probes because their
   current statuses are polluted by the failed Pair dependency.
-  The ordered next steps for this lane (Catch tag fix for the 9 newly
-  exposed `meson_tests` failures, a Pair/Simp logical-work multiplier hunt
-  before any further constant tuning, and only then the single-allocation
-  call-node / evaluated-stamp rework) live in
+  The ordered next steps for this lane are the Pair/Simp logical-work
+  multiplier hunt before any further constant tuning, and only then the
+  single-allocation call-node / evaluated-stamp rework if the counter evidence
+  justifies it; the plan lives in
   [docs/next-session-handoff.md](./docs/next-session-handoff.md).
   Performance status, retained work, and rejected probes are recorded in
   `PROGRESS.md` under "2026-06-12 Representation Optimization Pass",
