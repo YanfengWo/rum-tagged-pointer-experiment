@@ -326,6 +326,7 @@ pub struct Session {
     pub(super) definitions: DefinitionMap,
     pub(super) has_up_value_definitions: bool,
     pub(super) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
+    pub(super) message_symbol_counts: SymbolCountMap,
     pub(super) next_generated_symbol_id: u64,
     pub(super) resource_limits: ResourceLimits,
     pub(super) evaluation_depth: usize,
@@ -365,6 +366,8 @@ pub(super) struct SymbolStabilityCacheEntry {
     pub(super) generation: u64,
     pub(super) stable: bool,
 }
+
+pub(super) type SymbolCountMap = HashMap<Symbol, u32, BuildHasherDefault<RuntimeCacheHasher>>;
 
 pub(super) type SymbolSet =
     std::collections::HashSet<Symbol, BuildHasherDefault<RuntimeCacheHasher>>;

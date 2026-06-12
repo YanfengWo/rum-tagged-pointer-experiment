@@ -82,7 +82,8 @@ impl Session {
         attributes: AttributeSet,
         args: Vec<Expr>,
     ) -> Result<Vec<Expr>, EvalError> {
-        self.resume_prepared_call_arguments(head, attributes, Vec::new(), args, 0)
+        let evaluated_args = Vec::with_capacity(args.len());
+        self.resume_prepared_call_arguments(head, attributes, evaluated_args, args, 0)
     }
 
     pub(super) fn resume_prepared_call_arguments(

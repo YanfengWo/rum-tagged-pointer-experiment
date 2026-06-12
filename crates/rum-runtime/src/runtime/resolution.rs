@@ -117,12 +117,27 @@ impl Session {
                 .get(symbol)
                 .is_some_and(|options| !options.is_empty())
             || self.syntax_information.contains_key(symbol)
-            || self
-                .message_definitions
-                .keys()
-                .any(|key| &key.symbol == symbol)
+            || self.message_symbol_counts.contains_key(symbol)
             || self.builtin_spec_for_symbol(symbol).is_some()
             || is_known_system_symbol(symbol)
+    }
+
+    pub(super) fn discount_message_symbol(&mut self, symbol: &Symbol) {
+        if let Some(count) = self.message_symbol_counts.get_mut(symbol) {
+            *count -= 1;
+            if *count == 0 {
+                self.message_symbol_counts.remove(symbol);
+            }
+        }
+    }
+
+    pub(super) fn rebuild_message_symbol_counts(&mut self) {
+        self.message_symbol_counts.clear();
+        let mut counts = std::mem::take(&mut self.message_symbol_counts);
+        for key in self.message_definitions.keys() {
+            *counts.entry(key.symbol).or_insert(0) += 1;
+        }
+        self.message_symbol_counts = counts;
     }
 
     pub(super) fn attribute_set_for_symbol(&self, symbol: &Symbol) -> AttributeSet {

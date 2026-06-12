@@ -188,6 +188,7 @@ impl Session {
             for (key, definition) in state.messages {
                 self.message_definitions.insert(key, definition);
             }
+            self.rebuild_message_symbol_counts();
         }
         self.refresh_has_up_value_definitions();
         self.bump_attribute_revision();

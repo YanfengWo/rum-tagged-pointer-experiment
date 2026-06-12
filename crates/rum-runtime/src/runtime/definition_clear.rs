@@ -89,7 +89,9 @@ impl Session {
     pub(super) fn unset_normalized_definition(&mut self, target: UnsetDefinitionTarget) {
         match target {
             UnsetDefinitionTarget::Message(key) => {
-                self.message_definitions.remove(&key);
+                if self.message_definitions.remove(&key).is_some() {
+                    self.discount_message_symbol(&key.symbol);
+                }
             }
             UnsetDefinitionTarget::Options(symbol) => {
                 self.options.remove(&symbol);

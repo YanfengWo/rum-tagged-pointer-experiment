@@ -364,6 +364,7 @@ impl Default for Session {
             definitions: DefinitionMap::default(),
             has_up_value_definitions: false,
             message_definitions: BTreeMap::new(),
+            message_symbol_counts: SymbolCountMap::default(),
             next_generated_symbol_id: 0,
             resource_limits: ResourceLimits::default(),
             evaluation_depth: 0,

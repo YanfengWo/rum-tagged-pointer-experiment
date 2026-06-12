@@ -67,6 +67,7 @@ impl Session {
         self.definitions = snapshot.definitions;
         self.has_up_value_definitions = snapshot.has_up_value_definitions;
         self.message_definitions = snapshot.message_definitions;
+        self.rebuild_message_symbol_counts();
         self.next_generated_symbol_id = snapshot.next_generated_symbol_id;
         self.trace_events = snapshot.trace_events;
         self.trace_event_depths = snapshot.trace_event_depths;
