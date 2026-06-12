@@ -26,9 +26,16 @@ experiment did not close the gate, but conservative runtime stability cuts
 reduced user-rule-only mkPair simplification from about `52.14s` to `40.61s`
 and `basicSimpset[]` from `27.07s` to `20.27s`. The public warm mkPair /
 `Pair.wl` gate remains open: the current warm public mkPair probe still times
-out at `240s`. Continue from either a real downstream `Simp` algorithmic
-change or the larger runtime representation / argument-preparation lane; do
-not keep iterating narrow stability tweaks without a new probe.
+out at `240s`. Do not keep iterating narrow stability tweaks without a new
+probe.
+
+Review update, 2026-06-12 (external): Tasks 1 and 2 are verified complete
+(independent re-runs of the Catch repro, `meson_tests` `List[44, 0]`, the
+full workspace suite, and `rum-difftest check`). The stability cuts also
+moved the general lanes — PropTaut distribution `13.2s -> 10.0-10.2s`
+(~2.7x), Bool-stack load `0.78s -> 0.54s` (~2.8x). **Continue from Task 2b
+below**: the Task 2 verdict localized the multiplier but left its mechanism
+unexplained, and Task 3 stays gated behind that answer.
 
 ## Where things stand
 
@@ -121,7 +128,76 @@ did not remove the multiplier. The retained cuts and rejected
 base-conversion memo experiment are recorded in PROGRESS under
 "Pair/Simp Runtime Stability Cuts".
 
-## Task 3 (large, only after 1-2): representation rework
+## Task 2b (next diagnosis, do before Task 3): explain the stability-check amplifier
+
+The Task 2 diagnosis localized the multiplier but did not explain it, and
+the unexplained signal is precise: the warm public mkPair probe reaches
+**`536M+` stability checks while `evaluate_entries` and
+`down_value_applications` do not advance proportionally past the preheat
+background**. Something performs enormous amounts of stability checking
+without corresponding evaluation. WolframKernel runs the same logical
+algorithm in `23.1s`; the general rum constant elsewhere is now only
+~2.7-4x. Until the mechanism is named, neither a downstream `Simp`
+algorithm change nor the Task 3 representation rework is clearly the right
+spend — a third, much cheaper fix may exist. Do not start Task 3 before
+this verdict is written.
+
+Probe: the warm public mkPair shape from the Task 2 entry (preload through
+`auto/Simp.wl`, precompute `basicSimpset[]`, `impCongLemma[]`,
+`andCongLemma[]`, `orCongLemma[]`, then time
+`CONVRULE[simpConv[{mkPairDefThm}], lhsAppXY]`), bounded at `120-180s` —
+counters and samples from a bounded window are sufficient; the probe does
+not need to complete.
+
+Three candidate mechanisms, each cheap to confirm or kill. Instrument
+first, conclude second:
+
+1. **Call-stability cache size-cap thrash.** The pointer-keyed cache is
+   capped at `CALL_STABILITY_CACHE_MAX_ENTRIES = 1 << 14` and is cleared
+   wholesale on overflow (`evaluation_cache.rs`). The runtime stability
+   cuts added data constructors, hold forms, and status objects to the
+   cacheable set, so the Simp working set (large persistent simpset
+   structures plus HOL terms) may now exceed `16k` live stable subtrees.
+   If so the cache clears itself in a loop: insert past the cap, clear,
+   re-walk everything, repeat — exactly "many checks, few evaluations".
+   Confirm: add an opt-in counter that distinguishes size-cap clears from
+   generation bumps and report both for the bounded warm window. Cheap
+   falsification A/B: raise the cap `16x` and re-time the warm probe; a
+   large move confirms, no move kills.
+2. **Dirty-bloom saturation generation bumps.** Every `popcount > 96`
+   saturation bumps the call-cache generation, killing all entries. A
+   write-heavy Simp phase saturates every ~100 distinct written symbols,
+   so long-lived stable trees may be re-walked after every ~100 writes
+   forever. Confirm from the same run: compare `call_generation_bumps`
+   against `symbol_invalidations` for the warm window, and correlate with
+   `call_stability_misses`. If this dominates, the fix direction is finer
+   invalidation for long-lived entries (exact per-symbol write versions
+   were rejected once on PropTaut, but the cost profile here is different
+   — re-measure on THIS shape before re-rejecting), a wider bloom, or
+   exempting entries whose bloom does not intersect the saturating write
+   set.
+3. **Genuinely fresh trees from conversion-chain rebuilding.** If the
+   checks hit mostly never-seen pointer keys (high
+   `call_stability_misses` with low hit rate and no clear/bump
+   correlation), then `simpFixpointConv` / `descendOnce` really does
+   rebuild the `withBasic` chain per subterm and the cost is real work.
+   Then the choice is the downstream algorithmic discussion or Task 3,
+   as already recorded.
+
+Attribution to callers complements the counters: sample the warm window
+and run
+`scripts/sample-attribute-callers.py <sample> cached_expr_stability_with_bloom`
+to see which evaluator paths drive the checks (fixed-point pre-checks vs
+uncached-walk recursion vs argument preparation).
+
+Acceptance: a PROGRESS entry naming which mechanism dominates, with the
+counter split for the bounded warm window; if mechanism 1 or 2 wins, the
+matching cheap fix applied behind an A/B on the warm probe. The end-state
+target for the lane stays the same: warm public mkPair completes inside a
+bounded budget and the `Pair.wl` load enters the constant-bound regime
+(roughly `4x` of WolframKernel's `37.7s`, i.e. about `150s`).
+
+## Task 3 (large, only after 1, 2, and 2b): representation rework
 
 Unchanged from the prior plan, in order: single-allocation call node
 (head+args in one `Arc`), which halves per-node allocation/refcount
