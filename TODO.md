@@ -105,38 +105,26 @@ Completed history, archived planning detail, and operational lessons live in
   RHS `& /@` precedence, `Table` substitution into held `Rule` lhs positions,
   definition lhs own-value evaluation for non-pattern constants, the
   state-progressing recursive parser cycle-guard case, and ordinary-expression
-  pattern evaluation for `MemberQ` / `MatchQ` style calls. The next
-  post-Parser/Printer blocker is concrete: `proptaut_tests.wl` is still not
-  fast enough to be a useful smoke signal, and the `PropTaut`-backed `Simp`
-  schema path is still too slow for `stdlib/Pair.wl`. The old Pair hard
-  failure (`mkPairInjThm` consumed as a non-theorem) was traced to rum's too-low
-  default recursion limit and the default has been raised to the local Wolfram
-  baseline of `1024`, but a full `Pair.wl` load is still too slow to call green.
-  After `Pair` loads cleanly, rerun the later `Sum`, `Option`, `Set`, `Num`,
-  and Real package probes because their current statuses are polluted by the
-  failed Pair dependency.
-  Bool performance is now a follow-up lane:
-  dependency-preloaded `Bool.wl` now completes in about 2.36-2.40s warmed
-  external default-release wall time. A prior local `target-cpu=native` release
-  build measured about 2.29-2.35s warmed external wall time before the latest
-  follow-up cuts, but is not a portable default profile. The first evaluator
-  audit quick wins, symbol-level evaluation epoch cache, shared call-tree
-  representation, call-stability cache, upvalue fast path,
-  stable-expression early return, rule-RHS binding-substitution copy-on-write,
-  lexical-substitution copy-on-write, lightweight runtime cache hashing, owned
-  call-argument preparation, and empty-binding rule-RHS fast paths are in place.
-  Low-yield probes already rejected include symbol fingerprint hashing, shallow
-  definition matcher metadata, codegen-units=1, thin LTO, a broad literal
-  `ReplaceAll` shortcut that broke `Rule` evaluation boundaries, a borrowed
-  rewrite-matcher fast path that was neutral on the `PropTaut` distribution
-  probe, and a lightweight builtin-name hasher that regressed that same probe.
-  The current retained PropTaut frontier is about `27.40-27.64s` in release
-  versus local WolframKernel internal timing of about `3.80s`. Deep performance
-  work is paused pending external review; do not resume low-level
-  evaluator/representation optimization until that review picks the next
-  evidence-backed cut. The current profile points first at stability rescans,
-  allocation/clone traffic, and builtin/evaluator dispatch overhead rather
-  than parser or loader work.
+  pattern evaluation for `MemberQ` / `MatchQ` style calls.
+  After the 2026-06-12 representation optimization pass (see
+  `PROGRESS.md`), `proptaut_tests.wl` is green for the first time (`238s`
+  full suite) and the PropTaut distribution probe is about `13.0s` release
+  versus the local WolframKernel internal `3.80s` (~3.4x; Bool-stack load
+  `0.78s` vs `0.19s`, ~4.1x). The next downstream gate is `stdlib/Pair.wl`:
+  its load still exceeds a `600s` budget (the earlier `335s` observation was
+  an interrupted run, not a completion), with the `PropTaut`-backed `Simp`
+  schema path as the suspected dominant cost. The old Pair hard failure
+  (`mkPairInjThm` consumed as a non-theorem) was traced to rum's too-low
+  default recursion limit and the default has been raised to the local
+  Wolfram baseline of `1024`. After `Pair` loads cleanly, rerun the later
+  `Sum`, `Option`, `Set`, `Num`, and Real package probes because their
+  current statuses are polluted by the failed Pair dependency.
+  Performance status, retained work, rejected probes, and the next
+  evidence-backed cuts (per-symbol write versions first, then the
+  single-allocation call-node rework) are recorded in `PROGRESS.md` under
+  "2026-06-12 Representation Optimization Pass" and in
+  `docs/proptaut-performance-audit.md`; resume from those, not from this
+  bullet.
 - [ ] Treat `mma-hol` stable-mode snapshot helpers as a required
   developer-workflow gate for `rum-hol` migration. First-pass `Contexts[]`,
   file timestamp/size/existence helpers, `AbsoluteTime`, `Round`, simple
@@ -229,13 +217,22 @@ Completed history, archived planning detail, and operational lessons live in
   cached-definition matcher path has more downstream mileage, especially
   whether replacement rules and sequence/orderless backtracking need similar
   caching or representation support.
-- [ ] Continue probe-first evaluator optimization around large HOL proof terms:
-  symbol interning, node-level evaluated state, remaining clone accounting,
-  repeated derived-rule workloads, and debug-vs-release smoke policy before
-  adding broader low-level performance work. A symbol-level evaluation epoch
-  cache and shared call-tree representation are already in place;
-  whole-expression exact caching was measured and
-  rejected because owned-tree hashing/equality became a new cost.
+- [ ] Continue probe-first evaluator optimization around large HOL proof
+  terms. Already in place after the 2026-06-12 pass: interned 32-byte
+  symbols with dense pair ids, id-hashed definition/attribute/binding maps,
+  dependency-aware stability-cache invalidation (per-symbol removal plus a
+  128-bit dirty bloom; only stable verdicts cached), mimalloc as the
+  `rum-cli` global allocator, a message-symbol existence index, and the
+  earlier shared call-tree representation. The measured next cuts, in
+  order: per-symbol write versions to close the same-symbol-rewrite hole in
+  the dirty bloom (a black-box probe shows WolframKernel is unaffected by
+  interleaved writes to one symbol while rum re-walks; loop/fold
+  accumulators hit this), then the single-allocation call node
+  (head+args in one `Arc`) enabling an inline per-node evaluated stamp and
+  borrowed argument preparation. Whole-expression exact caching was
+  measured and rejected because owned-tree hashing/equality became a new
+  cost; depth-gated cycle tracking was rejected because the evaluation
+  stack also feeds trace depths and `Stack[]`.
 - [ ] Revisit large request/error payload ergonomics only after measurement
   shows that current shapes are a real cost.
 
