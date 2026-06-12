@@ -34,8 +34,8 @@ not keep iterating narrow stability tweaks without a new probe.
 
 | Gate | Status |
 | --- | --- |
-| PropTaut distribution probe | `13.2-13.4s` release internal vs WolframKernel `3.80s` (~3.4x) |
-| Bool-stack load | `0.78s` vs `0.19s` (~4.1x) |
+| PropTaut distribution probe | `10.0-10.2s` release internal vs WolframKernel `3.80s` (~2.7x); improved as a side effect of the Pair/Simp runtime stability cuts |
+| Bool-stack load | `0.54s` vs `0.19s` (~2.8x); same side effect |
 | `proptaut_tests.wl` | green, ~`238s` |
 | `meson_tests.wl` | green after Task 1: `List[44, 0]` in `79s` on clean `mma-hol` HEAD `698e3d0` |
 | `meson_proveprop_tests.wl` | re-probed after Task 1; timeout at `300s` without a stdout summary |
