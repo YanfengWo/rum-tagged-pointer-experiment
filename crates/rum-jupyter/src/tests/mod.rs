@@ -1,4 +1,4 @@
-use rum_runtime::{Session, SessionRequestFailure};
+use rum_host::{HostEvalOutcome, HostSession as Session, HostSessionBuilder};
 
 use super::{
     InMemoryTransport, KernelAdapter, KernelBootstrapConfig, KernelChannel, KernelCompleteRequest,
@@ -32,6 +32,26 @@ fn test_connection_file() -> KernelConnectionFile {
         }"#,
     )
     .expect("connection file should parse")
+}
+
+fn eval_text(session: &mut Session, source: &str) {
+    match session.eval(source) {
+        HostEvalOutcome::Success(_) => {}
+        other => panic!("expected host eval success for {source:?}, got {other:?}"),
+    }
+}
+
+fn tracing_session() -> Session {
+    HostSessionBuilder::new().with_tracing(true).build()
+}
+
+#[test]
+fn crate_manifest_keeps_jupyter_on_host_facade() {
+    let manifest = include_str!("../../Cargo.toml");
+
+    assert!(manifest.contains("rum-host"));
+    assert!(!manifest.contains("rum-runtime"));
+    assert!(!manifest.contains("rum-stdlib"));
 }
 
 mod adapter;

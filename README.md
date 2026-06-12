@@ -29,8 +29,8 @@ substantial:
   `ReplaceAll`, `ReplaceRepeated`, and current first passes of `Replace`,
   `ReplaceList`, and `ReplaceAt`
 - `rum-cli` and `rum-repl` are usable developer tools
-- `rum-jupyter` is an early adapter layer being migrated onto `rum-host`, not
-  part of the evaluator core
+- `rum-jupyter` is an early host-backed adapter layer, not part of the
+  evaluator core
 
 The main thing still in flight is not "whether evaluation exists" but how much
 of the intended Wolfram-style semantics has been tightened and how much surface
@@ -41,7 +41,8 @@ If you are reviewing the project, the fastest reading path is:
 1. [Architecture](./ARCHITECTURE.md)
 2. [Lowering Canonical Forms](./docs/lowering-canonical-forms.md)
 3. [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md)
-4. [TODO / Roadmap](./TODO.md)
+4. [v0.1 Acceptance Boundary](./docs/v0.1-acceptance-boundary.md)
+5. [TODO / Roadmap](./TODO.md)
 
 ## Scope
 
@@ -83,6 +84,7 @@ The repository is a Cargo workspace with these top-level crates:
 - [Architecture](./ARCHITECTURE.md)
 - [TODO / Roadmap](./TODO.md)
 - [Progress Log](./PROGRESS.md)
+- [v0.1 Acceptance Boundary](./docs/v0.1-acceptance-boundary.md)
 - [Core-Language Support Matrix](./docs/core-language-support-matrix.md)
 - [Testing Strategy](./docs/testing-strategy.md)
 - [Lowering Canonical Forms](./docs/lowering-canonical-forms.md)
@@ -184,8 +186,8 @@ cargo run -p rum-host --example basic_embedding
 
 Near-term work is concentrated in these areas:
 
-- hardening the new `rum-host` embedding boundary and migrating `rum-jupyter`
-  request handling onto that facade
+- hardening the `rum-host` embedding boundary and validating the now
+  host-backed `rum-jupyter` adapter against real Jupyter frontends
 - using `mma-hol` as the preferred real-project pressure test for the
   supported Wolfram-style language surface
 - further tightening evaluator semantics where behavior is still somewhat ad hoc

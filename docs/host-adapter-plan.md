@@ -158,8 +158,8 @@ The first validation wave for `rum-host` includes:
 - suspend/resume tests through the host facade
 - structured outcome, failure-code, message, print, parse, inspect,
   completion, and completeness coverage
-- migration of `rum-jupyter` request handling to the host facade, keeping
-  Jupyter protocol, transport, and MIME details in `rum-jupyter`
+- host-backed `rum-jupyter` request handling, keeping Jupyter protocol,
+  transport, and MIME details in `rum-jupyter`
 - one small example embedding binary or example module, with the current
   `crates/rum-host/examples/basic_embedding.rs` serving as the minimal smoke
   example; broader showcase work should be driven by concrete external
@@ -186,20 +186,20 @@ expand the public surface by default.
 ## Jupyter Migration Target
 
 The earlier "reuse later" stance has been superseded by the `v0.1` boundary:
-`rum-jupyter` should route kernel-facing request handling through `rum-host`
-before basic Notebook behavior is treated as delivered.
+`rum-jupyter` routes kernel-facing request handling through `rum-host`. The
+remaining `v0.1` validation target is a documented real-Notebook deploy path
+and frontend smoke.
 
-The migration should move these responsibilities behind `rum-host`:
+The migration moved these responsibilities behind `rum-host`:
 
 - session construction and core-builtin installation
 - eval and stdin resume
 - inspect, complete, and is-complete
 - stable success, input-suspension, failure, message, print, trace, and
   structured-output facades
-- public adapter-facing result and failure shapes that currently expose
-  `rum-runtime` types
+- public adapter-facing result and failure shapes
 
-The migration should leave these responsibilities in `rum-jupyter`:
+These responsibilities remain in `rum-jupyter`:
 
 - Jupyter request/response models
 - ZeroMQ/native transport and heartbeat handling

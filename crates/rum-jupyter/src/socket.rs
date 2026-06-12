@@ -1,4 +1,4 @@
-use rum_runtime::Session;
+use rum_host::HostSession;
 
 use crate::{
     KernelBootstrapConfig, KernelChannel, KernelEventPump, KernelQueuedTransport, KernelTransport,
@@ -334,7 +334,7 @@ impl<P: KernelSocketPoller> KernelSocketDriver<P> {
 }
 
 impl KernelBootstrapConfig {
-    pub fn socket_driver(&self, session: Session) -> KernelSocketDriver {
+    pub fn socket_driver(&self, session: HostSession) -> KernelSocketDriver {
         KernelSocketDriver::new(self.event_pump(session), PriorityKernelSocketPoller)
     }
 }

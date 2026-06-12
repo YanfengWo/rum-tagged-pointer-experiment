@@ -1,18 +1,19 @@
 use super::*;
+use rum_host::{
+    HostFailure, HostFailureCode, HostInputRequest, HostInputSuspension, HostMessage,
+    HostTraceEvent,
+};
 
 pub(super) fn input_request_from_outcome(
     outcome: &KernelExecuteOutcome,
-) -> Option<RuntimeInputRequest> {
+) -> Option<HostInputRequest> {
     match outcome {
-        KernelExecuteOutcome::Failure(SessionRequestFailure {
-            error: SessionRequestError::InputRequired { request },
-            ..
-        }) => Some(request.clone()),
+        KernelExecuteOutcome::InputRequired(suspension) => Some(suspension.request.clone()),
         _ => None,
     }
 }
 
-pub(super) fn kernel_input_request(request: &RuntimeInputRequest) -> KernelInputRequest {
+pub(super) fn kernel_input_request(request: &HostInputRequest) -> KernelInputRequest {
     let mut input = KernelInputRequest::new(&request.prompt);
     if request.password {
         input = input.password();
@@ -27,6 +28,9 @@ pub(super) fn build_execute_response(
     let outputs = build_execute_outputs(execution_count, &outcome);
     let error = match &outcome {
         KernelExecuteOutcome::Success(_) => None,
+        KernelExecuteOutcome::InputRequired(suspension) => {
+            Some(input_required_error_output(suspension))
+        }
         KernelExecuteOutcome::Failure(failure) => Some(error_output(failure)),
         KernelExecuteOutcome::WireDecoded => None,
     };
@@ -52,7 +56,8 @@ fn build_execute_outputs(
 ) -> Vec<KernelOutput> {
     match outcome {
         KernelExecuteOutcome::Success(response) => {
-            let mut outputs = runtime_message_streams(&response.messages);
+            let mut outputs = stdout_streams(&response.prints);
+            outputs.extend(runtime_message_streams(&response.messages));
             if !response.trace.is_empty() {
                 outputs.push(KernelOutput::DisplayData(KernelDisplayOutput {
                     data: trace_mime_bundle(&response.trace),
@@ -61,13 +66,19 @@ fn build_execute_outputs(
             }
             outputs.push(KernelOutput::ExecuteResult(KernelExecuteResult {
                 execution_count,
-                data: expr_mime_bundle(&response.value.to_string()),
+                data: expr_mime_bundle(&response.value.text),
                 metadata: execute_result_metadata(execution_count),
             }));
             outputs
         }
+        KernelExecuteOutcome::InputRequired(suspension) => {
+            let mut outputs = suspended_outputs(suspension);
+            outputs.push(KernelOutput::Error(input_required_error_output(suspension)));
+            outputs
+        }
         KernelExecuteOutcome::Failure(failure) => {
-            let mut outputs = runtime_message_streams(&failure.messages);
+            let mut outputs = stdout_streams(&failure.prints);
+            outputs.extend(runtime_message_streams(&failure.messages));
             if !failure.trace.is_empty() {
                 outputs.push(KernelOutput::DisplayData(KernelDisplayOutput {
                     data: trace_mime_bundle(&failure.trace),
@@ -83,76 +94,80 @@ fn build_execute_outputs(
 
 pub(super) fn build_suspended_outputs(outcome: &KernelExecuteOutcome) -> Vec<KernelOutput> {
     match outcome {
-        KernelExecuteOutcome::Failure(failure)
-            if matches!(failure.error, SessionRequestError::InputRequired { .. }) =>
-        {
-            let mut outputs = runtime_message_streams(&failure.messages);
-            if !failure.trace.is_empty() {
-                outputs.push(KernelOutput::DisplayData(KernelDisplayOutput {
-                    data: trace_mime_bundle(&failure.trace),
-                    metadata: trace_metadata(),
-                }));
-            }
-            outputs
-        }
+        KernelExecuteOutcome::InputRequired(suspension) => suspended_outputs(suspension),
         _ => Vec::new(),
     }
 }
 
-fn runtime_message_streams(messages: &[RuntimeMessage]) -> Vec<KernelOutput> {
-    messages
+fn suspended_outputs(suspension: &HostInputSuspension) -> Vec<KernelOutput> {
+    let mut outputs = stdout_streams(&suspension.prints);
+    outputs.extend(runtime_message_streams(&suspension.messages));
+    if !suspension.trace.is_empty() {
+        outputs.push(KernelOutput::DisplayData(KernelDisplayOutput {
+            data: trace_mime_bundle(&suspension.trace),
+            metadata: trace_metadata(),
+        }));
+    }
+    outputs
+}
+
+fn stdout_streams(prints: &[String]) -> Vec<KernelOutput> {
+    prints
         .iter()
-        .map(|message| {
+        .map(|text| {
             KernelOutput::Stream(KernelStreamOutput {
-                name: KernelStreamName::Stderr,
-                text: format!("{message}\n"),
+                name: KernelStreamName::Stdout,
+                text: format!("{text}\n"),
             })
         })
         .collect()
 }
 
-fn error_output(failure: &SessionRequestFailure) -> KernelErrorOutput {
-    let (error_name, rendered) = match &failure.error {
-        SessionRequestError::Syntax(diagnostic) => {
-            ("Syntax".to_string(), Some(diagnostic.rendered.clone()))
-        }
-        SessionRequestError::InvalidInteger { .. } => ("InvalidInteger".to_string(), None),
-        SessionRequestError::Io { .. } => ("Io".to_string(), None),
-        SessionRequestError::LoadPathNotFound { .. } => ("LoadPathNotFound".to_string(), None),
-        SessionRequestError::EvaluationCycleDetected { .. } => {
-            ("EvaluationCycleDetected".to_string(), None)
-        }
-        SessionRequestError::RecursionLimitExceeded { .. } => {
-            ("RecursionLimitExceeded".to_string(), None)
-        }
-        SessionRequestError::TimeConstraintExceeded => ("TimeConstraintExceeded".to_string(), None),
-        SessionRequestError::MemoryConstraintExceeded { .. } => {
-            ("MemoryConstraintExceeded".to_string(), None)
-        }
-        SessionRequestError::GeneratedElementLimitExceeded { .. } => {
-            ("GeneratedElementLimitExceeded".to_string(), None)
-        }
-        SessionRequestError::IntegerWorkLimitExceeded { .. } => {
-            ("IntegerWorkLimitExceeded".to_string(), None)
-        }
-        SessionRequestError::IterationWorkLimitExceeded { .. } => {
-            ("IterationWorkLimitExceeded".to_string(), None)
-        }
-        SessionRequestError::IterationLimitExceeded { .. } => {
-            ("IterationLimitExceeded".to_string(), None)
-        }
-        SessionRequestError::EvaluationPassLimitExceeded { .. } => {
-            ("EvaluationPassLimitExceeded".to_string(), None)
-        }
-        SessionRequestError::Exit { .. } => ("Exit".to_string(), None),
-        SessionRequestError::InputRequired { .. } => ("InputRequired".to_string(), None),
-        SessionRequestError::Other { .. } => ("Other".to_string(), None),
-    };
+fn runtime_message_streams(messages: &[HostMessage]) -> Vec<KernelOutput> {
+    messages
+        .iter()
+        .map(|message| {
+            KernelOutput::Stream(KernelStreamOutput {
+                name: KernelStreamName::Stderr,
+                text: format!("{}::{}: {}\n", message.symbol, message.tag, message.text),
+            })
+        })
+        .collect()
+}
 
+fn error_output(failure: &HostFailure) -> KernelErrorOutput {
     KernelErrorOutput {
-        error_name,
-        error_value: failure.error.to_string(),
-        rendered,
+        error_name: failure_code_name(failure.code).to_string(),
+        error_value: failure.message.clone(),
+        rendered: None,
+    }
+}
+
+fn input_required_error_output(suspension: &HostInputSuspension) -> KernelErrorOutput {
+    KernelErrorOutput {
+        error_name: "InputRequired".to_string(),
+        error_value: format!("input required: {}", suspension.request.prompt),
+        rendered: None,
+    }
+}
+
+const fn failure_code_name(code: HostFailureCode) -> &'static str {
+    match code {
+        HostFailureCode::Syntax => "Syntax",
+        HostFailureCode::InvalidInteger => "InvalidInteger",
+        HostFailureCode::Io => "Io",
+        HostFailureCode::LoadPathNotFound => "LoadPathNotFound",
+        HostFailureCode::EvaluationCycleDetected => "EvaluationCycleDetected",
+        HostFailureCode::RecursionLimitExceeded => "RecursionLimitExceeded",
+        HostFailureCode::TimeConstraintExceeded => "TimeConstraintExceeded",
+        HostFailureCode::MemoryConstraintExceeded => "MemoryConstraintExceeded",
+        HostFailureCode::GeneratedElementLimitExceeded => "GeneratedElementLimitExceeded",
+        HostFailureCode::IntegerWorkLimitExceeded => "IntegerWorkLimitExceeded",
+        HostFailureCode::IterationWorkLimitExceeded => "IterationWorkLimitExceeded",
+        HostFailureCode::IterationLimitExceeded => "IterationLimitExceeded",
+        HostFailureCode::EvaluationPassLimitExceeded => "EvaluationPassLimitExceeded",
+        HostFailureCode::Exit => "Exit",
+        HostFailureCode::Other => "Other",
     }
 }
 
@@ -163,7 +178,7 @@ fn expr_mime_bundle(rendered_expr: &str) -> KernelMimeBundle {
     bundle
 }
 
-fn trace_mime_bundle(trace: &[TraceEvent]) -> KernelMimeBundle {
+fn trace_mime_bundle(trace: &[HostTraceEvent]) -> KernelMimeBundle {
     let rendered = trace
         .iter()
         .map(render_trace_event)
@@ -176,7 +191,7 @@ fn trace_mime_bundle(trace: &[TraceEvent]) -> KernelMimeBundle {
     bundle
 }
 
-pub(super) fn inspect_mime_bundle(response: &SessionInspectResponse) -> KernelMimeBundle {
+pub(super) fn inspect_mime_bundle(response: &rum_host::HostInspectResponse) -> KernelMimeBundle {
     let plain = render_inspect_text(response);
     let markdown = render_inspect_markdown(response);
 
@@ -208,18 +223,14 @@ fn trace_metadata() -> KernelMetadata {
 
 #[cfg(test)]
 mod tests {
-    use rum_runtime::SessionRequestFailure;
-
     use super::*;
 
     #[test]
     fn error_output_covers_time_constraint_failures() {
-        let outcome = KernelExecuteOutcome::Failure(SessionRequestFailure {
-            error: SessionRequestError::TimeConstraintExceeded,
-            messages: Vec::new(),
-            prints: Vec::new(),
-            trace: Vec::new(),
-        });
+        let outcome = KernelExecuteOutcome::Failure(host_failure(
+            HostFailureCode::TimeConstraintExceeded,
+            "TimeConstrained limit exceeded",
+        ));
 
         let response = build_execute_response(Some(1), outcome);
 
@@ -248,12 +259,10 @@ mod tests {
 
     #[test]
     fn error_output_covers_memory_constraint_failures() {
-        let outcome = KernelExecuteOutcome::Failure(SessionRequestFailure {
-            error: SessionRequestError::MemoryConstraintExceeded { limit: 20 },
-            messages: Vec::new(),
-            prints: Vec::new(),
-            trace: Vec::new(),
-        });
+        let outcome = KernelExecuteOutcome::Failure(host_failure(
+            HostFailureCode::MemoryConstraintExceeded,
+            "MemoryConstrained limit (20) exceeded",
+        ));
 
         let response = build_execute_response(Some(1), outcome);
 
@@ -282,26 +291,21 @@ mod tests {
 
     #[test]
     fn error_output_covers_resource_limit_failures() {
-        for (error, expected_name) in [
+        for (code, expected_name) in [
             (
-                SessionRequestError::GeneratedElementLimitExceeded { limit: 10 },
+                HostFailureCode::GeneratedElementLimitExceeded,
                 "GeneratedElementLimitExceeded",
             ),
             (
-                SessionRequestError::IntegerWorkLimitExceeded { limit: 20 },
+                HostFailureCode::IntegerWorkLimitExceeded,
                 "IntegerWorkLimitExceeded",
             ),
             (
-                SessionRequestError::IterationWorkLimitExceeded { limit: 30 },
+                HostFailureCode::IterationWorkLimitExceeded,
                 "IterationWorkLimitExceeded",
             ),
         ] {
-            let outcome = KernelExecuteOutcome::Failure(SessionRequestFailure {
-                error,
-                messages: Vec::new(),
-                prints: Vec::new(),
-                trace: Vec::new(),
-            });
+            let outcome = KernelExecuteOutcome::Failure(host_failure(code, expected_name));
 
             let response = build_execute_response(Some(1), outcome);
 
@@ -318,18 +322,23 @@ mod tests {
 
     #[test]
     fn render_rule_application_source_covers_replace() {
+        assert_eq!(render_rule_application_source("Replace"), "replace");
         assert_eq!(
-            render_rule_application_source(RuleApplicationSource::Replace),
-            "replace"
-        );
-        assert_eq!(
-            render_rule_application_source(RuleApplicationSource::ReplaceList),
+            render_rule_application_source("ReplaceList"),
             "replace-list"
         );
-        assert_eq!(
-            render_rule_application_source(RuleApplicationSource::ReplaceAt),
-            "replace-at"
-        );
+        assert_eq!(render_rule_application_source("ReplaceAt"), "replace-at");
+    }
+
+    fn host_failure(code: HostFailureCode, message: &str) -> HostFailure {
+        HostFailure {
+            code,
+            message: message.to_string(),
+            messages: Vec::new(),
+            prints: Vec::new(),
+            trace: Vec::new(),
+            outputs: Vec::new(),
+        }
     }
 }
 
@@ -421,8 +430,15 @@ pub(super) fn input_request_metadata(
     metadata
 }
 
-fn render_inspect_text(response: &SessionInspectResponse) -> String {
-    let info = &response.info;
+fn render_inspect_text(response: &rum_host::HostInspectResponse) -> String {
+    let Some(info) = &response.info else {
+        return response
+            .target
+            .as_deref()
+            .map(|target| format!("{target}: <not found>"))
+            .unwrap_or_else(|| "<no symbol>".to_string());
+    };
+
     let mut lines = vec![
         format!("{} ({})", info.qualified_name, info.context),
         format!(
@@ -458,8 +474,15 @@ fn render_inspect_text(response: &SessionInspectResponse) -> String {
     lines.join("\n")
 }
 
-fn render_inspect_markdown(response: &SessionInspectResponse) -> String {
-    let info = &response.info;
+fn render_inspect_markdown(response: &rum_host::HostInspectResponse) -> String {
+    let Some(info) = &response.info else {
+        return response
+            .target
+            .as_deref()
+            .map(|target| format!("`{target}` not found"))
+            .unwrap_or_else(|| "No symbol".to_string());
+    };
+
     let attributes = if info.attributes.is_empty() {
         "<none>".to_string()
     } else {
@@ -485,37 +508,38 @@ fn render_inspect_markdown(response: &SessionInspectResponse) -> String {
     )
 }
 
-fn render_trace_event(event: &TraceEvent) -> String {
+fn render_trace_event(event: &HostTraceEvent) -> String {
     match event {
-        TraceEvent::EvaluationPass { before, after } => {
+        HostTraceEvent::EvaluationPass { before, after } => {
             format!("evaluation-pass: {before} => {after}")
         }
-        TraceEvent::DefinitionStored {
+        HostTraceEvent::DefinitionStored {
             symbol,
             kind,
             value,
-        } => format!("definition-stored: {symbol} [{kind:?}] = {value}"),
-        TraceEvent::RuleApplied {
+        } => format!("definition-stored: {symbol} [{kind}] = {value}"),
+        HostTraceEvent::RuleApplied {
             source,
             input,
             rule,
             result,
         } => format!(
             "rule-applied: {} | input={input} | rule={rule} | result={result}",
-            render_rule_application_source(*source)
+            render_rule_application_source(source)
         ),
     }
 }
 
-fn render_rule_application_source(source: RuleApplicationSource) -> &'static str {
+fn render_rule_application_source(source: &str) -> &str {
     match source {
-        RuleApplicationSource::UpValue => "upvalue",
-        RuleApplicationSource::DownValue => "downvalue",
-        RuleApplicationSource::SubValue => "subvalue",
-        RuleApplicationSource::Replace => "replace",
-        RuleApplicationSource::ReplaceList => "replace-list",
-        RuleApplicationSource::ReplaceAt => "replace-at",
-        RuleApplicationSource::ReplaceAll => "replace-all",
-        RuleApplicationSource::ReplaceRepeated => "replace-repeated",
+        "UpValue" => "upvalue",
+        "DownValue" => "downvalue",
+        "SubValue" => "subvalue",
+        "Replace" => "replace",
+        "ReplaceList" => "replace-list",
+        "ReplaceAt" => "replace-at",
+        "ReplaceAll" => "replace-all",
+        "ReplaceRepeated" => "replace-repeated",
+        other => other,
     }
 }

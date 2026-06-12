@@ -10,6 +10,9 @@ Completed history, archived planning detail, and operational lessons live in
 
 - [ ] Treat the next phase as `v0.1` kernel stabilization: correctness,
   contract boundaries, harnesses, and docs come before new same-name breadth.
+  Use
+  [docs/v0.1-acceptance-boundary.md](./docs/v0.1-acceptance-boundary.md)
+  as the concrete acceptance boundary.
 - [ ] Promote new Wolfram-style functions only when the support matrix,
   `mma-hol`, or another concrete downstream blocker justifies them.
 - [ ] Keep project-owned Python adapter work frozen until a real downstream
@@ -33,16 +36,19 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Architecture And Contracts
 
-- [ ] Write down the concrete `v0.1` public-contract boundary: stable
-  host-facing types and flows versus evaluator internals that remain unstable.
-- [ ] Define the release/check gate contract: default local checks, optional
-  Wolfram-oracle lanes, optional performance lanes, and what must pass before
-  a stabilization cut.
+- [ ] Keep the concrete `v0.1` public-contract boundary in
+  [docs/v0.1-acceptance-boundary.md](./docs/v0.1-acceptance-boundary.md)
+  aligned as host-facing types, downstream gates, or adapter commitments
+  change.
+- [ ] Keep the release/check gate contract in
+  [docs/v0.1-acceptance-boundary.md](./docs/v0.1-acceptance-boundary.md)
+  aligned with default local checks, optional Wolfram-oracle lanes, optional
+  performance lanes, and stabilization-cut requirements.
 - [ ] Keep `rum-host` as the Rust embedding boundary for sessions, requests,
   configuration, structured outcomes, failures, and suspend/resume.
-- [ ] Migrate `rum-jupyter` to consume `rum-host` for eval, resume, inspect,
-  complete, and is-complete before treating basic Notebook behavior as a
-  `v0.1` delivery surface.
+- [ ] Keep `rum-jupyter` request handling on `rum-host` for eval, resume,
+  inspect, complete, and is-complete; do not reintroduce direct broad
+  `rum-runtime` coupling in the adapter surface.
 - [ ] Treat any future adapters as peers to `rum-jupyter`, layered on the same
   host-facing runtime API rather than special cases inside `rum-runtime`.
 - [ ] Keep source organization aligned with
@@ -158,18 +164,19 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Basic Notebook Tech Preview
 
-- [ ] Make `rum-jupyter` depend on `rum-host` instead of broad `rum-runtime`
-  for request handling and public result, failure, input, inspect, completion,
-  and completeness shapes.
+- [ ] Keep the lightweight `rum-jupyter` dependency guard aligned so the
+  adapter does not silently reintroduce direct `rum-runtime` / `rum-stdlib`
+  request-handling dependencies.
 - [ ] Preserve Jupyter-owned concerns in `rum-jupyter`: kernelspec/bootstrap,
   ZeroMQ/native transport, signing, wire codecs, message envelopes, IOPub
   lifecycle, and MIME bundles.
 - [ ] Provide one documented deploy path for a real Notebook frontend; other
   frontends and installation styles are user-managed unless explicitly
   promoted.
-- [ ] Support the minimal Notebook workflow: code cell execution,
-  `text/plain` results, messages/prints, failures as Jupyter errors, inspect,
-  complete, is-complete, stdin resume, `kernel_info`, and shutdown.
+- [ ] Validate the minimal Notebook workflow against a real Notebook frontend:
+  code cell execution, `text/plain` results, messages/prints, failures as
+  Jupyter errors, inspect, complete, is-complete, stdin resume, `kernel_info`,
+  and shutdown.
 - [ ] Handle common unsupported Jupyter messages gracefully rather than
   terminating the kernel process.
 - [ ] Keep robust interrupt/cancel, widgets/comm, debug protocol, rich

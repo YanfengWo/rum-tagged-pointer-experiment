@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::VecDeque};
 
-use rum_runtime::Session;
+use rum_host::HostSession;
 
 use crate::{
     KernelBootstrapConfig, KernelChannel, KernelQueuedTransport, KernelSocketDriver,
@@ -297,11 +297,11 @@ impl<S: ZeroMqSocket> ZeroMqTransportBackend<S> {
         })
     }
 
-    pub fn event_pump(&self, session: Session) -> crate::KernelEventPump {
+    pub fn event_pump(&self, session: HostSession) -> crate::KernelEventPump {
         self.bootstrap_config.event_pump(session)
     }
 
-    pub fn socket_driver(&self, session: Session) -> KernelSocketDriver {
+    pub fn socket_driver(&self, session: HostSession) -> KernelSocketDriver {
         self.bootstrap_config.socket_driver(session)
     }
 

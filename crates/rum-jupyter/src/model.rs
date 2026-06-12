@@ -3,7 +3,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use rum_runtime::{SessionEvalResponse, SessionInspectResponse, SessionRequestFailure};
+use rum_host::{HostEvalSuccess, HostFailure, HostInputSuspension, HostInspectResponse};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KernelExecuteRequest {
@@ -34,8 +34,9 @@ impl KernelExecuteRequest {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum KernelExecuteOutcome {
-    Success(SessionEvalResponse),
-    Failure(SessionRequestFailure),
+    Success(HostEvalSuccess),
+    InputRequired(HostInputSuspension),
+    Failure(HostFailure),
     WireDecoded,
 }
 
@@ -298,7 +299,7 @@ pub struct KernelInspectResponse {
     pub found: bool,
     pub data: KernelMimeBundle,
     pub metadata: KernelMetadata,
-    pub result: Option<SessionInspectResponse>,
+    pub result: Option<HostInspectResponse>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

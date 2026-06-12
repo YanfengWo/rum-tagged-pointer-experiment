@@ -1,6 +1,6 @@
-use rum_runtime::{
-    RuleApplicationSource, RuntimeInputRequest, RuntimeMessage, Session, SessionCompletenessStatus,
-    SessionInspectResponse, SessionRequestError, SessionRequestFailure, TraceEvent,
+use rum_host::{
+    HostCompletenessStatus, HostCompletionRequest, HostEvalOutcome, HostEvalRequest,
+    HostInspectRequest, HostIsCompleteRequest, HostSession,
 };
 
 use crate::{
@@ -17,21 +17,17 @@ use crate::{
     KernelStatusOutput, KernelStdinError, KernelStreamName, KernelStreamOutput,
 };
 
-mod cursor;
 mod iopub;
 mod render;
 
-use self::{
-    cursor::{completion_prefix, symbol_at_cursor},
-    render::{
-        build_execute_response, build_suspended_outputs, complete_metadata,
-        input_request_from_outcome, input_request_metadata, inspect_metadata, inspect_mime_bundle,
-        kernel_input_request, response_metadata, response_msg_type,
-    },
+use self::render::{
+    build_execute_response, build_suspended_outputs, complete_metadata, input_request_from_outcome,
+    input_request_metadata, inspect_metadata, inspect_mime_bundle, kernel_input_request,
+    response_metadata, response_msg_type,
 };
 
 pub struct KernelAdapter {
-    session: Session,
+    session: HostSession,
     kernel_username: String,
     execution_count: u64,
     next_message_id: u64,
@@ -50,11 +46,11 @@ struct PendingExecute {
 }
 
 impl KernelAdapter {
-    pub fn new(session: Session) -> Self {
+    pub fn new(session: HostSession) -> Self {
         Self::with_username(session, "kernel")
     }
 
-    pub fn with_username(session: Session, username: impl Into<String>) -> Self {
+    pub fn with_username(session: HostSession, username: impl Into<String>) -> Self {
         Self {
             session,
             kernel_username: username.into(),
@@ -103,14 +99,6 @@ impl KernelAdapter {
         self.last_input_reply.take()
     }
 
-    pub fn session(&self) -> &Session {
-        &self.session
-    }
-
-    pub fn session_mut(&mut self) -> &mut Session {
-        &mut self.session
-    }
-
     pub fn execute(&mut self, request: KernelExecuteRequest) -> KernelExecuteResponse {
         let execution_count = self.next_execution_count(request.store_history);
         let outcome = self.run_execute_request(&request);
@@ -127,9 +115,15 @@ impl KernelAdapter {
     }
 
     fn run_execute_request(&mut self, request: &KernelExecuteRequest) -> KernelExecuteOutcome {
-        match self.session.eval_request(&request.code) {
-            Ok(response) => KernelExecuteOutcome::Success(response),
-            Err(failure) => KernelExecuteOutcome::Failure(failure),
+        match self
+            .session
+            .eval(HostEvalRequest::new(request.code.clone()))
+        {
+            HostEvalOutcome::Success(response) => KernelExecuteOutcome::Success(response),
+            HostEvalOutcome::InputRequired(suspension) => {
+                KernelExecuteOutcome::InputRequired(suspension)
+            }
+            HostEvalOutcome::Failure(failure) => KernelExecuteOutcome::Failure(failure),
         }
     }
 
@@ -174,15 +168,16 @@ impl KernelAdapter {
     }
 
     pub fn inspect(&self, request: KernelInspectRequest) -> KernelInspectResponse {
-        let target = symbol_at_cursor(&request.code, request.cursor_offset);
-        let result = target
-            .as_deref()
-            .and_then(|symbol| self.session.inspect_request(symbol));
-        let found = result.is_some();
-        let data = result
-            .as_ref()
-            .map(inspect_mime_bundle)
-            .unwrap_or_else(KernelMimeBundle::new);
+        let result = self
+            .session
+            .inspect(HostInspectRequest::new(request.code, request.cursor_offset));
+        let target = result.target.clone();
+        let found = result.found;
+        let data = if found {
+            inspect_mime_bundle(&result)
+        } else {
+            KernelMimeBundle::new()
+        };
         let metadata = inspect_metadata(target.as_deref(), found);
 
         KernelInspectResponse {
@@ -191,15 +186,18 @@ impl KernelAdapter {
             found,
             data,
             metadata,
-            result,
+            result: found.then_some(result),
         }
     }
 
     pub fn complete(&self, request: KernelCompleteRequest) -> KernelCompleteResponse {
-        let (replacement_start, replacement_end, prefix) =
-            completion_prefix(&request.code, request.cursor_offset);
-        let completion = self.session.complete_request(&prefix);
+        let completion = self.session.complete(HostCompletionRequest::new(
+            request.code,
+            request.cursor_offset,
+        ));
         let prefix = completion.prefix;
+        let replacement_start = completion.replacement_start;
+        let replacement_end = completion.replacement_end;
         let matches = completion.matches;
 
         KernelCompleteResponse {
@@ -213,14 +211,16 @@ impl KernelAdapter {
     }
 
     pub fn is_complete(&self, request: KernelIsCompleteRequest) -> KernelIsCompleteResponse {
-        let response = self.session.is_complete_request(&request.code);
+        let response = self
+            .session
+            .is_complete(HostIsCompleteRequest::new(request.code));
 
         KernelIsCompleteResponse {
             reply_status: KernelReplyStatus::Ok,
             completion_status: match response.status {
-                SessionCompletenessStatus::Complete => KernelIsCompleteStatus::Complete,
-                SessionCompletenessStatus::Incomplete => KernelIsCompleteStatus::Incomplete,
-                SessionCompletenessStatus::Invalid => KernelIsCompleteStatus::Invalid,
+                HostCompletenessStatus::Complete => KernelIsCompleteStatus::Complete,
+                HostCompletenessStatus::Incomplete => KernelIsCompleteStatus::Incomplete,
+                HostCompletenessStatus::Invalid => KernelIsCompleteStatus::Invalid,
             },
             indent: response.indent,
         }
@@ -384,9 +384,12 @@ impl KernelAdapter {
             .as_ref()
             .map(|reply| reply.value.clone())
             .expect("pending execute resumes only after an input reply");
-        let outcome = match self.session.resume_eval_request_with_input(input) {
-            Ok(response) => KernelExecuteOutcome::Success(response),
-            Err(failure) => KernelExecuteOutcome::Failure(failure),
+        let outcome = match self.session.resume_with_input(input) {
+            HostEvalOutcome::Success(response) => KernelExecuteOutcome::Success(response),
+            HostEvalOutcome::InputRequired(suspension) => {
+                KernelExecuteOutcome::InputRequired(suspension)
+            }
+            HostEvalOutcome::Failure(failure) => KernelExecuteOutcome::Failure(failure),
         };
         if let Some(input) = input_request_from_outcome(&outcome) {
             if pending.request.allow_stdin {

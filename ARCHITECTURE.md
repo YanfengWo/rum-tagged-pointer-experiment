@@ -281,6 +281,9 @@ is-complete, stdin resume, kernel info, and shutdown. Robust interrupt/cancel,
 widgets/comm, debug protocol, rich display updates, graphics, and broad
 frontend compatibility are later work unless deliberately promoted.
 
+The release-facing acceptance boundary for this lane is tracked in
+[docs/v0.1-acceptance-boundary.md](./docs/v0.1-acceptance-boundary.md).
+
 ### `rum-host`
 
 `rum-host` is the first-class Rust embedding crate.

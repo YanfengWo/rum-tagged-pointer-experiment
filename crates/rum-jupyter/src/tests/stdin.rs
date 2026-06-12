@@ -107,10 +107,7 @@ fn execute_request_with_disallowed_stdin_returns_input_error_reply() {
             assert_eq!(response.status, KernelReplyStatus::Error);
             assert!(matches!(
                 response.outcome,
-                KernelExecuteOutcome::Failure(SessionRequestFailure {
-                    error: rum_runtime::SessionRequestError::InputRequired { .. },
-                    ..
-                })
+                KernelExecuteOutcome::InputRequired(_)
             ));
         }
         other => panic!("expected execute reply, got {other:?}"),
@@ -214,7 +211,7 @@ fn input_reply_resumes_execute_and_preserves_shell_routing_ids() {
 #[test]
 fn input_reply_resumes_execute_without_rerunning_prefix_side_effects() {
     let mut session = Session::new();
-    session.eval_text("x = seed").unwrap();
+    eval_text(&mut session, "x = seed");
     let mut adapter = KernelAdapter::new(session);
 
     let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
@@ -274,23 +271,19 @@ fn input_reply_resumes_execute_without_rerunning_prefix_side_effects() {
         other => panic!("expected execute reply, got {other:?}"),
     }
 
-    assert_eq!(
-        adapter
-            .session_mut()
-            .eval_request("x")
-            .unwrap()
-            .value
-            .to_string(),
-        "List[List[seed]]"
-    );
+    let check = adapter.execute(KernelExecuteRequest::new("x").without_history());
+    match check.outcome {
+        KernelExecuteOutcome::Success(success) => {
+            assert_eq!(success.value.text, "List[List[seed]]");
+        }
+        other => panic!("expected x check to succeed, got {other:?}"),
+    }
 }
 
 #[test]
 fn input_reply_resumes_delayed_message_templates_through_internal_string_driver() {
     let mut session = Session::new();
-    session
-        .eval_text("f::argx := InputString[\"msg: \"]")
-        .unwrap();
+    eval_text(&mut session, "f::argx := InputString[\"msg: \"]");
     let mut adapter = KernelAdapter::new(session);
 
     let dispatch = adapter.dispatch_request(KernelRequestEnvelope {

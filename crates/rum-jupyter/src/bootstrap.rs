@@ -1,4 +1,4 @@
-use rum_runtime::Session;
+use rum_host::HostSession;
 
 use crate::{
     KernelAdapter, KernelChannel, KernelConnectionFile, KernelEventPump, KernelSocketSessionConfig,
@@ -94,7 +94,7 @@ impl KernelBootstrapConfig {
         KernelWireCodec::new(self.wire_config())
     }
 
-    pub fn event_pump(&self, session: Session) -> KernelEventPump {
+    pub fn event_pump(&self, session: HostSession) -> KernelEventPump {
         KernelEventPump::new(
             KernelAdapter::with_username(session, self.username.clone()),
             self.wire_codec(),
@@ -139,7 +139,7 @@ impl MockTransportBackend {
         (self.bootstrap_config, self.transport_layout, self.transport)
     }
 
-    pub fn event_pump(&self, session: Session) -> KernelEventPump {
+    pub fn event_pump(&self, session: HostSession) -> KernelEventPump {
         self.bootstrap_config.event_pump(session)
     }
 }
@@ -192,7 +192,7 @@ impl LocalSocketTransportBackend {
         self.frontend.clone()
     }
 
-    pub fn event_pump(&self, session: Session) -> KernelEventPump {
+    pub fn event_pump(&self, session: HostSession) -> KernelEventPump {
         self.bootstrap_config.event_pump(session)
     }
 

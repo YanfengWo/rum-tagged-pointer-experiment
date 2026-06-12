@@ -9,6 +9,8 @@ use zeromq::{
     util::PeerIdentity,
 };
 
+use rum_host::HostSession as Session;
+
 use super::*;
 use crate::{
     KernelConnectionFile, KernelMessageHeader, KernelMetadata, KernelReplyStatus, KernelRequest,

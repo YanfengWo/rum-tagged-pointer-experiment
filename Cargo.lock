@@ -580,8 +580,7 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "futures",
- "rum-runtime",
- "rum-stdlib",
+ "rum-host",
  "thiserror 2.0.18",
  "tokio",
  "zeromq",

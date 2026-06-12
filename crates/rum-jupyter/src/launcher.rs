@@ -1,7 +1,6 @@
 use std::{path::Path, thread, time::Duration};
 
-use rum_runtime::Session;
-use rum_stdlib::install_core;
+use rum_host::HostSession;
 use thiserror::Error;
 
 use crate::{
@@ -73,8 +72,7 @@ pub fn run_native_kernel_with_config(
         }
     })?;
 
-    let mut session = Session::new();
-    install_core(&mut session);
+    let session = HostSession::new();
     let mut driver = backend.socket_driver(session);
 
     loop {

@@ -19,7 +19,7 @@ fn execute_request_maps_to_session_eval_and_tracks_execution_count() {
 
     match response.outcome {
         KernelExecuteOutcome::Success(result) => {
-            assert_eq!(result.value.to_string(), "1");
+            assert_eq!(result.value.text, "1");
             assert!(result.messages.is_empty());
         }
         other => panic!("expected execute success, got {other:?}"),
@@ -43,10 +43,9 @@ fn execute_request_maps_to_session_eval_and_tracks_execution_count() {
 
 #[test]
 fn execute_request_failure_emits_stderr_streams_and_error_payload() {
-    let mut session = Session::new();
-    session.enable_tracing(true);
-    session.eval_text("f[x_Integer] := g[x]").unwrap();
-    session.eval_text("g[x_Integer] := f[x]").unwrap();
+    let mut session = tracing_session();
+    eval_text(&mut session, "f[x_Integer] := g[x]");
+    eval_text(&mut session, "g[x_Integer] := f[x]");
     let mut adapter = KernelAdapter::new(session);
 
     let response = adapter.execute(KernelExecuteRequest::new("f[1]"));
@@ -107,7 +106,7 @@ fn execute_request_failure_emits_stderr_streams_and_error_payload() {
 #[test]
 fn inspect_request_maps_symbol_at_cursor_to_session_inspect_response() {
     let mut session = Session::new();
-    session.eval_text("f = 1").unwrap();
+    eval_text(&mut session, "f = 1");
     let adapter = KernelAdapter::new(session);
 
     let response = adapter.inspect(KernelInspectRequest::new("f", 1));
@@ -124,14 +123,17 @@ fn inspect_request_maps_symbol_at_cursor_to_session_inspect_response() {
     let result = response
         .result
         .expect("known symbol should map to an inspect response");
-    assert_eq!(result.info.qualified_name, "Global`f");
-    assert!(result.info.has_own_value);
+    let info = result
+        .info
+        .expect("known symbol should include symbol info");
+    assert_eq!(info.qualified_name, "Global`f");
+    assert!(info.has_own_value);
 }
 
 #[test]
 fn complete_request_maps_cursor_prefix_to_session_completion_response() {
     let mut session = Session::new();
-    session.eval_text("localName = 1").unwrap();
+    eval_text(&mut session, "localName = 1");
     let adapter = KernelAdapter::new(session);
 
     let response = adapter.complete(KernelCompleteRequest::new("loc", 3));
@@ -140,7 +142,7 @@ fn complete_request_maps_cursor_prefix_to_session_completion_response() {
     assert_eq!(response.replacement_start, 0);
     assert_eq!(response.replacement_end, 3);
     assert_eq!(response.prefix, "loc");
-    assert_eq!(response.matches, vec!["localName"]);
+    assert!(response.matches.iter().any(|item| item == "localName"));
     assert_eq!(response.metadata.get("cursor_start"), Some("0"));
     assert_eq!(response.metadata.get("cursor_end"), Some("3"));
 }
@@ -148,7 +150,7 @@ fn complete_request_maps_cursor_prefix_to_session_completion_response() {
 #[test]
 fn complete_request_replaces_the_full_symbol_when_cursor_is_inside_it() {
     let mut session = Session::new();
-    session.eval_text("localName = 1").unwrap();
+    eval_text(&mut session, "localName = 1");
     let adapter = KernelAdapter::new(session);
 
     let response = adapter.complete(KernelCompleteRequest::new("localName", 3));
@@ -156,14 +158,13 @@ fn complete_request_replaces_the_full_symbol_when_cursor_is_inside_it() {
     assert_eq!(response.replacement_start, 0);
     assert_eq!(response.replacement_end, "localName".len());
     assert_eq!(response.prefix, "loc");
-    assert_eq!(response.matches, vec!["localName"]);
+    assert!(response.matches.iter().any(|item| item == "localName"));
 }
 
 #[test]
 fn execute_request_with_tracing_emits_display_data_separately_from_execute_result() {
-    let mut session = Session::new();
-    session.enable_tracing(true);
-    session.eval_text("f[x_Integer] := x").unwrap();
+    let mut session = tracing_session();
+    eval_text(&mut session, "f[x_Integer] := x");
     let mut adapter = KernelAdapter::new(session);
 
     let response = adapter.execute(KernelExecuteRequest::new("f[1]"));

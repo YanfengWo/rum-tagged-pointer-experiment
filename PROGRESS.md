@@ -6,6 +6,50 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-12 v0.1 Acceptance Boundary
+
+Added [docs/v0.1-acceptance-boundary.md](./docs/v0.1-acceptance-boundary.md)
+as the canonical stabilization boundary for the first usable `v0.1` cut.
+
+The document consolidates decisions that were previously spread across
+`ARCHITECTURE.md`, the Jupyter host migration audit, and the `mma-hol` smoke
+and snapshot notes:
+
+- `v0.1` is a kernel and host-contract stabilization cut, not a full CAS or
+  notebook product;
+- `rum-host` is the primary public embedding boundary;
+- `mma-hol` cold and stable-snapshot lanes are the main downstream pressure
+  tests;
+- Jupyter is scoped as a `rum-host`-backed basic Notebook tech preview with
+  one documented deploy path;
+- speculative showcase packages, Python adapter revival, broad frontend
+  compatibility, graphics, and `WLBuiltin/` cleanup remain outside the cut.
+
+## 2026-06-12 `rum-jupyter` Host Migration
+
+Migrated `rum-jupyter` request handling onto `rum-host`.
+
+- `rum-jupyter` now depends on `rum-host` instead of direct `rum-runtime` and
+  `rum-stdlib`.
+- `KernelAdapter`, bootstrap, socket, ZeroMQ, launcher, and tests now pass
+  `HostSession`.
+- Public Jupyter model outcomes use host-facing success, input-required,
+  failure, and inspect response types instead of runtime response/failure
+  types.
+- Jupyter rendering now consumes host messages, prints, traces, failures, and
+  text results; `Print` output maps to stdout streams and runtime messages map
+  to stderr streams.
+- The private Jupyter cursor helper was removed because inspect and completion
+  cursor handling now belongs to `rum-host`.
+- A lightweight manifest guard now fails if `rum-jupyter` reintroduces direct
+  `rum-runtime` or `rum-stdlib` dependencies.
+
+Validation: `cargo test -p rum-jupyter` passed locally, including native
+ZeroMQ loopback tests.
+
+Remaining Jupyter lane work: document one real Notebook deploy path and run
+the host-backed adapter through an actual Notebook frontend.
+
 ## 2026-06-12 `mma-hol` Stable Snapshot Validation
 
 Ran the stable snapshot lane against the fixed clean clone at

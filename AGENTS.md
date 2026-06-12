@@ -32,6 +32,8 @@ Before substantial work, read the smallest set needed for the task:
 - [ARCHITECTURE.md](./ARCHITECTURE.md): architecture boundaries and design
   commitments
 - [TODO.md](./TODO.md): active roadmap and technical debt
+- [docs/v0.1-acceptance-boundary.md](./docs/v0.1-acceptance-boundary.md):
+  current stabilization and public-contract boundary
 - [docs/core-language-support-matrix.md](./docs/core-language-support-matrix.md):
   supported Wolfram-style language surface
 - [docs/lowering-canonical-forms.md](./docs/lowering-canonical-forms.md):
