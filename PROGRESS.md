@@ -6,6 +6,55 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-12 Representation Optimization Pass (External)
+
+A second external optimization pass reopened the performance lane after the
+pause below and landed five retained structural changes. All numbers are the
+PropTaut distribution probe (dependency-preloaded, release, internal
+`AbsoluteTiming`) on the reference machine; WolframKernel internal reference
+is `3.80s`.
+
+- Symbol interning with dense pair ids (`7c0ff8a`): `Symbol` equality,
+  hashing, and hot map lookups became integer operations; `definitions` and
+  `attributes` moved from `BTreeMap` to id-hashed `HashMap`s. `28.6s -> 20.4s`.
+- Dependency-aware stability-cache invalidation (`f1806fb`): definition
+  writes invalidate exactly the written symbol plus a 128-bit dirty bloom
+  over call-stability entries instead of clearing all three caches per
+  assignment; only stable verdicts are cached. Full clears remain for
+  package/context/attribute changes. `20.4s -> 19.9s`, and cache wipes per
+  proof dropped from ~65k to ~4-8k generation bumps.
+- mimalloc as the `rum-cli` global allocator (`cfd3680`): expression-tree
+  churn made small-object allocation the largest single block (~34% self
+  time). `19.9s -> 14.1s`.
+- Message-symbol index plus pre-sized argument preparation (`9920aff`):
+  `symbol_exists` stopped scanning every message definition per name lookup.
+  `14.4s -> 13.9s`.
+- Id-hashed pattern/lexical binding maps and a 32-byte `Symbol`
+  (text-pointer + inline id): `13.9s -> 13.1s`.
+
+End state: distribution probe `13.1s` (3.4x vs WolframKernel, down from
+12.8x), Bool-stack load `0.78s` vs `0.19s` (4.1x, down from 11.5x).
+Downstream gates moved materially: `proptaut_tests.wl` is green for the
+first time (`238s` full suite, previously a hard timeout at `300s`),
+`bool_tests` `6s`, `drule/tactics/printer/parser/kernel` tests `~1s` each.
+`cargo test --workspace` (24 suites) and `rum-difftest check` pass.
+
+The original `<2x` target was not reached. The remaining ~3.4x is spread
+flat across the evaluator (no single item above ~7% self time): stability
+scanning ~10%, allocator/drop/memmove ~20%, substitution ~7%, definition
+matching ~8%, dispatch skeleton ~9%, long tail ~45%. Closing it requires a
+representation rework, in order of expected leverage: a single-allocation
+call node (head+args in one `Arc`, halving per-node allocations and
+refcount traffic, and enabling an inline per-node evaluated/stable stamp in
+place of the pointer-keyed side cache), borrowed argument preparation so
+shared arg vectors are not cloned per evaluation pass, and a non-recursive
+dispatch loop. Each is multi-day, cross-cutting work; per-probe estimates
+suggest together they plausibly reach ~2x but not below without a JIT-class
+overhaul. Rejected this pass: depth-gated cycle tracking (broke trace-depth
+and `Stack[]` semantics for ~1.5%), caching unstable call verdicts (pins
+dead trees, regressed to 25s), text-pointer-only `Symbol` equality without
+the inline id (hot-path pointer chase, ~3% regression).
+
 ## 2026-06-12 Performance Lane Pause And Cleanup
 
 - Cancelled the long-lived PropTaut optimization goal and stopped automatic

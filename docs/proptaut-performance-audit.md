@@ -8,9 +8,15 @@ x86-64 macOS box used for the Bool lane numbers in `PROGRESS.md`.
 Maintainer note, 2026-06-12: follow-up retained optimizations after this audit
 reduced the same PropTaut distribution probe to about `27.40-27.64s` in
 release, but the local WolframKernel internal timing remains about `3.80s`.
-The deeper performance lane is paused pending external review; use this report
-as diagnosis history, not as an instruction to continue automatic
-micro-optimization.
+
+Second maintainer note, 2026-06-12 (external representation pass): symbol
+interning, dependency-aware cache invalidation, mimalloc, and the related
+structural changes recorded in `PROGRESS.md` under "Representation
+Optimization Pass" brought the probe to about `13.1s` (3.4x) and the
+Bool-stack load to `0.78s` (4.1x). `proptaut_tests.wl` is green for the
+first time. The remaining gap is flat across the evaluator; section 4's
+item 5 (per-node evaluated bits / single-allocation call nodes) is now the
+frontier. Use this report as diagnosis history.
 
 This audit answers two questions: where the `PropTaut` time actually goes,
 and why a night of sample-guided micro-probes produced mostly neutral or
