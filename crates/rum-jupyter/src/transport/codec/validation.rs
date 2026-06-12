@@ -79,11 +79,13 @@ impl KernelWireCodec {
         msg_type: &str,
     ) -> Result<(), KernelWireError> {
         let valid = match msg_type {
-            "execute_request"
-            | "inspect_request"
-            | "complete_request"
-            | "is_complete_request"
-            | "kernel_info_request" => channel == KernelChannel::Shell,
+            "execute_request" | "inspect_request" | "complete_request" | "is_complete_request" => {
+                channel == KernelChannel::Shell
+            }
+            "history_request" => channel == KernelChannel::Shell,
+            "kernel_info_request" => {
+                matches!(channel, KernelChannel::Shell | KernelChannel::Control)
+            }
             "interrupt_request" => channel == KernelChannel::Control,
             "shutdown_request" => matches!(channel, KernelChannel::Shell | KernelChannel::Control),
             _ => {
@@ -109,8 +111,11 @@ impl KernelWireCodec {
         msg_type: &str,
     ) -> Result<(), KernelWireError> {
         let valid = match msg_type {
-            "execute_reply" | "inspect_reply" | "complete_reply" | "is_complete_reply"
-            | "kernel_info_reply" => channel == KernelChannel::Shell,
+            "execute_reply" | "inspect_reply" | "complete_reply" | "is_complete_reply" => {
+                channel == KernelChannel::Shell
+            }
+            "history_reply" => channel == KernelChannel::Shell,
+            "kernel_info_reply" => matches!(channel, KernelChannel::Shell | KernelChannel::Control),
             "interrupt_reply" => channel == KernelChannel::Control,
             "shutdown_reply" => matches!(channel, KernelChannel::Shell | KernelChannel::Control),
             _ => {

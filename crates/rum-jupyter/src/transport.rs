@@ -5,14 +5,14 @@ use crate::{
     KernelAdapter, KernelChannel, KernelCompleteRequest, KernelCompleteResponse,
     KernelDispatchResult, KernelDisplayOutput, KernelErrorOutput, KernelExecuteInput,
     KernelExecuteOutcome, KernelExecutePayload, KernelExecuteRequest, KernelExecuteResponse,
-    KernelExecuteResult, KernelHelpLink, KernelInfoResponse, KernelInputReply,
-    KernelInputReplyEnvelope, KernelInputRequest, KernelInputRequestEnvelope, KernelInspectRequest,
-    KernelInspectResponse, KernelInterruptRequest, KernelInterruptResponse, KernelIoPubEnvelope,
-    KernelIoPubPayload, KernelIsCompleteRequest, KernelIsCompleteResponse, KernelIsCompleteStatus,
-    KernelLanguageInfo, KernelMessageHeader, KernelMetadata, KernelMimeBundle, KernelReplyStatus,
-    KernelRequest, KernelRequestEnvelope, KernelResponse, KernelResponseEnvelope,
-    KernelShutdownRequest, KernelShutdownResponse, KernelStatusOutput, KernelStreamName,
-    KernelStreamOutput,
+    KernelExecuteResult, KernelHelpLink, KernelHistoryEntry, KernelHistoryRequest,
+    KernelHistoryResponse, KernelInfoResponse, KernelInputReply, KernelInputReplyEnvelope,
+    KernelInputRequest, KernelInputRequestEnvelope, KernelInspectRequest, KernelInspectResponse,
+    KernelInterruptRequest, KernelInterruptResponse, KernelIoPubEnvelope, KernelIoPubPayload,
+    KernelIsCompleteRequest, KernelIsCompleteResponse, KernelIsCompleteStatus, KernelLanguageInfo,
+    KernelMessageHeader, KernelMetadata, KernelMimeBundle, KernelReplyStatus, KernelRequest,
+    KernelRequestEnvelope, KernelResponse, KernelResponseEnvelope, KernelShutdownRequest,
+    KernelShutdownResponse, KernelStatusOutput, KernelStreamName, KernelStreamOutput,
 };
 
 mod codec;

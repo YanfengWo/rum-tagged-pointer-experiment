@@ -7,14 +7,15 @@ use crate::{
     KernelChannel, KernelCompleteRequest, KernelCompleteResponse, KernelDispatchResult,
     KernelDisplayOutput, KernelErrorOutput, KernelExecuteInput, KernelExecuteOutcome,
     KernelExecutePayload, KernelExecuteRequest, KernelExecuteResponse, KernelExecuteResult,
-    KernelExecutionState, KernelHelpLink, KernelInfoRequest, KernelInfoResponse, KernelInputReply,
-    KernelInputReplyEnvelope, KernelInputRequest, KernelInputRequestEnvelope, KernelInspectRequest,
-    KernelInspectResponse, KernelInterruptRequest, KernelInterruptResponse, KernelIoPubEnvelope,
-    KernelIoPubPayload, KernelIsCompleteRequest, KernelIsCompleteResponse, KernelIsCompleteStatus,
-    KernelLanguageInfo, KernelLifecycleState, KernelMessageHeader, KernelMetadata,
-    KernelMimeBundle, KernelOutput, KernelReplyStatus, KernelRequest, KernelRequestEnvelope,
-    KernelResponse, KernelResponseEnvelope, KernelShutdownRequest, KernelShutdownResponse,
-    KernelStatusOutput, KernelStdinError, KernelStreamName, KernelStreamOutput,
+    KernelExecutionState, KernelHelpLink, KernelHistoryRequest, KernelHistoryResponse,
+    KernelInfoRequest, KernelInfoResponse, KernelInputReply, KernelInputReplyEnvelope,
+    KernelInputRequest, KernelInputRequestEnvelope, KernelInspectRequest, KernelInspectResponse,
+    KernelInterruptRequest, KernelInterruptResponse, KernelIoPubEnvelope, KernelIoPubPayload,
+    KernelIsCompleteRequest, KernelIsCompleteResponse, KernelIsCompleteStatus, KernelLanguageInfo,
+    KernelLifecycleState, KernelMessageHeader, KernelMetadata, KernelMimeBundle, KernelOutput,
+    KernelReplyStatus, KernelRequest, KernelRequestEnvelope, KernelResponse,
+    KernelResponseEnvelope, KernelShutdownRequest, KernelShutdownResponse, KernelStatusOutput,
+    KernelStdinError, KernelStreamName, KernelStreamOutput,
 };
 
 mod iopub;
@@ -226,6 +227,13 @@ impl KernelAdapter {
         }
     }
 
+    pub fn history(&self, _request: KernelHistoryRequest) -> KernelHistoryResponse {
+        KernelHistoryResponse {
+            status: KernelReplyStatus::Ok,
+            history: Vec::new(),
+        }
+    }
+
     pub fn request_stdin_for_execute(
         &mut self,
         parent_header: &KernelMessageHeader,
@@ -311,6 +319,11 @@ impl KernelAdapter {
                 envelope.channel,
                 parent_header,
                 KernelResponse::KernelInfo(self.kernel_info(request)),
+            ),
+            KernelRequest::History(request) => self.finish_non_execute_request(
+                envelope.channel,
+                parent_header,
+                KernelResponse::History(self.history(request)),
             ),
             KernelRequest::Interrupt(request) => {
                 let response = KernelResponse::Interrupt(self.interrupt(request));

@@ -71,6 +71,7 @@ pub(in crate::transport) fn parse_request_content(
         "is_complete_request" => Ok(KernelRequest::IsComplete(KernelIsCompleteRequest {
             code: string_field(&object, "content", "code")?,
         })),
+        "history_request" => Ok(KernelRequest::History(KernelHistoryRequest)),
         "kernel_info_request" => Ok(KernelRequest::KernelInfo(crate::KernelInfoRequest)),
         "interrupt_request" => Ok(KernelRequest::Interrupt(KernelInterruptRequest)),
         "shutdown_request" => Ok(KernelRequest::Shutdown(KernelShutdownRequest {
@@ -170,6 +171,10 @@ pub(in crate::transport) fn parse_response_content(
                 &object, "content", "status",
             )?)?,
             indent: optional_string_field(&object, "content", "indent")?,
+        })),
+        "history_reply" => Ok(KernelResponse::History(KernelHistoryResponse {
+            status: parse_reply_status(&string_field(&object, "content", "status")?)?,
+            history: history_entries_field(&object, "content", "history")?,
         })),
         "kernel_info_reply" => Ok(KernelResponse::KernelInfo(KernelInfoResponse {
             status: parse_reply_status(&string_field(&object, "content", "status")?)?,

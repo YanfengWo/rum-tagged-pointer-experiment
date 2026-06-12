@@ -135,6 +135,39 @@ fn transport_codec_decodes_escaped_and_utf8_unicode_request_payloads() {
 }
 
 #[test]
+fn transport_codec_accepts_structured_frontend_metadata() {
+    let codec = KernelWireCodec::new(KernelWireConfig::default().with_session_id("session-7m"));
+    let mut wire = codec
+        .encode_request_envelope(&KernelRequestEnvelope {
+            channel: KernelChannel::Shell,
+            header: KernelMessageHeader::new(
+                "client-msg-60m",
+                "session-7m",
+                "tester",
+                "execute_request",
+            ),
+            parent_header: None,
+            metadata: super::KernelMetadata::new(),
+            request: KernelRequest::Execute(KernelExecuteRequest::new("1+1")),
+        })
+        .expect("request should encode");
+
+    wire.metadata_json =
+        r#"{"trusted":true,"tags":["parameters"],"frontend":{"name":"jupyterlab"}}"#.to_string();
+
+    let decoded = codec
+        .decode_request_message(&wire)
+        .expect("structured metadata should not reject the request");
+
+    assert_eq!(decoded.metadata.get("trusted"), Some("true"));
+    assert_eq!(decoded.metadata.get("tags"), Some(r#"["parameters"]"#));
+    assert_eq!(
+        decoded.metadata.get("frontend"),
+        Some(r#"{"name":"jupyterlab"}"#)
+    );
+}
+
+#[test]
 fn execute_request_round_trips_allow_stdin_flag() {
     let codec = KernelWireCodec::new(KernelWireConfig::default().with_session_id("session-7b"));
     let envelope = KernelRequestEnvelope {
@@ -388,6 +421,96 @@ fn request_headers_round_trip_date_field_through_wire_codec() {
         .expect("request should decode");
 
     assert_eq!(decoded.header.date, "2026-03-20T12:34:56Z");
+}
+
+#[test]
+fn kernel_info_round_trips_on_control_channel() {
+    let codec = KernelWireCodec::new(KernelWireConfig::default().with_session_id("session-14c"));
+    let envelope = KernelRequestEnvelope {
+        channel: KernelChannel::Control,
+        header: KernelMessageHeader::new(
+            "client-msg-67c",
+            "session-14c",
+            "tester",
+            "kernel_info_request",
+        ),
+        parent_header: None,
+        metadata: super::KernelMetadata::new(),
+        request: KernelRequest::KernelInfo(KernelInfoRequest),
+    };
+
+    let wire = codec
+        .encode_request_envelope(&envelope)
+        .expect("control kernel_info request should encode");
+    let decoded = codec
+        .decode_request_message(&wire)
+        .expect("control kernel_info request should decode");
+    assert_eq!(decoded.channel, KernelChannel::Control);
+
+    let mut adapter = KernelAdapter::new(Session::new());
+    let dispatch = adapter.dispatch_request(decoded);
+    let reply = dispatch
+        .reply
+        .expect("kernel_info should reply on the request channel");
+    assert_eq!(reply.channel, KernelChannel::Control);
+
+    let encoded_reply = codec
+        .encode_response_envelope(&reply)
+        .expect("control kernel_info reply should encode");
+    let decoded_reply = codec
+        .decode_response_message(&encoded_reply)
+        .expect("control kernel_info reply should decode");
+    assert_eq!(decoded_reply.channel, KernelChannel::Control);
+    assert_eq!(decoded_reply.header.msg_type, "kernel_info_reply");
+}
+
+#[test]
+fn history_request_round_trips_with_empty_reply() {
+    let codec = KernelWireCodec::new(KernelWireConfig::default().with_session_id("session-14h"));
+    let envelope = KernelRequestEnvelope {
+        channel: KernelChannel::Shell,
+        header: KernelMessageHeader::new(
+            "client-msg-67h",
+            "session-14h",
+            "tester",
+            "history_request",
+        ),
+        parent_header: None,
+        metadata: super::KernelMetadata::new(),
+        request: KernelRequest::History(KernelHistoryRequest),
+    };
+
+    let wire = codec
+        .encode_request_envelope(&envelope)
+        .expect("history request should encode");
+    let decoded = codec
+        .decode_request_message(&wire)
+        .expect("history request should decode");
+    assert_eq!(decoded.channel, KernelChannel::Shell);
+
+    let mut adapter = KernelAdapter::new(Session::new());
+    let dispatch = adapter.dispatch_request(decoded);
+    let reply = dispatch
+        .reply
+        .expect("history request should receive an immediate reply");
+    assert_eq!(reply.channel, KernelChannel::Shell);
+
+    let encoded_reply = codec
+        .encode_response_envelope(&reply)
+        .expect("history reply should encode");
+    assert!(encoded_reply.content_json.contains("\"history\":[]"));
+
+    let decoded_reply = codec
+        .decode_response_message(&encoded_reply)
+        .expect("history reply should decode");
+    assert_eq!(decoded_reply.header.msg_type, "history_reply");
+    match decoded_reply.response {
+        KernelResponse::History(response) => {
+            assert_eq!(response.status, KernelReplyStatus::Ok);
+            assert!(response.history.is_empty());
+        }
+        other => panic!("expected history reply, got {other:?}"),
+    }
 }
 
 #[test]

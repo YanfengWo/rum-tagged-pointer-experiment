@@ -28,7 +28,9 @@ pub(in crate::transport) fn encode_request_content(request: &KernelRequest) -> S
         KernelRequest::IsComplete(KernelIsCompleteRequest { code }) => {
             json_object(vec![field("code", json_string(code))])
         }
-        KernelRequest::KernelInfo(_) | KernelRequest::Interrupt(_) => json_object(Vec::new()),
+        KernelRequest::History(_) | KernelRequest::KernelInfo(_) | KernelRequest::Interrupt(_) => {
+            json_object(Vec::new())
+        }
         KernelRequest::Shutdown(KernelShutdownRequest { restart }) => {
             json_object(vec![field("restart", json_bool(*restart))])
         }
@@ -52,6 +54,7 @@ pub(in crate::transport) fn encode_response_content(response: &KernelResponse) -
         KernelResponse::Inspect(response) => encode_inspect_response(response),
         KernelResponse::Complete(response) => encode_complete_response(response),
         KernelResponse::IsComplete(response) => encode_is_complete_response(response),
+        KernelResponse::History(response) => encode_history_response(response),
         KernelResponse::KernelInfo(response) => encode_kernel_info_response(response),
         KernelResponse::Interrupt(response) => encode_interrupt_response(response),
         KernelResponse::Shutdown(response) => encode_shutdown_response(response),
@@ -119,6 +122,29 @@ pub(in crate::transport) fn encode_execute_response(response: &KernelExecuteResp
     }
 
     json_object(fields)
+}
+
+pub(in crate::transport) fn encode_history_response(response: &KernelHistoryResponse) -> String {
+    json_object(vec![
+        field("status", json_string(response.status.as_str())),
+        field(
+            "history",
+            json_array(response.history.iter().map(encode_history_entry).collect()),
+        ),
+    ])
+}
+
+pub(in crate::transport) fn encode_history_entry(entry: &KernelHistoryEntry) -> String {
+    let input = match &entry.output {
+        Some(output) => json_array(vec![json_string(&entry.input), json_string(output)]),
+        None => json_string(&entry.input),
+    };
+
+    json_array(vec![
+        entry.session.to_string(),
+        entry.line_number.to_string(),
+        input,
+    ])
 }
 
 pub(in crate::transport) fn encode_inspect_response(response: &KernelInspectResponse) -> String {

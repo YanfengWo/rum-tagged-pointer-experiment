@@ -13,6 +13,7 @@ global kernelspec. The optional expr defaults to:
 Environment overrides:
   RUM_JUPYTER_PYTHON      Python interpreter with jupyter_client installed
   RUM_JUPYTER_KERNEL_BIN  Path to rum-jupyter-kernel launcher
+  RUM_JUPYTER_TMP_ROOT    Parent directory for temporary smoke-test files
   RUM_JUPYTER_KEEP_TMP    Set to 1 to keep the temporary directories
 EOF
 }
@@ -32,6 +33,7 @@ repo_root=$(cd "${script_dir}/.." && pwd)
 expr=${1:-"1+1"}
 python_bin=${RUM_JUPYTER_PYTHON:-"${HOME}/.venv-jupyter/bin/python"}
 kernel_bin=${RUM_JUPYTER_KERNEL_BIN:-"${repo_root}/target/debug/rum-jupyter-kernel"}
+tmp_parent=${RUM_JUPYTER_TMP_ROOT:-/tmp}
 keep_tmp=${RUM_JUPYTER_KEEP_TMP:-0}
 
 if [[ ! -x "${python_bin}" ]]; then
@@ -46,7 +48,8 @@ if ! "${python_bin}" -c 'import jupyter_client' >/dev/null 2>&1; then
   exit 1
 fi
 
-tmp_root=$(mktemp -d /tmp/rum-jupyter-smoke.XXXXXX)
+mkdir -p "${tmp_parent}"
+tmp_root=$(mktemp -d "${tmp_parent%/}/rum-jupyter-smoke.XXXXXX")
 kernelspec_root="${tmp_root}/kernelspec"
 runtime_dir="${tmp_root}/runtime"
 

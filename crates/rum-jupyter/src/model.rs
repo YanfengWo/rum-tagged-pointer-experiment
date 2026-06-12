@@ -416,12 +416,30 @@ pub struct KernelIsCompleteResponse {
     pub indent: Option<String>,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct KernelHistoryRequest;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KernelHistoryEntry {
+    pub session: u64,
+    pub line_number: u64,
+    pub input: String,
+    pub output: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KernelHistoryResponse {
+    pub status: KernelReplyStatus,
+    pub history: Vec<KernelHistoryEntry>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum KernelRequest {
     Execute(KernelExecuteRequest),
     Inspect(KernelInspectRequest),
     Complete(KernelCompleteRequest),
     IsComplete(KernelIsCompleteRequest),
+    History(KernelHistoryRequest),
     KernelInfo(KernelInfoRequest),
     Interrupt(KernelInterruptRequest),
     Shutdown(KernelShutdownRequest),
@@ -493,6 +511,7 @@ pub enum KernelResponse {
     Inspect(KernelInspectResponse),
     Complete(KernelCompleteResponse),
     IsComplete(KernelIsCompleteResponse),
+    History(KernelHistoryResponse),
     KernelInfo(KernelInfoResponse),
     Interrupt(KernelInterruptResponse),
     Shutdown(KernelShutdownResponse),

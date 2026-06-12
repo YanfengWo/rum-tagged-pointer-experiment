@@ -75,19 +75,37 @@ pub(super) fn bool_field_with_default(
 }
 
 pub(super) fn scalar_to_string(
-    context: &'static str,
+    _context: &'static str,
     value: JsonValue,
 ) -> Result<String, KernelWireError> {
+    Ok(match value {
+        JsonValue::String(value) => value,
+        JsonValue::Number(value) => value,
+        JsonValue::Bool(value) => {
+            if value {
+                "true".to_string()
+            } else {
+                "false".to_string()
+            }
+        }
+        JsonValue::Null => "null".to_string(),
+        JsonValue::Array(_) | JsonValue::Object(_) => json_value_to_json(&value),
+    })
+}
+
+fn json_value_to_json(value: &JsonValue) -> String {
     match value {
-        JsonValue::String(value) => Ok(value),
-        JsonValue::Number(value) => Ok(value),
-        JsonValue::Bool(value) => Ok(if value { "true" } else { "false" }.to_string()),
-        JsonValue::Null => Ok("null".to_string()),
-        JsonValue::Array(_) | JsonValue::Object(_) => Err(KernelWireError::InvalidField {
-            context,
-            field: "<scalar>",
-            value: value.kind_name().to_string(),
-        }),
+        JsonValue::Null => "null".to_string(),
+        JsonValue::Bool(value) => json_bool(*value),
+        JsonValue::Number(value) => value.clone(),
+        JsonValue::String(value) => json_string(value),
+        JsonValue::Array(values) => json_array(values.iter().map(json_value_to_json).collect()),
+        JsonValue::Object(values) => json_object(
+            values
+                .iter()
+                .map(|(key, value)| field(key, json_value_to_json(value)))
+                .collect(),
+        ),
     }
 }
 
@@ -246,6 +264,99 @@ pub(super) fn execute_payloads_field(
             value: other.kind_name().to_string(),
         }),
         None => Ok(Vec::new()),
+    }
+}
+
+pub(super) fn history_entries_field(
+    object: &BTreeMap<String, JsonValue>,
+    context: &'static str,
+    field: &'static str,
+) -> Result<Vec<KernelHistoryEntry>, KernelWireError> {
+    match object.get(field) {
+        Some(JsonValue::Array(values)) => values
+            .iter()
+            .map(|value| {
+                let item = match value {
+                    JsonValue::Array(item) if item.len() == 3 => item,
+                    other => {
+                        return Err(KernelWireError::InvalidField {
+                            context,
+                            field,
+                            value: other.kind_name().to_string(),
+                        });
+                    }
+                };
+
+                let (input, output) = parse_history_input_output(&item[2], context, field)?;
+                Ok(KernelHistoryEntry {
+                    session: u64_json_value(&item[0], context, field)?,
+                    line_number: u64_json_value(&item[1], context, field)?,
+                    input,
+                    output,
+                })
+            })
+            .collect(),
+        Some(other) => Err(KernelWireError::InvalidField {
+            context,
+            field,
+            value: other.kind_name().to_string(),
+        }),
+        None => Ok(Vec::new()),
+    }
+}
+
+fn parse_history_input_output(
+    value: &JsonValue,
+    context: &'static str,
+    field: &'static str,
+) -> Result<(String, Option<String>), KernelWireError> {
+    match value {
+        JsonValue::String(input) => Ok((input.clone(), None)),
+        JsonValue::Array(values) if values.len() == 2 => {
+            let JsonValue::String(input) = &values[0] else {
+                return Err(KernelWireError::InvalidField {
+                    context,
+                    field,
+                    value: values[0].kind_name().to_string(),
+                });
+            };
+            let JsonValue::String(output) = &values[1] else {
+                return Err(KernelWireError::InvalidField {
+                    context,
+                    field,
+                    value: values[1].kind_name().to_string(),
+                });
+            };
+            Ok((input.clone(), Some(output.clone())))
+        }
+        other => Err(KernelWireError::InvalidField {
+            context,
+            field,
+            value: other.kind_name().to_string(),
+        }),
+    }
+}
+
+fn u64_json_value(
+    value: &JsonValue,
+    context: &'static str,
+    field: &'static str,
+) -> Result<u64, KernelWireError> {
+    match value {
+        JsonValue::Number(value) => {
+            value
+                .parse::<u64>()
+                .map_err(|_| KernelWireError::InvalidField {
+                    context,
+                    field,
+                    value: value.clone(),
+                })
+        }
+        other => Err(KernelWireError::InvalidField {
+            context,
+            field,
+            value: other.kind_name().to_string(),
+        }),
     }
 }
 
