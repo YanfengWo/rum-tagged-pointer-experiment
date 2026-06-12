@@ -103,7 +103,7 @@ impl Session {
             let plan = plan_call_argument_preparation(attributes, index, arg);
             let prepared_arg = if plan.should_evaluate {
                 let allow_sequence_splice = plan.allow_sequence_splice;
-                let evaluated_result = self.evaluate(plan.expr);
+                let evaluated_result = self.evaluate_atom_fast_path(plan.expr);
                 match evaluated_result {
                     Ok(value) => value,
                     Err(EvalError::InputRequired { request }) => {

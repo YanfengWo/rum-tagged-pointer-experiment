@@ -1,5 +1,7 @@
 use super::*;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
+use std::sync::{Mutex, OnceLock};
 
 const EVALUATION_CACHE_PROFILE_ENV: &str = "RUM_PROFILE_EVALUATION_CACHE";
 
@@ -20,6 +22,10 @@ static CALL_GENERATION_BUMP_COUNT: AtomicU64 = AtomicU64::new(0);
 static STABILITY_CHECK_COUNT: AtomicU64 = AtomicU64::new(0);
 static CALL_STABILITY_HIT_COUNT: AtomicU64 = AtomicU64::new(0);
 static CALL_STABILITY_MISS_COUNT: AtomicU64 = AtomicU64::new(0);
+static EVALUATE_ENTRY_COUNT: AtomicU64 = AtomicU64::new(0);
+static DOWN_VALUE_SCAN_COUNT: AtomicU64 = AtomicU64::new(0);
+static DOWN_VALUE_APPLICATION_COUNT: AtomicU64 = AtomicU64::new(0);
+static BUILTIN_APPLICATION_COUNT: AtomicU64 = AtomicU64::new(0);
 
 /// One bloom bit per written symbol, derived from the interned pair id plus
 /// the generated identity so distinct `Module` locals map to distinct bits.
@@ -33,6 +39,25 @@ pub(super) fn symbol_stability_bloom_bit(symbol: &Symbol) -> u128 {
 }
 
 impl Session {
+    pub(super) fn record_profile_evaluate_entry(&self) {
+        record_evaluation_cache_counter(&EVALUATE_ENTRY_COUNT, "evaluate_entries");
+    }
+
+    pub(super) fn record_profile_down_value_scan(&self, symbol: &Symbol) {
+        record_evaluation_cache_counter(&DOWN_VALUE_SCAN_COUNT, "down_value_scans");
+        record_symbol_profile_counter("down_value_scans", symbol);
+    }
+
+    pub(super) fn record_profile_down_value_application(&self, symbol: &Symbol) {
+        record_evaluation_cache_counter(&DOWN_VALUE_APPLICATION_COUNT, "down_value_applications");
+        record_symbol_profile_counter("down_value_applications", symbol);
+    }
+
+    pub(super) fn record_profile_builtin_application(&self, symbol: &Symbol) {
+        record_evaluation_cache_counter(&BUILTIN_APPLICATION_COUNT, "builtin_applications");
+        record_symbol_profile_counter("builtin_applications", symbol);
+    }
+
     /// Full invalidation: definition-state change without a single owning
     /// symbol (package loads, context-path mutation, attribute changes).
     pub(super) fn bump_evaluation_epoch(&mut self) {
@@ -116,14 +141,6 @@ impl Session {
         }
     }
 
-    pub(super) fn call_is_evaluation_stable(
-        &mut self,
-        head: &SharedExpr,
-        args: &SharedArgs,
-    ) -> bool {
-        self.call_stability_with_bloom(head, args).0
-    }
-
     fn call_stability_with_bloom(&mut self, head: &SharedExpr, args: &SharedArgs) -> (bool, u128) {
         let key = CallStabilityCacheKey::new(head, args);
         if let Some(entry) = self.call_stability_cache.get(&key) {
@@ -202,6 +219,33 @@ fn record_evaluation_cache_counter_slow(counter: &AtomicU64, name: &str) {
     let value = counter.fetch_add(1, Ordering::Relaxed) + 1;
     if value.is_power_of_two() {
         eprintln!("rum-profile evaluation-cache {name}={value}");
+    }
+}
+
+fn symbol_profile_counters() -> &'static Mutex<HashMap<(&'static str, Symbol), u64>> {
+    static SYMBOL_PROFILE_COUNTERS: OnceLock<Mutex<HashMap<(&'static str, Symbol), u64>>> =
+        OnceLock::new();
+    SYMBOL_PROFILE_COUNTERS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn record_symbol_profile_counter(name: &'static str, symbol: &Symbol) {
+    if !evaluation_cache_profile_enabled() {
+        return;
+    }
+
+    record_symbol_profile_counter_slow(name, *symbol);
+}
+
+#[cold]
+#[inline(never)]
+fn record_symbol_profile_counter_slow(name: &'static str, symbol: Symbol) {
+    let mut counters = symbol_profile_counters()
+        .lock()
+        .expect("profile counter lock should not be poisoned");
+    let value = counters.entry((name, symbol)).or_insert(0);
+    *value += 1;
+    if value.is_power_of_two() {
+        eprintln!("rum-profile evaluation-cache {name}[{symbol}]={value}");
     }
 }
 

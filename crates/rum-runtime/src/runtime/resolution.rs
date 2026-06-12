@@ -250,6 +250,8 @@ impl Session {
     }
 
     pub fn evaluate(&mut self, expr: Expr) -> Result<Expr, EvalError> {
+        self.record_profile_evaluate_entry();
+
         let mut current = expr;
         let mut evaluation_passes = 0;
         let mut fixed_point_seen = Vec::new();

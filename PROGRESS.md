@@ -43,6 +43,119 @@ matcher-pattern resolution here, so that assignment would persist. This is
 tracked as separate semantic debt because the Meson regression only needs the
 symbol-valued exact-tag case.
 
+## 2026-06-12 Pair/Simp Multiplier Diagnosis
+
+Completed the Task 2 diagnosis from
+[docs/next-session-handoff.md](./docs/next-session-handoff.md). The verdict is
+that `stdlib/Pair.wl` is not currently blocked by another Pair correctness bug
+or by a single cold PropTaut lemma. The multiplier is in the
+`HOL`Auto`Simp`` simplifier path triggered by
+`HOL`Drule`CONVRULE[HOL`Auto`Simp`simpConv[{mkPairDefThm}], lhsAppXY]`: adding
+`withBasic` turns a constant-range user-rule simplification into a
+failure-heavy nested `ORELSEC` / `TRYCONV` / `REPEATC` conversion chain over
+the `mkPair` application term.
+
+Reference timings, all bounded and using internal `AbsoluteTiming` where
+available:
+
+- WolframKernel dependency-preloaded `Get["stdlib/Pair.wl"]`: `37.697875s`.
+- rum release dependency-preloaded `load/stdlib/Pair`: timeout at `300s`,
+  with empty stdout and only the bounded-runner timeout in stderr.
+- WolframKernel phase probe: `basicSimpset[]` `7.327259s`,
+  `mkPairDefThm` construction `0.000538s`,
+  first public `simpConv[{mkPairDefThm}]` `CONVRULE` `29.306584s`, and the
+  later `simpConv[{xEqxTh, yEqyTh}]` collapse `0.76233s`.
+- rum release `basicSimpset[]`: `27.070526269s`, about `3.7x` the
+  WolframKernel time and in the current systemic constant-factor range.
+- `andCongLemma[]` alone: WolframKernel `7.117217s`, rum
+  `25.646827478s`, also about `3.6x`.
+- Warm public mkPair simplification after precomputing `basicSimpset[]`,
+  `impCongLemma[]`, `andCongLemma[]`, and `orCongLemma[]`: WolframKernel
+  `23.10866s`, rum timed out at `360s`.
+- User-rule-only mkPair simplification using
+  `simpFixpointConv[{mkPairDefThm}, {}, $simpDepthLimit]`: WolframKernel
+  `12.84882s`, rum `52.137050616s`, about `4.1x`.
+
+The opt-in `RUM_PROFILE_EVALUATION_CACHE=1` counter was extended to report
+`evaluate_entries`, `down_value_scans`, and `down_value_applications`, with
+per-symbol power-of-two lower bounds. Counter probes show:
+
+- `basicSimpset[]` completes with lower bounds of `134M` stability checks,
+  `33M` evaluate entries, and `2M` downvalue applications.
+- preheating `basicSimpset[]` plus the three congruence lemmas completes in
+  `111.742s` with `268M` stability checks, `134M` evaluate entries, and
+  `8M` downvalue applications.
+- the warm public mkPair simplification still times out at `180s`; its lower
+  bounds reach `536M` stability checks while downvalue/evaluate powers do not
+  advance proportionally past the preheat background. The continuing tail is
+  in the Simp/Drule conversion dispatcher: `isEquation`, `combineSimpConvs`,
+  `tryConv`, `tryTermMatch`, `tryStructComb`, `collectAppSpine`, and
+  `convFail`.
+- The hottest successful downvalue symbols in the 180s warm run are term/type
+  plumbing rather than Pair-specific definitions: `stripOrigin`, `typeOf`,
+  `destFunType`, `tyMatch`, `vsubstImpl`, `freesWalk`, and `betaSubst`.
+
+This identifies the next repair target more narrowly than broad evaluator or
+representation work: validate and then fix the `Simp` base-conversion
+construction/use pattern. The leading hypothesis is that recursive
+`simpFixpointConv` / `descendOnce` rebuilds and re-evaluates a large
+`withBasic` conversion chain for many subterms, and rum pays for the chain
+through repeated stability checks and failure-driven conversion dispatch. A
+targeted next experiment should hoist/cache prepared simplification rules or
+the base conversion for the duration of a simplification pass, or otherwise
+avoid repeatedly evaluating the same nested `ORELSEC` chain. Only if that
+does not move the warm public mkPair probe should this return to the larger
+single-allocation call-node / evaluated-stamp representation lane.
+
+## 2026-06-12 Pair/Simp Runtime Stability Cuts
+
+Followed up the Pair/Simp diagnosis on the `rum-runtime` side. The temporary
+`mma-hol` source-level experiment that memoized `buildBaseConv` moved the
+user-rule-only mkPair probe only from about `52.27s` to `51.10s`, and the
+warm public mkPair probe still timed out at `240s`; that makes base-conversion
+hoisting an insufficient standalone fix.
+
+The retained runtime changes are conservative stability and dispatch cuts for
+expressions that evaluate to themselves:
+
+- stable atom evaluation now bypasses the full fixed-point evaluator for
+  already-stable symbols and non-symbol atoms in call heads and ordinary
+  argument preparation;
+- `Association`, `Rule`, and `RuleDelayed` participate in call-stability
+  caching when their data shape is already normalized and dependency-safe;
+- `Part[expr, i, j, ...]` has a successful exact-integer fast path that
+  reuses the existing exact structural selector and falls back to the old path
+  for associations, selector errors, and diagnostics;
+- `HoldComplete` / `HoldAllComplete` and ordinary hold-literal forms
+  (`Hold`, `HoldAll`, `HoldPattern`, `Function`) participate in stability
+  caching when no direct `Evaluate[...]` or `Unevaluated[...]` escape would
+  change argument preparation;
+- normalized status/data objects (`Failure`, `Missing`, `Success`, and
+  `TerminatedEvaluation`) participate in stability caching, while
+  `Failure["tag", rule-list]` shapes that still need details normalization
+  stay on the old evaluator path.
+
+Release timing on the local clean-clone Pair/Simp probes:
+
+- user-rule-only mkPair simplification:
+  `52.14s` before these cuts, `41.77s` after data-constructor stability,
+  `41.44s` after the `Part` fast path, and `40.61s` after status/data
+  stability.
+- `basicSimpset[]`: `27.07s` before these cuts, `21.02s` after
+  data-constructor stability, `20.80s` after the `Part` fast path, and
+  `20.27s` after status/data stability.
+- warm public mkPair simplification still timed out at `240s` after the
+  retained runtime stability cuts.
+
+The warm public mkPair / `stdlib/Pair.wl` gate is not closed by these cuts.
+The remaining profile-visible work is mostly ordinary evaluator/dispatch cost
+over HOL term/type plumbing (`stripOrigin`, `typeOf`, `destFunType`,
+`tyMatch`, `vsubstImpl`, `freesWalk`, `betaSubst`) plus high-frequency
+ordinary builtins such as `Part`, `If`, `Function`, `Module`, and `Length`.
+Further improvement now points either to a real `Simp` algorithmic change in
+the downstream package, or to the larger call representation / argument
+preparation rework rather than another narrow stability tweak.
+
 ## 2026-06-12 Block Scope Invalidation Fix (External)
 
 Re-examined the same-bit follow-up below with a decomposed re-access probe

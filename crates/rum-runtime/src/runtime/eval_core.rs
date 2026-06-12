@@ -52,6 +52,17 @@ impl Session {
         }
     }
 
+    pub(super) fn evaluate_atom_fast_path(&mut self, expr: Expr) -> Result<Expr, EvalError> {
+        match &expr {
+            Expr::Atom(Atom::Symbol(symbol)) if self.symbol_is_atom_evaluation_stable(symbol) => {
+                Ok(expr)
+            }
+            Expr::Atom(Atom::Symbol(_)) => self.evaluate(expr),
+            Expr::Atom(_) => Ok(expr),
+            _ => self.evaluate(expr),
+        }
+    }
+
     pub(super) fn evaluate_symbol(&mut self, symbol: Symbol) -> Result<Expr, EvalError> {
         if symbol.context() == SYSTEM_CONTEXT {
             match symbol.name() {
@@ -142,14 +153,6 @@ impl Session {
             .collect()
     }
 
-    pub(super) fn expr_is_evaluation_stable_uncached(&mut self, expr: &Expr) -> bool {
-        match expr {
-            Expr::Atom(Atom::Symbol(symbol)) => self.symbol_is_atom_evaluation_stable(symbol),
-            Expr::Atom(_) => true,
-            Expr::Call { head, args } => self.call_stability_uncached_with_bloom(head, args).0,
-        }
-    }
-
     /// Uncached stability walk that also reports the bloom over every symbol
     /// whose definition state the verdict depends on. On an unstable verdict
     /// the walk stops at the deciding subterm; the symbols visited up to that
@@ -164,11 +167,111 @@ impl Session {
             return (false, bloom);
         }
 
+        if let Some((stable, data_bloom)) =
+            self.data_constructor_stability_with_bloom(head, args, bloom)
+        {
+            return (stable, data_bloom);
+        }
+
         if self.call_head_has_evaluation_effect(head, args) {
             return (false, bloom);
         }
 
         for arg in args.iter() {
+            let (arg_stable, arg_bloom) = self.cached_expr_stability_with_bloom(arg);
+            bloom |= arg_bloom;
+            if !arg_stable {
+                return (false, bloom);
+            }
+        }
+
+        (true, bloom)
+    }
+
+    fn data_constructor_stability_with_bloom(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+        mut bloom: u128,
+    ) -> Option<(bool, u128)> {
+        let symbol = expr_as_symbol(head)?;
+        if symbol.context() != SYSTEM_CONTEXT {
+            return None;
+        }
+
+        match symbol.name() {
+            "Association" => Some(self.association_data_stability_with_bloom(args, bloom)),
+            "Failure" => Some(self.failure_data_stability_with_bloom(args, bloom)),
+            "Missing" | "Success" | "TerminatedEvaluation" => {
+                Some(self.all_args_stability_with_bloom(args, bloom))
+            }
+            "HoldAllComplete" | "HoldComplete" => Some((true, bloom)),
+            "Function" | "Hold" | "HoldAll" | "HoldPattern" => {
+                Some((hold_all_literal_args_are_stable(args), bloom))
+            }
+            "Rule" => {
+                let [lhs, rhs] = args else {
+                    return Some((false, bloom));
+                };
+                let (lhs_stable, lhs_bloom) = self.cached_expr_stability_with_bloom(lhs);
+                bloom |= lhs_bloom;
+                if !lhs_stable {
+                    return Some((false, bloom));
+                }
+                let (rhs_stable, rhs_bloom) = self.cached_expr_stability_with_bloom(rhs);
+                bloom |= rhs_bloom;
+                Some((rhs_stable, bloom))
+            }
+            "RuleDelayed" => {
+                let [lhs, _rhs] = args else {
+                    return Some((false, bloom));
+                };
+                let (lhs_stable, lhs_bloom) = self.cached_expr_stability_with_bloom(lhs);
+                bloom |= lhs_bloom;
+                Some((lhs_stable, bloom))
+            }
+            _ => None,
+        }
+    }
+
+    fn all_args_stability_with_bloom(&mut self, args: &[Expr], mut bloom: u128) -> (bool, u128) {
+        for arg in args {
+            let (arg_stable, arg_bloom) = self.cached_expr_stability_with_bloom(arg);
+            bloom |= arg_bloom;
+            if !arg_stable {
+                return (false, bloom);
+            }
+        }
+
+        (true, bloom)
+    }
+
+    fn failure_data_stability_with_bloom(&mut self, args: &[Expr], bloom: u128) -> (bool, u128) {
+        let [_, details] = args else {
+            return self.all_args_stability_with_bloom(args, bloom);
+        };
+        if failure_details_would_normalize(details) {
+            return (false, bloom);
+        }
+
+        self.all_args_stability_with_bloom(args, bloom)
+    }
+
+    fn association_data_stability_with_bloom(
+        &mut self,
+        args: &[Expr],
+        mut bloom: u128,
+    ) -> (bool, u128) {
+        let mut keys = Vec::with_capacity(args.len());
+        for arg in args {
+            let Some(entry) = parse_association_entry_form(arg) else {
+                return (false, bloom);
+            };
+            if keys.iter().any(|key| key == &entry.key) {
+                return (false, bloom);
+            }
+            keys.push(entry.key);
+
             let (arg_stable, arg_bloom) = self.cached_expr_stability_with_bloom(arg);
             bloom |= arg_bloom;
             if !arg_stable {
@@ -313,7 +416,7 @@ impl Session {
     }
 
     pub(super) fn evaluate_call(&mut self, head: Expr, args: Vec<Expr>) -> Result<Expr, EvalError> {
-        let evaluated_head_result = self.evaluate(head);
+        let evaluated_head_result = self.evaluate_atom_fast_path(head);
         let evaluated_head = match evaluated_head_result {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
@@ -376,4 +479,42 @@ impl Session {
             }
         })
     }
+}
+
+fn hold_all_literal_args_are_stable(args: &[Expr]) -> bool {
+    args.iter().all(|arg| !is_direct_hold_escape_wrapper(arg))
+}
+
+fn is_direct_hold_escape_wrapper(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Call { head, args }
+            if args.len() == 1
+                && (is_system_symbol_name(head, "Evaluate")
+                    || is_system_symbol_name(head, "Unevaluated"))
+    )
+}
+
+fn failure_details_would_normalize(expr: &Expr) -> bool {
+    if association_entries_from_expr(expr).is_some() {
+        return false;
+    }
+
+    if parse_association_entry_form(expr).is_some() {
+        return true;
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return false;
+    };
+    is_system_symbol_name(head, heads::structure::LIST)
+        && args.iter().all(immediate_rule_entry_expr)
+}
+
+fn immediate_rule_entry_expr(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Call { head, args }
+            if is_system_symbol_name(head, "Rule") && args.len() == 2
+    )
 }

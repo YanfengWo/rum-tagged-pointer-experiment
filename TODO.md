@@ -129,18 +129,28 @@ Completed history, archived planning detail, and operational lessons live in
   `test/meson_tests` reports `List[44, 0]`; the current
   `test/meson_proveprop_tests` re-probe times out at `300s` without a stdout
   summary. The next downstream gate is `stdlib/Pair.wl`:
-  its load still exceeds a `600s` budget (the earlier `335s` observation was
-  an interrupted run, not a completion), with the `PropTaut`-backed `Simp`
-  schema path as the suspected dominant cost. The old Pair hard failure
+  its load still exceeds bounded budgets, but the current diagnosis has
+  narrowed the multiplier to the `HOL`Auto`Simp`` path where public
+  `simpConv` adds `withBasic` and repeatedly builds/uses a nested
+  `ORELSEC` conversion chain over the `mkPair` term. `basicSimpset[]`,
+  `andCongLemma[]`, and user-rule-only mkPair simplification are each in the
+  current constant-factor range; warm public mkPair simplification times out
+  at `360s` versus WolframKernel `23.10866s`. The old Pair hard failure
   (`mkPairInjThm` consumed as a non-theorem) was traced to rum's too-low
   default recursion limit and the default has been raised to the local
   Wolfram baseline of `1024`. After `Pair` loads cleanly, rerun the later
   `Sum`, `Option`, `Set`, `Num`, and Real package probes because their
   current statuses are polluted by the failed Pair dependency.
-  The ordered next steps for this lane are the Pair/Simp logical-work
-  multiplier hunt before any further constant tuning, and only then the
-  single-allocation call-node / evaluated-stamp rework if the counter evidence
-  justifies it; the plan lives in
+  The targeted `Simp` base-conversion memo experiment did not close the gate,
+  and the retained runtime stability cuts now put `basicSimpset[]` at about
+  `20.27s` and user-rule-only mkPair simplification at about `40.61s`.
+  Warm public mkPair simplification still times out at `240s` after those
+  cuts.
+  The remaining Pair work should therefore be treated as either a real
+  `Simp` algorithmic change in the downstream package or the larger runtime
+  representation / argument-preparation lane; avoid more narrow
+  micro-optimizations unless a probe identifies a new hot construct. The
+  diagnostic plan lives in
   [docs/next-session-handoff.md](./docs/next-session-handoff.md).
   Performance status, retained work, and rejected probes are recorded in
   `PROGRESS.md` under "2026-06-12 Representation Optimization Pass",

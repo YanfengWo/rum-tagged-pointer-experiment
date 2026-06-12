@@ -14,6 +14,22 @@ handoff's `43` expected count was stale for the current test tree).
 `test/meson_proveprop_tests` was re-probed afterward and timed out at `300s`
 without a stdout summary. Continue from Task 2 unless Task 1 regresses.
 
+Post-Task-2 update, 2026-06-12: the Pair/Simp multiplier hunt has a written
+verdict in [PROGRESS.md](../PROGRESS.md). It pointed first at a targeted
+`HOL`Auto`Simp`` base-conversion experiment before any broad representation
+work: warm public `simpConv[{mkPairDefThm}]` timed out in rum at `360s`
+versus WolframKernel `23.10866s`, while user-rule-only mkPair simplification
+was about `4.1x` and therefore not the multiplier.
+
+Post-runtime-stability update, 2026-06-12: the targeted base-conversion memo
+experiment did not close the gate, but conservative runtime stability cuts
+reduced user-rule-only mkPair simplification from about `52.14s` to `40.61s`
+and `basicSimpset[]` from `27.07s` to `20.27s`. The public warm mkPair /
+`Pair.wl` gate remains open: the current warm public mkPair probe still times
+out at `240s`. Continue from either a real downstream `Simp` algorithmic
+change or the larger runtime representation / argument-preparation lane; do
+not keep iterating narrow stability tweaks without a new probe.
+
 ## Where things stand
 
 | Gate | Status |
@@ -23,7 +39,7 @@ without a stdout summary. Continue from Task 2 unless Task 1 regresses.
 | `proptaut_tests.wl` | green, ~`238s` |
 | `meson_tests.wl` | green after Task 1: `List[44, 0]` in `79s` on clean `mma-hol` HEAD `698e3d0` |
 | `meson_proveprop_tests.wl` | re-probed after Task 1; timeout at `300s` without a stdout summary |
-| `stdlib/Pair.wl` load | still exceeds `600s` budget |
+| `stdlib/Pair.wl` load | still exceeds bounded budgets after runtime stability cuts |
 | `cargo test --workspace`, `rum-difftest check` | pass |
 
 The probe-visible cache-invalidation lane is closed: Do/Table iterator
@@ -67,7 +83,7 @@ effects do not leak after the `Catch`. The Task 1 fix covers the
 symbol-valued exact-tag failure that blocked Meson; that broader side-effect
 rollback behavior remains separate debt.
 
-## Task 2 (diagnosis before optimization): Pair/Simp multiplier hunt
+## Task 2 (completed diagnosis): Pair/Simp multiplier hunt
 
 `stdlib/Pair.wl` still exceeds `600s` with every retained optimization in
 place, while the overall evaluator constant is only ~3.4x. If the load
@@ -94,9 +110,16 @@ Method (count, do not sample — see the audit doc):
 4. Only if counts match Wolfram-plausible work and the stage is still
    slow does the cost go back into the constant-factor bucket (Task 3).
 
-Acceptance for this task is a written verdict (PROGRESS entry): either
-"Pair is algorithmically divergent at <specific construct>" with a repro,
-or "Pair is constant-bound; needs Task 3", with the counter numbers.
+Completion: the PROGRESS entry "Pair/Simp Multiplier Diagnosis" records the
+verdict and counter numbers. The concrete construct is the public
+`simpConv` / `withBasic` base-conversion path, especially repeated
+`buildBaseConv` / nested `ORELSEC` / `TRYCONV` failure dispatch inside
+`simpFixpointConv` and `descendOnce` over the mkPair term.
+
+Follow-up runtime work reduced the constant factor for the same probes but
+did not remove the multiplier. The retained cuts and rejected
+base-conversion memo experiment are recorded in PROGRESS under
+"Pair/Simp Runtime Stability Cuts".
 
 ## Task 3 (large, only after 1-2): representation rework
 

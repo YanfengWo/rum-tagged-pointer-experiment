@@ -105,6 +105,9 @@ impl Session {
             return Ok(None);
         };
 
+        if let Some(symbol) = expr_as_symbol(head) {
+            self.record_profile_builtin_application(symbol);
+        }
         self.run_builtin_handler(handler, head, args).map(Some)
     }
 

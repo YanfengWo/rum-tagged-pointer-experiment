@@ -87,6 +87,10 @@ impl Session {
             ));
         }
 
+        if let Some(value) = fast_exact_integer_part_path(args) {
+            return Ok(value);
+        }
+
         let Some(selectors) = parse_part_selectors_for_part(&args[1..]) else {
             if let Some(offender) = args[1..]
                 .iter()
@@ -321,4 +325,24 @@ impl Session {
             self.push_invalid_upto_messages_in_span(arg);
         }
     }
+}
+
+fn fast_exact_integer_part_path(args: &[Expr]) -> Option<Expr> {
+    let [_target, selector_exprs @ ..] = args else {
+        return None;
+    };
+    if selector_exprs.is_empty() {
+        return None;
+    }
+
+    let mut selected = None;
+    for selector in selector_exprs {
+        let current = selected.as_ref().unwrap_or(&args[0]);
+        if association_entries_from_expr(current).is_some() {
+            return None;
+        }
+        let index = expr_as_signed_isize(selector)?;
+        selected = Some(select_exact_part(current, index)?);
+    }
+    selected
 }

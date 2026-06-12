@@ -95,7 +95,11 @@ optimizations. Retained work includes symbol interning with dense ids,
 id-hashed definition/attribute/binding maps, dependency-aware stability-cache
 invalidation with a rewritten dirty bloom for repeated same-bit writes,
 mimalloc in `rum-cli`, a message-symbol existence index, and the shared
-call-tree `Expr` representation. Exact per-symbol/per-bloom-bit version
+call-tree `Expr` representation. Pair/Simp runtime stability cuts now reduce
+the local user-rule-only mkPair probe to about `40.61s` and `basicSimpset[]`
+to about `20.27s`, but the public warm mkPair probe still times out at `240s`
+and the `Pair.wl` gate remains open.
+Exact per-symbol/per-bloom-bit version
 snapshots, skipping dirty-related call-cache entries, whole-expression exact
 normal-form caching, symbol fingerprint hashing, shallow definition matcher
 metadata, a one-entry call-stability MRU, and heavier LTO/codegen flag probes

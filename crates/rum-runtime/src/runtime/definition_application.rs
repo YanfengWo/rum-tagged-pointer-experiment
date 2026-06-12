@@ -18,6 +18,8 @@ impl Session {
             return Ok(None);
         }
 
+        self.record_profile_down_value_scan(symbol);
+
         if is_system_symbol_name(head, heads::patterns::DEFAULT) {
             let down_values = definition.down_values.clone();
             if let Some(value) = self.try_apply_direct_default_value(args, &down_values)? {
@@ -87,6 +89,7 @@ impl Session {
                 &lhs,
                 &substituted,
             );
+            self.record_profile_down_value_application(&symbol);
             return self
                 .evaluate_definition_rhs(option_scope, substituted)
                 .map(Some);
@@ -127,6 +130,7 @@ impl Session {
                 &down_value.lhs,
                 &substituted,
             );
+            session.record_profile_down_value_application(&symbol);
             session
                 .evaluate_definition_rhs(option_scope, substituted)
                 .map(Some)
