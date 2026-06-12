@@ -17,7 +17,7 @@ impl Session {
             let pattern_count = self.reap_scopes[scope_index].patterns.len();
             for pattern_index in 0..pattern_count {
                 let pattern = self.reap_scopes[scope_index].patterns[pattern_index].clone();
-                let outcome = self.match_expr_owned(pattern, tag.clone(), BTreeMap::new())?;
+                let outcome = self.match_expr_owned(pattern, tag.clone(), SymbolExprMap::default())?;
                 if outcome.matched {
                     matched.push((scope_index, pattern_index));
                 }

@@ -5,7 +5,7 @@ impl Session {
         &mut self,
         pattern: MatcherArg,
         selected_values: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         match pattern {
             MatcherArg::Single(pattern) => match selected_values.as_slice() {
@@ -45,7 +45,7 @@ impl Session {
         flat_head: Expr,
         pattern: MatcherArg,
         selected_values: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         match pattern {
             MatcherArg::Single(pattern) => match selected_values.as_slice() {

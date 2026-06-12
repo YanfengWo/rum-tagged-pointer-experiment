@@ -2,7 +2,7 @@ use super::*;
 
 fn interpreted_match_outcome(
     matched: bool,
-    bindings: BTreeMap<Symbol, Expr>,
+    bindings: SymbolExprMap,
 ) -> CompiledMatchOutcome {
     CompiledMatchOutcome { matched, bindings }
 }
@@ -13,7 +13,7 @@ impl Session {
         name: Symbol,
         inner: Expr,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let inner_result = self.match_expr_interpreted_owned(inner, value.clone(), bindings);
         self.drive_internal_value(inner_result, move |_, outcome| {
@@ -34,7 +34,7 @@ impl Session {
         inner: Expr,
         condition: Expr,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let inner_result = self.match_expr_interpreted_owned(inner, value, bindings);
         self.drive_internal_value(inner_result, move |session, outcome| {
@@ -65,7 +65,7 @@ impl Session {
         inner: Expr,
         test: Expr,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let inner_result = self.match_expr_interpreted_owned(inner, value.clone(), bindings);
         self.drive_internal_value(inner_result, move |session, outcome| {
@@ -88,7 +88,7 @@ impl Session {
         excluded: Expr,
         inner: Expr,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let snapshot = bindings.clone();
         let inner_result = self.match_expr_interpreted_owned(inner, value.clone(), bindings);
@@ -115,7 +115,7 @@ impl Session {
         head: Expr,
         args: Vec<Expr>,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         match value {
             Expr::Call {
@@ -157,7 +157,7 @@ impl Session {
         &mut self,
         alternatives: Vec<Expr>,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         index: usize,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let Some(alternative) = alternatives.get(index).cloned() else {
@@ -187,7 +187,7 @@ impl Session {
         &mut self,
         pattern: &Expr,
         value: &Expr,
-        bindings: &mut BTreeMap<Symbol, Expr>,
+        bindings: &mut SymbolExprMap,
     ) -> Result<bool, EvalError> {
         let outcome =
             self.match_expr_interpreted_owned(pattern.clone(), value.clone(), bindings.clone())?;
@@ -200,7 +200,7 @@ impl Session {
         &mut self,
         pattern: Expr,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let normalized_pattern = self.normalize_match_expr(&pattern);
         let normalized_value = self.normalize_match_expr(&value);
@@ -223,7 +223,7 @@ impl Session {
         &mut self,
         pattern: Expr,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         if let Some((name, inner)) = pattern_named_pattern(&pattern) {
             return self.match_named_interpreted_owned(
@@ -316,7 +316,7 @@ impl Session {
         pattern_head: Expr,
         pattern_args: Vec<Expr>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let compiled_args = compile_matcher_args(&pattern_head, &pattern_args);
         self.match_compiled_args_owned(compiled_args, value_args, bindings)

@@ -369,7 +369,7 @@ impl Session {
 
         let pattern = args[index].clone();
         let branch = args[index + 1].clone();
-        let match_result = self.match_expr_owned(pattern, subject.clone(), BTreeMap::new());
+        let match_result = self.match_expr_owned(pattern, subject.clone(), SymbolExprMap::default());
 
         self.drive_internal_value(match_result, move |session, outcome| {
             if outcome.matched {

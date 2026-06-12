@@ -7,7 +7,7 @@ impl Session {
         pattern: MatcherArg,
         rest_patterns: Vec<MatcherArg>,
         choices: Vec<OrderlessCandidateChoice>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         index: usize,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let Some(choice) = choices.get(index).cloned() else {
@@ -68,7 +68,7 @@ impl Session {
         pattern: MatcherArg,
         rest_patterns: Vec<MatcherArg>,
         choices: Vec<OrderlessCandidateChoice>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         index: usize,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let Some(choice) = choices.get(index).cloned() else {

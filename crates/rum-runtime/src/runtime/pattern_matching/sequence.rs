@@ -16,7 +16,7 @@ impl Session {
         pattern: MatcherArg,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         match pattern {
             MatcherArg::Sequence(spec) => {
@@ -67,7 +67,7 @@ impl Session {
         pattern: MatcherArg,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         match pattern {
             MatcherArg::Sequence(spec) => {
@@ -128,7 +128,7 @@ impl Session {
         pattern: MatcherNode,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         consume: usize,
         max_consume: usize,
     ) -> Result<CompiledMatchOutcome, EvalError> {
@@ -186,8 +186,8 @@ impl Session {
         pattern: MatcherArg,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        bindings: SymbolExprMap,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         match pattern {
             MatcherArg::Sequence(spec) => {
                 let min_rest = min_required_matcher_arg_count(&rest_patterns);
@@ -247,8 +247,8 @@ impl Session {
         pattern: MatcherArg,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        bindings: SymbolExprMap,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         match pattern {
             MatcherArg::Sequence(spec) => {
                 let min_rest = min_required_matcher_arg_count(&rest_patterns);
@@ -312,11 +312,11 @@ impl Session {
         pattern: MatcherNode,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         consume: usize,
         max_consume: usize,
-        collected: Vec<BTreeMap<Symbol, Expr>>,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        collected: Vec<SymbolExprMap>,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         if consume > max_consume {
             return Ok(collected);
         }

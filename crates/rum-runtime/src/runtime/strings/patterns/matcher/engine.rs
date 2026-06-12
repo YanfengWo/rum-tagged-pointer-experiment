@@ -473,15 +473,15 @@ fn number_string_match_end_positions(chars: &[char], start: usize) -> Vec<usize>
 fn empty_match_state(end: usize) -> StringPatternMatchState {
     StringPatternMatchState {
         end,
-        bindings: BTreeMap::new(),
+        bindings: SymbolExprMap::default(),
     }
 }
 
 fn merge_symbol_binding(
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     symbol: &Symbol,
     value: Expr,
-) -> Option<BTreeMap<Symbol, Expr>> {
+) -> Option<SymbolExprMap> {
     let mut merged = bindings.clone();
     if let Some(existing) = merged.get(symbol) {
         if existing != &value {
@@ -494,9 +494,9 @@ fn merge_symbol_binding(
 }
 
 fn merge_match_bindings(
-    left: &BTreeMap<Symbol, Expr>,
-    right: &BTreeMap<Symbol, Expr>,
-) -> Option<BTreeMap<Symbol, Expr>> {
+    left: &SymbolExprMap,
+    right: &SymbolExprMap,
+) -> Option<SymbolExprMap> {
     let mut merged = left.clone();
     for (symbol, value) in right {
         if let Some(existing) = merged.get(symbol) {

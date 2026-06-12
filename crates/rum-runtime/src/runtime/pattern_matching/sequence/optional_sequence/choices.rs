@@ -6,7 +6,7 @@ impl Session {
         spec: CompiledSequencePattern,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         consume: usize,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let min_rest = min_required_matcher_arg_count(&rest_patterns);
@@ -90,7 +90,7 @@ impl Session {
         spec: CompiledSequencePattern,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         consume: usize,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let min_rest = min_required_matcher_arg_count(&rest_patterns);

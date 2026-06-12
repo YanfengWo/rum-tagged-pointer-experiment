@@ -36,8 +36,8 @@ fn compiled_matcher_matches_interpreted_matcher_on_supported_subset() {
         let pattern = session.normalize_pattern_expr(&pattern).unwrap();
         let value = lower_syntax_expr(&parse_expr(value_src).unwrap()).unwrap();
         let value = session.evaluate(value).unwrap();
-        let mut interpreted_bindings = BTreeMap::new();
-        let mut compiled_bindings = BTreeMap::new();
+        let mut interpreted_bindings = SymbolExprMap::default();
+        let mut compiled_bindings = SymbolExprMap::default();
 
         let interpreted = session
             .match_expr_interpreted(&pattern, &value, &mut interpreted_bindings)
@@ -73,7 +73,7 @@ fn interpreted_matcher_owned_can_resume_sequence_conditions_across_input() {
     let value = session.evaluate(value).unwrap();
 
     let failure = session
-        .match_expr_interpreted_owned(pattern, value, BTreeMap::new())
+        .match_expr_interpreted_owned(pattern, value, SymbolExprMap::default())
         .expect_err("interpreted matcher should suspend when a sequence condition requests input");
 
     match failure {

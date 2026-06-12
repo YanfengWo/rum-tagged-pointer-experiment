@@ -7,7 +7,7 @@ mod split_trim;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct StringPatternMatchState {
     pub(super) end: usize,
-    pub(super) bindings: BTreeMap<Symbol, Expr>,
+    pub(super) bindings: SymbolExprMap,
 }
 
 pub(super) use api::{

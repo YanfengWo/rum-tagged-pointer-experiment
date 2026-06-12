@@ -5,7 +5,7 @@ impl Session {
         &mut self,
         matcher: MatcherNode,
         values: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         index: usize,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let Some(value) = values.get(index).cloned() else {
@@ -34,7 +34,7 @@ impl Session {
         &mut self,
         spec: CompiledSequencePattern,
         values: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let snapshot = bindings.clone();
 

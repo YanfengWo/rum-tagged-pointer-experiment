@@ -118,11 +118,11 @@ impl Session {
         }
 
         let match_result = if traversal.levels.matches(level, depth) {
-            self.match_expr_owned(pattern, expr.clone(), BTreeMap::new())
+            self.match_expr_owned(pattern, expr.clone(), SymbolExprMap::default())
         } else {
             Ok(CompiledMatchOutcome {
                 matched: false,
-                bindings: BTreeMap::new(),
+                bindings: SymbolExprMap::default(),
             })
         };
 

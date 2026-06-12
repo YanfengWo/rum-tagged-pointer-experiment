@@ -6,11 +6,11 @@ impl Session {
         spec: CompiledSequencePattern,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         consumes: Vec<usize>,
         index: usize,
-        collected: Vec<BTreeMap<Symbol, Expr>>,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        collected: Vec<SymbolExprMap>,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         let Some(consume) = consumes.get(index).copied() else {
             return Ok(collected);
         };
@@ -62,11 +62,11 @@ impl Session {
         spec: CompiledSequencePattern,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         consumes: Vec<usize>,
         index: usize,
-        collected: Vec<BTreeMap<Symbol, Expr>>,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        collected: Vec<SymbolExprMap>,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         let Some(consume) = consumes.get(index).copied() else {
             return Ok(collected);
         };

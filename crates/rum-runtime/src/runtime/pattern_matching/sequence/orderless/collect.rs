@@ -7,10 +7,10 @@ impl Session {
         pattern: MatcherArg,
         rest_patterns: Vec<MatcherArg>,
         choices: Vec<OrderlessCandidateChoice>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         index: usize,
-        collected: Vec<BTreeMap<Symbol, Expr>>,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        collected: Vec<SymbolExprMap>,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         let Some(choice) = choices.get(index).cloned() else {
             return Ok(collected);
         };
@@ -60,10 +60,10 @@ impl Session {
         pattern: MatcherArg,
         rest_patterns: Vec<MatcherArg>,
         choices: Vec<OrderlessCandidateChoice>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         index: usize,
-        collected: Vec<BTreeMap<Symbol, Expr>>,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        collected: Vec<SymbolExprMap>,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         let Some(choice) = choices.get(index).cloned() else {
             return Ok(collected);
         };

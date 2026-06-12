@@ -132,7 +132,7 @@ impl Session {
     fn evaluate_string_rule_output_expr(
         &mut self,
         expr: &Expr,
-        bindings: &BTreeMap<Symbol, Expr>,
+        bindings: &SymbolExprMap,
     ) -> Result<Expr, EvalError> {
         let substituted = if bindings.is_empty() {
             expr.clone()

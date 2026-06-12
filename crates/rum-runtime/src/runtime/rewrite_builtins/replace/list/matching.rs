@@ -5,7 +5,7 @@ impl Session {
         &mut self,
         matcher: MatcherNode,
         normalized_target: Expr,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         match matcher {
             MatcherNode::Call { head, args } => {
                 let one_identity = matcher_head_has_attribute(&head, self, Attribute::OneIdentity);
@@ -21,7 +21,7 @@ impl Session {
                         let value_head = value_head.into_owned();
                         let value_args = value_args.into_vec();
                         let head_result =
-                            self.match_compiled_owned(*head, value_head, BTreeMap::new());
+                            self.match_compiled_owned(*head, value_head, SymbolExprMap::default());
                         self.drive_internal_value(head_result, move |session, outcome| {
                             if !outcome.matched {
                                 return Ok(Vec::new());
@@ -64,13 +64,13 @@ impl Session {
                             self.collect_compiled_orderless_arg_matches_owned(
                                 args,
                                 vec![other],
-                                BTreeMap::new(),
+                                SymbolExprMap::default(),
                             )
                         } else {
                             self.collect_compiled_args_matches_owned(
                                 args,
                                 vec![other],
-                                BTreeMap::new(),
+                                SymbolExprMap::default(),
                             )
                         }
                     }
@@ -79,7 +79,7 @@ impl Session {
             }
             other => {
                 let match_result =
-                    self.match_compiled_owned(other, normalized_target, BTreeMap::new());
+                    self.match_compiled_owned(other, normalized_target, SymbolExprMap::default());
                 self.drive_internal_value(match_result, move |_, outcome| {
                     Ok(if outcome.matched {
                         vec![outcome.bindings]
@@ -100,7 +100,7 @@ impl Session {
         collected: Vec<Expr>,
         rule_index: usize,
         rule: RewriteRule,
-        bindings: Vec<BTreeMap<Symbol, Expr>>,
+        bindings: Vec<SymbolExprMap>,
         binding_index: usize,
     ) -> Result<Vec<Expr>, EvalError> {
         if max_results.is_some_and(|limit| collected.len() >= limit) {

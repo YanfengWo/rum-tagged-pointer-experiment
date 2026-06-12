@@ -7,7 +7,7 @@ impl Session {
         pattern: MatcherArg,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         match pattern {
             MatcherArg::Optional(spec) => self.match_compiled_orderless_optional_choices(
@@ -36,7 +36,7 @@ impl Session {
         pattern: MatcherArg,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         match pattern {
             MatcherArg::Optional(spec) => self.match_compiled_orderless_flat_optional_choices(
@@ -66,8 +66,8 @@ impl Session {
         pattern: MatcherArg,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        bindings: SymbolExprMap,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         match pattern {
             MatcherArg::Optional(spec) => self.collect_compiled_orderless_optional_matches_owned(
                 spec,
@@ -96,8 +96,8 @@ impl Session {
         pattern: MatcherArg,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        bindings: SymbolExprMap,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         match pattern {
             MatcherArg::Optional(spec) => self
                 .collect_compiled_orderless_flat_optional_matches_owned(

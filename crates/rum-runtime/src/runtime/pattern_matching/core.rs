@@ -6,7 +6,7 @@ impl Session {
         &mut self,
         pattern: &Expr,
         value: &Expr,
-        bindings: &mut BTreeMap<Symbol, Expr>,
+        bindings: &mut SymbolExprMap,
     ) -> Result<bool, EvalError> {
         let outcome = self.match_expr_owned(pattern.clone(), value.clone(), bindings.clone())?;
         *bindings = outcome.bindings;
@@ -17,7 +17,7 @@ impl Session {
         &mut self,
         pattern: Expr,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let matcher = self.compile_matcher_for_expr(&pattern);
         let normalized_value = self.normalize_match_expr(&value);
@@ -28,7 +28,7 @@ impl Session {
         &mut self,
         matcher: MatcherNode,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let snapshot = BindingSnapshot::capture(&bindings, &matcher);
         let outcome = self.match_compiled_inner_owned(matcher, value, bindings)?;
@@ -44,8 +44,8 @@ impl Session {
         &mut self,
         test: Expr,
         value: Expr,
-        bindings_for_true: BTreeMap<Symbol, Expr>,
-        bindings_for_false: BTreeMap<Symbol, Expr>,
+        bindings_for_true: SymbolExprMap,
+        bindings_for_false: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let test_result = self.evaluate(Expr::call(test, vec![value]));
         self.drive_evaluated_value::<Expr, CompiledMatchOutcome, _>(
@@ -64,7 +64,7 @@ impl Session {
         &mut self,
         alternatives: Vec<MatcherNode>,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         index: usize,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let Some(alternative) = alternatives.get(index).cloned() else {
@@ -93,7 +93,7 @@ impl Session {
         name: Symbol,
         inner: MatcherNode,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let inner_result = self.match_compiled_owned(inner, value.clone(), bindings);
         self.drive_internal_value(inner_result, move |_, outcome| {
@@ -114,7 +114,7 @@ impl Session {
         inner: MatcherNode,
         condition: Expr,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let inner_result = self.match_compiled_owned(inner, value, bindings);
         self.drive_internal_value(inner_result, move |session, outcome| {
@@ -145,7 +145,7 @@ impl Session {
         inner: MatcherNode,
         test: Expr,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let inner_result = self.match_compiled_owned(inner, value.clone(), bindings);
         self.drive_internal_value(inner_result, move |session, outcome| {
@@ -168,7 +168,7 @@ impl Session {
         excluded: MatcherNode,
         inner: MatcherNode,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let inner_result = self.match_compiled_owned(inner, value.clone(), bindings);
         self.drive_internal_value(inner_result, move |session, outcome| {
@@ -192,7 +192,7 @@ impl Session {
         head: MatcherNode,
         args: Vec<MatcherArg>,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let one_identity = matcher_head_has_attribute(&head, self, Attribute::OneIdentity);
         let orderless = matcher_head_has_attribute(&head, self, Attribute::Orderless);
@@ -256,7 +256,7 @@ impl Session {
         &mut self,
         entries: Vec<(MatcherNode, MatcherNode, bool)>,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let Some(candidates) = keyed_entry_forms_from_expr(&value) else {
             return Ok(match_outcome(false, bindings));
@@ -269,7 +269,7 @@ impl Session {
         &mut self,
         entries: Vec<(MatcherNode, MatcherNode, bool)>,
         candidates: Vec<AssociationEntryForm>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let Some((key_pattern, value_pattern, delayed)) = entries.first().cloned() else {
             return Ok(match_outcome(true, bindings));
@@ -293,7 +293,7 @@ impl Session {
         delayed: bool,
         remaining_entries: Vec<(MatcherNode, MatcherNode, bool)>,
         candidates: Vec<AssociationEntryForm>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         candidate_index: usize,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let Some(candidate) = candidates.get(candidate_index).cloned() else {
@@ -370,8 +370,8 @@ impl Session {
         &mut self,
         checks: Vec<SequencePatternCheck>,
         sequence_value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
-        snapshot: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
+        snapshot: SymbolExprMap,
         index: usize,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let Some(check) = checks.get(index).cloned() else {
@@ -434,7 +434,7 @@ impl Session {
         &mut self,
         matcher: MatcherNode,
         value: Expr,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         match matcher {
             MatcherNode::Exact(pattern) => Ok(match_outcome(pattern == value, bindings)),
@@ -473,7 +473,7 @@ struct BindingSnapshot {
 }
 
 impl BindingSnapshot {
-    fn capture(bindings: &BTreeMap<Symbol, Expr>, matcher: &MatcherNode) -> Self {
+    fn capture(bindings: &SymbolExprMap, matcher: &MatcherNode) -> Self {
         let mut names = BTreeSet::new();
         collect_matcher_binding_names(matcher, &mut names);
         let entries = names
@@ -486,7 +486,7 @@ impl BindingSnapshot {
         Self { entries }
     }
 
-    fn restore(self, mut bindings: BTreeMap<Symbol, Expr>) -> BTreeMap<Symbol, Expr> {
+    fn restore(self, mut bindings: SymbolExprMap) -> SymbolExprMap {
         for (name, previous) in self.entries {
             match previous {
                 Some(value) => {

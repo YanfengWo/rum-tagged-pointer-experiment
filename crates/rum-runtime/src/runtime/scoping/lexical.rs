@@ -42,7 +42,7 @@ impl Session {
             }
         };
 
-        self.resume_with_bindings(config.items, args[1].clone(), BTreeMap::new(), 0)
+        self.resume_with_bindings(config.items, args[1].clone(), SymbolExprMap::default(), 0)
     }
 
     pub(in crate::runtime) fn eval_module(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -58,7 +58,7 @@ impl Session {
         };
         let items = config.items;
 
-        let mut renames = BTreeMap::new();
+        let mut renames = SymbolExprMap::default();
 
         for (symbol, _) in &items {
             renames.insert(
@@ -198,7 +198,7 @@ impl Session {
         &mut self,
         items: Vec<(Symbol, Expr)>,
         body: Expr,
-        mut bindings: BTreeMap<Symbol, Expr>,
+        mut bindings: SymbolExprMap,
         index: usize,
     ) -> Result<Expr, EvalError> {
         if index >= items.len() {
@@ -228,7 +228,7 @@ impl Session {
         &mut self,
         items: Vec<(Symbol, Option<Expr>)>,
         body: Expr,
-        renames: BTreeMap<Symbol, Expr>,
+        renames: SymbolExprMap,
         index: usize,
     ) -> Result<Expr, EvalError> {
         if index >= items.len() {
@@ -258,7 +258,7 @@ impl Session {
 
     fn store_module_initializer_value(
         &mut self,
-        renames: &BTreeMap<Symbol, Expr>,
+        renames: &SymbolExprMap,
         symbol: &Symbol,
         value: Expr,
     ) {

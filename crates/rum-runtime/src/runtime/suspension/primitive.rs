@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 
 use super::*;
 
@@ -84,7 +83,7 @@ impl ContinuationValue for Vec<Expr> {
     }
 }
 
-impl ContinuationValue for Vec<BTreeMap<Symbol, Expr>> {
+impl ContinuationValue for Vec<SymbolExprMap> {
     fn into_continuation_expr(self) -> Expr {
         let items = self
             .into_iter()

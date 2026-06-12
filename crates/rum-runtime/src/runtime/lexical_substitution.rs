@@ -2,7 +2,7 @@ use super::*;
 
 fn substitute_symbol_binding_changed(
     symbol: &Symbol,
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     if shadowed.contains(symbol) {
@@ -27,7 +27,7 @@ fn shadowed_with_binding_symbols(shadowed: &BTreeSet<Symbol>, expr: &Expr) -> BT
 fn substitute_pattern_call_changed(
     head: &Expr,
     args: &[Expr],
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -49,7 +49,7 @@ fn substitute_pattern_call_changed(
 fn substitute_assignment_like_call_changed(
     head: &Expr,
     args: &[Expr],
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -74,7 +74,7 @@ fn substitute_assignment_like_call_changed(
 fn substitute_condition_call_changed(
     head: &Expr,
     args: &[Expr],
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -100,7 +100,7 @@ fn substitute_condition_call_changed(
 fn substitute_with_call_changed(
     head: &Expr,
     args: &[Expr],
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -124,7 +124,7 @@ fn substitute_with_call_changed(
 fn substitute_scoped_call_changed(
     head: &Expr,
     args: &[Expr],
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -151,7 +151,7 @@ fn substitute_function_call_changed(
     expr: &Expr,
     head: &Expr,
     args: &[Expr],
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -210,7 +210,7 @@ fn substitute_function_call_changed(
 fn substitute_generic_call_changed(
     head: &Expr,
     args: &[Expr],
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -232,7 +232,7 @@ fn substitute_generic_call_changed(
 
 fn substitute_arg_list_changed(
     args: &[Expr],
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Vec<Expr>> {
     let mut substituted_args = None;
@@ -253,7 +253,7 @@ fn substitute_arg_list_changed(
 
 pub(super) fn substitute_lexical_bindings(
     expr: &Expr,
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Expr {
     substitute_lexical_bindings_changed(expr, bindings, shadowed).unwrap_or_else(|| expr.clone())
@@ -261,7 +261,7 @@ pub(super) fn substitute_lexical_bindings(
 
 fn substitute_lexical_bindings_changed(
     expr: &Expr,
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     match expr {
@@ -305,7 +305,7 @@ fn substitute_lexical_bindings_changed(
 
 fn substitute_with_binding_list_changed(
     expr: &Expr,
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let Expr::Call { head, args } = expr else {
@@ -341,7 +341,7 @@ fn substitute_with_binding_list_changed(
 
 fn substitute_with_binding_item_changed(
     expr: &Expr,
-    bindings: &BTreeMap<Symbol, Expr>,
+    bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     match expr {
@@ -395,7 +395,7 @@ mod tests {
     fn rule_rhs_substitution_respects_pattern_locals() {
         let x = Symbol::from_name("x");
         let y = Symbol::from_name("y");
-        let mut bindings = BTreeMap::new();
+        let mut bindings = SymbolExprMap::default();
         bindings.insert(x.clone(), Expr::integer(42_i64.into()));
         bindings.insert(y.clone(), Expr::integer(7_i64.into()));
 
@@ -440,7 +440,7 @@ mod tests {
     fn explicit_function_parameters_shadow_outer_bindings() {
         let x = Symbol::from_name("x");
         let y = Symbol::from_name("y");
-        let mut bindings = BTreeMap::new();
+        let mut bindings = SymbolExprMap::default();
         bindings.insert(x.clone(), Expr::integer(1_i64.into()));
         bindings.insert(y.clone(), Expr::integer(2_i64.into()));
 
@@ -485,7 +485,7 @@ mod tests {
     fn with_body_treats_binding_names_as_shadowed() {
         let x = Symbol::from_name("x");
         let y = Symbol::from_name("y");
-        let mut bindings = BTreeMap::new();
+        let mut bindings = SymbolExprMap::default();
         bindings.insert(x.clone(), Expr::integer(10_i64.into()));
         bindings.insert(y.clone(), Expr::integer(20_i64.into()));
 

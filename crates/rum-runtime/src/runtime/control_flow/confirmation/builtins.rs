@@ -191,7 +191,7 @@ impl Session {
             });
         };
 
-        let match_result = self.match_expr_owned(form, tag.clone(), BTreeMap::new());
+        let match_result = self.match_expr_owned(form, tag.clone(), SymbolExprMap::default());
         self.drive_internal_value(match_result, move |session, outcome| {
             if outcome.matched {
                 session.finish_enclose_handler(handler, value)
@@ -323,7 +323,7 @@ impl Session {
         let raw_pattern = args[1].clone();
         let tag = confirmation_tag_from_args(&args, 3);
         let match_result =
-            self.match_expr_owned(raw_pattern.clone(), value.clone(), BTreeMap::new());
+            self.match_expr_owned(raw_pattern.clone(), value.clone(), SymbolExprMap::default());
 
         self.drive_internal_value(match_result, move |session, outcome| {
             if outcome.matched {

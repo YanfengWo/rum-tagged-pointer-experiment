@@ -286,7 +286,7 @@ impl Session {
 
         match spec {
             CasesSpec::Pattern(pattern) => {
-                let match_result = self.match_expr_owned(pattern, expr.clone(), BTreeMap::new());
+                let match_result = self.match_expr_owned(pattern, expr.clone(), SymbolExprMap::default());
                 self.drive_internal_value(match_result, move |_, outcome| {
                     Ok(if outcome.matched { Some(expr) } else { None })
                 })
@@ -295,7 +295,7 @@ impl Session {
                 let match_result = self.match_compiled_owned(
                     rule.matcher.clone(),
                     normalized_expr,
-                    BTreeMap::new(),
+                    SymbolExprMap::default(),
                 );
                 self.drive_internal_value(match_result, move |session, outcome| {
                     if !outcome.matched {

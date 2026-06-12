@@ -65,7 +65,7 @@ impl Session {
         pattern: Expr,
         value: Expr,
     ) -> Result<Expr, EvalError> {
-        let match_result = self.match_expr_owned(pattern, value, BTreeMap::new());
+        let match_result = self.match_expr_owned(pattern, value, SymbolExprMap::default());
         self.drive_internal_value(match_result, move |_, outcome| {
             Ok(system_expr(if outcome.matched { "True" } else { "False" }))
         })

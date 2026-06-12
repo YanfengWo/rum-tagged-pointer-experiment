@@ -126,7 +126,7 @@ impl Session {
             return self.finish_catch_match(handler, value, tag);
         };
 
-        let match_result = self.match_expr_owned(form, tag.clone(), BTreeMap::new());
+        let match_result = self.match_expr_owned(form, tag.clone(), SymbolExprMap::default());
         self.drive_internal_value(match_result, move |session, outcome| {
             if outcome.matched {
                 session.finish_catch_match(handler, value, tag)
@@ -158,7 +158,7 @@ impl Session {
             });
         };
 
-        let match_result = self.match_expr_owned(form, tag.clone(), BTreeMap::new());
+        let match_result = self.match_expr_owned(form, tag.clone(), SymbolExprMap::default());
         self.drive_internal_value(match_result, move |_, outcome| {
             if outcome.matched {
                 Err(EvalError::Thrown {

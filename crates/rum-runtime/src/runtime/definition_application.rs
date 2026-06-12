@@ -99,7 +99,7 @@ impl Session {
             self.compile_matcher_for_expr(&down_value.lhs)
         };
         let match_result =
-            self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new());
+            self.match_compiled_owned(matcher, normalized_candidate.clone(), SymbolExprMap::default());
 
         self.drive_internal_value(match_result, move |session, outcome| {
             if !outcome.matched {
@@ -286,7 +286,7 @@ impl Session {
             self.compile_matcher_for_expr(&up_value.lhs)
         };
         let match_result =
-            self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new());
+            self.match_compiled_owned(matcher, normalized_candidate.clone(), SymbolExprMap::default());
 
         self.drive_internal_value(match_result, move |session, outcome| {
             if !outcome.matched {
@@ -406,7 +406,7 @@ impl Session {
             self.compile_matcher_for_expr(&sub_value.lhs)
         };
         let match_result =
-            self.match_compiled_owned(matcher, normalized_candidate.clone(), BTreeMap::new());
+            self.match_compiled_owned(matcher, normalized_candidate.clone(), SymbolExprMap::default());
 
         self.drive_internal_value(match_result, move |session, outcome| {
             if !outcome.matched {
@@ -586,13 +586,13 @@ impl Session {
         lhs: &Expr,
         candidate: &Expr,
     ) -> Option<CompiledMatchOutcome> {
-        let mut bindings = BTreeMap::new();
+        let mut bindings = SymbolExprMap::default();
         let matched =
             self.fast_match_definition_pattern(strip_hold_pattern(lhs), candidate, &mut bindings)?;
 
         Some(CompiledMatchOutcome {
             matched,
-            bindings: if matched { bindings } else { BTreeMap::new() },
+            bindings: if matched { bindings } else { SymbolExprMap::default() },
         })
     }
 
@@ -600,7 +600,7 @@ impl Session {
         &self,
         pattern: &Expr,
         value: &Expr,
-        bindings: &mut BTreeMap<Symbol, Expr>,
+        bindings: &mut SymbolExprMap,
     ) -> Option<bool> {
         let pattern = strip_hold_pattern(pattern);
 
@@ -804,7 +804,7 @@ impl Session {
         };
 
         let match_result =
-            self.match_compiled_owned(matcher, normalized_expr.clone(), BTreeMap::new());
+            self.match_compiled_owned(matcher, normalized_expr.clone(), SymbolExprMap::default());
 
         let outcome = match match_result {
             Ok(outcome) => outcome,

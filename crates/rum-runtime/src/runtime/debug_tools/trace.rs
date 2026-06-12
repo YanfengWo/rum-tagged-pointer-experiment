@@ -337,7 +337,7 @@ impl Session {
                         let outcome = self.match_expr_owned(
                             pattern.clone(),
                             candidate.clone(),
-                            BTreeMap::new(),
+                            SymbolExprMap::default(),
                         )?;
                         if outcome.matched {
                             is_match = true;
@@ -367,7 +367,7 @@ impl Session {
                     let mut is_match = false;
                     for pattern in normalize_trace_patterns(pattern) {
                         let outcome =
-                            self.match_expr_owned(pattern, expr.clone(), BTreeMap::new())?;
+                            self.match_expr_owned(pattern, expr.clone(), SymbolExprMap::default())?;
                         if outcome.matched {
                             is_match = true;
                             break;

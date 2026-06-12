@@ -369,6 +369,10 @@ pub(super) struct SymbolStabilityCacheEntry {
 
 pub(super) type SymbolCountMap = HashMap<Symbol, u32, BuildHasherDefault<RuntimeCacheHasher>>;
 
+/// Pattern/lexical binding maps: small, hot, order-independent.
+pub(in crate::runtime) type SymbolExprMap =
+    HashMap<Symbol, Expr, BuildHasherDefault<RuntimeCacheHasher>>;
+
 pub(super) type SymbolSet =
     std::collections::HashSet<Symbol, BuildHasherDefault<RuntimeCacheHasher>>;
 

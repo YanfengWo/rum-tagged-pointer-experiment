@@ -5,7 +5,7 @@ impl Session {
         &mut self,
         pattern_args: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         if pattern_args.is_empty() {
             return Ok(match_outcome(value_args.is_empty(), bindings));
@@ -24,7 +24,7 @@ impl Session {
         &mut self,
         pattern_args: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         flat_head: Expr,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         if pattern_args.is_empty() {
@@ -50,7 +50,7 @@ impl Session {
         &mut self,
         pattern_args: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         if pattern_args.is_empty() {
             return Ok(match_outcome(value_args.is_empty(), bindings));
@@ -69,7 +69,7 @@ impl Session {
         &mut self,
         pattern_args: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         flat_head: Expr,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         if pattern_args.is_empty() {
@@ -95,8 +95,8 @@ impl Session {
         &mut self,
         pattern_args: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        bindings: SymbolExprMap,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         if pattern_args.is_empty() {
             return Ok(if value_args.is_empty() {
                 vec![bindings]
@@ -118,9 +118,9 @@ impl Session {
         &mut self,
         pattern_args: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         flat_head: Expr,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         if pattern_args.is_empty() {
             return Ok(if value_args.is_empty() {
                 vec![bindings]
@@ -148,8 +148,8 @@ impl Session {
         &mut self,
         pattern_args: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        bindings: SymbolExprMap,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         if pattern_args.is_empty() {
             return Ok(if value_args.is_empty() {
                 vec![bindings]
@@ -176,9 +176,9 @@ impl Session {
         &mut self,
         pattern_args: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
         flat_head: Expr,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         if pattern_args.is_empty() {
             return Ok(if value_args.is_empty() {
                 vec![bindings]

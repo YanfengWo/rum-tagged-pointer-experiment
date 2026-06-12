@@ -3,7 +3,7 @@ use super::*;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::runtime) struct CompiledMatchOutcome {
     pub(in crate::runtime) matched: bool,
-    pub(in crate::runtime) bindings: BTreeMap<Symbol, Expr>,
+    pub(in crate::runtime) bindings: SymbolExprMap,
 }
 
 impl ContinuationValue for CompiledMatchOutcome {
@@ -49,7 +49,7 @@ impl ContinuationValue for CompiledMatchOutcome {
     }
 }
 
-fn bindings_from_continuation_expr(expr: Expr) -> BTreeMap<Symbol, Expr> {
+fn bindings_from_continuation_expr(expr: Expr) -> SymbolExprMap {
     let Expr::Call { head, args } = expr else {
         panic!("binding payload should be a List expression");
     };
@@ -81,7 +81,7 @@ fn bindings_from_continuation_expr(expr: Expr) -> BTreeMap<Symbol, Expr> {
 
 pub(super) fn match_outcome(
     matched: bool,
-    bindings: BTreeMap<Symbol, Expr>,
+    bindings: SymbolExprMap,
 ) -> CompiledMatchOutcome {
     CompiledMatchOutcome { matched, bindings }
 }

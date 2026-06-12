@@ -6,7 +6,7 @@ impl Session {
         spec: CompiledOptionalPattern,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let snapshot = bindings.clone();
 
@@ -41,7 +41,7 @@ impl Session {
         spec: CompiledOptionalPattern,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let snapshot = bindings.clone();
 
@@ -83,8 +83,8 @@ impl Session {
         spec: CompiledOptionalPattern,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        bindings: SymbolExprMap,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         let present_result = if value_args.is_empty() {
             Ok(Vec::new())
         } else {
@@ -118,8 +118,8 @@ impl Session {
         spec: CompiledOptionalPattern,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
-    ) -> Result<Vec<BTreeMap<Symbol, Expr>>, EvalError> {
+        bindings: SymbolExprMap,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
         let present_result = if value_args.is_empty() {
             Ok(Vec::new())
         } else {
@@ -154,7 +154,7 @@ impl Session {
         spec: CompiledOptionalPattern,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let default_result = self.resolve_optional_default_expr_owned(spec.default);
         self.drive_internal_value(default_result, move |session, default_expr| {
@@ -198,7 +198,7 @@ impl Session {
         spec: CompiledOptionalPattern,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
-        bindings: BTreeMap<Symbol, Expr>,
+        bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let default_result = self.resolve_optional_default_expr_owned(spec.default);
         self.drive_internal_value(default_result, move |session, default_expr| {
