@@ -985,18 +985,17 @@ the `mma-hol` lane healthy:
   expression pattern arguments such as `spec["kind"]` are evaluated before
   `MemberQ` / `MatchQ` compile them as exact patterns.
 - next CL-Y frontier: the bounded cold `run_all.wls` probe has moved the lane
-  past generic driver construction and into two concrete blockers. First,
-  `PropTaut` proof construction is slow enough that `proptaut_tests.wl` is not
-  yet a practical smoke signal. Second, the old `stdlib/Pair.wl`
-  non-theorem failure has been traced to the same area: `Simp` initializes
-  `PropTaut`-proved basic and congruence schemata before simplifying
-  `mkPairInjThm`. Rum's default recursion limit now matches the local Wolfram
-  baseline of `1024`, removing the immediate low-limit hard failure, but
-  `Pair` still needs the `PropTaut` / `Simp` performance path fixed before
-  later stdlib package statuses can be trusted. The deep performance lane is
-  currently paused pending external review; use the current matrix entry as a
-  blocker statement, not as an instruction to resume speculative
-  evaluator/representation optimization.
+  past generic driver construction and into the `PropTaut` / `Simp`-backed
+  stdlib packages. After the 2026-06-12 external representation pass and the
+  same-bit stability-invalidation follow-up, `proptaut_tests.wl` is a green
+  smoke signal at about `239s`, and the focused PropTaut distribution probe is
+  about `12.73-12.88s` versus the local WolframKernel internal `3.80s`. The
+  old `stdlib/Pair.wl` non-theorem failure was traced to rum's too-low default
+  recursion limit, and the default now matches the local Wolfram baseline of
+  `1024`. `Pair` still exceeds a `600s` load budget, so later stdlib package
+  statuses cannot be trusted until that gate is cleared. Treat the current
+  performance notes as evidence-backed next steps, not as permission for broad
+  speculative evaluator rewrites.
 
 ### Non-Goals
 

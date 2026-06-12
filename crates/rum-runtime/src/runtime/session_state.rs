@@ -345,6 +345,7 @@ impl Default for Session {
             symbol_cache_generation: 0,
             call_stability_generation: 0,
             stability_dirty_bloom: 0,
+            stability_rewritten_dirty_bloom: 0,
             stable_symbol_cache: SymbolStabilityCache::default(),
             symbol_call_effect_cache: SymbolCallEffectCache::default(),
             call_stability_cache: CallStabilityCache::default(),

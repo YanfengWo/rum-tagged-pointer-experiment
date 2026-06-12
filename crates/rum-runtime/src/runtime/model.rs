@@ -307,6 +307,7 @@ pub struct Session {
     pub(super) symbol_cache_generation: u64,
     pub(super) call_stability_generation: u64,
     pub(super) stability_dirty_bloom: u128,
+    pub(super) stability_rewritten_dirty_bloom: u128,
     pub(super) stable_symbol_cache: SymbolStabilityCache,
     pub(super) symbol_call_effect_cache: SymbolCallEffectCache,
     pub(super) call_stability_cache: CallStabilityCache,

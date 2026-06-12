@@ -67,26 +67,28 @@ Current clean-clone smoke results are: `bool_tests.wl` `List[73, 0]`,
 first stdlib/auto failure beyond Parser/Printer is still the `PropTaut` /
 `Simp` path behind `Pair.wl`.
 
-The deep PropTaut performance push is currently paused pending external review.
-Do not resume broad evaluator/representation optimization, or treat a prior
-cross-engine `<2x` target as an active commitment, unless the user explicitly
-reopens that lane. The retained current frontier is the PropTaut distribution
-probe at about `27.40-27.64s` in release versus the local WolframKernel
-internal timing of about `3.80s`; this remains an `mma-hol` gate, but the next
-action is evidence review rather than automatic micro-optimization.
+The PropTaut performance lane has been reopened by external review and a
+follow-up same-bit stability-invalidation experiment. The retained current
+frontier is the PropTaut distribution probe at about `12.73-12.88s` in release
+versus the local WolframKernel internal timing of about `3.80s`;
+`proptaut_tests.wl` is green at about `239s`, but `stdlib/Pair.wl` still
+exceeds a `600s` load budget and remains the next downstream gate. Do not treat
+the earlier cross-engine `<2x` target as an active commitment.
 
-If performance work is reopened, keep it probe-first: identify the hot path,
-make the smallest targeted change, then rerun the same timing smoke to reject
-negative optimizations. Bool performance is no longer the main correctness
-blocker. A symbol-level evaluation epoch cache and shared call-tree `Expr`
-representation are already in place; after lexical substitution copy-on-write
-plus the retained evaluator/representation follow-up cuts, the current clean
-Bool smoke is about 2.36-2.40s warmed external default-release wall time. A
-prior local `target-cpu=native` build measured about 2.29-2.35s before the
-latest follow-up cuts. Whole-expression exact normal-form caching, symbol
-fingerprint hashing, shallow definition matcher metadata, a one-entry
-call-stability MRU, and heavier LTO/codegen flag probes were measured and
-rejected or left as optional local knobs rather than default commitments.
+Keep performance work probe-first: identify the hot path, make the smallest
+targeted change, then rerun the same timing smoke to reject negative
+optimizations. Retained work includes symbol interning with dense ids,
+id-hashed definition/attribute/binding maps, dependency-aware stability-cache
+invalidation with a rewritten dirty bloom for repeated same-bit writes,
+mimalloc in `rum-cli`, a message-symbol existence index, and the shared
+call-tree `Expr` representation. Exact per-symbol/per-bloom-bit version
+snapshots, skipping dirty-related call-cache entries, whole-expression exact
+normal-form caching, symbol fingerprint hashing, shallow definition matcher
+metadata, a one-entry call-stability MRU, and heavier LTO/codegen flag probes
+were measured and rejected or left as optional local knobs rather than default
+commitments. The next evidence-backed frontier is larger representation work:
+single-allocation call nodes, inline evaluated/stable stamps, and borrowed
+argument preparation.
 
 For long-running probes or commands that may spawn children, do not start them
 bare. Use `scripts/run-bounded.py --timeout SECONDS -- <command> ...` or a

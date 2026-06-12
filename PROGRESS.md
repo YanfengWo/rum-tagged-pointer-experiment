@@ -6,6 +6,50 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-12 Same-Bit Stability Invalidation Follow-Up
+
+Followed the external pass recommendation to test the same-symbol rewrite
+hole in the call-stability dirty bloom. The retained change is a conservative
+rewritten-dirty-bloom scheme in `evaluation_cache.rs`: repeated writes whose
+bloom bit is already dirty no longer bump the whole call-stability generation,
+but cache hits still reject entries touched by newly dirty bits or by bits
+rewritten after the entry snapshot. New entries touching rewritten dirty bits
+are not cached. This preserves the cheap 128-bit dependency filter without
+pretending it is an exact symbol dependency set.
+
+Measured and rejected alternatives:
+
+- Exact per-symbol and per-bloom-bit version snapshots fixed the black-box
+  re-access shape but regressed the PropTaut distribution probe to about
+  `24.9s` and `24.6s`, respectively.
+- Skipping call-stability entries related to dirty bits regressed the same
+  probe to about `20.5s`.
+
+Retained result: the PropTaut distribution probe now measures about
+`12.73-12.88s` release internal timing on the reference machine, compared with
+the external pass frontier of about `13.1s` and the local WolframKernel
+internal timing of about `3.80s`. The bounded `proptaut_tests.wl` smoke is
+green in about `239s`.
+
+The original expert black-box script cannot currently run unchanged through
+the default CLI path: `Range[10^6]` exceeds the generated-element limit and
+`Do[..., {10000}]` overflows the current CLI/runtime stack. Scaled diagnostic
+probes are therefore only partial reproductions: with `Range[10000]` and
+`Do[100]`, repeated same-write re-access measured about `37-39us` per access;
+with `Range[50000]` and `Do[100]`, about `164us` per access.
+
+Checks after the retained change: `cargo fmt --check`, `git diff --check`,
+`cargo test -p rum-runtime`, unsandboxed `cargo test --workspace`, and the
+bounded `proptaut_tests.wl` smoke passed. The workspace-wide Rust test needs
+unsandboxed execution because the `rum-jupyter` native ZeroMQ tests bind
+loopback sockets.
+
+Next evidence-backed representation work is not another exact-version cache
+attempt. The remaining plausible cuts are the larger single-allocation call
+node / inline evaluated-stamp representation, borrowed argument preparation,
+and only if new profiling justifies it, a non-allocating exact dependency
+representation for stability invalidation.
+
 ## 2026-06-12 Representation Optimization Pass (External)
 
 A second external optimization pass reopened the performance lane after the
@@ -63,14 +107,12 @@ stored in a symbol, with interleaved definition writes) shows where the
 invalidation scheme still trails WolframKernel. Both engines re-access a
 100x larger expression at unchanged cost and survive a write to an
 unrelated symbol, but with a write to one symbol interleaved between
-accesses WolframKernel stays at ~0.35us per access while rum pays ~394us:
-the v1 dirty bloom cannot distinguish repeated writes to the same symbol
-and falls back to a call-cache generation bump on every same-bit rewrite,
-forcing an O(n) stability re-walk. The cheapest known next win is therefore
-per-symbol write versions (or a small exact dirty set beside the bloom) in
-`evaluation_cache.rs`; loop/fold accumulator patterns in `PropTaut`/`Simp`
-hit exactly this case. This is independent of, and much cheaper than, the
-call-node representation rework.
+accesses WolframKernel stays at ~0.35us per access while rum pays ~394us.
+The follow-up above tested this same-bit rewrite path. A cheap rewritten dirty
+bloom was retained; exact version snapshots were rejected because their entry
+snapshot overhead regressed the real PropTaut workload. This means the next
+high-leverage frontier has moved back to the larger call-node representation
+work rather than more blind stability-cache micro-optimization.
 
 ## 2026-06-12 Performance Lane Pause And Cleanup
 

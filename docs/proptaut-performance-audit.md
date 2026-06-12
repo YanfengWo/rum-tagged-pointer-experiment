@@ -18,6 +18,14 @@ first time. The remaining gap is flat across the evaluator; section 4's
 item 5 (per-node evaluated bits / single-allocation call nodes) is now the
 frontier. Use this report as diagnosis history.
 
+Third maintainer note, 2026-06-12: the same-bit stability-invalidation
+follow-up retained a conservative rewritten-dirty-bloom fix and moved the
+distribution probe to about `12.73-12.88s`; `proptaut_tests.wl` remains green
+at about `239s`. Exact per-symbol/per-bloom-bit version snapshots and
+dirty-entry cache skipping were measured and rejected because they regressed
+the real PropTaut workload. The next frontier remains the larger call-node /
+evaluated-stamp representation work.
+
 This audit answers two questions: where the `PropTaut` time actually goes,
 and why a night of sample-guided micro-probes produced mostly neutral or
 negative results. The short version: the profile was being read in a form

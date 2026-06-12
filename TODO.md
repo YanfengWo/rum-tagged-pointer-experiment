@@ -119,10 +119,12 @@ Completed history, archived planning detail, and operational lessons live in
   Wolfram baseline of `1024`. After `Pair` loads cleanly, rerun the later
   `Sum`, `Option`, `Set`, `Num`, and Real package probes because their
   current statuses are polluted by the failed Pair dependency.
-  Performance status, retained work, rejected probes, and the next
-  evidence-backed cuts (per-symbol write versions first, then the
-  single-allocation call-node rework) are recorded in `PROGRESS.md` under
-  "2026-06-12 Representation Optimization Pass" and in
+  Performance status, retained work, rejected probes, the follow-up same-bit
+  dirty-bloom fix, and the next evidence-backed cuts (single-allocation call
+  nodes and evaluated stamps first; better exact dependency tracking only if
+  fresh profiler evidence justifies it) are recorded in `PROGRESS.md` under
+  "2026-06-12 Representation Optimization Pass" and
+  "2026-06-12 Same-Bit Stability Invalidation Follow-Up", and in
   `docs/proptaut-performance-audit.md`; resume from those, not from this
   bullet.
 - [ ] Treat `mma-hol` stable-mode snapshot helpers as a required
@@ -221,18 +223,19 @@ Completed history, archived planning detail, and operational lessons live in
   terms. Already in place after the 2026-06-12 pass: interned 32-byte
   symbols with dense pair ids, id-hashed definition/attribute/binding maps,
   dependency-aware stability-cache invalidation (per-symbol removal plus a
-  128-bit dirty bloom; only stable verdicts cached), mimalloc as the
+  128-bit dirty bloom; repeated same-bit rewrites no longer bump the whole
+  call-stability generation; only stable verdicts cached), mimalloc as the
   `rum-cli` global allocator, a message-symbol existence index, and the
-  earlier shared call-tree representation. The measured next cuts, in
-  order: per-symbol write versions to close the same-symbol-rewrite hole in
-  the dirty bloom (a black-box probe shows WolframKernel is unaffected by
-  interleaved writes to one symbol while rum re-walks; loop/fold
-  accumulators hit this), then the single-allocation call node
-  (head+args in one `Arc`) enabling an inline per-node evaluated stamp and
-  borrowed argument preparation. Whole-expression exact caching was
-  measured and rejected because owned-tree hashing/equality became a new
-  cost; depth-gated cycle tracking was rejected because the evaluation
-  stack also feeds trace depths and `Stack[]`.
+  earlier shared call-tree representation. A same-symbol rewrite follow-up
+  retained the rewritten-dirty-bloom fix and rejected exact per-symbol and
+  per-bloom-bit version snapshots because they regressed the real PropTaut
+  probe to about `24-25s`. The measured next cuts are now the
+  single-allocation call node (head+args in one `Arc`) enabling an inline
+  per-node evaluated stamp, borrowed argument preparation, and only after
+  new profiler evidence, a non-allocating exact dependency representation.
+  Whole-expression exact caching was measured and rejected because owned-tree
+  hashing/equality became a new cost; depth-gated cycle tracking was rejected
+  because the evaluation stack also feeds trace depths and `Stack[]`.
 - [ ] Revisit large request/error payload ergonomics only after measurement
   shows that current shapes are a real cost.
 
