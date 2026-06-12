@@ -102,17 +102,28 @@ impl Session {
                 .map(|(symbol, _)| symbol.clone())
                 .collect::<Vec<_>>(),
         );
+        let mut attributes_changed = false;
+        let mut messages_changed = false;
         for (symbol, _) in &items {
-            self.definitions.remove(symbol);
-            self.attributes.remove(symbol);
+            if self.definitions.remove(symbol).is_some() {
+                self.bump_evaluation_epoch_for_symbol(symbol);
+            }
+            attributes_changed |= self.attributes.remove(symbol).is_some();
             self.options.remove(symbol);
             self.syntax_information.remove(symbol);
+            let messages_before = self.message_definitions.len();
             self.message_definitions
                 .retain(|key, _| key.symbol != *symbol);
+            messages_changed |= self.message_definitions.len() != messages_before;
         }
         if !items.is_empty() {
             self.refresh_has_up_value_definitions();
+        }
+        if attributes_changed {
             self.bump_attribute_revision();
+        }
+        if messages_changed {
+            self.rebuild_message_symbol_counts();
         }
 
         self.resume_block_initializers(items, args[1].clone(), saved_state, 0)
@@ -145,28 +156,33 @@ impl Session {
     }
 
     fn restore_block_symbol_states(&mut self, states: BTreeMap<Symbol, BlockSymbolState>) {
+        let mut attributes_changed = false;
+        let mut messages_changed = false;
         for (symbol, state) in states {
-            match state.definition {
+            let definition_changed = match state.definition {
                 Some(definition) => {
-                    self.definitions.insert(symbol.clone(), definition);
+                    self.definitions.insert(symbol, definition);
+                    true
                 }
-                None => {
-                    self.definitions.remove(&symbol);
-                }
+                None => self.definitions.remove(&symbol).is_some(),
+            };
+            if definition_changed {
+                self.bump_evaluation_epoch_for_symbol(&symbol);
             }
 
             match state.attributes {
                 Some(attributes) => {
-                    self.attributes.insert(symbol.clone(), attributes);
+                    self.attributes.insert(symbol, attributes);
+                    attributes_changed = true;
                 }
                 None => {
-                    self.attributes.remove(&symbol);
+                    attributes_changed |= self.attributes.remove(&symbol).is_some();
                 }
             }
 
             match state.options {
                 Some(options) => {
-                    self.options.insert(symbol.clone(), options);
+                    self.options.insert(symbol, options);
                 }
                 None => {
                     self.options.remove(&symbol);
@@ -175,23 +191,29 @@ impl Session {
 
             match state.syntax_information {
                 Some(syntax_information) => {
-                    self.syntax_information
-                        .insert(symbol.clone(), syntax_information);
+                    self.syntax_information.insert(symbol, syntax_information);
                 }
                 None => {
                     self.syntax_information.remove(&symbol);
                 }
             }
 
+            let messages_before = self.message_definitions.len();
             self.message_definitions
                 .retain(|key, _| key.symbol != symbol);
+            messages_changed |=
+                self.message_definitions.len() != messages_before || !state.messages.is_empty();
             for (key, definition) in state.messages {
                 self.message_definitions.insert(key, definition);
             }
-            self.rebuild_message_symbol_counts();
         }
         self.refresh_has_up_value_definitions();
-        self.bump_attribute_revision();
+        if attributes_changed {
+            self.bump_attribute_revision();
+        }
+        if messages_changed {
+            self.rebuild_message_symbol_counts();
+        }
     }
 
     fn resume_with_bindings(
