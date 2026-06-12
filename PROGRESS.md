@@ -58,6 +58,20 @@ and `Stack[]` semantics for ~1.5%), caching unstable call verdicts (pins
 dead trees, regressed to 25s), text-pointer-only `Symbol` equality without
 the inline id (hot-path pointer chase, ~3% regression).
 
+A black-box evaluation-state probe (re-accessing a large inert expression
+stored in a symbol, with interleaved definition writes) shows where the
+invalidation scheme still trails WolframKernel. Both engines re-access a
+100x larger expression at unchanged cost and survive a write to an
+unrelated symbol, but with a write to one symbol interleaved between
+accesses WolframKernel stays at ~0.35us per access while rum pays ~394us:
+the v1 dirty bloom cannot distinguish repeated writes to the same symbol
+and falls back to a call-cache generation bump on every same-bit rewrite,
+forcing an O(n) stability re-walk. The cheapest known next win is therefore
+per-symbol write versions (or a small exact dirty set beside the bloom) in
+`evaluation_cache.rs`; loop/fold accumulator patterns in `PropTaut`/`Simp`
+hit exactly this case. This is independent of, and much cheaper than, the
+call-node representation rework.
+
 ## 2026-06-12 Performance Lane Pause And Cleanup
 
 - Cancelled the long-lived PropTaut optimization goal and stopped automatic
