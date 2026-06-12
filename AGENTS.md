@@ -95,18 +95,23 @@ optimizations. Retained work includes symbol interning with dense ids,
 id-hashed definition/attribute/binding maps, dependency-aware stability-cache
 invalidation with a rewritten dirty bloom for repeated same-bit writes,
 mimalloc in `rum-cli`, a message-symbol existence index, and the shared
-call-tree `Expr` representation. Pair/Simp runtime stability cuts now reduce
-the local user-rule-only mkPair probe to about `40.61s` and `basicSimpset[]`
-to about `20.27s`, but the public warm mkPair probe still times out at `240s`
-and the `Pair.wl` gate remains open.
+call-tree `Expr` representation. Pair/Simp runtime stability cuts reduce the
+local user-rule-only mkPair probe to about `40.61s` and `basicSimpset[]` to
+about `20.27s`, but the public warm mkPair probe still times out and the
+`Pair.wl` gate remains open.
 Exact per-symbol/per-bloom-bit version
 snapshots, skipping dirty-related call-cache entries, whole-expression exact
 normal-form caching, symbol fingerprint hashing, shallow definition matcher
 metadata, a one-entry call-stability MRU, and heavier LTO/codegen flag probes
 were measured and rejected or left as optional local knobs rather than default
-commitments. The next evidence-backed frontier is larger representation work:
-single-allocation call nodes, inline evaluated/stable stamps, and borrowed
-argument preparation.
+commitments. Task 2b also rejects call-cache size-cap tuning and wider
+dirty-bloom saturation thresholds for the warm public mkPair shape:
+miss-reason counters point mostly at absent pointer-keyed call entries, which
+means the conversion chain is building fresh call trees. The next
+evidence-backed frontier is either a downstream `Simp` algorithm experiment
+that avoids repeatedly rebuilding the nested `ORELSEC` chain, or larger runtime
+representation work: single-allocation call nodes, inline evaluated/stable
+stamps, and borrowed argument preparation.
 
 For long-running probes or commands that may spawn children, do not start them
 bare. Use `scripts/run-bounded.py --timeout SECONDS -- <command> ...` or a

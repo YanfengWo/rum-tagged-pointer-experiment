@@ -33,9 +33,16 @@ Review update, 2026-06-12 (external): Tasks 1 and 2 are verified complete
 (independent re-runs of the Catch repro, `meson_tests` `List[44, 0]`, the
 full workspace suite, and `rum-difftest check`). The stability cuts also
 moved the general lanes — PropTaut distribution `13.2s -> 10.0-10.2s`
-(~2.7x), Bool-stack load `0.78s -> 0.54s` (~2.8x). **Continue from Task 2b
-below**: the Task 2 verdict localized the multiplier but left its mechanism
-unexplained, and Task 3 stays gated behind that answer.
+(~2.7x), Bool-stack load `0.78s -> 0.54s` (~2.8x).
+
+Post-Task-2b update, 2026-06-13: the stability-check amplifier diagnosis is
+complete and recorded in [PROGRESS.md](../PROGRESS.md). Call-cache size-cap
+thrash was rejected by a 16x cap A/B, and widening the dirty-bloom saturation
+threshold to 128 was much worse. Miss-reason counters point mostly at absent
+pointer-keyed call entries, so the remaining gate is fresh call-tree churn from
+the Simp/Drule conversion chain. Task 3 is no longer blocked by an unnamed
+cache mechanism, but a downstream `Simp` algorithm experiment remains a
+reasonable alternative before large representation work.
 
 ## Where things stand
 
@@ -128,7 +135,7 @@ did not remove the multiplier. The retained cuts and rejected
 base-conversion memo experiment are recorded in PROGRESS under
 "Pair/Simp Runtime Stability Cuts".
 
-## Task 2b (next diagnosis, do before Task 3): explain the stability-check amplifier
+## Task 2b (completed diagnosis): explain the stability-check amplifier
 
 The Task 2 diagnosis localized the multiplier but did not explain it, and
 the unexplained signal is precise: the warm public mkPair probe reaches
@@ -190,12 +197,16 @@ and run
 to see which evaluator paths drive the checks (fixed-point pre-checks vs
 uncached-walk recursion vs argument preparation).
 
-Acceptance: a PROGRESS entry naming which mechanism dominates, with the
-counter split for the bounded warm window; if mechanism 1 or 2 wins, the
-matching cheap fix applied behind an A/B on the warm probe. The end-state
-target for the lane stays the same: warm public mkPair completes inside a
-bounded budget and the `Pair.wl` load enters the constant-bound regime
-(roughly `4x` of WolframKernel's `37.7s`, i.e. about `150s`).
+Completion: the PROGRESS entry "Pair/Simp Stability-Check Amplifier Diagnosis"
+names mechanism 3 as dominant for the current warm window. In the default
+120s miss-reason probe, `call_stability_miss_absent=67M+` dominates
+`call_stability_miss_dirty=33M+` and
+`call_stability_miss_generation=4M+`; in the 180s windows, 16x cache capacity
+does not move the major counts, while a dirty-bloom threshold of 128 explodes
+misses and rewritten-dirty skips to `1B+`. The end-state target for the lane
+stays the same: warm public mkPair completes inside a bounded budget and the
+`Pair.wl` load enters the constant-bound regime (roughly `4x` of
+WolframKernel's `37.7s`, i.e. about `150s`).
 
 ## Task 3 (large, only after 1, 2, and 2b): representation rework
 

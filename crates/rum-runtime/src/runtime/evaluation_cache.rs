@@ -4,6 +4,8 @@ use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 const EVALUATION_CACHE_PROFILE_ENV: &str = "RUM_PROFILE_EVALUATION_CACHE";
+const CALL_STABILITY_CACHE_MAX_ENTRIES_ENV: &str = "RUM_CALL_STABILITY_CACHE_MAX_ENTRIES";
+const STABILITY_DIRTY_BLOOM_MAX_BITS_ENV: &str = "RUM_STABILITY_DIRTY_BLOOM_MAX_BITS";
 
 /// Entry-count bound for the pointer-keyed call-stability cache. Entries pin
 /// their head/args trees alive, so the map must stay bounded now that
@@ -19,9 +21,17 @@ static EPOCH_BUMP_COUNT: AtomicU64 = AtomicU64::new(0);
 static CACHE_CLEAR_COUNT: AtomicU64 = AtomicU64::new(0);
 static SYMBOL_INVALIDATION_COUNT: AtomicU64 = AtomicU64::new(0);
 static CALL_GENERATION_BUMP_COUNT: AtomicU64 = AtomicU64::new(0);
+static DIRTY_BLOOM_SATURATION_COUNT: AtomicU64 = AtomicU64::new(0);
+static CALL_STABILITY_SIZE_CAP_CLEAR_COUNT: AtomicU64 = AtomicU64::new(0);
 static STABILITY_CHECK_COUNT: AtomicU64 = AtomicU64::new(0);
 static CALL_STABILITY_HIT_COUNT: AtomicU64 = AtomicU64::new(0);
 static CALL_STABILITY_MISS_COUNT: AtomicU64 = AtomicU64::new(0);
+static CALL_STABILITY_MISS_ABSENT_COUNT: AtomicU64 = AtomicU64::new(0);
+static CALL_STABILITY_MISS_GENERATION_COUNT: AtomicU64 = AtomicU64::new(0);
+static CALL_STABILITY_MISS_DIRTY_COUNT: AtomicU64 = AtomicU64::new(0);
+static CALL_STABILITY_MISS_POINTER_COUNT: AtomicU64 = AtomicU64::new(0);
+static CALL_STABILITY_INSERT_COUNT: AtomicU64 = AtomicU64::new(0);
+static CALL_STABILITY_REWRITTEN_DIRTY_SKIP_COUNT: AtomicU64 = AtomicU64::new(0);
 static EVALUATE_ENTRY_COUNT: AtomicU64 = AtomicU64::new(0);
 static DOWN_VALUE_SCAN_COUNT: AtomicU64 = AtomicU64::new(0);
 static DOWN_VALUE_APPLICATION_COUNT: AtomicU64 = AtomicU64::new(0);
@@ -93,8 +103,12 @@ impl Session {
         let bit = symbol_stability_bloom_bit(symbol);
         let already_dirty = self.stability_dirty_bloom & bit != 0;
         if !already_dirty
-            && (self.stability_dirty_bloom | bit).count_ones() > STABILITY_DIRTY_BLOOM_MAX_BITS
+            && (self.stability_dirty_bloom | bit).count_ones() > stability_dirty_bloom_max_bits()
         {
+            record_evaluation_cache_counter(
+                &DIRTY_BLOOM_SATURATION_COUNT,
+                "dirty_bloom_saturations",
+            );
             self.bump_call_stability_generation();
         }
 
@@ -109,8 +123,8 @@ impl Session {
         self.call_stability_generation = self.call_stability_generation.saturating_add(1);
         self.stability_dirty_bloom = 0;
         self.stability_rewritten_dirty_bloom = 0;
-        if self.call_stability_cache.len() > CALL_STABILITY_CACHE_MAX_ENTRIES {
-            self.call_stability_cache.clear();
+        if self.call_stability_cache.len() > call_stability_cache_max_entries() {
+            self.clear_call_stability_cache_for_size_cap();
         }
     }
 
@@ -144,14 +158,37 @@ impl Session {
     fn call_stability_with_bloom(&mut self, head: &SharedExpr, args: &SharedArgs) -> (bool, u128) {
         let key = CallStabilityCacheKey::new(head, args);
         if let Some(entry) = self.call_stability_cache.get(&key) {
-            if entry.generation == self.call_stability_generation
-                && SharedExpr::ptr_eq(&entry.head, head)
-                && SharedArgs::ptr_eq(&entry.args, args)
-                && entry.bloom & self.call_stability_entry_dirty_delta(entry) == 0
+            if entry.generation != self.call_stability_generation {
+                record_evaluation_cache_counter(
+                    &CALL_STABILITY_MISS_GENERATION_COUNT,
+                    "call_stability_miss_generation",
+                );
+            } else if !SharedExpr::ptr_eq(&entry.head, head)
+                || !SharedArgs::ptr_eq(&entry.args, args)
             {
-                record_evaluation_cache_counter(&CALL_STABILITY_HIT_COUNT, "call_stability_hits");
-                return (entry.stable, entry.bloom);
+                record_evaluation_cache_counter(
+                    &CALL_STABILITY_MISS_POINTER_COUNT,
+                    "call_stability_miss_pointer",
+                );
+            } else {
+                let dirty_delta = self.call_stability_entry_dirty_delta(entry);
+                if entry.bloom & dirty_delta == 0 {
+                    record_evaluation_cache_counter(
+                        &CALL_STABILITY_HIT_COUNT,
+                        "call_stability_hits",
+                    );
+                    return (entry.stable, entry.bloom);
+                }
+                record_evaluation_cache_counter(
+                    &CALL_STABILITY_MISS_DIRTY_COUNT,
+                    "call_stability_miss_dirty",
+                );
             }
+        } else {
+            record_evaluation_cache_counter(
+                &CALL_STABILITY_MISS_ABSENT_COUNT,
+                "call_stability_miss_absent",
+            );
         }
 
         record_evaluation_cache_counter(&CALL_STABILITY_MISS_COUNT, "call_stability_misses");
@@ -160,11 +197,16 @@ impl Session {
         // about to be rewritten by evaluation, so its entry would pin a dead
         // tree and never be asked again, while stable subtrees are re-checked
         // by their parents for as long as they stay alive.
-        if stable && bloom & self.stability_rewritten_dirty_bloom == 0 {
-            if self.call_stability_cache.len() > CALL_STABILITY_CACHE_MAX_ENTRIES {
-                self.call_stability_cache.clear();
+        let rewritten_dirty_overlap = bloom & self.stability_rewritten_dirty_bloom != 0;
+        if stable && !rewritten_dirty_overlap {
+            if self.call_stability_cache.len() > call_stability_cache_max_entries() {
+                self.clear_call_stability_cache_for_size_cap();
             }
             let dirty_snapshot = self.stability_dirty_bloom;
+            record_evaluation_cache_counter(
+                &CALL_STABILITY_INSERT_COUNT,
+                "call_stability_insertions",
+            );
             self.call_stability_cache.insert(
                 key,
                 CallStabilityCacheEntry {
@@ -176,6 +218,11 @@ impl Session {
                     dirty_snapshot,
                 },
             );
+        } else if stable {
+            record_evaluation_cache_counter(
+                &CALL_STABILITY_REWRITTEN_DIRTY_SKIP_COUNT,
+                "call_stability_rewritten_dirty_skips",
+            );
         }
         (stable, bloom)
     }
@@ -185,6 +232,38 @@ impl Session {
         let rewritten_after_snapshot = self.stability_rewritten_dirty_bloom & entry.dirty_snapshot;
         newly_dirty | rewritten_after_snapshot
     }
+
+    fn clear_call_stability_cache_for_size_cap(&mut self) {
+        record_evaluation_cache_counter(
+            &CALL_STABILITY_SIZE_CAP_CLEAR_COUNT,
+            "call_stability_size_cap_clears",
+        );
+        self.call_stability_cache.clear();
+    }
+}
+
+#[inline]
+fn call_stability_cache_max_entries() -> usize {
+    static MAX_ENTRIES: OnceLock<usize> = OnceLock::new();
+    *MAX_ENTRIES.get_or_init(|| {
+        std::env::var(CALL_STABILITY_CACHE_MAX_ENTRIES_ENV)
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(CALL_STABILITY_CACHE_MAX_ENTRIES)
+    })
+}
+
+#[inline]
+fn stability_dirty_bloom_max_bits() -> u32 {
+    static MAX_BITS: OnceLock<u32> = OnceLock::new();
+    *MAX_BITS.get_or_init(|| {
+        std::env::var(STABILITY_DIRTY_BLOOM_MAX_BITS_ENV)
+            .ok()
+            .and_then(|value| value.parse::<u32>().ok())
+            .filter(|value| *value >= 1 && *value <= 128)
+            .unwrap_or(STABILITY_DIRTY_BLOOM_MAX_BITS)
+    })
 }
 
 #[inline]

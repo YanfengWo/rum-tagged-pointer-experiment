@@ -6,6 +6,57 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-13 Pair/Simp Stability-Check Amplifier Diagnosis
+
+Completed Task 2b from
+[docs/next-session-handoff.md](./docs/next-session-handoff.md). The unexplained
+warm public mkPair signal is not call-stability cache size-cap thrash, and a
+wider dirty-bloom saturation threshold is a negative optimization. The dominant
+mechanism is fresh pointer-keyed call trees from the Simp/Drule conversion
+chain, with dirty-overlap cache skips as a secondary cost.
+
+The opt-in `RUM_PROFILE_EVALUATION_CACHE=1` counters now also report
+call-stability cache size-cap clears, dirty-bloom saturations, stable insertions,
+rewritten-dirty skips, and miss reasons (`absent`, `generation`, `dirty`,
+`pointer`). Two diagnostic A/B knobs were added for bounded probes only:
+`RUM_CALL_STABILITY_CACHE_MAX_ENTRIES` and
+`RUM_STABILITY_DIRTY_BLOOM_MAX_BITS`.
+
+Counter split on the clean-clone warm public mkPair shape
+(`basicSimpset[]`, `impCongLemma[]`, `andCongLemma[]`, `orCongLemma[]` preheated,
+then `CONVRULE[simpConv[{mkPairDefThm}], lhsAppXY]`):
+
+- default 180s bounded window: timeout, `stability_checks=268M+`,
+  `evaluate_entries=67M+`, `down_value_applications=8M+`,
+  `call_generation_bumps=16k+`, `dirty_bloom_saturations=16k+`,
+  `call_stability_size_cap_clears=1024+`, `call_stability_hits=67M+`,
+  `call_stability_misses=134M+`, `call_stability_insertions=16M+`, and
+  `call_stability_rewritten_dirty_skips=33M+`.
+- 16x cache-cap A/B (`RUM_CALL_STABILITY_CACHE_MAX_ENTRIES=262144`) also timed
+  out at 180s with the same major lower bounds; only
+  `call_stability_size_cap_clears` fell to `32+`. This rejects size-cap thrash
+  as the amplifier.
+- dirty-bloom threshold A/B
+  (`RUM_STABILITY_DIRTY_BLOOM_MAX_BITS=128`) also timed out and was worse:
+  `call_generation_bumps`/`dirty_bloom_saturations` disappeared, but
+  `stability_checks=4B+`, `call_stability_misses=1B+`,
+  `call_stability_rewritten_dirty_skips=1B+`, `call_stability_hits=32k+`, and
+  `call_stability_insertions=2k+`. The generation bump is therefore a
+  protective reset against rewritten-dirty accumulation, not the primary
+  amplifier.
+- default 120s miss-reason window: timeout, `stability_checks=268M+`,
+  `evaluate_entries=67M+`, `down_value_applications=8M+`,
+  `call_stability_miss_absent=67M+`, `call_stability_miss_dirty=33M+`,
+  `call_stability_miss_generation=4M+`, and no visible pointer-mismatch lower
+  bound. The main misses are absent pointer keys, not stale generations.
+
+Verdict: no cheap cache-cap or bloom-threshold fix closes the gate. The warm
+public mkPair / `Pair.wl` gate should move either to a downstream `Simp`
+algorithm experiment that avoids rebuilding the nested `ORELSEC` conversion
+chain, or to the larger runtime representation lane (single-allocation call
+nodes with inline stable/evaluated stamps and borrowed argument preparation).
+Do not spend more time on call-cache knob tuning without a new probe signal.
+
 ## 2026-06-12 `Catch` Tag-Form Evaluation Fix
 
 Closed the `mma-hol` Meson semantic bug identified in

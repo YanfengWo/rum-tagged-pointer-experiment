@@ -146,14 +146,17 @@ Completed history, archived planning detail, and operational lessons live in
   `20.27s` and user-rule-only mkPair simplification at about `40.61s`.
   Warm public mkPair simplification still times out at `240s` after those
   cuts.
-  The remaining Pair work should therefore be treated as either a real
-  `Simp` algorithmic change in the downstream package or the larger runtime
-  representation / argument-preparation lane; avoid more narrow
-  micro-optimizations unless a probe identifies a new hot construct. The
-  diagnostic plan lives in
-  [docs/next-session-handoff.md](./docs/next-session-handoff.md).
+  The follow-up stability-check amplifier diagnosis is now complete (see
+  `PROGRESS.md`): 16x call-cache capacity does not move the warm probe, and
+  disabling dirty-bloom saturation bumps is much worse. Miss-reason counters
+  point mostly at absent pointer-keyed call entries, so the remaining Pair work
+  should be treated as either a real `Simp` algorithmic change in the
+  downstream package or the larger runtime representation / argument-preparation
+  lane. Avoid more call-cache knob tuning unless a probe identifies a new hot
+  construct.
   Performance status, retained work, and rejected probes are recorded in
-  `PROGRESS.md` under "2026-06-12 Representation Optimization Pass",
+  `PROGRESS.md` under "2026-06-13 Pair/Simp Stability-Check Amplifier
+  Diagnosis", "2026-06-12 Representation Optimization Pass",
   "2026-06-12 Same-Bit Stability Invalidation Follow-Up", and
   "2026-06-12 Block Scope Invalidation Fix", and in
   `docs/proptaut-performance-audit.md`; resume from those, not from this
