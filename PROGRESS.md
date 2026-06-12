@@ -6,6 +6,42 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-12 Block Scope Invalidation Fix (External)
+
+Re-examined the same-bit follow-up below with a decomposed re-access probe
+and corrected the earlier diagnosis: the slow interleaved-write shape was
+never about the dirty-bloom same-bit fallback. `Do[e2;, {100}]` re-accessed
+a cached 100k-node expression at `2.3us` per iteration while
+`Do[e2;, {i, 100}]` cost `428us` per iteration with no writes at all — the
+cost was the iterator binding, not the write invalidation. Do/Table
+iterator bindings wrap each iteration in `Block[{i = value}, body]`, and
+Block entry and exit each called `bump_attribute_revision()`
+unconditionally, which clears all three stability caches and invalidates
+every compiled definition matcher twice per iteration; the scope-exit path
+also rebuilt the message-symbol counts once per restored symbol.
+
+The retained fix (`6df7bfe`) grades Block entry/exit invalidation by what
+actually changed: definition shadow/restore invalidates just the affected
+symbol, the attribute revision bumps only when an attribute set really
+changed, and message-symbol counts rebuild at most once per scope exit.
+The re-access probe drops from `332us` to `5.8us` per iteration and stays
+flat in expression size. The PropTaut distribution probe is unchanged
+(`13.2-13.4s`; its hot path holds no Blocks), `bool_tests` stays green, and
+`cargo test -p rum-runtime` passes.
+
+Consequences of this correction for the planning notes below: both the
+same-bit rewritten-bloom scheme and the rejected exact-version experiments
+were optimizing a path that the motivating probe never exercised; their
+small effect sizes are explained. The probe-visible invalidation lane is
+now genuinely closed. `meson_tests.wl` now completes inside a `300s`
+budget and reports `List[34, 9]` — the 9 failures reproduce identically
+on the pre-fix commit, so the Meson lane has crossed from a performance
+gate to a semantic-triage gate. `stdlib/Pair.wl` still exceeds a `600s`
+load budget with the fix in place, so the Pair gate is not a Block-scope
+artifact; the next step there is a logical-work comparison of the
+`Simp` simpset construction path against WolframKernel (multiplier hunt),
+not further constant-factor tuning.
+
 ## 2026-06-12 v0.1 Acceptance Boundary
 
 Added [docs/v0.1-acceptance-boundary.md](./docs/v0.1-acceptance-boundary.md)
