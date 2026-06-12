@@ -72,14 +72,17 @@ first stdlib/auto failure beyond Parser/Printer is still the `PropTaut` /
 Stable snapshot partial validation is in place on the same clone:
 `tests/build_snapshot.wls Parser` writes a Stable `bootstrap.mx`,
 `tests/run_fast.wls parser` exits `0` with visible parser logs, and
-`tests/extend_snapshot.wls auto/PropTaut.wl` re-dumps quietly after the
-`$Packages` restore cleanup. Use
+`tests/extend_snapshot.wls auto/PropTaut.wl` re-dumps quietly on the current
+rum textual `DumpSave` restore path, which now auto-registers restored public
+package contexts in `$Packages` and `$ContextPath`. This snapshot lane was
+also revalidated on a refreshed unmodified clone at
+`/private/tmp/rum-mma-hol-unmodified.itrrai/mma-hol` (HEAD `51bbe9e`). Use
 `scripts/mma-hol-bounded-smoke.sh --mode snapshot` for this lane. `SelectFirst`,
 loaded-file `Print` propagation through `Get`, and CLI print preservation
 before `Exit[n]` are implemented for this workflow. Full `build_snapshot.wls`
-remains blocked by the `Pair.wl` / `Simp` performance gate. The fixed probe
-clone has the `extend_snapshot.wls` `$Packages` cleanup; carry that patch
-forward before replacing it with a refreshed live-tree clone.
+remains blocked by the `Pair.wl` / `Simp` performance gate. Do not carry the
+old `extend_snapshot.wls` `$Packages` workaround into upstream `mma-hol`; it
+masked a rum restore divergence that is now fixed in runtime.
 
 The PropTaut performance lane has been reopened by external review and a
 follow-up same-bit stability-invalidation experiment. The retained current

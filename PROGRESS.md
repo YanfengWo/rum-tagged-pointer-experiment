@@ -6,6 +6,39 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-13 DumpSave Package Registration Restore
+
+Closed the stable-snapshot `$Packages` workaround as a rum runtime conformance
+bug. `mma-hol` maintainers verified that Wolfram Language 14.3 restores package
+registration when `Get` reads a `DumpSave` `.mx`: public package contexts from
+the snapshot reappear in both `$Packages` and `$ContextPath`, while
+`` `Private` `` contexts do not. The earlier proposal to patch
+`tests/extend_snapshot.wls` therefore masked a rum restore divergence and
+should not be carried into upstream `mma-hol`.
+
+rum's textual `DumpSave` now writes restore metadata for package contexts that
+were present in the dumping session's `$Packages` and covered by the saved
+symbol set. Reading the snapshot through ordinary `Get` evaluates that metadata
+before the saved definitions, restoring the public package contexts to
+`$Packages` and `$ContextPath` while excluding `` `Private` `` contexts.
+
+Regression coverage updates
+`dump_save_context_strings_roundtrip_public_and_private_contexts`: after
+`Get[bootstrap.mx]`, `Select[$Packages, StringMatchQ[#, "Snap`*"] &]` and the
+matching `$ContextPath` query both return only `"Snap`"`, short-name
+`public[9]` resolves, and `Needs["Snap`"]` is a no-op.
+
+Validation:
+
+- `cargo test -p rum-runtime dump_save_context_strings_roundtrip_public_and_private_contexts`
+- `cargo test -p rum-runtime package_tools`
+- `scripts/mma-hol-bounded-smoke.sh --mode snapshot` with release `rum-cli` on
+  a refreshed unmodified clone at
+  `/private/tmp/rum-mma-hol-unmodified.itrrai/mma-hol` (HEAD `51bbe9e`):
+  `snapshot/build-parser`, `snapshot/run-fast-parser`, and
+  `snapshot/extend-proptaut` all exited `0`; `snapshot_extend-proptaut.stderr`
+  was empty.
+
 ## 2026-06-13 Pair/Simp Stability-Check Amplifier Diagnosis
 
 Completed Task 2b from
@@ -305,11 +338,12 @@ snapshot/run-fast-parser   ok
 snapshot/extend-proptaut   ok
 ```
 
-The fixed probe clone's `tests/extend_snapshot.wls` now restores `$Packages`
-alongside `$ContextPath`, so extending through `auto/PropTaut.wl` no longer
-emits dependency `Needs` noise. The upstream/live `mma-hol` tree should carry
-the same one-line script cleanup before a refreshed probe clone replaces this
-one.
+This run originally used a fixed probe clone whose `tests/extend_snapshot.wls`
+restored `$Packages` alongside `$ContextPath`, making
+`auto/PropTaut.wl` extension quiet. That workaround was later superseded by
+the 2026-06-13 rum runtime fix: textual `DumpSave` restore now auto-registers
+public package contexts, matching the WolframKernel behavior observed by
+`mma-hol` maintainers.
 
 The CLI now renders accumulated prints/messages before honoring `Exit[n]`, so
 `tests/run_fast.wls parser` produces visible progress and parser test logs

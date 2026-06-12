@@ -855,15 +855,16 @@ Strict/stable snapshot boundary:
   file existence/date/size helpers, `AbsoluteTime`, `Round`, recursive
   `FileNames[..., ..., Infinity]`, string wildcard filters such as `"HOL`*"`,
   `SelectFirst` partial layer selection, context-string `DumpSave`,
-  loaded-file `Print` propagation through `Get`, and restore-time
-  `$ContextPath` / `$Packages` session-field assignment. The bounded snapshot
-  harness mode now validates the fixed probe clone: `tests/build_snapshot.wls
-  Parser` writes a Stable snapshot, `tests/run_fast.wls parser` exits `0` with
-  visible parser logs, and `tests/extend_snapshot.wls auto/PropTaut.wl`
-  re-dumps quietly after the `$Packages` restore cleanup. Full
-  `build_snapshot.wls` remains behind the current `Pair.wl` / `Simp`
-  performance gate; carry the `$Packages` cleanup forward before refreshing the
-  probe clone from the live `mma-hol` tree.
+  loaded-file `Print` propagation through `Get`, restore-time `$ContextPath` /
+  `$Packages` session-field assignment, and automatic registration of restored
+  public package contexts from textual `DumpSave` snapshots. The bounded
+  snapshot harness mode validates the fixed probe clone:
+  `tests/build_snapshot.wls Parser` writes a Stable snapshot,
+  `tests/run_fast.wls parser` exits `0` with visible parser logs, and
+  `tests/extend_snapshot.wls auto/PropTaut.wl` re-dumps quietly. The same lane
+  has been re-run on a refreshed unmodified `mma-hol` clone at HEAD `51bbe9e`.
+  Full `build_snapshot.wls` remains behind the current `Pair.wl` / `Simp`
+  performance gate.
 - The current stable snapshot gap audit lives in
   [docs/mma-hol-smoke-and-snapshot.md](./mma-hol-smoke-and-snapshot.md).
 
@@ -931,7 +932,8 @@ the `mma-hol` lane healthy:
   the stable-mode snapshot-backed `run_fast.wls` workflow and for practical
   `rum-hol` development. `Contexts[]` now enumerates first-pass session
   contexts, `DumpSave[file, Evaluate[contexts]]` accepts context strings and
-  round-trips a tiny public/private context tree, and `$ContextPath` /
+  round-trips a tiny public/private context tree while restoring public package
+  contexts into `$Packages` and `$ContextPath`, and `$ContextPath` /
   `$Packages` assignment mutates session fields. The remaining work is full
   stable-script validation against the current `mma-hol` tree.
 - script/package source compatibility: initial shebang lines and multiline

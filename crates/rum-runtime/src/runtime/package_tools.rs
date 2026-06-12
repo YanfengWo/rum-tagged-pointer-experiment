@@ -334,10 +334,16 @@ impl Session {
     fn render_saved_symbols(
         &self,
         symbols: &[Symbol],
-        _textual_dump: bool,
+        textual_dump: bool,
         include_attributes: bool,
     ) -> String {
         let mut blocks = Vec::new();
+
+        if textual_dump {
+            if let Some(block) = self.render_dump_save_package_restore(symbols) {
+                blocks.push(block);
+            }
+        }
 
         for symbol in symbols {
             let symbol_block = self.render_saved_symbol(symbol, include_attributes);
@@ -351,6 +357,64 @@ impl Session {
         } else {
             format!("{}\n", blocks.join("\n\n"))
         }
+    }
+
+    fn render_dump_save_package_restore(&self, symbols: &[Symbol]) -> Option<String> {
+        let contexts = self.dump_save_package_restore_contexts(symbols);
+        if contexts.is_empty() {
+            return None;
+        }
+
+        let context_list = Expr::call(
+            system_expr("List"),
+            contexts.into_iter().map(Expr::string).collect(),
+        );
+        let context_path_restore = Expr::call(
+            system_expr("Set"),
+            vec![
+                system_expr("$ContextPath"),
+                Expr::call(
+                    system_expr("Join"),
+                    vec![context_list.clone(), system_expr("$ContextPath")],
+                ),
+            ],
+        );
+        let packages_restore = Expr::call(
+            system_expr("Set"),
+            vec![
+                system_expr("$Packages"),
+                Expr::call(
+                    system_expr("Union"),
+                    vec![system_expr("$Packages"), context_list],
+                ),
+            ],
+        );
+
+        Some(format!("{context_path_restore}\n{packages_restore}"))
+    }
+
+    fn dump_save_package_restore_contexts(&self, symbols: &[Symbol]) -> Vec<String> {
+        let saved_contexts: BTreeSet<&str> = symbols.iter().map(Symbol::context).collect();
+        let mut contexts = Vec::new();
+
+        for context in &self.loaded_packages {
+            if is_private_context(context) {
+                continue;
+            }
+
+            if !saved_contexts
+                .iter()
+                .any(|saved| *saved == context.as_str() || saved.starts_with(context.as_str()))
+            {
+                continue;
+            }
+
+            if !contexts.iter().any(|existing| existing == context) {
+                contexts.push(context.clone());
+            }
+        }
+
+        contexts
     }
 
     fn render_saved_symbol(&self, symbol: &Symbol, include_attributes: bool) -> String {
@@ -621,4 +685,8 @@ impl Session {
             PersistContextSelection::Explicit(contexts) => contexts.contains(context),
         }
     }
+}
+
+fn is_private_context(context: &str) -> bool {
+    context.ends_with("`Private`")
 }

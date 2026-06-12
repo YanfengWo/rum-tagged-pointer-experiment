@@ -196,23 +196,31 @@ EndPackage[]
             .to_string(),
         "List[\"Snap`\", \"Snap`Private`\"]"
     );
-    restored
-        .eval_text(
-            "$ContextPath = Join[Select[Contexts[], StringMatchQ[#, \"Snap`*\"] &], $ContextPath]",
-        )
-        .unwrap();
-    restored
-        .eval_text(
-            "$Packages = Union[$Packages, Select[Contexts[], StringMatchQ[#, \"Snap`*\"] &]]",
-        )
-        .unwrap();
+    assert_eq!(
+        restored
+            .eval_text("Select[$Packages, StringMatchQ[#, \"Snap`*\"] &]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"Snap`\"]"
+    );
+    assert_eq!(
+        restored
+            .eval_text("Select[$ContextPath, StringMatchQ[#, \"Snap`*\"] &]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"Snap`\"]"
+    );
     assert_eq!(
         restored.eval_text("public[9]").unwrap().value.to_string(),
         "10"
     );
+    let needs = restored.eval_text("Needs[\"Snap`\"]").unwrap();
+    assert_eq!(needs.value.to_string(), "Null");
     assert_eq!(
         restored.eval_text("$Packages").unwrap().value.to_string(),
-        "List[\"Snap`\", \"Snap`Private`\"]"
+        "List[\"Snap`\"]"
     );
 }
 

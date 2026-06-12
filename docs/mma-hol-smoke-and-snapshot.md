@@ -94,7 +94,8 @@ textual `rum` snapshot format that must round-trip through `Get`.
 - `FileByteCount`
 - `Get[snapshotFile]`
 - `Contexts[]`
-- `$ContextPath` restore
+- snapshot-restored public package contexts available through `$ContextPath`
+  and `$Packages`
 - ordered load of new relative files
 - `DumpSave[snapshotFile, Evaluate[holContexts]]`
 
@@ -136,8 +137,8 @@ The snapshot mode runs `snapshot/build-parser`, `snapshot/run-fast-parser`, and
 the same `summary.tsv`, `*.expr`, `*.stdout`, and `*.stderr` artifacts as the
 cold smoke lanes.
 
-Validated on 2026-06-12 against the fixed clean clone at
-`/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol`:
+Validated on 2026-06-13 against the refreshed unmodified clone at
+`/private/tmp/rum-mma-hol-unmodified.itrrai/mma-hol` (HEAD `51bbe9e`):
 
 - `tests/build_snapshot.wls Parser` succeeds in Stable mode, loading 11 of 32
   libraries and writing a partial `bootstrap.mx` of about `11904 KB`.
@@ -145,9 +146,11 @@ Validated on 2026-06-12 against the fixed clean clone at
   The dedicated snapshot harness now captures the visible parser test log,
   ending with `passed: 78` and `failed: 0`.
 - `tests/extend_snapshot.wls auto/PropTaut.wl` exits with status `0` and
-  re-dumps the snapshot at about `11940 KB`. The fixed probe clone restores
-  `$Packages` alongside `$ContextPath`, so this stage is quiet; carry the same
-  script cleanup forward when refreshing from the live `mma-hol` tree.
+  re-dumps the snapshot at about `11945 KB`. The current rum textual
+  `DumpSave` restore path auto-registers restored public package contexts in
+  `$Packages` and `$ContextPath`, so this stage should stay quiet on an
+  unmodified `mma-hol` tree; the latest `snapshot_extend-proptaut.stderr` was
+  empty.
 
 Not yet closed for stable snapshot scripts:
 
@@ -156,8 +159,7 @@ Not yet closed for stable snapshot scripts:
 
 ### Recommended Next Order
 
-1. Promote the snapshot mode into the regular `mma-hol` smoke checklist once
-   the live `mma-hol` tree carries the `$Packages` restore cleanup.
+1. Keep the unmodified-clone snapshot mode in the regular smoke checklist.
 2. Add a heavier snapshot stage only after it is worth spending time on the
    `PropTaut` / `Simp` downstream gate.
 3. Keep any private-context lint probe below the cold and stable snapshot lanes.
