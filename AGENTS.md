@@ -67,6 +67,16 @@ Current clean-clone smoke results are: `bool_tests.wl` `List[73, 0]`,
 first stdlib/auto failure beyond Parser/Printer is still the `PropTaut` /
 `Simp` path behind `Pair.wl`.
 
+Stable snapshot partial validation is in place on the same clone:
+`tests/build_snapshot.wls Parser` writes a Stable `bootstrap.mx`,
+`tests/run_fast.wls parser` exits `0`, and a manual restore plus
+`parser_tests.wl` summary reports `List[78, 0]`. `SelectFirst` and loaded-file
+`Print` propagation through `Get` are implemented for this lane. Full
+`build_snapshot.wls` remains blocked by the `Pair.wl` / `Simp` performance gate;
+`tests/extend_snapshot.wls` works for `auto/PropTaut.wl` but still emits noisy
+dependency `Needs` messages until it restores `$Packages` as well as
+`$ContextPath`.
+
 The PropTaut performance lane has been reopened by external review and a
 follow-up same-bit stability-invalidation experiment. The retained current
 frontier is the PropTaut distribution probe at about `12.73-12.88s` in release

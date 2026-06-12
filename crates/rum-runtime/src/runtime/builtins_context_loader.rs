@@ -175,6 +175,7 @@ impl Session {
         match self.eval_file(path) {
             Ok(outcome) => {
                 self.messages.extend(outcome.messages);
+                self.prints.extend(outcome.prints);
                 Ok(outcome.value)
             }
             Err(err) => {

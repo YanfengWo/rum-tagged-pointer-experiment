@@ -86,6 +86,54 @@ fn accumulate_blockmap_takewhile_and_fold_family_cover_current_subset() {
     );
     assert_eq!(
         session
+            .eval_text("SelectFirst[{2, 4, 5, 7}, OddQ]")
+            .unwrap()
+            .value
+            .to_string(),
+        "5"
+    );
+    assert_eq!(
+        session
+            .eval_text("SelectFirst[{2, 4}, OddQ]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Missing[\"NotFound\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("SelectFirst[{2, 4}, OddQ, fallback]")
+            .unwrap()
+            .value
+            .to_string(),
+        "fallback"
+    );
+    assert_eq!(
+        session
+            .eval_text("SelectFirst[OddQ][{2, 3, 4}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("SelectFirst[<|a -> 2, b -> 3|>, OddQ]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("libs = {{\"ErrorUtil.wl\"}, {\"Parser.wl\"}}; SelectFirst[Range[Length[libs]], StringContainsQ[Last[libs[[#]]], \"Parser\"] &, $Failed]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
             .eval_text("Fold[f][{a, b, c}]")
             .unwrap()
             .value

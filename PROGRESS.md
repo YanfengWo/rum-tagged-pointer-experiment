@@ -6,6 +6,39 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-12 `mma-hol` Stable Snapshot Validation
+
+Ran the stable snapshot lane against the fixed clean clone at
+`/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol`, bounded through
+`scripts/run-bounded.py`.
+
+- Added the missing `SelectFirst` sequence subset needed by
+  `tests/build_snapshot.wls` partial layer selection. The supported forms now
+  cover unary operator form, two-argument search, three-argument default, and
+  the snapshot shape
+  `SelectFirst[Range[Length[libs]], StringContainsQ[Last[libs[[#]]], pat] &, $Failed]`.
+- Fixed `Get` to propagate `Print` output from loaded files, so snapshot
+  scripts keep useful progress logs when they are invoked through `Get`.
+- `tests/build_snapshot.wls Parser` now succeeds through 11 of 32 libraries in
+  Stable mode, dumps 21 `HOL` contexts, and writes
+  `/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol/bootstrap.mx` at about
+  `11904 KB`.
+- `tests/run_fast.wls parser` exits with status `0` against that snapshot. A
+  manual restore+harness+`parser_tests.wl` summary, avoiding the script's final
+  `testExit[]`, reports `List[78, 0]`.
+- `tests/extend_snapshot.wls auto/PropTaut.wl` exits with status `0`, restores
+  the Parser snapshot, loads `auto/PropTaut.wl`, and re-dumps 23 `HOL`
+  contexts at about `11940 KB`. It currently emits noisy dependency `Needs`
+  messages because the script restores `$ContextPath` but not `$Packages` after
+  `DumpSave` restore; `tests/run_fast.wls` already handles both. This is a
+  stable-script cleanup item, not a core runtime blocker.
+
+Remaining snapshot boundaries: full `build_snapshot.wls` still runs into the
+known downstream `Pair.wl` / `Simp` performance gate; `run_fast.wls` progress
+prints are not shown by the CLI when the script ends via `Exit[0]`, because the
+CLI currently maps `Exit` request failures directly to process status. Use a
+manual `testSummary[]`-ending harness expression when visible logs are needed.
+
 ## 2026-06-12 Same-Bit Stability Invalidation Follow-Up
 
 Followed the external pass recommendation to test the same-symbol rewrite

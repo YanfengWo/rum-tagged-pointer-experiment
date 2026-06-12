@@ -492,17 +492,17 @@ fn begin_package_expands_relative_context_specs_against_the_current_context() {
 #[test]
 fn get_loads_a_script_file_and_returns_the_last_value() {
     let dir = TempDirGuard::new("get");
-    let file = dir.write("script.rum", "x = 1\npair = {\n  x,\n  2\n}\npair");
+    let file = dir.write(
+        "script.rum",
+        "Print[\"loading script\"]\nx = 1\npair = {\n  x,\n  2\n}\npair",
+    );
     let mut session = Session::new();
 
-    assert_eq!(
-        session
-            .eval_text(&format!("Get[\"{}\"]", rum_path(&file)))
-            .unwrap()
-            .value
-            .to_string(),
-        "List[1, 2]"
-    );
+    let outcome = session
+        .eval_text(&format!("Get[\"{}\"]", rum_path(&file)))
+        .unwrap();
+    assert_eq!(outcome.value.to_string(), "List[1, 2]");
+    assert_eq!(outcome.prints, vec!["loading script"]);
     assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
 }
 

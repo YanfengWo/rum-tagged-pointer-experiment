@@ -647,6 +647,7 @@ pub enum BuiltinHandler {
     ArrayReduce,
     Outer,
     Select,
+    SelectFirst,
     Apply,
     MapApply,
     OperatorApplied,

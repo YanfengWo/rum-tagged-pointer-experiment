@@ -70,6 +70,36 @@ impl Session {
         }
     }
 
+    pub(in crate::runtime) fn eval_select_first(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        match args {
+            [criterion] => Ok(unary_operator_form_slot_first("SelectFirst", criterion)),
+            [expr, criterion] => {
+                let Some(source) = sequence_like_from_expr(expr) else {
+                    return Ok(Expr::call(system_expr("SelectFirst"), args.to_vec()));
+                };
+
+                self.resume_select_first_from_index(
+                    source,
+                    criterion.clone(),
+                    missing_not_found_expr(),
+                    0,
+                )
+            }
+            [expr, criterion, default] => {
+                let Some(source) = sequence_like_from_expr(expr) else {
+                    return Ok(Expr::call(system_expr("SelectFirst"), args.to_vec()));
+                };
+
+                self.resume_select_first_from_index(source, criterion.clone(), default.clone(), 0)
+            }
+            _ => Ok(self.invalid_call_with_arg_range("SelectFirst", args, 1, 3)),
+        }
+    }
+
     fn resume_select_from_index(
         &mut self,
         source: SelectSource,
@@ -128,6 +158,58 @@ impl Session {
         }
 
         self.resume_select_from_index(source, criterion, limit, index + 1, selected)
+    }
+
+    fn resume_select_first_from_index(
+        &mut self,
+        source: SelectSource,
+        criterion: Expr,
+        default: Expr,
+        index: usize,
+    ) -> Result<Expr, EvalError> {
+        if index >= source_len(&source) {
+            return Ok(default);
+        }
+        if index >= self.resource_limits.iteration_work_limit {
+            return Err(EvalError::IterationWorkLimitExceeded {
+                limit: self.resource_limits.iteration_work_limit,
+            });
+        }
+
+        let Some(item) = source_item_value(&source, index) else {
+            return Ok(default);
+        };
+        let call = Expr::call(criterion.clone(), vec![item]);
+        let suspended_source = source.clone();
+        let suspended_criterion = criterion.clone();
+        let suspended_default = default.clone();
+        let value_result = self.evaluate(call);
+        let value = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_select_first_with_value(
+                suspended_source,
+                suspended_criterion,
+                suspended_default,
+                index,
+                value,
+            )
+        })?;
+
+        self.resume_select_first_with_value(source, criterion, default, index, value)
+    }
+
+    fn resume_select_first_with_value(
+        &mut self,
+        source: SelectSource,
+        criterion: Expr,
+        default: Expr,
+        index: usize,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        if truthiness_symbol(&value) == Some(true) {
+            return Ok(source_item_value(&source, index).unwrap_or(default));
+        }
+
+        self.resume_select_first_from_index(source, criterion, default, index + 1)
     }
 }
 
@@ -207,4 +289,8 @@ fn render_select_result(source: SelectSource, selected: Vec<Expr>) -> Expr {
                 .collect(),
         ),
     }
+}
+
+fn missing_not_found_expr() -> Expr {
+    Expr::call(system_expr("Missing"), vec![Expr::string("NotFound")])
 }

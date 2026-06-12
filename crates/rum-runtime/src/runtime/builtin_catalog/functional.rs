@@ -213,4 +213,9 @@ pub(super) const FUNCTIONAL_BUILTINS: &[BuiltinSpec] = &[
         "Selects elements satisfying a criterion in the current sequence subset.",
         BuiltinHandler::Select,
     ),
+    BuiltinSpec::ordinary(
+        "SelectFirst",
+        "Returns the first element satisfying a criterion in the current sequence subset.",
+        BuiltinHandler::SelectFirst,
+    ),
 ];

@@ -854,11 +854,15 @@ Strict/stable snapshot boundary:
 - The stable snapshot helper surface now has first-pass support: `Contexts[]`,
   file existence/date/size helpers, `AbsoluteTime`, `Round`, recursive
   `FileNames[..., ..., Infinity]`, string wildcard filters such as `"HOL`*"`,
-  context-string `DumpSave`, and restore-time `$ContextPath` / `$Packages`
-  session-field assignment. The full `tests/build_snapshot.wls` /
-  `tests/run_fast.wls` scripts still need validation against the current
-  `mma-hol` tree before they can be treated as the practical development loop
-  for `rum-hol`.
+  `SelectFirst` partial layer selection, context-string `DumpSave`,
+  loaded-file `Print` propagation through `Get`, and restore-time
+  `$ContextPath` / `$Packages` session-field assignment. Partial validation
+  against the fixed clean clone now works: `tests/build_snapshot.wls Parser`
+  writes a Stable snapshot, `tests/run_fast.wls parser` exits `0`, and a manual
+  restore plus `parser_tests.wl` summary reports `List[78, 0]`. Full
+  `build_snapshot.wls` remains behind the current `Pair.wl` / `Simp`
+  performance gate; `extend_snapshot.wls` also needs a small `$Packages`
+  restore cleanup before it is promoted as a quiet development-loop command.
 - The current stable snapshot gap audit lives in
   [docs/mma-hol-smoke-and-snapshot.md](./mma-hol-smoke-and-snapshot.md).
 

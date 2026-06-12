@@ -74,6 +74,7 @@ impl Session {
             BuiltinHandler::ArrayReduce => self.eval_array_reduce(head, args),
             BuiltinHandler::Outer => self.eval_outer(head, args),
             BuiltinHandler::Select => self.eval_select(head, args),
+            BuiltinHandler::SelectFirst => self.eval_select_first(head, args),
             BuiltinHandler::Apply => self.eval_apply(head, args),
             BuiltinHandler::MapApply => self.eval_map_apply(head, args),
             BuiltinHandler::OperatorApplied => self.eval_operator_applied(head, args),

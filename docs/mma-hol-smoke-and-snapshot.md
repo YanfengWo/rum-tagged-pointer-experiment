@@ -107,6 +107,7 @@ Already covered enough for cold or partial snapshot work:
   first-pass `FileNames`, including `FileNames[pattern, dir, Infinity]`
 - `StringContainsQ` and current `StringMatchQ` subset
 - `StringMatchQ` string wildcards such as `"HOL`*"` for context filtering
+- `SelectFirst` for partial snapshot layer selection
 - `Contexts[]` first-pass session context enumeration
 - `FileExistsQ`, `FileDate[..., "Modification"]`, `FileByteCount`,
   `AbsoluteTime`, and `Round` for snapshot freshness and timing reports
@@ -115,21 +116,41 @@ Already covered enough for cold or partial snapshot work:
   semantics
 - textual `Save` / `DumpSave` object persistence and `Get` restore for the
   current saved-definition subset
+- `Get` propagates `Print` output from loaded files, so snapshot progress logs
+  remain visible when scripts are invoked through a wrapper expression
 - `DumpSave[file, Evaluate[contexts]]` where `contexts` is a list of context
   strings, plus restore-time `$ContextPath` / `$Packages` session-field
   assignment, covered by a tiny public/private context regression
 
+Validated on 2026-06-12 against the fixed clean clone at
+`/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol`:
+
+- `tests/build_snapshot.wls Parser` succeeds in Stable mode, loading 11 of 32
+  libraries and writing a partial `bootstrap.mx` of about `11904 KB`.
+- `tests/run_fast.wls parser` exits with status `0` against that snapshot.
+  A manual restore+harness+`parser_tests.wl` expression ending in
+  ``HOLTest`testSummary[]`` reports `List[78, 0]`.
+- `tests/extend_snapshot.wls auto/PropTaut.wl` exits with status `0` and
+  re-dumps the snapshot at about `11940 KB`, but emits dependency `Needs`
+  messages because the script restores `$ContextPath` and not `$Packages`.
+  `run_fast.wls` already restores both fields, so this is a stable-script
+  cleanup item.
+
 Not yet closed for stable snapshot scripts:
 
-- full `tests/build_snapshot.wls` / `tests/run_fast.wls` validation against the
-  current `mma-hol` tree
+- full `tests/build_snapshot.wls` validation still runs into the known
+  downstream `Pair.wl` / `Simp` performance gate
+- CLI-visible `run_fast.wls` progress logs remain limited when the script ends
+  through ``HOLTest`testExit[]`` / `Exit[0]`; the process status is still
+  usable, and a manual `testSummary[]` wrapper gives visible logs for triage
 
 ### Recommended Next Order
 
-1. Try `tests/build_snapshot.wls` only through the current green cold frontier,
-   then use `tests/run_fast.wls` on one small test pattern.
-2. If that works, promote the stable script probe into the bounded smoke driver
-   as a separate non-performance lane.
+1. Add a dedicated snapshot mode to `scripts/mma-hol-bounded-smoke.sh` so the
+   partial build, restore+small-test, and extend probes are reproducible and
+   summarized like the cold load/test lanes.
+2. Patch or upstream the `extend_snapshot.wls` `$Packages` restore cleanup, then
+   rerun the `auto/PropTaut.wl` extension probe without dependency-load noise.
 3. Keep any private-context lint probe below the cold and stable snapshot lanes.
 
 Keep this lane below the cold semantic smoke while `PropTaut` / `Simp` remains
