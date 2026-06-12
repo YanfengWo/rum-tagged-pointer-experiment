@@ -11,23 +11,32 @@ use serde::{Deserialize, Serialize};
 pub const GLOBAL_CONTEXT: &str = "Global`";
 pub const SYSTEM_CONTEXT: &str = "System`";
 
-/// A symbol with interned context/name text.
-///
-/// Equality and hashing operate on the interned pair id plus the optional
-/// generated identity, so they are integer operations independent of name
-/// length. Ordering remains lexicographic over `(context, name, identity)`
-/// to preserve canonical ordering semantics.
-#[derive(Clone, Copy, Debug)]
-pub struct Symbol {
+/// Interned `(context, name)` pair shared by every symbol with that text.
+/// One instance is leaked per distinct pair, so pointer identity implies
+/// text identity.
+#[derive(Debug)]
+pub struct SymbolText {
     id: u32,
-    identity: Option<u64>,
     context: &'static str,
     name: &'static str,
 }
 
+/// A symbol referencing interned context/name text.
+///
+/// Equality and hashing operate on the interned text pointer/id plus the
+/// optional generated identity, so they are integer operations independent
+/// of name length. Ordering remains lexicographic over
+/// `(context, name, identity)` to preserve canonical ordering semantics.
+#[derive(Clone, Copy, Debug)]
+pub struct Symbol {
+    id: u32,
+    identity: Option<u64>,
+    text: &'static SymbolText,
+}
+
 struct SymbolInterner {
     strings: HashSet<&'static str>,
-    pairs: HashMap<(usize, usize), u32>,
+    pairs: HashMap<(usize, usize), &'static SymbolText>,
 }
 
 fn symbol_interner() -> &'static Mutex<SymbolInterner> {
@@ -50,7 +59,7 @@ fn intern_text(strings: &mut HashSet<&'static str>, value: &str) -> &'static str
     }
 }
 
-fn intern_symbol_parts(context: &str, name: &str) -> (u32, &'static str, &'static str) {
+fn intern_symbol_text(context: &str, name: &str) -> &'static SymbolText {
     let mut interner = symbol_interner()
         .lock()
         .expect("symbol interner lock should not be poisoned");
@@ -59,8 +68,13 @@ fn intern_symbol_parts(context: &str, name: &str) -> (u32, &'static str, &'stati
     let name = intern_text(strings, name);
     let key = (context.as_ptr() as usize, name.as_ptr() as usize);
     let next_id = u32::try_from(pairs.len()).expect("interned symbol count should fit in u32");
-    let id = *pairs.entry(key).or_insert(next_id);
-    (id, context, name)
+    pairs.entry(key).or_insert_with(|| {
+        Box::leak(Box::new(SymbolText {
+            id: next_id,
+            context,
+            name,
+        }))
+    })
 }
 
 fn canonical_system_symbols() -> &'static HashMap<&'static str, Symbol> {
@@ -75,22 +89,20 @@ fn canonical_system_symbols() -> &'static HashMap<&'static str, Symbol> {
 
 impl Symbol {
     pub fn new(context: impl AsRef<str>, name: impl AsRef<str>) -> Self {
-        let (id, context, name) = intern_symbol_parts(context.as_ref(), name.as_ref());
+        let text = intern_symbol_text(context.as_ref(), name.as_ref());
         Self {
-            id,
+            id: text.id,
             identity: None,
-            context,
-            name,
+            text,
         }
     }
 
     pub fn with_identity(context: impl AsRef<str>, name: impl AsRef<str>, identity: u64) -> Self {
-        let (id, context, name) = intern_symbol_parts(context.as_ref(), name.as_ref());
+        let text = intern_symbol_text(context.as_ref(), name.as_ref());
         Self {
-            id,
+            id: text.id,
             identity: Some(identity),
-            context,
-            name,
+            text,
         }
     }
 
@@ -107,11 +119,11 @@ impl Symbol {
     }
 
     pub fn context(&self) -> &str {
-        self.context
+        self.text.context
     }
 
     pub fn name(&self) -> &str {
-        self.name
+        self.text.name
     }
 
     pub fn identity(&self) -> Option<u64> {
@@ -125,12 +137,12 @@ impl Symbol {
     }
 
     pub fn fully_qualified_name(&self) -> String {
-        format!("{}{}", self.context, self.name)
+        format!("{}{}", self.text.context, self.text.name)
     }
 
     pub fn qualified_name(&self) -> String {
         if self.context() == GLOBAL_CONTEXT || self.context() == SYSTEM_CONTEXT {
-            self.name.to_string()
+            self.text.name.to_string()
         } else {
             self.fully_qualified_name()
         }
@@ -167,13 +179,13 @@ impl Ord for Symbol {
             return self.identity.cmp(&other.identity);
         }
 
-        let context_order = if std::ptr::eq(self.context, other.context) {
+        let context_order = if std::ptr::eq(self.text.context, other.text.context) {
             Ordering::Equal
         } else {
-            self.context.cmp(other.context)
+            self.text.context.cmp(other.text.context)
         };
         context_order
-            .then_with(|| self.name.cmp(other.name))
+            .then_with(|| self.text.name.cmp(other.text.name))
             .then_with(|| self.identity.cmp(&other.identity))
     }
 }
@@ -184,8 +196,8 @@ impl Serialize for Symbol {
 
         let fields = 2 + usize::from(self.identity.is_some());
         let mut state = serializer.serialize_struct("Symbol", fields)?;
-        state.serialize_field("context", self.context)?;
-        state.serialize_field("name", self.name)?;
+        state.serialize_field("context", self.text.context)?;
+        state.serialize_field("name", self.text.name)?;
         if let Some(identity) = self.identity {
             state.serialize_field("identity", &identity)?;
         }

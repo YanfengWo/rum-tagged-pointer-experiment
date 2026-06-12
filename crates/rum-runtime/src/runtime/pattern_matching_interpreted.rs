@@ -1,9 +1,6 @@
 use super::*;
 
-fn interpreted_match_outcome(
-    matched: bool,
-    bindings: SymbolExprMap,
-) -> CompiledMatchOutcome {
+fn interpreted_match_outcome(matched: bool, bindings: SymbolExprMap) -> CompiledMatchOutcome {
     CompiledMatchOutcome { matched, bindings }
 }
 

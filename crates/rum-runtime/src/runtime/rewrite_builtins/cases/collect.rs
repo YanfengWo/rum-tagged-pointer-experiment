@@ -286,7 +286,8 @@ impl Session {
 
         match spec {
             CasesSpec::Pattern(pattern) => {
-                let match_result = self.match_expr_owned(pattern, expr.clone(), SymbolExprMap::default());
+                let match_result =
+                    self.match_expr_owned(pattern, expr.clone(), SymbolExprMap::default());
                 self.drive_internal_value(match_result, move |_, outcome| {
                     Ok(if outcome.matched { Some(expr) } else { None })
                 })

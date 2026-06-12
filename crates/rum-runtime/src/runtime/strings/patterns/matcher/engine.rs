@@ -493,10 +493,7 @@ fn merge_symbol_binding(
     Some(merged)
 }
 
-fn merge_match_bindings(
-    left: &SymbolExprMap,
-    right: &SymbolExprMap,
-) -> Option<SymbolExprMap> {
+fn merge_match_bindings(left: &SymbolExprMap, right: &SymbolExprMap) -> Option<SymbolExprMap> {
     let mut merged = left.clone();
     for (symbol, value) in right {
         if let Some(existing) = merged.get(symbol) {

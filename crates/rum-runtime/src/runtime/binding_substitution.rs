@@ -1,10 +1,6 @@
 use super::*;
 
-pub(super) fn bind_pattern_name(
-    name: &Symbol,
-    value: Expr,
-    bindings: &mut SymbolExprMap,
-) -> bool {
+pub(super) fn bind_pattern_name(name: &Symbol, value: Expr, bindings: &mut SymbolExprMap) -> bool {
     match bindings.get(name) {
         Some(existing) => existing == &value,
         None => {
@@ -78,10 +74,7 @@ pub(super) fn rule_rhs_may_splice_without_bindings(expr: &Expr) -> bool {
     }
 }
 
-fn substitute_rule_bindings_changed(
-    expr: &Expr,
-    bindings: &SymbolExprMap,
-) -> Option<Expr> {
+fn substitute_rule_bindings_changed(expr: &Expr, bindings: &SymbolExprMap) -> Option<Expr> {
     match expr {
         Expr::Atom(Atom::Symbol(symbol)) => bindings.get(symbol).cloned(),
         Expr::Atom(_) => None,

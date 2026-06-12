@@ -79,9 +79,6 @@ fn bindings_from_continuation_expr(expr: Expr) -> SymbolExprMap {
         .collect()
 }
 
-pub(super) fn match_outcome(
-    matched: bool,
-    bindings: SymbolExprMap,
-) -> CompiledMatchOutcome {
+pub(super) fn match_outcome(matched: bool, bindings: SymbolExprMap) -> CompiledMatchOutcome {
     CompiledMatchOutcome { matched, bindings }
 }

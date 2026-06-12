@@ -98,8 +98,11 @@ impl Session {
         } else {
             self.compile_matcher_for_expr(&down_value.lhs)
         };
-        let match_result =
-            self.match_compiled_owned(matcher, normalized_candidate.clone(), SymbolExprMap::default());
+        let match_result = self.match_compiled_owned(
+            matcher,
+            normalized_candidate.clone(),
+            SymbolExprMap::default(),
+        );
 
         self.drive_internal_value(match_result, move |session, outcome| {
             if !outcome.matched {
@@ -285,8 +288,11 @@ impl Session {
         } else {
             self.compile_matcher_for_expr(&up_value.lhs)
         };
-        let match_result =
-            self.match_compiled_owned(matcher, normalized_candidate.clone(), SymbolExprMap::default());
+        let match_result = self.match_compiled_owned(
+            matcher,
+            normalized_candidate.clone(),
+            SymbolExprMap::default(),
+        );
 
         self.drive_internal_value(match_result, move |session, outcome| {
             if !outcome.matched {
@@ -405,8 +411,11 @@ impl Session {
         } else {
             self.compile_matcher_for_expr(&sub_value.lhs)
         };
-        let match_result =
-            self.match_compiled_owned(matcher, normalized_candidate.clone(), SymbolExprMap::default());
+        let match_result = self.match_compiled_owned(
+            matcher,
+            normalized_candidate.clone(),
+            SymbolExprMap::default(),
+        );
 
         self.drive_internal_value(match_result, move |session, outcome| {
             if !outcome.matched {
@@ -592,7 +601,11 @@ impl Session {
 
         Some(CompiledMatchOutcome {
             matched,
-            bindings: if matched { bindings } else { SymbolExprMap::default() },
+            bindings: if matched {
+                bindings
+            } else {
+                SymbolExprMap::default()
+            },
         })
     }
 

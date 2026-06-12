@@ -174,7 +174,8 @@ impl Session {
         };
 
         let position = replace_part_position_expr(&path);
-        let match_result = self.match_expr_owned(pattern.clone(), position, SymbolExprMap::default());
+        let match_result =
+            self.match_expr_owned(pattern.clone(), position, SymbolExprMap::default());
         self.drive_internal_value(match_result, move |session, outcome| {
             if outcome.matched {
                 collected.push(ReplacePartTarget {
