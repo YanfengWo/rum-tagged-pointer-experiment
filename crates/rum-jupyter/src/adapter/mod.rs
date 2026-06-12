@@ -270,18 +270,14 @@ impl KernelAdapter {
             .pending_input
             .as_ref()
             .ok_or(KernelStdinError::NoPendingInputRequest)?;
-        let found = envelope
-            .parent_header
-            .as_ref()
-            .map(|header| header.msg_id.as_str())
-            .unwrap_or_default()
-            .to_string();
-
-        if found != pending.header.msg_id {
-            return Err(KernelStdinError::ReplyParentMismatch {
-                expected: pending.header.msg_id.clone(),
-                found,
-            });
+        if let Some(parent_header) = envelope.parent_header.as_ref() {
+            let found = parent_header.msg_id.clone();
+            if found != pending.header.msg_id {
+                return Err(KernelStdinError::ReplyParentMismatch {
+                    expected: pending.header.msg_id.clone(),
+                    found,
+                });
+            }
         }
 
         self.last_input_reply = Some(envelope.reply);

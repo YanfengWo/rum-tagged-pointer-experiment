@@ -10,6 +10,9 @@ Commands:
   env               Print shell exports for the isolated environment.
   kernelspec        Build rum-jupyter-kernel and write the dev kernelspec.
   smoke [expr]      Run the protocol smoke through the isolated environment.
+  lifecycle-smoke   Run a real jupyter_client lifecycle smoke.
+  stdin-smoke       Run a real jupyter_client stdin suspend/resume smoke.
+  kernel-smoke      Run lifecycle-smoke and stdin-smoke.
   browser-smoke     Run a headless JupyterLab browser smoke with Playwright.
   lab [args...]     Start JupyterLab with all state under ./jupyter_home.
   notebook [args...] Start Notebook with all state under ./jupyter_home.
@@ -153,6 +156,14 @@ cmd_smoke() {
   "${script_dir}/smoke-rum-jupyter.sh" "${1:-1+1}"
 }
 
+cmd_kernel_smoke() {
+  require_venv
+  ensure_dirs
+  export_env
+  cmd_kernelspec >/dev/null
+  "$(venv_python)" "${script_dir}/rum-jupyter-kernel-smoke.py" "$@"
+}
+
 cmd_browser_smoke() {
   require_venv
   ensure_dirs
@@ -225,6 +236,9 @@ case "${command}" in
   env) print_env "$@" ;;
   kernelspec) cmd_kernelspec "$@" ;;
   smoke) cmd_smoke "$@" ;;
+  lifecycle-smoke) cmd_kernel_smoke lifecycle "$@" ;;
+  stdin-smoke) cmd_kernel_smoke stdin "$@" ;;
+  kernel-smoke) cmd_kernel_smoke all "$@" ;;
   browser-smoke) cmd_browser_smoke "$@" ;;
   lab) cmd_lab "$@" ;;
   notebook) cmd_notebook "$@" ;;

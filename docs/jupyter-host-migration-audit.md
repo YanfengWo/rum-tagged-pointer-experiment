@@ -29,6 +29,15 @@ implementation checklist for the Jupyter slice of that boundary.
   response/failure/inspection types.
 - `cargo test -p rum-jupyter` passes locally after the migration, including
   native ZeroMQ loopback tests.
+- 2026-06-12 update: the local deploy/test path is isolated under
+  `jupyter_home/` through `scripts/rum-jupyter-home.sh`.
+- The isolated Jupyter harness now includes:
+  - `smoke`: protocol-level `jupyter_client` execute smoke
+  - `lifecycle-smoke`: real kernel start, ready, execute, restart, and shutdown
+  - `stdin-smoke`: real stdin request/reply suspend and resume, including
+    multi-prompt and disallowed-stdin cases
+  - `kernel-smoke`: lifecycle plus stdin
+  - `browser-smoke`: JupyterLab plus headless Chromium notebook execution
 
 ## Resolved Runtime Couplings
 
@@ -152,6 +161,18 @@ frontend can use one documented deploy path for:
 - stdin request/reply resume
 - shutdown
 - graceful replies for common unsupported messages
+
+Current local harness commands:
+
+```bash
+scripts/run-bounded.py --timeout 180 -- scripts/rum-jupyter-home.sh kernel-smoke
+scripts/run-bounded.py --timeout 180 -- scripts/rum-jupyter-home.sh browser-smoke
+```
+
+In the Codex sandbox these commands need unsandboxed loopback-port access, but
+their filesystem state remains confined to `jupyter_home/`. The lifecycle smoke
+does not promote robust interrupt/cancel semantics; `jupyter_client` interrupt
+uses process signals, and host-level cancellation remains a separate contract.
 
 ## Out Of Scope For `v0.1`
 

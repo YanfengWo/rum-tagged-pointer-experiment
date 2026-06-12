@@ -209,6 +209,65 @@ fn input_reply_resumes_execute_and_preserves_shell_routing_ids() {
 }
 
 #[test]
+fn input_reply_without_parent_header_resumes_pending_execute() {
+    let session = Session::new();
+    let mut adapter = KernelAdapter::new(session);
+
+    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+        channel: KernelChannel::Shell,
+        header: KernelMessageHeader::new(
+            "client-msg-input-3b",
+            "session-input-3b",
+            "tester",
+            "execute_request",
+        ),
+        parent_header: None,
+        metadata: super::KernelMetadata::new(),
+        request: KernelRequest::Execute(KernelExecuteRequest::new("InputString[\"name: \"]")),
+    });
+
+    assert!(dispatch.reply.is_none());
+    assert_eq!(dispatch.stdin.len(), 1);
+    assert!(adapter.awaiting_stdin());
+
+    let resumed = adapter
+        .handle_input_reply(KernelInputReplyEnvelope {
+            channel: KernelChannel::Stdin,
+            header: KernelMessageHeader::new(
+                "client-msg-input-reply-3b",
+                "session-input-3b",
+                "tester",
+                "input_reply",
+            ),
+            parent_header: None,
+            metadata: super::KernelMetadata::new(),
+            reply: KernelInputReply::new("Alice"),
+        })
+        .expect("parent-less jupyter_client input_reply should be accepted")
+        .expect("stdin reply should resume the suspended execute");
+
+    let reply = resumed
+        .reply
+        .as_ref()
+        .expect("resumed execute should now have a reply");
+
+    match &reply.response {
+        KernelResponse::Execute(response) => {
+            assert_eq!(response.status, KernelReplyStatus::Ok);
+            assert_eq!(response.execution_count, Some(1));
+            assert_eq!(response.outputs.len(), 1);
+            match &response.outputs[0] {
+                KernelOutput::ExecuteResult(result) => {
+                    assert_eq!(result.data.get("text/plain"), Some("\"Alice\""));
+                }
+                other => panic!("expected execute result output, got {other:?}"),
+            }
+        }
+        other => panic!("expected execute reply, got {other:?}"),
+    }
+}
+
+#[test]
 fn input_reply_resumes_execute_without_rerunning_prefix_side_effects() {
     let mut session = Session::new();
     eval_text(&mut session, "x = seed");

@@ -889,6 +889,13 @@ cargo run -p rum-difftest -- check
 Wolfram oracle runs are intentionally environment-gated and should remain
 optional for normal development.
 
+The Jupyter harness now has an isolated `jupyter_home/` deploy path with real
+`jupyter_client` and JupyterLab smoke commands. `kernel-smoke` covers kernel
+start/ready/execute/restart/shutdown plus stdin suspend/resume over real ZMQ
+channels; `browser-smoke` covers notebook execution through JupyterLab and
+headless Chromium. Robust interrupt/cancel remains outside the current
+contract.
+
 ## Operational Lessons
 
 - Do not use the full Wolfram builtin inventory as a commitment list.
