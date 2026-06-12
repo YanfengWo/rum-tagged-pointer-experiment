@@ -37,7 +37,10 @@ End state: distribution probe `13.1s` (3.4x vs WolframKernel, down from
 Downstream gates moved materially: `proptaut_tests.wl` is green for the
 first time (`238s` full suite, previously a hard timeout at `300s`),
 `bool_tests` `6s`, `drule/tactics/printer/parser/kernel` tests `~1s` each.
-`cargo test --workspace` (24 suites) and `rum-difftest check` pass.
+`cargo test --workspace` (24 suites) and `rum-difftest check` pass. The
+`stdlib/Pair.wl` load still exceeds a `600s` budget; the earlier `335s`
+observation was an interrupted run, not a completion, so Pair remains the
+next downstream gate after `proptaut_tests`.
 
 The original `<2x` target was not reached. The remaining ~3.4x is spread
 flat across the evaluator (no single item above ~7% self time): stability
