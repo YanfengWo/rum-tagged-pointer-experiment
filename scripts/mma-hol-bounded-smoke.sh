@@ -10,7 +10,7 @@ This is an integration triage driver, not a performance benchmark.
 
 Options:
   --mma-hol PATH       mma-hol checkout root. Defaults to RUM_MMA_HOL_ROOT.
-  --mode MODE          loads, tests, or all. Defaults to loads.
+  --mode MODE          loads, tests, snapshot, or all. Defaults to loads.
   --timeout SECONDS    Per-stage wall timeout. Defaults to 60.
   --output-dir PATH    Directory for summary.tsv and per-stage logs.
   --only LABEL         Run one selected stage label, e.g. test/proptaut_tests.
@@ -56,7 +56,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --mode)
-      [[ $# -ge 2 ]] || { echo "error: --mode expects loads, tests, or all" >&2; exit 2; }
+      [[ $# -ge 2 ]] || { echo "error: --mode expects loads, tests, snapshot, or all" >&2; exit 2; }
       mode=$2
       shift 2
       ;;
@@ -112,8 +112,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "${mode}" in
-  loads|tests|all) ;;
-  *) echo "error: --mode expects loads, tests, or all" >&2; exit 2 ;;
+  loads|tests|snapshot|all) ;;
+  *) echo "error: --mode expects loads, tests, snapshot, or all" >&2; exit 2 ;;
 esac
 
 if ! [[ "${timeout_seconds}" =~ ^[1-9][0-9]*$ ]]; then
@@ -302,6 +302,18 @@ test_preload_load_indices=(
   31
 )
 
+snapshot_labels=(
+  snapshot/build-parser
+  snapshot/run-fast-parser
+  snapshot/extend-proptaut
+)
+
+snapshot_steps=(
+  build-parser
+  run-fast-parser
+  extend-proptaut
+)
+
 stage_labels=()
 stage_kinds=()
 stage_indices=()
@@ -324,9 +336,19 @@ append_test_stages() {
   done
 }
 
+append_snapshot_stages() {
+  local i
+  for i in "${!snapshot_labels[@]}"; do
+    stage_labels+=("${snapshot_labels[$i]}")
+    stage_kinds+=("snapshot")
+    stage_indices+=("$i")
+  done
+}
+
 case "${mode}" in
   loads) append_load_stages ;;
   tests) append_test_stages ;;
+  snapshot) append_snapshot_stages ;;
   all) append_load_stages; append_test_stages ;;
 esac
 
@@ -425,6 +447,54 @@ test_expr() {
   printf 'HOLTest`testSummary[]'
 }
 
+append_script_command_line() {
+  local script_rel=$1
+  shift
+  printf '$ScriptCommandLine = {%s' "$(wl_string "${script_rel}")"
+  local arg
+  for arg in "$@"; do
+    printf ', %s' "$(wl_string "${arg}")"
+  done
+  printf '}; '
+}
+
+append_get_absolute() {
+  local path=$1
+  printf 'Get[%s]; ' "$(wl_string "${path}")"
+}
+
+snapshot_expr() {
+  local index=$1
+  local step=${snapshot_steps[$index]}
+  local root_string snapshot_string
+  root_string=$(wl_string "${mma_hol_root}")
+  snapshot_string=$(wl_string "${mma_hol_root}/bootstrap.mx")
+
+  case "${step}" in
+    build-parser)
+      append_script_command_line "tests/build_snapshot.wls" "Parser"
+      append_get_absolute "${mma_hol_root}/tests/build_snapshot.wls"
+      printf '"ok"'
+      ;;
+    run-fast-parser)
+      append_script_command_line "tests/run_fast.wls" "parser"
+      append_get_absolute "${mma_hol_root}/tests/run_fast.wls"
+      ;;
+    extend-proptaut)
+      append_script_command_line "tests/extend_snapshot.wls" "auto/PropTaut.wl"
+      append_get_absolute "${mma_hol_root}/tests/extend_snapshot.wls"
+      printf '"ok"'
+      ;;
+    *)
+      echo "error: unknown snapshot step ${step}" >&2
+      exit 2
+      ;;
+  esac
+
+  # Keep the expression files self-identifying when inspected after a run.
+  printf '(* root=%s snapshot=%s *)' "${root_string}" "${snapshot_string}"
+}
+
 classify_stage() {
   local kind=$1
   local exit_code=$2
@@ -455,6 +525,12 @@ classify_stage() {
       printf 'ok'
     else
       printf 'unexpected-output'
+    fi
+  elif [[ "${kind}" == "snapshot" ]]; then
+    if [[ "${exit_code}" == "0" ]]; then
+      printf 'ok'
+    else
+      printf 'error'
     fi
   else
     if [[ "${last_line}" =~ ^List\[[0-9]+,\ 0\]$ ]]; then
@@ -508,8 +584,10 @@ for i in "${!stage_labels[@]}"; do
 
   if [[ "${kind}" == "load" ]]; then
     load_expr_through "${index}" > "${expr_file}"
-  else
+  elif [[ "${kind}" == "test" ]]; then
     test_expr "${index}" > "${expr_file}"
+  else
+    snapshot_expr "${index}" > "${expr_file}"
   fi
 
   printf '[%02d/%02d] %s ... ' "$((i + 1))" "${#stage_labels[@]}" "${label}"

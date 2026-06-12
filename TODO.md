@@ -136,14 +136,15 @@ Completed history, archived planning detail, and operational lessons live in
   context round-trip regression plus `$ContextPath` / `$Packages`
   session-field assignment are in place. Partial validation now works:
   `tests/build_snapshot.wls Parser` writes a Stable snapshot,
-  `tests/run_fast.wls parser` exits `0`, and a manual restore plus
-  `parser_tests.wl` summary reports `List[78, 0]`. Remaining work is a
-  dedicated bounded snapshot harness mode, cleanup of
-  `tests/extend_snapshot.wls` so it restores `$Packages` as well as
-  `$ContextPath`, and full validation once the `Pair.wl` / `Simp` performance
-  gate is cleared. Cold `run_all.wls` remains the semantic baseline; Strict
-  mode is not a snapshot restore target; `rum` `DumpSave` is a textual snapshot
-  format rather than Wolfram `.mx` compatibility. The current gap audit lives in
+  `tests/run_fast.wls parser` exits `0` with visible parser logs, and
+  `snapshot/extend-proptaut` re-dumps quietly on the fixed probe clone after
+  the `$Packages` restore cleanup. Remaining work is to carry the
+  `extend_snapshot.wls` `$Packages` cleanup into the live/upstream `mma-hol`
+  tree before refreshing the clone, then full validation once the `Pair.wl` /
+  `Simp` performance gate is cleared. Cold `run_all.wls` remains the semantic
+  baseline; Strict mode is not a snapshot restore target; `rum` `DumpSave` is a
+  textual snapshot format rather than Wolfram `.mx` compatibility. The current
+  gap audit lives in
   [docs/mma-hol-smoke-and-snapshot.md](./docs/mma-hol-smoke-and-snapshot.md).
 - [ ] Preserve the already-demonstrated `Module` closure pattern where
   exported definitions retain access to fresh private mutable state after the

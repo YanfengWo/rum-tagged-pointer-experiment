@@ -856,13 +856,14 @@ Strict/stable snapshot boundary:
   `FileNames[..., ..., Infinity]`, string wildcard filters such as `"HOL`*"`,
   `SelectFirst` partial layer selection, context-string `DumpSave`,
   loaded-file `Print` propagation through `Get`, and restore-time
-  `$ContextPath` / `$Packages` session-field assignment. Partial validation
-  against the fixed clean clone now works: `tests/build_snapshot.wls Parser`
-  writes a Stable snapshot, `tests/run_fast.wls parser` exits `0`, and a manual
-  restore plus `parser_tests.wl` summary reports `List[78, 0]`. Full
+  `$ContextPath` / `$Packages` session-field assignment. The bounded snapshot
+  harness mode now validates the fixed probe clone: `tests/build_snapshot.wls
+  Parser` writes a Stable snapshot, `tests/run_fast.wls parser` exits `0` with
+  visible parser logs, and `tests/extend_snapshot.wls auto/PropTaut.wl`
+  re-dumps quietly after the `$Packages` restore cleanup. Full
   `build_snapshot.wls` remains behind the current `Pair.wl` / `Simp`
-  performance gate; `extend_snapshot.wls` also needs a small `$Packages`
-  restore cleanup before it is promoted as a quiet development-loop command.
+  performance gate; carry the `$Packages` cleanup forward before refreshing the
+  probe clone from the live `mma-hol` tree.
 - The current stable snapshot gap audit lives in
   [docs/mma-hol-smoke-and-snapshot.md](./mma-hol-smoke-and-snapshot.md).
 

@@ -118,9 +118,23 @@ Already covered enough for cold or partial snapshot work:
   current saved-definition subset
 - `Get` propagates `Print` output from loaded files, so snapshot progress logs
   remain visible when scripts are invoked through a wrapper expression
+- CLI `Exit[n]` handling preserves accumulated prints/messages before returning
+  the requested process status, so `run_fast.wls` logs are visible even though
+  it ends through `HOLTest`testExit[]`
 - `DumpSave[file, Evaluate[contexts]]` where `contexts` is a list of context
   strings, plus restore-time `$ContextPath` / `$Packages` session-field
   assignment, covered by a tiny public/private context regression
+
+Dedicated bounded harness:
+
+```bash
+scripts/mma-hol-bounded-smoke.sh --mma-hol /path/to/mma-hol --mode snapshot
+```
+
+The snapshot mode runs `snapshot/build-parser`, `snapshot/run-fast-parser`, and
+`snapshot/extend-proptaut` as separate process-group-bounded stages and writes
+the same `summary.tsv`, `*.expr`, `*.stdout`, and `*.stderr` artifacts as the
+cold smoke lanes.
 
 Validated on 2026-06-12 against the fixed clean clone at
 `/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol`:
@@ -128,29 +142,24 @@ Validated on 2026-06-12 against the fixed clean clone at
 - `tests/build_snapshot.wls Parser` succeeds in Stable mode, loading 11 of 32
   libraries and writing a partial `bootstrap.mx` of about `11904 KB`.
 - `tests/run_fast.wls parser` exits with status `0` against that snapshot.
-  A manual restore+harness+`parser_tests.wl` expression ending in
-  ``HOLTest`testSummary[]`` reports `List[78, 0]`.
+  The dedicated snapshot harness now captures the visible parser test log,
+  ending with `passed: 78` and `failed: 0`.
 - `tests/extend_snapshot.wls auto/PropTaut.wl` exits with status `0` and
-  re-dumps the snapshot at about `11940 KB`, but emits dependency `Needs`
-  messages because the script restores `$ContextPath` and not `$Packages`.
-  `run_fast.wls` already restores both fields, so this is a stable-script
-  cleanup item.
+  re-dumps the snapshot at about `11940 KB`. The fixed probe clone restores
+  `$Packages` alongside `$ContextPath`, so this stage is quiet; carry the same
+  script cleanup forward when refreshing from the live `mma-hol` tree.
 
 Not yet closed for stable snapshot scripts:
 
 - full `tests/build_snapshot.wls` validation still runs into the known
   downstream `Pair.wl` / `Simp` performance gate
-- CLI-visible `run_fast.wls` progress logs remain limited when the script ends
-  through ``HOLTest`testExit[]`` / `Exit[0]`; the process status is still
-  usable, and a manual `testSummary[]` wrapper gives visible logs for triage
 
 ### Recommended Next Order
 
-1. Add a dedicated snapshot mode to `scripts/mma-hol-bounded-smoke.sh` so the
-   partial build, restore+small-test, and extend probes are reproducible and
-   summarized like the cold load/test lanes.
-2. Patch or upstream the `extend_snapshot.wls` `$Packages` restore cleanup, then
-   rerun the `auto/PropTaut.wl` extension probe without dependency-load noise.
+1. Promote the snapshot mode into the regular `mma-hol` smoke checklist once
+   the live `mma-hol` tree carries the `$Packages` restore cleanup.
+2. Add a heavier snapshot stage only after it is worth spending time on the
+   `PropTaut` / `Simp` downstream gate.
 3. Keep any private-context lint probe below the cold and stable snapshot lanes.
 
 Keep this lane below the cold semantic smoke while `PropTaut` / `Simp` remains

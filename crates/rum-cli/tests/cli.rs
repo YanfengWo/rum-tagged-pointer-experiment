@@ -160,6 +160,15 @@ fn eval_exit_uses_requested_status_code_without_error_rendering() {
 }
 
 #[test]
+fn eval_exit_renders_accumulated_prints_without_error_rendering() {
+    let output = run_cli(&["--eval", "Print[\"before exit\"]; Exit[7]"]);
+
+    assert_eq!(output.status.code(), Some(7));
+    assert_eq!(stdout(&output), "before exit\n");
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
 fn file_exit_uses_requested_status_code_without_error_rendering() {
     let file = TempFile::new("Exit[6]");
     let path = file.path().to_string_lossy().into_owned();
@@ -167,6 +176,17 @@ fn file_exit_uses_requested_status_code_without_error_rendering() {
 
     assert_eq!(output.status.code(), Some(6));
     assert!(stdout(&output).is_empty());
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
+fn file_exit_renders_accumulated_prints_without_error_rendering() {
+    let file = TempFile::new("Print[\"file progress\"]; Exit[6]");
+    let path = file.path().to_string_lossy().into_owned();
+    let output = run_cli(&["--file", &path]);
+
+    assert_eq!(output.status.code(), Some(6));
+    assert_eq!(stdout(&output), "file progress\n");
     assert!(stderr(&output).is_empty());
 }
 

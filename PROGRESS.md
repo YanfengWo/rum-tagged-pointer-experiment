@@ -12,6 +12,28 @@ Ran the stable snapshot lane against the fixed clean clone at
 `/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol`, bounded through
 `scripts/run-bounded.py`.
 
+Follow-up: `scripts/mma-hol-bounded-smoke.sh --mode snapshot` now owns the
+bounded stable snapshot lane. It runs three stages in order:
+`snapshot/build-parser`, `snapshot/run-fast-parser`, and
+`snapshot/extend-proptaut`. With `RUM_CLI_BIN=target/release/rum-cli`, the lane
+is green on the fixed probe clone:
+
+```text
+snapshot/build-parser      ok
+snapshot/run-fast-parser   ok
+snapshot/extend-proptaut   ok
+```
+
+The fixed probe clone's `tests/extend_snapshot.wls` now restores `$Packages`
+alongside `$ContextPath`, so extending through `auto/PropTaut.wl` no longer
+emits dependency `Needs` noise. The upstream/live `mma-hol` tree should carry
+the same one-line script cleanup before a refreshed probe clone replaces this
+one.
+
+The CLI now renders accumulated prints/messages before honoring `Exit[n]`, so
+`tests/run_fast.wls parser` produces visible progress and parser test logs
+while still exiting with the test status code.
+
 - Added the missing `SelectFirst` sequence subset needed by
   `tests/build_snapshot.wls` partial layer selection. The supported forms now
   cover unary operator form, two-argument search, three-argument default, and
@@ -23,21 +45,14 @@ Ran the stable snapshot lane against the fixed clean clone at
   Stable mode, dumps 21 `HOL` contexts, and writes
   `/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol/bootstrap.mx` at about
   `11904 KB`.
-- `tests/run_fast.wls parser` exits with status `0` against that snapshot. A
-  manual restore+harness+`parser_tests.wl` summary, avoiding the script's final
-  `testExit[]`, reports `List[78, 0]`.
+- `tests/run_fast.wls parser` exits with status `0` against that snapshot and
+  prints the parser test log; the parser summary is `passed: 78`, `failed: 0`.
 - `tests/extend_snapshot.wls auto/PropTaut.wl` exits with status `0`, restores
   the Parser snapshot, loads `auto/PropTaut.wl`, and re-dumps 23 `HOL`
-  contexts at about `11940 KB`. It currently emits noisy dependency `Needs`
-  messages because the script restores `$ContextPath` but not `$Packages` after
-  `DumpSave` restore; `tests/run_fast.wls` already handles both. This is a
-  stable-script cleanup item, not a core runtime blocker.
+  contexts at about `11940 KB`.
 
 Remaining snapshot boundaries: full `build_snapshot.wls` still runs into the
-known downstream `Pair.wl` / `Simp` performance gate; `run_fast.wls` progress
-prints are not shown by the CLI when the script ends via `Exit[0]`, because the
-CLI currently maps `Exit` request failures directly to process status. Use a
-manual `testSummary[]`-ending harness expression when visible logs are needed.
+known downstream `Pair.wl` / `Simp` performance gate.
 
 ## 2026-06-12 Same-Bit Stability Invalidation Follow-Up
 

@@ -62,6 +62,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
                 Ok(response) => print_outcome(&response),
                 Err(failure) => {
                     if let Some(code) = exit_code_from_failure(&failure) {
+                        print_failure_side_effects(&failure);
                         return Ok(code);
                     }
                     return Err(request_failure_to_cli_error(failure, "evaluation failed"));
@@ -103,6 +104,7 @@ fn eval_file(session: &mut Session, path: &str) -> Result<ExitCode, Box<dyn std:
         }
         Err(failure) => {
             if let Some(code) = exit_code_from_failure(&failure) {
+                print_failure_side_effects(&failure);
                 return Ok(code);
             }
 
@@ -124,6 +126,16 @@ fn print_outcome(outcome: &SessionEvalResponse) {
     }
 
     println!("{}", outcome.value);
+}
+
+fn print_failure_side_effects(failure: &SessionRequestFailure) {
+    for message in &failure.messages {
+        eprintln!("{}", render_runtime_message(message));
+    }
+
+    for printed in &failure.prints {
+        println!("{printed}");
+    }
 }
 
 fn request_failure_to_cli_error(
