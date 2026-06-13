@@ -6,6 +6,44 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-13 Suspension-Safe Helper Audit
+
+Completed the first audit pass over non-`Expr` and helper-level
+suspension/resume paths after the host/Jupyter keepalive work. The main
+evaluator, fixed-point resume stack, message-template evaluation, matcher,
+traversal, replacement, association transforms, `Select` / `SelectFirst`, and
+the `Array` / `Outer` generators already use ordinary suspension frames or
+typed `ContinuationValue` drivers in the currently tested subset.
+
+The remaining concrete gaps are narrower than the old TODO suggested. Public
+callback loops that still call `evaluate(...)?` without saving loop state are
+the next correctness tranche:
+
+- functional iteration helpers in `functional_ops/iteration.rs`:
+  `Nest`, `NestList`, `FixedPoint`, `FixedPointList`, `NestWhile`, and
+  `NestWhileList`;
+- fold/window helpers in `functional_ops/sequence/fold.rs` and
+  `functional_ops/sequence/window.rs`: `Fold`, `FoldList`, `FoldPair`,
+  `FoldWhile`, `SequenceFold`, `SequenceFoldList`, `TakeWhile`,
+  `LengthWhile`, `Accumulate`, and `BlockMap`;
+- targeted mapping helpers in `functional_ops/targeted_map.rs`:
+  `MapAt` and `SubsetMap`;
+- array/string callback helpers outside the already-fixed `Array` / `Outer`
+  lane: `ArrayReduce`, `Inner`, `ArrayFilter`, `StringApply`, and delayed
+  string-rule outputs for `StringReplace` / `StringCases`;
+- debug/tooling helpers where the body is sometimes framed but option,
+  fallback, repeated, filtered, or handler evaluation is not:
+  `RepeatedTiming`, `Reap` / `Sow` handler paths, `Trace` capture,
+  `TestReport` same-test/capture helpers, and `TimeConstrained` /
+  `MemoryConstrained` limit and fallback expressions.
+
+Some paths are intentionally not promoted by this audit. `Monitor` display and
+callback refresh remain best-effort and clear suspension state if the display
+expression asks for input; `ValueQ` retains rollback-style probing rather than
+a resumable public continuation. `Scan` has per-part suspension frames but not
+a saved remaining-parts loop state, so it should be reviewed with the broader
+functional callback tranche rather than counted as fully closed.
+
 ## 2026-06-13 Runtime Namespace Test Split
 
 Split the regrown

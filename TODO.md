@@ -22,10 +22,20 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Immediate Correctness And Debt
 
-- [ ] Continue auditing remaining non-`Expr` helper paths that need the same
-  suspension-safe treatment as the main evaluator flows.
-- [ ] Continue moving host-facing inspection/debug helper payloads onto typed
-  continuation values when those flows become suspendable.
+- [ ] Close the concrete suspension-safe helper gaps found in the 2026-06-13
+  audit. Prioritize public callback loops first: functional iteration
+  (`Nest`, `FixedPoint`, `NestWhile`), fold/window helpers (`Fold`,
+  `FoldPair`, `FoldWhile`, `SequenceFold`, `TakeWhile`, `Accumulate`,
+  `BlockMap`), targeted mapping (`MapAt`, `SubsetMap`), tensor/string
+  callback helpers (`ArrayReduce`, `Inner`, `ArrayFilter`, `StringApply`,
+  delayed `StringReplace` / `StringCases` rules), then debug/tooling flows
+  (`RepeatedTiming`, `Reap` / `Sow` handlers, `Trace`, `TestReport`,
+  resource-constraint limit/fallback expressions).
+- [ ] Continue moving those helper payloads onto typed continuation values
+  when the flow cannot be represented as `Result<Expr, EvalError>` plus a
+  single ordinary suspension frame. Keep Monitor display/callback refresh and
+  `ValueQ` rollback behavior intentionally best-effort/non-resumable unless
+  their public contract is promoted.
 
 ## Architecture And Contracts
 

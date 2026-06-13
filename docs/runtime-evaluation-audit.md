@@ -250,16 +250,24 @@ Known gaps include:
   treatment already applied to messages, loaders, definitions, scoping, and
   traversal config
 
-### 6. Non-`Expr` Helper Suspension Audit Is Not Fully Closed
+### 6. Helper Suspension Implementation Is Not Fully Closed
 
-Typed suspension/resume is now real kernel infrastructure, but the audit is not
-fully complete.
+Typed suspension/resume is now real kernel infrastructure, and the first
+helper-level audit has been narrowed to concrete implementation gaps.
 
-Known gap:
+Known gaps:
 
-- some remaining inspection/debug helper paths may still need to be pulled onto
-  the same typed continuation driver that now covers the currently audited
-  subset
+- public callback loops in functional iteration, folds, window helpers,
+  targeted mapping, tensor helpers, and string delayed-rule helpers still have
+  direct `evaluate(...)?` points that need loop-state continuations before
+  host-driven input can resume them correctly
+- debug/tooling flows such as repeated timing, trace capture, test-report
+  evaluation, resource-constraint limit/fallback expressions, and `Reap` /
+  `Sow` handlers still need focused continuation work if they are expected to
+  support input suspension
+- `Monitor` display/callback refresh is intentionally best-effort for now, and
+  `ValueQ` intentionally remains a rollback probe rather than a resumable
+  public continuation
 
 ### 7. Pattern And Traversal Semantics Still Cover Only The Current Early Subset
 
@@ -290,8 +298,8 @@ The cleanest next steps for `rum-runtime` are:
    sequencing edges
 2. continue auditing remaining raw-form / held-spec builtin families so they
    join the shared normalization model
-3. finish auditing any remaining non-`Expr` helper paths for typed
-   suspension/resume
+3. implement the helper-level suspension gaps found in the 2026-06-13 audit,
+   starting with public callback loops before debug/tooling surfaces
 4. widen matcher and traversal semantics only after the current evaluator
    boundaries feel fully locked down
 5. strengthen verification and conformance coverage as the semantic surface
