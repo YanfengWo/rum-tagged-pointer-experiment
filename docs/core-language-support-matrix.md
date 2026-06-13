@@ -330,7 +330,14 @@ once in its primary implementation group. Other groups may mention it as
   explicit even-template anchoring for `ArrayFilter`, and current
   dimension-spec plus grouped-dimension support for `ArrayReduce`, current
   dense same-head `Array` / `Outer` generation subset, and current `Select`
-  expression / association / operator-form subset
+  expression / association / operator-form subset. Host-input
+  suspension/resume coverage now includes `Select` / `SelectFirst`,
+  `Array` / `Outer`, the functional iteration family (`Nest`, `NestList`,
+  `FixedPoint`, `FixedPointList`, `NestWhile`, `NestWhileList`), and the
+  fold/window family (`Fold`, `FoldList`, `FoldPair`, `FoldWhile`,
+  `SequenceFold`, `SequenceFoldList`, `TakeWhile`, `LengthWhile`,
+  `Accumulate`, `BlockMap`); targeted mapping and tensor/string callback
+  helpers remain separate suspension-hardening work
 - `planned`: sparse-array parity, broader ArrayPad-style padding / storage
   compatibility, and obscure higher-order traversal, threading diagnostic, or
   operator/combinator convenience corners beyond the current mainline subset
