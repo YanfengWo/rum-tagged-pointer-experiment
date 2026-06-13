@@ -6,6 +6,23 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-13 Runtime Namespace Test Split
+
+Split the regrown
+`crates/rum-runtime/src/runtime/tests/names_and_syntax_information.rs` file
+along behavior boundaries and removed the mixed module. The coverage now lives
+in:
+
+- `namespace_names.rs` for `Names` pattern, context, and option behavior;
+- `syntax_information_lifecycle.rs` for assignment, unset, protection, `Block`,
+  `Clear`, and `ClearAll` behavior;
+- `syntax_information_core_catalog.rs` for the current core builtin
+  `SyntaxInformation` catalog;
+- `syntax_information_debug_catalog.rs` for the CL-09 debugging/tooling catalog.
+
+The largest split file is under `10k` chars, so this closes the immediate
+organization debt without changing test assertions.
+
 ## 2026-06-13 Lightweight Correctness Debt Closure
 
 Closed three non-performance cleanup items from the immediate debt list.

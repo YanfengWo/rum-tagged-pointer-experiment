@@ -22,9 +22,6 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Immediate Correctness And Debt
 
-- [ ] Split the regrown
-  `crates/rum-runtime/src/runtime/tests/names_and_syntax_information.rs`
-  coverage along real behavior boundaries.
 - [ ] Continue auditing remaining non-`Expr` helper paths that need the same
   suspension-safe treatment as the main evaluator flows.
 - [ ] Continue moving host-facing inspection/debug helper payloads onto typed
