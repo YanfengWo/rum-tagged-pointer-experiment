@@ -136,9 +136,15 @@ Completed history, archived planning detail, and operational lessons live in
   real ingredient is avoiding the whole `ORELSEC` chain for mismatched rule
   heads. Decide whether this belongs upstream in `mma-hol` as a Simp
   algorithm patch, in rum as a general evaluator/closure optimization, or
-  both. The stable snapshot lane remains open: loading through Pair in Stable
-  mode is now bounded, but partial `DumpSave` through Pair timed out, so
-  transient conversion caches must be cleared/excluded before snapshot closure.
+  both. The stable snapshot lane also has an experimental closure path:
+  loading through Pair in Stable mode is bounded, but raw full-context
+  `DumpSave` captures generated `Module` locals in private contexts
+  (`baseConv$...`, `xEq$...`) and can inflate `HOL`Auto`Simp`Private`` to
+  hundreds of MB. Explicitly enumerating and removing `Names["HOL`*$*"]`
+  before dump, then restoring intentional globals/lazy-cache state, produced
+  a through-Pair snapshot in `114.3s` (`500KB`) and restored `pair_tests.wl`
+  green (`42/0`). Turn this into a careful snapshot-tooling patch before
+  declaring the Pair snapshot lane closed.
   After the Pair optimization boundary is decided, rerun the later `Sum`,
   `Option`, `Set`, `Num`, and Real package probes because their current
   statuses are polluted by the failed Pair dependency.

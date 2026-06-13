@@ -142,13 +142,32 @@ Therefore the important ingredient is not merely avoiding repeated builder
 work; the dispatcher must also avoid walking the whole public `ORELSEC` rule
 chain for obviously mismatched heads.
 
-The experiment crosses the previous `Pair.wl` gate in source-load and tests,
-but the stable snapshot lane still needs separate work. A partial snapshot
-through `Pair` timed out at `300s`; a custom load-through-Pair script in
-Stable mode without `DumpSave` completed quickly, so the remaining issue is
-DumpSave/snapshot serialization or snapshot policy, not Pair proof load
-itself. Any real patch must treat base-conversion caches as transient and
-clear or exclude them before dumping.
+The experiment crosses the previous `Pair.wl` gate in source-load and tests.
+The stable snapshot lane was then reduced and resolved experimentally. A
+partial snapshot through `Pair` initially timed out at `300s`; loading through
+Pair in Stable mode without `DumpSave` completes in `83.5s`, so the problem
+was not proof load. Staged dumps showed `HOL`Auto`Simp`Private`` alone
+serialized to about `402MB`. The cause is not the explicit base-conversion
+cache: `Names["HOL`Auto`Simp`Private`*"]` contains many generated
+`Module` locals such as `baseConv$...` and `xEq$...`; dumping a whole private
+context saves those temporary symbols. `Remove["HOL`Auto`Simp`Private`*$*"]`
+does not match in rum, but explicit enumeration works:
+
+```wolfram
+generated = Names["HOL`*$*"];
+Scan[Remove, generated];
+HOL`Auto`Simp`Private`$simpDepthLimit = 4;
+HOL`Auto`Simp`Private`$rumBaseConvCache = <||>;
+HOL`Auto`Simp`Private`$rumBaseConvCacheHits = 0;
+HOL`Auto`Simp`Private`$rumBaseConvCacheMisses = 0;
+```
+
+After this cleanup, full HOL-context `DumpSave` through Pair completes: load
+`86.9s`, remove `14.1s`, dump `0.0s`, total `114.3s`, snapshot size `500KB`.
+Restoring `/private/tmp/rum-baseconv-exp-bootstrap-pair-filtered.mx` takes
+`0.1s`, `pairInjThm` is still a theorem, and restored `pair_tests.wl` reports
+`42/0`. A real snapshot patch should perform generated-symbol cleanup before
+dumping, then restore intentional runtime globals/lazy caches explicitly.
 
 ## 2026-06-13 Task 2c Simp Fixpoint Loop Count Diagnosis
 

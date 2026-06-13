@@ -43,10 +43,15 @@ public `pair2Same` `34.932s` (`1509` / `2`), `pair3Same` `34.394s`,
 valid, `pair_tests.wl` green `42/0`, and `simp_tests.wl` green `46/0`.
 WolframKernel also runs the patched `pair_tests.wl` green. A cache-only clone
 was negative: RHS three-lambda still `115.585s` and public `pair2Same` timed
-out at `180s`, so head-indexed candidate pruning is required. Remaining
-snapshot caveat: partial `build_snapshot.wls Pair` timed out, while Stable
-mode load-through-Pair without `DumpSave` completed; investigate DumpSave /
-transient cache clearing before treating the snapshot lane as closed.
+out at `180s`, so head-indexed candidate pruning is required. Snapshot caveat
+is now diagnosed: full private-context `DumpSave` saved `Module` temporary
+symbols such as `baseConv$...` / `xEq$...` and inflated
+`HOL`Auto`Simp`Private`` to `402MB`. Explicitly removing
+`generated = Names["HOL`*$*"]; Scan[Remove, generated];` before `DumpSave`
+and restoring intentional Simp globals makes a filtered through-Pair snapshot
+complete in `114.3s`, size `500KB`; restoring it takes `0.1s` and
+`pair_tests.wl` remains green `42/0`. Real snapshot tooling should include a
+careful generated-symbol cleanup phase before dumping.
 
 Date: 2026-06-12. Initial diagnosis was written against commit `f06c23c`;
 Task 1 has since been completed and the current status is recorded below.
