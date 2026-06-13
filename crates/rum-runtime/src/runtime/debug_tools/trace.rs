@@ -4,13 +4,27 @@ mod builder;
 
 use builder::{StructuredTraceBuilder, trace_expr_path_depth};
 
+#[derive(Clone)]
+struct TraceEvalState {
+    original: Expr,
+    pattern: Option<Expr>,
+    levels: Option<CasesLevelSpec>,
+    include_heads: bool,
+    print: bool,
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_trace(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let default_include_heads = self.system_option_bool("Trace", "Heads", false)?;
 
         if let [expr] = args {
-            let (_value, trace) = self.eval_with_structured_trace_capture(expr.clone())?;
-            return Ok(trace);
+            return self.eval_structured_trace_capture_expr(TraceEvalState {
+                original: expr.clone(),
+                pattern: None,
+                levels: None,
+                include_heads: default_include_heads,
+                print: false,
+            });
         }
 
         let (expr, pattern, levels, include_heads) = match args {
@@ -56,8 +70,13 @@ impl Session {
             _ => return Ok(self.invalid_call_with_arg_range("Trace", args, 2, 4)),
         };
 
-        let (_value, trace) = self.eval_with_structured_trace_capture(expr.clone())?;
-        self.filter_structured_trace_expr(trace, pattern, levels, include_heads)
+        self.eval_structured_trace_capture_expr(TraceEvalState {
+            original: expr.clone(),
+            pattern,
+            levels,
+            include_heads,
+            print: false,
+        })
     }
 
     pub(in crate::runtime) fn eval_trace_print(
@@ -67,11 +86,13 @@ impl Session {
         let default_include_heads = self.system_option_bool("TracePrint", "Heads", false)?;
 
         if let [expr] = args {
-            let (value, trace) = self.eval_with_structured_trace_capture(expr.clone())?;
-            for line in render_structured_trace_lines(&trace) {
-                self.push_print(line);
-            }
-            return Ok(value);
+            return self.eval_structured_trace_capture_expr(TraceEvalState {
+                original: expr.clone(),
+                pattern: None,
+                levels: None,
+                include_heads: default_include_heads,
+                print: true,
+            });
         }
 
         let (expr, pattern, levels, include_heads) = match args {
@@ -117,34 +138,53 @@ impl Session {
             _ => return Ok(self.invalid_call_with_arg_range("TracePrint", args, 2, 4)),
         };
 
-        let (value, trace) = self.eval_with_structured_trace_capture(expr.clone())?;
-        let trace = self.filter_structured_trace_expr(trace, pattern, levels, include_heads)?;
-        for line in render_structured_trace_lines(&trace) {
-            self.push_print(line);
-        }
-        Ok(value)
+        self.eval_structured_trace_capture_expr(TraceEvalState {
+            original: expr.clone(),
+            pattern,
+            levels,
+            include_heads,
+            print: true,
+        })
     }
 
-    fn eval_with_structured_trace_capture(
+    fn eval_structured_trace_capture_expr(
         &mut self,
-        expr: Expr,
-    ) -> Result<(Expr, Expr), EvalError> {
-        let (value, events, depths) = self.capture_trace_events(expr.clone())?;
-        Ok((
-            value,
-            self.structured_trace_expr_from_events(&expr, &events, &depths),
-        ))
-    }
-
-    fn capture_trace_events(
-        &mut self,
-        expr: Expr,
-    ) -> Result<(Expr, Vec<TraceEvent>, Vec<usize>), EvalError> {
+        state: TraceEvalState,
+    ) -> Result<Expr, EvalError> {
         let prior_enabled = self.tracing_enabled;
         let trace_checkpoint = self.trace_events.len();
         self.tracing_enabled = true;
 
-        let value = match self.evaluate(expr) {
+        let suspended_state = state.clone();
+        let value_result = self.evaluate(state.original.clone());
+        let outcome = self.suspend_with_result_frame(value_result, move |session, outcome| {
+            session.finish_structured_trace_capture_expr(
+                suspended_state,
+                trace_checkpoint,
+                prior_enabled,
+                outcome,
+            )
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.finish_structured_trace_capture_expr(
+                state,
+                trace_checkpoint,
+                prior_enabled,
+                outcome,
+            ),
+        }
+    }
+
+    fn finish_structured_trace_capture_expr(
+        &mut self,
+        state: TraceEvalState,
+        trace_checkpoint: usize,
+        prior_enabled: bool,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        let value = match outcome {
             Ok(value) => value,
             Err(error) => {
                 self.restore_trace_capture_on_error(trace_checkpoint, prior_enabled);
@@ -152,7 +192,24 @@ impl Session {
             }
         };
 
-        self.finish_trace_event_capture(trace_checkpoint, prior_enabled, value)
+        let (value, events, depths) =
+            self.finish_trace_event_capture(trace_checkpoint, prior_enabled, value)?;
+        let trace = self.structured_trace_expr_from_events(&state.original, &events, &depths);
+        let trace = self.filter_structured_trace_expr(
+            trace,
+            state.pattern,
+            state.levels,
+            state.include_heads,
+        )?;
+
+        if state.print {
+            for line in render_structured_trace_lines(&trace) {
+                self.push_print(line);
+            }
+            Ok(value)
+        } else {
+            Ok(trace)
+        }
     }
 
     fn finish_trace_event_capture(

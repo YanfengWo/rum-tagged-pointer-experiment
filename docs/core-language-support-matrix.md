@@ -336,8 +336,11 @@ once in its primary implementation group. Other groups may mention it as
   `FixedPoint`, `FixedPointList`, `NestWhile`, `NestWhileList`), and the
   fold/window family (`Fold`, `FoldList`, `FoldPair`, `FoldWhile`,
   `SequenceFold`, `SequenceFoldList`, `TakeWhile`, `LengthWhile`,
-  `Accumulate`, `BlockMap`); targeted mapping and tensor/string callback
-  helpers remain separate suspension-hardening work
+  `Accumulate`, `BlockMap`), targeted mapping (`MapAt`, `SubsetMap`), and
+  tensor/string callback helpers (`ArrayReduce`, `Inner`, `ArrayFilter`,
+  `StringApply`, delayed `StringReplace` / `StringCases` rule outputs).
+  `Scan` remaining-part continuation state is not promoted unless a concrete
+  downstream workflow needs that edge
 - `planned`: sparse-array parity, broader ArrayPad-style padding / storage
   compatibility, and obscure higher-order traversal, threading diagnostic, or
   operator/combinator convenience corners beyond the current mainline subset
@@ -794,8 +797,10 @@ once in its primary implementation group. Other groups may mention it as
   options, broader per-test `ActualMessagesText` /
   `ActualMessagesExpressions` / `OutputLog` / `Timing` payloads, current
   merged-report property projection, current input-resume coverage for
-  `EvaluationData` / `Monitor`, and a first-pass `Dialog[...]` / `Dialog[]`
-  one-shot subset with current
+  `EvaluationData`, `RepeatedTiming`, resource-constraint limit/fallback
+  expressions, `Reap` handler rendering, `Trace` / `TracePrint` capture,
+  `TestReport` input capture and `SameTest`, and `Monitor`, plus a first-pass
+  `Dialog[...]` / `Dialog[]` one-shot subset with current
   `DialogProlog` / `DialogSymbols` handling; treat any remaining deeper
   allocator-level real-memory accounting or obscure trace/report edge-case
   parity as future demand-driven work rather than active mainline blockers

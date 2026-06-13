@@ -2,6 +2,11 @@ use super::*;
 
 const REPEATED_TIMING_SAMPLES: usize = 3;
 
+#[derive(Clone)]
+struct RepeatedTimingEvalState {
+    expr: Expr,
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_absolute_time(
         &mut self,
@@ -43,27 +48,12 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("RepeatedTiming", args, 1));
         };
 
-        let mut best_elapsed = None;
-        let mut last_value = system_expr("Null");
-
-        for _ in 0..REPEATED_TIMING_SAMPLES {
-            let started = Instant::now();
-            let value = match self.evaluate(expr.clone()) {
-                Ok(value) => value,
-                Err(error) => return Err(error),
-            };
-            let elapsed = started.elapsed();
-            best_elapsed = Some(best_elapsed.map_or(elapsed, |best: Duration| best.min(elapsed)));
-            last_value = value;
-        }
-
-        Ok(Expr::call(
-            system_expr("List"),
-            vec![
-                elapsed_duration_expr(best_elapsed.unwrap_or_default()),
-                last_value,
-            ],
-        ))
+        self.resume_repeated_timing_from_sample(
+            RepeatedTimingEvalState { expr: expr.clone() },
+            0,
+            None,
+            system_expr("Null"),
+        )
     }
 
     fn eval_timing_like(&mut self, symbol: &str, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -91,6 +81,52 @@ impl Session {
             system_expr("List"),
             vec![elapsed_duration_expr(started.elapsed()), value],
         ))
+    }
+
+    fn resume_repeated_timing_from_sample(
+        &mut self,
+        state: RepeatedTimingEvalState,
+        sample: usize,
+        best_elapsed: Option<Duration>,
+        last_value: Expr,
+    ) -> Result<Expr, EvalError> {
+        if sample >= REPEATED_TIMING_SAMPLES {
+            return Ok(Expr::call(
+                system_expr("List"),
+                vec![
+                    elapsed_duration_expr(best_elapsed.unwrap_or_default()),
+                    last_value,
+                ],
+            ));
+        }
+
+        let started = Instant::now();
+        let suspended_state = state.clone();
+        let value_result = self.evaluate(state.expr.clone());
+        let value = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_repeated_timing_with_value(
+                suspended_state,
+                sample,
+                best_elapsed,
+                started,
+                value,
+            )
+        })?;
+
+        self.resume_repeated_timing_with_value(state, sample, best_elapsed, started, value)
+    }
+
+    fn resume_repeated_timing_with_value(
+        &mut self,
+        state: RepeatedTimingEvalState,
+        sample: usize,
+        best_elapsed: Option<Duration>,
+        started: Instant,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        let elapsed = started.elapsed();
+        let best_elapsed = Some(best_elapsed.map_or(elapsed, |best| best.min(elapsed)));
+        self.resume_repeated_timing_from_sample(state, sample + 1, best_elapsed, value)
     }
 }
 

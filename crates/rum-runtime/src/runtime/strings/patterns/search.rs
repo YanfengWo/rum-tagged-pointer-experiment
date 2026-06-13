@@ -167,25 +167,20 @@ impl Session {
         };
 
         if let Some(value) = expr_as_string(&args[0]) {
-            return Ok(Expr::string(self.replace_string_value_with_rules(
-                value,
-                &rules,
-                max_replacements,
-                config,
-            )?));
+            let result =
+                self.replace_string_value_with_rules(value, &rules, max_replacements, config);
+            return self.drive_internal_value::<String, Expr, _>(result, |_, rendered| {
+                Ok(Expr::string(rendered))
+            });
         }
 
         if let Some(values) = expr_as_string_list(&args[0]) {
-            let mut rendered = Vec::with_capacity(values.len());
-            for value in values {
-                rendered.push(self.replace_string_value_with_rules(
-                    &value,
-                    &rules,
-                    max_replacements,
-                    config,
-                )?);
-            }
-            return Ok(string_list_expr(rendered));
+            return self.replace_string_values_with_rules_expr(
+                values,
+                &rules,
+                max_replacements,
+                config,
+            );
         }
 
         Ok(Expr::call(head.clone(), args.to_vec()))
@@ -210,31 +205,39 @@ impl Session {
         };
 
         if let Some(value) = expr_as_string(&args[0]) {
-            return Ok(if matches!(&spec, ExactStringCaseSpec::Rules(_)) {
-                list_expr(self.collect_string_cases_with_rule_evaluation(
+            if matches!(&spec, ExactStringCaseSpec::Rules(_)) {
+                let result = self.collect_string_cases_with_rule_evaluation(
                     value,
                     &spec,
                     max_matches,
                     config,
-                )?)
-            } else {
-                list_expr(collect_string_cases(value, &spec, max_matches, config))
-            });
+                );
+                return self.drive_internal_value::<Vec<Expr>, Expr, _>(result, |_, items| {
+                    Ok(list_expr(items))
+                });
+            }
+
+            return Ok(list_expr(collect_string_cases(
+                value,
+                &spec,
+                max_matches,
+                config,
+            )));
         }
 
         if let Some(values) = expr_as_string_list(&args[0]) {
+            if matches!(&spec, ExactStringCaseSpec::Rules(_)) {
+                return self.collect_string_cases_values_with_rule_evaluation_expr(
+                    values,
+                    &spec,
+                    max_matches,
+                    config,
+                );
+            }
+
             let mut outputs = Vec::with_capacity(values.len());
             for value in values {
-                let items = if matches!(&spec, ExactStringCaseSpec::Rules(_)) {
-                    self.collect_string_cases_with_rule_evaluation(
-                        &value,
-                        &spec,
-                        max_matches,
-                        config,
-                    )?
-                } else {
-                    collect_string_cases(&value, &spec, max_matches, config)
-                };
+                let items = collect_string_cases(&value, &spec, max_matches, config);
                 outputs.push(list_expr(items));
             }
             return Ok(list_expr(outputs));
@@ -333,28 +336,11 @@ impl Session {
             [operator] => Ok(string_unary_operator_form("StringApply", operator)),
             [operator, input] => {
                 if let Some(value) = expr_as_string(input) {
-                    return string_apply_value(
-                        self,
-                        operator,
-                        value,
-                        Expr::call(head.clone(), args.to_vec()),
-                    );
+                    return string_apply_value(self, head, operator, value);
                 }
 
                 if let Some(values) = expr_as_string_list(input) {
-                    let mut outputs = Vec::with_capacity(values.len());
-                    for value in values {
-                        outputs.push(string_apply_value(
-                            self,
-                            operator,
-                            &value,
-                            Expr::call(
-                                head.clone(),
-                                vec![operator.clone(), Expr::string(value.clone())],
-                            ),
-                        )?);
-                    }
-                    return Ok(list_expr(outputs));
+                    return self.resume_string_apply_values(head, operator, values);
                 }
 
                 Ok(Expr::call(head.clone(), args.to_vec()))

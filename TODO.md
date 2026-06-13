@@ -22,20 +22,20 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Immediate Correctness And Debt
 
-- [ ] Close the concrete suspension-safe helper gaps found in the 2026-06-13
-  audit. Prioritize the remaining public callback loops first: targeted
-  mapping (`MapAt`, `SubsetMap`), tensor/string callback helpers
-  (`ArrayReduce`, `Inner`, `ArrayFilter`, `StringApply`, delayed
-  `StringReplace` / `StringCases` rules), then debug/tooling flows
-  (`RepeatedTiming`, `Reap` / `Sow` handlers, `Trace`, `TestReport`,
-  resource-constraint limit/fallback expressions). Fold/window callback
-  helpers and functional iteration helpers were closed in the 2026-06-13
-  continuation passes.
+- [ ] Keep the suspension-safe helper boundary from the 2026-06-13 audit from
+  regressing. The public callback-loop tranches are now closed for
+  fold/window, functional iteration, targeted mapping (`MapAt`, `SubsetMap`),
+  tensor/string callbacks (`ArrayReduce`, `Inner`, `ArrayFilter`,
+  `StringApply`, delayed `StringReplace` / `StringCases` rules), and selected
+  debug/tooling flows (`RepeatedTiming`, `Reap` handler rendering, `Trace`,
+  `TestReport`, and resource-constraint limit/fallback expressions).
 - [ ] Continue moving those helper payloads onto typed continuation values
   when the flow cannot be represented as `Result<Expr, EvalError>` plus a
   single ordinary suspension frame. Keep Monitor display/callback refresh and
   `ValueQ` rollback behavior intentionally best-effort/non-resumable unless
-  their public contract is promoted.
+  their public contract is promoted. Review `Scan` remaining-part state and
+  exotic `Sow` pattern-test suspension only if a concrete downstream workflow
+  promotes those edges.
 
 ## Architecture And Contracts
 

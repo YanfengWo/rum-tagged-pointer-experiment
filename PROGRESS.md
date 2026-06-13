@@ -6,6 +6,51 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-13 Remaining Helper Suspension Continuations
+
+Closed the remaining public helper tranches from the 2026-06-13
+suspension-safe helper audit.
+
+Targeted mapping now preserves loop state across host input:
+
+- `MapAt` saves the operator, remaining exact paths, current expression, and
+  completed replacements;
+- `SubsetMap` saves the operator result boundary and also frames the final
+  post-replacement evaluation, so a replacement-triggered input request can
+  resume to the full `SubsetMap` result.
+
+Tensor and string callback helpers now use saved continuation state:
+
+- `ArrayReduce` and `ArrayFilter` share a tensor callback loop over prepared
+  operator arguments and output shape;
+- `Inner` saves both the term-building `f` phase and the reduction `g` phase;
+- `StringApply` preserves scalar/list output shape across callback input;
+- delayed `StringReplace` and `StringCases` rule outputs save string-scan
+  position, accumulated output, match count, and list-input progress.
+
+Selected debug/tooling flows now resume through their public callback or
+capture boundaries:
+
+- `RepeatedTiming` resumes through repeated samples;
+- `TimeConstrained` / `MemoryConstrained` resume through limit evaluation and
+  fallback evaluation;
+- `Reap` preserves the body value while handler rendering suspends;
+- `Trace` / `TracePrint` preserve trace checkpoints and restore tracing state
+  after resumed capture;
+- `TestReport` preserves stream-capture checkpoints, test-case progress,
+  `SameTest` evaluation, and report rendering state.
+
+Intentional non-promotions remain documented in `TODO.md`: `Monitor`
+display/callback refresh is best-effort, `ValueQ` remains a rollback probe, and
+`Scan` remaining-part state plus exotic `Sow` pattern-test suspension should be
+reviewed only if a concrete downstream workflow promotes those edges.
+
+Validation:
+
+- `cargo fmt --check`
+- `cargo test -p rum-runtime resume_eval_request_with_input_can_finish`
+- `cargo test -p rum-runtime`
+
 ## 2026-06-13 Sequence Fold Module Split
 
 Split the post-continuation

@@ -43,23 +43,113 @@ fn string_unary_operator_form_slot_first(symbol: &str, tail: &Expr) -> Expr {
     )
 }
 
+#[derive(Clone)]
+struct StringApplyEvalState {
+    head: Expr,
+    operator: Expr,
+    values: Vec<String>,
+    list_output: bool,
+}
+
 fn string_apply_value(
     session: &mut Session,
+    head: &Expr,
     operator: &Expr,
     value: &str,
-    fallback: Expr,
 ) -> Result<Expr, EvalError> {
-    let applied = Expr::call(
-        operator.clone(),
-        vec![list_expr(
-            value
-                .chars()
-                .map(|ch| Expr::string(ch.to_string()))
-                .collect(),
-        )],
-    );
-    let evaluated = session.evaluate(applied)?;
-    Ok(string_apply_output_expr(evaluated).unwrap_or(fallback))
+    session.resume_string_apply_from_index(
+        StringApplyEvalState {
+            head: head.clone(),
+            operator: operator.clone(),
+            values: vec![value.to_string()],
+            list_output: false,
+        },
+        0,
+        Vec::with_capacity(1),
+    )
+}
+
+impl Session {
+    fn resume_string_apply_from_index(
+        &mut self,
+        state: StringApplyEvalState,
+        index: usize,
+        outputs: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let Some(value) = state.values.get(index) else {
+            return Ok(if state.list_output {
+                list_expr(outputs)
+            } else {
+                outputs
+                    .into_iter()
+                    .next()
+                    .unwrap_or_else(|| Expr::call(state.head, Vec::new()))
+            });
+        };
+
+        let applied = Expr::call(
+            state.operator.clone(),
+            vec![list_expr(
+                value
+                    .chars()
+                    .map(|ch| Expr::string(ch.to_string()))
+                    .collect(),
+            )],
+        );
+        let suspended_state = state.clone();
+        let suspended_outputs = outputs.clone();
+        let evaluated_result = self.evaluate(applied);
+        let evaluated = self.suspend_with_frame(evaluated_result, move |session, evaluated| {
+            session.resume_string_apply_with_value(
+                suspended_state,
+                index,
+                suspended_outputs,
+                evaluated,
+            )
+        })?;
+
+        self.resume_string_apply_with_value(state, index, outputs, evaluated)
+    }
+
+    fn resume_string_apply_with_value(
+        &mut self,
+        state: StringApplyEvalState,
+        index: usize,
+        mut outputs: Vec<Expr>,
+        evaluated: Expr,
+    ) -> Result<Expr, EvalError> {
+        let fallback = state
+            .values
+            .get(index)
+            .map(|value| {
+                Expr::call(
+                    state.head.clone(),
+                    vec![state.operator.clone(), Expr::string(value.clone())],
+                )
+            })
+            .unwrap_or_else(|| Expr::call(state.head.clone(), Vec::new()));
+        outputs.push(string_apply_output_expr(evaluated).unwrap_or(fallback));
+        self.resume_string_apply_from_index(state, index + 1, outputs)
+    }
+
+    fn resume_string_apply_values(
+        &mut self,
+        head: &Expr,
+        operator: &Expr,
+        values: Vec<String>,
+    ) -> Result<Expr, EvalError> {
+        let capacity = values.len();
+        self.resume_string_apply_from_index(
+            StringApplyEvalState {
+                head: head.clone(),
+                operator: operator.clone(),
+                values,
+                list_output: true,
+            },
+            0,
+            Vec::with_capacity(capacity),
+        )
+    }
 }
 
 fn string_apply_output_expr(expr: Expr) -> Option<Expr> {

@@ -1,6 +1,89 @@
 use super::model::{EvalCapturedOutcome, TestCaseSpec, TestReportOptions};
 use super::*;
 
+impl ContinuationValue for EvalCapturedOutcome {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationEvalCapturedOutcome"),
+            vec![
+                self.value,
+                self.failure_type
+                    .map(Expr::string)
+                    .unwrap_or_else(|| system_expr("Null")),
+                Expr::call(
+                    system_expr("List"),
+                    self.messages
+                        .into_iter()
+                        .map(|message| {
+                            Expr::call(
+                                system_expr("List"),
+                                vec![
+                                    Expr::string(message.symbol),
+                                    Expr::string(message.tag),
+                                    Expr::string(message.text),
+                                ],
+                            )
+                        })
+                        .collect(),
+                ),
+                Expr::call(
+                    system_expr("List"),
+                    self.prints.into_iter().map(Expr::string).collect(),
+                ),
+                self.timing,
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        let Expr::Call { head, args } = expr else {
+            return EvalCapturedOutcome {
+                value: expr,
+                failure_type: Some("Error"),
+                messages: Vec::new(),
+                prints: Vec::new(),
+                timing: Expr::integer(BigInt::from(0_u8)),
+            };
+        };
+        if !is_system_symbol_name(&head, "InternalContinuationEvalCapturedOutcome")
+            || args.len() != 5
+        {
+            return EvalCapturedOutcome {
+                value: Expr::call_shared(head, args),
+                failure_type: Some("Error"),
+                messages: Vec::new(),
+                prints: Vec::new(),
+                timing: Expr::integer(BigInt::from(0_u8)),
+            };
+        }
+
+        let mut items = args.into_iter();
+        let value = items.next().unwrap_or_else(|| system_expr("$Failed"));
+        let failure_type = items
+            .next()
+            .and_then(|expr| expr_as_string(&expr).map(failure_type_from_string));
+        let messages = items
+            .next()
+            .and_then(runtime_messages_from_continuation_expr)
+            .unwrap_or_default();
+        let prints = items
+            .next()
+            .and_then(strings_from_continuation_expr)
+            .unwrap_or_default();
+        let timing = items
+            .next()
+            .unwrap_or_else(|| Expr::integer(BigInt::from(0_u8)));
+
+        EvalCapturedOutcome {
+            value,
+            failure_type,
+            messages,
+            prints,
+            timing,
+        }
+    }
+}
+
 impl Session {
     pub(in crate::runtime::debug_tools::test_report) fn test_case_output_matches(
         &mut self,
@@ -15,8 +98,10 @@ impl Session {
             .or(report_same_test)
             .unwrap_or_else(|| system_expr("SameQ"));
         let applied = Expr::call(same_test, vec![actual, expected]);
-        let resolved = self.evaluate(applied)?;
-        Ok(is_system_symbol_name(&resolved, "True"))
+        let resolved_result = self.evaluate(applied);
+        self.drive_evaluated_value::<Expr, bool, _>(resolved_result, |_, resolved| {
+            Ok(is_system_symbol_name(&resolved, "True"))
+        })
     }
 
     pub(in crate::runtime::debug_tools::test_report) fn normalize_expected_message_exprs(
@@ -88,36 +173,11 @@ impl Session {
     ) -> Result<EvalCapturedOutcome, EvalError> {
         let wrapped = wrap_test_case_with_constraints(input, options);
         let started = Instant::now();
-        let outcome = self.eval_expr_with_stream_capture(wrapped)?;
-        let elapsed = elapsed_duration_expr(started.elapsed());
-
-        if outcome.value == test_report_time_constraint_sentinel() {
-            return Ok(EvalCapturedOutcome {
-                value: system_expr("$Aborted"),
-                failure_type: Some("TimeConstraint"),
-                messages: outcome.messages,
-                prints: outcome.prints,
-                timing: elapsed,
-            });
-        }
-
-        if outcome.value == test_report_memory_constraint_sentinel() {
-            return Ok(EvalCapturedOutcome {
-                value: system_expr("$Aborted"),
-                failure_type: Some("MemoryConstraint"),
-                messages: outcome.messages,
-                prints: outcome.prints,
-                timing: elapsed,
-            });
-        }
-
-        Ok(EvalCapturedOutcome {
-            value: outcome.value,
-            failure_type: None,
-            messages: outcome.messages,
-            prints: outcome.prints,
-            timing: elapsed,
-        })
+        let outcome_result = self.eval_expr_with_stream_capture(wrapped);
+        self.drive_internal_value::<EvalCapturedOutcome, EvalCapturedOutcome, _>(
+            outcome_result,
+            move |_, outcome| Ok(finish_test_case_input_outcome(started, outcome)),
+        )
     }
 
     fn render_test_outcome(
@@ -181,6 +241,39 @@ impl Session {
         let result = self.finalize_top_level_control_flow(evaluated);
 
         match result {
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(move |session, outcome| {
+                    let result = session.finalize_top_level_control_flow(outcome);
+                    let captured = session.finish_eval_expr_with_stream_capture(
+                        started,
+                        message_checkpoint,
+                        print_checkpoint,
+                        handled_error_checkpoint,
+                        result,
+                    )?;
+                    Ok(captured.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            result => self.finish_eval_expr_with_stream_capture(
+                started,
+                message_checkpoint,
+                print_checkpoint,
+                handled_error_checkpoint,
+                result,
+            ),
+        }
+    }
+
+    fn finish_eval_expr_with_stream_capture(
+        &mut self,
+        started: Instant,
+        message_checkpoint: usize,
+        print_checkpoint: usize,
+        handled_error_checkpoint: usize,
+        result: Result<Expr, EvalError>,
+    ) -> Result<EvalCapturedOutcome, EvalError> {
+        match result {
             Ok(value) => {
                 let messages = self.messages.split_off(message_checkpoint);
                 let prints = self.prints.split_off(print_checkpoint);
@@ -217,6 +310,59 @@ impl Session {
     }
 }
 
+fn runtime_messages_from_continuation_expr(expr: Expr) -> Option<Vec<RuntimeMessage>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    if !is_system_symbol_name(&head, "List") {
+        return None;
+    }
+
+    args.into_iter()
+        .map(|item| {
+            let Expr::Call { head, args } = item else {
+                return None;
+            };
+            if !is_system_symbol_name(&head, "List") || args.len() != 3 {
+                return None;
+            }
+            let mut fields = args.into_iter();
+            Some(RuntimeMessage {
+                symbol: expr_as_string(&fields.next()?)?.to_string(),
+                tag: expr_as_string(&fields.next()?)?.to_string(),
+                text: expr_as_string(&fields.next()?)?.to_string(),
+            })
+        })
+        .collect()
+}
+
+fn strings_from_continuation_expr(expr: Expr) -> Option<Vec<String>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    if !is_system_symbol_name(&head, "List") {
+        return None;
+    }
+
+    args.into_iter()
+        .map(|item| expr_as_string(&item).map(str::to_owned))
+        .collect()
+}
+
+fn failure_type_from_string(value: &str) -> &'static str {
+    match value {
+        "Abort" => "Abort",
+        "Break" => "Break",
+        "Continue" => "Continue",
+        "Error" => "Error",
+        "MemoryConstraint" => "MemoryConstraint",
+        "Return" => "Return",
+        "Throw" => "Throw",
+        "TimeConstraint" => "TimeConstraint",
+        _ => "Error",
+    }
+}
+
 fn wrap_test_case_with_constraints(input: Expr, options: &TestReportOptions) -> Expr {
     let mut wrapped = input;
 
@@ -235,6 +381,41 @@ fn wrap_test_case_with_constraints(input: Expr, options: &TestReportOptions) -> 
     }
 
     wrapped
+}
+
+fn finish_test_case_input_outcome(
+    started: Instant,
+    outcome: EvalCapturedOutcome,
+) -> EvalCapturedOutcome {
+    let elapsed = elapsed_duration_expr(started.elapsed());
+
+    if outcome.value == test_report_time_constraint_sentinel() {
+        return EvalCapturedOutcome {
+            value: system_expr("$Aborted"),
+            failure_type: Some("TimeConstraint"),
+            messages: outcome.messages,
+            prints: outcome.prints,
+            timing: elapsed,
+        };
+    }
+
+    if outcome.value == test_report_memory_constraint_sentinel() {
+        return EvalCapturedOutcome {
+            value: system_expr("$Aborted"),
+            failure_type: Some("MemoryConstraint"),
+            messages: outcome.messages,
+            prints: outcome.prints,
+            timing: elapsed,
+        };
+    }
+
+    EvalCapturedOutcome {
+        value: outcome.value,
+        failure_type: None,
+        messages: outcome.messages,
+        prints: outcome.prints,
+        timing: elapsed,
+    }
 }
 
 fn test_report_time_constraint_sentinel() -> Expr {

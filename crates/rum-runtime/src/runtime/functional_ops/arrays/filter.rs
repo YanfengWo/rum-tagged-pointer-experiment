@@ -31,7 +31,7 @@ pub(super) fn apply_array_filter(
         })
         .collect::<Vec<_>>();
 
-    let mut outputs = Vec::new();
+    let mut operator_args = Vec::new();
     for output_index in enumerate_indices(&output_shape) {
         let center = output_index
             .iter()
@@ -52,10 +52,19 @@ pub(super) fn apply_array_filter(
             &mut window_index,
         )
         .expect("validated array neighborhoods should rebuild");
-        outputs.push(session.evaluate(Expr::call(operator.clone(), vec![block]))?);
+        operator_args.push(block);
     }
 
-    Ok(rebuild_tensor_expr(&list_head, &output_shape, &outputs))
+    session.resume_tensor_callback_from_index(
+        TensorCallbackEvalState {
+            operator: operator.clone(),
+            output_head: list_head,
+            output_shape,
+            operator_args,
+        },
+        0,
+        Vec::new(),
+    )
 }
 
 pub(super) fn build_array_filter_block(

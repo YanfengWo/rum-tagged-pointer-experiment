@@ -250,23 +250,31 @@ Known gaps include:
   treatment already applied to messages, loaders, definitions, scoping, and
   traversal config
 
-### 6. Helper Suspension Implementation Is Not Fully Closed
+### 6. Helper Suspension Implementation Is Mostly Closed
 
-Typed suspension/resume is now real kernel infrastructure, and the first
-helper-level audit has been narrowed to concrete implementation gaps.
+Typed suspension/resume is now real kernel infrastructure. The first
+helper-level audit's public callback-loop tranches are closed for the current
+`v0.1` boundary:
 
-Known gaps:
+- fold/window helpers and functional iteration helpers save loop state before
+  callback evaluation
+- targeted mapping (`MapAt`, `SubsetMap`) preserves current expression and
+  replacement state
+- tensor/string callback helpers (`ArrayReduce`, `Inner`, `ArrayFilter`,
+  `StringApply`, delayed `StringReplace` / `StringCases` rule outputs)
+  preserve scan/index state
+- selected debug/tooling flows now resume through repeated timing samples,
+  `Trace` / `TracePrint` capture, `TestReport` input and `SameTest`
+  evaluation, resource-constraint limit/fallback expressions, and `Reap`
+  handler rendering
 
-- public callback loops in targeted mapping, tensor helpers, and string
-  delayed-rule helpers still have direct `evaluate(...)?` points that need
-  loop-state continuations before host-driven input can resume them correctly
-- debug/tooling flows such as repeated timing, trace capture, test-report
-  evaluation, resource-constraint limit/fallback expressions, and `Reap` /
-  `Sow` handlers still need focused continuation work if they are expected to
-  support input suspension
+Known residual non-promotions:
+
 - `Monitor` display/callback refresh is intentionally best-effort for now, and
   `ValueQ` intentionally remains a rollback probe rather than a resumable
   public continuation
+- `Scan` remaining-part state and exotic `Sow` pattern-test suspension should
+  be reviewed only if a concrete downstream workflow promotes those edges
 
 ### 7. Pattern And Traversal Semantics Still Cover Only The Current Early Subset
 

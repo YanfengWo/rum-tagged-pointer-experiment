@@ -6,6 +6,19 @@ enum MapThreadDispatch {
     Mismatch,
 }
 
+#[derive(Clone)]
+struct MapAtEvalState {
+    operator: Expr,
+    paths: Vec<Vec<isize>>,
+}
+
+#[derive(Clone)]
+struct SubsetMapEvalState {
+    expr: Expr,
+    paths: Vec<Vec<isize>>,
+    fallback: Expr,
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_subset_map(
         &mut self,
@@ -137,18 +150,78 @@ impl Session {
         expr: Expr,
         paths: Vec<Vec<isize>>,
     ) -> Result<Expr, EvalError> {
-        let mut current = expr;
+        self.resume_map_at_from_index(
+            MapAtEvalState {
+                operator: operator.clone(),
+                paths,
+            },
+            0,
+            expr,
+        )
+    }
 
-        for path in paths {
-            let Some(part) = exact_expr_at_path(&current, &path) else {
-                continue;
-            };
+    fn resume_map_at_from_index(
+        &mut self,
+        state: MapAtEvalState,
+        index: usize,
+        current: Expr,
+    ) -> Result<Expr, EvalError> {
+        let Some(path) = state.paths.get(index) else {
+            return Ok(current);
+        };
 
-            let mapped = self.evaluate(Expr::call(operator.clone(), vec![part]))?;
-            current = replace_exact_path(current, &path, mapped);
+        let Some(part) = exact_expr_at_path(&current, path) else {
+            return self.resume_map_at_from_index(state, index + 1, current);
+        };
+
+        let suspended_state = state.clone();
+        let suspended_current = current.clone();
+        let mapped_result = self.evaluate(Expr::call(state.operator.clone(), vec![part]));
+        let mapped = self.suspend_with_frame(mapped_result, move |session, mapped| {
+            session.resume_map_at_with_value(suspended_state, index, suspended_current, mapped)
+        })?;
+
+        self.resume_map_at_with_value(state, index, current, mapped)
+    }
+
+    fn resume_map_at_with_value(
+        &mut self,
+        state: MapAtEvalState,
+        index: usize,
+        current: Expr,
+        mapped: Expr,
+    ) -> Result<Expr, EvalError> {
+        let Some(path) = state.paths.get(index) else {
+            return Ok(current);
+        };
+
+        let current = replace_exact_path(current, path, mapped);
+        self.resume_map_at_from_index(state, index + 1, current)
+    }
+
+    fn finish_subset_map_from_mapped(
+        &mut self,
+        state: SubsetMapEvalState,
+        mapped: Expr,
+    ) -> Result<Expr, EvalError> {
+        let Expr::Call {
+            args: replacements, ..
+        } = mapped
+        else {
+            return Ok(state.fallback);
+        };
+
+        if replacements.len() != state.paths.len() {
+            return Ok(state.fallback);
         }
 
-        Ok(current)
+        let mut current = state.expr;
+        for (path, replacement) in state.paths.iter().zip(replacements.into_iter()) {
+            current = replace_exact_path(current, path, replacement);
+        }
+
+        let evaluated_result = self.evaluate(current);
+        self.suspend_with_frame(evaluated_result, |_, value| Ok(value))
     }
 }
 
@@ -276,33 +349,28 @@ fn apply_subset_map(
     paths: &[Vec<isize>],
     raw_args: &[Expr],
 ) -> Result<Expr, EvalError> {
+    let fallback = Expr::call(head.clone(), raw_args.to_vec());
     let Some(parts) = paths
         .iter()
         .map(|path| exact_expr_at_path(expr, path))
         .collect::<Option<Vec<_>>>()
     else {
-        return Ok(Expr::call(head.clone(), raw_args.to_vec()));
+        return Ok(fallback);
     };
 
-    let mapped = session.evaluate(Expr::call(
+    let state = SubsetMapEvalState {
+        expr: expr.clone(),
+        paths: paths.to_vec(),
+        fallback,
+    };
+    let suspended_state = state.clone();
+    let mapped_result = session.evaluate(Expr::call(
         operator.clone(),
         vec![Expr::call(system_expr("List"), parts)],
-    ))?;
-    let Expr::Call {
-        args: replacements, ..
-    } = mapped
-    else {
-        return Ok(Expr::call(head.clone(), raw_args.to_vec()));
-    };
+    ));
+    let mapped = session.suspend_with_frame(mapped_result, move |session, mapped| {
+        session.finish_subset_map_from_mapped(suspended_state, mapped)
+    })?;
 
-    if replacements.len() != paths.len() {
-        return Ok(Expr::call(head.clone(), raw_args.to_vec()));
-    }
-
-    let mut current = expr.clone();
-    for (path, replacement) in paths.iter().zip(replacements.into_iter()) {
-        current = replace_exact_path(current, path, replacement);
-    }
-
-    session.evaluate(current)
+    session.finish_subset_map_from_mapped(state, mapped)
 }

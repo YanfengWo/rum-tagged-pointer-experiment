@@ -14,11 +14,33 @@ impl Session {
             }
         };
 
-        let resolved_limit = self.evaluate(limit_expr.clone())?;
+        let raw_args = args.to_vec();
+        let suspended_body = body.clone();
+        let suspended_fallback = fallback.clone();
+        let resolved_result = self.evaluate(limit_expr.clone());
+        let resolved_limit =
+            self.suspend_with_frame(resolved_result, move |session, resolved| {
+                session.resume_time_constrained_with_limit(
+                    suspended_body,
+                    suspended_fallback,
+                    raw_args,
+                    resolved,
+                )
+            })?;
+        self.resume_time_constrained_with_limit(body, fallback, args.to_vec(), resolved_limit)
+    }
+
+    fn resume_time_constrained_with_limit(
+        &mut self,
+        body: Expr,
+        fallback: Option<Expr>,
+        raw_args: Vec<Expr>,
+        resolved_limit: Expr,
+    ) -> Result<Expr, EvalError> {
         let Some(limit) = parse_time_constraint_duration(&resolved_limit) else {
             return Ok(self.invalid_call_with_arg_form(
                 "TimeConstrained",
-                args,
+                &raw_args,
                 "expected the timeout argument to be a non-negative exact number in the current first-pass subset",
             ));
         };
@@ -53,11 +75,33 @@ impl Session {
             }
         };
 
-        let resolved_limit = self.evaluate(limit_expr.clone())?;
+        let raw_args = args.to_vec();
+        let suspended_body = body.clone();
+        let suspended_fallback = fallback.clone();
+        let resolved_result = self.evaluate(limit_expr.clone());
+        let resolved_limit =
+            self.suspend_with_frame(resolved_result, move |session, resolved| {
+                session.resume_memory_constrained_with_limit(
+                    suspended_body,
+                    suspended_fallback,
+                    raw_args,
+                    resolved,
+                )
+            })?;
+        self.resume_memory_constrained_with_limit(body, fallback, args.to_vec(), resolved_limit)
+    }
+
+    fn resume_memory_constrained_with_limit(
+        &mut self,
+        body: Expr,
+        fallback: Option<Expr>,
+        raw_args: Vec<Expr>,
+        resolved_limit: Expr,
+    ) -> Result<Expr, EvalError> {
         let Some(limit) = expr_as_non_negative_usize(&resolved_limit) else {
             return Ok(self.invalid_call_with_arg_form(
                 "MemoryConstrained",
-                args,
+                &raw_args,
                 "expected the memory limit argument to be a non-negative exact integer",
             ));
         };
@@ -168,7 +212,10 @@ impl Session {
         match outcome {
             Ok(value) => Ok(value),
             Err(EvalError::TimeConstraintExceeded) => match fallback {
-                Some(expr) => self.evaluate(expr),
+                Some(expr) => {
+                    let fallback_result = self.evaluate(expr);
+                    self.suspend_with_frame(fallback_result, |_, value| Ok(value))
+                }
                 None => Ok(system_expr("$Aborted")),
             },
             Err(error) => Err(error),
@@ -186,7 +233,10 @@ impl Session {
         match outcome {
             Ok(value) => Ok(value),
             Err(EvalError::MemoryConstraintExceeded { .. }) => match fallback {
-                Some(expr) => self.evaluate(expr),
+                Some(expr) => {
+                    let fallback_result = self.evaluate(expr);
+                    self.suspend_with_frame(fallback_result, |_, value| Ok(value))
+                }
                 None => Ok(system_expr("$Aborted")),
             },
             Err(error) => Err(error),

@@ -1,5 +1,18 @@
 use super::*;
 
+#[derive(Clone)]
+struct ReapScopeRenderState {
+    handler: Option<Expr>,
+    pattern_list_form: bool,
+    groups: Vec<Vec<ReapBucket>>,
+}
+
+#[derive(Clone)]
+struct ReapBucketRenderState {
+    handler: Option<Expr>,
+    buckets: Vec<ReapBucket>,
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_sow(
         &mut self,
@@ -71,49 +84,117 @@ impl Session {
             .expect("reap scope should exist while finishing Reap");
 
         match outcome {
-            Ok(value) => Ok(Expr::call(
-                system_expr("List"),
-                vec![value, self.render_reap_scope(scope)?],
-            )),
+            Ok(value) => {
+                let suspended_value = value.clone();
+                let rendered_result = self.render_reap_scope(scope);
+                let rendered = self.suspend_with_frame(rendered_result, move |_, rendered| {
+                    Ok(finish_reap_result(suspended_value, rendered))
+                })?;
+                Ok(finish_reap_result(value, rendered))
+            }
             Err(error) => Err(error),
         }
     }
 
     fn render_reap_scope(&mut self, scope: ReapScope) -> Result<Expr, EvalError> {
-        if scope.pattern_list_form {
-            let mut rendered = Vec::with_capacity(scope.buckets_by_pattern.len());
-            for buckets in scope.buckets_by_pattern {
-                rendered.push(self.render_reap_buckets(&scope.handler, buckets)?);
-            }
-            Ok(Expr::call(system_expr("List"), rendered))
-        } else {
-            let buckets = scope
-                .buckets_by_pattern
-                .into_iter()
-                .next()
-                .unwrap_or_default();
-            self.render_reap_buckets(&scope.handler, buckets)
-        }
+        self.resume_reap_scope_groups_from_index(
+            ReapScopeRenderState {
+                handler: scope.handler,
+                pattern_list_form: scope.pattern_list_form,
+                groups: scope.buckets_by_pattern,
+            },
+            0,
+            Vec::new(),
+        )
     }
 
-    fn render_reap_buckets(
+    fn resume_reap_scope_groups_from_index(
         &mut self,
-        handler: &Option<Expr>,
-        buckets: Vec<ReapBucket>,
+        state: ReapScopeRenderState,
+        group_index: usize,
+        rendered_groups: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
-        let mut rendered = Vec::with_capacity(buckets.len());
-        for bucket in buckets {
-            let values_expr = Expr::call(system_expr("List"), bucket.values);
-            let group = match handler {
-                Some(handler) => {
-                    let applied = Expr::call(handler.clone(), vec![bucket.tag, values_expr]);
-                    self.evaluate(applied)?
-                }
-                None => values_expr,
-            };
-            rendered.push(group);
-        }
-        Ok(Expr::call(system_expr("List"), rendered))
+        let Some(buckets) = state.groups.get(group_index) else {
+            return Ok(if state.pattern_list_form {
+                Expr::call(system_expr("List"), rendered_groups)
+            } else {
+                rendered_groups
+                    .into_iter()
+                    .next()
+                    .unwrap_or_else(|| Expr::call(system_expr("List"), Vec::new()))
+            });
+        };
+
+        let bucket_state = ReapBucketRenderState {
+            handler: state.handler.clone(),
+            buckets: buckets.clone(),
+        };
+        let suspended_state = state.clone();
+        let suspended_rendered_groups = rendered_groups.clone();
+        let group_result = self.resume_reap_buckets_from_index(bucket_state, 0, Vec::new());
+        let group = self.suspend_with_frame(group_result, move |session, group| {
+            session.resume_reap_scope_group_with_value(
+                suspended_state,
+                group_index,
+                suspended_rendered_groups,
+                group,
+            )
+        })?;
+
+        self.resume_reap_scope_group_with_value(state, group_index, rendered_groups, group)
+    }
+
+    fn resume_reap_scope_group_with_value(
+        &mut self,
+        state: ReapScopeRenderState,
+        group_index: usize,
+        mut rendered_groups: Vec<Expr>,
+        group: Expr,
+    ) -> Result<Expr, EvalError> {
+        rendered_groups.push(group);
+        self.resume_reap_scope_groups_from_index(state, group_index + 1, rendered_groups)
+    }
+
+    fn resume_reap_buckets_from_index(
+        &mut self,
+        state: ReapBucketRenderState,
+        bucket_index: usize,
+        rendered: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let Some(bucket) = state.buckets.get(bucket_index) else {
+            return Ok(Expr::call(system_expr("List"), rendered));
+        };
+
+        let values_expr = Expr::call(system_expr("List"), bucket.values.clone());
+        let Some(handler) = &state.handler else {
+            return self.resume_reap_bucket_with_value(state, bucket_index, rendered, values_expr);
+        };
+
+        let suspended_state = state.clone();
+        let suspended_rendered = rendered.clone();
+        let applied = Expr::call(handler.clone(), vec![bucket.tag.clone(), values_expr]);
+        let group_result = self.evaluate(applied);
+        let group = self.suspend_with_frame(group_result, move |session, group| {
+            session.resume_reap_bucket_with_value(
+                suspended_state,
+                bucket_index,
+                suspended_rendered,
+                group,
+            )
+        })?;
+
+        self.resume_reap_bucket_with_value(state, bucket_index, rendered, group)
+    }
+
+    fn resume_reap_bucket_with_value(
+        &mut self,
+        state: ReapBucketRenderState,
+        bucket_index: usize,
+        mut rendered: Vec<Expr>,
+        group: Expr,
+    ) -> Result<Expr, EvalError> {
+        rendered.push(group);
+        self.resume_reap_buckets_from_index(state, bucket_index + 1, rendered)
     }
 }
 
@@ -137,4 +218,8 @@ fn record_sown_value(buckets: &mut Vec<ReapBucket>, tag: Expr, value: Expr) {
         tag,
         values: vec![value],
     });
+}
+
+fn finish_reap_result(value: Expr, harvested: Expr) -> Expr {
+    Expr::call(system_expr("List"), vec![value, harvested])
 }
