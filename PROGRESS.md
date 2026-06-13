@@ -6,6 +6,31 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-13 Iteration Suspension Continuations
+
+Closed the functional-iteration callback tranche from the suspension-safe
+helper audit. The iteration helpers now save their state before evaluating
+operator or test callbacks and resume from the saved point instead of
+restarting the whole request:
+
+- `Nest` / `NestList` preserve the current value, iteration index, and
+  collected history for the list form;
+- `FixedPoint` / `FixedPointList` preserve current value, seen values, iteration
+  count, and list history, keeping the existing fixed-point, cycle, and
+  max-iteration behavior;
+- `NestWhile` / `NestWhileList` resume through both the test callback and the
+  step callback while preserving history and max-iteration semantics.
+
+Added host-level regression coverage that drives these callbacks through
+`InputString` and `resume_eval_request_with_input`, including repeated
+suspensions in `Nest`.
+
+Validation:
+
+- `cargo fmt`
+- `cargo test -p rum-runtime functional_ops::iteration`
+- `cargo test -p rum-runtime functional_iteration_resume`
+
 ## 2026-06-13 Fold/Window Suspension Continuations
 
 Closed the fold/window callback tranche from the suspension-safe helper audit.

@@ -23,14 +23,14 @@ Completed history, archived planning detail, and operational lessons live in
 ## Immediate Correctness And Debt
 
 - [ ] Close the concrete suspension-safe helper gaps found in the 2026-06-13
-  audit. Prioritize public callback loops first: functional iteration
-  (`Nest`, `FixedPoint`, `NestWhile`), targeted mapping (`MapAt`,
-  `SubsetMap`), tensor/string callback helpers (`ArrayReduce`, `Inner`,
-  `ArrayFilter`, `StringApply`, delayed `StringReplace` / `StringCases`
-  rules), then debug/tooling flows (`RepeatedTiming`, `Reap` / `Sow`
-  handlers, `Trace`, `TestReport`, resource-constraint limit/fallback
-  expressions). Fold/window callback helpers were closed in the 2026-06-13
-  fold/window continuation pass.
+  audit. Prioritize the remaining public callback loops first: targeted
+  mapping (`MapAt`, `SubsetMap`), tensor/string callback helpers
+  (`ArrayReduce`, `Inner`, `ArrayFilter`, `StringApply`, delayed
+  `StringReplace` / `StringCases` rules), then debug/tooling flows
+  (`RepeatedTiming`, `Reap` / `Sow` handlers, `Trace`, `TestReport`,
+  resource-constraint limit/fallback expressions). Fold/window callback
+  helpers and functional iteration helpers were closed in the 2026-06-13
+  continuation passes.
 - [ ] Continue moving those helper payloads onto typed continuation values
   when the flow cannot be represented as `Result<Expr, EvalError>` plus a
   single ordinary suspension frame. Keep Monitor display/callback refresh and

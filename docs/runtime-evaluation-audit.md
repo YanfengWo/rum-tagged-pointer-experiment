@@ -257,10 +257,9 @@ helper-level audit has been narrowed to concrete implementation gaps.
 
 Known gaps:
 
-- public callback loops in functional iteration, targeted mapping, tensor
-  helpers, and string delayed-rule helpers still have direct `evaluate(...)?`
-  points that need loop-state continuations before host-driven input can resume
-  them correctly
+- public callback loops in targeted mapping, tensor helpers, and string
+  delayed-rule helpers still have direct `evaluate(...)?` points that need
+  loop-state continuations before host-driven input can resume them correctly
 - debug/tooling flows such as repeated timing, trace capture, test-report
   evaluation, resource-constraint limit/fallback expressions, and `Reap` /
   `Sow` handlers still need focused continuation work if they are expected to

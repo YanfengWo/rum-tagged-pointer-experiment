@@ -1,6 +1,7 @@
 use super::*;
 
 mod api;
+mod functional_iteration_resume;
 mod functional_sequence_resume;
 mod input_resume;
 mod matcher_resume;
