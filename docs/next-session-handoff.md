@@ -91,11 +91,10 @@ Completion: a runtime regression test now covers the symbol-valued tag repro
 `test/meson_proveprop_tests` has been re-probed. Its current timeout is no
 longer polluted by this bug.
 
-Remaining semantic boundary: WolframKernel appears to evaluate nontrivial tag
-forms in a protected side-effect scope where `Print` is visible but assignment
-effects do not leak after the `Catch`. The Task 1 fix covers the
-symbol-valued exact-tag failure that blocked Meson; that broader side-effect
-rollback behavior remains separate debt.
+Follow-up oracle check: WolframKernel does not sandbox nontrivial tag-form
+side effects in the tested exact-tag path. `Print` is visible and assignments
+inside the tag form remain visible after both matching and nonmatching nested
+`Catch` cases, so this is no longer tracked as separate rollback debt.
 
 ## Task 2 (completed diagnosis): Pair/Simp multiplier hunt
 

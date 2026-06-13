@@ -322,6 +322,37 @@ fn repl_history_persists_when_a_history_path_is_configured() {
 }
 
 #[test]
+fn repl_history_persists_multiline_inputs_as_single_logical_entries() {
+    let history_path = temp_history_path("multiline");
+
+    {
+        let input = Cursor::new("Identity[\n123\n]\n:quit\n");
+        let mut output = Vec::new();
+        let mut repl = Repl::new(input, &mut output).with_history_path(&history_path);
+        let mut session = Session::new();
+
+        repl.run(&mut session).unwrap();
+    }
+
+    let persisted = fs::read_to_string(&history_path).unwrap();
+    assert!(persisted.contains("Identity[\\n123\\n]"));
+    assert_eq!(persisted.lines().count(), 2);
+
+    let input = Cursor::new(":history\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output).with_history_path(&history_path);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("Identity[\\n123\\n]"));
+    assert!(!rendered.contains("   2: 123"));
+
+    let _ = fs::remove_file(history_path);
+}
+
+#[test]
 fn repl_reports_incomplete_multiline_input_when_input_ends() {
     let input = Cursor::new("Identity[\n123\n");
     let mut output = Vec::new();

@@ -22,16 +22,6 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Immediate Correctness And Debt
 
-- [ ] Audit `Catch` tag-form side-effect scoping beyond the Meson fix.
-  WolframKernel evaluates nontrivial tag forms for matching and preserves
-  visible effects such as `Print`, but assignment effects inside that tag-form
-  evaluation do not leak after the `Catch`. rum currently uses ordinary
-  matcher-pattern resolution for this path, which fixes symbol-valued exact
-  tags but does not model that rollback boundary.
-- [ ] Fix lexer unexpected-character spans so structured diagnostics report
-  the actual offending byte range instead of zero-width placeholders.
-- [ ] Fix REPL history persistence so multiline inputs reload as single logical
-  entries instead of fake per-line history entries.
 - [ ] Split the regrown
   `crates/rum-runtime/src/runtime/tests/names_and_syntax_information.rs`
   coverage along real behavior boundaries.

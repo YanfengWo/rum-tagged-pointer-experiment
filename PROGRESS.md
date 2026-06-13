@@ -6,6 +6,34 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-13 Lightweight Correctness Debt Closure
+
+Closed three non-performance cleanup items from the immediate debt list.
+
+`Catch` tag-form side-effect scoping was rechecked against the local
+WolframKernel oracle. Both the matching case
+`Catch[Throw[1, "t"], (Print["tag"]; x = 9; "t")]` and a nonmatching nested
+`Catch` case preserve visible `Print` output and leave the assignment visible
+after the `Catch`. The earlier rollback-debt note was therefore wrong for this
+path. rum keeps its ordinary matcher-pattern resolution and now has regression
+coverage for the visible side effects.
+
+The syntax lexer now reports `UnexpectedCharacter` spans over the offending
+character's byte range instead of a zero-width `start..start` placeholder,
+including multi-byte invalid characters.
+
+REPL history persistence now stores multiline entries as a single encoded
+physical line and decodes them back to one logical history entry on load. Plain
+single-line history remains readable and backward-compatible.
+
+Validation:
+
+- `cargo fmt --check`
+- `cargo test -p rum-runtime catch_tag_form_keeps_visible_side_effects`
+- `cargo test -p rum-runtime holding_and_control_part6::cleanup_throw`
+- `cargo test -p rum-syntax`
+- `cargo test -p rum-repl`
+
 ## 2026-06-13 DumpSave Package Registration Restore
 
 Closed the stable-snapshot `$Packages` workaround as a rum runtime conformance
@@ -119,13 +147,12 @@ Validation:
   the process group cleanly, so the remaining status is a performance/scale
   gate rather than the now-fixed `Catch` tag-form bug.
 
-Known remaining boundary: WolframKernel has a subtler side-effect scope for
-nontrivial `Catch` tag-form evaluation. A tag form like
-`(Print["SIDE"]; x = 2; "$t$")` prints while matching, but the `x = 2`
-assignment does not leak after the `Catch`; rum currently uses ordinary
-matcher-pattern resolution here, so that assignment would persist. This is
-tracked as separate semantic debt because the Meson regression only needs the
-symbol-valued exact-tag case.
+Follow-up oracle check: WolframKernel does not sandbox nontrivial `Catch`
+tag-form side effects in the tested exact-tag path. A tag form like
+`(Print["tag"]; x = 9; "$t$")` prints while matching, and `x = 9` remains
+visible after both matching and nonmatching nested-`Catch` cases. rum's
+ordinary matcher-pattern resolution is therefore retained for this boundary,
+with regression coverage for visible `Print` and assignment effects.
 
 ## 2026-06-12 Pair/Simp Multiplier Diagnosis
 

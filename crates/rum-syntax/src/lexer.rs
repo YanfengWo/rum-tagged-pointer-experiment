@@ -213,7 +213,7 @@ impl<'a> Lexer<'a> {
             other => {
                 return Err(SyntaxError::UnexpectedCharacter {
                     found: other,
-                    span: Span::new(start, self.offset),
+                    span: Span::new(start, start + other.len_utf8()),
                 });
             }
         };
@@ -692,6 +692,27 @@ mod tests {
             err,
             SyntaxError::UnterminatedComment {
                 span: Span::new(2, 22),
+            }
+        );
+    }
+
+    #[test]
+    fn reports_unexpected_character_byte_span() {
+        let err = lex("\\").unwrap_err();
+        assert_eq!(
+            err,
+            SyntaxError::UnexpectedCharacter {
+                found: '\\',
+                span: Span::new(0, 1),
+            }
+        );
+
+        let err = lex("\u{2603}").unwrap_err();
+        assert_eq!(
+            err,
+            SyntaxError::UnexpectedCharacter {
+                found: '\u{2603}',
+                span: Span::new(0, 3),
             }
         );
     }

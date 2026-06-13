@@ -9,6 +9,8 @@ use rum_terminal::{render_eval_response, render_request_failure};
 mod commands;
 use self::commands::*;
 
+const HISTORY_ENTRY_PREFIX: &str = ":rum-history-v1:";
+
 pub struct Repl<R, W> {
     input: R,
     output: W,
@@ -149,7 +151,7 @@ where
             .lines()
             .map(str::trim)
             .filter(|line| !line.is_empty())
-            .map(ToOwned::to_owned)
+            .map(decode_history_line)
             .collect();
     }
 
@@ -173,7 +175,12 @@ where
             fs::create_dir_all(parent)?;
         }
 
-        let mut contents = self.history.join("\n");
+        let mut contents = self
+            .history
+            .iter()
+            .map(|entry| encode_history_entry(entry))
+            .collect::<Vec<_>>()
+            .join("\n");
 
         if !contents.is_empty() {
             contents.push('\n');
@@ -215,6 +222,59 @@ fn default_history_path() -> Option<PathBuf> {
     env::var_os("RUM_HISTORY_PATH")
         .map(PathBuf::from)
         .or_else(|| env::current_dir().ok().map(|dir| dir.join(".rum_history")))
+}
+
+fn encode_history_entry(entry: &str) -> String {
+    if !history_entry_needs_encoding(entry) {
+        return entry.to_string();
+    }
+
+    let mut encoded = String::with_capacity(HISTORY_ENTRY_PREFIX.len() + entry.len());
+    encoded.push_str(HISTORY_ENTRY_PREFIX);
+
+    for ch in entry.chars() {
+        match ch {
+            '\\' => encoded.push_str("\\\\"),
+            '\n' => encoded.push_str("\\n"),
+            '\r' => encoded.push_str("\\r"),
+            other => encoded.push(other),
+        }
+    }
+
+    encoded
+}
+
+fn history_entry_needs_encoding(entry: &str) -> bool {
+    entry.starts_with(HISTORY_ENTRY_PREFIX) || entry.contains(['\n', '\r'])
+}
+
+fn decode_history_line(line: &str) -> String {
+    let Some(encoded) = line.strip_prefix(HISTORY_ENTRY_PREFIX) else {
+        return line.to_string();
+    };
+
+    let mut decoded = String::new();
+    let mut chars = encoded.chars();
+
+    while let Some(ch) = chars.next() {
+        if ch != '\\' {
+            decoded.push(ch);
+            continue;
+        }
+
+        match chars.next() {
+            Some('\\') => decoded.push('\\'),
+            Some('n') => decoded.push('\n'),
+            Some('r') => decoded.push('\r'),
+            Some(other) => {
+                decoded.push('\\');
+                decoded.push(other);
+            }
+            None => decoded.push('\\'),
+        }
+    }
+
+    decoded
 }
 
 fn request_failure_is_incomplete(failure: &SessionRequestFailure) -> bool {

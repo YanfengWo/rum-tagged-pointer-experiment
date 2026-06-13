@@ -290,3 +290,20 @@ fn catch_evaluates_symbol_valued_tag_form_before_matching() {
         other => panic!("expected nonmatching throw to escape, got {other:?}"),
     }
 }
+
+#[test]
+fn catch_tag_form_keeps_visible_side_effects() {
+    let mut session = Session::new();
+
+    let caught = session
+        .eval_text("x = 0; Catch[Throw[1, \"$t$\"], (Print[\"tag\"]; x = 9; \"$t$\")]; x")
+        .unwrap();
+    assert_eq!(caught.value.to_string(), "9");
+    assert_eq!(caught.prints, vec!["tag"]);
+
+    let bypassed = session
+        .eval_text("x = 0; Catch[Catch[Throw[1, \"$u$\"], (Print[\"tag\"]; x = 9; \"$t$\")], _]; x")
+        .unwrap();
+    assert_eq!(bypassed.value.to_string(), "9");
+    assert_eq!(bypassed.prints, vec!["tag"]);
+}
