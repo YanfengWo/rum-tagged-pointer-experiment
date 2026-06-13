@@ -62,6 +62,27 @@ Preload lower HOL files before higher layers: `ErrorUtil.wl`, `Types.wl`,
 `Terms.wl`, `Kernel.wl`, `Bootstrap.wl`, `Equal.wl`, then `Bool.wl`,
 `Drule.wl`, `Tactics.wl`, `Printer.wl`, and `Parser.wl` as needed.
 
+Treat `mma-hol` as an unmodified downstream acceptance target. The task is to
+make clean `mma-hol` run under rum, not to patch `mma-hol` into a different
+test standard. If unmodified `mma-hol` works under WolframKernel but fails,
+times out, or restores incorrectly under rum, the working assumption is a rum
+semantic, performance, snapshot, CLI, or harness gap that must be debugged in
+rum. Local edits to `mma-hol` are allowed only as temporary diagnostic probes
+or bug reports for the `mma-hol` developer; do not present them as the rum-side
+fix or the acceptance path.
+
+This is a hard line: editing the standard to pass the standard voids the
+result. Keep the canonical clean clone pristine; do diagnostic edits only in
+throwaway scratch clones, never in the reference clone, and never leave a
+modified reference clone behind. Two real violations to learn from, both the
+same wrong-layer mistake: (1) a head-indexed dispatch + cache patch to
+`auto/Simp.wl` to "cross" the Pair gate — the real fix is rum's failed-rule
+dispatch cost (handoff Task 2d); (2) adding `$Packages = Union[$Packages,
+holPublic]` to `tests/extend_snapshot.wls` so a restored snapshot resolves —
+the real fix is rum's `DumpSave`/`Get` preserving `$Packages` across a
+restore so the unmodified harness works. In both cases the WolframKernel run
+of the unmodified file is the proof that the gap is rum's.
+
 Current clean-clone smoke results are: `bool_tests.wl` `List[73, 0]`,
 `drule_tests.wl` `List[43, 0]`, `tactics_tests.wl` `List[49, 0]`, and
 `printer_tests.wl` + `parser_tests.wl` `List[126, 0]`. Use
