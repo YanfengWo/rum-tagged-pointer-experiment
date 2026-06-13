@@ -546,6 +546,33 @@ that only borrowed traversal fixes), then and only then does this merge into
 Task 3 — and a Simp.wl improvement *upstreamed to mma-hol* (not a private rum
 fork) becomes the pragmatic fallback. Decide that from the profile, not before.
 
+## Task 2e (snapshot lane): make rum preserve `$Packages` across DumpSave restore
+
+A snapshot of the Pair lane failed under rum, and the scratch experiment
+"fixed" it by editing the standard's harness — `tests/extend_snapshot.wls` in
+the canonical clone was modified to add
+`$Packages = Union[$Packages, holPublic]` after restoring a `DumpSave`. That
+edit has been reverted; the canonical clone is pristine again. The harness edit
+is not the fix (it changes the acceptance standard — see `AGENTS.md`).
+
+The real gap is rum-side: `DumpSave` does not persist `$Packages`, so after
+`Get`-restoring a snapshot, `BeginPackage` dependency checks in the unmodified
+harness do not know the restored packages are already loaded. WolframKernel
+runs the unmodified `extend_snapshot.wls` correctly, so this is a rum
+`DumpSave`/`Get` round-trip gap. Fix: have rum's snapshot save/restore preserve
+(or reconstruct on restore) `$Packages` for the saved public contexts, so the
+unmodified harness resolves short names and dependency state without any edit.
+Note the separate, legitimate observation already in PROGRESS: rum's full
+private-context `DumpSave` also serializes generated `Module` locals
+(`baseConv$…`, `xEq$…`) and inflates the dump (~`402MB`); that is a real rum
+snapshot-hygiene bug to fix too (exclude generated/temporary symbols), but it
+is independent of the `$Packages` restore gap and must also be fixed in rum,
+not by pre-cleaning the standard's scripts.
+
+Acceptance: an unmodified-`mma-hol` snapshot build/extend through `Pair`
+completes and restores correctly under rum (`pair_tests.wl` green after
+restore), with no edits to any file under the `mma-hol` tree.
+
 ## Task 3 (large, gated behind Task 2d): representation rework
 
 > Re-scoping note (Task 3b review): the inline-stamp prototype already probed
