@@ -1,14 +1,48 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-Current focus: Task 2c is now complete for the completing user-rule-only mkPair
-shape: rum and WolframKernel take identical `simpFixpointConv` loop counts, so
-that shape is not looping in rum. The uncommitted Task-3b default-path carrier
-regression has also been corrected by reverting the carrier. The next cheap
-performance probe is the secondary split over a single `mkPair` application
-term under user rule only, basic rules only, and smaller partial applications.
+Current focus: **Task 2d** — fix rum's failed-rule-dispatch cost in the kernel,
+not in `Simp.wl`. The diagnosis below (Task 2c + secondary splits) is correct
+and excellent; the prototyped fix is at the wrong layer. See the review block
+immediately below, then Task 2d.
+
+Task-2c/patch review, 2026-06-13 (external): the root cause is correctly found
+and the loop-count diagnosis is clean (rum and WK take identical
+`simpFixpointConv` counts → not a fixpoint divergence; the earlier
+origin-tag/`===` hypothesis is correctly ruled out). The multiplier is
+**basic-rule failed dispatch**: `17240` `REWRCONV` calls, all match failures,
+over the 19 basic rules on a no-op descent. That much is solid.
+
+The problem with the patch is the **layer**, and it shows up as the symptoms
+you noticed (snapshot blowup, `simp_tests` still `208s`, can't run stock
+mma-hol):
+
+- The prototyped fix (head-indexed dispatch + `buildBaseConv` cache) edits the
+  downstream `auto/Simp.wl`, i.e. it **forks mma-hol**. The entire point of rum
+  is to run the *same* HOL source WolframKernel runs, faster. A Simp.wl fork
+  concedes that rum cannot, and rum still can't run an unmodified mma-hol.
+- It **masks rather than fixes** the real defect. Use the developer's own
+  numbers on the identical-entry-count three-lambda RHS (`431` entries in every
+  rule set): adding the basic rules costs rum `+91.2s` (`22.5s → 113.7s`) but
+  costs WolframKernel only `+2.7s` (`7.8s → 10.5s`). Same `17240` failed
+  dispatches in both engines, but rum pays ~`5.3ms` per failed `REWRCONV`
+  versus WK's ~`0.16ms` — a **~34x** gap on this path, against the ~3x general
+  constant. WK proves the algorithm (try 19 rules per subterm, fail fast) is
+  cheap; rum makes it catastrophic. Head-indexing "works" only by cutting the
+  dispatch *count* so rum's ~34x per-dispatch slowness is hit fewer times. The
+  defect is in rum's execution of a failed conversion dispatch, and it stays
+  unfixed — every other dispatch-heavy workload still pays it.
+- The snapshot breakage (`402MB` private-context dumps, the generated-symbol
+  cleanup dance) is a *direct consequence* of fixing this in `Simp.wl`: the WL
+  cache and its `Module` locals land in the symbol table. A rum-kernel fix
+  touches no HOL symbol and the snapshot lane is never perturbed.
+
+Keep the WL experiments as diagnosis — they prove that reducing dispatch count
+closes the gate, which confirms the dispatch path is the cost. Do not commit or
+upstream them as the fix. The fix is Task 2d.
+
 Earlier tasks (Catch fix, Pair/Simp multiplier hunt, stability-check amplifier,
 substitution-sharing audit and stamp prototype) are done and kept below as
-history.
+history. The Task-3b carrier was correctly reverted.
 
 Post-RHS-lambda split update, 2026-06-13: the single-term split has reduced
 the hot shape to no-op descent over the rewritten `mkPair` RHS lambda, and the
@@ -203,14 +237,14 @@ diagnosis below.
 
 | Gate | Status |
 | --- | --- |
-| PropTaut distribution probe | committed HEAD `~10.2s` vs WolframKernel `3.80s` (~2.7x). NOTE: the uncommitted Task-3b carrier regresses this to `~11.6s`; it must be reverted/zero-costed before commit (see Task-3a/3b review) |
+| PropTaut distribution probe | committed HEAD `~10.2s` vs WolframKernel `3.80s` (~2.7x). The Task-3b carrier that regressed this to `~11.6s` has been reverted |
 | Bool-stack load | `0.54s` vs `0.19s` (~2.8x) at committed HEAD |
 | `proptaut_tests.wl` | green, ~`238s` |
 | `meson_tests.wl` | green after Task 1: `List[44, 0]` in `79s` on clean `mma-hol` HEAD `698e3d0` |
 | `meson_proveprop_tests.wl` | re-probed after Task 1; timeout at `300s` without a stdout summary |
-| `stdlib/Pair.wl` load | still exceeds bounded budgets after runtime stability cuts |
-| public `basicSimpset[]` entry | completes normally: `24.40s` standalone, `22.68s` after mkPair setup; congruence preheat `0.0018s` |
-| warm public mkPair conversion | still times out at `360s` with and without inline stamps; corrected `descendOnce` subcalls on both sides time out at `240s` |
+| `stdlib/Pair.wl` load (stock mma-hol) | still exceeds bounded budgets; root cause is Task 2d (rum's ~34x failed-rule-dispatch cost), not a representation gap |
+| `stdlib/Pair.wl` load (forked Simp.wl) | crosses the gate in a scratch clone (`85.5s` cold, `pair_tests 42/0`) but the fix is a downstream fork that masks the rum hotspot and breaks snapshots — not a shippable fix; see Task 2d |
+| warm public mkPair conversion (stock) | times out; loop counts identical to WK (not looping), per-step cost is the gate |
 | `cargo test --workspace`, `rum-difftest check` | pass |
 
 The probe-visible cache-invalidation lane is closed: Do/Table iterator
@@ -364,7 +398,7 @@ stays the same: warm public mkPair completes inside a bounded budget and the
 `Pair.wl` load enters the constant-bound regime (roughly `4x` of
 WolframKernel's `37.7s`, i.e. about `150s`).
 
-## Task 2c (next diagnosis — do this before Task 3): is the Simp descent looping?
+## Task 2c (completed diagnosis): is the Simp descent looping? — No; it is per-step cost
 
 This is the focus for the next session. The Task 3b stamp result rules out
 "shareable redundant re-evaluation" as the Pair cost, and the conversion split
@@ -447,7 +481,72 @@ secondary cut, but the two-engine loop count above is more decisive and should
 come first — it distinguishes "looping" from "slow" in one measurement instead
 of bisecting rule sets.
 
-## Task 3 (large, gated behind Task 2c): representation rework
+## Task 2d (current focus): fix rum's per-failed-dispatch cost in the kernel
+
+Task 2c is answered (not looping; per-step constant) and the secondary split
+localized the multiplier to **basic-rule failed dispatch** — but at a ~34x
+rum-vs-WK ratio on that specific path, not the ~3x general constant (see the
+review block at the top for the arithmetic). That ~34x is a rum kernel hotspot
+in how a *failed* conversion dispatch is executed. Fix it there so stock
+mma-hol runs fast and the snapshot lane is untouched. Do not fork `Simp.wl`.
+
+The unit to profile is **one failed `REWRCONV` dispatch**. Its HOL body
+(`Drule.wl:292`) is small: `concl`, a `MatchQ` shape check, two `Part`s,
+`tryTermMatch[lhs, t, ...]`, then on `$matchFail` a `convFail[...]`. The
+developer already ruled out the obvious suspects at the WL layer: removing the
+`Failure` payload, a no-throw sentinel, and a fast const-head pre-check inside
+`REWRCONV` each failed to move wall time, and `tryTermMatch` depth is not it
+(the fast head check caught `1998/2120` failures with no wall-time change). So
+the ~5.3ms is *not* in the parts that a WL edit can see — which is exactly why
+this must be profiled in rum, not in `Simp.wl`.
+
+Concrete steps:
+
+1. Build the smallest reproducing probe that does many failed dispatches and
+   completes: the `basic`-only descent on `pair4Same` is ideal — `8.739s`,
+   `61` entries, `Changed=False`, all dispatch failures. It is a few seconds,
+   so it samples cleanly.
+2. Sample it and reduce with the existing tools:
+   `scripts/sample-self-time.py` then
+   `scripts/sample-attribute-callers.py <sample> <hot leaf>`. The question is
+   what rum executes per failed `REWRCONV` that WK does not. Likely suspects,
+   in order of how cheaply each is confirmed:
+   - **Per-attempt conversion-combinator construction.** `buildBaseConv`
+     builds `combineSimpConvs[Join[ctxConvs, ruleConvs]]` and each
+     `simpRuleConv[#, prover]` closes over `prover = makeProver[...]`. If rum
+     re-evaluates/reconstructs these `Module`/`Function` closures per subterm
+     (the caching experiment helping is circumstantial evidence it does), the
+     cost is closure/`Module` setup, not matching. Check whether `eval_module`
+     / closure construction dominates the failed-dispatch self time.
+   - **`prover` recursion on conditional rules.** If any basic rule is
+     conditional, trying it invokes `prover`, which may recursively simplify
+     hypotheses even when the rule ultimately fails. Check the call tree under
+     a failed `REWRCONV` for re-entrant `simpFixpointConv` / prover calls.
+   - **Owned-tree churn per attempt.** `concl`, `Part`, and `tryTermMatch`
+     each clone HOL subterms; on a ~34x path even modest per-call cloning
+     compounds. This overlaps the general representation lane (Task 3) but may
+     have a cheap local win (borrow instead of clone in the match-and-fail
+     path).
+3. Counter cross-check: add an opt-in counter for `eval_module` entries (or
+   closure constructions) per failed `REWRCONV`, run the `basic`-only
+   `pair4Same` probe, and compare against the `61` entries. If closures are
+   rebuilt thousands of times for `61` entries, that is the multiplier and the
+   fix is to build the conversion once per `simpFixpointConv` entry (or per
+   rule set) inside the kernel's handling, not per subterm.
+
+Acceptance: a PROGRESS entry naming what rum spends the ~5.3ms-per-failed-
+`REWRCONV` on, with the self-time/attribution evidence, and a rum-side change
+that brings the `basic`-only `pair4Same` descent and the `userBasic` mkPair
+shapes down without any edit to `auto/Simp.wl`. Target: stock (unmodified)
+mma-hol `pair_tests.wl` green and `stdlib/Pair.wl` load inside a bounded budget.
+
+If the profile shows the ~5.3ms is irreducible without the call-node
+representation change (e.g. it is dominated by per-attempt owned-tree cloning
+that only borrowed traversal fixes), then and only then does this merge into
+Task 3 — and a Simp.wl improvement *upstreamed to mma-hol* (not a private rum
+fork) becomes the pragmatic fallback. Decide that from the profile, not before.
+
+## Task 3 (large, gated behind Task 2d): representation rework
 
 > Re-scoping note (Task 3b review): the inline-stamp prototype already probed
 > this lane's core mechanism and did **not** close the Pair gate, so do not start
