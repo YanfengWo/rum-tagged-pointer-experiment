@@ -1,4 +1,10 @@
-# Next Session Handoff: Meson Triage, Pair Multiplier Hunt, Representation Work
+# Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
+
+Current focus: **Task 2c** below (is the Simp fixpoint descent looping in rum
+vs WolframKernel?), plus correcting the uncommitted Task-3b default-path
+regression. Earlier tasks (Catch fix, Pair/Simp multiplier hunt, stability-check
+amplifier, substitution-sharing audit and stamp prototype) are done and kept
+below as history.
 
 Date: 2026-06-12. Initial diagnosis was written against commit `f06c23c`;
 Task 1 has since been completed and the current status is recorded below.
@@ -67,16 +73,97 @@ before starting it.
   the ~3x systemic constant is this redundant re-evaluation of logically
   equivalent subterms, which no cache *tuning* can remove.
 
+Post-Task-3a update, 2026-06-13: the substitution-sharing audit is recorded
+in [PROGRESS.md](../PROGRESS.md). Rule RHS instantiation does preserve shared
+call subtrees for repeated bound values, unchanged sibling arguments, and
+`Sequence` splices; `Expr` clones keep the shared head/argument-vector arcs.
+Parent RHS calls are still rebuilt with fresh top-level pointers, so the Task
+3 design constraint stands: an evaluated/stable stamp must travel on reused
+shared subtrees, and the next prototype should prove that it reduces absent
+call-stability misses on a workload with real shared subterms before broad
+representation rollout.
+
+Post-Task-3b update, 2026-06-13: an opt-in shared-subtree stamp prototype is
+now available behind `RUM_CALL_STABILITY_INLINE_STAMP=1` and recorded in
+[PROGRESS.md](../PROGRESS.md). It stores call-stability verdicts on the
+existing shared argument-vector object, preserves the textual expression shape,
+and uses the existing generation/dirty-bloom invalidation logic. Unit litmus
+tests prove that a shared subtree can hit after the side cache is cleared, and
+that a later write to the subtree head invalidates the stamp. A small rule-RHS
+probe shows `call_stability_stamp_hits`.
+
+Post-Task-3b A/B update, 2026-06-13: do not promote the stamp path to the
+default runtime. The release warm public mkPair probe was run with and without
+`RUM_CALL_STABILITY_INLINE_STAMP=1`. Profiled `240s` runs showed real stamp
+activity (`call_stability_stamp_hits=33M+`,
+`call_stability_stamp_stores=16M+`) but both variants timed out and reached the
+same `268M+` stability-check scale. No-profile `360s` runs also timed out in
+both variants. A follow-up split corrected a measurement trap: timeout logs can
+lose earlier stdout `Print` output, so absence of `RUM_PROBE preheat_basic=` in
+the full timeout log was not proof that preheat failed. Dedicated probes show
+public `basicSimpset[]` still completes normally (`24.40s` standalone,
+`22.68s` after mkPair setup) and the congruence preheat is `0.0018s`. The next
+performance step is therefore to split the final public
+`CONVRULE[simpConv[{mkPairDefThm}], lhsAppXY]` conversion itself.
+
+Post-final-conversion split, 2026-06-13: the first split is done. A false-start
+probe applied conversions to the theorem object; ignore that. The corrected
+probes use `targetTm = concl[lhsAppXY]`. `buildBaseConv` takes `0.0048s` for 20
+rules, and `TRYCONV[REPEATC[baseConv]][targetTm]` takes `0.079s` and leaves the
+term unchanged. `descendOnce[allRules, {}, depth][targetTm]` times out at
+`240s`; splitting the ordinary `comb` branch shows both
+`simpFixpointConv[allRules, {}, depth][targetTm[[1]]]` and the same call on
+`targetTm[[2]]` time out at `240s`. Next split: one `mkPair` application term,
+comparing user rule only, basic rules only, and smaller partial applications.
+
+Task-3a/3b review, 2026-06-13 (external): the audit and prototype were done in
+the right order and the prototype is a genuinely useful **negative result**,
+but it has a regression that must be corrected before any of this is committed,
+and it changes how Task 3 should be scoped. Two action items, then the next
+diagnosis below.
+
+1. **Correct the default-path regression before committing (do not ship the
+   carrier as-is).** The stamp prototype puts a `Mutex<Option<CallStabilityStamp>>`
+   on every `SharedArgs`, and that slot is allocated and initialized on every
+   call-node construction **unconditionally** — the `RUM_CALL_STABILITY_INLINE_STAMP`
+   flag only gates whether the stamp is *consulted*, not whether the carrier is
+   *paid for*. A clean same-session A/B (stash the uncommitted `crates/` changes,
+   rebuild, measure; restore, rebuild, measure) puts the default-path PropTaut
+   distribution probe at `~11.6s` with the changes versus `~10.2s` without —
+   a ~12-14% regression that every workload pays, for a feature that is off by
+   default and does not close the gate. The PROGRESS note "do not promote the
+   stamp path to the default runtime" addresses the flag, not this structural
+   cost. Fix options: revert the carrier entirely and keep only the diagnostic
+   findings plus the opt-in counters (those are correctly cold-gated and cheap),
+   or make the slot truly zero-cost when off (compile-time `cfg`/feature gate, or
+   drop the `Mutex` — the per-session evaluator is single-threaded, so the real
+   cost is the larger allocation, not the lock). Recommendation: revert the
+   carrier; its value is already fully captured by the negative result below.
+2. **Re-scope Task 3: its Pair justification is now refuted.** The prototype is
+   exactly the cheap probe of Task 3's core mechanism, and it came back negative
+   for the gate: the stamp carries the verdict correctly (litmus passes; warm
+   mkPair shows `call_stability_stamp_hits=33M+`) yet the warm probe still times
+   out at `240s` at the same `268M+` stability-check scale. This **refutes the
+   earlier "redundant re-evaluation of shared subterms" hypothesis** — if the
+   cost were re-checking shared stable subterms, the stamp would have moved it.
+   It did not, so the Pair cost is not shareable redundancy; it is genuine work
+   in the conversion descent. The single-allocation-node + inline-stamp rework
+   may still be worth doing for the general ~2.7x constant, but it should no
+   longer be greenlit on the expectation of closing Pair. Pursue the descent
+   diagnosis below first.
+
 ## Where things stand
 
 | Gate | Status |
 | --- | --- |
-| PropTaut distribution probe | `10.0-10.2s` release internal vs WolframKernel `3.80s` (~2.7x); improved as a side effect of the Pair/Simp runtime stability cuts |
-| Bool-stack load | `0.54s` vs `0.19s` (~2.8x); same side effect |
+| PropTaut distribution probe | committed HEAD `~10.2s` vs WolframKernel `3.80s` (~2.7x). NOTE: the uncommitted Task-3b carrier regresses this to `~11.6s`; it must be reverted/zero-costed before commit (see Task-3a/3b review) |
+| Bool-stack load | `0.54s` vs `0.19s` (~2.8x) at committed HEAD |
 | `proptaut_tests.wl` | green, ~`238s` |
 | `meson_tests.wl` | green after Task 1: `List[44, 0]` in `79s` on clean `mma-hol` HEAD `698e3d0` |
 | `meson_proveprop_tests.wl` | re-probed after Task 1; timeout at `300s` without a stdout summary |
 | `stdlib/Pair.wl` load | still exceeds bounded budgets after runtime stability cuts |
+| public `basicSimpset[]` entry | completes normally: `24.40s` standalone, `22.68s` after mkPair setup; congruence preheat `0.0018s` |
+| warm public mkPair conversion | still times out at `360s` with and without inline stamps; corrected `descendOnce` subcalls on both sides time out at `240s` |
 | `cargo test --workspace`, `rum-difftest check` | pass |
 
 The probe-visible cache-invalidation lane is closed: Do/Table iterator
@@ -230,7 +317,81 @@ stays the same: warm public mkPair completes inside a bounded budget and the
 `Pair.wl` load enters the constant-bound regime (roughly `4x` of
 WolframKernel's `37.7s`, i.e. about `150s`).
 
-## Task 3 (large, now unblocked): representation rework
+## Task 2c (next diagnosis — do this before Task 3): is the Simp descent looping?
+
+This is the focus for the next session. The Task 3b stamp result rules out
+"shareable redundant re-evaluation" as the Pair cost, and the conversion split
+narrowed the timeout to recursive descent over `mkPair` application terms
+(`descendOnce` → `simpFixpointConv`, with both `comb` halves independently
+timing out). The decisive next question is whether `simpFixpointConv`'s
+fixpoint loop **runs the same number of steps in rum and WolframKernel** (so the
+gap is the ~3-4x per-step constant) or **runs far more steps in rum** (a
+non-converging fixpoint — a different, usually cheaper, class of bug).
+
+The enabling fact: `simpFixpointConv`, `descendOnce`, and `buildBaseConv` are
+**WL-level functions in `auto/Simp.wl`, not kernel builtins**, so they can be
+instrumented identically in both engines. This finally makes the
+multiplier-vs-constant question at the descent level *directly measurable*
+rather than inferred from rum-side counters. Read `simpFixpointConv` (around
+`Simp.wl:446`): its `While[True, ...]` loop breaks on `newRhs === rhs`
+(fixpoint reached) or `KeyExistsQ[seen, newRhs]` (cycle), and it rebuilds
+`buildBaseConv` once per entry.
+
+Plan:
+
+1. In a scratch copy of `Simp.wl`, add global counters: total `simpFixpointConv`
+   entries, total `While` iterations across all entries, and the max `seen`-set
+   size. Print them after a probe. Apply the identical edit to the WolframKernel
+   run.
+2. Run a **completing** probe in both engines — user-rule-only mkPair finishes
+   (~`12.8s` WK, ~`40-52s` rum), so it gives comparable counts — and compare the
+   three numbers.
+   - **Counts roughly equal between engines** → rum's cost is the per-step
+     constant; the full-ruleset timeout is just more of the same. The lane then
+     legitimately belongs to the general evaluator constant (Task 3) or a
+     downstream `Simp` change, and Task 3's payoff estimate applies.
+   - **rum's counts much higher (10x+)** → the fixpoint is not converging in
+     rum: `newRhs === rhs` keeps returning False where WK returns True, so the
+     loop spins on logically-equivalent but structurally-different terms. This
+     is the high-value, usually-cheap case.
+3. If the loop is spinning, find the spurious structural difference: dump the
+   first few rum `newRhs`/`rhs` pairs where `newRhs =!= rhs` but the terms are
+   alpha/semantically equal, and diff their `FullForm`. **Prime suspect: HOL
+   origin annotations.** `stripOrigin` was already a hot per-symbol downvalue in
+   the Task 2b counters; if rum's rewrite output carries origin tags that WK
+   strips (or normalizes differently), every `===` comparison in the fixpoint
+   loop fails and the descent never settles. Other candidates to rule out:
+   `Plus`/`And` argument ordering, association internal form, and beta/`betaSubst`
+   output shape (`betaSubst`/`vsubstImpl` were also hot). The fix for any of
+   these is a local normalization so `===` matches WK, not a representation
+   rework.
+4. Independently, confirm the breadth vs depth shape: the developer's observation
+   that splitting `targetTm` in half leaves **both** halves at the full `240s`
+   timeout is itself evidence against a simple linear descent (a linear descent
+   would roughly halve). Either each half independently spins (supports step 2's
+   non-convergence case) or the descent is super-linear in term size (supports a
+   beta-expansion term-size blowup — measure intermediate term size across the
+   descent to tell these apart).
+
+Acceptance: a PROGRESS entry stating, with the two-engine loop counts, whether
+the Simp descent is constant-bound or looping in rum, and — if looping — the
+named structural difference that breaks `===`, with a minimal repro. Only after
+this verdict should the lane commit to either a local normalization fix, a
+downstream `Simp` change, or the Task 3 representation rework.
+
+The developer's own proposed split (one `mkPair` application term: user rule
+only vs basic rules only vs smaller partial applications) is a reasonable
+secondary cut, but the two-engine loop count above is more decisive and should
+come first — it distinguishes "looping" from "slow" in one measurement instead
+of bisecting rule sets.
+
+## Task 3 (large, gated behind Task 2c): representation rework
+
+> Re-scoping note (Task 3b review): the inline-stamp prototype already probed
+> this lane's core mechanism and did **not** close the Pair gate, so do not start
+> Task 3 expecting to close Pair. It may still be worth doing for the general
+> ~2.7x constant. Run Task 2c first; if that verdict is "looping," a local
+> normalization fix likely closes Pair far more cheaply than this rework.
 
 Plan, in order: single-allocation call node (head+args in one `Arc`),
 which halves per-node allocation/refcount traffic and enables an inline
@@ -265,16 +426,15 @@ the stamp is not propagating through substitution and the design needs
 revisiting before the larger rollout.
 
 If the propagation requirement turns out to need structural sharing /
-hash-consing of subterms rather than just a stamp bit (because rum does
-not currently reuse subtree `Arc`s aggressively enough through
-substitution to make stamps land), that is the real shape of the work,
-and it is larger than "add a stamp field". Scope it from a fresh read of
-the substitution paths (`binding_substitution.rs`,
-`lexical_substitution.rs`, the rule-RHS instantiation in
-`definition_application.rs`) to see how often bound subtrees are already
-`Arc`-shared versus deep-cloned. The downstream `Simp` algorithm change
-remains the cheaper alternative if Task 3's payoff estimate comes back
-weak after that read.
+hash-consing of subterms beyond the sharing already confirmed in Task 3a and
+the existing-`SharedArgs` stamp prototype from Task 3b, that is the real shape
+of the work, and it is larger than "add a stamp field". The warm mkPair A/B
+did come back weak: inline stamps hit on small shared-subtree litmus tests and
+in the profiled warm run, but they do not move the public gate. Before deeper
+representation work, split the final public `simpConv[{mkPairDefThm}]`
+conversion and check whether a downstream `Simp` algorithm change is the
+cheaper route. The first split now points at recursive descent over single
+`mkPair` application terms, not at `buildBaseConv` or top-level rewriting.
 
 ## Methodology guardrails (lessons already paid for)
 
