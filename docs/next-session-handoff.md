@@ -44,6 +44,29 @@ the Simp/Drule conversion chain. Task 3 is no longer blocked by an unnamed
 cache mechanism, but a downstream `Simp` algorithm experiment remains a
 reasonable alternative before large representation work.
 
+Task-2b review, 2026-06-13 (external): verdict confirmed, with one gap and
+one sharpening that change how Task 3 must be scoped — read Task 3 below
+before starting it.
+
+- Gap (does not change the verdict): the `1<<7`-bit dirty bloom is one bit
+  per symbol, so in a write-heavy Simp phase ~96/128 bits are dirty and
+  almost any cached entry is rejected by false bloom overlap. The
+  `33M+ call_stability_rewritten_dirty_skips` are mostly this false overlap,
+  and exact per-symbol write versions (which the original Task 2b note asked
+  to re-measure on this shape) were never tried here — only the coarser
+  wider-bloom knob was. It does not matter: `absent` misses (`67M+`, fresh
+  trees with no entry at all) dominate the `dirty` misses (`33M+`), and
+  fresh trees are immune to *any* dirty-tracking quality, so exact versions
+  would be a modest win, never a gate-closer. The verdict stands.
+- Sharpening (verified first-hand on a `fib[27]` baseline:
+  `call_stability_miss_absent == evaluate_entries`, call-stability hit rate
+  `0%`): the dominant cost is not Simp-specific. rum rebuilds a new-pointer
+  tree on every rewrite, so the pointer-keyed call cache structurally cannot
+  hit on freshly built trees; WolframKernel avoids the equivalent
+  re-evaluation through expression sharing. The ~15x on warm mkPair versus
+  the ~3x systemic constant is this redundant re-evaluation of logically
+  equivalent subterms, which no cache *tuning* can remove.
+
 ## Where things stand
 
 | Gate | Status |
@@ -207,15 +230,51 @@ stays the same: warm public mkPair completes inside a bounded budget and the
 `Pair.wl` load enters the constant-bound regime (roughly `4x` of
 WolframKernel's `37.7s`, i.e. about `150s`).
 
-## Task 3 (large, only after 1, 2, and 2b): representation rework
+## Task 3 (large, now unblocked): representation rework
 
-Unchanged from the prior plan, in order: single-allocation call node
-(head+args in one `Arc`), which halves per-node allocation/refcount
-traffic and enables an inline per-node evaluated stamp replacing the
-pointer-keyed call-stability side cache; then borrowed argument
-preparation so shared argument vectors are not cloned per evaluation
-pass. Multi-day, cross-cutting; re-estimate after Task 2 because a Pair
-multiplier fix may change the payoff calculus.
+Plan, in order: single-allocation call node (head+args in one `Arc`),
+which halves per-node allocation/refcount traffic and enables an inline
+per-node evaluated/stable stamp replacing the pointer-keyed
+call-stability side cache; then borrowed argument preparation so shared
+argument vectors are not cloned per evaluation pass. Multi-day,
+cross-cutting.
+
+**Load-bearing design constraint from the Task 2b review — get this
+right or the mkPair gate will not close.** The Pair/Simp gate is
+dominated by `absent` call-stability misses: rum rebuilds a new-pointer
+tree on every rewrite, so a pointer-keyed cache (the current side cache,
+and equally a stamp that lives only on a freshly allocated node) can
+never hit on those trees. An inline evaluated/stable stamp therefore
+only helps if it **travels on the shared subtree `Arc`s reused through
+substitution**, not on the freshly allocated parent node. Concretely:
+when a rule RHS is instantiated, the bound subtrees are reused by `Arc`
+clone; their stamps must survive into the new tree so that an
+already-evaluated subterm is recognized as evaluated even though its new
+parent has a fresh pointer. If the rework only stamps whole freshly
+built nodes, it will reproduce the `absent`-miss behavior and leave the
+~15x mkPair gap intact while still paying for the rewrite.
+
+A litmus test for the design before committing to it: the `fib[27]`
+baseline currently shows `call_stability_miss_absent == evaluate_entries`
+and a `0%` call-stability hit rate (every rewrite is a fresh tree). After
+the stamp change, a memoization-free recursive workload that re-encounters
+structurally shared evaluated subterms should show those subterms
+short-circuiting — i.e. the absent-miss count should fall well below the
+evaluate count on a workload with real subterm sharing. If it does not,
+the stamp is not propagating through substitution and the design needs
+revisiting before the larger rollout.
+
+If the propagation requirement turns out to need structural sharing /
+hash-consing of subterms rather than just a stamp bit (because rum does
+not currently reuse subtree `Arc`s aggressively enough through
+substitution to make stamps land), that is the real shape of the work,
+and it is larger than "add a stamp field". Scope it from a fresh read of
+the substitution paths (`binding_substitution.rs`,
+`lexical_substitution.rs`, the rule-RHS instantiation in
+`definition_application.rs`) to see how often bound subtrees are already
+`Arc`-shared versus deep-cloned. The downstream `Simp` algorithm change
+remains the cheaper alternative if Task 3's payoff estimate comes back
+weak after that read.
 
 ## Methodology guardrails (lessons already paid for)
 
