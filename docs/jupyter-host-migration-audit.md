@@ -31,12 +31,24 @@ implementation checklist for the Jupyter slice of that boundary.
   native ZeroMQ loopback tests.
 - 2026-06-12 update: the local deploy/test path is isolated under
   `jupyter_home/` through `scripts/rum-jupyter-home.sh`.
+- 2026-06-13 update: the host-backed path was re-validated through
+  `rum-host`, `rum-jupyter`, real `jupyter_client`, and headless JupyterLab
+  smoke tests. The `jupyter_client` smoke now includes protocol probes for
+  completion, inspection, is-complete, history, stdout/stderr streams, and
+  runtime failures.
+- 2026-06-13 update: common unsupported frontend messages no longer terminate
+  the native kernel. `comm_info_request` returns an empty `comm_info_reply`,
+  comm open/msg/close messages are ignored, `debug_request` returns an
+  explicit unsupported `debug_reply`, and unknown frontend probes are ignored.
 - The isolated Jupyter harness now includes:
   - `smoke`: protocol-level `jupyter_client` execute smoke
   - `lifecycle-smoke`: real kernel start, ready, execute, restart, and shutdown
   - `stdin-smoke`: real stdin request/reply suspend and resume, including
     multi-prompt and disallowed-stdin cases
-  - `kernel-smoke`: lifecycle plus stdin
+  - `protocol-smoke`: real completion, inspection, is-complete, history,
+    stream, message, and failure probes
+  - `unsupported-smoke`: real comm/debug/unknown-message keepalive probes
+  - `kernel-smoke`: lifecycle plus stdin plus protocol plus unsupported probes
   - `browser-smoke`: JupyterLab plus headless Chromium notebook execution
 
 ## Resolved Runtime Couplings
@@ -125,7 +137,7 @@ Implementation checklist:
     ordinary adapter, pump, wire, bootstrap, socket, stdin, or ZeroMQ paths.
 13. [x] Add a guard test or dependency audit that fails if `rum-jupyter`
     reintroduces direct `rum-runtime` / `rum-stdlib` dependencies.
-14. [ ] Provide one documented real-Notebook deploy path and keep other frontend
+14. [x] Provide one documented real-Notebook deploy path and keep other frontend
     installation styles out of scope.
 
 ## Host Gaps And Decisions
@@ -165,6 +177,7 @@ frontend can use one documented deploy path for:
 Current local harness commands:
 
 ```bash
+scripts/rum-jupyter-home.sh init
 scripts/run-bounded.py --timeout 180 -- scripts/rum-jupyter-home.sh kernel-smoke
 scripts/run-bounded.py --timeout 180 -- scripts/rum-jupyter-home.sh browser-smoke
 ```
@@ -173,6 +186,18 @@ In the Codex sandbox these commands need unsandboxed loopback-port access, but
 their filesystem state remains confined to `jupyter_home/`. The lifecycle smoke
 does not promote robust interrupt/cancel semantics; `jupyter_client` interrupt
 uses process signals, and host-level cancellation remains a separate contract.
+Unsupported-message keepalive is deliberately narrow: it preserves kernel
+liveness and ordinary session state but does not implement widgets, comm state,
+or the Jupyter debug protocol.
+
+For manual frontend validation, start the isolated server with:
+
+```bash
+scripts/run-bounded.py --timeout 3600 -- scripts/rum-jupyter-home.sh lab
+```
+
+This writes Jupyter config, data, runtime state, Python caches, Playwright
+browsers, notebooks, logs, and temporary files under `jupyter_home/`.
 
 ## Out Of Scope For `v0.1`
 

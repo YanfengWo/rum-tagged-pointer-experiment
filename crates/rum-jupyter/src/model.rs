@@ -433,6 +433,35 @@ pub struct KernelHistoryResponse {
     pub history: Vec<KernelHistoryEntry>,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct KernelCommInfoRequest {
+    pub target_name: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KernelCommInfoResponse {
+    pub status: KernelReplyStatus,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KernelDebugRequest {
+    pub request_seq: Option<u64>,
+    pub command: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KernelDebugResponse {
+    pub status: KernelReplyStatus,
+    pub request_seq: Option<u64>,
+    pub command: Option<String>,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KernelIgnoredRequest {
+    pub msg_type: String,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum KernelRequest {
     Execute(KernelExecuteRequest),
@@ -441,6 +470,9 @@ pub enum KernelRequest {
     IsComplete(KernelIsCompleteRequest),
     History(KernelHistoryRequest),
     KernelInfo(KernelInfoRequest),
+    CommInfo(KernelCommInfoRequest),
+    Debug(KernelDebugRequest),
+    Ignored(KernelIgnoredRequest),
     Interrupt(KernelInterruptRequest),
     Shutdown(KernelShutdownRequest),
 }
@@ -513,6 +545,8 @@ pub enum KernelResponse {
     IsComplete(KernelIsCompleteResponse),
     History(KernelHistoryResponse),
     KernelInfo(KernelInfoResponse),
+    CommInfo(KernelCommInfoResponse),
+    Debug(KernelDebugResponse),
     Interrupt(KernelInterruptResponse),
     Shutdown(KernelShutdownResponse),
 }

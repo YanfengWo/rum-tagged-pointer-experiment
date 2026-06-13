@@ -1,10 +1,12 @@
 # Jupyter Console Manual Smoke
 
-This page records the manual `jupyter-console` workflow for `rum-jupyter`.
+This page records the manual `jupyter-console` workflow for `rum-jupyter`
+through the isolated `jupyter_home/` harness.
 
 It is meant for local developer validation when we want to watch a real Jupyter
-frontend talk to the kernel, but do not want to install a global kernelspec or
-keep a long-running notebook server around.
+frontend talk to the kernel, but do not want to install a global kernelspec,
+write Jupyter state outside the checkout, or keep a long-running notebook
+server around.
 
 This is not the full `v0.1` Notebook acceptance path. The `v0.1` target is a
 `rum-host`-backed basic Notebook tech preview; see
@@ -14,62 +16,57 @@ Notebook frontend path.
 
 ## Prerequisites
 
-- a working local Python environment with `jupyter-console` and
-  `jupyter-client`
-- a built `rum-jupyter-kernel` launcher
+- an initialized local harness:
+
+```bash
+scripts/rum-jupyter-home.sh init
+```
+
 - no global Jupyter installation changes are required
-
-In our current WSL setup, the default Python path is:
-
-```text
-~/.venv-jupyter/bin/python
-```
-
-The matching console is:
-
-```text
-~/.venv-jupyter/bin/jupyter-console
-```
+- all Jupyter config, runtime state, caches, logs, notebooks, and temporary
+  files stay under `jupyter_home/`
 
 ## Fastest Path
 
-If you only want a quick end-to-end check, run:
+If you only want the acceptance smoke checks, run:
 
 ```bash
-scripts/smoke-rum-jupyter.sh
+scripts/run-bounded.py --timeout 180 -- scripts/rum-jupyter-home.sh kernel-smoke
+scripts/run-bounded.py --timeout 180 -- scripts/rum-jupyter-home.sh browser-smoke
 ```
 
-That one command:
+Those commands:
 
 - builds `rum-jupyter-kernel`
-- writes a temporary kernelspec under `/tmp`
-- starts a real Jupyter client round-trip
-- executes one expression
-- cleans up temporary files afterward
+- writes the development kernelspec under `jupyter_home/`
+- runs real `jupyter_client` lifecycle, stdin, protocol, and
+  unsupported-message keepalive probes
+- starts JupyterLab and drives a notebook with headless Chromium
+
+In Codex-style sandboxes these commands need permission to bind local loopback
+ports. Filesystem state still stays under `jupyter_home/`.
 
 ## Manual Console Flow
 
-1. Build the development launcher:
+1. Ensure the isolated harness exists:
 
 ```bash
-cargo build -p rum-jupyter --bin rum-jupyter-kernel
+scripts/rum-jupyter-home.sh init
 ```
 
-2. Generate a temporary kernelspec root:
+2. Start a console against the development kernelspec:
 
 ```bash
-scripts/write-rum-jupyter-kernelspec.sh /tmp/rum-jupyter-dev
+scripts/run-bounded.py --timeout 3600 -- scripts/rum-jupyter-home.sh console --simple-prompt
 ```
 
-3. Start a temporary console:
+3. Exit the console when you are done. Nothing is installed globally.
+
+For a Notebook frontend instead of a console, start JupyterLab with:
 
 ```bash
-JUPYTER_PATH=/tmp/rum-jupyter-dev \
-JUPYTER_RUNTIME_DIR=/tmp/rum-jupyter-runtime \
-~/.venv-jupyter/bin/jupyter-console --kernel rum-dev --simple-prompt
+scripts/run-bounded.py --timeout 3600 -- scripts/rum-jupyter-home.sh lab
 ```
-
-4. Exit the console when you are done. Nothing is installed globally.
 
 ## Suggested Manual Cases
 
@@ -139,26 +136,24 @@ Expected shape:
 
 ## Keeping Temporary Files For Debugging
 
-For the one-command smoke script, keep the temporary directories with:
+The isolated harness keeps its state by design. The main locations are:
 
 ```bash
-RUM_JUPYTER_KEEP_TMP=1 scripts/smoke-rum-jupyter.sh
+scripts/rum-jupyter-home.sh paths
 ```
 
-That is useful when we want to inspect:
-
-- the generated kernelspec
-- the Jupyter runtime directory
-- the exact launcher path used in the smoke run
+`browser-smoke` also writes its notebook, server log, and failure artifacts
+under `jupyter_home/workspace`, `jupyter_home/logs`, and
+`jupyter_home/playwright/artifacts`.
 
 ## Common Checks
 
 If the console fails to start, verify:
 
-- `~/.venv-jupyter/bin/jupyter-console` exists
-- `~/.venv-jupyter/bin/python -c "import jupyter_client"` works
+- `jupyter_home/venv/bin/jupyter-console` exists
+- `jupyter_home/venv/bin/python -c "import jupyter_client"` works
 - `target/debug/rum-jupyter-kernel` exists
-- the temporary kernelspec points at the expected launcher path
+- `scripts/rum-jupyter-home.sh kernelspec` rewrites the development kernelspec
 
 If the frontend starts but stalls during ready-handshake, the first thing to
 re-check is whether `kernel_info_request` still emits the expected IOPub

@@ -106,6 +106,112 @@ fn dispatch_request_emits_busy_and_idle_status_for_kernel_info() {
 }
 
 #[test]
+fn dispatch_request_handles_comm_info_without_touching_runtime_session() {
+    let session = Session::new();
+    let mut adapter = KernelAdapter::new(session);
+
+    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+        channel: KernelChannel::Shell,
+        header: KernelMessageHeader::new(
+            "client-msg-comm-info",
+            "session-comm",
+            "tester",
+            "comm_info_request",
+        ),
+        parent_header: None,
+        metadata: KernelMetadata::new(),
+        request: KernelRequest::CommInfo(KernelCommInfoRequest::default()),
+    });
+
+    let reply = dispatch
+        .reply
+        .as_ref()
+        .expect("comm_info should reply immediately");
+    assert_eq!(reply.channel, KernelChannel::Shell);
+    assert_eq!(reply.header.msg_type, "comm_info_reply");
+    assert_eq!(reply.metadata.get("status"), Some("ok"));
+    assert_eq!(dispatch.iopub.len(), 2);
+    assert_eq!(adapter.execution_count(), 0);
+
+    match &reply.response {
+        KernelResponse::CommInfo(response) => {
+            assert_eq!(response.status, KernelReplyStatus::Ok);
+        }
+        other => panic!("expected comm-info response, got {other:?}"),
+    }
+}
+
+#[test]
+fn dispatch_request_replies_to_debug_request_as_unsupported_without_exiting() {
+    let session = Session::new();
+    let mut adapter = KernelAdapter::new(session);
+
+    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+        channel: KernelChannel::Control,
+        header: KernelMessageHeader::new(
+            "client-msg-debug",
+            "session-debug",
+            "tester",
+            "debug_request",
+        ),
+        parent_header: None,
+        metadata: KernelMetadata::new(),
+        request: KernelRequest::Debug(KernelDebugRequest {
+            request_seq: Some(7),
+            command: Some("initialize".to_string()),
+        }),
+    });
+
+    let reply = dispatch
+        .reply
+        .as_ref()
+        .expect("debug request should receive an unsupported reply");
+    assert_eq!(reply.channel, KernelChannel::Control);
+    assert_eq!(reply.header.msg_type, "debug_reply");
+    assert_eq!(reply.metadata.get("status"), Some("error"));
+    assert_eq!(adapter.execution_count(), 0);
+    assert_eq!(adapter.lifecycle_state(), KernelLifecycleState::Running);
+
+    match &reply.response {
+        KernelResponse::Debug(response) => {
+            assert_eq!(response.status, KernelReplyStatus::Error);
+            assert_eq!(response.request_seq, Some(7));
+            assert_eq!(response.command.as_deref(), Some("initialize"));
+            assert!(response.message.contains("debug protocol"));
+        }
+        other => panic!("expected debug response, got {other:?}"),
+    }
+}
+
+#[test]
+fn dispatch_request_ignores_comm_messages_without_affecting_session_state() {
+    let session = Session::new();
+    let mut adapter = KernelAdapter::new(session);
+
+    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+        channel: KernelChannel::Shell,
+        header: KernelMessageHeader::new(
+            "client-msg-comm-open",
+            "session-comm-open",
+            "tester",
+            "comm_open",
+        ),
+        parent_header: None,
+        metadata: KernelMetadata::new(),
+        request: KernelRequest::Ignored(KernelIgnoredRequest {
+            msg_type: "comm_open".to_string(),
+        }),
+    });
+
+    assert!(dispatch.reply.is_none());
+    assert!(dispatch.iopub.is_empty());
+    assert!(dispatch.stdin.is_empty());
+    assert_eq!(adapter.execution_count(), 0);
+    assert_eq!(adapter.lifecycle_state(), KernelLifecycleState::Running);
+    assert_eq!(adapter.execution_state(), KernelExecutionState::Idle);
+}
+
+#[test]
 fn shell_request_envelope_dispatches_kernel_info_and_shutdown() {
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);

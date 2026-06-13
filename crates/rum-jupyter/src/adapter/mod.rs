@@ -4,18 +4,19 @@ use rum_host::{
 };
 
 use crate::{
-    KernelChannel, KernelCompleteRequest, KernelCompleteResponse, KernelDispatchResult,
+    KernelChannel, KernelCommInfoRequest, KernelCommInfoResponse, KernelCompleteRequest,
+    KernelCompleteResponse, KernelDebugRequest, KernelDebugResponse, KernelDispatchResult,
     KernelDisplayOutput, KernelErrorOutput, KernelExecuteInput, KernelExecuteOutcome,
     KernelExecutePayload, KernelExecuteRequest, KernelExecuteResponse, KernelExecuteResult,
     KernelExecutionState, KernelHelpLink, KernelHistoryRequest, KernelHistoryResponse,
-    KernelInfoRequest, KernelInfoResponse, KernelInputReply, KernelInputReplyEnvelope,
-    KernelInputRequest, KernelInputRequestEnvelope, KernelInspectRequest, KernelInspectResponse,
-    KernelInterruptRequest, KernelInterruptResponse, KernelIoPubEnvelope, KernelIoPubPayload,
-    KernelIsCompleteRequest, KernelIsCompleteResponse, KernelIsCompleteStatus, KernelLanguageInfo,
-    KernelLifecycleState, KernelMessageHeader, KernelMetadata, KernelMimeBundle, KernelOutput,
-    KernelReplyStatus, KernelRequest, KernelRequestEnvelope, KernelResponse,
-    KernelResponseEnvelope, KernelShutdownRequest, KernelShutdownResponse, KernelStatusOutput,
-    KernelStdinError, KernelStreamName, KernelStreamOutput,
+    KernelIgnoredRequest, KernelInfoRequest, KernelInfoResponse, KernelInputReply,
+    KernelInputReplyEnvelope, KernelInputRequest, KernelInputRequestEnvelope, KernelInspectRequest,
+    KernelInspectResponse, KernelInterruptRequest, KernelInterruptResponse, KernelIoPubEnvelope,
+    KernelIoPubPayload, KernelIsCompleteRequest, KernelIsCompleteResponse, KernelIsCompleteStatus,
+    KernelLanguageInfo, KernelLifecycleState, KernelMessageHeader, KernelMetadata,
+    KernelMimeBundle, KernelOutput, KernelReplyStatus, KernelRequest, KernelRequestEnvelope,
+    KernelResponse, KernelResponseEnvelope, KernelShutdownRequest, KernelShutdownResponse,
+    KernelStatusOutput, KernelStdinError, KernelStreamName, KernelStreamOutput,
 };
 
 mod iopub;
@@ -234,6 +235,21 @@ impl KernelAdapter {
         }
     }
 
+    pub fn comm_info(&self, _request: KernelCommInfoRequest) -> KernelCommInfoResponse {
+        KernelCommInfoResponse {
+            status: KernelReplyStatus::Ok,
+        }
+    }
+
+    pub fn debug(&self, request: KernelDebugRequest) -> KernelDebugResponse {
+        KernelDebugResponse {
+            status: KernelReplyStatus::Error,
+            request_seq: request.request_seq,
+            command: request.command,
+            message: "rum does not implement the Jupyter debug protocol".to_string(),
+        }
+    }
+
     pub fn request_stdin_for_execute(
         &mut self,
         parent_header: &KernelMessageHeader,
@@ -321,6 +337,17 @@ impl KernelAdapter {
                 parent_header,
                 KernelResponse::History(self.history(request)),
             ),
+            KernelRequest::CommInfo(request) => self.finish_non_execute_request(
+                envelope.channel,
+                parent_header,
+                KernelResponse::CommInfo(self.comm_info(request)),
+            ),
+            KernelRequest::Debug(request) => self.finish_non_execute_request(
+                envelope.channel,
+                parent_header,
+                KernelResponse::Debug(self.debug(request)),
+            ),
+            KernelRequest::Ignored(request) => self.ignore_request(request),
             KernelRequest::Interrupt(request) => {
                 let response = KernelResponse::Interrupt(self.interrupt(request));
                 self.finish_non_execute_request(envelope.channel, parent_header, response)
@@ -329,6 +356,14 @@ impl KernelAdapter {
                 let response = KernelResponse::Shutdown(self.shutdown(request));
                 self.finish_non_execute_request(envelope.channel, parent_header, response)
             }
+        }
+    }
+
+    fn ignore_request(&mut self, _request: KernelIgnoredRequest) -> KernelDispatchResult {
+        KernelDispatchResult {
+            reply: None,
+            iopub: Vec::new(),
+            stdin: Vec::new(),
         }
     }
 

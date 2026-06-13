@@ -198,15 +198,17 @@ Completed history, archived planning detail, and operational lessons live in
 - [ ] Preserve Jupyter-owned concerns in `rum-jupyter`: kernelspec/bootstrap,
   ZeroMQ/native transport, signing, wire codecs, message envelopes, IOPub
   lifecycle, and MIME bundles.
-- [ ] Provide one documented deploy path for a real Notebook frontend; other
-  frontends and installation styles are user-managed unless explicitly
-  promoted.
-- [ ] Validate the minimal Notebook workflow against a real Notebook frontend:
-  code cell execution, `text/plain` results, messages/prints, failures as
-  Jupyter errors, inspect, complete, is-complete, stdin resume, `kernel_info`,
-  and shutdown.
-- [ ] Handle common unsupported Jupyter messages gracefully rather than
-  terminating the kernel process.
+- [ ] Maintain the isolated `jupyter_home/` deploy path as the documented
+  Notebook frontend route; other frontends and installation styles are
+  user-managed unless explicitly promoted.
+- [ ] Keep the minimal Notebook workflow covered by the real harness:
+  `kernel-smoke` for `kernel_info`, execute, shutdown/restart, stdin resume,
+  messages/prints, failures as Jupyter errors, inspect, complete, is-complete,
+  history, and unsupported-message keepalive probes; `browser-smoke` for
+  JupyterLab/headless-Chromium code-cell execution with `text/plain` results.
+- [ ] Maintain graceful handling for common unsupported Jupyter messages:
+  empty `comm_info_reply`, ignored comm open/msg/close, explicit unsupported
+  `debug_reply`, and non-fatal ignoring for unknown frontend probes.
 - [ ] Keep robust interrupt/cancel, widgets/comm, debug protocol, rich
   display/update/clear-output behavior, and broad frontend compatibility
   outside `v0.1` unless deliberately promoted.

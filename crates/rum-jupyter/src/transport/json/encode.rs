@@ -1,4 +1,7 @@
 use super::*;
+use crate::{
+    KernelCommInfoRequest, KernelCommInfoResponse, KernelDebugRequest, KernelDebugResponse,
+};
 
 pub(in crate::transport) fn encode_request_content(request: &KernelRequest) -> String {
     match request {
@@ -28,8 +31,30 @@ pub(in crate::transport) fn encode_request_content(request: &KernelRequest) -> S
         KernelRequest::IsComplete(KernelIsCompleteRequest { code }) => {
             json_object(vec![field("code", json_string(code))])
         }
-        KernelRequest::History(_) | KernelRequest::KernelInfo(_) | KernelRequest::Interrupt(_) => {
-            json_object(Vec::new())
+        KernelRequest::History(_)
+        | KernelRequest::KernelInfo(_)
+        | KernelRequest::Interrupt(_)
+        | KernelRequest::Ignored(_) => json_object(Vec::new()),
+        KernelRequest::CommInfo(KernelCommInfoRequest { target_name }) => {
+            if let Some(target_name) = target_name {
+                json_object(vec![field("target_name", json_string(target_name))])
+            } else {
+                json_object(Vec::new())
+            }
+        }
+        KernelRequest::Debug(KernelDebugRequest {
+            request_seq,
+            command,
+        }) => {
+            let mut fields = vec![field("type", json_string("request"))];
+            if let Some(request_seq) = request_seq {
+                fields.push(field("seq", request_seq.to_string()));
+            }
+            if let Some(command) = command {
+                fields.push(field("command", json_string(command)));
+            }
+            fields.push(field("arguments", json_object(Vec::new())));
+            json_object(fields)
         }
         KernelRequest::Shutdown(KernelShutdownRequest { restart }) => {
             json_object(vec![field("restart", json_bool(*restart))])
@@ -56,6 +81,8 @@ pub(in crate::transport) fn encode_response_content(response: &KernelResponse) -
         KernelResponse::IsComplete(response) => encode_is_complete_response(response),
         KernelResponse::History(response) => encode_history_response(response),
         KernelResponse::KernelInfo(response) => encode_kernel_info_response(response),
+        KernelResponse::CommInfo(response) => encode_comm_info_response(response),
+        KernelResponse::Debug(response) => encode_debug_response(response),
         KernelResponse::Interrupt(response) => encode_interrupt_response(response),
         KernelResponse::Shutdown(response) => encode_shutdown_response(response),
     }
@@ -209,6 +236,33 @@ pub(in crate::transport) fn encode_kernel_info_response(response: &KernelInfoRes
             json_array(response.help_links.iter().map(encode_help_link).collect()),
         ),
     ])
+}
+
+pub(in crate::transport) fn encode_comm_info_response(response: &KernelCommInfoResponse) -> String {
+    json_object(vec![
+        field("status", json_string(response.status.as_str())),
+        field("comms", json_object(Vec::new())),
+    ])
+}
+
+pub(in crate::transport) fn encode_debug_response(response: &KernelDebugResponse) -> String {
+    let mut fields = vec![
+        field("status", json_string(response.status.as_str())),
+        field("seq", "0".to_string()),
+        field("type", json_string("response")),
+        field("success", json_bool(false)),
+        field(
+            "command",
+            json_string(response.command.as_deref().unwrap_or("unsupported")),
+        ),
+        field("message", json_string(&response.message)),
+    ];
+
+    if let Some(request_seq) = response.request_seq {
+        fields.push(field("request_seq", request_seq.to_string()));
+    }
+
+    json_object(fields)
 }
 
 pub(in crate::transport) fn encode_interrupt_response(

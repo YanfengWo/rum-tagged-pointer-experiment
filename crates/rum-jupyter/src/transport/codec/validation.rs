@@ -86,13 +86,14 @@ impl KernelWireCodec {
             "kernel_info_request" => {
                 matches!(channel, KernelChannel::Shell | KernelChannel::Control)
             }
+            "comm_info_request" => matches!(channel, KernelChannel::Shell | KernelChannel::Control),
+            "comm_open" | "comm_msg" | "comm_close" => {
+                matches!(channel, KernelChannel::Shell | KernelChannel::Control)
+            }
+            "debug_request" => matches!(channel, KernelChannel::Shell | KernelChannel::Control),
             "interrupt_request" => channel == KernelChannel::Control,
             "shutdown_request" => matches!(channel, KernelChannel::Shell | KernelChannel::Control),
-            _ => {
-                return Err(KernelWireError::UnsupportedMessageType {
-                    msg_type: msg_type.to_string(),
-                });
-            }
+            _ => matches!(channel, KernelChannel::Shell | KernelChannel::Control),
         };
 
         if valid {
@@ -116,6 +117,9 @@ impl KernelWireCodec {
             }
             "history_reply" => channel == KernelChannel::Shell,
             "kernel_info_reply" => matches!(channel, KernelChannel::Shell | KernelChannel::Control),
+            "comm_info_reply" | "debug_reply" => {
+                matches!(channel, KernelChannel::Shell | KernelChannel::Control)
+            }
             "interrupt_reply" => channel == KernelChannel::Control,
             "shutdown_reply" => matches!(channel, KernelChannel::Shell | KernelChannel::Control),
             _ => {

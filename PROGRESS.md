@@ -1162,10 +1162,20 @@ optional for normal development.
 
 The Jupyter harness now has an isolated `jupyter_home/` deploy path with real
 `jupyter_client` and JupyterLab smoke commands. `kernel-smoke` covers kernel
-start/ready/execute/restart/shutdown plus stdin suspend/resume over real ZMQ
-channels; `browser-smoke` covers notebook execution through JupyterLab and
-headless Chromium. Robust interrupt/cancel remains outside the current
-contract.
+start/ready/execute/restart/shutdown, stdin suspend/resume, completion,
+inspection, is-complete, history, stdout/stderr stream mapping, runtime
+messages, failure-to-error mapping, and unsupported-message keepalive over real
+ZMQ channels. Unsupported-message handling now returns an empty
+`comm_info_reply`, ignores comm open/msg/close, returns an explicit unsupported
+`debug_reply`, and ignores unknown frontend probes so the kernel stays alive.
+`browser-smoke` covers notebook execution through JupyterLab and headless
+Chromium. On 2026-06-13, `cargo test -p rum-host`, `cargo test -p
+rum-jupyter`, `scripts/rum-jupyter-home.sh kernel-smoke`, and
+`scripts/rum-jupyter-home.sh browser-smoke` all passed locally. The Codex
+sandbox blocks loopback-port binding, so the native ZeroMQ and real Jupyter
+smokes need unsandboxed execution, but their filesystem state stays under
+`jupyter_home/`. Robust interrupt/cancel, widgets/comm state, and the debug
+protocol remain outside the current contract.
 
 ## Operational Lessons
 

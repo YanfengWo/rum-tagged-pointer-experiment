@@ -363,6 +363,8 @@ pub(super) fn response_msg_type(response: &KernelResponse) -> &'static str {
         KernelResponse::IsComplete(_) => "is_complete_reply",
         KernelResponse::History(_) => "history_reply",
         KernelResponse::KernelInfo(_) => "kernel_info_reply",
+        KernelResponse::CommInfo(_) => "comm_info_reply",
+        KernelResponse::Debug(_) => "debug_reply",
         KernelResponse::Interrupt(_) => "interrupt_reply",
         KernelResponse::Shutdown(_) => "shutdown_reply",
     }
@@ -390,6 +392,8 @@ pub(super) fn response_metadata(
         KernelResponse::IsComplete(response) => response.reply_status.as_str(),
         KernelResponse::History(history) => history.status.as_str(),
         KernelResponse::KernelInfo(info) => info.status.as_str(),
+        KernelResponse::CommInfo(comm_info) => comm_info.status.as_str(),
+        KernelResponse::Debug(debug) => debug.status.as_str(),
         KernelResponse::Interrupt(interrupt) => interrupt.status.as_str(),
         KernelResponse::Shutdown(shutdown) => shutdown.status.as_str(),
     };

@@ -84,6 +84,18 @@ remains blocked by the `Pair.wl` / `Simp` performance gate. Do not carry the
 old `extend_snapshot.wls` `$Packages` workaround into upstream `mma-hol`; it
 masked a rum restore divergence that is now fixed in runtime.
 
+The Jupyter harness has an isolated `jupyter_home/` path through
+`scripts/rum-jupyter-home.sh`. Use `init` to install the local venv and
+kernelspec, `kernel-smoke` for real `jupyter_client`
+lifecycle/stdin/protocol/unsupported-message keepalive coverage, and
+`browser-smoke` for JupyterLab plus headless Chromium notebook execution.
+Unsupported keepalive means empty `comm_info_reply`, ignored comm open/msg/close,
+explicit unsupported `debug_reply`, and ignored unknown frontend probes; it does
+not implement widgets/comm state or the debug protocol. The real Jupyter and
+native ZeroMQ smokes need loopback-port access outside the Codex sandbox, but
+their files remain under `jupyter_home/`. Robust interrupt/cancel and rich
+display behavior remain outside the current v0.1 contract.
+
 The PropTaut performance lane has been reopened by external review and a
 follow-up same-bit stability-invalidation experiment. The retained current
 frontier is the PropTaut distribution probe at about `12.73-12.88s` in release

@@ -12,7 +12,9 @@ Commands:
   smoke [expr]      Run the protocol smoke through the isolated environment.
   lifecycle-smoke   Run a real jupyter_client lifecycle smoke.
   stdin-smoke       Run a real jupyter_client stdin suspend/resume smoke.
-  kernel-smoke      Run lifecycle-smoke and stdin-smoke.
+  protocol-smoke    Run real jupyter_client protocol feature probes.
+  unsupported-smoke Run unsupported-message keepalive probes.
+  kernel-smoke      Run lifecycle, stdin, protocol, and unsupported smokes.
   browser-smoke     Run a headless JupyterLab browser smoke with Playwright.
   lab [args...]     Start JupyterLab with all state under ./jupyter_home.
   notebook [args...] Start Notebook with all state under ./jupyter_home.
@@ -238,6 +240,8 @@ case "${command}" in
   smoke) cmd_smoke "$@" ;;
   lifecycle-smoke) cmd_kernel_smoke lifecycle "$@" ;;
   stdin-smoke) cmd_kernel_smoke stdin "$@" ;;
+  protocol-smoke) cmd_kernel_smoke protocol "$@" ;;
+  unsupported-smoke) cmd_kernel_smoke unsupported "$@" ;;
   kernel-smoke) cmd_kernel_smoke all "$@" ;;
   browser-smoke) cmd_browser_smoke "$@" ;;
   lab) cmd_lab "$@" ;;

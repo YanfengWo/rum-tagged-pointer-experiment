@@ -514,6 +514,175 @@ fn history_request_round_trips_with_empty_reply() {
 }
 
 #[test]
+fn comm_info_request_round_trips_with_empty_comm_registry() {
+    let codec = KernelWireCodec::new(KernelWireConfig::default().with_session_id("session-14comm"));
+    let envelope = KernelRequestEnvelope {
+        channel: KernelChannel::Shell,
+        header: KernelMessageHeader::new(
+            "client-msg-comm-info",
+            "session-14comm",
+            "tester",
+            "comm_info_request",
+        ),
+        parent_header: None,
+        metadata: super::KernelMetadata::new(),
+        request: KernelRequest::CommInfo(KernelCommInfoRequest::default()),
+    };
+
+    let wire = codec
+        .encode_request_envelope(&envelope)
+        .expect("comm_info request should encode");
+    let decoded = codec
+        .decode_request_message(&wire)
+        .expect("comm_info request should decode");
+
+    match &decoded.request {
+        KernelRequest::CommInfo(request) => assert!(request.target_name.is_none()),
+        other => panic!("expected comm-info request, got {other:?}"),
+    }
+
+    let mut adapter = KernelAdapter::new(Session::new());
+    let dispatch = adapter.dispatch_request(decoded);
+    let reply = dispatch
+        .reply
+        .expect("comm_info request should receive a reply");
+    let encoded_reply = codec
+        .encode_response_envelope(&reply)
+        .expect("comm_info reply should encode");
+    assert!(encoded_reply.content_json.contains("\"comms\":{}"));
+
+    let decoded_reply = codec
+        .decode_response_message(&encoded_reply)
+        .expect("comm_info reply should decode");
+    assert_eq!(decoded_reply.header.msg_type, "comm_info_reply");
+    match decoded_reply.response {
+        KernelResponse::CommInfo(response) => assert_eq!(response.status, KernelReplyStatus::Ok),
+        other => panic!("expected comm-info response, got {other:?}"),
+    }
+}
+
+#[test]
+fn debug_request_round_trips_as_explicit_unsupported_reply() {
+    let codec =
+        KernelWireCodec::new(KernelWireConfig::default().with_session_id("session-14debug"));
+    let envelope = KernelRequestEnvelope {
+        channel: KernelChannel::Control,
+        header: KernelMessageHeader::new(
+            "client-msg-debug",
+            "session-14debug",
+            "tester",
+            "debug_request",
+        ),
+        parent_header: None,
+        metadata: super::KernelMetadata::new(),
+        request: KernelRequest::Debug(KernelDebugRequest {
+            request_seq: Some(5),
+            command: Some("initialize".to_string()),
+        }),
+    };
+
+    let wire = codec
+        .encode_request_envelope(&envelope)
+        .expect("debug request should encode");
+    let decoded = codec
+        .decode_request_message(&wire)
+        .expect("debug request should decode");
+
+    let mut adapter = KernelAdapter::new(Session::new());
+    let dispatch = adapter.dispatch_request(decoded);
+    let reply = dispatch
+        .reply
+        .expect("debug request should receive a reply");
+    assert_eq!(reply.channel, KernelChannel::Control);
+
+    let encoded_reply = codec
+        .encode_response_envelope(&reply)
+        .expect("debug reply should encode");
+    assert!(encoded_reply.content_json.contains("\"success\":false"));
+    assert!(
+        encoded_reply
+            .content_json
+            .contains("\"command\":\"initialize\"")
+    );
+
+    let decoded_reply = codec
+        .decode_response_message(&encoded_reply)
+        .expect("debug reply should decode");
+    assert_eq!(decoded_reply.header.msg_type, "debug_reply");
+    match decoded_reply.response {
+        KernelResponse::Debug(response) => {
+            assert_eq!(response.status, KernelReplyStatus::Error);
+            assert_eq!(response.request_seq, Some(5));
+            assert_eq!(response.command.as_deref(), Some("initialize"));
+        }
+        other => panic!("expected debug response, got {other:?}"),
+    }
+}
+
+#[test]
+fn event_pump_ignores_comm_messages_and_keeps_processing_later_execute() {
+    let codec = KernelWireCodec::new(KernelWireConfig::default().with_session_id("session-14keep"));
+    let adapter = KernelAdapter::new(Session::new());
+    let mut pump = KernelEventPump::new(adapter, codec.clone());
+    let mut transport = MockSocketTransport::default();
+
+    let comm_open = codec
+        .encode_request_envelope(&KernelRequestEnvelope {
+            channel: KernelChannel::Shell,
+            header: KernelMessageHeader::new(
+                "client-msg-comm-open",
+                "session-14keep",
+                "tester",
+                "comm_open",
+            ),
+            parent_header: None,
+            metadata: super::KernelMetadata::new(),
+            request: KernelRequest::Ignored(KernelIgnoredRequest {
+                msg_type: "comm_open".to_string(),
+            }),
+        })
+        .expect("comm_open should encode");
+    transport.queue_incoming(comm_open);
+
+    let first = pump
+        .pump_until_idle(&mut transport)
+        .expect("ignored comm_open should not be fatal");
+    assert_eq!(first.shell_messages, 1);
+    assert!(transport.shell.is_empty());
+    assert!(transport.iopub.is_empty());
+
+    let execute = codec
+        .encode_request_envelope(&KernelRequestEnvelope {
+            channel: KernelChannel::Shell,
+            header: KernelMessageHeader::new(
+                "client-msg-after-comm",
+                "session-14keep",
+                "tester",
+                "execute_request",
+            ),
+            parent_header: None,
+            metadata: super::KernelMetadata::new(),
+            request: KernelRequest::Execute(KernelExecuteRequest::new("3+3")),
+        })
+        .expect("execute should encode");
+    transport.queue_incoming(execute);
+
+    pump.pump_until_idle(&mut transport)
+        .expect("kernel should keep processing after ignored comm message");
+    assert_eq!(transport.shell.len(), 1);
+    let reply = codec
+        .decode_response_message(&transport.shell[0])
+        .expect("execute reply should decode");
+    match reply.response {
+        KernelResponse::Execute(response) => {
+            assert_eq!(response.status, KernelReplyStatus::Ok);
+            assert_eq!(response.execution_count, Some(1));
+        }
+        other => panic!("expected execute response, got {other:?}"),
+    }
+}
+
+#[test]
 fn transport_codec_round_trips_stdin_input_messages() {
     let codec = KernelWireCodec::new(
         KernelWireConfig::default()

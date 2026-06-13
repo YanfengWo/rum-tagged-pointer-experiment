@@ -1,6 +1,10 @@
 use super::fields::*;
 use super::status::*;
 use super::*;
+use crate::{
+    KernelCommInfoRequest, KernelCommInfoResponse, KernelDebugRequest, KernelDebugResponse,
+    KernelIgnoredRequest,
+};
 
 pub(in crate::transport) fn parse_header(
     input: &str,
@@ -73,13 +77,20 @@ pub(in crate::transport) fn parse_request_content(
         })),
         "history_request" => Ok(KernelRequest::History(KernelHistoryRequest)),
         "kernel_info_request" => Ok(KernelRequest::KernelInfo(crate::KernelInfoRequest)),
+        "comm_info_request" => Ok(KernelRequest::CommInfo(KernelCommInfoRequest {
+            target_name: optional_string_field(&object, "content", "target_name")?,
+        })),
+        "debug_request" => Ok(KernelRequest::Debug(KernelDebugRequest {
+            request_seq: optional_u64_field(&object, "content", "seq")?,
+            command: optional_string_field(&object, "content", "command")?,
+        })),
         "interrupt_request" => Ok(KernelRequest::Interrupt(KernelInterruptRequest)),
         "shutdown_request" => Ok(KernelRequest::Shutdown(KernelShutdownRequest {
             restart: bool_field_with_default(&object, "content", "restart", false)?,
         })),
-        _ => Err(KernelWireError::UnsupportedMessageType {
+        _ => Ok(KernelRequest::Ignored(KernelIgnoredRequest {
             msg_type: msg_type.to_string(),
-        }),
+        })),
     }
 }
 
@@ -184,6 +195,19 @@ pub(in crate::transport) fn parse_response_content(
             banner: string_field(&object, "content", "banner")?,
             language_info: language_info_field(&object, "content", "language_info")?,
             help_links: help_links_field(&object, "content", "help_links")?,
+        })),
+        "comm_info_reply" => Ok(KernelResponse::CommInfo(KernelCommInfoResponse {
+            status: parse_reply_status(&string_field(&object, "content", "status")?)?,
+        })),
+        "debug_reply" => Ok(KernelResponse::Debug(KernelDebugResponse {
+            status: parse_reply_status(
+                optional_string_field(&object, "content", "status")?
+                    .as_deref()
+                    .unwrap_or(KernelReplyStatus::Error.as_str()),
+            )?,
+            request_seq: optional_u64_field(&object, "content", "request_seq")?,
+            command: optional_string_field(&object, "content", "command")?,
+            message: optional_string_field(&object, "content", "message")?.unwrap_or_default(),
         })),
         "interrupt_reply" => Ok(KernelResponse::Interrupt(KernelInterruptResponse {
             status: parse_reply_status(&string_field(&object, "content", "status")?)?,
