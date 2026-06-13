@@ -1,10 +1,52 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-Current focus: **Task 2c** below (is the Simp fixpoint descent looping in rum
-vs WolframKernel?), plus correcting the uncommitted Task-3b default-path
-regression. Earlier tasks (Catch fix, Pair/Simp multiplier hunt, stability-check
-amplifier, substitution-sharing audit and stamp prototype) are done and kept
-below as history.
+Current focus: Task 2c is now complete for the completing user-rule-only mkPair
+shape: rum and WolframKernel take identical `simpFixpointConv` loop counts, so
+that shape is not looping in rum. The uncommitted Task-3b default-path carrier
+regression has also been corrected by reverting the carrier. The next cheap
+performance probe is the secondary split over a single `mkPair` application
+term under user rule only, basic rules only, and smaller partial applications.
+Earlier tasks (Catch fix, Pair/Simp multiplier hunt, stability-check amplifier,
+substitution-sharing audit and stamp prototype) are done and kept below as
+history.
+
+Post-RHS-lambda split update, 2026-06-13: the single-term split has reduced
+the hot shape to no-op descent over the rewritten `mkPair` RHS lambda, and the
+RHS lambda has now been split. Each remaining binder roughly doubles
+`simpFixpointConv` entries: full opened body `29.616s` / `53` entries, one
+lambda `40.590s` / `107`, two lambdas `63.673s` / `215`, three lambdas
+`113.656s` / `431` in rum; WolframKernel takes `7.640s` on the body and
+`10.535s` on the three-lambda shape with identical entry counts. Rule-set
+splits on the three-lambda shape are `user` only `22.492s`, `basic` only on
+the user-generated RHS `94.288s`, and `userBasic` `113.656s`, so the public
+multiplier is basic-rule failed dispatch layered over the no-op descent.
+Scratch `Drule.wl` counters show `17240` `REWRCONV` calls on the three-lambda
+shape, all match failures. Failure payload removal, sentinel throw, no-throw
+failure, and fast const-head rejection inside `REWRCONV` did not materially
+move the body time. A scratch indexed `buildBaseConv` reduced body
+`REWRCONV` calls from `2120` to `122` but regressed without caching because
+`100` indexed builds cost `27.877s`; adding exact `buildBaseConv` cache moved
+the body to `21.293s` (`51` hits / `2` misses) and the three-lambda RHS to
+`24.452s` (`429` hits / `2` misses, `976` failed `REWRCONV` calls). Next
+evidence-backed optimization: design a real cached/compiled base-conversion
+dispatch keyed by rules/context/depth and head-indexed rule candidates. Do not
+ship the scratch WL patches directly; they are diagnostic.
+
+Post-clean-baseConv experiment update, 2026-06-13: a fresh scratch clone at
+`/private/tmp/rum-mma-hol-baseconv-exp.HtBwlQ/mma-hol` tested only the minimal
+`auto/Simp.wl` optimization direction: head-indexed rule dispatch plus exact
+`buildBaseConv` cache. This crosses the previous Pair gate. Key rum release
+results: RHS three-lambda `userBasic` `27.618s` (`430` hits / `2` misses),
+public `pair2Same` `34.932s` (`1509` / `2`), `pair3Same` `34.394s`,
+`pair4Same` `36.681s`, `CONVRULE[simpConv[{mkPairDefThm}], REFL[pair2Same]]`
+`53.047s`, cold load through `stdlib/Pair.wl` `85.537s` with `pairInjThm`
+valid, `pair_tests.wl` green `42/0`, and `simp_tests.wl` green `46/0`.
+WolframKernel also runs the patched `pair_tests.wl` green. A cache-only clone
+was negative: RHS three-lambda still `115.585s` and public `pair2Same` timed
+out at `180s`, so head-indexed candidate pruning is required. Remaining
+snapshot caveat: partial `build_snapshot.wls Pair` timed out, while Stable
+mode load-through-Pair without `DumpSave` completed; investigate DumpSave /
+transient cache clearing before treating the snapshot lane as closed.
 
 Date: 2026-06-12. Initial diagnosis was written against commit `f06c23c`;
 Task 1 has since been completed and the current status is recorded below.
@@ -336,6 +378,21 @@ rather than inferred from rum-side counters. Read `simpFixpointConv` (around
 `Simp.wl:446`): its `While[True, ...]` loop breaks on `newRhs === rhs`
 (fixpoint reached) or `KeyExistsQ[seen, newRhs]` (cycle), and it rebuilds
 `buildBaseConv` once per entry.
+
+Completion, 2026-06-13: the two-engine loop-count probe was run on a scratch
+instrumented `Simp.wl` copy at
+`/private/tmp/rum-mma-hol-simp-loop.sSsJv1/mma-hol`. The completing
+user-rule-only probe
+`simpFixpointConv[{mkPairDefThm}, {}, $simpDepthLimit][concl[lhsAppXY]]`
+reported identical counts in rum release and WolframKernel: `3565` entries,
+`3573` while iterations, max `seen` size `3`, `3565` fixpoint breaks, and `0`
+cycle breaks. Timings were `40.977489205s` in rum release and `12.837901s` in
+WolframKernel, about `3.2x`. This completing shape is therefore not looping in
+rum and does not support the `newRhs === rhs` / origin-annotation
+non-convergence hypothesis. The next split should focus on rule-set and term
+shape for one `mkPair` application; if the full public ruleset is suspected of
+a separate loop, use explicit in-run snapshots rather than killed-process
+stdout.
 
 Plan:
 

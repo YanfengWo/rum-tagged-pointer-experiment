@@ -6,6 +6,427 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-13 Pair/Simp Secondary Split
+
+Continued from the Task 2c verdict using the same scratch instrumented
+`mma-hol` copy at `/private/tmp/rum-mma-hol-simp-loop.sSsJv1/mma-hol`. The
+secondary split isolates one `mkPair` application term under progressively
+different rule sets and term shapes. Timings below are release `rum-cli` unless
+noted.
+
+Rule-set / term-shape split:
+
+| Probe | Time | Entries | While Iterations | Changed |
+| --- | ---: | ---: | ---: | --- |
+| `none` rules on `pair4Same` | `0.0909s` | `61` | `61` | `False` |
+| `basic` rules on `pair4Same` | `8.739s` | `61` | `61` | `False` |
+| `user` rule on `pair2Same` | `29.126s` | `1511` | `1513` | `True` |
+| `user` rule on `pair3Same` | `29.674s` | `1619` | `1622` | `True` |
+| `user` rule on `pair4Same` | `30.738s` | `1673` | `1677` | `True` |
+| WolframKernel `userBasic` on `pair2Same` | `16.522s` | `1511` | `1513` | `True` |
+| rum `userBasic` on `pair2Same` | timeout at `180s` and again at `360s` | n/a | n/a | n/a |
+
+This immediately identified `userBasic` on the smallest partial application
+`mkPair[x, y]` as the reduced long-tail shape. A first-step split for this
+shape then showed:
+
+- `preheatRules["userBasic"]`: `21.592s`;
+- `buildBaseConv`: `0.0046s`;
+- top `TRYCONV[REPEATC[baseConv]]` on `mkPair[x, y]`: `0.068s`, unchanged;
+- `descendOnce` on the same term: timeout at `180s`.
+
+Splitting the ordinary `comb` descent found that the argument positions are
+not responsible:
+
+- simplifying the argument `y`: `0.137s`, unchanged, `1` entry;
+- simplifying the function position `mkPair[x]`: timeout at `180s`;
+- within `mkPair[x]`, simplifying argument `x`: `0.129s`, unchanged, `1`
+  entry;
+- simplifying the head `mkPair` constant: timeout at `180s`.
+
+The current smallest named hot shape is therefore the `mkPair` constant under
+`userBasic`. Splitting that head shows:
+
+| Probe | rum | WolframKernel | Changed |
+| --- | ---: | ---: | --- |
+| top rewrite of `mkPair` constant | `0.111s` | not measured | `True` |
+| `descendOnce` on the rewritten RHS lambda, `user` rule only | `23.027s` | `7.854s` | `False` |
+| `descendOnce` on the rewritten RHS lambda, `userBasic` rules | `112.766s` | `10.687s` | `False` |
+
+The `RUM_STEP` cumulative top/descend timers are useful for direction but
+double-count recursive nested calls, so the stage wall times above are the
+authoritative comparison. The important semantic point is that these expensive
+RHS-lambda descents are no-ops (`descend_changed=False`): rum spends over 100s
+proving that the `mkPair` definition body is unchanged when the 19 basic rules
+are present. This is not preheat, `buildBaseConv`, top rewrite, or argument
+descent. It is the recursive descent over the definition RHS lambda/body under
+the `userBasic` ruleset, where basic-rule failed dispatch multiplies an
+otherwise already nontrivial user-rule-only descent.
+
+RHS-lambda split, same scratch clone:
+
+| Probe | rum | WolframKernel | Entries | Notes |
+| --- | ---: | ---: | ---: | --- |
+| body left branch, `userBasic` | `2.0616s` | not measured | `13` | unchanged |
+| body right branch, `userBasic` | `2.0481s` | not measured | `13` | unchanged |
+| full opened body, `userBasic` | `29.616s` | `7.640s` | `53` | unchanged |
+| one remaining lambda, `userBasic` | `40.590s` | not measured | `107` | unchanged |
+| two remaining lambdas, `userBasic` | `63.673s` | not measured | `215` | unchanged |
+| three remaining lambdas, `userBasic` | `113.656s` | `10.535s` | `431` | unchanged |
+
+The binder levels are the multiplier: each remaining lambda roughly doubles
+the number of `simpFixpointConv` entries. Rule-set splits on the three-lambda
+shape show that the extra wall time comes from basic-rule failed dispatch, not
+from successful user rewrites:
+
+| Probe | rum | WolframKernel | Entries |
+| --- | ---: | ---: | ---: |
+| `user` only on the three-lambda RHS | `22.492s` | `7.804s` | `431` |
+| `basic` only, applied to the user-generated RHS | `94.288s` | `10.321s` | `431` |
+| `userBasic` on the same RHS | `113.656s` | `10.535s` | `431` |
+
+Scratch `Drule.wl` counters then showed that the `userBasic` three-lambda
+probe performs `17240` `REWRCONV` calls and every one is a match failure
+(`0` rewrite successes); the full body alone performs `2120` failed
+`REWRCONV` calls. Dropping the large `Failure` payload and even replacing
+conversion failure with a no-throw sentinel did not materially move the body
+time (`~29.7s` -> `~29.3s`), so exception payload/throw mechanics are not the
+primary gate.
+
+A fast const-head mismatch check inside `REWRCONV` hit most body failures
+(`1998/2120`) but also did not move wall time, which rejects "deep matcher
+walk" as the main explanation. A stronger scratch experiment changed
+`buildBaseConv` to index rules by LHS const head. Without caching, this cut
+body `REWRCONV` calls from `2120` to `122` but regressed wall time to
+`43.818s`; measuring the indexed builder separately showed `100` builds cost
+`27.877s`. Adding an exact `buildBaseConv` cache fixed that: the body fell to
+`21.293s` with `51` cache hits / `2` misses, and the three-lambda RHS fell to
+`24.452s` with `429` hits / `2` misses and only `976` failed `REWRCONV` calls.
+
+Verdict: the evidence-backed optimization direction is a compiled/cached
+base-conversion dispatch structure, probably keyed by rules/context/depth and
+using head-indexed rule candidates. The naive WL-layer indexed builder is too
+expensive if rebuilt per recursive entry, but indexed dispatch plus reuse
+removes almost all `basicSimpset` failed-dispatch overhead and returns the
+three-lambda RHS to near the `user`-only no-op descent cost. The remaining
+`~22-24s` is the general no-op lambda/body descent and theorem-construction
+constant, not the public-rule multiplier.
+
+Clean follow-up experiment, same date:
+
+Re-ran the optimization direction on a fresh scratch clone at
+`/private/tmp/rum-mma-hol-baseconv-exp.HtBwlQ/mma-hol` with only the minimal
+`auto/Simp.wl` change: `buildBaseConv` produces a head-indexed conversion
+dispatcher and exact-caches it by `{ruleThms, ctxThms, depth}` using a held
+key. No `Drule.wl` failure-protocol diagnostics were present.
+
+Results:
+
+| Probe | Time | Cache Hits | Cache Misses | Result |
+| --- | ---: | ---: | ---: | --- |
+| RHS opened body, `userBasic` | `21.603s` | `52` | `2` | unchanged theorem |
+| RHS three-lambda, `userBasic` | `27.618s` | `430` | `2` | unchanged theorem |
+| `pair2Same`, public `userBasic` | `34.932s` | `1509` | `2` | changed theorem |
+| `pair3Same`, public `userBasic` | `34.394s` | `1616` | `3` | changed theorem |
+| `pair4Same`, public `userBasic` | `36.681s` | `1670` | `3` | changed theorem |
+| `CONVRULE[simpConv[{mkPairDefThm}], REFL[pair2Same]]` | `53.047s` | `3887` | `2` | theorem |
+| cold load through `stdlib/Pair.wl` | `85.537s` | `3670` | `8` | `pairInjThm` theorem |
+| `pair_tests.wl` after cold load | `42/0`; test body `0.466s` | `3670` | `8` | green |
+| `simp_tests.wl` | `46/0`; test body `208.655s` | `648` | `48` | green |
+
+WolframKernel also runs the patched `pair_tests.wl` green (`42/0`). A
+cache-only clone at `/private/tmp/rum-mma-hol-baseconv-cacheonly.65rVR2/mma-hol`
+was a negative control: the RHS three-lambda probe still took `115.585s`
+despite `430` cache hits / `2` misses, and `pair2Same` timed out at `180s`.
+Therefore the important ingredient is not merely avoiding repeated builder
+work; the dispatcher must also avoid walking the whole public `ORELSEC` rule
+chain for obviously mismatched heads.
+
+The experiment crosses the previous `Pair.wl` gate in source-load and tests,
+but the stable snapshot lane still needs separate work. A partial snapshot
+through `Pair` timed out at `300s`; a custom load-through-Pair script in
+Stable mode without `DumpSave` completed quickly, so the remaining issue is
+DumpSave/snapshot serialization or snapshot policy, not Pair proof load
+itself. Any real patch must treat base-conversion caches as transient and
+clear or exclude them before dumping.
+
+## 2026-06-13 Task 2c Simp Fixpoint Loop Count Diagnosis
+
+Ran the handoff's Task 2c two-engine loop-count check on a scratch copy of
+`mma-hol` at `/private/tmp/rum-mma-hol-simp-loop.sSsJv1/mma-hol`. The scratch
+`auto/Simp.wl` instruments the WL-level `simpFixpointConv` with counters for:
+
+- total `simpFixpointConv` entries;
+- total `While` iterations;
+- maximum `seen` association size;
+- fixpoint breaks (`newRhs === rhs`);
+- cycle breaks (`KeyExistsQ[seen, newRhs]`).
+
+The probe `/private/tmp/rum-simp-loop-user-rule-probe.wl` constructs the same
+`mkPairDefThm` / `lhsAppXY` shape as the Pair/Simp probes and runs the
+completing user-rule-only conversion:
+
+```wolfram
+HOL`Auto`Simp`Private`simpFixpointConv[
+  {mkPairDefThm}, {}, HOL`Auto`Simp`Private`$simpDepthLimit][concl[lhsAppXY]]
+```
+
+The release `rum-cli` binary was rebuilt after reverting the Task 3b carrier.
+Results:
+
+| Engine | Time | Entries | While Iterations | Max Seen | Fixpoint Breaks | Cycle Breaks |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| rum release | `40.977489205s` | `3565` | `3573` | `3` | `3565` | `0` |
+| WolframKernel | `12.837901s` | `3565` | `3573` | `3` | `3565` | `0` |
+
+Verdict: the completing user-rule-only mkPair shape is not looping in rum.
+The step counts and break reasons are identical to WolframKernel, so this
+probe does not support the high-value `newRhs === rhs` / origin-annotation
+non-convergence hypothesis. The observed ratio is about `3.2x`, squarely in
+the current per-step constant range. The remaining Pair/Simp gate should now
+be treated as either a downstream `Simp` algorithm issue or a general evaluator
+constant-factor / representation issue; the next cheap split is still one
+`mkPair` application term under user rule only, basic rules only, and smaller
+partial applications. If the full public ruleset is suspected of a separate
+non-convergence behavior, use an in-run snapshot/logging probe rather than
+inferring from killed stdout.
+
+Validation / commands:
+
+- `scripts/run-bounded.py --timeout 180 -- cargo build --release -p rum-cli`
+- `scripts/run-bounded.py --timeout 120 -- target/release/rum-cli --file /private/tmp/rum-simp-loop-user-rule-probe.wl`
+- `scripts/run-bounded.py --timeout 120 -- /Applications/Wolfram.app/Contents/MacOS/WolframKernel -noprompt -script /private/tmp/rum-simp-loop-user-rule-probe.wl`
+
+## 2026-06-13 Task 3b Shared-Subtree Stamp Prototype Reverted
+
+A temporary opt-in call-stability stamp prototype was built for the
+representation-work Task 3 lane, then reverted before commit after external
+review found a default-path regression. The prototype stored a runtime
+stability verdict on the existing shared argument-vector allocation so cloned
+call subtrees could carry the verdict across rule RHS substitution.
+
+Implementation shape tested, not retained:
+
+- `SharedArgs` wrapped an internal argument-vector object with a
+  non-serialized `CallStabilityStamp` slot. Equality, hashing, display, and
+  serde still use only the argument vector, preserving the public expression
+  shape and textual snapshot format.
+- The stamp recorded the call head `SharedExpr`, call-stability generation,
+  stable verdict, dependency bloom, and dirty snapshot. Keeping the head Arc in
+  the stamp avoids unsafe pointer-reuse hits when the same argument vector is
+  later paired with a different head.
+- Mutable access to `SharedArgs` cleared the stamp. Cloning a shared argument
+  vector preserves the stamp; clone-on-write copies start with no stamp.
+- Runtime use was behind `RUM_CALL_STABILITY_INLINE_STAMP=1`, so default
+  evaluation still consulted the existing pointer-keyed side cache. When
+  enabled, `call_stability_with_bloom` checked the shared-args stamp first,
+  fell back to the side cache on miss, and stored a stamp whenever it inserted
+  or hit a stable side-cache entry.
+
+Prototype-only profile counters under the existing
+`RUM_PROFILE_EVALUATION_CACHE=1` switch were:
+
+- `call_stability_stamp_hits`
+- `call_stability_stamp_miss_absent`
+- `call_stability_stamp_miss_head`
+- `call_stability_stamp_miss_generation`
+- `call_stability_stamp_miss_dirty`
+- `call_stability_stamp_stores`
+
+Prototype litmus coverage:
+
+- a shared call subtree remains stable through its inline stamp after the
+  side cache is manually cleared, proving that the verdict travels with the
+  shared subtree rather than only living in the session map;
+- a later write to the subtree's call head invalidates the stamp through the
+  existing dirty-bloom logic, proving the prototype does not reuse stale stable
+  verdicts across relevant definition writes.
+
+Small WL-layer probe:
+
+```bash
+RUM_PROFILE_EVALUATION_CACHE=1 \
+RUM_PROFILE_SUBSTITUTION_SHARING=1 \
+RUM_CALL_STABILITY_CACHE_MAX_ENTRIES=1 \
+RUM_CALL_STABILITY_INLINE_STAMP=1 \
+  scripts/run-bounded.py --timeout 120 -- \
+  cargo run -p rum-cli -- --eval \
+  'f[x_] := q[x, x, x, x, x, x, x, x]; f[g[h[1]]]'
+```
+
+Observed output includes `rule_rhs_binding_call_hits=8`,
+`call_stability_stamp_stores=2`, and `call_stability_stamp_hits=8`, confirming
+that repeated rule-RHS insertion of one shared call subtree can be seen by the
+stamp path. This proves the carrier mechanism, not the full Pair/Simp payoff.
+
+Warm public mkPair A/B result: do not promote this path to the default runtime.
+The release probe preloads through `auto/Simp.wl`, preheats
+`HOL`Auto`Simp`basicSimpset[]` and the three congruence lemmas, then runs
+`CONVRULE[HOL`Auto`Simp`simpConv[{mkPairDefThm}], lhsAppXY]`. With
+`RUM_PROFILE_EVALUATION_CACHE=1 RUM_PROFILE_SUBSTITUTION_SHARING=1`, both the
+default runtime and `RUM_CALL_STABILITY_INLINE_STAMP=1` timed out at `240s`;
+the inline-stamp run did show real stamp activity
+(`call_stability_stamp_hits=33M+`, `call_stability_stamp_stores=16M+`), but it
+reached the same `268M+` stability-check scale and did not move the gate.
+No-profile `360s` runs with and without the env var also timed out.
+
+Follow-up phase probes corrected one measurement trap: timeout logs can lose
+earlier stdout `Print` output, so absence of `RUM_PROBE preheat_basic=` in the
+full timeout log does not mean the preheat failed to finish. Dedicated probes
+that exit after the phase show:
+
+- standalone public `basicSimpset[]`: `24.40s`, length `19`, all theorems;
+- mkPair setup plus `basicSimpset[]`: `22.68s`;
+- mkPair setup plus `basicSimpset[]` plus all three congruence lemmas:
+  `22.37s + 0.0018s`.
+
+The retained value is diagnostic: the carrier mechanism works on small shared
+subtree litmus tests, but it does not close the current public Simp gate. The
+current gate remains the final public
+`CONVRULE[simpConv[{mkPairDefThm}], lhsAppXY]` conversion after normal preheat,
+not public `basicSimpset[]` construction.
+
+External review then measured the uncommitted carrier against committed HEAD
+and found a default-path regression: even with
+`RUM_CALL_STABILITY_INLINE_STAMP` unset, every `SharedArgs` allocation paid for
+the extra `Mutex<Option<CallStabilityStamp>>` slot. The PropTaut distribution
+probe regressed from about `10.2s` without the carrier to about `11.6s` with
+it. Because the prototype did not move the Pair/Simp gate, the carrier and its
+runtime path were reverted. The current code intentionally has no
+`CallStabilityStamp`, no `RUM_CALL_STABILITY_INLINE_STAMP` runtime path, and no
+per-`SharedArgs` stamp slot; only the negative-result evidence and Task 3a
+substitution-sharing counters remain.
+
+Final-conversion split: the first corrected phase probes narrowed the timeout
+inside `simpConv` itself. A false-start probe accidentally applied conversions
+to the theorem object instead of `concl[lhsAppXY]`; the corrected probes use
+`targetTm = concl[lhsAppXY]`.
+
+- `buildBaseConv[Join[{mkPairDefThm}, basic], {}, $simpDepthLimit]` is tiny:
+  `0.0048s` for 20 rules.
+- `TRYCONV[REPEATC[baseConv]][targetTm]` is also tiny: `0.079s`, and leaves
+  the term unchanged.
+- `descendOnce[allRules, {}, $simpDepthLimit][targetTm]` times out at `240s`.
+- Splitting the ordinary `comb` branch shows both recursive subcalls are
+  already enough to reproduce the long tail:
+  `simpFixpointConv[allRules, {}, depth][targetTm[[1]]]` times out at `240s`,
+  and `simpFixpointConv[allRules, {}, depth][targetTm[[2]]]` also times out at
+  `240s`.
+
+That rules out rule preparation, `ORELSEC` chain construction, and the top
+rewrite pass as the immediate bottleneck. The next split should target a
+single `mkPair` application term under different rule sets: user rule only,
+basic rules only, and progressively smaller partial applications, to decide
+whether the multiplier is the user definition, interaction with the 19 basic
+rules, or descent over the higher-order `mkPair` expansion shape.
+
+While running workspace validation, the Lane D smoke-baseline test exposed a
+test-thread stack limit: the same lane passed as a CLI command and with
+`RUST_MIN_STACK=33554432`, but overflowed the default Rust test thread stack.
+The test now runs its all-smoke lane in a 32 MiB thread so workspace validation
+is not blocked by harness stack size.
+
+Validation:
+
+- `scripts/run-bounded.py --timeout 120 -- cargo test -p rum-core`
+- `scripts/run-bounded.py --timeout 120 -- cargo test -p rum-runtime binding_substitution`
+- `cargo fmt --check`
+- `git diff --check`
+- `scripts/run-bounded.py --timeout 420 -- cargo test -p rum-runtime`
+- `scripts/run-bounded.py --timeout 180 -- cargo test -p rum-difftest --lib`
+- `RUM_PROFILE_EVALUATION_CACHE=1 RUM_PROFILE_SUBSTITUTION_SHARING=1 RUM_CALL_STABILITY_CACHE_MAX_ENTRIES=1 RUM_CALL_STABILITY_INLINE_STAMP=1 scripts/run-bounded.py --timeout 120 -- cargo run -p rum-cli -- --eval 'f[x_] := q[x, x, x, x, x, x, x, x]; f[g[h[1]]]'`
+- `scripts/run-bounded.py --timeout 240 -- target/release/rum-cli --file /private/tmp/rum-mkpair-warm-public-probe.wl` with and without `RUM_CALL_STABILITY_INLINE_STAMP=1` under profile counters; both timed out
+- `scripts/run-bounded.py --timeout 360 -- target/release/rum-cli --file /private/tmp/rum-mkpair-warm-public-probe.wl` with and without `RUM_CALL_STABILITY_INLINE_STAMP=1` without profile counters; both timed out
+- `scripts/run-bounded.py --timeout 120 -- target/release/rum-cli --file /private/tmp/rum-basic-simpset-public-probe.wl`
+- `scripts/run-bounded.py --timeout 120 -- target/release/rum-cli --file /private/tmp/rum-mkpair-preheat-basic-only.wl`
+- `scripts/run-bounded.py --timeout 180 -- target/release/rum-cli --file /private/tmp/rum-mkpair-preheat-cong-only.wl`
+- `scripts/run-bounded.py --timeout 120 -- target/release/rum-cli --file /private/tmp/rum-mkpair-build-baseconv-only.wl`
+- `scripts/run-bounded.py --timeout 180 -- target/release/rum-cli --file /private/tmp/rum-mkpair-top-baseconv-only.wl`
+- `scripts/run-bounded.py --timeout 240 -- target/release/rum-cli --file /private/tmp/rum-mkpair-descend-only.wl`
+- `scripts/run-bounded.py --timeout 240 -- target/release/rum-cli --file /private/tmp/rum-mkpair-descend-left-only.wl`
+- `scripts/run-bounded.py --timeout 240 -- target/release/rum-cli --file /private/tmp/rum-mkpair-descend-right-only.wl`
+- post-revert `rg` over `crates/` confirms no remaining
+  `CallStabilityStamp`, `RUM_CALL_STABILITY_INLINE_STAMP`, or inline-stamp API
+- `scripts/run-bounded.py --timeout 600 -- cargo test --workspace` in the
+  ordinary sandbox failed only because native Jupyter ZeroMQ tests cannot bind
+  loopback ports there; the same bounded workspace command passed outside the
+  sandbox.
+
+## 2026-06-13 Task 3a Substitution Sharing Audit
+
+Started the representation-work Task 3a from
+[docs/next-session-handoff.md](./docs/next-session-handoff.md): audit whether
+rule RHS instantiation already preserves enough subtree sharing for a future
+inline evaluated/stable stamp to travel with reused subexpressions.
+
+Findings from the code read:
+
+- `Expr` currently stores calls as `Call { head: SharedExpr, args:
+  SharedArgs }`, so the current top-level call node is not itself a single
+  shared allocation, but cloned call expressions do preserve the shared head
+  and argument-vector arcs.
+- `substitute_rule_bindings_for_rhs` preserves sharing in the important
+  existing paths: a bound call value is inserted by `Expr::clone`, unchanged
+  sibling call arguments are cloned into rebuilt argument vectors, and
+  `Sequence` splices clone the spliced item expressions.
+- Parent calls are still rebuilt whenever an RHS changes, so the current
+  pointer-keyed call-stability cache still sees fresh parent pointers. This
+  supports the Task 2b review constraint: a future stamp must live on / travel
+  with shared subtrees, not just freshly allocated parent nodes.
+- `lexical_substitution.rs` follows the same broad clone-preserving shape for
+  unchanged children, but the Pair/Simp gate's direct pressure path is rule
+  RHS instantiation through `binding_substitution.rs` and
+  `definition_application.rs`.
+
+Added opt-in substitution-sharing counters under
+`RUM_PROFILE_SUBSTITUTION_SHARING=1`. They print lines like
+`rum-profile substitution-sharing rule_rhs_binding_call_hits=N` at powers of
+two, matching the existing evaluation-cache counter style. Initial counters:
+
+- `rule_rhs_substitution_requests`
+- `rule_rhs_fast_clone_empty_bindings`
+- `rule_rhs_binding_hits`
+- `rule_rhs_binding_call_hits`
+- `rule_rhs_binding_atom_hits`
+- `rule_rhs_rebuilt_reuse_shared_args`
+- `rule_rhs_rebuilt_reuse_shared_head`
+- `rule_rhs_rebuilt_fresh_head_args`
+- `rule_rhs_preserved_existing_args`
+- `rule_rhs_preserved_existing_call_args`
+- `rule_rhs_splices_from_binding`
+- `rule_rhs_splices_from_existing_rhs`
+
+Added unit-level litmus coverage proving that rule RHS substitution preserves
+shared nodes for:
+
+- repeated insertion of the same bound call subtree;
+- unchanged sibling call arguments copied into a rebuilt RHS parent;
+- spliced `Sequence` items from a bound value.
+
+Small WL-layer probe:
+
+```bash
+RUM_PROFILE_SUBSTITUTION_SHARING=1 \
+  scripts/run-bounded.py --timeout 30 -- \
+  cargo run -p rum-cli -- --eval 'f[x_] := q[x, x]; f[g[h[1]]]'
+```
+
+Observed output includes two `rule_rhs_binding_call_hits`, confirming that the
+definition-application path sees both `x` occurrences as call-subtree binding
+insertions. This is a necessary but not sufficient condition for Task 3: the
+next design check is whether a prototype call-node stamp can exploit this
+subtree reuse to reduce absent call-stability misses on a workload with real
+shared subterms.
+
+Validation:
+
+- `scripts/run-bounded.py --timeout 120 -- cargo test -p rum-runtime binding_substitution`
+- `RUM_PROFILE_SUBSTITUTION_SHARING=1 scripts/run-bounded.py --timeout 120 -- cargo test -p rum-runtime rule_rhs_substitution_reuses_bound_call_shared_nodes -- --nocapture`
+- `cargo fmt --check`
+- `git diff --check`
+- `scripts/run-bounded.py --timeout 420 -- cargo test -p rum-runtime`
+- `RUM_PROFILE_SUBSTITUTION_SHARING=1 scripts/run-bounded.py --timeout 120 -- cargo run -p rum-cli -- --eval 'f[x_] := q[x, x]; f[g[h[1]]]'`
+
 ## 2026-06-13 Remaining Helper Suspension Continuations
 
 Closed the remaining public helper tranches from the 2026-06-13

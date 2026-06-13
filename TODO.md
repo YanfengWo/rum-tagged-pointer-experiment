@@ -125,19 +125,23 @@ Completed history, archived planning detail, and operational lessons live in
   `0.78s` vs `0.19s`, ~4.1x). After the `Catch` fix, bounded clean-clone
   `test/meson_tests` reports `List[44, 0]`; the current
   `test/meson_proveprop_tests` re-probe times out at `300s` without a stdout
-  summary. The next downstream gate is `stdlib/Pair.wl`:
-  its load still exceeds bounded budgets, but the current diagnosis has
-  narrowed the multiplier to the `HOL`Auto`Simp`` path where public
-  `simpConv` adds `withBasic` and repeatedly builds/uses a nested
-  `ORELSEC` conversion chain over the `mkPair` term. `basicSimpset[]`,
-  `andCongLemma[]`, and user-rule-only mkPair simplification are each in the
-  current constant-factor range; warm public mkPair simplification times out
-  at `360s` versus WolframKernel `23.10866s`. The old Pair hard failure
-  (`mkPairInjThm` consumed as a non-theorem) was traced to rum's too-low
-  default recursion limit and the default has been raised to the local
-  Wolfram baseline of `1024`. After `Pair` loads cleanly, rerun the later
-  `Sum`, `Option`, `Set`, `Num`, and Real package probes because their
-  current statuses are polluted by the failed Pair dependency.
+  summary. The old Pair hard failure (`mkPairInjThm` consumed as a
+  non-theorem) was traced to rum's too-low default recursion limit and the
+  default has been raised to the local Wolfram baseline of `1024`.
+  The remaining Pair performance gate has a strong downstream-side
+  experiment: a scratch `HOL`Auto`Simp`` head-indexed, exact-cached
+  `buildBaseConv` dispatcher makes `stdlib/Pair.wl` cold-load in `85.5s`,
+  runs `pair_tests.wl` green (`42/0`), and reduces public `mkPair[x,y]`
+  simplification from timeout to `34.9s`. Cache-only does not help, so the
+  real ingredient is avoiding the whole `ORELSEC` chain for mismatched rule
+  heads. Decide whether this belongs upstream in `mma-hol` as a Simp
+  algorithm patch, in rum as a general evaluator/closure optimization, or
+  both. The stable snapshot lane remains open: loading through Pair in Stable
+  mode is now bounded, but partial `DumpSave` through Pair timed out, so
+  transient conversion caches must be cleared/excluded before snapshot closure.
+  After the Pair optimization boundary is decided, rerun the later `Sum`,
+  `Option`, `Set`, `Num`, and Real package probes because their current
+  statuses are polluted by the failed Pair dependency.
   The targeted `Simp` base-conversion memo experiment did not close the gate,
   and the retained runtime stability cuts now put `basicSimpset[]` at about
   `20.27s` and user-rule-only mkPair simplification at about `40.61s`.
@@ -157,7 +161,38 @@ Completed history, archived planning detail, and operational lessons live in
   "2026-06-12 Same-Bit Stability Invalidation Follow-Up", and
   "2026-06-12 Block Scope Invalidation Fix", and in
   `docs/proptaut-performance-audit.md`; resume from those, not from this
-  bullet.
+  bullet. The first Task 3a substitution-sharing audit confirms that rule RHS
+  instantiation already preserves shared call subtrees for repeated bound
+  values, unchanged sibling arguments, and `Sequence` splices, but rebuilt RHS
+  parents still have fresh top-level pointers. The Task 3b opt-in
+  shared-subtree stamp prototype was built and measured, then reverted before
+  commit after external review showed a default-path PropTaut regression
+  (`~10.2s` committed HEAD versus `~11.6s` with the uncommitted carrier). Its
+  negative result is retained: profiled `240s` warm public mkPair runs showed
+  real `call_stability_stamp_*` activity but no gate movement, and no-profile
+  `360s` runs with and without the env var both timed out. Follow-up stage
+  probes show public `basicSimpset[]` still completes in the expected range
+  (`24.40s` standalone, `22.68s` after mkPair setup; congruence preheat
+  `0.0018s`). The first final-conversion split shows `buildBaseConv`
+  (`0.0048s`) and top
+  `REPEATC[baseConv]` (`0.079s`) are tiny, but corrected `descendOnce` on
+  `concl[lhsAppXY]` times out at `240s`, and each recursive subcall on
+  `targetTm[[1]]` and `targetTm[[2]]` also times out at `240s`. Task 2c's
+  two-engine WL-level loop-count probe is complete for the user-rule-only
+  mkPair shape: rum release and WolframKernel both report `3565`
+  `simpFixpointConv` entries, `3573` while iterations, max `seen` size `3`,
+  `3565` fixpoint breaks, and `0` cycle breaks. That shape is not looping in
+  rum. The secondary split has now reduced the long-tail shape further:
+  `userBasic` on `mkPair[x, y]` times out in rum at `180s` and `360s`, while
+  WolframKernel completes the same shape in `16.522s` with the same `1511`
+  entries / `1513` while iterations as user-only. `preheat` and
+  `buildBaseConv` are small, top rewrite is `0.068s`, and the timeout is in
+  `descendOnce`. The smallest named hot subshape is the `mkPair` constant after
+  top rewrite: descending the rewritten RHS lambda is a no-op but costs
+  `112.766s` in rum with `userBasic`, versus `23.027s` with user rule only and
+  `10.687s` in WolframKernel with `userBasic`. The next performance step is to
+  split the rewritten RHS lambda/body descent itself and identify whether a
+  particular body subterm or uniform basic-rule failed dispatch owns the cost.
 - [ ] Treat `mma-hol` stable-mode snapshot helpers as a required
   developer-workflow gate for `rum-hol` migration. First-pass `Contexts[]`,
   file timestamp/size/existence helpers, `AbsoluteTime`, `Round`, simple

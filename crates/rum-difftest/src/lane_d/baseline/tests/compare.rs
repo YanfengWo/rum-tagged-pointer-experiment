@@ -87,6 +87,17 @@ fn threshold_profile_filters_baseline_records() {
 
 #[test]
 fn default_smoke_baseline_covers_current_smoke_lane() {
+    let handle = std::thread::Builder::new()
+        .name("lane-d-smoke-baseline".to_string())
+        .stack_size(32 * 1024 * 1024)
+        .spawn(assert_default_smoke_baseline_covers_current_smoke_lane)
+        .expect("lane-d smoke baseline test thread should spawn");
+    handle
+        .join()
+        .expect("lane-d smoke baseline test thread should finish");
+}
+
+fn assert_default_smoke_baseline_covers_current_smoke_lane() {
     let summary = run(&LaneDOptions {
         suite: LaneDSuite::All,
         profile: LaneDProfile::Smoke,

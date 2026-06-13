@@ -126,7 +126,31 @@ means the conversion chain is building fresh call trees. The next
 evidence-backed frontier is either a downstream `Simp` algorithm experiment
 that avoids repeatedly rebuilding the nested `ORELSEC` chain, or larger runtime
 representation work: single-allocation call nodes, inline evaluated/stable
-stamps, and borrowed argument preparation.
+stamps, and borrowed argument preparation. A temporary opt-in shared-subtree
+stamp prototype proved that shared subtrees can hit after the side cache is
+cleared, but it was reverted before commit: the uncommitted carrier regressed
+the default PropTaut distribution probe from about `10.2s` to about `11.6s`
+while failing to move the Pair/Simp gate. Keep the negative result and do not
+restore the `SharedArgs` stamp slot unless it is truly zero-cost when disabled.
+Follow-up phase probes show public `basicSimpset[]` still completes normally
+(`24.40s` standalone, `22.68s` after mkPair setup, congruence preheat
+`0.0018s`). A corrected final-conversion split shows `buildBaseConv` and the
+top `REPEATC[baseConv]` pass are tiny, while
+`descendOnce[allRules][concl[lhsAppXY]]` times out at `240s`; both recursive
+subcalls on `targetTm[[1]]` and `targetTm[[2]]` also time out. Task 2c's
+two-engine WL-level loop-count probe is complete on the user-rule-only mkPair
+shape: rum and WolframKernel both report `3565` `simpFixpointConv` entries,
+`3573` while iterations, max `seen` size `3`, `3565` fixpoint breaks, and no
+cycles. That completing shape is not looping in rum. The next performance probe
+did split single `mkPair` application terms: `none`/`basic` rules on a full
+application are bounded, user-only grows mildly from `pair2` to `pair4`, but
+`userBasic` on the smallest `mkPair[x, y]` times out in rum while WolframKernel
+completes it in `16.522s` with `1511` entries / `1513` iterations. The current
+smallest hot shape is `descendOnce` on the rewritten `mkPair` RHS lambda:
+`112.766s` in rum with `userBasic`, `23.027s` in rum with user rule only, and
+`10.687s` in WolframKernel with `userBasic`; all are no-op descents. The next
+probe should split the rewritten RHS lambda/body descent and decide whether one
+body subterm or uniform basic-rule failed dispatch owns the cost.
 
 For long-running probes or commands that may spawn children, do not start them
 bare. Use `scripts/run-bounded.py --timeout SECONDS -- <command> ...` or a
