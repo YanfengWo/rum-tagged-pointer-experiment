@@ -57,11 +57,6 @@ Completed history, archived planning detail, and operational lessons live in
 - [ ] Keep source organization aligned with
   [docs/code-organization-guidelines.md](./docs/code-organization-guidelines.md);
   revisit warning-range files opportunistically when touching nearby code.
-- [ ] Split `crates/rum-runtime/src/runtime/functional_ops/sequence/fold.rs`
-  before adding more sequence-fold behavior. After the 2026-06-13 suspension
-  continuation pass it is in the `20k`-`35k` split-plan range; the natural
-  split is front-door argument parsing, `Fold` / `FoldList`, `FoldPair`,
-  `FoldWhile`, and `SequenceFold` continuation state.
 - [ ] Decide later whether the string subsystem is large and stable enough to
   justify a dedicated crate boundary; do not create a string crate by default.
 

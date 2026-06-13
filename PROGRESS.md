@@ -6,6 +6,28 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-13 Sequence Fold Module Split
+
+Split the post-continuation
+`crates/rum-runtime/src/runtime/functional_ops/sequence/fold.rs` file into a
+`fold/` submodule tree:
+
+- `fold/mod.rs` keeps the public builtin entry points and shared fold parsing
+  helpers;
+- `fold/plain.rs` owns `Fold` / `FoldList`;
+- `fold/pair.rs` owns `FoldPair`;
+- `fold/while_loop.rs` owns `FoldWhile`;
+- `fold/sequence_fold.rs` owns `SequenceFold` / `SequenceFoldList`.
+
+All split files are under `10k` chars, closing the split-plan item introduced
+after the fold/window suspension continuation pass.
+
+Validation:
+
+- `cargo fmt`
+- `cargo test -p rum-runtime functional_ops::sequence`
+- `cargo test -p rum-runtime functional_sequence_resume`
+
 ## 2026-06-13 Iteration Suspension Continuations
 
 Closed the functional-iteration callback tranche from the suspension-safe
