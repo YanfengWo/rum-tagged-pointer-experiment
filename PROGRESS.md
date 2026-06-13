@@ -6,6 +6,36 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-13 Fold/Window Suspension Continuations
+
+Closed the fold/window callback tranche from the suspension-safe helper audit.
+The sequence fold helpers now save their loop state before evaluating callback
+expressions and resume from the saved point instead of restarting the whole
+request:
+
+- `Fold` / `FoldList` preserve current value, index, and collected history;
+- `FoldPair` preserves pair state and also resumes through an optional
+  projector callback;
+- `FoldWhile` resumes through both the operator callback and the test callback,
+  including positive and negative tail-adjustment handling;
+- `SequenceFold` / `SequenceFoldList` preserve seed history and item offset;
+- `TakeWhile` / `LengthWhile` preserve the accepted prefix count over both
+  ordinary heads and associations;
+- `Accumulate` preserves accumulated values while evaluating the internal
+  `Plus` step;
+- `BlockMap` preserves completed block results and the next block index.
+
+Added host-level regression coverage that drives these callbacks through
+`InputString` and `resume_eval_request_with_input`, including repeated
+suspensions in the same helper loop.
+
+Validation:
+
+- `cargo fmt --check`
+- `cargo test -p rum-runtime functional_ops::sequence`
+- `cargo test -p rum-runtime functional_sequence_resume`
+- `cargo test -p rum-runtime`
+
 ## 2026-06-13 Suspension-Safe Helper Audit
 
 Completed the first audit pass over non-`Expr` and helper-level

@@ -6,6 +6,43 @@ struct FoldWhileConfig {
     tail_adjustment: isize,
 }
 
+#[derive(Clone)]
+struct FoldEvalState {
+    operator: Expr,
+    items: Vec<Expr>,
+    collect_all: bool,
+}
+
+#[derive(Clone)]
+struct FoldPairEvalState {
+    head: Expr,
+    operator: Expr,
+    items: Vec<Expr>,
+    projector: Option<Expr>,
+    raw_args: Vec<Expr>,
+}
+
+#[derive(Clone)]
+struct FoldWhileEvalState {
+    head: Expr,
+    operator: Expr,
+    items: Vec<Expr>,
+    test: Expr,
+    config: FoldWhileConfig,
+    raw_args: Vec<Expr>,
+}
+
+#[derive(Clone)]
+struct SequenceFoldEvalState {
+    head: Expr,
+    operator: Expr,
+    items: Vec<Expr>,
+    seed_len: usize,
+    consumed_per_step: usize,
+    collect_all: bool,
+    raw_args: Vec<Expr>,
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_fold(
         &mut self,
@@ -164,6 +201,317 @@ impl Session {
             _ => Ok(self.invalid_call_with_arg_range("SequenceFoldList", args, 3, 4)),
         }
     }
+
+    fn resume_fold_from_index(
+        &mut self,
+        state: FoldEvalState,
+        index: usize,
+        current: Expr,
+        history: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        if index >= state.items.len() {
+            return Ok(finish_fold_result(state.collect_all, current, history));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            vec![current, state.items[index].clone()],
+        );
+        let suspended_state = state.clone();
+        let suspended_history = history.clone();
+        let value_result = self.evaluate(call);
+        let value = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_fold_with_value(suspended_state, index, suspended_history, value)
+        })?;
+
+        self.resume_fold_with_value(state, index, history, value)
+    }
+
+    fn resume_fold_with_value(
+        &mut self,
+        state: FoldEvalState,
+        index: usize,
+        mut history: Vec<Expr>,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        if state.collect_all {
+            history.push(value.clone());
+        }
+
+        self.resume_fold_from_index(state, index + 1, value, history)
+    }
+
+    fn resume_fold_pair_from_index(
+        &mut self,
+        state: FoldPairEvalState,
+        index: usize,
+        current_state: Expr,
+        last_output: Option<Expr>,
+    ) -> Result<Expr, EvalError> {
+        if index >= state.items.len() {
+            return Ok(finish_fold_pair_result(state, last_output));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            vec![current_state, state.items[index].clone()],
+        );
+        let suspended_state = state.clone();
+        let suspended_last_output = last_output.clone();
+        let value_result = self.evaluate(call);
+        let pair = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_fold_pair_with_pair_result(
+                suspended_state,
+                index,
+                suspended_last_output,
+                value,
+            )
+        })?;
+
+        self.resume_fold_pair_with_pair_result(state, index, last_output, pair)
+    }
+
+    fn resume_fold_pair_with_pair_result(
+        &mut self,
+        state: FoldPairEvalState,
+        index: usize,
+        last_output: Option<Expr>,
+        pair: Expr,
+    ) -> Result<Expr, EvalError> {
+        let Some((x_value, y_value)) = parse_pair_result(&pair) else {
+            return Ok(fold_pair_unevaluated(state));
+        };
+
+        let Some(projector) = state.projector.clone() else {
+            return self.resume_fold_pair_with_output(state, index, y_value, last_output, x_value);
+        };
+
+        let call = Expr::call(
+            projector,
+            vec![Expr::call(
+                system_expr("List"),
+                vec![x_value.clone(), y_value.clone()],
+            )],
+        );
+        let suspended_state = state.clone();
+        let suspended_y_value = y_value.clone();
+        let suspended_last_output = last_output.clone();
+        let value_result = self.evaluate(call);
+        let output = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_fold_pair_with_output(
+                suspended_state,
+                index,
+                suspended_y_value,
+                suspended_last_output,
+                value,
+            )
+        })?;
+
+        self.resume_fold_pair_with_output(state, index, y_value, last_output, output)
+    }
+
+    fn resume_fold_pair_with_output(
+        &mut self,
+        state: FoldPairEvalState,
+        index: usize,
+        next_state: Expr,
+        _last_output: Option<Expr>,
+        output: Expr,
+    ) -> Result<Expr, EvalError> {
+        self.resume_fold_pair_from_index(state, index + 1, next_state, Some(output))
+    }
+
+    fn resume_fold_while_from_index(
+        &mut self,
+        state: FoldWhileEvalState,
+        index: usize,
+        current: Expr,
+        history: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        if index >= state.items.len() {
+            return Ok(finish_fold_while_result(state, history));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            vec![current, state.items[index].clone()],
+        );
+        let suspended_state = state.clone();
+        let suspended_history = history.clone();
+        let value_result = self.evaluate(call);
+        let value = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_fold_while_with_step_value(
+                suspended_state,
+                index,
+                suspended_history,
+                value,
+            )
+        })?;
+
+        self.resume_fold_while_with_step_value(state, index, history, value)
+    }
+
+    fn resume_fold_while_with_step_value(
+        &mut self,
+        state: FoldWhileEvalState,
+        index: usize,
+        mut history: Vec<Expr>,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        history.push(value.clone());
+        let next_index = index + 1;
+        let call = Expr::call(
+            state.test.clone(),
+            nest_while_test_args(&history, state.config.test_arity),
+        );
+        let suspended_state = state.clone();
+        let suspended_history = history.clone();
+        let suspended_value = value.clone();
+        let value_result = self.evaluate(call);
+        let test_value = self.suspend_with_frame(value_result, move |session, test_value| {
+            session.resume_fold_while_with_test_value(
+                suspended_state,
+                next_index,
+                suspended_value,
+                suspended_history,
+                test_value,
+            )
+        })?;
+
+        self.resume_fold_while_with_test_value(state, next_index, value, history, test_value)
+    }
+
+    fn resume_fold_while_with_test_value(
+        &mut self,
+        state: FoldWhileEvalState,
+        index: usize,
+        current: Expr,
+        mut history: Vec<Expr>,
+        test_value: Expr,
+    ) -> Result<Expr, EvalError> {
+        if truthiness_symbol(&test_value) == Some(true) {
+            return self.resume_fold_while_from_index(state, index, current, history);
+        }
+
+        if state.config.tail_adjustment > 0 {
+            let remaining = usize::try_from(state.config.tail_adjustment).unwrap_or(0);
+            return self
+                .resume_fold_while_tail_from_index(state, index, current, history, remaining);
+        }
+
+        if state.config.tail_adjustment < 0 {
+            let drop_count = state
+                .config
+                .tail_adjustment
+                .checked_neg()
+                .and_then(|value| usize::try_from(value).ok())
+                .unwrap_or(usize::MAX);
+            let keep_len = history.len().saturating_sub(drop_count).max(1);
+            history.truncate(keep_len);
+        }
+
+        Ok(finish_fold_while_result(state, history))
+    }
+
+    fn resume_fold_while_tail_from_index(
+        &mut self,
+        state: FoldWhileEvalState,
+        index: usize,
+        current: Expr,
+        history: Vec<Expr>,
+        remaining: usize,
+    ) -> Result<Expr, EvalError> {
+        if remaining == 0 || index >= state.items.len() {
+            return Ok(finish_fold_while_result(state, history));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            vec![current, state.items[index].clone()],
+        );
+        let suspended_state = state.clone();
+        let suspended_history = history.clone();
+        let value_result = self.evaluate(call);
+        let value = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_fold_while_tail_with_value(
+                suspended_state,
+                index,
+                suspended_history,
+                remaining,
+                value,
+            )
+        })?;
+
+        self.resume_fold_while_tail_with_value(state, index, history, remaining, value)
+    }
+
+    fn resume_fold_while_tail_with_value(
+        &mut self,
+        state: FoldWhileEvalState,
+        index: usize,
+        mut history: Vec<Expr>,
+        remaining: usize,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        history.push(value.clone());
+        self.resume_fold_while_tail_from_index(state, index + 1, value, history, remaining - 1)
+    }
+
+    fn resume_sequence_fold_from_offset(
+        &mut self,
+        state: SequenceFoldEvalState,
+        offset: usize,
+        history: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        if offset + state.consumed_per_step > state.items.len() {
+            return Ok(finish_sequence_fold_result(state, history));
+        }
+
+        let mut call_args = if state.seed_len == 0 {
+            Vec::new()
+        } else {
+            history
+                .iter()
+                .rev()
+                .take(state.seed_len)
+                .cloned()
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect::<Vec<_>>()
+        };
+        call_args.extend(
+            state.items[offset..offset + state.consumed_per_step]
+                .iter()
+                .cloned(),
+        );
+
+        let suspended_state = state.clone();
+        let suspended_history = history.clone();
+        let value_result = self.evaluate(Expr::call(state.operator.clone(), call_args));
+        let value = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_sequence_fold_with_value(
+                suspended_state,
+                offset,
+                suspended_history,
+                value,
+            )
+        })?;
+
+        self.resume_sequence_fold_with_value(state, offset, history, value)
+    }
+
+    fn resume_sequence_fold_with_value(
+        &mut self,
+        state: SequenceFoldEvalState,
+        offset: usize,
+        mut history: Vec<Expr>,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        history.push(value);
+        let next_offset = offset + state.consumed_per_step;
+        self.resume_sequence_fold_from_offset(state, next_offset, history)
+    }
 }
 
 fn iterable_items(expr: &Expr) -> Option<Vec<Expr>> {
@@ -196,7 +544,7 @@ fn apply_fold(
         ));
     };
 
-    let (mut current, start_index, mut history) = if let Some(initial) = initial {
+    let (current, start_index, history) = if let Some(initial) = initial {
         let history = if collect_all {
             vec![initial.clone()]
         } else {
@@ -219,18 +567,16 @@ fn apply_fold(
         (first.clone(), start_index, history)
     };
 
-    for item in items.into_iter().skip(start_index) {
-        current = session.evaluate(Expr::call(operator.clone(), vec![current, item]))?;
-        if collect_all {
-            history.push(current.clone());
-        }
-    }
-
-    if collect_all {
-        Ok(Expr::call(system_expr("List"), history))
-    } else {
-        Ok(current)
-    }
+    session.resume_fold_from_index(
+        FoldEvalState {
+            operator: operator.clone(),
+            items,
+            collect_all,
+        },
+        start_index,
+        current,
+        history,
+    )
 }
 
 fn apply_fold_pair(
@@ -246,7 +592,7 @@ fn apply_fold_pair(
         return Ok(Expr::call(head.clone(), raw_args.to_vec()));
     };
 
-    let (mut state, start_index) = if let Some(initial) = initial {
+    let (state, start_index) = if let Some(initial) = initial {
         (initial, 0usize)
     } else {
         let Some((first, rest)) = items.split_first() else {
@@ -255,30 +601,18 @@ fn apply_fold_pair(
         (first.clone(), items.len() - rest.len())
     };
 
-    let mut last_output = None;
-    for item in items.into_iter().skip(start_index) {
-        let pair = session.evaluate(Expr::call(operator.clone(), vec![state, item]))?;
-        let Some((x_value, y_value)) = parse_pair_result(&pair) else {
-            return Ok(Expr::call(head.clone(), raw_args.to_vec()));
-        };
-
-        let output = if let Some(projector) = &projector {
-            session.evaluate(Expr::call(
-                projector.clone(),
-                vec![Expr::call(
-                    system_expr("List"),
-                    vec![x_value.clone(), y_value.clone()],
-                )],
-            ))?
-        } else {
-            x_value.clone()
-        };
-
-        last_output = Some(output);
-        state = y_value;
-    }
-
-    Ok(last_output.unwrap_or_else(|| Expr::call(head.clone(), raw_args.to_vec())))
+    session.resume_fold_pair_from_index(
+        FoldPairEvalState {
+            head: head.clone(),
+            operator: operator.clone(),
+            items,
+            projector,
+            raw_args: raw_args.to_vec(),
+        },
+        start_index,
+        state,
+        None,
+    )
 }
 
 fn parse_pair_result(expr: &Expr) -> Option<(Expr, Expr)> {
@@ -315,7 +649,7 @@ fn apply_fold_while(
         return Ok(Expr::call(head.clone(), raw_args.to_vec()));
     };
 
-    let (mut current, start_index, mut history) = if let Some(initial) = initial {
+    let (current, start_index, history) = if let Some(initial) = initial {
         (initial.clone(), 0usize, vec![initial])
     } else {
         let Some((first, rest)) = items.split_first() else {
@@ -324,51 +658,19 @@ fn apply_fold_while(
         (first.clone(), items.len() - rest.len(), vec![first.clone()])
     };
 
-    let mut index = start_index;
-    let mut failed = false;
-    while index < items.len() {
-        current = session.evaluate(Expr::call(
-            operator.clone(),
-            vec![current, items[index].clone()],
-        ))?;
-        history.push(current.clone());
-        index += 1;
-
-        let test_value = session.evaluate(Expr::call(
-            test.clone(),
-            nest_while_test_args(&history, config.test_arity),
-        ))?;
-        if truthiness_symbol(&test_value) != Some(true) {
-            failed = true;
-            break;
-        }
-    }
-
-    if failed {
-        if config.tail_adjustment > 0 {
-            for _ in 0..usize::try_from(config.tail_adjustment).unwrap_or(0) {
-                if index >= items.len() {
-                    break;
-                }
-                let previous = history.last().cloned().unwrap_or_else(|| current.clone());
-                current = session.evaluate(Expr::call(
-                    operator.clone(),
-                    vec![previous, items[index].clone()],
-                ))?;
-                history.push(current.clone());
-                index += 1;
-            }
-        } else if config.tail_adjustment < 0 {
-            let drop_count = usize::try_from(-config.tail_adjustment).unwrap_or(usize::MAX);
-            let keep_len = history.len().saturating_sub(drop_count).max(1);
-            history.truncate(keep_len);
-        }
-    }
-
-    Ok(history
-        .last()
-        .cloned()
-        .unwrap_or_else(|| Expr::call(head.clone(), raw_args.to_vec())))
+    session.resume_fold_while_from_index(
+        FoldWhileEvalState {
+            head: head.clone(),
+            operator: operator.clone(),
+            items,
+            test: test.clone(),
+            config,
+            raw_args: raw_args.to_vec(),
+        },
+        start_index,
+        current,
+        history,
+    )
 }
 
 fn parse_fold_while_config(
@@ -446,37 +748,51 @@ fn apply_sequence_fold(
         ));
     }
 
-    let consumed_per_step = arity - seed_len;
-    let mut history = seeds.clone();
-    let mut offset = 0usize;
+    session.resume_sequence_fold_from_offset(
+        SequenceFoldEvalState {
+            head: head.clone(),
+            operator: operator.clone(),
+            items,
+            seed_len,
+            consumed_per_step: arity - seed_len,
+            collect_all,
+            raw_args: raw_args.to_vec(),
+        },
+        0,
+        seeds,
+    )
+}
 
-    while offset + consumed_per_step <= items.len() {
-        let mut call_args = if seed_len == 0 {
-            Vec::new()
-        } else {
-            history
-                .iter()
-                .rev()
-                .take(seed_len)
-                .cloned()
-                .collect::<Vec<_>>()
-                .into_iter()
-                .rev()
-                .collect::<Vec<_>>()
-        };
-        call_args.extend(items[offset..offset + consumed_per_step].iter().cloned());
-
-        history.push(session.evaluate(Expr::call(operator.clone(), call_args))?);
-        offset += consumed_per_step;
-    }
-
+fn finish_fold_result(collect_all: bool, current: Expr, history: Vec<Expr>) -> Expr {
     if collect_all {
-        Ok(Expr::call(system_expr("List"), history))
+        Expr::call(system_expr("List"), history)
+    } else {
+        current
+    }
+}
+
+fn finish_fold_pair_result(state: FoldPairEvalState, last_output: Option<Expr>) -> Expr {
+    last_output.unwrap_or_else(|| Expr::call(state.head, state.raw_args))
+}
+
+fn fold_pair_unevaluated(state: FoldPairEvalState) -> Expr {
+    Expr::call(state.head, state.raw_args)
+}
+
+fn finish_fold_while_result(state: FoldWhileEvalState, history: Vec<Expr>) -> Expr {
+    history
+        .last()
+        .cloned()
+        .unwrap_or_else(|| Expr::call(state.head, state.raw_args))
+}
+
+fn finish_sequence_fold_result(state: SequenceFoldEvalState, history: Vec<Expr>) -> Expr {
+    if state.collect_all {
+        Expr::call(system_expr("List"), history)
     } else {
         history
             .last()
             .cloned()
-            .map(Ok)
-            .unwrap_or_else(|| Ok(Expr::call(head.clone(), raw_args.to_vec())))
+            .unwrap_or_else(|| Expr::call(state.head, state.raw_args))
     }
 }

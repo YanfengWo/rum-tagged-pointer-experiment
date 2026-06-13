@@ -1,8 +1,24 @@
 use super::*;
 
+#[derive(Clone)]
 enum SequenceLikeExpr {
     Call { head: Expr, items: Vec<Expr> },
     Association(Vec<(Expr, Expr)>),
+}
+
+#[derive(Clone, Copy)]
+enum WhileSequenceMode {
+    Take,
+    Length,
+}
+
+#[derive(Clone)]
+struct BlockMapEvalState {
+    operator: Expr,
+    block_head: Expr,
+    items: Vec<Expr>,
+    size: usize,
+    offset: usize,
 }
 
 impl Session {
@@ -106,8 +122,7 @@ impl Session {
                     return Ok(Expr::call(system_expr("LengthWhile"), args.to_vec()));
                 };
 
-                let count = self.length_while_sequence(sequence, criterion)?;
-                Ok(Expr::integer(BigInt::from(count)))
+                self.length_while_sequence(sequence, criterion)
             }
             _ => Ok(self.invalid_call_with_arg_range("LengthWhile", args, 1, 2)),
         }
@@ -118,58 +133,185 @@ impl Session {
         sequence: SequenceLikeExpr,
         criterion: &Expr,
     ) -> Result<Expr, EvalError> {
-        match sequence {
-            SequenceLikeExpr::Call { head, items } => {
-                let mut taken = Vec::new();
-                for item in items {
-                    if !criterion_accepts(self, criterion, &item)? {
-                        break;
-                    }
-                    taken.push(item);
-                }
-
-                Ok(Expr::call(head, taken))
-            }
-            SequenceLikeExpr::Association(entries) => {
-                let mut taken = Vec::new();
-                for (key, value) in entries {
-                    if !criterion_accepts(self, criterion, &value)? {
-                        break;
-                    }
-                    taken.push((key, value));
-                }
-
-                Ok(render_association(taken))
-            }
-        }
+        self.resume_while_sequence_from_index(
+            sequence,
+            criterion.clone(),
+            0,
+            WhileSequenceMode::Take,
+        )
     }
 
     fn length_while_sequence(
         &mut self,
         sequence: SequenceLikeExpr,
         criterion: &Expr,
-    ) -> Result<usize, EvalError> {
-        match sequence {
-            SequenceLikeExpr::Call { items, .. } => {
-                let mut count = 0usize;
-                for item in items {
-                    if !criterion_accepts(self, criterion, &item)? {
-                        break;
-                    }
-                    count += 1;
-                }
-                Ok(count)
+    ) -> Result<Expr, EvalError> {
+        self.resume_while_sequence_from_index(
+            sequence,
+            criterion.clone(),
+            0,
+            WhileSequenceMode::Length,
+        )
+    }
+
+    fn resume_while_sequence_from_index(
+        &mut self,
+        sequence: SequenceLikeExpr,
+        criterion: Expr,
+        index: usize,
+        mode: WhileSequenceMode,
+    ) -> Result<Expr, EvalError> {
+        if index >= sequence.len() {
+            return Ok(finish_while_sequence(sequence, index, mode));
+        }
+
+        let Some(item) = sequence.value_at(index) else {
+            return Ok(finish_while_sequence(sequence, index, mode));
+        };
+        let suspended_sequence = sequence.clone();
+        let suspended_criterion = criterion.clone();
+        let value_result = self.evaluate(Expr::call(criterion.clone(), vec![item]));
+        let value = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_while_sequence_with_value(
+                suspended_sequence,
+                suspended_criterion,
+                index,
+                mode,
+                value,
+            )
+        })?;
+
+        self.resume_while_sequence_with_value(sequence, criterion, index, mode, value)
+    }
+
+    fn resume_while_sequence_with_value(
+        &mut self,
+        sequence: SequenceLikeExpr,
+        criterion: Expr,
+        index: usize,
+        mode: WhileSequenceMode,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        if truthiness_symbol(&value) == Some(true) {
+            self.resume_while_sequence_from_index(sequence, criterion, index + 1, mode)
+        } else {
+            Ok(finish_while_sequence(sequence, index, mode))
+        }
+    }
+
+    fn resume_accumulate_from_index(
+        &mut self,
+        sequence: SequenceLikeExpr,
+        index: usize,
+        current: Expr,
+        accumulated: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        if index >= sequence.len() {
+            return Ok(sequence.render_with_values(accumulated));
+        }
+
+        let Some(item) = sequence.value_at(index) else {
+            return Ok(sequence.render_with_values(accumulated));
+        };
+        let suspended_sequence = sequence.clone();
+        let suspended_accumulated = accumulated.clone();
+        let value_result = self.evaluate(Expr::call(system_expr("Plus"), vec![current, item]));
+        let value = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_accumulate_with_value(
+                suspended_sequence,
+                index,
+                suspended_accumulated,
+                value,
+            )
+        })?;
+
+        self.resume_accumulate_with_value(sequence, index, accumulated, value)
+    }
+
+    fn resume_accumulate_with_value(
+        &mut self,
+        sequence: SequenceLikeExpr,
+        index: usize,
+        mut accumulated: Vec<Expr>,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        accumulated.push(value.clone());
+        self.resume_accumulate_from_index(sequence, index + 1, value, accumulated)
+    }
+
+    fn resume_block_map_from_index(
+        &mut self,
+        state: BlockMapEvalState,
+        index: usize,
+        results: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        if index + state.size > state.items.len() {
+            return Ok(Expr::call(system_expr("List"), results));
+        }
+
+        let block = Expr::call(
+            state.block_head.clone(),
+            state.items[index..index + state.size].to_vec(),
+        );
+        let suspended_state = state.clone();
+        let suspended_results = results.clone();
+        let value_result = self.evaluate(Expr::call(state.operator.clone(), vec![block]));
+        let value = self.suspend_with_frame(value_result, move |session, value| {
+            session.resume_block_map_with_value(suspended_state, index, suspended_results, value)
+        })?;
+
+        self.resume_block_map_with_value(state, index, results, value)
+    }
+
+    fn resume_block_map_with_value(
+        &mut self,
+        state: BlockMapEvalState,
+        index: usize,
+        mut results: Vec<Expr>,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        results.push(value);
+        let next_index = index + state.offset;
+        self.resume_block_map_from_index(state, next_index, results)
+    }
+}
+
+impl SequenceLikeExpr {
+    fn len(&self) -> usize {
+        match self {
+            Self::Call { items, .. } => items.len(),
+            Self::Association(entries) => entries.len(),
+        }
+    }
+
+    fn value_at(&self, index: usize) -> Option<Expr> {
+        match self {
+            Self::Call { items, .. } => items.get(index).cloned(),
+            Self::Association(entries) => entries.get(index).map(|(_, value)| value.clone()),
+        }
+    }
+
+    fn render_prefix(&self, count: usize) -> Expr {
+        match self {
+            Self::Call { head, items } => {
+                Expr::call(head.clone(), items.iter().take(count).cloned().collect())
             }
-            SequenceLikeExpr::Association(entries) => {
-                let mut count = 0usize;
-                for (_, value) in entries {
-                    if !criterion_accepts(self, criterion, &value)? {
-                        break;
-                    }
-                    count += 1;
-                }
-                Ok(count)
+            Self::Association(entries) => {
+                render_association(entries.iter().take(count).cloned().collect())
             }
+        }
+    }
+
+    fn render_with_values(&self, values: Vec<Expr>) -> Expr {
+        match self {
+            Self::Call { head, .. } => Expr::call(head.clone(), values),
+            Self::Association(entries) => render_association(
+                entries
+                    .iter()
+                    .map(|(key, _)| key.clone())
+                    .zip(values)
+                    .collect(),
+            ),
         }
     }
 }
@@ -189,54 +331,15 @@ fn sequence_like_from_expr(expr: &Expr) -> Option<SequenceLikeExpr> {
     })
 }
 
-fn criterion_accepts(
-    session: &mut Session,
-    criterion: &Expr,
-    item: &Expr,
-) -> Result<bool, EvalError> {
-    let value = session.evaluate(Expr::call(criterion.clone(), vec![item.clone()]))?;
-    Ok(truthiness_symbol(&value) == Some(true))
-}
-
 fn accumulate_sequence(
     session: &mut Session,
     sequence: SequenceLikeExpr,
 ) -> Result<Expr, EvalError> {
-    match sequence {
-        SequenceLikeExpr::Call { head, items } => {
-            let accumulated = accumulate_items(session, items)?;
-            Ok(Expr::call(head, accumulated))
-        }
-        SequenceLikeExpr::Association(entries) => {
-            let keys = entries
-                .iter()
-                .map(|(key, _)| key.clone())
-                .collect::<Vec<_>>();
-            let values = entries
-                .into_iter()
-                .map(|(_, value)| value)
-                .collect::<Vec<_>>();
-            let accumulated = accumulate_items(session, values)?;
-            Ok(render_association(
-                keys.into_iter().zip(accumulated).collect(),
-            ))
-        }
-    }
-}
-
-fn accumulate_items(session: &mut Session, items: Vec<Expr>) -> Result<Vec<Expr>, EvalError> {
-    let Some((first, rest)) = items.split_first() else {
-        return Ok(Vec::new());
+    let Some(first) = sequence.value_at(0) else {
+        return Ok(sequence.render_with_values(Vec::new()));
     };
 
-    let mut accumulated = vec![first.clone()];
-    let mut current = first.clone();
-    for item in rest {
-        current = session.evaluate(Expr::call(system_expr("Plus"), vec![current, item.clone()]))?;
-        accumulated.push(current.clone());
-    }
-
-    Ok(accumulated)
+    session.resume_accumulate_from_index(sequence, 1, first.clone(), vec![first])
 }
 
 fn apply_block_map(
@@ -256,16 +359,26 @@ fn apply_block_map(
         return Ok(Expr::call(head.clone(), raw_args.to_vec()));
     };
 
-    let mut results = Vec::new();
-    let mut index = 0usize;
-    while index + size <= items.len() {
-        let block = Expr::call(
-            block_head.as_ref().clone(),
-            items[index..index + size].to_vec(),
-        );
-        results.push(session.evaluate(Expr::call(operator.clone(), vec![block]))?);
-        index += offset;
-    }
+    session.resume_block_map_from_index(
+        BlockMapEvalState {
+            operator: operator.clone(),
+            block_head: block_head.as_ref().clone(),
+            items: items.to_vec(),
+            size,
+            offset,
+        },
+        0,
+        Vec::new(),
+    )
+}
 
-    Ok(Expr::call(system_expr("List"), results))
+fn finish_while_sequence(
+    sequence: SequenceLikeExpr,
+    count: usize,
+    mode: WhileSequenceMode,
+) -> Expr {
+    match mode {
+        WhileSequenceMode::Take => sequence.render_prefix(count),
+        WhileSequenceMode::Length => Expr::integer(BigInt::from(count)),
+    }
 }

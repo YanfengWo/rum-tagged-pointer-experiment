@@ -24,13 +24,13 @@ Completed history, archived planning detail, and operational lessons live in
 
 - [ ] Close the concrete suspension-safe helper gaps found in the 2026-06-13
   audit. Prioritize public callback loops first: functional iteration
-  (`Nest`, `FixedPoint`, `NestWhile`), fold/window helpers (`Fold`,
-  `FoldPair`, `FoldWhile`, `SequenceFold`, `TakeWhile`, `Accumulate`,
-  `BlockMap`), targeted mapping (`MapAt`, `SubsetMap`), tensor/string
-  callback helpers (`ArrayReduce`, `Inner`, `ArrayFilter`, `StringApply`,
-  delayed `StringReplace` / `StringCases` rules), then debug/tooling flows
-  (`RepeatedTiming`, `Reap` / `Sow` handlers, `Trace`, `TestReport`,
-  resource-constraint limit/fallback expressions).
+  (`Nest`, `FixedPoint`, `NestWhile`), targeted mapping (`MapAt`,
+  `SubsetMap`), tensor/string callback helpers (`ArrayReduce`, `Inner`,
+  `ArrayFilter`, `StringApply`, delayed `StringReplace` / `StringCases`
+  rules), then debug/tooling flows (`RepeatedTiming`, `Reap` / `Sow`
+  handlers, `Trace`, `TestReport`, resource-constraint limit/fallback
+  expressions). Fold/window callback helpers were closed in the 2026-06-13
+  fold/window continuation pass.
 - [ ] Continue moving those helper payloads onto typed continuation values
   when the flow cannot be represented as `Result<Expr, EvalError>` plus a
   single ordinary suspension frame. Keep Monitor display/callback refresh and
@@ -57,6 +57,11 @@ Completed history, archived planning detail, and operational lessons live in
 - [ ] Keep source organization aligned with
   [docs/code-organization-guidelines.md](./docs/code-organization-guidelines.md);
   revisit warning-range files opportunistically when touching nearby code.
+- [ ] Split `crates/rum-runtime/src/runtime/functional_ops/sequence/fold.rs`
+  before adding more sequence-fold behavior. After the 2026-06-13 suspension
+  continuation pass it is in the `20k`-`35k` split-plan range; the natural
+  split is front-door argument parsing, `Fold` / `FoldList`, `FoldPair`,
+  `FoldWhile`, and `SequenceFold` continuation state.
 - [ ] Decide later whether the string subsystem is large and stable enough to
   justify a dedicated crate boundary; do not create a string crate by default.
 
