@@ -187,6 +187,14 @@ struct PresenceFingerprintGroupStats {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceExactFingerprintKey {
+    kind: PresenceScanKind,
+    shape: PresenceRootShape,
+    target_text: Option<Symbol>,
+    fingerprint: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct ExpressionRebuildKey {
     source: &'static str,
     source_symbol: Option<Symbol>,
@@ -231,6 +239,8 @@ thread_local! {
     static PRESENCE_REUSE_STATS: RefCell<HashMap<PresenceReuseKey, PresenceShapeStats>> =
         RefCell::new(HashMap::new());
     static PRESENCE_FINGERPRINT_STATS: RefCell<HashMap<PresenceFingerprintKey, PresenceShapeStats>> =
+        RefCell::new(HashMap::new());
+    static PRESENCE_EXACT_FINGERPRINT_STATS: RefCell<HashMap<PresenceExactFingerprintKey, PresenceShapeStats>> =
         RefCell::new(HashMap::new());
     static EXPRESSION_REBUILD_STATS: RefCell<HashMap<ExpressionRebuildKey, ExpressionRebuildStats>> =
         RefCell::new(HashMap::new());
@@ -796,6 +806,7 @@ pub(super) fn print_lexical_profile_summary_once() {
     print_presence_reuse_group_summary();
     print_presence_fingerprint_summary();
     print_presence_fingerprint_group_summary();
+    print_presence_exact_fingerprint_group_summary();
     print_expression_rebuild_summary();
     print_expression_rebuild_group_summary();
     print_presence_binding_summary();
@@ -1074,15 +1085,27 @@ fn record_presence_fingerprint(
         return;
     }
 
+    let (text_fingerprint, exact_fingerprint) = structural_text_and_exact_fingerprints(expr);
     let key = PresenceFingerprintKey {
         kind,
         shape: presence_root_shape(expr),
         target_text,
-        fingerprint: structural_text_fingerprint(expr),
+        fingerprint: text_fingerprint,
+    };
+    let exact_key = PresenceExactFingerprintKey {
+        kind,
+        shape: key.shape,
+        target_text,
+        fingerprint: exact_fingerprint,
     };
     PRESENCE_FINGERPRINT_STATS.with(|stats| {
         let mut stats = stats.borrow_mut();
         let entry = stats.entry(key).or_default();
+        record_presence_stats(entry, result, nodes, elapsed_nanos);
+    });
+    PRESENCE_EXACT_FINGERPRINT_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(exact_key).or_default();
         record_presence_stats(entry, result, nodes, elapsed_nanos);
     });
 }
@@ -1472,6 +1495,60 @@ fn print_presence_fingerprint_group_summary() {
     });
 }
 
+fn print_presence_exact_fingerprint_group_summary() {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    PRESENCE_EXACT_FINGERPRINT_STATS.with(|stats| {
+        let mut groups =
+            HashMap::<PresenceFingerprintGroupKey, PresenceFingerprintGroupStats>::new();
+        for (key, stats) in stats.borrow().iter() {
+            let group = groups
+                .entry(PresenceFingerprintGroupKey {
+                    kind: key.kind,
+                    shape: key.shape,
+                    target_text: key.target_text,
+                })
+                .or_default();
+            group.unique_fingerprints = group.unique_fingerprints.saturating_add(1);
+            group.scans = group.scans.saturating_add(stats.scans);
+            group.nodes = group.nodes.saturating_add(stats.nodes);
+            group.timed = group.timed.saturating_add(stats.timed);
+            group.nanos = group.nanos.saturating_add(stats.nanos);
+            group.max_scans_per_fingerprint = group.max_scans_per_fingerprint.max(stats.scans);
+            group.true_count = group.true_count.saturating_add(stats.true_count);
+            group.false_count = group.false_count.saturating_add(stats.false_count);
+        }
+
+        let mut entries = groups.into_iter().collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(24).enumerate() {
+            eprintln!(
+                "rum-profile lexical exact-fingerprint-group rank={} kind={} shape={} target={} unique_fingerprints={} scans={} max_scans_per_fingerprint={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_scan_kind_name(key.kind),
+                presence_root_shape_name(key.shape),
+                profile_optional_symbol_name(key.target_text),
+                stats.unique_fingerprints,
+                stats.scans,
+                stats.max_scans_per_fingerprint,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
 fn print_expression_rebuild_summary() {
     if !lexical_profile_shapes_enabled() {
         return;
@@ -1638,8 +1715,11 @@ fn expression_rebuild_source_name(source: &'static str, symbol: Option<Symbol>) 
     symbol.map_or_else(|| source.to_string(), |symbol| format!("{source}:{symbol}"))
 }
 
-fn structural_text_fingerprint(expr: &Expr) -> u64 {
-    structural_text_fingerprint_and_nodes(expr).0
+fn structural_text_and_exact_fingerprints(expr: &Expr) -> (u64, u64) {
+    let mut text_hasher = DefaultHasher::new();
+    let mut exact_hasher = DefaultHasher::new();
+    hash_expr_text_and_exact(expr, &mut text_hasher, &mut exact_hasher);
+    (text_hasher.finish(), exact_hasher.finish())
 }
 
 fn structural_text_fingerprint_and_nodes(expr: &Expr) -> (u64, u64) {
@@ -1662,6 +1742,60 @@ fn hash_expr_text(expr: &Expr, state: &mut impl Hasher) -> u64 {
                 nodes = nodes.saturating_add(hash_expr_text(arg, state));
             }
             nodes
+        }
+    }
+}
+
+fn hash_expr_text_and_exact(
+    expr: &Expr,
+    text_state: &mut impl Hasher,
+    exact_state: &mut impl Hasher,
+) {
+    match expr {
+        Expr::Atom(atom) => hash_atom_text_and_exact(atom, text_state, exact_state),
+        Expr::Call { head, args } => {
+            4_u8.hash(text_state);
+            4_u8.hash(exact_state);
+            hash_expr_text_and_exact(head, text_state, exact_state);
+            args.len().hash(text_state);
+            args.len().hash(exact_state);
+            for arg in args.iter() {
+                hash_expr_text_and_exact(arg, text_state, exact_state);
+            }
+        }
+    }
+}
+
+fn hash_atom_text_and_exact(
+    atom: &Atom,
+    text_state: &mut impl Hasher,
+    exact_state: &mut impl Hasher,
+) {
+    match atom {
+        Atom::Integer(value) => {
+            0_u8.hash(text_state);
+            value.hash(text_state);
+            0_u8.hash(exact_state);
+            value.hash(exact_state);
+        }
+        Atom::Rational(value) => {
+            1_u8.hash(text_state);
+            value.hash(text_state);
+            1_u8.hash(exact_state);
+            value.hash(exact_state);
+        }
+        Atom::String(value) => {
+            2_u8.hash(text_state);
+            value.hash(text_state);
+            2_u8.hash(exact_state);
+            value.hash(exact_state);
+        }
+        Atom::Symbol(symbol) => {
+            3_u8.hash(text_state);
+            symbol.context().hash(text_state);
+            symbol.name().hash(text_state);
+            3_u8.hash(exact_state);
+            symbol.hash(exact_state);
         }
     }
 }

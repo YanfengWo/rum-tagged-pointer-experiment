@@ -195,6 +195,37 @@ respect `Symbol` equality including generated identity; the diagnostic
 fingerprint used above intentionally ignores identity and is not itself a safe
 semantic cache key.
 
+An exact-fingerprint follow-up then tested whether a safe structural absence
+cache keyed on generated identities could still collapse the hot scans. It
+again preserved the theorem result (`is_thm=True`, `changed=False`), with a
+profiler-inflated target time of about `297.814s`. The answer is negative for
+the main wall:
+
+- text fingerprint for
+  ``call-head-call:HOL`Drule`ORELSEC`` / ``HOL`Drule`Private`res``:
+  `unique_fingerprints=126`, `scans=17,568`,
+  `max_scans_per_fingerprint=320`;
+  exact fingerprint: `unique_fingerprints=8,784`,
+  `max_scans_per_fingerprint=2`;
+- text fingerprint for `call-head:Catch` / ``HOL`Drule`Private`res``:
+  `147` unique over `20,496` scans, `max=320`;
+  exact fingerprint: `10,248` unique, `max=2`;
+- text fingerprint for ``call-head:HOL`Drule`Private`tryConv`` /
+  ``HOL`Drule`Private`res``: `140` unique over `19,520` scans, `max=320`;
+  exact fingerprint: `9,760` unique, `max=2`;
+- text fingerprint for
+  ``call-head-call:HOL`Auto`Simp`Private`condRewrConv`` /
+  ``HOL`Auto`Simp`Private`c``: `133` unique over `18,544` scans, `max=320`;
+  exact fingerprint: `9,272` unique, `max=2`.
+
+This rejects a simple exact structural cache as the next fix for the primary
+single-binding absence scans. The repeated structures differ by generated
+symbol identities, so the viable runtime directions are now narrower:
+propagate exact symbol-presence summaries through rule RHS substitution and
+expression construction, or preserve enough provenance to skip scanning
+freshly inserted values for a newer lexical local without violating the
+hygienic delayed-RHS semantics just fixed.
+
 ## 2026-06-15 Pair/Simp Hygienic RHS Substitution Probe
 
 Reopened the Pair/Simp performance lane probe-first after rejecting further
