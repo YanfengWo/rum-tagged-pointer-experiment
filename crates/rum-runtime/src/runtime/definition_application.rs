@@ -75,6 +75,7 @@ impl Session {
             }
 
             let (lhs, substituted) = {
+                let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
                 let substituted = substitute_rule_bindings_for_rhs(
                     &down_value.rhs,
                     &outcome.bindings,
@@ -117,6 +118,7 @@ impl Session {
                 );
             }
 
+            let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
             let substituted = substitute_rule_bindings_for_rhs(
                 &down_value.rhs,
                 &outcome.bindings,
@@ -390,6 +392,7 @@ impl Session {
             }
 
             let (lhs, substituted) = {
+                let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
                 let substituted = substitute_rule_bindings_for_rhs(
                     &sub_value.rhs,
                     &outcome.bindings,
@@ -432,6 +435,7 @@ impl Session {
                 );
             }
 
+            let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
             let substituted = substitute_rule_bindings_for_rhs(
                 &sub_value.rhs,
                 &outcome.bindings,

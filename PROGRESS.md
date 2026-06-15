@@ -129,6 +129,72 @@ real structural repetition. The next probe should find where these
 pointer-fresh but structurally repeated conversion closures are rebuilt,
 preferably without changing evaluator semantics.
 
+Follow-up expression-rebuild attribution then extended the same gated profiler
+from lexical substitution into rule RHS binding substitution. The full profile
+was written to `/private/tmp/rum-expression-rebuild-profile.txt` to avoid
+terminal truncation. It again proved the same target (`is_thm=True`,
+`changed=False`); the absolute target time was profiler-inflated
+(`270.893s`) and is not a performance baseline.
+
+The new `expression-rebuild-group` rows line up with the earlier lexical
+presence fingerprints:
+
+- `rule_rhs_call` rebuilt ``call-head-call:HOL`Drule`ORELSEC`` with
+  `unique_fingerprints=133`, `rebuilds=18,544`,
+  `max_rebuilds_per_fingerprint=320`, matching the hot
+  ``condRewrConv``/`c` and adjacent `ORELSEC` structural repetition;
+- `rule_rhs_call` rebuilt `call-head:Catch` with
+  `unique_fingerprints=147`, `rebuilds=20,496`,
+  `max_rebuilds_per_fingerprint=320`, matching the hot lexical `Catch` scans
+  for ``HOL`Drule`Private`res``;
+- `rule_rhs_call` rebuilt ``call-head:HOL`Drule`Private`tryConv`` with
+  `unique_fingerprints=147`, `rebuilds=20,496`,
+  `max_rebuilds_per_fingerprint=320`, matching the hot `tryConv` scans;
+- `rule_rhs_call` rebuilt
+  ``call-head-call:HOL`Auto`Simp`Private`condRewrConv`` with
+  `unique_fingerprints=133`, `rebuilds=18,544`,
+  `max_rebuilds_per_fingerprint=320`, matching the hot `condRewrConv` scans.
+
+Current interpretation: the Pair/Simp wall is now a concrete two-step runtime
+path, not an unknown evaluator blob. Delayed rule RHS substitution repeatedly
+rebuilds structurally repeated conversion-closure trees, and the later `Module`
+lexical prefilter repeatedly scans those fresh trees to prove absence of
+fresh locals such as ``HOL`Drule`Private`res`` and
+``HOL`Auto`Simp`Private`c``. The next diagnostic split should identify the
+definition/rule source of the largest `rule_rhs_call` rebuilds before changing
+the algorithm. Plausible fix directions include preserving/propagating
+symbol-presence summaries through rule RHS substitution outputs or avoiding
+full absence scans on freshly inserted rule-RHS values that cannot contain a
+newer `Module` local; do not implement either before a smaller probe validates
+the exact source contract.
+
+The source-symbol split completed next, again with the same theorem result
+(`is_thm=True`, `changed=False`) and profiler-inflated target time
+(`272.066s`). The largest `rule_rhs_call` sources are now concrete:
+
+- ``HOL`Drule`ORELSEC`` rebuilds `Module` / `CompoundExpression` /
+  `If` / nested `ORELSEC` shapes with `126-133` structural fingerprints and
+  `17,568-18,544` rebuilds, `max_rebuilds_per_fingerprint=320`;
+- ``HOL`Drule`Private`tryConv`` rebuilds `Module` / `CompoundExpression` /
+  `Set` / `Catch` shapes with `147` structural fingerprints and `20,496`
+  rebuilds, `max_rebuilds_per_fingerprint=320`;
+- ``HOL`Auto`Simp`Private`combineSimpConvs`` rebuilds `ORELSEC`,
+  recursive `combineSimpConvs`, and `List` shapes with `18-19` fingerprints
+  and `8,784-9,272` rebuilds, `max_rebuilds_per_fingerprint=488`;
+- ``HOL`Auto`Simp`Private`simpRuleConv`` rebuilds `Module` /
+  `CompoundExpression` / `Which` shapes with `133` fingerprints and `18,544`
+  rebuilds, `max_rebuilds_per_fingerprint=320`;
+- ``HOL`Drule`REPEATC`` and
+  ``HOL`Auto`Simp`Private`simpStepConv`` own the largest single-expression
+  rebuild rows around `68k` nodes per rebuilt expression.
+
+This confirms the next viable optimization frontier is not broad evaluator
+rewrites. It is the interaction between rule RHS substitution of conversion
+combinators and subsequent lexical absence scans. Any cache/provenance fix must
+respect `Symbol` equality including generated identity; the diagnostic
+fingerprint used above intentionally ignores identity and is not itself a safe
+semantic cache key.
+
 ## 2026-06-15 Pair/Simp Hygienic RHS Substitution Probe
 
 Reopened the Pair/Simp performance lane probe-first after rejecting further

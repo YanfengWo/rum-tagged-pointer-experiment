@@ -186,6 +186,35 @@ struct PresenceFingerprintGroupStats {
     false_count: u64,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct ExpressionRebuildKey {
+    source: &'static str,
+    source_symbol: Option<Symbol>,
+    shape: PresenceRootShape,
+    fingerprint: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct ExpressionRebuildGroupKey {
+    source: &'static str,
+    source_symbol: Option<Symbol>,
+    shape: PresenceRootShape,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct ExpressionRebuildStats {
+    rebuilds: u64,
+    nodes: u64,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct ExpressionRebuildGroupStats {
+    unique_fingerprints: u64,
+    rebuilds: u64,
+    nodes: u64,
+    max_rebuilds_per_fingerprint: u64,
+}
+
 thread_local! {
     static PRESENCE_SHAPE_STATS: RefCell<HashMap<PresenceShapeKey, PresenceShapeStats>> =
         RefCell::new(HashMap::new());
@@ -203,10 +232,14 @@ thread_local! {
         RefCell::new(HashMap::new());
     static PRESENCE_FINGERPRINT_STATS: RefCell<HashMap<PresenceFingerprintKey, PresenceShapeStats>> =
         RefCell::new(HashMap::new());
+    static EXPRESSION_REBUILD_STATS: RefCell<HashMap<ExpressionRebuildKey, ExpressionRebuildStats>> =
+        RefCell::new(HashMap::new());
     static LEXICAL_CONTEXT_STACK: RefCell<Vec<&'static str>> = const { RefCell::new(Vec::new()) };
     static LEXICAL_CONTEXT_DEPTH: Cell<usize> = const { Cell::new(0) };
     static ARG_PREFILTER_SITE_STACK: RefCell<Vec<PresenceArgSite>> = const { RefCell::new(Vec::new()) };
     static ARG_PREFILTER_SITE_DEPTH: Cell<usize> = const { Cell::new(0) };
+    static EXPRESSION_REBUILD_SOURCE_STACK: RefCell<Vec<Symbol>> = const { RefCell::new(Vec::new()) };
+    static EXPRESSION_REBUILD_SOURCE_DEPTH: Cell<usize> = const { Cell::new(0) };
 }
 
 pub(super) struct LexicalProfileContextGuard {
@@ -243,6 +276,23 @@ impl Drop for LexicalProfileArgSiteGuard {
     }
 }
 
+pub(super) struct ExpressionRebuildSourceGuard {
+    active: bool,
+}
+
+impl Drop for ExpressionRebuildSourceGuard {
+    fn drop(&mut self) {
+        if !self.active {
+            return;
+        }
+
+        EXPRESSION_REBUILD_SOURCE_STACK.with(|stack| {
+            stack.borrow_mut().pop();
+        });
+        EXPRESSION_REBUILD_SOURCE_DEPTH.with(|depth| depth.set(depth.get().saturating_sub(1)));
+    }
+}
+
 #[inline]
 pub(super) fn lexical_profile_context(context: &'static str) -> LexicalProfileContextGuard {
     if !lexical_profile_shapes_enabled() {
@@ -274,6 +324,19 @@ pub(super) fn lexical_profile_arg_prefilter_site(
     });
     ARG_PREFILTER_SITE_DEPTH.with(|depth| depth.set(depth.get().saturating_add(1)));
     LexicalProfileArgSiteGuard { active: true }
+}
+
+#[inline]
+pub(super) fn expression_rebuild_source_symbol(symbol: Symbol) -> ExpressionRebuildSourceGuard {
+    if !lexical_profile_shapes_enabled() {
+        return ExpressionRebuildSourceGuard { active: false };
+    }
+
+    EXPRESSION_REBUILD_SOURCE_STACK.with(|stack| {
+        stack.borrow_mut().push(symbol);
+    });
+    EXPRESSION_REBUILD_SOURCE_DEPTH.with(|depth| depth.set(depth.get().saturating_add(1)));
+    ExpressionRebuildSourceGuard { active: true }
 }
 
 #[inline]
@@ -513,6 +576,30 @@ pub(super) fn record_profile_arg_substitution_attempt(start: Option<Instant>, ch
     );
 }
 
+pub(super) fn record_profile_expression_rebuild(source: &'static str, expr: &Expr) {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    let (fingerprint, nodes) = structural_text_fingerprint_and_nodes(expr);
+    if nodes < PRESENCE_REUSE_MIN_NODES {
+        return;
+    }
+
+    let key = ExpressionRebuildKey {
+        source,
+        source_symbol: current_expression_rebuild_source_symbol(),
+        shape: presence_root_shape(expr),
+        fingerprint,
+    };
+    EXPRESSION_REBUILD_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(key).or_default();
+        entry.rebuilds = entry.rebuilds.saturating_add(1);
+        entry.nodes = entry.nodes.saturating_add(nodes);
+    });
+}
+
 pub(super) fn record_profile_single_presence_scan(
     start: Option<Instant>,
     expr: &Expr,
@@ -709,6 +796,8 @@ pub(super) fn print_lexical_profile_summary_once() {
     print_presence_reuse_group_summary();
     print_presence_fingerprint_summary();
     print_presence_fingerprint_group_summary();
+    print_expression_rebuild_summary();
+    print_expression_rebuild_group_summary();
     print_presence_binding_summary();
     print_presence_binding_name_summary();
 }
@@ -1029,6 +1118,14 @@ fn current_arg_prefilter_site() -> Option<PresenceArgSite> {
     }
 
     ARG_PREFILTER_SITE_STACK.with(|stack| stack.borrow().last().copied())
+}
+
+fn current_expression_rebuild_source_symbol() -> Option<Symbol> {
+    if EXPRESSION_REBUILD_SOURCE_DEPTH.with(Cell::get) == 0 {
+        return None;
+    }
+
+    EXPRESSION_REBUILD_SOURCE_STACK.with(|stack| stack.borrow().last().copied())
 }
 
 fn record_presence_stats(
@@ -1375,6 +1472,83 @@ fn print_presence_fingerprint_group_summary() {
     });
 }
 
+fn print_expression_rebuild_summary() {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    EXPRESSION_REBUILD_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.rebuilds.cmp(&lhs.rebuilds))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(24).enumerate() {
+            eprintln!(
+                "rum-profile expression-rebuild rank={} source={} shape={} fingerprint={:#x} rebuilds={} nodes={} avg_nodes={}",
+                rank + 1,
+                expression_rebuild_source_name(key.source, key.source_symbol),
+                presence_root_shape_name(key.shape),
+                key.fingerprint,
+                stats.rebuilds,
+                stats.nodes,
+                profile_stats_average(stats.nodes, stats.rebuilds),
+            );
+        }
+    });
+}
+
+fn print_expression_rebuild_group_summary() {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    EXPRESSION_REBUILD_STATS.with(|stats| {
+        let mut groups = HashMap::<ExpressionRebuildGroupKey, ExpressionRebuildGroupStats>::new();
+        for (key, stats) in stats.borrow().iter() {
+            let group = groups
+                .entry(ExpressionRebuildGroupKey {
+                    source: key.source,
+                    source_symbol: key.source_symbol,
+                    shape: key.shape,
+                })
+                .or_default();
+            group.unique_fingerprints = group.unique_fingerprints.saturating_add(1);
+            group.rebuilds = group.rebuilds.saturating_add(stats.rebuilds);
+            group.nodes = group.nodes.saturating_add(stats.nodes);
+            group.max_rebuilds_per_fingerprint =
+                group.max_rebuilds_per_fingerprint.max(stats.rebuilds);
+        }
+
+        let mut entries = groups.into_iter().collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.rebuilds.cmp(&lhs.rebuilds))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(24).enumerate() {
+            eprintln!(
+                "rum-profile expression-rebuild-group rank={} source={} shape={} unique_fingerprints={} rebuilds={} max_rebuilds_per_fingerprint={} nodes={} avg_nodes={}",
+                rank + 1,
+                expression_rebuild_source_name(key.source, key.source_symbol),
+                presence_root_shape_name(key.shape),
+                stats.unique_fingerprints,
+                stats.rebuilds,
+                stats.max_rebuilds_per_fingerprint,
+                stats.nodes,
+                profile_stats_average(stats.nodes, stats.rebuilds),
+            );
+        }
+    });
+}
+
 fn print_presence_binding_summary() {
     if !lexical_profile_bindings_enabled() {
         return;
@@ -1460,22 +1634,34 @@ fn profile_optional_symbol_name(symbol: Option<Symbol>) -> String {
     symbol.map_or_else(|| "-".to_string(), |symbol| symbol.to_string())
 }
 
-fn structural_text_fingerprint(expr: &Expr) -> u64 {
-    let mut hasher = DefaultHasher::new();
-    hash_expr_text(expr, &mut hasher);
-    hasher.finish()
+fn expression_rebuild_source_name(source: &'static str, symbol: Option<Symbol>) -> String {
+    symbol.map_or_else(|| source.to_string(), |symbol| format!("{source}:{symbol}"))
 }
 
-fn hash_expr_text(expr: &Expr, state: &mut impl Hasher) {
+fn structural_text_fingerprint(expr: &Expr) -> u64 {
+    structural_text_fingerprint_and_nodes(expr).0
+}
+
+fn structural_text_fingerprint_and_nodes(expr: &Expr) -> (u64, u64) {
+    let mut hasher = DefaultHasher::new();
+    let nodes = hash_expr_text(expr, &mut hasher);
+    (hasher.finish(), nodes)
+}
+
+fn hash_expr_text(expr: &Expr, state: &mut impl Hasher) -> u64 {
     match expr {
-        Expr::Atom(atom) => hash_atom_text(atom, state),
+        Expr::Atom(atom) => {
+            hash_atom_text(atom, state);
+            1
+        }
         Expr::Call { head, args } => {
             4_u8.hash(state);
-            hash_expr_text(head, state);
+            let mut nodes = 1_u64.saturating_add(hash_expr_text(head, state));
             args.len().hash(state);
             for arg in args.iter() {
-                hash_expr_text(arg, state);
+                nodes = nodes.saturating_add(hash_expr_text(arg, state));
             }
+            nodes
         }
     }
 }

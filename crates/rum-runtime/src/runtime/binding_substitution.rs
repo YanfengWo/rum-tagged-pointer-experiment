@@ -34,6 +34,11 @@ pub(super) fn sequence_expr(values: Vec<Expr>) -> Expr {
     Expr::call(system_expr("Sequence"), values)
 }
 
+fn record_rule_rhs_rebuild(source: &'static str, expr: Expr) -> Expr {
+    record_profile_expression_rebuild(source, &expr);
+    expr
+}
+
 pub(super) fn substitute_bindings(expr: &Expr, bindings: &SymbolExprMap) -> Expr {
     substitute_bindings_changed(expr, bindings).unwrap_or_else(|| expr.clone())
 }
@@ -195,12 +200,15 @@ fn substitute_rule_with_call_changed(
         return None;
     }
 
-    Some(Expr::call(
-        substituted_head.unwrap_or_else(|| head.clone()),
-        vec![
-            substituted_bindings.unwrap_or_else(|| args[0].clone()),
-            substituted_body.unwrap_or_else(|| args[1].clone()),
-        ],
+    Some(record_rule_rhs_rebuild(
+        "rule_rhs_with_call",
+        Expr::call(
+            substituted_head.unwrap_or_else(|| head.clone()),
+            vec![
+                substituted_bindings.unwrap_or_else(|| args[0].clone()),
+                substituted_body.unwrap_or_else(|| args[1].clone()),
+            ],
+        ),
     ))
 }
 
@@ -324,12 +332,21 @@ fn substitute_rule_with_binding_list_changed(
 
     match (substituted_head, substituted_items) {
         (None, None) => None,
-        (Some(head), None) => Some(Expr::call_with_shared_args(head, args.clone())),
-        (None, Some(args)) => Some(Expr::call_shared(
-            SharedExpr::from(head.as_ref().clone()),
-            SharedArgs::new(args),
+        (Some(head), None) => Some(record_rule_rhs_rebuild(
+            "rule_rhs_with_binding_list",
+            Expr::call_with_shared_args(head, args.clone()),
         )),
-        (Some(head), Some(args)) => Some(Expr::call(head, args)),
+        (None, Some(args)) => Some(record_rule_rhs_rebuild(
+            "rule_rhs_with_binding_list",
+            Expr::call_shared(
+                SharedExpr::from(head.as_ref().clone()),
+                SharedArgs::new(args),
+            ),
+        )),
+        (Some(head), Some(args)) => Some(record_rule_rhs_rebuild(
+            "rule_rhs_with_binding_list",
+            Expr::call(head, args),
+        )),
     }
 }
 
@@ -357,12 +374,15 @@ fn substitute_rule_with_binding_item_changed(
                 return None;
             }
 
-            Some(Expr::call(
-                substituted_head.unwrap_or_else(|| head.as_ref().clone()),
-                vec![
-                    substituted_lhs.unwrap_or_else(|| args[0].clone()),
-                    substituted_rhs.unwrap_or_else(|| args[1].clone()),
-                ],
+            Some(record_rule_rhs_rebuild(
+                "rule_rhs_with_binding_item",
+                Expr::call(
+                    substituted_head.unwrap_or_else(|| head.as_ref().clone()),
+                    vec![
+                        substituted_lhs.unwrap_or_else(|| args[0].clone()),
+                        substituted_rhs.unwrap_or_else(|| args[1].clone()),
+                    ],
+                ),
             ))
         }
         _ => substitute_rule_bindings_changed(expr, bindings, rhs_alpha_renames),
@@ -382,16 +402,19 @@ fn rebuild_rule_call(
                 &RULE_RHS_REBUILT_REUSE_SHARED_ARGS_COUNT,
                 "rule_rhs_rebuilt_reuse_shared_args",
             );
-            Some(Expr::call_with_shared_args(head, original_args.clone()))
+            Some(record_rule_rhs_rebuild(
+                "rule_rhs_call",
+                Expr::call_with_shared_args(head, original_args.clone()),
+            ))
         }
         (None, Some(args)) => {
             record_substitution_sharing_counter(
                 &RULE_RHS_REBUILT_REUSE_SHARED_HEAD_COUNT,
                 "rule_rhs_rebuilt_reuse_shared_head",
             );
-            Some(Expr::call_shared(
-                SharedExpr::from(head.clone()),
-                SharedArgs::new(args),
+            Some(record_rule_rhs_rebuild(
+                "rule_rhs_call",
+                Expr::call_shared(SharedExpr::from(head.clone()), SharedArgs::new(args)),
             ))
         }
         (Some(head), Some(args)) => {
@@ -399,7 +422,10 @@ fn rebuild_rule_call(
                 &RULE_RHS_REBUILT_FRESH_HEAD_ARGS_COUNT,
                 "rule_rhs_rebuilt_fresh_head_args",
             );
-            Some(Expr::call(head, args))
+            Some(record_rule_rhs_rebuild(
+                "rule_rhs_call",
+                Expr::call(head, args),
+            ))
         }
     }
 }

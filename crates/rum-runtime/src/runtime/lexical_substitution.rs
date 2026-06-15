@@ -151,6 +151,11 @@ fn substitute_symbol_binding_changed(
     }
 }
 
+fn record_lexical_rebuild(source: &'static str, expr: Expr) -> Expr {
+    record_profile_expression_rebuild(source, &expr);
+    expr
+}
+
 fn shadowed_with_pattern_locals(shadowed: &BTreeSet<Symbol>, expr: &Expr) -> BTreeSet<Symbol> {
     let mut locals = shadowed.clone();
     collect_pattern_locals(expr, &mut locals);
@@ -177,12 +182,15 @@ fn substitute_pattern_call_changed(
         return None;
     }
 
-    Some(Expr::call(
-        substituted_head.unwrap_or_else(|| head.clone()),
-        vec![
-            args[0].clone(),
-            substituted_pattern.unwrap_or_else(|| args[1].clone()),
-        ],
+    Some(record_lexical_rebuild(
+        "pattern_call",
+        Expr::call(
+            substituted_head.unwrap_or_else(|| head.clone()),
+            vec![
+                args[0].clone(),
+                substituted_pattern.unwrap_or_else(|| args[1].clone()),
+            ],
+        ),
     ))
 }
 fn substitute_assignment_like_call_changed(
@@ -202,12 +210,15 @@ fn substitute_assignment_like_call_changed(
         return None;
     }
 
-    Some(Expr::call(
-        substituted_head.unwrap_or_else(|| head.clone()),
-        vec![
-            substituted_lhs.unwrap_or_else(|| args[0].clone()),
-            substituted_rhs.unwrap_or_else(|| args[1].clone()),
-        ],
+    Some(record_lexical_rebuild(
+        "assignment_like_call",
+        Expr::call(
+            substituted_head.unwrap_or_else(|| head.clone()),
+            vec![
+                substituted_lhs.unwrap_or_else(|| args[0].clone()),
+                substituted_rhs.unwrap_or_else(|| args[1].clone()),
+            ],
+        ),
     ))
 }
 
@@ -229,12 +240,15 @@ fn substitute_condition_call_changed(
         return None;
     }
 
-    Some(Expr::call(
-        substituted_head.unwrap_or_else(|| head.clone()),
-        vec![
-            substituted_lhs.unwrap_or_else(|| args[0].clone()),
-            substituted_condition.unwrap_or_else(|| args[1].clone()),
-        ],
+    Some(record_lexical_rebuild(
+        "condition_call",
+        Expr::call(
+            substituted_head.unwrap_or_else(|| head.clone()),
+            vec![
+                substituted_lhs.unwrap_or_else(|| args[0].clone()),
+                substituted_condition.unwrap_or_else(|| args[1].clone()),
+            ],
+        ),
     ))
 }
 
@@ -254,12 +268,15 @@ fn substitute_with_call_changed(
         return None;
     }
 
-    Some(Expr::call(
-        substituted_head.unwrap_or_else(|| head.clone()),
-        vec![
-            substituted_bindings.unwrap_or_else(|| args[0].clone()),
-            substituted_body.unwrap_or_else(|| args[1].clone()),
-        ],
+    Some(record_lexical_rebuild(
+        "with_call",
+        Expr::call(
+            substituted_head.unwrap_or_else(|| head.clone()),
+            vec![
+                substituted_bindings.unwrap_or_else(|| args[0].clone()),
+                substituted_body.unwrap_or_else(|| args[1].clone()),
+            ],
+        ),
     ))
 }
 
@@ -285,9 +302,12 @@ fn substitute_scoped_call_changed(
     substituted_args.push(substituted_bindings.unwrap_or_else(|| args[0].clone()));
     substituted_args.extend(substituted_rest.unwrap_or_else(|| args[1..].to_vec()));
 
-    Some(Expr::call(
-        substituted_head.unwrap_or_else(|| head.clone()),
-        substituted_args,
+    Some(record_lexical_rebuild(
+        "scoped_call",
+        Expr::call(
+            substituted_head.unwrap_or_else(|| head.clone()),
+            substituted_args,
+        ),
     ))
 }
 
@@ -318,9 +338,12 @@ fn substitute_function_call_changed(
             substituted_args.push(substituted_body.unwrap_or_else(|| body.clone()));
             substituted_args.extend(substituted_rest.unwrap_or_else(|| args[1..].to_vec()));
 
-            Some(Expr::call(
-                substituted_head.unwrap_or_else(|| head.clone()),
-                substituted_args,
+            Some(record_lexical_rebuild(
+                "function_call",
+                Expr::call(
+                    substituted_head.unwrap_or_else(|| head.clone()),
+                    substituted_args,
+                ),
             ))
         }
         Some(FunctionSpec::Explicit { params, body, .. }) => {
@@ -345,9 +368,12 @@ fn substitute_function_call_changed(
             substituted_args.push(substituted_body.unwrap_or_else(|| body.clone()));
             substituted_args.extend(substituted_rest.unwrap_or_else(|| args[2..].to_vec()));
 
-            Some(Expr::call(
-                substituted_head.unwrap_or_else(|| head.clone()),
-                substituted_args,
+            Some(record_lexical_rebuild(
+                "function_call",
+                Expr::call(
+                    substituted_head.unwrap_or_else(|| head.clone()),
+                    substituted_args,
+                ),
             ))
         }
         None => substitute_generic_call_changed(head, args, bindings, shadowed),
@@ -366,15 +392,18 @@ fn substitute_generic_call_changed(
 
     match (substituted_head, substituted_args) {
         (None, None) => None,
-        (Some(head), None) => Some(Expr::call_with_shared_args(
-            head,
-            SharedArgs::from(args.to_vec()),
+        (Some(head), None) => Some(record_lexical_rebuild(
+            "generic_call",
+            Expr::call_with_shared_args(head, SharedArgs::from(args.to_vec())),
         )),
-        (None, Some(args)) => Some(Expr::call_shared(
-            SharedExpr::from(head.clone()),
-            SharedArgs::new(args),
+        (None, Some(args)) => Some(record_lexical_rebuild(
+            "generic_call",
+            Expr::call_shared(SharedExpr::from(head.clone()), SharedArgs::new(args)),
         )),
-        (Some(head), Some(args)) => Some(Expr::call(head, args)),
+        (Some(head), Some(args)) => Some(record_lexical_rebuild(
+            "generic_call",
+            Expr::call(head, args),
+        )),
     }
 }
 
@@ -524,9 +553,18 @@ fn substitute_with_binding_list_changed(
 
     match (substituted_head, substituted_items) {
         (None, None) => None,
-        (Some(head), None) => Some(Expr::call_with_shared_args(head, args.clone())),
-        (None, Some(args)) => Some(Expr::call_shared(head.clone(), SharedArgs::new(args))),
-        (Some(head), Some(args)) => Some(Expr::call(head, args)),
+        (Some(head), None) => Some(record_lexical_rebuild(
+            "with_binding_list",
+            Expr::call_with_shared_args(head, args.clone()),
+        )),
+        (None, Some(args)) => Some(record_lexical_rebuild(
+            "with_binding_list",
+            Expr::call_shared(head.clone(), SharedArgs::new(args)),
+        )),
+        (Some(head), Some(args)) => Some(record_lexical_rebuild(
+            "with_binding_list",
+            Expr::call(head, args),
+        )),
     }
 }
 
@@ -550,12 +588,15 @@ fn substitute_with_binding_item_changed(
                 return None;
             }
 
-            Some(Expr::call(
-                substituted_head.unwrap_or_else(|| head.as_ref().clone()),
-                vec![
-                    args[0].clone(),
-                    substituted_rhs.unwrap_or_else(|| args[1].clone()),
-                ],
+            Some(record_lexical_rebuild(
+                "with_binding_item",
+                Expr::call(
+                    substituted_head.unwrap_or_else(|| head.as_ref().clone()),
+                    vec![
+                        args[0].clone(),
+                        substituted_rhs.unwrap_or_else(|| args[1].clone()),
+                    ],
+                ),
             ))
         }
         _ => substitute_lexical_bindings_changed(expr, bindings, shadowed),
