@@ -169,6 +169,7 @@ fn substitute_pattern_call_changed(
     bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
+    let _profile_context = lexical_profile_context("pattern_call");
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
     let substituted_pattern = substitute_lexical_bindings_changed(&args[1], bindings, shadowed);
 
@@ -190,6 +191,7 @@ fn substitute_assignment_like_call_changed(
     bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
+    let _profile_context = lexical_profile_context("assignment_like_call");
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
     let substituted_lhs = substitute_lexical_bindings_changed(&args[0], bindings, shadowed);
     let lhs_for_shadow = substituted_lhs.as_ref().unwrap_or(&args[0]);
@@ -215,6 +217,7 @@ fn substitute_condition_call_changed(
     bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
+    let _profile_context = lexical_profile_context("condition_call");
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
     let substituted_lhs = substitute_lexical_bindings_changed(&args[0], bindings, shadowed);
     let lhs_for_shadow = substituted_lhs.as_ref().unwrap_or(&args[0]);
@@ -241,6 +244,7 @@ fn substitute_with_call_changed(
     bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
+    let _profile_context = lexical_profile_context("with_call");
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
     let substituted_bindings = substitute_with_binding_list_changed(&args[0], bindings, shadowed);
     let body_shadowed = shadowed_with_binding_symbols(shadowed, &args[0]);
@@ -265,10 +269,12 @@ fn substitute_scoped_call_changed(
     bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
+    let _profile_context = lexical_profile_context("scoped_call");
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
     let substituted_bindings = substitute_with_binding_list_changed(&args[0], bindings, shadowed);
     let body_shadowed = shadowed_with_binding_symbols(shadowed, &args[0]);
-    let substituted_rest = substitute_arg_list_changed(&args[1..], bindings, &body_shadowed);
+    let substituted_rest =
+        substitute_arg_list_changed(&args[1..], bindings, &body_shadowed, head, 1);
 
     if substituted_head.is_none() && substituted_bindings.is_none() && substituted_rest.is_none() {
         return None;
@@ -292,11 +298,13 @@ fn substitute_function_call_changed(
     bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
+    let _profile_context = lexical_profile_context("function_call");
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
     match parse_function(expr) {
         Some(FunctionSpec::SlotBased { body, .. }) => {
             let substituted_body = substitute_lexical_bindings_changed(body, bindings, shadowed);
-            let substituted_rest = substitute_arg_list_changed(&args[1..], bindings, shadowed);
+            let substituted_rest =
+                substitute_arg_list_changed(&args[1..], bindings, shadowed, head, 1);
 
             if substituted_head.is_none()
                 && substituted_body.is_none()
@@ -321,7 +329,8 @@ fn substitute_function_call_changed(
 
             let substituted_body =
                 substitute_lexical_bindings_changed(body, bindings, &body_shadowed);
-            let substituted_rest = substitute_arg_list_changed(&args[2..], bindings, shadowed);
+            let substituted_rest =
+                substitute_arg_list_changed(&args[2..], bindings, shadowed, head, 2);
 
             if substituted_head.is_none()
                 && substituted_body.is_none()
@@ -351,8 +360,9 @@ fn substitute_generic_call_changed(
     bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
+    let _profile_context = lexical_profile_context("generic_call");
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
-    let substituted_args = substitute_arg_list_changed(args, bindings, shadowed);
+    let substituted_args = substitute_arg_list_changed(args, bindings, shadowed, head, 0);
 
     match (substituted_head, substituted_args) {
         (None, None) => None,
@@ -372,13 +382,20 @@ fn substitute_arg_list_changed(
     args: &[Expr],
     bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
+    parent_head: &Expr,
+    index_offset: usize,
 ) -> Option<Vec<Expr>> {
     record_profile_arg_list_start(args.len());
     let profile_detail = lexical_profile_detail_enabled();
     let mut substituted_args: Option<Vec<Expr>> = None;
 
     for (index, arg) in args.iter().enumerate() {
-        let maybe_contains_binding = bindings.may_contain_binding_symbol(arg);
+        let maybe_contains_binding = {
+            let _profile_site =
+                lexical_profile_arg_prefilter_site(parent_head, index + index_offset);
+            let _profile_context = lexical_profile_context("arg_prefilter");
+            bindings.may_contain_binding_symbol(arg)
+        };
         record_profile_arg_prefilter(maybe_contains_binding);
         if !maybe_contains_binding {
             if let Some(substituted_args) = &mut substituted_args {
@@ -392,7 +409,10 @@ fn substitute_arg_list_changed(
         } else {
             None
         };
-        let substituted_arg = substitute_lexical_bindings_changed(arg, bindings, shadowed);
+        let substituted_arg = {
+            let _profile_context = lexical_profile_context("arg_substitution");
+            substitute_lexical_bindings_changed(arg, bindings, shadowed)
+        };
         if profile_detail {
             record_profile_arg_substitution_attempt(profile_start, substituted_arg.is_some());
         }
@@ -478,6 +498,7 @@ fn substitute_with_binding_list_changed(
     bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
+    let _profile_context = lexical_profile_context("with_binding_list");
     let Expr::Call { head, args } = expr else {
         return substitute_lexical_bindings_changed(expr, bindings, shadowed);
     };
@@ -514,6 +535,7 @@ fn substitute_with_binding_item_changed(
     bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
+    let _profile_context = lexical_profile_context("with_binding_item");
     match expr {
         Expr::Atom(Atom::Symbol(_)) => None,
         Expr::Call { head, args }

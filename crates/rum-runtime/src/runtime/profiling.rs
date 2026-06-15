@@ -1,6 +1,7 @@
 use super::{Atom, Expr, Symbol};
-use std::cell::RefCell;
-use std::collections::HashMap;
+use std::cell::{Cell, RefCell};
+use std::collections::{HashMap, hash_map::DefaultHasher};
+use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 use std::time::Instant;
 
@@ -9,6 +10,7 @@ const LEXICAL_PROFILE_DETAIL_ENV: &str = "RUM_PROFILE_LEXICAL_DETAIL";
 const LEXICAL_PROFILE_INCREMENTAL_ENV: &str = "RUM_PROFILE_LEXICAL_INCREMENTAL";
 const LEXICAL_PROFILE_SHAPES_ENV: &str = "RUM_PROFILE_LEXICAL_SHAPES";
 const LEXICAL_PROFILE_BINDINGS_ENV: &str = "RUM_PROFILE_LEXICAL_BINDINGS";
+const PRESENCE_REUSE_MIN_NODES: u64 = 1024;
 
 static LEXICAL_PROFILE_ENABLED: AtomicU8 = AtomicU8::new(0);
 static LEXICAL_PROFILE_DETAIL_ENABLED: AtomicU8 = AtomicU8::new(0);
@@ -81,6 +83,32 @@ struct PresenceShapeKey {
     shape: PresenceRootShape,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceContextKey {
+    kind: PresenceScanKind,
+    context: &'static str,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceContextShapeKey {
+    kind: PresenceScanKind,
+    context: &'static str,
+    shape: PresenceRootShape,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceArgSite {
+    parent: PresenceRootShape,
+    index: u16,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceArgSiteKey {
+    kind: PresenceScanKind,
+    site: PresenceArgSite,
+    shape: PresenceRootShape,
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 struct PresenceShapeStats {
     scans: u64,
@@ -97,11 +125,155 @@ struct PresenceBindingKey {
     target: Symbol,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceBindingNameKey {
+    shape: PresenceRootShape,
+    target_text: Symbol,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceReuseKey {
+    kind: PresenceScanKind,
+    shape: PresenceRootShape,
+    target_text: Option<Symbol>,
+    head_ptr: usize,
+    args_ptr: usize,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceReuseGroupKey {
+    kind: PresenceScanKind,
+    shape: PresenceRootShape,
+    target_text: Option<Symbol>,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct PresenceReuseGroupStats {
+    unique_ptrs: u64,
+    scans: u64,
+    nodes: u64,
+    timed: u64,
+    nanos: u64,
+    max_scans_per_ptr: u64,
+    true_count: u64,
+    false_count: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceFingerprintKey {
+    kind: PresenceScanKind,
+    shape: PresenceRootShape,
+    target_text: Option<Symbol>,
+    fingerprint: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceFingerprintGroupKey {
+    kind: PresenceScanKind,
+    shape: PresenceRootShape,
+    target_text: Option<Symbol>,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct PresenceFingerprintGroupStats {
+    unique_fingerprints: u64,
+    scans: u64,
+    nodes: u64,
+    timed: u64,
+    nanos: u64,
+    max_scans_per_fingerprint: u64,
+    true_count: u64,
+    false_count: u64,
+}
+
 thread_local! {
     static PRESENCE_SHAPE_STATS: RefCell<HashMap<PresenceShapeKey, PresenceShapeStats>> =
         RefCell::new(HashMap::new());
+    static PRESENCE_CONTEXT_STATS: RefCell<HashMap<PresenceContextKey, PresenceShapeStats>> =
+        RefCell::new(HashMap::new());
+    static PRESENCE_CONTEXT_SHAPE_STATS: RefCell<HashMap<PresenceContextShapeKey, PresenceShapeStats>> =
+        RefCell::new(HashMap::new());
+    static PRESENCE_ARG_SITE_STATS: RefCell<HashMap<PresenceArgSiteKey, PresenceShapeStats>> =
+        RefCell::new(HashMap::new());
     static PRESENCE_BINDING_STATS: RefCell<HashMap<PresenceBindingKey, PresenceShapeStats>> =
         RefCell::new(HashMap::new());
+    static PRESENCE_BINDING_NAME_STATS: RefCell<HashMap<PresenceBindingNameKey, PresenceShapeStats>> =
+        RefCell::new(HashMap::new());
+    static PRESENCE_REUSE_STATS: RefCell<HashMap<PresenceReuseKey, PresenceShapeStats>> =
+        RefCell::new(HashMap::new());
+    static PRESENCE_FINGERPRINT_STATS: RefCell<HashMap<PresenceFingerprintKey, PresenceShapeStats>> =
+        RefCell::new(HashMap::new());
+    static LEXICAL_CONTEXT_STACK: RefCell<Vec<&'static str>> = const { RefCell::new(Vec::new()) };
+    static LEXICAL_CONTEXT_DEPTH: Cell<usize> = const { Cell::new(0) };
+    static ARG_PREFILTER_SITE_STACK: RefCell<Vec<PresenceArgSite>> = const { RefCell::new(Vec::new()) };
+    static ARG_PREFILTER_SITE_DEPTH: Cell<usize> = const { Cell::new(0) };
+}
+
+pub(super) struct LexicalProfileContextGuard {
+    active: bool,
+}
+
+impl Drop for LexicalProfileContextGuard {
+    fn drop(&mut self) {
+        if !self.active {
+            return;
+        }
+
+        LEXICAL_CONTEXT_STACK.with(|stack| {
+            stack.borrow_mut().pop();
+        });
+        LEXICAL_CONTEXT_DEPTH.with(|depth| depth.set(depth.get().saturating_sub(1)));
+    }
+}
+
+pub(super) struct LexicalProfileArgSiteGuard {
+    active: bool,
+}
+
+impl Drop for LexicalProfileArgSiteGuard {
+    fn drop(&mut self) {
+        if !self.active {
+            return;
+        }
+
+        ARG_PREFILTER_SITE_STACK.with(|stack| {
+            stack.borrow_mut().pop();
+        });
+        ARG_PREFILTER_SITE_DEPTH.with(|depth| depth.set(depth.get().saturating_sub(1)));
+    }
+}
+
+#[inline]
+pub(super) fn lexical_profile_context(context: &'static str) -> LexicalProfileContextGuard {
+    if !lexical_profile_shapes_enabled() {
+        return LexicalProfileContextGuard { active: false };
+    }
+
+    LEXICAL_CONTEXT_STACK.with(|stack| {
+        stack.borrow_mut().push(context);
+    });
+    LEXICAL_CONTEXT_DEPTH.with(|depth| depth.set(depth.get().saturating_add(1)));
+    LexicalProfileContextGuard { active: true }
+}
+
+#[inline]
+pub(super) fn lexical_profile_arg_prefilter_site(
+    parent_head: &Expr,
+    index: usize,
+) -> LexicalProfileArgSiteGuard {
+    if !lexical_profile_shapes_enabled() {
+        return LexicalProfileArgSiteGuard { active: false };
+    }
+
+    let site = PresenceArgSite {
+        parent: presence_root_shape(parent_head),
+        index: index.min(usize::from(u16::MAX)) as u16,
+    };
+    ARG_PREFILTER_SITE_STACK.with(|stack| {
+        stack.borrow_mut().push(site);
+    });
+    ARG_PREFILTER_SITE_DEPTH.with(|depth| depth.set(depth.get().saturating_add(1)));
+    LexicalProfileArgSiteGuard { active: true }
 }
 
 #[inline]
@@ -375,6 +547,14 @@ pub(super) fn record_profile_single_presence_scan(
     }
     record_presence_shape(PresenceScanKind::Single, expr, result, nodes, elapsed_nanos);
     record_presence_binding(expr, target, result, nodes, elapsed_nanos);
+    record_presence_reuse(
+        PresenceScanKind::Single,
+        expr,
+        Some(Symbol::new(target.context(), target.name())),
+        result,
+        nodes,
+        elapsed_nanos,
+    );
 }
 
 pub(super) fn record_profile_multi_presence_scan(
@@ -406,6 +586,14 @@ pub(super) fn record_profile_multi_presence_scan(
         );
     }
     record_presence_shape(PresenceScanKind::Multi, expr, result, nodes, elapsed_nanos);
+    record_presence_reuse(
+        PresenceScanKind::Multi,
+        expr,
+        None,
+        result,
+        nodes,
+        elapsed_nanos,
+    );
 }
 
 pub(super) fn print_lexical_profile_summary_once() {
@@ -514,7 +702,15 @@ pub(super) fn print_lexical_profile_summary_once() {
         load(&PRESENCE_MULTI_SCAN_FALSE_COUNT),
     );
     print_presence_shape_summary();
+    print_presence_context_summary();
+    print_presence_context_shape_summary();
+    print_presence_arg_site_summary();
+    print_presence_reuse_summary();
+    print_presence_reuse_group_summary();
+    print_presence_fingerprint_summary();
+    print_presence_fingerprint_group_summary();
     print_presence_binding_summary();
+    print_presence_binding_name_summary();
 }
 
 fn record_timing(count: &AtomicU64, total_nanos: &AtomicU64, name: &str, start: Option<Instant>) {
@@ -659,6 +855,13 @@ fn record_presence_shape(
         kind,
         shape: presence_root_shape(expr),
     };
+    let context = current_lexical_profile_context();
+    let context_key = PresenceContextKey { kind, context };
+    let context_shape_key = PresenceContextShapeKey {
+        kind,
+        context,
+        shape: key.shape,
+    };
     PRESENCE_SHAPE_STATS.with(|stats| {
         let mut stats = stats.borrow_mut();
         let entry = stats.entry(key).or_default();
@@ -674,6 +877,28 @@ fn record_presence_shape(
             entry.false_count = entry.false_count.saturating_add(1);
         }
     });
+    PRESENCE_CONTEXT_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(context_key).or_default();
+        record_presence_stats(entry, result, nodes, elapsed_nanos);
+    });
+    PRESENCE_CONTEXT_SHAPE_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(context_shape_key).or_default();
+        record_presence_stats(entry, result, nodes, elapsed_nanos);
+    });
+    if let Some(site) = current_arg_prefilter_site() {
+        let site_key = PresenceArgSiteKey {
+            kind,
+            site,
+            shape: key.shape,
+        };
+        PRESENCE_ARG_SITE_STATS.with(|stats| {
+            let mut stats = stats.borrow_mut();
+            let entry = stats.entry(site_key).or_default();
+            record_presence_stats(entry, result, nodes, elapsed_nanos);
+        });
+    }
 }
 
 fn record_presence_binding(
@@ -691,6 +916,10 @@ fn record_presence_binding(
         shape: presence_root_shape(expr),
         target: *target,
     };
+    let name_key = PresenceBindingNameKey {
+        shape: key.shape,
+        target_text: Symbol::new(target.context(), target.name()),
+    };
     PRESENCE_BINDING_STATS.with(|stats| {
         let mut stats = stats.borrow_mut();
         let entry = stats.entry(key).or_default();
@@ -705,6 +934,67 @@ fn record_presence_binding(
         } else {
             entry.false_count = entry.false_count.saturating_add(1);
         }
+    });
+    PRESENCE_BINDING_NAME_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(name_key).or_default();
+        record_presence_stats(entry, result, nodes, elapsed_nanos);
+    });
+}
+
+fn record_presence_reuse(
+    kind: PresenceScanKind,
+    expr: &Expr,
+    target_text: Option<Symbol>,
+    result: bool,
+    nodes: u64,
+    elapsed_nanos: Option<u64>,
+) {
+    if !lexical_profile_shapes_enabled() || nodes < PRESENCE_REUSE_MIN_NODES {
+        return;
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return;
+    };
+
+    let key = PresenceReuseKey {
+        kind,
+        shape: presence_root_shape(expr),
+        target_text,
+        head_ptr: head.ptr_key(),
+        args_ptr: args.ptr_key(),
+    };
+    PRESENCE_REUSE_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(key).or_default();
+        record_presence_stats(entry, result, nodes, elapsed_nanos);
+    });
+    record_presence_fingerprint(kind, expr, target_text, result, nodes, elapsed_nanos);
+}
+
+fn record_presence_fingerprint(
+    kind: PresenceScanKind,
+    expr: &Expr,
+    target_text: Option<Symbol>,
+    result: bool,
+    nodes: u64,
+    elapsed_nanos: Option<u64>,
+) {
+    if !lexical_profile_shapes_enabled() || nodes < PRESENCE_REUSE_MIN_NODES {
+        return;
+    }
+
+    let key = PresenceFingerprintKey {
+        kind,
+        shape: presence_root_shape(expr),
+        target_text,
+        fingerprint: structural_text_fingerprint(expr),
+    };
+    PRESENCE_FINGERPRINT_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(key).or_default();
+        record_presence_stats(entry, result, nodes, elapsed_nanos);
     });
 }
 
@@ -722,6 +1012,41 @@ fn presence_root_shape(expr: &Expr) -> PresenceRootShape {
                 _ => PresenceRootShape::CallHeadCallOther,
             },
         },
+    }
+}
+
+fn current_lexical_profile_context() -> &'static str {
+    if LEXICAL_CONTEXT_DEPTH.with(Cell::get) == 0 {
+        return "root";
+    }
+
+    LEXICAL_CONTEXT_STACK.with(|stack| stack.borrow().last().copied().unwrap_or("root"))
+}
+
+fn current_arg_prefilter_site() -> Option<PresenceArgSite> {
+    if ARG_PREFILTER_SITE_DEPTH.with(Cell::get) == 0 {
+        return None;
+    }
+
+    ARG_PREFILTER_SITE_STACK.with(|stack| stack.borrow().last().copied())
+}
+
+fn record_presence_stats(
+    stats: &mut PresenceShapeStats,
+    result: bool,
+    nodes: u64,
+    elapsed_nanos: Option<u64>,
+) {
+    stats.scans = stats.scans.saturating_add(1);
+    stats.nodes = stats.nodes.saturating_add(nodes);
+    if let Some(elapsed_nanos) = elapsed_nanos {
+        stats.timed = stats.timed.saturating_add(1);
+        stats.nanos = stats.nanos.saturating_add(elapsed_nanos);
+    }
+    if result {
+        stats.true_count = stats.true_count.saturating_add(1);
+    } else {
+        stats.false_count = stats.false_count.saturating_add(1);
     }
 }
 
@@ -749,6 +1074,296 @@ fn print_presence_shape_summary() {
                 presence_scan_kind_name(key.kind),
                 presence_root_shape_name(key.shape),
                 stats.scans,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
+fn print_presence_context_summary() {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    PRESENCE_CONTEXT_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(16).enumerate() {
+            eprintln!(
+                "rum-profile lexical context rank={} kind={} context={} scans={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_scan_kind_name(key.kind),
+                key.context,
+                stats.scans,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
+fn print_presence_context_shape_summary() {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    PRESENCE_CONTEXT_SHAPE_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(24).enumerate() {
+            eprintln!(
+                "rum-profile lexical context-shape rank={} kind={} context={} shape={} scans={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_scan_kind_name(key.kind),
+                key.context,
+                presence_root_shape_name(key.shape),
+                stats.scans,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
+fn print_presence_arg_site_summary() {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    PRESENCE_ARG_SITE_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(24).enumerate() {
+            eprintln!(
+                "rum-profile lexical arg-site rank={} kind={} parent={} index={} shape={} scans={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_scan_kind_name(key.kind),
+                presence_root_shape_name(key.site.parent),
+                key.site.index,
+                presence_root_shape_name(key.shape),
+                stats.scans,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
+fn print_presence_reuse_summary() {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    PRESENCE_REUSE_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(24).enumerate() {
+            eprintln!(
+                "rum-profile lexical reuse rank={} kind={} shape={} target={} head_ptr={:#x} args_ptr={:#x} scans={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_scan_kind_name(key.kind),
+                presence_root_shape_name(key.shape),
+                profile_optional_symbol_name(key.target_text),
+                key.head_ptr,
+                key.args_ptr,
+                stats.scans,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
+fn print_presence_reuse_group_summary() {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    PRESENCE_REUSE_STATS.with(|stats| {
+        let mut groups = HashMap::<PresenceReuseGroupKey, PresenceReuseGroupStats>::new();
+        for (key, stats) in stats.borrow().iter() {
+            let group = groups
+                .entry(PresenceReuseGroupKey {
+                    kind: key.kind,
+                    shape: key.shape,
+                    target_text: key.target_text,
+                })
+                .or_default();
+            group.unique_ptrs = group.unique_ptrs.saturating_add(1);
+            group.scans = group.scans.saturating_add(stats.scans);
+            group.nodes = group.nodes.saturating_add(stats.nodes);
+            group.timed = group.timed.saturating_add(stats.timed);
+            group.nanos = group.nanos.saturating_add(stats.nanos);
+            group.max_scans_per_ptr = group.max_scans_per_ptr.max(stats.scans);
+            group.true_count = group.true_count.saturating_add(stats.true_count);
+            group.false_count = group.false_count.saturating_add(stats.false_count);
+        }
+
+        let mut entries = groups.into_iter().collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(24).enumerate() {
+            eprintln!(
+                "rum-profile lexical reuse-group rank={} kind={} shape={} target={} unique_ptrs={} scans={} max_scans_per_ptr={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_scan_kind_name(key.kind),
+                presence_root_shape_name(key.shape),
+                profile_optional_symbol_name(key.target_text),
+                stats.unique_ptrs,
+                stats.scans,
+                stats.max_scans_per_ptr,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
+fn print_presence_fingerprint_summary() {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    PRESENCE_FINGERPRINT_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(24).enumerate() {
+            eprintln!(
+                "rum-profile lexical fingerprint rank={} kind={} shape={} target={} fingerprint={:#x} scans={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_scan_kind_name(key.kind),
+                presence_root_shape_name(key.shape),
+                profile_optional_symbol_name(key.target_text),
+                key.fingerprint,
+                stats.scans,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
+fn print_presence_fingerprint_group_summary() {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    PRESENCE_FINGERPRINT_STATS.with(|stats| {
+        let mut groups =
+            HashMap::<PresenceFingerprintGroupKey, PresenceFingerprintGroupStats>::new();
+        for (key, stats) in stats.borrow().iter() {
+            let group = groups
+                .entry(PresenceFingerprintGroupKey {
+                    kind: key.kind,
+                    shape: key.shape,
+                    target_text: key.target_text,
+                })
+                .or_default();
+            group.unique_fingerprints = group.unique_fingerprints.saturating_add(1);
+            group.scans = group.scans.saturating_add(stats.scans);
+            group.nodes = group.nodes.saturating_add(stats.nodes);
+            group.timed = group.timed.saturating_add(stats.timed);
+            group.nanos = group.nanos.saturating_add(stats.nanos);
+            group.max_scans_per_fingerprint = group.max_scans_per_fingerprint.max(stats.scans);
+            group.true_count = group.true_count.saturating_add(stats.true_count);
+            group.false_count = group.false_count.saturating_add(stats.false_count);
+        }
+
+        let mut entries = groups.into_iter().collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(24).enumerate() {
+            eprintln!(
+                "rum-profile lexical fingerprint-group rank={} kind={} shape={} target={} unique_fingerprints={} scans={} max_scans_per_fingerprint={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_scan_kind_name(key.kind),
+                presence_root_shape_name(key.shape),
+                profile_optional_symbol_name(key.target_text),
+                stats.unique_fingerprints,
+                stats.scans,
+                stats.max_scans_per_fingerprint,
                 stats.nodes,
                 stats.timed,
                 stats.nanos,
@@ -795,6 +1410,41 @@ fn print_presence_binding_summary() {
     });
 }
 
+fn print_presence_binding_name_summary() {
+    if !lexical_profile_bindings_enabled() {
+        return;
+    }
+
+    PRESENCE_BINDING_NAME_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(24).enumerate() {
+            eprintln!(
+                "rum-profile lexical binding-name rank={} shape={} target={} scans={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_root_shape_name(key.shape),
+                key.target_text,
+                stats.scans,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
 fn profile_stats_average(total: u64, count: u64) -> u64 {
     if count == 0 { 0 } else { total / count }
 }
@@ -803,6 +1453,52 @@ fn profile_symbol_name(symbol: Symbol) -> String {
     match symbol.identity() {
         Some(identity) => format!("{symbol}#{}", identity),
         None => symbol.to_string(),
+    }
+}
+
+fn profile_optional_symbol_name(symbol: Option<Symbol>) -> String {
+    symbol.map_or_else(|| "-".to_string(), |symbol| symbol.to_string())
+}
+
+fn structural_text_fingerprint(expr: &Expr) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    hash_expr_text(expr, &mut hasher);
+    hasher.finish()
+}
+
+fn hash_expr_text(expr: &Expr, state: &mut impl Hasher) {
+    match expr {
+        Expr::Atom(atom) => hash_atom_text(atom, state),
+        Expr::Call { head, args } => {
+            4_u8.hash(state);
+            hash_expr_text(head, state);
+            args.len().hash(state);
+            for arg in args.iter() {
+                hash_expr_text(arg, state);
+            }
+        }
+    }
+}
+
+fn hash_atom_text(atom: &Atom, state: &mut impl Hasher) {
+    match atom {
+        Atom::Integer(value) => {
+            0_u8.hash(state);
+            value.hash(state);
+        }
+        Atom::Rational(value) => {
+            1_u8.hash(state);
+            value.hash(state);
+        }
+        Atom::String(value) => {
+            2_u8.hash(state);
+            value.hash(state);
+        }
+        Atom::Symbol(symbol) => {
+            3_u8.hash(state);
+            symbol.context().hash(state);
+            symbol.name().hash(state);
+        }
     }
 }
 

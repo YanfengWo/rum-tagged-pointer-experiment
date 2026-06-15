@@ -6,6 +6,129 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-16 Pair/Simp Arg-Prefilter Attribution Probe
+
+Committed the hygienic delayed-RHS substitution fix as `e9989f1`
+(`Fix hygienic delayed RHS substitution`) before continuing performance
+diagnosis.
+
+Added another probe-only attribution layer to the lexical profiler. It does not
+change evaluator behavior. The new `context` / `context-shape` summaries showed
+that essentially all presence-scan cost in the stock `basic-pair4` Pair/Simp
+probe is under `generic_call`, not the `Module`/`With`/`Function` scoped
+branches. A second split around `substitute_arg_list_changed` then showed the
+cost is specifically in `arg_prefilter`: the scan that asks whether an argument
+may contain the current lexical binding before recursively substituting it.
+`arg_substitution` itself is not the owner of the presence-scan wall.
+
+The stock clean-clone probe was still
+`/private/tmp/rum-task2d-basic-pair4-stock.wl` against
+`/private/tmp/rum-mma-hol-unmodified.itrrai/mma-hol` (HEAD `51bbe9e`), run with
+`RUM_PROFILE_LEXICAL_SUBSTITUTION=1 RUM_PROFILE_LEXICAL_DETAIL=1
+RUM_PROFILE_LEXICAL_SHAPES=1 RUM_PROFILE_LEXICAL_BINDINGS=1`. With the heavier
+attribution enabled, the target result was still theorem `True` and changed
+`False`; absolute timing is profiler-inflated and should not be compared to the
+default lane.
+
+Arg-prefilter ownership:
+
+- single-binding presence scans: `6,824,326` scans, `662,415,057` nodes,
+  `13.96s`, all under `arg_prefilter`;
+- multi-binding presence scans: `6,138,394` scans, `218,746,948` nodes,
+  `5.15s`, all under `arg_prefilter`.
+
+The largest concrete arg-prefilter sites are:
+
+- parent `If`, argument index `1`, scanned shape
+  ``call-head-call:HOL`Drule`ORELSEC``: `17,568` scans,
+  `360,134,688` nodes, `7.52s`, all false;
+- parent `Set`, argument index `1`, scanned shape `call-head:Catch`:
+  `20,496` scans, `120,353,360` nodes, `3.68s`, all false;
+- parent `Set`, argument index `1`, scanned shape
+  ``call-head:HOL`Drule`Private`tryConv``: `19,520` scans,
+  `80,319,984` nodes, `1.29s`, all false;
+- parent `Which`, argument index `3`, scanned shape
+  ``call-head-call:HOL`Auto`Simp`Private`condRewrConv``: `18,544` scans,
+  `40,287,584` nodes, `0.56s`, all false.
+
+Interpretation: the current Pair/Simp hot path is repeated prefilter absence
+checking over large unchanged argument expressions, especially conversion
+closures under `If`, `Set`, and `Which`. This is narrower than "lexical
+substitution is slow": the recursive substitution body is not the owner.
+
+The follow-up binding-name aggregation probe merged fresh `res#...` identities
+by textual symbol name and confirmed the top rows are real repeated scans of
+the same local-name families, not profile fragmentation:
+
+- ``call-head-call:HOL`Drule`ORELSEC`` looking for
+  ``HOL`Drule`Private`res``: `17,568` scans, `360,134,688` nodes,
+  `6.63s`, all false;
+- `call-head:Catch` looking for ``HOL`Drule`Private`res``: `20,496` scans,
+  `120,353,360` nodes, `3.43s`, all false;
+- ``call-head:HOL`Drule`Private`tryConv`` looking for
+  ``HOL`Drule`Private`res``: `19,520` scans, `80,319,984` nodes, `1.15s`,
+  all false;
+- ``call-head-call:HOL`Auto`Simp`Private`condRewrConv`` looking for
+  ``HOL`Auto`Simp`Private`c``: `18,544` scans, `40,287,584` nodes,
+  `0.52s`, all false.
+
+The next optimization should target arg-prefilter absence checking, not rule
+matching or recursive substitution. Good candidate directions are: cache or
+summarize symbol-presence for large immutable argument subtrees; or teach
+lexical substitution that certain caller-inserted values cannot contain the
+fresh local symbol introduced after insertion. Do not change the downstream
+`mma-hol` standard to avoid this cost.
+
+End-of-day probe status: added a follow-up presence-reuse profiler to ask
+whether those large absent scans revisit the same shared expression node or
+mostly scan newly allocated equivalent structures. The first reuse run printed
+top rows with `scans=1` even for the largest `Catch` / `TRYCONV` nodes
+(`~41k` nodes each), which is evidence that the hot path is not repeatedly
+visiting one stable `SharedArgs` pointer. It is more likely rebuilding fresh
+conversion closures that are structurally similar but pointer-distinct. A
+`reuse-group` summary was then added to aggregate by `(scan kind, root shape,
+target textual symbol)` and print `unique_ptrs`, `scans`, and
+`max_scans_per_ptr`. Its final Pair run completed after the machine went quiet.
+The top rows are decisive:
+
+- ``call-head-call:HOL`Drule`ORELSEC`` / ``HOL`Drule`Private`res``:
+  `unique_ptrs=17,568`, `scans=17,568`, `max_scans_per_ptr=1`;
+- `call-head:Catch` / ``HOL`Drule`Private`res``: `unique_ptrs=20,496`,
+  `scans=20,496`, `max_scans_per_ptr=1`;
+- ``call-head:HOL`Drule`Private`tryConv`` / ``HOL`Drule`Private`res``:
+  `unique_ptrs=19,520`, `scans=19,520`, `max_scans_per_ptr=1`;
+- ``call-head-call:HOL`Auto`Simp`Private`condRewrConv`` /
+  ``HOL`Auto`Simp`Private`c``: `unique_ptrs=18,544`, `scans=18,544`,
+  `max_scans_per_ptr=1`.
+
+This rules out a simple pointer-keyed presence cache as the primary fix for
+the top absent-scan wall. The next probe should determine whether these are
+structurally identical fresh trees or genuinely distinct trees by adding a
+structural fingerprint aggregation for large scanned expressions.
+
+Structural fingerprint profile completed. The fingerprint intentionally ignores
+generated symbol identity and hashes only expression structure plus symbol
+context/name text. The result shows that the hot absent scans are not unique
+structures; they are repeated structures rebuilt with fresh pointers:
+
+- ``call-head-call:HOL`Drule`ORELSEC`` / ``HOL`Drule`Private`res``:
+  `unique_fingerprints=126`, `scans=17,568`,
+  `max_scans_per_fingerprint=320`;
+- `call-head:Catch` / ``HOL`Drule`Private`res``:
+  `unique_fingerprints=147`, `scans=20,496`,
+  `max_scans_per_fingerprint=320`;
+- ``call-head:HOL`Drule`Private`tryConv`` / ``HOL`Drule`Private`res``:
+  `unique_fingerprints=140`, `scans=19,520`,
+  `max_scans_per_fingerprint=320`;
+- ``call-head-call:HOL`Auto`Simp`Private`condRewrConv`` /
+  ``HOL`Auto`Simp`Private`c``: `unique_fingerprints=133`,
+  `scans=18,544`, `max_scans_per_fingerprint=320`.
+
+Interpretation: a pointer-keyed cache will miss the top cases, but there is
+real structural repetition. The next probe should find where these
+pointer-fresh but structurally repeated conversion closures are rebuilt,
+preferably without changing evaluator semantics.
+
 ## 2026-06-15 Pair/Simp Hygienic RHS Substitution Probe
 
 Reopened the Pair/Simp performance lane probe-first after rejecting further
