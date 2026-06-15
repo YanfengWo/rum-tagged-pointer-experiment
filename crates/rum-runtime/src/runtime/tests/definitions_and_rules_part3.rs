@@ -323,6 +323,82 @@ fn delayed_rule_uses_current_rhs_value_at_application_time() {
 }
 
 #[test]
+fn delayed_rhs_substitution_does_not_capture_inserted_values_in_lexical_scopes() {
+    let mut session = Session::new();
+    assert_eq!(
+        session
+            .eval_text("ClearAll[f, x]; SetAttributes[f, HoldAll]; f[body_] := Module[{x}, Hold[body, x]]; f[x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[x, x$1]"
+    );
+
+    let mut session = Session::new();
+    assert_eq!(
+        session
+            .eval_text("ClearAll[f, x]; f[body_] := With[{x = 1}, Hold[body, x]]; f[x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[x, 1]"
+    );
+
+    let mut session = Session::new();
+    assert_eq!(
+        session
+            .eval_text("ClearAll[f, x, y]; SetAttributes[f, HoldAll]; f[body_] := Function[x, Hold[body, x], HoldAll][y]; f[x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[x, y]"
+    );
+
+    let mut session = Session::new();
+    assert_eq!(
+        session
+            .eval_text("ClearAll[x]; Replace[x, body_ :> Module[{x}, Hold[body, x]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[x, x$1]"
+    );
+
+    let mut session = Session::new();
+    assert_eq!(
+        session
+            .eval_text("ClearAll[f, x]; SetAttributes[f, HoldAll]; f[body_] := Module[{x}, Module[{x}, Hold[body, x]]]; f[x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[x, x$2]"
+    );
+}
+
+#[test]
+fn delayed_rhs_substitution_preserves_same_name_local_binding_behavior() {
+    let mut session = Session::new();
+    assert_eq!(
+        session
+            .eval_text("ClearAll[x, y]; Replace[y, x_ :> Module[{x}, Hold[x]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[y$1]"
+    );
+
+    let mut session = Session::new();
+    assert_eq!(
+        session
+            .eval_text("ClearAll[x, y]; Replace[y, x_ :> With[{x = 1}, Hold[x]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[1]"
+    );
+}
+
+#[test]
 fn replaceall_honors_condition_patterns() {
     let mut session = Session::new();
 

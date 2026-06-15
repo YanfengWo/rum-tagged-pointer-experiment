@@ -60,6 +60,7 @@ mod pattern_matching;
 mod pattern_matching_interpreted;
 mod polynomials;
 mod predicates;
+mod profiling;
 mod resolution;
 mod rewrite_builtins;
 mod scoping;
@@ -86,7 +87,7 @@ use self::{
     hold_thread::*, lexical_substitution::*, listable_dispatch::*, logic::*, lowering::*,
     matcher_and_symbols::*, message_catalog::*, message_format::*, message_selector_parsing::*,
     metadata::*, model::*, namespace_tools::*, options::*, package_tools::*,
-    parse_and_message_helpers::*, pattern_matching::*, polynomials::*, predicates::*,
+    parse_and_message_helpers::*, pattern_matching::*, polynomials::*, predicates::*, profiling::*,
     resolution::*, rewrite_builtins::*, scoping::*, session_api::*, session_eval::*,
     session_helpers::*, session_requests::*, session_state::*, slot_substitution::*, strings::*,
     structure_ops::*, suspension::*, tree_walkers::*,

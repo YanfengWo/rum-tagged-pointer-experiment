@@ -128,15 +128,24 @@ Completed history, archived planning detail, and operational lessons live in
   summary. The old Pair hard failure (`mkPairInjThm` consumed as a
   non-theorem) was traced to rum's too-low default recursion limit and the
   default has been raised to the local Wolfram baseline of `1024`.
-  The remaining Pair performance gate has a strong downstream-side
-  experiment: a scratch `HOL`Auto`Simp`` head-indexed, exact-cached
-  `buildBaseConv` dispatcher makes `stdlib/Pair.wl` cold-load in `85.5s`,
-  runs `pair_tests.wl` green (`42/0`), and reduces public `mkPair[x,y]`
-  simplification from timeout to `34.9s`. Cache-only does not help, so the
-  real ingredient is avoiding the whole `ORELSEC` chain for mismatched rule
-  heads. Decide whether this belongs upstream in `mma-hol` as a Simp
-  algorithm patch, in rum as a general evaluator/closure optimization, or
-  both. The stable snapshot lane also has an experimental closure path:
+  The remaining Pair performance gate must stay rum-side. The old scratch
+  ``HOL`Auto`Simp`` head-indexed `buildBaseConv` experiment crossed the gate,
+  but it changed the downstream standard and is not an acceptance path. The
+  2026-06-15 probe-first diagnosis found and fixed a rum hygienic RHS
+  substitution bug: pattern-bound values inserted into delayed RHS expressions
+  were capturable by inner `Module` locals, unlike WolframKernel behavior for
+  downvalues, `HoldAll` / `HoldFirst`, `RuleDelayed`, `With`, and explicit
+  `Function`. The semantic regressions are now covered in `rum-runtime`, and
+  the same stock Pair/Simp probe still proves the theorem without changing the
+  target term. The performance wall remains rum-side: the latest
+  `basic-pair4-stock` release probe on the unmodified clone is about `51.09s`
+  without profiling and `53.26s` with lexical detail/shape/binding profiling;
+  repeated no-op presence scans over fresh lexical locals such as
+  ``HOL`Drule`Private`res#...`` still dominate. The next Pair/Simp task is to
+  diagnose how to avoid those repeated full-tree absence scans over
+  caller-inserted values that cannot be captured by the fresh lexical locals,
+  before returning to larger representation work. The stable snapshot lane also
+  has an experimental closure path:
   loading through Pair in Stable mode is bounded, but raw full-context
   `DumpSave` captures generated `Module` locals in private contexts
   (`baseConv$...`, `xEq$...`) and can inflate `HOL`Auto`Simp`Private`` to
@@ -198,7 +207,10 @@ Completed history, archived planning detail, and operational lessons live in
   `112.766s` in rum with `userBasic`, versus `23.027s` with user rule only and
   `10.687s` in WolframKernel with `userBasic`. The next performance step is to
   split the rewritten RHS lambda/body descent itself and identify whether a
-  particular body subterm or uniform basic-rule failed dispatch owns the cost.
+  particular body subterm or uniform basic-rule failed dispatch owns the cost;
+  after the 2026-06-15 hygienic substitution finding, do not continue this
+  lower-level split until the minimal Module/RHS semantic mismatch is fixed and
+  the stock probe is remeasured.
 - [ ] Treat `mma-hol` stable-mode snapshot helpers as a required
   developer-workflow gate for `rum-hol` migration. First-pass `Contexts[]`,
   file timestamp/size/existence helpers, `AbsoluteTime`, `Round`, simple

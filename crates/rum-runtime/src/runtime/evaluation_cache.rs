@@ -35,7 +35,9 @@ static CALL_STABILITY_REWRITTEN_DIRTY_SKIP_COUNT: AtomicU64 = AtomicU64::new(0);
 static EVALUATE_ENTRY_COUNT: AtomicU64 = AtomicU64::new(0);
 static DOWN_VALUE_SCAN_COUNT: AtomicU64 = AtomicU64::new(0);
 static DOWN_VALUE_APPLICATION_COUNT: AtomicU64 = AtomicU64::new(0);
+static SUB_VALUE_APPLICATION_COUNT: AtomicU64 = AtomicU64::new(0);
 static BUILTIN_APPLICATION_COUNT: AtomicU64 = AtomicU64::new(0);
+static EVAL_MODULE_ENTRY_COUNT: AtomicU64 = AtomicU64::new(0);
 
 /// One bloom bit per written symbol, derived from the interned pair id plus
 /// the generated identity so distinct `Module` locals map to distinct bits.
@@ -63,9 +65,18 @@ impl Session {
         record_symbol_profile_counter("down_value_applications", symbol);
     }
 
+    pub(super) fn record_profile_sub_value_application(&self, symbol: &Symbol) {
+        record_evaluation_cache_counter(&SUB_VALUE_APPLICATION_COUNT, "sub_value_applications");
+        record_symbol_profile_counter("sub_value_applications", symbol);
+    }
+
     pub(super) fn record_profile_builtin_application(&self, symbol: &Symbol) {
         record_evaluation_cache_counter(&BUILTIN_APPLICATION_COUNT, "builtin_applications");
         record_symbol_profile_counter("builtin_applications", symbol);
+    }
+
+    pub(super) fn record_profile_eval_module_entry(&self) {
+        record_evaluation_cache_counter(&EVAL_MODULE_ENTRY_COUNT, "eval_module_entries");
     }
 
     /// Full invalidation: definition-state change without a single owning

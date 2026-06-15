@@ -404,6 +404,7 @@ impl Session {
                 &lhs,
                 &substituted,
             );
+            self.record_profile_sub_value_application(&symbol);
             return self
                 .evaluate_definition_rhs(option_scope, substituted)
                 .map(Some);
@@ -444,6 +445,7 @@ impl Session {
                 &sub_value.lhs,
                 &substituted,
             );
+            session.record_profile_sub_value_application(&symbol);
             session
                 .evaluate_definition_rhs(option_scope, substituted)
                 .map(Some)
@@ -697,15 +699,18 @@ impl Session {
         option_scope: Option<OptionValueScope>,
         rhs: Expr,
     ) -> Result<Expr, EvalError> {
+        let profile_start = lexical_profile_start();
         let rhs_result = self.evaluate_with_option_value_scope(option_scope, rhs);
         let outcome = self.suspend_with_result_frame(rhs_result, |session, outcome| {
             session.finish_definition_rhs_evaluation(outcome)
         });
 
-        match outcome {
+        let result = match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
             outcome => self.finish_definition_rhs_evaluation(outcome),
-        }
+        };
+        record_profile_definition_rhs_eval(profile_start);
+        result
     }
 
     fn finish_definition_rhs_evaluation(

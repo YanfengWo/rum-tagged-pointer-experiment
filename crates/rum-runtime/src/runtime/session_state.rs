@@ -395,3 +395,9 @@ impl Default for Session {
         }
     }
 }
+
+impl Drop for Session {
+    fn drop(&mut self) {
+        print_lexical_profile_summary_once();
+    }
+}

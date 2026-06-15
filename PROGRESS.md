@@ -6,6 +6,222 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-15 Pair/Simp Hygienic RHS Substitution Probe
+
+Reopened the Pair/Simp performance lane probe-first after rejecting further
+trial-and-error optimizer changes. The stock clean-clone target remained
+`/private/tmp/rum-task2d-basic-pair4-stock.wl` against the unmodified
+`mma-hol` clone. The old clean clone path was empty by the time of the final
+rerun, so the same probe file now points at the clean unmodified clone
+`/private/tmp/rum-mma-hol-unmodified.itrrai/mma-hol` (HEAD `51bbe9e`).
+
+Added cold-gated lexical profiling only:
+
+- `RUM_PROFILE_LEXICAL_SUBSTITUTION=1` for phase-level counters and summary
+  timing;
+- `RUM_PROFILE_LEXICAL_DETAIL=1` for presence-scan timings;
+- `RUM_PROFILE_LEXICAL_SHAPES=1` for presence-scan root-shape attribution;
+- `RUM_PROFILE_LEXICAL_BINDINGS=1` for single-binding target-symbol
+  attribution.
+
+With the probes enabled, the same 8-repeat target still proves the theorem and
+does not change the target term. The measured lexical block is now clear:
+`Module` initializer substitution is negligible, while final `Module` body
+substitution accounts for essentially all lexical substitution time. In the
+detail run, presence scans consume about `18.40s` of `23.01s` lexical
+substitution time (`13.43s` single-binding plus `4.97s` multi-binding).
+
+The dominant timed presence-scan shapes are all no-op scans:
+
+- single ``call-head-call:HOL`Drule`ORELSEC`` looking for
+  ``HOL`Drule`Private`res``: `17,568` scans, `360,134,688` nodes,
+  `7.24s`, all false;
+- single `call-head:Catch` looking for ``HOL`Drule`Private`res``: `20,496`
+  scans, `120,353,360` nodes, `3.62s`, all false;
+- single ``call-head:HOL`Drule`Private`tryConv`` looking for
+  ``HOL`Drule`Private`res``: `19,520` scans, `80,319,984` nodes,
+  `1.25s`, all false;
+- single ``call-head-call:HOL`Auto`Simp`Private`condRewrConv`` looking for
+  ``HOL`Auto`Simp`Private`c``: `18,544` scans, `40,287,584` nodes,
+  `0.55s`, all false.
+
+This changed the interpretation. Local WolframKernel checks show that values
+substituted for pattern variables into a delayed RHS are not captured by an
+inner `Module` local of the same name:
+
+```wl
+ClearAll[f, x, y];
+SetAttributes[f, HoldFirst];
+f[body_] := Module[{x}, Hold[body, x]];
+f[x]
+(* WolframKernel: Hold[x, x$...] *)
+(* current rum:    Hold[x$1, x$1] *)
+```
+
+The same difference appears for ordinary downvalues, `HoldAll`, and
+`RuleDelayed` replacement rules. Therefore the Pair/Simp `res`/`ORELSEC`
+scanner wall is not just a low-level scanner constant: current rum substitutes
+pattern bindings into the whole RHS before `Module` local renaming, so inserted
+argument expressions are scanned and can be incorrectly captured by the
+inner lexical binder.
+
+Implemented the rum-side hygienic RHS fix in rule binding substitution:
+delayed RHS substitution now treats `Module`, `With`, and explicit `Function`
+locals as alpha-renamed boundaries before substituting pattern bindings into
+their bodies. Pattern-bound values are inserted directly, so fresh local
+alpha-renames do not recursively capture values that came from the caller; if
+the local has the same symbol as the pattern variable itself, the same-name
+binding behavior is preserved. Added regression coverage for downvalues,
+`HoldAll` / `HoldFirst`, `RuleDelayed`, nested `Module`, `With`, and explicit
+`Function`.
+
+Validation:
+
+- `cargo test -p rum-runtime delayed_rhs_substitution -- --nocapture`: green;
+- `cargo test -p rum-runtime`: green (`654` tests);
+- `cargo fmt --check`: green;
+- release `basic-pair4-stock` probe on the unmodified clone: preheat
+  `23.10s`, target `51.09s`, theorem `True`, changed `False`;
+- release profile probe with lexical detail/shape/binding: preheat `28.31s`,
+  target `53.26s`, theorem `True`, changed `False`.
+
+The rerun fixes the semantic mismatch but does not remove the Pair/Simp
+performance wall. Presence scans still consume about `16.59s` of `23.82s`
+lexical substitution time (`12.04s` single-binding plus `4.55s`
+multi-binding), and the dominant timed shapes are still no-op absence scans:
+
+- single ``call-head-call:HOL`Drule`ORELSEC``: `17,568` scans,
+  `360,134,688` nodes, `6.24s`, all false;
+- single `call-head:Catch`: `20,496` scans, `120,353,360` nodes, `3.37s`,
+  all false;
+- single ``call-head:HOL`Drule`Private`tryConv``: `19,520` scans,
+  `80,319,984` nodes, `1.12s`, all false;
+- single ``call-head-call:HOL`Auto`Simp`Private`condRewrConv``: `18,544`
+  scans, `40,287,584` nodes, `0.50s`, all false.
+
+The binding-level profile now prints symbol identities and shows those rows as
+fresh alpha locals such as ``HOL`Drule`Private`res#...`` rather than a single
+textual `res` symbol. The next performance diagnosis should therefore stay on
+the rum side and quantify how to avoid repeated full-tree absence scans over
+caller-inserted values that cannot be captured by those fresh lexical locals.
+
+## 2026-06-13 Task 2d Failed-Dispatch Kernel Probe
+
+Started Task 2d against the unmodified clean `mma-hol` clone at
+`/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol` (HEAD `698e3d0`). The probe is
+stock HOL code plus an external `/private/tmp` driver; no `mma-hol` source file
+is edited.
+
+Small reproducer: `basic`-only
+``HOL`Auto`Simp`Private`simpFixpointConv`` on `pair4Same`. Calibration with
+`/private/tmp/rum-task2d-basic-pair4-stock.wl`:
+
+- 8 target repeats: preheat `22.616s`, target `79.261s`, theorem `True`,
+  changed `False`;
+- 20 target repeats during sampling: preheat `20.707s`, target `226.650s`,
+  theorem `True`, changed `False`.
+
+Sampled the 20-repeat target window with macOS `sample` for 40s and reduced
+`/private/tmp/rum-task2d-basic-pair4.sample` with the repo profile tools. The
+flat profile is dominated by lexical substitution rather than term matching:
+
+- self time: `substitute_lexical_bindings_changed` `24.5%`,
+  `Symbol::cmp` `7.1%`, allocation/drop/arg-list substitution following;
+- inclusive path: `100%` through `evaluate_definition_rhs` and `eval_module`;
+- attribution: `evaluate_definition_rhs` is `93.8%`
+  `try_apply_sub_values_from_symbol`; `eval_module` is `62.4%` SubValue path;
+  `substitute_arg_list_changed` is `100%` under generic call substitution;
+  `substitute_function_call_changed` is `100%` under lexical substitution;
+  `eval_set` is `50.6%` under `resume_module_initializers`.
+
+Added cold-gated `RUM_PROFILE_EVALUATION_CACHE=1` counters for
+`sub_value_applications` and `eval_module_entries`. A one-repeat profile run
+(`/private/tmp/rum-task2d-basic-pair4-profile.log`) shows the target reaches at
+least the following powers of two:
+
+- ``sub_value_applications[HOL`Drule`REWRCONV] = 2048``;
+- ``sub_value_applications[HOL`Auto`Simp`Private`simpRuleConv] = 2048``;
+- ``sub_value_applications[HOL`Drule`ORELSEC] = 2048``;
+- ``down_value_applications[HOL`Drule`Private`tryTermMatch] = 2048``;
+- ``down_value_applications[HOL`Drule`Private`convFail] = 2048``;
+- ``down_value_applications[HOL`Terms`stripOrigin] = 1048576``;
+- `eval_module_entries = 262144` over the profiled process.
+
+Current interpretation: the Task 2d hotspot is not `tryTermMatch` depth alone.
+Each failed conversion dispatch repeatedly applies SubValues whose RHS bodies
+are `Module`/`Function`-heavy WL code, then pays full lexical substitution and
+local `Set` execution before failing. The next one-variable A/B should be a
+rum-side optimization or diagnostic around Module/SubValue RHS execution
+(for example, a cheaper lexical-substitution path or a compiled Module
+renaming plan), measured against this same stock probe. Do not reintroduce a
+`Simp.wl` fork.
+
+Follow-up A/B work kept the same unmodified clone and external probe. Host
+load made the first post-17:30 timings unreliable, so those intermediate
+numbers were discarded and the lane was remeasured after the load cleared.
+Retained 8-repeat target timings:
+
+- first lexical-substitution cut, checking the binding map before the shadowed
+  set for symbol atoms: `69.224s`;
+- single-binding lookup view for lexical substitution: `62.692s` and
+  `62.978s`;
+- arg-list prefilter that skips full substitution for subtrees containing no
+  bound symbol: `53.079s` and `53.070s`;
+- single-binding-specific prefilter scan: `51.167s`, `55.363s`, `49.140s`,
+  then `56.016s` and `51.672s` after rejecting the next experiment; median is
+  about `51.7s`.
+
+The final retained code keeps all four cuts above. A hand-written scan loop
+experiment was rejected because it did not beat noise (`54.440s`, `50.073s`)
+and was reverted. The newest sample after the retained prefilter work shows
+the remaining self-time frontier has moved from full lexical substitution into
+the prefilter scan itself: `expr_may_contain_symbol` about `17.4%`,
+multi-binding `expr_may_contain_any_binding` about `5.2%`, then allocation,
+drop, stability checks, and `normalize_match_expr`. Further work should not
+blindly add another scanner tweak; the next evidence-backed direction is
+either a real per-expression symbol-presence summary/cache with measured
+overhead, or a larger Module/SubValue execution representation change.
+
+Follow-up presence-cache experiments were rejected. A recursive thread-local
+single-binding presence cache made the same 8-repeat target much worse
+(`93.997s`), because every nested call paid cache lookup overhead. A narrower
+top-level-only cache did improve the small target (`45.499s`, `45.381s`), but
+did not move the real Pair gate: the split probe measured `0.620s` preload,
+`565.747s` in `Get["stdlib/Pair.wl"]`, and `566.367s` total versus the prior
+`564.032s` Pair-body baseline. A shadowed-aware prefilter/early-exit attempt
+also failed to show stable benefit on the same target (`50.807s`, then
+`54.730s`). None of these cache/shadowed variants are retained. The useful
+lesson is that the remaining repeated lexical presence-scan cost is not fixed
+by adding ordinary side caches around the current recursive scanner; it needs
+either a cheaper expression-level summary carried by the representation, or a
+larger reduction in how often Module/SubValue RHS substitution is invoked.
+
+Higher-level validation after the same retained changes:
+
+- focused PropTaut distribution probe through clean `mma-hol` returned
+  `{True, True}` with internal timing `10.402s`;
+- `scripts/mma-hol-bounded-smoke.sh --mode tests --only test/proptaut_tests`
+  with release `rum-cli` exited `0` in `203s` under a `360s` stage timeout.
+- `load/stdlib/Pair` through the same clean clone exited `0` in `571s` under a
+  `900s` stage timeout, with stdout ending in `"ok"` and empty stderr. This is
+  a material change from the earlier timeout status and would narrowly fit a
+  `600s` budget on this run, but it is still far from the intended
+  constant-bound target around `150s`; Pair/Simp remains the main performance
+  gate.
+- A follow-up rum split probe showed the same stage is almost entirely
+  `Pair.wl` body time: preload through `auto/Simp.wl` was `0.727s`, while
+  `Get["stdlib/Pair.wl"]` itself was `564.032s` (`564.759s` total). The matched
+  WolframKernel split was `0.226s` preload, `40.249s` Pair body,
+  `40.475s` total, so the remaining gap is Pair-body execution, not preload.
+- A 40s `sample` window inside rum's `Pair.wl` body keeps the same kernel
+  mechanism as the smaller `basic-pair4` probe: self time is led by
+  `expr_may_contain_symbol` `15.8%`, allocation/drop, and
+  `expr_may_contain_any_binding` `6.1%`; inclusive time is `100%` through
+  `evaluate_definition_rhs`, `eval_module`, and `resume_module_initializers`.
+  Caller attribution shows both symbol-presence scanners are `100%` under
+  `substitute_arg_list_changed`; `eval_set` is `53.7%` under Module
+  initializers; `normalize_match_expr` is `94.4%` under `eval_set`.
+
 ## 2026-06-13 Pair/Simp Secondary Split
 
 Continued from the Task 2c verdict using the same scratch instrumented

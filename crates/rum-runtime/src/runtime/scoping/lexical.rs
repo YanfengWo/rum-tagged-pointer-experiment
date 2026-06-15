@@ -46,6 +46,9 @@ impl Session {
     }
 
     pub(in crate::runtime) fn eval_module(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        self.record_profile_eval_module_entry();
+        let profile_start = lexical_profile_start();
+
         if args.len() != 2 {
             return Ok(self.invalid_call_with_exact_arg_count("Module", args, 2));
         }
@@ -80,7 +83,9 @@ impl Session {
             definition.delayed_own_value = None;
         }
 
-        self.resume_module_initializers(items, args[1].clone(), renames, 0)
+        let result = self.resume_module_initializers(items, args[1].clone(), renames, 0);
+        record_profile_eval_module(profile_start);
+        result
     }
 
     pub(in crate::runtime) fn eval_block(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -253,14 +258,19 @@ impl Session {
         renames: SymbolExprMap,
         index: usize,
     ) -> Result<Expr, EvalError> {
+        record_profile_module_resume_entry(index);
         if index >= items.len() {
+            let profile_start = lexical_profile_start();
             let body = substitute_lexical_bindings(&body, &renames, &BTreeSet::new());
+            record_profile_module_body_substitution(profile_start);
             return self.evaluate(body);
         }
 
         let (symbol, init) = items[index].clone();
         if let Some(init) = init {
+            let profile_start = lexical_profile_start();
             let renamed_init = substitute_lexical_bindings(&init, &renames, &BTreeSet::new());
+            record_profile_module_init_substitution(profile_start);
             let init_result = self.evaluate(renamed_init);
             let outcome = self.suspend_with_frame_lazy(init_result, || {
                 let items = items.clone();

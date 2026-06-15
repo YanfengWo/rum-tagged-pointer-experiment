@@ -1,14 +1,153 @@
 use super::*;
 
+struct LexicalBindings<'a> {
+    map: &'a SymbolExprMap,
+    single: Option<(&'a Symbol, &'a Expr)>,
+}
+
+impl<'a> LexicalBindings<'a> {
+    fn new(map: &'a SymbolExprMap) -> Self {
+        let single = if map.len() == 1 {
+            map.iter().next()
+        } else {
+            None
+        };
+        Self { map, single }
+    }
+
+    #[inline]
+    fn get(&self, symbol: &Symbol) -> Option<&'a Expr> {
+        if let Some((bound_symbol, value)) = self.single {
+            if bound_symbol == symbol {
+                return Some(value);
+            }
+            return None;
+        }
+
+        self.map.get(symbol)
+    }
+
+    fn may_contain_binding_symbol(&self, expr: &Expr) -> bool {
+        if let Some((symbol, _)) = self.single {
+            return expr_may_contain_symbol(expr, symbol);
+        }
+
+        expr_may_contain_any_binding(expr, self.map)
+    }
+}
+
+fn expr_may_contain_any_binding(expr: &Expr, bindings: &SymbolExprMap) -> bool {
+    if lexical_profile_enabled() {
+        let profile_start = if lexical_profile_detail_enabled() {
+            lexical_profile_start()
+        } else {
+            None
+        };
+        let (result, nodes) = expr_may_contain_any_binding_counted(expr, bindings);
+        record_profile_multi_presence_scan(profile_start, expr, result, nodes);
+        return result;
+    }
+
+    expr_may_contain_any_binding_fast(expr, bindings)
+}
+
+fn expr_may_contain_any_binding_fast(expr: &Expr, bindings: &SymbolExprMap) -> bool {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => bindings.contains_key(symbol),
+        Expr::Atom(_) => false,
+        Expr::Call { head, args } => {
+            expr_may_contain_any_binding_fast(head, bindings)
+                || args
+                    .iter()
+                    .any(|arg| expr_may_contain_any_binding_fast(arg, bindings))
+        }
+    }
+}
+
+fn expr_may_contain_any_binding_counted(expr: &Expr, bindings: &SymbolExprMap) -> (bool, u64) {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => (bindings.contains_key(symbol), 1),
+        Expr::Atom(_) => (false, 1),
+        Expr::Call { head, args } => {
+            let (head_result, mut nodes) = expr_may_contain_any_binding_counted(head, bindings);
+            if head_result {
+                return (true, nodes);
+            }
+
+            for arg in args.iter() {
+                let (arg_result, arg_nodes) = expr_may_contain_any_binding_counted(arg, bindings);
+                nodes = nodes.saturating_add(arg_nodes);
+                if arg_result {
+                    return (true, nodes);
+                }
+            }
+
+            (false, nodes)
+        }
+    }
+}
+
+fn expr_may_contain_symbol(expr: &Expr, target: &Symbol) -> bool {
+    if lexical_profile_enabled() {
+        let profile_start = if lexical_profile_detail_enabled() {
+            lexical_profile_start()
+        } else {
+            None
+        };
+        let (result, nodes) = expr_may_contain_symbol_counted(expr, target);
+        record_profile_single_presence_scan(profile_start, expr, target, result, nodes);
+        return result;
+    }
+
+    expr_may_contain_symbol_fast(expr, target)
+}
+
+fn expr_may_contain_symbol_fast(expr: &Expr, target: &Symbol) -> bool {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => symbol == target,
+        Expr::Atom(_) => false,
+        Expr::Call { head, args } => {
+            expr_may_contain_symbol_fast(head, target)
+                || args
+                    .iter()
+                    .any(|arg| expr_may_contain_symbol_fast(arg, target))
+        }
+    }
+}
+
+fn expr_may_contain_symbol_counted(expr: &Expr, target: &Symbol) -> (bool, u64) {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => (symbol == target, 1),
+        Expr::Atom(_) => (false, 1),
+        Expr::Call { head, args } => {
+            let (head_result, mut nodes) = expr_may_contain_symbol_counted(head, target);
+            if head_result {
+                return (true, nodes);
+            }
+
+            for arg in args.iter() {
+                let (arg_result, arg_nodes) = expr_may_contain_symbol_counted(arg, target);
+                nodes = nodes.saturating_add(arg_nodes);
+                if arg_result {
+                    return (true, nodes);
+                }
+            }
+
+            (false, nodes)
+        }
+    }
+}
+
 fn substitute_symbol_binding_changed(
     symbol: &Symbol,
-    bindings: &SymbolExprMap,
+    bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
+    let value = bindings.get(symbol)?;
     if shadowed.contains(symbol) {
         None
     } else {
-        bindings.get(symbol).cloned()
+        Some(value.clone())
     }
 }
 
@@ -27,7 +166,7 @@ fn shadowed_with_binding_symbols(shadowed: &BTreeSet<Symbol>, expr: &Expr) -> BT
 fn substitute_pattern_call_changed(
     head: &Expr,
     args: &[Expr],
-    bindings: &SymbolExprMap,
+    bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -45,11 +184,10 @@ fn substitute_pattern_call_changed(
         ],
     ))
 }
-
 fn substitute_assignment_like_call_changed(
     head: &Expr,
     args: &[Expr],
-    bindings: &SymbolExprMap,
+    bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -74,7 +212,7 @@ fn substitute_assignment_like_call_changed(
 fn substitute_condition_call_changed(
     head: &Expr,
     args: &[Expr],
-    bindings: &SymbolExprMap,
+    bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -100,7 +238,7 @@ fn substitute_condition_call_changed(
 fn substitute_with_call_changed(
     head: &Expr,
     args: &[Expr],
-    bindings: &SymbolExprMap,
+    bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -124,7 +262,7 @@ fn substitute_with_call_changed(
 fn substitute_scoped_call_changed(
     head: &Expr,
     args: &[Expr],
-    bindings: &SymbolExprMap,
+    bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -151,7 +289,7 @@ fn substitute_function_call_changed(
     expr: &Expr,
     head: &Expr,
     args: &[Expr],
-    bindings: &SymbolExprMap,
+    bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -210,7 +348,7 @@ fn substitute_function_call_changed(
 fn substitute_generic_call_changed(
     head: &Expr,
     args: &[Expr],
-    bindings: &SymbolExprMap,
+    bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let substituted_head = substitute_lexical_bindings_changed(head, bindings, shadowed);
@@ -232,14 +370,34 @@ fn substitute_generic_call_changed(
 
 fn substitute_arg_list_changed(
     args: &[Expr],
-    bindings: &SymbolExprMap,
+    bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Vec<Expr>> {
-    let mut substituted_args = None;
+    record_profile_arg_list_start(args.len());
+    let profile_detail = lexical_profile_detail_enabled();
+    let mut substituted_args: Option<Vec<Expr>> = None;
 
     for (index, arg) in args.iter().enumerate() {
-        if let Some(substituted_arg) = substitute_lexical_bindings_changed(arg, bindings, shadowed)
-        {
+        let maybe_contains_binding = bindings.may_contain_binding_symbol(arg);
+        record_profile_arg_prefilter(maybe_contains_binding);
+        if !maybe_contains_binding {
+            if let Some(substituted_args) = &mut substituted_args {
+                substituted_args.push(arg.clone());
+            }
+            continue;
+        }
+
+        let profile_start = if profile_detail {
+            lexical_profile_start()
+        } else {
+            None
+        };
+        let substituted_arg = substitute_lexical_bindings_changed(arg, bindings, shadowed);
+        if profile_detail {
+            record_profile_arg_substitution_attempt(profile_start, substituted_arg.is_some());
+        }
+
+        if let Some(substituted_arg) = substituted_arg {
             substituted_args
                 .get_or_insert_with(|| args[..index].to_vec())
                 .push(substituted_arg);
@@ -256,12 +414,24 @@ pub(super) fn substitute_lexical_bindings(
     bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,
 ) -> Expr {
-    substitute_lexical_bindings_changed(expr, bindings, shadowed).unwrap_or_else(|| expr.clone())
+    let profile_start = lexical_profile_start();
+    record_profile_lexical_substitution_start(bindings.len(), shadowed.len());
+    if bindings.is_empty() {
+        record_profile_lexical_substitution_finish(profile_start, false);
+        return expr.clone();
+    }
+
+    let bindings = LexicalBindings::new(bindings);
+    let substituted = substitute_lexical_bindings_changed(expr, &bindings, shadowed);
+    let changed = substituted.is_some();
+    let result = substituted.unwrap_or_else(|| expr.clone());
+    record_profile_lexical_substitution_finish(profile_start, changed);
+    result
 }
 
 fn substitute_lexical_bindings_changed(
     expr: &Expr,
-    bindings: &SymbolExprMap,
+    bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     match expr {
@@ -305,7 +475,7 @@ fn substitute_lexical_bindings_changed(
 
 fn substitute_with_binding_list_changed(
     expr: &Expr,
-    bindings: &SymbolExprMap,
+    bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     let Expr::Call { head, args } = expr else {
@@ -341,7 +511,7 @@ fn substitute_with_binding_list_changed(
 
 fn substitute_with_binding_item_changed(
     expr: &Expr,
-    bindings: &SymbolExprMap,
+    bindings: &LexicalBindings<'_>,
     shadowed: &BTreeSet<Symbol>,
 ) -> Option<Expr> {
     match expr {
