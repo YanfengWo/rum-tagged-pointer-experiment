@@ -91,9 +91,17 @@ impl Session {
                 &substituted,
             );
             self.record_profile_down_value_application(&symbol);
-            return self
-                .evaluate_definition_rhs(option_scope, substituted)
-                .map(Some);
+            let _profile_definition_source = evaluation_profile_definition_source(symbol);
+            let profile_rule_start = definition_rule_timing_start();
+            let result = self.evaluate_definition_rhs(option_scope, substituted);
+            record_profile_definition_rule_timing(
+                "down_value_rhs_eval",
+                &symbol,
+                index,
+                profile_rule_start,
+                result.is_ok(),
+            );
+            return result.map(Some);
         }
 
         let down_value = down_value.clone();
@@ -133,9 +141,17 @@ impl Session {
                 &substituted,
             );
             session.record_profile_down_value_application(&symbol);
-            session
-                .evaluate_definition_rhs(option_scope, substituted)
-                .map(Some)
+            let _profile_definition_source = evaluation_profile_definition_source(symbol);
+            let profile_rule_start = definition_rule_timing_start();
+            let result = session.evaluate_definition_rhs(option_scope, substituted);
+            record_profile_definition_rule_timing(
+                "down_value_rhs_eval",
+                &symbol,
+                index,
+                profile_rule_start,
+                result.is_ok(),
+            );
+            result.map(Some)
         })
     }
 
@@ -408,6 +424,7 @@ impl Session {
                 &substituted,
             );
             self.record_profile_sub_value_application(&symbol);
+            let _profile_definition_source = evaluation_profile_definition_source(symbol);
             return self
                 .evaluate_definition_rhs(option_scope, substituted)
                 .map(Some);
@@ -450,6 +467,7 @@ impl Session {
                 &substituted,
             );
             session.record_profile_sub_value_application(&symbol);
+            let _profile_definition_source = evaluation_profile_definition_source(symbol);
             session
                 .evaluate_definition_rhs(option_scope, substituted)
                 .map(Some)
@@ -704,6 +722,8 @@ impl Session {
         rhs: Expr,
     ) -> Result<Expr, EvalError> {
         let profile_start = lexical_profile_start();
+        let eval_cache_profile_start =
+            evaluation_cache_profile_source_timing_start("definition_rhs_eval_by_source");
         let rhs_result = self.evaluate_with_option_value_scope(option_scope, rhs);
         let outcome = self.suspend_with_result_frame(rhs_result, |session, outcome| {
             session.finish_definition_rhs_evaluation(outcome)
@@ -714,6 +734,7 @@ impl Session {
             outcome => self.finish_definition_rhs_evaluation(outcome),
         };
         record_profile_definition_rhs_eval(profile_start);
+        record_profile_definition_rhs_eval_by_source(eval_cache_profile_start);
         result
     }
 

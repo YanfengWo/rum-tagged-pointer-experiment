@@ -141,10 +141,79 @@ Completed history, archived planning detail, and operational lessons live in
   `basic-pair4-stock` release probe on the unmodified clone is about `51.09s`
   without profiling and `53.26s` with lexical detail/shape/binding profiling;
   repeated no-op presence scans over fresh lexical locals such as
-  ``HOL`Drule`Private`res#...`` still dominate. The next Pair/Simp task is to
-  diagnose how to avoid those repeated full-tree absence scans over
-  caller-inserted values that cannot be captured by the fresh lexical locals,
-  before returning to larger representation work. The stable snapshot lane also
+  ``HOL`Drule`Private`res#...`` still dominate. The next Pair/Simp task is not
+  optimization yet: keep building fixed reproducer probes and split the hot
+  WL/runtime functions until each remaining cost is atomic enough to name.
+  The first repo-level probe assets live under
+  `scripts/perf-probes/pair-simp/`; continue from their RHS body/lambda,
+  basic-only, and user-basic public-shape splits before returning to larger
+  representation work. The current runtime baseline shows the finishing
+  opened-body target already performs about `973k` evaluator entries,
+  `70k` down-value applications, `20.6k` `Module` entries, and `8.8M`
+  call-stability checks with no rewrite. Source-level timing now puts the
+  largest exclusive chunks in `Module` wrapper/body-substitution work under
+  Drule conversion combinators such as ``HOL`Drule`ORELSEC``,
+  ``HOL`Drule`Private`tryConv``, ``HOL`Drule`REPEATC``, and
+  ``HOL`Drule`TRYCONV``. The follow-up source/context probe now shows those
+  module body substitutions are essentially lexical `arg_prefilter` absent
+  scans over large Drule conversion trees, especially
+  ``HOL`Drule`ORELSEC`` and ``HOL`Drule`Private`tryConv``. The latest
+  source-target/fingerprint split names the top owner as
+  ``ORELSEC``/``tryConv`` scanning large text-equivalent conversion trees for
+  ``HOL`Drule`Private`res``; exact fingerprints churn with fresh identities
+  (`max exact scans` about `2`). The follow-up split explains both open
+  questions: generation bumps are not source-less after target-family
+  aggregation, but come from concrete fresh-local dirty-bloom saturation sites
+  such as ``HOL`Kernel`Private`tyMatch`` / `k`,
+  ``HOL`Drule`ORELSEC`` / `res`, ``HOL`Drule`Private`tryConv`` / `res`,
+  ``HOL`Drule`REWRCONV`` / `c`, and
+  ``HOL`Auto`Simp`Private`simpRuleConv`` / `c`; Drule conversion trees get
+  fresh exact identities because rule RHS application alpha-renames scoped
+  locals with `Symbol::with_identity` before rebuilding large
+  `Module`/`CompoundExpression`/`If`/`Catch`/`ORELSEC` closures. The
+  call-stability dirty/generation miss stream is therefore a separate
+  invalidation amplifier: dirty writes are led by
+  ``HOL`Drule`Private`collectAppSpine``, ``HOL`Drule`REWRCONV``,
+  ``HOL`Drule`Private`tryTermMatch``, and
+  ``HOL`Auto`Simp`Private`productiveSimpRule``. Do not move to optimization
+  yet. The WL-hygiene boundary is now covered by
+  `rule_rhs_alpha_rename_does_not_rewrite_inserted_bound_values` and
+  `delayed_rhs_substitution_keeps_inserted_compound_values_outside_new_locals`.
+  The provenance split is complete for the finishing opened-body target: the
+  dominant ``ORELSEC``/``tryConv`` `res` absence-scan node volume is over
+  rule-RHS rebuilt parents whose RHS alpha ids are older than the exact fresh
+  target local. But timed presence scanning itself is under a second in that
+  probe, so the next Pair/Simp work stayed diagnostic. Rule-RHS
+  substitution/rebuild timing has now also been measured and rejected as the
+  100s-class owner on the already-preheated opened-body target: the largest
+  single RHS timing bucket was only about `0.42s`, while the final post-preheat
+  target was about `7.7s`. The true current wall is Simp preheat:
+  `basicSimpset[]` and the three lazy congruence lemmas run through
+  `PropTaut` theorem construction. The new preheat profile probes show
+  `preheat-basic` around `40-47s` under profile and congruence preheat around
+  `118-133s` under profile, with each congruence lemma about `39-40s`.
+  DownValue-index timing names the hot branches as
+  ``HOL`Kernel`Private`tyMatch`` `tyVar`/`tyApp` branches and abs-recursive
+  ``HOL`Terms`stripOrigin`` / `typeOf` / `vsubstImpl`; builtin self timing then
+  puts the next runtime layer in `Fold` and `Module` under `tyMatch`, plus
+  `Set`/`CompoundExpression` costs in theorem plumbing. `Part` and
+  `KeyExistsQ` are not major self-time owners in the latest basic-preheat run.
+  Do not optimize yet, and do not continue drilling into small side probes
+  until the current root hotspot is closed. The smaller single-lemma and
+  single-function probes under `scripts/perf-probes/pair-simp/` are retained
+  side evidence only: `imp`/`and`/`or` congruence lemmas are same-shaped
+  `PropTaut` runs; no-profile `impCongLemma[]` is `22.54s` in rum versus
+  `7.08s` in WolframKernel; bare ``HOL`Bool`EXCLUDEDMIDDLE[p]`` is `0.969s`
+  in rum versus `0.322s` in WolframKernel. These numbers do not explain the
+  hundreds-of-seconds Pair gate by themselves. The next Pair/Simp task is to
+  rebuild a closed no-profile phase tree rooted at the unmodified `Pair.wl`
+  load or the warm public mkPair probe: dependency preload, preheat, public
+  `simpConv`/`CONVRULE` construction and application, theorem plumbing, and
+  post-conversion package work must sum close to the parent wall time. Only the
+  largest closed child segment may be split further. Record the root target,
+  parent segment, child percentage, profiling overhead ratio, and log paths for
+  every descent.
+  The stable snapshot lane also
   has an experimental closure path:
   loading through Pair in Stable mode is bounded, but raw full-context
   `DumpSave` captures generated `Module` locals in private contexts

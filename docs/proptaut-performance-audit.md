@@ -149,10 +149,13 @@ Items 1-4 plausibly compound to 3-5x on this workload. Reaching the
 remaining 2-4x is representation-level work and should be re-planned from a
 fresh profile, not extrapolated.
 
-`PropTaut` is the first gate of the current `mma-hol` frontier; the same
-constant factor sits under `basicSimpset[]` (~106s), `andCongLemma[]`
-(~99s), and the `Pair.wl` load (>335s), so wins here propagate down the
-whole stdlib lane.
+`PropTaut` was the first obvious gate of the `mma-hol` frontier when this
+audit was written; the same constant factor sits under `basicSimpset[]` and
+congruence lemma construction, so wins here can propagate down the stdlib
+lane. Later Pair/Simp work showed the caveat: a real `PropTaut` hotspot is not
+automatically the current `Pair.wl` hotspot. Before drilling into any smaller
+`PropTaut` descendant, rebuild a closed phase tree for the current Pair root
+and prove that the `PropTaut` child still dominates that root.
 
 ## 5. How to find hot regions in this codebase (method)
 
@@ -200,6 +203,14 @@ was read in the wrong form. Concretely:
   (package load) versus assign-evaluate-interleaved lanes (`propTaut`,
   `Simp`) stress different state-invalidation paths; a lane-by-lane ratio
   table against the oracle localizes a regression before any profiler runs.
+- **Keep the current root target invariant.** Hotspot diagnosis must be a
+  top-down closed timing tree, not a walk through whichever smaller probe is
+  convenient. Name the root target, measure it with profiling off, split it
+  into child phases whose times close over the parent, then descend only into
+  the largest child and record its percentage of the parent. A smaller probe
+  such as one-case ``HOL`Bool`EXCLUDEDMIDDLE[p]`` may show a real constant
+  factor, but it is side-lane evidence unless its parent segment is proven to
+  dominate the current root.
 
 ## 6. Note on the prior Bool optimization arc
 

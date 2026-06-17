@@ -6,6 +6,574 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-16 Pair/Simp Reproducible Hotspot Probe Assets
+
+Stopped treating the current Pair/Simp wall as ready for optimization. The
+working rule is now stricter: for every known hot shape, first create a stable
+probe file that reproduces it against an unmodified `mma-hol`, then split the
+called WL/runtime functions until the remaining hot spots are atomic enough to
+name directly.
+
+Added static probe assets under `scripts/perf-probes/pair-simp/` plus
+`scripts/pair-simp-hotspot-probes.sh`. The runner uses
+`scripts/run-bounded.py`, runs from the clean `mma-hol` checkout root, and
+keeps probe code outside the downstream tree. The common prelude deliberately
+uses fully qualified HOL symbols; an earlier draft accidentally parsed short
+names before packages loaded, which produced a fake fast shape and was fixed
+before retaining measurements.
+
+Validation on `/private/tmp/rum-mma-hol-unmodified.itrrai/mma-hol` with
+`target/release/rum-cli`:
+
+Completing outer reproducers:
+
+| Probe | Target result |
+| --- | ---: |
+| `basic-only-pair4` | `5.63s`, theorem `True`, changed `False` |
+| `pair4-stock-repeat8` | `51.64s` for 8 repeats, theorem `True`, changed `False` |
+| `user-basic-pair2` | timeout at `120s` |
+
+The timeout probe has empty stdout because `rum-cli` emits collected `Print`
+output only after evaluation returns. It is useful as a bounded public-shape
+non-completion reproducer, not as phase-level evidence. For phase evidence,
+split into completing probes like the RHS body and RHS lambda files above.
+
+Two probe correctness fixes matter for all later readings:
+
+- `common.wls` must use fully qualified HOL symbols; short names parsed before
+  package load bind to `Global`` and create fake fast probes.
+- `impCongLemma`, `andCongLemma`, and `orCongLemma` are Private helpers in
+  `auto/Simp.wl`, not public API. Congruence preheat is now an explicit
+  `preheat-congruence` phase instead of being hidden in target timings.
+
+Corrected opened-body split after separating one-time preheats:
+
+| Probe / phase | Target result |
+| --- | ---: |
+| `preheat-basic` | about `22.3s` |
+| `preheat-congruence` | about `64.7-65.2s` |
+| logical left child `t[[1,2]]` | `1.25s`, changed `False` |
+| logical right child `t[[2]]`, no context | `1.38s`, changed `False` |
+| `doAndCong` left child | `1.29s`, changed `False` |
+| `doAndCong` right child with left context | `1.46s`, changed `False` |
+| `doAndCong` theorem plumbing | `0.10s`, changed `False` |
+| original `doAndCong` / `descendOnce` | `3.19s`, changed `False` |
+| full opened-body `simpFixpointConv` after preheat | `6.27s`, changed `False` |
+
+Manual `simpFixpointConv` entry split for the same opened body closes over
+that `6.27s`: `buildBaseConv` is about `0.01s`, the two top
+`TRYCONV[REPEATC[baseConv]]` passes are about `0.04-0.05s` each, and the two
+`descendOnce` calls are about `2.84s` and `3.09s`.
+
+Corrected RHS-lambda depth split after preheating basic rules and congruence
+lemmas:
+
+| Remaining lambda shape | `descendOnce` time |
+| --- | ---: |
+| opened body | `2.89s` |
+| one remaining abs | `6.64s` |
+| two remaining abs | `14.42s` |
+| three remaining abs | `29.59s` |
+| four remaining abs | `60.43s` |
+
+The abs-branch split shows the four-abs cost is not opening or theorem
+plumbing: open/BETA is below `0.001s`, `ABS` is below `0.001s`, and the inner
+`simpFixpointConv` on the three-abs term is `58.14s` versus `60.25s` for the
+original `descendOnce`. Splitting that inner `simpFixpointConv` shows the same
+pattern one level down: `buildBaseConv` about `0.009s`, top rewrite passes
+about `0.04s`, and the two unchanged `descendOnce` calls about `28.00s` and
+`29.81s`.
+
+Current interpretation is still probe-only: the WL-level recursive multiplier
+is now explicit. For unchanged lambda terms, `descendOnce` on an abs delegates
+almost entirely to an inner `simpFixpointConv`; that fixpoint entry evaluates
+two unchanged `descendOnce` passes to prove stability, producing an approximate
+doubling at each binder level. The next probe-only work is to correlate the
+remaining atomic-looking costs with rum runtime counters under these fixed
+probes: lexical-substitution prefilter scans, module/closure construction, and
+owned-tree churn inside those repeated unchanged `descendOnce` passes. Do not
+implement optimizations until that runtime attribution is complete or a clear
+semantic divergence is found.
+
+## 2026-06-16 Pair/Simp Runtime-Layer Probe Baseline
+
+Added runtime profile control for the fixed Pair/Simp probes without changing
+normal evaluator behavior:
+
+- `RumProfileReset[]` and `RumProfileSnapshot[label]` are inert unless a
+  profile environment variable is enabled.
+- `RUM_PROFILE_LEXICAL_DEFER=1` and
+  `RUM_PROFILE_EVALUATION_CACHE_DEFER=1` keep profile code configured but
+  inactive until `RumProfileReset[]`, so preheat phases do not dominate the
+  measurement.
+- The Pair/Simp `runtime-profile-*` runner path now enables lexical and
+  evaluation-cache profile environments by default; set
+  `RUM_PROFILE_LEXICAL_SHAPES=0 RUM_PROFILE_LEXICAL_BINDINGS=0` for the
+  low-disturbance category/count mode. The runner disables evaluation-cache
+  power-of-two incremental logs by default; set
+  `RUM_PROFILE_EVALUATION_CACHE_INCREMENTAL=1` if those checkpoints are needed.
+
+The first full lexical shape/binding profile for
+`runtime-profile-opened-body-user-basic` timed out at `300s` before defer
+control because profile mode covered package load and preheat. After adding
+defer, the same full shape/binding profile completed in `130s`, but inflated
+the target segment to `40.89s`. That run is useful for top shape/rebuild
+attribution, not for wall-time comparison. Its largest rebuild groups were
+large `rule_rhs_call` and `generic_call` rebuilds around
+``HOL`Drule`ORELSEC``, ``HOL`Auto`Simp`Private`combineSimpConvs``, and
+``HOL`Auto`Simp`Private`simpStepConv``.
+
+Low-disturbance runtime profile mode keeps lexical detail timing but disables
+shape/binding hash maps. Those runs stay close to the unprofiled WL-level
+timings and are the comparable baseline:
+
+| Probe target | Target time | RHS evals | Module evals | lexical substitutions | arg substitution attempts | presence-scan nodes |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| opened body `simpFixpointConv` | `6.36s` | `77,322` | `20,656` | `23,328` | `372,974` | `112,537,915` |
+| three-abs `descendOnce` | `28.82s` | `302,101` | `81,609` | `91,911` | `1,486,709` | `455,967,571` |
+| outer-abs inner `simpFixpointConv` | `59.91s` | `605,241` | `163,523` | `184,155` | `2,979,339` | `913,977,875` |
+
+This closes the WL/runtime multiplier correlation: the same runtime categories
+scale about `1x -> 4x -> 8x` across the opened-body, three-abs, and outer-inner
+targets. The remaining question is therefore inside those repeated runtime
+operations, not in a new larger input shape.
+
+With evaluation-cache snapshot enabled on the opened-body target, the same
+low-disturbance run measured `6.58s` for the target and reported:
+
+- `973,755` evaluator entries, `70,252` down-value applications, `7,070`
+  sub-value applications, `215,507` builtin applications, and `20,656`
+  `Module` entries.
+- `8,791,390` stability checks, `995,448` call-stability hits, `3,068,438`
+  misses (`2,208,477` absent, `367,176` generation, `492,785` dirty), and
+  `1,700,861` stable rewritten-dirty skips.
+- `45,206` symbol invalidations, `311` dirty-bloom saturations, and `33`
+  call-cache size-cap clears within the target segment.
+- Top builtin applications: `Set` `39,402`, `CompoundExpression` `23,572`,
+  `If` `21,436`, `Module` `20,656`, `MatchQ` `20,577`, and `Part` `20,445`.
+- Top HOL down-values: ``HOL`Terms`stripOrigin`` `15,954`,
+  ``HOL`Kernel`concl`` `7,859`, ``HOL`Terms`typeOf`` `4,814`,
+  ``HOL`Auto`Simp`Private`isEquation`` `4,240`,
+  ``HOL`Kernel`Private`tyMatch`` `3,308`,
+  ``HOL`Drule`Private`tryTermMatch`` `2,791`, and
+  ``HOL`Drule`Private`tryConv`` `2,488`.
+
+The first source-level runtime attribution then added inclusive/exclusive
+timing frames for RHS evaluation and `Module`, plus source counters for symbol
+invalidations and source timing for `Module` lexical substitution. On the same
+opened-body target (`6.57s` with this probe), the highest exclusive/self-time
+items were:
+
+| Source timing item | Count | Self time |
+| --- | ---: | ---: |
+| `module_body_substitution_by_source` / ``HOL`Drule`ORELSEC`` | `2,172` | `0.860s` |
+| `eval_module_by_source` / ``HOL`Drule`ORELSEC`` | `2,172` | `0.757s` |
+| `eval_module_by_source` / ``HOL`Drule`TRYCONV`` | `168` | `0.635s` |
+| `eval_module_by_source` / ``HOL`Drule`REPEATC`` | `127` | `0.621s` |
+| `eval_module_by_source` / ``HOL`Drule`Private`tryConv`` | `2,488` | `0.569s` |
+| `module_body_substitution_by_source` / ``HOL`Drule`Private`tryConv`` | `2,488` | `0.384s` |
+| `module_body_substitution_by_source` / ``HOL`Drule`REPEATC`` | `127` | `0.326s` |
+
+Top source-owned symbol invalidations were
+``HOL`Drule`Private`collectAppSpine`` `13,112`,
+``HOL`Drule`REWRCONV`` `6,369`,
+``HOL`Drule`Private`tryTermMatch`` `4,911`, and
+``HOL`Auto`Simp`Private`productiveSimpRule`` `4,240`.
+
+Current interpretation after this source-level pass was still
+diagnostic-only: the smallest finishing target already showed massive repeated
+evaluator, `Module`, down-value, builtin, and call-stability activity while
+proving no rewrite occurred. Source-level timing moved the next split away
+from broad `Module` suspicion and into module body substitution under Drule
+conversion combinators, especially ``HOL`Drule`ORELSEC``,
+``HOL`Drule`Private`tryConv``, ``HOL`Drule`REPEATC``, and
+``HOL`Drule`TRYCONV``. The follow-up 2026-06-17 split below tests that
+directly.
+
+## 2026-06-17 Pair/Simp Runtime Internal Split
+
+Extended the runtime profile probes one layer deeper:
+
+- lexical source summaries now run in low-disturbance mode via
+  `RUM_PROFILE_LEXICAL_SOURCES=1`, independent of the heavier shape/binding
+  hash maps;
+- lexical context guards now remain active for source summaries, so source
+  output correctly attributes this lane to `arg_prefilter`;
+- evaluation-cache snapshots now include `call-stability-source-head` counts,
+  grouped by active definition source and call head.
+
+On the same opened-body target, the low-disturbance probe with these summaries
+measured `7.14s`. The repeated counts are still the same shape
+(`77,322` RHS evals, `20,656` `Module` entries, `8.79M` stability checks), so
+the source summaries are usable as attribution, not a new workload.
+
+The module body substitution hotspot is now explained by lexical prefilter
+presence scans:
+
+| Source / shape | Scans | Nodes | Time |
+| --- | ---: | ---: | ---: |
+| ``HOL`Drule`ORELSEC`` / all single `arg_prefilter` scans | `19,548` | `59,926,272` | `0.872s` |
+| ``HOL`Drule`ORELSEC`` / ``call-head-call:HOL`Drule`ORELSEC`` | `2,066` | `54,418,260` | `0.795s` |
+| ``HOL`Drule`Private`tryConv`` / all single `arg_prefilter` scans | `22,392` | `16,436,594` | `0.374s` |
+| ``HOL`Drule`Private`tryConv`` / `call-head:Catch` | `2,488` | `16,404,250` | `0.372s` |
+| ``HOL`Drule`REPEATC`` / all multi `arg_prefilter` scans | `3,175` | `16,378,553` | `0.310s` |
+
+These line up with the source-level self timings from the previous split:
+``HOL`Drule`ORELSEC`` module body substitution was about `0.895s`, and its
+source lexical prefilter scans account for about `0.872s`; ``tryConv`` was
+about `0.394s` vs. `0.374s`; ``REPEATC`` was about `0.313s` vs. `0.310s`.
+That makes the hot suboperation concrete: repeated `arg_prefilter` absence
+scans over large Drule conversion trees inserted into `Module` bodies.
+
+The call-stability split is a separate repeated-work lane, concentrated by
+source and head:
+
+- ``HOL`Drule`Private`collectAppSpine`` / `List`: `123,881` checks,
+  `77,649` misses, mostly absent plus many rewritten-dirty skips.
+- ``HOL`Drule`Private`tryConv`` / `List`: `123,546` checks,
+  `116,899` misses, mostly absent.
+- ``HOL`Drule`Private`tryConv`` / ``HOL`Types`tyApp``: `116,548` checks,
+  `112,856` misses, mostly absent.
+- ``HOL`Drule`ORELSEC`` / `List`: `105,139` checks, `77,349` misses, with
+  dirty and generation misses prominent.
+- ``HOL`Drule`ORELSEC`` / ``HOL`Types`tyApp``: `102,113` checks,
+  `92,693` misses, again dirty/generation-heavy.
+
+The next probe split added binding-target and opt-in source-fingerprint
+summaries, plus a separate invalidation-source view for call-stability misses.
+This was still diagnostic-only; normal evaluator behavior is unchanged, and
+source fingerprints are behind
+`RUM_PROFILE_LEXICAL_SOURCE_FINGERPRINTS=1`.
+
+On `runtime-profile-opened-body-user-basic`, the source/target split names the
+largest lexical absent scans directly:
+
+| Source / target / shape | Scans | Nodes | Time |
+| --- | ---: | ---: | ---: |
+| ``HOL`Drule`ORELSEC`` / ``HOL`Drule`Private`res`` / ``call-head-call:HOL`Drule`ORELSEC`` | `2,066` | `54,418,260` | `0.86s` |
+| ``HOL`Drule`Private`tryConv`` / ``HOL`Drule`Private`res`` / `call-head:Catch` | `2,488` | `16,404,250` | `0.38s` |
+| ``HOL`Drule`ORELSEC`` / ``HOL`Drule`Private`res`` / ``call-head:HOL`Drule`Private`tryConv`` | `2,172` | `5,482,684` | `0.08s` |
+| ``HOL`Drule`REPEATC`` / multi-binding / ``call-head:HOL`Drule`Private`tryConv`` | `127` | `5,458,036` | `0.16s` |
+| ``HOL`Drule`REPEATC`` / multi-binding / ``call-head-call:HOL`Drule`REPEATC`` | `127` | `5,455,890` | `0.10s` |
+| ``HOL`Drule`REPEATC`` / multi-binding / ``call-head:HOL`Drule`ORELSEC`` | `106` | `5,455,594` | `0.09s` |
+
+The fingerprint follow-up is important: these hot scans are not one exact tree
+being scanned hundreds of times. For the top ``ORELSEC`` /
+``HOL`Drule`Private`res`` shape, text fingerprints group to `214` structures
+with `max_scans_per_fingerprint=16`, but exact fingerprints split to `1,033`
+structures with `max_scans_per_fingerprint=2`. The top ``tryConv`` /
+`Catch` shape similarly has `242` text fingerprints vs. `1,166` exact
+fingerprints, again `max exact=2`. That points at repeated text-equivalent
+conversion trees with fresh identities, not a simple exact-tree memoization
+miss.
+
+The follow-up no-source generation split showed that the generation bumps were
+not actually source-less; the earlier output was fragmented by fresh symbol
+names and top-N reporting. Evaluation-cache profiling now records invalidation
+file/line, active definition source, exact target text, and target family with
+generated `$...` suffixes stripped. On the low-disturbance
+`runtime-profile-opened-body-user-basic` run, the target segment was about
+`8.59s` and still reported `367,176` generation misses, `492,785` dirty
+misses, `311` dirty-bloom saturations, and `311` call-generation bumps. The
+critical family view attributed those generation bumps to concrete sources:
+`scoping/lexical.rs:316` under ``HOL`Kernel`Private`tyMatch`` writing family
+``HOL`Kernel`Private`k`` (`29`), and `definition_tags.rs:272` under
+``HOL`Drule`ORELSEC`` / ``HOL`Drule`Private`res`` (`24`),
+``HOL`Drule`Private`tryConv`` / ``HOL`Drule`Private`res`` (`22`),
+``HOL`Drule`REWRCONV`` / ``HOL`Drule`Private`c`` (`22`), and
+``HOL`Auto`Simp`Private`simpRuleConv`` / ``HOL`Auto`Simp`Private`c`` (`21`).
+Dirty writes remain a separate invalidation amplifier led by
+``HOL`Drule`Private`collectAppSpine`` target families `args` and `cur`
+(`6,556` each), ``HOL`Drule`Private`tryConv`` / `res` (`2,488`),
+``HOL`Drule`Private`tryTermMatch`` / `args` and `head` (`2,430` each),
+``HOL`Drule`ORELSEC`` / `res` (`2,172`), and ``HOL`Drule`REWRCONV`` / `c`
+(`2,121`).
+
+The Drule fresh-identity rebuild split is now attributed to rule-RHS
+alpha-renaming, not to a later generic call alone. With lexical shape summaries
+enabled, the profile-inflated same target finished in about `73.24s`.
+Expression rebuild text/exact groups show text-equivalent but exact-unique
+trees: ``HOL`Drule`ORELSEC`` rebuilds `Module` and `CompoundExpression`
+with `225` text fingerprints but `2,172` exact fingerprints, `If` with `214`
+text fingerprints but `2,066` exact fingerprints, and nested `ORELSEC` with
+`214` text fingerprints but `1,033` exact fingerprints. ``HOL`Drule`Private`tryConv``
+shows the same pattern for `Module` / `CompoundExpression` / `Set` (`242`
+text vs. `2,332` exact), and `Catch` (`1,166` exact, max rebuilds `2`).
+The explicit `rule-rhs-alpha-rename` summary names the source: `tryConv`
+renames local ``HOL`Drule`Private`res`` `2,488` times, `collectAppSpine`
+renames `cur` and `args` `2,430` times each, `tryTermMatch` renames `head`
+and `args` `2,430` times each, and `ORELSEC` renames `res` `2,172` times.
+All of those fresh locals carry symbol identities.
+
+Current interpretation remains probe-only. Rule application alpha-renames
+scoped RHS locals with fresh identities, rebuilds large Drule conversion
+closures around them, and lexical `arg_prefilter` then repeatedly scans those
+fresh trees to prove absence of newly introduced locals such as
+``HOL`Drule`Private`res`` and ``HOL`Auto`Simp`Private`c``. This is still
+probe-only evidence, not permission to optimize. The next step is to split
+whether those absence scans can be explained by a precise provenance boundary
+and to measure the remaining internal cost before any shortcut is implemented.
+
+Added a small semantic guardrail for the provenance question. The internal unit
+test
+`rule_rhs_alpha_rename_does_not_rewrite_inserted_bound_values` proves that
+rule RHS substitution can alpha-rename a scoped local to a fresh identity while
+leaving an inserted bound value with the original plain symbol and shared call
+nodes. The public evaluator test
+`delayed_rhs_substitution_keeps_inserted_compound_values_outside_new_locals`
+locks the same behavior through `Module`, `With`, and explicit `Function`:
+compound held values inserted from the caller are not captured by locals that
+are introduced by the delayed RHS.
+
+The remaining probe work is to test the provenance hypothesis directly. Build
+instrumentation that classifies each hot `arg_prefilter` absence scan by
+target-local origin and scanned-subtree origin: direct caller-provided binding,
+rule-RHS rebuilt parent, ordinary evaluated value, or unknown. The key question
+is how much of the ``ORELSEC``/`tryConv` `res` node volume is over subtrees
+created before the exact fresh local identity existed. Until that fraction is
+measured and the residual unclassified scan cost is split, do not implement a
+negative certificate, compact footprint, or shortcut.
+
+The provenance classifier is now in place behind
+`RUM_PROFILE_LEXICAL_PROVENANCE=1`. It records exact-fingerprint provenance for
+direct rule binding values and rule-RHS rebuilds, classifies presence-scan
+targets as rule-RHS alpha identities / generated `$` names / plain symbols, and
+reports whether the scanned expression's maximum rule-RHS alpha id is older
+than the exact target alpha id. This remains diagnostic-only.
+
+Semantic consistency was rechecked before using the classifier: the internal
+identity-level test and the public `Module` / `With` / `Function` compound
+inserted-value tests pass in rum, and the same compound inserted-value cases
+match WolframKernel modulo generated `$` suffixes.
+
+The low-shape provenance run on
+`runtime-profile-opened-body-user-basic`
+(`/tmp/rum-pair-simp-probes.m4HXYh`) finished in `176s`; the target segment was
+profile-inflated to about `81.51s` and still returned theorem `True`,
+changed `False`. The main evidence:
+
+- ``HOL`Drule`ORELSEC`` scanning for ``HOL`Drule`Private`res`` over nested
+  ``HOL`Drule`ORELSEC``: `2,066` scans, `54,418,260` nodes, all
+  `target_origin=rule-rhs-alpha`, `expr_origin=rule-rhs-rebuild`, and
+  `alpha_relation=expr-older-than-target`;
+- ``HOL`Drule`Private`tryConv`` scanning for `res` over `Catch`: `2,332`
+  large scans, `16,395,778` nodes, same origin/relation;
+- ``HOL`Drule`ORELSEC`` scanning for `res` over `tryConv`: `2,120` large
+  scans, `5,479,280` nodes, same origin/relation;
+- ``HOL`Drule`TRYCONV`` scanning for `res` over `tryConv`: `106` large scans,
+  `5,457,136` nodes, same origin/relation;
+- ``HOL`Auto`Simp`Private`simpRuleConv`` scanning for private `c` over
+  `condRewrConv`: `2,120` scans, `5,477,160` nodes, same origin/relation.
+
+So the hot single-binding absence scans are no longer unknown provenance: the
+dominant node volume is over rule-RHS rebuilt parents whose contained RHS alpha
+ids are older than the fresh local being searched for. However, the same run
+also reports only about `0.824s` total timed `presence_single_scan_time` for
+`88.26M` single-scan nodes. On this opened-body target, scan node volume is a
+clear structural multiplier but not the full wall-time owner by itself. The
+next probe should therefore time rule RHS substitution/rebuild phases directly
+instead of moving to a skip/footprint optimization.
+
+Follow-up RHS timing did that and rejected RHS substitution/rebuild as the
+100s-class owner on the already-preheated opened-body target. With
+`RUM_PROFILE_RULE_RHS_TIMING=1` and heavy shape/provenance summaries disabled,
+`runtime-profile-opened-body-user-basic`
+(`/tmp/rum-pair-simp-probes.QeWkZ0`) completed in `104s` total. The profiled
+target segment itself was about `7.74s`; the largest RHS timing item was only
+``HOL`Drule`REWRCONV`` `call_args` at about `0.42s`, followed by
+``HOL`Kernel`Private`tyMatch`` `call_args` at about `0.16s`. This showed that
+the run was mostly measuring the two preheats (`preheat-basic` and
+`preheat-congruence`) plus the final target, while `RumProfileReset[]` after
+preheat intentionally excluded the true slow setup window.
+
+Two new runtime profile probe windows now isolate those preheats:
+`runtime-profile-preheat-basic.wls` resets before `basicSimpset[]`, and
+`runtime-profile-preheat-congruence.wls` resets after `basicSimpset[]` and
+before the three lazy congruence lemmas. On the unmodified clean clone:
+
+| Probe window | Target segment | Notes |
+| --- | ---: | --- |
+| `runtime-profile-preheat-basic` | `40.4-46.8s` under profile | `basicSimpset[]` via 19 `PropTaut` schemas |
+| `runtime-profile-preheat-congruence` | `118.2-133.1s` under profile | three congruence lemmas, about `39-40s` each |
+
+This supersedes the older interpretation that the final opened-body target was
+the main wall. The post-preheat target can be single-digit seconds; the current
+large Pair/Simp wall is dominated by `PropTaut` theorem construction during
+Simp preheat.
+
+DownValue-index timing, behind `RUM_PROFILE_DEFINITION_RULE_TIMING=1`, then
+split the hot WL functions without editing `mma-hol`. In the basic preheat
+window (`/tmp/rum-pair-simp-probes.yNYBD6`), the biggest branch-level costs
+were:
+
+| DownValue branch | Calls | Inclusive time |
+| --- | ---: | ---: |
+| ``HOL`Kernel`Private`tyMatch`` index `0` (`tyVar[...]`) | `190,074` | `15.6s` |
+| ``HOL`Terms`stripOrigin`` index `4` (`abs[...]`) | `429,832` | `13.5s` |
+| ``HOL`Kernel`Private`tyMatch`` index `1` (`tyApp[...]`) | `124,606` | `4.2s` |
+| ``HOL`Terms`typeOf`` index `4` (`abs[...]`) | `272,286` | `4.1s` |
+| ``HOL`Terms`Private`vsubstImpl`` index `4` (`abs[...]`) | `119,430` | `6.2s` |
+
+The congruence window (`/tmp/rum-pair-simp-probes.2pOAfO`) has the same shape
+at larger scale: ``stripOrigin`` `abs` branch `1,408,655` calls / `48.1s`,
+``tyMatch`` `tyVar` branch `523,474` / `43.4s`, ``tyMatch`` `tyApp` branch
+`343,578` / `11.6s`, and ``typeOf`` `abs` branch `759,580` / `11.8s`.
+
+Builtin timing was added next behind `RUM_PROFILE_BUILTIN_TIMING=1`, with both
+inclusive and child-subtracted self rankings. The self ranking from
+`runtime-profile-preheat-basic`
+(`/tmp/rum-pair-simp-probes.AQih8j`) makes the next runtime layer concrete:
+
+| Builtin self item | Calls | Self time |
+| --- | ---: | ---: |
+| `Fold` in ``HOL`Kernel`Private`tyMatch`` | `190,074` | `4.24s` |
+| `Module` in ``HOL`Kernel`Private`tyMatch`` | `124,606` | `3.45s` |
+| `Set` in ``HOL`Equal`BETACONV`` | `51,800` | `2.61s` |
+| `CompoundExpression` in ``HOL`Kernel`mkEq`` | `58,513` | `2.47s` |
+| `Set` in ``HOL`Kernel`mkEq`` | `58,513` | `1.90s` |
+| `Lookup` in ``HOL`Kernel`constType`` | `64,142` | `1.10s` |
+
+This rules out some earlier guesses: `Part` in `tyMatch` is only about
+`115ms` self and `KeyExistsQ` in `tyMatch` about `66ms` self in the same run.
+The next probe-only step is therefore not a local `Part` or association lookup
+micro-optimization. It should create smaller single-lemma or single-function
+probes around `PropTaut`/`tyMatch`/abs-recursive term walkers and determine
+whether the remaining cost is evaluator dispatch/control-flow overhead,
+`Fold` callback overhead, repeated `Module` frame construction, or unavoidable
+proof-construction work.
+
+## 2026-06-17 Pair/Simp Probe-Discipline Correction
+
+The single-lemma / micro-function split below exposed a process error rather
+than a completed hotspot diagnosis. The probes are real, but the decision to
+continue from `PropTaut` into one-case ``HOL`Bool`EXCLUDEDMIDDLE[p]`` was not
+justified as the next Pair/Simp root task.
+
+The point where the work drifted is now identifiable. Earlier root-level
+evidence showed that dependency-preloaded `Get["stdlib/Pair.wl"]` spent about
+`564s` in the Pair body in rum versus about `40s` in WolframKernel, and that
+the warm public mkPair simplification still timed out after normal preheat.
+That is the current acceptance root. Later runtime-profile probes showed that
+an already-preheated opened-body target was only about `7.7s`, and that
+`basicSimpset[]` / congruence preheat through `PropTaut` was measurable and
+slow. The mistake was treating the profile-visible preheat and then the tiny
+`EXCLUDEDMIDDLE[p]` descendant as "the current wall" without rebuilding a
+closed no-profile phase tree for the actual Pair root. The small descendant
+explains a real local constant factor, but it was not proven to account for
+the hundreds-of-seconds Pair gate.
+
+Root cause of the agent error:
+
+- The current root target was not carried as an invariant. Once smaller
+  probes produced readable rankings, the investigation followed the readable
+  child instead of asking whether that child dominated `Pair.wl`.
+- Phase closure was not required at every descent. A child probe was allowed
+  to become the next focus without showing that child phases summed to the
+  parent wall time and that the child owned a large percentage of the parent.
+- Profiled timings and unprofiled timings were mixed too casually. Profiled
+  `39-40s` congruence lemmas were useful for attribution but were not enough
+  to replace no-profile root accounting.
+- Inclusive rankings were over-trusted. Names such as `PropTautBoolVars`,
+  `caseSplit`, `DISCH`, `mkEq`, `tyMatch`, and `stripOrigin` overlap heavily;
+  following them without an exclusive parent/child tree can look like progress
+  while failing to explain the root wall.
+- The work optimized for momentum and locally measurable progress instead of
+  enforcing the user's stated goal: find the dominant heat in the current
+  hundreds-of-seconds Pair gate before considering fixes.
+
+New hard rule for Pair/Simp performance work:
+
+1. Name the current root target first: unmodified `Pair.wl` load or the warm
+   public mkPair probe that reproduces the Pair gate.
+2. Produce a no-profile timing baseline for that root.
+3. Split that exact root into child phases whose measured times close over the
+   parent wall time. If the child phases do not sum close to the parent, fix
+   the probe before interpreting it.
+4. Descend only into the largest closed child segment, recording its percentage
+   of the parent. Do not descend into a merely interesting, slow, or
+   cross-engine-different child that is not proven to dominate the parent.
+5. Use profile-on runs only after the no-profile parent/child ownership is
+   established, and record the profile overhead ratio.
+6. If a smaller probe is useful but not root-dominant, label it as a side lane
+   and do not let it redefine the next Pair/Simp frontier.
+
+The immediate next diagnostic task is therefore not to split
+``HOL`Bool`EXCLUDEDMIDDLE[p]`` further. It is to rebuild a closed phase tree
+for the current unmodified Pair root or warm public mkPair root, then continue
+recursing only down the largest closed branch.
+
+## 2026-06-17 Pair/Simp Single-Lemma And Micro-Function Split
+
+Kept the Pair/Simp lane in probe-only mode and added smaller reproducers for
+the `PropTaut` preheat wall, `tyMatch`, abs-recursive term walkers, and
+`Fold`/`Module` runtime overhead. These are retained as side-lane evidence, not
+as the current Pair root hotspot. All rum probes ran against the unmodified
+clean clone at `/private/tmp/rum-mma-hol-unmodified.itrrai/mma-hol` through
+`scripts/pair-simp-hotspot-probes.sh`.
+
+Single congruence lemma probes show the Simp wrapper is not the owner. With
+definition/builtin profiling enabled, the measured target windows were:
+
+| Probe | Target segment | Shape |
+| --- | ---: | --- |
+| `runtime-profile-proptaut-imp-cong-schema` | `39.49s` | hand-built implication congruence schema through `propTaut` |
+| `runtime-profile-imp-cong-lemma` | `39.28s` | `computeImpCongLemma[]` / `impCongLemma[]` |
+| `runtime-profile-and-cong-lemma` | `39.55s` | `computeAndCongLemma[]` / `andCongLemma[]` |
+| `runtime-profile-or-cong-lemma` | `40.68s` | `computeOrCongLemma[]` / `orCongLemma[]` |
+
+The three lazy congruence lemmas are therefore essentially three same-shaped
+`PropTaut` runs. A no-profile sanity pass measured `impCongLemma[]` at
+`22.54s` in rum versus `7.08s` in WolframKernel, so profiling inflates the
+absolute time but the unprofiled gap is still about `3.2x`.
+
+The smallest currently retained `PropTaut` subshape is now one case split:
+
+| Probe | Rum target | Wolfram target | Notes |
+| --- | ---: | ---: | --- |
+| `runtime-profile-excluded-middle-boolvar` with profiling off | `0.969s` | `0.322s` | bare ``HOL`Bool`EXCLUDEDMIDDLE[p]`` |
+| same probe with profiling on | `1.75s` | n/a | names the internal rum hot functions |
+| `runtime-profile-proptaut-boolvars-p-or-notp` with profiling on | `2.35s` | n/a | minimal `propTautBoolVars[p ∨ ¬p]`; `caseSplit` is `1.98s`, `EXCLUDEDMIDDLE` is `1.71s` |
+| `runtime-profile-proptaut-free-bool-vars-schema` | `0.745s` for 1000 calls | n/a | `propFreeBoolVars` scan is only about `0.6ms` per call, so the full `PropTautBoolVars` rank is mostly inclusive recursion/case-split work |
+
+Profiling the bare `EXCLUDEDMIDDLE[p]` still names the same runtime/language
+suboperations seen in the larger lemmas: `mkEq`, `stripOrigin`, `tyMatch`,
+`unfoldBinop`, `mkConst`, `BETACONV`, `MKCOMB`, `vsubstImpl`, `typeOf`, and
+the theorem-plumbing rules. In builtin self timing, `Fold` inside `tyMatch`
+is about `170ms` for `7,820` calls and `Module` inside `tyMatch` about
+`132ms` for `5,134` calls on this one-case-split shape.
+
+The `tyMatch` micro probes now separate branch and callback overhead:
+
+| Probe | Target segment | Notable self timing |
+| --- | ---: | --- |
+| `runtime-profile-tymatch-var-repeat` | `0.178s` for 1000 calls | `tyMatch` RHS about `46.5us`/call; `Module` self about `34.5us`/call |
+| `runtime-profile-tymatch-fold-repeat` | `0.383s` for 1000 outer calls | `5000` `tyMatch` RHS evals; `Fold` self `80.97ms`, `Module` self `100.56ms` |
+| `runtime-profile-fold-callback-repeat` | `0.0287s` for 1000 trivial two-element folds | pure `Fold` self about `3.2us`/call |
+| `runtime-profile-module-frame-repeat` | `0.0392s` for 1000 trivial modules | trivial `Module` self about `5.5us`/call |
+| `runtime-profile-loop-null-repeat` | `0.0255s` for 1000 empty iterations | loop/iterator baseline; `Do` plus iterator `Block` is visible probe overhead |
+
+The useful conclusion is not that `Fold` or `Module` are universally slow; it
+is that `Fold` callbacks and `Module` frames become expensive when they carry
+the real `tyMatch` body and recursive evaluator traffic. `Part`,
+`KeyExistsQ`, `Transpose`, and `Append` remain small in the same probes.
+
+The abs-recursive walker probes show real repeated tree-walk dispatch, but
+also make the loop baseline explicit:
+
+| Probe | Target segment for 1000 calls | Main observation |
+| --- | ---: | --- |
+| `runtime-profile-striporigin-abs-repeat` | `0.151s` | `17,000` `stripOrigin` down-value applications; `Block` iterator overhead is a large share |
+| `runtime-profile-typeof-abs-repeat` | `0.167s` | `11,000` `typeOf` down-value applications plus `destFunType` |
+| `runtime-profile-vsubst-abs-repeat` | `0.199s` | `17,000` `vsubstImpl` applications; empty substitution validation is small |
+
+If a future closed Pair-root phase tree proves that congruence preheat or
+`PropTaut` again dominates the current root, these retained probes provide a
+ready side lane. In that case, useful next splits would be one-rule theorem
+plumbing such as `DISCH`, `CONJUNCT1/2`, `DISJ1/2`, `DISJCASES`, `BETACONV`,
+and `MKCOMB`, or a runtime source split for their repeated
+`mkEq`/`tyMatch`/`stripOrigin` traffic. Until then, the main Pair/Simp frontier
+returns to the root-level closed phase tree.
+
 ## 2026-06-16 Pair/Simp Arg-Prefilter Attribution Probe
 
 Committed the hygienic delayed-RHS substitution fix as `e9989f1`
@@ -72,12 +640,12 @@ the same local-name families, not profile fragmentation:
   ``HOL`Auto`Simp`Private`c``: `18,544` scans, `40,287,584` nodes,
   `0.52s`, all false.
 
-The next optimization should target arg-prefilter absence checking, not rule
-matching or recursive substitution. Good candidate directions are: cache or
-summarize symbol-presence for large immutable argument subtrees; or teach
-lexical substitution that certain caller-inserted values cannot contain the
-fresh local symbol introduced after insertion. Do not change the downstream
-`mma-hol` standard to avoid this cost.
+The next diagnostic layer should target arg-prefilter absence checking, not
+rule matching or recursive substitution. Candidate explanations to test are:
+repeated symbol-presence scans for large immutable argument subtrees, or a
+lexical-substitution boundary that fails to recognize caller-inserted values
+cannot contain the fresh local symbol introduced after insertion. Do not change
+the downstream `mma-hol` standard to avoid this cost.
 
 End-of-day probe status: added a follow-up presence-reuse profiler to ask
 whether those large absent scans revisit the same shared expression node or

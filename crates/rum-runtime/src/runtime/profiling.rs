@@ -1,4 +1,4 @@
-use super::{Atom, Expr, Symbol};
+use super::{Atom, Expr, Symbol, evaluation_profile_current_source_symbol};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, hash_map::DefaultHasher};
 use std::hash::{Hash, Hasher};
@@ -6,17 +6,32 @@ use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 use std::time::Instant;
 
 const LEXICAL_PROFILE_ENV: &str = "RUM_PROFILE_LEXICAL_SUBSTITUTION";
+const LEXICAL_PROFILE_DEFER_ENV: &str = "RUM_PROFILE_LEXICAL_DEFER";
 const LEXICAL_PROFILE_DETAIL_ENV: &str = "RUM_PROFILE_LEXICAL_DETAIL";
 const LEXICAL_PROFILE_INCREMENTAL_ENV: &str = "RUM_PROFILE_LEXICAL_INCREMENTAL";
 const LEXICAL_PROFILE_SHAPES_ENV: &str = "RUM_PROFILE_LEXICAL_SHAPES";
 const LEXICAL_PROFILE_BINDINGS_ENV: &str = "RUM_PROFILE_LEXICAL_BINDINGS";
+const LEXICAL_PROFILE_SOURCES_ENV: &str = "RUM_PROFILE_LEXICAL_SOURCES";
+const LEXICAL_PROFILE_SOURCE_FINGERPRINTS_ENV: &str = "RUM_PROFILE_LEXICAL_SOURCE_FINGERPRINTS";
+const LEXICAL_PROFILE_PROVENANCE_ENV: &str = "RUM_PROFILE_LEXICAL_PROVENANCE";
+const RULE_RHS_TIMING_ENV: &str = "RUM_PROFILE_RULE_RHS_TIMING";
+const DEFINITION_RULE_TIMING_ENV: &str = "RUM_PROFILE_DEFINITION_RULE_TIMING";
+const BUILTIN_TIMING_ENV: &str = "RUM_PROFILE_BUILTIN_TIMING";
 const PRESENCE_REUSE_MIN_NODES: u64 = 1024;
+const RULE_RHS_ALPHA_ID_MARKER: u64 = 1_u64 << 63;
 
 static LEXICAL_PROFILE_ENABLED: AtomicU8 = AtomicU8::new(0);
+static LEXICAL_PROFILE_ACTIVE: AtomicU8 = AtomicU8::new(0);
 static LEXICAL_PROFILE_DETAIL_ENABLED: AtomicU8 = AtomicU8::new(0);
 static LEXICAL_PROFILE_INCREMENTAL_ENABLED: AtomicU8 = AtomicU8::new(0);
 static LEXICAL_PROFILE_SHAPES_ENABLED: AtomicU8 = AtomicU8::new(0);
 static LEXICAL_PROFILE_BINDINGS_ENABLED: AtomicU8 = AtomicU8::new(0);
+static LEXICAL_PROFILE_SOURCES_ENABLED: AtomicU8 = AtomicU8::new(0);
+static LEXICAL_PROFILE_SOURCE_FINGERPRINTS_ENABLED: AtomicU8 = AtomicU8::new(0);
+static LEXICAL_PROFILE_PROVENANCE_ENABLED: AtomicU8 = AtomicU8::new(0);
+static RULE_RHS_TIMING_ENABLED: AtomicU8 = AtomicU8::new(0);
+static DEFINITION_RULE_TIMING_ENABLED: AtomicU8 = AtomicU8::new(0);
+static BUILTIN_TIMING_ENABLED: AtomicU8 = AtomicU8::new(0);
 static LEXICAL_PROFILE_SUMMARY_PRINTED: AtomicU8 = AtomicU8::new(0);
 
 static DEFINITION_RHS_EVAL_COUNT: AtomicU64 = AtomicU64::new(0);
@@ -132,6 +147,69 @@ struct PresenceBindingNameKey {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceSourceKey {
+    kind: PresenceScanKind,
+    source: Symbol,
+    context: &'static str,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceSourceShapeKey {
+    kind: PresenceScanKind,
+    source: Symbol,
+    context: &'static str,
+    shape: PresenceRootShape,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceSourceTargetShapeKey {
+    kind: PresenceScanKind,
+    source: Symbol,
+    context: &'static str,
+    shape: PresenceRootShape,
+    target_text: Option<Symbol>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+enum PresenceSourceFingerprintKind {
+    Text,
+    Exact,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceSourceFingerprintKey {
+    fingerprint_kind: PresenceSourceFingerprintKind,
+    kind: PresenceScanKind,
+    source: Symbol,
+    context: &'static str,
+    shape: PresenceRootShape,
+    target_text: Option<Symbol>,
+    fingerprint: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceSourceFingerprintGroupKey {
+    fingerprint_kind: PresenceSourceFingerprintKind,
+    kind: PresenceScanKind,
+    source: Symbol,
+    context: &'static str,
+    shape: PresenceRootShape,
+    target_text: Option<Symbol>,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct PresenceSourceFingerprintGroupStats {
+    unique_fingerprints: u64,
+    scans: u64,
+    nodes: u64,
+    timed: u64,
+    nanos: u64,
+    max_scans_per_fingerprint: u64,
+    true_count: u64,
+    false_count: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct PresenceReuseKey {
     kind: PresenceScanKind,
     shape: PresenceRootShape,
@@ -223,6 +301,144 @@ struct ExpressionRebuildGroupStats {
     max_rebuilds_per_fingerprint: u64,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct RuleRhsAlphaRenameKey {
+    source_symbol: Option<Symbol>,
+    local_text: Symbol,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct RuleRhsAlphaRenameStats {
+    renames: u64,
+    fresh_with_identity: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct RuleRhsTimingKey {
+    phase: &'static str,
+    source_symbol: Option<Symbol>,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct RuleRhsTimingStats {
+    calls: u64,
+    nanos: u64,
+    changed: u64,
+    unchanged: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct DefinitionRuleTimingKey {
+    kind: &'static str,
+    symbol: Symbol,
+    index: u32,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct DefinitionRuleTimingStats {
+    calls: u64,
+    nanos: u64,
+    ok: u64,
+    err: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct BuiltinTimingKey {
+    symbol: Symbol,
+    source_symbol: Option<Symbol>,
+    arg_count: u16,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct BuiltinTimingStats {
+    calls: u64,
+    nanos: u64,
+    self_nanos: u64,
+    ok: u64,
+    err: u64,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct BuiltinTimingFrame {
+    key: BuiltinTimingKey,
+    child_nanos: u64,
+}
+
+pub(super) struct BuiltinTimingToken {
+    start: Instant,
+    key: BuiltinTimingKey,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+enum PresenceTargetOrigin {
+    None,
+    PlainSymbol,
+    GeneratedDollarName,
+    RuleRhsAlphaIdentity,
+    OtherIdentity,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+enum ExpressionProvenanceKind {
+    RuleBindingValue,
+    RuleRhsRebuild,
+    OtherRebuild,
+    Unknown,
+}
+
+impl ExpressionProvenanceKind {
+    fn for_rebuild_source(source: &'static str) -> Self {
+        if source.starts_with("rule_rhs_") {
+            Self::RuleRhsRebuild
+        } else {
+            Self::OtherRebuild
+        }
+    }
+
+    fn priority(self) -> u8 {
+        match self {
+            Self::RuleBindingValue => 3,
+            Self::RuleRhsRebuild => 2,
+            Self::OtherRebuild => 1,
+            Self::Unknown => 0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct ExpressionProvenanceValue {
+    kind: ExpressionProvenanceKind,
+    source: &'static str,
+    source_symbol: Option<Symbol>,
+    max_rule_rhs_alpha_id: Option<u64>,
+    records: u64,
+    nodes: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+enum PresenceAlphaRelation {
+    NoTarget,
+    TargetNotRuleRhsAlpha,
+    ExprHasNoRuleRhsAlpha,
+    ExprOlderThanTarget,
+    ExprSameOrNewerThanTarget,
+    Unknown,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct PresenceProvenanceKey {
+    kind: PresenceScanKind,
+    source: Option<Symbol>,
+    context: &'static str,
+    target_text: Option<Symbol>,
+    target_origin: PresenceTargetOrigin,
+    expr_origin: ExpressionProvenanceKind,
+    expr_origin_source: &'static str,
+    expr_origin_symbol: Option<Symbol>,
+    alpha_relation: PresenceAlphaRelation,
+    shape: PresenceRootShape,
+}
+
 thread_local! {
     static PRESENCE_SHAPE_STATS: RefCell<HashMap<PresenceShapeKey, PresenceShapeStats>> =
         RefCell::new(HashMap::new());
@@ -236,6 +452,14 @@ thread_local! {
         RefCell::new(HashMap::new());
     static PRESENCE_BINDING_NAME_STATS: RefCell<HashMap<PresenceBindingNameKey, PresenceShapeStats>> =
         RefCell::new(HashMap::new());
+    static PRESENCE_SOURCE_STATS: RefCell<HashMap<PresenceSourceKey, PresenceShapeStats>> =
+        RefCell::new(HashMap::new());
+    static PRESENCE_SOURCE_SHAPE_STATS: RefCell<HashMap<PresenceSourceShapeKey, PresenceShapeStats>> =
+        RefCell::new(HashMap::new());
+    static PRESENCE_SOURCE_TARGET_SHAPE_STATS: RefCell<HashMap<PresenceSourceTargetShapeKey, PresenceShapeStats>> =
+        RefCell::new(HashMap::new());
+    static PRESENCE_SOURCE_FINGERPRINT_STATS: RefCell<HashMap<PresenceSourceFingerprintKey, PresenceShapeStats>> =
+        RefCell::new(HashMap::new());
     static PRESENCE_REUSE_STATS: RefCell<HashMap<PresenceReuseKey, PresenceShapeStats>> =
         RefCell::new(HashMap::new());
     static PRESENCE_FINGERPRINT_STATS: RefCell<HashMap<PresenceFingerprintKey, PresenceShapeStats>> =
@@ -243,6 +467,21 @@ thread_local! {
     static PRESENCE_EXACT_FINGERPRINT_STATS: RefCell<HashMap<PresenceExactFingerprintKey, PresenceShapeStats>> =
         RefCell::new(HashMap::new());
     static EXPRESSION_REBUILD_STATS: RefCell<HashMap<ExpressionRebuildKey, ExpressionRebuildStats>> =
+        RefCell::new(HashMap::new());
+    static EXPRESSION_REBUILD_EXACT_STATS: RefCell<HashMap<ExpressionRebuildKey, ExpressionRebuildStats>> =
+        RefCell::new(HashMap::new());
+    static RULE_RHS_ALPHA_RENAME_STATS: RefCell<HashMap<RuleRhsAlphaRenameKey, RuleRhsAlphaRenameStats>> =
+        RefCell::new(HashMap::new());
+    static RULE_RHS_TIMING_STATS: RefCell<HashMap<RuleRhsTimingKey, RuleRhsTimingStats>> =
+        RefCell::new(HashMap::new());
+    static DEFINITION_RULE_TIMING_STATS: RefCell<HashMap<DefinitionRuleTimingKey, DefinitionRuleTimingStats>> =
+        RefCell::new(HashMap::new());
+    static BUILTIN_TIMING_STATS: RefCell<HashMap<BuiltinTimingKey, BuiltinTimingStats>> =
+        RefCell::new(HashMap::new());
+    static BUILTIN_TIMING_STACK: RefCell<Vec<BuiltinTimingFrame>> = const { RefCell::new(Vec::new()) };
+    static EXPRESSION_PROVENANCE_BY_EXACT: RefCell<HashMap<u64, ExpressionProvenanceValue>> =
+        RefCell::new(HashMap::new());
+    static PRESENCE_PROVENANCE_STATS: RefCell<HashMap<PresenceProvenanceKey, PresenceShapeStats>> =
         RefCell::new(HashMap::new());
     static LEXICAL_CONTEXT_STACK: RefCell<Vec<&'static str>> = const { RefCell::new(Vec::new()) };
     static LEXICAL_CONTEXT_DEPTH: Cell<usize> = const { Cell::new(0) };
@@ -305,7 +544,7 @@ impl Drop for ExpressionRebuildSourceGuard {
 
 #[inline]
 pub(super) fn lexical_profile_context(context: &'static str) -> LexicalProfileContextGuard {
-    if !lexical_profile_shapes_enabled() {
+    if !lexical_profile_shapes_enabled() && !lexical_profile_sources_enabled() {
         return LexicalProfileContextGuard { active: false };
     }
 
@@ -338,7 +577,10 @@ pub(super) fn lexical_profile_arg_prefilter_site(
 
 #[inline]
 pub(super) fn expression_rebuild_source_symbol(symbol: Symbol) -> ExpressionRebuildSourceGuard {
-    if !lexical_profile_shapes_enabled() {
+    if !lexical_profile_shapes_enabled()
+        && !lexical_profile_provenance_enabled()
+        && !rule_rhs_timing_enabled()
+    {
         return ExpressionRebuildSourceGuard { active: false };
     }
 
@@ -351,10 +593,24 @@ pub(super) fn expression_rebuild_source_symbol(symbol: Symbol) -> ExpressionRebu
 
 #[inline]
 pub(super) fn lexical_profile_enabled() -> bool {
+    lexical_profile_configured() && lexical_profile_active()
+}
+
+#[inline]
+fn lexical_profile_configured() -> bool {
     match LEXICAL_PROFILE_ENABLED.load(Ordering::Relaxed) {
         1 => true,
         2 => false,
         _ => initialize_lexical_profile_enabled(),
+    }
+}
+
+#[inline]
+fn lexical_profile_active() -> bool {
+    match LEXICAL_PROFILE_ACTIVE.load(Ordering::Relaxed) {
+        1 => true,
+        2 => false,
+        _ => initialize_lexical_profile_active(),
     }
 }
 
@@ -397,6 +653,66 @@ fn lexical_profile_bindings_enabled() -> bool {
         }
 }
 
+#[inline]
+fn lexical_profile_sources_enabled() -> bool {
+    lexical_profile_enabled()
+        && match LEXICAL_PROFILE_SOURCES_ENABLED.load(Ordering::Relaxed) {
+            1 => true,
+            2 => false,
+            _ => initialize_lexical_profile_sources_enabled(),
+        }
+}
+
+#[inline]
+fn lexical_profile_source_fingerprints_enabled() -> bool {
+    lexical_profile_sources_enabled()
+        && match LEXICAL_PROFILE_SOURCE_FINGERPRINTS_ENABLED.load(Ordering::Relaxed) {
+            1 => true,
+            2 => false,
+            _ => initialize_lexical_profile_source_fingerprints_enabled(),
+        }
+}
+
+#[inline]
+fn lexical_profile_provenance_enabled() -> bool {
+    lexical_profile_enabled()
+        && match LEXICAL_PROFILE_PROVENANCE_ENABLED.load(Ordering::Relaxed) {
+            1 => true,
+            2 => false,
+            _ => initialize_lexical_profile_provenance_enabled(),
+        }
+}
+
+#[inline]
+fn rule_rhs_timing_enabled() -> bool {
+    lexical_profile_enabled()
+        && match RULE_RHS_TIMING_ENABLED.load(Ordering::Relaxed) {
+            1 => true,
+            2 => false,
+            _ => initialize_rule_rhs_timing_enabled(),
+        }
+}
+
+#[inline]
+fn definition_rule_timing_enabled() -> bool {
+    lexical_profile_enabled()
+        && match DEFINITION_RULE_TIMING_ENABLED.load(Ordering::Relaxed) {
+            1 => true,
+            2 => false,
+            _ => initialize_definition_rule_timing_enabled(),
+        }
+}
+
+#[inline]
+fn builtin_timing_enabled() -> bool {
+    lexical_profile_enabled()
+        && match BUILTIN_TIMING_ENABLED.load(Ordering::Relaxed) {
+            1 => true,
+            2 => false,
+            _ => initialize_builtin_timing_enabled(),
+        }
+}
+
 #[cold]
 fn initialize_lexical_profile_detail_enabled() -> bool {
     let enabled = std::env::var_os(LEXICAL_PROFILE_DETAIL_ENV)
@@ -411,6 +727,15 @@ fn initialize_lexical_profile_enabled() -> bool {
         .is_some_and(|value| !value.is_empty() && value != "0");
     LEXICAL_PROFILE_ENABLED.store(if enabled { 1 } else { 2 }, Ordering::Relaxed);
     enabled
+}
+
+#[cold]
+fn initialize_lexical_profile_active() -> bool {
+    let deferred = std::env::var_os(LEXICAL_PROFILE_DEFER_ENV)
+        .is_some_and(|value| !value.is_empty() && value != "0");
+    let active = !deferred;
+    LEXICAL_PROFILE_ACTIVE.store(if active { 1 } else { 2 }, Ordering::Relaxed);
+    active
 }
 
 #[cold]
@@ -437,6 +762,55 @@ fn initialize_lexical_profile_bindings_enabled() -> bool {
     enabled
 }
 
+#[cold]
+fn initialize_lexical_profile_sources_enabled() -> bool {
+    let enabled = std::env::var_os(LEXICAL_PROFILE_SOURCES_ENV)
+        .is_some_and(|value| !value.is_empty() && value != "0");
+    LEXICAL_PROFILE_SOURCES_ENABLED.store(if enabled { 1 } else { 2 }, Ordering::Relaxed);
+    enabled
+}
+
+#[cold]
+fn initialize_lexical_profile_source_fingerprints_enabled() -> bool {
+    let enabled = std::env::var_os(LEXICAL_PROFILE_SOURCE_FINGERPRINTS_ENV)
+        .is_some_and(|value| !value.is_empty() && value != "0");
+    LEXICAL_PROFILE_SOURCE_FINGERPRINTS_ENABLED
+        .store(if enabled { 1 } else { 2 }, Ordering::Relaxed);
+    enabled
+}
+
+#[cold]
+fn initialize_lexical_profile_provenance_enabled() -> bool {
+    let enabled = std::env::var_os(LEXICAL_PROFILE_PROVENANCE_ENV)
+        .is_some_and(|value| !value.is_empty() && value != "0");
+    LEXICAL_PROFILE_PROVENANCE_ENABLED.store(if enabled { 1 } else { 2 }, Ordering::Relaxed);
+    enabled
+}
+
+#[cold]
+fn initialize_rule_rhs_timing_enabled() -> bool {
+    let enabled = std::env::var_os(RULE_RHS_TIMING_ENV)
+        .is_some_and(|value| !value.is_empty() && value != "0");
+    RULE_RHS_TIMING_ENABLED.store(if enabled { 1 } else { 2 }, Ordering::Relaxed);
+    enabled
+}
+
+#[cold]
+fn initialize_definition_rule_timing_enabled() -> bool {
+    let enabled = std::env::var_os(DEFINITION_RULE_TIMING_ENV)
+        .is_some_and(|value| !value.is_empty() && value != "0");
+    DEFINITION_RULE_TIMING_ENABLED.store(if enabled { 1 } else { 2 }, Ordering::Relaxed);
+    enabled
+}
+
+#[cold]
+fn initialize_builtin_timing_enabled() -> bool {
+    let enabled =
+        std::env::var_os(BUILTIN_TIMING_ENV).is_some_and(|value| !value.is_empty() && value != "0");
+    BUILTIN_TIMING_ENABLED.store(if enabled { 1 } else { 2 }, Ordering::Relaxed);
+    enabled
+}
+
 #[inline]
 pub(super) fn lexical_profile_start() -> Option<Instant> {
     if lexical_profile_enabled() {
@@ -444,6 +818,49 @@ pub(super) fn lexical_profile_start() -> Option<Instant> {
     } else {
         None
     }
+}
+
+#[inline]
+pub(super) fn rule_rhs_timing_start() -> Option<Instant> {
+    if rule_rhs_timing_enabled() {
+        Some(Instant::now())
+    } else {
+        None
+    }
+}
+
+pub(super) fn definition_rule_timing_start() -> Option<Instant> {
+    if definition_rule_timing_enabled() {
+        Some(Instant::now())
+    } else {
+        None
+    }
+}
+
+pub(super) fn builtin_timing_start(
+    symbol: &Symbol,
+    arg_count: usize,
+) -> Option<BuiltinTimingToken> {
+    if !builtin_timing_enabled() {
+        return None;
+    }
+
+    let key = BuiltinTimingKey {
+        symbol: Symbol::new(symbol.context(), symbol.name()),
+        source_symbol: evaluation_profile_current_source_symbol()
+            .map(|symbol| Symbol::new(symbol.context(), symbol.name())),
+        arg_count: arg_count.min(usize::from(u16::MAX)) as u16,
+    };
+    BUILTIN_TIMING_STACK.with(|stack| {
+        stack.borrow_mut().push(BuiltinTimingFrame {
+            key,
+            child_nanos: 0,
+        });
+    });
+    Some(BuiltinTimingToken {
+        start: Instant::now(),
+        key,
+    })
 }
 
 pub(super) fn record_profile_definition_rhs_eval(start: Option<Instant>) {
@@ -587,12 +1004,25 @@ pub(super) fn record_profile_arg_substitution_attempt(start: Option<Instant>, ch
 }
 
 pub(super) fn record_profile_expression_rebuild(source: &'static str, expr: &Expr) {
-    if !lexical_profile_shapes_enabled() {
+    if !lexical_profile_shapes_enabled() && !lexical_profile_provenance_enabled() {
         return;
     }
 
-    let (fingerprint, nodes) = structural_text_fingerprint_and_nodes(expr);
+    let (fingerprint, exact_fingerprint, nodes) =
+        structural_text_exact_fingerprints_and_nodes(expr);
     if nodes < PRESENCE_REUSE_MIN_NODES {
+        return;
+    }
+    record_expression_provenance_from_fingerprint(
+        exact_fingerprint,
+        ExpressionProvenanceKind::for_rebuild_source(source),
+        source,
+        current_expression_rebuild_source_symbol(),
+        max_rule_rhs_alpha_id(expr),
+        nodes,
+    );
+
+    if !lexical_profile_shapes_enabled() {
         return;
     }
 
@@ -602,11 +1032,154 @@ pub(super) fn record_profile_expression_rebuild(source: &'static str, expr: &Exp
         shape: presence_root_shape(expr),
         fingerprint,
     };
+    let exact_key = ExpressionRebuildKey {
+        fingerprint: exact_fingerprint,
+        ..key
+    };
     EXPRESSION_REBUILD_STATS.with(|stats| {
         let mut stats = stats.borrow_mut();
         let entry = stats.entry(key).or_default();
         entry.rebuilds = entry.rebuilds.saturating_add(1);
         entry.nodes = entry.nodes.saturating_add(nodes);
+    });
+    EXPRESSION_REBUILD_EXACT_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(exact_key).or_default();
+        entry.rebuilds = entry.rebuilds.saturating_add(1);
+        entry.nodes = entry.nodes.saturating_add(nodes);
+    });
+}
+
+pub(super) fn record_profile_rule_rhs_binding_value(expr: &Expr) {
+    if !lexical_profile_provenance_enabled() {
+        return;
+    }
+
+    let (_, exact_fingerprint, nodes) = structural_text_exact_fingerprints_and_nodes(expr);
+    record_expression_provenance_from_fingerprint(
+        exact_fingerprint,
+        ExpressionProvenanceKind::RuleBindingValue,
+        "rule_binding_value",
+        current_expression_rebuild_source_symbol(),
+        max_rule_rhs_alpha_id(expr),
+        nodes,
+    );
+}
+
+pub(super) fn record_profile_rule_rhs_alpha_rename(local: &Symbol, fresh: &Symbol) {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    let key = RuleRhsAlphaRenameKey {
+        source_symbol: current_expression_rebuild_source_symbol(),
+        local_text: Symbol::new(local.context(), local.name()),
+    };
+    RULE_RHS_ALPHA_RENAME_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(key).or_default();
+        entry.renames = entry.renames.saturating_add(1);
+        if fresh.identity().is_some() {
+            entry.fresh_with_identity = entry.fresh_with_identity.saturating_add(1);
+        }
+    });
+}
+
+pub(super) fn record_profile_rule_rhs_timing(
+    phase: &'static str,
+    start: Option<Instant>,
+    changed: Option<bool>,
+) {
+    if !rule_rhs_timing_enabled() {
+        return;
+    }
+
+    let Some(start) = start else {
+        return;
+    };
+    let elapsed_nanos = elapsed_nanos_since(start);
+    let key = RuleRhsTimingKey {
+        phase,
+        source_symbol: current_expression_rebuild_source_symbol(),
+    };
+    RULE_RHS_TIMING_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(key).or_default();
+        entry.calls = entry.calls.saturating_add(1);
+        entry.nanos = entry.nanos.saturating_add(elapsed_nanos);
+        match changed {
+            Some(true) => entry.changed = entry.changed.saturating_add(1),
+            Some(false) => entry.unchanged = entry.unchanged.saturating_add(1),
+            None => {}
+        }
+    });
+}
+
+pub(super) fn record_profile_definition_rule_timing(
+    kind: &'static str,
+    symbol: &Symbol,
+    index: usize,
+    start: Option<Instant>,
+    result_is_ok: bool,
+) {
+    if !definition_rule_timing_enabled() {
+        return;
+    }
+
+    let Some(start) = start else {
+        return;
+    };
+    let elapsed_nanos = elapsed_nanos_since(start);
+    let key = DefinitionRuleTimingKey {
+        kind,
+        symbol: Symbol::new(symbol.context(), symbol.name()),
+        index: index.min(u32::MAX as usize) as u32,
+    };
+    DEFINITION_RULE_TIMING_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(key).or_default();
+        entry.calls = entry.calls.saturating_add(1);
+        entry.nanos = entry.nanos.saturating_add(elapsed_nanos);
+        if result_is_ok {
+            entry.ok = entry.ok.saturating_add(1);
+        } else {
+            entry.err = entry.err.saturating_add(1);
+        }
+    });
+}
+
+pub(super) fn record_profile_builtin_timing(token: Option<BuiltinTimingToken>, result_is_ok: bool) {
+    if !builtin_timing_enabled() {
+        return;
+    }
+
+    let Some(token) = token else {
+        return;
+    };
+    let elapsed_nanos = elapsed_nanos_since(token.start);
+    let child_nanos = BUILTIN_TIMING_STACK.with(|stack| {
+        let mut stack = stack.borrow_mut();
+        let frame = stack.pop();
+        if let Some(parent) = stack.last_mut() {
+            parent.child_nanos = parent.child_nanos.saturating_add(elapsed_nanos);
+        }
+        frame
+            .filter(|frame| frame.key == token.key)
+            .map(|frame| frame.child_nanos)
+            .unwrap_or(0)
+    });
+    let self_nanos = elapsed_nanos.saturating_sub(child_nanos);
+    BUILTIN_TIMING_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(token.key).or_default();
+        entry.calls = entry.calls.saturating_add(1);
+        entry.nanos = entry.nanos.saturating_add(elapsed_nanos);
+        entry.self_nanos = entry.self_nanos.saturating_add(self_nanos);
+        if result_is_ok {
+            entry.ok = entry.ok.saturating_add(1);
+        } else {
+            entry.err = entry.err.saturating_add(1);
+        }
     });
 }
 
@@ -642,12 +1215,30 @@ pub(super) fn record_profile_single_presence_scan(
             "presence_single_scan_false",
         );
     }
+    let target_text = Symbol::new(target.context(), target.name());
     record_presence_shape(PresenceScanKind::Single, expr, result, nodes, elapsed_nanos);
+    record_presence_source(
+        PresenceScanKind::Single,
+        expr,
+        Some(target_text),
+        result,
+        nodes,
+        elapsed_nanos,
+    );
     record_presence_binding(expr, target, result, nodes, elapsed_nanos);
     record_presence_reuse(
         PresenceScanKind::Single,
         expr,
-        Some(Symbol::new(target.context(), target.name())),
+        Some(target_text),
+        result,
+        nodes,
+        elapsed_nanos,
+    );
+    record_presence_provenance(
+        PresenceScanKind::Single,
+        expr,
+        Some(target),
+        Some(target_text),
         result,
         nodes,
         elapsed_nanos,
@@ -683,9 +1274,26 @@ pub(super) fn record_profile_multi_presence_scan(
         );
     }
     record_presence_shape(PresenceScanKind::Multi, expr, result, nodes, elapsed_nanos);
+    record_presence_source(
+        PresenceScanKind::Multi,
+        expr,
+        None,
+        result,
+        nodes,
+        elapsed_nanos,
+    );
     record_presence_reuse(
         PresenceScanKind::Multi,
         expr,
+        None,
+        result,
+        nodes,
+        elapsed_nanos,
+    );
+    record_presence_provenance(
+        PresenceScanKind::Multi,
+        expr,
+        None,
         None,
         result,
         nodes,
@@ -701,6 +1309,107 @@ pub(super) fn print_lexical_profile_summary_once() {
         return;
     }
 
+    print_lexical_profile_summary_body();
+}
+
+pub(super) fn reset_lexical_profile_counters() {
+    if !lexical_profile_configured() {
+        return;
+    }
+
+    macro_rules! reset {
+        ($($counter:ident),+ $(,)?) => {
+            $( $counter.store(0, Ordering::Relaxed); )+
+        };
+    }
+
+    reset!(
+        DEFINITION_RHS_EVAL_COUNT,
+        DEFINITION_RHS_EVAL_NANOS,
+        EVAL_MODULE_COUNT,
+        EVAL_MODULE_NANOS,
+        MODULE_RESUME_ENTRY_COUNT,
+        MODULE_RESUME_MAX_INDEX,
+        MODULE_INIT_SUBSTITUTION_COUNT,
+        MODULE_INIT_SUBSTITUTION_NANOS,
+        MODULE_BODY_SUBSTITUTION_COUNT,
+        MODULE_BODY_SUBSTITUTION_NANOS,
+        LEXICAL_SUBSTITUTION_COUNT,
+        LEXICAL_SUBSTITUTION_TIME_COUNT,
+        LEXICAL_SUBSTITUTION_NANOS,
+        LEXICAL_SUBSTITUTION_CHANGED_COUNT,
+        LEXICAL_SUBSTITUTION_UNCHANGED_COUNT,
+        LEXICAL_BINDING_EMPTY_COUNT,
+        LEXICAL_BINDING_SINGLE_COUNT,
+        LEXICAL_BINDING_MULTI_COUNT,
+        LEXICAL_BINDING_MAX_COUNT,
+        LEXICAL_SHADOWED_NONEMPTY_COUNT,
+        ARG_LIST_SUBSTITUTION_COUNT,
+        ARG_LIST_TOTAL_ARGS,
+        ARG_LIST_MAX_LEN,
+        ARG_PREFILTER_SKIP_COUNT,
+        ARG_PREFILTER_MAYBE_COUNT,
+        ARG_SUBSTITUTION_ATTEMPT_COUNT,
+        ARG_SUBSTITUTION_ATTEMPT_NANOS,
+        ARG_SUBSTITUTION_CHANGED_COUNT,
+        ARG_SUBSTITUTION_UNCHANGED_COUNT,
+        PRESENCE_SINGLE_SCAN_COUNT,
+        PRESENCE_SINGLE_SCAN_NODES,
+        PRESENCE_SINGLE_SCAN_NANOS,
+        PRESENCE_SINGLE_SCAN_TIME_COUNT,
+        PRESENCE_SINGLE_SCAN_TRUE_COUNT,
+        PRESENCE_SINGLE_SCAN_FALSE_COUNT,
+        PRESENCE_MULTI_SCAN_COUNT,
+        PRESENCE_MULTI_SCAN_NODES,
+        PRESENCE_MULTI_SCAN_NANOS,
+        PRESENCE_MULTI_SCAN_TIME_COUNT,
+        PRESENCE_MULTI_SCAN_TRUE_COUNT,
+        PRESENCE_MULTI_SCAN_FALSE_COUNT,
+    );
+
+    PRESENCE_SHAPE_STATS.with(|stats| stats.borrow_mut().clear());
+    PRESENCE_CONTEXT_STATS.with(|stats| stats.borrow_mut().clear());
+    PRESENCE_CONTEXT_SHAPE_STATS.with(|stats| stats.borrow_mut().clear());
+    PRESENCE_ARG_SITE_STATS.with(|stats| stats.borrow_mut().clear());
+    PRESENCE_BINDING_STATS.with(|stats| stats.borrow_mut().clear());
+    PRESENCE_BINDING_NAME_STATS.with(|stats| stats.borrow_mut().clear());
+    PRESENCE_SOURCE_STATS.with(|stats| stats.borrow_mut().clear());
+    PRESENCE_SOURCE_SHAPE_STATS.with(|stats| stats.borrow_mut().clear());
+    PRESENCE_SOURCE_TARGET_SHAPE_STATS.with(|stats| stats.borrow_mut().clear());
+    PRESENCE_SOURCE_FINGERPRINT_STATS.with(|stats| stats.borrow_mut().clear());
+    PRESENCE_REUSE_STATS.with(|stats| stats.borrow_mut().clear());
+    PRESENCE_FINGERPRINT_STATS.with(|stats| stats.borrow_mut().clear());
+    PRESENCE_EXACT_FINGERPRINT_STATS.with(|stats| stats.borrow_mut().clear());
+    EXPRESSION_REBUILD_STATS.with(|stats| stats.borrow_mut().clear());
+    EXPRESSION_REBUILD_EXACT_STATS.with(|stats| stats.borrow_mut().clear());
+    RULE_RHS_ALPHA_RENAME_STATS.with(|stats| stats.borrow_mut().clear());
+    RULE_RHS_TIMING_STATS.with(|stats| stats.borrow_mut().clear());
+    DEFINITION_RULE_TIMING_STATS.with(|stats| stats.borrow_mut().clear());
+    BUILTIN_TIMING_STATS.with(|stats| stats.borrow_mut().clear());
+    BUILTIN_TIMING_STACK.with(|stack| stack.borrow_mut().clear());
+    EXPRESSION_PROVENANCE_BY_EXACT.with(|stats| stats.borrow_mut().clear());
+    PRESENCE_PROVENANCE_STATS.with(|stats| stats.borrow_mut().clear());
+    LEXICAL_CONTEXT_STACK.with(|stack| stack.borrow_mut().clear());
+    LEXICAL_CONTEXT_DEPTH.with(|depth| depth.set(0));
+    ARG_PREFILTER_SITE_STACK.with(|stack| stack.borrow_mut().clear());
+    ARG_PREFILTER_SITE_DEPTH.with(|depth| depth.set(0));
+    EXPRESSION_REBUILD_SOURCE_STACK.with(|stack| stack.borrow_mut().clear());
+    EXPRESSION_REBUILD_SOURCE_DEPTH.with(|depth| depth.set(0));
+    LEXICAL_PROFILE_SUMMARY_PRINTED.store(0, Ordering::Relaxed);
+    LEXICAL_PROFILE_ACTIVE.store(1, Ordering::Relaxed);
+}
+
+pub(super) fn print_lexical_profile_snapshot(label: &str) {
+    if !lexical_profile_configured() {
+        return;
+    }
+
+    eprintln!("rum-profile lexical snapshot label={label}");
+    print_lexical_profile_summary_body();
+    LEXICAL_PROFILE_SUMMARY_PRINTED.store(1, Ordering::Relaxed);
+}
+
+fn print_lexical_profile_summary_body() {
     eprintln!(
         "rum-profile lexical summary definition_rhs_eval_count={} definition_rhs_eval_total_ns={} definition_rhs_eval_avg_ns={}",
         load(&DEFINITION_RHS_EVAL_COUNT),
@@ -802,6 +1511,12 @@ pub(super) fn print_lexical_profile_summary_once() {
     print_presence_context_summary();
     print_presence_context_shape_summary();
     print_presence_arg_site_summary();
+    print_presence_source_summary();
+    print_presence_source_shape_summary();
+    print_presence_source_target_shape_summary();
+    print_presence_source_fingerprint_summary();
+    print_presence_source_fingerprint_group_summary();
+    print_presence_provenance_summary();
     print_presence_reuse_summary();
     print_presence_reuse_group_summary();
     print_presence_fingerprint_summary();
@@ -809,6 +1524,12 @@ pub(super) fn print_lexical_profile_summary_once() {
     print_presence_exact_fingerprint_group_summary();
     print_expression_rebuild_summary();
     print_expression_rebuild_group_summary();
+    print_expression_rebuild_exact_summary();
+    print_expression_rebuild_exact_group_summary();
+    print_rule_rhs_alpha_rename_summary();
+    print_rule_rhs_timing_summary();
+    print_definition_rule_timing_summary();
+    print_builtin_timing_summary();
     print_presence_binding_summary();
     print_presence_binding_name_summary();
 }
@@ -999,6 +1720,193 @@ fn record_presence_shape(
             record_presence_stats(entry, result, nodes, elapsed_nanos);
         });
     }
+}
+
+fn record_presence_source(
+    kind: PresenceScanKind,
+    expr: &Expr,
+    target_text: Option<Symbol>,
+    result: bool,
+    nodes: u64,
+    elapsed_nanos: Option<u64>,
+) {
+    if !lexical_profile_sources_enabled() {
+        return;
+    }
+
+    let Some(source) = evaluation_profile_current_source_symbol() else {
+        return;
+    };
+
+    let context = current_lexical_profile_context();
+    let shape = presence_root_shape(expr);
+    let source_key = PresenceSourceKey {
+        kind,
+        source,
+        context,
+    };
+    let source_shape_key = PresenceSourceShapeKey {
+        kind,
+        source,
+        context,
+        shape,
+    };
+    let source_target_shape_key = PresenceSourceTargetShapeKey {
+        kind,
+        source,
+        context,
+        shape,
+        target_text,
+    };
+    PRESENCE_SOURCE_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(source_key).or_default();
+        record_presence_stats(entry, result, nodes, elapsed_nanos);
+    });
+    PRESENCE_SOURCE_SHAPE_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(source_shape_key).or_default();
+        record_presence_stats(entry, result, nodes, elapsed_nanos);
+    });
+    PRESENCE_SOURCE_TARGET_SHAPE_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(source_target_shape_key).or_default();
+        record_presence_stats(entry, result, nodes, elapsed_nanos);
+    });
+    record_presence_source_fingerprint(
+        kind,
+        source,
+        context,
+        shape,
+        target_text,
+        expr,
+        result,
+        nodes,
+        elapsed_nanos,
+    );
+}
+
+fn record_presence_source_fingerprint(
+    kind: PresenceScanKind,
+    source: Symbol,
+    context: &'static str,
+    shape: PresenceRootShape,
+    target_text: Option<Symbol>,
+    expr: &Expr,
+    result: bool,
+    nodes: u64,
+    elapsed_nanos: Option<u64>,
+) {
+    if !lexical_profile_source_fingerprints_enabled() || nodes < PRESENCE_REUSE_MIN_NODES {
+        return;
+    }
+
+    let (text_fingerprint, exact_fingerprint) = structural_text_and_exact_fingerprints(expr);
+    for (fingerprint_kind, fingerprint) in [
+        (PresenceSourceFingerprintKind::Text, text_fingerprint),
+        (PresenceSourceFingerprintKind::Exact, exact_fingerprint),
+    ] {
+        let key = PresenceSourceFingerprintKey {
+            fingerprint_kind,
+            kind,
+            source,
+            context,
+            shape,
+            target_text,
+            fingerprint,
+        };
+        PRESENCE_SOURCE_FINGERPRINT_STATS.with(|stats| {
+            let mut stats = stats.borrow_mut();
+            let entry = stats.entry(key).or_default();
+            record_presence_stats(entry, result, nodes, elapsed_nanos);
+        });
+    }
+}
+
+fn record_expression_provenance_from_fingerprint(
+    exact_fingerprint: u64,
+    kind: ExpressionProvenanceKind,
+    source: &'static str,
+    source_symbol: Option<Symbol>,
+    max_rule_rhs_alpha_id: Option<u64>,
+    nodes: u64,
+) {
+    if !lexical_profile_provenance_enabled() {
+        return;
+    }
+
+    EXPRESSION_PROVENANCE_BY_EXACT.with(|map| {
+        let mut map = map.borrow_mut();
+        let entry = map
+            .entry(exact_fingerprint)
+            .or_insert(ExpressionProvenanceValue {
+                kind,
+                source,
+                source_symbol,
+                max_rule_rhs_alpha_id,
+                records: 0,
+                nodes: 0,
+            });
+        entry.records = entry.records.saturating_add(1);
+        entry.nodes = entry.nodes.saturating_add(nodes);
+        entry.max_rule_rhs_alpha_id = match (entry.max_rule_rhs_alpha_id, max_rule_rhs_alpha_id) {
+            (Some(lhs), Some(rhs)) => Some(lhs.max(rhs)),
+            (Some(lhs), None) => Some(lhs),
+            (None, Some(rhs)) => Some(rhs),
+            (None, None) => None,
+        };
+        if kind.priority() > entry.kind.priority() {
+            entry.kind = kind;
+            entry.source = source;
+            entry.source_symbol = source_symbol;
+        }
+    });
+}
+
+fn record_presence_provenance(
+    kind: PresenceScanKind,
+    expr: &Expr,
+    target: Option<&Symbol>,
+    target_text: Option<Symbol>,
+    result: bool,
+    nodes: u64,
+    elapsed_nanos: Option<u64>,
+) {
+    if !lexical_profile_provenance_enabled() || nodes < PRESENCE_REUSE_MIN_NODES {
+        return;
+    }
+
+    let (_, exact_fingerprint) = structural_text_and_exact_fingerprints(expr);
+    let provenance = EXPRESSION_PROVENANCE_BY_EXACT.with(|map| {
+        map.borrow()
+            .get(&exact_fingerprint)
+            .copied()
+            .unwrap_or(ExpressionProvenanceValue {
+                kind: ExpressionProvenanceKind::Unknown,
+                source: "-",
+                source_symbol: None,
+                max_rule_rhs_alpha_id: None,
+                records: 0,
+                nodes: 0,
+            })
+    });
+    let key = PresenceProvenanceKey {
+        kind,
+        source: evaluation_profile_current_source_symbol(),
+        context: current_lexical_profile_context(),
+        target_text,
+        target_origin: presence_target_origin(target),
+        expr_origin: provenance.kind,
+        expr_origin_source: provenance.source,
+        expr_origin_symbol: provenance.source_symbol,
+        alpha_relation: presence_alpha_relation(target, provenance),
+        shape: presence_root_shape(expr),
+    };
+    PRESENCE_PROVENANCE_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(key).or_default();
+        record_presence_stats(entry, result, nodes, elapsed_nanos);
+    });
 }
 
 fn record_presence_binding(
@@ -1300,6 +2208,259 @@ fn print_presence_arg_site_summary() {
                 presence_scan_kind_name(key.kind),
                 presence_root_shape_name(key.site.parent),
                 key.site.index,
+                presence_root_shape_name(key.shape),
+                stats.scans,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
+fn print_presence_source_summary() {
+    if !lexical_profile_sources_enabled() {
+        return;
+    }
+
+    PRESENCE_SOURCE_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(32).enumerate() {
+            eprintln!(
+                "rum-profile lexical source rank={} kind={} source={} context={} scans={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_scan_kind_name(key.kind),
+                key.source,
+                key.context,
+                stats.scans,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
+fn print_presence_source_shape_summary() {
+    if !lexical_profile_sources_enabled() {
+        return;
+    }
+
+    PRESENCE_SOURCE_SHAPE_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(32).enumerate() {
+            eprintln!(
+                "rum-profile lexical source-shape rank={} kind={} source={} context={} shape={} scans={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_scan_kind_name(key.kind),
+                key.source,
+                key.context,
+                presence_root_shape_name(key.shape),
+                stats.scans,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
+fn print_presence_source_target_shape_summary() {
+    if !lexical_profile_sources_enabled() {
+        return;
+    }
+
+    PRESENCE_SOURCE_TARGET_SHAPE_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(48).enumerate() {
+            eprintln!(
+                "rum-profile lexical source-target-shape rank={} kind={} source={} context={} target={} shape={} scans={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_scan_kind_name(key.kind),
+                key.source,
+                key.context,
+                profile_optional_symbol_name(key.target_text),
+                presence_root_shape_name(key.shape),
+                stats.scans,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
+fn print_presence_source_fingerprint_summary() {
+    if !lexical_profile_source_fingerprints_enabled() {
+        return;
+    }
+
+    PRESENCE_SOURCE_FINGERPRINT_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(48).enumerate() {
+            eprintln!(
+                "rum-profile lexical source-fingerprint rank={} fingerprint_kind={} kind={} source={} context={} target={} shape={} fingerprint={:#x} scans={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_source_fingerprint_kind_name(key.fingerprint_kind),
+                presence_scan_kind_name(key.kind),
+                key.source,
+                key.context,
+                profile_optional_symbol_name(key.target_text),
+                presence_root_shape_name(key.shape),
+                key.fingerprint,
+                stats.scans,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
+fn print_presence_source_fingerprint_group_summary() {
+    if !lexical_profile_source_fingerprints_enabled() {
+        return;
+    }
+
+    PRESENCE_SOURCE_FINGERPRINT_STATS.with(|stats| {
+        let mut groups =
+            HashMap::<PresenceSourceFingerprintGroupKey, PresenceSourceFingerprintGroupStats>::new();
+        for (key, stats) in stats.borrow().iter() {
+            let group = groups
+                .entry(PresenceSourceFingerprintGroupKey {
+                    fingerprint_kind: key.fingerprint_kind,
+                    kind: key.kind,
+                    source: key.source,
+                    context: key.context,
+                    shape: key.shape,
+                    target_text: key.target_text,
+                })
+                .or_default();
+            group.unique_fingerprints = group.unique_fingerprints.saturating_add(1);
+            group.scans = group.scans.saturating_add(stats.scans);
+            group.nodes = group.nodes.saturating_add(stats.nodes);
+            group.timed = group.timed.saturating_add(stats.timed);
+            group.nanos = group.nanos.saturating_add(stats.nanos);
+            group.max_scans_per_fingerprint = group.max_scans_per_fingerprint.max(stats.scans);
+            group.true_count = group.true_count.saturating_add(stats.true_count);
+            group.false_count = group.false_count.saturating_add(stats.false_count);
+        }
+
+        let mut entries = groups.into_iter().collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(48).enumerate() {
+            eprintln!(
+                "rum-profile lexical source-fingerprint-group rank={} fingerprint_kind={} kind={} source={} context={} target={} shape={} unique_fingerprints={} scans={} max_scans_per_fingerprint={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_source_fingerprint_kind_name(key.fingerprint_kind),
+                presence_scan_kind_name(key.kind),
+                key.source,
+                key.context,
+                profile_optional_symbol_name(key.target_text),
+                presence_root_shape_name(key.shape),
+                stats.unique_fingerprints,
+                stats.scans,
+                stats.max_scans_per_fingerprint,
+                stats.nodes,
+                stats.timed,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.timed),
+                stats.true_count,
+                stats.false_count,
+            );
+        }
+    });
+}
+
+fn print_presence_provenance_summary() {
+    if !lexical_profile_provenance_enabled() {
+        return;
+    }
+
+    PRESENCE_PROVENANCE_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.scans.cmp(&lhs.scans))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(64).enumerate() {
+            eprintln!(
+                "rum-profile lexical provenance rank={} kind={} source={} context={} target={} target_origin={} expr_origin={} expr_source={} alpha_relation={} shape={} scans={} nodes={} timed={} total_ns={} avg_ns={} true={} false={}",
+                rank + 1,
+                presence_scan_kind_name(key.kind),
+                profile_optional_symbol_name(key.source),
+                key.context,
+                profile_optional_symbol_name(key.target_text),
+                presence_target_origin_name(key.target_origin),
+                expression_provenance_kind_name(key.expr_origin),
+                expression_rebuild_source_name(key.expr_origin_source, key.expr_origin_symbol),
+                presence_alpha_relation_name(key.alpha_relation),
                 presence_root_shape_name(key.shape),
                 stats.scans,
                 stats.nodes,
@@ -1626,6 +2787,246 @@ fn print_expression_rebuild_group_summary() {
     });
 }
 
+fn print_expression_rebuild_exact_summary() {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    EXPRESSION_REBUILD_EXACT_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.rebuilds.cmp(&lhs.rebuilds))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(24).enumerate() {
+            eprintln!(
+                "rum-profile expression-rebuild-exact rank={} source={} shape={} fingerprint={:#x} rebuilds={} nodes={} avg_nodes={}",
+                rank + 1,
+                expression_rebuild_source_name(key.source, key.source_symbol),
+                presence_root_shape_name(key.shape),
+                key.fingerprint,
+                stats.rebuilds,
+                stats.nodes,
+                profile_stats_average(stats.nodes, stats.rebuilds),
+            );
+        }
+    });
+}
+
+fn print_expression_rebuild_exact_group_summary() {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    EXPRESSION_REBUILD_EXACT_STATS.with(|stats| {
+        let mut groups = HashMap::<ExpressionRebuildGroupKey, ExpressionRebuildGroupStats>::new();
+        for (key, stats) in stats.borrow().iter() {
+            let group = groups
+                .entry(ExpressionRebuildGroupKey {
+                    source: key.source,
+                    source_symbol: key.source_symbol,
+                    shape: key.shape,
+                })
+                .or_default();
+            group.unique_fingerprints = group.unique_fingerprints.saturating_add(1);
+            group.rebuilds = group.rebuilds.saturating_add(stats.rebuilds);
+            group.nodes = group.nodes.saturating_add(stats.nodes);
+            group.max_rebuilds_per_fingerprint =
+                group.max_rebuilds_per_fingerprint.max(stats.rebuilds);
+        }
+
+        let mut entries = groups.into_iter().collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nodes
+                .cmp(&lhs.nodes)
+                .then_with(|| rhs.rebuilds.cmp(&lhs.rebuilds))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(24).enumerate() {
+            eprintln!(
+                "rum-profile expression-rebuild-exact-group rank={} source={} shape={} unique_fingerprints={} rebuilds={} max_rebuilds_per_fingerprint={} nodes={} avg_nodes={}",
+                rank + 1,
+                expression_rebuild_source_name(key.source, key.source_symbol),
+                presence_root_shape_name(key.shape),
+                stats.unique_fingerprints,
+                stats.rebuilds,
+                stats.max_rebuilds_per_fingerprint,
+                stats.nodes,
+                profile_stats_average(stats.nodes, stats.rebuilds),
+            );
+        }
+    });
+}
+
+fn print_rule_rhs_alpha_rename_summary() {
+    if !lexical_profile_shapes_enabled() {
+        return;
+    }
+
+    RULE_RHS_ALPHA_RENAME_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.renames
+                .cmp(&lhs.renames)
+                .then_with(|| rhs.fresh_with_identity.cmp(&lhs.fresh_with_identity))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(32).enumerate() {
+            eprintln!(
+                "rum-profile rule-rhs-alpha-rename rank={} source={} local={} renames={} fresh_with_identity={}",
+                rank + 1,
+                profile_optional_symbol_name(key.source_symbol),
+                key.local_text,
+                stats.renames,
+                stats.fresh_with_identity,
+            );
+        }
+    });
+}
+
+fn print_rule_rhs_timing_summary() {
+    if !rule_rhs_timing_enabled() {
+        return;
+    }
+
+    RULE_RHS_TIMING_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nanos
+                .cmp(&lhs.nanos)
+                .then_with(|| rhs.calls.cmp(&lhs.calls))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(64).enumerate() {
+            eprintln!(
+                "rum-profile rule-rhs-timing rank={} phase={} source={} calls={} total_ns={} avg_ns={} changed={} unchanged={}",
+                rank + 1,
+                key.phase,
+                profile_optional_symbol_name(key.source_symbol),
+                stats.calls,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.calls),
+                stats.changed,
+                stats.unchanged,
+            );
+        }
+    });
+}
+
+fn print_definition_rule_timing_summary() {
+    if !definition_rule_timing_enabled() {
+        return;
+    }
+
+    DEFINITION_RULE_TIMING_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nanos
+                .cmp(&lhs.nanos)
+                .then_with(|| rhs.calls.cmp(&lhs.calls))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(64).enumerate() {
+            eprintln!(
+                "rum-profile definition-rule-timing rank={} kind={} symbol={} index={} calls={} total_ns={} avg_ns={} ok={} err={}",
+                rank + 1,
+                key.kind,
+                key.symbol,
+                key.index,
+                stats.calls,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.calls),
+                stats.ok,
+                stats.err,
+            );
+        }
+    });
+}
+
+fn print_builtin_timing_summary() {
+    if !builtin_timing_enabled() {
+        return;
+    }
+
+    BUILTIN_TIMING_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nanos
+                .cmp(&lhs.nanos)
+                .then_with(|| rhs.calls.cmp(&lhs.calls))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(64).enumerate() {
+            eprintln!(
+                "rum-profile builtin-timing rank={} symbol={} source={} arg_count={} calls={} total_ns={} avg_ns={} self_total_ns={} self_avg_ns={} ok={} err={}",
+                rank + 1,
+                key.symbol,
+                profile_optional_symbol_name(key.source_symbol),
+                key.arg_count,
+                stats.calls,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.calls),
+                stats.self_nanos,
+                profile_stats_average(stats.self_nanos, stats.calls),
+                stats.ok,
+                stats.err,
+            );
+        }
+    });
+
+    BUILTIN_TIMING_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.self_nanos
+                .cmp(&lhs.self_nanos)
+                .then_with(|| rhs.calls.cmp(&lhs.calls))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(64).enumerate() {
+            eprintln!(
+                "rum-profile builtin-self-timing rank={} symbol={} source={} arg_count={} calls={} self_total_ns={} self_avg_ns={} total_ns={} avg_ns={} ok={} err={}",
+                rank + 1,
+                key.symbol,
+                profile_optional_symbol_name(key.source_symbol),
+                key.arg_count,
+                stats.calls,
+                stats.self_nanos,
+                profile_stats_average(stats.self_nanos, stats.calls),
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.calls),
+                stats.ok,
+                stats.err,
+            );
+        }
+    });
+}
+
 fn print_presence_binding_summary() {
     if !lexical_profile_bindings_enabled() {
         return;
@@ -1715,53 +3116,141 @@ fn expression_rebuild_source_name(source: &'static str, symbol: Option<Symbol>) 
     symbol.map_or_else(|| source.to_string(), |symbol| format!("{source}:{symbol}"))
 }
 
+fn presence_target_origin(symbol: Option<&Symbol>) -> PresenceTargetOrigin {
+    let Some(symbol) = symbol else {
+        return PresenceTargetOrigin::None;
+    };
+
+    if let Some(identity) = symbol.identity() {
+        if identity & RULE_RHS_ALPHA_ID_MARKER != 0 {
+            PresenceTargetOrigin::RuleRhsAlphaIdentity
+        } else {
+            PresenceTargetOrigin::OtherIdentity
+        }
+    } else if is_generated_dollar_name(symbol.name()) {
+        PresenceTargetOrigin::GeneratedDollarName
+    } else {
+        PresenceTargetOrigin::PlainSymbol
+    }
+}
+
+fn is_generated_dollar_name(name: &str) -> bool {
+    let Some((_, suffix)) = name.rsplit_once('$') else {
+        return false;
+    };
+    !suffix.is_empty() && suffix.bytes().all(|byte| byte.is_ascii_digit())
+}
+
+fn rule_rhs_alpha_id(symbol: &Symbol) -> Option<u64> {
+    symbol
+        .identity()
+        .filter(|identity| identity & RULE_RHS_ALPHA_ID_MARKER != 0)
+        .map(|identity| identity & !RULE_RHS_ALPHA_ID_MARKER)
+}
+
+fn max_rule_rhs_alpha_id(expr: &Expr) -> Option<u64> {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => rule_rhs_alpha_id(symbol),
+        Expr::Atom(_) => None,
+        Expr::Call { head, args } => {
+            let mut max_id = max_rule_rhs_alpha_id(head);
+            for arg in args.iter() {
+                if let Some(arg_id) = max_rule_rhs_alpha_id(arg) {
+                    max_id = Some(max_id.map_or(arg_id, |current| current.max(arg_id)));
+                }
+            }
+            max_id
+        }
+    }
+}
+
+fn presence_alpha_relation(
+    target: Option<&Symbol>,
+    provenance: ExpressionProvenanceValue,
+) -> PresenceAlphaRelation {
+    let Some(target) = target else {
+        return PresenceAlphaRelation::NoTarget;
+    };
+    let Some(target_id) = rule_rhs_alpha_id(target) else {
+        return PresenceAlphaRelation::TargetNotRuleRhsAlpha;
+    };
+
+    match provenance.max_rule_rhs_alpha_id {
+        Some(max_id) if max_id < target_id => PresenceAlphaRelation::ExprOlderThanTarget,
+        Some(_) => PresenceAlphaRelation::ExprSameOrNewerThanTarget,
+        None if provenance.kind == ExpressionProvenanceKind::Unknown => {
+            PresenceAlphaRelation::Unknown
+        }
+        None => PresenceAlphaRelation::ExprHasNoRuleRhsAlpha,
+    }
+}
+
+fn presence_target_origin_name(origin: PresenceTargetOrigin) -> &'static str {
+    match origin {
+        PresenceTargetOrigin::None => "none",
+        PresenceTargetOrigin::PlainSymbol => "plain",
+        PresenceTargetOrigin::GeneratedDollarName => "generated-dollar",
+        PresenceTargetOrigin::RuleRhsAlphaIdentity => "rule-rhs-alpha",
+        PresenceTargetOrigin::OtherIdentity => "other-identity",
+    }
+}
+
+fn presence_alpha_relation_name(relation: PresenceAlphaRelation) -> &'static str {
+    match relation {
+        PresenceAlphaRelation::NoTarget => "no-target",
+        PresenceAlphaRelation::TargetNotRuleRhsAlpha => "target-not-rule-rhs-alpha",
+        PresenceAlphaRelation::ExprHasNoRuleRhsAlpha => "expr-has-no-rule-rhs-alpha",
+        PresenceAlphaRelation::ExprOlderThanTarget => "expr-older-than-target",
+        PresenceAlphaRelation::ExprSameOrNewerThanTarget => "expr-same-or-newer-than-target",
+        PresenceAlphaRelation::Unknown => "unknown",
+    }
+}
+
+fn expression_provenance_kind_name(kind: ExpressionProvenanceKind) -> &'static str {
+    match kind {
+        ExpressionProvenanceKind::RuleBindingValue => "rule-binding-value",
+        ExpressionProvenanceKind::RuleRhsRebuild => "rule-rhs-rebuild",
+        ExpressionProvenanceKind::OtherRebuild => "other-rebuild",
+        ExpressionProvenanceKind::Unknown => "unknown",
+    }
+}
+
 fn structural_text_and_exact_fingerprints(expr: &Expr) -> (u64, u64) {
     let mut text_hasher = DefaultHasher::new();
     let mut exact_hasher = DefaultHasher::new();
-    hash_expr_text_and_exact(expr, &mut text_hasher, &mut exact_hasher);
+    let _nodes = hash_expr_text_and_exact(expr, &mut text_hasher, &mut exact_hasher);
     (text_hasher.finish(), exact_hasher.finish())
 }
 
-fn structural_text_fingerprint_and_nodes(expr: &Expr) -> (u64, u64) {
-    let mut hasher = DefaultHasher::new();
-    let nodes = hash_expr_text(expr, &mut hasher);
-    (hasher.finish(), nodes)
-}
-
-fn hash_expr_text(expr: &Expr, state: &mut impl Hasher) -> u64 {
-    match expr {
-        Expr::Atom(atom) => {
-            hash_atom_text(atom, state);
-            1
-        }
-        Expr::Call { head, args } => {
-            4_u8.hash(state);
-            let mut nodes = 1_u64.saturating_add(hash_expr_text(head, state));
-            args.len().hash(state);
-            for arg in args.iter() {
-                nodes = nodes.saturating_add(hash_expr_text(arg, state));
-            }
-            nodes
-        }
-    }
+fn structural_text_exact_fingerprints_and_nodes(expr: &Expr) -> (u64, u64, u64) {
+    let mut text_hasher = DefaultHasher::new();
+    let mut exact_hasher = DefaultHasher::new();
+    let nodes = hash_expr_text_and_exact(expr, &mut text_hasher, &mut exact_hasher);
+    (text_hasher.finish(), exact_hasher.finish(), nodes)
 }
 
 fn hash_expr_text_and_exact(
     expr: &Expr,
     text_state: &mut impl Hasher,
     exact_state: &mut impl Hasher,
-) {
+) -> u64 {
     match expr {
-        Expr::Atom(atom) => hash_atom_text_and_exact(atom, text_state, exact_state),
+        Expr::Atom(atom) => {
+            hash_atom_text_and_exact(atom, text_state, exact_state);
+            1
+        }
         Expr::Call { head, args } => {
             4_u8.hash(text_state);
             4_u8.hash(exact_state);
-            hash_expr_text_and_exact(head, text_state, exact_state);
+            let mut nodes =
+                1_u64.saturating_add(hash_expr_text_and_exact(head, text_state, exact_state));
             args.len().hash(text_state);
             args.len().hash(exact_state);
             for arg in args.iter() {
-                hash_expr_text_and_exact(arg, text_state, exact_state);
+                nodes =
+                    nodes.saturating_add(hash_expr_text_and_exact(arg, text_state, exact_state));
             }
+            nodes
         }
     }
 }
@@ -1800,32 +3289,17 @@ fn hash_atom_text_and_exact(
     }
 }
 
-fn hash_atom_text(atom: &Atom, state: &mut impl Hasher) {
-    match atom {
-        Atom::Integer(value) => {
-            0_u8.hash(state);
-            value.hash(state);
-        }
-        Atom::Rational(value) => {
-            1_u8.hash(state);
-            value.hash(state);
-        }
-        Atom::String(value) => {
-            2_u8.hash(state);
-            value.hash(state);
-        }
-        Atom::Symbol(symbol) => {
-            3_u8.hash(state);
-            symbol.context().hash(state);
-            symbol.name().hash(state);
-        }
-    }
-}
-
 fn presence_scan_kind_name(kind: PresenceScanKind) -> &'static str {
     match kind {
         PresenceScanKind::Single => "single",
         PresenceScanKind::Multi => "multi",
+    }
+}
+
+fn presence_source_fingerprint_kind_name(kind: PresenceSourceFingerprintKind) -> &'static str {
+    match kind {
+        PresenceSourceFingerprintKind::Text => "text",
+        PresenceSourceFingerprintKind::Exact => "exact",
     }
 }
 

@@ -294,6 +294,15 @@ debug build, and the same JSON entry exposes `cargo_profile` as `debug` or
 `release` for dashboards. Lane D remains a local `rum` performance lane; it
 should not use a Wolfram oracle.
 
+Project-specific performance investigations, such as the `mma-hol` Pair/Simp
+gate, are not allowed to proceed by chasing small probes in isolation. Treat
+them as top-down phase-tree work: fix the current root target, measure it with
+profiling off, split that target into phases whose times close over the parent
+wall time, and descend only into the largest closed child segment. Profilers,
+counters, and Wolfram comparisons are attribution tools after root ownership is
+established; they are not permission to switch the investigation to a smaller
+non-dominating probe.
+
 ## Oracle Policy
 
 Oracle runs use a user-provided local Wolfram kernel such as `WolframKernel`,

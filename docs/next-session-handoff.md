@@ -1,5 +1,18 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
+Process correction, 2026-06-17: recent probes drifted away from this handoff's
+root target. The added `PropTaut` / one-case
+``HOL`Bool`EXCLUDEDMIDDLE[p]`` probes are valid side evidence, but they were
+not proven to dominate the current `Pair.wl` / warm public mkPair gate. Do not
+continue drilling them as the main line. Resume from the root performance
+question below: build a no-profile closed phase tree for unmodified `Pair.wl`
+or the warm public mkPair reproducer, verify child phases sum close to the
+parent wall time, then descend only into the largest child. Record root target,
+parent segment, child percentage, profile overhead ratio, and logs at every
+descent. This rule exists because the investigation lost the current-root
+invariant and followed readable local profile output instead of the dominant
+hundreds-of-seconds gate.
+
 Current focus: **Task 2d** — fix rum's failed-rule-dispatch cost in the kernel,
 not in `Simp.wl`. The diagnosis below (Task 2c + secondary splits) is correct
 and excellent; the prototyped fix is at the wrong layer. See the review block

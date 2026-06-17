@@ -48,6 +48,8 @@ impl Session {
     pub(in crate::runtime) fn eval_module(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         self.record_profile_eval_module_entry();
         let profile_start = lexical_profile_start();
+        let eval_cache_profile_start =
+            evaluation_cache_profile_source_timing_start("eval_module_by_source");
 
         if args.len() != 2 {
             return Ok(self.invalid_call_with_exact_arg_count("Module", args, 2));
@@ -85,6 +87,7 @@ impl Session {
 
         let result = self.resume_module_initializers(items, args[1].clone(), renames, 0);
         record_profile_eval_module(profile_start);
+        record_profile_eval_module_by_source(eval_cache_profile_start);
         result
     }
 
@@ -261,16 +264,22 @@ impl Session {
         record_profile_module_resume_entry(index);
         if index >= items.len() {
             let profile_start = lexical_profile_start();
+            let eval_cache_profile_start =
+                evaluation_cache_profile_source_timing_start("module_body_substitution_by_source");
             let body = substitute_lexical_bindings(&body, &renames, &BTreeSet::new());
             record_profile_module_body_substitution(profile_start);
+            record_profile_module_body_substitution_by_source(eval_cache_profile_start);
             return self.evaluate(body);
         }
 
         let (symbol, init) = items[index].clone();
         if let Some(init) = init {
             let profile_start = lexical_profile_start();
+            let eval_cache_profile_start =
+                evaluation_cache_profile_source_timing_start("module_init_substitution_by_source");
             let renamed_init = substitute_lexical_bindings(&init, &renames, &BTreeSet::new());
             record_profile_module_init_substitution(profile_start);
+            record_profile_module_init_substitution_by_source(eval_cache_profile_start);
             let init_result = self.evaluate(renamed_init);
             let outcome = self.suspend_with_frame_lazy(init_result, || {
                 let items = items.clone();

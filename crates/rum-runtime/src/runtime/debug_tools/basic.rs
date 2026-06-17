@@ -95,6 +95,36 @@ impl Session {
 
         Ok(Expr::call(system_expr("List"), items))
     }
+
+    pub(in crate::runtime) fn eval_rum_profile_reset(
+        &mut self,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !args.is_empty() {
+            return Ok(self.invalid_call_with_exact_arg_count("RumProfileReset", args, 0));
+        }
+
+        reset_lexical_profile_counters();
+        reset_evaluation_cache_profile_counters();
+        Ok(system_expr("Null"))
+    }
+
+    pub(in crate::runtime) fn eval_rum_profile_snapshot(
+        &mut self,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let label = match args {
+            [] => "snapshot",
+            [label] => expr_as_string(label).unwrap_or("snapshot"),
+            _ => {
+                return Ok(self.invalid_call_with_arg_range("RumProfileSnapshot", args, 0, 1));
+            }
+        };
+
+        print_lexical_profile_snapshot(label);
+        print_evaluation_cache_profile_snapshot(label);
+        Ok(system_expr("Null"))
+    }
 }
 
 fn debug_slot_expr() -> Expr {

@@ -115,6 +115,16 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldFirst,
         BuiltinHandler::EvaluationData,
     ),
+    BuiltinSpec::ordinary(
+        "RumProfileReset",
+        "Internal diagnostic hook: resets rum runtime profile counters when profiling is enabled.",
+        BuiltinHandler::RumProfileReset,
+    ),
+    BuiltinSpec::ordinary(
+        "RumProfileSnapshot",
+        "Internal diagnostic hook: prints rum runtime profile counters when profiling is enabled.",
+        BuiltinHandler::RumProfileSnapshot,
+    ),
     BuiltinSpec::ordinary_with_hold(
         "TestCreate",
         "Builds a first-pass symbolic test specification.",

@@ -181,6 +181,36 @@ fn short_uses_the_current_canonical_text_truncation_subset() {
 }
 
 #[test]
+fn rum_profile_hooks_are_inert_without_profile_env() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("RumProfileReset[]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Null"
+    );
+    assert_eq!(
+        session
+            .eval_text("RumProfileSnapshot[\"unit\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Null"
+    );
+    assert_eq!(
+        session
+            .eval_text("RumProfileReset[extra]")
+            .unwrap()
+            .value
+            .to_string(),
+        "RumProfileReset[extra]"
+    );
+}
+
+#[test]
 fn on_and_off_gate_matching_messages_at_session_scope() {
     let mut session = Session::new();
 

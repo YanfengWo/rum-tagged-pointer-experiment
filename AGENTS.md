@@ -44,6 +44,9 @@ Before substantial work, read the smallest set needed for the task:
   Wolfram conformance lanes, and same-name compatibility rules
 - [docs/mma-hol-smoke-and-snapshot.md](./docs/mma-hol-smoke-and-snapshot.md):
   bounded `mma-hol` smoke driver and stable snapshot gap audit
+- [docs/proptaut-performance-audit.md](./docs/proptaut-performance-audit.md):
+  performance-diagnosis method and pitfalls for `PropTaut` / `mma-hol`
+  work; required before Pair/Simp or PropTaut performance investigations
 - [docs/code-organization-guidelines.md](./docs/code-organization-guidelines.md):
   file-size and module-organization rules
 
@@ -117,6 +120,20 @@ native ZeroMQ smokes need loopback-port access outside the Codex sandbox, but
 their files remain under `jupyter_home/`. Robust interrupt/cancel and rich
 display behavior remain outside the current v0.1 contract.
 
+Performance investigations must stay anchored to the current acceptance root.
+For `mma-hol`, that means the unmodified `Pair.wl` load or the warm public
+mkPair probe that reproduces the gate, not whichever smaller probe currently
+has readable profile output. Before drilling into any child function, build or
+reuse a closed phase tree for the parent target: the measured child phases must
+sum close to the parent wall time, the largest child must be named with a
+percentage of the parent, and the same target must have a no-profile baseline.
+Do not descend into a child merely because it is slow in isolation, differs from
+WolframKernel, or appears high in an inclusive ranking. If a child is not shown
+to dominate the current root, label it a side lane and return to the root phase
+tree. The June 2026 Pair/Simp detour into one-case `EXCLUDEDMIDDLE[p]` is the
+failure mode to avoid: that probe was real but was not proven to own the
+hundreds-of-seconds `Pair.wl` gate.
+
 The PropTaut performance lane has been reopened by external review and a
 follow-up same-bit stability-invalidation experiment. The retained current
 frontier is the PropTaut distribution probe at about `12.73-12.88s` in release
@@ -153,25 +170,20 @@ cleared, but it was reverted before commit: the uncommitted carrier regressed
 the default PropTaut distribution probe from about `10.2s` to about `11.6s`
 while failing to move the Pair/Simp gate. Keep the negative result and do not
 restore the `SharedArgs` stamp slot unless it is truly zero-cost when disabled.
-Follow-up phase probes show public `basicSimpset[]` still completes normally
-(`24.40s` standalone, `22.68s` after mkPair setup, congruence preheat
-`0.0018s`). A corrected final-conversion split shows `buildBaseConv` and the
-top `REPEATC[baseConv]` pass are tiny, while
-`descendOnce[allRules][concl[lhsAppXY]]` times out at `240s`; both recursive
-subcalls on `targetTm[[1]]` and `targetTm[[2]]` also time out. Task 2c's
-two-engine WL-level loop-count probe is complete on the user-rule-only mkPair
-shape: rum and WolframKernel both report `3565` `simpFixpointConv` entries,
-`3573` while iterations, max `seen` size `3`, `3565` fixpoint breaks, and no
-cycles. That completing shape is not looping in rum. The next performance probe
-did split single `mkPair` application terms: `none`/`basic` rules on a full
-application are bounded, user-only grows mildly from `pair2` to `pair4`, but
-`userBasic` on the smallest `mkPair[x, y]` times out in rum while WolframKernel
-completes it in `16.522s` with `1511` entries / `1513` iterations. The current
-smallest hot shape is `descendOnce` on the rewritten `mkPair` RHS lambda:
-`112.766s` in rum with `userBasic`, `23.027s` in rum with user rule only, and
-`10.687s` in WolframKernel with `userBasic`; all are no-op descents. The next
-probe should split the rewritten RHS lambda/body descent and decide whether one
-body subterm or uniform basic-rule failed dispatch owns the cost.
+Follow-up phase probes found that the final opened-body target can be
+single-digit seconds after preheat, while basic and congruence preheats are
+measurable `PropTaut` costs. Those probes are valid side evidence only. They do
+not supersede the older root-level Pair evidence: dependency-preloaded
+`Get["stdlib/Pair.wl"]` spent about `564s` in the Pair body versus about `40s`
+in WolframKernel, and the warm public mkPair probe still times out after normal
+preheat. Smaller single-lemma probes show `impCongLemma[]`, `andCongLemma[]`,
+and `orCongLemma[]` are same-shaped `PropTaut` runs; no-profile
+`impCongLemma[]` is `22.54s` in rum versus `7.08s` in WolframKernel; bare
+``HOL`Bool`EXCLUDEDMIDDLE[p]`` is `0.969s` in rum versus `0.322s` in
+WolframKernel. Keep these numbers as bounded side-lane evidence, not as the
+current Pair root hotspot. The next Pair/Simp performance task is to rebuild a
+closed, no-profile phase tree for the current unmodified Pair root or warm
+public mkPair root, then drill only into the largest closed child segment.
 
 For long-running probes or commands that may spawn children, do not start them
 bare. Use `scripts/run-bounded.py --timeout SECONDS -- <command> ...` or a

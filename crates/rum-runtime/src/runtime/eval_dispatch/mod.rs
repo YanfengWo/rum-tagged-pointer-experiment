@@ -105,10 +105,15 @@ impl Session {
             return Ok(None);
         };
 
-        if let Some(symbol) = expr_as_symbol(head) {
-            self.record_profile_builtin_application(symbol);
+        let builtin_symbol = expr_as_symbol(head).copied();
+        if let Some(symbol) = builtin_symbol {
+            self.record_profile_builtin_application(&symbol);
         }
-        self.run_builtin_handler(handler, head, args).map(Some)
+        let profile_builtin_start =
+            builtin_symbol.map(|symbol| builtin_timing_start(&symbol, args.len()));
+        let result = self.run_builtin_handler(handler, head, args);
+        record_profile_builtin_timing(profile_builtin_start.flatten(), result.is_ok());
+        result.map(Some)
     }
 
     pub(super) fn run_builtin_handler(

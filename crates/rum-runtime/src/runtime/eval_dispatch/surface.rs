@@ -111,6 +111,8 @@ impl Session {
             BuiltinHandler::MemoryInUse => self.eval_memory_in_use(head, args),
             BuiltinHandler::Monitor => self.eval_monitor(args),
             BuiltinHandler::EvaluationData => self.eval_evaluation_data(args),
+            BuiltinHandler::RumProfileReset => self.eval_rum_profile_reset(args),
+            BuiltinHandler::RumProfileSnapshot => self.eval_rum_profile_snapshot(args),
             BuiltinHandler::TestCreate => self.eval_test_create(head, args),
             BuiltinHandler::TestReport => self.eval_test_report(head, args),
             BuiltinHandler::Stack => self.eval_stack(args),

@@ -1014,7 +1014,10 @@ the `mma-hol` lane healthy:
   `1024`. `Pair` still exceeds a `600s` load budget, so later stdlib package
   statuses cannot be trusted until that gate is cleared. Treat the current
   performance notes as evidence-backed next steps, not as permission for broad
-  speculative evaluator rewrites.
+  speculative evaluator rewrites. Pair/Simp performance diagnosis must stay
+  rooted in an unmodified `Pair.wl` load or warm public mkPair reproducer with
+  a closed no-profile phase tree; smaller `PropTaut` or theorem-lemma probes
+  are side evidence unless they are proven to dominate that root.
 
 ### Non-Goals
 

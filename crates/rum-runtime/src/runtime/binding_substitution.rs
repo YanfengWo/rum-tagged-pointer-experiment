@@ -35,7 +35,9 @@ pub(super) fn sequence_expr(values: Vec<Expr>) -> Expr {
 }
 
 fn record_rule_rhs_rebuild(source: &'static str, expr: Expr) -> Expr {
+    let start = rule_rhs_timing_start();
     record_profile_expression_rebuild(source, &expr);
+    record_profile_rule_rhs_timing("record_rebuild", start, None);
     expr
 }
 
@@ -72,8 +74,12 @@ fn substitute_bindings_changed(expr: &Expr, bindings: &SymbolExprMap) -> Option<
 }
 
 pub(super) fn substitute_rule_bindings(expr: &Expr, bindings: &SymbolExprMap) -> Expr {
-    substitute_rule_bindings_changed(expr, bindings, &SymbolExprMap::default())
-        .unwrap_or_else(|| expr.clone())
+    let start = rule_rhs_timing_start();
+    let substituted = substitute_rule_bindings_changed(expr, bindings, &SymbolExprMap::default());
+    let changed = substituted.is_some();
+    let result = substituted.unwrap_or_else(|| expr.clone());
+    record_profile_rule_rhs_timing("top_substitute", start, Some(changed));
+    result
 }
 
 pub(super) fn substitute_rule_bindings_for_rhs(
@@ -81,19 +87,24 @@ pub(super) fn substitute_rule_bindings_for_rhs(
     bindings: &SymbolExprMap,
     may_splice_without_bindings: bool,
 ) -> Expr {
+    let start = rule_rhs_timing_start();
     record_substitution_sharing_counter(
         &RULE_RHS_SUBSTITUTION_REQUEST_COUNT,
         "rule_rhs_substitution_requests",
     );
-    if bindings.is_empty() && !may_splice_without_bindings {
+    let result = if bindings.is_empty() && !may_splice_without_bindings {
         record_substitution_sharing_counter(
             &RULE_RHS_FAST_CLONE_EMPTY_BINDINGS_COUNT,
             "rule_rhs_fast_clone_empty_bindings",
         );
-        expr.clone()
+        let result = expr.clone();
+        record_profile_rule_rhs_timing("fast_clone_empty", rule_rhs_timing_start(), Some(false));
+        result
     } else {
         substitute_rule_bindings(expr, bindings)
-    }
+    };
+    record_profile_rule_rhs_timing("request", start, None);
+    result
 }
 
 pub(super) fn rule_rhs_may_splice_without_bindings(expr: &Expr) -> bool {
@@ -115,14 +126,16 @@ fn substitute_rule_bindings_changed(
 ) -> Option<Expr> {
     match expr {
         Expr::Atom(Atom::Symbol(symbol)) => {
-            let value = bindings
-                .get(symbol)
-                .cloned()
-                .or_else(|| alpha_renames.get(symbol).cloned());
-            if let Some(value) = &value {
+            if let Some(value) = bindings.get(symbol) {
                 record_rule_rhs_binding_hit(value);
+                record_profile_rule_rhs_binding_value(value);
+                Some(value.clone())
+            } else if let Some(value) = alpha_renames.get(symbol) {
+                record_rule_rhs_binding_hit(value);
+                Some(value.clone())
+            } else {
+                None
             }
-            value
         }
         Expr::Atom(_) => None,
         Expr::Call { head, args } if is_system_symbol_name(head, "Module") && args.len() == 2 => {
@@ -150,22 +163,28 @@ fn substitute_rule_scoped_call_changed(
     bindings: &SymbolExprMap,
     alpha_renames: &SymbolExprMap,
 ) -> Option<Expr> {
+    let start = rule_rhs_timing_start();
     let Some(local_symbols) = parse_module_binding_list(&args[0]).map(scoped_binding_symbols)
     else {
-        return substitute_rule_call_changed_with_arg_alphas(
+        let result = substitute_rule_call_changed_with_arg_alphas(
             head,
             args,
             bindings,
             alpha_renames,
             |_| alpha_renames,
         );
+        record_profile_rule_rhs_timing("scoped_call", start, Some(result.is_some()));
+        return result;
     };
     let scoped_alpha_renames =
         alpha_renames_with_fresh_locals(alpha_renames, bindings, local_symbols);
 
-    substitute_rule_call_changed_with_arg_alphas(head, args, bindings, alpha_renames, |_| {
-        &scoped_alpha_renames
-    })
+    let result =
+        substitute_rule_call_changed_with_arg_alphas(head, args, bindings, alpha_renames, |_| {
+            &scoped_alpha_renames
+        });
+    record_profile_rule_rhs_timing("scoped_call", start, Some(result.is_some()));
+    result
 }
 
 fn substitute_rule_with_call_changed(
@@ -174,14 +193,17 @@ fn substitute_rule_with_call_changed(
     bindings: &SymbolExprMap,
     alpha_renames: &SymbolExprMap,
 ) -> Option<Expr> {
+    let start = rule_rhs_timing_start();
     let Some(local_symbols) = parse_with_binding_list(&args[0]).map(with_binding_symbols) else {
-        return substitute_rule_call_changed_with_arg_alphas(
+        let result = substitute_rule_call_changed_with_arg_alphas(
             head,
             args,
             bindings,
             alpha_renames,
             |_| alpha_renames,
         );
+        record_profile_rule_rhs_timing("with_call", start, Some(result.is_some()));
+        return result;
     };
     let scoped_alpha_renames =
         alpha_renames_with_fresh_locals(alpha_renames, bindings, local_symbols);
@@ -197,10 +219,11 @@ fn substitute_rule_with_call_changed(
         substitute_rule_bindings_changed(&args[1], bindings, &scoped_alpha_renames);
 
     if substituted_head.is_none() && substituted_bindings.is_none() && substituted_body.is_none() {
+        record_profile_rule_rhs_timing("with_call", start, Some(false));
         return None;
     }
 
-    Some(record_rule_rhs_rebuild(
+    let result = Some(record_rule_rhs_rebuild(
         "rule_rhs_with_call",
         Expr::call(
             substituted_head.unwrap_or_else(|| head.clone()),
@@ -209,7 +232,9 @@ fn substitute_rule_with_call_changed(
                 substituted_body.unwrap_or_else(|| args[1].clone()),
             ],
         ),
-    ))
+    ));
+    record_profile_rule_rhs_timing("with_call", start, Some(true));
+    result
 }
 
 fn substitute_rule_function_call_changed(
@@ -218,24 +243,35 @@ fn substitute_rule_function_call_changed(
     bindings: &SymbolExprMap,
     alpha_renames: &SymbolExprMap,
 ) -> Option<Expr> {
+    let start = rule_rhs_timing_start();
     let Some(params) = explicit_function_parameters_from_args(args) else {
-        return substitute_rule_call_changed_with_arg_alphas(
+        let result = substitute_rule_call_changed_with_arg_alphas(
             head,
             args,
             bindings,
             alpha_renames,
             |_| alpha_renames,
         );
+        record_profile_rule_rhs_timing("function_call", start, Some(result.is_some()));
+        return result;
     };
     let scoped_alpha_renames = alpha_renames_with_fresh_locals(alpha_renames, bindings, params);
 
-    substitute_rule_call_changed_with_arg_alphas(head, args, bindings, alpha_renames, |index| {
-        if index <= 1 {
-            &scoped_alpha_renames
-        } else {
-            alpha_renames
-        }
-    })
+    let result = substitute_rule_call_changed_with_arg_alphas(
+        head,
+        args,
+        bindings,
+        alpha_renames,
+        |index| {
+            if index <= 1 {
+                &scoped_alpha_renames
+            } else {
+                alpha_renames
+            }
+        },
+    );
+    record_profile_rule_rhs_timing("function_call", start, Some(result.is_some()));
+    result
 }
 
 fn substitute_rule_call_changed_with_arg_alphas<'a, F>(
@@ -248,6 +284,7 @@ fn substitute_rule_call_changed_with_arg_alphas<'a, F>(
 where
     F: FnMut(usize) -> &'a SymbolExprMap,
 {
+    let start = rule_rhs_timing_start();
     let substituted_head = substitute_rule_bindings_changed(head, bindings, head_alpha_renames);
     let mut substituted_args = None;
 
@@ -286,7 +323,9 @@ where
         }
     }
 
-    rebuild_rule_call(head, args, substituted_head, substituted_args)
+    let result = rebuild_rule_call(head, args, substituted_head, substituted_args);
+    record_profile_rule_rhs_timing("call_args", start, Some(result.is_some()));
+    result
 }
 
 fn substitute_rule_with_binding_list_changed(
@@ -295,12 +334,17 @@ fn substitute_rule_with_binding_list_changed(
     alpha_renames: &SymbolExprMap,
     scoped_alpha_renames: &SymbolExprMap,
 ) -> Option<Expr> {
+    let start = rule_rhs_timing_start();
     let Expr::Call { head, args } = expr else {
-        return substitute_rule_bindings_changed(expr, bindings, alpha_renames);
+        let result = substitute_rule_bindings_changed(expr, bindings, alpha_renames);
+        record_profile_rule_rhs_timing("with_binding_list", start, Some(result.is_some()));
+        return result;
     };
 
     if !is_system_symbol_name(head, "List") {
-        return substitute_rule_bindings_changed(expr, bindings, alpha_renames);
+        let result = substitute_rule_bindings_changed(expr, bindings, alpha_renames);
+        record_profile_rule_rhs_timing("with_binding_list", start, Some(result.is_some()));
+        return result;
     }
 
     let substituted_head = substitute_rule_bindings_changed(head, bindings, alpha_renames);
@@ -330,7 +374,7 @@ fn substitute_rule_with_binding_list_changed(
         }
     }
 
-    match (substituted_head, substituted_items) {
+    let result = match (substituted_head, substituted_items) {
         (None, None) => None,
         (Some(head), None) => Some(record_rule_rhs_rebuild(
             "rule_rhs_with_binding_list",
@@ -347,7 +391,9 @@ fn substitute_rule_with_binding_list_changed(
             "rule_rhs_with_binding_list",
             Expr::call(head, args),
         )),
-    }
+    };
+    record_profile_rule_rhs_timing("with_binding_list", start, Some(result.is_some()));
+    result
 }
 
 fn substitute_rule_with_binding_item_changed(
@@ -356,6 +402,7 @@ fn substitute_rule_with_binding_item_changed(
     rhs_alpha_renames: &SymbolExprMap,
     scoped_alpha_renames: &SymbolExprMap,
 ) -> Option<Expr> {
+    let start = rule_rhs_timing_start();
     match expr {
         Expr::Call { head, args }
             if (is_system_symbol_name(head, "Set") || is_system_symbol_name(head, "Rule"))
@@ -371,10 +418,11 @@ fn substitute_rule_with_binding_item_changed(
 
             if substituted_head.is_none() && substituted_lhs.is_none() && substituted_rhs.is_none()
             {
+                record_profile_rule_rhs_timing("with_binding_item", start, Some(false));
                 return None;
             }
 
-            Some(record_rule_rhs_rebuild(
+            let result = Some(record_rule_rhs_rebuild(
                 "rule_rhs_with_binding_item",
                 Expr::call(
                     substituted_head.unwrap_or_else(|| head.as_ref().clone()),
@@ -383,9 +431,15 @@ fn substitute_rule_with_binding_item_changed(
                         substituted_rhs.unwrap_or_else(|| args[1].clone()),
                     ],
                 ),
-            ))
+            ));
+            record_profile_rule_rhs_timing("with_binding_item", start, Some(true));
+            result
         }
-        _ => substitute_rule_bindings_changed(expr, bindings, rhs_alpha_renames),
+        _ => {
+            let result = substitute_rule_bindings_changed(expr, bindings, rhs_alpha_renames);
+            record_profile_rule_rhs_timing("with_binding_item", start, Some(result.is_some()));
+            result
+        }
     }
 }
 
@@ -395,7 +449,8 @@ fn rebuild_rule_call(
     substituted_head: Option<Expr>,
     substituted_args: Option<Vec<Expr>>,
 ) -> Option<Expr> {
-    match (substituted_head, substituted_args) {
+    let start = rule_rhs_timing_start();
+    let result = match (substituted_head, substituted_args) {
         (None, None) => None,
         (Some(head), None) => {
             record_substitution_sharing_counter(
@@ -427,7 +482,9 @@ fn rebuild_rule_call(
                 Expr::call(head, args),
             ))
         }
-    }
+    };
+    record_profile_rule_rhs_timing("rebuild_call", start, Some(result.is_some()));
+    result
 }
 
 fn scoped_binding_symbols(items: Vec<(Symbol, Option<Expr>)>) -> Vec<Symbol> {
@@ -451,14 +508,17 @@ fn alpha_renames_with_fresh_locals(
     bindings: &SymbolExprMap,
     locals: Vec<Symbol>,
 ) -> SymbolExprMap {
+    let start = rule_rhs_timing_start();
     let mut scoped = alpha_renames.clone();
     for local in locals {
         if bindings.contains_key(&local) {
             continue;
         }
         let alpha = fresh_rule_rhs_alpha_symbol(&local);
+        record_profile_rule_rhs_alpha_rename(&local, &alpha);
         scoped.insert(local, Expr::Atom(Atom::Symbol(alpha)));
     }
+    record_profile_rule_rhs_timing("alpha_renames", start, None);
     scoped
 }
 
@@ -613,6 +673,60 @@ mod tests {
 
         assert_eq!(args.len(), 1);
         assert_call_shared_nodes_eq(&item, &args[0]);
+    }
+
+    #[test]
+    fn rule_rhs_alpha_rename_does_not_rewrite_inserted_bound_values() {
+        let x = Symbol::from_name("x");
+        let body = Symbol::from_name("body");
+        let bound = Expr::call(system_expr("Hold"), vec![symbol_expr(&x)]);
+        let mut bindings = SymbolExprMap::default();
+        bindings.insert(body.clone(), bound.clone());
+        let rhs = Expr::call(
+            system_expr("Module"),
+            vec![
+                Expr::call(system_expr("List"), vec![symbol_expr(&x)]),
+                Expr::call(
+                    system_expr("Hold"),
+                    vec![symbol_expr(&body), symbol_expr(&x)],
+                ),
+            ],
+        );
+
+        let substituted = substitute_rule_bindings_for_rhs(&rhs, &bindings, false);
+        let module_locals = call_arg(&substituted, 0);
+        let module_body = call_arg(&substituted, 1);
+        let alpha_local = symbol_atom(call_arg(module_locals, 0)).clone();
+
+        assert_eq!(alpha_local.context(), x.context());
+        assert_eq!(alpha_local.name(), x.name());
+        assert!(alpha_local.identity().is_some());
+        assert_eq!(symbol_atom(call_arg(module_body, 1)), &alpha_local);
+
+        let inserted_value = call_arg(module_body, 0);
+        assert_call_shared_nodes_eq(&bound, inserted_value);
+        let inserted_x = symbol_atom(call_arg(inserted_value, 0));
+        assert_eq!(inserted_x, &x);
+        assert_eq!(inserted_x.identity(), None);
+        assert_ne!(inserted_x, &alpha_local);
+    }
+
+    fn symbol_expr(symbol: &Symbol) -> Expr {
+        Expr::Atom(Atom::Symbol(symbol.clone()))
+    }
+
+    fn call_arg(expr: &Expr, index: usize) -> &Expr {
+        let Expr::Call { args, .. } = expr else {
+            panic!("expected call expression");
+        };
+        &args[index]
+    }
+
+    fn symbol_atom(expr: &Expr) -> &Symbol {
+        let Expr::Atom(Atom::Symbol(symbol)) = expr else {
+            panic!("expected symbol atom");
+        };
+        symbol
     }
 
     fn assert_call_shared_nodes_eq(expected: &Expr, actual: &Expr) {

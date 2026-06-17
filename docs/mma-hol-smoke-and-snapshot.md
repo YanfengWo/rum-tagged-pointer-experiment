@@ -45,6 +45,12 @@ for each stage. That makes the first failing load boundary explicit and avoids
 keeping long-lived session state hidden inside the driver. It should not be
 used to compare elapsed time across commits.
 
+For performance triage, use the smoke driver only to choose the current root
+gate. After that, build a dedicated no-profile phase probe whose child timings
+close over that root before drilling into smaller functions. Do not treat a
+small package helper or theorem lemma as the active hotspot unless the closed
+phase tree proves it dominates the current `mma-hol` gate.
+
 The test stages preload the package dependency prefix needed by the selected
 test file, then load `tests/harness.wl` and run one test file. That keeps
 `Needs[...]` package lookup noise out of performance triage; for example,

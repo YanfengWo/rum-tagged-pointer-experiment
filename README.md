@@ -152,6 +152,11 @@ processes, prefer:
 scripts/run-bounded.py --timeout 120 -- <command> ...
 ```
 
+For performance diagnosis, keep probes anchored to the current root gate.
+Measure the root without profiling, split it into child phases that close over
+the parent wall time, and drill only into the largest closed child. Smaller
+probes are side evidence until they are shown to dominate that root.
+
 Run the CLI REPL:
 
 ```bash

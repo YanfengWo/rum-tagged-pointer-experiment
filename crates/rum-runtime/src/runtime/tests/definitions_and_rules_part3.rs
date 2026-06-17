@@ -376,6 +376,39 @@ fn delayed_rhs_substitution_does_not_capture_inserted_values_in_lexical_scopes()
 }
 
 #[test]
+fn delayed_rhs_substitution_keeps_inserted_compound_values_outside_new_locals() {
+    let mut session = Session::new();
+    assert_eq!(
+        session
+            .eval_text("ClearAll[f, x]; SetAttributes[f, HoldAll]; f[body_] := Module[{x}, Hold[body, x]]; f[Hold[x]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[Hold[x], x$1]"
+    );
+
+    let mut session = Session::new();
+    assert_eq!(
+        session
+            .eval_text("ClearAll[f, x]; SetAttributes[f, HoldAll]; f[body_] := With[{x = 1}, Hold[body, x]]; f[Hold[x]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[Hold[x], 1]"
+    );
+
+    let mut session = Session::new();
+    assert_eq!(
+        session
+            .eval_text("ClearAll[f, x, y]; SetAttributes[f, HoldAll]; f[body_] := Function[x, Hold[body, x], HoldAll][y]; f[Hold[x]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[Hold[x], y]"
+    );
+}
+
+#[test]
 fn delayed_rhs_substitution_preserves_same_name_local_binding_behavior() {
     let mut session = Session::new();
     assert_eq!(

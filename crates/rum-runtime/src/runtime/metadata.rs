@@ -547,6 +547,8 @@ pub enum BuiltinHandler {
     MemoryInUse,
     Monitor,
     EvaluationData,
+    RumProfileReset,
+    RumProfileSnapshot,
     TestCreate,
     TestReport,
     Stack,
