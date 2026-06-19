@@ -6,6 +6,58 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-19 Pair/Simp Runtime Sharing Cut
+
+Turned the first production runtime optimization from the recent Pair/Simp
+diagnosis into code, without changing the unmodified `mma-hol` acceptance
+target.
+
+Retained runtime cuts:
+
+- `Catch` now bypasses the general matcher for already-resolved atomic tag
+  forms, while still evaluating the tag form before matching so visible side
+  effects and pattern forms keep the previous semantics.
+- `normalize_match_expr` now returns the original shared expression when
+  recursive normalization and Flat/Orderless argument normalization make no
+  semantic change. This preserves `SharedExpr` / `SharedArgs` identity for
+  ordinary calls instead of rebuilding fresh call trees during failed
+  conversion dispatch paths.
+- Added
+  `scripts/perf-probes/pair-simp/runtime-profile-basic-only-pair4.wls` as a
+  focused low-disturbance runtime profile target around the basic-rule
+  `pair4` no-op simplification.
+
+Validation:
+
+```bash
+cargo fmt --check
+cargo test -p rum-runtime
+cargo build --release -p rum-cli
+scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only basic-only-pair4 --timeout 180 --output-dir /tmp/rum-pair-simp-basic-only.normalize.A1
+scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only pair4-stock-repeat8 --timeout 180 --output-dir /tmp/rum-pair-simp-pair4-repeat8.normalize.A1
+scripts/pair-simp-repetition-probe.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --timeout 900 --output-dir /tmp/rum-pair-repeat.normalize.A1
+```
+
+Measured release results on the same clean clone:
+
+- `basic-only-pair4-simpFixpointConv`: about `5.68-6.36s` before this cut,
+  now `2.23s`; theorem marker `True`, changed marker `False`.
+- `pair4-stock-repeat8`: target segment `60.76s` before this cut, now
+  `18.30s`; theorem marker `True`, changed marker `False`.
+- first `mkPairInj` `CONVRULE` repetition root: previous production baseline
+  about `564s`, now `307s`.
+- Low-disturbance profile target: about `6.36s` before, now `2.99s`.
+  `module_body_substitution_total_ns` fell from about `1.59s` to `1.00s`;
+  cumulative `eval_module_total_ns` fell from about `130.63s` to `65.49s`.
+  Call-stability absent misses fell from `2,188,789` to `940,263`, confirming
+  that preserving shared call trees lets existing cache paths hit more often.
+
+This does not close the Pair gate, but it validates the current rum-side
+frontier: avoid downstream `mma-hol` patches and avoid unsafe text-fingerprint
+semantic caches; continue with conservative representation/sharing cuts or
+closed root-level splits that further reduce repeated failed conversion
+dispatch and lexical absence-scan churn.
+
 ## 2026-06-18 Pair/Simp Abs-And Cold-Cache Split
 
 Continued the no-optimization Pair/Simp root phase tree against the unmodified

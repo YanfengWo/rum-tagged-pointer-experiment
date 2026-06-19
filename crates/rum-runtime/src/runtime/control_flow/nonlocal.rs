@@ -147,6 +147,18 @@ impl Session {
         tag: Expr,
         explicit_tag: bool,
     ) -> Result<Expr, EvalError> {
+        if let Some(matched) = exact_catch_tag_match(&form, &tag) {
+            return if matched {
+                self.finish_catch_match(handler, value, tag)
+            } else {
+                Err(EvalError::Thrown {
+                    value,
+                    tag,
+                    explicit_tag,
+                })
+            };
+        }
+
         let match_result = self.match_expr_owned(form, tag.clone(), SymbolExprMap::default());
         self.drive_internal_value(match_result, move |session, outcome| {
             if outcome.matched {
@@ -219,6 +231,25 @@ impl Session {
         cleanup_tag: Expr,
         cleanup_explicit_tag: bool,
     ) -> Result<Expr, EvalError> {
+        if let Some(matched) = exact_catch_tag_match(&form, &tag) {
+            return if matched {
+                Err(EvalError::Thrown {
+                    value,
+                    tag,
+                    explicit_tag,
+                })
+            } else {
+                Err(EvalError::ThrownBypassingCatch {
+                    value,
+                    tag,
+                    explicit_tag,
+                    cleanup_value,
+                    cleanup_tag,
+                    cleanup_explicit_tag,
+                })
+            };
+        }
+
         let match_result = self.match_expr_owned(form, tag.clone(), SymbolExprMap::default());
         self.drive_internal_value(match_result, move |_, outcome| {
             if outcome.matched {
@@ -251,4 +282,8 @@ impl Session {
             None => Ok(value),
         }
     }
+}
+
+fn exact_catch_tag_match(form: &Expr, tag: &Expr) -> Option<bool> {
+    matches!(form, Expr::Atom(_)).then(|| form == tag)
 }

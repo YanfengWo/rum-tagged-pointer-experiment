@@ -148,10 +148,14 @@ optimizations. Retained work includes symbol interning with dense ids,
 id-hashed definition/attribute/binding maps, dependency-aware stability-cache
 invalidation with a rewritten dirty bloom for repeated same-bit writes,
 mimalloc in `rum-cli`, a message-symbol existence index, and the shared
-call-tree `Expr` representation. Pair/Simp runtime stability cuts reduce the
+call-tree `Expr` representation. Pair/Simp runtime stability cuts reduced the
 local user-rule-only mkPair probe to about `40.61s` and `basicSimpset[]` to
-about `20.27s`, but the public warm mkPair probe still times out and the
-`Pair.wl` gate remains open.
+about `20.27s`. The 2026-06-19 runtime sharing cut retained an exact atomic
+`Catch` tag fast path and changed `normalize_match_expr` to preserve shared
+call trees when normalization is a no-op; on the unmodified clean clone,
+`basic-only-pair4` improved from about `5.68-6.36s` to `2.23s`,
+`pair4-stock-repeat8` from `60.76s` to `18.30s`, and the first `mkPairInj`
+`CONVRULE` root from about `564s` to `307s`. The `Pair.wl` gate remains open.
 Exact per-symbol/per-bloom-bit version
 snapshots, skipping dirty-related call-cache entries, whole-expression exact
 normal-form caching, symbol fingerprint hashing, shallow definition matcher
@@ -160,16 +164,16 @@ were measured and rejected or left as optional local knobs rather than default
 commitments. Task 2b also rejects call-cache size-cap tuning and wider
 dirty-bloom saturation thresholds for the warm public mkPair shape:
 miss-reason counters point mostly at absent pointer-keyed call entries, which
-means the conversion chain is building fresh call trees. The next
-evidence-backed frontier is a rum-side equivalent of the temporary Pair/Simp
-diagnostic cuts: flat/nested `ORELSEC` failure propagation and repeated atomic
-leaf no-op top-repeatc scans. Copy-based `auto/Simp.wl` prototypes proved the
-shape without changing the acceptance target: flat converter combination cut
-the first `mkPairInj` gate to about `440s`, atomic leaf no-op caching cut it to
-about `253s`, and the combined prototype loaded full `Pair.wl` in about
-`183s` with theorem markers true. Do not upstream those temporary downstream
-rewrites; implement a correctness-preserving rum-side cache/dispatch
-optimization with conservative keys and invalidation. A temporary opt-in
+means the conversion chain is building fresh call trees. Copy-based
+`auto/Simp.wl` prototypes are retained as diagnostic evidence only: flat
+converter combination cut the first `mkPairInj` gate to about `440s`, atomic
+leaf no-op caching cut it to about `253s`, and the combined prototype loaded
+full `Pair.wl` in about `183s` with theorem markers true. Do not upstream or
+depend on those downstream rewrites. The next Pair/Simp work should stay
+rum-side: either continue small representation/sharing cuts with before/after
+checks on `basic-only-pair4`, `pair4-stock-repeat8`, and the first `CONVRULE`
+root, or split the remaining closed root phases before changing algorithms. A
+temporary opt-in
 shared-subtree stamp prototype proved that shared subtrees can hit after the
 side cache is cleared, but it was reverted before commit: the uncommitted
 carrier regressed the default PropTaut distribution probe from about `10.2s`
@@ -191,9 +195,9 @@ current Pair root hotspot. A 2026-06-18 deep Pair-root split also showed that
 the first `andCongLemma[]` call can appear as a `~24s` `doAndCong` block, but
 later calls are microsecond/millisecond cache hits; treat it as one-time
 memoized `PropTaut` cold-cache cost, not a repeated steady-state Pair/Simp
-multiplier. The next Pair/Simp performance task is no longer another broad
-phase-tree rebuild; it is to turn the proven flat/cache diagnostic into a
-rum-side optimization and verify it against the unmodified Pair root.
+multiplier. The current Pair/Simp performance task is to continue from the
+retained rum-side sharing result above, not to patch `mma-hol` or chase side
+probes that do not own the current root.
 
 For long-running probes or commands that may spawn children, do not start them
 bare. Use `scripts/run-bounded.py --timeout SECONDS -- <command> ...` or a

@@ -2,23 +2,64 @@ use super::*;
 
 impl Session {
     pub(super) fn normalize_match_expr(&self, expr: &Expr) -> Expr {
-        match expr {
-            Expr::Atom(_) => expr.clone(),
-            Expr::Call { head, args } => {
-                let normalized_head = self.normalize_match_expr(head);
-                let normalized_args = args
-                    .iter()
-                    .map(|arg| self.normalize_match_expr(arg))
-                    .collect::<Vec<_>>();
-                let attributes = self.attribute_set_for_head(&normalized_head);
-                let normalized_args = self.normalize_call_args_by_attributes(
-                    &normalized_head,
-                    normalized_args,
-                    attributes,
-                );
+        self.normalize_match_expr_changed(expr)
+            .unwrap_or_else(|| expr.clone())
+    }
 
-                Expr::call(normalized_head, normalized_args)
+    fn normalize_match_expr_changed(&self, expr: &Expr) -> Option<Expr> {
+        match expr {
+            Expr::Atom(_) => None,
+            Expr::Call { head, args } => {
+                let normalized_head = self.normalize_match_expr_changed(head);
+                let head_for_attributes = normalized_head.as_ref().unwrap_or(head);
+                let normalized_args =
+                    self.normalize_match_arg_list_changed(args, head_for_attributes);
+
+                match (normalized_head, normalized_args) {
+                    (None, None) => None,
+                    (Some(head), None) => Some(Expr::call_with_shared_args(head, args.clone())),
+                    (None, Some(args)) => {
+                        Some(Expr::call_shared(head.clone(), SharedArgs::new(args)))
+                    }
+                    (Some(head), Some(args)) => Some(Expr::call(head, args)),
+                }
             }
+        }
+    }
+
+    fn normalize_match_arg_list_changed(
+        &self,
+        args: &SharedArgs,
+        normalized_head: &Expr,
+    ) -> Option<Vec<Expr>> {
+        let mut normalized_args: Option<Vec<Expr>> = None;
+
+        for (index, arg) in args.iter().enumerate() {
+            if let Some(normalized_arg) = self.normalize_match_expr_changed(arg) {
+                normalized_args
+                    .get_or_insert_with(|| args[..index].to_vec())
+                    .push(normalized_arg);
+            } else if let Some(normalized_args) = &mut normalized_args {
+                normalized_args.push(arg.clone());
+            }
+        }
+
+        let attributes = self.attribute_set_for_head(normalized_head);
+        if !attributes.contains(Attribute::Flat) && !attributes.contains(Attribute::Orderless) {
+            return normalized_args;
+        }
+
+        let args_for_attribute_normalization = normalized_args.unwrap_or_else(|| args.to_vec());
+        let attribute_normalized_args = self.normalize_call_args_by_attributes(
+            normalized_head,
+            args_for_attribute_normalization,
+            attributes,
+        );
+
+        if attribute_normalized_args.as_slice() == args.as_ref() {
+            None
+        } else {
+            Some(attribute_normalized_args)
         }
     }
 

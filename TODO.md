@@ -137,20 +137,23 @@ Completed history, archived planning detail, and operational lessons live in
   downvalues, `HoldAll` / `HoldFirst`, `RuleDelayed`, `With`, and explicit
   `Function`. The semantic regressions are now covered in `rum-runtime`, and
   the same stock Pair/Simp probe still proves the theorem without changing the
-  target term. The performance wall remains rum-side: the latest
-  `basic-pair4-stock` release probe on the unmodified clone is about `51.09s`
-  without profiling and `53.26s` with lexical detail/shape/binding profiling;
-  repeated no-op presence scans over fresh lexical locals such as
-  ``HOL`Drule`Private`res#...`` still dominate. The next Pair/Simp task is not
-  optimization yet: keep building fixed reproducer probes and split the hot
-  WL/runtime functions until each remaining cost is atomic enough to name.
-  The first repo-level probe assets live under
-  `scripts/perf-probes/pair-simp/`; continue from their RHS body/lambda,
-  basic-only, and user-basic public-shape splits before returning to larger
-  representation work. The current runtime baseline shows the finishing
-  opened-body target already performs about `973k` evaluator entries,
-  `70k` down-value applications, `20.6k` `Module` entries, and `8.8M`
-  call-stability checks with no rewrite. Source-level timing now puts the
+  target term. The performance wall remains rum-side. The 2026-06-19 runtime
+  sharing cut retained an exact atomic `Catch` tag fast path and changed
+  `normalize_match_expr` to preserve shared call trees when normalization is a
+  no-op. On the unmodified clean clone, `basic-only-pair4` improved from about
+  `5.68-6.36s` to `2.23s`, `pair4-stock-repeat8` from `60.76s` to `18.30s`,
+  and the first `mkPairInj` `CONVRULE` root from about `564s` to `307s`.
+  Pair/Simp is still open, but the result validates conservative rum-side
+  representation/sharing work as the current path. Do not reintroduce
+  downstream `Simp.wl` patches or unsafe text-fingerprint semantic caches.
+  Continue from the repo-level probe assets under
+  `scripts/perf-probes/pair-simp/` and the root repetition probe; split only
+  closed parent phases or implement small sharing cuts whose before/after can
+  be checked on `basic-only-pair4`, `pair4-stock-repeat8`, and the first
+  `CONVRULE` root. The earlier runtime baseline showed the finishing
+  opened-body target already performs about `973k` evaluator entries, `70k`
+  down-value applications, `20.6k` `Module` entries, and `8.8M`
+  call-stability checks with no rewrite. Source-level timing put the
   largest exclusive chunks in `Module` wrapper/body-substitution work under
   Drule conversion combinators such as ``HOL`Drule`ORELSEC``,
   ``HOL`Drule`Private`tryConv``, ``HOL`Drule`REPEATC``, and
@@ -175,8 +178,9 @@ Completed history, archived planning detail, and operational lessons live in
   invalidation amplifier: dirty writes are led by
   ``HOL`Drule`Private`collectAppSpine``, ``HOL`Drule`REWRCONV``,
   ``HOL`Drule`Private`tryTermMatch``, and
-  ``HOL`Auto`Simp`Private`productiveSimpRule``. Do not move to optimization
-  yet. The WL-hygiene boundary is now covered by
+  ``HOL`Auto`Simp`Private`productiveSimpRule``. Treat these as retained
+  diagnostic constraints for future rum-side optimization. The WL-hygiene
+  boundary is now covered by
   `rule_rhs_alpha_rename_does_not_rewrite_inserted_bound_values` and
   `delayed_rhs_substitution_keeps_inserted_compound_values_outside_new_locals`.
   The provenance split is complete for the finishing opened-body target: the
@@ -198,10 +202,9 @@ Completed history, archived planning detail, and operational lessons live in
   puts the next runtime layer in `Fold` and `Module` under `tyMatch`, plus
   `Set`/`CompoundExpression` costs in theorem plumbing. `Part` and
   `KeyExistsQ` are not major self-time owners in the latest basic-preheat run.
-  Do not optimize yet, and do not continue drilling into small side probes
-  until the current root hotspot is closed. The smaller single-lemma and
-  single-function probes under `scripts/perf-probes/pair-simp/` are retained
-  side evidence only: `imp`/`and`/`or` congruence lemmas are same-shaped
+  Do not let these side probes replace the current Pair root. The smaller
+  single-lemma and single-function probes under `scripts/perf-probes/pair-simp/`
+  are retained side evidence only: `imp`/`and`/`or` congruence lemmas are same-shaped
   `PropTaut` runs; no-profile `impCongLemma[]` is `22.54s` in rum versus
   `7.08s` in WolframKernel; bare ``HOL`Bool`EXCLUDEDMIDDLE[p]`` is `0.969s`
   in rum versus `0.322s` in WolframKernel. These numbers do not explain the
