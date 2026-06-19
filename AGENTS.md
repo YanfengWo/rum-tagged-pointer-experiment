@@ -161,15 +161,21 @@ commitments. Task 2b also rejects call-cache size-cap tuning and wider
 dirty-bloom saturation thresholds for the warm public mkPair shape:
 miss-reason counters point mostly at absent pointer-keyed call entries, which
 means the conversion chain is building fresh call trees. The next
-evidence-backed frontier is either a downstream `Simp` algorithm experiment
-that avoids repeatedly rebuilding the nested `ORELSEC` chain, or larger runtime
-representation work: single-allocation call nodes, inline evaluated/stable
-stamps, and borrowed argument preparation. A temporary opt-in shared-subtree
-stamp prototype proved that shared subtrees can hit after the side cache is
-cleared, but it was reverted before commit: the uncommitted carrier regressed
-the default PropTaut distribution probe from about `10.2s` to about `11.6s`
-while failing to move the Pair/Simp gate. Keep the negative result and do not
-restore the `SharedArgs` stamp slot unless it is truly zero-cost when disabled.
+evidence-backed frontier is a rum-side equivalent of the temporary Pair/Simp
+diagnostic cuts: flat/nested `ORELSEC` failure propagation and repeated atomic
+leaf no-op top-repeatc scans. Copy-based `auto/Simp.wl` prototypes proved the
+shape without changing the acceptance target: flat converter combination cut
+the first `mkPairInj` gate to about `440s`, atomic leaf no-op caching cut it to
+about `253s`, and the combined prototype loaded full `Pair.wl` in about
+`183s` with theorem markers true. Do not upstream those temporary downstream
+rewrites; implement a correctness-preserving rum-side cache/dispatch
+optimization with conservative keys and invalidation. A temporary opt-in
+shared-subtree stamp prototype proved that shared subtrees can hit after the
+side cache is cleared, but it was reverted before commit: the uncommitted
+carrier regressed the default PropTaut distribution probe from about `10.2s`
+to about `11.6s` while failing to move the Pair/Simp gate. Keep the negative
+result and do not restore the `SharedArgs` stamp slot unless it is truly
+zero-cost when disabled.
 Follow-up phase probes found that the final opened-body target can be
 single-digit seconds after preheat, while basic and congruence preheats are
 measurable `PropTaut` costs. Those probes are valid side evidence only. They do
@@ -181,9 +187,13 @@ and `orCongLemma[]` are same-shaped `PropTaut` runs; no-profile
 `impCongLemma[]` is `22.54s` in rum versus `7.08s` in WolframKernel; bare
 ``HOL`Bool`EXCLUDEDMIDDLE[p]`` is `0.969s` in rum versus `0.322s` in
 WolframKernel. Keep these numbers as bounded side-lane evidence, not as the
-current Pair root hotspot. The next Pair/Simp performance task is to rebuild a
-closed, no-profile phase tree for the current unmodified Pair root or warm
-public mkPair root, then drill only into the largest closed child segment.
+current Pair root hotspot. A 2026-06-18 deep Pair-root split also showed that
+the first `andCongLemma[]` call can appear as a `~24s` `doAndCong` block, but
+later calls are microsecond/millisecond cache hits; treat it as one-time
+memoized `PropTaut` cold-cache cost, not a repeated steady-state Pair/Simp
+multiplier. The next Pair/Simp performance task is no longer another broad
+phase-tree rebuild; it is to turn the proven flat/cache diagnostic into a
+rum-side optimization and verify it against the unmodified Pair root.
 
 For long-running probes or commands that may spawn children, do not start them
 bare. Use `scripts/run-bounded.py --timeout SECONDS -- <command> ...` or a

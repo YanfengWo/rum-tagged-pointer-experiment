@@ -157,6 +157,29 @@ automatically the current `Pair.wl` hotspot. Before drilling into any smaller
 `PropTaut` descendant, rebuild a closed phase tree for the current Pair root
 and prove that the `PropTaut` child still dominates that root.
 
+Maintainer note, 2026-06-18: a Pair-root phase-tree split of the deep
+`mkPairInj` abs path found an apparent `doAndCong` `INST` block of about
+`23s`; after adding `and-vars` / `and-lemma` / `and-INST` markers, that block
+was identified as the first `andCongLemma[]` call computing its lazy
+`PropTaut` theorem (`and-lemma` about `24.44s`), while the real kernel `INST`
+was millisecond-scale. This is a cold-cache cost, not a repeated steady-state
+hotspot. Preheating or snapshotting the lemma can improve warm workflows, but
+it only moves time within a cold Pair load and cannot explain a tenfold
+steady-state slowdown. Keep it as side evidence for `PropTaut`; continue Pair
+root diagnosis on repeated recursive `simpFixpointConv` / `descendOnce`
+segments.
+
+Maintainer note, 2026-06-19: later copy-based Pair/Simp diagnostics reached an
+atomic repeated leaf hotspot: failed top-repeatc scans through a nested
+`ORELSEC` converter chain. Temporary `auto/Simp.wl` prototypes in the
+instrumented copy only gave useful ceilings: flat converter combination cut the
+first `mkPairInj` gate to `440s`, atomic leaf no-op caching cut it to `253s`,
+and the combined prototype loaded full `Pair.wl` in `183s` with theorem markers
+still true. These numbers prove the hotspot class, not a downstream fix. The
+next production work must implement an equivalent correctness-preserving
+rum-side optimization, with conservative keys/invalidation, while keeping
+unmodified `mma-hol` as the acceptance target.
+
 ## 5. How to find hot regions in this codebase (method)
 
 The night's probes failed not for lack of effort but because the profile
@@ -211,6 +234,17 @@ was read in the wrong form. Concretely:
   such as one-case ``HOL`Bool`EXCLUDEDMIDDLE[p]`` may show a real constant
   factor, but it is side-lane evidence unless its parent segment is proven to
   dominate the current root.
+- **Separate one-time memoization costs from repeated heat.** Wolfram-style
+  definitions such as `andCongLemma[] := andCongLemma[] = ...` can put a large
+  first-call `PropTaut` cost inside a later-looking phase. If later calls in
+  the same run are microseconds or milliseconds, the block is cold-cache
+  setup. Record it, but do not treat preheating it as a total cold-load win or
+  as the explanation for a repeated Pair/Simp multiplier.
+- **Validate traced paths inside fixpoint loops.** A path that is correct for
+  the first `descendOnce` may be wrong after a loop iteration changes the term
+  shape, for example from a comb to an abs. If a large `loop*-descendOnce`
+  block appears, first log the post-iteration shape and, if needed, rerun with
+  an exact path override before calling `descendOnce` atomic.
 
 ## 6. Note on the prior Bool optimization arc
 

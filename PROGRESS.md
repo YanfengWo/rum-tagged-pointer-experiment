@@ -6,6 +6,395 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-18 Pair/Simp Abs-And Cold-Cache Split
+
+Continued the no-optimization Pair/Simp root phase tree against the unmodified
+clean clone at `/private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol`, using the
+diagnostic copy-based runner `scripts/pair-simp-pair-body-phase-tree.sh`.
+
+The deep `mkPairInj` abs path now has a concrete correction:
+
+- `f/x/f/f/f/f/a/a/a` showed the previous `abs-abs-descendOnce` continuing
+  into `abs-abs-abs-descendOnce` at about `30.96s`, with primitive abs
+  housekeeping (`freesIn`, fresh-name pick, `BETA`, `ABS`) still below
+  millisecond scale.
+- `f/x/f/f/f/f/a/a/a/a` showed that the next layer is no longer another abs
+  opener. Four abs openings expose an `isAnd=True`, `isComb=True` body, and
+  the large block became `abs-abs-abs-abs-descendOnce` at about `29.54s`.
+- Adding a real `doAndCong` split for that body first produced an apparent
+  `and-INST` block around `23.06s`. After splitting `and-vars`,
+  `and-lemma`, and `and-INST`, the block was correctly attributed to the first
+  lazy `andCongLemma[]` computation: `and-lemma` about `24.44s`, real
+  `and-INST` about `0.00047s`, `and-MP` about `0.03s`, and p/q child
+  simplification below `1s` each.
+
+Interpretation: `andCongLemma[]` is a WL memoized cold-cache cost
+(`andCongLemma[] := andCongLemma[] = computeAndCongLemma[]`), not a repeated
+steady-state hotspot. Preheating or snapshotting it can improve warm-session
+developer workflows, but it only moves time inside a full cold Pair load and
+cannot explain a tenfold repeated Pair/Simp slowdown. The remaining Pair-root
+frontier is still the repeated recursive `simpFixpointConv` / `descendOnce`
+chain, especially the loop1 fixpoint labels that stay in the `~4-8s` range
+after cold lemma cost is peeled away.
+
+Follow-up loop splits kept the same rule: do not optimize until the hot child
+is closed and repeatedly hot.
+
+- `/tmp/rum-pair-body-phase.QR1nSF` split the previous
+  `...abs-loop1-abs-loop1-abs` fixpoint label. The old `~7.9s` residual fell
+  to about `0.002s`; its cost moved into two recursive children around
+  `3.7s` each.
+- `/tmp/rum-pair-body-phase.MXYNOV` split the visible `~3.4-3.8s` children.
+  Most of them decomposed into And p/q recursive child labels around
+  `0.7-1.0s`, with `descendOnce` and the immediate follow-up fixpoint loop
+  carrying comparable halves. Repeated `and-lemma` calls after the first were
+  micro/millisecond-scale, confirming that the earlier `~24s` block was
+  one-time memoization.
+
+Current interpretation: this branch is recursive fanout through repeated
+`simpFixpointConv` / `descendOnce` traversal, not an atomic `INST`, `ABS`,
+`MKCOMB`, `TRANS`, `freesIn`, or theorem-plumbing hotspot. The next useful
+probe should move back up the same closed Pair root tree and split the largest
+remaining repeated parent/sibling phase rather than chasing one-time lemma
+construction or sub-second leaf fragments.
+
+The matching top `x`-side probe
+`/tmp/rum-pair-body-phase.KCHkCj` used
+`--path x/f/f/f/f/a/a/a/a/b` and returned cleanly in `563s` with empty stderr
+and both theorem markers true. It split the previous top sibling block and
+showed the same recursive shape:
+
+- The opposite top sibling remained large (`...-comb-f-sibling` about
+  `258.97s`), as expected for a one-sided split.
+- The traced `x` branch had repeated fixpoint parent labels around `61.48s`,
+  `59.27s`, `29.79s`, `29.76s`, `14.96s`, `14.91s`, `7.41s`, `7.39s`, and
+  `3.65s`.
+- Its deepest And p/q children were again about `0.79-0.89s` each. The
+  `and-lemma` call was about `55us`, so the earlier cold-cache lemma cost was
+  not repeated on this branch.
+
+This keeps the current root-level hypothesis narrow: both major `mkPairInj`
+sides spend time in repeated `simpFixpointConv` loop fanout over similar
+logical-congruence subtrees. The next probe should split the visible `x`-side
+loop parents themselves and verify whether the `~60s` and `~30s` blocks are
+just sums of the same `~0.8s` leaves, or whether there is still a larger
+unaccounted repeated operation inside the loop machinery.
+
+Two follow-up `x`-side loop probes clarified that frontier:
+
+- `/tmp/rum-pair-body-phase.t8eJcG` split the exact `x`-side loop parents.
+  The largest newly exposed blocks were not theorem primitives; they were
+  loop-iteration `descendOnce` calls over terms that had changed shape from
+  combs to abs terms: about `34.70s` and `31.48s` under
+  `...x-f-f-f-loop{2,1}-descendOnce`, plus `17.38s` and `16.00s` under
+  `...x-f-f-loop{1,2}-descendOnce`.
+- That revealed a probe limitation. The loop splitter reused the parent path,
+  but after a fixpoint iteration the next target could become an abs term
+  before the old `f/...` path was reached. The diagnostic runner now has an
+  explicit `--loop-path-override` option for exact loop labels; it logs
+  `loop-path-override=...` when used.
+- `/tmp/rum-pair-body-phase.k3hfNg` reran the same target with overrides for
+  the affected loop labels. It returned cleanly in `592s`, with empty stderr
+  and theorem markers true. The former large `loop*-descendOnce` blocks were
+  replaced by abs-subtree fixpoint parents: about `32.93s`,
+  `15.75s`, `15.61s`, `15.59s`, `15.57s`, then `~7.7-7.8s` and `~3.8s`
+  descendants, with many And p/q leaf fixpoints around `0.8-1.0s`.
+
+Current interpretation after the override run: `descendOnce` was not yet an
+atomic runtime hotspot; it was an under-split loop step caused by path drift
+after the term shape changed. The open frontier is now the loop-prefixed abs
+fixpoint parents, especially
+`...x-f-f-f-f-loop1-abs-fixpoint-loop` and the matching `~15s` children. The
+next probe should split those exact loop-prefixed abs labels before considering
+any algorithm or runtime change.
+
+Additional exact-label splits pushed the same `x`-side branch down another
+level:
+
+- `/tmp/rum-pair-body-phase.wSqe4m` split
+  `...x-f-f-f-f-loop1-abs` and nearby `~15-32s` abs parents. The old
+  `~32.9s` parent disappeared; the largest traced descendants became
+  `...x-f-f-f-f-loop1-abs-loop1-abs-fixpoint-loop` at about `16.77s`, then
+  several `~7.6s` abs-fixpoint parents and `~0.8-1.0s` And p/q leaves.
+- `/tmp/rum-pair-body-phase.tXypOP` split that `~16.77s` parent and its next
+  abs layers. The same branch's largest traced parents fell to `~7.5-7.6s`,
+  with one nested And p child around `2.33s` and most direct leaves around
+  `0.8-1.0s`.
+- `/tmp/rum-pair-body-phase.WLWnTh` split the visible `~7s` parents. The
+  remaining traced branch was mostly `~3.7-4.1s` abs-fixpoint parents plus
+  many `~0.8-1.0s` And p/q children.
+- `/tmp/rum-pair-body-phase.c7cf9p` split the next visible `~7s` labels.
+  It returned cleanly in `577s`, with empty stderr and theorem markers true.
+  The traced `x` branch now has no remaining `~7s` label among the split
+  focus; the biggest traced labels are `~3.5-4.0s` abs-fixpoint parents and
+  `~0.8-1.0s` child fixpoints/descend-once blocks. The full root still shows
+  expected one-sided sibling phases such as top `comb-f-sibling` and
+  `loop1-comb-f-sibling`.
+
+Interpretation: this traced branch is now well characterized as regular
+recursive fanout rather than a single hidden primitive or one missed semantic
+gate. The next root-level probe should stop chasing this branch's `~3s` leaves
+and instead split the remaining larger parent/sibling phases that still exceed
+ten seconds: the root-loop sibling under `...loop1-comb-f-sibling`, the second
+`CONVRULE`, and any matching top-level sibling not already covered by the
+earlier `f`-side run.
+
+The first return-to-parent probe,
+`/tmp/rum-pair-body-phase.lP4YmA`, used a root-loop path override
+(`...xffffaaaab -> b/f/f/f/f/a/a/a/a/b`) to split the previous
+`...loop1-comb-f-sibling` block. It returned cleanly in `578s`, with empty
+stderr and theorem markers true. The `~15s` sibling broke into
+`...loop1-f-fixpoint-loop` at about `7.73s` and
+`...loop1-f-comb-x-sibling` at about `7.53s`, with small plumbing around it.
+This means the root-loop sibling is also recursive fanout, not a hidden
+single expensive primitive.
+
+Current frontier after these probes:
+
+- The heavily traced `x` branch is no longer the right place to look for a
+  tenfold loss; it is down to mostly `~3-4s` parents and `~0.8-1.0s` leaves.
+- The root-loop sibling likewise decomposes to `~7s` halves.
+- Remaining larger root-level phases that still need separate closed probes
+  are the second `CONVRULE` (`~16s`) and any top-level sibling not already
+  matched by the earlier `f`-side run. Do not interpret the intentionally
+  one-sided top `comb-f-sibling` from an `x`-path probe as new evidence by
+  itself; it is the untraced opposite branch.
+
+## 2026-06-18 Pair/Simp Repetition Fingerprint Probe
+
+Added `scripts/pair-simp-repetition-probe.sh` as a copy-based diagnostic
+runner. It leaves the clean `mma-hol` checkout untouched, loads a temporary
+instrumented `auto/Simp.wl`, and by default exits a temporary `Pair.wl` after
+the first `mkPairInj` `CONVRULE`. The probe groups `simpFixpointConv` and
+`descendOnce` calls by kind, depth, rule count, context count, term shape, and
+SHA256 term fingerprint. `--track-step` can also count `simpStepConv`, but is
+off by default to keep probe overhead bounded.
+
+First run:
+
+- checkout: `/private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol`
+- output: `/tmp/rum-pair-repeat.MCGLrS`
+- target: first `mkPairInj` `CONVRULE`
+- elapsed wall: `594s`
+- result markers: `first_convrule_is_thm=True`,
+  `first_convrule_changed=True`
+- aggregate rows: `101`
+
+The largest rows are expected inclusive parents, not atomized findings:
+
+- root `simpFixpointConv` on an `eq` fingerprint: `1` call, about `551s`
+- root `descendOnce` on the same `eq` fingerprint: `1` call, about `528s`
+
+The useful signal is below those parents. Repeated fingerprints are real:
+
+- `simpFixpointConv`: `35` repeated rows, `3552` calls, about `3202s`
+  inclusive; `13` single-call rows, about `2758s` inclusive
+- `descendOnce`: `42` repeated rows, `7127` calls, about `2965s`
+  inclusive; `11` single-call rows, about `2487s` inclusive
+
+Top repeated inclusive groups include:
+
+- `abs` fingerprint `0e5a...4910`: `simpFixpointConv` `22` calls, about
+  `373s`; matching `descendOnce` `44` calls, about `370s`
+- `and` fingerprint `e901...caef`: `simpFixpointConv` `44` calls, about
+  `370s`; matching `descendOnce` `88` calls, about `364s`
+- context-length `1` `eq` fingerprint `98c7...405b`: `simpFixpointConv`
+  `108` calls, about `210s`; matching `descendOnce` `216` calls, about
+  `193s`
+- context-length `1` `comb` fingerprint `7361...0bfc`: `simpFixpointConv`
+  `240` calls, about `179s`; matching `descendOnce` `480` calls, about
+  `142s`
+- context-length `0` `comb` fingerprint `8f79...7dfa`: `simpFixpointConv`
+  `224` calls, about `156s`; matching `descendOnce` `448` calls, about
+  `124s`
+
+These totals are intentionally inclusive and nested, so they exceed wall time
+when summed. The conclusion is not "optimize this fingerprint" yet; it is that
+the Pair gate is indeed dominated by repeated recursive `simpFixpointConv` /
+`descendOnce` work over a small set of logical subtrees. The next probe should
+select one or two of the top repeated fingerprints, record a parent/child
+closed tree or self-time split inside their representative calls, and only then
+decide whether the fix is memoization, normal-form caching, or a lower-level
+runtime representation/call-dispatch issue.
+
+Follow-up split probes stayed on the same unmodified checkout and continued
+the no-optimization rule. The probe runner now has targeted split modes for
+`simpFixpointConv`, `simpStepConv`, `descendOnce`, and `topRepeatc`.
+
+Valid split runs:
+
+- `/tmp/rum-pair-repeat.2dHawL`: context-length `0` `abs`
+  `0e5a...4910` split at `simpFixpointConv`. Its `22` calls were all one
+  loop terminating with `same`; `buildBaseConv` and RHS extraction were
+  negligible, while the two step calls per fixpoint carried the cost.
+- `/tmp/rum-pair-repeat.NapkUF`: the same `abs` split at `simpStepConv`.
+  `descendOnce` dominated the `44` step calls; `top-repeatc`, `TRANS`, and
+  RHS extraction were small.
+- `/tmp/rum-pair-repeat.HfIdjG`: the same `abs` split at `descendOnce`.
+  Abs housekeeping was not hot; `abs-inner-simpFixpoint` dominated and always
+  opened to `and e901...caef`.
+- `/tmp/rum-pair-repeat.xqfqRi`: `descendOnce` for `and e901...caef`.
+  After the first cold `andCongLemma[]` call, theorem plumbing was small.
+  The repeated cost came from two child equalities:
+  `p` = `eq 2e4...7c35` at context length `0`, and
+  `q` = `eq 98c...405b` at context length `1`.
+- `/tmp/rum-pair-repeat.Qzh0Al`: `simpFixpointConv` for `eq 98c...405b`.
+  `108` calls summed to about `201.08s`: `initial-step` about `99.62s`,
+  `loop1-step` about `100.17s`, `buildBaseConv` about `1.28s`, and RHS
+  extraction negligible.
+- `/tmp/rum-pair-repeat.JJXw4V`: `simpStepConv` for the same `eq`.
+  `216` calls summed to `top-repeatc` about `14.95s`, `descendOnce` about
+  `183.24s`, and negligible `TRANS`/RHS work.
+- `/tmp/rum-pair-repeat.Vgazhb`: `descendOnce` for the same `eq`. It is the
+  generic `comb` branch: `comb-f-simpFixpoint` about `153.50s`,
+  `comb-x-simpFixpoint` about `29.54s`, `MKCOMB` about `0.10s`.
+  The hot child is `comb 7361...0bfc`; the right child is a fixed var.
+- `/tmp/rum-pair-repeat.gZYe4n`: `simpFixpointConv` for
+  `comb 7361...0bfc`. `240` calls summed to `buildBaseConv` about `3.78s`,
+  `initial-step` about `83.23s`, and `loop1-step` about `84.99s`.
+- `/tmp/rum-pair-repeat.eaVMmX`: `simpStepConv` for the same `comb`.
+  `480` calls summed to `top-repeatc` about `31.93s`, `descendOnce` about
+  `135.53s`, and negligible `TRANS`/RHS work.
+- `/tmp/rum-pair-repeat.Mpl6iz`: `descendOnce` for the same `comb`.
+  `comb-f-simpFixpoint` was about `68.53s` on a fixed const leaf
+  `2821...f288`; `comb-x-simpFixpoint` was about `67.58s` on a fixed var
+  leaf `9e64...9190`; `MKCOMB` was about `0.21s`.
+- `/tmp/rum-pair-repeat.JXWmL3`: `simpFixpointConv` for the fixed const
+  leaf. `528` calls summed to `buildBaseConv` about `6.55s`,
+  `initial-step` about `34.03s`, and `loop1-step` about `34.72s`.
+- `/tmp/rum-pair-repeat.sdZw6k`: `simpStepConv` for the same const leaf.
+  `1056` step calls put the leaf cost in `top-repeatc` at about `68.95s`;
+  `descendOnce` was about `3.56s`, with `TRANS`/RHS below `1s`.
+- `/tmp/rum-pair-repeat.qjUT5u`: valid `topRepeatc` sample for the same const
+  leaf, `20` calls with `440` base-conv piece rows and empty stderr. The
+  original right-associated `TRYCONV[REPEATC[baseConv]]` averaged about
+  `53.94ms` per leaf call; the direct expanded piece loop averaged about
+  `31.44ms`. Individual rule failures were usually `0.4-0.6ms` each, with
+  occasional spikes on rule positions `4`, `10`, `14`, and `19`; beta fallback
+  was about `0.067ms`.
+
+Invalid `topRepeatc` probe runs, retained only as probe-debugging history:
+
+- `/tmp/rum-pair-repeat.lbOpgT` returned in `27s` because the first
+  instrumented no-conversion path called ``HOL`Error`holError``, which throws
+  under rum. This was a probe bug, not a performance result.
+- `/tmp/rum-pair-repeat.QXHBxP` reached full wall time but treated the private
+  failure sentinel as a successful piece result, so it only measured `ctx-1`.
+  This was also a probe bug and should not be used for performance conclusions.
+
+Current hot-tree interpretation:
+
+```text
+root first mkPairInj CONVRULE, root eq 2299...21d9 (~530s)
+  descendOnce root eq (~507-513s)
+    abs 0e5a...4910 repeated fixpoint (~358s)
+      opened and e901...caef
+        q child eq 98c...405b, ctxLen=1 (~200s)
+          descendOnce eq (~183-190s)
+            f child comb 7361...0bfc (~153s inside this eq)
+              descendOnce comb (~135-137s)
+                const leaf 2821...f288 fixpoint (~66-74s)
+                  top-repeatc leaf failure scan (~69s over 1056 calls)
+                var leaf 9e64...9190 fixpoint (~66-68s)
+```
+
+This is the first atomic-looking repeated hotspot in the current branch:
+leaf-level `top-repeatc` repeatedly scans a 1-context + 20-rule + beta
+converter chain and fails without changing a fixed const/var. The raw rule
+matcher failures do not alone explain the full original `ORELSEC` cost; the
+difference between original `top-repeatc` and the direct expanded loop points
+at right-associated `ORELSEC` / repeated `tryConv` / failure propagation
+overhead as the next probe target. The sibling var leaf should still be
+checked with the same `simpFixpointConv`/`simpStepConv`/`topRepeatc` sequence
+before changing algorithms.
+
+The sibling var leaf check was then completed and matched the const-leaf
+shape:
+
+- `/tmp/rum-pair-repeat.wUt4Ex`: `simpFixpointConv` for fixed var leaf
+  `9e64...9190`. `480` calls all terminated after one loop with `same`.
+  `buildBaseConv` was about `6.64s`; `initial-step` about `31.22s`;
+  `loop1-step` about `32.25s`; RHS extraction was negligible.
+- `/tmp/rum-pair-repeat.T5BIi5`: `simpStepConv` for the same var leaf.
+  `960` step calls put the cost in `top-repeatc` at about `61.39s`;
+  `descendOnce` was about `3.45s`; `TRANS` and RHS extraction were small.
+- `/tmp/rum-pair-repeat.fidk64`: `topRepeatc` sample for the same var leaf.
+  `20` calls had `440` base-conv piece rows and empty stderr. The original
+  right-associated `TRYCONV[REPEATC[baseConv]]` averaged about `54.13ms`; the
+  direct expanded piece loop averaged about `28.83ms`. Individual rule
+  failures were again mostly `0.4-0.6ms`, with occasional spikes on rule
+  positions `11` and `15`; beta fallback was about `0.064ms`.
+
+This confirms both sibling leaves share the same repeated leaf-level failure
+scan shape.
+
+Two internal propagation probes then isolated the original chain overhead more
+directly:
+
+- `/tmp/rum-pair-repeat.zYQrXN`: `topRepeatcTrace`, `5` samples on the var
+  leaf. This emulates a right-associated `ORELSEC` recursion over the same
+  pieces. The original unwrapped path averaged about `50.16ms`, the direct
+  expanded loop averaged about `32.81ms`, and the right-associated emulation
+  averaged about `56.65ms`. The emulated `ORELSEC_REST` inclusives decreased
+  from about `51.52ms` at level `1` to about `1.90ms` at level `21`.
+- `/tmp/rum-pair-repeat.egQmMP`: `topRepeatcNativeTrace`, `5` samples on the
+  same var leaf. This temporarily wraps the public ``HOL`Drule`ORELSEC``,
+  ``HOL`Drule`REPEATC``, and ``HOL`Drule`TRYCONV`` in the diagnostic copy
+  only, with tracing active only inside the matched leaf step. The run
+  completed with both theorem markers true and empty stderr. Because the
+  wrapper itself adds overhead, the native traced top-repeatc averaged about
+  `73.46ms`, but the shape is informative: `REPEATC`'s private `tryConv`
+  around the whole baseConv averaged about `56.41ms`, the outer public
+  `TRYCONV` averaged about `71.35ms`, and native `ORELSEC_REST` inclusives
+  decreased from about `43.23ms` at level `1` to about `0.058ms` at level
+  `21`.
+
+Current interpretation after the native trace: the repeated leaf hotspot is a
+failed right-associated converter chain. The matcher work is real but not the
+whole cost; a large part is structural failure propagation through nested
+`ORELSEC` plus `tryConv` catch boundaries around the whole chain. This is now
+atomic enough to consider targeted changes, but they should be tested against
+the same leaf probes and then the full Pair root. Plausible next experiments
+are still probe-first: a flat `combineSimpConvs` diagnostic, a head/shape
+prefilter before invoking rule conversions, or a failed-conversion cache for
+stable atomic leaves. Do not change the downstream `mma-hol` standard.
+
+Temporary prototype diagnostics then tested those two concrete mechanisms in
+the same copy-based runner. These are not accepted fixes, because they rewrite
+only the temporary instrumented `auto/Simp.wl` copy; the clean downstream clone
+remained untouched.
+
+- `/tmp/rum-pair-repeat.flat-baseconv.A1`: `--prototype flat-baseconv`,
+  first `mkPairInj` `CONVRULE`, empty stderr, both first-convrule markers
+  true. Wall time was `440s`, down from the earlier unprofiled/instrumented
+  root around `594s`. This confirms right-associated `ORELSEC` failure
+  propagation is a real root-level cost, but not enough by itself.
+- `/tmp/rum-pair-repeat.failure-cache.A1`: `--prototype failure-cache`, same
+  first-convrule target, empty stderr, markers true. Wall time was `253s`.
+  The temporary cache stored `21` atomic leaf no-op top-repeatc entries and
+  hit `5283` times, with `2` changed top-repeatc cases and `1832` non-atomic
+  skips. This is the stronger signal: repeated no-op top-repeatc work over
+  stable leaves is a major Pair/Simp multiplier.
+- `/tmp/rum-pair-repeat.flat-failure-cache.A1`: combined temporary prototype,
+  first-convrule target, empty stderr, markers true. Wall time was `176s`,
+  with the same `21` entries and `5283` hits. The flat chain and leaf no-op
+  cache are additive.
+- `/tmp/rum-pair-repeat.flat-failure-cache-full.A1`: combined temporary
+  prototype with `--target full-load`, empty stderr, and both
+  `mkPairInjThm` / `pairInjThm` markers true. Full `Pair.wl` loaded in
+  `183s`, with `30` cache entries and `5443` hits. This shows the first
+  `mkPairInj` simplifier gate is still the dominant Pair root cost after the
+  diagnostic cut.
+
+The next real implementation should stay on the rum side: either a runtime
+representation/dispatch cache that can skip provably stable repeated converter
+failure/no-op calls, or an equivalent evaluator optimization for nested
+`ORELSEC`/`TRYCONV` failure propagation. Do not upstream the temporary
+`auto/Simp.wl` rewrites or treat them as the acceptance path. Since the cache
+prototype produced the larger root win, a standalone `tryConv`/`Catch`
+fast-path probe is lower priority than designing a correctness-preserving
+rum-side cache key and invalidation rule.
+
 ## 2026-06-16 Pair/Simp Reproducible Hotspot Probe Assets
 
 Stopped treating the current Pair/Simp wall as ready for optimization. The
