@@ -6,6 +6,170 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Core-Language Microbench Performance Reset
+
+Replaced the Pair/Simp-first performance entry route with a bottom-up
+core-language microbench ladder. The active plan now lives in
+[docs/performance-kernel-rewrite-plan.md](./docs/performance-kernel-rewrite-plan.md),
+and [docs/performance-stage0-baseline.md](./docs/performance-stage0-baseline.md)
+documents the new `scripts/core-language-microbench.sh` runner. `AGENTS.md`
+and `TODO.md` now say that Pair/Simp is downstream acceptance evidence, not
+the default optimization entry point while lower-tier core labels still show
+unexplained constant-factor gaps.
+
+Initial runner validation exposed the first true bottom-up target:
+
+- The first high-iteration harness attempt hit a rum stack overflow at
+  `Do[..., {10000}]` scale.
+- The first completed core table showed `loop-empty` at `0.510967s` in rum
+  versus `0.001173s` in WolframKernel (`435.61x`), proving that larger labels
+  were dominated by loop/evaluator plumbing rather than matcher or Pair/Simp
+  mechanics.
+
+Two retained runtime cuts followed from the lowest labels:
+
+- `Do` count loops now advance with an iterative Rust loop instead of recursive
+  `resume_do_iterations` calls. `Do[Null, {10000}]` no longer overflows the
+  CLI stack.
+- `Do` / `Table` iterator loops now use a narrow single-symbol dynamic
+  own-value scope instead of constructing and evaluating
+  `Block[{i = value}, body]` every iteration. The scope restores symbol state
+  through suspension before the outer loop continuation resumes.
+
+Representative no-profile release rows:
+
+| label | before loop cuts | after loop cuts | WolframKernel | final ratio |
+| --- | ---: | ---: | ---: | ---: |
+| `loop-empty` | `0.510967s` | `0.004382s` | `0.001123s` | `3.90x` |
+| `do-count-null` | stack/limit side lane | `0.001229s` | `0.000501s` | `2.45x` |
+| `do-iterator-null` | `0.001503s` | `0.000339s` | `0.000052s` | `6.52x` |
+| `table-count-null` | `0.000343s` | `0.000301s` | `0.000287s` | `1.05x` |
+| `table-iterator-symbol` | `0.001723s` | `0.000781s` | `0.000096s` | `8.14x` |
+
+The `--scale 5` rerun completed after lowering the `do-count-null` base count
+to stay under the default iteration work limit. It shows the lowest count loop
+labels in or near the target band (`loop-empty` `4.06x`,
+`do-count-null` `2.19x`, `do-iterator-null` `4.30x`), while remaining larger
+gaps now point to the next tiers: generic `Block`, `Table` iterator/list
+collection, and definition/matcher dispatch labels such as
+`downvalue-pattern-miss`.
+
+Focused checks:
+
+```bash
+cargo test -p rum-runtime holding_and_control_part4 --lib
+cargo test -p rum-runtime holding_and_control_part5 --lib
+cargo test -p rum-runtime input_resume --lib
+```
+
+Added regression coverage for the large `Do` count loop and for `Do` iterator
+scope preservation across `InputString` suspend/resume.
+
+## 2026-06-20 Stage 1 Symbol-Key Runtime Cut
+
+Started Stage 1 of the kernel rewrite with a conservative symbol-key cleanup:
+core `Global`` / `System`` context strings are now canonical static texts,
+`Symbol` has cheap context/name helpers, and the runtime builtin registry is
+keyed by `Symbol` rather than `String`. Builtin default dispatch and default
+attribute lookup now use the same symbol-key path, while display and completion
+still render names from the symbol text.
+
+Correctness checks:
+
+```bash
+cargo fmt --check
+cargo test -p rum-runtime --lib
+```
+
+The first quick no-root baseline against
+`/private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol` used:
+
+```bash
+scripts/perf-baseline-stage0.sh \
+  --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol \
+  --engine rum \
+  --timeout 420 \
+  --skip-root \
+  --output-dir /tmp/rum-stage1-symbol-builtin-quick
+```
+
+Comparison with the Stage 0 rum rows:
+
+| label | Stage 0 rum | after symbol-key builtin | result |
+| --- | ---: | ---: | --- |
+| `var-basic-baseConv-top-TRYCONV-REPEATC` | `0.013118075s` | `0.012318896s` | small positive |
+| `basic-chain-full-TRYCONV-REPEATC-depth19` | `2.661301684s` | `2.487020894s` | positive |
+| `control-TRYCONV-REPEATC-success` | `2.560320439s` | `2.493639789s` | small positive |
+| `pair4-stock-repeat8` | `17.191801002s` | `16.569549047s` | small positive |
+
+Retained interpretation: this is a low-risk constant-factor cleanup, but not
+the main Pair/Simp gap. The current profile frontier after this cut remains
+ordinary definition/subvalue dispatch and matcher/evaluator representation
+costs, especially ``HOL`Drule`ORELSEC`` and
+``HOL`Drule`Private`tryConv`` in the repeated conversion-failure chain.
+
+Measured and rejected before commit:
+
+- A symbol-head `call_dispatch_plan_cache` prototype. It moved
+  `pair4-stock-repeat8` slightly (`16.57s -> 16.40s`) but regressed the
+  depth-19 conversion chain (`2.49s -> 2.76s`), so it was removed.
+- A `Vec`-backed small `SymbolExprMap` prototype for matcher/lexical bindings.
+  It regressed the retained quick baseline (`depth19` `2.49s -> 2.69s`,
+  `pair4` `16.57s -> 17.06s`), so the hash-map binding representation stays.
+- A local-loop rewrite of downvalue/subvalue failed-candidate dispatch. It
+  regressed the depth-19 chain (`2.49s -> 2.84s`) despite a noisy small pair4
+  improvement (`16.57s -> 16.51s`), so the recursive continuation-shaped
+  implementation stays until a deeper dispatch representation change is ready.
+- A `LexicalPresenceCache` rewrite from `RefCell<HashMap<...>>` to direct
+  mutable cache passing. It looked plausible from the `Module` body-substitution
+  profile, but the no-root quick baseline regressed (`depth19` `2.49s ->
+  2.56s`, `pair4` `16.57s -> 16.89s`), so the original interior-mutable
+  presence cache stays.
+- A compiled-`MatcherNode` fast-definition matcher prototype. It tried to avoid
+  expression-pattern traversal on the fast path, but the retained quick
+  baseline still regressed (`depth19` `2.49s -> 2.51s`, `control` `2.49s ->
+  2.52s`, `pair4` `16.57s -> 16.79s`), so the current expression-based fast
+  matcher stays until a larger matcher representation change is justified.
+
+## 2026-06-20 Stage 0 Performance Baseline Runner
+
+Started the deep performance rewrite at Stage 0. Added
+`scripts/perf-baseline-stage0.sh` and
+[docs/performance-stage0-baseline.md](./docs/performance-stage0-baseline.md).
+The runner executes the fixed micro-proxy, mid-level, and root Pair/Simp probes
+against an unmodified `mma-hol` checkout, disables rum profiling for baseline
+timings, and writes `runs.tsv` plus decimal-normalized `measurements.tsv`.
+
+Validated the full suite on
+`/private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol` with:
+
+```bash
+scripts/perf-baseline-stage0.sh \
+  --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol \
+  --engine both \
+  --timeout 420 \
+  --root-timeout 900 \
+  --include-wk-wrapper \
+  --output-dir /tmp/rum-stage0-baseline-current
+```
+
+All rum and WolframKernel baseline probes completed, including the root
+`pair-load-root-phase`; the optional WK wrapper probe also completed. Key
+no-profile rows from `/tmp/rum-stage0-baseline-current/measurements.tsv`:
+
+| label | rum | WolframKernel | ratio |
+| --- | ---: | ---: | ---: |
+| `var-basic-baseConv-top-TRYCONV-REPEATC` | `0.013118075s` | `0.001972s` | `6.65x` |
+| `basic-chain-full-TRYCONV-REPEATC-depth19` | `2.661301684s` | `0.375481s` | `7.09x` |
+| `control-TRYCONV-REPEATC-success` | `2.560320439s` | `0.442067s` | `5.79x` |
+| `pair4-stock-repeat8` | `17.191801002s` | `2.587891s` | `6.64x` |
+| `root-get-stdlib-pair` | `217.799748228s` | `39.357833s` | `5.53x` |
+
+This confirms the rewrite plan's current target shape: the gap is consistent
+from small conversion failure through the root Pair load, so Stage 1/2 work
+must reduce fundamental runtime constants instead of chasing only one
+microprobe.
+
 ## 2026-06-20 Performance Kernel Rewrite Plan
 
 Added [docs/performance-kernel-rewrite-plan.md](./docs/performance-kernel-rewrite-plan.md)

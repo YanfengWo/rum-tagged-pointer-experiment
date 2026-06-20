@@ -164,6 +164,36 @@ fn resume_eval_request_with_input_preserves_block_scope_until_completion() {
 }
 
 #[test]
+fn resume_eval_request_with_input_preserves_do_iterator_scope_until_completion() {
+    let mut session = Session::new();
+    session.eval_text("i = global").unwrap();
+    session.eval_text("seen = none").unwrap();
+
+    let failure = session
+        .eval_request(
+            "Do[If[SameQ[i, 2], seen = List[i, InputString[\"iter: \"], i], Null], {i, 3}]; List[seen, i]",
+        )
+        .expect_err("Do iterator body should suspend when it reaches InputString");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "iter: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("ok")
+        .expect("resume should continue inside the active Do iterator scope");
+
+    assert_eq!(
+        response.value.to_string(),
+        "List[List[2, \"ok\", 2], global]"
+    );
+    assert_eq!(session.eval_text("i").unwrap().value.to_string(), "global");
+}
+
+#[test]
 fn resume_eval_request_with_input_reports_input_parse_errors_as_syntax_diagnostics() {
     let mut session = Session::new();
 

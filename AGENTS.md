@@ -50,6 +50,10 @@ Before substantial work, read the smallest set needed for the task:
 - [docs/performance-kernel-rewrite-plan.md](./docs/performance-kernel-rewrite-plan.md):
   staged plan for reaching WolframKernel parity or better on the supported
   `mma-hol` target slice
+- [docs/performance-stage0-baseline.md](./docs/performance-stage0-baseline.md):
+  canonical Stage 0 core-language microbench suite and
+  `scripts/core-language-microbench.sh` runner for performance-rewrite A/B
+  checks
 - [docs/code-organization-guidelines.md](./docs/code-organization-guidelines.md):
   file-size and module-organization rules
 
@@ -123,29 +127,23 @@ native ZeroMQ smokes need loopback-port access outside the Codex sandbox, but
 their files remain under `jupyter_home/`. Robust interrupt/cancel and rich
 display behavior remain outside the current v0.1 contract.
 
-Performance investigations must stay anchored to the current acceptance root.
-For `mma-hol`, that means the unmodified `Pair.wl` load or the warm public
-mkPair probe that reproduces the gate, not whichever smaller probe currently
-has readable profile output. Before drilling into any child function, build or
-reuse a closed phase tree for the parent target: the measured child phases must
-sum close to the parent wall time, the largest child must be named with a
-percentage of the parent, and the same target must have a no-profile baseline.
-Do not descend into a child merely because it is slow in isolation, differs from
-WolframKernel, or appears high in an inclusive ranking. If a child is not shown
-to dominate the current root, label it a side lane and return to the root phase
-tree. The June 2026 Pair/Simp detour into one-case `EXCLUDEDMIDDLE[p]` is the
-failure mode to avoid: that probe was real but was not proven to own the
-hundreds-of-seconds `Pair.wl` gate.
-
 The current performance mainline is the staged kernel rewrite plan in
 [docs/performance-kernel-rewrite-plan.md](./docs/performance-kernel-rewrite-plan.md).
 The target is WolframKernel parity or better on the supported `mma-hol` slice,
-not merely "good enough" interpreter performance. The plan is to lower the
-ordinary failure-path constants through symbol identity, expression
-representation, borrowed evaluator frames, matcher/dispatch plans,
-conversion-chain plans, and allocator strategy before considering bytecode or
-JIT work. Treat semantic failed-conversion/no-change caches as optional
-rum-specific shortcuts, not as the inferred WolframKernel mechanism.
+not merely "good enough" interpreter performance. The current route is
+bottom-up: measure the smallest shared Wolfram-language statements in rum and
+WolframKernel, optimize the first primitive with a clear `4-5x` ratio gap, and
+only then move to larger `mma-hol` statement groups. Use
+`scripts/core-language-microbench.sh` as the active Stage 0 entry point.
+Pair/Simp probes remain downstream acceptance checks, not the default place to
+discover the next optimization.
+
+Do not descend into `Pair.wl` / `Simp` phase trees while lower-tier core labels
+still show unexplained constant-factor gaps. If a real `mma-hol` statement
+exposes a new cost, reduce it back to a core microbench label or add a new
+minimal label before changing algorithms. Treat semantic
+failed-conversion/no-change caches as optional rum-specific shortcuts, not as
+the inferred WolframKernel mechanism.
 
 The PropTaut performance lane has been reopened by external review and a
 follow-up same-bit stability-invalidation experiment. The retained current
@@ -155,62 +153,16 @@ versus the local WolframKernel internal timing of about `3.80s`;
 exceeds a `600s` load budget and remains the next downstream gate. Do not treat
 the earlier cross-engine `<2x` target as an active commitment.
 
-Keep performance work probe-first: identify the hot path, make the smallest
-targeted change, then rerun the same timing smoke to reject negative
-optimizations. Retained work includes symbol interning with dense ids,
-id-hashed definition/attribute/binding maps, dependency-aware stability-cache
+Keep performance work probe-first but bottom-up: identify the minimal hot
+primitive, make the smallest targeted change, then rerun the same
+microbenchmark label and neighboring labels to reject negative optimizations.
+Retained work includes symbol interning with dense ids, id-hashed
+definition/attribute/binding maps, dependency-aware stability-cache
 invalidation with a rewritten dirty bloom for repeated same-bit writes,
-mimalloc in `rum-cli`, a message-symbol existence index, and the shared
-call-tree `Expr` representation. Pair/Simp runtime stability cuts reduced the
-local user-rule-only mkPair probe to about `40.61s` and `basicSimpset[]` to
-about `20.27s`. The 2026-06-19 runtime sharing cut retained an exact atomic
-`Catch` tag fast path and changed `normalize_match_expr` to preserve shared
-call trees when normalization is a no-op; on the unmodified clean clone,
-`basic-only-pair4` improved from about `5.68-6.36s` to `2.23s`,
-`pair4-stock-repeat8` from `60.76s` to `18.30s`, and the first `mkPairInj`
-`CONVRULE` root from about `564s` to `307s`. The `Pair.wl` gate remains open.
-Exact per-symbol/per-bloom-bit version
-snapshots, skipping dirty-related call-cache entries, whole-expression exact
-normal-form caching, symbol fingerprint hashing, shallow definition matcher
-metadata, a one-entry call-stability MRU, and heavier LTO/codegen flag probes
-were measured and rejected or left as optional local knobs rather than default
-commitments. Task 2b also rejects call-cache size-cap tuning and wider
-dirty-bloom saturation thresholds for the warm public mkPair shape:
-miss-reason counters point mostly at absent pointer-keyed call entries, which
-means the conversion chain is building fresh call trees. Copy-based
-`auto/Simp.wl` prototypes are retained as diagnostic evidence only: flat
-converter combination cut the first `mkPairInj` gate to about `440s`, atomic
-leaf no-op caching cut it to about `253s`, and the combined prototype loaded
-full `Pair.wl` in about `183s` with theorem markers true. Do not upstream or
-depend on those downstream rewrites. The next Pair/Simp work should stay
-rum-side: either continue small representation/sharing cuts with before/after
-checks on `basic-only-pair4`, `pair4-stock-repeat8`, and the first `CONVRULE`
-root, or split the remaining closed root phases before changing algorithms. A
-temporary opt-in
-shared-subtree stamp prototype proved that shared subtrees can hit after the
-side cache is cleared, but it was reverted before commit: the uncommitted
-carrier regressed the default PropTaut distribution probe from about `10.2s`
-to about `11.6s` while failing to move the Pair/Simp gate. Keep the negative
-result and do not restore the `SharedArgs` stamp slot unless it is truly
-zero-cost when disabled.
-Follow-up phase probes found that the final opened-body target can be
-single-digit seconds after preheat, while basic and congruence preheats are
-measurable `PropTaut` costs. Those probes are valid side evidence only. They do
-not supersede the older root-level Pair evidence: dependency-preloaded
-`Get["stdlib/Pair.wl"]` spent about `564s` in the Pair body versus about `40s`
-in WolframKernel, and the warm public mkPair probe still times out after normal
-preheat. Smaller single-lemma probes show `impCongLemma[]`, `andCongLemma[]`,
-and `orCongLemma[]` are same-shaped `PropTaut` runs; no-profile
-`impCongLemma[]` is `22.54s` in rum versus `7.08s` in WolframKernel; bare
-``HOL`Bool`EXCLUDEDMIDDLE[p]`` is `0.969s` in rum versus `0.322s` in
-WolframKernel. Keep these numbers as bounded side-lane evidence, not as the
-current Pair root hotspot. A 2026-06-18 deep Pair-root split also showed that
-the first `andCongLemma[]` call can appear as a `~24s` `doAndCong` block, but
-later calls are microsecond/millisecond cache hits; treat it as one-time
-memoized `PropTaut` cold-cache cost, not a repeated steady-state Pair/Simp
-multiplier. The current Pair/Simp performance task is to continue from the
-retained rum-side sharing result above, not to patch `mma-hol` or chase side
-probes that do not own the current root.
+mimalloc in `rum-cli`, a message-symbol existence index, the shared call-tree
+`Expr` representation, and the exact atomic `Catch` tag fast path. Historical
+Pair/Simp probes remain useful acceptance evidence and negative-result history,
+but they no longer define the next optimization by default.
 
 For long-running probes or commands that may spawn children, do not start them
 bare. Use `scripts/run-bounded.py --timeout SECONDS -- <command> ...` or a

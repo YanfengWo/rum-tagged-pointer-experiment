@@ -18,7 +18,11 @@ Completed history, archived planning detail, and operational lessons live in
   as the active performance mainline. The goal is WolframKernel parity or
   better on the supported `mma-hol` target slice by lowering fundamental
   runtime constants, not by patching downstream `mma-hol` or relying on
-  unproven broad semantic caches.
+  unproven broad semantic caches. The active Stage 0 is now the bottom-up
+  core-language microbench ladder in `scripts/core-language-microbench.sh`.
+  Select the next performance cut from the lowest-tier primitive with a clear
+  rum/WolframKernel ratio gap; keep Pair/Simp as downstream acceptance, not as
+  the default optimization entry point.
 - [ ] Promote new Wolfram-style functions only when the support matrix,
   `mma-hol`, or another concrete downstream blocker justifies them.
 - [ ] Keep project-owned Python adapter work frozen until a real downstream

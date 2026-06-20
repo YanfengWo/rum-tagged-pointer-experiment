@@ -111,6 +111,20 @@ fn do_and_table_respect_resource_limits() {
 }
 
 #[test]
+fn large_do_count_loop_does_not_recurse_through_the_rust_stack() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Do[Null, {10000}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Null"
+    );
+}
+
+#[test]
 fn table_propagates_return_to_function_boundaries() {
     let mut session = Session::new();
 

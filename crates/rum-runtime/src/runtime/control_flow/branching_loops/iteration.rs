@@ -87,25 +87,40 @@ impl Session {
         args: Vec<Expr>,
         spec_index: usize,
         spec: DoSpec,
-        iteration: usize,
+        mut iteration: usize,
     ) -> Result<Expr, EvalError> {
-        let Some(iteration_expr) = build_do_iteration_expr(&args, spec_index, &spec, iteration)
-        else {
-            return Ok(system_expr("Null"));
-        };
+        loop {
+            let outcome = match &spec {
+                DoSpec::Count(count) => {
+                    if iteration >= *count {
+                        return Ok(system_expr("Null"));
+                    }
+                    let body = build_iteration_body_or_nested(&args, spec_index, "Do");
+                    self.evaluate(body)
+                }
+                DoSpec::Iterator { symbol, values } => {
+                    let Some(value) = values.get(iteration).cloned() else {
+                        return Ok(system_expr("Null"));
+                    };
+                    let body = build_iteration_body_or_nested(&args, spec_index, "Do");
+                    self.evaluate_loop_iterator_body(*symbol, value, body)
+                }
+            };
 
-        let iteration_result = self.evaluate(iteration_expr);
-        let outcome = self.suspend_with_result_frame(iteration_result, {
-            let args = args.clone();
-            let spec = spec.clone();
-            move |session, outcome| {
-                session.resume_do_after_iteration(args, spec_index, spec, iteration, outcome)
+            match outcome {
+                Ok(_) | Err(EvalError::Continue) => {
+                    iteration += 1;
+                }
+                Err(EvalError::Break) => return Ok(system_expr("Null")),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, outcome| {
+                        session
+                            .resume_do_after_iteration(args, spec_index, spec, iteration, outcome)
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
             }
-        });
-
-        match outcome {
-            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => self.resume_do_after_iteration(args, spec_index, spec, iteration, outcome),
         }
     }
 
@@ -170,13 +185,24 @@ impl Session {
         mut collected: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         loop {
-            let Some(iteration_expr) =
-                build_table_iteration_expr(&args, spec_index, &spec, iteration)
-            else {
-                return Ok(Expr::call(system_expr("List"), collected));
+            let outcome = match &spec {
+                DoSpec::Count(count) => {
+                    if iteration >= *count {
+                        return Ok(Expr::call(system_expr("List"), collected));
+                    }
+                    let body = build_iteration_body_or_nested(&args, spec_index, "Table");
+                    self.evaluate(body)
+                }
+                DoSpec::Iterator { symbol, values } => {
+                    let Some(value) = values.get(iteration).cloned() else {
+                        return Ok(Expr::call(system_expr("List"), collected));
+                    };
+                    let body = build_iteration_body_or_nested(&args, spec_index, "Table");
+                    self.evaluate_loop_iterator_body(*symbol, value, body)
+                }
             };
 
-            match self.evaluate(iteration_expr) {
+            match outcome {
                 Ok(value) => {
                     collected.push(value);
                     iteration += 1;
@@ -210,6 +236,155 @@ impl Session {
             }
             Err(error) => Err(error),
         }
+    }
+
+    fn evaluate_loop_iterator_body(
+        &mut self,
+        symbol: Symbol,
+        value: Expr,
+        body: Expr,
+    ) -> Result<Expr, EvalError> {
+        let saved_state = self.capture_loop_iterator_symbol_state(&symbol);
+        self.install_loop_iterator_symbol_value(&symbol, value, &saved_state);
+
+        let body_result = self.evaluate(body);
+        let outcome = self.suspend_with_result_frame(body_result, {
+            let saved_state = saved_state.clone();
+            move |session, outcome| session.finish_loop_iterator_scope(symbol, saved_state, outcome)
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.finish_loop_iterator_scope(symbol, saved_state, outcome),
+        }
+    }
+
+    fn capture_loop_iterator_symbol_state(&self, symbol: &Symbol) -> BlockSymbolState {
+        BlockSymbolState {
+            definition: self.definitions.get(symbol).cloned(),
+            attributes: self.attributes.get(symbol).copied(),
+            options: self.options.get(symbol).cloned(),
+            syntax_information: self.syntax_information.get(symbol).cloned(),
+            messages: self
+                .message_definitions
+                .iter()
+                .filter(|(key, _)| key.symbol == *symbol)
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect(),
+        }
+    }
+
+    fn install_loop_iterator_symbol_value(
+        &mut self,
+        symbol: &Symbol,
+        value: Expr,
+        saved_state: &BlockSymbolState,
+    ) {
+        let removed_up_values = saved_state
+            .definition
+            .as_ref()
+            .is_some_and(|definition| !definition.up_values.is_empty());
+
+        self.definitions.insert(
+            *symbol,
+            SymbolDefinition {
+                own_value: Some(value),
+                ..SymbolDefinition::default()
+            },
+        );
+        self.bump_evaluation_epoch_for_symbol(symbol);
+
+        if removed_up_values {
+            self.refresh_has_up_value_definitions();
+        }
+
+        if self.attributes.remove(symbol).is_some() {
+            self.bump_attribute_revision();
+        }
+        self.options.remove(symbol);
+        self.syntax_information.remove(symbol);
+
+        let messages_before = self.message_definitions.len();
+        self.message_definitions
+            .retain(|key, _| key.symbol != *symbol);
+        if self.message_definitions.len() != messages_before {
+            self.rebuild_message_symbol_counts();
+        }
+    }
+
+    fn finish_loop_iterator_scope(
+        &mut self,
+        symbol: Symbol,
+        saved_state: BlockSymbolState,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        let current_had_up_values = self
+            .definitions
+            .get(&symbol)
+            .is_some_and(|definition| !definition.up_values.is_empty());
+        let restored_has_up_values = saved_state
+            .definition
+            .as_ref()
+            .is_some_and(|definition| !definition.up_values.is_empty());
+
+        match saved_state.definition {
+            Some(definition) => {
+                self.definitions.insert(symbol, definition);
+            }
+            None => {
+                self.definitions.remove(&symbol);
+            }
+        }
+        self.bump_evaluation_epoch_for_symbol(&symbol);
+
+        if current_had_up_values || restored_has_up_values {
+            self.refresh_has_up_value_definitions();
+        }
+
+        let current_attributes = self.attributes.get(&symbol).copied();
+        if current_attributes != saved_state.attributes {
+            match saved_state.attributes {
+                Some(attributes) => {
+                    self.attributes.insert(symbol, attributes);
+                }
+                None => {
+                    self.attributes.remove(&symbol);
+                }
+            }
+            self.bump_attribute_revision();
+        }
+
+        match saved_state.options {
+            Some(options) => {
+                self.options.insert(symbol, options);
+            }
+            None => {
+                self.options.remove(&symbol);
+            }
+        }
+
+        match saved_state.syntax_information {
+            Some(syntax_information) => {
+                self.syntax_information.insert(symbol, syntax_information);
+            }
+            None => {
+                self.syntax_information.remove(&symbol);
+            }
+        }
+
+        let messages_before = self.message_definitions.len();
+        self.message_definitions
+            .retain(|key, _| key.symbol != symbol);
+        let messages_changed =
+            self.message_definitions.len() != messages_before || !saved_state.messages.is_empty();
+        for (key, definition) in saved_state.messages {
+            self.message_definitions.insert(key, definition);
+        }
+        if messages_changed {
+            self.rebuild_message_symbol_counts();
+        }
+
+        outcome
     }
 }
 fn evaluate_do_spec_expr(session: &mut Session, raw_spec: Expr) -> Result<Expr, EvalError> {
@@ -321,56 +496,14 @@ fn parse_do_spec(
     })
 }
 
-fn build_do_iteration_expr(
-    args: &[Expr],
-    spec_index: usize,
-    spec: &DoSpec,
-    iteration: usize,
-) -> Option<Expr> {
-    build_iteration_expr(args, spec_index, spec, iteration, "Do")
-}
-
-fn build_table_iteration_expr(
-    args: &[Expr],
-    spec_index: usize,
-    spec: &DoSpec,
-    iteration: usize,
-) -> Option<Expr> {
-    build_iteration_expr(args, spec_index, spec, iteration, "Table")
-}
-
-fn build_iteration_expr(
-    args: &[Expr],
-    spec_index: usize,
-    spec: &DoSpec,
-    iteration: usize,
-    nested_head: &str,
-) -> Option<Expr> {
-    let body_or_nested = if spec_index + 2 >= args.len() {
+fn build_iteration_body_or_nested(args: &[Expr], spec_index: usize, nested_head: &str) -> Expr {
+    if spec_index + 2 >= args.len() {
         args[0].clone()
     } else {
         let mut nested_args = Vec::with_capacity(args.len() - spec_index - 1);
         nested_args.push(args[0].clone());
         nested_args.extend(args[(spec_index + 2)..].iter().cloned());
         Expr::call(system_expr(nested_head), nested_args)
-    };
-
-    match spec {
-        DoSpec::Count(count) => (iteration < *count).then_some(body_or_nested),
-        DoSpec::Iterator { symbol, values } => {
-            let value = values.get(iteration)?.clone();
-            let binding = Expr::call(
-                system_expr("Set"),
-                vec![Expr::Atom(Atom::Symbol(symbol.clone())), value],
-            );
-            Some(Expr::call(
-                system_expr("Block"),
-                vec![
-                    Expr::call(system_expr("List"), vec![binding]),
-                    body_or_nested,
-                ],
-            ))
-        }
     }
 }
 
