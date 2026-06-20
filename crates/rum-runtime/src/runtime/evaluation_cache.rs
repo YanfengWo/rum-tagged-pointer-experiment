@@ -73,6 +73,7 @@ struct InvalidationSiteKey {
 struct InvalidationSiteStats {
     count: u64,
     target_with_identity: u64,
+    target_generated_dollar: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -109,6 +110,13 @@ struct CallStabilitySourceHeadStats {
     miss_pointer: u64,
     insertions: u64,
     rewritten_dirty_skips: u64,
+    total_nanos: u64,
+    self_nanos: u64,
+    hit_nanos: u64,
+    miss_absent_nanos: u64,
+    miss_generation_nanos: u64,
+    miss_dirty_nanos: u64,
+    miss_pointer_nanos: u64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -120,12 +128,19 @@ enum CallStabilityProfileOutcome {
     MissPointer,
 }
 
+#[derive(Clone, Copy, Debug)]
+struct CallStabilityTimingFrame {
+    key: Option<CallStabilitySourceHeadKey>,
+    child_nanos: u64,
+}
+
 thread_local! {
     static EVALUATION_PROFILE_SOURCE_STACK: RefCell<Vec<Symbol>> = const { RefCell::new(Vec::new()) };
     static EVALUATION_PROFILE_SOURCE_DEPTH: Cell<usize> = const { Cell::new(0) };
     static EVALUATION_PROFILE_TIMING_STACK: RefCell<Vec<SymbolTimingFrame>> = const { RefCell::new(Vec::new()) };
     static CALL_STABILITY_SOURCE_HEAD_STATS: RefCell<HashMap<CallStabilitySourceHeadKey, CallStabilitySourceHeadStats>> =
         RefCell::new(HashMap::new());
+    static CALL_STABILITY_TIMING_STACK: RefCell<Vec<CallStabilityTimingFrame>> = const { RefCell::new(Vec::new()) };
 }
 
 pub(super) struct EvaluationProfileSourceGuard {
@@ -266,9 +281,9 @@ impl Session {
         } else {
             record_invalidation_site("stability_new_dirty_write", None, Some(symbol), location);
         }
-        if !already_dirty
-            && (self.stability_dirty_bloom | bit).count_ones() > stability_dirty_bloom_max_bits()
-        {
+        let dirty_bloom_would_saturate = !already_dirty
+            && (self.stability_dirty_bloom | bit).count_ones() > stability_dirty_bloom_max_bits();
+        if dirty_bloom_would_saturate {
             record_evaluation_cache_counter(
                 &DIRTY_BLOOM_SATURATION_COUNT,
                 "dirty_bloom_saturations",
@@ -339,9 +354,12 @@ impl Session {
 
     fn call_stability_with_bloom(&mut self, head: &SharedExpr, args: &SharedArgs) -> (bool, u128) {
         let profile_key = call_stability_source_head_key(head.as_ref());
+        let timing_start = call_stability_timing_start(profile_key);
         let key = CallStabilityCacheKey::new(head, args);
+        let mut miss_outcome = CallStabilityProfileOutcome::MissAbsent;
         if let Some(entry) = self.call_stability_cache.get(&key) {
             if entry.generation != self.call_stability_generation {
+                miss_outcome = CallStabilityProfileOutcome::MissGeneration;
                 record_evaluation_cache_counter(
                     &CALL_STABILITY_MISS_GENERATION_COUNT,
                     "call_stability_miss_generation",
@@ -353,6 +371,7 @@ impl Session {
             } else if !SharedExpr::ptr_eq(&entry.head, head)
                 || !SharedArgs::ptr_eq(&entry.args, args)
             {
+                miss_outcome = CallStabilityProfileOutcome::MissPointer;
                 record_evaluation_cache_counter(
                     &CALL_STABILITY_MISS_POINTER_COUNT,
                     "call_stability_miss_pointer",
@@ -372,8 +391,13 @@ impl Session {
                         profile_key,
                         CallStabilityProfileOutcome::Hit,
                     );
+                    record_call_stability_source_head_timing(
+                        CallStabilityProfileOutcome::Hit,
+                        timing_start,
+                    );
                     return (entry.stable, entry.bloom);
                 }
+                miss_outcome = CallStabilityProfileOutcome::MissDirty;
                 record_evaluation_cache_counter(
                     &CALL_STABILITY_MISS_DIRTY_COUNT,
                     "call_stability_miss_dirty",
@@ -396,6 +420,7 @@ impl Session {
 
         record_evaluation_cache_counter(&CALL_STABILITY_MISS_COUNT, "call_stability_misses");
         let (stable, bloom) = self.call_stability_uncached_with_bloom(head, args);
+        record_call_stability_source_head_timing(miss_outcome, timing_start);
         // Only stable verdicts are worth caching: an unstable expression is
         // about to be rewritten by evaluation, so its entry would pin a dead
         // tree and never be asked again, while stable subtrees are re-checked
@@ -647,6 +672,7 @@ fn record_invalidation_site(
     let target_text = target.map(|symbol| Symbol::new(symbol.context(), symbol.name()));
     let target_family = target.map(symbol_family_name);
     let target_has_identity = target.and_then(Symbol::identity).is_some();
+    let target_is_generated_dollar = target.is_some_and(symbol_has_generated_dollar_name);
     let key = InvalidationSiteKey {
         event,
         file: location.file(),
@@ -661,6 +687,9 @@ fn record_invalidation_site(
     entry.count = entry.count.saturating_add(1);
     if target_has_identity {
         entry.target_with_identity = entry.target_with_identity.saturating_add(1);
+    }
+    if target_is_generated_dollar {
+        entry.target_generated_dollar = entry.target_generated_dollar.saturating_add(1);
     }
 
     let family_key = InvalidationFamilyKey {
@@ -677,6 +706,10 @@ fn record_invalidation_site(
     family_entry.count = family_entry.count.saturating_add(1);
     if target_has_identity {
         family_entry.target_with_identity = family_entry.target_with_identity.saturating_add(1);
+    }
+    if target_is_generated_dollar {
+        family_entry.target_generated_dollar =
+            family_entry.target_generated_dollar.saturating_add(1);
     }
 }
 
@@ -808,6 +841,71 @@ fn record_call_stability_source_head_outcome(
     });
 }
 
+fn call_stability_timing_start(key: Option<CallStabilitySourceHeadKey>) -> Option<Instant> {
+    if !evaluation_cache_profile_enabled() {
+        return None;
+    }
+
+    CALL_STABILITY_TIMING_STACK.with(|stack| {
+        stack.borrow_mut().push(CallStabilityTimingFrame {
+            key,
+            child_nanos: 0,
+        });
+    });
+    Some(Instant::now())
+}
+
+fn record_call_stability_source_head_timing(
+    outcome: CallStabilityProfileOutcome,
+    start: Option<Instant>,
+) {
+    let Some(start) = start else {
+        return;
+    };
+
+    let elapsed_nanos = elapsed_nanos_since(start);
+    let frame = CALL_STABILITY_TIMING_STACK.with(|stack| {
+        let mut stack = stack.borrow_mut();
+        let frame = stack.pop();
+        if let Some(parent) = stack.last_mut() {
+            parent.child_nanos = parent.child_nanos.saturating_add(elapsed_nanos);
+        }
+        frame
+    });
+    let Some(frame) = frame else {
+        return;
+    };
+    let Some(key) = frame.key else {
+        return;
+    };
+    let self_nanos = elapsed_nanos.saturating_sub(frame.child_nanos);
+
+    CALL_STABILITY_SOURCE_HEAD_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(key).or_default();
+        entry.total_nanos = entry.total_nanos.saturating_add(elapsed_nanos);
+        entry.self_nanos = entry.self_nanos.saturating_add(self_nanos);
+        match outcome {
+            CallStabilityProfileOutcome::Hit => {
+                entry.hit_nanos = entry.hit_nanos.saturating_add(elapsed_nanos);
+            }
+            CallStabilityProfileOutcome::MissAbsent => {
+                entry.miss_absent_nanos = entry.miss_absent_nanos.saturating_add(elapsed_nanos);
+            }
+            CallStabilityProfileOutcome::MissGeneration => {
+                entry.miss_generation_nanos =
+                    entry.miss_generation_nanos.saturating_add(elapsed_nanos);
+            }
+            CallStabilityProfileOutcome::MissDirty => {
+                entry.miss_dirty_nanos = entry.miss_dirty_nanos.saturating_add(elapsed_nanos);
+            }
+            CallStabilityProfileOutcome::MissPointer => {
+                entry.miss_pointer_nanos = entry.miss_pointer_nanos.saturating_add(elapsed_nanos);
+            }
+        }
+    });
+}
+
 fn record_call_stability_source_head_insertion(key: Option<CallStabilitySourceHeadKey>) {
     let Some(key) = key else {
         return;
@@ -887,6 +985,7 @@ pub(super) fn reset_evaluation_cache_profile_counters() {
     EVALUATION_PROFILE_SOURCE_DEPTH.with(|depth| depth.set(0));
     EVALUATION_PROFILE_TIMING_STACK.with(|stack| stack.borrow_mut().clear());
     CALL_STABILITY_SOURCE_HEAD_STATS.with(|stats| stats.borrow_mut().clear());
+    CALL_STABILITY_TIMING_STACK.with(|stack| stack.borrow_mut().clear());
     EVALUATION_CACHE_PROFILE_ACTIVE.store(1, Ordering::Relaxed);
 }
 
@@ -934,6 +1033,8 @@ pub(super) fn print_evaluation_cache_profile_snapshot(label: &str) {
     print_symbol_timing_profile_summary();
     print_call_stability_source_head_summary();
     print_call_stability_source_head_invalidation_summary();
+    print_call_stability_source_head_timing_summary();
+    print_call_stability_source_head_invalidation_timing_summary();
 }
 
 fn print_symbol_profile_summary() {
@@ -1033,7 +1134,7 @@ fn print_invalidation_site_profile_summary() {
 
     for (rank, (key, stats)) in entries.into_iter().take(80).enumerate() {
         eprintln!(
-            "rum-profile evaluation-cache invalidation-site rank={} event={} file={} line={} source={} target={} count={} target_with_identity={}",
+            "rum-profile evaluation-cache invalidation-site rank={} event={} file={} line={} source={} target={} count={} target_with_identity={} target_generated_dollar={}",
             rank + 1,
             key.event,
             key.file,
@@ -1042,6 +1143,7 @@ fn print_invalidation_site_profile_summary() {
             optional_symbol_profile_name(key.target_text),
             stats.count,
             stats.target_with_identity,
+            stats.target_generated_dollar,
         );
     }
 }
@@ -1074,7 +1176,7 @@ fn print_invalidation_family_profile_summary() {
 
     for (rank, (key, stats)) in entries.into_iter().take(80).enumerate() {
         eprintln!(
-            "rum-profile evaluation-cache invalidation-family rank={} event={} file={} line={} source={} target_family={} count={} target_with_identity={}",
+            "rum-profile evaluation-cache invalidation-family rank={} event={} file={} line={} source={} target_family={} count={} target_with_identity={} target_generated_dollar={}",
             rank + 1,
             key.event,
             key.file,
@@ -1083,6 +1185,7 @@ fn print_invalidation_family_profile_summary() {
             optional_string_profile_name(&key.target_family),
             stats.count,
             stats.target_with_identity,
+            stats.target_generated_dollar,
         );
     }
 }
@@ -1116,7 +1219,7 @@ fn print_invalidation_critical_profile_summary() {
 
     for (rank, (key, stats)) in entries.into_iter().take(80).enumerate() {
         eprintln!(
-            "rum-profile evaluation-cache invalidation-critical rank={} event={} file={} line={} source={} target_family={} count={} target_with_identity={}",
+            "rum-profile evaluation-cache invalidation-critical rank={} event={} file={} line={} source={} target_family={} count={} target_with_identity={} target_generated_dollar={}",
             rank + 1,
             key.event,
             key.file,
@@ -1125,6 +1228,7 @@ fn print_invalidation_critical_profile_summary() {
             optional_string_profile_name(&key.target_family),
             stats.count,
             stats.target_with_identity,
+            stats.target_generated_dollar,
         );
     }
 }
@@ -1278,6 +1382,86 @@ fn print_call_stability_source_head_invalidation_summary() {
     });
 }
 
+fn print_call_stability_source_head_timing_summary() {
+    CALL_STABILITY_SOURCE_HEAD_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .filter(|(_, stats)| stats.total_nanos > 0)
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.self_nanos
+                .cmp(&lhs.self_nanos)
+                .then_with(|| rhs.total_nanos.cmp(&lhs.total_nanos))
+                .then_with(|| rhs.checks.cmp(&lhs.checks))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(48).enumerate() {
+            eprintln!(
+                "rum-profile evaluation-cache call-stability-source-head-time rank={} source={} head={} checks={} hits={} misses={} total_ns={} avg_ns={} self_total_ns={} self_avg_ns={} hit_ns={} miss_absent_ns={} miss_generation_ns={} miss_dirty_ns={} miss_pointer_ns={}",
+                rank + 1,
+                key.source,
+                call_stability_head_shape_name(key.head),
+                stats.checks,
+                stats.hits,
+                stats.misses,
+                stats.total_nanos,
+                profile_average(stats.total_nanos, stats.checks),
+                stats.self_nanos,
+                profile_average(stats.self_nanos, stats.checks),
+                stats.hit_nanos,
+                stats.miss_absent_nanos,
+                stats.miss_generation_nanos,
+                stats.miss_dirty_nanos,
+                stats.miss_pointer_nanos,
+            );
+        }
+    });
+}
+
+fn print_call_stability_source_head_invalidation_timing_summary() {
+    CALL_STABILITY_SOURCE_HEAD_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .filter(|(_, stats)| stats.miss_generation_nanos.saturating_add(stats.miss_dirty_nanos) > 0)
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.miss_generation_nanos
+                .saturating_add(rhs.miss_dirty_nanos)
+                .cmp(&lhs.miss_generation_nanos.saturating_add(lhs.miss_dirty_nanos))
+                .then_with(|| rhs.self_nanos.cmp(&lhs.self_nanos))
+                .then_with(|| rhs.checks.cmp(&lhs.checks))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(48).enumerate() {
+            let invalidation_misses = stats.miss_dirty.saturating_add(stats.miss_generation);
+            let invalidation_nanos = stats
+                .miss_dirty_nanos
+                .saturating_add(stats.miss_generation_nanos);
+            eprintln!(
+                "rum-profile evaluation-cache call-stability-source-head-invalidation-time rank={} source={} head={} invalidation_misses={} invalidation_total_ns={} invalidation_avg_ns={} miss_generation={} miss_generation_ns={} miss_dirty={} miss_dirty_ns={} misses={} checks={} hits={} self_total_ns={}",
+                rank + 1,
+                key.source,
+                call_stability_head_shape_name(key.head),
+                invalidation_misses,
+                invalidation_nanos,
+                profile_average(invalidation_nanos, invalidation_misses),
+                stats.miss_generation,
+                stats.miss_generation_nanos,
+                stats.miss_dirty,
+                stats.miss_dirty_nanos,
+                stats.misses,
+                stats.checks,
+                stats.hits,
+                stats.self_nanos,
+            );
+        }
+    });
+}
+
 fn call_stability_head_shape_name(shape: CallStabilityHeadShape) -> String {
     match shape {
         CallStabilityHeadShape::AtomSymbol(symbol) => symbol.to_string(),
@@ -1317,8 +1501,23 @@ fn symbol_family_name(symbol: &Symbol) -> String {
     format!("{}{base_name}", symbol.context())
 }
 
+fn symbol_has_generated_dollar_name(symbol: &Symbol) -> bool {
+    let Some((_, suffix)) = symbol.name().rsplit_once('$') else {
+        return false;
+    };
+    !suffix.is_empty() && suffix.bytes().all(|byte| byte.is_ascii_digit())
+}
+
 fn load(counter: &AtomicU64) -> u64 {
     counter.load(Ordering::Relaxed)
+}
+
+fn profile_average(total: u64, count: u64) -> u64 {
+    if count == 0 { 0 } else { total / count }
+}
+
+fn elapsed_nanos_since(start: Instant) -> u64 {
+    start.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64
 }
 
 #[cfg(test)]

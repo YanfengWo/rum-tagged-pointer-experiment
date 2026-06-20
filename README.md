@@ -43,6 +43,7 @@ If you are reviewing the project, the fastest reading path is:
 3. [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md)
 4. [v0.1 Acceptance Boundary](./docs/v0.1-acceptance-boundary.md)
 5. [TODO / Roadmap](./TODO.md)
+6. [Performance Kernel Rewrite Plan](./docs/performance-kernel-rewrite-plan.md)
 
 ## Scope
 
@@ -89,6 +90,7 @@ The repository is a Cargo workspace with these top-level crates:
 - [Testing Strategy](./docs/testing-strategy.md)
 - [Lowering Canonical Forms](./docs/lowering-canonical-forms.md)
 - [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md)
+- [Performance Kernel Rewrite Plan](./docs/performance-kernel-rewrite-plan.md)
 - [Jupyter Host Migration Audit](./docs/jupyter-host-migration-audit.md)
 - [`mma-hol` Smoke Driver And Snapshot Audit](./docs/mma-hol-smoke-and-snapshot.md)
 - [Formatter Style Notes](./docs/formatter-style.md)

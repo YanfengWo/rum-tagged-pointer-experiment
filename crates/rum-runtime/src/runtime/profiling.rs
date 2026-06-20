@@ -75,6 +75,12 @@ static PRESENCE_MULTI_SCAN_NANOS: AtomicU64 = AtomicU64::new(0);
 static PRESENCE_MULTI_SCAN_TIME_COUNT: AtomicU64 = AtomicU64::new(0);
 static PRESENCE_MULTI_SCAN_TRUE_COUNT: AtomicU64 = AtomicU64::new(0);
 static PRESENCE_MULTI_SCAN_FALSE_COUNT: AtomicU64 = AtomicU64::new(0);
+static REWRITE_RULE_CANDIDATE_COUNT: AtomicU64 = AtomicU64::new(0);
+static REWRITE_RULE_WOULD_PREFILTER_REJECT_COUNT: AtomicU64 = AtomicU64::new(0);
+static REWRITE_RULE_WOULD_MATCHER_COUNT: AtomicU64 = AtomicU64::new(0);
+static REWRITE_RULE_MATCHER_MISS_COUNT: AtomicU64 = AtomicU64::new(0);
+static REWRITE_RULE_MATCH_COUNT: AtomicU64 = AtomicU64::new(0);
+static REWRITE_RULE_PREFILTER_FALSE_REJECT_COUNT: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 enum PresenceScanKind {
@@ -343,6 +349,27 @@ struct DefinitionRuleTimingStats {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct DefinitionDispatchKey {
+    kind: &'static str,
+    symbol: Symbol,
+    source_symbol: Option<Symbol>,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct DefinitionDispatchStats {
+    candidates: u64,
+    prefilter_skips: u64,
+    fast_matches: u64,
+    fast_misses: u64,
+    matcher_matches: u64,
+    matcher_misses: u64,
+    prefilter_nanos: u64,
+    fast_match_nanos: u64,
+    compiled_matcher_nanos: u64,
+    rhs_substitution_nanos: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct BuiltinTimingKey {
     symbol: Symbol,
     source_symbol: Option<Symbol>,
@@ -358,15 +385,67 @@ struct BuiltinTimingStats {
     err: u64,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct RuntimePathTimingKey {
+    phase: &'static str,
+    source_symbol: Option<Symbol>,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct RuntimePathTimingStats {
+    calls: u64,
+    nanos: u64,
+    self_nanos: u64,
+    ok: u64,
+    err: u64,
+    some: u64,
+    none: u64,
+    return_err: u64,
+    throw_err: u64,
+    input_required: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum RuntimeProfileOutcome {
+    Ok,
+    Some,
+    None,
+    Return,
+    Throw,
+    InputRequired,
+    Error,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct RewriteRulePrefilterStats {
+    candidates: u64,
+    would_reject: u64,
+    would_matcher: u64,
+    matcher_misses: u64,
+    matches: u64,
+    false_rejects: u64,
+}
+
 #[derive(Clone, Copy, Debug)]
 struct BuiltinTimingFrame {
     key: BuiltinTimingKey,
     child_nanos: u64,
 }
 
+#[derive(Clone, Copy, Debug)]
+struct RuntimePathTimingFrame {
+    key: RuntimePathTimingKey,
+    child_nanos: u64,
+}
+
 pub(super) struct BuiltinTimingToken {
     start: Instant,
     key: BuiltinTimingKey,
+}
+
+pub(super) struct RuntimePathTimingToken {
+    start: Instant,
+    key: RuntimePathTimingKey,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -476,9 +555,16 @@ thread_local! {
         RefCell::new(HashMap::new());
     static DEFINITION_RULE_TIMING_STATS: RefCell<HashMap<DefinitionRuleTimingKey, DefinitionRuleTimingStats>> =
         RefCell::new(HashMap::new());
+    static DEFINITION_DISPATCH_STATS: RefCell<HashMap<DefinitionDispatchKey, DefinitionDispatchStats>> =
+        RefCell::new(HashMap::new());
     static BUILTIN_TIMING_STATS: RefCell<HashMap<BuiltinTimingKey, BuiltinTimingStats>> =
         RefCell::new(HashMap::new());
     static BUILTIN_TIMING_STACK: RefCell<Vec<BuiltinTimingFrame>> = const { RefCell::new(Vec::new()) };
+    static RUNTIME_PATH_TIMING_STATS: RefCell<HashMap<RuntimePathTimingKey, RuntimePathTimingStats>> =
+        RefCell::new(HashMap::new());
+    static RUNTIME_PATH_TIMING_STACK: RefCell<Vec<RuntimePathTimingFrame>> = const { RefCell::new(Vec::new()) };
+    static REWRITE_RULE_PREFILTER_SOURCE_STATS: RefCell<HashMap<Symbol, RewriteRulePrefilterStats>> =
+        RefCell::new(HashMap::new());
     static EXPRESSION_PROVENANCE_BY_EXACT: RefCell<HashMap<u64, ExpressionProvenanceValue>> =
         RefCell::new(HashMap::new());
     static PRESENCE_PROVENANCE_STATS: RefCell<HashMap<PresenceProvenanceKey, PresenceShapeStats>> =
@@ -837,6 +923,14 @@ pub(super) fn definition_rule_timing_start() -> Option<Instant> {
     }
 }
 
+pub(super) fn definition_dispatch_timing_start() -> Option<Instant> {
+    if definition_rule_timing_enabled() {
+        Some(Instant::now())
+    } else {
+        None
+    }
+}
+
 pub(super) fn builtin_timing_start(
     symbol: &Symbol,
     arg_count: usize,
@@ -861,6 +955,88 @@ pub(super) fn builtin_timing_start(
         start: Instant::now(),
         key,
     })
+}
+
+pub(super) fn runtime_path_timing_start(phase: &'static str) -> Option<RuntimePathTimingToken> {
+    if !lexical_profile_enabled() {
+        return None;
+    }
+
+    let key = RuntimePathTimingKey {
+        phase,
+        source_symbol: evaluation_profile_current_source_symbol()
+            .map(|symbol| Symbol::new(symbol.context(), symbol.name())),
+    };
+    RUNTIME_PATH_TIMING_STACK.with(|stack| {
+        stack.borrow_mut().push(RuntimePathTimingFrame {
+            key,
+            child_nanos: 0,
+        });
+    });
+    Some(RuntimePathTimingToken {
+        start: Instant::now(),
+        key,
+    })
+}
+
+pub(super) fn record_profile_rewrite_rule_prefilter_candidate(would_reject: bool) {
+    if !lexical_profile_enabled() {
+        return;
+    }
+
+    REWRITE_RULE_CANDIDATE_COUNT.fetch_add(1, Ordering::Relaxed);
+    if would_reject {
+        REWRITE_RULE_WOULD_PREFILTER_REJECT_COUNT.fetch_add(1, Ordering::Relaxed);
+    } else {
+        REWRITE_RULE_WOULD_MATCHER_COUNT.fetch_add(1, Ordering::Relaxed);
+    }
+
+    let Some(source_symbol) = evaluation_profile_current_source_symbol() else {
+        return;
+    };
+    let source_symbol = Symbol::new(source_symbol.context(), source_symbol.name());
+    REWRITE_RULE_PREFILTER_SOURCE_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(source_symbol).or_default();
+        entry.candidates = entry.candidates.saturating_add(1);
+        if would_reject {
+            entry.would_reject = entry.would_reject.saturating_add(1);
+        } else {
+            entry.would_matcher = entry.would_matcher.saturating_add(1);
+        }
+    });
+}
+
+pub(super) fn record_profile_rewrite_rule_match_outcome(would_reject: bool, matched: bool) {
+    if !lexical_profile_enabled() {
+        return;
+    }
+
+    if matched {
+        REWRITE_RULE_MATCH_COUNT.fetch_add(1, Ordering::Relaxed);
+        if would_reject {
+            REWRITE_RULE_PREFILTER_FALSE_REJECT_COUNT.fetch_add(1, Ordering::Relaxed);
+        }
+    } else {
+        REWRITE_RULE_MATCHER_MISS_COUNT.fetch_add(1, Ordering::Relaxed);
+    }
+
+    let Some(source_symbol) = evaluation_profile_current_source_symbol() else {
+        return;
+    };
+    let source_symbol = Symbol::new(source_symbol.context(), source_symbol.name());
+    REWRITE_RULE_PREFILTER_SOURCE_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(source_symbol).or_default();
+        if matched {
+            entry.matches = entry.matches.saturating_add(1);
+            if would_reject {
+                entry.false_rejects = entry.false_rejects.saturating_add(1);
+            }
+        } else {
+            entry.matcher_misses = entry.matcher_misses.saturating_add(1);
+        }
+    });
 }
 
 pub(super) fn record_profile_definition_rhs_eval(start: Option<Instant>) {
@@ -1148,6 +1324,102 @@ pub(super) fn record_profile_definition_rule_timing(
     });
 }
 
+pub(super) fn record_profile_definition_dispatch_candidate(kind: &'static str, symbol: &Symbol) {
+    record_profile_definition_dispatch(kind, symbol, |stats| {
+        stats.candidates = stats.candidates.saturating_add(1);
+    });
+}
+
+pub(super) fn record_profile_definition_dispatch_prefilter_skip(
+    kind: &'static str,
+    symbol: &Symbol,
+) {
+    record_profile_definition_dispatch(kind, symbol, |stats| {
+        stats.prefilter_skips = stats.prefilter_skips.saturating_add(1);
+    });
+}
+
+pub(super) fn record_profile_definition_dispatch_fast_outcome(
+    kind: &'static str,
+    symbol: &Symbol,
+    matched: bool,
+) {
+    record_profile_definition_dispatch(kind, symbol, |stats| {
+        if matched {
+            stats.fast_matches = stats.fast_matches.saturating_add(1);
+        } else {
+            stats.fast_misses = stats.fast_misses.saturating_add(1);
+        }
+    });
+}
+
+pub(super) fn record_profile_definition_dispatch_matcher_outcome(
+    kind: &'static str,
+    symbol: &Symbol,
+    matched: bool,
+) {
+    record_profile_definition_dispatch(kind, symbol, |stats| {
+        if matched {
+            stats.matcher_matches = stats.matcher_matches.saturating_add(1);
+        } else {
+            stats.matcher_misses = stats.matcher_misses.saturating_add(1);
+        }
+    });
+}
+
+pub(super) fn record_profile_definition_dispatch_phase_timing(
+    kind: &'static str,
+    symbol: &Symbol,
+    phase: &'static str,
+    start: Option<Instant>,
+) {
+    if !definition_rule_timing_enabled() {
+        return;
+    }
+
+    let Some(start) = start else {
+        return;
+    };
+    let elapsed_nanos = elapsed_nanos_since(start);
+    record_profile_definition_dispatch(kind, symbol, |stats| match phase {
+        "prefilter" => {
+            stats.prefilter_nanos = stats.prefilter_nanos.saturating_add(elapsed_nanos);
+        }
+        "fast_match" => {
+            stats.fast_match_nanos = stats.fast_match_nanos.saturating_add(elapsed_nanos);
+        }
+        "compiled_matcher" => {
+            stats.compiled_matcher_nanos =
+                stats.compiled_matcher_nanos.saturating_add(elapsed_nanos);
+        }
+        "rhs_substitution" => {
+            stats.rhs_substitution_nanos =
+                stats.rhs_substitution_nanos.saturating_add(elapsed_nanos);
+        }
+        _ => {}
+    });
+}
+
+fn record_profile_definition_dispatch<F>(kind: &'static str, symbol: &Symbol, update: F)
+where
+    F: FnOnce(&mut DefinitionDispatchStats),
+{
+    if !lexical_profile_enabled() {
+        return;
+    }
+
+    let key = DefinitionDispatchKey {
+        kind,
+        symbol: Symbol::new(symbol.context(), symbol.name()),
+        source_symbol: evaluation_profile_current_source_symbol()
+            .map(|symbol| Symbol::new(symbol.context(), symbol.name())),
+    };
+    DEFINITION_DISPATCH_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        update(stats.entry(key).or_default());
+    });
+}
+
 pub(super) fn record_profile_builtin_timing(token: Option<BuiltinTimingToken>, result_is_ok: bool) {
     if !builtin_timing_enabled() {
         return;
@@ -1179,6 +1451,67 @@ pub(super) fn record_profile_builtin_timing(token: Option<BuiltinTimingToken>, r
             entry.ok = entry.ok.saturating_add(1);
         } else {
             entry.err = entry.err.saturating_add(1);
+        }
+    });
+}
+
+pub(super) fn record_profile_runtime_path_timing(
+    token: Option<RuntimePathTimingToken>,
+    outcome: RuntimeProfileOutcome,
+) {
+    if !lexical_profile_enabled() {
+        return;
+    }
+
+    let Some(token) = token else {
+        return;
+    };
+    let elapsed_nanos = elapsed_nanos_since(token.start);
+    let child_nanos = RUNTIME_PATH_TIMING_STACK.with(|stack| {
+        let mut stack = stack.borrow_mut();
+        let frame = stack.pop();
+        if let Some(parent) = stack.last_mut() {
+            parent.child_nanos = parent.child_nanos.saturating_add(elapsed_nanos);
+        }
+        frame
+            .filter(|frame| frame.key == token.key)
+            .map(|frame| frame.child_nanos)
+            .unwrap_or(0)
+    });
+    let self_nanos = elapsed_nanos.saturating_sub(child_nanos);
+    RUNTIME_PATH_TIMING_STATS.with(|stats| {
+        let mut stats = stats.borrow_mut();
+        let entry = stats.entry(token.key).or_default();
+        entry.calls = entry.calls.saturating_add(1);
+        entry.nanos = entry.nanos.saturating_add(elapsed_nanos);
+        entry.self_nanos = entry.self_nanos.saturating_add(self_nanos);
+        match outcome {
+            RuntimeProfileOutcome::Ok => {
+                entry.ok = entry.ok.saturating_add(1);
+            }
+            RuntimeProfileOutcome::Some => {
+                entry.ok = entry.ok.saturating_add(1);
+                entry.some = entry.some.saturating_add(1);
+            }
+            RuntimeProfileOutcome::None => {
+                entry.ok = entry.ok.saturating_add(1);
+                entry.none = entry.none.saturating_add(1);
+            }
+            RuntimeProfileOutcome::Return => {
+                entry.err = entry.err.saturating_add(1);
+                entry.return_err = entry.return_err.saturating_add(1);
+            }
+            RuntimeProfileOutcome::Throw => {
+                entry.err = entry.err.saturating_add(1);
+                entry.throw_err = entry.throw_err.saturating_add(1);
+            }
+            RuntimeProfileOutcome::InputRequired => {
+                entry.err = entry.err.saturating_add(1);
+                entry.input_required = entry.input_required.saturating_add(1);
+            }
+            RuntimeProfileOutcome::Error => {
+                entry.err = entry.err.saturating_add(1);
+            }
         }
     });
 }
@@ -1365,6 +1698,12 @@ pub(super) fn reset_lexical_profile_counters() {
         PRESENCE_MULTI_SCAN_TIME_COUNT,
         PRESENCE_MULTI_SCAN_TRUE_COUNT,
         PRESENCE_MULTI_SCAN_FALSE_COUNT,
+        REWRITE_RULE_CANDIDATE_COUNT,
+        REWRITE_RULE_WOULD_PREFILTER_REJECT_COUNT,
+        REWRITE_RULE_WOULD_MATCHER_COUNT,
+        REWRITE_RULE_MATCHER_MISS_COUNT,
+        REWRITE_RULE_MATCH_COUNT,
+        REWRITE_RULE_PREFILTER_FALSE_REJECT_COUNT,
     );
 
     PRESENCE_SHAPE_STATS.with(|stats| stats.borrow_mut().clear());
@@ -1385,8 +1724,12 @@ pub(super) fn reset_lexical_profile_counters() {
     RULE_RHS_ALPHA_RENAME_STATS.with(|stats| stats.borrow_mut().clear());
     RULE_RHS_TIMING_STATS.with(|stats| stats.borrow_mut().clear());
     DEFINITION_RULE_TIMING_STATS.with(|stats| stats.borrow_mut().clear());
+    DEFINITION_DISPATCH_STATS.with(|stats| stats.borrow_mut().clear());
     BUILTIN_TIMING_STATS.with(|stats| stats.borrow_mut().clear());
     BUILTIN_TIMING_STACK.with(|stack| stack.borrow_mut().clear());
+    RUNTIME_PATH_TIMING_STATS.with(|stats| stats.borrow_mut().clear());
+    RUNTIME_PATH_TIMING_STACK.with(|stack| stack.borrow_mut().clear());
+    REWRITE_RULE_PREFILTER_SOURCE_STATS.with(|stats| stats.borrow_mut().clear());
     EXPRESSION_PROVENANCE_BY_EXACT.with(|stats| stats.borrow_mut().clear());
     PRESENCE_PROVENANCE_STATS.with(|stats| stats.borrow_mut().clear());
     LEXICAL_CONTEXT_STACK.with(|stack| stack.borrow_mut().clear());
@@ -1529,7 +1872,10 @@ fn print_lexical_profile_summary_body() {
     print_rule_rhs_alpha_rename_summary();
     print_rule_rhs_timing_summary();
     print_definition_rule_timing_summary();
+    print_definition_dispatch_summary();
+    print_runtime_path_timing_summary();
     print_builtin_timing_summary();
+    print_rewrite_rule_prefilter_summary();
     print_presence_binding_summary();
     print_presence_binding_name_summary();
 }
@@ -2961,6 +3307,214 @@ fn print_definition_rule_timing_summary() {
     });
 }
 
+fn print_definition_dispatch_summary() {
+    if !lexical_profile_enabled() {
+        return;
+    }
+
+    DEFINITION_DISPATCH_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        if entries.is_empty() {
+            return;
+        }
+
+        let totals =
+            entries
+                .iter()
+                .fold(DefinitionDispatchStats::default(), |mut acc, (_, stats)| {
+                    acc.candidates = acc.candidates.saturating_add(stats.candidates);
+                    acc.prefilter_skips = acc.prefilter_skips.saturating_add(stats.prefilter_skips);
+                    acc.fast_matches = acc.fast_matches.saturating_add(stats.fast_matches);
+                    acc.fast_misses = acc.fast_misses.saturating_add(stats.fast_misses);
+                    acc.matcher_matches = acc.matcher_matches.saturating_add(stats.matcher_matches);
+                    acc.matcher_misses = acc.matcher_misses.saturating_add(stats.matcher_misses);
+                    acc.prefilter_nanos = acc.prefilter_nanos.saturating_add(stats.prefilter_nanos);
+                    acc.fast_match_nanos =
+                        acc.fast_match_nanos.saturating_add(stats.fast_match_nanos);
+                    acc.compiled_matcher_nanos = acc
+                        .compiled_matcher_nanos
+                        .saturating_add(stats.compiled_matcher_nanos);
+                    acc.rhs_substitution_nanos = acc
+                        .rhs_substitution_nanos
+                        .saturating_add(stats.rhs_substitution_nanos);
+                    acc
+                });
+        eprintln!(
+            "rum-profile definition-dispatch summary candidates={} prefilter_skips={} fast_matches={} fast_misses={} matcher_matches={} matcher_misses={} prefilter_skip_rate_per_mille={} matcher_miss_rate_per_mille={}",
+            totals.candidates,
+            totals.prefilter_skips,
+            totals.fast_matches,
+            totals.fast_misses,
+            totals.matcher_matches,
+            totals.matcher_misses,
+            profile_stats_per_mille(totals.prefilter_skips, totals.candidates),
+            profile_stats_per_mille(totals.matcher_misses, totals.candidates),
+        );
+
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.matcher_misses
+                .cmp(&lhs.matcher_misses)
+                .then_with(|| rhs.prefilter_skips.cmp(&lhs.prefilter_skips))
+                .then_with(|| rhs.candidates.cmp(&lhs.candidates))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(64).enumerate() {
+            eprintln!(
+                "rum-profile definition-dispatch rank={} kind={} symbol={} source={} candidates={} prefilter_skips={} fast_matches={} fast_misses={} matcher_matches={} matcher_misses={} prefilter_skip_rate_per_mille={} matcher_miss_rate_per_mille={}",
+                rank + 1,
+                key.kind,
+                key.symbol,
+                profile_optional_symbol_name(key.source_symbol),
+                stats.candidates,
+                stats.prefilter_skips,
+                stats.fast_matches,
+                stats.fast_misses,
+                stats.matcher_matches,
+                stats.matcher_misses,
+                profile_stats_per_mille(stats.prefilter_skips, stats.candidates),
+                profile_stats_per_mille(stats.matcher_misses, stats.candidates),
+            );
+        }
+
+        if definition_rule_timing_enabled() {
+            eprintln!(
+                "rum-profile definition-dispatch-time summary prefilter_ns={} fast_match_ns={} compiled_matcher_ns={} rhs_substitution_ns={}",
+                totals.prefilter_nanos,
+                totals.fast_match_nanos,
+                totals.compiled_matcher_nanos,
+                totals.rhs_substitution_nanos,
+            );
+
+            let mut entries = DEFINITION_DISPATCH_STATS.with(|stats| {
+                stats
+                    .borrow()
+                    .iter()
+                    .map(|(key, stats)| (*key, *stats))
+                    .collect::<Vec<_>>()
+            });
+            entries.sort_by(|(_, lhs), (_, rhs)| {
+                definition_dispatch_timing_total(rhs)
+                    .cmp(&definition_dispatch_timing_total(lhs))
+                    .then_with(|| rhs.candidates.cmp(&lhs.candidates))
+            });
+
+            for (rank, (key, stats)) in entries.into_iter().take(64).enumerate() {
+                let fast_attempts = stats.fast_matches.saturating_add(stats.fast_misses);
+                let matcher_attempts = stats
+                    .matcher_matches
+                    .saturating_add(stats.matcher_misses);
+                let rhs_substitutions = stats.fast_matches.saturating_add(stats.matcher_matches);
+                eprintln!(
+                    "rum-profile definition-dispatch-time rank={} kind={} symbol={} source={} total_ns={} candidates={} prefilter_ns={} prefilter_avg_ns={} fast_attempts={} fast_match_ns={} fast_match_avg_ns={} matcher_attempts={} compiled_matcher_ns={} compiled_matcher_avg_ns={} rhs_substitutions={} rhs_substitution_ns={} rhs_substitution_avg_ns={}",
+                    rank + 1,
+                    key.kind,
+                    key.symbol,
+                    profile_optional_symbol_name(key.source_symbol),
+                    definition_dispatch_timing_total(&stats),
+                    stats.candidates,
+                    stats.prefilter_nanos,
+                    profile_stats_average(stats.prefilter_nanos, stats.candidates),
+                    fast_attempts,
+                    stats.fast_match_nanos,
+                    profile_stats_average(stats.fast_match_nanos, fast_attempts),
+                    matcher_attempts,
+                    stats.compiled_matcher_nanos,
+                    profile_stats_average(stats.compiled_matcher_nanos, matcher_attempts),
+                    rhs_substitutions,
+                    stats.rhs_substitution_nanos,
+                    profile_stats_average(stats.rhs_substitution_nanos, rhs_substitutions),
+                );
+            }
+        }
+    });
+}
+
+fn definition_dispatch_timing_total(stats: &DefinitionDispatchStats) -> u64 {
+    stats
+        .prefilter_nanos
+        .saturating_add(stats.fast_match_nanos)
+        .saturating_add(stats.compiled_matcher_nanos)
+        .saturating_add(stats.rhs_substitution_nanos)
+}
+
+fn print_runtime_path_timing_summary() {
+    if !lexical_profile_enabled() {
+        return;
+    }
+
+    RUNTIME_PATH_TIMING_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.nanos
+                .cmp(&lhs.nanos)
+                .then_with(|| rhs.calls.cmp(&lhs.calls))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(64).enumerate() {
+            eprintln!(
+                "rum-profile runtime-path-timing rank={} phase={} source={} calls={} total_ns={} avg_ns={} self_total_ns={} self_avg_ns={} ok={} err={} some={} none={} return_err={} throw_err={} input_required={}",
+                rank + 1,
+                key.phase,
+                profile_optional_symbol_name(key.source_symbol),
+                stats.calls,
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.calls),
+                stats.self_nanos,
+                profile_stats_average(stats.self_nanos, stats.calls),
+                stats.ok,
+                stats.err,
+                stats.some,
+                stats.none,
+                stats.return_err,
+                stats.throw_err,
+                stats.input_required,
+            );
+        }
+    });
+
+    RUNTIME_PATH_TIMING_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(key, stats)| (*key, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.self_nanos
+                .cmp(&lhs.self_nanos)
+                .then_with(|| rhs.calls.cmp(&lhs.calls))
+        });
+
+        for (rank, (key, stats)) in entries.into_iter().take(64).enumerate() {
+            eprintln!(
+                "rum-profile runtime-path-self-timing rank={} phase={} source={} calls={} self_total_ns={} self_avg_ns={} total_ns={} avg_ns={} ok={} err={} some={} none={} return_err={} throw_err={} input_required={}",
+                rank + 1,
+                key.phase,
+                profile_optional_symbol_name(key.source_symbol),
+                stats.calls,
+                stats.self_nanos,
+                profile_stats_average(stats.self_nanos, stats.calls),
+                stats.nanos,
+                profile_stats_average(stats.nanos, stats.calls),
+                stats.ok,
+                stats.err,
+                stats.some,
+                stats.none,
+                stats.return_err,
+                stats.throw_err,
+                stats.input_required,
+            );
+        }
+    });
+}
+
 fn print_builtin_timing_summary() {
     if !builtin_timing_enabled() {
         return;
@@ -3022,6 +3576,60 @@ fn print_builtin_timing_summary() {
                 profile_stats_average(stats.nanos, stats.calls),
                 stats.ok,
                 stats.err,
+            );
+        }
+    });
+}
+
+fn print_rewrite_rule_prefilter_summary() {
+    let candidates = load(&REWRITE_RULE_CANDIDATE_COUNT);
+    if candidates == 0 {
+        return;
+    }
+
+    let would_reject = load(&REWRITE_RULE_WOULD_PREFILTER_REJECT_COUNT);
+    let would_matcher = load(&REWRITE_RULE_WOULD_MATCHER_COUNT);
+    let matcher_misses = load(&REWRITE_RULE_MATCHER_MISS_COUNT);
+    let matches = load(&REWRITE_RULE_MATCH_COUNT);
+    let false_rejects = load(&REWRITE_RULE_PREFILTER_FALSE_REJECT_COUNT);
+    eprintln!(
+        "rum-profile rewrite-rule prefilter summary candidates={} would_reject={} would_matcher={} matcher_misses={} matches={} false_rejects={} reject_rate_per_mille={} false_reject_rate_per_mille={}",
+        candidates,
+        would_reject,
+        would_matcher,
+        matcher_misses,
+        matches,
+        false_rejects,
+        profile_stats_per_mille(would_reject, candidates),
+        profile_stats_per_mille(false_rejects, candidates),
+    );
+
+    REWRITE_RULE_PREFILTER_SOURCE_STATS.with(|stats| {
+        let mut entries = stats
+            .borrow()
+            .iter()
+            .map(|(source, stats)| (*source, *stats))
+            .collect::<Vec<_>>();
+        entries.sort_by(|(_, lhs), (_, rhs)| {
+            rhs.would_reject
+                .cmp(&lhs.would_reject)
+                .then_with(|| rhs.candidates.cmp(&lhs.candidates))
+                .then_with(|| rhs.matcher_misses.cmp(&lhs.matcher_misses))
+        });
+
+        for (rank, (source, stats)) in entries.into_iter().take(32).enumerate() {
+            eprintln!(
+                "rum-profile rewrite-rule prefilter-source rank={} source={} candidates={} would_reject={} would_matcher={} matcher_misses={} matches={} false_rejects={} reject_rate_per_mille={} false_reject_rate_per_mille={}",
+                rank + 1,
+                source,
+                stats.candidates,
+                stats.would_reject,
+                stats.would_matcher,
+                stats.matcher_misses,
+                stats.matches,
+                stats.false_rejects,
+                profile_stats_per_mille(stats.would_reject, stats.candidates),
+                profile_stats_per_mille(stats.false_rejects, stats.candidates),
             );
         }
     });
@@ -3099,6 +3707,14 @@ fn print_presence_binding_name_summary() {
 
 fn profile_stats_average(total: u64, count: u64) -> u64 {
     if count == 0 { 0 } else { total / count }
+}
+
+fn profile_stats_per_mille(numerator: u64, denominator: u64) -> u64 {
+    if denominator == 0 {
+        0
+    } else {
+        numerator.saturating_mul(1000) / denominator
+    }
 }
 
 fn profile_symbol_name(symbol: Symbol) -> String {

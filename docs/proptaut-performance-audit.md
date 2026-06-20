@@ -180,6 +180,58 @@ next production work must implement an equivalent correctness-preserving
 rum-side optimization, with conservative keys/invalidation, while keeping
 unmodified `mma-hol` as the acceptance target.
 
+Maintainer note, 2026-06-20: a current-worktree revalidation returned to the
+first `mkPairInj` `CONVRULE` root after evaluator micro-splits proved too small
+to own the remaining Pair wall. The valid sibling leaf probes show the same
+root-linked repeated failure class: the context-length `1` comb
+`7361...0bfc` remains a `64-67s` parent, with its const and var leaves around
+`25-30s` each and direct `topRepeatc` samples around `21-24ms` per full
+failure scan. A generated-copy `failure-cache` prototype cut the same root
+`simpFixpointConv` from roughly `226-231s` to about `137.65s` with `21`
+entries and `5283` hits. This supersedes the short-lived idea of drilling into
+sub-second evaluator glue for the Pair root: the next production experiment
+should implement the equivalent rum-side failed-conversion/no-change cache or
+dispatch shortcut with conservative invalidation.
+
+Maintainer note, 2026-06-20 follow-up: a broad rum-side generic
+call-result-cache prototype was measured and rejected before commit. On the
+same clean clone, `runtime-profile-var-basic-baseconv-chain` completed in
+`54s` with the cache disabled but timed out at `240s` when enabled. The
+failure mode is candidate granularity: building full evaluated-call keys
+around package load/preheat is too expensive and not a root-linked Pair/Simp
+fix. Keep the production line focused on failed-conversion/no-change caching
+or dispatch shortcuts with narrow, semantically justified keys.
+
+Maintainer note, 2026-06-20 second follow-up: a narrower held-`Catch`
+failure-cache prototype was also rejected before commit. Safe invalidation
+produced no hits on the tiny base-conversion chain (`40` lookups, `18` dirty
+misses, `0` hits). Ignoring dirty invalidation proved that repeated held
+`Catch` bodies can hit in isolation (`18/40` hits and a manual rule-loop cut
+to about `2.8ms`), but the root-linked stock `pair4-stock-repeat8` probe got
+slower even under that unsafe upper bound (`16.94s` off, `18.17s` ignore
+dirty). Therefore the next implementation must move earlier than `Catch` to a
+conversion/no-change result key or dispatch shortcut; do not retain a held
+`Catch` result cache.
+
+Maintainer note, 2026-06-20 WolframKernel comparison: a WK-only wrapper probe
+then checked that inference directly. WK does not skip the mma-hol conversion
+failure chain at the WL level: the depth-19 base-conversion probe performs
+`3819` failed `REWRCONV` / `simpRuleConv` calls over `200` repetitions, and
+`pair4-stock-repeat2` performs `6954` failed `REWRCONV` / `simpRuleConv`
+calls. The difference is the constant: WK's non-instrumented
+`TRYCONV[REPEATC[baseConv]]` depth-19 probe is `0.372219s` for `200`
+repetitions, and `pair4-stock-repeat8` is `2.485002s`. Treat a semantic
+failed-conversion cache as a possible rum-specific shortcut, not as the
+inferred WK mechanism. A WK-like implementation means lowering the cost of the
+ordinary failure path: dispatch, pattern matching, structural operations,
+curried call application, and nonlocal control.
+
+Maintainer note, 2026-06-20 plan update: the performance mainline is now the
+staged kernel plan in
+[Performance Kernel Rewrite Plan](./performance-kernel-rewrite-plan.md).
+Use this audit as evidence and method history, but use the rewrite plan for
+stage ordering and acceptance gates.
+
 ## 5. How to find hot regions in this codebase (method)
 
 The night's probes failed not for lack of effort but because the profile

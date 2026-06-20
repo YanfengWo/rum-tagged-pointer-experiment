@@ -85,9 +85,14 @@ impl Session {
             definition.delayed_own_value = None;
         }
 
+        let runtime_profile_total = runtime_path_timing_start("module.eval.total");
         let result = self.resume_module_initializers(items, args[1].clone(), renames, 0);
         record_profile_eval_module(profile_start);
         record_profile_eval_module_by_source(eval_cache_profile_start);
+        record_profile_runtime_path_timing(
+            runtime_profile_total,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
         result
     }
 
@@ -261,6 +266,7 @@ impl Session {
         renames: SymbolExprMap,
         index: usize,
     ) -> Result<Expr, EvalError> {
+        let runtime_profile_resume = runtime_path_timing_start("module.resume_initializers");
         record_profile_module_resume_entry(index);
         if index >= items.len() {
             let profile_start = lexical_profile_start();
@@ -269,7 +275,17 @@ impl Session {
             let body = substitute_lexical_bindings(&body, &renames, &BTreeSet::new());
             record_profile_module_body_substitution(profile_start);
             record_profile_module_body_substitution_by_source(eval_cache_profile_start);
-            return self.evaluate(body);
+            let runtime_profile_body = runtime_path_timing_start("module.body.evaluate");
+            let result = self.evaluate(body);
+            record_profile_runtime_path_timing(
+                runtime_profile_body,
+                runtime_profile_outcome_for_expr_result(&result),
+            );
+            record_profile_runtime_path_timing(
+                runtime_profile_resume,
+                runtime_profile_outcome_for_expr_result(&result),
+            );
+            return result;
         }
 
         let (symbol, init) = items[index].clone();
@@ -280,7 +296,12 @@ impl Session {
             let renamed_init = substitute_lexical_bindings(&init, &renames, &BTreeSet::new());
             record_profile_module_init_substitution(profile_start);
             record_profile_module_init_substitution_by_source(eval_cache_profile_start);
+            let runtime_profile_init = runtime_path_timing_start("module.initializer.evaluate");
             let init_result = self.evaluate(renamed_init);
+            record_profile_runtime_path_timing(
+                runtime_profile_init,
+                runtime_profile_outcome_for_expr_result(&init_result),
+            );
             let outcome = self.suspend_with_frame_lazy(init_result, || {
                 let items = items.clone();
                 let body = body.clone();
@@ -294,7 +315,12 @@ impl Session {
             self.store_module_initializer_value(&renames, &symbol, outcome);
         }
 
-        self.resume_module_initializers(items, body, renames, index + 1)
+        let result = self.resume_module_initializers(items, body, renames, index + 1);
+        record_profile_runtime_path_timing(
+            runtime_profile_resume,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        result
     }
 
     fn store_module_initializer_value(
@@ -433,5 +459,19 @@ impl Session {
             items: parse_module_binding_list(&args[0])
                 .ok_or(ScopingBindingNormalizationError::InvalidScopedBindings)?,
         })
+    }
+}
+
+fn runtime_profile_outcome_for_expr_result(
+    result: &Result<Expr, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(_) => RuntimeProfileOutcome::Ok,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
     }
 }

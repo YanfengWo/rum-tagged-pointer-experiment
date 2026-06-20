@@ -1,8 +1,10 @@
+use super::lexical_presence::LexicalPresenceCache;
 use super::*;
 
 struct LexicalBindings<'a> {
     map: &'a SymbolExprMap,
     single: Option<(&'a Symbol, &'a Expr)>,
+    presence_cache: LexicalPresenceCache,
 }
 
 impl<'a> LexicalBindings<'a> {
@@ -12,7 +14,11 @@ impl<'a> LexicalBindings<'a> {
         } else {
             None
         };
-        Self { map, single }
+        Self {
+            map,
+            single,
+            presence_cache: LexicalPresenceCache::new(),
+        }
     }
 
     #[inline]
@@ -29,112 +35,10 @@ impl<'a> LexicalBindings<'a> {
 
     fn may_contain_binding_symbol(&self, expr: &Expr) -> bool {
         if let Some((symbol, _)) = self.single {
-            return expr_may_contain_symbol(expr, symbol);
+            return self.presence_cache.may_contain_symbol(expr, symbol);
         }
 
-        expr_may_contain_any_binding(expr, self.map)
-    }
-}
-
-fn expr_may_contain_any_binding(expr: &Expr, bindings: &SymbolExprMap) -> bool {
-    if lexical_profile_enabled() {
-        let profile_start = if lexical_profile_detail_enabled() {
-            lexical_profile_start()
-        } else {
-            None
-        };
-        let (result, nodes) = expr_may_contain_any_binding_counted(expr, bindings);
-        record_profile_multi_presence_scan(profile_start, expr, result, nodes);
-        return result;
-    }
-
-    expr_may_contain_any_binding_fast(expr, bindings)
-}
-
-fn expr_may_contain_any_binding_fast(expr: &Expr, bindings: &SymbolExprMap) -> bool {
-    match expr {
-        Expr::Atom(Atom::Symbol(symbol)) => bindings.contains_key(symbol),
-        Expr::Atom(_) => false,
-        Expr::Call { head, args } => {
-            expr_may_contain_any_binding_fast(head, bindings)
-                || args
-                    .iter()
-                    .any(|arg| expr_may_contain_any_binding_fast(arg, bindings))
-        }
-    }
-}
-
-fn expr_may_contain_any_binding_counted(expr: &Expr, bindings: &SymbolExprMap) -> (bool, u64) {
-    match expr {
-        Expr::Atom(Atom::Symbol(symbol)) => (bindings.contains_key(symbol), 1),
-        Expr::Atom(_) => (false, 1),
-        Expr::Call { head, args } => {
-            let (head_result, mut nodes) = expr_may_contain_any_binding_counted(head, bindings);
-            if head_result {
-                return (true, nodes);
-            }
-
-            for arg in args.iter() {
-                let (arg_result, arg_nodes) = expr_may_contain_any_binding_counted(arg, bindings);
-                nodes = nodes.saturating_add(arg_nodes);
-                if arg_result {
-                    return (true, nodes);
-                }
-            }
-
-            (false, nodes)
-        }
-    }
-}
-
-fn expr_may_contain_symbol(expr: &Expr, target: &Symbol) -> bool {
-    if lexical_profile_enabled() {
-        let profile_start = if lexical_profile_detail_enabled() {
-            lexical_profile_start()
-        } else {
-            None
-        };
-        let (result, nodes) = expr_may_contain_symbol_counted(expr, target);
-        record_profile_single_presence_scan(profile_start, expr, target, result, nodes);
-        return result;
-    }
-
-    expr_may_contain_symbol_fast(expr, target)
-}
-
-fn expr_may_contain_symbol_fast(expr: &Expr, target: &Symbol) -> bool {
-    match expr {
-        Expr::Atom(Atom::Symbol(symbol)) => symbol == target,
-        Expr::Atom(_) => false,
-        Expr::Call { head, args } => {
-            expr_may_contain_symbol_fast(head, target)
-                || args
-                    .iter()
-                    .any(|arg| expr_may_contain_symbol_fast(arg, target))
-        }
-    }
-}
-
-fn expr_may_contain_symbol_counted(expr: &Expr, target: &Symbol) -> (bool, u64) {
-    match expr {
-        Expr::Atom(Atom::Symbol(symbol)) => (symbol == target, 1),
-        Expr::Atom(_) => (false, 1),
-        Expr::Call { head, args } => {
-            let (head_result, mut nodes) = expr_may_contain_symbol_counted(head, target);
-            if head_result {
-                return (true, nodes);
-            }
-
-            for arg in args.iter() {
-                let (arg_result, arg_nodes) = expr_may_contain_symbol_counted(arg, target);
-                nodes = nodes.saturating_add(arg_nodes);
-                if arg_result {
-                    return (true, nodes);
-                }
-            }
-
-            (false, nodes)
-        }
+        self.presence_cache.may_contain_any_binding(expr, self.map)
     }
 }
 

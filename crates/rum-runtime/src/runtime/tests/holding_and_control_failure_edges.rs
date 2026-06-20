@@ -115,6 +115,22 @@ fn failure_symbolic_property_and_predicate_edges_cover_current_subset() {
     );
     assert_eq!(
         session
+            .eval_text("MatchQ[Failure[\"oops\", {\"Code\" -> 500}], _Failure]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[$Failed, _Failure]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
             .eval_text("TerminatedEvaluation[\"RecursionLimit\"]")
             .unwrap()
             .value

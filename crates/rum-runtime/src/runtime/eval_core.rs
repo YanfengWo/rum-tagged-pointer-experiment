@@ -45,22 +45,62 @@ impl Session {
     }
 
     pub(super) fn evaluate_inner_unstable(&mut self, expr: Expr) -> Result<Expr, EvalError> {
-        match expr {
-            Expr::Atom(Atom::Symbol(symbol)) => self.evaluate_symbol(symbol),
-            Expr::Call { head, args } => self.evaluate_call(head.into_owned(), args.into_vec()),
-            other => Ok(other),
-        }
+        let runtime_profile_total = runtime_path_timing_start("evaluate_inner_unstable.total");
+        let result = match expr {
+            Expr::Atom(Atom::Symbol(symbol)) => {
+                let runtime_profile = runtime_path_timing_start("evaluate_inner_unstable.symbol");
+                let result = self.evaluate_symbol(symbol);
+                record_profile_runtime_path_timing(
+                    runtime_profile,
+                    runtime_profile_outcome_for_expr_result(&result),
+                );
+                result
+            }
+            Expr::Call { head, args } => {
+                let runtime_profile = runtime_path_timing_start("evaluate_inner_unstable.call");
+                let result = self.evaluate_call(head.into_owned(), args.into_vec());
+                record_profile_runtime_path_timing(
+                    runtime_profile,
+                    runtime_profile_outcome_for_expr_result(&result),
+                );
+                result
+            }
+            other => {
+                let runtime_profile = runtime_path_timing_start("evaluate_inner_unstable.atom");
+                let result = Ok(other);
+                record_profile_runtime_path_timing(
+                    runtime_profile,
+                    runtime_profile_outcome_for_expr_result(&result),
+                );
+                result
+            }
+        };
+        record_profile_runtime_path_timing(
+            runtime_profile_total,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        result
     }
 
     pub(super) fn evaluate_atom_fast_path(&mut self, expr: Expr) -> Result<Expr, EvalError> {
-        match &expr {
-            Expr::Atom(Atom::Symbol(symbol)) if self.symbol_is_atom_evaluation_stable(symbol) => {
-                Ok(expr)
+        let kind = EvaluateAtomFastPathKind::classify(self, &expr);
+        let runtime_profile_total = runtime_path_timing_start("evaluate_atom_fast_path.total");
+        let runtime_profile_kind = runtime_path_timing_start(kind.profile_name());
+        let result = match kind {
+            EvaluateAtomFastPathKind::StableSymbol | EvaluateAtomFastPathKind::Atom => Ok(expr),
+            EvaluateAtomFastPathKind::UnstableSymbol | EvaluateAtomFastPathKind::Call => {
+                self.evaluate(expr)
             }
-            Expr::Atom(Atom::Symbol(_)) => self.evaluate(expr),
-            Expr::Atom(_) => Ok(expr),
-            _ => self.evaluate(expr),
-        }
+        };
+        record_profile_runtime_path_timing(
+            runtime_profile_kind,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        record_profile_runtime_path_timing(
+            runtime_profile_total,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        result
     }
 
     pub(super) fn evaluate_symbol(&mut self, symbol: Symbol) -> Result<Expr, EvalError> {
@@ -416,19 +456,42 @@ impl Session {
     }
 
     pub(super) fn evaluate_call(&mut self, head: Expr, args: Vec<Expr>) -> Result<Expr, EvalError> {
+        let runtime_profile_total = runtime_path_timing_start("evaluate_call.total");
+        let runtime_profile_head = runtime_path_timing_start("evaluate_call.head_eval");
         let evaluated_head_result = self.evaluate_atom_fast_path(head);
+        record_profile_runtime_path_timing(
+            runtime_profile_head,
+            runtime_profile_outcome_for_expr_result(&evaluated_head_result),
+        );
         let evaluated_head = match evaluated_head_result {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
                 let args_for_resume = args.clone();
-                return self.suspend_with_frame(
+                let result = self.suspend_with_frame(
                     Err(EvalError::InputRequired { request }),
                     move |session, value| session.resume_call_after_head(value, args_for_resume),
                 );
+                record_profile_runtime_path_timing(
+                    runtime_profile_total,
+                    runtime_profile_outcome_for_expr_result(&result),
+                );
+                return result;
             }
-            Err(error) => return Err(error),
+            Err(error) => {
+                let result = Err(error);
+                record_profile_runtime_path_timing(
+                    runtime_profile_total,
+                    runtime_profile_outcome_for_expr_result(&result),
+                );
+                return result;
+            }
         };
-        self.resume_call_after_head(evaluated_head, args)
+        let result = self.resume_call_after_head(evaluated_head, args);
+        record_profile_runtime_path_timing(
+            runtime_profile_total,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        result
     }
 
     pub(super) fn resume_call_after_head(
@@ -436,10 +499,23 @@ impl Session {
         evaluated_head: Expr,
         args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
+        let runtime_profile_total = runtime_path_timing_start("evaluate_call.resume_after_head");
+        let runtime_profile_plan = runtime_path_timing_start("evaluate_call.build_dispatch_plan");
         let plan = self.build_call_dispatch_plan(&evaluated_head);
+        record_profile_runtime_path_timing(runtime_profile_plan, RuntimeProfileOutcome::Ok);
         let state = CallDispatchState::new(args);
 
-        self.resume_call_with_dispatch_plan(evaluated_head, plan, state, 0)
+        let runtime_profile_dispatch = runtime_path_timing_start("evaluate_call.dispatch");
+        let result = self.resume_call_with_dispatch_plan(evaluated_head, plan, state, 0);
+        record_profile_runtime_path_timing(
+            runtime_profile_dispatch,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        record_profile_runtime_path_timing(
+            runtime_profile_total,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        result
     }
 
     pub(super) fn resume_call_with_dispatch_plan(
@@ -454,6 +530,7 @@ impl Session {
         }
 
         let stage = plan.stage(stage_index);
+        let mut state = state;
         if stage == CallDispatchStage::PrepareArguments && state.evaluated_args.is_some() {
             return self.resume_call_with_dispatch_plan(
                 evaluated_head,
@@ -463,13 +540,18 @@ impl Session {
             );
         }
 
-        let mut state = state;
+        let runtime_profile_stage =
+            runtime_path_timing_start(call_dispatch_stage_profile_name(stage));
         let stage_result = self.run_call_dispatch_stage(
             stage,
             &evaluated_head,
             plan.attributes,
             plan.builtin_handler,
             &mut state,
+        );
+        record_profile_runtime_path_timing(
+            runtime_profile_stage,
+            runtime_profile_outcome_for_optional_result(&stage_result),
         );
 
         self.drive_internal_value(stage_result, move |session, outcome| match outcome {
@@ -478,6 +560,38 @@ impl Session {
                 session.resume_call_with_dispatch_plan(evaluated_head, plan, state, stage_index + 1)
             }
         })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum EvaluateAtomFastPathKind {
+    StableSymbol,
+    UnstableSymbol,
+    Atom,
+    Call,
+}
+
+impl EvaluateAtomFastPathKind {
+    fn classify(session: &mut Session, expr: &Expr) -> Self {
+        match expr {
+            Expr::Atom(Atom::Symbol(symbol))
+                if session.symbol_is_atom_evaluation_stable(symbol) =>
+            {
+                Self::StableSymbol
+            }
+            Expr::Atom(Atom::Symbol(_)) => Self::UnstableSymbol,
+            Expr::Atom(_) => Self::Atom,
+            Expr::Call { .. } => Self::Call,
+        }
+    }
+
+    fn profile_name(self) -> &'static str {
+        match self {
+            Self::StableSymbol => "evaluate_atom_fast_path.stable_symbol",
+            Self::UnstableSymbol => "evaluate_atom_fast_path.unstable_symbol",
+            Self::Atom => "evaluate_atom_fast_path.atom",
+            Self::Call => "evaluate_atom_fast_path.call",
+        }
     }
 }
 
@@ -517,4 +631,46 @@ fn immediate_rule_entry_expr(expr: &Expr) -> bool {
         Expr::Call { head, args }
             if is_system_symbol_name(head, "Rule") && args.len() == 2
     )
+}
+
+fn call_dispatch_stage_profile_name(stage: CallDispatchStage) -> &'static str {
+    match stage {
+        CallDispatchStage::SpecialForm => "call.stage.special_form",
+        CallDispatchStage::PrepareArguments => "call.stage.prepare_arguments",
+        CallDispatchStage::Listable => "call.stage.listable",
+        CallDispatchStage::UpValues => "call.stage.up_values",
+        CallDispatchStage::DownValues => "call.stage.down_values",
+        CallDispatchStage::SubValues => "call.stage.sub_values",
+        CallDispatchStage::OrdinaryBuiltin => "call.stage.ordinary_builtin",
+        CallDispatchStage::Function => "call.stage.function",
+    }
+}
+
+fn runtime_profile_outcome_for_optional_result(
+    result: &Result<Option<Expr>, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(Some(_)) => RuntimeProfileOutcome::Some,
+        Ok(None) => RuntimeProfileOutcome::None,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
+    }
+}
+
+fn runtime_profile_outcome_for_expr_result(
+    result: &Result<Expr, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(_) => RuntimeProfileOutcome::Ok,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
+    }
 }

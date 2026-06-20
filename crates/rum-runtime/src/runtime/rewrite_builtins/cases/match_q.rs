@@ -65,11 +65,19 @@ impl Session {
         pattern: Expr,
         value: Expr,
     ) -> Result<Expr, EvalError> {
+        if let Some(matched) = fast_match_q_resolved_pattern(&pattern, &value) {
+            return Ok(system_expr(if matched { "True" } else { "False" }));
+        }
+
         let match_result = self.match_expr_owned(pattern, value, SymbolExprMap::default());
         self.drive_internal_value(match_result, move |_, outcome| {
             Ok(system_expr(if outcome.matched { "True" } else { "False" }))
         })
     }
+}
+
+fn fast_match_q_resolved_pattern(pattern: &Expr, value: &Expr) -> Option<bool> {
+    pattern_blank_head(pattern).map(|head_constraint| match_blank(head_constraint, value))
 }
 
 fn contains_pattern_syntax(expr: &Expr) -> bool {

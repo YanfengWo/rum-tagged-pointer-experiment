@@ -49,11 +49,21 @@ impl Session {
             return Ok(None);
         };
 
-        if !Self::definition_lhs_could_match_candidate(
+        record_profile_definition_dispatch_candidate("down_value", &symbol);
+        let prefilter_start = definition_dispatch_timing_start();
+        let could_match = Self::definition_lhs_could_match_candidate(
             &down_value.lhs,
             &down_value.matcher,
             &normalized_candidate,
-        ) {
+        );
+        record_profile_definition_dispatch_phase_timing(
+            "down_value",
+            &symbol,
+            "prefilter",
+            prefilter_start,
+        );
+        if !could_match {
+            record_profile_definition_dispatch_prefilter_skip("down_value", &symbol);
             return self.try_apply_down_values_from_symbol(
                 candidate,
                 normalized_candidate,
@@ -62,9 +72,16 @@ impl Session {
             );
         }
 
-        if let Some(outcome) =
-            self.try_fast_definition_match(&down_value.lhs, &normalized_candidate)
-        {
+        let fast_match_start = definition_dispatch_timing_start();
+        let fast_outcome = self.try_fast_definition_match(&down_value.lhs, &normalized_candidate);
+        record_profile_definition_dispatch_phase_timing(
+            "down_value",
+            &symbol,
+            "fast_match",
+            fast_match_start,
+        );
+        if let Some(outcome) = fast_outcome {
+            record_profile_definition_dispatch_fast_outcome("down_value", &symbol, outcome.matched);
             if !outcome.matched {
                 return self.try_apply_down_values_from_symbol(
                     candidate,
@@ -76,10 +93,17 @@ impl Session {
 
             let (lhs, substituted) = {
                 let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
+                let rhs_substitution_start = definition_dispatch_timing_start();
                 let substituted = substitute_rule_bindings_for_rhs(
                     &down_value.rhs,
                     &outcome.bindings,
                     down_value.rhs_may_splice_without_bindings,
+                );
+                record_profile_definition_dispatch_phase_timing(
+                    "down_value",
+                    &symbol,
+                    "rhs_substitution",
+                    rhs_substitution_start,
                 );
                 (down_value.lhs.clone(), substituted)
             };
@@ -110,13 +134,25 @@ impl Session {
         } else {
             self.compile_matcher_for_expr(&down_value.lhs)
         };
+        let compiled_matcher_start = definition_dispatch_timing_start();
         let match_result = self.match_compiled_owned(
             matcher,
             normalized_candidate.clone(),
             SymbolExprMap::default(),
         );
+        record_profile_definition_dispatch_phase_timing(
+            "down_value",
+            &symbol,
+            "compiled_matcher",
+            compiled_matcher_start,
+        );
 
         self.drive_internal_value(match_result, move |session, outcome| {
+            record_profile_definition_dispatch_matcher_outcome(
+                "down_value",
+                &symbol,
+                outcome.matched,
+            );
             if !outcome.matched {
                 return session.try_apply_down_values_from_symbol(
                     candidate,
@@ -127,10 +163,17 @@ impl Session {
             }
 
             let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
+            let rhs_substitution_start = definition_dispatch_timing_start();
             let substituted = substitute_rule_bindings_for_rhs(
                 &down_value.rhs,
                 &outcome.bindings,
                 down_value.rhs_may_splice_without_bindings,
+            );
+            record_profile_definition_dispatch_phase_timing(
+                "down_value",
+                &symbol,
+                "rhs_substitution",
+                rhs_substitution_start,
             );
             let option_scope =
                 session.option_value_scope_for_definition(&down_value.lhs, &candidate);
@@ -235,7 +278,13 @@ impl Session {
             let Some(definition) = self.definitions.get(&symbol) else {
                 continue;
             };
-            up_values.extend(definition.up_values.iter().cloned());
+            up_values.extend(
+                definition
+                    .up_values
+                    .iter()
+                    .cloned()
+                    .map(|up_value| (symbol, up_value)),
+            );
         }
 
         if up_values.is_empty() {
@@ -253,18 +302,29 @@ impl Session {
         &mut self,
         candidate: Expr,
         normalized_candidate: Expr,
-        up_values: Vec<UpValue>,
+        up_values: Vec<(Symbol, UpValue)>,
         index: usize,
     ) -> Result<Option<Expr>, EvalError> {
-        let Some(up_value) = up_values.get(index) else {
+        let Some((symbol, up_value)) = up_values.get(index) else {
             return Ok(None);
         };
+        let symbol = *symbol;
 
-        if !Self::definition_lhs_could_match_candidate(
+        record_profile_definition_dispatch_candidate("up_value", &symbol);
+        let prefilter_start = definition_dispatch_timing_start();
+        let could_match = Self::definition_lhs_could_match_candidate(
             &up_value.lhs,
             &up_value.matcher,
             &normalized_candidate,
-        ) {
+        );
+        record_profile_definition_dispatch_phase_timing(
+            "up_value",
+            &symbol,
+            "prefilter",
+            prefilter_start,
+        );
+        if !could_match {
+            record_profile_definition_dispatch_prefilter_skip("up_value", &symbol);
             return self.try_apply_up_values_from_list(
                 candidate,
                 normalized_candidate,
@@ -273,8 +333,16 @@ impl Session {
             );
         }
 
-        if let Some(outcome) = self.try_fast_definition_match(&up_value.lhs, &normalized_candidate)
-        {
+        let fast_match_start = definition_dispatch_timing_start();
+        let fast_outcome = self.try_fast_definition_match(&up_value.lhs, &normalized_candidate);
+        record_profile_definition_dispatch_phase_timing(
+            "up_value",
+            &symbol,
+            "fast_match",
+            fast_match_start,
+        );
+        if let Some(outcome) = fast_outcome {
+            record_profile_definition_dispatch_fast_outcome("up_value", &symbol, outcome.matched);
             if !outcome.matched {
                 return self.try_apply_up_values_from_list(
                     candidate,
@@ -285,10 +353,17 @@ impl Session {
             }
 
             let (lhs, substituted) = {
+                let rhs_substitution_start = definition_dispatch_timing_start();
                 let substituted = substitute_rule_bindings_for_rhs(
                     &up_value.rhs,
                     &outcome.bindings,
                     up_value.rhs_may_splice_without_bindings,
+                );
+                record_profile_definition_dispatch_phase_timing(
+                    "up_value",
+                    &symbol,
+                    "rhs_substitution",
+                    rhs_substitution_start,
                 );
                 (up_value.lhs.clone(), substituted)
             };
@@ -299,9 +374,16 @@ impl Session {
                 &lhs,
                 &substituted,
             );
-            return self
-                .evaluate_definition_rhs(option_scope, substituted)
-                .map(Some);
+            let profile_rule_start = definition_rule_timing_start();
+            let result = self.evaluate_definition_rhs(option_scope, substituted);
+            record_profile_definition_rule_timing(
+                "up_value_rhs_eval",
+                &symbol,
+                index,
+                profile_rule_start,
+                result.is_ok(),
+            );
+            return result.map(Some);
         }
 
         let up_value = up_value.clone();
@@ -310,13 +392,25 @@ impl Session {
         } else {
             self.compile_matcher_for_expr(&up_value.lhs)
         };
+        let compiled_matcher_start = definition_dispatch_timing_start();
         let match_result = self.match_compiled_owned(
             matcher,
             normalized_candidate.clone(),
             SymbolExprMap::default(),
         );
+        record_profile_definition_dispatch_phase_timing(
+            "up_value",
+            &symbol,
+            "compiled_matcher",
+            compiled_matcher_start,
+        );
 
         self.drive_internal_value(match_result, move |session, outcome| {
+            record_profile_definition_dispatch_matcher_outcome(
+                "up_value",
+                &symbol,
+                outcome.matched,
+            );
             if !outcome.matched {
                 return session.try_apply_up_values_from_list(
                     candidate,
@@ -326,10 +420,17 @@ impl Session {
                 );
             }
 
+            let rhs_substitution_start = definition_dispatch_timing_start();
             let substituted = substitute_rule_bindings_for_rhs(
                 &up_value.rhs,
                 &outcome.bindings,
                 up_value.rhs_may_splice_without_bindings,
+            );
+            record_profile_definition_dispatch_phase_timing(
+                "up_value",
+                &symbol,
+                "rhs_substitution",
+                rhs_substitution_start,
             );
             let option_scope = session.option_value_scope_for_definition(&up_value.lhs, &candidate);
             session.push_rule_applied_trace(
@@ -338,9 +439,16 @@ impl Session {
                 &up_value.lhs,
                 &substituted,
             );
-            session
-                .evaluate_definition_rhs(option_scope, substituted)
-                .map(Some)
+            let profile_rule_start = definition_rule_timing_start();
+            let result = session.evaluate_definition_rhs(option_scope, substituted);
+            record_profile_definition_rule_timing(
+                "up_value_rhs_eval",
+                &symbol,
+                index,
+                profile_rule_start,
+                result.is_ok(),
+            );
+            result.map(Some)
         })
     }
 
@@ -383,11 +491,21 @@ impl Session {
             return Ok(None);
         };
 
-        if !Self::definition_lhs_could_match_candidate(
+        record_profile_definition_dispatch_candidate("sub_value", &symbol);
+        let prefilter_start = definition_dispatch_timing_start();
+        let could_match = Self::definition_lhs_could_match_candidate(
             &sub_value.lhs,
             &sub_value.matcher,
             &normalized_candidate,
-        ) {
+        );
+        record_profile_definition_dispatch_phase_timing(
+            "sub_value",
+            &symbol,
+            "prefilter",
+            prefilter_start,
+        );
+        if !could_match {
+            record_profile_definition_dispatch_prefilter_skip("sub_value", &symbol);
             return self.try_apply_sub_values_from_symbol(
                 candidate,
                 normalized_candidate,
@@ -396,8 +514,16 @@ impl Session {
             );
         }
 
-        if let Some(outcome) = self.try_fast_definition_match(&sub_value.lhs, &normalized_candidate)
-        {
+        let fast_match_start = definition_dispatch_timing_start();
+        let fast_outcome = self.try_fast_definition_match(&sub_value.lhs, &normalized_candidate);
+        record_profile_definition_dispatch_phase_timing(
+            "sub_value",
+            &symbol,
+            "fast_match",
+            fast_match_start,
+        );
+        if let Some(outcome) = fast_outcome {
+            record_profile_definition_dispatch_fast_outcome("sub_value", &symbol, outcome.matched);
             if !outcome.matched {
                 return self.try_apply_sub_values_from_symbol(
                     candidate,
@@ -409,10 +535,17 @@ impl Session {
 
             let (lhs, substituted) = {
                 let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
+                let rhs_substitution_start = definition_dispatch_timing_start();
                 let substituted = substitute_rule_bindings_for_rhs(
                     &sub_value.rhs,
                     &outcome.bindings,
                     sub_value.rhs_may_splice_without_bindings,
+                );
+                record_profile_definition_dispatch_phase_timing(
+                    "sub_value",
+                    &symbol,
+                    "rhs_substitution",
+                    rhs_substitution_start,
                 );
                 (sub_value.lhs.clone(), substituted)
             };
@@ -425,9 +558,16 @@ impl Session {
             );
             self.record_profile_sub_value_application(&symbol);
             let _profile_definition_source = evaluation_profile_definition_source(symbol);
-            return self
-                .evaluate_definition_rhs(option_scope, substituted)
-                .map(Some);
+            let profile_rule_start = definition_rule_timing_start();
+            let result = self.evaluate_definition_rhs(option_scope, substituted);
+            record_profile_definition_rule_timing(
+                "sub_value_rhs_eval",
+                &symbol,
+                index,
+                profile_rule_start,
+                result.is_ok(),
+            );
+            return result.map(Some);
         }
 
         let sub_value = sub_value.clone();
@@ -436,13 +576,25 @@ impl Session {
         } else {
             self.compile_matcher_for_expr(&sub_value.lhs)
         };
+        let compiled_matcher_start = definition_dispatch_timing_start();
         let match_result = self.match_compiled_owned(
             matcher,
             normalized_candidate.clone(),
             SymbolExprMap::default(),
         );
+        record_profile_definition_dispatch_phase_timing(
+            "sub_value",
+            &symbol,
+            "compiled_matcher",
+            compiled_matcher_start,
+        );
 
         self.drive_internal_value(match_result, move |session, outcome| {
+            record_profile_definition_dispatch_matcher_outcome(
+                "sub_value",
+                &symbol,
+                outcome.matched,
+            );
             if !outcome.matched {
                 return session.try_apply_sub_values_from_symbol(
                     candidate,
@@ -453,10 +605,17 @@ impl Session {
             }
 
             let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
+            let rhs_substitution_start = definition_dispatch_timing_start();
             let substituted = substitute_rule_bindings_for_rhs(
                 &sub_value.rhs,
                 &outcome.bindings,
                 sub_value.rhs_may_splice_without_bindings,
+            );
+            record_profile_definition_dispatch_phase_timing(
+                "sub_value",
+                &symbol,
+                "rhs_substitution",
+                rhs_substitution_start,
             );
             let option_scope =
                 session.option_value_scope_for_definition(&sub_value.lhs, &candidate);
@@ -468,9 +627,16 @@ impl Session {
             );
             session.record_profile_sub_value_application(&symbol);
             let _profile_definition_source = evaluation_profile_definition_source(symbol);
-            session
-                .evaluate_definition_rhs(option_scope, substituted)
-                .map(Some)
+            let profile_rule_start = definition_rule_timing_start();
+            let result = session.evaluate_definition_rhs(option_scope, substituted);
+            record_profile_definition_rule_timing(
+                "sub_value_rhs_eval",
+                &symbol,
+                index,
+                profile_rule_start,
+                result.is_ok(),
+            );
+            result.map(Some)
         })
     }
 
@@ -724,7 +890,13 @@ impl Session {
         let profile_start = lexical_profile_start();
         let eval_cache_profile_start =
             evaluation_cache_profile_source_timing_start("definition_rhs_eval_by_source");
+        let runtime_profile_total = runtime_path_timing_start("definition.rhs.total");
+        let runtime_profile_evaluate = runtime_path_timing_start("definition.rhs.evaluate");
         let rhs_result = self.evaluate_with_option_value_scope(option_scope, rhs);
+        record_profile_runtime_path_timing(
+            runtime_profile_evaluate,
+            runtime_profile_outcome_for_expr_result(&rhs_result),
+        );
         let outcome = self.suspend_with_result_frame(rhs_result, |session, outcome| {
             session.finish_definition_rhs_evaluation(outcome)
         });
@@ -735,6 +907,10 @@ impl Session {
         };
         record_profile_definition_rhs_eval(profile_start);
         record_profile_definition_rhs_eval_by_source(eval_cache_profile_start);
+        record_profile_runtime_path_timing(
+            runtime_profile_total,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
         result
     }
 
@@ -742,11 +918,15 @@ impl Session {
         &mut self,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
-        match outcome {
+        let runtime_profile_finish = runtime_path_timing_start("definition.rhs.finish");
+        let profile_outcome = runtime_profile_outcome_for_expr_result(&outcome);
+        let result = match outcome {
             Ok(value) => Ok(value),
             Err(EvalError::Return { value }) => Ok(value),
             Err(error) => Err(error),
-        }
+        };
+        record_profile_runtime_path_timing(runtime_profile_finish, profile_outcome);
+        result
     }
 
     pub(super) fn apply_replace_all(
@@ -846,9 +1026,13 @@ impl Session {
         source: RuleApplicationSource,
         index: usize,
     ) -> Result<Option<Expr>, EvalError> {
-        let Some(matcher) = rules.get(index).map(|rule| rule.matcher.clone()) else {
+        let Some(rule) = rules.get(index) else {
             return Ok(None);
         };
+        let would_reject =
+            !Self::definition_lhs_could_match_candidate(&rule.lhs, &rule.matcher, &normalized_expr);
+        record_profile_rewrite_rule_prefilter_candidate(would_reject);
+        let matcher = rule.matcher.clone();
 
         let match_result =
             self.match_compiled_owned(matcher, normalized_expr.clone(), SymbolExprMap::default());
@@ -863,6 +1047,7 @@ impl Session {
                 return self.drive_internal_value::<CompiledMatchOutcome, Option<Expr>, _>(
                     Err(EvalError::InputRequired { request }),
                     move |session, outcome| {
+                        record_profile_rewrite_rule_match_outcome(would_reject, outcome.matched);
                         if !outcome.matched {
                             return session.apply_rules_once_from_list(
                                 expr,
@@ -885,6 +1070,7 @@ impl Session {
             }
             Err(error) => return Err(error),
         };
+        record_profile_rewrite_rule_match_outcome(would_reject, outcome.matched);
 
         if !outcome.matched {
             return self.apply_rules_once_from_list(
@@ -998,6 +1184,20 @@ impl Session {
         }
 
         self.handle_monitor_trace_event(&event);
+    }
+}
+
+fn runtime_profile_outcome_for_expr_result(
+    result: &Result<Expr, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(_) => RuntimeProfileOutcome::Ok,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
     }
 }
 

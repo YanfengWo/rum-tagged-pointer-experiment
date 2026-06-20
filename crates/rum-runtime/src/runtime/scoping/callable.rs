@@ -55,7 +55,12 @@ impl Session {
             return Ok(None);
         };
 
+        let runtime_profile_evaluate = runtime_path_timing_start("function.apply.evaluate");
         let applied_result = self.evaluate(applied);
+        record_profile_runtime_path_timing(
+            runtime_profile_evaluate,
+            runtime_profile_outcome_for_expr_result(&applied_result),
+        );
         let outcome = self.suspend_with_result_frame(applied_result, |session, outcome| {
             session.finish_function_application(outcome)
         });
@@ -70,11 +75,15 @@ impl Session {
         &mut self,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
-        match outcome {
+        let runtime_profile_finish = runtime_path_timing_start("function.apply.finish");
+        let profile_outcome = runtime_profile_outcome_for_expr_result(&outcome);
+        let result = match outcome {
             Ok(value) => Ok(value),
             Err(EvalError::Return { value }) => Ok(value),
             Err(error) => Err(error),
-        }
+        };
+        record_profile_runtime_path_timing(runtime_profile_finish, profile_outcome);
+        result
     }
 
     fn invalid_callable_key_application(&mut self, head: &Expr, args: &[Expr]) -> Option<Expr> {
@@ -108,5 +117,19 @@ impl Session {
         }
 
         None
+    }
+}
+
+fn runtime_profile_outcome_for_expr_result(
+    result: &Result<Expr, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(_) => RuntimeProfileOutcome::Ok,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
     }
 }

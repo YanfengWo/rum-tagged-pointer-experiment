@@ -83,7 +83,13 @@ impl Session {
         args: Vec<Expr>,
     ) -> Result<Vec<Expr>, EvalError> {
         let evaluated_args = Vec::with_capacity(args.len());
-        self.resume_prepared_call_arguments(head, attributes, evaluated_args, args, 0)
+        let runtime_profile = runtime_path_timing_start("prepare_arguments.total");
+        let result = self.resume_prepared_call_arguments(head, attributes, evaluated_args, args, 0);
+        record_profile_runtime_path_timing(
+            runtime_profile,
+            runtime_profile_outcome_for_vec_result(&result),
+        );
+        result
     }
 
     pub(super) fn resume_prepared_call_arguments(
@@ -100,10 +106,18 @@ impl Session {
         while let Some((offset, arg)) = remaining_args.next() {
             let index = start_index + offset;
 
+            let runtime_profile_plan = runtime_path_timing_start("prepare_arguments.plan_arg");
             let plan = plan_call_argument_preparation(attributes, index, arg);
+            record_profile_runtime_path_timing(runtime_profile_plan, RuntimeProfileOutcome::Ok);
             let prepared_arg = if plan.should_evaluate {
                 let allow_sequence_splice = plan.allow_sequence_splice;
+                let runtime_profile_evaluate =
+                    runtime_path_timing_start("prepare_arguments.evaluate_arg");
                 let evaluated_result = self.evaluate_atom_fast_path(plan.expr);
+                record_profile_runtime_path_timing(
+                    runtime_profile_evaluate,
+                    runtime_profile_outcome_for_expr_result(&evaluated_result),
+                );
                 match evaluated_result {
                     Ok(value) => value,
                     Err(EvalError::InputRequired { request }) => {
@@ -135,12 +149,14 @@ impl Session {
                 plan.expr
             };
 
+            let runtime_profile_append = runtime_path_timing_start("prepare_arguments.append_arg");
             append_prepared_argument(
                 &mut evaluated_args,
                 prepared_arg,
                 plan.allow_sequence_splice,
                 sequence_hold,
             );
+            record_profile_runtime_path_timing(runtime_profile_append, RuntimeProfileOutcome::Ok);
         }
 
         Ok(evaluated_args)
@@ -221,17 +237,57 @@ impl Session {
         args: Vec<Expr>,
         attributes: AttributeSet,
     ) -> Vec<Expr> {
+        let runtime_profile_total = runtime_path_timing_start("prepare_arguments.normalize.total");
         let mut normalized_args = if attributes.contains(Attribute::Flat) {
-            flatten_flat_call_args(head, args)
+            let runtime_profile_flat =
+                runtime_path_timing_start("prepare_arguments.normalize.flat");
+            let result = flatten_flat_call_args(head, args);
+            record_profile_runtime_path_timing(runtime_profile_flat, RuntimeProfileOutcome::Ok);
+            result
         } else {
             args
         };
 
         if attributes.contains(Attribute::Orderless) {
+            let runtime_profile_orderless =
+                runtime_path_timing_start("prepare_arguments.normalize.orderless");
             normalized_args.sort_by(compare_expr_canonical);
+            record_profile_runtime_path_timing(
+                runtime_profile_orderless,
+                RuntimeProfileOutcome::Ok,
+            );
         }
 
+        record_profile_runtime_path_timing(runtime_profile_total, RuntimeProfileOutcome::Ok);
         normalized_args
+    }
+}
+
+fn runtime_profile_outcome_for_expr_result(
+    result: &Result<Expr, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(_) => RuntimeProfileOutcome::Ok,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
+    }
+}
+
+fn runtime_profile_outcome_for_vec_result(
+    result: &Result<Vec<Expr>, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(_) => RuntimeProfileOutcome::Ok,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
     }
 }
 

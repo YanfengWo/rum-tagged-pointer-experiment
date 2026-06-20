@@ -13,6 +13,12 @@ Completed history, archived planning detail, and operational lessons live in
   Use
   [docs/v0.1-acceptance-boundary.md](./docs/v0.1-acceptance-boundary.md)
   as the concrete acceptance boundary.
+- [ ] Treat
+  [docs/performance-kernel-rewrite-plan.md](./docs/performance-kernel-rewrite-plan.md)
+  as the active performance mainline. The goal is WolframKernel parity or
+  better on the supported `mma-hol` target slice by lowering fundamental
+  runtime constants, not by patching downstream `mma-hol` or relying on
+  unproven broad semantic caches.
 - [ ] Promote new Wolfram-style functions only when the support matrix,
   `mma-hol`, or another concrete downstream blocker justifies them.
 - [ ] Keep project-owned Python adapter work frozen until a real downstream
@@ -143,14 +149,101 @@ Completed history, archived planning detail, and operational lessons live in
   no-op. On the unmodified clean clone, `basic-only-pair4` improved from about
   `5.68-6.36s` to `2.23s`, `pair4-stock-repeat8` from `60.76s` to `18.30s`,
   and the first `mkPairInj` `CONVRULE` root from about `564s` to `307s`.
-  Pair/Simp is still open, but the result validates conservative rum-side
-  representation/sharing work as the current path. Do not reintroduce
-  downstream `Simp.wl` patches or unsafe text-fingerprint semantic caches.
-  Continue from the repo-level probe assets under
+  A follow-up 2026-06-19 lexical presence-cache cut added a per-substitution
+  shared-call presence cache for lexical `arg_prefilter` absence scans. On the
+  same clean clone, `pair4-stock-repeat8` is now `15.2-15.6s`, pair-depth
+  `pair4` is about `1.93s`, profiled lexical substitution total time moved
+  from `10.01s` to `6.77s`, and presence-scan node volume fell from
+  `606.8M -> 75.1M` for single-binding scans and `178.3M -> 13.5M` for
+  multi-binding scans. The root retest after this cut moved the first
+  `mkPairInj` `CONVRULE` root to a `193.83s` closed Pair-body phase sum,
+  dominated by `mkPairInj-first-simp-apply-CONVRULE` at `188.07s`
+  (~97%); WolframKernel spends `37.24s` in the same child. The
+  dependency-preloaded `Pair.wl` root now reports `root-get-stdlib-pair`
+  `188.27s` in rum versus `37.66s` in WolframKernel, with
+  `mkPairInjThm=True` and `pairInjThm=True`. Pair/Simp is still open at about
+  a `5x` full-root gap, but these results validate conservative rum-side
+  representation/sharing work as the current path. A 2026-06-20 follow-up
+  kept the same small-cut discipline: a rule-RHS presence prefilter was
+  measured and rejected as a negative optimization, while a resolved
+  `MatchQ` `Blank`/`Blank[head]` fast path retained a small positive
+  failure-tail cut (`pair4-stock-repeat8` `16.02s -> 15.69s`). Do not
+  reintroduce downstream `Simp.wl` patches or unsafe text-fingerprint semantic
+  caches. A 2026-06-20 runtime-path follow-up then isolated the
+  `REPEATC`/`TRYCONV` control-stack probe without preheat noise: definition
+  dispatch selection is only about `0.06s` on `~1.0-1.5s` labels, and
+  nonlocal `Return` propagation is not the owner. The remaining rum-side
+  runtime self rows are ordinary frame/preparation costs: `Module` body
+  substitution, `call.stage.down_values`, and `call.stage.prepare_arguments`
+  around thousands of failing ``HOL`Drule`ORELSEC`` / `tryConv` /
+  `simpRuleConv` / `REWRCONV` calls. The first `prepare_arguments` split shows
+  that cheap `Flat` / `Orderless` normalization is not the owner: normalization
+  self is only milliseconds in the `N=80` control-stack probe, while recursive
+  argument evaluation plus high-frequency preparation loop/control overhead
+  owns the visible self rows. Follow-up evaluator splits show that
+  `prepare_arguments.evaluate_arg` itself is no longer a hot leaf. It mostly
+  enters `evaluate_atom_fast_path.call`, then the ordinary call path. Stable
+  symbol, non-symbol atom, dispatch-plan construction, and fixed-point equality
+  are small, so that branch is now retained as side evidence rather than the
+  Pair root frontier. The current root-linked Pair/Simp frontier is repeated
+  no-change conversion failure over stable atomic leaves inside the first
+  `mkPairInj` `CONVRULE` root. Current-worktree sibling probes show the
+  context-length `1` comb `7361...0bfc` at about `64-67s`, with sibling const
+  and var leaves at about `25-30s` each; direct `topRepeatc` samples on those
+  leaves are about `21-24ms` per full failure scan through one context theorem,
+  twenty basic rules, and beta. A temporary generated-copy
+  `--prototype failure-cache` diagnostic cut the same first `CONVRULE` root
+  `simpFixpointConv` from about `226-231s` to about `137.65s`, using `21`
+  entries and `5283` hits. A broad opt-in generic call-result cache
+  prototype was measured and rejected: it made
+  `runtime-profile-var-basic-baseconv-chain` time out at `240s` versus the
+  default-off `54s` baseline because full evaluated-call key construction is
+  the wrong granularity during load/preheat. A narrower held-`Catch`
+  failure-cache prototype was also measured and rejected before commit: the
+  safe version had `0/40` hits on the tiny base-conversion chain because dirty
+  invalidation rejected every possible reuse, and even the unsafe ignore-dirty
+  upper bound slowed `pair4-stock-repeat8` (`16.94s` default-off versus
+  `18.17s`). The temporary `auto/Simp.wl`
+  prototype is only a diagnostic ceiling and must not become the acceptance
+  path. Continue from the repo-level probe assets under
   `scripts/perf-probes/pair-simp/` and the root repetition probe; split only
   closed parent phases or implement small sharing cuts whose before/after can
   be checked on `basic-only-pair4`, `pair4-stock-repeat8`, and the first
-  `CONVRULE` root. The earlier runtime baseline showed the finishing
+  `CONVRULE` root. A post-revert runtime-path probe again excludes evaluator
+  glue as the target: `prepare_arguments.evaluate_arg`, dispatch-plan
+  construction, and normalization are millisecond-scale self rows inside a
+  101s profiled conversion-control probe. A WolframKernel-side wrapper probe
+  then changed the immediate inference: WK does not skip the failed rewrite
+  chain at the WL level. It still performs about `19` failed `REWRCONV` /
+  `simpRuleConv` calls per depth-19 base-conversion attempt, and
+  `pair4-stock-repeat8` still shows thousands of failed conversions. Its
+  advantage is a much lower per-failure constant. Therefore first copy the WK
+  shape by making rum's existing failure path cheap: downvalue/definition
+  dispatch, pattern dispatch, structural term operations, `Catch`/`Throw`,
+  curried call application, and rule-chain evaluation. A narrow
+  failed-conversion/no-change cache may still be tested as a rum-specific
+  shortcut, but do not treat it as the inferred WK mechanism. The current
+  closed `CONVRULE` descent names two retained
+  hot leaves rather than one opaque primitive: `x/f/f-descendOnce` under the
+  outer `x` sibling, and nested `abs/abs-descendOnce` under the
+  `f/x/f/f/f/f/a/b` left-chain path. Follow-up root-linked splits keep the
+  main multiplier on repeated conversion failure rather than Abs opening:
+  `x/f/f/b` names `x/f/f/f-descendOnce` at `35.71s` plus a `16.60s` local
+  loop; `x/f/f/f/b` reaches an `Abs` at `x/f/f/f/f` with `16.39s`
+  `descendOnce` and an `18.08s` loop; `x/f/f/f/f/a/b` shows
+  `freesIn`/fresh-name/`BETA-open`/`ABS` are sub-millisecond to
+  millisecond-scale while the opened nested body still has
+  `abs/abs-descendOnce` about `3.99s` and enclosing loops of about `4.03s`,
+  `8.10s`, `16.13s`, and `17.93s`. Stage profiles at both the larger
+  `x/f/f/f-descendOnce` leaf and the smaller
+  `x/f/f/f/f/a/b` `abs/abs-descendOnce` leaf confirm the same rum-side
+  amplifier: thousands of failing `ORELSEC` / `REWRCONV` /
+  `simpRuleConv` conversion calls, millions of call-stability misses dominated
+  by dirty/generation invalidation with no pointer misses, and rule-RHS
+  call-argument rebuild traffic concentrated in Drule conversion combinators.
+  A full shape/rebuild profile for the larger leaf timed out at `900s`, so
+  broad shape accounting is too disturbing there; use narrower probes or split
+  smaller first. The earlier runtime baseline showed the finishing
   opened-body target already performs about `973k` evaluator entries, `70k`
   down-value applications, `20.6k` `Module` entries, and `8.8M`
   call-stability checks with no rewrite. Source-level timing put the
@@ -191,8 +284,9 @@ Completed history, archived planning detail, and operational lessons live in
   substitution/rebuild timing has now also been measured and rejected as the
   100s-class owner on the already-preheated opened-body target: the largest
   single RHS timing bucket was only about `0.42s`, while the final post-preheat
-  target was about `7.7s`. The true current wall is Simp preheat:
-  `basicSimpset[]` and the three lazy congruence lemmas run through
+  target was about `7.7s`. For that opened-body side target, the relevant
+  upstream wall was Simp preheat: `basicSimpset[]` and the three lazy
+  congruence lemmas run through
   `PropTaut` theorem construction. The new preheat profile probes show
   `preheat-basic` around `40-47s` under profile and congruence preheat around
   `118-133s` under profile, with each congruence lemma about `39-40s`.

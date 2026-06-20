@@ -47,6 +47,9 @@ Before substantial work, read the smallest set needed for the task:
 - [docs/proptaut-performance-audit.md](./docs/proptaut-performance-audit.md):
   performance-diagnosis method and pitfalls for `PropTaut` / `mma-hol`
   work; required before Pair/Simp or PropTaut performance investigations
+- [docs/performance-kernel-rewrite-plan.md](./docs/performance-kernel-rewrite-plan.md):
+  staged plan for reaching WolframKernel parity or better on the supported
+  `mma-hol` target slice
 - [docs/code-organization-guidelines.md](./docs/code-organization-guidelines.md):
   file-size and module-organization rules
 
@@ -133,6 +136,16 @@ to dominate the current root, label it a side lane and return to the root phase
 tree. The June 2026 Pair/Simp detour into one-case `EXCLUDEDMIDDLE[p]` is the
 failure mode to avoid: that probe was real but was not proven to own the
 hundreds-of-seconds `Pair.wl` gate.
+
+The current performance mainline is the staged kernel rewrite plan in
+[docs/performance-kernel-rewrite-plan.md](./docs/performance-kernel-rewrite-plan.md).
+The target is WolframKernel parity or better on the supported `mma-hol` slice,
+not merely "good enough" interpreter performance. The plan is to lower the
+ordinary failure-path constants through symbol identity, expression
+representation, borrowed evaluator frames, matcher/dispatch plans,
+conversion-chain plans, and allocator strategy before considering bytecode or
+JIT work. Treat semantic failed-conversion/no-change caches as optional
+rum-specific shortcuts, not as the inferred WolframKernel mechanism.
 
 The PropTaut performance lane has been reopened by external review and a
 follow-up same-bit stability-invalidation experiment. The retained current

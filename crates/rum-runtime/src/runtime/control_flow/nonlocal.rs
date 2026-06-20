@@ -6,7 +6,8 @@ impl Session {
         _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        match args {
+        let runtime_profile = runtime_path_timing_start("return.eval");
+        let result = match args {
             [] => Err(EvalError::Return {
                 value: system_expr("Null"),
             }),
@@ -14,7 +15,12 @@ impl Session {
                 value: value.clone(),
             }),
             _ => Ok(self.invalid_call_with_arg_range("Return", args, 0, 1)),
-        }
+        };
+        record_profile_runtime_path_timing(
+            runtime_profile,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        result
     }
 
     pub(in crate::runtime) fn eval_throw(
@@ -22,7 +28,8 @@ impl Session {
         _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        match args {
+        let runtime_profile = runtime_path_timing_start("throw.eval");
+        let result = match args {
             [value] => Err(EvalError::Thrown {
                 value: value.clone(),
                 tag: system_expr("None"),
@@ -34,7 +41,12 @@ impl Session {
                 explicit_tag: true,
             }),
             _ => Ok(self.invalid_call_with_arg_range("Throw", args, 1, 2)),
-        }
+        };
+        record_profile_runtime_path_timing(
+            runtime_profile,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        result
     }
 
     pub(in crate::runtime) fn eval_break(
@@ -62,23 +74,39 @@ impl Session {
     }
 
     pub(in crate::runtime) fn eval_catch(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        let runtime_profile_total = runtime_path_timing_start("catch.eval.total");
         if !(1..=3).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Catch", args, 1, 3));
+            let result = Ok(self.invalid_call_with_arg_range("Catch", args, 1, 3));
+            record_profile_runtime_path_timing(
+                runtime_profile_total,
+                runtime_profile_outcome_for_expr_result(&result),
+            );
+            return result;
         }
 
         let form = args.get(1).cloned();
         let handler = args.get(2).cloned();
+        let runtime_profile_body = runtime_path_timing_start("catch.body.evaluate");
         let body_result = self.evaluate(args[0].clone());
+        record_profile_runtime_path_timing(
+            runtime_profile_body,
+            runtime_profile_outcome_for_expr_result(&body_result),
+        );
         let outcome = self.suspend_with_result_frame(body_result, {
             let form = form.clone();
             let handler = handler.clone();
             move |session, outcome| session.resume_catch_after_body(form, handler, outcome)
         });
 
-        match outcome {
+        let result = match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
             outcome => self.resume_catch_after_body(form, handler, outcome),
-        }
+        };
+        record_profile_runtime_path_timing(
+            runtime_profile_total,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        result
     }
 
     fn resume_catch_after_body(
@@ -87,7 +115,9 @@ impl Session {
         handler: Option<Expr>,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
-        match outcome {
+        let runtime_profile = runtime_path_timing_start("catch.resume_after_body");
+        let profile_outcome = runtime_profile_outcome_for_expr_result(&outcome);
+        let result = match outcome {
             Ok(value) => Ok(value),
             Err(EvalError::ThrownBypassingCatch {
                 value,
@@ -111,7 +141,9 @@ impl Session {
                 explicit_tag,
             }) => self.resume_catch_for_throw(form, handler, value, tag, explicit_tag),
             Err(error) => Err(error),
-        }
+        };
+        record_profile_runtime_path_timing(runtime_profile, profile_outcome);
+        result
     }
 
     fn resume_catch_for_throw(
@@ -286,4 +318,18 @@ impl Session {
 
 fn exact_catch_tag_match(form: &Expr, tag: &Expr) -> Option<bool> {
     matches!(form, Expr::Atom(_)).then(|| form == tag)
+}
+
+fn runtime_profile_outcome_for_expr_result(
+    result: &Result<Expr, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(_) => RuntimeProfileOutcome::Ok,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
+    }
 }

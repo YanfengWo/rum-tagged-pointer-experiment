@@ -292,7 +292,16 @@ impl Session {
 
     pub fn evaluate(&mut self, expr: Expr) -> Result<Expr, EvalError> {
         self.record_profile_evaluate_entry();
+        let runtime_profile = runtime_path_timing_start("evaluate.total");
+        let result = self.evaluate_profiled_fixed_point(expr);
+        record_profile_runtime_path_timing(
+            runtime_profile,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        result
+    }
 
+    fn evaluate_profiled_fixed_point(&mut self, expr: Expr) -> Result<Expr, EvalError> {
         let mut current = expr;
         let mut evaluation_passes = 0;
         let mut fixed_point_seen = Vec::new();
@@ -306,7 +315,13 @@ impl Session {
             evaluation_passes += 1;
 
             self.enforce_active_resource_limits_for_expr(&current)?;
-            if self.cached_expr_is_evaluation_stable(&current) {
+            let runtime_profile_stability = runtime_path_timing_start("evaluate.stability_check");
+            let stable = self.cached_expr_is_evaluation_stable(&current);
+            record_profile_runtime_path_timing(
+                runtime_profile_stability,
+                RuntimeProfileOutcome::Ok,
+            );
+            if stable {
                 return Ok(current);
             }
 
@@ -320,9 +335,14 @@ impl Session {
                 fixed_point_seen.push(current.clone());
             }
 
+            let runtime_profile_once = runtime_path_timing_start("evaluate.once_unstable");
             let next_result = self.evaluate_once_unstable_after_input_check_with_cycle_tracking(
                 current.clone(),
                 track_cycle,
+            );
+            record_profile_runtime_path_timing(
+                runtime_profile_once,
+                runtime_profile_outcome_for_expr_result(&next_result),
             );
             let next = match next_result {
                 Ok(value) => value,
@@ -344,13 +364,18 @@ impl Session {
                 Err(error) => return Err(error),
             };
 
-            if next == current {
+            let runtime_profile_equal = runtime_path_timing_start("evaluate.fixed_point_equal");
+            let fixed_point = next == current;
+            record_profile_runtime_path_timing(runtime_profile_equal, RuntimeProfileOutcome::Ok);
+            if fixed_point {
                 return Ok(next);
             }
 
+            let runtime_profile_update = runtime_path_timing_start("evaluate.trace_update");
             self.push_evaluation_pass_trace(&current, &next);
 
             current = next;
+            record_profile_runtime_path_timing(runtime_profile_update, RuntimeProfileOutcome::Ok);
         }
     }
 
@@ -458,4 +483,18 @@ pub(super) fn expr_node_count_with_limit(expr: &Expr, limit: usize) -> Option<us
 
 pub(super) fn symbol_generation_key(context: &str, name: &str) -> (String, String) {
     (context.to_string(), name.to_string())
+}
+
+fn runtime_profile_outcome_for_expr_result(
+    result: &Result<Expr, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(_) => RuntimeProfileOutcome::Ok,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
+    }
 }

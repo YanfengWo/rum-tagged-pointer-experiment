@@ -570,6 +570,28 @@ In practice, that means:
 This compatibility target is one reason the project treats conformance testing
 as a core engineering task rather than optional polish.
 
+## Performance Kernel Direction
+
+The `mma-hol` lane has made one architectural point explicit: matching
+Wolfram-style semantics is not enough if the evaluator pays much higher
+constants for ordinary symbolic-programming failure paths. Because `rum` only
+targets a supported kernel slice rather than the full WolframKernel feature
+surface, the long-term performance target for that slice is WolframKernel
+parity or better.
+
+This is a kernel architecture concern, not a local tuning lane. The next
+performance mainline is the staged plan in
+[Performance Kernel Rewrite Plan](./docs/performance-kernel-rewrite-plan.md):
+symbol identity, expression representation, borrowed evaluator frames,
+definition dispatch, matcher plans, conversion-chain plans, and memory
+strategy must all move toward low-constant native runtime behavior. Bytecode
+or JIT work is intentionally late; compiling the wrong abstraction is not a
+substitute for fixing representation and dispatch.
+
+The same downstream boundary still applies: performance wins must run
+unmodified `mma-hol`. Downstream rewrites are diagnostic evidence only, not
+architectural solutions.
+
 ## Conformance Strategy
 
 Conformance work should not be treated as one monolithic test bucket. Different

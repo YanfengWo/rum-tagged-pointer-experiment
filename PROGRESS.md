@@ -6,6 +6,713 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-20 Performance Kernel Rewrite Plan
+
+Added [docs/performance-kernel-rewrite-plan.md](./docs/performance-kernel-rewrite-plan.md)
+as the active performance mainline. The plan sets the target at
+WolframKernel parity or better on the supported `mma-hol` slice and sequences
+the work through baseline freeze, symbol identity, expression representation,
+borrowed evaluator frames, definition/matcher plans, conversion-chain plans,
+memory strategy, and only then optional bytecode/JIT. `README.md`,
+`ARCHITECTURE.md`, `TODO.md`, `AGENTS.md`, and the PropTaut performance audit
+now link to that plan instead of treating Pair/Simp work as a loose sequence of
+local probes.
+
+## 2026-06-20 WolframKernel Conversion-Failure Probe
+
+Added a WolframKernel-only wrapper probe at
+`scripts/perf-probes/pair-simp/wolfram/wk-conversion-wrapper-profile.wls`.
+It loads the unmodified clean `mma-hol` clone, builds the same Pair/Simp
+basic-rule conversion chain, then temporarily wraps visible WL-level
+conversion functions after setup. The reference clone at
+`/private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol` stayed clean.
+
+Clean non-instrumented WolframKernel baselines:
+
+- `wk-profile-baseline-baseConv-tryConv-depth19`: `0.353249s` for `200`
+  repetitions.
+- `wk-profile-baseline-TRYCONV-REPEATC-depth19`: `0.372219s` for `200`
+  repetitions.
+- Existing `pair4-stock-repeat8` under WolframKernel:
+  `preheat-basic` `7.63629s`, target `2.485002s` for `8` repetitions.
+  The current rum target remains about `15-17s`, so the root-like small probe
+  is still roughly `6x` slower in rum.
+
+Instrumented WolframKernel counts:
+
+- On `baseConv` through `tryConv`, WK still performs `3819` failed
+  `REWRCONV` / `simpRuleConv` calls for `200` repetitions, plus `4020`
+  failed `tryConv` calls. That is about `19` failed rewrite rules per
+  iteration, not a WL-level rule skip.
+- Wrapping the full `TRYCONV[REPEATC[baseConv]]` shape shows the same `3819`
+  failed `REWRCONV` / `simpRuleConv` calls, with `201` `REPEATC` calls all
+  taking the fail-to-`REFL` path and `201` outer `TRYCONV` calls returning
+  success.
+- On `pair4-stock-repeat2`, WK performs `6954` failed `REWRCONV` /
+  `simpRuleConv` calls, `9336` failed top-level `tryTermMatch` calls, `366`
+  `REPEATC` fail-to-`REFL` calls, and `366` successful outer `TRYCONV` calls.
+
+Interpretation: WolframKernel is not avoiding the mma-hol conversion failure
+chain at the WL level. It runs the same repeated failed rules, but its
+per-failure constant is much lower: failed `tryTermMatch` is tens of
+microseconds, and failed `REWRCONV` is roughly one hundred microseconds under
+the intrusive wrapper. Therefore a production rum change that claims to copy
+WK should focus on making the existing failure path cheap through evaluator
+dispatch, representation, pattern dispatch, `Catch`/`Throw`, and structural
+operation constants. A semantic failed-conversion/no-change cache remains a
+possible rum-specific shortcut if proven sound and root-linked, but it should
+not be justified as "what WK must be doing."
+
+## 2026-06-20 Pair/Simp Repeated Failure-Chain Revalidation
+
+Returned the Pair/Simp performance lane to the current unmodified
+`Pair.wl` / first `mkPairInj` `CONVRULE` root after the evaluator
+micro-splits showed that `prepare_arguments.evaluate_arg`, atom fast paths,
+dispatch-plan construction, and cheap normalization were not root-scale hot
+leaves.
+
+Invalid probe history:
+
+- `/tmp/rum-pair-repeat.current-var-native-trace-20260620` attempted
+  `topRepeatcNativeTrace` on the known var leaf
+  `9e642f187bbe77fcd524ebf5f1ca4aec59fe51d2e7d0d765595b9b378c8b9190`.
+  The run failed after `34s` with a `rum-cli` stack overflow before emitting
+  split rows. Treat it as probe-overhead / recursion evidence only, not as a
+  timing result.
+
+Valid current-worktree probes, all against the same clean `mma-hol` clone and
+temporary instrumented copies only:
+
+- `/tmp/rum-pair-repeat.current-var-toprepeatc-20260620`: same first
+  `CONVRULE` root, `topRepeatc` split for the var leaf
+  `9e642...9190`. Wall `279s`, markers true. Aggregate root rows show
+  root `simpFixpointConv` about `226.35s` and root `descendOnce` about
+  `217.13s`. The context-length `1` comb
+  `736164760f6f457a67d70768cab89cfed0fd0966abfeddbcb0ad2bd1b9380bfc`
+  accounts for about `64.55s` of `simpFixpointConv`; its var leaf accounts
+  for about `26.04s`. Five `topRepeatc` samples on that var leaf averaged
+  `23.46ms` (`19.79-27.98ms`), with the direct detail loop averaging
+  `22.39ms`. The expanded base-conversion pass is a full failure scan over
+  one context theorem, twenty basic rules, and beta.
+- `/tmp/rum-pair-repeat.current-const-toprepeatc-20260620`: sibling const
+  leaf
+  `2821ed455384f83164f551f6b1682c1ce385679d7f8218a5bde44a4fc5cbf288`
+  under the same comb. Wall `280s`, markers true. The same comb row is about
+  `66.75s`; the const leaf is about `29.90s` and the var sibling about
+  `25.20s`. Five `topRepeatc` samples on the const leaf averaged `21.10ms`
+  (`17.00-25.10ms`), with the direct detail loop averaging `23.76ms`.
+- `/tmp/rum-pair-repeat.current-failure-cache-first-convrule-20260620`:
+  temporary `--prototype failure-cache` diagnostic, still on the first
+  `CONVRULE` root and still only in generated probe copies. Wall `181s`;
+  markers true. The prototype recorded `21` cache entries, `5283` hits,
+  `21` stores, `2` changed cases, and `1832` skipped cases. Root
+  `simpFixpointConv` fell to about `137.65s`; the hot comb
+  `7361...0bfc` fell to about `29.18s`; the const and var leaves fell to
+  about `8.13s` and `7.26s`.
+- `/tmp/rum-pair-var-basic-baseconv-chain.call-result-cache-off-20260620`
+  versus
+  `/tmp/rum-pair-var-basic-baseconv-chain.call-result-cache-on-20260620`:
+  a rum-side opt-in generic call-result cache prototype was measured and
+  rejected before commit. The default-off baseline completed the
+  `runtime-profile-var-basic-baseconv-chain` probe in `54s`; enabling the
+  cache timed out at `240s` before producing useful phase output. The cause
+  is the wrong granularity: constructing full evaluated-call keys around
+  package load / preheat is far too broad for this hotspot. Do not revive a
+  global "cache every successful call" shape for Pair/Simp without a new
+  proof that candidate selection is narrow and root-linked.
+- `/tmp/rum-var-basic-baseconv-chain.catch-failure-cache-off-20260620`,
+  `/tmp/rum-var-basic-baseconv-chain.catch-failure-cache-on-20260620`, and
+  `/tmp/rum-var-basic-baseconv-chain.catch-failure-cache-ignore-dirty-20260620`:
+  a narrower opt-in held-`Catch` failure cache prototype was also measured
+  and rejected before commit. On the tiny
+  `runtime-profile-var-basic-baseconv-chain` probe, the safe version saw
+  `40` lookups, `0` hits, and `18` dirty misses; ignoring dirty invalidation
+  as an unsafe upper bound produced `18` hits and cut the manual rule loop
+  from about `18-21ms` to `2.8ms`. The root-linked stock
+  `pair4-stock-repeat8` check rejected it anyway: default-off target
+  `16.94s`, safe cache `18.81s`, unsafe ignore-dirty `18.17s`. The prototype
+  was too late and too narrow: caching the held `Catch` failure tail does not
+  avoid the repeated `ORELSEC` / `REWRCONV` construction, dispatch, or
+  no-change traversal that owns the Pair/Simp wall.
+- `/tmp/rum-pair4-stock-repeat8.current-after-call-result-reject-noprofile`
+  and
+  `/tmp/rum-pair4-stock-repeat8.current-after-call-result-reject-evalprofile`:
+  post-revert stock probe sanity checks. The no-profile `pair4-stock-repeat8`
+  target measured `17.60s`; the evaluation-cache profiled run measured
+  `24.75s` on the same target. The profiled run still concentrates
+  call-stability invalidation under `HOL`Drule`ORELSEC`,
+  `HOL`Drule`REWRCONV`, `HOL`Drule`Private`tryConv`, and Simp
+  conversion builders, especially `HOL`Terms`comb` heads.
+- `/tmp/rum-repeatc-tryconv-control-split.current-runtimepath`: narrow
+  runtime-path probe with lexical timing enabled but shape/source details
+  disabled. It completed in `101s`; `prepare_arguments.evaluate_arg` self
+  time was only about `31ms`, dispatch-plan construction about `16ms`, and
+  normalization under `8ms`, while profile wall was dominated by recursive
+  conversion evaluation. This reconfirms that evaluator glue is side evidence,
+  not the current Pair root optimization target.
+
+Interpretation: the retained root-linked hotspot is repeated no-change
+conversion failure over stable atomic leaves. The repeated cost is not owned
+by Abs opening, RHS extraction, `TRANS`, `descendOnce` on the leaf itself, or
+the earlier evaluator `prepare_arguments` split. A correctness-preserving
+rum-side implementation should therefore target failed conversion dispatch /
+no-change conversion caching with conservative term identity, rule-set/context
+identity, and definition/version invalidation. The temporary `auto/Simp.wl`
+cache prototype is only a diagnostic ceiling; do not carry it into downstream
+`mma-hol` or present it as the acceptance path.
+
+## 2026-06-20 Pair/Simp MatchQ Blank Fast Path
+
+Kept the current Pair/Simp optimization pass small and measurable on the
+unmodified clean `mma-hol` clone.
+
+Rejected experiment:
+
+- A rule-RHS presence prefilter keyed by shared call identity and alpha-scope
+  ids was tested on the no-change basic-rule failure path and then reverted.
+  It slightly improved one top-level `TRYCONV[REPEATC]` sample but slowed the
+  manual rule loop and moved `pair4-stock-repeat8` from the current baseline
+  `16.02s` to `16.81s`, so it was a net negative.
+
+Retained cut:
+
+- `MatchQ` now fast-paths already-resolved `Blank` / `Blank[head]` patterns
+  through the same `match_blank` predicate used by the matcher. This covers
+  the repeated `MatchQ[res, _Failure]` check in `HOL`Drule`Private`tryConv`
+  after `Catch` converts conversion failures into `Failure[...]`.
+
+Validation:
+
+```bash
+cargo test -p rum-runtime failure_symbolic_property_and_predicate_edges_cover_current_subset --lib
+cargo test -p rum-runtime --lib
+cargo build --release -p rum-cli
+env RUM_PROFILE_LEXICAL_SUBSTITUTION=0 RUM_PROFILE_LEXICAL_DEFER=0 RUM_PROFILE_LEXICAL_DETAIL=0 RUM_PROFILE_LEXICAL_SHAPES=0 RUM_PROFILE_LEXICAL_BINDINGS=0 RUM_PROFILE_LEXICAL_SOURCES=0 RUM_PROFILE_EVALUATION_CACHE=0 RUM_PROFILE_EVALUATION_CACHE_DEFER=0 RUM_PROFILE_EVALUATION_CACHE_INCREMENTAL=0 scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only runtime-profile-var-basic-baseconv-chain --timeout 180 --output-dir /tmp/rum-pair-var-basic-baseconv-chain.matchq-fastpath-noprofile --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+env RUM_PROFILE_LEXICAL_SUBSTITUTION=0 RUM_PROFILE_LEXICAL_DEFER=0 RUM_PROFILE_LEXICAL_DETAIL=0 RUM_PROFILE_LEXICAL_SHAPES=0 RUM_PROFILE_LEXICAL_BINDINGS=0 RUM_PROFILE_LEXICAL_SOURCES=0 RUM_PROFILE_EVALUATION_CACHE=0 RUM_PROFILE_EVALUATION_CACHE_DEFER=0 RUM_PROFILE_EVALUATION_CACHE_INCREMENTAL=0 scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only runtime-profile-pair4-stock-repeat8 --timeout 180 --output-dir /tmp/rum-pair4-stock-repeat8.matchq-fastpath-noprofile --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+```
+
+Measured release result:
+
+- `runtime-profile-var-basic-baseconv-chain` no-profile top
+  `TRYCONV[REPEATC]`: old baseline about `13.17ms`, now `11.72ms`.
+- `runtime-profile-pair4-stock-repeat8` no-profile target: old baseline
+  `16.02s`, now `15.69s`.
+
+This is a useful constant-factor cleanup of the failure tail, not the remaining
+dominant Pair/Simp wall by itself.
+
+Follow-up closed probe:
+
+- Added
+  `scripts/perf-probes/pair-simp/single-basic-failure-split.wls` to split one
+  productive basic simplification rule failing on the variable target `x`.
+  The probe keeps the clean `mma-hol` tree unmodified and validates that the
+  single failure returns `$convFailed`, that the raw body catches a `Failure`,
+  and that `tryTermMatch` returns `$matchFail`.
+- Probe-design note: `Do[expr, {i, 1, 500}]` was rejected because the loop
+  variable write polluted rum timings (`single-loop-empty` about `6.91s`).
+  `Do[expr, {N}]` was also rejected for this purpose because the resulting
+  timings were not interpretable. The retained probe uses
+  `Module[{i = 0}, While[i < N, expr; i = i + 1]]` and prints a count check.
+
+Validation commands:
+
+```bash
+scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only single-basic-failure-split --timeout 180 --output-dir /tmp/rum-single-basic-failure-split.rum.while-loop --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only single-basic-failure-split --timeout 180 --output-dir /tmp/rum-single-basic-failure-split.wolfram.while-loop --engine wolfram
+```
+
+Selected `N=500` totals:
+
+| segment | rum | WolframKernel | ratio |
+| --- | ---: | ---: | ---: |
+| full `tryConv[simpRuleConv[rule][x]]` | `0.1499s` | `0.0440s` | `3.4x` |
+| `Catch[simpRuleConv[rule][x]]` | `0.1428s` | `0.0400s` | `3.6x` |
+| direct `Catch[REWRCONV[rule][x]]` | `0.1089s` | `0.0274s` | `4.0x` |
+| manual failed `REWRCONV` body | `0.0799s` | `0.0202s` | `4.0x` |
+| `tryTermMatch[lhs, x, {<||>, <||>}, 0]` | `0.0349s` | `0.0079s` | `4.4x` |
+| full `convFail` / `holError` catch | `0.0231s` | `0.0077s` | `3.0x` |
+| construct `Failure[...]` with full extra payload | `0.0147s` | `0.0043s` | `3.4x` |
+| `MatchQ[failure, _Failure]` after the fast path | `0.0045s` | `0.0005s` | small absolute |
+| loop empty | `0.0023s` | `0.0004s` | small absolute |
+
+Interpretation: the single basic-rule failure path is genuinely slower in rum,
+but only around `3-4x` on the closed parent. It cannot alone explain the
+remaining `6x`-class `pair4-stock-repeat8` gap. The next root-linked split
+should move one level back up to the 19-rule `combineSimpConvs` /
+right-associated `ORELSEC` chain and `TRYCONV[REPEATC[baseConv]]`, because the
+extra multiplier likely appears in chain composition, repeated closure calls,
+or parent-level conversion control rather than in one isolated `REWRCONV`
+failure.
+
+The next split did exactly that, again without changing the clean `mma-hol`
+tree:
+
+- Added
+  `scripts/perf-probes/pair-simp/basic-chain-orelsec-split.wls`.
+- The probe builds the 19 productive basic `simpRuleConv` conversions, the
+  `combineSimpConvs` right-associated `ORELSEC` chain at depths `1`, `5`,
+  `10`, and `19`, and prebuilt `REPEATC` / `TRYCONV` wrappers around the
+  depth-19 base conversion.
+- The retained repeat harness uses a local `While` count check and avoids
+  storing every iteration result, so repeated local assignment does not dominate
+  the measured segments.
+
+Validation commands:
+
+```bash
+scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only basic-chain-orelsec-split --timeout 180 --output-dir /tmp/rum-basic-chain-orelsec-split.rum --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only basic-chain-orelsec-split --timeout 180 --output-dir /tmp/rum-basic-chain-orelsec-split.wolfram --engine wolfram
+```
+
+Selected `N=200` totals:
+
+| segment | rum | WolframKernel | ratio |
+| --- | ---: | ---: | ---: |
+| manual 19-rule `tryConv` loop | `1.621s` | `0.343s` | `4.7x` |
+| manual 19-rule loop + final `BETACONV` fail | `1.663s` | `0.345s` | `4.8x` |
+| raw `combineSimpConvs` chain, depth 19 | `1.861s` | `0.360s` | `5.2x` |
+| `Catch[baseConv[x]]`, depth 19 | `1.934s` | `0.360s` | `5.4x` |
+| prebuilt `REPEATC[baseConv][x]` | `2.199s` | `0.372s` | `5.9x` |
+| prebuilt `TRYCONV[REPEATC[baseConv]][x]` | `2.425s` | `0.378s` | `6.4x` |
+| fresh `TRYCONV[REPEATC[baseConv]][x]` | `2.431s` | `0.383s` | `6.4x` |
+
+Depth scaling:
+
+| segment | rum depth 1/5/10/19 | Wolfram depth 1/5/10/19 |
+| --- | ---: | ---: |
+| raw `tryConv[baseConv[x]]` | `0.101 / 0.470 / 0.958 / 1.861s` | `0.022 / 0.096 / 0.191 / 0.360s` |
+| full `TRYCONV[REPEATC[baseConv]][x]` | `0.201 / 0.670 / 1.278 / 2.423s` | `0.038 / 0.116 / 0.212 / 0.374s` |
+
+Interpretation: the extra multiplier appears as the probe moves up the
+conversion-control stack. A single `REWRCONV` failure is only about `3-4x`.
+The 19-rule loop is `4.7-4.8x`, right-associated `ORELSEC` is `5.2-5.4x`,
+and `REPEATC` / `TRYCONV` pushes the same target to `6.4x`. Fresh wrapper
+construction is not the issue: fresh and prebuilt `TRYCONV[REPEATC[baseConv]]`
+are essentially equal. The next useful split is therefore inside rum's handling
+of repeated nested conversion-control calls, especially the cost difference
+between raw `baseConv` failure, `REPEATC` returning `REFL[x]` after failure,
+and `TRYCONV` catching an already-successful `REPEATC`.
+
+The next control-stack split narrowed that layer:
+
+- Added
+  `scripts/perf-probes/pair-simp/repeatc-tryconv-control-split.wls`.
+- It keeps the same 19-rule `baseConv` and measures real `REPEATC`, hand-written
+  `REPEATC` failure branches, real `TRYCONV`, hand-written `TRYCONV`, raw
+  `Catch` over a successful `REPEATC`, `REFL`, `SameQ`, and `MatchQ` on a
+  successful theorem.
+- A standalone bare `Return[REFL[x]]` micro-segment was rejected because
+  `Return` inside the HoldAll measurement wrapper did not produce reliable
+  probe output. The retained comparison is inside realistic `REPEATC`-shaped
+  branches: with `Return` versus without `Return`.
+
+Validation commands:
+
+```bash
+scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only repeatc-tryconv-control-split --timeout 180 --output-dir /tmp/rum-repeatc-tryconv-control-split.rum.clean --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only repeatc-tryconv-control-split --timeout 180 --output-dir /tmp/rum-repeatc-tryconv-control-split.wolfram.clean --engine wolfram
+```
+
+Selected `N=200` totals:
+
+| segment | rum | WolframKernel | ratio |
+| --- | ---: | ---: | ---: |
+| raw `tryConv[baseConv[x]]` failure | `1.875s` | `0.348s` | `5.4x` |
+| `TRYCONV[baseConv][x]` failure to `REFL[x]` | `2.105s` | `0.361s` | `5.8x` |
+| `REPEATC[baseConv][x]` failure to `REFL[x]` | `2.133s` | `0.360s` | `5.9x` |
+| manual `REPEATC` branch with `Return[REFL[x]]` | `2.316s` | `0.364s` | `6.4x` |
+| manual `REPEATC` branch without `Return` | `1.902s` | `0.367s` | `5.2x` |
+| direct `REFL[x]` | `0.0317s` | `0.0089s` | small absolute |
+| actual `TRYCONV[REPEATC[baseConv]][x]` | `2.377s` | `0.372s` | `6.4x` |
+| manual outer `TRYCONV` via `tryConv` | `2.237s` | `0.367s` | `6.1x` |
+| manual outer `TRYCONV` inline `Catch`/`MatchQ` | `2.120s` | `0.366s` | `5.8x` |
+| raw `Catch[REPEATC[baseConv][x]]` success | `2.117s` | `0.364s` | `5.8x` |
+| `MatchQ[successThm, _Failure]` | `0.0010s` | `0.0002s` | negligible |
+| `Catch[prebuiltSuccessThm]` | `0.0014s` | `0.0001s` | negligible |
+
+Interpretation: the newly isolated small pieces are not the owner. `REFL[x]`,
+`SameQ[$convFailed, $convFailed]`, `MatchQ` on a successful theorem, and
+`Catch` returning a prebuilt successful theorem are all too small. The retained
+hot layer is realistic nested conversion-control application: real
+`REPEATC`/`TRYCONV` definitions around an already expensive baseConv failure,
+plus `Return` in the failed `REPEATC` branch. The strongest next runtime-side
+probe is no longer a WL-level split; it should instrument rum's definition
+application / subvalue dispatch / nonlocal `Return` path for the concrete
+symbols ``HOL`Drule`REPEATC`` and ``HOL`Drule`TRYCONV`` under this probe.
+
+Runtime-path probe follow-up:
+
+- Added
+  `scripts/perf-probes/pair-simp/runtime-profile-repeatc-tryconv-control-split.wls`.
+  It runs the same 19-rule `baseConv` control-stack target with
+  `RumProfileReset[]` / `RumProfileSnapshot[]` around each label, so profile
+  output is not mixed with preheat or sibling segments.
+- Added profile-only rum runtime timing rows for call dispatch stages,
+  definition RHS evaluate/finish, `Module` resume/body evaluation,
+  `Catch` body/resume, `Return`/`Throw`, and `Function` evaluate/finish.
+  These rows are emitted only under the existing runtime profile path and are
+  reset by `RumProfileReset[]`.
+
+Validation:
+
+```bash
+cargo fmt --check
+cargo test -p rum-runtime
+cargo build --release -p rum-cli
+env RUM_PROFILE_LEXICAL_SUBSTITUTION=1 RUM_PROFILE_LEXICAL_DEFER=0 RUM_PROFILE_LEXICAL_DETAIL=0 RUM_PROFILE_LEXICAL_SHAPES=0 RUM_PROFILE_LEXICAL_BINDINGS=0 RUM_PROFILE_LEXICAL_SOURCES=1 RUM_PROFILE_EVALUATION_CACHE=0 RUM_PROFILE_EVALUATION_CACHE_DEFER=0 RUM_PROFILE_DEFINITION_RULE_TIMING=1 RUM_PROFILE_BUILTIN_TIMING=1 scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only runtime-profile-repeatc-tryconv-control-split --timeout 240 --output-dir /tmp/rum-repeatc-tryconv-control-split.runtime-path --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+```
+
+Selected `N=80` profile-target wall times under the new instrumentation:
+
+| segment | rum |
+| --- | ---: |
+| raw `tryConv[baseConv[x]]` failure | `1.009s` |
+| `TRYCONV[baseConv][x]` failure to `REFL[x]` | `1.127s` |
+| `REPEATC[baseConv][x]` failure to `REFL[x]` | `1.167s` |
+| manual `REPEATC` branch with `Return[REFL[x]]` | `1.019s` |
+| manual `REPEATC` branch without `Return` | `1.039s` |
+| actual `TRYCONV[REPEATC[baseConv]][x]` | `1.229s` |
+| manual outer `TRYCONV` via `tryConv` | `1.166s` |
+| manual outer `TRYCONV` inline `Catch`/`MatchQ` | `1.177s` |
+| raw `Catch[REPEATC[baseConv][x]]` success | `1.460s` |
+
+Runtime profile conclusions from the same run:
+
+- Definition dispatch selection is not the owner. Across the control-stack
+  labels, `definition-dispatch-time summary` stays around `0.06s` total
+  (`prefilter` + `fast_match` + RHS substitution) while the measured label
+  wall is about `1.0-1.5s`.
+- Nonlocal `Return` itself is not the owner. The real `REPEATC` and manual
+  `Return` labels record the expected `return_err` flow through
+  `call.stage.special_form`, `definition.rhs.evaluate`, `module.body.evaluate`,
+  and `module.resume_initializers`, but `Return` builtin self time is
+  micro-scale and the manual-with-`Return` branch is not slower than the
+  manual no-`Return` branch in this run (`1.019s` vs. `1.039s`).
+- The realistic hot parent is still the failed conversion chain. The top RHS
+  rows remain ``HOL`Drule`ORELSEC`` (1539 failing calls per snapshot),
+  ``HOL`Drule`Private`tryConv`` (1620-1701 calls), then
+  ``HOL`Auto`Simp`Private`simpRuleConv`` and ``HOL`Drule`REWRCONV``.
+- The largest non-intrusive runtime self rows are not matcher dispatch but
+  frame/preparation overhead: `module.resume_initializers` self is about
+  `0.33-0.37s`, `call.stage.down_values` self about `0.17-0.26s`, and
+  `call.stage.prepare_arguments` self about `0.13-0.16s` on the main labels.
+  The lexical summary confirms that most `module.resume_initializers` self is
+  body substitution: `module_body_substitution_total_ns` is about
+  `0.32-0.36s` over roughly `9.3k-9.9k` module bodies.
+
+Current interpretation: `REPEATC` / `TRYCONV` are not hiding a special rum
+`Return` or subvalue-dispatch bug. They amplify the same repeated failure
+chain by adding many ordinary `Module` frames, argument preparation, and
+downvalue/subvalue calls. The next useful split is still runtime-side but
+should drill below these new self rows: separate `prepare_arguments` evaluation
+from cheap argument normalization, and split `Module` body substitution by
+exact source shape/source symbol if profile disturbance remains tolerable.
+
+Prepare-arguments split follow-up:
+
+- Added profile-only runtime rows inside
+  `Session::prepare_arguments_for_call` and
+  `Session::normalize_call_args_by_attributes`: `prepare_arguments.total`,
+  `prepare_arguments.plan_arg`, `prepare_arguments.evaluate_arg`,
+  `prepare_arguments.append_arg`, `prepare_arguments.normalize.total`,
+  `prepare_arguments.normalize.flat`, and
+  `prepare_arguments.normalize.orderless`.
+- The split is diagnostic only. It records one event per prepared argument and
+  therefore adds visible observation overhead; use it to read same-run phase
+  proportions, not as a no-profile timing baseline.
+
+Validation:
+
+```bash
+cargo fmt --check
+cargo test -p rum-runtime
+cargo build --release -p rum-cli
+env RUM_PROFILE_LEXICAL_SUBSTITUTION=1 RUM_PROFILE_LEXICAL_DEFER=0 RUM_PROFILE_LEXICAL_DETAIL=0 RUM_PROFILE_LEXICAL_SHAPES=0 RUM_PROFILE_LEXICAL_BINDINGS=0 RUM_PROFILE_LEXICAL_SOURCES=1 RUM_PROFILE_EVALUATION_CACHE=0 RUM_PROFILE_EVALUATION_CACHE_DEFER=0 RUM_PROFILE_DEFINITION_RULE_TIMING=1 RUM_PROFILE_BUILTIN_TIMING=1 scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only runtime-profile-repeatc-tryconv-control-split --timeout 240 --output-dir /tmp/rum-repeatc-tryconv-control-split.prepare-args-20260620a --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+```
+
+Selected runtime-path rows from the same `N=80` run:
+
+| segment | calls | self time | average |
+| --- | ---: | ---: | ---: |
+| `prepare_arguments.evaluate_arg` | `161k-184k` | `0.117-0.150s` | `724-845ns` |
+| `prepare_arguments.total` wrapper/loop self | `108k-121k` | `0.089-0.101s` | `818-863ns` |
+| outer `call.stage.prepare_arguments` self | `108k-121k` | `0.040-0.045s` | `367-386ns` |
+| `prepare_arguments.plan_arg` | `239k-265k` | `0.013-0.015s` | `55-59ns` |
+| `prepare_arguments.append_arg` | `239k-265k` | `0.011-0.013s` | `47-49ns` |
+| `prepare_arguments.normalize.total` self | `111k-130k` | `0.005-0.007s` | `46-56ns` |
+| `prepare_arguments.normalize.flat` | `3k-9k` | `0.0005-0.0011s` | `118-157ns` |
+| `prepare_arguments.normalize.orderless` | `3k-9k` | `0.0004-0.0009s` | `94-122ns` |
+
+Interpretation: cheap `Flat` / `Orderless` normalization is not the owner.
+`prepare_arguments` is mostly a multiplier around recursive argument
+evaluation plus high-frequency loop/control overhead. The next closed split
+should drill below `prepare_arguments.evaluate_arg`, especially
+`evaluate_atom_fast_path` and the call paths it re-enters under the same
+control-stack probe, before trying another optimization. If optimizing this
+area later, the measurable candidates are reducing repeated argument-prep
+wrapper/loop overhead or bypassing no-op preparation for common unheld calls,
+but those should wait for a closed child phase tree.
+
+Evaluator fast-path split follow-up:
+
+- Added profile-only rows for `evaluate_atom_fast_path.total` and its
+  branch buckets: `stable_symbol`, `unstable_symbol`, `atom`, and `call`.
+- Added `evaluate.total`, `evaluate.stability_check`,
+  `evaluate.once_unstable`, `evaluate.fixed_point_equal`, and
+  `evaluate.trace_update` around the fixed-point evaluator loop.
+- Added `evaluate_inner_unstable.total`, `evaluate_inner_unstable.call`,
+  `evaluate_inner_unstable.symbol`, and `evaluate_inner_unstable.atom`.
+- Added a second follow-up split for the call branch:
+  `evaluate_call.total`, `evaluate_call.head_eval`,
+  `evaluate_call.resume_after_head`, `evaluate_call.build_dispatch_plan`, and
+  `evaluate_call.dispatch`.
+
+Validation:
+
+```bash
+cargo fmt --check
+cargo test -p rum-runtime
+cargo build --release -p rum-cli
+env RUM_PROFILE_LEXICAL_SUBSTITUTION=1 RUM_PROFILE_LEXICAL_DEFER=0 RUM_PROFILE_LEXICAL_DETAIL=0 RUM_PROFILE_LEXICAL_SHAPES=0 RUM_PROFILE_LEXICAL_BINDINGS=0 RUM_PROFILE_LEXICAL_SOURCES=1 RUM_PROFILE_EVALUATION_CACHE=0 RUM_PROFILE_EVALUATION_CACHE_DEFER=0 RUM_PROFILE_DEFINITION_RULE_TIMING=1 RUM_PROFILE_BUILTIN_TIMING=1 scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only runtime-profile-repeatc-tryconv-control-split --timeout 240 --output-dir /tmp/rum-repeatc-tryconv-control-split.eval-fastpath-20260620a --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+env RUM_PROFILE_LEXICAL_SUBSTITUTION=1 RUM_PROFILE_LEXICAL_DEFER=0 RUM_PROFILE_LEXICAL_DETAIL=0 RUM_PROFILE_LEXICAL_SHAPES=0 RUM_PROFILE_LEXICAL_BINDINGS=0 RUM_PROFILE_LEXICAL_SOURCES=1 RUM_PROFILE_EVALUATION_CACHE=0 RUM_PROFILE_EVALUATION_CACHE_DEFER=0 RUM_PROFILE_DEFINITION_RULE_TIMING=1 RUM_PROFILE_BUILTIN_TIMING=1 scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only runtime-profile-repeatc-tryconv-control-split --timeout 240 --output-dir /tmp/rum-repeatc-tryconv-control-split.eval-call-20260620a --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+```
+
+The extra evaluator probes are high frequency. The two profiled runs completed
+in `103s` and `112s`; use their same-run self/inclusive relationships, not
+their absolute wall times, as the evidence.
+
+Selected `N=80` self rows across the control-stack labels:
+
+| segment | calls | self time | average |
+| --- | ---: | ---: | ---: |
+| `prepare_arguments.evaluate_arg` | `162k-184k` | `0.028-0.032s` | `172-181ns` |
+| `evaluate_atom_fast_path.call` | `124k-144k` | `0.020-0.024s` | `162-172ns` |
+| `evaluate_atom_fast_path.stable_symbol` | `151k-165k` | `0.0056-0.0063s` | `36-38ns` |
+| `evaluate_atom_fast_path.unstable_symbol` | `21k-22k` | `0.0035-0.0038s` | `158-175ns` |
+| `evaluate.stability_check` | `431k-468k` | `0.103-0.150s` | `239-325ns` |
+| `evaluate_call.dispatch` | `151k-165k` | `0.093-0.106s` | `616-660ns` |
+| `evaluate_call.head_eval` | `151k-165k` | `0.030-0.034s` | `199-210ns` |
+| `evaluate_call.build_dispatch_plan` | `151k-165k` | `0.016-0.018s` | `105-112ns` |
+| `evaluate.fixed_point_equal` | `161k-176k` | `0.012-0.014s` | `74-80ns` |
+
+Interpretation: `prepare_arguments.evaluate_arg` itself is no longer a hot
+leaf. Its inclusive time is mostly the ordinary call path reached through
+`evaluate_atom_fast_path.call`. Stable-symbol and non-symbol atom fast paths
+are cheap. Dispatch-plan construction is also not the owner. The remaining
+runtime-side evaluator leaves worth splitting are:
+
+- `evaluate_call.dispatch`, which is the wrapper around
+  `resume_call_with_dispatch_plan` after child call-stage timing is subtracted;
+  this likely captures dispatch recursion/skip/drive glue rather than rule
+  matching itself.
+- `evaluate.stability_check`, which is now a visible independent leaf at about
+  `0.10-0.15s` per snapshot under this high-frequency probe.
+
+Do not optimize either yet. The next probe should split
+`resume_call_with_dispatch_plan` into skip, stage execution, `drive_internal`
+continuation, and recursion overhead, or separately split
+`cached_expr_is_evaluation_stable` if the goal is the stability-check leaf.
+
+## 2026-06-19 Pair/Simp Lexical Presence Cache Cut
+
+Turned the current root-level lexical absence-scan diagnosis into a rum-side
+runtime cut. The clean `mma-hol` target stayed unmodified.
+
+The retained implementation adds a per-substitution lexical presence cache for
+`arg_prefilter` scans. The cache is scoped to a single
+`substitute_lexical_bindings` call and is keyed by the immutable shared call
+node identity `(SharedExpr head Arc, SharedArgs Arc)`, so it avoids a global
+raw-pointer cache and cannot observe pointer reuse after the substitution
+returns. Both single-binding and multi-binding prefilters use the cache.
+
+Rejected experiments from the same A/B pass:
+
+- A no-initializer `Module` fast path was too small and noisy. Keeping the
+  fresh-symbol definition-table registration but skipping the initializer
+  recursion moved `pair4-stock-repeat8` only from the same-machine baseline
+  `18.24s` to about `17.98-18.09s`, while pair-depth did not consistently
+  improve. Skipping the registration itself was worse.
+- A shadowed-only lexical early exit did not hit the root path. The
+  `pair4-stock-repeat8` probe stayed around `18.51-18.57s`, confirming that
+  the hot false scans are ordinary closed conversion arguments, not subtrees
+  already fully shadowed by nested scopes.
+
+Validation:
+
+```bash
+cargo fmt --check
+cargo test -p rum-runtime
+cargo build --release -p rum-cli
+/Users/fft/Developments/rum/scripts/run-bounded.py --timeout 180 -- /Users/fft/Developments/rum/target/release/rum-cli --file /Users/fft/Developments/rum/scripts/perf-probes/pair-simp/runtime-profile-pair4-stock-repeat8.wls
+/Users/fft/Developments/rum/scripts/run-bounded.py --timeout 160 -- /Users/fft/Developments/rum/target/release/rum-cli --file /Users/fft/Developments/rum/scripts/perf-probes/pair-simp/runtime-profile-pair-depth-chain-basic.wls
+RUM_PROFILE_DEFINITION_RULE_TIMING=1 RUM_PROFILE_BUILTIN_TIMING=1 RUM_PROFILE_LEXICAL_SHAPES=0 RUM_PROFILE_LEXICAL_BINDINGS=0 scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only runtime-profile-pair4-stock-repeat8 --timeout 240 --output-dir /tmp/rum-pair-repeat8-profile.presence-cache-multi --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+```
+
+Measured release results on the same clean clone:
+
+- Same-machine baseline immediately before the cut:
+  `pair4-stock-repeat8` `18.24s`.
+- Single-binding-only presence cache: `pair4-stock-repeat8` `16.91s` and
+  `17.20s`; `presence_single_nodes` fell from `606.8M` to `75.1M`.
+- Single + multi presence cache: `pair4-stock-repeat8` `15.22s`, `15.56s`,
+  and `15.45s`; pair-depth `pair4` fell to about `1.93s`.
+- Low-disturbance profile target:
+  `runtime-profile-pair4-stock-repeat8` target segment fell from `31.92s`
+  (`/tmp/rum-pair-repeat8-profile.baseline`) to `28.59s`
+  (`/tmp/rum-pair-repeat8-profile.presence-cache-multi`).
+- Lexical totals in that profile moved as expected:
+  `lexical_substitution_total_ns` `10.01s -> 6.77s`,
+  `presence_single_nodes` `606.8M -> 75.1M`,
+  `presence_multi_nodes` `178.3M -> 13.5M`, and
+  the `HOL`Drule`ORELSEC` single `arg_prefilter` node volume
+  `400.7M -> 28.8M`.
+
+This is a real constant-factor runtime cut, not a new semantic cache. It still
+does not by itself prove the full `Pair.wl` gate is closed.
+
+Root retest after the cut:
+
+```bash
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstConv --timeout 600 --output-dir /tmp/rum-pair-firstconv.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only pair-load-root-phase --timeout 900 --output-dir /tmp/rum-pair-load-root.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-hotspot-probes.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --only pair-load-root-phase --timeout 180 --output-dir /tmp/rum-pair-load-root.wolfram-current --engine wolfram
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstConv --timeout 180 --output-dir /tmp/rum-pair-firstconv.wolfram-current --engine wolfram
+```
+
+- rum first `mkPairInj` `CONVRULE` root: summary wall `200s`, closed Pair body
+  phase sum `193.83s`; `mkPairInj-first-simp-apply-CONVRULE` is still the
+  dominant child at `188.07s` (~97% of the Pair body phase sum). Theorem
+  markers: `mkPairInjThm=True`, `pairInjThm=True`.
+- WolframKernel first `mkPairInj` `CONVRULE` root: summary wall `41s`, Pair
+  body phase sum `38.36s`, `mkPairInj-first-simp-apply-CONVRULE` `37.24s`.
+  The same dominant child is now about `5.05x` slower in rum.
+- rum dependency-preloaded `Pair.wl` root: summary wall `194s`,
+  `root-preload-simp-stack` `0.64s`, `root-get-stdlib-pair` `188.27s`.
+  Theorem markers: `mkPairInjThm=True`, `pairInjThm=True`.
+- WolframKernel dependency-preloaded `Pair.wl` root: summary wall `40s`,
+  `root-preload-simp-stack` `0.22s`, `root-get-stdlib-pair` `37.66s`.
+  The current full-root gap is therefore about `5.0x`, not the old `14x+`
+  hundreds-of-seconds wall.
+
+The next Pair/Simp step is to rebuild the closed root phase tree from the
+remaining dominant child, `mkPairInj-first-simp-apply-CONVRULE`, with
+no-profile baselines preserved for every descent.
+
+Follow-up `mkPairInj-first-simp-apply-CONVRULE` descent, same clean clone and
+same release binary, kept the standard target unmodified and used only
+temporary instrumented `Pair.wl` copies under `/tmp`:
+
+```bash
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstConvRule --timeout 600 --output-dir /tmp/rum-pair-firstconv-rule.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstSimpFixpoint --timeout 600 --output-dir /tmp/rum-pair-first-simp-fixpoint.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstSimpStep --timeout 600 --output-dir /tmp/rum-pair-first-simp-step.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstDescendOnce --timeout 600 --output-dir /tmp/rum-pair-first-descend-once.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstDescendF --timeout 600 --output-dir /tmp/rum-pair-first-descend-f.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstDescendFX --timeout 600 --output-dir /tmp/rum-pair-first-descend-fx.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstDescendFXDescend --timeout 600 --output-dir /tmp/rum-pair-first-descend-fx-descend.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstPathFXF --timeout 600 --output-dir /tmp/rum-pair-first-path-fxf.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstPath --path f/x/f/b --timeout 600 --output-dir /tmp/rum-pair-first-path-fxfb.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstPath --path f/x/f/f/b --timeout 600 --output-dir /tmp/rum-pair-first-path-fxffb.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstPath --path x/b --timeout 600 --output-dir /tmp/rum-pair-first-path-xb.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstPath --path f/x/f/f/f/b --timeout 600 --output-dir /tmp/rum-pair-first-path-fxfffb.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstPath --path x/f/b --timeout 600 --output-dir /tmp/rum-pair-first-path-xfb.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstPath --path f/x/f/f/f/f/a/b --timeout 600 --output-dir /tmp/rum-pair-first-path-fxffffaB.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+```
+
+Closed tree summary, rounded to two decimals where useful:
+
+- `CONVRULE` expansion: `mkPairInj-first-simp-call-conv` is `189.77s`; target
+  conclusion, `simpConv` construction, and `EQMP` are tiny.
+- `simpConv` fixpoint: `first-step` is `159.84s`, `withBasic` `24.82s`,
+  fixpoint loop `6.23s` with one iteration. The first step remains the owner.
+- First `simpStepConv`: `descendOnce` is `164.26s`; top `REPEATC`,
+  `TRANS`, and bookkeeping are tiny.
+- First `descendOnce` on the top `Comb`: `comb-f` `95.63s` and `comb-x`
+  `69.86s`; both are real hot siblings.
+- Outer `comb-f`: its hot child is `f/x`, not `f/f`; `f/x` is `94.19s`,
+  `f/f` is about `0.05s`, and outer `comb-x` remains about `73.70s`.
+- `f/x`: its hot child is another `descendOnce` at `89.59s`; splitting that
+  names `f/x/f` at `88.88s`, while `f/x/x` is tiny. The outer `x` sibling
+  remains about `69.58s`.
+- `f/x/f`: its unsplit `descendOnce` is `88.01s`. Splitting one level deeper
+  gives `f/x/f/f` `73.61s`, `f/x/f/x` tiny, and the outer `x` sibling about
+  `67.91s`.
+- `f/x/f/f`: its hot child is `f/x/f/f/f` `61.26s`, with its own fixpoint
+  loop about `18.89s`; the right sibling is tiny. At this depth the other hot
+  top sibling is still outer `x` at about `71.79s`.
+- Outer `x`: its hot child is `x/f`, specifically `x/f/f-descendOnce`
+  `54.16s` plus a `8.78s` local loop; `x/x` is tiny.
+- The left-chain `f/x/f/f/f/f` reaches an `Abs` shape. The expensive part is
+  not `freesIn`, `pickFresh`, or `BETA-open` (all sub-millisecond here), but
+  the opened inner body: nested `abs/abs-descendOnce` is `28.31s`, plus
+  nested fixpoint loops of about `4.88s`, `9.93s`, and `18.69s`.
+
+Current interpretation: the remaining `CONVRULE` wall is no longer one opaque
+runtime primitive. It is a small number of repeated `simpFixpointConv` /
+`descendOnce` traversals over structurally similar HOL `Comb` / nested `Abs`
+subterms. The next probe should continue from the two retained hot leaves:
+`x/f/f-descendOnce` and the nested `abs/abs-descendOnce` under
+`f/x/f/f/f/f/a/b`, checking whether the same repeated conversion-tree rebuild
+and failed-dispatch pattern remains dominant inside those leaves.
+
+Additional split on the outer `x` sibling, still no downstream edits:
+
+```bash
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstPath --path x/f/f/b --timeout 600 --output-dir /tmp/rum-pair-first-path-xffb.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstPath --path x/f/f/f/b --timeout 600 --output-dir /tmp/rum-pair-first-path-xfffb.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+bash scripts/pair-simp-pair-body-phase-tree.sh --mma-hol /private/tmp/rum-mma-hol-rootprobe.e6tD3J/mma-hol --detail mkPairInjFirstPath --path x/f/f/f/f/a/b --timeout 600 --output-dir /tmp/rum-pair-first-path-xffffab.presence-cache --rum-cli /Users/fft/Developments/rum/target/release/rum-cli
+```
+
+- `x/f/f/b` keeps the Pair body around `194.89s`. The target continues down a
+  left comb chain: `x/f/f/f-descendOnce` is `35.71s`, its local fixpoint loop
+  is `16.60s`, and the outer sibling is still about `91.34s`.
+- `x/f/f/f/b` keeps the Pair body around `189.03s`. The hot child is an `Abs`
+  at `x/f/f/f/f`: `descendOnce` is `16.39s` and its local fixpoint loop is
+  `18.08s`; the right sibling is tiny.
+- `x/f/f/f/f/a/b` confirms again that `Abs` housekeeping is not the owner:
+  `freesIn`, fresh-name selection, `BETA-open`, and `ABS` are sub-millisecond
+  to millisecond-scale. Opening exposes nested Abs bodies where
+  `abs/abs-descendOnce` is `3.99s`, with enclosing fixpoint loops of about
+  `4.03s`, `8.10s`, `16.13s`, and `17.93s`.
+
+Stage-level profile snapshots then separated the main repeated conversion
+path from cold theorem-preheat side evidence:
+
+- Profiling `x/f/f/f-descendOnce` under
+  `/tmp/rum-pair-first-path-xffb.presence-cache` confirmed the same
+  conversion/failure amplifier: `ORELSEC`/`tryConv`/`REWRCONV`/
+  `simpRuleConv` still produce many failed conversion calls; call-stability
+  shows about `124.5M` checks and `42.7M` misses with no pointer misses, split
+  between absent entries and dirty/generation invalidation; lexical presence
+  scans are still material but no longer the only owner.
+- Profiling the nested
+  `f/x/f/f/f/f/a/b/a` `abs/abs/abs-descendOnce` leaf showed a different
+  side lane: it mainly hit cold `andCongLemma[]` / `PropTaut` construction.
+  That is valid evidence for local cost, but not the retained explanation for
+  the repeated Pair root multiplier.
+- Profiling the smaller
+  `x/f/f/f/f/a/b` `abs/abs-descendOnce` leaf under
+  `/tmp/rum-pair-first-path-xffffab.presence-cache` restored the main pattern
+  at a smaller scale. The profiled target was `7.95s`; it reported
+  `4384` failing `ORELSEC` sub-value RHS evaluations, `4280` failing
+  `simpRuleConv` and `REWRCONV` evaluations, and builtin failure rows headed
+  by `Module`/`If` under `HOL`Drule`ORELSEC``. Evaluation-cache counters show
+  `14.7M` stability checks and `5.05M` misses, with dirty/generation misses
+  dominating and no pointer misses. Rule-RHS timing concentrates in
+  conversion call-argument rebuilding: `REWRCONV` call args `243,960` calls,
+  `collectAppSpine` `88,164`, `tryTermMatch` `74,286`,
+  `simpRuleConv` `68,480`, `ORELSEC` `39,456`, and `tryConv` `38,496`.
+  This is the current strongest evidence that repeated failed conversion
+  dispatch plus call-stability invalidation, not Abs opening, remains the
+  rum-side multiplier inside the reduced leaf.
+
+An attempted full shape/rebuild profile for `x/f/f/f-descendOnce` timed out at
+`900s` without a completed snapshot, so full lexical shape profiling is too
+disturbing at that granularity. Keep future rebuild probes narrower, or attach
+shape/fingerprint accounting only after the no-profile phase has been reduced
+below this leaf size.
+
 ## 2026-06-19 Pair/Simp Runtime Sharing Cut
 
 Turned the first production runtime optimization from the recent Pair/Simp

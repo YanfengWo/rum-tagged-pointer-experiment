@@ -41,6 +41,7 @@ mod expr_runtime_helpers;
 mod function_and_subst_helpers;
 mod functional_ops;
 mod hold_thread;
+mod lexical_presence;
 mod lexical_substitution;
 mod listable_dispatch;
 mod logic;
