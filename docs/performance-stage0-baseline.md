@@ -81,6 +81,43 @@ lower-tier label is already worse or the measurement is below timing noise.
 Use larger `mma-hol` and Pair/Simp probes only after the primitive result has
 been handled.
 
+## Harness Faithfulness (corrected 2026-06-21)
+
+The Stage 0 harness was re-verified after a contaminated probe surfaced in
+Codex's brief-001. Two foundation issues were found; the first is fixed.
+
+1. **Per-iteration `Set` contamination (FIXED).** `rumMicroBench` timed
+   `Do[result = expr, {n}]` — an ownvalue `Set` to a local every iteration.
+   A three-way control (pure `Do[expr]` vs local-`Set` vs global-`Set`, 1M
+   iters) showed the `Set` form costs `6.6s` vs the pure `4.2s` and injects
+   ~1M `symbol_invalidations` vs `1`. Because rum's Set triggers cache
+   invalidation while a WK local write is cheap, this inflated rum more than
+   WK and **deflated the rum/WK ratio on the cheapest primitives** (the `Set`
+   was a larger share of WK's tiny per-iteration time). The timed loop now
+   runs the bare `expr`. Corrected stable targets, worst-first:
+
+   | label | corrected ratio | was (contaminated) |
+   | --- | ---: | ---: |
+   | `downvalue-exact-hit` | `6.57` | `4.63` |
+   | `if-true` | `6.29` | `4.39` |
+   | `downvalue-pattern-hit` | `5.70` | `5.18` |
+   | `sameq-integer` | `5.13` | `4.17` |
+   | `head-list` | `4.08` | `3.43` |
+
+   The true worst primitives are `downvalue-exact-hit` and `if-true`, not
+   `downvalue-pattern-hit`; the old prioritization was off.
+
+2. **Measurement noise on sub-millisecond labels (OPEN).** Run-to-run jitter is
+   <8% on the slow targets (>=1.5ms total) but 20-78% on the fast and
+   `*-repeat` labels (`downvalue-*-miss-repeat` ~71-78%, `block-symbol-only-repeat`
+   ~59%). Decisions on those labels are within noise at the current iteration
+   counts. Raise their counts (or median-of-N) before crediting a change to
+   them; the `*-repeat` labels were the evidence cited for the recent
+   cache-stable-miss optimizations and should be re-measured at higher counts.
+
+Treat only stable (>=~1.5ms total, <10% jitter) labels as decision-grade until
+the counts are raised.
+
 ## Pair/Simp Baseline Status
 
 The older `scripts/perf-baseline-stage0.sh` Pair/Simp suite remains useful as a

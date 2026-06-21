@@ -171,15 +171,21 @@ rumMicroEmit[label_String, n_, seconds_] := Print[StringJoin[
 ]];
 
 rumMicroBench[label_String, nExpr_, expr_] := Module[
-  {start, i, n, result, seconds},
+  {start, i, n, seconds},
   n = nExpr;
+  (* One untimed eval for a defined sink; the timed loop measures the bare
+     expression with NO per-iteration assignment. A per-iteration
+     result-equals-expr injects one ownvalue Set plus cache invalidation per
+     iteration, which inflated rum time about 57 percent on cheap primitives
+     and inflated the rum/WK ratio because rum Set-invalidation is hit harder
+     than a WK local write. The loop body must be the label exact expression. *)
+  rumMicroSink = expr;
   start = AbsoluteTime[];
   Do[
-    result = expr,
+    expr,
     {i, 1, n}
   ];
   seconds = AbsoluteTime[] - start;
-  rumMicroSink = result;
   rumMicroEmit[label, n, seconds];
 ];
 
