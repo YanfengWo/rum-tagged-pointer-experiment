@@ -6,14 +6,23 @@ mod symbolic;
 impl Session {
     pub(super) fn build_call_dispatch_plan(&mut self, head: &Expr) -> CallDispatchPlan {
         let attributes = self.cached_attribute_set_for_head(head);
-        let builtin_spec = expr_as_symbol(head)
-            .and_then(|symbol| self.cached_builtin_dispatch_spec_for_symbol(symbol));
+        let head_symbol = expr_as_symbol(head);
+        let builtin_spec =
+            head_symbol.and_then(|symbol| self.cached_builtin_dispatch_spec_for_symbol(symbol));
         let builtin_dispatch = builtin_spec.map(|spec| spec.dispatch);
         let builtin_handler = builtin_spec.and_then(|spec| spec.handler);
 
         if builtin_dispatch == Some(BuiltinDispatch::SpecialForm) {
             return CallDispatchPlan::special_form(attributes, builtin_handler);
         }
+
+        let value_definition = head_symbol
+            .or_else(|| base_head_symbol_of_nested_call(head))
+            .and_then(|symbol| self.definitions.get(symbol));
+        let has_down_values = head_symbol.is_some()
+            && value_definition.is_some_and(|definition| !definition.down_values.is_empty());
+        let has_sub_values =
+            value_definition.is_some_and(|definition| !definition.sub_values.is_empty());
 
         let mut plan = CallDispatchPlan::new(attributes, builtin_handler);
 
@@ -23,12 +32,17 @@ impl Session {
             plan.push(CallDispatchStage::Listable);
         }
 
-        if !attributes.contains(Attribute::HoldAllComplete) {
+        if !attributes.contains(Attribute::HoldAllComplete) && self.has_up_value_definitions {
             plan.push(CallDispatchStage::UpValues);
         }
 
-        plan.push(CallDispatchStage::DownValues);
-        plan.push(CallDispatchStage::SubValues);
+        if has_down_values {
+            plan.push(CallDispatchStage::DownValues);
+        }
+
+        if has_sub_values {
+            plan.push(CallDispatchStage::SubValues);
+        }
 
         if builtin_dispatch == Some(BuiltinDispatch::Ordinary) {
             plan.push(CallDispatchStage::OrdinaryBuiltin);

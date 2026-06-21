@@ -206,9 +206,6 @@ fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
         thread_plan.stages(),
         [
             CallDispatchStage::PrepareArguments,
-            CallDispatchStage::UpValues,
-            CallDispatchStage::DownValues,
-            CallDispatchStage::SubValues,
             CallDispatchStage::OrdinaryBuiltin,
         ]
     );
@@ -219,9 +216,6 @@ fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
         [
             CallDispatchStage::PrepareArguments,
             CallDispatchStage::Listable,
-            CallDispatchStage::UpValues,
-            CallDispatchStage::DownValues,
-            CallDispatchStage::SubValues,
             CallDispatchStage::OrdinaryBuiltin,
         ]
     );
@@ -232,9 +226,6 @@ fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
         function_plan.stages(),
         [
             CallDispatchStage::PrepareArguments,
-            CallDispatchStage::UpValues,
-            CallDispatchStage::DownValues,
-            CallDispatchStage::SubValues,
             CallDispatchStage::Function,
         ]
     );
