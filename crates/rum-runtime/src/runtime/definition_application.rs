@@ -163,7 +163,11 @@ impl Session {
 
         let runtime_profile_fast_match = runtime_path_timing_start("down_values.fast_match");
         let fast_match_start = definition_dispatch_timing_start();
-        let fast_outcome = self.try_fast_definition_match(&down_value.lhs, &normalized_candidate);
+        let fast_outcome = if down_value.matcher_attribute_revision == self.attribute_revision {
+            self.try_fast_definition_match_compiled(&down_value.matcher, &normalized_candidate)
+        } else {
+            self.try_fast_definition_match(&down_value.lhs, &normalized_candidate)
+        };
         record_profile_definition_dispatch_phase_timing(
             "down_value",
             &symbol,
@@ -446,7 +450,11 @@ impl Session {
         }
 
         let fast_match_start = definition_dispatch_timing_start();
-        let fast_outcome = self.try_fast_definition_match(&up_value.lhs, &normalized_candidate);
+        let fast_outcome = if up_value.matcher_attribute_revision == self.attribute_revision {
+            self.try_fast_definition_match_compiled(&up_value.matcher, &normalized_candidate)
+        } else {
+            self.try_fast_definition_match(&up_value.lhs, &normalized_candidate)
+        };
         record_profile_definition_dispatch_phase_timing(
             "up_value",
             &symbol,
@@ -650,7 +658,11 @@ impl Session {
 
         let runtime_profile_fast_match = runtime_path_timing_start("sub_values.fast_match");
         let fast_match_start = definition_dispatch_timing_start();
-        let fast_outcome = self.try_fast_definition_match(&sub_value.lhs, &normalized_candidate);
+        let fast_outcome = if sub_value.matcher_attribute_revision == self.attribute_revision {
+            self.try_fast_definition_match_compiled(&sub_value.matcher, &normalized_candidate)
+        } else {
+            self.try_fast_definition_match(&sub_value.lhs, &normalized_candidate)
+        };
         record_profile_definition_dispatch_phase_timing(
             "sub_value",
             &symbol,
@@ -890,6 +902,88 @@ impl Session {
                 SymbolExprMap::default()
             },
         })
+    }
+
+    fn try_fast_definition_match_compiled(
+        &self,
+        matcher: &MatcherNode,
+        candidate: &Expr,
+    ) -> Option<CompiledMatchOutcome> {
+        let mut bindings = SymbolExprMap::default();
+        let matched = self.fast_match_compiled(matcher, candidate, &mut bindings)?;
+
+        Some(CompiledMatchOutcome {
+            matched,
+            bindings: if matched {
+                bindings
+            } else {
+                SymbolExprMap::default()
+            },
+        })
+    }
+
+    fn fast_match_compiled(
+        &self,
+        matcher: &MatcherNode,
+        value: &Expr,
+        bindings: &mut SymbolExprMap,
+    ) -> Option<bool> {
+        match matcher {
+            MatcherNode::Exact(pattern) => Some(pattern == value),
+            MatcherNode::Blank { head_constraint } => {
+                Some(match_blank(head_constraint.as_ref(), value))
+            }
+            MatcherNode::Named { name, inner } => {
+                if !self.fast_match_compiled(inner, value, bindings)? {
+                    return Some(false);
+                }
+                Some(bind_pattern_name(name, value.clone(), bindings))
+            }
+            MatcherNode::Call { head, args } => {
+                let Expr::Call {
+                    head: value_head,
+                    args: value_args,
+                } = value
+                else {
+                    return Some(false);
+                };
+
+                if args.iter().any(|arg| !matches!(arg, MatcherArg::Single(_))) {
+                    return None;
+                }
+                if args.len() != value_args.len() {
+                    return Some(false);
+                }
+
+                let head_attributes = self.attribute_set_for_head(value_head);
+                if head_attributes.contains(Attribute::Flat)
+                    || head_attributes.contains(Attribute::Orderless)
+                    || head_attributes.contains(Attribute::OneIdentity)
+                {
+                    return None;
+                }
+
+                if !self.fast_match_compiled(head, value_head, bindings)? {
+                    return Some(false);
+                }
+
+                for (matcher_arg, value_arg) in args.iter().zip(value_args) {
+                    let MatcherArg::Single(arg_matcher) = matcher_arg else {
+                        return None;
+                    };
+                    if !self.fast_match_compiled(arg_matcher, value_arg, bindings)? {
+                        return Some(false);
+                    }
+                }
+
+                Some(true)
+            }
+            MatcherNode::Condition { .. }
+            | MatcherNode::PatternTest { .. }
+            | MatcherNode::Except { .. }
+            | MatcherNode::Alternatives(_)
+            | MatcherNode::KeyValuePattern(_) => None,
+        }
     }
 
     fn fast_match_definition_pattern(

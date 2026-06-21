@@ -135,6 +135,81 @@ fn except_downvalue_prefilter_stays_conservative() {
 }
 
 #[test]
+fn compiled_downvalue_matcher_handles_named_typed_blank_hit() {
+    let mut session = Session::new();
+
+    session.eval_text("f[x_Integer] := x + 1").unwrap();
+
+    assert_eq!(session.eval_text("f[1]").unwrap().value.to_string(), "2");
+}
+
+#[test]
+fn compiled_downvalue_matcher_keeps_typed_blank_miss_unevaluated() {
+    let mut session = Session::new();
+
+    session.eval_text("f[x_Integer] := x + 1").unwrap();
+
+    assert_eq!(
+        session.eval_text("f[\"a\"]").unwrap().value.to_string(),
+        "f[\"a\"]"
+    );
+}
+
+#[test]
+fn compiled_downvalue_matcher_binds_multiple_named_args() {
+    let mut session = Session::new();
+
+    session.eval_text("g[x_, y_] := x - y").unwrap();
+
+    assert_eq!(session.eval_text("g[5, 2]").unwrap().value.to_string(), "3");
+}
+
+#[test]
+fn compiled_downvalue_matcher_preserves_exact_vs_pattern_precedence() {
+    let mut session = Session::new();
+
+    session.eval_text("h[x_] := x + 1").unwrap();
+    session.eval_text("h[1] = 10").unwrap();
+
+    assert_eq!(session.eval_text("h[1]").unwrap().value.to_string(), "10");
+    assert_eq!(session.eval_text("h[2]").unwrap().value.to_string(), "3");
+}
+
+#[test]
+fn compiled_downvalue_matcher_falls_back_for_condition_patterns() {
+    let mut session = Session::new();
+
+    session.eval_text("p[x_] /; x > 0 := x").unwrap();
+
+    assert_eq!(session.eval_text("p[3]").unwrap().value.to_string(), "3");
+    assert_eq!(
+        session.eval_text("p[-1]").unwrap().value.to_string(),
+        "p[-1]"
+    );
+}
+
+#[test]
+fn compiled_downvalue_matcher_falls_back_for_sequence_patterns() {
+    let mut session = Session::new();
+
+    session.eval_text("q[x__] := {x}").unwrap();
+
+    assert_eq!(
+        session.eval_text("q[1, 2, 3]").unwrap().value.to_string(),
+        "List[1, 2, 3]"
+    );
+}
+
+#[test]
+fn compiled_downvalue_matcher_falls_back_for_alternatives_patterns() {
+    let mut session = Session::new();
+
+    session.eval_text("r[1 | 2] := ok").unwrap();
+
+    assert_eq!(session.eval_text("r[2]").unwrap().value.to_string(), "ok");
+}
+
+#[test]
 fn matchq_honors_optional_and_repeated_patterns() {
     let mut session = Session::new();
 
