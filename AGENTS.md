@@ -71,8 +71,13 @@ The active `mma-hol` pressure test now reaches the clean-clone core through
 Parser/Printer path. The canonical status lives in
 [PROGRESS.md](./PROGRESS.md) and [TODO.md](./TODO.md).
 
-Use the fixed clean clone at `/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol`
-for current probes unless the user asks to refresh from the live sibling tree.
+Use the persistent acceptance clone at
+`/Users/fft/Developments/mma-hol-acceptance` (latest published `mma-hol`,
+HEAD `200f13a`, the completed/launched project — a large advance past the
+earlier `698e3d0` probe snapshot). This replaces the old
+`/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol` clone, which `/tmp` purging
+decayed; keep this clone pristine (diagnostic edits only in throwaway scratch
+copies, never here). Re-`git pull` it if the user says the standard moved.
 Preload lower HOL files before higher layers: `ErrorUtil.wl`, `Types.wl`,
 `Terms.wl`, `Kernel.wl`, `Bootstrap.wl`, `Equal.wl`, then `Bool.wl`,
 `Drule.wl`, `Tactics.wl`, `Printer.wl`, and `Parser.wl` as needed.

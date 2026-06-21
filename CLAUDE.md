@@ -48,8 +48,12 @@ rather than duplicating them.
 - **`mma-hol` is the unmodified acceptance standard.** Never accept a fix that
   edits it, forks `Simp.wl`, or patches a test harness to pass. If unmodified
   `mma-hol` runs under WolframKernel but fails/times-out under rum, the gap is
-  rum's, full stop (`AGENTS.md` hard line). Keep the canonical clone pristine;
-  it has lived in `/tmp` and been purged — prefer a persistent clone path.
+  rum's, full stop (`AGENTS.md` hard line). The acceptance standard is the
+  persistent clone `/Users/fft/Developments/mma-hol-acceptance` (latest
+  published HEAD `200f13a`, the completed project — past the old `698e3d0`
+  probe snapshot); keep it pristine, diagnostic edits only in throwaway scratch
+  copies. The old `/tmp` clone decayed under `/tmp` purging — do not rely on
+  `/tmp` for the standard.
 - **No default-path cost for diagnostics or off-by-default features.** Counters
   and instrumentation go behind the env-gated cold-load `AtomicU8` pattern; a
   `Mutex`/allocation/branch paid on every call when the flag is off is a

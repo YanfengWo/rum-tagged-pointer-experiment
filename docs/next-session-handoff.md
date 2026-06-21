@@ -659,7 +659,11 @@ cheaper route. The first split now points at recursive descent over single
 - `Do[..., {10000}]`-scale loops can overflow the CLI stack and
   `Range[10^6]` exceeds the generated-element budget; scale probes
   accordingly or raise limits explicitly in the probe session.
-- The clean `mma-hol` probe clone lives at
-  `/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol` (HEAD `698e3d0`);
-  `wolframscript` is at `/usr/local/bin/wolframscript` (~3.2s startup —
+- The acceptance `mma-hol` clone is now the persistent
+  `/Users/fft/Developments/mma-hol-acceptance` (latest published HEAD
+  `200f13a`, the completed project — a large advance past `698e3d0`; older
+  PROGRESS/audit entries that cite the decayed
+  `/private/tmp/rum-mma-hol-clean.PKeAHp/mma-hol` are historical records of
+  what was measured then, not live paths). `wolframscript` is at
+  `/usr/local/bin/wolframscript` (~3.2s startup —
   never compare wall times).
