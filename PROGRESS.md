@@ -6,6 +6,36 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-22 A4 (gated, SYSTEMIC win): thread call head as SharedExpr
+
+`9d6d639`. `evaluate_call` now carries the head as `SharedExpr` instead of
+`head.into_owned()`: a stable-symbol/atom head is reused unchanged (no clone, no
+re-evaluate), only unstable/computed heads are evaluated and re-wrapped, and the
+no-change dispatch tail rebuilds with `Expr::call_shared` (reuse the head Arc, no
+fresh `SharedExpr`). Stages keep borrowing `&Expr` via the `SharedExpr`.
+
+Gate: `into_owned_clone` `1M/2M -> 0` across if-true/exact-hit/pattern-hit
+(reproduced); if-true `shared_expr_alloc` `1M -> 27` (no-change reuse). Because
+every call has a head, this is SYSTEMIC. A clean same-session back-to-back A/B
+(thermal-cancelled — the long session had saturated the machine and a naive
+cross-run comparison showed spurious if-true/block-local regressions) shows EVERY
+label down: `block-local -11.7%`, `downvalue-pattern-hit -9.6%`,
+`downvalue-exact-hit -7.2%`, `set-ownvalue -6.9%`, `sameq -5.3%`, `if-true
+-3.6%`, `length`/`head-list -3.2%`, `part-list -2.1%`; zero regressions.
+
+Pair downstream: codex's cooler-machine run measured the bounded basic-chain down
+~`4-5%` (manual `1.311->1.260s`, full `2.273->2.153s`); my hot-machine re-measure
+was flat (thermal drift), so Pair translation is codex-measured/expected, not
+independently reconfirmed. The head clone is real per-call WORK the Pair descent
+pays, which is why (unlike A3's pure candidate alloc) it translates.
+
+**Measurement lesson (re-)learned:** late in a long session the machine thermally
+saturates and cross-run microbench ratios drift several percent; the clean
+same-session stash A/B (back-to-back, thermal common-mode cancelled) is the only
+reliable gate then. Cumulative from the frozen Phase-0 baseline: worst labels
+down ~13-17% (e.g. `downvalue-exact-hit 5.74x -> ~4.76x`, `if-true 5.96 ->
+~5.15`, `downvalue-pattern-hit 5.47 -> ~4.56`).
+
 ## 2026-06-21 Pair 34x ROOT CAUSE: distributed eval-loop constant (match is 5%)
 
 Profiled the faithful failing-pattern dispatch (a pattern downvalue applied to
