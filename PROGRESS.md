@@ -43,13 +43,31 @@ per-node WALK over large combinator bodies, not whole-body cloning. The
 combinators are Module-wrapped, so Module frame setup
 (`module.resume_initializers`) is paid per application.
 
-**Next step to pick the implementation target:** a NO-PROFILE isolation that
-separates the combinator amplification into its factors — SubValue/DownValue
-application dispatch vs Module frame setup vs the substitution walk — before
-committing a brief. The candidate levers (Module frame setup constant; the
-substitution-walk per-node constant) are both the per-call dispatch/eval
-constant in the conversion path; the ~1.7x combinator amplification is the
-prize to attribute.
+**No-profile cross-check resolves the inflation (the unifying conclusion):** the
+primitive microbench (no profiling, fast, no Pair load) shows `module-local` at
+only `1.58x` — so Module frame setup is NOT the lever, and the profiled `65s`
+`module.resume_initializers` was instrumentation inflation. The microbench's
+worst labels are the DOWNVALUE/SUBVALUE dispatch ones (`downvalue-exact-hit`
+`5.66x`, `downvalue-pattern-hit` `5.24x`). The Pair conversion combinators
+(`ORELSEC`/`REPEATC`/`TRYCONV`/`simpRuleConv`) are curried down/sub-value-defined
+WL functions, so the `34x` is the SAME per-call downvalue/subvalue dispatch
+constant the microbench worst-labels measure, compounded over the descent (plus
+a secondary RHS-walk cost only for the large-body combinators; `pattern-hit`'s
+tiny `x+1` RHS is already `5.24x`, proving dispatch — not the RHS walk —
+dominates the per-call constant).
+
+**Implication for the plan:** there is no separate Pair-specific lever. The Pair
+`34x` and the primitive tier's worst labels are ONE target: the
+downvalue/subvalue dispatch + RHS-eval per-call constant. It can be worked on the
+fast microbench (`downvalue-exact-hit` / `downvalue-pattern-hit`) as a faithful
+proxy, with Pair as the compounding downstream beneficiary — no heavy Pair load
+per iteration. Dead-ends eliminated this session: the inline stamp (refuted), the
+node-alloc compaction (deferred, moderate), and Module frame setup (measured
+cheap at `1.58x`). Next implementation target: the downvalue/subvalue dispatch
+constant, diagnosed on `downvalue-exact-hit` (briefs 002/003 added the ground
+fast path; it is still `5.66x`, so the residual is the shared dispatch +
+matcher/binding + RHS-eval machinery — the same distributed per-call cost the B0
+`if-true` self-timing showed).
 
 ## 2026-06-21 Inline stamp REFUTED (validation-first caught a known dead-end)
 
