@@ -6,6 +6,41 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Brief-001 Diagnosis: `downvalue-pattern-hit` (gated, corrected)
+
+First Codex task brief under the new delegation model (`docs/dev/codex/`): a
+diagnostic profile of the worst bottom-up primitive, `downvalue-pattern-hit`
+(~`5.18x` WK). Codex's directional finding is correct and is retained: a
+pattern-downvalue hit does NOT repeat candidate scanning
+(`down_value_scans / down_value_applications = 1.0`); the per-hit cost is the
+match + binding substitution + evaluation of a fresh RHS tree, and the
+pointer-keyed call-stability cache cannot help because each RHS instantiation
+is a new tree (all `call_stability` misses are `miss_absent`). The hot path is
+`resume_call_after_head → try_apply_down_values_from_symbol`, with
+`fast_match_definition_pattern`, `substitute_rule_bindings_changed`, and
+`SharedArgs::into_vec` / clone / memmove on the apply path.
+
+Director gate correction: Codex's probe added `rumProfileSink = fPattern[1]`
+per iteration — an ownvalue `Set` the target label does not have. Reproducing
+with the faithful shape (`Do[fPattern[1], {n}]`, no sink) corrected the
+contaminated numbers:
+
+| metric | Codex probe (with sink Set) | faithful probe (no Set) |
+| --- | ---: | ---: |
+| time / iteration | `7.0us` | `4.1us` (label is ~`3.9us`) |
+| `symbol_invalidations` | `2,500,005` | `1` |
+| `stability_checks` / application | `9.0` | `4.0` |
+| `down_value_scans` / application | `1.0` | `1.0` |
+
+The per-iteration `Set` produced ALL `2.5M` invalidations and inflated both the
+stability ratio (9→4) and per-iteration time (~70%); the "call-stability misses
+every time" effect is the intrinsic fresh-RHS-tree behavior, not an invalidation
+storm. The honest target for the implementation brief is ~`4` stability checks
+plus fresh-tree RHS eval plus match/binding per hit (rum ~`4us` vs WK ~`0.76us`).
+Lesson folded into `docs/dev/codex/TEMPLATE.md` pitfall 2b: a probe must be the
+label's exact statement, never wrapped in a sink `Set`. This is exactly what the
+director gate exists to catch — the raw report's headline counter was an artifact.
+
 ## 2026-06-21 Core-Language Microbench Performance Reset
 
 Replaced the Pair/Simp-first performance entry route with a bottom-up

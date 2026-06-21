@@ -74,6 +74,14 @@ produce; for implementation: code + test + the before/after ratio).
 2. **Never compare profiled rum to unprofiled WolframKernel.** Profiling env
    vars must be OFF for any timing number; they are for counts/attribution
    only.
+2b. **A probe must be the label's EXACT statement — nothing added.** Do not
+   wrap the timed expression in an assignment, a sink `Set`, a `Print`, or any
+   extra builtin to "use" the result. The microbench label is `Do[expr, {n}]`;
+   a probe of `Do[sink = expr, {n}]` measures a different thing (the `Set`
+   alone injects one ownvalue write + cache invalidation per iteration, which
+   dominated counters and inflated per-iteration time ~70% in brief-001). If
+   you need the loop not to be elided, raise the iteration count; do not add a
+   sink. Replicate the generated `core-language-microbench.wls` shape verbatim.
 3. **Default-path cost is unconditional cost.** A counter that does an atomic
    load per call when disabled still costs; keep the disabled path a single
    relaxed load that returns early (see existing pattern). No `Mutex`, no
