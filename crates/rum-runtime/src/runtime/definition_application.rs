@@ -33,6 +33,20 @@ impl Session {
 
         self.record_profile_down_value_scan(symbol);
 
+        let head_allows_raw_miss_cache = matches!(
+            self.attribute_set_for_head(head).hold_attribute(),
+            HoldAttribute::None
+        );
+        let down_values_cannot_match = head_allows_raw_miss_cache
+            && definition
+                .down_value_shallow_signatures
+                .as_ref()
+                .is_some_and(|signatures| {
+                    signatures
+                        .iter()
+                        .all(|signature| !signature.could_match_args(args))
+                });
+
         if is_system_symbol_name(head, heads::patterns::DEFAULT) {
             let runtime_profile_default =
                 runtime_path_timing_start("down_values.direct_default_lookup");
@@ -45,6 +59,10 @@ impl Session {
             if let Some(value) = direct_default? {
                 return Ok(Some(value));
             }
+        }
+
+        if down_values_cannot_match {
+            return Ok(None);
         }
 
         let runtime_profile_candidate = runtime_path_timing_start("down_values.candidate_build");

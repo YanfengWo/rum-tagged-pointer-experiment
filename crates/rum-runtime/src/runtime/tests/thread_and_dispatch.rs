@@ -125,6 +125,17 @@ fn stable_call_shortcut_preserves_symbol_and_upvalue_evaluation() {
 }
 
 #[test]
+fn downvalue_miss_stability_shortcut_invalidates_on_later_definition() {
+    let mut session = Session::new();
+
+    session.eval_text("f[1] = 2").unwrap();
+    assert_eq!(session.eval_text("f[2]").unwrap().value.to_string(), "f[2]");
+
+    session.eval_text("f[2] = 3").unwrap();
+    assert_eq!(session.eval_text("f[2]").unwrap().value.to_string(), "3");
+}
+
+#[test]
 fn flat_attribute_flattens_calls_and_matches_flat_patterns() {
     let mut session = Session::new();
 

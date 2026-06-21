@@ -219,6 +219,7 @@ impl Session {
                 } else {
                     replace_or_insert_down_value(&mut definition.down_values, &lhs, down_value);
                 }
+                definition.refresh_down_value_shallow_signatures(&symbol);
                 self.push_definition_stored_trace(&symbol, DefinitionKind::DownValue, || {
                     format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs)
                 });

@@ -493,6 +493,9 @@ impl Session {
 
     fn call_head_has_evaluation_effect(&mut self, head: &Expr, args: &[Expr]) -> bool {
         if let Some(symbol) = expr_as_symbol(head) {
+            if self.symbol_call_args_have_no_evaluation_effect(symbol, args) {
+                return false;
+            }
             return self.symbol_call_head_has_evaluation_effect(symbol, args.is_empty());
         }
 
@@ -516,6 +519,53 @@ impl Session {
         }
 
         true
+    }
+
+    fn symbol_call_args_have_no_evaluation_effect(
+        &mut self,
+        symbol: &Symbol,
+        args: &[Expr],
+    ) -> bool {
+        if self.has_up_value_definitions
+            || symbol.context() == SYSTEM_CONTEXT && symbol.name() == heads::patterns::DEFAULT
+        {
+            return false;
+        }
+
+        let attributes = self.cached_attribute_set_for_symbol(symbol);
+        if attributes.contains(Attribute::Listable)
+            || attributes.contains(Attribute::Orderless)
+            || attributes.contains(Attribute::Flat)
+            || !matches!(attributes.hold_attribute(), HoldAttribute::None)
+        {
+            return false;
+        }
+
+        if self
+            .cached_builtin_dispatch_spec_for_symbol(symbol)
+            .is_some()
+        {
+            return false;
+        }
+
+        let Some(definition) = self.definitions.get(symbol) else {
+            return false;
+        };
+        if !definition.up_values.is_empty()
+            || !definition.sub_values.is_empty()
+            || definition.down_values.is_empty()
+        {
+            return false;
+        }
+
+        definition
+            .down_value_shallow_signatures
+            .as_ref()
+            .is_some_and(|signatures| {
+                signatures
+                    .iter()
+                    .all(|signature| !signature.could_match_args(args))
+            })
     }
 
     fn symbol_call_head_has_evaluation_effect(
