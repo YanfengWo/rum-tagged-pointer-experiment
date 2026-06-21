@@ -6,6 +6,26 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Brief-004 Diagnosis: shared call-dispatch overhead (gated)
+
+Diagnostic via `if-true` (the cleanest isolator of pure call overhead: literal
+fast path, no downvalues, no matcher), with a `loop-empty` baseline subtracted.
+Codex's ranked baseline-subtracted table puts the per-call shared cost in
+owned-tree movement/cloning around call setup (`memmove`, `SharedArgs::into_vec`,
+`Vec::clone`), argument preparation, the dispatch skeleton, and repeated
+stability checks.
+
+The actionable catch, independently verified: the per-phase timing
+instrumentation costs **~12% of the per-call work with profiling DISABLED**.
+`runtime_path_timing_start` / `record_profile_runtime_path_timing` (and the
+builtin/dispatch timing variants) are sprinkled ~20x per dispatch and are NOT
+`#[inline]`, so the disabled run still pays the call overhead. A clean unprofiled
+`if-true` sample shows `230 / 1866` self samples (`12.3%`) in
+`profiling::*` — matching Codex's `~11.8%`. This violates the no-default-path-cost
+rule (template pitfall 3, the Mutex lesson). Fix → brief-005: apply the existing
+`record_evaluation_cache_counter` pattern (`#[inline]` guard + `#[cold]
+#[inline(never)]` slow path) so the timing hooks are zero-cost when off.
+
 ## 2026-06-21 Brief-003 Implemented: exact (ground) downvalue fast path (gated)
 
 First implementation brief under the delegation model (`7748efd`). Codex added
