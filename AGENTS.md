@@ -4,6 +4,11 @@ This file is the first-stop guide for coding agents working in this
 repository. Keep it short and link to the canonical documents instead of
 duplicating them.
 
+`CLAUDE.md` is a separate document for the supervising Claude director (role
+split, diagnosis method, the Codex task-brief workflow, and the authoritative
+gate). An executing agent does not need it; follow the brief you were given
+plus this guide.
+
 ## Project Snapshot
 
 `rum` is an experimental Rust implementation of a Mathematica /
