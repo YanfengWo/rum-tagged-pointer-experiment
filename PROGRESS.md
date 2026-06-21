@@ -6,6 +6,26 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Brief-003 Implemented: exact (ground) downvalue fast path (gated)
+
+First implementation brief under the delegation model (`7748efd`). Codex added
+`DownValue.lhs_is_ground` and a dispatch fast path that decides a pattern-free
+LHS match with one `Expr` equality, skipping the shallow-signature prefilter and
+the matcher. Scope was clean (the 4 in-brief files only), `cargo test -p
+rum-runtime` is `664` green including new precedence/regression coverage.
+
+Director gate measured the honest delta with a clean same-session A/B (stash the
+change, rebuild, measure; restore, measure) rather than trusting the report's
+cross-run numbers: `downvalue-exact-hit` rum time `-21.5%` (ratio ~`7.4x` ->
+~`5.8x`), with `downvalue-exact-miss` / `downvalue-pattern-hit` /
+`downvalue-pattern-miss` unchanged within noise. Codex's own report showed only
+`7.76 -> 6.98` because it compared its run to the documented baseline (WK side
+drifting); the gate's same-session A/B is why the true ~22% win was recovered.
+
+After this, `downvalue-exact-hit` is no longer the worst primitive. The new
+worst decision-grade targets are `if-true` (~`7.2x`) and `downvalue-pattern-hit`
+(~`7.1x`); the next brief should target one of those.
+
 ## 2026-06-21 Brief-002 Diagnosis: `downvalue-exact-hit` (gated, verified)
 
 Second Codex brief: diagnose the corrected worst primitive,
