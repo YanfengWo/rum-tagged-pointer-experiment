@@ -75,12 +75,11 @@ impl Session {
                 self.try_dispatch_builtin_call(builtin_handler, head, state.raw_args.as_ref())
             }
             CallDispatchStage::PrepareArguments => {
-                let raw_args = Expr::unwrap_shared_args(std::mem::take(&mut state.raw_args));
-                let mut evaluated_args =
+                let raw_args = std::mem::take(&mut state.raw_args);
+                let prepared =
                     self.prepare_arguments_for_call(head.clone(), attributes, raw_args)?;
-                evaluated_args =
-                    self.normalize_call_args_by_attributes(head, evaluated_args, attributes);
-                state.evaluated_args = Some(evaluated_args);
+                state.evaluated_args =
+                    Some(self.normalize_call_args_shared(head, prepared, attributes));
                 Ok(None)
             }
             CallDispatchStage::Listable => {

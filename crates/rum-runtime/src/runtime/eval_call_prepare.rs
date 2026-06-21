@@ -75,19 +75,136 @@ fn append_prepared_argument(
     }
 }
 
+fn prepared_argument_splices(
+    value: &Expr,
+    allow_sequence_splice: bool,
+    sequence_hold: bool,
+) -> bool {
+    allow_sequence_splice && !sequence_hold && sequence_items(value).is_some()
+}
+
+fn attribute_normalization_is_noop(head: &Expr, args: &[Expr], attributes: AttributeSet) -> bool {
+    if attributes.contains(Attribute::Flat)
+        && args
+            .iter()
+            .any(|arg| call_items_with_head(arg, head).is_some())
+    {
+        return false;
+    }
+
+    if attributes.contains(Attribute::Orderless)
+        && args
+            .windows(2)
+            .any(|pair| compare_expr_canonical(&pair[0], &pair[1]).is_gt())
+    {
+        return false;
+    }
+
+    true
+}
+
 impl Session {
     pub(super) fn prepare_arguments_for_call(
         &mut self,
         head: Expr,
         attributes: AttributeSet,
-        args: Vec<Expr>,
-    ) -> Result<Vec<Expr>, EvalError> {
-        let evaluated_args = Vec::with_capacity(args.len());
+        args: SharedArgs,
+    ) -> Result<SharedArgs, EvalError> {
         let runtime_profile = runtime_path_timing_start("prepare_arguments.total");
-        let result = self.resume_prepared_call_arguments(head, attributes, evaluated_args, args, 0);
+        let result = (|| {
+            let sequence_hold = attributes.sequence_hold();
+            let mut built: Option<Vec<Expr>> = None;
+
+            for index in 0..args.len() {
+                let runtime_profile_plan = runtime_path_timing_start("prepare_arguments.plan_arg");
+                let plan = plan_call_argument_preparation(attributes, index, args[index].clone());
+                record_profile_runtime_path_timing(runtime_profile_plan, RuntimeProfileOutcome::Ok);
+
+                let prepared_arg = if plan.should_evaluate {
+                    let allow_sequence_splice = plan.allow_sequence_splice;
+                    let runtime_profile_evaluate =
+                        runtime_path_timing_start("prepare_arguments.evaluate_arg");
+                    let evaluated_result = self.evaluate_atom_fast_path(plan.expr);
+                    record_profile_runtime_path_timing(
+                        runtime_profile_evaluate,
+                        runtime_profile_outcome_for_expr_result(&evaluated_result),
+                    );
+                    match evaluated_result {
+                        Ok(value) => value,
+                        Err(EvalError::InputRequired { request }) => {
+                            let head_for_resume = head.clone();
+                            let attributes_for_resume = attributes;
+                            let evaluated_for_resume =
+                                built.take().unwrap_or_else(|| args[..index].to_vec());
+                            let remaining_for_resume = args[index + 1..].to_vec();
+                            self.suspend_with_frame(
+                                Err(EvalError::InputRequired { request }),
+                                move |session, value| {
+                                    session.resume_call_after_argument(
+                                        head_for_resume,
+                                        attributes_for_resume,
+                                        evaluated_for_resume,
+                                        remaining_for_resume,
+                                        index + 1,
+                                        value,
+                                        allow_sequence_splice,
+                                    )
+                                },
+                            )?
+                        }
+                        Err(error) => return Err(error),
+                    }
+                } else {
+                    plan.expr
+                };
+
+                let splices = prepared_argument_splices(
+                    &prepared_arg,
+                    plan.allow_sequence_splice,
+                    sequence_hold,
+                );
+                let changed = splices || prepared_arg != args[index];
+
+                match (built.as_mut(), changed) {
+                    (None, false) => {}
+                    (None, true) => {
+                        let mut prepared_args = args[..index].to_vec();
+                        let runtime_profile_append =
+                            runtime_path_timing_start("prepare_arguments.append_arg");
+                        append_prepared_argument(
+                            &mut prepared_args,
+                            prepared_arg,
+                            plan.allow_sequence_splice,
+                            sequence_hold,
+                        );
+                        record_profile_runtime_path_timing(
+                            runtime_profile_append,
+                            RuntimeProfileOutcome::Ok,
+                        );
+                        built = Some(prepared_args);
+                    }
+                    (Some(prepared_args), _) => {
+                        let runtime_profile_append =
+                            runtime_path_timing_start("prepare_arguments.append_arg");
+                        append_prepared_argument(
+                            prepared_args,
+                            prepared_arg,
+                            plan.allow_sequence_splice,
+                            sequence_hold,
+                        );
+                        record_profile_runtime_path_timing(
+                            runtime_profile_append,
+                            RuntimeProfileOutcome::Ok,
+                        );
+                    }
+                }
+            }
+
+            Ok(built.map(SharedArgs::new).unwrap_or(args))
+        })();
         record_profile_runtime_path_timing(
             runtime_profile,
-            runtime_profile_outcome_for_vec_result(&result),
+            runtime_profile_outcome_for_shared_args_result(&result),
         );
         result
     }
@@ -197,11 +314,11 @@ impl Session {
         let plan = self.build_call_dispatch_plan(&head);
         let state = CallDispatchState {
             raw_args: SharedArgs::default(),
-            evaluated_args: Some(self.normalize_call_args_by_attributes(
+            evaluated_args: Some(SharedArgs::new(self.normalize_call_args_by_attributes(
                 &head,
                 prepared_args,
                 plan.attributes,
-            )),
+            ))),
         };
 
         self.resume_call_with_dispatch_plan(head, plan, state, 0)
@@ -261,6 +378,23 @@ impl Session {
         record_profile_runtime_path_timing(runtime_profile_total, RuntimeProfileOutcome::Ok);
         normalized_args
     }
+
+    pub(super) fn normalize_call_args_shared(
+        &self,
+        head: &Expr,
+        args: SharedArgs,
+        attributes: AttributeSet,
+    ) -> SharedArgs {
+        if attribute_normalization_is_noop(head, args.as_ref(), attributes) {
+            return args;
+        }
+
+        SharedArgs::new(self.normalize_call_args_by_attributes(
+            head,
+            Expr::unwrap_shared_args(args),
+            attributes,
+        ))
+    }
 }
 
 fn runtime_profile_outcome_for_expr_result(
@@ -277,8 +411,8 @@ fn runtime_profile_outcome_for_expr_result(
     }
 }
 
-fn runtime_profile_outcome_for_vec_result(
-    result: &Result<Vec<Expr>, EvalError>,
+fn runtime_profile_outcome_for_shared_args_result(
+    result: &Result<SharedArgs, EvalError>,
 ) -> RuntimeProfileOutcome {
     match result {
         Ok(_) => RuntimeProfileOutcome::Ok,

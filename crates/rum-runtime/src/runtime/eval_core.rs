@@ -696,7 +696,10 @@ impl Session {
         stage_index: usize,
     ) -> Result<Expr, EvalError> {
         if stage_index >= plan.len() {
-            return Ok(Expr::call(evaluated_head, state.into_final_args()));
+            return Ok(Expr::call_with_shared_args(
+                evaluated_head,
+                state.into_final_shared_args(),
+            ));
         }
 
         let stage = plan.stage(stage_index);

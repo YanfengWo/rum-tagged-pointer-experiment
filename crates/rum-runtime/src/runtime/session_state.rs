@@ -79,7 +79,7 @@ impl CallDispatchPlan {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(super) struct CallDispatchState {
     pub(super) raw_args: SharedArgs,
-    pub(super) evaluated_args: Option<Vec<Expr>>,
+    pub(super) evaluated_args: Option<SharedArgs>,
 }
 
 impl CallDispatchState {
@@ -92,13 +92,13 @@ impl CallDispatchState {
 
     pub(super) fn evaluated_args(&self) -> &[Expr] {
         self.evaluated_args
-            .as_deref()
+            .as_ref()
             .expect("call arguments should be prepared before this stage")
+            .as_ref()
     }
 
-    pub(super) fn into_final_args(self) -> Vec<Expr> {
-        self.evaluated_args
-            .unwrap_or_else(|| Expr::unwrap_shared_args(self.raw_args))
+    pub(super) fn into_final_shared_args(self) -> SharedArgs {
+        self.evaluated_args.unwrap_or(self.raw_args)
     }
 }
 

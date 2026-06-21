@@ -175,6 +175,72 @@ fn dispatch_stage_guards_preserve_value_and_builtin_semantics() {
 }
 
 #[test]
+fn argument_preparation_cow_preserves_dispatch_semantics() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session.eval_text("g[1 + 1]").unwrap().value.to_string(),
+        "g[2]"
+    );
+
+    session.eval_text("x = 5").unwrap();
+    assert_eq!(session.eval_text("h[x]").unwrap().value.to_string(), "h[5]");
+
+    assert_eq!(
+        session.eval_text("Hold[1 + 1]").unwrap().value.to_string(),
+        "Hold[Plus[1, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("If[True, a, b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "a"
+    );
+    assert_eq!(
+        session
+            .eval_text("f[Sequence[1, 2], 3]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[1, 2, 3]"
+    );
+
+    session.eval_text("SetAttributes[ff, Orderless]").unwrap();
+    assert_eq!(
+        session.eval_text("ff[2, 1]").unwrap().value.to_string(),
+        "ff[1, 2]"
+    );
+
+    session.eval_text("SetAttributes[flatf, Flat]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("flatf[a, flatf[b, c], d]")
+            .unwrap()
+            .value
+            .to_string(),
+        "flatf[a, b, c, d]"
+    );
+
+    let failure = session
+        .eval_request("wrap[InputString[\"arg: \"], Identity[2]]")
+        .expect_err("argument evaluation should suspend on InputString");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.kind, RuntimeInputKind::InputString);
+            assert_eq!(request.prompt, "arg: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("argument evaluation should resume and finish the call");
+    assert_eq!(response.value.to_string(), "wrap[\"done\", 2]");
+}
+
+#[test]
 fn flat_attribute_flattens_calls_and_matches_flat_patterns() {
     let mut session = Session::new();
 
