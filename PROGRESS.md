@@ -6,6 +6,42 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Pair 34x ROOT CAUSE: distributed eval-loop constant (match is 5%)
+
+Profiled the faithful failing-pattern dispatch (a pattern downvalue applied to
+FRESH non-matching args each iteration, so the stability cache cannot
+short-circuit — matching the Pair descent's fresh-subterm failing conversions).
+The cost is DISTRIBUTED across the per-call evaluation machinery, with no single
+hotspot and the failing MATCH itself only `5.3%`:
+
+| phase | share | mult |
+| --- | ---: | ---: |
+| `evaluate.total` (fixed-point loop) | `21.1%` | 2/call |
+| `evaluate.stability_check` | `7.4%` | 4/call |
+| `evaluate.once_unstable` | `7.1%` | 2/call |
+| `prepare_arguments.total` | `6.8%` | 1/call |
+| `evaluate_call.dispatch` | `5.9%` | 1/call |
+| `call.stage.down_values` (the actual failing match) | `5.3%` | 1/call |
+| (long distributed tail) | … | |
+
+**This is the final root cause of the Pair `34x`:** it is the persistent
+distributed per-call evaluation constant (the fixed-point loop running ~2x/call,
+~4 stability checks/call, argument prep, and dispatch drive glue) — the SAME
+constant `if-true` measures (B0) — compounded over the deep descent and amplified
+~1.7x by the WL control combinators. It is NOT the matcher (`5%`), NOT caching/
+inline-stamp (refuted, Task-3b), NOT node allocation (A3 did not translate to
+Pair), NOT Module frame setup (`module-local` `1.58x`). All single-hotspot
+theories are eliminated; the gap is genuinely the distributed eval-loop constant.
+
+**Biggest remaining lever:** the fixed-point evaluate-loop multiplicity — ~2
+full `evaluate` passes and ~4 stability checks per call. A failing/stable call
+(result structurally equal to input) is re-evaluated and re-checked more than
+necessary. Reducing redundant evaluate passes / stability checks per call is the
+next target, but it is eval-core surgery (the hottest loop), so it is
+higher-risk and the wins are incremental (~5-15% per cut, per the brief-003/005/
+007/008 history), and each must be downstream-validated (A3 showed a microbench
+win need not translate to Pair).
+
 ## 2026-06-21 Downstream re-measure: A3 did NOT move Pair; lever corrected
 
 Re-ran the bounded `basic-chain-orelsec-split` Pair unit post-A3 (the plan's
