@@ -6,6 +6,51 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Pair descent re-diagnosis (post-Layer-A), bounded two-engine
+
+Per the corrected direction (the `34x` is the per-call dispatch/eval constant in
+the conversion descent, not a cache/stamp problem), re-ran the bounded
+`basic-chain-orelsec-split` unit (19 productive basic rules, 200 reps) in BOTH
+rum and WK against the acceptance clone, no-profile. Logical work matches across
+engines (both: 19/20 failed rules, same `is_thm`/`changed`), so the gap is a
+pure per-op constant.
+
+**No-profile decomposition (reliable):**
+
+| segment | rum | WK | ratio | pre-Layer-A |
+| --- | ---: | ---: | ---: | ---: |
+| manual 19-rule loop (raw failed dispatch, no combinator) | `1.323s` | `0.352s` | `3.76x` | `4.7x` |
+| + ORELSEC chain | `1.755s` | `0.331s` | `5.31x` | — |
+| + REPEATC | `2.034s` | `0.349s` | `5.82x` | `5.9x` |
+| + TRYCONV (full base-conv pass) | `2.298s` | `0.351s` | `6.55x` | `6.4x` |
+
+So **Layer A cut the raw per-failed-dispatch constant `4.7x -> 3.76x` (~18%)**,
+confirming the Pair chain is dominated by the same per-call constant the
+primitive tier measures. The WL conversion-control combinators
+(ORELSEC/REPEATC/TRYCONV — curried, Module+Catch+down/sub-value defined) amplify
+`3.76x -> 6.55x` (~`1.7x`). The `34x` is this ~`6.5x` per-pass constant
+compounded over the deep descent.
+
+**Profile localization (SUGGESTIVE ONLY — profiling-inflated, needs no-profile
+confirmation):** a profiling-ON run of the control-combinator path ranks
+`sub_values.rhs_substitution`, `module.resume_initializers`, and
+`down_values.rhs_substitution` far above the dispatch glue (which Layer A +
+briefs 003-008 already cut). BUT those phases are densely instrumented, so their
+absolute self-time is inflated; do not treat the ranking as the true cost split.
+The substitution is ALREADY copy-on-write (`substitute_rule_bindings_changed`
+returns `Option`, reusing unchanged subtree Arcs), so any real cost there is the
+per-node WALK over large combinator bodies, not whole-body cloning. The
+combinators are Module-wrapped, so Module frame setup
+(`module.resume_initializers`) is paid per application.
+
+**Next step to pick the implementation target:** a NO-PROFILE isolation that
+separates the combinator amplification into its factors — SubValue/DownValue
+application dispatch vs Module frame setup vs the substitution walk — before
+committing a brief. The candidate levers (Module frame setup constant; the
+substitution-walk per-node constant) are both the per-call dispatch/eval
+constant in the conversion path; the ~1.7x combinator amplification is the
+prize to attribute.
+
 ## 2026-06-21 Inline stamp REFUTED (validation-first caught a known dead-end)
 
 Direction was set to pivot Layer B to the inline normal-form stamp as the
