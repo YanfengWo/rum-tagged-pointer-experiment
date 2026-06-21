@@ -200,11 +200,13 @@ impl Session {
             TaggedDefinitionTarget::DownValue(symbol) => {
                 let matcher = self.compile_matcher_for_expr(&lhs);
                 let matcher_attribute_revision = self.attribute_revision;
+                let lhs_is_ground = !expr_contains_pattern_syntax(strip_hold_pattern(&lhs));
                 let definition = self.definitions.entry(symbol.clone()).or_default();
                 let down_value = DownValue {
                     lhs: lhs.clone(),
                     rhs: rhs.clone(),
                     delayed,
+                    lhs_is_ground,
                     rhs_may_splice_without_bindings: rule_rhs_may_splice_without_bindings(&rhs),
                     matcher,
                     matcher_attribute_revision,

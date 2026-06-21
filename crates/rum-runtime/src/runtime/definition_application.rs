@@ -96,6 +96,47 @@ impl Session {
         record_profile_runtime_path_timing(runtime_profile_value, RuntimeProfileOutcome::Some);
 
         record_profile_definition_dispatch_candidate("down_value", &symbol);
+        if down_value.lhs_is_ground {
+            let matched = strip_hold_pattern(&down_value.lhs) == &normalized_candidate;
+            if !matched {
+                return self.try_apply_down_values_from_symbol(
+                    candidate,
+                    normalized_candidate,
+                    symbol,
+                    index + 1,
+                );
+            }
+
+            let (lhs, substituted) = {
+                let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
+                let substituted = substitute_rule_bindings_for_rhs(
+                    &down_value.rhs,
+                    &SymbolExprMap::default(),
+                    down_value.rhs_may_splice_without_bindings,
+                );
+                (down_value.lhs.clone(), substituted)
+            };
+            let option_scope = self.option_value_scope_for_definition(&lhs, &candidate);
+            self.push_rule_applied_trace(
+                RuleApplicationSource::DownValue,
+                &candidate,
+                &lhs,
+                &substituted,
+            );
+            self.record_profile_down_value_application(&symbol);
+            let _profile_definition_source = evaluation_profile_definition_source(symbol);
+            let profile_rule_start = definition_rule_timing_start();
+            let result = self.evaluate_definition_rhs(option_scope, substituted);
+            record_profile_definition_rule_timing(
+                "down_value_rhs_eval",
+                &symbol,
+                index,
+                profile_rule_start,
+                result.is_ok(),
+            );
+            return result.map(Some);
+        }
+
         let runtime_profile_prefilter = runtime_path_timing_start("down_values.prefilter");
         let prefilter_start = definition_dispatch_timing_start();
         let could_match = Self::definition_lhs_could_match_candidate(

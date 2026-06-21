@@ -687,6 +687,7 @@ pub struct DownValue {
     pub lhs: Expr,
     pub rhs: Expr,
     pub delayed: bool,
+    pub(super) lhs_is_ground: bool,
     pub(super) rhs_may_splice_without_bindings: bool,
     pub(super) matcher: MatcherNode,
     pub(super) matcher_attribute_revision: u64,
@@ -819,7 +820,7 @@ impl DownValueShallowArg {
     }
 }
 
-fn expr_contains_pattern_syntax(expr: &Expr) -> bool {
+pub(super) fn expr_contains_pattern_syntax(expr: &Expr) -> bool {
     if pattern_verbatim_inner(expr).is_some()
         || pattern_named_pattern(expr).is_some()
         || pattern_condition(expr).is_some()

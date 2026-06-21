@@ -98,6 +98,66 @@ fn literal_downvalue_is_prioritized_over_existing_typed_downvalue() {
 }
 
 #[test]
+fn exact_downvalue_dispatch_preserves_ground_and_pattern_semantics() {
+    let mut exact_session = Session::new();
+
+    exact_session.eval_text("f[1] = 10").unwrap();
+
+    assert_eq!(
+        exact_session.eval_text("f[1]").unwrap().value.to_string(),
+        "10"
+    );
+    assert_eq!(
+        exact_session.eval_text("f[2]").unwrap().value.to_string(),
+        "f[2]"
+    );
+
+    let mut precedence_session = Session::new();
+
+    precedence_session.eval_text("f[x_] := x + 1").unwrap();
+    precedence_session.eval_text("f[1] = 10").unwrap();
+
+    assert_eq!(
+        precedence_session
+            .eval_text("f[1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "10"
+    );
+    assert_eq!(
+        precedence_session
+            .eval_text("f[2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+
+    let mut delayed_session = Session::new();
+
+    delayed_session.eval_text("g[1] := 10").unwrap();
+
+    assert_eq!(
+        delayed_session.eval_text("g[1]").unwrap().value.to_string(),
+        "10"
+    );
+
+    let mut conditioned_session = Session::new();
+
+    conditioned_session.eval_text("h[1] /; True := 5").unwrap();
+
+    assert_eq!(
+        conditioned_session
+            .eval_text("h[1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "5"
+    );
+}
+
+#[test]
 fn redefining_same_upvalue_replaces_the_older_rule_in_place() {
     let mut session = Session::new();
 
