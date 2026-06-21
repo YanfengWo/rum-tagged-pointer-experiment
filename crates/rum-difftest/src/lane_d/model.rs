@@ -6,6 +6,7 @@ pub enum LaneDSuite {
     All,
     Timing,
     Memory,
+    CoreLanguage,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]

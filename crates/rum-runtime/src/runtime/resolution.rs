@@ -68,13 +68,14 @@ impl Session {
     }
 
     pub(super) fn builtin_spec_for_symbol(&self, symbol: &Symbol) -> Option<&BuiltinSpec> {
-        (symbol.context() == SYSTEM_CONTEXT)
-            .then(|| self.builtins.get(symbol.name()))
+        symbol
+            .is_system()
+            .then(|| self.builtins.get(symbol))
             .flatten()
     }
 
     pub(super) fn builtin_dispatch_spec_for_symbol(&self, symbol: &Symbol) -> Option<BuiltinSpec> {
-        if symbol.context() != SYSTEM_CONTEXT {
+        if !symbol.is_system() {
             return None;
         }
 
@@ -83,12 +84,12 @@ impl Session {
                 return Some(spec);
             }
 
-            return default_builtin_dispatch_spec(symbol.name())
+            return default_builtin_dispatch_spec_for_symbol(symbol)
                 .map(|fallback| spec.with_fallback_dispatch(fallback))
                 .or(Some(spec));
         }
 
-        default_builtin_dispatch_spec(symbol.name())
+        default_builtin_dispatch_spec_for_symbol(symbol)
     }
 
     pub(super) fn cached_builtin_dispatch_spec_for_symbol(

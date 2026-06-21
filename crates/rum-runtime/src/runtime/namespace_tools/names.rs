@@ -192,9 +192,7 @@ impl Session {
     fn enumerated_names_symbols(&self) -> BTreeSet<Symbol> {
         let mut symbols = BTreeSet::new();
 
-        for name in self.builtins.keys() {
-            symbols.insert(Symbol::system(name.as_str()));
-        }
+        symbols.extend(self.builtins.keys().copied());
 
         for name in rum_core::CANONICAL_CORE_HEADS {
             symbols.insert(Symbol::system(*name));

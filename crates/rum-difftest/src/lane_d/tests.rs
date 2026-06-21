@@ -17,10 +17,30 @@ fn runs_limited_timing_lane() {
 }
 
 #[test]
+fn runs_limited_core_language_lane() {
+    let summary = run(&LaneDOptions {
+        suite: LaneDSuite::CoreLanguage,
+        profile: LaneDProfile::Smoke,
+        limit: Some(2),
+    })
+    .unwrap();
+
+    assert_eq!(summary.executed, 2);
+    assert_eq!(summary.failed, 0);
+    assert_eq!(summary.cases[0].suite, "core-language");
+    assert_eq!(summary.cases[0].category.as_deref(), Some("core-loop"));
+}
+
+#[test]
 fn parses_lane_d_suite_names() {
     assert_eq!(parse_suite_name("all"), Some(LaneDSuite::All));
     assert_eq!(parse_suite_name("timing"), Some(LaneDSuite::Timing));
     assert_eq!(parse_suite_name("memory"), Some(LaneDSuite::Memory));
+    assert_eq!(
+        parse_suite_name("core-language"),
+        Some(LaneDSuite::CoreLanguage)
+    );
+    assert_eq!(parse_suite_name("core"), Some(LaneDSuite::CoreLanguage));
     assert_eq!(parse_suite_name("typo"), None);
 }
 

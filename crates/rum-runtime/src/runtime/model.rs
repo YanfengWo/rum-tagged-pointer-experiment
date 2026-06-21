@@ -298,7 +298,7 @@ impl MessageSelector {
 }
 
 pub struct Session {
-    pub(super) builtins: BTreeMap<String, BuiltinSpec>,
+    pub(super) builtins: BuiltinSpecMap,
     pub(super) attributes: AttributeMap,
     pub(super) attribute_revision: u64,
     pub(super) attribute_set_cache: AttributeSetCache,
@@ -306,8 +306,8 @@ pub struct Session {
     pub(super) evaluation_epoch: u64,
     pub(super) symbol_cache_generation: u64,
     pub(super) call_stability_generation: u64,
-    pub(super) stability_dirty_bloom: u128,
-    pub(super) stability_rewritten_dirty_bloom: u128,
+    pub(super) stability_dirty_bloom: StabilityBloom,
+    pub(super) stability_rewritten_dirty_bloom: StabilityBloom,
     pub(super) stable_symbol_cache: SymbolStabilityCache,
     pub(super) symbol_call_effect_cache: SymbolCallEffectCache,
     pub(super) call_stability_cache: CallStabilityCache,
@@ -318,6 +318,7 @@ pub struct Session {
     pub(super) symbol_generations: BTreeMap<(String, String), u64>,
     pub(super) once_values: BTreeMap<String, Expr>,
     pub(super) option_value_scopes: Vec<OptionValueScope>,
+    pub(super) dynamic_own_values: Vec<DynamicOwnValueFrame>,
     pub(super) current_context: String,
     pub(super) context_path: Vec<String>,
     pub(super) context_stack: Vec<ContextFrame>,
@@ -369,8 +370,6 @@ pub(super) struct SymbolStabilityCacheEntry {
 }
 
 pub(super) type SymbolCountMap = HashMap<Symbol, u32, BuildHasherDefault<RuntimeCacheHasher>>;
-
-/// Pattern/lexical binding maps: small, hot, order-independent.
 pub(in crate::runtime) type SymbolExprMap =
     HashMap<Symbol, Expr, BuildHasherDefault<RuntimeCacheHasher>>;
 
@@ -379,6 +378,9 @@ pub(super) type SymbolSet =
 
 pub(super) type DefinitionMap =
     HashMap<Symbol, SymbolDefinition, BuildHasherDefault<RuntimeCacheHasher>>;
+
+pub(super) type BuiltinSpecMap =
+    HashMap<Symbol, BuiltinSpec, BuildHasherDefault<RuntimeCacheHasher>>;
 
 pub(super) type AttributeMap =
     HashMap<Symbol, AttributeSet, BuildHasherDefault<RuntimeCacheHasher>>;
@@ -465,8 +467,39 @@ pub(super) struct CallStabilityCacheEntry {
     pub(super) head: SharedExpr,
     pub(super) args: SharedArgs,
     pub(super) stable: bool,
-    pub(super) bloom: u128,
-    pub(super) dirty_snapshot: u128,
+    pub(super) bloom: StabilityBloom,
+    pub(super) dirty_snapshot: StabilityBloom,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) struct StabilityBloom {
+    pub(super) regular: u128,
+    pub(super) generated: u128,
+}
+
+impl StabilityBloom {
+    pub(super) fn regular(bit: u128) -> Self {
+        Self {
+            regular: bit,
+            generated: 0,
+        }
+    }
+
+    pub(super) fn generated(bit: u128) -> Self {
+        Self {
+            regular: 0,
+            generated: bit,
+        }
+    }
+
+    pub(super) fn union_assign(&mut self, rhs: Self) {
+        self.regular |= rhs.regular;
+        self.generated |= rhs.generated;
+    }
+
+    pub(super) fn intersects(self, rhs: Self) -> bool {
+        (self.regular & rhs.regular) != 0 || (self.generated & rhs.generated) != 0
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

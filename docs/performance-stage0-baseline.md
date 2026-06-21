@@ -33,6 +33,19 @@ bash scripts/core-language-microbench.sh --engine rum --scale 1 --timeout 120
 The script disables rum profiling environment variables by default and runs
 engines through `scripts/run-bounded.py`.
 
+For a rum-local regression gate over the same primitive families, use Lane D:
+
+```bash
+cargo run -p rum-difftest -- lane-d \
+  --suite core-language \
+  --summary-json /tmp/rum-core-language-lane-d.json
+```
+
+This does not replace the cross-engine script. It keeps the current
+time-efficiency work inside `rum-difftest`'s baseline capture, comparison, and
+summary tooling so local optimizations can gain a checked rum baseline before
+or after a WolframKernel ratio run.
+
 ## Initial Label Set
 
 The first label set intentionally starts with ordinary language mechanics

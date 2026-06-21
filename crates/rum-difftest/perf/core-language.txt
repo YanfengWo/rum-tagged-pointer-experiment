@@ -1,0 +1,46 @@
+# Core-language timing inputs for Lane D.
+#
+# This suite mirrors the bottom-up targets in scripts/core-language-microbench.sh,
+# but it is intentionally rum-local: Lane D records elapsed time and node counts
+# for regression baselines, while the script remains the rum/WolframKernel ratio
+# probe.
+
+# @category: core-loop
+Null
+Do[Null, {5000}]
+Do[Null, {j, 1000}]
+
+# @category: core-table
+Table[Null, {5000}]
+Table[Null, {j, 1000}]
+Table[j, {j, 1000}]
+Table[j + 1, {j, 1000}]
+Table[{j, j}, {j, 1000}]
+Table[i, {i, 1, 5}]
+
+# @category: core-block
+Block[{x = 1}, x + 1]
+Do[Block[{b}, Null], {1000}]
+Do[Block[{b = 1}, Null], {1000}]
+Do[Block[{b = 1}, b], {1000}]
+
+# @category: core-structure
+Module[{x = 1}, x + 1]
+With[{x = 1}, x + 1]
+Length[{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}]
+Part[{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, 5]
+SameQ[1, 1]
+SameQ[{0, 1, 2}, {0, 1, 2}]
+
+# @category: core-dispatch
+ClearAll[rumLaneDExact]; rumLaneDExact[1] = 2; Do[rumLaneDExact[1], {1000}]
+ClearAll[rumLaneDExact]; rumLaneDExact[1] = 2; Do[rumLaneDExact[2], {1000}]
+ClearAll[rumLaneDPattern]; rumLaneDPattern[x_Integer] := x + 1; Do[rumLaneDPattern[1], {1000}]
+ClearAll[rumLaneDPattern]; rumLaneDPattern[x_Integer] := x + 1; Do[rumLaneDPattern["x"], {1000}]
+MatchQ[1, _Integer]
+MatchQ["x", _Integer]
+a /. {a -> 1, b -> 2, c -> 3}
+
+# @category: core-string
+StringRepeat["a", 3]
+CharacterRange["a", "z"]

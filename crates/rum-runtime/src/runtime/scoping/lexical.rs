@@ -55,7 +55,17 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("Module", args, 2));
         }
 
-        let config = match self.compile_scoped_call_from_raw_args(args) {
+        let runtime_profile_compile = runtime_path_timing_start("module.compile_bindings");
+        let config_result = self.compile_scoped_call_from_raw_args(args);
+        record_profile_runtime_path_timing(
+            runtime_profile_compile,
+            if config_result.is_ok() {
+                RuntimeProfileOutcome::Ok
+            } else {
+                RuntimeProfileOutcome::Error
+            },
+        );
+        let config = match config_result {
             Ok(config) => config,
             Err(error) => {
                 return Ok(self.invalid_call_with_arg_form("Module", args, error.message()));
@@ -65,25 +75,14 @@ impl Session {
 
         let mut renames = SymbolExprMap::default();
 
+        let runtime_profile_allocate = runtime_path_timing_start("module.allocate_fresh_symbols");
         for (symbol, _) in &items {
             renames.insert(
                 symbol.clone(),
                 Expr::Atom(Atom::Symbol(self.allocate_fresh_symbol(symbol))),
             );
         }
-
-        for (symbol, _init) in &items {
-            let Some(fresh_expr) = renames.get(&symbol) else {
-                continue;
-            };
-            let Some(fresh_symbol) = expr_as_symbol(fresh_expr).cloned() else {
-                continue;
-            };
-
-            let definition = self.definitions.entry(fresh_symbol.clone()).or_default();
-            definition.own_value = None;
-            definition.delayed_own_value = None;
-        }
+        record_profile_runtime_path_timing(runtime_profile_allocate, RuntimeProfileOutcome::Ok);
 
         let runtime_profile_total = runtime_path_timing_start("module.eval.total");
         let result = self.resume_module_initializers(items, args[1].clone(), renames, 0);
@@ -108,6 +107,14 @@ impl Session {
             }
         };
         let items = config.items;
+
+        if items.len() == 1 {
+            let (symbol, init) = items
+                .into_iter()
+                .next()
+                .expect("single Block item should exist");
+            return self.eval_single_symbol_block(symbol, init, args[1].clone());
+        }
 
         let saved_state = self.capture_block_symbol_states(
             &items
@@ -139,7 +146,122 @@ impl Session {
             self.rebuild_message_symbol_counts();
         }
 
-        self.resume_block_initializers(items, args[1].clone(), saved_state, 0)
+        let dynamic_depth = self.push_block_dynamic_shadow_bindings(&items);
+        self.resume_block_initializers(items, args[1].clone(), saved_state, dynamic_depth, 0)
+    }
+
+    fn eval_single_symbol_block(
+        &mut self,
+        symbol: Symbol,
+        init: Option<Expr>,
+        body: Expr,
+    ) -> Result<Expr, EvalError> {
+        let saved_state = self.capture_single_block_symbol_state(&symbol);
+        self.clear_single_block_symbol_state(&symbol, &saved_state);
+        let dynamic_depth = self.push_dynamic_own_value_binding(symbol, None);
+
+        if let Some(init) = init {
+            let init_result = self.evaluate(init);
+            let outcome = self.suspend_with_result_frame(init_result, {
+                let saved_state = saved_state.clone();
+                let body = body.clone();
+                move |session, outcome| {
+                    session.resume_single_symbol_block_after_initializer(
+                        symbol,
+                        body,
+                        saved_state,
+                        dynamic_depth,
+                        outcome,
+                    )
+                }
+            });
+
+            return match outcome {
+                Err(EvalError::InputRequired { request }) => {
+                    Err(EvalError::InputRequired { request })
+                }
+                outcome => self.resume_single_symbol_block_after_initializer(
+                    symbol,
+                    body,
+                    saved_state,
+                    dynamic_depth,
+                    outcome,
+                ),
+            };
+        }
+
+        self.resume_single_symbol_block_body(symbol, body, saved_state, dynamic_depth)
+    }
+
+    fn push_block_dynamic_shadow_bindings(&mut self, items: &[(Symbol, Option<Expr>)]) -> usize {
+        let dynamic_depth = self.dynamic_own_values.len();
+        for (symbol, _) in items {
+            self.push_dynamic_own_value_binding(*symbol, None);
+        }
+        dynamic_depth
+    }
+
+    fn capture_single_block_symbol_state(&self, symbol: &Symbol) -> BlockSymbolState {
+        BlockSymbolState {
+            definition: self.definitions.get(symbol).cloned(),
+            attributes: self.attributes.get(symbol).copied(),
+            options: self.options.get(symbol).cloned(),
+            syntax_information: self.syntax_information.get(symbol).cloned(),
+            messages: self.single_symbol_message_definitions(symbol),
+        }
+    }
+
+    fn single_symbol_message_definitions(
+        &self,
+        symbol: &Symbol,
+    ) -> Vec<(MessageNameKey, MessageDefinition)> {
+        if self
+            .message_symbol_counts
+            .get(symbol)
+            .copied()
+            .unwrap_or_default()
+            == 0
+        {
+            return Vec::new();
+        }
+
+        self.message_definitions
+            .iter()
+            .filter(|(key, _)| key.symbol == *symbol)
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect()
+    }
+
+    fn clear_single_block_symbol_state(&mut self, symbol: &Symbol, saved_state: &BlockSymbolState) {
+        let removed_up_values = saved_state
+            .definition
+            .as_ref()
+            .is_some_and(|definition| !definition.up_values.is_empty());
+
+        if self.definitions.remove(symbol).is_some() {
+            self.bump_evaluation_epoch_for_symbol(symbol);
+        }
+        if removed_up_values {
+            self.refresh_has_up_value_definitions();
+        }
+
+        if self.attributes.remove(symbol).is_some() {
+            self.bump_attribute_revision();
+        }
+        self.options.remove(symbol);
+        self.syntax_information.remove(symbol);
+
+        if self
+            .message_symbol_counts
+            .get(symbol)
+            .copied()
+            .unwrap_or_default()
+            > 0
+        {
+            self.message_definitions
+                .retain(|key, _| key.symbol != *symbol);
+            self.rebuild_message_symbol_counts();
+        }
     }
 
     fn capture_block_symbol_states(
@@ -347,10 +469,11 @@ impl Session {
         items: Vec<(Symbol, Option<Expr>)>,
         body: Expr,
         saved_state: BTreeMap<Symbol, BlockSymbolState>,
+        dynamic_depth: usize,
         index: usize,
     ) -> Result<Expr, EvalError> {
         if index >= items.len() {
-            return self.resume_block_body(body, saved_state);
+            return self.resume_block_body(body, saved_state, dynamic_depth);
         }
 
         let (symbol, init) = items[index].clone();
@@ -366,6 +489,7 @@ impl Session {
                         items,
                         body,
                         saved_state,
+                        dynamic_depth,
                         index,
                         symbol,
                         outcome,
@@ -381,6 +505,7 @@ impl Session {
                     items,
                     body,
                     saved_state,
+                    dynamic_depth,
                     index,
                     symbol,
                     outcome,
@@ -388,7 +513,7 @@ impl Session {
             };
         }
 
-        self.resume_block_initializers(items, body, saved_state, index + 1)
+        self.resume_block_initializers(items, body, saved_state, dynamic_depth, index + 1)
     }
 
     fn resume_block_after_initializer(
@@ -396,6 +521,7 @@ impl Session {
         items: Vec<(Symbol, Option<Expr>)>,
         body: Expr,
         saved_state: BTreeMap<Symbol, BlockSymbolState>,
+        dynamic_depth: usize,
         index: usize,
         symbol: Symbol,
         outcome: Result<Expr, EvalError>,
@@ -406,12 +532,147 @@ impl Session {
                 definition.own_value = Some(value);
                 definition.delayed_own_value = None;
                 self.bump_evaluation_epoch_for_symbol(&symbol);
-                self.resume_block_initializers(items, body, saved_state, index + 1)
+                self.resume_block_initializers(items, body, saved_state, dynamic_depth, index + 1)
             }
             Err(error) => {
+                self.truncate_dynamic_own_value_bindings(dynamic_depth);
                 self.restore_block_symbol_states(saved_state);
                 Err(error)
             }
+        }
+    }
+
+    fn resume_single_symbol_block_after_initializer(
+        &mut self,
+        symbol: Symbol,
+        body: Expr,
+        saved_state: BlockSymbolState,
+        dynamic_depth: usize,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) => {
+                let definition = self.definitions.entry(symbol).or_default();
+                definition.own_value = Some(value);
+                definition.delayed_own_value = None;
+                self.bump_evaluation_epoch_for_symbol(&symbol);
+                self.resume_single_symbol_block_body(symbol, body, saved_state, dynamic_depth)
+            }
+            Err(error) => {
+                self.truncate_dynamic_own_value_bindings(dynamic_depth);
+                self.restore_single_block_symbol_state(symbol, saved_state);
+                Err(error)
+            }
+        }
+    }
+
+    fn resume_single_symbol_block_body(
+        &mut self,
+        symbol: Symbol,
+        body: Expr,
+        saved_state: BlockSymbolState,
+        dynamic_depth: usize,
+    ) -> Result<Expr, EvalError> {
+        let body_result = self.evaluate(body);
+        let outcome = self.suspend_with_result_frame(body_result, {
+            let saved_state = saved_state.clone();
+            move |session, outcome| {
+                session.finish_single_symbol_block_scope(
+                    symbol,
+                    saved_state,
+                    dynamic_depth,
+                    outcome,
+                )
+            }
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => {
+                self.finish_single_symbol_block_scope(symbol, saved_state, dynamic_depth, outcome)
+            }
+        }
+    }
+
+    fn finish_single_symbol_block_scope(
+        &mut self,
+        symbol: Symbol,
+        saved_state: BlockSymbolState,
+        dynamic_depth: usize,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        self.truncate_dynamic_own_value_bindings(dynamic_depth);
+        self.restore_single_block_symbol_state(symbol, saved_state);
+        outcome
+    }
+
+    fn restore_single_block_symbol_state(&mut self, symbol: Symbol, saved_state: BlockSymbolState) {
+        let current_had_up_values = self
+            .definitions
+            .get(&symbol)
+            .is_some_and(|definition| !definition.up_values.is_empty());
+        let restored_has_up_values = saved_state
+            .definition
+            .as_ref()
+            .is_some_and(|definition| !definition.up_values.is_empty());
+
+        match saved_state.definition {
+            Some(definition) => {
+                self.definitions.insert(symbol, definition);
+            }
+            None => {
+                self.definitions.remove(&symbol);
+            }
+        }
+        self.bump_evaluation_epoch_for_symbol(&symbol);
+
+        if current_had_up_values || restored_has_up_values {
+            self.refresh_has_up_value_definitions();
+        }
+
+        let current_attributes = self.attributes.get(&symbol).copied();
+        if current_attributes != saved_state.attributes {
+            match saved_state.attributes {
+                Some(attributes) => {
+                    self.attributes.insert(symbol, attributes);
+                }
+                None => {
+                    self.attributes.remove(&symbol);
+                }
+            }
+            self.bump_attribute_revision();
+        }
+
+        match saved_state.options {
+            Some(options) => {
+                self.options.insert(symbol, options);
+            }
+            None => {
+                self.options.remove(&symbol);
+            }
+        }
+
+        match saved_state.syntax_information {
+            Some(syntax_information) => {
+                self.syntax_information.insert(symbol, syntax_information);
+            }
+            None => {
+                self.syntax_information.remove(&symbol);
+            }
+        }
+
+        let current_message_count = self
+            .message_symbol_counts
+            .get(&symbol)
+            .copied()
+            .unwrap_or_default();
+        if current_message_count > 0 || !saved_state.messages.is_empty() {
+            self.message_definitions
+                .retain(|key, _| key.symbol != symbol);
+            for (key, definition) in saved_state.messages {
+                self.message_definitions.insert(key, definition);
+            }
+            self.rebuild_message_symbol_counts();
         }
     }
 
@@ -419,24 +680,27 @@ impl Session {
         &mut self,
         body: Expr,
         saved_state: BTreeMap<Symbol, BlockSymbolState>,
+        dynamic_depth: usize,
     ) -> Result<Expr, EvalError> {
         let body_result = self.evaluate(body);
         let outcome = self.suspend_with_result_frame(body_result, {
             let saved_state = saved_state.clone();
-            move |session, outcome| session.finish_block_scope(saved_state, outcome)
+            move |session, outcome| session.finish_block_scope(saved_state, dynamic_depth, outcome)
         });
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => self.finish_block_scope(saved_state, outcome),
+            outcome => self.finish_block_scope(saved_state, dynamic_depth, outcome),
         }
     }
 
     fn finish_block_scope(
         &mut self,
         saved_state: BTreeMap<Symbol, BlockSymbolState>,
+        dynamic_depth: usize,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
+        self.truncate_dynamic_own_value_bindings(dynamic_depth);
         self.restore_block_symbol_states(saved_state);
         outcome
     }

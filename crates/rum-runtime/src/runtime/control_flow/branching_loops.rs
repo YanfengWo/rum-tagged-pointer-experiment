@@ -22,13 +22,14 @@ impl Session {
             );
         }
 
-        let condition_result = self.evaluate(args[0].clone());
-        let condition = self.suspend_with_frame(condition_result, {
-            let args = args.to_vec();
+        let args_vec = args.to_vec();
+        let condition_result = self.evaluate(args_vec[0].clone());
+        let condition = self.suspend_with_frame_lazy(condition_result, || {
+            let args = args_vec.clone();
             move |session, condition| session.resume_if_after_condition(args, condition)
         })?;
 
-        self.resume_if_after_condition(args.to_vec(), condition)
+        self.resume_if_after_condition(args_vec, condition)
     }
 
     pub(in crate::runtime) fn eval_which(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -95,11 +96,22 @@ impl Session {
     }
 
     fn resume_while_test(&mut self, args: Vec<Expr>) -> Result<Expr, EvalError> {
+        let runtime_profile_test = runtime_path_timing_start("while.test.evaluate");
         let test_result = self.evaluate(args[0].clone());
-        let test = self.suspend_with_frame(test_result, {
+        record_profile_runtime_path_timing(
+            runtime_profile_test,
+            runtime_profile_outcome_for_expr_result(&test_result),
+        );
+        let runtime_profile_suspend = runtime_path_timing_start("while.test.suspend");
+        let test_result = self.suspend_with_frame_lazy(test_result, || {
             let args = args.clone();
             move |session, test| session.resume_while_after_test(args, test)
-        })?;
+        });
+        record_profile_runtime_path_timing(
+            runtime_profile_suspend,
+            runtime_profile_outcome_for_expr_result(&test_result),
+        );
+        let test = test_result?;
 
         self.resume_while_after_test(args, test)
     }
@@ -110,11 +122,21 @@ impl Session {
         }
 
         let body = args.get(1).cloned().unwrap_or_else(|| system_expr("Null"));
+        let runtime_profile_body = runtime_path_timing_start("while.body.evaluate");
         let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame(body_result, {
+        record_profile_runtime_path_timing(
+            runtime_profile_body,
+            runtime_profile_outcome_for_expr_result(&body_result),
+        );
+        let runtime_profile_suspend = runtime_path_timing_start("while.body.suspend");
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
             let args = args.clone();
             move |session, outcome| session.resume_while_after_body(args, outcome)
         });
+        record_profile_runtime_path_timing(
+            runtime_profile_suspend,
+            runtime_profile_outcome_for_expr_result(&outcome),
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -285,13 +307,23 @@ impl Session {
             return Ok(system_expr("Null"));
         };
 
+        let runtime_profile_item = runtime_path_timing_start("compound.item.evaluate");
         let current_result = self.evaluate(current);
+        record_profile_runtime_path_timing(
+            runtime_profile_item,
+            runtime_profile_outcome_for_expr_result(&current_result),
+        );
+        let runtime_profile_suspend = runtime_path_timing_start("compound.item.suspend");
         let outcome = self.suspend_with_result_frame_lazy(current_result, || {
             let args = args.clone();
             move |session, outcome| {
                 session.resume_compound_expression_after_item(args, index, outcome)
             }
         });
+        record_profile_runtime_path_timing(
+            runtime_profile_suspend,
+            runtime_profile_outcome_for_expr_result(&outcome),
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -379,5 +411,19 @@ impl Session {
                 session.resume_switch_from_index(args, subject, index + 2)
             }
         })
+    }
+}
+
+fn runtime_profile_outcome_for_expr_result(
+    result: &Result<Expr, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(_) => RuntimeProfileOutcome::Ok,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
     }
 }

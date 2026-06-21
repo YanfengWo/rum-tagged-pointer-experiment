@@ -12,6 +12,12 @@ enum IterationConsumer {
     Table,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum IteratorListTemplateArg {
+    Iterator,
+    Constant(Expr),
+}
+
 impl DoSpec {
     fn iteration_count(&self) -> usize {
         match self {
@@ -161,6 +167,14 @@ impl Session {
         spec_index: usize,
         spec_expr: Expr,
     ) -> Result<Expr, EvalError> {
+        if spec_index + 2 >= args.len() {
+            if let Some(result) =
+                eval_single_spec_constant_table_fast_path(self, &args[0], &spec_expr)?
+            {
+                return Ok(result);
+            }
+        }
+
         let spec = match parse_do_spec(self, &spec_expr, IterationConsumer::Table)? {
             Some(spec) => spec,
             None => {
@@ -172,6 +186,20 @@ impl Session {
             }
         };
         let capacity = spec.iteration_count();
+        if spec_index + 2 >= args.len() {
+            match eval_single_spec_table_fast_path(self, &args[0], spec) {
+                Ok(result) => return Ok(result),
+                Err(spec_after_fast_path) => {
+                    return self.resume_table_iterations(
+                        args,
+                        spec_index,
+                        spec_after_fast_path,
+                        0,
+                        Vec::with_capacity(capacity),
+                    );
+                }
+            }
+        }
 
         self.resume_table_iterations(args, spec_index, spec, 0, Vec::with_capacity(capacity))
     }
@@ -244,6 +272,10 @@ impl Session {
         value: Expr,
         body: Expr,
     ) -> Result<Expr, EvalError> {
+        if self.dynamic_scope_symbol_state_is_clean(&symbol) {
+            return self.evaluate_loop_iterator_body_with_dynamic_value(symbol, value, body);
+        }
+
         let saved_state = self.capture_loop_iterator_symbol_state(&symbol);
         self.install_loop_iterator_symbol_value(&symbol, value, &saved_state);
 
@@ -257,6 +289,35 @@ impl Session {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
             outcome => self.finish_loop_iterator_scope(symbol, saved_state, outcome),
         }
+    }
+
+    fn evaluate_loop_iterator_body_with_dynamic_value(
+        &mut self,
+        symbol: Symbol,
+        value: Expr,
+        body: Expr,
+    ) -> Result<Expr, EvalError> {
+        let dynamic_depth = self.push_dynamic_own_value_binding(symbol, Some(value));
+        let body_result = self.evaluate(body);
+        let outcome = self.suspend_with_result_frame(body_result, move |session, outcome| {
+            session.finish_loop_iterator_dynamic_scope(symbol, dynamic_depth, outcome)
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            outcome => self.finish_loop_iterator_dynamic_scope(symbol, dynamic_depth, outcome),
+        }
+    }
+
+    fn finish_loop_iterator_dynamic_scope(
+        &mut self,
+        symbol: Symbol,
+        dynamic_depth: usize,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        self.truncate_dynamic_own_value_bindings(dynamic_depth);
+        self.clear_dynamic_scope_symbol_side_effects(&symbol);
+        outcome
     }
 
     fn capture_loop_iterator_symbol_state(&self, symbol: &Symbol) -> BlockSymbolState {
@@ -507,6 +568,316 @@ fn build_iteration_body_or_nested(args: &[Expr], spec_index: usize, nested_head:
     }
 }
 
+fn eval_single_spec_constant_table_fast_path(
+    session: &Session,
+    body: &Expr,
+    spec_expr: &Expr,
+) -> Result<Option<Expr>, EvalError> {
+    if !table_fast_path_preserves_observability(session)
+        || !table_body_is_repeated_constant(session, body)
+    {
+        return Ok(None);
+    }
+
+    let Some(count) = parse_do_spec_iteration_count(session, spec_expr, IterationConsumer::Table)?
+    else {
+        return Ok(None);
+    };
+
+    Ok(Some(Expr::call(
+        system_expr("List"),
+        vec![body.clone(); count],
+    )))
+}
+
+fn eval_single_spec_table_fast_path(
+    session: &Session,
+    body: &Expr,
+    spec: DoSpec,
+) -> Result<Expr, DoSpec> {
+    if !table_fast_path_preserves_observability(session) {
+        return Err(spec);
+    }
+
+    if table_body_is_repeated_constant(session, body) {
+        return Ok(Expr::call(
+            system_expr("List"),
+            vec![body.clone(); spec.iteration_count()],
+        ));
+    }
+
+    let DoSpec::Iterator { symbol, values } = spec else {
+        return Err(spec);
+    };
+    if expr_as_symbol(body).is_some_and(|body_symbol| *body_symbol == symbol) {
+        return Ok(Expr::call(system_expr("List"), values));
+    }
+
+    match eval_single_spec_integer_plus_table_fast_path(session, body, symbol, values) {
+        Ok(result) => Ok(result),
+        Err(DoSpec::Iterator { symbol, values }) => {
+            eval_single_spec_integer_list_template_table_fast_path(session, body, symbol, values)
+        }
+        Err(spec) => Err(spec),
+    }
+}
+
+fn eval_single_spec_integer_plus_table_fast_path(
+    session: &Session,
+    body: &Expr,
+    symbol: Symbol,
+    values: Vec<Expr>,
+) -> Result<Expr, DoSpec> {
+    let Some(offset) = iterator_integer_plus_offset(session, body, &symbol) else {
+        return Err(DoSpec::Iterator { symbol, values });
+    };
+    if !values
+        .iter()
+        .all(|value| matches!(value, Expr::Atom(Atom::Integer(_))))
+    {
+        return Err(DoSpec::Iterator { symbol, values });
+    }
+
+    let items = values
+        .into_iter()
+        .map(|value| match value {
+            Expr::Atom(Atom::Integer(integer)) => Expr::integer(integer + offset.clone()),
+            _ => unreachable!("values were prechecked as integers"),
+        })
+        .collect();
+    Ok(Expr::call(system_expr("List"), items))
+}
+
+fn eval_single_spec_integer_list_template_table_fast_path(
+    session: &Session,
+    body: &Expr,
+    symbol: Symbol,
+    values: Vec<Expr>,
+) -> Result<Expr, DoSpec> {
+    let Some(template) = iterator_integer_list_template(session, body, &symbol) else {
+        return Err(DoSpec::Iterator { symbol, values });
+    };
+    if !values
+        .iter()
+        .all(|value| matches!(value, Expr::Atom(Atom::Integer(_))))
+    {
+        return Err(DoSpec::Iterator { symbol, values });
+    }
+
+    let list_head = SharedExpr::new(system_expr("List"));
+    let items = values
+        .into_iter()
+        .map(|value| instantiate_integer_list_template(&template, value, &list_head))
+        .collect();
+    Ok(Expr::call_shared(list_head, SharedArgs::new(items)))
+}
+
+fn iterator_integer_list_template(
+    session: &Session,
+    body: &Expr,
+    symbol: &Symbol,
+) -> Option<Vec<IteratorListTemplateArg>> {
+    if !system_builtin_symbol_has_default_runtime_semantics(session, "List") {
+        return None;
+    }
+
+    let Expr::Call { head, args } = body else {
+        return None;
+    };
+    if !is_system_symbol_name(head, "List")
+        || !args
+            .iter()
+            .all(|arg| iterator_list_template_arg_is_plain(arg, symbol))
+    {
+        return None;
+    }
+
+    args.iter()
+        .map(|arg| iterator_list_template_arg(arg, symbol))
+        .collect()
+}
+
+fn iterator_list_template_arg(arg: &Expr, symbol: &Symbol) -> Option<IteratorListTemplateArg> {
+    if expr_as_symbol(arg).is_some_and(|arg_symbol| arg_symbol == symbol) {
+        return Some(IteratorListTemplateArg::Iterator);
+    }
+    iteration_body_is_self_evaluating_atom(arg)
+        .then(|| IteratorListTemplateArg::Constant(arg.clone()))
+}
+
+fn iterator_list_template_arg_is_plain(arg: &Expr, symbol: &Symbol) -> bool {
+    iterator_list_template_arg(arg, symbol).is_some()
+}
+
+fn instantiate_integer_list_template(
+    template: &[IteratorListTemplateArg],
+    value: Expr,
+    list_head: &SharedExpr,
+) -> Expr {
+    let mut remaining_iterator_slots = template
+        .iter()
+        .filter(|arg| matches!(arg, IteratorListTemplateArg::Iterator))
+        .count();
+    let mut value = Some(value);
+    let items = template
+        .iter()
+        .map(|arg| match arg {
+            IteratorListTemplateArg::Iterator => {
+                remaining_iterator_slots -= 1;
+                if remaining_iterator_slots == 0 {
+                    value.take().expect("last iterator slot consumes value")
+                } else {
+                    value
+                        .as_ref()
+                        .expect("iterator value remains available before last slot")
+                        .clone()
+                }
+            }
+            IteratorListTemplateArg::Constant(expr) => expr.clone(),
+        })
+        .collect();
+    Expr::call_shared(list_head.clone(), SharedArgs::new(items))
+}
+
+fn iterator_integer_plus_offset(session: &Session, body: &Expr, symbol: &Symbol) -> Option<BigInt> {
+    if !system_builtin_symbol_has_default_runtime_semantics(session, "Plus") {
+        return None;
+    }
+
+    let Expr::Call { head, args } = body else {
+        return None;
+    };
+    if !is_system_symbol_name(head, "Plus") || args.len() != 2 {
+        return None;
+    }
+
+    match args.as_slice() {
+        [lhs, rhs] if expr_as_symbol(lhs).is_some_and(|lhs_symbol| lhs_symbol == symbol) => {
+            expr_as_exact_integer(rhs)
+        }
+        [lhs, rhs] if expr_as_symbol(rhs).is_some_and(|rhs_symbol| rhs_symbol == symbol) => {
+            expr_as_exact_integer(lhs)
+        }
+        _ => None,
+    }
+}
+
+fn system_builtin_symbol_has_default_runtime_semantics(session: &Session, name: &str) -> bool {
+    let symbol = Symbol::system(name);
+    session.attribute_set_for_symbol(&symbol) == default_system_attribute_set(&symbol)
+        && session
+            .definitions
+            .get(&symbol)
+            .is_none_or(SymbolDefinition::is_empty)
+        && !session
+            .dynamic_own_values
+            .iter()
+            .any(|frame| frame.symbol == symbol)
+        && !session.removed_symbols.contains(&symbol)
+}
+
+fn table_fast_path_preserves_observability(session: &Session) -> bool {
+    !session.tracing_enabled
+        && (session.monitor_scopes.is_empty() || !session.monitor_callbacks_enabled)
+}
+
+fn table_body_is_repeated_constant(session: &Session, expr: &Expr) -> bool {
+    iteration_body_is_self_evaluating_atom(expr)
+        || expr_as_symbol(expr).is_some_and(|symbol| {
+            symbol.context() == SYSTEM_CONTEXT
+                && matches!(symbol.name(), "Null" | "True" | "False")
+                && system_builtin_symbol_has_default_runtime_semantics(session, symbol.name())
+        })
+}
+
+fn iteration_body_is_self_evaluating_atom(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Atom(Atom::Integer(_) | Atom::Rational(_) | Atom::String(_))
+    )
+}
+
+fn parse_do_spec_iteration_count(
+    session: &Session,
+    expr: &Expr,
+    consumer: IterationConsumer,
+) -> Result<Option<usize>, EvalError> {
+    if let Some(count) = expr_as_non_negative_bigint(expr) {
+        return Ok(Some(checked_iteration_count(session, &count, consumer)?));
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return Ok(None);
+    };
+
+    if !is_system_symbol_name(head, heads::structure::LIST) {
+        return Ok(None);
+    }
+
+    Ok(match args.as_slice() {
+        [count_expr] => {
+            let Some(count) = expr_as_non_negative_bigint(count_expr) else {
+                return Ok(None);
+            };
+            Some(checked_iteration_count(session, &count, consumer)?)
+        }
+        [symbol_expr, values_expr] => {
+            let Some(_symbol) = parse_held_loop_symbol(symbol_expr) else {
+                return Ok(None);
+            };
+
+            if let Expr::Call { head, args } = values_expr {
+                if is_system_symbol_name(head, heads::structure::LIST) {
+                    let count = BigInt::from(args.len());
+                    return Ok(Some(checked_iteration_count(session, &count, consumer)?));
+                }
+            }
+
+            let Some(end) = expr_as_signed_bigint(values_expr) else {
+                return Ok(None);
+            };
+            checked_integer_range_iteration_count(
+                session,
+                &BigInt::from(1_u8),
+                &end,
+                &BigInt::from(1_u8),
+                consumer,
+            )?
+        }
+        [symbol_expr, start_expr, end_expr] => {
+            let (Some(_symbol), Some(start), Some(end)) = (
+                parse_held_loop_symbol(symbol_expr),
+                expr_as_signed_bigint(start_expr),
+                expr_as_signed_bigint(end_expr),
+            ) else {
+                return Ok(None);
+            };
+            checked_integer_range_iteration_count(
+                session,
+                &start,
+                &end,
+                &BigInt::from(1_u8),
+                consumer,
+            )?
+        }
+        [symbol_expr, start_expr, end_expr, step_expr] => {
+            let (Some(_symbol), Some(start), Some(end), Some(step)) = (
+                parse_held_loop_symbol(symbol_expr),
+                expr_as_signed_bigint(start_expr),
+                expr_as_signed_bigint(end_expr),
+                expr_as_signed_bigint(step_expr),
+            ) else {
+                return Ok(None);
+            };
+            if step == BigInt::from(0_u8) {
+                return Ok(None);
+            }
+            checked_integer_range_iteration_count(session, &start, &end, &step, consumer)?
+        }
+        _ => None,
+    })
+}
+
 fn parse_held_loop_symbol(expr: &Expr) -> Option<Symbol> {
     match expr {
         Expr::Call { head, args } if is_system_symbol_name(head, "Hold") && args.len() == 1 => {
@@ -549,6 +920,19 @@ fn checked_integer_range_values(
     };
     let count = checked_iteration_count(session, &count, consumer)?;
     Ok(integer_range_values(start, step, count))
+}
+
+fn checked_integer_range_iteration_count(
+    session: &Session,
+    start: &BigInt,
+    end: &BigInt,
+    step: &BigInt,
+    consumer: IterationConsumer,
+) -> Result<Option<usize>, EvalError> {
+    let Some(count) = integer_range_count(start, end, step) else {
+        return Ok(None);
+    };
+    Ok(Some(checked_iteration_count(session, &count, consumer)?))
 }
 
 fn checked_iteration_count(

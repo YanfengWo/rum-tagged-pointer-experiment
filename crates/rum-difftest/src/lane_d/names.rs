@@ -5,6 +5,7 @@ pub fn suite_name(suite: LaneDSuite) -> &'static str {
         LaneDSuite::All => "all",
         LaneDSuite::Timing => "timing",
         LaneDSuite::Memory => "memory",
+        LaneDSuite::CoreLanguage => "core-language",
     }
 }
 
@@ -28,6 +29,7 @@ pub fn parse_suite_name(name: &str) -> Option<LaneDSuite> {
         "all" => Some(LaneDSuite::All),
         "timing" => Some(LaneDSuite::Timing),
         "memory" => Some(LaneDSuite::Memory),
+        "core-language" | "core" => Some(LaneDSuite::CoreLanguage),
         _ => None,
     }
 }

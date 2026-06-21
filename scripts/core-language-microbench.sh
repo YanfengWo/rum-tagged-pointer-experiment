@@ -206,6 +206,7 @@ rumMicroBench["loop-empty", rumMicroN[5000], Null];
 rumMicroOnce["do-count-null", rumMicroN[10000], Do[Null, {10000 * rumMicroScale}]];
 rumMicroOnce["do-iterator-null", rumMicroN[1000], Do[Null, {j, 1000 * rumMicroScale}]];
 rumMicroOnce["table-count-null", rumMicroN[5000], Table[Null, {5000 * rumMicroScale}]];
+rumMicroOnce["table-iterator-null", rumMicroN[1000], Table[Null, {j, 1000 * rumMicroScale}]];
 rumMicroOnce["table-iterator-symbol", rumMicroN[1000], Table[j, {j, 1000 * rumMicroScale}]];
 
 rumMicroBench["literal-integer", rumMicroN[2000], 123];
@@ -223,13 +224,21 @@ rumMicroBench["sameq-list", rumMicroN[1000], SameQ[list10, list10]];
 rumMicroBench["if-true", rumMicroN[2000], If[True, 1, 2]];
 rumMicroBench["module-local", rumMicroN[500], Module[{x = 1}, x + 1]];
 rumMicroBench["block-local", rumMicroN[500], Block[{xOwn = 1}, xOwn + 1]];
+rumMicroOnce["block-symbol-only-repeat", rumMicroN[1000], Do[Block[{b}, Null], {1000 * rumMicroScale}]];
+rumMicroOnce["block-init-null-repeat", rumMicroN[1000], Do[Block[{b = 1}, Null], {1000 * rumMicroScale}]];
+rumMicroOnce["block-init-read-repeat", rumMicroN[1000], Do[Block[{b = 1}, b], {1000 * rumMicroScale}]];
 rumMicroBench["with-local", rumMicroN[500], With[{x = 1}, x + 1]];
 rumMicroBench["table-small", rumMicroN[200], Table[i, {i, 1, 5}]];
+rumMicroOnce["table-iterator-plus", rumMicroN[1000], Table[j + 1, {j, 1000 * rumMicroScale}]];
+rumMicroOnce["table-iterator-pair-list", rumMicroN[1000], Table[{j, j}, {j, 1000 * rumMicroScale}]];
 rumMicroBench["do-small", rumMicroN[200], Module[{s = 0}, Do[s = i, {i, 1, 5}]; s]];
 
 rumMicroBench["downvalue-exact-hit", rumMicroN[2000], fExact[1]];
+rumMicroBench["downvalue-exact-miss", rumMicroN[2000], fExact[2]];
 rumMicroBench["downvalue-pattern-hit", rumMicroN[1000], fPattern[1]];
 rumMicroBench["downvalue-pattern-miss", rumMicroN[1000], fPattern["x"]];
+rumMicroOnce["downvalue-exact-miss-repeat", rumMicroN[5000], Do[fExact[2], {5000 * rumMicroScale}]];
+rumMicroOnce["downvalue-pattern-miss-repeat", rumMicroN[5000], Do[fPattern["x"], {5000 * rumMicroScale}]];
 
 rumMicroBench["matchq-integer-success", rumMicroN[1000], MatchQ[1, _Integer]];
 rumMicroBench["matchq-integer-fail", rumMicroN[1000], MatchQ["x", _Integer]];

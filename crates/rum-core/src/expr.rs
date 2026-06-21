@@ -50,12 +50,25 @@ fn symbol_interner() -> &'static Mutex<SymbolInterner> {
 }
 
 fn intern_text(strings: &mut HashSet<&'static str>, value: &str) -> &'static str {
+    if let Some(canonical) = canonical_static_str(value) {
+        strings.insert(canonical);
+        return canonical;
+    }
+
     if let Some(existing) = strings.get(value) {
         existing
     } else {
         let leaked: &'static str = Box::leak(value.to_owned().into_boxed_str());
         strings.insert(leaked);
         leaked
+    }
+}
+
+fn canonical_static_str(value: &str) -> Option<&'static str> {
+    match value {
+        GLOBAL_CONTEXT => Some(GLOBAL_CONTEXT),
+        SYSTEM_CONTEXT => Some(SYSTEM_CONTEXT),
+        _ => None,
     }
 }
 
@@ -126,6 +139,18 @@ impl Symbol {
         self.text.name
     }
 
+    pub fn is_global(&self) -> bool {
+        self.text.context == GLOBAL_CONTEXT
+    }
+
+    pub fn is_system(&self) -> bool {
+        self.text.context == SYSTEM_CONTEXT
+    }
+
+    pub fn is_system_name(&self, name: &str) -> bool {
+        self.is_system() && self.text.name == name
+    }
+
     pub fn identity(&self) -> Option<u64> {
         self.identity
     }
@@ -141,7 +166,7 @@ impl Symbol {
     }
 
     pub fn qualified_name(&self) -> String {
-        if self.context() == GLOBAL_CONTEXT || self.context() == SYSTEM_CONTEXT {
+        if self.is_global() || self.is_system() {
             self.text.name.to_string()
         } else {
             self.fully_qualified_name()

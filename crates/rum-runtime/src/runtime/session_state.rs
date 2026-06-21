@@ -117,6 +117,12 @@ pub(super) struct BlockSymbolState {
     pub(super) messages: Vec<(MessageNameKey, MessageDefinition)>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct DynamicOwnValueFrame {
+    pub(super) symbol: Symbol,
+    pub(super) value: Option<Expr>,
+}
+
 #[derive(Clone, Debug)]
 pub(super) struct LoaderSnapshot {
     pub(super) attributes: AttributeMap,
@@ -336,7 +342,7 @@ pub enum EvalError {
 impl Default for Session {
     fn default() -> Self {
         Self {
-            builtins: BTreeMap::new(),
+            builtins: BuiltinSpecMap::default(),
             attributes: AttributeMap::default(),
             attribute_revision: 0,
             attribute_set_cache: AttributeSetCache::default(),
@@ -344,8 +350,8 @@ impl Default for Session {
             evaluation_epoch: 0,
             symbol_cache_generation: 0,
             call_stability_generation: 0,
-            stability_dirty_bloom: 0,
-            stability_rewritten_dirty_bloom: 0,
+            stability_dirty_bloom: StabilityBloom::default(),
+            stability_rewritten_dirty_bloom: StabilityBloom::default(),
             stable_symbol_cache: SymbolStabilityCache::default(),
             symbol_call_effect_cache: SymbolCallEffectCache::default(),
             call_stability_cache: CallStabilityCache::default(),
@@ -356,6 +362,7 @@ impl Default for Session {
             symbol_generations: BTreeMap::new(),
             once_values: BTreeMap::new(),
             option_value_scopes: Vec::new(),
+            dynamic_own_values: Vec::new(),
             current_context: GLOBAL_CONTEXT.to_string(),
             context_path: vec![SYSTEM_CONTEXT.to_string(), GLOBAL_CONTEXT.to_string()],
             context_stack: Vec::new(),

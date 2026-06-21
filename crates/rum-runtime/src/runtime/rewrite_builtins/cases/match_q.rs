@@ -65,7 +65,7 @@ impl Session {
         pattern: Expr,
         value: Expr,
     ) -> Result<Expr, EvalError> {
-        if let Some(matched) = fast_match_q_resolved_pattern(&pattern, &value) {
+        if let Some(matched) = self.fast_match_q_resolved_pattern(&pattern, &value) {
             return Ok(system_expr(if matched { "True" } else { "False" }));
         }
 
@@ -74,10 +74,56 @@ impl Session {
             Ok(system_expr(if outcome.matched { "True" } else { "False" }))
         })
     }
+    fn fast_match_q_resolved_pattern(&self, pattern: &Expr, value: &Expr) -> Option<bool> {
+        if let Some(head_constraint) = pattern_blank_head(pattern) {
+            return Some(match_blank(head_constraint, value));
+        }
+
+        self.fast_fixed_head_blank_args_match_q(pattern, value)
+    }
+
+    fn fast_fixed_head_blank_args_match_q(&self, pattern: &Expr, value: &Expr) -> Option<bool> {
+        let Expr::Call {
+            head: pattern_head,
+            args: pattern_args,
+        } = pattern
+        else {
+            return None;
+        };
+
+        if pattern_args.is_empty() || !pattern_args.iter().all(is_plain_blank_pattern) {
+            return None;
+        }
+
+        if matches_pattern_head(pattern_head) {
+            return None;
+        }
+
+        let pattern_symbol = expr_as_symbol(pattern_head)?;
+        let attributes = self.attribute_set_for_symbol(pattern_symbol);
+        if fixed_head_blank_args_fast_path_needs_general_matcher(attributes) {
+            return None;
+        }
+
+        let Expr::Call { head, args } = value else {
+            return Some(false);
+        };
+
+        Some(expr_as_symbol(head) == Some(pattern_symbol) && args.len() == pattern_args.len())
+    }
 }
 
-fn fast_match_q_resolved_pattern(pattern: &Expr, value: &Expr) -> Option<bool> {
-    pattern_blank_head(pattern).map(|head_constraint| match_blank(head_constraint, value))
+fn is_plain_blank_pattern(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Call { head, args } if is_system_symbol_name(head, "Blank") && args.is_empty()
+    )
+}
+
+fn fixed_head_blank_args_fast_path_needs_general_matcher(attributes: AttributeSet) -> bool {
+    attributes.contains(Attribute::Flat)
+        || attributes.contains(Attribute::Orderless)
+        || attributes.contains(Attribute::OneIdentity)
 }
 
 fn contains_pattern_syntax(expr: &Expr) -> bool {

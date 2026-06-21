@@ -32,6 +32,15 @@ Options:
                        Override the remaining comb path for exact split loop
                        labels, e.g. label=a/a/b. Useful when a loop iteration
                        changes shape before the traced child is reached.
+  --split-and-lemma   Split andCongLemma[] into first/second calls when an
+                       instrumented And-congruence branch is reached.
+  --split-and-lemma-compute
+                       Expand computeAndCongLemma[] at the instrumented
+                       And-congruence branch into construction/PropTaut/memo
+                       phases.
+  --split-and-lemma-proptaut
+                       With --split-and-lemma-compute, recursively split the
+                       PropTaut bool-var driver for the instrumented lemma.
   --timeout SECONDS    Wall timeout. Defaults to 900.
   --output-dir PATH    Directory for generated files and logs.
   --engine ENGINE      rum or wolfram. Defaults to rum.
@@ -54,6 +63,9 @@ detail=${RUM_PAIR_BODY_PHASE_DETAIL:-top}
 focus_path=${RUM_PAIR_BODY_PHASE_PATH:-}
 loop_split_label=${RUM_PAIR_BODY_PHASE_LOOP_SPLIT_LABEL:-}
 loop_path_override=${RUM_PAIR_BODY_PHASE_LOOP_PATH_OVERRIDE:-}
+split_and_lemma=${RUM_PAIR_BODY_PHASE_SPLIT_AND_LEMMA:-0}
+split_and_lemma_compute=${RUM_PAIR_BODY_PHASE_SPLIT_AND_LEMMA_COMPUTE:-0}
+split_and_lemma_proptaut=${RUM_PAIR_BODY_PHASE_SPLIT_AND_LEMMA_PROPTAUT:-0}
 rum_cli_bin=${RUM_CLI_BIN:-"${repo_root}/target/release/rum-cli"}
 wolfram_bin=${WOLFRAM_KERNEL:-/Applications/Wolfram.app/Contents/MacOS/WolframKernel}
 
@@ -88,6 +100,19 @@ while [[ $# -gt 0 ]]; do
       [[ $# -ge 2 ]] || { echo "error: --loop-path-override expects LABEL=PATH[,LABEL=PATH...]" >&2; exit 2; }
       loop_path_override=$2
       shift 2
+      ;;
+    --split-and-lemma)
+      split_and_lemma=1
+      shift
+      ;;
+    --split-and-lemma-compute)
+      split_and_lemma_compute=1
+      shift
+      ;;
+    --split-and-lemma-proptaut)
+      split_and_lemma_compute=1
+      split_and_lemma_proptaut=1
+      shift
       ;;
     --output-dir)
       [[ $# -ge 2 ]] || { echo "error: --output-dir expects a path" >&2; exit 2; }
@@ -195,6 +220,24 @@ if ! [[ "${timeout_seconds}" =~ ^[1-9][0-9]*$ ]]; then
   echo "error: --timeout expects a positive integer" >&2
   exit 2
 fi
+
+case "${split_and_lemma}" in
+  0|false|False|FALSE) split_and_lemma_wl=False ;;
+  1|true|True|TRUE) split_and_lemma_wl=True ;;
+  *) echo "error: --split-and-lemma expects a boolean when set via env" >&2; exit 2 ;;
+esac
+
+case "${split_and_lemma_compute}" in
+  0|false|False|FALSE) split_and_lemma_compute_wl=False ;;
+  1|true|True|TRUE) split_and_lemma_compute_wl=True ;;
+  *) echo "error: --split-and-lemma-compute expects a boolean when set via env" >&2; exit 2 ;;
+esac
+
+case "${split_and_lemma_proptaut}" in
+  0|false|False|FALSE) split_and_lemma_proptaut_wl=False ;;
+  1|true|True|TRUE) split_and_lemma_proptaut_wl=True ;;
+  *) echo "error: --split-and-lemma-proptaut expects a boolean when set via env" >&2; exit 2 ;;
+esac
 
 if [[ -z "${mma_hol_root}" ]]; then
   echo "error: --mma-hol is required when RUM_MMA_HOL_ROOT is unset" >&2
@@ -770,6 +813,9 @@ cat > "${driver_wls}" <<EOF
 Get["${common_wls}"];
 rumPairProbeLoopSplitLabels = Select[StringSplit["${loop_split_label}", ","], # =!= "" &];
 rumPairProbeLoopPathOverrides = ${loop_path_override_wl};
+rumPairProbeSplitAndLemma = ${split_and_lemma_wl};
+rumPairProbeSplitAndLemmaCompute = ${split_and_lemma_compute_wl};
+rumPairProbeSplitAndLemmaPropTaut = ${split_and_lemma_proptaut_wl};
 
 Print["RUM_PAIR_PHASE probe=pair-body-phase-tree"];
 Print["RUM_PAIR_PHASE detail=${detail}"];
@@ -798,6 +844,319 @@ rumPairProbeStageNext[next_String] :=
     Null
   ];
 
+rumPairProbeDisj1Timed[thp_, qTm_, label_String] :=
+  Module[{p, r, pImpR, qImpR, mpTh, inner1, inner2, genTh, unfold},
+    Global\`rumPairProbeStageNext[label <> "-type"];
+    If[HOL\`Terms\`typeOf[qTm] =!= HOL\`Kernel\`boolTy,
+      HOL\`Error\`holError["rule", "DISJ1: q must be :bool",
+        <|"got" -> HOL\`Terms\`typeOf[qTm]|>]];
+    Global\`rumPairProbeStageNext[label <> "-fresh"];
+    p = HOL\`Kernel\`concl[thp];
+    r = HOL\`Terms\`mkVar[
+      HOL\`Bool\`Private\`freshName[
+        "r",
+        HOL\`Bool\`Private\`collectFreeNames[
+          p, qTm, Sequence @@ HOL\`Kernel\`hyp[thp]]],
+      HOL\`Kernel\`boolTy];
+    Global\`rumPairProbeStageNext[label <> "-imp-terms"];
+    pImpR = HOL\`Bool\`Private\`impTmInt[p, r];
+    qImpR = HOL\`Bool\`Private\`impTmInt[qTm, r];
+    Global\`rumPairProbeStageNext[label <> "-mp"];
+    mpTh = HOL\`Bool\`MP[HOL\`Kernel\`ASSUME[pImpR], thp];
+    Global\`rumPairProbeStageNext[label <> "-disch-q"];
+    inner1 = HOL\`Bool\`DISCH[qImpR, mpTh];
+    Global\`rumPairProbeStageNext[label <> "-disch-p"];
+    inner2 = HOL\`Bool\`DISCH[pImpR, inner1];
+    Global\`rumPairProbeStageNext[label <> "-gen"];
+    genTh = HOL\`Bool\`GEN[r, inner2];
+    Global\`rumPairProbeStageNext[label <> "-unfold-or"];
+    unfold = HOL\`Bool\`Private\`unfoldOr[p, qTm];
+    Global\`rumPairProbeStageNext[label <> "-eqmp"];
+    HOL\`Kernel\`EQMP[HOL\`Equal\`SYM[unfold], genTh]
+  ];
+
+rumPairProbeDisj2Timed[thq_, pTm_, label_String] :=
+  Module[{q, r, pImpR, qImpR, mpTh, inner1, inner2, genTh, unfold},
+    Global\`rumPairProbeStageNext[label <> "-type"];
+    If[HOL\`Terms\`typeOf[pTm] =!= HOL\`Kernel\`boolTy,
+      HOL\`Error\`holError["rule", "DISJ2: p must be :bool",
+        <|"got" -> HOL\`Terms\`typeOf[pTm]|>]];
+    Global\`rumPairProbeStageNext[label <> "-fresh"];
+    q = HOL\`Kernel\`concl[thq];
+    r = HOL\`Terms\`mkVar[
+      HOL\`Bool\`Private\`freshName[
+        "r",
+        HOL\`Bool\`Private\`collectFreeNames[
+          q, pTm, Sequence @@ HOL\`Kernel\`hyp[thq]]],
+      HOL\`Kernel\`boolTy];
+    Global\`rumPairProbeStageNext[label <> "-imp-terms"];
+    pImpR = HOL\`Bool\`Private\`impTmInt[pTm, r];
+    qImpR = HOL\`Bool\`Private\`impTmInt[q, r];
+    Global\`rumPairProbeStageNext[label <> "-mp"];
+    mpTh = HOL\`Bool\`MP[HOL\`Kernel\`ASSUME[qImpR], thq];
+    Global\`rumPairProbeStageNext[label <> "-disch-q"];
+    inner1 = HOL\`Bool\`DISCH[qImpR, mpTh];
+    Global\`rumPairProbeStageNext[label <> "-disch-p"];
+    inner2 = HOL\`Bool\`DISCH[pImpR, inner1];
+    Global\`rumPairProbeStageNext[label <> "-gen"];
+    genTh = HOL\`Bool\`GEN[r, inner2];
+    Global\`rumPairProbeStageNext[label <> "-unfold-or"];
+    unfold = HOL\`Bool\`Private\`unfoldOr[pTm, q];
+    Global\`rumPairProbeStageNext[label <> "-eqmp"];
+    HOL\`Kernel\`EQMP[HOL\`Equal\`SYM[unfold], genTh]
+  ];
+
+rumPairProbeDisjCasesTimed[thOr_, thPR_, thQR_, label_String] :=
+  Module[{c, p, q, rTgt, unfoldTh, step1, specTh, pImp, qImp, step3},
+    Global\`rumPairProbeStageNext[label <> "-concl"];
+    c = HOL\`Kernel\`concl[thOr];
+    If[! MatchQ[
+        c,
+        HOL\`Terms\`comb[
+          HOL\`Terms\`comb[HOL\`Terms\`const["∨", _], _],
+          _]],
+      HOL\`Error\`holError["rule", "DISJCASES: expected p ∨ q",
+        <|"concl" -> c|>]];
+    p = c[[1, 2]];
+    q = c[[2]];
+    Global\`rumPairProbeStageNext[label <> "-branch-concls"];
+    rTgt = HOL\`Kernel\`concl[thPR];
+    If[HOL\`Kernel\`concl[thQR] =!= rTgt,
+      HOL\`Error\`holError["rule", "DISJCASES: branches must share conclusion",
+        <|"left" -> rTgt, "right" -> HOL\`Kernel\`concl[thQR]|>]];
+    Global\`rumPairProbeStageNext[label <> "-unfold-or"];
+    unfoldTh = HOL\`Bool\`Private\`unfoldOr[p, q];
+    Global\`rumPairProbeStageNext[label <> "-eqmp"];
+    step1 = HOL\`Kernel\`EQMP[unfoldTh, thOr];
+    Global\`rumPairProbeStageNext[label <> "-spec"];
+    specTh = HOL\`Bool\`SPEC[rTgt, step1];
+    Global\`rumPairProbeStageNext[label <> "-disch-p"];
+    pImp = HOL\`Bool\`DISCH[p, thPR];
+    Global\`rumPairProbeStageNext[label <> "-disch-q"];
+    qImp = HOL\`Bool\`DISCH[q, thQR];
+    Global\`rumPairProbeStageNext[label <> "-mp1"];
+    step3 = HOL\`Bool\`MP[specTh, pImp];
+    Global\`rumPairProbeStageNext[label <> "-mp2"];
+    HOL\`Bool\`MP[step3, qImp]
+  ];
+
+rumPairProbeExcludedMiddleTimed[t_, label_String] :=
+  Module[{xName, xv, tConst, fConst, Uabs, Vabs, selBool, u, v,
+          uWitness, vWitness, uEqTOrT, vEqFOrT, assT, thA, thB,
+          bodyEq, UeqV, tEqUV, tImpUV, assUT, assVF, assTHyp,
+          mpUV, symUT, transTv, transTF, fromTEqF, dischTF, notTThm,
+          notT, innerBranch1, innerBranch2, outerBranch1, outerBranch2},
+    Global\`rumPairProbeStageNext[label <> "-typeOf"];
+    If[HOL\`Terms\`typeOf[t] =!= HOL\`Kernel\`boolTy,
+      HOL\`Error\`holError["rule", "EXCLUDEDMIDDLE: target must be :bool",
+        <|"got" -> HOL\`Terms\`typeOf[t]|>]];
+    Global\`rumPairProbeStageNext[label <> "-consts"];
+    tConst = HOL\`Kernel\`mkConst["T", HOL\`Kernel\`boolTy];
+    fConst = HOL\`Kernel\`mkConst["F", HOL\`Kernel\`boolTy];
+    Global\`rumPairProbeStageNext[label <> "-fresh-var"];
+    xName = HOL\`Bool\`Private\`freshName[
+      "x", HOL\`Bool\`Private\`collectFreeNames[t]];
+    xv = HOL\`Terms\`mkVar[xName, HOL\`Kernel\`boolTy];
+    Global\`rumPairProbeStageNext[label <> "-abs-terms"];
+    Uabs = HOL\`Terms\`mkAbs[
+      xv,
+      HOL\`Bool\`Private\`orTmInt[
+        HOL\`Kernel\`mkEq[xv, tConst],
+        t]];
+    Vabs = HOL\`Terms\`mkAbs[
+      xv,
+      HOL\`Bool\`Private\`orTmInt[
+        HOL\`Kernel\`mkEq[xv, fConst],
+        t]];
+    Global\`rumPairProbeStageNext[label <> "-select-terms"];
+    selBool = HOL\`Bool\`Private\`selectCty[HOL\`Kernel\`boolTy];
+    u = HOL\`Terms\`mkComb[selBool, Uabs];
+    v = HOL\`Terms\`mkComb[selBool, Vabs];
+    Global\`rumPairProbeStageNext[label <> "-u-witness"];
+    uWitness = Global\`rumPairProbeDisj1Timed[
+      HOL\`Kernel\`REFL[tConst],
+      t,
+      label <> "-u-witness-disj1"];
+    Global\`rumPairProbeStageNext[label <> "-u-selectAp"];
+    uEqTOrT = HOL\`Bool\`Private\`selectAp[Uabs, tConst, uWitness];
+    Global\`rumPairProbeStageNext[label <> "-v-witness"];
+    vWitness = Global\`rumPairProbeDisj1Timed[
+      HOL\`Kernel\`REFL[fConst],
+      t,
+      label <> "-v-witness-disj1"];
+    Global\`rumPairProbeStageNext[label <> "-v-selectAp"];
+    vEqFOrT = HOL\`Bool\`Private\`selectAp[Vabs, fConst, vWitness];
+    Global\`rumPairProbeStageNext[label <> "-assume-t"];
+    assT = HOL\`Kernel\`ASSUME[t];
+    Global\`rumPairProbeStageNext[label <> "-body-disj2"];
+    thA = Global\`rumPairProbeDisj2Timed[
+      assT,
+      HOL\`Kernel\`mkEq[xv, tConst],
+      label <> "-body-disj2-a"];
+    thB = Global\`rumPairProbeDisj2Timed[
+      assT,
+      HOL\`Kernel\`mkEq[xv, fConst],
+      label <> "-body-disj2-b"];
+    Global\`rumPairProbeStageNext[label <> "-body-eq"];
+    bodyEq = HOL\`Kernel\`DEDUCTANTISYM[thA, thB];
+    Global\`rumPairProbeStageNext[label <> "-abs-eq"];
+    UeqV = HOL\`Kernel\`ABS[xv, bodyEq];
+    Global\`rumPairProbeStageNext[label <> "-apterm"];
+    tEqUV = HOL\`Equal\`APTERM[selBool, UeqV];
+    Global\`rumPairProbeStageNext[label <> "-disch-t"];
+    tImpUV = HOL\`Bool\`DISCH[t, tEqUV];
+    Global\`rumPairProbeStageNext[label <> "-assumptions"];
+    assUT = HOL\`Kernel\`ASSUME[HOL\`Kernel\`mkEq[u, tConst]];
+    assVF = HOL\`Kernel\`ASSUME[HOL\`Kernel\`mkEq[v, fConst]];
+    assTHyp = HOL\`Kernel\`ASSUME[t];
+    Global\`rumPairProbeStageNext[label <> "-mp-uv"];
+    mpUV = HOL\`Bool\`MP[tImpUV, assTHyp];
+    Global\`rumPairProbeStageNext[label <> "-sym-ut"];
+    symUT = HOL\`Equal\`SYM[assUT];
+    Global\`rumPairProbeStageNext[label <> "-trans-tv"];
+    transTv = HOL\`Kernel\`TRANS[symUT, mpUV];
+    Global\`rumPairProbeStageNext[label <> "-trans-tf"];
+    transTF = HOL\`Kernel\`TRANS[transTv, assVF];
+    Global\`rumPairProbeStageNext[label <> "-from-t-eq-f"];
+    fromTEqF = HOL\`Kernel\`EQMP[transTF, HOL\`Bool\`TRUTH];
+    Global\`rumPairProbeStageNext[label <> "-not-intro"];
+    dischTF = HOL\`Bool\`DISCH[t, fromTEqF];
+    notTThm = HOL\`Bool\`NOTINTRO[dischTF];
+    Global\`rumPairProbeStageNext[label <> "-not-term"];
+    notT = HOL\`Bool\`Private\`notTmInt[t];
+    Global\`rumPairProbeStageNext[label <> "-inner-branches"];
+    innerBranch1 = Global\`rumPairProbeDisj2Timed[
+      notTThm, t, label <> "-inner-branch1-disj2"];
+    innerBranch2 = Global\`rumPairProbeDisj1Timed[
+      HOL\`Kernel\`ASSUME[t],
+      notT,
+      label <> "-inner-branch2-disj1"];
+    Global\`rumPairProbeStageNext[label <> "-outer-disjcases-1"];
+    outerBranch1 = Global\`rumPairProbeDisjCasesTimed[
+      vEqFOrT,
+      innerBranch1,
+      innerBranch2,
+      label <> "-outer-disjcases-1"];
+    Global\`rumPairProbeStageNext[label <> "-outer-branch2"];
+    outerBranch2 = Global\`rumPairProbeDisj1Timed[
+      HOL\`Kernel\`ASSUME[t],
+      notT,
+      label <> "-outer-branch2-disj1"];
+    Global\`rumPairProbeStageNext[label <> "-outer-disjcases-2"];
+    Global\`rumPairProbeDisjCasesTimed[
+      uEqTOrT,
+      outerBranch1,
+      outerBranch2,
+      label <> "-outer-disjcases-2"]
+  ];
+
+rumPairProbeCaseSplitTimed[pVar_, t_, thmT_, thmF_, label_String] :=
+  Module[{lambdaT, betaP, betaT, betaF, eqAtP, eqUnderP, tProofUnderP,
+          notP, eqfNotP, eqAtFP, eqUnderNotP, tProofUnderNotP, em},
+    Global\`rumPairProbeStageNext[label <> "-lambda"];
+    lambdaT = HOL\`Terms\`mkAbs[pVar, t];
+    Global\`rumPairProbeStageNext[label <> "-betaP"];
+    betaP = HOL\`Equal\`BETACONV[HOL\`Terms\`mkComb[lambdaT, pVar]];
+    Global\`rumPairProbeStageNext[label <> "-betaT"];
+    betaT = HOL\`Equal\`BETACONV[
+      HOL\`Terms\`mkComb[lambdaT, HOL\`Auto\`PropTaut\`Private\`ptT[]]];
+    Global\`rumPairProbeStageNext[label <> "-betaF"];
+    betaF = HOL\`Equal\`BETACONV[
+      HOL\`Terms\`mkComb[lambdaT, HOL\`Auto\`PropTaut\`Private\`ptF[]]];
+    Global\`rumPairProbeStageNext[label <> "-eqAtP"];
+    eqAtP = HOL\`Kernel\`MKCOMB[
+      HOL\`Kernel\`REFL[lambdaT],
+      HOL\`Bool\`EQTINTRO[HOL\`Kernel\`ASSUME[pVar]]];
+    Global\`rumPairProbeStageNext[label <> "-eqUnderP"];
+    eqUnderP = HOL\`Kernel\`TRANS[
+      HOL\`Kernel\`TRANS[HOL\`Equal\`SYM[betaP], eqAtP],
+      betaT];
+    Global\`rumPairProbeStageNext[label <> "-tProofUnderP"];
+    tProofUnderP = HOL\`Kernel\`EQMP[HOL\`Equal\`SYM[eqUnderP], thmT];
+    Global\`rumPairProbeStageNext[label <> "-notP"];
+    notP = HOL\`Auto\`PropTaut\`Private\`ptNot[pVar];
+    Global\`rumPairProbeStageNext[label <> "-eqfNotP"];
+    eqfNotP = HOL\`Auto\`PropTaut\`Private\`eqfIntro[
+      HOL\`Kernel\`ASSUME[notP]];
+    Global\`rumPairProbeStageNext[label <> "-eqAtFP"];
+    eqAtFP = HOL\`Kernel\`MKCOMB[
+      HOL\`Kernel\`REFL[lambdaT],
+      eqfNotP];
+    Global\`rumPairProbeStageNext[label <> "-eqUnderNotP"];
+    eqUnderNotP = HOL\`Kernel\`TRANS[
+      HOL\`Kernel\`TRANS[HOL\`Equal\`SYM[betaP], eqAtFP],
+      betaF];
+    Global\`rumPairProbeStageNext[label <> "-tProofUnderNotP"];
+    tProofUnderNotP = HOL\`Kernel\`EQMP[
+      HOL\`Equal\`SYM[eqUnderNotP],
+      thmF];
+    Global\`rumPairProbeStageNext[label <> "-excludedMiddle"];
+    em = Global\`rumPairProbeExcludedMiddleTimed[
+      pVar, label <> "-excludedMiddle"];
+    Global\`rumPairProbeStageNext[label <> "-disjCases"];
+    Global\`rumPairProbeDisjCasesTimed[
+      em,
+      tProofUnderP,
+      tProofUnderNotP,
+      label <> "-disjCases"]
+  ];
+
+rumPairProbePropTautBoolVarsTimed[t_, label_String] :=
+  Module[{vars, ev, p, tT, tF, thmT, thmF},
+    Global\`rumPairProbeStageNext[label <> "-free-vars"];
+    vars = HOL\`Auto\`PropTaut\`Private\`propFreeBoolVars[t];
+    If[vars === {},
+      Global\`rumPairProbeStageNext[label <> "-eval-closed"];
+      ev = HOL\`Auto\`PropTaut\`Private\`propEvalClosed[t];
+      If[ev[[1]] === "T", ev[[2]],
+        HOL\`Error\`holError["propTaut", "propTaut: not a tautology",
+          <|"t" -> t|>]],
+
+      p = First[vars];
+      Global\`rumPairProbeStageNext[label <> "-subst-T"];
+      tT = t /. p -> HOL\`Auto\`PropTaut\`Private\`ptT[];
+      Global\`rumPairProbeStageNext[label <> "-subst-F"];
+      tF = t /. p -> HOL\`Auto\`PropTaut\`Private\`ptF[];
+      Global\`rumPairProbeStageNext[label <> "-recurse-T"];
+      thmT = Global\`rumPairProbePropTautBoolVarsTimed[tT, label <> "-T"];
+      Global\`rumPairProbeStageNext[label <> "-recurse-F"];
+      thmF = Global\`rumPairProbePropTautBoolVarsTimed[tF, label <> "-F"];
+      Global\`rumPairProbeStageNext[label <> "-caseSplit"];
+      Global\`rumPairProbeCaseSplitTimed[
+        p, t, thmT, thmF, label <> "-caseSplit"]
+    ]
+  ];
+
+rumPairProbePropTautTimed[t_, label_String] :=
+  Module[{atoms, freshNames, freshVars, abstractRules, instBack,
+          abstractedT, abstractedThm},
+    Global\`rumPairProbeStageNext[label <> "-typeOf"];
+    If[HOL\`Terms\`typeOf[t] =!= HOL\`Kernel\`boolTy,
+      HOL\`Error\`holError["propTaut", "propTaut: term must be of type bool",
+        <|"t" -> t, "type" -> HOL\`Terms\`typeOf[t]|>]];
+    Global\`rumPairProbeStageNext[label <> "-compound-atoms"];
+    atoms = HOL\`Auto\`PropTaut\`Private\`collectCompoundBoolAtoms[t];
+    If[atoms === {},
+      Global\`rumPairProbeStageNext[label <> "-bool-vars"];
+      Global\`rumPairProbePropTautBoolVarsTimed[t, label <> "-bool"],
+
+      Global\`rumPairProbeStageNext[label <> "-fresh-names"];
+      freshNames = HOL\`Auto\`PropTaut\`Private\`freshBoolVarNames[
+        atoms, HOL\`Auto\`PropTaut\`Private\`allVarNames[t]];
+      Global\`rumPairProbeStageNext[label <> "-fresh-vars"];
+      freshVars = Map[HOL\`Terms\`mkVar[#, HOL\`Kernel\`boolTy] &, freshNames];
+      Global\`rumPairProbeStageNext[label <> "-abstract"];
+      abstractRules = MapThread[Rule, {atoms, freshVars}];
+      instBack = MapThread[Rule, {freshVars, atoms}];
+      abstractedT = t /. abstractRules;
+      Global\`rumPairProbeStageNext[label <> "-abstracted-bool-vars"];
+      abstractedThm = Global\`rumPairProbePropTautBoolVarsTimed[
+        abstractedT, label <> "-abstracted-bool"];
+      Global\`rumPairProbeStageNext[label <> "-inst-back"];
+      HOL\`Kernel\`INST[instBack, abstractedThm]
+    ]
+  ];
+
 rumPairProbeSplitSimpStep[
     label_String, baseConv_, ruleThms_, ctxThms_, depth_, t_, path_List] :=
   Module[{topTh, rhs1, descTh, f, x, fEq, xEq, first, rest,
@@ -824,6 +1183,13 @@ rumPairProbeSplitSimpStep[
       Length[path] > 0 && HOL\`Auto\`Simp\`Private\`isAndForm[rhs1],
       descTh = Global\`rumPairProbeSplitAndCong[
         label, ruleThms, ctxThms, depth, rhs1, path],
+
+      Length[path] > 0 &&
+        (HOL\`Auto\`Simp\`Private\`isImp[rhs1] ||
+         HOL\`Auto\`Simp\`Private\`isOrForm[rhs1]),
+      Global\`rumPairProbeStageNext[label <> "-logic-descendOnce"];
+      descTh = HOL\`Auto\`Simp\`Private\`descendOnce[
+        ruleThms, ctxThms, depth][rhs1],
 
       Length[path] > 0 && MatchQ[rhs1, HOL\`Terms\`comb[_, _]],
       first = First[path];
@@ -901,7 +1267,10 @@ rumPairProbeSplitSimpStep[
 rumPairProbeSplitAndCong[
     label_String, ruleThms_, ctxThms_, depth_, t_, path_List] :=
   Module[{first, rest, p1Tm, q1Tm, eq1, p2Tm, eq2, q2Tm,
-          dischEq2, conjAx, p1V, p2V, q1V, q2V, lemma, instLemma},
+          dischEq2, conjAx, p1V, p2V, q1V, q2V, lemma, instLemma,
+          lemmaP1, lemmaP2, lemmaQ1, lemmaQ2, lemmaBoolBinTy,
+          lemmaAndConst, lemmaImpConst, lemmaAnte, lemmaConsequent,
+          lemmaGoal},
     first = First[path];
     rest = Rest[path];
     p1Tm = t[[1, 2]];
@@ -949,8 +1318,64 @@ rumPairProbeSplitAndCong[
     p2V = HOL\`Terms\`mkVar["p2", HOL\`Kernel\`boolTy];
     q1V = HOL\`Terms\`mkVar["q1", HOL\`Kernel\`boolTy];
     q2V = HOL\`Terms\`mkVar["q2", HOL\`Kernel\`boolTy];
-    Global\`rumPairProbeStageNext[label <> "-and-lemma"];
-    lemma = HOL\`Auto\`Simp\`Private\`andCongLemma[];
+    If[Global\`rumPairProbeSplitAndLemmaCompute,
+      Global\`rumPairProbeStageNext[label <> "-and-lemma-compute-vars"];
+      lemmaP1 = HOL\`Terms\`mkVar["p1", HOL\`Kernel\`boolTy];
+      lemmaP2 = HOL\`Terms\`mkVar["p2", HOL\`Kernel\`boolTy];
+      lemmaQ1 = HOL\`Terms\`mkVar["q1", HOL\`Kernel\`boolTy];
+      lemmaQ2 = HOL\`Terms\`mkVar["q2", HOL\`Kernel\`boolTy];
+      lemmaBoolBinTy = HOL\`Kernel\`tyFun[
+        HOL\`Kernel\`boolTy,
+        HOL\`Kernel\`tyFun[HOL\`Kernel\`boolTy, HOL\`Kernel\`boolTy]];
+      lemmaAndConst = HOL\`Kernel\`mkConst["∧", lemmaBoolBinTy];
+      lemmaImpConst = HOL\`Kernel\`mkConst["⇒", lemmaBoolBinTy];
+      Global\`rumPairProbeStageNext[label <> "-and-lemma-compute-formula"];
+      lemmaAnte = HOL\`Terms\`mkComb[
+        HOL\`Terms\`mkComb[
+          lemmaAndConst,
+          HOL\`Kernel\`mkEq[lemmaP1, lemmaP2]],
+        HOL\`Terms\`mkComb[
+          HOL\`Terms\`mkComb[lemmaImpConst, lemmaP2],
+          HOL\`Kernel\`mkEq[lemmaQ1, lemmaQ2]]];
+      lemmaConsequent = HOL\`Kernel\`mkEq[
+        HOL\`Terms\`mkComb[
+          HOL\`Terms\`mkComb[lemmaAndConst, lemmaP1],
+          lemmaQ1],
+        HOL\`Terms\`mkComb[
+          HOL\`Terms\`mkComb[lemmaAndConst, lemmaP2],
+          lemmaQ2]];
+      lemmaGoal = HOL\`Terms\`mkComb[
+        HOL\`Terms\`mkComb[lemmaImpConst, lemmaAnte],
+        lemmaConsequent];
+      If[Global\`rumPairProbeSplitAndLemmaPropTaut,
+        Global\`rumPairProbeStageNext[label <> "-and-lemma-compute-propTaut"];
+        lemma = Global\`rumPairProbePropTautTimed[
+          lemmaGoal, label <> "-and-lemma-proptaut"],
+
+        Global\`rumPairProbeStageNext[label <> "-and-lemma-compute-propTaut"];
+        lemma = HOL\`Auto\`PropTaut\`propTaut[lemmaGoal]
+      ];
+      Global\`rumPairProbeStageNext[label <> "-and-lemma-compute-memo-set"];
+      HOL\`Auto\`Simp\`Private\`andCongLemma[] = lemma;
+      Global\`rumPairProbeStageNext[label <> "-and-lemma-second"];
+      HOL\`Auto\`Simp\`Private\`andCongLemma[],
+
+      If[Global\`rumPairProbeSplitAndLemma,
+      Global\`rumPairProbeStageNext[label <> "-and-lemma-first"];
+      Print["RUM_PAIR_PHASE ", label, "-and-lemma-downvalues-before=",
+        Length[DownValues[HOL\`Auto\`Simp\`Private\`andCongLemma]]];
+      lemma = HOL\`Auto\`Simp\`Private\`andCongLemma[];
+      Print["RUM_PAIR_PHASE ", label, "-and-lemma-downvalues-after-first=",
+        Length[DownValues[HOL\`Auto\`Simp\`Private\`andCongLemma]]];
+      Global\`rumPairProbeStageNext[label <> "-and-lemma-second"];
+      HOL\`Auto\`Simp\`Private\`andCongLemma[];
+      Print["RUM_PAIR_PHASE ", label, "-and-lemma-downvalues-after-second=",
+        Length[DownValues[HOL\`Auto\`Simp\`Private\`andCongLemma]]],
+
+      Global\`rumPairProbeStageNext[label <> "-and-lemma"];
+      lemma = HOL\`Auto\`Simp\`Private\`andCongLemma[]
+      ]
+    ];
     Global\`rumPairProbeStageNext[label <> "-and-INST"];
     instLemma = HOL\`Kernel\`INST[
       {p1V -> p1Tm, p2V -> p2Tm, q1V -> q1Tm, q2V -> q2Tm},
@@ -993,6 +1418,13 @@ rumPairProbeSplitSimpFixpoint[
       Length[path] > 0 && HOL\`Auto\`Simp\`Private\`isAndForm[rhs1],
       descTh = Global\`rumPairProbeSplitAndCong[
         label, ruleThms, ctxThms, depth, rhs1, path],
+
+      Length[path] > 0 &&
+        (HOL\`Auto\`Simp\`Private\`isImp[rhs1] ||
+         HOL\`Auto\`Simp\`Private\`isOrForm[rhs1]),
+      Global\`rumPairProbeStageNext[label <> "-logic-descendOnce"];
+      descTh = HOL\`Auto\`Simp\`Private\`descendOnce[
+        ruleThms, ctxThms, depth][rhs1],
 
       Length[path] > 0 && MatchQ[rhs1, HOL\`Terms\`comb[_, _]],
       first = First[path];

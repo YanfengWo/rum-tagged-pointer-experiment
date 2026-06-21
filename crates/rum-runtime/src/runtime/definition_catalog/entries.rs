@@ -69,10 +69,30 @@ impl Session {
         &self,
         symbol: &Symbol,
     ) -> Vec<DefinitionCatalogEntry> {
-        self.definitions
+        let mut entries = self
+            .definitions
             .get(symbol)
             .map(|definition| self.build_definition_catalog_entries(symbol, definition))
-            .unwrap_or_default()
+            .unwrap_or_default();
+
+        let has_definition_own_value = entries.iter().any(|entry| {
+            matches!(
+                entry.kind,
+                DefinitionKind::OwnValue | DefinitionKind::DelayedOwnValue
+            )
+        });
+        if !has_definition_own_value {
+            if let Some(Some(value)) = self.dynamic_own_value_binding(symbol) {
+                entries.push(DefinitionCatalogEntry {
+                    kind: DefinitionKind::OwnValue,
+                    lhs: Expr::Atom(Atom::Symbol(*symbol)),
+                    rhs: value,
+                    delayed: false,
+                });
+            }
+        }
+
+        entries
     }
 
     pub(in crate::runtime) fn definition_rule_expr(entry: &DefinitionCatalogEntry) -> Expr {

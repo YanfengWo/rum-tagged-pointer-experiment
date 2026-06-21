@@ -116,7 +116,11 @@ single broad diff bucket:
   semantic conformance tests and should not use a Wolfram oracle. `lane-d
   --summary-json PATH` writes a stable machine-readable summary for scripts or
   CI dashboards, covering run counts and optional baseline/readiness gate
-  counts without freezing per-case result rows.
+  counts without freezing per-case result rows. `--suite core-language` is the
+  rum-local half of the bottom-up time-efficiency difftest: it runs the same
+  primitive families tracked by `scripts/core-language-microbench.sh` through
+  Lane D's baseline and summary machinery, while the script remains responsible
+  for rum/WolframKernel timing ratios.
 - Lane E: host-contract tests stay in host/native crate suites, currently
   `cargo test -p rum-host` for the Rust host boundary.
 - Lane F: adapter/protocol tests stay in adapter-native suites, currently
@@ -269,14 +273,18 @@ fixture batches in one Wolfram process and resets Global-context symbols,
 newly introduced contexts,
 `$Packages`, `$Context`, and `$ContextPath` between fixture batches.
 
-Lane D currently executes imported timing and memory seed suites through local
-`rum` sessions and reports raw metrics. Its default `smoke` profile skips
-heavy / very-large imported categories for routine validation; `--profile full`
-is the explicit all-input baseline mode. `--baseline PATH` compares a run
-against a checked baseline artifact, and `--fail-on-regression` turns missing
-rows, stale rows, elapsed-threshold failures, and result-node-threshold
-failures into a non-zero exit. `--write-baseline PATH` captures the current
-successful run as a baseline artifact with configurable elapsed guardrails.
+Lane D currently executes imported timing/memory seed suites and the
+project-owned `core-language` suite through local `rum` sessions and reports
+raw metrics. Its default `smoke` profile skips heavy / very-large imported
+categories for routine validation; `--profile full` is the explicit all-input
+baseline mode. `--suite core-language` is intended for the current primitive
+time-efficiency work and is deliberately local-only; use
+`scripts/core-language-microbench.sh` when a rum/WolframKernel ratio is needed.
+`--baseline PATH` compares a run against a checked baseline artifact, and
+`--fail-on-regression` turns missing rows, stale rows, elapsed-threshold
+failures, and result-node-threshold failures into a non-zero exit.
+`--write-baseline PATH` captures the current successful run as a baseline
+artifact with configurable elapsed guardrails.
 `--capture-runs N` repeats the same run and writes median elapsed samples plus
 slowest-sample guardrails. Capture-only guardrail controls such as
 `--capture-runs`, `--baseline-elapsed-multiplier`, and

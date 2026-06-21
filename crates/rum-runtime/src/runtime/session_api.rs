@@ -115,12 +115,12 @@ impl Session {
     }
 
     pub fn register_builtin(&mut self, spec: BuiltinSpec) {
-        self.builtins.insert(spec.name.to_string(), spec);
+        let symbol = Symbol::system(spec.name);
+        self.builtins.insert(symbol, spec);
         self.builtin_dispatch_spec_cache.clear();
 
         if !spec.attributes.is_empty() {
-            self.attributes
-                .insert(Symbol::system(spec.name), spec.attributes);
+            self.attributes.insert(symbol, spec.attributes);
             self.bump_attribute_revision();
         } else {
             self.bump_evaluation_epoch();
@@ -176,9 +176,8 @@ impl Session {
         let explicit_context = prefix.contains('`');
         let mut candidates = BTreeSet::new();
 
-        for name in self.builtins.keys() {
-            let symbol = Symbol::system(name.as_str());
-            self.insert_completion_candidate(&mut candidates, &symbol, prefix, explicit_context);
+        for symbol in self.builtins.keys() {
+            self.insert_completion_candidate(&mut candidates, symbol, prefix, explicit_context);
         }
 
         for symbol in self.definitions.keys() {

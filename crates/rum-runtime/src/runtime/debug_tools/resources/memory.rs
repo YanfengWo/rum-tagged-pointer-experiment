@@ -34,12 +34,8 @@ impl Session {
 
         total = total.saturating_add(
             self.builtins
-                .iter()
-                .map(|(name, _)| {
-                    name.capacity()
-                        .saturating_add(std::mem::size_of::<BuiltinSpec>())
-                })
-                .sum::<usize>(),
+                .len()
+                .saturating_mul(std::mem::size_of::<(Symbol, BuiltinSpec)>()),
         );
 
         total = total.saturating_add(self.current_context.capacity());

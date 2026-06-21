@@ -92,7 +92,7 @@ impl Session {
             runtime_profile_body,
             runtime_profile_outcome_for_expr_result(&body_result),
         );
-        let outcome = self.suspend_with_result_frame(body_result, {
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
             let form = form.clone();
             let handler = handler.clone();
             move |session, outcome| session.resume_catch_after_body(form, handler, outcome)

@@ -63,6 +63,24 @@ pub(super) fn default_builtin_dispatch_spec(name: &str) -> Option<BuiltinSpec> {
         .copied()
 }
 
+pub(super) fn default_builtin_dispatch_spec_for_symbol(symbol: &Symbol) -> Option<BuiltinSpec> {
+    if !symbol.is_system() {
+        return None;
+    }
+
+    static CORE_BUILTINS_BY_SYMBOL: OnceLock<HashMap<Symbol, BuiltinSpec>> = OnceLock::new();
+
+    CORE_BUILTINS_BY_SYMBOL
+        .get_or_init(|| {
+            core_builtin_specs()
+                .iter()
+                .map(|spec| (Symbol::system(spec.name), *spec))
+                .collect()
+        })
+        .get(symbol)
+        .copied()
+}
+
 pub(super) fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
     // Wolfram's private Information display wrapper holds symbols that would
     // otherwise evaluate while an InformationData expression reaches a fixed point.
@@ -70,11 +88,7 @@ pub(super) fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
         return AttributeSet::from_hold(HoldAttribute::HoldAll);
     }
 
-    if symbol.context() != SYSTEM_CONTEXT {
-        return AttributeSet::empty();
-    }
-
-    default_builtin_dispatch_spec(symbol.name())
+    default_builtin_dispatch_spec_for_symbol(symbol)
         .map(|spec| spec.attributes)
         .unwrap_or_else(AttributeSet::empty)
 }

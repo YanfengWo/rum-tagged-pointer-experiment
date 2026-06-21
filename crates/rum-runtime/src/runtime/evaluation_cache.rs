@@ -171,6 +171,19 @@ pub(super) fn symbol_stability_bloom_bit(symbol: &Symbol) -> u128 {
     1u128 << (mix >> 57)
 }
 
+fn symbol_stability_bloom(symbol: &Symbol) -> StabilityBloom {
+    let bit = symbol_stability_bloom_bit(symbol);
+    if symbol_uses_generated_stability_bloom(symbol) {
+        StabilityBloom::generated(bit)
+    } else {
+        StabilityBloom::regular(bit)
+    }
+}
+
+fn symbol_uses_generated_stability_bloom(symbol: &Symbol) -> bool {
+    symbol.identity().is_some() || symbol_has_generated_dollar_name(symbol)
+}
+
 impl Session {
     pub(super) fn record_profile_evaluate_entry(&self) {
         record_evaluation_cache_counter(&EVALUATE_ENTRY_COUNT, "evaluate_entries");
@@ -247,7 +260,13 @@ impl Session {
         location: &'static Location<'static>,
     ) {
         let bit = symbol_stability_bloom_bit(symbol);
-        let already_dirty = self.stability_dirty_bloom & bit != 0;
+        let generated_lane = symbol_uses_generated_stability_bloom(symbol);
+        let dirty_lane = if generated_lane {
+            self.stability_dirty_bloom.generated
+        } else {
+            self.stability_dirty_bloom.regular
+        };
+        let already_dirty = dirty_lane & bit != 0;
         let source = current_evaluation_profile_source_symbol();
         record_invalidation_site("stability_dirty_write", source, Some(symbol), location);
         if let Some(source) = source {
@@ -281,8 +300,8 @@ impl Session {
         } else {
             record_invalidation_site("stability_new_dirty_write", None, Some(symbol), location);
         }
-        let dirty_bloom_would_saturate = !already_dirty
-            && (self.stability_dirty_bloom | bit).count_ones() > stability_dirty_bloom_max_bits();
+        let dirty_bloom_would_saturate =
+            !already_dirty && (dirty_lane | bit).count_ones() > stability_dirty_bloom_max_bits();
         if dirty_bloom_would_saturate {
             record_evaluation_cache_counter(
                 &DIRTY_BLOOM_SATURATION_COUNT,
@@ -297,9 +316,17 @@ impl Session {
         }
 
         if already_dirty {
-            self.stability_rewritten_dirty_bloom |= bit;
+            if generated_lane {
+                self.stability_rewritten_dirty_bloom.generated |= bit;
+            } else {
+                self.stability_rewritten_dirty_bloom.regular |= bit;
+            }
         }
-        self.stability_dirty_bloom |= bit;
+        if generated_lane {
+            self.stability_dirty_bloom.generated |= bit;
+        } else {
+            self.stability_dirty_bloom.regular |= bit;
+        }
     }
 
     fn bump_call_stability_generation(
@@ -314,8 +341,8 @@ impl Session {
             record_symbol_profile_counter("call_generation_bumps_by_source", &source);
         }
         self.call_stability_generation = self.call_stability_generation.saturating_add(1);
-        self.stability_dirty_bloom = 0;
-        self.stability_rewritten_dirty_bloom = 0;
+        self.stability_dirty_bloom = StabilityBloom::default();
+        self.stability_rewritten_dirty_bloom = StabilityBloom::default();
         if self.call_stability_cache.len() > call_stability_cache_max_entries() {
             self.clear_call_stability_cache_for_size_cap();
         }
@@ -329,8 +356,8 @@ impl Session {
         }
         self.symbol_cache_generation = self.symbol_cache_generation.saturating_add(1);
         self.call_stability_generation = self.call_stability_generation.saturating_add(1);
-        self.stability_dirty_bloom = 0;
-        self.stability_rewritten_dirty_bloom = 0;
+        self.stability_dirty_bloom = StabilityBloom::default();
+        self.stability_rewritten_dirty_bloom = StabilityBloom::default();
         self.stable_symbol_cache.clear();
         self.symbol_call_effect_cache.clear();
         self.call_stability_cache.clear();
@@ -340,19 +367,26 @@ impl Session {
         self.cached_expr_stability_with_bloom(expr).0
     }
 
-    pub(super) fn cached_expr_stability_with_bloom(&mut self, expr: &Expr) -> (bool, u128) {
+    pub(super) fn cached_expr_stability_with_bloom(
+        &mut self,
+        expr: &Expr,
+    ) -> (bool, StabilityBloom) {
         record_evaluation_cache_counter(&STABILITY_CHECK_COUNT, "stability_checks");
         match expr {
             Expr::Call { head, args } => self.call_stability_with_bloom(head, args),
             Expr::Atom(Atom::Symbol(symbol)) => (
                 self.symbol_is_atom_evaluation_stable(symbol),
-                symbol_stability_bloom_bit(symbol),
+                symbol_stability_bloom(symbol),
             ),
-            Expr::Atom(_) => (true, 0),
+            Expr::Atom(_) => (true, StabilityBloom::default()),
         }
     }
 
-    fn call_stability_with_bloom(&mut self, head: &SharedExpr, args: &SharedArgs) -> (bool, u128) {
+    fn call_stability_with_bloom(
+        &mut self,
+        head: &SharedExpr,
+        args: &SharedArgs,
+    ) -> (bool, StabilityBloom) {
         let profile_key = call_stability_source_head_key(head.as_ref());
         let timing_start = call_stability_timing_start(profile_key);
         let key = CallStabilityCacheKey::new(head, args);
@@ -382,7 +416,7 @@ impl Session {
                 );
             } else {
                 let dirty_delta = self.call_stability_entry_dirty_delta(entry);
-                if entry.bloom & dirty_delta == 0 {
+                if !entry.bloom.intersects(dirty_delta) {
                     record_evaluation_cache_counter(
                         &CALL_STABILITY_HIT_COUNT,
                         "call_stability_hits",
@@ -425,7 +459,7 @@ impl Session {
         // about to be rewritten by evaluation, so its entry would pin a dead
         // tree and never be asked again, while stable subtrees are re-checked
         // by their parents for as long as they stay alive.
-        let rewritten_dirty_overlap = bloom & self.stability_rewritten_dirty_bloom != 0;
+        let rewritten_dirty_overlap = bloom.intersects(self.stability_rewritten_dirty_bloom);
         if stable && !rewritten_dirty_overlap {
             if self.call_stability_cache.len() > call_stability_cache_max_entries() {
                 self.clear_call_stability_cache_for_size_cap();
@@ -457,10 +491,13 @@ impl Session {
         (stable, bloom)
     }
 
-    fn call_stability_entry_dirty_delta(&self, entry: &CallStabilityCacheEntry) -> u128 {
-        let newly_dirty = self.stability_dirty_bloom & !entry.dirty_snapshot;
-        let rewritten_after_snapshot = self.stability_rewritten_dirty_bloom & entry.dirty_snapshot;
-        newly_dirty | rewritten_after_snapshot
+    fn call_stability_entry_dirty_delta(&self, entry: &CallStabilityCacheEntry) -> StabilityBloom {
+        StabilityBloom {
+            regular: (self.stability_dirty_bloom.regular & !entry.dirty_snapshot.regular)
+                | (self.stability_rewritten_dirty_bloom.regular & entry.dirty_snapshot.regular),
+            generated: (self.stability_dirty_bloom.generated & !entry.dirty_snapshot.generated)
+                | (self.stability_rewritten_dirty_bloom.generated & entry.dirty_snapshot.generated),
+        }
     }
 
     fn clear_call_stability_cache_for_size_cap(&mut self) {

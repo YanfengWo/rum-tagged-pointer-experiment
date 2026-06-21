@@ -2,6 +2,10 @@ use super::*;
 
 impl Session {
     pub(super) fn eval_plus(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        if let Some(value) = fast_integer_plus(args) {
+            return Ok(value);
+        }
+
         self.combine_additive_args(head, args)
     }
 
@@ -374,6 +378,20 @@ impl Session {
             _ => Expr::call(head.clone(), normalized),
         })
     }
+}
+
+fn fast_integer_plus(args: &[Expr]) -> Option<Expr> {
+    let mut iter = args.iter();
+    let Some(first) = iter.next() else {
+        return Some(Expr::integer(0_i32.into()));
+    };
+
+    let mut total = expr_as_exact_integer(first)?;
+    for arg in iter {
+        total += expr_as_exact_integer(arg)?;
+    }
+
+    Some(Expr::integer(total))
 }
 
 pub(super) fn expr_as_exact_integer(expr: &Expr) -> Option<BigInt> {

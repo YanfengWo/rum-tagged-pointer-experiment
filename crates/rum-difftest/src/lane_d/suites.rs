@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::fixtures::seed_root;
+use crate::fixtures::{crate_root, seed_root};
 
 use super::LaneDSuite;
 
@@ -15,6 +15,7 @@ pub(super) fn suites_for(suite: LaneDSuite) -> Vec<LaneDInputSuite> {
         LaneDSuite::All => vec![timing_suite(), memory_suite()],
         LaneDSuite::Timing => vec![timing_suite()],
         LaneDSuite::Memory => vec![memory_suite()],
+        LaneDSuite::CoreLanguage => vec![core_language_suite()],
     }
 }
 
@@ -29,6 +30,13 @@ fn memory_suite() -> LaneDInputSuite {
     LaneDInputSuite {
         name: "memory",
         path: seed_root().join("mem/memory_suite.txt"),
+    }
+}
+
+fn core_language_suite() -> LaneDInputSuite {
+    LaneDInputSuite {
+        name: "core-language",
+        path: crate_root().join("perf/core-language.txt"),
     }
 }
 

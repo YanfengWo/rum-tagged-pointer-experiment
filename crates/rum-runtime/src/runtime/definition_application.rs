@@ -6,30 +6,55 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Option<Expr>, EvalError> {
+        let runtime_profile_head = runtime_path_timing_start("down_values.head_lookup");
         let Some(symbol) = expr_as_symbol(head) else {
+            record_profile_runtime_path_timing(runtime_profile_head, RuntimeProfileOutcome::None);
             return Ok(None);
         };
+        record_profile_runtime_path_timing(runtime_profile_head, RuntimeProfileOutcome::Some);
 
+        let runtime_profile_definition = runtime_path_timing_start("down_values.definition_lookup");
         let Some(definition) = self.definitions.get(symbol) else {
+            record_profile_runtime_path_timing(
+                runtime_profile_definition,
+                RuntimeProfileOutcome::None,
+            );
             return Ok(None);
         };
 
         if definition.down_values.is_empty() {
+            record_profile_runtime_path_timing(
+                runtime_profile_definition,
+                RuntimeProfileOutcome::None,
+            );
             return Ok(None);
         }
+        record_profile_runtime_path_timing(runtime_profile_definition, RuntimeProfileOutcome::Some);
 
         self.record_profile_down_value_scan(symbol);
 
         if is_system_symbol_name(head, heads::patterns::DEFAULT) {
+            let runtime_profile_default =
+                runtime_path_timing_start("down_values.direct_default_lookup");
             let down_values = definition.down_values.clone();
-            if let Some(value) = self.try_apply_direct_default_value(args, &down_values)? {
+            let direct_default = self.try_apply_direct_default_value(args, &down_values);
+            record_profile_runtime_path_timing(
+                runtime_profile_default,
+                runtime_profile_outcome_for_option_result(&direct_default),
+            );
+            if let Some(value) = direct_default? {
                 return Ok(Some(value));
             }
         }
 
+        let runtime_profile_candidate = runtime_path_timing_start("down_values.candidate_build");
         let candidate = Expr::call(head.clone(), args.to_vec());
+        record_profile_runtime_path_timing(runtime_profile_candidate, RuntimeProfileOutcome::Ok);
+        let runtime_profile_normalize =
+            runtime_path_timing_start("down_values.normalize_candidate");
         let normalized_candidate =
             self.normalize_definition_candidate_for_matching(head, &candidate);
+        record_profile_runtime_path_timing(runtime_profile_normalize, RuntimeProfileOutcome::Ok);
 
         self.try_apply_down_values_from_symbol(candidate, normalized_candidate, symbol.clone(), 0)
     }
@@ -41,15 +66,19 @@ impl Session {
         symbol: Symbol,
         index: usize,
     ) -> Result<Option<Expr>, EvalError> {
+        let runtime_profile_value = runtime_path_timing_start("down_values.value_lookup");
         let Some(down_value) = self
             .definitions
             .get(&symbol)
             .and_then(|definition| definition.down_values.get(index))
         else {
+            record_profile_runtime_path_timing(runtime_profile_value, RuntimeProfileOutcome::None);
             return Ok(None);
         };
+        record_profile_runtime_path_timing(runtime_profile_value, RuntimeProfileOutcome::Some);
 
         record_profile_definition_dispatch_candidate("down_value", &symbol);
+        let runtime_profile_prefilter = runtime_path_timing_start("down_values.prefilter");
         let prefilter_start = definition_dispatch_timing_start();
         let could_match = Self::definition_lhs_could_match_candidate(
             &down_value.lhs,
@@ -62,6 +91,7 @@ impl Session {
             "prefilter",
             prefilter_start,
         );
+        record_profile_runtime_path_timing(runtime_profile_prefilter, RuntimeProfileOutcome::Ok);
         if !could_match {
             record_profile_definition_dispatch_prefilter_skip("down_value", &symbol);
             return self.try_apply_down_values_from_symbol(
@@ -72,6 +102,7 @@ impl Session {
             );
         }
 
+        let runtime_profile_fast_match = runtime_path_timing_start("down_values.fast_match");
         let fast_match_start = definition_dispatch_timing_start();
         let fast_outcome = self.try_fast_definition_match(&down_value.lhs, &normalized_candidate);
         record_profile_definition_dispatch_phase_timing(
@@ -79,6 +110,10 @@ impl Session {
             &symbol,
             "fast_match",
             fast_match_start,
+        );
+        record_profile_runtime_path_timing(
+            runtime_profile_fast_match,
+            runtime_profile_outcome_for_optional_fast_match(&fast_outcome),
         );
         if let Some(outcome) = fast_outcome {
             record_profile_definition_dispatch_fast_outcome("down_value", &symbol, outcome.matched);
@@ -93,6 +128,8 @@ impl Session {
 
             let (lhs, substituted) = {
                 let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
+                let runtime_profile_rhs_substitution =
+                    runtime_path_timing_start("down_values.rhs_substitution");
                 let rhs_substitution_start = definition_dispatch_timing_start();
                 let substituted = substitute_rule_bindings_for_rhs(
                     &down_value.rhs,
@@ -104,6 +141,10 @@ impl Session {
                     &symbol,
                     "rhs_substitution",
                     rhs_substitution_start,
+                );
+                record_profile_runtime_path_timing(
+                    runtime_profile_rhs_substitution,
+                    RuntimeProfileOutcome::Ok,
                 );
                 (down_value.lhs.clone(), substituted)
             };
@@ -134,6 +175,8 @@ impl Session {
         } else {
             self.compile_matcher_for_expr(&down_value.lhs)
         };
+        let runtime_profile_compiled_matcher =
+            runtime_path_timing_start("down_values.compiled_matcher");
         let compiled_matcher_start = definition_dispatch_timing_start();
         let match_result = self.match_compiled_owned(
             matcher,
@@ -145,6 +188,10 @@ impl Session {
             &symbol,
             "compiled_matcher",
             compiled_matcher_start,
+        );
+        record_profile_runtime_path_timing(
+            runtime_profile_compiled_matcher,
+            runtime_profile_outcome_for_internal_result(&match_result),
         );
 
         self.drive_internal_value(match_result, move |session, outcome| {
@@ -163,6 +210,8 @@ impl Session {
             }
 
             let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
+            let runtime_profile_rhs_substitution =
+                runtime_path_timing_start("down_values.rhs_substitution");
             let rhs_substitution_start = definition_dispatch_timing_start();
             let substituted = substitute_rule_bindings_for_rhs(
                 &down_value.rhs,
@@ -174,6 +223,10 @@ impl Session {
                 &symbol,
                 "rhs_substitution",
                 rhs_substitution_start,
+            );
+            record_profile_runtime_path_timing(
+                runtime_profile_rhs_substitution,
+                RuntimeProfileOutcome::Ok,
             );
             let option_scope =
                 session.option_value_scope_for_definition(&down_value.lhs, &candidate);
@@ -457,21 +510,38 @@ impl Session {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Option<Expr>, EvalError> {
+        let runtime_profile_head = runtime_path_timing_start("sub_values.base_head_lookup");
         let Some(symbol) = base_head_symbol_of_nested_call(head).cloned() else {
+            record_profile_runtime_path_timing(runtime_profile_head, RuntimeProfileOutcome::None);
             return Ok(None);
         };
+        record_profile_runtime_path_timing(runtime_profile_head, RuntimeProfileOutcome::Some);
 
+        let runtime_profile_definition = runtime_path_timing_start("sub_values.definition_lookup");
         let Some(definition) = self.definitions.get(&symbol) else {
+            record_profile_runtime_path_timing(
+                runtime_profile_definition,
+                RuntimeProfileOutcome::None,
+            );
             return Ok(None);
         };
 
         if definition.sub_values.is_empty() {
+            record_profile_runtime_path_timing(
+                runtime_profile_definition,
+                RuntimeProfileOutcome::None,
+            );
             return Ok(None);
         }
+        record_profile_runtime_path_timing(runtime_profile_definition, RuntimeProfileOutcome::Some);
 
+        let runtime_profile_candidate = runtime_path_timing_start("sub_values.candidate_build");
         let candidate = Expr::call(head.clone(), args.to_vec());
+        record_profile_runtime_path_timing(runtime_profile_candidate, RuntimeProfileOutcome::Ok);
+        let runtime_profile_normalize = runtime_path_timing_start("sub_values.normalize_candidate");
         let normalized_candidate =
             self.normalize_definition_candidate_for_matching(head, &candidate);
+        record_profile_runtime_path_timing(runtime_profile_normalize, RuntimeProfileOutcome::Ok);
 
         self.try_apply_sub_values_from_symbol(candidate, normalized_candidate, symbol, 0)
     }
@@ -483,15 +553,19 @@ impl Session {
         symbol: Symbol,
         index: usize,
     ) -> Result<Option<Expr>, EvalError> {
+        let runtime_profile_value = runtime_path_timing_start("sub_values.value_lookup");
         let Some(sub_value) = self
             .definitions
             .get(&symbol)
             .and_then(|definition| definition.sub_values.get(index))
         else {
+            record_profile_runtime_path_timing(runtime_profile_value, RuntimeProfileOutcome::None);
             return Ok(None);
         };
+        record_profile_runtime_path_timing(runtime_profile_value, RuntimeProfileOutcome::Some);
 
         record_profile_definition_dispatch_candidate("sub_value", &symbol);
+        let runtime_profile_prefilter = runtime_path_timing_start("sub_values.prefilter");
         let prefilter_start = definition_dispatch_timing_start();
         let could_match = Self::definition_lhs_could_match_candidate(
             &sub_value.lhs,
@@ -504,6 +578,7 @@ impl Session {
             "prefilter",
             prefilter_start,
         );
+        record_profile_runtime_path_timing(runtime_profile_prefilter, RuntimeProfileOutcome::Ok);
         if !could_match {
             record_profile_definition_dispatch_prefilter_skip("sub_value", &symbol);
             return self.try_apply_sub_values_from_symbol(
@@ -514,6 +589,7 @@ impl Session {
             );
         }
 
+        let runtime_profile_fast_match = runtime_path_timing_start("sub_values.fast_match");
         let fast_match_start = definition_dispatch_timing_start();
         let fast_outcome = self.try_fast_definition_match(&sub_value.lhs, &normalized_candidate);
         record_profile_definition_dispatch_phase_timing(
@@ -521,6 +597,10 @@ impl Session {
             &symbol,
             "fast_match",
             fast_match_start,
+        );
+        record_profile_runtime_path_timing(
+            runtime_profile_fast_match,
+            runtime_profile_outcome_for_optional_fast_match(&fast_outcome),
         );
         if let Some(outcome) = fast_outcome {
             record_profile_definition_dispatch_fast_outcome("sub_value", &symbol, outcome.matched);
@@ -535,6 +615,8 @@ impl Session {
 
             let (lhs, substituted) = {
                 let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
+                let runtime_profile_rhs_substitution =
+                    runtime_path_timing_start("sub_values.rhs_substitution");
                 let rhs_substitution_start = definition_dispatch_timing_start();
                 let substituted = substitute_rule_bindings_for_rhs(
                     &sub_value.rhs,
@@ -546,6 +628,10 @@ impl Session {
                     &symbol,
                     "rhs_substitution",
                     rhs_substitution_start,
+                );
+                record_profile_runtime_path_timing(
+                    runtime_profile_rhs_substitution,
+                    RuntimeProfileOutcome::Ok,
                 );
                 (sub_value.lhs.clone(), substituted)
             };
@@ -576,6 +662,8 @@ impl Session {
         } else {
             self.compile_matcher_for_expr(&sub_value.lhs)
         };
+        let runtime_profile_compiled_matcher =
+            runtime_path_timing_start("sub_values.compiled_matcher");
         let compiled_matcher_start = definition_dispatch_timing_start();
         let match_result = self.match_compiled_owned(
             matcher,
@@ -587,6 +675,10 @@ impl Session {
             &symbol,
             "compiled_matcher",
             compiled_matcher_start,
+        );
+        record_profile_runtime_path_timing(
+            runtime_profile_compiled_matcher,
+            runtime_profile_outcome_for_internal_result(&match_result),
         );
 
         self.drive_internal_value(match_result, move |session, outcome| {
@@ -605,6 +697,8 @@ impl Session {
             }
 
             let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
+            let runtime_profile_rhs_substitution =
+                runtime_path_timing_start("sub_values.rhs_substitution");
             let rhs_substitution_start = definition_dispatch_timing_start();
             let substituted = substitute_rule_bindings_for_rhs(
                 &sub_value.rhs,
@@ -616,6 +710,10 @@ impl Session {
                 &symbol,
                 "rhs_substitution",
                 rhs_substitution_start,
+            );
+            record_profile_runtime_path_timing(
+                runtime_profile_rhs_substitution,
+                RuntimeProfileOutcome::Ok,
             );
             let option_scope =
                 session.option_value_scope_for_definition(&sub_value.lhs, &candidate);
@@ -656,122 +754,54 @@ impl Session {
     }
 
     fn definition_lhs_could_match_candidate(
-        lhs: &Expr,
+        _lhs: &Expr,
         matcher: &MatcherNode,
         candidate: &Expr,
     ) -> bool {
-        if !Self::compiled_matcher_could_match_candidate_shape(matcher, candidate) {
-            return false;
-        }
-
-        Self::pattern_could_match_value_shape(strip_hold_pattern(lhs), candidate)
+        Self::matcher_could_match_candidate_shape(matcher, candidate)
     }
 
-    fn compiled_matcher_could_match_candidate_shape(
-        matcher: &MatcherNode,
-        candidate: &Expr,
-    ) -> bool {
-        let MatcherNode::Call {
-            head: pattern_head,
-            args: pattern_args,
-        } = matcher
-        else {
-            return true;
-        };
+    fn matcher_could_match_candidate_shape(matcher: &MatcherNode, candidate: &Expr) -> bool {
+        match matcher {
+            MatcherNode::Exact(pattern) => pattern == candidate,
+            MatcherNode::Blank { head_constraint } => {
+                match_blank(head_constraint.as_ref(), candidate)
+            }
+            MatcherNode::KeyValuePattern(_) | MatcherNode::Except { .. } => true,
+            MatcherNode::Named { inner, .. }
+            | MatcherNode::Condition { inner, .. }
+            | MatcherNode::PatternTest { inner, .. } => {
+                Self::matcher_could_match_candidate_shape(inner, candidate)
+            }
+            MatcherNode::Alternatives(alternatives) => alternatives.iter().any(|alternative| {
+                Self::matcher_could_match_candidate_shape(alternative, candidate)
+            }),
+            MatcherNode::Call { head, args } => {
+                let Expr::Call {
+                    head: value_head,
+                    args: value_args,
+                } = candidate
+                else {
+                    return true;
+                };
 
-        let Expr::Call {
-            head: value_head,
-            args: value_args,
-        } = candidate
-        else {
-            return true;
-        };
+                if !Self::matcher_could_match_candidate_shape(head, value_head) {
+                    return false;
+                }
 
-        if let MatcherNode::Exact(pattern_head) = pattern_head.as_ref() {
-            if pattern_head != value_head.as_ref() {
-                return false;
+                if args.iter().any(|arg| !matches!(arg, MatcherArg::Single(_))) {
+                    return true;
+                }
+
+                args.len() == value_args.len()
+                    && args.iter().zip(value_args).all(|(pattern_arg, value_arg)| {
+                        let MatcherArg::Single(matcher) = pattern_arg else {
+                            return true;
+                        };
+                        Self::matcher_could_match_candidate_shape(matcher, value_arg)
+                    })
             }
         }
-
-        if pattern_args
-            .iter()
-            .all(|arg| matches!(arg, MatcherArg::Single(_)))
-            && pattern_args.len() != value_args.len()
-        {
-            return false;
-        }
-
-        true
-    }
-
-    fn pattern_could_match_value_shape(pattern: &Expr, value: &Expr) -> bool {
-        let pattern = strip_hold_pattern(pattern);
-
-        if let Some(inner) = pattern_verbatim_inner(pattern) {
-            return inner == value;
-        }
-
-        if let Some((_, inner)) = pattern_named_pattern(pattern) {
-            return Self::pattern_could_match_value_shape(inner, value);
-        }
-
-        if let Some((inner, _)) = pattern_condition(pattern) {
-            return Self::pattern_could_match_value_shape(inner, value);
-        }
-
-        if let Some((inner, _)) = pattern_test(pattern) {
-            return Self::pattern_could_match_value_shape(inner, value);
-        }
-
-        if pattern_except(pattern).is_some() {
-            return true;
-        }
-
-        if let Some((inner, _)) = pattern_optional(pattern) {
-            return Self::pattern_could_match_value_shape(inner, value);
-        }
-
-        if let Some(alternatives) = pattern_alternatives(pattern) {
-            return alternatives
-                .iter()
-                .any(|alternative| Self::pattern_could_match_value_shape(alternative, value));
-        }
-
-        if let Some(head_constraint) = pattern_blank_head(pattern) {
-            return match_blank(head_constraint, value);
-        }
-
-        let Expr::Call {
-            head: pattern_head,
-            args: pattern_args,
-        } = pattern
-        else {
-            return pattern == value;
-        };
-
-        let Expr::Call {
-            head: value_head,
-            args: value_args,
-        } = value
-        else {
-            return true;
-        };
-
-        if !Self::pattern_could_match_value_shape(pattern_head, value_head) {
-            return false;
-        }
-
-        if Self::pattern_args_may_have_variable_arity(pattern_args) {
-            return true;
-        }
-
-        pattern_args.len() == value_args.len()
-            && pattern_args
-                .iter()
-                .zip(value_args)
-                .all(|(pattern_arg, value_arg)| {
-                    Self::pattern_could_match_value_shape(pattern_arg, value_arg)
-                })
     }
 
     fn pattern_args_may_have_variable_arity(args: &[Expr]) -> bool {
@@ -1190,6 +1220,31 @@ impl Session {
 fn runtime_profile_outcome_for_expr_result(
     result: &Result<Expr, EvalError>,
 ) -> RuntimeProfileOutcome {
+    runtime_profile_outcome_for_result(result)
+}
+
+fn runtime_profile_outcome_for_option_result<T>(
+    result: &Result<Option<T>, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(Some(_)) => RuntimeProfileOutcome::Some,
+        Ok(None) => RuntimeProfileOutcome::None,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
+    }
+}
+
+fn runtime_profile_outcome_for_internal_result<T>(
+    result: &Result<T, EvalError>,
+) -> RuntimeProfileOutcome {
+    runtime_profile_outcome_for_result(result)
+}
+
+fn runtime_profile_outcome_for_result<T>(result: &Result<T, EvalError>) -> RuntimeProfileOutcome {
     match result {
         Ok(_) => RuntimeProfileOutcome::Ok,
         Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
@@ -1198,6 +1253,16 @@ fn runtime_profile_outcome_for_expr_result(
         }
         Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
         Err(_) => RuntimeProfileOutcome::Error,
+    }
+}
+
+fn runtime_profile_outcome_for_optional_fast_match(
+    outcome: &Option<CompiledMatchOutcome>,
+) -> RuntimeProfileOutcome {
+    if outcome.is_some() {
+        RuntimeProfileOutcome::Some
+    } else {
+        RuntimeProfileOutcome::None
     }
 }
 

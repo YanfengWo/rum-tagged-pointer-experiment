@@ -11,6 +11,7 @@ Current runner:
 cargo run -p rum-difftest -- lane-d
 cargo run -p rum-difftest -- lane-d --suite timing --limit 10
 cargo run -p rum-difftest -- lane-d --suite memory --fail-on-error
+cargo run -p rum-difftest -- lane-d --suite core-language --summary-json /tmp/rum-core-language-lane-d.json
 cargo run -p rum-difftest -- lane-d --suite all --profile full
 cargo run -p rum-difftest -- lane-d --baseline crates/rum-difftest/perf/baselines/smoke.txt --fail-on-regression
 cargo run -p rum-difftest -- lane-d --write-baseline /tmp/rum-lane-d-smoke.txt --fail-on-error
@@ -23,6 +24,13 @@ The first runner consumes the imported seed suites:
 
 - `seed/ham-import/bench/timing_suite.txt`
 - `seed/ham-import/mem/memory_suite.txt`
+
+`--suite core-language` consumes [core-language.txt](./core-language.txt),
+which keeps the bottom-up core-language timing probes inside Lane D's summary,
+baseline capture, and baseline comparison machinery. The standalone
+`scripts/core-language-microbench.sh` remains the cross-engine
+rum/WolframKernel ratio probe; Lane D is deliberately rum-local and does not
+invoke a Wolfram oracle.
 
 By default, `lane-d` uses the daily-safe `smoke` profile and skips imported
 heavy / very-large categories. `--profile full` is the explicit baseline

@@ -10,6 +10,14 @@ fn table_supports_count_iterators_and_nested_iterators() {
     );
     assert_eq!(
         session
+            .eval_text("Table[Null, {i, 3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Null, Null, Null]"
+    );
+    assert_eq!(
+        session
             .eval_text("Table[i^2, {i, 3}]")
             .unwrap()
             .value
@@ -23,6 +31,30 @@ fn table_supports_count_iterators_and_nested_iterators() {
             .value
             .to_string(),
         "List[2, 4]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Table[i + 1, {i, 3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 3, 4]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Table[1 + i, {i, 3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 3, 4]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Table[{i, i, 0}, {i, 3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1, 1, 0], List[2, 2, 0], List[3, 3, 0]]"
     );
     assert_eq!(
         session
@@ -55,6 +87,51 @@ fn table_supports_count_iterators_and_nested_iterators() {
             .value
             .to_string(),
         "List[Rule[0, a], Rule[1, b]]"
+    );
+}
+
+#[test]
+fn iterator_variables_expose_dynamic_ownvalues_without_leaking_assignments() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Table[OwnValues[i], {i, 1, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[RuleDelayed[HoldPattern[i], 1]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Table[i = 10; i, {i, 1, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[10]"
+    );
+    assert_eq!(session.eval_text("i").unwrap().value.to_string(), "i");
+}
+
+#[test]
+fn iterator_dynamic_values_interact_with_nested_block_shadowing() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Table[Block[{i}, i], {i, 1, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Table[Block[{i = 7}, i], {i, 1, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[7]"
     );
 }
 

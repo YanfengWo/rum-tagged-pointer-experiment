@@ -1,6 +1,7 @@
 pub(crate) fn print_lane_d_usage() {
     println!("rum-difftest lane-d");
-    println!("  --suite all|timing|memory  Select imported performance input suite");
+    println!("  --suite all|timing|memory|core-language");
+    println!("                             Select performance input suite");
     println!("  --profile smoke|full       Select daily-safe smoke inputs or explicit full inputs");
     println!("  --threshold-profile local-debug|ci-debug|ci-release");
     println!("                             Select baseline threshold records and capture defaults");

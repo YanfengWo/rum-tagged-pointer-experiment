@@ -284,7 +284,19 @@ fn atom_order_rank(atom: &Atom) -> u8 {
 }
 
 pub(super) fn is_known_system_symbol(symbol: &Symbol) -> bool {
-    symbol.context() == SYSTEM_CONTEXT && is_known_system_symbol_name(symbol.name())
+    if !symbol.is_system() {
+        return false;
+    }
+
+    if rum_core::is_canonical_core_head_name(symbol.name()) {
+        return true;
+    }
+
+    if default_builtin_dispatch_spec_for_symbol(symbol).is_some() {
+        return true;
+    }
+
+    is_extra_known_system_symbol_name(symbol.name())
 }
 
 pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
@@ -296,6 +308,10 @@ pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
         return true;
     }
 
+    is_extra_known_system_symbol_name(name)
+}
+
+fn is_extra_known_system_symbol_name(name: &str) -> bool {
     matches!(
         name,
         "Alternatives"
@@ -334,6 +350,6 @@ pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
 
 pub(super) fn is_system_symbol_name(expr: &Expr, name: &str) -> bool {
     expr_as_symbol(expr)
-        .map(|symbol| symbol.context() == SYSTEM_CONTEXT && symbol.name() == name)
+        .map(|symbol| symbol.is_system_name(name))
         .unwrap_or(false)
 }

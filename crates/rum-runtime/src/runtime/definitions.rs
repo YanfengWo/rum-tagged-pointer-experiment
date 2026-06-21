@@ -14,13 +14,38 @@ impl Session {
         }
 
         let lhs = args[0].clone();
-        let rhs_result = self.evaluate(args[1].clone());
-        let rhs = self.suspend_with_frame(rhs_result, {
-            let lhs = lhs.clone();
-            move |session, rhs| session.resume_set_with_rhs(lhs, rhs)
-        })?;
+        let rhs = if expr_is_self_evaluating_atom(&args[1]) {
+            let runtime_profile_rhs = runtime_path_timing_start("set.rhs.evaluate");
+            record_profile_runtime_path_timing(runtime_profile_rhs, RuntimeProfileOutcome::Ok);
+            let runtime_profile_suspend = runtime_path_timing_start("set.rhs.suspend");
+            record_profile_runtime_path_timing(runtime_profile_suspend, RuntimeProfileOutcome::Ok);
+            args[1].clone()
+        } else {
+            let runtime_profile_rhs = runtime_path_timing_start("set.rhs.evaluate");
+            let rhs_result = self.evaluate(args[1].clone());
+            record_profile_runtime_path_timing(
+                runtime_profile_rhs,
+                runtime_profile_outcome_for_expr_result(&rhs_result),
+            );
+            let runtime_profile_suspend = runtime_path_timing_start("set.rhs.suspend");
+            let rhs_result = self.suspend_with_frame(rhs_result, {
+                let lhs = lhs.clone();
+                move |session, rhs| session.resume_set_with_rhs(lhs, rhs)
+            });
+            record_profile_runtime_path_timing(
+                runtime_profile_suspend,
+                runtime_profile_outcome_for_expr_result(&rhs_result),
+            );
+            rhs_result?
+        };
 
-        self.resume_set_with_rhs(lhs, rhs)
+        let runtime_profile_finish = runtime_path_timing_start("set.finish");
+        let result = self.resume_set_with_rhs(lhs, rhs);
+        record_profile_runtime_path_timing(
+            runtime_profile_finish,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        result
     }
 
     pub(super) fn eval_set_delayed(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -208,6 +233,16 @@ impl Session {
                 return Ok(rhs);
             }
 
+            let runtime_profile_symbol = runtime_path_timing_start("set.try_symbol_own_value");
+            let symbol_result = self.try_set_symbol_own_value_lvalue(symbol, &lhs, &rhs);
+            record_profile_runtime_path_timing(
+                runtime_profile_symbol,
+                runtime_profile_outcome_for_bool_result(&symbol_result),
+            );
+            if symbol_result? {
+                return Ok(rhs);
+            }
+
             if let Some(target) = self.normalize_options_target_expr(&lhs) {
                 if !self.ensure_symbol_not_protected_for_write(symbol, &target) {
                     return Ok(rhs);
@@ -251,20 +286,47 @@ impl Session {
         }
 
         if !delayed {
-            if let Some(value) =
-                self.try_set_list_destructuring_lvalue(symbol, lhs.clone(), rhs.clone())?
-            {
+            let runtime_profile_list = runtime_path_timing_start("set.try_list_destructuring");
+            let list_result =
+                self.try_set_list_destructuring_lvalue(symbol, lhs.clone(), rhs.clone());
+            record_profile_runtime_path_timing(
+                runtime_profile_list,
+                runtime_profile_outcome_for_optional_result(&list_result),
+            );
+            if let Some(value) = list_result? {
                 return Ok(value);
             }
 
-            if let Some(value) = self.try_set_association_lvalue(lhs.clone(), rhs.clone())? {
+            let runtime_profile_assoc = runtime_path_timing_start("set.try_association_lvalue");
+            let assoc_result = self.try_set_association_lvalue(lhs.clone(), rhs.clone());
+            record_profile_runtime_path_timing(
+                runtime_profile_assoc,
+                runtime_profile_outcome_for_optional_result(&assoc_result),
+            );
+            if let Some(value) = assoc_result? {
                 return Ok(value);
             }
         }
 
+        let runtime_profile_normalize_lhs = runtime_path_timing_start("set.normalize_lhs_heads");
         let lhs = self.normalize_definition_lhs_call_heads(&lhs);
+        record_profile_runtime_path_timing(
+            runtime_profile_normalize_lhs,
+            RuntimeProfileOutcome::Ok,
+        );
 
-        match self.normalize_definition_assignment_target(&lhs) {
+        let runtime_profile_normalize_target = runtime_path_timing_start("set.normalize_target");
+        let target = self.normalize_definition_assignment_target(&lhs);
+        record_profile_runtime_path_timing(
+            runtime_profile_normalize_target,
+            if target.is_some() {
+                RuntimeProfileOutcome::Some
+            } else {
+                RuntimeProfileOutcome::None
+            },
+        );
+
+        match target {
             Some(DefinitionAssignmentTarget::Message(key)) => {
                 if !self.ensure_symbol_not_protected_for_write(symbol, &key.symbol) {
                     return Ok(if delayed { system_expr("Null") } else { rhs });
@@ -282,11 +344,56 @@ impl Session {
                 if !self.ensure_symbol_not_protected_for_write(symbol, target.symbol()) {
                     return Ok(if delayed { system_expr("Null") } else { rhs });
                 }
+                let runtime_profile_store = runtime_path_timing_start("set.store_definition");
                 self.store_definition_target(target, lhs.clone(), rhs.clone(), delayed);
+                record_profile_runtime_path_timing(
+                    runtime_profile_store,
+                    RuntimeProfileOutcome::Ok,
+                );
                 Ok(if delayed { system_expr("Null") } else { rhs })
             }
             None => Ok(Expr::call(system_expr(symbol), vec![lhs, rhs])),
         }
+    }
+
+    fn try_set_symbol_own_value_lvalue(
+        &mut self,
+        symbol: &str,
+        lhs: &Expr,
+        rhs: &Expr,
+    ) -> Result<bool, EvalError> {
+        let runtime_profile_lvalue = runtime_path_timing_start("set.symbol_own_value.lvalue");
+        let Some(target) = expr_as_symbol(lhs).cloned() else {
+            record_profile_runtime_path_timing(runtime_profile_lvalue, RuntimeProfileOutcome::None);
+            return Ok(false);
+        };
+        record_profile_runtime_path_timing(runtime_profile_lvalue, RuntimeProfileOutcome::Some);
+
+        let runtime_profile_protected =
+            runtime_path_timing_start("set.symbol_own_value.protected_check");
+        if !self.ensure_symbol_not_protected_for_write(symbol, &target) {
+            record_profile_runtime_path_timing(
+                runtime_profile_protected,
+                RuntimeProfileOutcome::None,
+            );
+            return Ok(true);
+        }
+        record_profile_runtime_path_timing(runtime_profile_protected, RuntimeProfileOutcome::Some);
+
+        let runtime_profile_store = runtime_path_timing_start("set.symbol_own_value.store");
+        let definition = self.definitions.entry(target.clone()).or_default();
+        definition.own_value = Some(rhs.clone());
+        definition.delayed_own_value = None;
+        record_profile_runtime_path_timing(runtime_profile_store, RuntimeProfileOutcome::Ok);
+
+        let runtime_profile_trace = runtime_path_timing_start("set.symbol_own_value.trace");
+        self.push_definition_stored_trace(&target, DefinitionKind::OwnValue, || rhs.to_string());
+        record_profile_runtime_path_timing(runtime_profile_trace, RuntimeProfileOutcome::Ok);
+
+        let runtime_profile_epoch = runtime_path_timing_start("set.symbol_own_value.epoch_bump");
+        self.bump_evaluation_epoch_for_symbol(&target);
+        record_profile_runtime_path_timing(runtime_profile_epoch, RuntimeProfileOutcome::Ok);
+        Ok(true)
     }
 
     fn try_set_list_destructuring_lvalue(
@@ -538,4 +645,55 @@ fn list_destructuring_shapes_match(lhs: &Expr, rhs: &Expr) -> bool {
             .iter()
             .zip(rhs_items)
             .all(|(lhs_item, rhs_item)| list_destructuring_shapes_match(lhs_item, rhs_item))
+}
+
+fn expr_is_self_evaluating_atom(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Atom(Atom::Integer(_) | Atom::Rational(_) | Atom::String(_))
+    )
+}
+
+fn runtime_profile_outcome_for_optional_result(
+    result: &Result<Option<Expr>, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(Some(_)) => RuntimeProfileOutcome::Some,
+        Ok(None) => RuntimeProfileOutcome::None,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
+    }
+}
+
+fn runtime_profile_outcome_for_bool_result(
+    result: &Result<bool, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(true) => RuntimeProfileOutcome::Some,
+        Ok(false) => RuntimeProfileOutcome::None,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
+    }
+}
+
+fn runtime_profile_outcome_for_expr_result(
+    result: &Result<Expr, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(_) => RuntimeProfileOutcome::Ok,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
+    }
 }

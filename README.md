@@ -91,6 +91,7 @@ The repository is a Cargo workspace with these top-level crates:
 - [Lowering Canonical Forms](./docs/lowering-canonical-forms.md)
 - [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md)
 - [Performance Kernel Rewrite Plan](./docs/performance-kernel-rewrite-plan.md)
+- [Performance Stage 0 Baseline](./docs/performance-stage0-baseline.md)
 - [Jupyter Host Migration Audit](./docs/jupyter-host-migration-audit.md)
 - [`mma-hol` Smoke Driver And Snapshot Audit](./docs/mma-hol-smoke-and-snapshot.md)
 - [Formatter Style Notes](./docs/formatter-style.md)

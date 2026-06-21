@@ -264,6 +264,36 @@ fn matchq_reports_false_for_non_matching_pattern() {
 }
 
 #[test]
+fn matchq_supports_plain_blank_arguments_under_fixed_heads() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[a, b], f[_, _]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[a], f[_, _]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[g[a, b], f[_, _]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+}
+
+#[test]
 fn matchq_supports_blanksequence_in_argument_lists() {
     let mut session = Session::new();
 
