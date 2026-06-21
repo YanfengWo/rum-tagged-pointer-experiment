@@ -6,6 +6,28 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Downstream re-measure: A3 did NOT move Pair; lever corrected
+
+Re-ran the bounded `basic-chain-orelsec-split` Pair unit post-A3 (the plan's
+"re-measure downstream after each layer"). A3 did NOT move it: manual 19-rule
+loop `3.76x -> 3.72x`, raw-tryConv-d19 `5.31x -> 5.40x`, full TRYCONV[REPEATC]
+`6.55x -> 6.48x` — all within run noise. So the `downvalue-exact-hit`
+candidate-allocation win (A3, ~10% on that label) did NOT translate to Pair.
+
+Why (the correction): the Pair basic rules are pattern conversions that **fail**
+on the target term, so the per-dispatch cost is the FAILING pattern-match work,
+not the candidate allocation — the alloc only stood out in the trivial ground-
+*hit* microbench (`exact-hit`). I picked the wrong proxy. The faithful Pair
+proxy is `downvalue-pattern-MISS` (`3.31x`) ≈ the Pair manual-loop (`3.72x`),
+not `exact-hit`. The real `34x` lever is the **failing-pattern-match dispatch
+constant** (prefilter + match-attempt-then-reject over many rules per subterm),
+compounded over the descent and amplified ~1.7x by the WL control combinators.
+
+A3 remains a legitimate, gated win on `exact-hit` and removes a real per-dispatch
+allocation, but it is not the Pair lever. Next: profile the failing-match path
+(`downvalue-pattern-miss`, the fast faithful proxy) to localize the reducible
+failing-dispatch cost before the next brief.
+
 ## 2026-06-21 Layer A3 (gated): reuse SharedArgs in candidate build
 
 `868dea7`. The down/up/sub-value dispatch stages built their match candidate
