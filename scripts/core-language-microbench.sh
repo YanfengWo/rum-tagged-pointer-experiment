@@ -38,6 +38,7 @@ engine=${RUM_CORE_MICRO_ENGINE:-both}
 timeout_seconds=${RUM_CORE_MICRO_TIMEOUT:-180}
 build_timeout_seconds=${RUM_CORE_MICRO_BUILD_TIMEOUT:-300}
 scale=${RUM_CORE_MICRO_SCALE:-1}
+reps=${RUM_CORE_MICRO_REPS:-7}
 rum_cli_bin=${RUM_CLI_BIN:-"${repo_root}/target/release/rum-cli"}
 wolfram_bin=${WOLFRAM_KERNEL:-/Applications/Wolfram.app/Contents/MacOS/WolframKernel}
 
@@ -66,6 +67,11 @@ while [[ $# -gt 0 ]]; do
     --scale)
       [[ $# -ge 2 ]] || { echo "error: --scale expects a positive integer" >&2; exit 2; }
       scale=$2
+      shift 2
+      ;;
+    --reps)
+      [[ $# -ge 2 ]] || { echo "error: --reps expects a positive integer" >&2; exit 2; }
+      reps=$2
       shift 2
       ;;
     --rum-cli)
@@ -98,7 +104,7 @@ case "${engine}" in
   *) echo "error: --engine expects rum, wolfram, or both" >&2; exit 2 ;;
 esac
 
-for number in "${timeout_seconds}" "${build_timeout_seconds}" "${scale}"; do
+for number in "${timeout_seconds}" "${build_timeout_seconds}" "${scale}" "${reps}"; do
   if ! [[ "${number}" =~ ^[1-9][0-9]*$ ]]; then
     echo "error: numeric options expect positive integers" >&2
     exit 2
@@ -157,6 +163,7 @@ ClearAll[
 ];
 
 rumMicroScale = ${scale};
+rumMicroReps = ${reps};
 rumMicroN[n_Integer] := n * rumMicroScale;
 rumMicroSink = Null;
 
@@ -170,34 +177,48 @@ rumMicroEmit[label_String, n_, seconds_] := Print[StringJoin[
   ToString[seconds]
 ]];
 
+(* Min-of-reps: the timed loop runs the bare expression (NO per-iteration
+   assignment — a per-iteration result-equals-expr injects one ownvalue Set
+   plus cache invalidation per iteration, inflating rum time about 57 percent
+   on cheap primitives and inflating the rum/WK ratio because rum
+   Set-invalidation is hit harder than a WK local write). We time it
+   rumMicroReps times and report the MINIMUM, which rejects OS scheduling
+   spikes; sub-millisecond labels otherwise jitter 20-78 percent run-to-run.
+   One untimed warm eval precedes the reps so the first timed rep is warm. *)
 rumMicroBench[label_String, nExpr_, expr_] := Module[
-  {start, i, n, seconds},
+  {start, i, k, n, seconds, best},
   n = nExpr;
-  (* One untimed eval for a defined sink; the timed loop measures the bare
-     expression with NO per-iteration assignment. A per-iteration
-     result-equals-expr injects one ownvalue Set plus cache invalidation per
-     iteration, which inflated rum time about 57 percent on cheap primitives
-     and inflated the rum/WK ratio because rum Set-invalidation is hit harder
-     than a WK local write. The loop body must be the label exact expression. *)
   rumMicroSink = expr;
-  start = AbsoluteTime[];
+  best = -1;
   Do[
-    expr,
-    {i, 1, n}
+    start = AbsoluteTime[];
+    Do[
+      expr,
+      {i, 1, n}
+    ];
+    seconds = AbsoluteTime[] - start;
+    If[best < 0 || seconds < best, best = seconds],
+    {k, 1, rumMicroReps}
   ];
-  seconds = AbsoluteTime[] - start;
-  rumMicroEmit[label, n, seconds];
+  rumMicroEmit[label, n, best];
 ];
 
 SetAttributes[rumMicroOnce, HoldAll];
 rumMicroOnce[label_String, nExpr_, expr_] := Module[
-  {start, n, result, seconds},
+  {start, k, n, result, seconds, best},
   n = nExpr;
-  start = AbsoluteTime[];
   result = expr;
-  seconds = AbsoluteTime[] - start;
   rumMicroSink = result;
-  rumMicroEmit[label, n, seconds];
+  best = -1;
+  Do[
+    start = AbsoluteTime[];
+    result = expr;
+    seconds = AbsoluteTime[] - start;
+    If[best < 0 || seconds < best, best = seconds],
+    {k, 1, rumMicroReps}
+  ];
+  rumMicroSink = result;
+  rumMicroEmit[label, n, best];
 ];
 
 xOwn = 123;

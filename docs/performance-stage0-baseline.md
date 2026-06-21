@@ -31,7 +31,9 @@ bash scripts/core-language-microbench.sh --engine rum --scale 1 --timeout 120
 ```
 
 The script disables rum profiling environment variables by default and runs
-engines through `scripts/run-bounded.py`.
+engines through `scripts/run-bounded.py`. Each label is timed `--reps` times
+(default `7`) and the MINIMUM is reported, so sub-millisecond labels are not
+dominated by scheduling jitter; raise `--reps` if a label is still unstable.
 
 For a rum-local regression gate over the same primitive families, use Lane D:
 
@@ -84,7 +86,7 @@ been handled.
 ## Harness Faithfulness (corrected 2026-06-21)
 
 The Stage 0 harness was re-verified after a contaminated probe surfaced in
-Codex's brief-001. Two foundation issues were found; the first is fixed.
+Codex's brief-001. Two foundation issues were found and both are now fixed.
 
 1. **Per-iteration `Set` contamination (FIXED).** `rumMicroBench` timed
    `Do[result = expr, {n}]` — an ownvalue `Set` to a local every iteration.
@@ -94,29 +96,33 @@ Codex's brief-001. Two foundation issues were found; the first is fixed.
    invalidation while a WK local write is cheap, this inflated rum more than
    WK and **deflated the rum/WK ratio on the cheapest primitives** (the `Set`
    was a larger share of WK's tiny per-iteration time). The timed loop now
-   runs the bare `expr`. Corrected stable targets, worst-first:
+   runs the bare `expr`.
 
-   | label | corrected ratio | was (contaminated) |
-   | --- | ---: | ---: |
-   | `downvalue-exact-hit` | `6.57` | `4.63` |
-   | `if-true` | `6.29` | `4.39` |
-   | `downvalue-pattern-hit` | `5.70` | `5.18` |
-   | `sameq-integer` | `5.13` | `4.17` |
-   | `head-list` | `4.08` | `3.43` |
+2. **Measurement noise on sub-millisecond labels (FIXED via min-of-N).**
+   Run-to-run jitter was <8% on slow targets but 20-78% on the fast and
+   `*-repeat` labels. The harness now times each label `rumMicroReps` times
+   (default `7`, `--reps`) and reports the MINIMUM, which rejects OS scheduling
+   spikes. Residual run-to-run jitter is now <8% on every decision-grade label
+   (1/38 labels, the `loop-empty` overhead baseline, sits at ~11%). The
+   `*-repeat` labels — the evidence cited for the recent cache-stable-miss
+   optimizations — went from ~71-78% jitter to <4%, so those optimizations can
+   now be re-credited against a stable baseline.
 
-   The true worst primitives are `downvalue-exact-hit` and `if-true`, not
-   `downvalue-pattern-hit`; the old prioritization was off.
+Corrected, denoised baseline (harness fix + min-of-7, both engines at their
+cleanest), worst-first decision-grade targets:
 
-2. **Measurement noise on sub-millisecond labels (OPEN).** Run-to-run jitter is
-   <8% on the slow targets (>=1.5ms total) but 20-78% on the fast and
-   `*-repeat` labels (`downvalue-*-miss-repeat` ~71-78%, `block-symbol-only-repeat`
-   ~59%). Decisions on those labels are within noise at the current iteration
-   counts. Raise their counts (or median-of-N) before crediting a change to
-   them; the `*-repeat` labels were the evidence cited for the recent
-   cache-stable-miss optimizations and should be re-measured at higher counts.
+| label | clean ratio | was (contaminated) |
+| --- | ---: | ---: |
+| `downvalue-exact-hit` | `7.76` | `4.63` |
+| `if-true` | `7.20` | `4.39` |
+| `downvalue-pattern-hit` | `7.07` | `5.18` |
+| `sameq-integer` | `6.33` | `4.17` |
+| `block-local` / `with-local` | `~5.3` | `~4.4` |
 
-Treat only stable (>=~1.5ms total, <10% jitter) labels as decision-grade until
-the counts are raised.
+The contaminated baseline both **mis-ranked** the targets (it put
+`downvalue-pattern-hit` worst; the true worst are `downvalue-exact-hit` and
+`if-true`) and **understated the gap** by roughly half on the cheapest
+primitives. Re-select the next optimization target from this corrected table.
 
 ## Pair/Simp Baseline Status
 
