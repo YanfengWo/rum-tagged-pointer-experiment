@@ -6,6 +6,32 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Layer A3 (gated): reuse SharedArgs in candidate build
+
+`868dea7`. The down/up/sub-value dispatch stages built their match candidate
+with `Expr::call(head.clone(), args.to_vec())` — a deep arg copy + fresh
+`SharedArgs` alloc per dispatch (the `call.stage.down_values` cost and the
+exact/pattern-hit `shared_args_alloc` that the Pair re-diagnosis localized).
+Post-A2 the state carries the args as `SharedArgs`, so the candidate now reuses
+that Arc via `call_with_shared_args` (refcount bump). The three value stages take
+`&SharedArgs`; the builtin/Listable/Function/special-form stages are byte-for-byte
+unchanged.
+
+Gate (counter authoritative, reproduced): `downvalue-exact-hit`
+`shared_args_alloc` `1M -> 31`; `downvalue-pattern-hit` `2M -> 1M` (the RHS-rebuild
+`Plus[1,1]` 1M remains — Layer B territory); `into_vec_clone` stays `0`.
+`downvalue-exact-hit` ratio ~`5.5x -> ~5.0x` (2x2-run clean win); pattern-hit/miss
+and the no-downvalue controls (if-true/sameq) unchanged. `length-list`/`head-list`
+jitter is environmental noise — they are builtin calls whose dispatch path A3
+does not touch.
+
+**Layer A is now complete (A1+A2+A3).** Cumulative: flaw-1 arg churn eliminated
+(`into_vec_clone -> 0`), the down/sub-value candidate arg-allocation eliminated,
+the primitive tier down ~`5-11%` and `downvalue-exact-hit` from `5.74x` to
+~`5.0x`. Remaining per-call flaw-2: the head allocation (`shared_expr_alloc`, the
+candidate/RHS head `SharedExpr::new`) and the pattern RHS-rebuild node alloc;
+plus the distributed dispatch/eval-loop constant (B0).
+
 ## 2026-06-21 Pair descent re-diagnosis (post-Layer-A), bounded two-engine
 
 Per the corrected direction (the `34x` is the per-call dispatch/eval constant in
