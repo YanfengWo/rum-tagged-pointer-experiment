@@ -6,6 +6,28 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Brief-008 Implemented: skip empty dispatch stages (gated)
+
+Re-ranked after brief-007: `if-true` (~`6.4x`) was the worst again (shared
+dispatch). `build_call_dispatch_plan` pushed the UpValues/DownValues/SubValues
+stages unconditionally; `If[True,1,2]` (no such values) entered three no-op
+stages costing ~`539ns` profiled. Gated each push on the value's possible
+presence (`1212664`). Scope clean, `cargo test` 672 green (an existing
+plan-structure test was correctly updated to the empty-stage plan, plus new
+runtime regressions). Isolated proof: if-true's empty `call.stage.*` are gone,
+while a downvalue symbol still enters `down_values` (control). A/B differential
+confirms a real win — builtin labels `-10` to `-13%` (if-true `-13.4%`, sameq
+`-13.0%`) while `downvalue-exact-hit` (keeps its stage) moved only `-1.2%`.
+
+This largely exhausts the cheap, bounded per-call dispatch wins. The remaining
+tier-wide cost is the owned-args churn (Arc->owned->Arc round-trip, ~13% of a
+call) plus the two-allocation `Call` node and the pointer-keyed stability cache
+that cannot hit freshly rebuilt trees. Closing more needs the representation
+rework (Layer A: borrowed/shared dispatch — bounded, splittable; Layer B:
+single-allocation call node + inline evaluated/stable stamp propagated through
+substitution — larger). Scope Layer A with bounded briefs and Layer B from a
+fresh allocation/absent-miss measurement before committing.
+
 ## 2026-06-21 Brief-007 Implemented: compiled-MatcherNode fast match (gated)
 
 Added `fast_match_compiled` reading the precompiled `MatcherNode` instead of
