@@ -91,10 +91,13 @@ impl CallDispatchState {
     }
 
     pub(super) fn evaluated_args(&self) -> &[Expr] {
+        self.evaluated_shared_args().as_ref()
+    }
+
+    pub(super) fn evaluated_shared_args(&self) -> &SharedArgs {
         self.evaluated_args
             .as_ref()
             .expect("call arguments should be prepared before this stage")
-            .as_ref()
     }
 
     pub(super) fn into_final_shared_args(self) -> SharedArgs {

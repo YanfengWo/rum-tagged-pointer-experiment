@@ -96,11 +96,15 @@ impl Session {
                     ))),
                 }
             }
-            CallDispatchStage::UpValues => self.try_apply_up_values(head, state.evaluated_args()),
-            CallDispatchStage::DownValues => {
-                self.try_apply_down_values(head, state.evaluated_args())
+            CallDispatchStage::UpValues => {
+                self.try_apply_up_values(head, state.evaluated_shared_args())
             }
-            CallDispatchStage::SubValues => self.try_apply_sub_values(head, state.evaluated_args()),
+            CallDispatchStage::DownValues => {
+                self.try_apply_down_values(head, state.evaluated_shared_args())
+            }
+            CallDispatchStage::SubValues => {
+                self.try_apply_sub_values(head, state.evaluated_shared_args())
+            }
             CallDispatchStage::OrdinaryBuiltin => {
                 self.try_dispatch_builtin_call(builtin_handler, head, state.evaluated_args())
             }

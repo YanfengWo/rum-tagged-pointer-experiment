@@ -4,7 +4,7 @@ impl Session {
     pub(super) fn try_apply_down_values(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Option<Expr>, EvalError> {
         let runtime_profile_head = runtime_path_timing_start("down_values.head_lookup");
         let Some(symbol) = expr_as_symbol(head) else {
@@ -33,6 +33,7 @@ impl Session {
 
         self.record_profile_down_value_scan(symbol);
 
+        let args_slice = args.as_ref();
         let head_allows_raw_miss_cache = matches!(
             self.attribute_set_for_head(head).hold_attribute(),
             HoldAttribute::None
@@ -44,14 +45,14 @@ impl Session {
                 .is_some_and(|signatures| {
                     signatures
                         .iter()
-                        .all(|signature| !signature.could_match_args(args))
+                        .all(|signature| !signature.could_match_args(args_slice))
                 });
 
         if is_system_symbol_name(head, heads::patterns::DEFAULT) {
             let runtime_profile_default =
                 runtime_path_timing_start("down_values.direct_default_lookup");
             let down_values = definition.down_values.clone();
-            let direct_default = self.try_apply_direct_default_value(args, &down_values);
+            let direct_default = self.try_apply_direct_default_value(args_slice, &down_values);
             record_profile_runtime_path_timing(
                 runtime_profile_default,
                 runtime_profile_outcome_for_option_result(&direct_default),
@@ -66,7 +67,7 @@ impl Session {
         }
 
         let runtime_profile_candidate = runtime_path_timing_start("down_values.candidate_build");
-        let candidate = Expr::call(head.clone(), args.to_vec());
+        let candidate = Expr::call_with_shared_args(head.clone(), args.clone());
         record_profile_runtime_path_timing(runtime_profile_candidate, RuntimeProfileOutcome::Ok);
         let runtime_profile_normalize =
             runtime_path_timing_start("down_values.normalize_candidate");
@@ -382,15 +383,16 @@ impl Session {
     pub(super) fn try_apply_up_values(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Option<Expr>, EvalError> {
         if !self.has_up_value_definitions {
             return Ok(None);
         }
 
         let mut up_values = Vec::new();
+        let args_slice = args.as_ref();
 
-        for symbol in collect_upvalue_candidate_symbols(args) {
+        for symbol in collect_upvalue_candidate_symbols(args_slice) {
             let Some(definition) = self.definitions.get(&symbol) else {
                 continue;
             };
@@ -407,7 +409,7 @@ impl Session {
             return Ok(None);
         }
 
-        let candidate = Expr::call(head.clone(), args.to_vec());
+        let candidate = Expr::call_with_shared_args(head.clone(), args.clone());
         let normalized_candidate =
             self.normalize_definition_candidate_for_matching(head, &candidate);
 
@@ -575,7 +577,7 @@ impl Session {
     pub(super) fn try_apply_sub_values(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Option<Expr>, EvalError> {
         let runtime_profile_head = runtime_path_timing_start("sub_values.base_head_lookup");
         let Some(symbol) = base_head_symbol_of_nested_call(head).cloned() else {
@@ -603,7 +605,7 @@ impl Session {
         record_profile_runtime_path_timing(runtime_profile_definition, RuntimeProfileOutcome::Some);
 
         let runtime_profile_candidate = runtime_path_timing_start("sub_values.candidate_build");
-        let candidate = Expr::call(head.clone(), args.to_vec());
+        let candidate = Expr::call_with_shared_args(head.clone(), args.clone());
         record_profile_runtime_path_timing(runtime_profile_candidate, RuntimeProfileOutcome::Ok);
         let runtime_profile_normalize = runtime_path_timing_start("sub_values.normalize_candidate");
         let normalized_candidate =
