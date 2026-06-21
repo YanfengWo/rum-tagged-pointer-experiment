@@ -6,6 +6,39 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 B0 diagnostic: Layer B prize + the if-true residual fork
+
+After Layer A, ran the B0 diagnostic (node-alloc share, miss_absent rate, what
+now dominates if-true) to decide the Layer B go/no-go.
+
+- **flaw 2 (node allocation):** the downvalue paths allocate 2-4 Arcs/call
+  (`shared_args_alloc + shared_expr_alloc`: exact-hit `2/call`, pattern-hit
+  `4/call` — candidate build + RHS rebuild + call node). `if-true` allocates
+  ~`27` total (the result `1` is an atom; the body Arc is reused) — essentially
+  zero per call.
+- **flaw 3 (absent-miss):** on a fresh-RHS workload (`pattern-hit`),
+  `call_stability_misses == call_stability_miss_absent` at every snapshot — 100%
+  of stability-cache misses are absent-misses (the pointer key cannot hit a
+  freshly rebuilt tree).
+- **if-true residual is dispatch/eval-loop bound, NOT allocation bound.**
+  Per-phase self-timing (profiling-inflated, read as proportions) spreads the
+  cost across the evaluate fixed-point loop (`evaluate.total` called 2x/If,
+  `stability_check` 3x/If), the COW `prepare_arguments` loop (still iterates
+  plan/evaluate/compare per arg even with zero alloc), the `If` builtin itself,
+  and the dispatch drive glue — no single dominant leaf. This is the persistent
+  per-call constant (the brief-003/005/007/008 lever), separate from the
+  allocation/absent-miss flaws.
+
+**Consequence for Layer B:** B (single-alloc node + inline stamp) targets flaw 2
+and flaw 3, so it helps the downvalue/subvalue paths and the downstream Pair
+`34x` conversion chain (where there is real subterm sharing for a stamp to
+catch). It will NOT move `if-true` (the current worst microbench label), because
+`If[True,1,2]` evaluates to a different value (not a fixed point) and allocates
+nothing — neither the cache nor a stability-stamp can short-circuit it; only
+full value-memoization (deferred, out of scope) would. So Layer B should be
+gated on the downvalue-path allocation counter halving and the downstream gates,
+NOT on the if-true ratio.
+
 ## 2026-06-21 Layer A COMPLETE: shared-args dispatch + COW arg prep (gated)
 
 Layer A of the representation rewrite (`docs/representation-rewrite-plan.md`)
