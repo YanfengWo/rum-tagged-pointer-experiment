@@ -6,6 +6,22 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Brief-005 Implemented: zero-cost dispatch timing (gated, systemic win)
+
+Converted the 8 hot per-phase timing helpers to the `#[inline]` guard +
+`#[cold] #[inline(never)]` slow-path pattern (`9bfec36`). Scope clean
+(`profiling.rs` only), `cargo test` 664 green, enabled per-phase output
+identical (46 phases), and a re-sampled disabled `if-true` no longer shows the
+profiling helpers (were `12.3%`, now gone).
+
+Because the instrumentation sat on the shared dispatch path, this is a SYSTEMIC
+win, not a single-label one. Clean same-session microbench A/B, median rum-time
+`-9.2%` across the primitive tier: `part-list -16.2%`, `length-list -13.7%`,
+`set-ownvalue -11.5%`, `sameq-integer -10.5%`, `block-local`/`with-local` ~`-9%`,
+`downvalue-exact-hit -8.2%`, `if-true -6.6%`; no same-tier regression. The
+diagnostic scaffolding had been quietly taxing every call — exactly the
+no-default-path-cost rule.
+
 ## 2026-06-21 Brief-004 Diagnosis: shared call-dispatch overhead (gated)
 
 Diagnostic via `if-true` (the cleanest isolator of pure call overhead: literal
