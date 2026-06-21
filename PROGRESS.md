@@ -6,6 +6,24 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Brief-007 Implemented: compiled-MatcherNode fast match (gated)
+
+Added `fast_match_compiled` reading the precompiled `MatcherNode` instead of
+re-probing the raw pattern `Expr`, swapped in at the 3 fast-path sites when the
+matcher revision is current (`d4b50a6`). Scope clean, `cargo test` 671 green,
+and the fall-through cases were spot-checked directly (Condition `/;`, sequence
+`x__`, Alternatives `|`, PatternTest `?`, typed blank, multi-arg all evaluate
+correctly — the compiled path returns `None` and the full matcher handles them).
+
+Gate note on measurement: the whole-label microbench A/B was too noisy to
+attribute (labels that cannot use the matcher — `if-true`, `sameq-integer` —
+moved `-9` to `-12%` cross-run, same magnitude as the target's `-8.4%`). The
+authoritative proof is the ISOLATED matcher phase: `down_values.fast_match`
+self time dropped `583ns -> 163ns` (`-72%`) and the `pattern_*` predicate chain
+vanished from a clean sample (`337 -> 0` self samples). Lesson: when whole-run
+noise swamps the signal, measure the isolated mechanism directly. No real
+same-tier regression.
+
 ## 2026-06-21 Brief-006 Diagnosis: pattern-matcher cost (gated, verified)
 
 Re-ranked after brief-005, `downvalue-pattern-hit` (~`7.2x`) is the worst
