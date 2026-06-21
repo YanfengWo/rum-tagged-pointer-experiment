@@ -58,7 +58,7 @@ impl Session {
             }
             Expr::Call { head, args } => {
                 let runtime_profile = runtime_path_timing_start("evaluate_inner_unstable.call");
-                let result = self.evaluate_call(head.into_owned(), args);
+                let result = self.evaluate_call(head.clone(), args);
                 record_profile_runtime_path_timing(
                     runtime_profile,
                     runtime_profile_outcome_for_expr_result(&result),
@@ -623,15 +623,31 @@ impl Session {
 
     pub(super) fn evaluate_call(
         &mut self,
-        head: Expr,
+        head: SharedExpr,
         args: SharedArgs,
     ) -> Result<Expr, EvalError> {
         let runtime_profile_total = runtime_path_timing_start("evaluate_call.total");
         let runtime_profile_head = runtime_path_timing_start("evaluate_call.head_eval");
-        let evaluated_head_result = self.evaluate_atom_fast_path(head);
+        let head_kind = EvaluateAtomFastPathKind::classify(self, head.as_ref());
+        let runtime_profile_fast_path = runtime_path_timing_start("evaluate_atom_fast_path.total");
+        let runtime_profile_kind = runtime_path_timing_start(head_kind.profile_name());
+        let evaluated_head_result = match head_kind {
+            EvaluateAtomFastPathKind::StableSymbol | EvaluateAtomFastPathKind::Atom => Ok(head),
+            EvaluateAtomFastPathKind::UnstableSymbol | EvaluateAtomFastPathKind::Call => {
+                self.evaluate(head.into_owned()).map(SharedExpr::new)
+            }
+        };
+        record_profile_runtime_path_timing(
+            runtime_profile_kind,
+            runtime_profile_outcome_for_shared_expr_result(&evaluated_head_result),
+        );
+        record_profile_runtime_path_timing(
+            runtime_profile_fast_path,
+            runtime_profile_outcome_for_shared_expr_result(&evaluated_head_result),
+        );
         record_profile_runtime_path_timing(
             runtime_profile_head,
-            runtime_profile_outcome_for_expr_result(&evaluated_head_result),
+            runtime_profile_outcome_for_shared_expr_result(&evaluated_head_result),
         );
         let evaluated_head = match evaluated_head_result {
             Ok(value) => value,
@@ -639,7 +655,9 @@ impl Session {
                 let args_for_resume = args.clone();
                 let result = self.suspend_with_frame(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| session.resume_call_after_head(value, args_for_resume),
+                    move |session, value| {
+                        session.resume_call_after_head(SharedExpr::new(value), args_for_resume)
+                    },
                 );
                 record_profile_runtime_path_timing(
                     runtime_profile_total,
@@ -666,12 +684,12 @@ impl Session {
 
     pub(super) fn resume_call_after_head(
         &mut self,
-        evaluated_head: Expr,
+        evaluated_head: SharedExpr,
         args: SharedArgs,
     ) -> Result<Expr, EvalError> {
         let runtime_profile_total = runtime_path_timing_start("evaluate_call.resume_after_head");
         let runtime_profile_plan = runtime_path_timing_start("evaluate_call.build_dispatch_plan");
-        let plan = self.build_call_dispatch_plan(&evaluated_head);
+        let plan = self.build_call_dispatch_plan(evaluated_head.as_ref());
         record_profile_runtime_path_timing(runtime_profile_plan, RuntimeProfileOutcome::Ok);
         let state = CallDispatchState::new(args);
 
@@ -690,13 +708,14 @@ impl Session {
 
     pub(super) fn resume_call_with_dispatch_plan(
         &mut self,
-        evaluated_head: Expr,
+        evaluated_head: impl Into<SharedExpr>,
         plan: CallDispatchPlan,
         state: CallDispatchState,
         stage_index: usize,
     ) -> Result<Expr, EvalError> {
+        let evaluated_head = evaluated_head.into();
         if stage_index >= plan.len() {
-            return Ok(Expr::call_with_shared_args(
+            return Ok(Expr::call_shared(
                 evaluated_head,
                 state.into_final_shared_args(),
             ));
@@ -717,7 +736,7 @@ impl Session {
             runtime_path_timing_start(call_dispatch_stage_profile_name(stage));
         let stage_result = self.run_call_dispatch_stage(
             stage,
-            &evaluated_head,
+            evaluated_head.as_ref(),
             plan.attributes,
             plan.builtin_handler,
             &mut state,
@@ -837,6 +856,16 @@ fn runtime_profile_outcome_for_optional_result(
 fn runtime_profile_outcome_for_expr_result(
     result: &Result<Expr, EvalError>,
 ) -> RuntimeProfileOutcome {
+    runtime_profile_outcome_for_result(result)
+}
+
+fn runtime_profile_outcome_for_shared_expr_result(
+    result: &Result<SharedExpr, EvalError>,
+) -> RuntimeProfileOutcome {
+    runtime_profile_outcome_for_result(result)
+}
+
+fn runtime_profile_outcome_for_result<T>(result: &Result<T, EvalError>) -> RuntimeProfileOutcome {
     match result {
         Ok(_) => RuntimeProfileOutcome::Ok,
         Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
