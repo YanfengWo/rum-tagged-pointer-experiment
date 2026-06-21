@@ -31,6 +31,13 @@ pub(super) fn expr_as_string(expr: &Expr) -> Option<&str> {
     }
 }
 
+pub(super) fn expr_is_self_evaluating_atom(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Atom(Atom::Integer(_) | Atom::Rational(_) | Atom::String(_))
+    )
+}
+
 pub(super) fn load_spec_from_expr(expr: &Expr) -> Option<String> {
     match expr {
         Expr::Atom(Atom::String(spec)) => Some(spec.clone()),

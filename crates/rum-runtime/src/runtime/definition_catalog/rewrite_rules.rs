@@ -57,6 +57,32 @@ impl Session {
         self.drive_internal_value(resolved_rule_exprs_result, cont)
     }
 
+    pub(in crate::runtime) fn drive_rewrite_rules_owned<U, F>(
+        &mut self,
+        expr: Expr,
+        cont: F,
+    ) -> Result<U, EvalError>
+    where
+        U: ContinuationValue + 'static,
+        F: FnOnce(&mut Session, Option<Vec<RewriteRule>>) -> Result<U, EvalError> + 'static,
+    {
+        match self.evaluate(expr) {
+            Ok(resolved) => cont(self, self.compile_rewrite_rules_for_matching(&resolved)),
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(move |session, outcome| match outcome {
+                    Ok(resolved) => {
+                        let rules = session.compile_rewrite_rules_for_matching(&resolved);
+                        let resumed = cont(session, rules)?;
+                        Ok(resumed.into_continuation_expr())
+                    }
+                    Err(error) => Err(error),
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
     pub(in crate::runtime) fn normalize_rewrite_rule_exprs_from_resolved(
         &self,
         resolved: &Expr,

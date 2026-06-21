@@ -939,19 +939,25 @@ impl Session {
         let eval_cache_profile_start =
             evaluation_cache_profile_source_timing_start("definition_rhs_eval_by_source");
         let runtime_profile_total = runtime_path_timing_start("definition.rhs.total");
-        let runtime_profile_evaluate = runtime_path_timing_start("definition.rhs.evaluate");
-        let rhs_result = self.evaluate_with_option_value_scope(option_scope, rhs);
-        record_profile_runtime_path_timing(
-            runtime_profile_evaluate,
-            runtime_profile_outcome_for_expr_result(&rhs_result),
-        );
-        let outcome = self.suspend_with_result_frame(rhs_result, |session, outcome| {
-            session.finish_definition_rhs_evaluation(outcome)
-        });
+        let result = if option_scope.is_none() && expr_is_self_evaluating_atom(&rhs) {
+            Ok(rhs)
+        } else {
+            let runtime_profile_evaluate = runtime_path_timing_start("definition.rhs.evaluate");
+            let rhs_result = self.evaluate_with_option_value_scope(option_scope, rhs);
+            record_profile_runtime_path_timing(
+                runtime_profile_evaluate,
+                runtime_profile_outcome_for_expr_result(&rhs_result),
+            );
+            let outcome = self.suspend_with_result_frame(rhs_result, |session, outcome| {
+                session.finish_definition_rhs_evaluation(outcome)
+            });
 
-        let result = match outcome {
-            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => self.finish_definition_rhs_evaluation(outcome),
+            match outcome {
+                Err(EvalError::InputRequired { request }) => {
+                    Err(EvalError::InputRequired { request })
+                }
+                outcome => self.finish_definition_rhs_evaluation(outcome),
+            }
         };
         record_profile_definition_rhs_eval(profile_start);
         record_profile_definition_rhs_eval_by_source(eval_cache_profile_start);
@@ -1190,6 +1196,12 @@ impl Session {
         rule: &Expr,
         result: &Expr,
     ) {
+        if !self.tracing_enabled
+            && (self.monitor_scopes.is_empty() || !self.monitor_callbacks_enabled)
+        {
+            return;
+        }
+
         let event = if self.tracing_enabled {
             TraceEvent::RuleApplied {
                 source,

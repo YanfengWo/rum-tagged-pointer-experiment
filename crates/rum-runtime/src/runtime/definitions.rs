@@ -647,13 +647,6 @@ fn list_destructuring_shapes_match(lhs: &Expr, rhs: &Expr) -> bool {
             .all(|(lhs_item, rhs_item)| list_destructuring_shapes_match(lhs_item, rhs_item))
 }
 
-fn expr_is_self_evaluating_atom(expr: &Expr) -> bool {
-    matches!(
-        expr,
-        Expr::Atom(Atom::Integer(_) | Atom::Rational(_) | Atom::String(_))
-    )
-}
-
 fn runtime_profile_outcome_for_optional_result(
     result: &Result<Option<Expr>, EvalError>,
 ) -> RuntimeProfileOutcome {
