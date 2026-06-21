@@ -72,10 +72,10 @@ impl Session {
     ) -> Result<Option<Expr>, EvalError> {
         match stage {
             CallDispatchStage::SpecialForm => {
-                self.try_dispatch_builtin_call(builtin_handler, head, state.raw_args.as_slice())
+                self.try_dispatch_builtin_call(builtin_handler, head, state.raw_args.as_ref())
             }
             CallDispatchStage::PrepareArguments => {
-                let raw_args = std::mem::take(&mut state.raw_args);
+                let raw_args = Expr::unwrap_shared_args(std::mem::take(&mut state.raw_args));
                 let mut evaluated_args =
                     self.prepare_arguments_for_call(head.clone(), attributes, raw_args)?;
                 evaluated_args =

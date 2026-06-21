@@ -78,12 +78,12 @@ impl CallDispatchPlan {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(super) struct CallDispatchState {
-    pub(super) raw_args: Vec<Expr>,
+    pub(super) raw_args: SharedArgs,
     pub(super) evaluated_args: Option<Vec<Expr>>,
 }
 
 impl CallDispatchState {
-    pub(super) fn new(raw_args: Vec<Expr>) -> Self {
+    pub(super) fn new(raw_args: SharedArgs) -> Self {
         Self {
             raw_args,
             evaluated_args: None,
@@ -97,7 +97,8 @@ impl CallDispatchState {
     }
 
     pub(super) fn into_final_args(self) -> Vec<Expr> {
-        self.evaluated_args.unwrap_or(self.raw_args)
+        self.evaluated_args
+            .unwrap_or_else(|| Expr::unwrap_shared_args(self.raw_args))
     }
 }
 

@@ -58,7 +58,7 @@ impl Session {
             }
             Expr::Call { head, args } => {
                 let runtime_profile = runtime_path_timing_start("evaluate_inner_unstable.call");
-                let result = self.evaluate_call(head.into_owned(), args.into_vec());
+                let result = self.evaluate_call(head.into_owned(), args);
                 record_profile_runtime_path_timing(
                     runtime_profile,
                     runtime_profile_outcome_for_expr_result(&result),
@@ -621,7 +621,11 @@ impl Session {
         })
     }
 
-    pub(super) fn evaluate_call(&mut self, head: Expr, args: Vec<Expr>) -> Result<Expr, EvalError> {
+    pub(super) fn evaluate_call(
+        &mut self,
+        head: Expr,
+        args: SharedArgs,
+    ) -> Result<Expr, EvalError> {
         let runtime_profile_total = runtime_path_timing_start("evaluate_call.total");
         let runtime_profile_head = runtime_path_timing_start("evaluate_call.head_eval");
         let evaluated_head_result = self.evaluate_atom_fast_path(head);
@@ -663,7 +667,7 @@ impl Session {
     pub(super) fn resume_call_after_head(
         &mut self,
         evaluated_head: Expr,
-        args: Vec<Expr>,
+        args: SharedArgs,
     ) -> Result<Expr, EvalError> {
         let runtime_profile_total = runtime_path_timing_start("evaluate_call.resume_after_head");
         let runtime_profile_plan = runtime_path_timing_start("evaluate_call.build_dispatch_plan");

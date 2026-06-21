@@ -196,7 +196,7 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         let plan = self.build_call_dispatch_plan(&head);
         let state = CallDispatchState {
-            raw_args: Vec::new(),
+            raw_args: SharedArgs::default(),
             evaluated_args: Some(self.normalize_call_args_by_attributes(
                 &head,
                 prepared_args,

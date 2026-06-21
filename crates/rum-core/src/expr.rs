@@ -524,6 +524,12 @@ impl SharedArgs {
     }
 }
 
+impl Default for SharedArgs {
+    fn default() -> Self {
+        Self(Arc::new(Vec::new()))
+    }
+}
+
 impl PartialEq for SharedArgs {
     fn eq(&self, other: &Self) -> bool {
         Self::ptr_eq(self, other) || self.as_ref() == other.as_ref()
