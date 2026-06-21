@@ -169,6 +169,25 @@ Acceptance:
 - Larger `REWRCONV` / `tryTermMatch` probes are not optimized until the basic
   matcher labels are understood.
 
+Bridge label (carry the Task 2d finding forward — do not rediscover it). The
+isolated native-dispatch labels do not reproduce the Pair gate: the core
+microbench `downvalue-pattern-miss` is ~`3.2x`, but the Pair/Simp failed
+`REWRCONV` dispatch was measured at ~`34x` (same `17240` failed dispatches in
+both engines; rum ~`5.3ms` vs WK ~`0.16ms` each). That ~10x gap means the Pair
+multiplier is *not* the native pattern-miss primitive — it is a WL-level
+conversion-combinator path: each failed rewrite goes through
+`REWRCONV → tryTermMatch → convFail` wrapped in the `simpRuleConv` / `ORELSEC`
+closures that `buildBaseConv` constructs, and the prime suspect is per-attempt
+combinator / `Module`-closure construction rebuilt per subterm. Add a core
+microbench label that isolates this shape — a held equational rule applied to a
+mismatched term through a conversion-combinator wrapper that fails — so the
+ladder has a rung for the actual Pair driver. Without it, fixing
+`downvalue-pattern-hit`/`-miss` to ~`2x` will look like progress while Pair
+stays slow, because that native path is not the one Pair exercises. The Stage 4
+matcher work and Stage 5 `Catch`/`Throw` work both feed this; the explicit
+profile target is one failed `REWRCONV` in the Simp context (was handoff
+Task 2d).
+
 ### Stage 5: Nonlocal Control And Runtime Boundaries
 
 Goal: control transfer should be correct and cheap enough for package-level
