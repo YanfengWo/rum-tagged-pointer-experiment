@@ -6,6 +6,46 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Phase 0 Baseline FROZEN (representation rewrite reference)
+
+Brief-009 (`044aa1e`) landed the env-gated (`RUM_PROFILE_REPR`) rum-core
+representation-cost counters, zero-cost when off (verified by sampling that
+`rum_core::profiling::*` / `record_into_*` never appear on the disabled hot
+path; 672 rum-runtime + 6 rum-core tests green). This freezes the objective
+Phase-0 baseline that every later rewrite step is gated against.
+
+**Primitive tier (no-profile release, min-of-7, worst-first):**
+
+| label | ratio vs WK |
+| --- | ---: |
+| `if-true` | `5.96x` |
+| `downvalue-exact-hit` | `5.74x` |
+| `downvalue-pattern-hit` | `5.47x` |
+| `sameq-integer` | `5.38x` |
+| `length-list` | `3.66x` |
+| `head-list` | `3.38x` |
+
+**Representation counters per 1M calls (the two flaws, now measured):**
+
+| call shape | into_vec clone | into_owned clone | node allocs | reading |
+| --- | ---: | ---: | ---: | --- |
+| `if-true` | `1.00M` (100%) | `1.00M` (100%) | `~27` (≈0) | **pure flaw 1**: clones args, builds no new node |
+| `downvalue-exact-hit` | `1.00M` (100%) | `1.00M` (100%) | `2.00M` (2/call) | flaw 1 + flaw 2 |
+| `downvalue-pattern-hit` | `2.00M` (100%) | `2.00M` (100%) | `2.00M` | churn doubles (RHS rebuild) |
+
+So 100% of owned conversions on these paths are deep clones (flaw 1), and an
+ordinary call node costs **two** Arc allocations (flaw 2: SharedArgs + SharedExpr).
+
+**Downstream gate:** Bool-stack load (acceptance clone `200f13a`) `0.70s`.
+Pair `mkPair`/PropTaut are the heavy end-to-end gates, captured at Layer
+boundaries, not every step.
+
+**Per-layer success criteria derived from the baseline:**
+- Layer A (borrowed/shared dispatch) wins ⇒ `into_vec_clone` / `into_owned_clone`
+  fall toward 0 on builtin/held paths — `if-true` should go ~1M → ~0.
+- Layer B (single-allocation node) wins ⇒ node allocs halve (2/call → 1/call):
+  `shared_args_alloc + shared_expr_alloc` drops from ~2M to ~1M per 1M calls.
+
 ## 2026-06-21 Brief-008 Implemented: skip empty dispatch stages (gated)
 
 Re-ranked after brief-007: `if-true` (~`6.4x`) was the worst again (shared
