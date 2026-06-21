@@ -136,25 +136,27 @@ steps so the representation swap is never a 572-site big-bang.
   change; the 572 sites are untouched (they use accessors). Gate: tests green,
   call-allocation counter halves, node-construction-heavy labels and warm mkPair
   improve, serde round-trip unchanged.
-- B3 (brief): the inline normal-form stamp. Put an evaluated/stable flag ON the
-  call node, validated against the evaluation epoch/generation (reuse the
-  existing epoch + dirty-bloom invalidation machinery). At `evaluate` entry, a
-  node whose stamp is valid for the current epoch short-circuits with no walk
-  and no dispatch. This REPLACES the pointer-keyed call-stability side cache —
-  the side cache existed only because there was nowhere to put the bit; with the
-  bit inline and the trees now shared (Layer A), it hits whenever a shared
-  subtree is reused. **Load-bearing constraint (from the Task-2b review): the
-  stamp helps only if it travels on shared subtree `Arc`s reused through
-  substitution, not on freshly allocated parents.** Layer A + B1/B2 make that
-  true; verify it with the litmus from the handoff (a memoization-free recursive
-  workload with real subterm sharing must show `miss_absent` fall well below the
-  evaluate count). Gate: `miss_absent` rate collapses, warm mkPair drops sharply
-  (this is the `Pair.wl` `34x` lever), all tests green, the epoch-invalidation
-  regression tests still pass.
+- B3 (the inline normal-form stamp) — **REFUTED as the Pair/34x lever; do NOT
+  build it on that expectation.** This step was already prototyped (Task-3b,
+  2026-06-13, `RUM_CALL_STABILITY_INLINE_STAMP=1`): the stamp carried the
+  stable verdict correctly (unit litmus passed) and **hit `33M+` times** on warm
+  mkPair, **yet both variants still timed out at the same `268M+`
+  stability-check scale**. That refutes the "redundant re-evaluation of shared
+  stable subterms" hypothesis: if the cost were re-checking shared stable
+  subterms, the stamp would have moved it — it did not, so the Pair cost is
+  **genuine work in the conversion descent**, not shareable redundancy. The
+  stamp carrier (a `Mutex<Option<..>>` on every `SharedArgs`) also imposed a
+  ~`12-14%` default-path regression (the reverted-carrier hard line in
+  `CLAUDE.md`). Conclusion: the `34x` Pair gate is the per-failed-dispatch
+  CONSTANT in the descent (handoff Task 2d), i.e. the same per-call dispatch/eval
+  constant the primitive tier measures — NOT a cache/sharing/stamp problem. An
+  inline stamp could only ever be a marginal play on the general constant, and
+  only if made truly zero-cost when off; it is not greenlit.
 
-Acceptance for Layer B: call allocations halved, `miss_absent` collapsed, the
-side cache removed, primitive tier and `Pair.wl`/warm mkPair materially down,
-all tests green, serde + suspension invariants intact.
+Acceptance for Layer B: the **per-call dispatch/eval constant** (the real `34x`
+lever, via compounding over the descent) and the node-allocation pressure come
+down, primitive tier and `Pair.wl`/warm mkPair materially down, all tests green,
+serde + suspension invariants intact. The stamp/absent-miss framing is dropped.
 
 ## Sequencing and why A precedes B
 

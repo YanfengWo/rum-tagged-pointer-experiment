@@ -6,6 +6,30 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Inline stamp REFUTED (validation-first caught a known dead-end)
+
+Direction was set to pivot Layer B to the inline normal-form stamp as the
+`34x`/Pair lever. The validation-first step (reading the current cache mechanism
+and the handoff before building) surfaced that this is a **already-run, negative
+experiment**: Task-3b (2026-06-13) prototyped exactly this stamp behind
+`RUM_CALL_STABILITY_INLINE_STAMP=1`; it carried the verdict correctly (unit
+litmus passed) and **hit `33M+` times** on warm mkPair, **yet both variants
+still timed out at the same `268M+` stability-check scale**. That refutes the
+"redundant re-evaluation of shared stable subterms" hypothesis — if the cost
+were re-checking shared subterms, the stamp would have moved it. The Pair `34x`
+is therefore **genuine work in the conversion descent**, i.e. the per-failed-
+dispatch CONSTANT (handoff Task 2d) = the same per-call dispatch/eval constant
+the primitive tier measures, NOT a cache/sharing problem. The stamp carrier also
+caused the reverted ~`12-14%` default-path regression (CLAUDE.md hard line).
+
+Decision: do NOT build the inline stamp. `docs/representation-rewrite-plan.md`
+B3 corrected to mark it refuted. The real `34x` lever is the per-call
+dispatch/eval constant (which Layer A has been reducing, ~`5-11%` banked, and
+which the B0 if-true self-timing localizes to the evaluate fixed-point loop +
+stability-check passes + dispatch drive glue). Next target is that constant, not
+a stamp/cache. This is the validation-first methodology working as intended:
+it cost one diagnostic read and saved days of re-implementing a refuted lever.
+
 ## 2026-06-21 Brief-012 STOPPED: SharedArgs=Arc<[Expr]> hit hidden mutators
 
 Attempted the low-risk Layer-B args compaction (`SharedArgs(Arc<Vec<Expr>>)` →
