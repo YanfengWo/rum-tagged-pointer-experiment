@@ -6,6 +6,23 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Brief-006 Diagnosis: pattern-matcher cost (gated, verified)
+
+Re-ranked after brief-005, `downvalue-pattern-hit` (~`7.2x`) is the worst
+primitive. Brief-006 split the ~`518-583 ns` `fast_match_definition_pattern`
+cost. Probe clean (`symbol_invalidations = 1`). The matcher is dominated by
+**re-probing the raw pattern `Expr`**: the `pattern_*` predicate chain is
+`41.8%` (conservative) to `61.6%` of the matcher; `bind_pattern_name` /
+`SymbolExprMap` is `13.9%`; structural clone/compare `7.1%`;
+`attribute_set_for_head` `3.0%`; `match_blank` (the `_Integer` check) only
+`1.0%`. Independently reproduced: in a clean sample the `pattern_*` probe chain
+is `337` self samples vs `bind_pattern_name` `10` — the predicate chain
+overwhelmingly dominates. This confirms the precompiled-`MatcherNode`
+hypothesis: the matcher re-interprets the raw pattern every call even though a
+compiled `MatcherNode` already sits on the `DownValue`. Fix → brief-007: drive
+the fast match from the precompiled `MatcherNode`, not the raw-`Expr` probe
+chain.
+
 ## 2026-06-21 Brief-005 Implemented: zero-cost dispatch timing (gated, systemic win)
 
 Converted the 8 hot per-phase timing helpers to the `#[inline]` guard +
