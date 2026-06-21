@@ -915,26 +915,59 @@ pub(super) fn rule_rhs_timing_start() -> Option<Instant> {
     }
 }
 
+#[inline]
 pub(super) fn definition_rule_timing_start() -> Option<Instant> {
-    if definition_rule_timing_enabled() {
-        Some(Instant::now())
-    } else {
-        None
+    if !lexical_profile_enabled() {
+        return None;
     }
+
+    definition_rule_timing_start_slow()
 }
 
+#[cold]
+#[inline(never)]
+fn definition_rule_timing_start_slow() -> Option<Instant> {
+    if !definition_rule_timing_enabled() {
+        return None;
+    }
+
+    Some(Instant::now())
+}
+
+#[inline]
 pub(super) fn definition_dispatch_timing_start() -> Option<Instant> {
-    if definition_rule_timing_enabled() {
-        Some(Instant::now())
-    } else {
-        None
+    if !lexical_profile_enabled() {
+        return None;
     }
+
+    definition_dispatch_timing_start_slow()
 }
 
+#[cold]
+#[inline(never)]
+fn definition_dispatch_timing_start_slow() -> Option<Instant> {
+    if !definition_rule_timing_enabled() {
+        return None;
+    }
+
+    Some(Instant::now())
+}
+
+#[inline]
 pub(super) fn builtin_timing_start(
     symbol: &Symbol,
     arg_count: usize,
 ) -> Option<BuiltinTimingToken> {
+    if !lexical_profile_enabled() {
+        return None;
+    }
+
+    builtin_timing_start_slow(symbol, arg_count)
+}
+
+#[cold]
+#[inline(never)]
+fn builtin_timing_start_slow(symbol: &Symbol, arg_count: usize) -> Option<BuiltinTimingToken> {
     if !builtin_timing_enabled() {
         return None;
     }
@@ -957,11 +990,18 @@ pub(super) fn builtin_timing_start(
     })
 }
 
+#[inline]
 pub(super) fn runtime_path_timing_start(phase: &'static str) -> Option<RuntimePathTimingToken> {
     if !lexical_profile_enabled() {
         return None;
     }
 
+    runtime_path_timing_start_slow(phase)
+}
+
+#[cold]
+#[inline(never)]
+fn runtime_path_timing_start_slow(phase: &'static str) -> Option<RuntimePathTimingToken> {
     let key = RuntimePathTimingKey {
         phase,
         source_symbol: evaluation_profile_current_source_symbol()
@@ -1291,6 +1331,7 @@ pub(super) fn record_profile_rule_rhs_timing(
     });
 }
 
+#[inline]
 pub(super) fn record_profile_definition_rule_timing(
     kind: &'static str,
     symbol: &Symbol,
@@ -1298,13 +1339,30 @@ pub(super) fn record_profile_definition_rule_timing(
     start: Option<Instant>,
     result_is_ok: bool,
 ) {
-    if !definition_rule_timing_enabled() {
+    if !lexical_profile_enabled() {
         return;
     }
 
     let Some(start) = start else {
         return;
     };
+
+    record_profile_definition_rule_timing_slow(kind, symbol, index, start, result_is_ok);
+}
+
+#[cold]
+#[inline(never)]
+fn record_profile_definition_rule_timing_slow(
+    kind: &'static str,
+    symbol: &Symbol,
+    index: usize,
+    start: Instant,
+    result_is_ok: bool,
+) {
+    if !definition_rule_timing_enabled() {
+        return;
+    }
+
     let elapsed_nanos = elapsed_nanos_since(start);
     let key = DefinitionRuleTimingKey {
         kind,
@@ -1367,19 +1425,36 @@ pub(super) fn record_profile_definition_dispatch_matcher_outcome(
     });
 }
 
+#[inline]
 pub(super) fn record_profile_definition_dispatch_phase_timing(
     kind: &'static str,
     symbol: &Symbol,
     phase: &'static str,
     start: Option<Instant>,
 ) {
-    if !definition_rule_timing_enabled() {
+    if !lexical_profile_enabled() {
         return;
     }
 
     let Some(start) = start else {
         return;
     };
+
+    record_profile_definition_dispatch_phase_timing_slow(kind, symbol, phase, start);
+}
+
+#[cold]
+#[inline(never)]
+fn record_profile_definition_dispatch_phase_timing_slow(
+    kind: &'static str,
+    symbol: &Symbol,
+    phase: &'static str,
+    start: Instant,
+) {
+    if !definition_rule_timing_enabled() {
+        return;
+    }
+
     let elapsed_nanos = elapsed_nanos_since(start);
     record_profile_definition_dispatch(kind, symbol, |stats| match phase {
         "prefilter" => {
@@ -1420,14 +1495,26 @@ where
     });
 }
 
+#[inline]
 pub(super) fn record_profile_builtin_timing(token: Option<BuiltinTimingToken>, result_is_ok: bool) {
-    if !builtin_timing_enabled() {
+    if !lexical_profile_enabled() {
         return;
     }
 
     let Some(token) = token else {
         return;
     };
+
+    record_profile_builtin_timing_slow(token, result_is_ok);
+}
+
+#[cold]
+#[inline(never)]
+fn record_profile_builtin_timing_slow(token: BuiltinTimingToken, result_is_ok: bool) {
+    if !builtin_timing_enabled() {
+        return;
+    }
+
     let elapsed_nanos = elapsed_nanos_since(token.start);
     let child_nanos = BUILTIN_TIMING_STACK.with(|stack| {
         let mut stack = stack.borrow_mut();
@@ -1455,6 +1542,7 @@ pub(super) fn record_profile_builtin_timing(token: Option<BuiltinTimingToken>, r
     });
 }
 
+#[inline]
 pub(super) fn record_profile_runtime_path_timing(
     token: Option<RuntimePathTimingToken>,
     outcome: RuntimeProfileOutcome,
@@ -1466,6 +1554,16 @@ pub(super) fn record_profile_runtime_path_timing(
     let Some(token) = token else {
         return;
     };
+
+    record_profile_runtime_path_timing_slow(token, outcome);
+}
+
+#[cold]
+#[inline(never)]
+fn record_profile_runtime_path_timing_slow(
+    token: RuntimePathTimingToken,
+    outcome: RuntimeProfileOutcome,
+) {
     let elapsed_nanos = elapsed_nanos_since(token.start);
     let child_nanos = RUNTIME_PATH_TIMING_STACK.with(|stack| {
         let mut stack = stack.borrow_mut();
