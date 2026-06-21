@@ -6,6 +6,41 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Brief-002 Diagnosis: `downvalue-exact-hit` (gated, verified)
+
+Second Codex brief: diagnose the corrected worst primitive,
+`downvalue-exact-hit` (~`7.76x`), a literal downvalue `fExact[1] = 2` looked up
+by `fExact[1]`. The probe was clean this time (`symbol_invalidations = 1`,
+pitfall 2b followed). The finding is verified by independent reproduction.
+
+The hit-vs-miss asymmetry is the mechanism. Per application:
+
+| metric | hit (`fExact[1]`) | miss (`fExact[2]`) |
+| --- | ---: | ---: |
+| `down_value_scans` / `down_value_applications` | `1` / `1` | `0` / `0` |
+| `stability_checks` | `~3` | `~1` |
+| `call_stability_hits` | `0` | `1` |
+
+A downvalue MISS evaluates to itself, so the literal `fExact[2]` becomes a
+steady-state call-stability HIT and short-circuits (cheap). A downvalue HIT
+evaluates to a different value (`2`), so the call is never cached as stable and
+**the full dispatch re-runs every iteration**: shallow-signature scan,
+`normalize_definition_candidate_for_matching`, `fast_match_definition_pattern`,
+`substitute_rule_bindings_for_rhs`, `Expr::clone`, RHS re-evaluation, and ~2
+extra stability checks. `try_apply_down_values_from_symbol` is the top self-time
+leaf with `evaluate_definition_rhs` fully under it.
+
+Root cause and fix direction: down_values are a `Vec<DownValue>` dispatched by
+scan + matcher; there is no exact-literal index (the `exact_down_value_rhs`
+helper exists but is used only by the `Default` path). A literal, pattern-free
+downvalue like `fExact[1] = 2` does not need the matcher / binding-substitution
+/ candidate-normalization machinery at all — WolframKernel hash-indexes exact
+downvalues and returns the stored RHS directly. The implementation brief
+(brief-003) is an exact-downvalue fast path: when a call's args are all ground
+and the symbol has an exact downvalue for them, return the stored RHS via a
+keyed lookup, bypassing the matcher. It must preserve definition ordering /
+specificity vs pattern downvalues.
+
 ## 2026-06-21 Brief-001 Diagnosis: `downvalue-pattern-hit` (gated, corrected)
 
 First Codex task brief under the new delegation model (`docs/dev/codex/`): a
