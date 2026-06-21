@@ -6,6 +6,54 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Layer A COMPLETE: shared-args dispatch + COW arg prep (gated)
+
+Layer A of the representation rewrite (`docs/representation-rewrite-plan.md`)
+landed in two gated commits and eliminated flaw-1 (owned arg round-trip churn)
+on the hot paths.
+
+- **A1 (`bfa7ba4`)** threaded `SharedArgs` (an `Arc<Vec<Expr>>`) through
+  `evaluate_call` / `resume_call_after_head` / `CallDispatchState`, reading args
+  by borrow in the stages. Net-neutral alone (it only *moved* the single
+  `into_vec` from the dispatch entry into `PrepareArguments`) — the counter
+  honestly stayed at ~`1M`, codex stopped at the gate, and I committed A1 only
+  as the prerequisite carrier change. Lesson: the original brief-010 attached
+  the `into_vec`-counter gate to the wrong layer; the materialization is in
+  `prepare_arguments`, not the dispatch entry.
+- **A2 (`6dd4fc7`)** made `prepare_arguments` copy-on-write: it reuses the input
+  `SharedArgs` Arc when every prepared arg is structurally equal to its source,
+  no `Sequence` splice changed the arity, and `Flat`/`Orderless` normalization
+  is provably a no-op. Every arg is still evaluated once in order (safe by
+  construction); suspension materializes the unchanged prefix and reuses the
+  existing continuation. `evaluated_args` became `SharedArgs` so the COW result
+  is not re-cloned on store.
+
+**Measured result (counter is the authoritative proof, independently
+reproduced):** `into_vec_clone` per 1M calls → `0` for `if-true`,
+`downvalue-exact-hit` (was `1M`) and `downvalue-pattern-hit` (was `2M`).
+Systemic tier ratio win, 2×2-run confirmed (A2 both runs below A1 both runs on
+5/6 labels; `exact-hit` the 6th, mechanism-confirmed by the counter; zero
+regressions):
+
+| label | A1 (HEAD) | A2 | delta |
+| --- | ---: | ---: | ---: |
+| `if-true` | ~`5.65-5.89x` | ~`5.21-5.35x` | ~`-11%` |
+| `downvalue-pattern-hit` | ~`5.46-5.70x` | ~`5.03-5.24x` | ~`-8%` |
+| `length-list` | ~`3.64-3.68x` | ~`3.42-3.57x` | ~`-7%` |
+| `head-list` | ~`3.53-3.56x` | ~`3.30-3.43x` | ~`-7%` |
+| `sameq-integer` | ~`4.99-5.24x` | ~`4.67-4.89x` | ~`-6%` |
+| `downvalue-exact-hit` | ~`5.61-5.74x` | ~`5.33-5.66x` | ~`-5%` |
+
+**Re-rank for the next step:** the remaining per-call cost is now (a) the head
+`into_owned` clone (~`1M`, but a cheap no-heap symbol clone — small) and (b) the
+two-Arc node allocation `shared_args_alloc + shared_expr_alloc` ≈ `2/call`
+(flaw 2). `if-true` at ~`5.2x` now allocates only ~`27` nodes (no rebuild), so
+its residual is pure dispatch + evaluate-loop overhead, not allocation. The
+downvalue shapes still allocate `2M`/`call` (RHS rebuild + call-node). Both flaw
+2 and flaw 3 (pointer-cache `miss_absent`) are Layer B. Next: the B0 diagnostic
+(node-alloc share + `miss_absent` rate + what dominates `if-true` now) decides
+the Layer B node layout and whether the 572-site migration prize is worth it.
+
 ## 2026-06-21 Phase 0 Baseline FROZEN (representation rewrite reference)
 
 Brief-009 (`044aa1e`) landed the env-gated (`RUM_PROFILE_REPR`) rum-core
