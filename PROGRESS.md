@@ -6,6 +6,33 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-21 Brief-012 STOPPED: SharedArgs=Arc<[Expr]> hit hidden mutators
+
+Attempted the low-risk Layer-B args compaction (`SharedArgs(Arc<Vec<Expr>>)` →
+`Arc<[Expr]>`, one contiguous alloc instead of Arc-box + Vec-buffer, preserving
+the `Expr::Call { head, args }` variant shape). The director audit estimated
+~55 references, all slice-reads, no in-place mutation. **The audit was wrong:**
+`cargo test --workspace` produced 70 compile errors, and removing `DerefMut`
+exposed real in-place `SharedArgs` mutation (`pop`/`push`/`insert`/`remove`/
+indexed-assign/`iter_mut`) via `Arc::make_mut` in ~12 files
+(`structure_ops/{sequence/insert,sequence/delete,replace/replace_part,
+exact_paths,surface}`, `rewrite_builtins`, `definition_updates`,
+`definition_catalog/traversal_continuation`, `parse_and_message_helpers`,
+`suspension/{collections,rewrite_rules,traversal}`). The audit grep filtered out
+too aggressively. Codex's stop-loss (the brief's conservative ">~6 fallout
+sites" limit) caught it via the compiler before any damage; the change was
+reverted, tree clean.
+
+Re-assessment: `Arc<[Expr]>` for args is a genuine ~70-site compiler-guided
+migration (mechanical: ~58 `.as_slice()` read fixes + ~12 mutator sites
+restructured to build-Vec-then-freeze), not a trivial swap. The prize is flaw-2
+only (one fewer live allocation per *non-mutating* node construction +
+contiguity); the mutating builtins (`Insert`/`Delete`/`ReplacePart`/...) do not
+benefit (they clone+refreeze). It is NOT the `34x` headline (that is flaw 3, the
+inline stamp). Per decision point 2 (a moderate prize behind a large migration
+is a valid defer), the args/head alloc compaction is deferred; Layer B pivots to
+the flaw-3 inline stamp (the `34x` lever), validation-first.
+
 ## 2026-06-21 B0 diagnostic: Layer B prize + the if-true residual fork
 
 After Layer A, ran the B0 diagnostic (node-alloc share, miss_absent rate, what
