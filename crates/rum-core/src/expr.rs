@@ -8,6 +8,10 @@ use std::sync::{Arc, Mutex, OnceLock};
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
 
+use crate::profiling::{
+    record_into_owned, record_into_vec, record_shared_args_alloc, record_shared_expr_alloc,
+};
+
 pub const GLOBAL_CONTEXT: &str = "Global`";
 pub const SYSTEM_CONTEXT: &str = "System`";
 
@@ -429,11 +433,22 @@ pub struct SharedExpr(Arc<Expr>);
 
 impl SharedExpr {
     pub fn new(expr: Expr) -> Self {
-        Self(Arc::new(expr))
+        let shared = Self(Arc::new(expr));
+        record_shared_expr_alloc();
+        shared
     }
 
     pub fn into_owned(self) -> Expr {
-        Arc::try_unwrap(self.0).unwrap_or_else(|expr| expr.as_ref().clone())
+        match Arc::try_unwrap(self.0) {
+            Ok(expr) => {
+                record_into_owned(false);
+                expr
+            }
+            Err(expr) => {
+                record_into_owned(true);
+                expr.as_ref().clone()
+            }
+        }
     }
 
     pub fn ptr_eq(lhs: &Self, rhs: &Self) -> bool {
@@ -482,11 +497,22 @@ pub struct SharedArgs(Arc<Vec<Expr>>);
 
 impl SharedArgs {
     pub fn new(args: Vec<Expr>) -> Self {
-        Self(Arc::new(args))
+        let shared = Self(Arc::new(args));
+        record_shared_args_alloc();
+        shared
     }
 
     pub fn into_vec(self) -> Vec<Expr> {
-        Arc::try_unwrap(self.0).unwrap_or_else(|args| args.as_ref().clone())
+        match Arc::try_unwrap(self.0) {
+            Ok(args) => {
+                record_into_vec(false);
+                args
+            }
+            Err(args) => {
+                record_into_vec(true);
+                args.as_ref().clone()
+            }
+        }
     }
 
     pub fn ptr_eq(lhs: &Self, rhs: &Self) -> bool {

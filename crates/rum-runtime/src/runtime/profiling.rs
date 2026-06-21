@@ -1733,14 +1733,19 @@ pub(super) fn record_profile_multi_presence_scan(
 }
 
 pub(super) fn print_lexical_profile_summary_once() {
-    if !lexical_profile_enabled() {
+    let lexical_enabled = lexical_profile_enabled();
+    let repr_enabled = rum_core::repr_profile_enabled();
+    if !lexical_enabled && !repr_enabled {
         return;
     }
     if LEXICAL_PROFILE_SUMMARY_PRINTED.swap(1, Ordering::Relaxed) == 1 {
         return;
     }
 
-    print_lexical_profile_summary_body();
+    if lexical_enabled {
+        print_lexical_profile_summary_body();
+    }
+    print_repr_profile_summary();
 }
 
 pub(super) fn reset_lexical_profile_counters() {
@@ -1841,13 +1846,35 @@ pub(super) fn reset_lexical_profile_counters() {
 }
 
 pub(super) fn print_lexical_profile_snapshot(label: &str) {
-    if !lexical_profile_configured() {
+    let lexical_configured = lexical_profile_configured();
+    let repr_enabled = rum_core::repr_profile_enabled();
+    if !lexical_configured && !repr_enabled {
         return;
     }
 
-    eprintln!("rum-profile lexical snapshot label={label}");
-    print_lexical_profile_summary_body();
-    LEXICAL_PROFILE_SUMMARY_PRINTED.store(1, Ordering::Relaxed);
+    if lexical_configured {
+        eprintln!("rum-profile lexical snapshot label={label}");
+        print_lexical_profile_summary_body();
+        LEXICAL_PROFILE_SUMMARY_PRINTED.store(1, Ordering::Relaxed);
+    }
+    print_repr_profile_summary();
+}
+
+fn print_repr_profile_summary() {
+    if !rum_core::repr_profile_enabled() {
+        return;
+    }
+
+    let profile = rum_core::repr_profile_snapshot();
+    eprintln!(
+        "rum-profile repr into_vec_total={} into_vec_clone={} into_owned_total={} into_owned_clone={} shared_args_alloc={} shared_expr_alloc={}",
+        profile.into_vec_total,
+        profile.into_vec_clone,
+        profile.into_owned_total,
+        profile.into_owned_clone,
+        profile.shared_args_alloc,
+        profile.shared_expr_alloc,
+    );
 }
 
 fn print_lexical_profile_summary_body() {
