@@ -225,6 +225,54 @@ EndPackage[]
 }
 
 #[test]
+fn dump_save_context_strings_skip_module_gensyms_but_keep_dollar_globals() {
+    let dir = TempDirGuard::new("dumpsave-context-gensyms");
+    let context_file = dir.path().join("context.mx");
+    let explicit_file = dir.path().join("explicit.mx");
+    let mut session = Session::new();
+
+    session
+        .eval_script(
+            r#"
+Begin["Sandbox`"]
+f[n_] := Module[{a, b}, a = n; b = a + 1; a + b]
+f[5]; f[6];
+Sandbox`$keep = 42;
+End[]
+"#,
+        )
+        .unwrap();
+
+    let leaked_names = session
+        .eval_text("Names[\"Sandbox`*$*\"]")
+        .unwrap()
+        .value
+        .to_string();
+    assert!(contains_module_gensym_marker(&leaked_names));
+
+    session
+        .eval_text(&format!(
+            "DumpSave[File[\"{}\"], \"Sandbox`\"]",
+            rum_path(&context_file)
+        ))
+        .unwrap();
+
+    let saved = fs::read_to_string(&context_file).unwrap();
+    assert!(saved.contains("Set[Sandbox`$keep, 42]"));
+    assert!(!contains_module_gensym_marker(&saved));
+
+    session.eval_text("Sandbox`manual$1 = 99").unwrap();
+    session
+        .eval_text(&format!(
+            "DumpSave[File[\"{}\"], Sandbox`manual$1]",
+            rum_path(&explicit_file)
+        ))
+        .unwrap();
+    let explicit_saved = fs::read_to_string(&explicit_file).unwrap();
+    assert!(explicit_saved.contains("Set[Sandbox`manual$1, 99]"));
+}
+
+#[test]
 fn save_and_dumpsave_accept_names_pattern_objects() {
     let dir = TempDirGuard::new("save-name-patterns");
     let save_file = dir.path().join("saved.wl");
@@ -410,4 +458,11 @@ fn save_rejects_unknown_options_and_once_reports_unknown_option_names() {
             .iter()
             .any(|message| message.symbol == "OptionValue" && message.tag == "nodef")
     );
+}
+
+fn contains_module_gensym_marker(text: &str) -> bool {
+    text.as_bytes()
+        .windows(2)
+        .enumerate()
+        .any(|(index, pair)| index > 0 && pair[0] == b'$' && pair[1].is_ascii_digit())
 }

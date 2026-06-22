@@ -315,6 +315,7 @@ impl Session {
                 .map(|key| key.symbol.clone()),
         );
 
+        symbols.retain(|symbol| !is_module_gensym_name(symbol.name()));
         symbols
     }
 
@@ -689,4 +690,11 @@ impl Session {
 
 fn is_private_context(context: &str) -> bool {
     context.ends_with("`Private`")
+}
+
+fn is_module_gensym_name(name: &str) -> bool {
+    name.as_bytes()
+        .windows(2)
+        .enumerate()
+        .any(|(index, pair)| index > 0 && pair[0] == b'$' && pair[1].is_ascii_digit())
 }
