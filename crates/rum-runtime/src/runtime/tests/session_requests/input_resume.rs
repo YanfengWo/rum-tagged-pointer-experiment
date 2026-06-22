@@ -210,7 +210,7 @@ fn resume_eval_request_with_input_reports_input_parse_errors_as_syntax_diagnosti
     }
 
     let failure = session
-        .resume_eval_request_with_input("1 2")
+        .resume_eval_request_with_input("1 ! 2")
         .expect_err("malformed host text should surface a syntax diagnostic");
 
     match &failure.error {
@@ -220,7 +220,7 @@ fn resume_eval_request_with_input_reports_input_parse_errors_as_syntax_diagnosti
             assert!(diagnostic.rendered.contains("--> 1:3"));
             assert_eq!(diagnostic.spans.len(), 1);
             assert_eq!(diagnostic.spans[0].start.column, 3);
-            assert_eq!(diagnostic.spans[0].text, "2");
+            assert_eq!(diagnostic.spans[0].text, "!");
         }
         other => panic!("expected syntax diagnostic, got {other:?}"),
     }

@@ -4,7 +4,7 @@ use super::*;
 fn parse_request_returns_structured_syntax_diagnostics() {
     let session = Session::new();
     let failure = session
-        .parse_request("f[1 2]")
+        .parse_request("f[1 ! 2]")
         .expect_err("malformed input should fail with a syntax diagnostic");
 
     match failure.error {
@@ -15,7 +15,7 @@ fn parse_request_returns_structured_syntax_diagnostics() {
             assert_eq!(diagnostic.spans.len(), 1);
             assert_eq!(diagnostic.spans[0].start.line, 1);
             assert_eq!(diagnostic.spans[0].start.column, 5);
-            assert_eq!(diagnostic.spans[0].text, "2");
+            assert_eq!(diagnostic.spans[0].text, "!");
         }
         other => panic!("expected syntax diagnostic, got {other:?}"),
     }
@@ -54,7 +54,7 @@ fn is_complete_request_distinguishes_complete_incomplete_and_invalid_input() {
             .is_some_and(|diagnostic| diagnostic.is_incomplete)
     );
 
-    let invalid = session.is_complete_request("f[1 2]");
+    let invalid = session.is_complete_request("f[1 ! 2]");
     assert_eq!(invalid.status, SessionCompletenessStatus::Invalid);
     assert!(invalid.indent.is_none());
     assert!(

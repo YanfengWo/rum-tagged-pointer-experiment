@@ -93,8 +93,23 @@ impl Parser {
                 continue;
             }
 
-            let Some(op) = self.current_binary_op() else {
-                break;
+            let op = match self.current_binary_op() {
+                Some(op) => op,
+                None => {
+                    // Implicit multiplication (juxtaposition): `a b` == Times[a, b].
+                    let times = BinaryOp::Times;
+                    if self.token_starts_primary() && times.precedence() >= min_precedence {
+                        let next_min_precedence = next_min_precedence_for_binary_op(times);
+                        let rhs = self.parse_binary_expr_internal(
+                            next_min_precedence,
+                            allow_function_postfix,
+                        )?;
+                        let span = lhs.span().merge(rhs.span());
+                        lhs = SyntaxExpr::binary(times, lhs, rhs, span);
+                        continue;
+                    }
+                    break;
+                }
             };
 
             if op.precedence() < min_precedence {

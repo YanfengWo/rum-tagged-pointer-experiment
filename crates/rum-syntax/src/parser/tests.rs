@@ -176,6 +176,129 @@ fn parses_string_join_infix_sugar() {
 }
 
 #[test]
+fn parses_implicit_multiplication_juxtaposition() {
+    assert_eq!(
+        parse_expr("a b").unwrap(),
+        SyntaxExpr::binary(
+            BinaryOp::Times,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::symbol("b", z()),
+            z(),
+        )
+    );
+    assert_eq!(
+        parse_expr("2 x").unwrap(),
+        SyntaxExpr::binary(
+            BinaryOp::Times,
+            SyntaxExpr::integer("2", z()),
+            SyntaxExpr::symbol("x", z()),
+            z(),
+        )
+    );
+    assert_eq!(
+        parse_expr("g #").unwrap(),
+        SyntaxExpr::binary(
+            BinaryOp::Times,
+            SyntaxExpr::symbol("g", z()),
+            SyntaxExpr::slot(SlotSpec::Anonymous, z()),
+            z(),
+        )
+    );
+    assert_eq!(
+        parse_expr("a (b + c)").unwrap(),
+        SyntaxExpr::binary(
+            BinaryOp::Times,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::Add,
+                SyntaxExpr::symbol("b", z()),
+                SyntaxExpr::symbol("c", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+    assert_eq!(
+        parse_expr("a + b c").unwrap(),
+        SyntaxExpr::binary(
+            BinaryOp::Add,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::Times,
+                SyntaxExpr::symbol("b", z()),
+                SyntaxExpr::symbol("c", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+    assert_eq!(
+        parse_expr("a b + c").unwrap(),
+        SyntaxExpr::binary(
+            BinaryOp::Add,
+            SyntaxExpr::binary(
+                BinaryOp::Times,
+                SyntaxExpr::symbol("a", z()),
+                SyntaxExpr::symbol("b", z()),
+                z(),
+            ),
+            SyntaxExpr::symbol("c", z()),
+            z(),
+        )
+    );
+    assert_eq!(
+        parse_expr("a b c").unwrap(),
+        SyntaxExpr::binary(
+            BinaryOp::Times,
+            SyntaxExpr::binary(
+                BinaryOp::Times,
+                SyntaxExpr::symbol("a", z()),
+                SyntaxExpr::symbol("b", z()),
+                z(),
+            ),
+            SyntaxExpr::symbol("c", z()),
+            z(),
+        )
+    );
+    assert_eq!(
+        parse_expr("2 x^2").unwrap(),
+        SyntaxExpr::binary(
+            BinaryOp::Times,
+            SyntaxExpr::integer("2", z()),
+            SyntaxExpr::binary(
+                BinaryOp::Power,
+                SyntaxExpr::symbol("x", z()),
+                SyntaxExpr::integer("2", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+    assert_eq!(
+        parse_expr("Map[g # &, a]").unwrap(),
+        SyntaxExpr::call(
+            SyntaxExpr::symbol("Map", z()),
+            vec![
+                SyntaxExpr::postfix(
+                    PostfixOp::Function,
+                    SyntaxExpr::binary(
+                        BinaryOp::Times,
+                        SyntaxExpr::symbol("g", z()),
+                        SyntaxExpr::slot(SlotSpec::Anonymous, z()),
+                        z(),
+                    ),
+                    z(),
+                ),
+                SyntaxExpr::symbol("a", z()),
+            ],
+            z(),
+        )
+    );
+    assert_eq!(parse_expr("a - b").unwrap().to_string(), "a - b");
+    assert_eq!(parse_expr("a -> b").unwrap().to_string(), "a -> b");
+}
+
+#[test]
 fn parses_colon_named_pattern_sugar() {
     let parsed = parse_expr("theta : {___Rule}").unwrap();
     assert_eq!(parsed.to_string(), "theta : {___Rule}");
@@ -408,19 +531,20 @@ fn parses_rule_expression_as_pure_function_body() {
 
 #[test]
 fn does_not_merge_slots_across_trivia_into_a_sequence_slot() {
-    assert_eq!(
-        parse_expr("# # &"),
-        Err(SyntaxError::TrailingInput {
-            span: Span::new(2, 3),
-        })
+    let expected = SyntaxExpr::postfix(
+        PostfixOp::Function,
+        SyntaxExpr::binary(
+            BinaryOp::Times,
+            SyntaxExpr::slot(SlotSpec::Anonymous, z()),
+            SyntaxExpr::slot(SlotSpec::Anonymous, z()),
+            z(),
+        ),
+        z(),
     );
 
-    assert_eq!(
-        parse_expr("#(* gap *)# &"),
-        Err(SyntaxError::TrailingInput {
-            span: Span::new(10, 11),
-        })
-    );
+    assert_eq!(parse_expr("# # &").unwrap(), expected);
+
+    assert_eq!(parse_expr("#(* gap *)# &").unwrap(), expected);
 }
 
 #[test]
@@ -648,13 +772,13 @@ fn reports_incomplete_rhs_after_binary_operator() {
 
 #[test]
 fn reports_malformed_call_arguments_without_marking_input_incomplete() {
-    let err = parse_expr("f[1 2]").unwrap_err();
+    let err = parse_expr("f[1 ! 2]").unwrap_err();
 
     assert_eq!(
         err,
         SyntaxError::UnexpectedToken {
             expected: ",",
-            found: "integer".to_string(),
+            found: "!".to_string(),
             span: Span::new(4, 5),
         }
     );

@@ -490,12 +490,12 @@ mod tests {
 
     #[test]
     fn source_diagnostic_renders_line_column_and_snippet() {
-        let diagnostic = parse_with_diagnostics("f[1 2]").unwrap_err();
+        let diagnostic = parse_with_diagnostics("f[1 ! 2]").unwrap_err();
         let rendered = diagnostic.render();
 
         assert!(rendered.contains("error: expected ,"));
         assert!(rendered.contains("--> 1:5"));
-        assert!(rendered.contains("1 | f[1 2]"));
+        assert!(rendered.contains("1 | f[1 ! 2]"));
         assert!(rendered.contains("^"));
     }
 
@@ -523,7 +523,7 @@ mod tests {
 
     #[test]
     fn source_diagnostic_exposes_structured_span_data() {
-        let diagnostic = parse_with_diagnostics("f[1 2]").unwrap_err().structured();
+        let diagnostic = parse_with_diagnostics("f[1 ! 2]").unwrap_err().structured();
 
         assert!(diagnostic.message.starts_with("expected ,"));
         assert!(!diagnostic.is_incomplete);
@@ -532,6 +532,6 @@ mod tests {
             diagnostic.spans[0].start,
             SourceLocation { line: 1, column: 5 }
         );
-        assert_eq!(diagnostic.spans[0].text, "2");
+        assert_eq!(diagnostic.spans[0].text, "!");
     }
 }
