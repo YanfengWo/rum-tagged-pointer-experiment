@@ -548,6 +548,51 @@ fn does_not_merge_slots_across_trivia_into_a_sequence_slot() {
 }
 
 #[test]
+fn does_not_merge_slot_specs_across_trivia() {
+    assert_eq!(
+        parse_expr("# 6 &").unwrap(),
+        SyntaxExpr::postfix(
+            PostfixOp::Function,
+            SyntaxExpr::binary(
+                BinaryOp::Times,
+                SyntaxExpr::slot(SlotSpec::Anonymous, z()),
+                SyntaxExpr::integer("6", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+
+    assert_eq!(
+        parse_expr("# x &").unwrap(),
+        SyntaxExpr::postfix(
+            PostfixOp::Function,
+            SyntaxExpr::binary(
+                BinaryOp::Times,
+                SyntaxExpr::slot(SlotSpec::Anonymous, z()),
+                SyntaxExpr::symbol("x", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+
+    assert_eq!(
+        parse_expr("## 2 &").unwrap(),
+        SyntaxExpr::postfix(
+            PostfixOp::Function,
+            SyntaxExpr::binary(
+                BinaryOp::Times,
+                SyntaxExpr::slot(SlotSpec::Sequence, z()),
+                SyntaxExpr::integer("2", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+}
+
+#[test]
 fn parses_prefix_minus_with_power_precedence() {
     let parsed = parse_expr("-x^2").unwrap();
     assert_eq!(parsed.to_string(), "-x ^ 2");

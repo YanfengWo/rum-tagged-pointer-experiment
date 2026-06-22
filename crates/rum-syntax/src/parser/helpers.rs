@@ -12,17 +12,17 @@ impl Parser {
         }
 
         let spec = match (&self.current().kind, is_sequence) {
-            (TokenKind::Integer(value), false) => {
+            (TokenKind::Integer(value), false) if self.current().leading_trivia.is_empty() => {
                 let value = value.clone();
                 end_span = self.bump();
                 SlotSpec::Number(value)
             }
-            (TokenKind::Symbol(value), false) => {
+            (TokenKind::Symbol(value), false) if self.current().leading_trivia.is_empty() => {
                 let value = value.clone();
                 end_span = self.bump();
                 SlotSpec::Named(value)
             }
-            (TokenKind::Integer(value), true) => {
+            (TokenKind::Integer(value), true) if self.current().leading_trivia.is_empty() => {
                 let value = value.clone();
                 end_span = self.bump();
                 SlotSpec::SequenceNumber(value)
