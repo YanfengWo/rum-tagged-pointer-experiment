@@ -84,18 +84,26 @@ from the profile before keeping a change.**
 
 ## Current direction (read these for state)
 
-- `docs/performance-kernel-rewrite-plan.md` — the bottom-up "fix the primitive
-  before the composite" plan (Stages 0-8) and `docs/performance-stage0-baseline.md`.
-  The active entry point is `scripts/core-language-microbench.sh` (rum/WK ratio)
-  plus the Lane D `core-language` suite (rum-local regression baseline).
-- `docs/next-session-handoff.md` — the live task ledger (Task 2d: rum's ~34x
-  failed-`REWRCONV` dispatch cost; Task 2e: rum `DumpSave`/`Get` `$Packages`
-  restore). **The primitive ladder does NOT capture the Pair ~34x compounding**
-  — that is a WL-level conversion-combinator path; see the Stage 4 bridge label.
-- `docs/proptaut-performance-audit.md` — the profiling method and the reducer
-  scripts.
-- The persistent constant is ~3x across primitives; the Pair gate is a separate
-  ~34x failed-dispatch path. Do not conflate them.
+- `docs/representation-rewrite-plan.md` — **the active plan** (Layer A/B
+  representation rewrite). Phase 0 + **Layer A (A1+A2+A3+A4) are complete and
+  gated** (2026-06-22). Entry point `scripts/core-language-microbench.sh`
+  (rum/WK ratio); gate with the `RUM_PROFILE_REPR` counters + a clean
+  back-to-back A/B. The older `docs/performance-kernel-rewrite-plan.md`
+  (Stages 0-8) is superseded for the active line.
+- `docs/next-session-handoff.md` — the live task ledger; **read its
+  `2026-06-22` top block** (the Task-2c/2d framing below it is superseded).
+- `PROGRESS.md` — full running log; the `2026-06-21`/`2026-06-22` entries cover
+  Phase 0, Layer A, the Pair re-diagnosis, and the eliminated dead-ends.
+- `docs/proptaut-performance-audit.md` — the profiling method and reducers.
+- **Unified model (corrected this session):** the Pair `~34x` is NOT a separate
+  failed-dispatch defect distinct from the ~3x constant — it is the SAME
+  distributed per-call dispatch/eval constant the primitive microbench measures,
+  compounded over the descent and amplified ~1.7x by the WL conversion-control
+  combinators. The failing match is ~5% of a failing dispatch; the rest is the
+  per-call machinery. Proven one-lever by A4 translating a per-call head-clone
+  cut to the Pair raw failing-dispatch (`-5.8 to -7.9%`, clean A/B). Refuted as
+  the Pair lever: the inline stamp (Task-3b), node-alloc compaction (A3 did not
+  translate — only WORK cuts do), and Module frame setup (`1.58x`).
 
 ## Pointers
 

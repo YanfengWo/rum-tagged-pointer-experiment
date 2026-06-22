@@ -1,5 +1,61 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
+> **2026-06-22 — CURRENT STATUS (supersedes the Task-2c/2d framing below).**
+> The full running log is `PROGRESS.md` (read the `2026-06-21`/`2026-06-22`
+> entries); the active plan is `docs/representation-rewrite-plan.md` (Layer A/B),
+> NOT the older `performance-kernel-rewrite-plan.md`. Everything is committed
+> (clean tree). Brief packages 009-014 are in `docs/dev/codex/`.
+>
+> **Done this session (all gated + committed):** Phase 0 repr-cost counters
+> (`RUM_PROFILE_REPR`, zero-cost when off) + frozen baseline; **Layer A complete
+> (A1+A2+A3+A4)** — A1 thread `SharedArgs` through dispatch, A2 copy-on-write
+> `prepare_arguments`, A3 reuse `SharedArgs` in the down/up/sub-value candidate
+> build, A4 thread the head as `SharedExpr`. Cumulative vs the frozen Phase-0
+> baseline: worst microbench labels down ~13-17% (`downvalue-exact-hit 5.74 ->
+> ~4.76x`, `if-true 5.96 -> ~5.15`, `pattern-hit 5.47 -> ~4.56`); A4 is a
+> SYSTEMIC win (every call has a head).
+>
+> **The Task-2d framing below is SUPERSEDED.** The `~34x` was NOT a separate
+> "failed-REWRCONV dispatch defect" distinct from the ~3x constant. Re-diagnosed
+> this session (bounded two-engine `basic-chain-orelsec-split` + a faithful
+> fresh-term failing-dispatch profile): the Pair `34x` is the SAME distributed
+> per-call dispatch/eval constant the primitive microbench measures, compounded
+> over the deep descent and amplified ~1.7x by the WL control combinators
+> (`ORELSEC`/`REPEATC`/`TRYCONV`, curried down/sub-value functions). The failing
+> MATCH itself is only ~5% of the failing dispatch; the cost is the per-call
+> machinery (fixed-point evaluate loop ~2x/call, ~4 stability checks/call,
+> prepare, dispatch glue). **Proof it is one lever, not two:** A4 (a per-call
+> head-clone elimination, measured on the fast microbench) translated to the
+> bounded Pair raw failing-dispatch `-5.8 to -7.9%` in a clean back-to-back A/B.
+>
+> **Dead-ends eliminated this session (do not re-attempt as the Pair lever):**
+> (1) the inline normal-form stamp — already prototyped Task-3b, hits 33M+ but
+> does not move Pair (refuted; `docs/representation-rewrite-plan.md` B3 marked
+> refuted); (2) `SharedArgs = Arc<[Expr]>` node compaction — hit ~70 hidden
+> in-place mutators, deferred (moderate flaw-2 prize); (3) Module frame setup —
+> `module-local` is only `1.58x`, not the lever; (4) A3-style pure candidate
+> allocation cuts — real on the microbench but did NOT translate to Pair (only
+> WORK reductions like A4's head clone translate).
+>
+> **Next target:** keep reducing the distributed per-call dispatch/eval constant
+> (the real `34x` lever via compounding) on the fast microbench proxy
+> (`downvalue-exact-hit`/`pattern-hit`), validating each cut with a clean
+> back-to-back A/B AND a bounded Pair re-measure. Candidates not yet cut: the
+> dispatch plan build + stage iteration, redundant stability checks, the
+> `prepare_arguments` loop, the no-change rebuild on non-symbol heads. Prefer
+> cuts that remove real per-call WORK (clones/walks), not just allocations.
+>
+> **Measurement discipline (learned the hard way this session):** cross-run
+> microbench/Pair ratios are unreliable when anything else shares the CPU (a
+> concurrent probe, or MacBook nighttime maintenance `mds`/`backupd`). Gate with
+> the machine-independent `RUM_PROFILE_REPR` counters PLUS a clean same-session
+> back-to-back A/B (nothing else running). For an uncommitted change the A/B can
+> stash it; **once committed, A/B against the parent commit via `git checkout
+> <commit>^ -- <file>` (a `git stash` of a committed file is a no-op).** Verify
+> the machine is idle first (maintenance daemons at 0% CPU); `if-true` /
+> `block-local` stay intrinsically jittery (~6-9%) even idle, so use the A/B,
+> not a single run, for them.
+
 Process correction, 2026-06-17: recent probes drifted away from this handoff's
 root target. The added `PropTaut` / one-case
 ``HOL`Bool`EXCLUDEDMIDDLE[p]`` probes are valid side evidence, but they were
