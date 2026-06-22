@@ -43,12 +43,18 @@
 > further WORK-shaving has steeply diminishing returns. Per the user's decision,
 > the structural **Layer B (single-allocation call-node rewrite)** is now the
 > active line. Detailed executable plan: **`docs/layer-b-node-rewrite-plan.md`**.
-> Start at B0 (allocation counter) → B1 (args compaction `SharedArgs =
-> Arc<[Expr]>`, via the mutator build-then-freeze migration) → B2 (full
-> single-node, data-gated). B3 (inline stamp) is DROPPED (refuted). Note: this
-> is a constant-factor + code-quality fix, NOT a Pair-34x silver bullet (the 34x
-> is an unreliable differential; the real gap is a uniform ~6x distributed
-> constant).
+> Progress: **B0 (alloc counter, cfg `alloc-count` feature) and B1a (mutator
+> build-then-freeze migration, `DerefMut` removed) are DONE + committed**
+> (`545b368`, `83938a0`). **NEXT = B1b**: swap the `SharedArgs` backing
+> `Arc<Vec<Expr>>` → `Arc<[Expr]>` (now safe — nothing mutates a `SharedArgs` in
+> place). Gate B1b on: `cargo test --workspace` + `DumpSave`/`Get` snapshot
+> round-trip + the B0 alloc counter (`cargo build -p rum-cli --features
+> alloc-count`) showing fewer live bytes + a clean back-to-back A/B (no hot-tier
+> regression; the `into_vec`-always-clones lands only on ~18 cold callers). Then
+> B2 (full single-node) is DATA-GATED on B1's measured prize. B3 (inline stamp)
+> is DROPPED (refuted). Note: this is a constant-factor + code-quality fix, NOT a
+> Pair-34x silver bullet (the 34x is an unreliable differential; the real gap is
+> a uniform ~6x distributed constant).
 >
 > **Measurement discipline (learned the hard way this session):** cross-run
 > microbench/Pair ratios are unreliable when anything else shares the CPU (a

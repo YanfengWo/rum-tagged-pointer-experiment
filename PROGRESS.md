@@ -6,6 +6,23 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-22 Layer B B1a (gated): SharedArgs mutators → build-then-freeze
+
+`83938a0`. Removed the `DerefMut for SharedArgs` impl (kept the immutable
+`Deref`) and rewrote the **40 compiler-exposed in-place mutation sites** across
+12 files (`structure_ops/{sequence/insert,sequence/delete,replace/replace_part,
+exact_paths,surface}`, `rewrite_builtins`, `definition_updates`,
+`definition_catalog/traversal_continuation`, `parse_and_message_helpers`,
+`suspension/{collections,rewrite_rules,traversal}`) to build-then-freeze: unwrap
+to an owned `Vec<Expr>`, mutate, re-freeze into `SharedArgs` at the same point
+the old code finished its in-place mutation. Most are continuation-payload
+`pop`s; the structure-ops ones preserve the early-return-original no-mutation
+branches and only unwrap when they actually mutate (spot-checked insert/delete).
+Behavior-preserving, zero hot-path delta (cold builtin/suspension paths only).
+`cargo test --workspace` green (1111 tests, reproduced by the director). This is
+the step that makes B1b (the `Arc<[Expr]>` backing swap) a clean swap — nothing
+mutates a `SharedArgs` in place anymore. NEXT = B1b.
+
 ## 2026-06-22 Layer B B0 (gated): allocation counter behind a cfg feature
 
 `545b368`. The first step of the greenlit Layer B rewrite
