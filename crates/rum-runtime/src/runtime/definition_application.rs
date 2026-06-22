@@ -5,6 +5,7 @@ impl Session {
         &mut self,
         head: &Expr,
         args: &SharedArgs,
+        attributes: AttributeSet,
     ) -> Result<Option<Expr>, EvalError> {
         let runtime_profile_head = runtime_path_timing_start("down_values.head_lookup");
         let Some(symbol) = expr_as_symbol(head) else {
@@ -34,10 +35,7 @@ impl Session {
         self.record_profile_down_value_scan(symbol);
 
         let args_slice = args.as_ref();
-        let head_allows_raw_miss_cache = matches!(
-            self.attribute_set_for_head(head).hold_attribute(),
-            HoldAttribute::None
-        );
+        let head_allows_raw_miss_cache = matches!(attributes.hold_attribute(), HoldAttribute::None);
         let down_values_cannot_match = head_allows_raw_miss_cache
             && definition
                 .down_value_shallow_signatures
@@ -72,7 +70,7 @@ impl Session {
         let runtime_profile_normalize =
             runtime_path_timing_start("down_values.normalize_candidate");
         let normalized_candidate =
-            self.normalize_definition_candidate_for_matching(head, &candidate);
+            self.normalize_definition_candidate_for_matching(&candidate, attributes);
         record_profile_runtime_path_timing(runtime_profile_normalize, RuntimeProfileOutcome::Ok);
 
         self.try_apply_down_values_from_symbol(candidate, normalized_candidate, symbol.clone(), 0)
@@ -384,6 +382,7 @@ impl Session {
         &mut self,
         head: &Expr,
         args: &SharedArgs,
+        attributes: AttributeSet,
     ) -> Result<Option<Expr>, EvalError> {
         if !self.has_up_value_definitions {
             return Ok(None);
@@ -411,7 +410,7 @@ impl Session {
 
         let candidate = Expr::call_with_shared_args(head.clone(), args.clone());
         let normalized_candidate =
-            self.normalize_definition_candidate_for_matching(head, &candidate);
+            self.normalize_definition_candidate_for_matching(&candidate, attributes);
 
         self.try_apply_up_values_from_list(candidate, normalized_candidate, up_values, 0)
     }
@@ -578,6 +577,7 @@ impl Session {
         &mut self,
         head: &Expr,
         args: &SharedArgs,
+        attributes: AttributeSet,
     ) -> Result<Option<Expr>, EvalError> {
         let runtime_profile_head = runtime_path_timing_start("sub_values.base_head_lookup");
         let Some(symbol) = base_head_symbol_of_nested_call(head).cloned() else {
@@ -609,7 +609,7 @@ impl Session {
         record_profile_runtime_path_timing(runtime_profile_candidate, RuntimeProfileOutcome::Ok);
         let runtime_profile_normalize = runtime_path_timing_start("sub_values.normalize_candidate");
         let normalized_candidate =
-            self.normalize_definition_candidate_for_matching(head, &candidate);
+            self.normalize_definition_candidate_for_matching(&candidate, attributes);
         record_profile_runtime_path_timing(runtime_profile_normalize, RuntimeProfileOutcome::Ok);
 
         self.try_apply_sub_values_from_symbol(candidate, normalized_candidate, symbol, 0)
@@ -813,13 +813,10 @@ impl Session {
 
     fn normalize_definition_candidate_for_matching(
         &mut self,
-        head: &Expr,
         candidate: &Expr,
+        attributes: AttributeSet,
     ) -> Expr {
-        if matches!(
-            self.cached_attribute_set_for_head(head).hold_attribute(),
-            HoldAttribute::None
-        ) {
+        if matches!(attributes.hold_attribute(), HoldAttribute::None) {
             candidate.clone()
         } else {
             self.normalize_match_expr(candidate)
