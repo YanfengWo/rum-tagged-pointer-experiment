@@ -6,6 +6,35 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-22 Layer B B0 (gated): allocation counter behind a cfg feature
+
+`545b368`. The first step of the greenlit Layer B rewrite
+(`docs/layer-b-node-rewrite-plan.md`): a counting allocator wrapping mimalloc
+reports alloc count / total bytes / **peak live bytes** so B1 has an objective
+before/after measure (the existing `RUM_PROFILE_REPR` counts `SharedArgs::new`
+calls but not heap bytes / live memory, which is where the `Arc<Vec>` →
+`Arc<[Expr]>` win actually lands). Baseline: `fExact[1]` 1M-call loop =
+`count=3001487` (~3 allocs/call — directly confirms flaw 2's multi-allocation
+node), `bytes_total=88.4MB`, `peak_live=7.47MB`; peak-live scales with held
+structure size.
+
+**Measurement/design lesson (cost-then-caught):** the brief specified an
+env-gated (`RUM_PROFILE_ALLOC`) `AtomicU8` flag (the normal counter pattern). The
+director gate (a clean back-to-back A/B, bare mimalloc vs the wrapper with its
+flag OFF) caught a **4-19% regression on EVERY label** (if-true `+19%`,
+pattern-hit `+18%`) — a `GlobalAlloc` WRAPPER blocks mimalloc's fast-path
+inlining on every allocation, so even an off-by-default per-alloc branch is a
+gross default-path cost (the no-default-path-cost hard line, but at the
+allocator). Fix: gate the whole shim behind a Cargo `alloc-count` FEATURE, not an
+env flag — the default build compiles in NO wrapper (bare mimalloc, verified: the
+default binary emits no alloc line even with `RUM_PROFILE_ALLOC=1`); measurement
+uses `cargo build -p rum-cli --features alloc-count`. Lesson for the rules: the
+env-gated AtomicU8 counter pattern is fine for an ordinary instrumented function,
+but NOT for a global allocator wrapper — there, only a compile-time `cfg` gate is
+truly zero-cost. Next: B1a — migrate the ~70 in-place `SharedArgs` mutators to
+build-then-freeze (remove `DerefMut`, fix the resulting compile errors), the step
+that makes the `Arc<[Expr]>` backing swap (B1b) safe.
+
 ## 2026-06-22 A4 (gated, SYSTEMIC win): thread call head as SharedExpr
 
 `9d6d639`. `evaluate_call` now carries the head as `SharedExpr` instead of
