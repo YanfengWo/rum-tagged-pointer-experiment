@@ -501,6 +501,9 @@ impl Session {
             Expr::Call { head, args } if is_system_symbol_name(head, "HoldPattern") => {
                 Expr::call_with_shared_args(head.as_ref().clone(), args.clone())
             }
+            Expr::Call { head, args } if is_system_symbol_name(head, "MessageName") => {
+                Expr::call_with_shared_args(head.as_ref().clone(), args.clone())
+            }
             Expr::Call { head, args } if is_system_symbol_name(head, heads::patterns::DEFAULT) => {
                 Expr::call_with_shared_args(head.as_ref().clone(), args.clone())
             }

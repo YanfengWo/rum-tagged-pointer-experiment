@@ -63,6 +63,25 @@ fn message_family_accepts_symbol_name_strings_and_messagename_targets() {
 }
 
 #[test]
+fn usage_message_assignment_holds_symbol_with_existing_own_value() {
+    let mut session = Session::new();
+
+    session.eval_text("a = 5").unwrap();
+    session.eval_text("a::usage = \"doc-a\"").unwrap();
+    session.eval_text("b::usage = \"doc-b\"").unwrap();
+    session.eval_text("b = 5").unwrap();
+
+    assert_eq!(
+        session.eval_text("Messages[a]").unwrap().value.to_string(),
+        "List[a::usage]"
+    );
+    assert_eq!(
+        session.eval_text("Messages[b]").unwrap().value.to_string(),
+        "List[b::usage]"
+    );
+}
+
+#[test]
 fn direct_set_and_setdelayed_calls_share_message_assignment_normalization() {
     let mut session = Session::new();
     session
