@@ -256,6 +256,16 @@ classify_step() {
     printf 'error'
     return
   fi
+  # Catch SILENT load failures: a thrown HOL error or a syntax error during
+  # Get is reported to stderr (prefixed `! `) while extend_snapshot.wls swallows
+  # it and exits 0 with "ok" on stdout. Without this, the chain marched past 15
+  # silently-failing libraries (auto/Arith.wl syntax error -> the whole number
+  # tower). Any of these markers in stderr stops the chain at the first failure.
+  if grep -qE 'uncaught throw|Get::syntax|Get::load|holErrorTag|::nottm|^! ' \
+    "${stderr_file}"; then
+    printf 'error'
+    return
+  fi
   printf 'ok'
 }
 
