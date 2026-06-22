@@ -14,16 +14,19 @@ Completed history, archived planning detail, and operational lessons live in
   [docs/v0.1-acceptance-boundary.md](./docs/v0.1-acceptance-boundary.md)
   as the concrete acceptance boundary.
 - [ ] Treat
-  [docs/performance-kernel-rewrite-plan.md](./docs/performance-kernel-rewrite-plan.md)
-  as the active performance mainline. The goal is WolframKernel parity or
-  better on the supported `mma-hol` target slice by lowering fundamental
-  runtime constants, not by patching downstream `mma-hol` or relying on
-  unproven broad semantic caches. The active Stage 0 is now the bottom-up
-  core-language microbench ladder in `scripts/core-language-microbench.sh`,
-  with the rum-local regression subset integrated as `rum-difftest lane-d
-  --suite core-language`. Select the next performance cut from the lowest-tier
-  primitive with a clear rum/WolframKernel ratio gap; keep Pair/Simp as
-  downstream acceptance, not as the default optimization entry point.
+  [docs/representation-rewrite-plan.md](./docs/representation-rewrite-plan.md)
+  as the active performance mainline (supersedes
+  `docs/performance-kernel-rewrite-plan.md`). The goal is WolframKernel parity or
+  better on the supported `mma-hol` slice by lowering fundamental runtime
+  constants, not by patching downstream `mma-hol`. **Phase 0 + Layer A (A1-A4)
+  are done (2026-06-22).** Next: keep reducing the distributed per-call
+  dispatch/eval constant (the unified `~34x` lever) on the
+  `scripts/core-language-microbench.sh` proxy (`downvalue-exact-hit`/
+  `pattern-hit`), gating each cut with the `RUM_PROFILE_REPR` counters + a clean
+  back-to-back A/B + a bounded Pair re-measure. Prefer cuts that remove real
+  per-call WORK (clones/walks), not just allocations (A3's pure alloc cut did not
+  translate to Pair; A4's head-clone cut did). See the
+  `docs/next-session-handoff.md` `2026-06-22` block.
 - [ ] Promote new Wolfram-style functions only when the support matrix,
   `mma-hol`, or another concrete downstream blocker justifies them.
 - [ ] Keep project-owned Python adapter work frozen until a real downstream

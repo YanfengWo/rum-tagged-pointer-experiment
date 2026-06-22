@@ -52,9 +52,14 @@ Before substantial work, read the smallest set needed for the task:
 - [docs/proptaut-performance-audit.md](./docs/proptaut-performance-audit.md):
   performance-diagnosis method and pitfalls for `PropTaut` / `mma-hol`
   work; required before Pair/Simp or PropTaut performance investigations
+- [docs/representation-rewrite-plan.md](./docs/representation-rewrite-plan.md):
+  **the active performance plan** (Layer A/B representation rewrite). Phase 0 +
+  Layer A (A1-A4) are complete and gated as of 2026-06-22; see the
+  `docs/next-session-handoff.md` top block and the `PROGRESS.md`
+  `2026-06-21`/`2026-06-22` entries.
 - [docs/performance-kernel-rewrite-plan.md](./docs/performance-kernel-rewrite-plan.md):
-  staged plan for reaching WolframKernel parity or better on the supported
-  `mma-hol` target slice
+  earlier staged plan (Stages 0-8); superseded by the representation-rewrite
+  plan for the active line, kept for history
 - [docs/performance-stage0-baseline.md](./docs/performance-stage0-baseline.md):
   canonical Stage 0 core-language microbench suite and
   `scripts/core-language-microbench.sh` runner for performance-rewrite A/B
@@ -62,8 +67,10 @@ Before substantial work, read the smallest set needed for the task:
 - [docs/code-organization-guidelines.md](./docs/code-organization-guidelines.md):
   file-size and module-organization rules
 
-`docs/next-session-handoff.md` is intentionally empty unless an active handoff
-is being prepared.
+`docs/next-session-handoff.md` carries an active handoff when one is being
+prepared; as of 2026-06-22 its top block is the current state (Layer A complete,
+the unified `34x` model, the next target). Read that block before performance
+work.
 
 ## Current Downstream Lane
 
