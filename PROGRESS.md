@@ -6,6 +6,43 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-22 Layer B B1b REFUTED: SharedArgs=Arc<[Expr]> is a net loss
+
+Built the `SharedArgs(Arc<Vec<Expr>>)` → `Arc<[Expr]>` swap (brief-018). It is
+CORRECT (workspace green, `DumpSave` round-trip unchanged) but a clean 2×2
+back-to-back A/B (min-of-2 each half, idle machine) shows it **regresses the hot
+tier `2-8%` across 6/9 labels** (`sameq +8.0%`, `pattern-hit +6.9%`, `if-true
++6.4%`, `length +5.0%`, `list-literal-small +4.8%`, `head-list +3.8%`). Reverted.
+
+**Two mechanisms, both fundamental to `Arc<[Expr]>`:**
+1. **Fat pointer grows `Expr`.** `Arc<[Expr]>` is a fat pointer (data + len = 16
+   bytes); `Arc<Vec<Expr>>` is a thin pointer (8 bytes). So `SharedArgs` doubles
+   `8 -> 16` bytes and the `Expr::Call` variant grows, enlarging the whole `Expr`
+   enum — every `Expr` clone/move/cache-line gets more expensive, which is why
+   even non-constructing labels (`if-true`, `sameq`) regress.
+2. **`Arc::from(Vec)` copies.** Converting `Vec<Expr>` → `Arc<[Expr]>` allocates a
+   new slice and COPIES the elements (vs `Arc::new(Vec)` which just moves the Vec
+   — zero copy). rum is construction-heavy (fresh nodes everywhere), so this copy
+   is paid constantly. The alloc counter confirmed it: peak-live actually ROSE on
+   `Range[100000]` (`7.46 -> 13.86MB`, the transient Vec + new slice both live
+   during `Arc::from`) and total allocs/bytes rose on the nested probe.
+
+**Consequence for Layer B (data-gated decision):** the args-only compaction is
+refuted. The full single-node option `Expr::Call(Arc<[Expr]>)` head-at-0 has the
+SAME fat-pointer + copy problems, so it is refuted by the same data. The ONLY
+non-regressing single-allocation layout is `Arc<CallData{head, args: Vec}>` (a
+THIN pointer → no `Expr` growth; `Arc::new` → move-construct, no copy; `3 -> 2`
+allocs/node) — but it requires the ~572-site `Expr::Call{head,args}` accessor
+migration and folds head+args into one Arc (the independent-COW question). Its
+prize is one fewer alloc/node, the same size of saving A3 made — and A3 did NOT
+translate to Pair. So `Arc<CallData>` is a large migration for a likely-modest,
+possibly-non-translating prize. Pattern repeats: the "obvious design flaw"
+(multi-alloc node) has no cheap profitable fix; the current `Arc<Vec>` (thin
+pointer, zero-copy move-construct) is actually well-matched to rum's
+construction-heavy workload. Kept from Layer B: B0 (alloc-count tooling) and B1a
+(immutable `SharedArgs`, a real code-quality win). Decision pending: pursue the
+`Arc<CallData>` 572-site migration, or stop Layer B and bank B1a + Layer A.
+
 ## 2026-06-22 Layer B B1a (gated): SharedArgs mutators → build-then-freeze
 
 `83938a0`. Removed the `DerefMut for SharedArgs` impl (kept the immutable
