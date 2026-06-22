@@ -6,6 +6,42 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-22 ThinArc-args NO-GO — args-compaction line conclusively closed
+
+Tested the one untried args layout: a THIN-pointer inline slice
+(`triomphe::ThinArc<(), Expr>`) — thin pointer (no `Expr` growth, unlike B1b's
+fat `Arc<[Expr]>`), elements inlined (no separate `Vec` buffer), variant shape
+and Layer A sharing preserved. Correct (workspace + `DumpSave` round-trip green).
+
+**Decisive machine-independent evidence (the alloc counter):** the alloc COUNT
+did NOT drop — `pattern-hit` (which rebuilds `Plus[1,1]`, genuinely constructing
+args) was `+2` (flat), `exact-hit` `+2`, `Range` flat; bytes and peak-live got
+WORSE (`Range peak_live 7.46→13.86MB`, ~`2x`). Timing confirms: the unaffectable
+control `if-true` moved `-4.5%` (binary/order artifact) while the construction
+labels regressed ABOVE it (`exact-hit +8%`, `head-list +3.6%`).
+
+**The mechanism, now fully understood (sharper than the earlier prediction):**
+the construction pipeline (`prepare_arguments`, RHS substitution) always builds a
+transient `Vec` first (incremental `push`; splicing makes a known-arity direct
+build infeasible). Any inline-slice rep must then `from_iter` that `Vec` into a
+new inline allocation and free the `Vec` — so it does the SAME 2 allocations per
+construction as `Arc<Vec>` (`Vec` buffer + the node alloc), i.e. **it does not
+even save an allocation**, it just adds an element-move + a transient
+double-allocation (worse peak memory). `Arc<Vec>` wins because `Arc::new(vec)`
+MOVES the `Vec` (zero element copy, the buffer stays put). And the only "live"
+allocation an inline rep would save is the one Layer A's reuse already avoids
+(the `Arc<CallData>` `-30` result).
+
+**flaw-2 (multi-allocation node) is conclusively, mechanistically closed** — all
+three single-allocation layouts tested and refuted with a consistent,
+now-understood cause: `Arc<[Expr]>` (fat pointer grows `Expr`), `Arc<CallData>`
+(access indirection, alloc reuse-minimized), `ThinArc` (no alloc-count saving +
+element-move + worse peak). The current `Arc<Vec>` thin-pointer + zero-copy-move
+construction + Layer-A reuse is genuinely well-matched to rum, not a flaw. The
+representation-rewrite arc is closed with understanding, not just exhaustion:
+Layer A (flaw 1) was the real and only profitable lever; flaws 2 and 3 are
+reasonable designs whose obvious "fixes" each lose for an understood reason.
+
 ## 2026-06-22 flaw-3 churn REJECTED + measurement-methodology correction
 
 The user rightly flagged that the flaw-3 (`miss_absent`) dismissal had leaned on
