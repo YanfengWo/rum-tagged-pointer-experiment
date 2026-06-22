@@ -37,13 +37,18 @@
 > allocation cuts — real on the microbench but did NOT translate to Pair (only
 > WORK reductions like A4's head clone translate).
 >
-> **Next target:** keep reducing the distributed per-call dispatch/eval constant
-> (the real `34x` lever via compounding) on the fast microbench proxy
-> (`downvalue-exact-hit`/`pattern-hit`), validating each cut with a clean
-> back-to-back A/B AND a bounded Pair re-measure. Candidates not yet cut: the
-> dispatch plan build + stage iteration, redundant stability checks, the
-> `prepare_arguments` loop, the no-change rebuild on non-symbol heads. Prefer
-> cuts that remove real per-call WORK (clones/walks), not just allocations.
+> **Next target (UPDATED 2026-06-22 — incremental cuts hit the plateau; Layer B
+> greenlit):** the per-call constant is now a hard plateau — brief-015 (a correct
+> redundant-lookup removal) landed at the microbench noise floor, confirming
+> further WORK-shaving has steeply diminishing returns. Per the user's decision,
+> the structural **Layer B (single-allocation call-node rewrite)** is now the
+> active line. Detailed executable plan: **`docs/layer-b-node-rewrite-plan.md`**.
+> Start at B0 (allocation counter) → B1 (args compaction `SharedArgs =
+> Arc<[Expr]>`, via the mutator build-then-freeze migration) → B2 (full
+> single-node, data-gated). B3 (inline stamp) is DROPPED (refuted). Note: this
+> is a constant-factor + code-quality fix, NOT a Pair-34x silver bullet (the 34x
+> is an unreliable differential; the real gap is a uniform ~6x distributed
+> constant).
 >
 > **Measurement discipline (learned the hard way this session):** cross-run
 > microbench/Pair ratios are unreliable when anything else shares the CPU (a
