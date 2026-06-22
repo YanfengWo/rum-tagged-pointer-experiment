@@ -6,6 +6,41 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-22 Arc<CallData> prototype: NO-GO; Layer A already neutralized flaw 2
+
+To get a go/no-go on the ~572-site single-allocation-node migration WITHOUT doing
+it, prototyped `Arc<CallData{head, args}>` via a trick (brief-019, throwaway):
+`SharedExpr` and `SharedArgs` both wrap a SHARED `Arc<CallData>`, keeping the
+`Expr::Call { head, args }` variant shape (no destructure-site migration). Thin
+pointer (no `Expr` growth), move-construct (no copy) — it avoids B1b's two
+failure modes and is a CONSERVATIVE lower bound (the real single-field node would
+also shrink `Expr::Call` 16→8B). Correct: `cargo test --workspace` green, manual
+round-tripping serde passes the `DumpSave` test.
+
+**Result — decisive NO-GO:**
+- **Allocations barely moved**: `count 3001487 → 3001457` (`-30`, not the
+  expected ~`-1M`). The reason is the important finding: **Layer A's reuse
+  (A2/A3/A4) already eliminated the node RE-allocations that flaw 2 would cost** —
+  in the `fExact` hot loop the call nodes are reused, and the remaining ~3M
+  allocations are NON-node (the `Do` machinery, arg-prep `Vec`s, evaluate
+  temporaries) which a single-allocation node does not touch. So merging head+args
+  into one Arc has essentially nothing left to save.
+- **Hot tier regressed `+2.4%` to `+9.5%`** across the board (length `+9.5%`,
+  part `+8.0%`, head `+7.4%`, sameq `+5%`, pattern-hit `+4.7%`): the `Arc<CallData>`
+  projection adds an access indirection (`arc.args` is one more hop than
+  `Arc<Vec>`) and construction complexity, with no alloc saving to offset it.
+
+**Conclusion (data-gated, decisive):** the single-allocation node is NOT worth
+the 572-site migration — it does not reduce allocations in practice (Layer A
+already did, via reuse) and it regresses the hot tier even in the conservative
+prototype. Combined with B1b (Arc<[Expr]> refuted: fat pointer + copy), **Layer
+B's node-compaction line is fully data-refuted.** The deeper lesson: **Layer A
+neutralized flaw 2** — by reusing nodes it avoids the re-allocation that the
+multi-alloc node would otherwise cost, so the structural single-alloc fix is
+unnecessary AND counterproductive. Kept from Layer B: B0 (alloc-count tooling)
+and B1a (immutable `SharedArgs`, code quality). Remaining representation
+candidate: flaw 3's cache-churn (~7% profiled ceiling), NOT the refuted stamp.
+
 ## 2026-06-22 Layer B B1b REFUTED: SharedArgs=Arc<[Expr]> is a net loss
 
 Built the `SharedArgs(Arc<Vec<Expr>>)` → `Arc<[Expr]>` swap (brief-018). It is
