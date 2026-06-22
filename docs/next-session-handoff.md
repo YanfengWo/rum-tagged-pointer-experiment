@@ -75,6 +75,37 @@
 > the machine is idle first (maintenance daemons at 0% CPU); `if-true` /
 > `block-local` stay intrinsically jittery (~6-9%) even idle, so use the A/B,
 > not a single run, for them.
+>
+> **2026-06-22 CODA — hash-consing/value-memo validated, then DEFERRED; pivot to
+> correctness mainline.** After the representation arc closed, probed the one
+> remaining WK-class lever (strategy #3, structural value memoization). A shadow
+> value-memo (measure-only, recompute-and-COMPARE) on the bounded Pair descent:
+> `total=397105 hits=101851 hit_rate=0.2565 mismatches=0`. Verdict (PROGRESS
+> `2026-06-22 Shadow value-memo VERDICT`): SOUND on Pair (mismatches=0), ~26%
+> achievable hit rate — the first sound positive structural lever, and a
+> different lever than the refuted stamp (it short-circuits NON-stable
+> `REWRCONV→Failure`). BUT confirmed to be the deferred WK-class project, not an
+> incremental cut: (1) the epoch does NOT cover dynamic scopes —
+> `Do[Plus[i,1],{i,1,N}]` gives mismatches=N (loop-var bindings don't bump the
+> epoch), so a production memo needs dynamic-scope-aware invalidation; (2)
+> capturing the 26% needs cheap pointer keys = hash-consing, whose own
+> per-construction interning cost must not eat the win. **Validated, documented,
+> DEFERRED — go/no-go is a scope decision, not a measurement question.**
+>
+> **DIRECTION DECISION (2026-06-22, user): pivot to the v0.1 correctness/
+> stability mainline.** Performance has reached diminishing returns (only
+> remaining lever is the large/uncertain hash-consing bet). New main line: run
+> the UNMODIFIED acceptance standard `/Users/fft/Developments/mma-hol-acceptance`
+> (HEAD `200f13a`, the full completed project — 61 smoke stages, far beyond the
+> 2026-06-13 validation which only reached Parser/Printer+proptaut against the
+> older `51bbe9e`) through `scripts/mma-hol-bounded-smoke.sh` to find the CURRENT
+> first failing/timing-out boundary. The whole stdlib (Sum, Option, Set, Num,
+> Arith, List, Finite, FTA, Int, Rat, Real/*) and several test stages are
+> NEVER-validated-against-rum fresh frontier. Goal: separate genuine CORRECTNESS
+> failures from PERFORMANCE timeouts, and surface whether a concentrated timeout
+> exists (a better-targeted optimization than the distributed per-call constant).
+> HARD LINE: the acceptance clone stays pristine (read-only); diagnostic edits
+> only in throwaway scratch copies.
 
 Process correction, 2026-06-17: recent probes drifted away from this handoff's
 root target. The added `PropTaut` / one-case

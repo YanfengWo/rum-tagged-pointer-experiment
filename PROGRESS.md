@@ -6,6 +6,105 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-22 Snapshot reliability test (dimension A) — surfaced a real reader bug (BUG-RT) + confirmed #2 hygiene is unfixed
+
+Per the user's direction (build a resumable snapshot-checkpoint workflow for
+mma-hol loading; FIRST investigate codex's prior snapshot work + design a
+reliability test), ran dimension-A reliability cycling (load→save→restore→
+re-dump→test, repeated) on the FAST layers (scratch copy of `200f13a`,
+pristine clone untouched).
+
+**Investigation of codex's prior snapshot work (git + Task 2e):** two problems
+were hit. **#1 `$Packages` restore** (after `Get`, `BeginPackage` deps didn't
+see restored packages; was once worked around by a HARD-LINE-VIOLATING edit to
+the standard's `extend_snapshot.wls`, reverted) — **really FIXED** (commit
+`2d901ea` + 2026-06-13 runtime auto-registration; re-verified on 200f13a:
+extend-proptaut green). **#2 Module-locals 402MB bloat** (dumping
+`HOL`Auto`Simp`Private`` includes generated `baseConv$…`/`xEq$…`) — **NOT
+fixed**: the only "fix" was a WL scratch experiment (`Scan[Remove,
+Names["HOL`*$*"]]` before dump), absent from both rum and the unmodified
+harness. Code (`symbols_in_context`, package_tools.rs:284 — context-level
+filter only, no `$` exclusion) AND an empirical dump (`gen$1`/`gen$2` both
+serialized) confirm #2 is a LIVE bug. Cycle data shows it is pervasive, not
+Pair-only: even the Parser snapshot has 13277 generated `$`-locals of 13576
+names (98%).
+
+**Cycle results (Parser layer, 5× restore→redump):** context count (21) and
+name count (13576) constant — no symbol-count leak; parser tests stay `78/0`
+after the cycles — semantics preserved. BUT the snapshot grew **+80 bytes per
+cycle, monotonically** (12193843→12194163). Logical state stable + bytes
+growing = a non-idempotent round-trip.
+
+**Root cause (BUG-RT, a reader/parser bug — minimal repro):**
+`FullForm[Hold[-1]]` → `Hold[Times[-1, 1]]` (should be `Hold[-1]`);
+`FullForm[Hold[Times[-1,b]]]` → `Hold[Times[Times[-1,1],b]]`;
+`-3` → `Times[-1,3]`; positive `Times[2,b]` is immune. **rum's reader parses a
+negative integer literal `-n` as `Times[-1, |n|]` (unary-minus-of-positive),
+not an atomic negative integer.** Evaluation always collapses `Times[-1,1]→-1`,
+so it is invisible in normal use; but in HELD contexts (SetDelayed RHS,
+DumpSave/Get) it is preserved, and since the serialized `Times[-1, b]` re-parses
+to `Times[Times[-1,1], b]`, every snapshot round-trip wraps the `-1` one level
+deeper → unbounded growth + representation rot. DumpSave's serializer is
+FAITHFUL (atomic `-1` from infix `x-b` dumps clean `Times[-1,b]`); the wrap is
+introduced by the READER. Distinguished: `a1:=x-b` (infix, atomic -1) dumps
+clean then rots after Get; `a2:=Times[-1,b]` (explicit literal) is wrapped on
+the FIRST dump (parsed from input); `a3:=-b` (unary on a symbol) is clean.
+**Latent correctness risk** beyond cosmetics: a pattern `Times[-1, x_]` will not
+match the rotted `Times[Times[-1,1], x]`. Fix locus: the reader/lexer — a
+negative numeric literal in operand position must tokenize as an atomic negative
+number so FullForm/DumpSave round-trips are idempotent (WL round-trips). Care:
+keep infix `a - 1` = `Plus[a, -1]` working; inside FullForm `Times[-1, b]` the
+`-1` after `[`/`,` is unambiguously a literal.
+
+**Verdict:** dimension-A cycling did exactly its job — the mechanism "looked
+fine" (tests green) but is non-idempotent (BUG-RT) and dumps junk locals (#2).
+Both must be fixed before the segment-by-segment checkpoint workflow is
+trustworthy. Next: codex briefs for (a) BUG-RT reader fix, (b) #2 dump hygiene,
+(c) the reliability-test harness (dimension A loop + dimension B assertion).
+
+## 2026-06-22 Correctness-mainline pivot — first boundary on acceptance standard 200f13a IS the Pair.wl load wall (~5x rum defect, blocks the whole downstream stdlib)
+
+Per the user's direction decision, pivoted from the (diminishing-returns)
+performance line to the v0.1 correctness/stability mainline: run the UNMODIFIED
+acceptance standard `/Users/fft/Developments/mma-hol-acceptance` (HEAD `200f13a`,
+the full completed project — 61 smoke stages, far past the 2026-06-13 validation
+that only reached Parser/Printer+proptaut on the older `51bbe9e`) through
+`scripts/mma-hol-bounded-smoke.sh --mode loads` (release `rum-cli`, 180s/stage,
+stop-at-first-break) to find the current first failing/timing-out boundary.
+
+**Result — clean and decisive:** stages 1-14 (`ErrorUtil` … `auto/Simp`) each
+load in ≤1s; **`load/stdlib/Pair` TIMES OUT at >180s (the first boundary, a
+PERFORMANCE wall, NOT a correctness error)**. The cumulative prefix through
+`auto/Simp` is ~1s, so the >180s is essentially Pair.wl load itself — i.e.
+`Get["stdlib/Pair.wl"]` runs the heavy Simp descent (proving the Pair theory at
+load time) and never finishes inside 180s. This BLOCKS the entire
+never-validated downstream stdlib frontier (Sum, Option, Set, Num, Arith, List,
+Finite, FTA, Int, Rat, Real/*) — we cannot even SEE whether those have
+correctness issues because Pair never loads.
+
+**Two-engine comparison on the SAME 200f13a clone (authoritative, current
+standard):** `scripts/pair-simp-hotspot-probes.sh --only pair-load-root-phase
+--engine wolfram` (WolframKernel `/Applications/Wolfram.app/Contents/MacOS/
+WolframKernel`): internal `root-get-stdlib-pair = 38.56s`, preload-simp-stack
+`0.22s`, and it PROVES the theory (`pair_mkPairInjThm_is_thm=True`,
+`pair_pairInjThm_is_thm=True`). The matching rum run (`--engine rum
+--timeout 400` on the SAME 200f13a clone) COMPLETES at `root-get-stdlib-pair =
+190.12s` and proves the IDENTICAL theorems True (`pair_mkPairInjThm_is_thm=True`,
+`pair_pairInjThm_is_thm=True`). So rum is **slow-but-CORRECT** here: not a
+non-termination bug, not a correctness divergence — a pure performance wall.
+**rum/WK = 190.12 / 38.56 ≈ 4.93x on the exact critical-path blocker** — WK does
+the identical logical work (same unmodified Pair.wl, same proved theorems) in
+38.6s. This is a genuine rum-specific ~5x defect, not inherent cost.
+
+**Reframing (the important part):** the correctness pivot did NOT find new
+correctness bugs and did NOT escape the Pair/Simp gate — it PROVED that the
+Pair.wl-load performance wall is the single thing gating the entire downstream
+correctness frontier. Performance and correctness are the SAME critical path
+here. And the deferred hash-consing/value-memo project was validated SOUND +
+~26% on exactly this Pair descent — so it is the one validated lever aimed
+directly at the wall that blocks everything else. The rejected forked-`Simp.wl`
+"fix" (85.5s) remains off the table (masks the rum hotspot, breaks snapshots).
+
 ## 2026-06-22 Hash-consing / value-memo probe: 57% dispatched-call structural repeat
 
 After concluding flaws 1-3, asked WHY WolframKernel is fast (not LLVM/JIT — its
@@ -41,6 +140,56 @@ project, not an incremental cut. Next decisive validation BEFORE committing: a
 shadow value-memo (structural key, bounded LRU, recompute-and-COMPARE to check
 soundness empirically + measure the ACHIEVABLE hit rate and whether the repeats
 are the EXPENSIVE dispatches) — the analog of the stamp prototype.
+
+## 2026-06-22 Shadow value-memo VERDICT — sound for Pair, ~26% achievable, but needs the full hash-consing architecture
+
+Built the shadow value-memo (measurement-only, never short-circuits): in
+`evaluate_inner_unstable`'s `Call` arm, structural-hash the dispatched call key,
+run the real `evaluate_call`, then on a repeat key recompute-and-COMPARE the new
+result against the stored one (epoch-validated) to measure BOTH the achievable
+hit rate AND empirical soundness (a mismatch = the memo would have returned a
+stale/wrong value). Throwaway, now reverted.
+
+**Decisive Pair result** (`runtime-profile-basic-only-pair4`): `total=397105,
+hits=101851, hit_rate=0.2565, mismatches=0, distinct=160447`.
+
+- **mismatches=0 → SOUND on the Pair descent.** The conversions act on concrete
+  built terms (no free dynamic/loop vars), so an epoch-validated structural value
+  memo would return correct results there.
+- **~26% achievable hit rate** (below the 0.57 raw ceiling — epoch invalidation
+  and the per-key first-miss eat the gap). This is the FIRST sound, positive
+  structural lever found for the Pair gap, and it is a DIFFERENT lever than the
+  refuted stamp: it short-circuits NON-stable failing conversions
+  (`REWRCONV→Failure`) the stamp could never touch.
+
+**But two hard caveats that make this the WK-class project, not a quick win:**
+
+1. **General unsoundness — the epoch does not cover dynamic scopes.**
+   `Do[Plus[i,1],{i,1,50000}]` → `total=50001 hits=49999 mismatches=49999`:
+   rum binds Do/Table loop vars via a narrow single-symbol dynamic own-value
+   scope that deliberately does NOT bump `evaluation_epoch` (for Do/Table perf),
+   so a naive structural-key+epoch memo returns the first iteration's result for
+   every iteration. `Block`/`Set` DO bump the epoch (`block-x-reassign`
+   mismatches=0). So a production value-memo must either (a) make dynamic-scope
+   bindings bump/extend the epoch key (a perf cost on the hottest loops), or
+   (b) restrict memoization to exprs with no free dynamic vars. Pair is sound
+   only because its path is concrete.
+
+2. **Capturing the 26% REQUIRES cheap keys → hash-consing.** The shadow memo
+   pays an O(expr) structural hash on 100% of dispatches to harvest the 26%
+   hits. Without hash-consing (pointer-identity keys), that per-dispatch hash
+   cost plausibly eats the 26% saving — exactly why WK hash-conses. And
+   hash-consing has its OWN cost: interning every constructed expr (a global
+   table probe on 100% of constructions). So the real project is
+   hash-consing + value-memo + dynamic-scope-aware invalidation together — a
+   large, multi-stage architectural effort with a now-MEASURED prize (~26% sound
+   Pair dispatch short-circuit) and a now-MEASURED risk (the epoch model must be
+   extended to dynamic scopes, and interning overhead must not eat the win).
+
+**Net:** the hash-consing direction is VALIDATED as real and sound-for-Pair with
+a moderate (~26%) prize — but confirmed to be the deferred WK-class architectural
+project, not an incremental cut. Go/no-go is a scope decision, not a measurement
+question anymore.
 
 ## 2026-06-22 ThinArc-args NO-GO — args-compaction line conclusively closed
 
