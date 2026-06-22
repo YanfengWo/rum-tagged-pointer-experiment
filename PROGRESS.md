@@ -6,6 +6,50 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-22 flaw-3 churn REJECTED + measurement-methodology correction
+
+The user rightly flagged that the flaw-3 (`miss_absent`) dismissal had leaned on
+the now-distrusted `34x`. Re-examined on current code: 100% absent-miss confirmed,
+and the call-stability cache THRASHES on fresh trees (`size_cap_clears` 2→32 —
+fills with fresh entries, hits the cap, clears the whole cache, refills). The
+`stability_check` phase is ~7% of the per-call cost (profiled ceiling). Two churn
+experiments:
+
+1. **Disable insertion entirely (blunt):** NET LOSS — the labels that benefit
+   from legitimate hits (reused `{1,2,3}` list-literal stability, stable
+   `pattern-miss`) regressed `+16-42%`, far outweighing the `2-11%` wins on
+   churn-heavy labels. The cache's hits are valuable.
+2. **Skip-insert-when-full instead of thrash-clear (targeted):** a first
+   sequential back-to-back A/B looked like a broad WIN (`-3.7 to -7%`, fresh-tree
+   `-8%`). **But it did not hold.** A 2×2 sequential A/B reversed it (`+3 to
+   +7%`), and a drift-cancelled INTERLEAVED A/B (base/new alternated ×5, medians)
+   settled it: the unaffectable control `if-true` showed `+2.7%` (the noise
+   floor), and the cache-USING labels regressed ABOVE it (`exact-hit +4.9%`,
+   `head-list +4.2%`) — a mild real regression. Mechanism: `thrash-clear` makes
+   room so late-arriving hot entries can re-insert; `skip-when-full` starves them.
+   The existing policy is actually better. REJECTED.
+
+**MEASUREMENT METHODOLOGY CORRECTION (important, applies to all gating):** the
+sequential back-to-back A/B (all-baseline-then-all-new, with a rebuild between
+halves) has a systematic bias — the `new` half is always measured later, so
+slow machine drift (thermal/background) lands entirely on it. For LARGE effects
+(A4's ~6-11%, B1b's regression) the effect dominates the drift and the verdict is
+safe, but for SMALL effects (~few %) the drift dominates and the result is
+unreliable or sign-flipped (here the same change read `-7%` then `+7%`). The tell
+is an unaffectable control label (e.g. `if-true` for a cache-policy change) moving
+more than the claimed effect. The fix is an INTERLEAVED A/B (alternate base/new
+each run, compare medians), which cancels slow drift. Use the machine-independent
+counters first; reserve interleaved A/B for small-effect timing verdicts.
+
+**Representation-rewrite arc — CLOSED (all three flaws data-exhausted):**
+flaw 1 → Layer A (the real win, worst labels `-13-17%`); flaw 2 → single-alloc
+node refuted (Arc<[Expr]> fat-pointer + copy; Arc<CallData> indirection-with-no-
+alloc-saving — Layer A's reuse already neutralized flaw 2); flaw 3 → stamp
+refuted + churn rejected (the cache earns its keep). Banked: Phase 0, **Layer A
+(A1-A4)**, B0 (alloc tooling), B1a (immutable SharedArgs). The current `Arc<Vec>`
+node + pointer-keyed stability cache are well-matched to rum's
+construction-heavy, reuse-friendly workload.
+
 ## 2026-06-22 Arc<CallData> prototype: NO-GO; Layer A already neutralized flaw 2
 
 To get a go/no-go on the ~572-site single-allocation-node migration WITHOUT doing
