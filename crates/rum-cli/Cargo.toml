@@ -4,6 +4,11 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[features]
+# Layer B B0 measurement scaffold: wrap mimalloc in a counting allocator.
+# Off by default so the production build is bare mimalloc with zero per-alloc cost.
+alloc-count = []
+
 [dependencies]
 mimalloc = "0.1.52"
 rum-repl = { path = "../rum-repl" }

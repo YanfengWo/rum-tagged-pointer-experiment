@@ -2,24 +2,39 @@ use std::env;
 use std::io;
 use std::process::ExitCode;
 
-use mimalloc::MiMalloc;
 use rum_repl::Repl;
 use rum_runtime::{Session, SessionEvalResponse, SessionRequestError, SessionRequestFailure};
 use rum_stdlib::install_core;
 use rum_syntax::{format_parsed_source, parse_format_cli_args};
 use rum_terminal::{render_request_failure, render_runtime_message};
 
+// The allocation-counter shim (Layer B B0 measurement) is compiled in ONLY under
+// the `alloc-count` feature. The default build uses bare mimalloc with no wrapper
+// so there is zero per-allocation cost on the production path (a global-allocator
+// wrapper regresses every allocation 4-19% even when its flag is off, because it
+// blocks the allocator fast-path inlining — measured 2026-06-22).
+#[cfg(not(feature = "alloc-count"))]
 #[global_allocator]
-static GLOBAL_ALLOCATOR: MiMalloc = MiMalloc;
+static GLOBAL_ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+#[cfg(feature = "alloc-count")]
+mod alloc_count;
 
 fn main() -> ExitCode {
-    match run() {
+    #[cfg(feature = "alloc-count")]
+    alloc_count::init();
+
+    let code = match run() {
         Ok(code) => code,
         Err(err) => {
             eprintln!("error: {err}");
             ExitCode::FAILURE
         }
-    }
+    };
+
+    #[cfg(feature = "alloc-count")]
+    print_alloc_profile();
+    code
 }
 
 fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
@@ -136,6 +151,19 @@ fn print_failure_side_effects(failure: &SessionRequestFailure) {
     for printed in &failure.prints {
         println!("{printed}");
     }
+}
+
+#[cfg(feature = "alloc-count")]
+fn print_alloc_profile() {
+    if !alloc_count::enabled() {
+        return;
+    }
+
+    let profile = alloc_count::snapshot();
+    eprintln!(
+        "rum-profile alloc count={} bytes_total={} peak_live_bytes={}",
+        profile.count, profile.bytes_total, profile.peak_live_bytes
+    );
 }
 
 fn request_failure_to_cli_error(
