@@ -185,14 +185,18 @@ pub(super) fn replace_exact_path(expr: Expr, path: &[isize], rhs: Expr) -> Expr 
 
     match expr {
         Expr::Atom(_) => expr,
-        Expr::Call { head, mut args } => {
+        Expr::Call { head, args } => {
             let Some(index) = normalize_structural_arg_position(*first, args.len()) else {
                 return Expr::Call { head, args };
             };
 
+            let mut args = Expr::unwrap_shared_args(args);
             let replaced_child = replace_exact_path(args[index].clone(), rest, rhs);
             args[index] = replaced_child;
-            Expr::Call { head, args }
+            Expr::Call {
+                head,
+                args: SharedArgs::new(args),
+            }
         }
     }
 }

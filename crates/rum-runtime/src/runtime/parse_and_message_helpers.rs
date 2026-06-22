@@ -276,10 +276,11 @@ impl ContinuationValue for HeadsOptionClassification {
                     _ => panic!("heads option value continuation stores zero or one item"),
                 }
             }
-            Expr::Call { head, mut args }
+            Expr::Call { head, args }
                 if is_system_symbol_name(&head, "InternalContinuationHeadsOptionUnknown")
                     && args.len() == 1 =>
             {
+                let mut args = Expr::unwrap_shared_args(args);
                 Self::UnknownOption(symbol_from_continuation_expr(
                     args.pop().expect("unknown option stores a symbol"),
                 ))

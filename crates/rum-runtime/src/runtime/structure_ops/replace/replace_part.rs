@@ -236,19 +236,23 @@ impl Session {
                     Ok(expr)
                 }
             }
-            Expr::Call { head, mut args } => {
+            Expr::Call { head, args } => {
                 let mut replaced_head = head.as_ref().clone();
                 if let Some(head_plan) = plan.children.remove(&0) {
                     replaced_head = self.apply_replace_plan_owned(replaced_head, head_plan)?;
                 }
 
+                let mut args = Expr::unwrap_shared_args(args);
                 for (index, arg) in args.iter_mut().enumerate() {
                     if let Some(child_plan) = plan.children.remove(&(index as isize + 1)) {
                         *arg = self.apply_replace_plan_owned(arg.clone(), child_plan)?;
                     }
                 }
 
-                Ok(Expr::call_with_shared_args(replaced_head, args))
+                Ok(Expr::call_with_shared_args(
+                    replaced_head,
+                    SharedArgs::new(args),
+                ))
             }
         }
     }

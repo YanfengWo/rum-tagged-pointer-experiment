@@ -121,9 +121,13 @@ impl Session {
                 );
                 return Ok(held_call);
             }
-            Expr::Call { head, mut args } => {
+            Expr::Call { head, args } => {
+                let mut args = Expr::unwrap_shared_args(args);
                 args.push(item.clone());
-                Expr::call_with_shared_args(head.as_ref().clone(), args)
+                Expr::Call {
+                    head,
+                    args: SharedArgs::new(args),
+                }
             }
         };
 
@@ -151,9 +155,13 @@ impl Session {
                 );
                 return Ok(held_call);
             }
-            Expr::Call { head, mut args } => {
+            Expr::Call { head, args } => {
+                let mut args = Expr::unwrap_shared_args(args);
                 args.insert(0, item.clone());
-                Expr::call_with_shared_args(head.as_ref().clone(), args)
+                Expr::Call {
+                    head,
+                    args: SharedArgs::new(args),
+                }
             }
         };
 

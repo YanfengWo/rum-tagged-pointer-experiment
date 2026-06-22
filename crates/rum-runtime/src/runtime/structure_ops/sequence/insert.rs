@@ -175,13 +175,23 @@ fn insert_canonical_path(expr: Expr, path: &[usize], item: &Expr) -> Expr {
 
     match expr {
         Expr::Atom(_) => expr,
-        Expr::Call { head, mut args } => {
+        Expr::Call { head, args } => {
             if rest.is_empty() {
                 if *first <= args.len() {
+                    let mut args = Expr::unwrap_shared_args(args);
                     args.insert(*first, item.clone());
+                    return Expr::Call {
+                        head,
+                        args: SharedArgs::new(args),
+                    };
                 }
             } else if *first < args.len() {
+                let mut args = Expr::unwrap_shared_args(args);
                 args[*first] = insert_canonical_path(args[*first].clone(), rest, item);
+                return Expr::Call {
+                    head,
+                    args: SharedArgs::new(args),
+                };
             }
             Expr::Call { head, args }
         }

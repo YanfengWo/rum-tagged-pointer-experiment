@@ -51,10 +51,11 @@ impl ContinuationValue for DeleteCasesOutcome {
 
     fn from_continuation_expr(expr: Expr) -> Self {
         match expr {
-            Expr::Call { head, mut args }
+            Expr::Call { head, args }
                 if is_system_symbol_name(&head, "InternalContinuationDeleteCasesOutcome")
                     && args.len() == 4 =>
             {
+                let mut args = Expr::unwrap_shared_args(args);
                 let exhausted_expr = args.pop().expect("delete-cases payload stores exhausted");
                 let deleted_count_expr = args
                     .pop()
@@ -63,10 +64,11 @@ impl ContinuationValue for DeleteCasesOutcome {
                 let result_expr = args.pop().expect("delete-cases payload stores result");
 
                 let result = match result_expr {
-                    Expr::Call { head, mut args }
+                    Expr::Call { head, args }
                         if is_system_symbol_name(&head, "InternalContinuationDeleteCasesKeep")
                             && args.len() == 1 =>
                     {
+                        let mut args = Expr::unwrap_shared_args(args);
                         DeleteCasesResult::Keep(
                             args.pop().expect("delete-cases keep payload stores expr"),
                         )
@@ -79,12 +81,13 @@ impl ContinuationValue for DeleteCasesOutcome {
                     {
                         DeleteCasesResult::Delete
                     }
-                    Expr::Call { head, mut args }
+                    Expr::Call { head, args }
                         if is_system_symbol_name(
                             &head,
                             "InternalContinuationDeleteCasesSplice",
                         ) && args.len() == 1 =>
                     {
+                        let mut args = Expr::unwrap_shared_args(args);
                         let items_expr = args
                             .pop()
                             .expect("delete-cases splice payload stores items");
@@ -123,10 +126,11 @@ impl ContinuationValue for ReplaceOutcome {
 
     fn from_continuation_expr(expr: Expr) -> Self {
         match expr {
-            Expr::Call { head, mut args }
+            Expr::Call { head, args }
                 if is_system_symbol_name(&head, "InternalContinuationReplaceOutcome")
                     && args.len() == 2 =>
             {
+                let mut args = Expr::unwrap_shared_args(args);
                 let depth_expr = args.pop().expect("replace outcome payload stores depth");
                 let expr = args.pop().expect("replace outcome payload stores expr");
 

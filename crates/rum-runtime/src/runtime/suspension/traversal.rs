@@ -14,10 +14,11 @@ fn cases_level_spec_expr(spec: CasesLevelSpec) -> Expr {
 
 fn cases_level_spec_from_expr(expr: Expr) -> CasesLevelSpec {
     match expr {
-        Expr::Call { head, mut args }
+        Expr::Call { head, args }
             if is_system_symbol_name(&head, "InternalContinuationCasesLevelSpec")
                 && args.len() == 2 =>
         {
+            let mut args = Expr::unwrap_shared_args(args);
             let max_expr = args.pop().expect("cases-level payload stores max");
             let min_expr = args.pop().expect("cases-level payload stores min");
             let min = expr_as_signed_isize(&min_expr)
@@ -50,10 +51,11 @@ impl ContinuationValue for Option<CasesLevelSpec> {
 
     fn from_continuation_expr(expr: Expr) -> Self {
         match expr {
-            Expr::Call { head, mut args }
+            Expr::Call { head, args }
                 if is_system_symbol_name(&head, "InternalContinuationSomeCasesLevelSpec")
                     && args.len() == 1 =>
             {
+                let mut args = Expr::unwrap_shared_args(args);
                 let spec_expr = args
                     .pop()
                     .expect("some-cases-level-spec payload stores one item");
@@ -86,10 +88,11 @@ impl ContinuationValue for CasesTraversalConfig {
 
     fn from_continuation_expr(expr: Expr) -> Self {
         match expr {
-            Expr::Call { head, mut args }
+            Expr::Call { head, args }
                 if is_system_symbol_name(&head, "InternalContinuationCasesTraversalConfig")
                     && args.len() == 3 =>
             {
+                let mut args = Expr::unwrap_shared_args(args);
                 let include_heads_expr = args
                     .pop()
                     .expect("cases-traversal payload stores include-heads");
@@ -132,17 +135,19 @@ impl ContinuationValue for CasesTraversalResolution {
 
     fn from_continuation_expr(expr: Expr) -> Self {
         match expr {
-            Expr::Call { head, mut args }
+            Expr::Call { head, args }
                 if is_system_symbol_name(&head, "InternalContinuationCasesTraversalValid")
                     && args.len() == 1 =>
             {
+                let mut args = Expr::unwrap_shared_args(args);
                 let config_expr = args.pop().expect("valid cases-traversal stores config");
                 Self::Valid(CasesTraversalConfig::from_continuation_expr(config_expr))
             }
-            Expr::Call { head, mut args }
+            Expr::Call { head, args }
                 if is_system_symbol_name(&head, "InternalContinuationCasesTraversalInvalid")
                     && args.len() == 1 =>
             {
+                let mut args = Expr::unwrap_shared_args(args);
                 let error_expr = args.pop().expect("invalid cases-traversal stores error");
                 Self::Invalid(CasesTraversalNormalizationError::from_continuation_expr(
                     error_expr,

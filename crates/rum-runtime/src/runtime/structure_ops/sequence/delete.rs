@@ -206,18 +206,22 @@ fn delete_canonical_path(expr: Expr, path: &[isize]) -> Expr {
             let replaced_head = delete_canonical_path(head.as_ref().clone(), rest);
             Expr::call_with_shared_args(replaced_head, args)
         }
-        Expr::Call { head, mut args } => {
+        Expr::Call { head, args } => {
             let index = (*first as usize).saturating_sub(1);
             if index >= args.len() {
                 return Expr::Call { head, args };
             }
 
+            let mut args = Expr::unwrap_shared_args(args);
             if rest.is_empty() {
                 args.remove(index);
             } else {
                 args[index] = delete_canonical_path(args[index].clone(), rest);
             }
-            Expr::Call { head, args }
+            Expr::Call {
+                head,
+                args: SharedArgs::new(args),
+            }
         }
     }
 }

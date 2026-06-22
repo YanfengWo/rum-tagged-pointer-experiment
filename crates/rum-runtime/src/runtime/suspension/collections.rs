@@ -14,10 +14,11 @@ impl ContinuationValue for CasesCollectionOutcome {
 
     fn from_continuation_expr(expr: Expr) -> Self {
         match expr {
-            Expr::Call { head, mut args }
+            Expr::Call { head, args }
                 if is_system_symbol_name(&head, "InternalContinuationCasesCollection")
                     && args.len() == 3 =>
             {
+                let mut args = Expr::unwrap_shared_args(args);
                 let exhausted_expr = args
                     .pop()
                     .expect("cases-collection payload stores exhausted");
@@ -59,10 +60,11 @@ impl ContinuationValue for PositionCollectionOutcome {
 
     fn from_continuation_expr(expr: Expr) -> Self {
         match expr {
-            Expr::Call { head, mut args }
+            Expr::Call { head, args }
                 if is_system_symbol_name(&head, "InternalContinuationPositionCollection")
                     && args.len() == 3 =>
             {
+                let mut args = Expr::unwrap_shared_args(args);
                 let exhausted_expr = args
                     .pop()
                     .expect("position-collection payload stores exhausted");
@@ -108,10 +110,11 @@ impl ContinuationValue for TraversalCountOutcome {
 
     fn from_continuation_expr(expr: Expr) -> Self {
         match expr {
-            Expr::Call { head, mut args }
+            Expr::Call { head, args }
                 if is_system_symbol_name(&head, "InternalContinuationTraversalCount")
                     && args.len() == 3 =>
             {
+                let mut args = Expr::unwrap_shared_args(args);
                 let exhausted_expr = args
                     .pop()
                     .expect("traversal-count payload stores exhausted");

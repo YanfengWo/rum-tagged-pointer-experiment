@@ -9,11 +9,12 @@ fn rewrite_rule_info_expr(rule: RewriteRuleInfo) -> Expr {
 
 fn rewrite_rule_info_from_expr(expr: Expr) -> RewriteRuleInfo {
     match expr {
-        Expr::Call { head, mut args }
+        Expr::Call { head, args }
             if (is_system_symbol_name(&head, "Rule")
                 || is_system_symbol_name(&head, "RuleDelayed"))
                 && args.len() == 2 =>
         {
+            let mut args = Expr::unwrap_shared_args(args);
             let rhs = args.pop().expect("rewrite-rule continuation rhs exists");
             let lhs = args.pop().expect("rewrite-rule continuation lhs exists");
             RewriteRuleInfo {
@@ -46,9 +47,10 @@ impl ContinuationValue for Option<Vec<RewriteRuleInfo>> {
 
     fn from_continuation_expr(expr: Expr) -> Self {
         match expr {
-            Expr::Call { head, mut args }
+            Expr::Call { head, args }
                 if is_system_symbol_name(&head, "InternalContinuationSomeRewriteRuleInfos") =>
             {
+                let mut args = Expr::unwrap_shared_args(args);
                 let Some(list_expr) = args.pop() else {
                     return Some(Vec::new());
                 };

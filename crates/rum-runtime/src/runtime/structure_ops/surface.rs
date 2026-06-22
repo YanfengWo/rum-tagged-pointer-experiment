@@ -172,9 +172,9 @@ impl Session {
             [expr, item] => Ok(match expr {
                 Expr::Atom(_) => self.invalid_surface_normal_expression_call("Append", args),
                 Expr::Call { head, args } => {
-                    let mut new_args = args.clone();
+                    let mut new_args = args.to_vec();
                     new_args.push(item.clone());
-                    Expr::call_with_shared_args(head.as_ref().clone(), new_args)
+                    Expr::call_with_shared_args(head.as_ref().clone(), SharedArgs::new(new_args))
                 }
             }),
             [item] => Ok(unary_operator_form("Append", item.clone())),
