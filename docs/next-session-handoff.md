@@ -41,20 +41,29 @@
 > greenlit):** the per-call constant is now a hard plateau — brief-015 (a correct
 > redundant-lookup removal) landed at the microbench noise floor, confirming
 > further WORK-shaving has steeply diminishing returns. Per the user's decision,
-> the structural **Layer B (single-allocation call-node rewrite)** is now the
-> active line. Detailed executable plan: **`docs/layer-b-node-rewrite-plan.md`**.
-> Progress: **B0 (alloc counter, cfg `alloc-count` feature) and B1a (mutator
-> build-then-freeze migration, `DerefMut` removed) are DONE + committed**
-> (`545b368`, `83938a0`). **NEXT = B1b**: swap the `SharedArgs` backing
-> `Arc<Vec<Expr>>` → `Arc<[Expr]>` (now safe — nothing mutates a `SharedArgs` in
-> place). Gate B1b on: `cargo test --workspace` + `DumpSave`/`Get` snapshot
-> round-trip + the B0 alloc counter (`cargo build -p rum-cli --features
-> alloc-count`) showing fewer live bytes + a clean back-to-back A/B (no hot-tier
-> regression; the `into_vec`-always-clones lands only on ~18 cold callers). Then
-> B2 (full single-node) is DATA-GATED on B1's measured prize. B3 (inline stamp)
-> is DROPPED (refuted). Note: this is a constant-factor + code-quality fix, NOT a
-> Pair-34x silver bullet (the 34x is an unreliable differential; the real gap is
-> a uniform ~6x distributed constant).
+> the structural **Layer B (single-allocation call-node rewrite)** was the active
+> line; it is now **CONCLUSIVELY CLOSED — all of flaw 2's single-alloc layouts
+> tested and refuted with one understood cause** (see PROGRESS `2026-06-22`):
+> `Arc<[Expr]>` (B1b: fat pointer grows `Expr`), `Arc<CallData>` (indirection +
+> alloc reuse-minimized to `-30`), `triomphe::ThinArc` (no alloc-count saving —
+> the construction pipeline always builds a transient `Vec` first, so any inline
+> rep does the same 2 allocs + adds an element-move + worse peak memory). The
+> current `Arc<Vec>` (thin pointer, zero-copy-move construction) is genuinely
+> well-matched to rum's reuse-heavy workload — flaw 2 is a REASONABLE DESIGN, not
+> a defect; Layer A's reuse already neutralizes its practical cost. **DO NOT
+> re-attempt single-alloc node layouts.** flaw 3 (cache absent-miss) likewise
+> closed: stamp refuted (Task-3b) + churn-reduction rejected (interleaved A/B —
+> the cache earns its keep). **The representation-rewrite arc is CLOSED with
+> understanding:** Layer A (flaw 1) was the only profitable lever (worst labels
+> `-13-17%`, A4 systemic, translated to Pair). KEPT: Phase 0, Layer A (A1-A4), B0
+> (alloc-count cfg tooling), B1a (immutable `SharedArgs`). The remaining WK gap is
+> the distributed per-call dispatch/eval constant — a hard plateau with no single
+> hotspot. **NEXT direction is open** (the representation/perf line is at a clean
+> stopping point): either a different line (v0.1 stabilization per `TODO.md`), or
+> a much larger separate project (evaluator bytecode/JIT), or accept the current
+> state. Use the INTERLEAVED A/B + control-group-difference method for any future
+> small-effect timing gate (sequential A/B sign-flips ~few% effects — see the
+> methodology note in PROGRESS and [[profiling-method-for-rum]]).
 >
 > **Measurement discipline (learned the hard way this session):** cross-run
 > microbench/Pair ratios are unreliable when anything else shares the CPU (a
