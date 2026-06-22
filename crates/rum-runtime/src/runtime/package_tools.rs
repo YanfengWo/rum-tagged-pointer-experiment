@@ -415,6 +415,13 @@ impl Session {
             }
         }
 
+        // Emit in a deterministic (sorted) order so the auto-generated package
+        // restore preamble is byte-identical across a DumpSave/Get round-trip.
+        // A cold dump enumerates `loaded_packages` in load order, but a restored
+        // session reconstructs them sorted (the preamble's own `Union`), so an
+        // unsorted preamble makes the first restore+redump differ by exactly
+        // these two lines. Sorting both sides makes the snapshot reproducible.
+        contexts.sort();
         contexts
     }
 

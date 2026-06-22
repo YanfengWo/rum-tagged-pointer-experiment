@@ -6,6 +6,50 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-23 Snapshot reliability harness GREEN — BUG-MSG fixed + deterministic preamble; three round-trip bugs closed
+
+Completed the snapshot-reliability line. The brief-023 harness
+(`scripts/snapshot-reliability.sh`) cycles `restore -> re-dump` N times per fast
+layer asserting byte-identity (guards BUG-RT growth), test stability, gensym=0
+(guards #2), and cold-vs-incremental fidelity. It immediately earned its keep by
+catching a THIRD round-trip bug:
+
+**BUG-MSG (fixed, commit `2fa0749`, brief-024):** restore+redump silently dropped
+~all theorem `::usage` strings. Root cause: `normalize_definition_lhs_expr`
+(definitions.rs) special-cases Pattern/Blank/Condition/HoldPattern to preserve
+their operands but had NO `MessageName` case, so the general Call arm resolved the
+target symbol of `sym::tag = value` to its OwnValue — `MessageName[<value>, tag]`
+can't form a key, so `define_message` was never called. Order-dependent: works
+only if usage is set BEFORE the symbol's value. DumpSave emits value-before-usage,
+so Get-restore (value first) hit the bug. Minimal repro: `a=5; a::usage="d";
+Messages[a]` was `{}` (should be `{a::usage}`). Fix: one MessageName arm mirroring
+HoldPattern. Diagnosed entirely from the harness failure + a value-vs-usage order
+probe.
+
+**Deterministic preamble (fix in package_tools.rs):** after BUG-MSG, the only
+residual cold-vs-cyc1 diff was the auto-generated package-restore preamble: a cold
+dump enumerates `loaded_packages` in LOAD order, but a restored session
+reconstructs them SORTED (the preamble's own `Union`), so the first restore+redump
+reordered the two `$ContextPath`/`$Packages` lines (same contexts, same size).
+`dump_save_package_restore_contexts` now `contexts.sort()`s, making snapshots
+byte-reproducible across the round-trip. Safe: restored worlds already used sorted
+order (pair_tests green from restored snapshots).
+
+**Harness now GREEN** (all 5 fast layers, `RUM_CLI_BIN` release): every layer
+`gensym_count=0`, `cycle_byte_stable=yes` (Bool 177621, Drule 218422, Tactics
+242758, Printer 262039, Parser 292656 — identical across 3 cycles), tests stable
+(76/50/49/48/78, all /0), fidelity ok; pristine clone untouched.
+
+**Net — three round-trip bugs found by reliability cycling, all fixed:** BUG-RT
+(negative-literal growth, `20458b9`), #2 (gensym dump bloat 402MB->504KB,
+`ae7e92d`), BUG-MSG (usage loss, `2fa0749`), plus deterministic preamble. The
+DumpSave/Get snapshot round-trip is now byte-idempotent and fidelity-preserving on
+the fast layers, with a standing regression guard. codex's old #1 ($Packages
+restore) was already fixed; #2 was not (now is). The live Module-gensym leak
+(locals never GC'd in-session) remains a separate, deferred evaluator issue.
+This unblocks the resumable Pair-checkpoint workflow (pay Pair's ~190s once into a
+trustworthy, backupable snapshot, then resume downstream).
+
 ## 2026-06-22 Snapshot reliability test (dimension A) — surfaced a real reader bug (BUG-RT) + confirmed #2 hygiene is unfixed
 
 Per the user's direction (build a resumable snapshot-checkpoint workflow for
