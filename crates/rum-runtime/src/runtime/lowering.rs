@@ -110,6 +110,28 @@ fn canonical_call(head: &'static str, args: Vec<Expr>) -> Expr {
     Expr::call(system_expr(head), args)
 }
 
+fn negated_numeric_literal(expr: &Expr) -> Option<Expr> {
+    match expr {
+        Expr::Atom(Atom::Integer(value)) => Some(Expr::integer(-value.clone())),
+        Expr::Atom(Atom::Rational(value)) => Some(Expr::rational(value.negated())),
+        _ => None,
+    }
+}
+
+fn numeric_literal_rational(expr: &Expr) -> Option<Rational> {
+    match expr {
+        Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.clone())),
+        Expr::Atom(Atom::Rational(value)) => Some(value.clone()),
+        _ => None,
+    }
+}
+
+fn divided_numeric_literals(lhs: &Expr, rhs: &Expr) -> Option<Expr> {
+    Some(Expr::rational(
+        numeric_literal_rational(lhs)?.div(&numeric_literal_rational(rhs)?)?,
+    ))
+}
+
 // Parser sugar lowers into canonical runtime heads.
 fn lower_list_sugar<F>(items: &[SyntaxExpr], resolve_symbol: &mut F) -> Result<Expr, EvalError>
 where
@@ -202,10 +224,16 @@ where
 
     match op {
         PrefixOp::Plus => Ok(lowered),
-        PrefixOp::Minus => Ok(canonical_call(
-            heads::arithmetic::TIMES,
-            vec![Expr::integer(BigInt::from(-1)), lowered],
-        )),
+        PrefixOp::Minus => {
+            if let Some(negated) = negated_numeric_literal(&lowered) {
+                Ok(negated)
+            } else {
+                Ok(canonical_call(
+                    heads::arithmetic::TIMES,
+                    vec![Expr::integer(BigInt::from(-1)), lowered],
+                ))
+            }
+        }
         PrefixOp::Not => Ok(canonical_call("Not", vec![lowered])),
         PrefixOp::PreIncrement => Ok(canonical_call("PreIncrement", vec![lowered])),
         PrefixOp::PreDecrement => Ok(canonical_call("PreDecrement", vec![lowered])),
@@ -329,16 +357,22 @@ where
             heads::arithmetic::TIMES,
             vec![lowered_lhs, lowered_rhs],
         )),
-        BinaryOp::Divide => Ok(canonical_call(
-            heads::arithmetic::TIMES,
-            vec![
-                lowered_lhs,
-                canonical_call(
-                    heads::arithmetic::POWER,
-                    vec![lowered_rhs, Expr::integer(BigInt::from(-1))],
-                ),
-            ],
-        )),
+        BinaryOp::Divide => {
+            if let Some(quotient) = divided_numeric_literals(&lowered_lhs, &lowered_rhs) {
+                Ok(quotient)
+            } else {
+                Ok(canonical_call(
+                    heads::arithmetic::TIMES,
+                    vec![
+                        lowered_lhs,
+                        canonical_call(
+                            heads::arithmetic::POWER,
+                            vec![lowered_rhs, Expr::integer(BigInt::from(-1))],
+                        ),
+                    ],
+                ))
+            }
+        }
         BinaryOp::Power => Ok(canonical_call(
             heads::arithmetic::POWER,
             vec![lowered_lhs, lowered_rhs],
