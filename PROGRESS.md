@@ -6,6 +6,42 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-22 Hash-consing / value-memo probe: 57% dispatched-call structural repeat
+
+After concluding flaws 1-3, asked WHY WolframKernel is fast (not LLVM/JIT — its
+symbolic evaluator is a ~35-year-optimized C interpreter: compact rep, hashed
+dispatch, expression SHARING/hash-consing, `Update[]` change-tracking). The one
+WK-class architectural lever rum lacks is **hash-consing / structural value
+memoization**. Probed its ceiling: a throwaway counter in `evaluate_call`
+structural-hashes each DISPATCHED (unstable) call and counts repeats.
+
+On the real bounded Pair descent (`runtime-profile-basic-only-pair4`,
+`simpFixpointConv`): `total=432914 dispatched calls, distinct=186863,
+repeat_rate=0.5684, max_rep=2440`. **~57% of dispatched calls are structurally
+identical to one already dispatched.** This is the FIRST positive structural
+signal for the Pair gap.
+
+**Why this is a DIFFERENT lever than the refuted stamp:** the stamp / stability
+cache only short-circuits STABLE (self-evaluating) exprs; the Pair repeats are
+`REWRCONV[rule][term] → Failure` — NOT stable, so the stamp could never help
+them. VALUE memoization (cache the evaluated RESULT, even a `Failure`, keyed by
+structure) CAN. So the Task-3b stamp refutation does NOT rule this out.
+
+**Caveats (the stamp also "looked promising" via 33M raw hits before the A/B
+refuted it — do NOT over-read this):** (1) `0.57` is the whole-descent CEILING,
+not an achievable bounded-cache hit rate (most structures recur only ~2.3×; a few
+up to 2440×). (2) Measured PRE-arg-eval, so cheap repeats (the same
+`REWRCONV[rule]` closure across the descent) may inflate it vs the expensive
+failing-dispatch repeats. (3) SOUNDNESS is the real risk: value memo is only
+valid if the result is a pure function of args (no hidden mutable state); within
+one descent the rules/defs are fixed (memoizable) but it MUST invalidate on
+definition/epoch change. Value memoization + hash-consing is the "WK-class"
+effort the plan deferred (decision point 3) — a large, separate architectural
+project, not an incremental cut. Next decisive validation BEFORE committing: a
+shadow value-memo (structural key, bounded LRU, recompute-and-COMPARE to check
+soundness empirically + measure the ACHIEVABLE hit rate and whether the repeats
+are the EXPENSIVE dispatches) — the analog of the stamp prototype.
+
 ## 2026-06-22 ThinArc-args NO-GO — args-compaction line conclusively closed
 
 Tested the one untried args layout: a THIN-pointer inline slice
