@@ -222,6 +222,34 @@ fn arithmetic_and_number_theory_builtins_thread_over_lists() {
 }
 
 #[test]
+fn power_threads_over_lists_without_disturbing_canonicalization() {
+    let mut session = Session::new();
+
+    let cases = [
+        ("Power[{2,3},2]", "List[4, 9]"),
+        ("Power[{2,3},{3,2}]", "List[8, 9]"),
+        ("Power[{a,b},2]", "List[Power[a, 2], Power[b, 2]]"),
+        ("Power[2,{2,3}]", "List[4, 8]"),
+        ("Power[{2,3},0]", "List[1, 1]"),
+        ("Power[{1,2,3},-1]", "List[1, 1/2, 1/3]"),
+        ("Power[2,3]", "8"),
+        ("Power[5,1]", "5"),
+        ("Power[7,0]", "1"),
+        ("Power[1,9]", "1"),
+        ("Power[a,2]", "Power[a, 2]"),
+        ("2^10", "1024"),
+        ("x^2 x^3", "Times[Power[x, 2], Power[x, 3]]"),
+        ("(2 x)^2", "Power[Times[2, x], 2]"),
+        ("x^2/x", "Times[Power[x, -1], Power[x, 2]]"),
+        ("Power[0,0]", "Power[0, 0]"),
+    ];
+
+    for (source, expected) in cases {
+        assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
+    }
+}
+
+#[test]
 fn first_last_rest_and_most_support_defaults_and_empty_calls() {
     let mut session = Session::new();
 

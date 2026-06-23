@@ -1,5 +1,68 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
+> **2026-06-24 (LATER) — ATTRIBUTE-AXIS triage RESOLVED + fixes landed (read FIRST;
+> supersedes the scan block just below).** The attribute-axis findings are now
+> fully triaged against WK (behavioral probes, not just the `Attributes[]` diff —
+> [[diagnostic-tool-trust]]), and the confirmed bugs are fixed.
+>
+> **DONE + committed:** brief-041 (`b7840a7`) — dropped FullForm's spurious
+> `HoldAll` (`FullForm[1+1]` now `"2"` not `"Plus[1, 1]"`) and added `Listable` to
+> 12 number-theory builtins (Abs/Round/Factorial/Factorial2/Denominator/Numerator/
+> Mod/Quotient/PowerMod/GCD/LCM/CoprimeQ) so they thread. `cargo test -p
+> rum-runtime` 688/0; all 12 threaded forms + FullForm verified vs WK. One test
+> that encoded the OLD buggy `FullForm[1+2]→"Plus[1, 2]"` was corrected to WK's
+> `"3"`. Also `75e8f48` — recorded the Chinese-working-language discipline as a
+> hard line in `CLAUDE.md` (mirrors [[working-language-chinese]]).
+>
+> **KEY CORRECTION — `Evaluate` is NOT broken (the scan/handoff misdiagnosed it).**
+> "`Hold[Evaluate[1+1]]` stays unevaluated" was a FULLFORM ARTIFACT: inspecting it
+> with `FullForm[...]` (which held the whole thing, bug above) rendered the
+> un-fired input. `Hold[Evaluate[1+1]] === Hold[2]` is `True` — Evaluate works.
+> Left untouched. Textbook [[diagnostic-tool-trust]] (the instrument was the bug).
+>
+> **TRIAGE CLOSED — the rest of the attribute diff is BENIGN or low-value (verified,
+> deliberately left):**
+> - **EXTRA-Hold (Catch/Until/D/ReleaseHold/Once/Stack/OptionValue/BlockRandom/
+>   MessageName/Definition/DownValues/… ~32 symbols) = ALL BENIGN.** rum hardcodes
+>   the real hold behavior in the evaluator, not via the attr table, so behavior
+>   MATCHES WK even though `Attributes[]` differs. Probed: `ReleaseHold[1+1]`=2,
+>   `Catch[Throw[1,1+1],1+1]`=1, `D[1+1,x]`=0 — all == WK. Do NOT "fix" these by
+>   editing attributes; that risks breaking the hardcoded behavior for zero gain.
+> - **EXTRA-Listable on `TextWords`/`ToCharacterCode` = BENIGN** — behavior matches
+>   WK exactly (`ToCharacterCode[{"A","B"}]`={{65},{66}} in both). Leave (removing
+>   would break the match).
+> - **`Power` MISSING Listable = the one REAL remaining gap** (`Power[{2,3},2]`
+>   inert in rum, `{4,9}` in WK; `Power[{a,b},2]`→`{a^2,b^2}`). → **brief-042
+>   DONE + committed** — Power threads (`{4,9}`, `{a^2,b^2}`, `Power[2,{2,3}]`=`{4,8}`),
+>   all 16 scalar/symbolic/canonicalization guards byte-identical,
+>   `cargo test -p rum-runtime` 689/0.
+> - **`Divide`/`Subtract`/`ToUpperCase` already THREAD** correctly via lowering
+>   (Times/Plus Listable / handler maps) — only the `Attributes[]` report differs
+>   (cosmetic). Left as-is.
+> - **`Range`/`Characters`/`ToExpression`/`Coefficient`/`Factor`/`Together`/
+>   `Attributes` = low-value real Listable gaps** (HOL doesn't use them; `Attributes`
+>   also has a HoldFirst-vs-Listable conflict). Deferred indefinitely unless a
+>   downstream need appears.
+> - Noted separately (NOT Listable, NOT this triage): rum's `Power`/`Times`
+>   canonicalization is weaker than WK — `x^2 x^3` stays `Times[Power[x,2],Power[x,3]]`
+>   (WK `x^5`), `x^2/x` not simplified, `Power[0,0]` inert (WK `Indeterminate`).
+>   Pre-existing, doesn't block HOL; a separate future item, locked as guards in
+>   brief-042 so the Listable change doesn't perturb them.
+>
+> **NEXT (under research):** the Power/Times SYMBOLIC-canonicalization gap — rum's
+> `combine_additive_args`/`combine_multiplicative_args` fold only NUMERIC constants
+> and never combine symbolic like-terms/like-bases (`x^2 x^3`≠`x^5`, `x-x`≠`0`,
+> `x^3/x^2`≠`x`). Diagnosed (this session): a mid-size HOT-PATH change in those two
+> `combine_*` fns + an `eval_power` nested-power flatten (`(x^2)^-1`→`x^-2`). Blast
+> radius is SMALLER than it looks — `Expand`/`Factor`/`Together`/`D`/`Coefficient`
+> already self-combine and feed `combine_*` already-distinct terms (so adding
+> combination there is idempotent for them); only bare `Plus`/`Times` change. Core
+> safety argument: WK's kernel already combines and mma-hol runs fine under WK, so
+> rum combining moves TOWARD WK. Needs WK-edge alignment + real-tower 1122 re-run +
+> microbench gate. SCOPE/philosophy decision pending (rum's minimal-kernel ethos;
+> no downstream blocker). Then the SEPARATE 50 batch-A `FAIL shape` (inline `MatchQ`
+> divergence, source-level matcher/eval diagnosis; NOT an attribute issue).
+
 > **2026-06-24 — ATTRIBUTE-AXIS conformance scan (3rd axis) found a batch of bugs.**
 > Diffing `Attributes` for every System symbol in rum∩WK (recipe in
 > [[coverage-conformance-direction]]; drop Protected/ReadProtected/Locked noise —

@@ -26,9 +26,10 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::OneIdentity),
         BuiltinHandler::Times,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "Power",
         "Raises an exact number to an integer power when possible.",
+        AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::Power,
     ),
     BuiltinSpec::ordinary(
