@@ -199,12 +199,14 @@ pub enum BinaryOp {
     MessageName,
     TagSet,
     Set,
+    UpSet,
     AddTo,
     SubtractFrom,
     TimesBy,
     DivideBy,
     ApplyTo,
     SetDelayed,
+    UpSetDelayed,
     ReplaceAll,
     ReplaceRepeated,
     Rule,
@@ -227,6 +229,7 @@ pub enum BinaryOp {
     Apply,
     PostfixApply,
     Map,
+    MapAll,
     ApplyHead,
     MapApply,
     Composition,
@@ -234,8 +237,10 @@ pub enum BinaryOp {
     Add,
     Subtract,
     Times,
+    NonCommutativeMultiply,
     Divide,
     Power,
+    Function,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -283,12 +288,14 @@ impl BinaryOp {
             Self::MessageName => "::",
             Self::TagSet => "/:",
             Self::Set => "=",
+            Self::UpSet => "^=",
             Self::AddTo => "+=",
             Self::SubtractFrom => "-=",
             Self::TimesBy => "*=",
             Self::DivideBy => "/=",
             Self::ApplyTo => "//=",
             Self::SetDelayed => ":=",
+            Self::UpSetDelayed => "^:=",
             Self::ReplaceAll => "/.",
             Self::ReplaceRepeated => "//.",
             Self::Rule => "->",
@@ -311,6 +318,7 @@ impl BinaryOp {
             Self::Apply => "@",
             Self::PostfixApply => "//",
             Self::Map => "/@",
+            Self::MapAll => "//@",
             Self::ApplyHead => "@@",
             Self::MapApply => "@@@",
             Self::Composition => "@*",
@@ -318,8 +326,10 @@ impl BinaryOp {
             Self::Add => "+",
             Self::Subtract => "-",
             Self::Times => "*",
+            Self::NonCommutativeMultiply => "**",
             Self::Divide => "/",
             Self::Power => "^",
+            Self::Function => "|->",
         }
     }
 
@@ -328,8 +338,9 @@ impl BinaryOp {
             Self::CompoundExpression => 3,
             Self::MessageName => 75,
             Self::TagSet => 5,
-            Self::Set | Self::SetDelayed => 10,
+            Self::Set | Self::UpSet | Self::SetDelayed | Self::UpSetDelayed => 10,
             Self::AddTo | Self::SubtractFrom | Self::TimesBy | Self::DivideBy | Self::ApplyTo => 10,
+            Self::Function => 14,
             Self::ReplaceAll | Self::ReplaceRepeated => 20,
             Self::Rule | Self::RuleDelayed => 30,
             Self::Condition => 40,
@@ -348,10 +359,11 @@ impl BinaryOp {
             Self::PatternTest => 85,
             Self::StringJoin => 55,
             Self::PostfixApply => 15,
-            Self::Apply | Self::Map | Self::ApplyHead | Self::MapApply => 72,
+            Self::Apply | Self::Map | Self::MapAll | Self::ApplyHead | Self::MapApply => 72,
             Self::Composition | Self::RightComposition => 73,
             Self::Add | Self::Subtract => 50,
             Self::Times | Self::Divide => 60,
+            Self::NonCommutativeMultiply => 65,
             Self::Power => 70,
         }
     }
@@ -362,12 +374,14 @@ impl BinaryOp {
             Self::CompoundExpression
                 | Self::TagSet
                 | Self::Set
+                | Self::UpSet
                 | Self::AddTo
                 | Self::SubtractFrom
                 | Self::TimesBy
                 | Self::DivideBy
                 | Self::ApplyTo
                 | Self::SetDelayed
+                | Self::UpSetDelayed
                 | Self::Rule
                 | Self::RuleDelayed
                 | Self::Condition
@@ -375,10 +389,12 @@ impl BinaryOp {
                 | Self::And
                 | Self::Apply
                 | Self::Map
+                | Self::MapAll
                 | Self::ApplyHead
                 | Self::MapApply
                 | Self::Composition
                 | Self::Power
+                | Self::Function
         )
     }
 }

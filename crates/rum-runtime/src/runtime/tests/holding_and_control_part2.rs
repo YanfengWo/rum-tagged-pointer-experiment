@@ -39,6 +39,20 @@ fn function_applies_slots_positionally() {
 }
 
 #[test]
+fn binary_function_syntax_applies_explicit_parameter() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("(x |-> x + 1)[5]")
+            .unwrap()
+            .value
+            .to_string(),
+        "6"
+    );
+}
+
+#[test]
 fn explicit_parameter_functions_ignore_extra_arguments() {
     let mut session = Session::new();
 

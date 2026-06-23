@@ -213,6 +213,153 @@ fn parses_apply_level_operators_as_right_associative() {
 }
 
 #[test]
+fn parses_new_infix_binary_operators() {
+    let upset = parse_expr("a ^= b ^= c").unwrap();
+    assert_eq!(
+        upset,
+        SyntaxExpr::binary(
+            BinaryOp::UpSet,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::UpSet,
+                SyntaxExpr::symbol("b", z()),
+                SyntaxExpr::symbol("c", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+
+    let upset_delayed = parse_expr("a ^:= b ^:= c").unwrap();
+    assert_eq!(
+        upset_delayed,
+        SyntaxExpr::binary(
+            BinaryOp::UpSetDelayed,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::UpSetDelayed,
+                SyntaxExpr::symbol("b", z()),
+                SyntaxExpr::symbol("c", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+
+    let upset_precedence = parse_expr("a ^= b // f").unwrap();
+    assert_eq!(
+        upset_precedence,
+        SyntaxExpr::binary(
+            BinaryOp::UpSet,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::PostfixApply,
+                SyntaxExpr::symbol("b", z()),
+                SyntaxExpr::symbol("f", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+
+    let non_commutative_chain = parse_expr("a ** b ** c").unwrap();
+    assert_eq!(
+        non_commutative_chain,
+        SyntaxExpr::binary(
+            BinaryOp::NonCommutativeMultiply,
+            SyntaxExpr::binary(
+                BinaryOp::NonCommutativeMultiply,
+                SyntaxExpr::symbol("a", z()),
+                SyntaxExpr::symbol("b", z()),
+                z(),
+            ),
+            SyntaxExpr::symbol("c", z()),
+            z(),
+        )
+    );
+
+    let times = parse_expr("a ** b * c").unwrap();
+    assert_eq!(
+        times,
+        SyntaxExpr::binary(
+            BinaryOp::Times,
+            SyntaxExpr::binary(
+                BinaryOp::NonCommutativeMultiply,
+                SyntaxExpr::symbol("a", z()),
+                SyntaxExpr::symbol("b", z()),
+                z(),
+            ),
+            SyntaxExpr::symbol("c", z()),
+            z(),
+        )
+    );
+
+    let power = parse_expr("a ** b ^ c").unwrap();
+    assert_eq!(
+        power,
+        SyntaxExpr::binary(
+            BinaryOp::NonCommutativeMultiply,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::Power,
+                SyntaxExpr::symbol("b", z()),
+                SyntaxExpr::symbol("c", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+
+    let map_all = parse_expr("f //@ g //@ x").unwrap();
+    assert_eq!(
+        map_all,
+        SyntaxExpr::binary(
+            BinaryOp::MapAll,
+            SyntaxExpr::symbol("f", z()),
+            SyntaxExpr::binary(
+                BinaryOp::MapAll,
+                SyntaxExpr::symbol("g", z()),
+                SyntaxExpr::symbol("x", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+
+    let function = parse_expr("x |-> a + b").unwrap();
+    assert_eq!(
+        function,
+        SyntaxExpr::binary(
+            BinaryOp::Function,
+            SyntaxExpr::symbol("x", z()),
+            SyntaxExpr::binary(
+                BinaryOp::Add,
+                SyntaxExpr::symbol("a", z()),
+                SyntaxExpr::symbol("b", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+
+    let function_chain = parse_expr("x |-> y |-> y").unwrap();
+    assert_eq!(
+        function_chain,
+        SyntaxExpr::binary(
+            BinaryOp::Function,
+            SyntaxExpr::symbol("x", z()),
+            SyntaxExpr::binary(
+                BinaryOp::Function,
+                SyntaxExpr::symbol("y", z()),
+                SyntaxExpr::symbol("y", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+}
+
+#[test]
 fn parses_logical_and_comparison_operator_precedence() {
     let parsed = parse_expr("! MatchQ[k, pat] && 0 <= i < depth || done").unwrap();
     assert_eq!(

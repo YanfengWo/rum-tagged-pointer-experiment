@@ -280,6 +280,7 @@ where
             heads::rules::SET,
             vec![lowered_lhs, lowered_rhs],
         )),
+        BinaryOp::UpSet => Ok(canonical_call("UpSet", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::AddTo => Ok(canonical_call("AddTo", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::SubtractFrom => Ok(canonical_call(
             "SubtractFrom",
@@ -290,6 +291,10 @@ where
         BinaryOp::ApplyTo => Ok(canonical_call("ApplyTo", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::SetDelayed => Ok(canonical_call(
             heads::rules::SET_DELAYED,
+            vec![lowered_lhs, lowered_rhs],
+        )),
+        BinaryOp::UpSetDelayed => Ok(canonical_call(
+            "UpSetDelayed",
             vec![lowered_lhs, lowered_rhs],
         )),
         BinaryOp::ReplaceAll => Ok(canonical_call(
@@ -330,6 +335,7 @@ where
         BinaryOp::Apply => Ok(Expr::call(lowered_lhs, vec![lowered_rhs])),
         BinaryOp::PostfixApply => Ok(Expr::call(lowered_rhs, vec![lowered_lhs])),
         BinaryOp::Map => Ok(canonical_call("Map", vec![lowered_lhs, lowered_rhs])),
+        BinaryOp::MapAll => Ok(canonical_call("MapAll", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::ApplyHead => Ok(canonical_call("Apply", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::MapApply => Ok(canonical_call("MapApply", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::Composition => Ok(canonical_call(
@@ -358,6 +364,10 @@ where
             heads::arithmetic::TIMES,
             vec![lowered_lhs, lowered_rhs],
         )),
+        BinaryOp::NonCommutativeMultiply => Ok(canonical_call(
+            "NonCommutativeMultiply",
+            vec![lowered_lhs, lowered_rhs],
+        )),
         BinaryOp::Divide => {
             if let Some(quotient) = divided_numeric_literals(&lowered_lhs, &lowered_rhs) {
                 Ok(quotient)
@@ -376,6 +386,10 @@ where
         }
         BinaryOp::Power => Ok(canonical_call(
             heads::arithmetic::POWER,
+            vec![lowered_lhs, lowered_rhs],
+        )),
+        BinaryOp::Function => Ok(canonical_call(
+            heads::functions::FUNCTION,
             vec![lowered_lhs, lowered_rhs],
         )),
         BinaryOp::SameQ

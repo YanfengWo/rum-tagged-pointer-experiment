@@ -217,7 +217,9 @@ impl<'a> Lexer<'a> {
                 }
             }
             '|' => {
-                if self.consume_str("|>") {
+                if self.consume_str("|->") {
+                    TokenKind::BarMinusGreater
+                } else if self.consume_str("|>") {
                     TokenKind::RAssociation
                 } else if self.consume_str("||") {
                     TokenKind::Or
@@ -256,13 +258,23 @@ impl<'a> Lexer<'a> {
                 }
             }
             '*' => {
-                if self.consume_str("*=") {
+                if self.consume_str("**") {
+                    TokenKind::StarStar
+                } else if self.consume_str("*=") {
                     TokenKind::StarEqual
                 } else {
                     self.single(TokenKind::Star)
                 }
             }
-            '^' => self.single(TokenKind::Caret),
+            '^' => {
+                if self.consume_str("^:=") {
+                    TokenKind::CaretColonEqual
+                } else if self.consume_str("^=") {
+                    TokenKind::CaretEqual
+                } else {
+                    self.single(TokenKind::Caret)
+                }
+            }
             '&' => {
                 if self.consume_str("&&") {
                     TokenKind::And
@@ -317,6 +329,8 @@ impl<'a> Lexer<'a> {
             '/' => {
                 if self.consume_str("//.") {
                     TokenKind::ReplaceRepeated
+                } else if self.consume_str("//@") {
+                    TokenKind::SlashSlashAt
                 } else if self.consume_str("/@") {
                     TokenKind::SlashAt
                 } else if self.consume_str("//=") {
@@ -723,7 +737,7 @@ mod tests {
     #[test]
     fn lexes_multi_char_operators() {
         let tokens = lex(
-            "x::tag := y //. z /. q -> w /; p f /: g =. a[[1]] b;;c <|d -> e|> h@i j@@k l@@@m n@*o p/*q r/@s a&&b c||d !e f===g h=!=i j==k l!=m n<o p>q r<=s t>=u v:_ \"a\"<>\"b\"",
+            "x::tag := y //. z /. q -> w /; p f /: g =. a[[1]] b;;c <|d -> e|> h@i j@@k l@@@m n@*o p/*q r/@s aa^=bb cc^:=dd ee**ff gg//@hh ii|->jj a&&b c||d !e f===g h=!=i j==k l!=m n<o p>q r<=s t>=u v:_ \"a\"<>\"b\"",
         )
         .unwrap();
 
@@ -816,6 +830,31 @@ mod tests {
             tokens
                 .iter()
                 .any(|token| matches!(token.kind, TokenKind::SlashAt))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::CaretEqual))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::CaretColonEqual))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::StarStar))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::SlashSlashAt))
+        );
+        assert!(
+            tokens
+                .iter()
+                .any(|token| matches!(token.kind, TokenKind::BarMinusGreater))
         );
         assert!(
             tokens
@@ -1035,6 +1074,27 @@ mod tests {
         assert!(matches!(tokens[4].kind, TokenKind::SlashSlashEqual));
         assert!(matches!(tokens[7].kind, TokenKind::ReplaceAll));
         assert!(matches!(tokens[10].kind, TokenKind::SlashSlash));
+    }
+
+    #[test]
+    fn lexes_new_infix_operators_before_shared_prefixes() {
+        let tokens = lex(
+            "a ^:= b a ^= b a ^ b a ** b a *= b a * b f //@ x f /@ x a // f x |-> y a || b a | b",
+        )
+        .unwrap();
+
+        assert!(matches!(tokens[1].kind, TokenKind::CaretColonEqual));
+        assert!(matches!(tokens[4].kind, TokenKind::CaretEqual));
+        assert!(matches!(tokens[7].kind, TokenKind::Caret));
+        assert!(matches!(tokens[10].kind, TokenKind::StarStar));
+        assert!(matches!(tokens[13].kind, TokenKind::StarEqual));
+        assert!(matches!(tokens[16].kind, TokenKind::Star));
+        assert!(matches!(tokens[19].kind, TokenKind::SlashSlashAt));
+        assert!(matches!(tokens[22].kind, TokenKind::SlashAt));
+        assert!(matches!(tokens[25].kind, TokenKind::SlashSlash));
+        assert!(matches!(tokens[28].kind, TokenKind::BarMinusGreater));
+        assert!(matches!(tokens[31].kind, TokenKind::Or));
+        assert!(matches!(tokens[34].kind, TokenKind::Bar));
     }
 
     #[test]
