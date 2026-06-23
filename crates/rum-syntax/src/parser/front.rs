@@ -1,4 +1,5 @@
 use super::*;
+use crate::ast::SyntaxExprKind;
 
 const SPAN_PRECEDENCE: u8 = 45;
 const INFIX_APPLICATION_PRECEDENCE: u8 = 67;
@@ -302,6 +303,14 @@ impl Parser {
                 continue;
             }
 
+            if is_optional_pattern_target(&expr) {
+                if let Some(optional_span) = self.consume_dot() {
+                    let span = expr.span().merge(optional_span);
+                    expr = SyntaxExpr::postfix(PostfixOp::Optional, expr, span);
+                    continue;
+                }
+            }
+
             break;
         }
 
@@ -487,6 +496,16 @@ impl Parser {
                 span: token.span,
             }),
         }
+    }
+}
+
+fn is_optional_pattern_target(expr: &SyntaxExpr) -> bool {
+    match &expr.kind {
+        SyntaxExprKind::Blank { .. } => true,
+        SyntaxExprKind::Pattern { pattern, .. } => {
+            matches!(&pattern.kind, SyntaxExprKind::Blank { .. })
+        }
+        _ => false,
     }
 }
 

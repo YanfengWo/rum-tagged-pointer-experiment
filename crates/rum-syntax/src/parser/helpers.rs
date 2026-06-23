@@ -283,6 +283,14 @@ impl Parser {
         }
     }
 
+    pub(super) fn consume_dot(&mut self) -> Option<Span> {
+        if matches!(self.current().kind, TokenKind::Dot) {
+            Some(self.bump())
+        } else {
+            None
+        }
+    }
+
     pub(super) fn consume_unset(&mut self) -> Option<Span> {
         if matches!(self.current().kind, TokenKind::Unset) {
             Some(self.bump())

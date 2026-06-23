@@ -744,6 +744,54 @@ fn parses_named_patterns() {
 }
 
 #[test]
+fn parses_optional_default_patterns() {
+    assert_eq!(
+        parse_expr("x_.").unwrap(),
+        SyntaxExpr::postfix(
+            PostfixOp::Optional,
+            SyntaxExpr::pattern(
+                SyntaxExpr::symbol("x", z()),
+                SyntaxExpr::blank(BlankKind::Blank, None, z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+    assert_eq!(
+        parse_expr("_.").unwrap(),
+        SyntaxExpr::postfix(
+            PostfixOp::Optional,
+            SyntaxExpr::blank(BlankKind::Blank, None, z()),
+            z(),
+        )
+    );
+    assert_eq!(
+        parse_expr("x_..").unwrap(),
+        SyntaxExpr::postfix(
+            PostfixOp::Repeated,
+            SyntaxExpr::pattern(
+                SyntaxExpr::symbol("x", z()),
+                SyntaxExpr::blank(BlankKind::Blank, None, z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+    assert_eq!(
+        parse_expr("x_...").unwrap(),
+        SyntaxExpr::postfix(
+            PostfixOp::RepeatedNull,
+            SyntaxExpr::pattern(
+                SyntaxExpr::symbol("x", z()),
+                SyntaxExpr::blank(BlankKind::Blank, None, z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+}
+
+#[test]
 fn parses_rule_and_replace_all_precedence() {
     let parsed = parse_expr("expr /. x_Integer -> y").unwrap();
     assert_eq!(

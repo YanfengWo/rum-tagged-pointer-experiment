@@ -252,6 +252,7 @@ pub enum PostfixOp {
     Factorial,
     Factorial2,
     Derivative(u32),
+    Optional,
     Repeated,
     RepeatedNull,
     Unset,
@@ -416,6 +417,7 @@ impl PostfixOp {
             Self::Factorial => "!",
             Self::Factorial2 => "!!",
             Self::Derivative(_) => "'",
+            Self::Optional => ".",
             Self::Repeated => "..",
             Self::RepeatedNull => "...",
             Self::Unset => "=.",
@@ -430,7 +432,7 @@ impl PostfixOp {
             | Self::Factorial
             | Self::Factorial2
             | Self::Derivative(_) => 80,
-            Self::Repeated | Self::RepeatedNull => 76,
+            Self::Optional | Self::Repeated | Self::RepeatedNull => 76,
             Self::Unset => 10,
         }
     }
@@ -526,7 +528,9 @@ fn format_expr(
                         f.write_str("'")?;
                     }
                 }
-                PostfixOp::Factorial | PostfixOp::Factorial2 => f.write_str(op.token())?,
+                PostfixOp::Factorial | PostfixOp::Factorial2 | PostfixOp::Optional => {
+                    f.write_str(op.token())?
+                }
                 _ => write!(f, " {}", op.token())?,
             }
         }

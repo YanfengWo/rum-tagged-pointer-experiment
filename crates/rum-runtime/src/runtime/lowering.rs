@@ -349,10 +349,16 @@ where
         )),
         BinaryOp::Or => Ok(canonical_call("Or", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::And => Ok(canonical_call("And", vec![lowered_lhs, lowered_rhs])),
-        BinaryOp::Pattern => Ok(canonical_call(
-            heads::patterns::PATTERN,
-            vec![lowered_lhs, lowered_rhs],
-        )),
+        BinaryOp::Pattern => {
+            if matches!(&lowered_lhs, Expr::Atom(Atom::Symbol(_))) {
+                Ok(canonical_call(
+                    heads::patterns::PATTERN,
+                    vec![lowered_lhs, lowered_rhs],
+                ))
+            } else {
+                Ok(canonical_call("Optional", vec![lowered_lhs, lowered_rhs]))
+            }
+        }
         BinaryOp::Alternatives => Ok(canonical_call(
             "Alternatives",
             vec![lowered_lhs, lowered_rhs],
@@ -570,6 +576,7 @@ where
             canonical_call("Derivative", vec![Expr::integer(BigInt::from(order))]),
             vec![lowered],
         )),
+        PostfixOp::Optional => Ok(canonical_call("Optional", vec![lowered])),
         PostfixOp::Repeated => Ok(canonical_call("Repeated", vec![lowered])),
         PostfixOp::RepeatedNull => Ok(canonical_call("RepeatedNull", vec![lowered])),
         PostfixOp::Unset => Ok(canonical_call(heads::rules::UNSET, vec![lowered])),
