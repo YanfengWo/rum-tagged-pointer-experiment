@@ -74,7 +74,11 @@
 > (cold rebuild's ~41 restores ≈ ~40s of ~65min = ~1%; module loads dominate). So
 > the 3.3x size is DISK-ONLY; a binary DumpSave saves space, not time — LOW priority,
 > NOT a perf win. Result semantics are correct (snapshots round-trip faithfully);
-> this is a format/completeness gap, not a correctness/result-semantic bug. **NEXT:
+> this is a format/completeness gap, not a correctness/result-semantic bug.
+> DECIDED (user): a real binary serialization IS worthwhile eventually (WK
+> fidelity + larger-scale apps — at a 150G-class cache it's a ~30-100x feasibility
+> flip, text ~9h/OOM vs binary minutes), but LOW priority now; recorded as a
+> deferred backlog item in `TODO.md` "Performance And Representation". **NEXT:
 > more demos/test stages, the 🔴 operators (`.` Dot, `>>`/`<<` I/O), or the deferred
 > perf line.**
 >

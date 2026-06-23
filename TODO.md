@@ -506,6 +506,22 @@ Completed history, archived planning detail, and operational lessons live in
   because the evaluation stack also feeds trace depths and `Stack[]`.
 - [ ] Revisit large request/error payload ergonomics only after measurement
   shows that current shapes are a real cost.
+- [ ] **Binary snapshot serialization (deferred, LOW priority — worthwhile, not
+  urgent).** Today rum's `DumpSave` is implemented as TEXT (shares
+  `eval_persist_package_state` with `Save`; the real binary `.mx` is NOT
+  implemented, `.mx` extension is misleading). The snapshot is verbose UTF-8
+  WL-source (`Set[...]`), ~3.3x WK's binary (mma-hol: 5M vs 1.5M), gzips 17.6x.
+  At HOL scale this is NEGLIGIBLE — measured `Get` restore ~0.21 s/MB, ~1.0s for
+  the full 4.8M tower (it stores pre-computed defs, re-assign not re-prove), ~1%
+  of a cold rebuild. So NOT worth doing for rum's current target. BUT it IS worth
+  doing eventually for (a) WK fidelity (`DumpSave` should be binary) and (b)
+  potential larger-scale applications: linear extrapolation to a 150G-class cache
+  is ~9h text restore (super-linear / OOM in reality), where a binary
+  deserialize-direct path (skips parse + eval + matcher recompile; lower peak
+  memory) would be ~30-100x faster and a feasibility flip ("can't finish" ->
+  "minutes"). Scope when picked up: a binary serialization for `Expr` + the
+  definition/attribute tables + interning, and binary `DumpSave`/`Get` paths
+  (distinct from `Save`/text). Estimate-only until a prototype is measured.
 
 ## Samples And Application Directions
 
