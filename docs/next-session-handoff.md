@@ -49,13 +49,13 @@
 > `df833d6`), 038 (`~~`, `~f~` matchfix, `c5e5bfb`) — all gated+committed
 > (rum-syntax 143/0, rum-runtime 684/0; re-survey confirms all parse). Since then:
 > the 缺省模式 / Optional bug is FIXED (`x_:v`->Optional + `x_.` syntax, brief-039,
-> `f92d873` — it was a PARSER bug, matcher was fine). **IN-FLIGHT (dispatched, NOT
-> yet gated — gate this next): brief-040 Dot product** (the `.` operator + the `Dot`
-> linear-algebra builtin) — `cdx` run, log `/tmp/cdx_brief_040.log`; on resume read
-> that log + `git status`, run the authoritative gate (cargo + the WK-match probes
-> in the brief: `Dot[{1,2,3},{4,5,6}]`=32, `{{1,2},{3,4}}.{5,6}`={17,39}, decimal/
-> `..` regressions clean), then commit. REMAINING 🔴 after Dot: `>>`/`<<` (Put/Get
-> — special unquoted-filename lexing; Get exists, Put missing). Also
+> `f92d873` — it was a PARSER bug, matcher was fine). **Dot product DONE (brief-040,
+> `daaa221`)**: the `.` operator + the `Dot` linear-algebra builtin — gated (cargo
+> rum-syntax 145/0 + rum-runtime 686/0; WK-match probes pass: `Dot[{1,2,3},{4,5,6}]`
+> =32, mat·vec={17,39}, symbolic `{a,b}.{c,d}`=`a c+b d`, `a.b*c`->`Times[Dot[a,b],c]`;
+> decimals/`..`/`x_.` regressions clean). REMAINING 🔴: `>>`/`<<` (Put/Get — special
+> unquoted-filename lexing; Get exists, Put missing) — the last syntax-axis gap, and
+> the lowest value (I/O, irrelevant to HOL). Also
 > a DELIBERATE DESIGN DECISION (NOT a gap to fix): rum is RATIONALS-ONLY — no
 > machine/arbitrary-precision `Real` type. Decimal literals `1.5`/`.5`/`1.5e3`
 > parse but lower to EXACT rationals/integers (`1.5`→`3/2`, `0.1+0.2`→`3/10`,
