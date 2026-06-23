@@ -404,6 +404,98 @@ fn parses_string_join_infix_sugar() {
 }
 
 #[test]
+fn parses_string_expression_infix_sugar() {
+    let parsed = parse_expr("a ~~ b ~~ c").unwrap();
+    assert_eq!(parsed.to_string(), "a ~~ b ~~ c");
+
+    assert_eq!(
+        parsed,
+        SyntaxExpr::binary(
+            BinaryOp::StringExpression,
+            SyntaxExpr::binary(
+                BinaryOp::StringExpression,
+                SyntaxExpr::symbol("a", z()),
+                SyntaxExpr::symbol("b", z()),
+                z(),
+            ),
+            SyntaxExpr::symbol("c", z()),
+            z(),
+        )
+    );
+
+    let string_join_binds_tighter = parse_expr("a ~~ b <> c").unwrap();
+    assert_eq!(
+        string_join_binds_tighter,
+        SyntaxExpr::binary(
+            BinaryOp::StringExpression,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::StringJoin,
+                SyntaxExpr::symbol("b", z()),
+                SyntaxExpr::symbol("c", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+}
+
+#[test]
+fn parses_tilde_infix_application_as_call() {
+    let parsed = parse_expr("a ~ g ~ b").unwrap();
+    assert_eq!(
+        parsed,
+        SyntaxExpr::call(
+            SyntaxExpr::symbol("g", z()),
+            vec![SyntaxExpr::symbol("a", z()), SyntaxExpr::symbol("b", z())],
+            z(),
+        )
+    );
+
+    let plus = parse_expr("a ~ g ~ b + c").unwrap();
+    assert_eq!(
+        plus,
+        SyntaxExpr::binary(
+            BinaryOp::Add,
+            SyntaxExpr::call(
+                SyntaxExpr::symbol("g", z()),
+                vec![SyntaxExpr::symbol("a", z()), SyntaxExpr::symbol("b", z())],
+                z(),
+            ),
+            SyntaxExpr::symbol("c", z()),
+            z(),
+        )
+    );
+
+    let chain = parse_expr("x ~ f ~ y ~ g ~ z").unwrap();
+    assert_eq!(
+        chain,
+        SyntaxExpr::call(
+            SyntaxExpr::symbol("g", z()),
+            vec![
+                SyntaxExpr::call(
+                    SyntaxExpr::symbol("f", z()),
+                    vec![SyntaxExpr::symbol("x", z()), SyntaxExpr::symbol("y", z())],
+                    z(),
+                ),
+                SyntaxExpr::symbol("z", z()),
+            ],
+            z(),
+        )
+    );
+
+    let context_head = parse_expr("a ~ HOL`Bool`foo ~ b").unwrap();
+    assert_eq!(
+        context_head,
+        SyntaxExpr::call(
+            SyntaxExpr::symbol("HOL`Bool`foo", z()),
+            vec![SyntaxExpr::symbol("a", z()), SyntaxExpr::symbol("b", z())],
+            z(),
+        )
+    );
+}
+
+#[test]
 fn parses_implicit_multiplication_juxtaposition() {
     assert_eq!(
         parse_expr("a b").unwrap(),
@@ -1082,6 +1174,19 @@ fn reports_incomplete_rhs_after_binary_operator() {
         SyntaxError::Incomplete {
             expected: "expression",
             span: Span::point(3),
+        }
+    );
+}
+
+#[test]
+fn reports_missing_closing_tilde_in_infix_application() {
+    let err = parse_expr("a ~ f").unwrap_err();
+
+    assert_eq!(
+        err,
+        SyntaxError::Incomplete {
+            expected: "~",
+            span: Span::point(5),
         }
     );
 }

@@ -174,6 +174,7 @@ impl Parser {
             TokenKind::Colon => Some(BinaryOp::Pattern),
             TokenKind::Bar => Some(BinaryOp::Alternatives),
             TokenKind::Question => Some(BinaryOp::PatternTest),
+            TokenKind::TildeTilde => Some(BinaryOp::StringExpression),
             TokenKind::StringJoin => Some(BinaryOp::StringJoin),
             TokenKind::At => Some(BinaryOp::Apply),
             TokenKind::SlashSlash => Some(BinaryOp::PostfixApply),
@@ -329,6 +330,23 @@ impl Parser {
             Some(self.bump())
         } else {
             None
+        }
+    }
+
+    pub(super) fn expect_tilde(&mut self) -> Result<Span, SyntaxError> {
+        if matches!(self.current().kind, TokenKind::Tilde) {
+            Ok(self.bump())
+        } else if self.at_end() {
+            Err(SyntaxError::Incomplete {
+                expected: "~",
+                span: self.current().span,
+            })
+        } else {
+            Err(SyntaxError::UnexpectedToken {
+                expected: "~",
+                found: self.current_token_label(),
+                span: self.current().span,
+            })
         }
     }
 

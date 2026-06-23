@@ -1,6 +1,7 @@
 use super::*;
 
 const SPAN_PRECEDENCE: u8 = 45;
+const INFIX_APPLICATION_PRECEDENCE: u8 = 67;
 
 pub fn parse_expr(input: &str) -> Result<SyntaxExpr, SyntaxError> {
     let tokens = lex(input)?;
@@ -63,13 +64,14 @@ impl Parser {
         &mut self,
         min_precedence: u8,
     ) -> Result<SyntaxExpr, SyntaxError> {
-        self.parse_binary_expr_internal(min_precedence, true)
+        self.parse_binary_expr_internal(min_precedence, true, true)
     }
 
     fn parse_binary_expr_internal(
         &mut self,
         min_precedence: u8,
         allow_function_postfix: bool,
+        allow_infix_application: bool,
     ) -> Result<SyntaxExpr, SyntaxError> {
         let mut lhs = if matches!(self.current().kind, TokenKind::Span)
             && SPAN_PRECEDENCE >= min_precedence
@@ -93,6 +95,14 @@ impl Parser {
                 continue;
             }
 
+            if matches!(self.current().kind, TokenKind::Tilde)
+                && allow_infix_application
+                && INFIX_APPLICATION_PRECEDENCE >= min_precedence
+            {
+                lhs = self.parse_infix_application(lhs, allow_function_postfix)?;
+                continue;
+            }
+
             let op = match self.current_binary_op() {
                 Some(op) => op,
                 None => {
@@ -103,6 +113,7 @@ impl Parser {
                         let rhs = self.parse_binary_expr_internal(
                             next_min_precedence,
                             allow_function_postfix,
+                            allow_infix_application,
                         )?;
                         let span = lhs.span().merge(rhs.span());
                         lhs = SyntaxExpr::binary(times, lhs, rhs, span);
@@ -124,9 +135,17 @@ impl Parser {
                 if matches!(op, BinaryOp::CompoundExpression) && !self.token_starts_expression() {
                     SyntaxExpr::symbol("Null", self.current().span)
                 } else if matches!(op, BinaryOp::Rule | BinaryOp::RuleDelayed) {
-                    self.parse_binary_expr_internal(next_min_precedence, false)?
+                    self.parse_binary_expr_internal(
+                        next_min_precedence,
+                        false,
+                        allow_infix_application,
+                    )?
                 } else {
-                    self.parse_binary_expr_internal(next_min_precedence, allow_function_postfix)?
+                    self.parse_binary_expr_internal(
+                        next_min_precedence,
+                        allow_function_postfix,
+                        allow_infix_application,
+                    )?
                 };
             let span = lhs.span().merge(rhs.span());
             lhs = SyntaxExpr::binary(op, lhs, rhs, span);
@@ -138,6 +157,40 @@ impl Parser {
         }
 
         Ok(lhs)
+    }
+
+    fn parse_infix_application(
+        &mut self,
+        lhs: SyntaxExpr,
+        allow_function_postfix: bool,
+    ) -> Result<SyntaxExpr, SyntaxError> {
+        self.bump();
+
+        if !self.token_starts_expression() {
+            return Err(if self.at_end() {
+                SyntaxError::Incomplete {
+                    expected: "expression",
+                    span: self.current().span,
+                }
+            } else {
+                SyntaxError::UnexpectedToken {
+                    expected: "expression",
+                    found: self.current_token_label(),
+                    span: self.current().span,
+                }
+            });
+        }
+
+        let head = self.parse_binary_expr_internal(0, allow_function_postfix, false)?;
+        self.expect_tilde()?;
+        let rhs = self.parse_binary_expr_internal(
+            INFIX_APPLICATION_PRECEDENCE + 1,
+            allow_function_postfix,
+            true,
+        )?;
+        let span = lhs.span().merge(rhs.span());
+
+        Ok(SyntaxExpr::call(head, vec![lhs, rhs], span))
     }
 
     pub(super) fn parse_prefix_expr(&mut self) -> Result<SyntaxExpr, SyntaxError> {

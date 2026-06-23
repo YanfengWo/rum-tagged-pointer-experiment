@@ -353,6 +353,13 @@ impl<'a> Lexer<'a> {
                     self.single(TokenKind::Slash)
                 }
             }
+            '~' => {
+                if self.consume_str("~~") {
+                    TokenKind::TildeTilde
+                } else {
+                    self.single(TokenKind::Tilde)
+                }
+            }
             '_' => {
                 if self.consume_str("___") {
                     TokenKind::TripleUnderscore
@@ -1146,7 +1153,7 @@ mod tests {
     #[test]
     fn lexes_new_infix_operators_before_shared_prefixes() {
         let tokens = lex(
-            "a ^:= b a ^= b a ^ b a ** b a *= b a * b f //@ x f /@ x a // f x |-> y a || b a | b",
+            "a ^:= b a ^= b a ^ b a ** b a *= b a * b f //@ x f /@ x a // f x |-> y a || b a | b a ~~ b a ~ f ~ b",
         )
         .unwrap();
 
@@ -1162,6 +1169,9 @@ mod tests {
         assert!(matches!(tokens[28].kind, TokenKind::BarMinusGreater));
         assert!(matches!(tokens[31].kind, TokenKind::Or));
         assert!(matches!(tokens[34].kind, TokenKind::Bar));
+        assert!(matches!(tokens[37].kind, TokenKind::TildeTilde));
+        assert!(matches!(tokens[40].kind, TokenKind::Tilde));
+        assert!(matches!(tokens[42].kind, TokenKind::Tilde));
     }
 
     #[test]

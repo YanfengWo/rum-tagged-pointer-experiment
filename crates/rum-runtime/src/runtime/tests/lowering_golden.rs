@@ -60,6 +60,10 @@ fn lowering_golden_forms_cover_rules_patterns_slots_and_scoping() {
             "Alternatives[var[Blank[], Blank[]], const[Blank[], Blank[]]]",
         ),
         ("_?propBoolAtomQ", "PatternTest[Blank[], propBoolAtomQ]"),
+        ("a ~~ b <> c", "StringExpression[a, StringJoin[b, c]]"),
+        ("a ~ g ~ b", "g[a, b]"),
+        ("a ~ g ~ b + c", "Plus[g[a, b], c]"),
+        ("x ~ f ~ y ~ g ~ z", "g[f[x, y], z]"),
         ("\"a\" <> ToString[i]", "StringJoin[\"a\", ToString[i]]"),
         (
             "x_Integer := f[x]",

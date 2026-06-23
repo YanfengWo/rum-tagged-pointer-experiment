@@ -361,6 +361,10 @@ where
             "PatternTest",
             vec![lowered_lhs, lowered_rhs],
         )),
+        BinaryOp::StringExpression => Ok(canonical_call(
+            "StringExpression",
+            vec![lowered_lhs, lowered_rhs],
+        )),
         BinaryOp::StringJoin => Ok(canonical_call("StringJoin", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::Apply => Ok(Expr::call(lowered_lhs, vec![lowered_rhs])),
         BinaryOp::PostfixApply => Ok(Expr::call(lowered_rhs, vec![lowered_lhs])),
