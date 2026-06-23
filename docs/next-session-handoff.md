@@ -58,7 +58,15 @@
 > `Names["System\`Real"]`={}). Rationale (user): rum's purpose isn't numerics and
 > WL's arbitrary-precision float arithmetic is too heavy — rationals-only sidesteps
 > it. Fine for HOL (exact reals); a settled divergence from WL for general numeric
-> work. Do NOT propose adding a Real atom. ([[rum-rationals-only-by-design]]) **NEXT: more demos/test stages, the 🔴 operators, or the deferred
+> work. Do NOT propose adding a Real atom. ([[rum-rationals-only-by-design]])
+> SNAPSHOT SIZE (2026-06-23, user noticed WK bootstrap.mx=1.5M vs rum's 5M): NOT
+> a representation/density problem — rum's `.mx` is **verbose UTF-8 WL-SOURCE TEXT**
+> (`Set[...]` expressions, symbol/context names spelled out, no interning), while
+> WK's is compact interned BINARY. Proof: rum's 4.8M `.mx` gzips 17.6x to ~0.3M
+> (< WK's 1.5M), so rum's actual info content is comparable/smaller; the gap is
+> pure text-encoding redundancy. Also makes restore slower (re-parse+eval the
+> text vs binary deserialize). CHEAP DEFERRED WIN if snapshot size/restore ever
+> matters: binary/compressed snapshot format. Not on the critical path (dev tool). **NEXT: more demos/test stages, the 🔴 operators, or the deferred
 > perf line.**
 >
 > ---
