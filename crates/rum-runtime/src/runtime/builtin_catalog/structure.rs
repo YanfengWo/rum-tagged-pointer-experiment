@@ -1,10 +1,9 @@
 use super::*;
 
 pub(super) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
-    BuiltinSpec::ordinary_with_hold(
+    BuiltinSpec::ordinary(
         "FullForm",
         "Renders the held argument as a canonical structural-form string in the current core expression subset.",
-        HoldAttribute::HoldAll,
         BuiltinHandler::FullForm,
     ),
     BuiltinSpec::ordinary(

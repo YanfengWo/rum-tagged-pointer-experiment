@@ -295,9 +295,10 @@ pub(super) const LOGIC_BUILTINS: &[BuiltinSpec] = &[
         "Tests whether no selected structural parts satisfy a criterion in the current boolean subset.",
         BuiltinHandler::NoneTrue,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "CoprimeQ",
         "Tests whether exact integers are pairwise relatively prime in the current integer subset.",
+        AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::CoprimeQ,
     ),
     BuiltinSpec::ordinary(
