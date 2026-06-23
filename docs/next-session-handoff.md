@@ -52,11 +52,13 @@
 > lexing; Get exists, Put missing), `x_.` (Optional-DEFAULT matcher is BROKEN even
 > via `x_:9` — `MatchQ[f[1], f[1,x_:9]]`=False — its own bug worth fixing), `.`
 > (Dot — real linear-algebra builtin, not just sugar; `Dot` not registered). Also
-> a KNOWN NUMERIC DIVERGENCE: rum has NO machine-`Real` type — decimal literals
-> `1.5`/`.5`/`1.5e3` parse but lower to EXACT rationals/integers (`1.5`→`3/2`,
-> `0.1+0.2`→`3/10`, `Names["System\`Real"]`={}); fine for HOL (exact reals), a real
-> gap for general WL numeric work (post-HOL project: add Real atom + inexact
-> arithmetic). **NEXT: more demos/test stages, the 🔴 operators, or the deferred
+> a DELIBERATE DESIGN DECISION (NOT a gap to fix): rum is RATIONALS-ONLY — no
+> machine/arbitrary-precision `Real` type. Decimal literals `1.5`/`.5`/`1.5e3`
+> parse but lower to EXACT rationals/integers (`1.5`→`3/2`, `0.1+0.2`→`3/10`,
+> `Names["System\`Real"]`={}). Rationale (user): rum's purpose isn't numerics and
+> WL's arbitrary-precision float arithmetic is too heavy — rationals-only sidesteps
+> it. Fine for HOL (exact reals); a settled divergence from WL for general numeric
+> work. Do NOT propose adding a Real atom. ([[rum-rationals-only-by-design]]) **NEXT: more demos/test stages, the 🔴 operators, or the deferred
 > perf line.**
 >
 > ---
