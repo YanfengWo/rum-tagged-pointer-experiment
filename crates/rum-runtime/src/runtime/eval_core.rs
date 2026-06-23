@@ -493,6 +493,12 @@ impl Session {
 
     fn call_head_has_evaluation_effect(&mut self, head: &Expr, args: &[Expr]) -> bool {
         if let Some(symbol) = expr_as_symbol(head) {
+            if symbol.is_system_name(heads::structure::LIST)
+                && args.iter().any(|arg| is_system_symbol_name(arg, "Nothing"))
+            {
+                return true;
+            }
+
             if self.symbol_call_args_have_no_evaluation_effect(symbol, args) {
                 return false;
             }

@@ -31,6 +31,10 @@ pub(super) const NAMESPACE_BUILTINS: &[BuiltinSpec] = &[
         "Evaluates to the path of the file currently being loaded, or the empty string at top level.",
     ),
     BuiltinSpec::new("$Path", "Lists search roots used by the package loader."),
+    BuiltinSpec::new(
+        "Nothing",
+        "Represents a list element that is removed from evaluated Lists.",
+    ),
     BuiltinSpec::ordinary(
         "FileNameJoin",
         "Joins path components into a platform path string.",

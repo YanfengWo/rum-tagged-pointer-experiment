@@ -193,6 +193,11 @@ impl Session {
         let mut symbols = BTreeSet::new();
 
         symbols.extend(self.builtins.keys().copied());
+        symbols.extend(
+            core_builtin_specs()
+                .iter()
+                .map(|spec| Symbol::system(spec.name)),
+        );
 
         for name in rum_core::CANONICAL_CORE_HEADS {
             symbols.insert(Symbol::system(*name));

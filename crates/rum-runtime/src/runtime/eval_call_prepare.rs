@@ -75,6 +75,35 @@ fn append_prepared_argument(
     }
 }
 
+fn append_prepared_list_argument(
+    prepared_args: &mut Vec<Expr>,
+    value: Expr,
+    allow_sequence_splice: bool,
+    sequence_hold: bool,
+) {
+    if allow_sequence_splice && !sequence_hold {
+        match value {
+            Expr::Call { head, args }
+                if is_system_symbol_name(head.as_ref(), heads::functions::SEQUENCE) =>
+            {
+                prepared_args.extend(
+                    args.into_iter()
+                        .filter(|item| !is_system_symbol_name(item, "Nothing")),
+                );
+            }
+            other => append_prepared_list_item(prepared_args, other),
+        }
+    } else {
+        append_prepared_list_item(prepared_args, value);
+    }
+}
+
+fn append_prepared_list_item(prepared_args: &mut Vec<Expr>, value: Expr) {
+    if !is_system_symbol_name(&value, "Nothing") {
+        prepared_args.push(value);
+    }
+}
+
 fn prepared_argument_splices(
     value: &Expr,
     allow_sequence_splice: bool,
@@ -83,7 +112,33 @@ fn prepared_argument_splices(
     allow_sequence_splice && !sequence_hold && sequence_items(value).is_some()
 }
 
+fn prepared_list_argument_drops_nothing(
+    value: &Expr,
+    allow_sequence_splice: bool,
+    sequence_hold: bool,
+) -> bool {
+    if is_nothing_symbol(value) {
+        return true;
+    }
+
+    allow_sequence_splice
+        && !sequence_hold
+        && sequence_items(value).is_some_and(|items| items.iter().any(is_nothing_symbol))
+}
+
+fn list_args_drop_nothing(head: &Expr, args: &[Expr]) -> bool {
+    is_system_symbol_name(head, heads::structure::LIST) && args.iter().any(is_nothing_symbol)
+}
+
+fn is_nothing_symbol(expr: &Expr) -> bool {
+    is_system_symbol_name(expr, "Nothing")
+}
+
 fn attribute_normalization_is_noop(head: &Expr, args: &[Expr], attributes: AttributeSet) -> bool {
+    if list_args_drop_nothing(head, args) {
+        return false;
+    }
+
     if attributes.contains(Attribute::Flat)
         && args
             .iter()
@@ -113,6 +168,7 @@ impl Session {
         let runtime_profile = runtime_path_timing_start("prepare_arguments.total");
         let result = (|| {
             let sequence_hold = attributes.sequence_hold();
+            let list_drops_nothing = is_system_symbol_name(&head, heads::structure::LIST);
             let mut built: Option<Vec<Expr>> = None;
 
             for index in 0..args.len() {
@@ -163,7 +219,13 @@ impl Session {
                     plan.allow_sequence_splice,
                     sequence_hold,
                 );
-                let changed = splices || prepared_arg != args[index];
+                let drops_nothing = list_drops_nothing
+                    && prepared_list_argument_drops_nothing(
+                        &prepared_arg,
+                        plan.allow_sequence_splice,
+                        sequence_hold,
+                    );
+                let changed = splices || drops_nothing || prepared_arg != args[index];
 
                 match (built.as_mut(), changed) {
                     (None, false) => {}
@@ -171,12 +233,21 @@ impl Session {
                         let mut prepared_args = args[..index].to_vec();
                         let runtime_profile_append =
                             runtime_path_timing_start("prepare_arguments.append_arg");
-                        append_prepared_argument(
-                            &mut prepared_args,
-                            prepared_arg,
-                            plan.allow_sequence_splice,
-                            sequence_hold,
-                        );
+                        if list_drops_nothing {
+                            append_prepared_list_argument(
+                                &mut prepared_args,
+                                prepared_arg,
+                                plan.allow_sequence_splice,
+                                sequence_hold,
+                            );
+                        } else {
+                            append_prepared_argument(
+                                &mut prepared_args,
+                                prepared_arg,
+                                plan.allow_sequence_splice,
+                                sequence_hold,
+                            );
+                        }
                         record_profile_runtime_path_timing(
                             runtime_profile_append,
                             RuntimeProfileOutcome::Ok,
@@ -186,12 +257,21 @@ impl Session {
                     (Some(prepared_args), _) => {
                         let runtime_profile_append =
                             runtime_path_timing_start("prepare_arguments.append_arg");
-                        append_prepared_argument(
-                            prepared_args,
-                            prepared_arg,
-                            plan.allow_sequence_splice,
-                            sequence_hold,
-                        );
+                        if list_drops_nothing {
+                            append_prepared_list_argument(
+                                prepared_args,
+                                prepared_arg,
+                                plan.allow_sequence_splice,
+                                sequence_hold,
+                            );
+                        } else {
+                            append_prepared_argument(
+                                prepared_args,
+                                prepared_arg,
+                                plan.allow_sequence_splice,
+                                sequence_hold,
+                            );
+                        }
                         record_profile_runtime_path_timing(
                             runtime_profile_append,
                             RuntimeProfileOutcome::Ok,
@@ -218,6 +298,7 @@ impl Session {
         start_index: usize,
     ) -> Result<Vec<Expr>, EvalError> {
         let sequence_hold = attributes.sequence_hold();
+        let list_drops_nothing = is_system_symbol_name(&head, heads::structure::LIST);
         let mut remaining_args = remaining_args.into_iter().enumerate();
 
         while let Some((offset, arg)) = remaining_args.next() {
@@ -267,12 +348,21 @@ impl Session {
             };
 
             let runtime_profile_append = runtime_path_timing_start("prepare_arguments.append_arg");
-            append_prepared_argument(
-                &mut evaluated_args,
-                prepared_arg,
-                plan.allow_sequence_splice,
-                sequence_hold,
-            );
+            if list_drops_nothing {
+                append_prepared_list_argument(
+                    &mut evaluated_args,
+                    prepared_arg,
+                    plan.allow_sequence_splice,
+                    sequence_hold,
+                );
+            } else {
+                append_prepared_argument(
+                    &mut evaluated_args,
+                    prepared_arg,
+                    plan.allow_sequence_splice,
+                    sequence_hold,
+                );
+            }
             record_profile_runtime_path_timing(runtime_profile_append, RuntimeProfileOutcome::Ok);
         }
 
@@ -289,12 +379,21 @@ impl Session {
         value: Expr,
         allow_sequence_splice: bool,
     ) -> Result<Expr, EvalError> {
-        append_prepared_argument(
-            &mut evaluated_args,
-            value,
-            allow_sequence_splice,
-            attributes.sequence_hold(),
-        );
+        if is_system_symbol_name(&head, heads::structure::LIST) {
+            append_prepared_list_argument(
+                &mut evaluated_args,
+                value,
+                allow_sequence_splice,
+                attributes.sequence_hold(),
+            );
+        } else {
+            append_prepared_argument(
+                &mut evaluated_args,
+                value,
+                allow_sequence_splice,
+                attributes.sequence_hold(),
+            );
+        }
 
         let prepared = self.resume_prepared_call_arguments(
             head.clone(),
@@ -373,6 +472,10 @@ impl Session {
                 runtime_profile_orderless,
                 RuntimeProfileOutcome::Ok,
             );
+        }
+
+        if is_system_symbol_name(head, heads::structure::LIST) {
+            normalized_args.retain(|arg| !is_nothing_symbol(arg));
         }
 
         record_profile_runtime_path_timing(runtime_profile_total, RuntimeProfileOutcome::Ok);
