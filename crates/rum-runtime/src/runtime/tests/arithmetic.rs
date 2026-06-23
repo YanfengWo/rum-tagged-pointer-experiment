@@ -236,6 +236,89 @@ fn exact_integer_mod_quotient_gcd_lcm_and_powermod_follow_floor_style_semantics(
 }
 
 #[test]
+fn max_min_handle_exact_extrema_lists_and_registration() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session.eval_text("Max[3, 5]").unwrap().value.to_string(),
+        "5"
+    );
+    assert_eq!(
+        session.eval_text("Min[3, 5]").unwrap().value.to_string(),
+        "3"
+    );
+    assert_eq!(session.eval_text("Max[3]").unwrap().value.to_string(), "3");
+    assert_eq!(
+        session.eval_text("Max[1, 5, 2]").unwrap().value.to_string(),
+        "5"
+    );
+    assert_eq!(
+        session.eval_text("Max[3/2, 1]").unwrap().value.to_string(),
+        "3/2"
+    );
+    assert_eq!(
+        session.eval_text("Min[3/2, 1]").unwrap().value.to_string(),
+        "1"
+    );
+    assert_eq!(
+        session.eval_text("Max[-3, -5]").unwrap().value.to_string(),
+        "-3"
+    );
+    assert_eq!(
+        session
+            .eval_text("Max[{3, {5}}, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "5"
+    );
+    assert_eq!(
+        session
+            .eval_text("Min[{4, 1}, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session.eval_text("Context[Max]").unwrap().value.to_string(),
+        "\"System`\""
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[\"System`Min\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"System`Min\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("FullForm[Max[x, 3]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"Max[x, 3]\""
+    );
+    assert_eq!(
+        session.eval_text("Min[]").unwrap().value.to_string(),
+        "Infinity"
+    );
+    assert_eq!(
+        session.eval_text("Max[]").unwrap().value.to_string(),
+        "Times[-1, Infinity]"
+    );
+    assert_eq!(
+        session.eval_text("Min[{}]").unwrap().value.to_string(),
+        "Infinity"
+    );
+    assert_eq!(
+        session.eval_text("Max[{}]").unwrap().value.to_string(),
+        "Times[-1, Infinity]"
+    );
+}
+
+#[test]
 fn rational_atoms_expose_a_rational_head_for_patterns() {
     let mut session = Session::new();
 

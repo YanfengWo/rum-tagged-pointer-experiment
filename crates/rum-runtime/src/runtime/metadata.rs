@@ -272,6 +272,8 @@ pub enum BuiltinHandler {
     PowerMod,
     GCD,
     LCM,
+    Max,
+    Min,
     Expand,
     Coefficient,
     CoefficientList,

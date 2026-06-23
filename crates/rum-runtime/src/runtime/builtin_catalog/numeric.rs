@@ -97,6 +97,16 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::LCM,
     ),
     BuiltinSpec::ordinary(
+        "Max",
+        "Returns the maximum exact integer or rational operand.",
+        BuiltinHandler::Max,
+    ),
+    BuiltinSpec::ordinary(
+        "Min",
+        "Returns the minimum exact integer or rational operand.",
+        BuiltinHandler::Min,
+    ),
+    BuiltinSpec::ordinary(
         "Expand",
         "Expands rational-coefficient polynomial expressions over pattern-free indeterminates.",
         BuiltinHandler::Expand,

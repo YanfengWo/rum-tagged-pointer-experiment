@@ -29,6 +29,8 @@ impl Session {
             BuiltinHandler::PowerMod => self.eval_power_mod(head, args),
             BuiltinHandler::GCD => self.eval_gcd(head, args),
             BuiltinHandler::LCM => self.eval_lcm(head, args),
+            BuiltinHandler::Max => self.eval_max(head, args),
+            BuiltinHandler::Min => self.eval_min(head, args),
             BuiltinHandler::Expand => self.eval_expand(head, args),
             BuiltinHandler::Coefficient => self.eval_coefficient(head, args),
             BuiltinHandler::CoefficientList => self.eval_coefficient_list(head, args),
