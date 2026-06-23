@@ -44,12 +44,20 @@
 > checkpoint-chain.sh` now auto-appends it (rum-side `extra_modules` default,
 > env-overridable `RUM_SNAPSHOT_EXTRA_MODULES`; the pristine clone's
 > `build_snapshot.wls` is NEVER edited) so a future v7 cold-builds all 42. v6
-> supersedes v5. **NEXT: the 5+5+2 syntax-axis operator gaps — briefs 036
-> (`^= ^:= ** //@ |->`), 037 (`! !! ' .. ...` + `Factorial2`), 038 (`~~`, `~f~`)
-> are WRITTEN and ready to dispatch SEQUENTIALLY (shared parser files), gate+commit
-> each; deferred 🔴 = `>>`(Put I/O), `x_.`(Optional-default matcher is BROKEN —
-> `MatchQ[f[1], f[1,x_:9]]`=False, its own bug), `.`(Dot builtin). Then more
-> demos/test stages or the deferred perf line.**
+> supersedes v5. **DONE since: the syntax-axis 🟢🟡 operator gaps — briefs 036
+> (`^= ^:= ** //@ |->`, `af9eb57`), 037 (`! !! ' .. ...` + `Factorial2` builtin,
+> `df833d6`), 038 (`~~`, `~f~` matchfix, `c5e5bfb`) — all gated+committed
+> (rum-syntax 143/0, rum-runtime 684/0; re-survey confirms all parse). DEFERRED 🔴
+> (need runtime, not just parser): `>>`/`<<` (Put/Get — special unquoted-filename
+> lexing; Get exists, Put missing), `x_.` (Optional-DEFAULT matcher is BROKEN even
+> via `x_:9` — `MatchQ[f[1], f[1,x_:9]]`=False — its own bug worth fixing), `.`
+> (Dot — real linear-algebra builtin, not just sugar; `Dot` not registered). Also
+> a KNOWN NUMERIC DIVERGENCE: rum has NO machine-`Real` type — decimal literals
+> `1.5`/`.5`/`1.5e3` parse but lower to EXACT rationals/integers (`1.5`→`3/2`,
+> `0.1+0.2`→`3/10`, `Names["System\`Real"]`={}); fine for HOL (exact reals), a real
+> gap for general WL numeric work (post-HOL project: add Real atom + inexact
+> arithmetic). **NEXT: more demos/test stages, the 🔴 operators, or the deferred
+> perf line.**
 >
 > ---
 >
