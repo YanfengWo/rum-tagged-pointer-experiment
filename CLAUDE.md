@@ -84,16 +84,23 @@ from the profile before keeping a change.**
 
 ## Current direction (read these for state)
 
-- `docs/representation-rewrite-plan.md` — **the active plan** (Layer A/B
-  representation rewrite). Phase 0 + **Layer A (A1+A2+A3+A4) are complete and
-  gated** (2026-06-22). Entry point `scripts/core-language-microbench.sh`
-  (rum/WK ratio); gate with the `RUM_PROFILE_REPR` counters + a clean
-  back-to-back A/B. The older `docs/performance-kernel-rewrite-plan.md`
-  (Stages 0-8) is superseded for the active line.
-- `docs/next-session-handoff.md` — the live task ledger; **read its
-  `2026-06-22` top block** (the Task-2c/2d framing below it is superseded).
-- `PROGRESS.md` — full running log; the `2026-06-21`/`2026-06-22` entries cover
-  Phase 0, Layer A, the Pair re-diagnosis, and the eliminated dead-ends.
+- **ACTIVE LINE (2026-06-23): the correctness mainline** — drive the unmodified
+  `mma-hol-acceptance` (`200f13a`) load to "the bottom" (last theorem verifies,
+  or a hard time/space wall). Read `docs/next-session-handoff.md`'s **`2026-06-23`
+  top block** for the live state: the full ℤ→ℚ→ℝ tower + real construction loads
+  (88%, 36/41); frontier is `stdlib/Real/Seq.wl` (multi-layered; `Nothing` fixed,
+  next is a `mkComb` type mismatch). Driver: `scripts/snapshot-checkpoint-chain.sh`;
+  checkpoints in `rum-snapshot-checkpoints-v5/`. Method: rebuild fixes from the
+  checkpoint just before the earliest tainted file; patch-and-trace
+  `HOL`Auto`RealArith` functions on a restored checkpoint.
+- The **perf/representation line is PAUSED at a clean stop** (not the active
+  line): `docs/representation-rewrite-plan.md` (Layer A done+gated; flaws 2-3
+  refuted; hash-consing validated SOUND+~26% on Pair but DEFERRED). Deferred SAFE
+  perf work after correctness: hash-consing/value-memo + Module-gensym GC (~10GB
+  live leak). Entry point for that line: `scripts/core-language-microbench.sh`.
+- `PROGRESS.md` — full running log; the `2026-06-23` entries cover the correctness
+  chain + the 5 parser/lexer/eval bugs; `2026-06-21`/`2026-06-22` cover the perf
+  line (Layer A, the Pair re-diagnosis, the eliminated dead-ends).
 - `docs/proptaut-performance-audit.md` — the profiling method and reducers.
 - **Unified model (corrected this session):** the Pair `~34x` is NOT a separate
   failed-dispatch defect distinct from the ~3x constant — it is the SAME

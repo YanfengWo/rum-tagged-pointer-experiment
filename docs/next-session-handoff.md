@@ -1,5 +1,54 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
+> **2026-06-23 — CURRENT STATUS (read THIS first; supersedes every block below).**
+> Active line: the **correctness mainline** — drive the UNMODIFIED acceptance
+> standard `/Users/fft/Developments/mma-hol-acceptance` (HEAD `200f13a`) load to
+> "the bottom" (user's goal: the last theorem verifies, OR a hard time/space wall
+> on this machine). NOT the perf/representation line (that is paused at a clean
+> stop; see the 2026-06-22 block below + PROGRESS). Tree clean, all committed.
+> Full log: PROGRESS.md `2026-06-23` entries. Driver:
+> `scripts/snapshot-checkpoint-chain.sh` (per-module named checkpoints + manifest,
+> stops at the first stderr error). Briefs 021-030 in `docs/dev/codex/`.
+>
+> **Progress: the full ℤ→ℚ→ℝ number tower + real-number construction LOADS — 88%
+> (36/41 modules).** Authoritative checkpoints: `rum-snapshot-checkpoints-v5/`
+> (cp00…cp35 = core … auto/RealArith). 5 rum bugs fixed this push, each found by a
+> rebuild and advancing the frontier: (1) juxtaposition `a b`/`g #` (`67a3bdc`),
+> (2) `#` slot adjacency `# 6` (`df4b368`), (3) `\[Name]` named chars (`9bcf231`),
+> (4) **Function ignores extra args** — the eval-semantics one that unblocked the
+> standard `Catch[e,tag,handler]` idiom and the whole Farkas-refute retry
+> (`7d04aab`), (5) **`Nothing`** missing builtin (`35a6a82`). Plus the harness
+> blind-spot fix (stderr error detection, `ca6312f`) and deterministic preamble.
+>
+> **CURRENT FRONTIER: `stdlib/Real/Seq.wl` (index 36) — MULTI-LAYERED.** `Nothing`
+> fixed the `realarith-norm: term is not a real linear expression` layer; the NEXT
+> error is `mkComb: argument type mismatch` (tag `term`) in
+> `proveRealConclUnderFacts → realLinNormConv → normLinRAux → rMulComm →
+> buildLinRAny` (types `fun`/`real`) — a deeper real-arithmetic proof-reconstruction
+> issue. Likely another rum eval bug (WK loads mma-hol). Remaining after Seq:
+> SeqAux, Compact, Connected, Topology, CompactSet.
+>
+> **HOW TO RESUME the Real/Seq dive (fast iteration base):** the `/tmp` scratch is
+> transient — rebuild it: `rsync -a --exclude=.git --exclude=*.mx
+> /Users/fft/Developments/mma-hol-acceptance/ <scratch>/`, then
+> `cp rum-snapshot-checkpoints-v5/cp34-stdlib_Real_MinMax_wl.mx <scratch>/bootstrap.mx`,
+> `extend_snapshot auto/RealArith.wl` (re-load RealArith with the CURRENT binary so
+> `Nothing`/etc. resolve right — the BLAST-RADIUS lesson: an old checkpoint that
+> STORES a definition using a changed symbol is tainted; cp35's RealArith baked the
+> old `Private`Nothing`), then `extend_snapshot stdlib/Real/Seq.wl` reproduces the
+> `mkComb` error (~4s). Diagnose by patching the relevant `HOL`Auto`RealArith`
+> function on that checkpoint (e.g. `realAtomNormConv`, `buildLinRAny`, `rMulComm`)
+> to Print intermediates + Throw — runs in seconds, no full reload. Method proven
+> in PROGRESS `2026-06-23`.
+>
+> **Method/lessons (all in memory):** test a fix from the checkpoint just before
+> the EARLIEST file it taints, not a full rebuild ([[feedback-test-fix-from-checkpoint]]);
+> the corpus-load line is complemented by a planned symbol+syntax conformance/difftest
+> pass ([[coverage-conformance-direction]]); deferred SAFE perf after correctness:
+> hash-consing/value-memo (~26% sound on Pair, also a memory win) + Module-gensym GC
+> (the ~10GB live leak); and a `#![forbid(unsafe_code)]` guardrail for rum-core/
+> rum-runtime (the only `unsafe` is the off-by-default alloc-count GlobalAlloc).
+
 > **2026-06-22 — CURRENT STATUS (supersedes the Task-2c/2d framing below).**
 > The full running log is `PROGRESS.md` (read the `2026-06-21`/`2026-06-22`
 > entries); the active plan is `docs/representation-rewrite-plan.md` (Layer A/B),
