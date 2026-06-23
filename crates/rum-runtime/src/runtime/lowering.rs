@@ -328,6 +328,7 @@ where
         )),
         BinaryOp::StringJoin => Ok(canonical_call("StringJoin", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::Apply => Ok(Expr::call(lowered_lhs, vec![lowered_rhs])),
+        BinaryOp::PostfixApply => Ok(Expr::call(lowered_rhs, vec![lowered_lhs])),
         BinaryOp::Map => Ok(canonical_call("Map", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::ApplyHead => Ok(canonical_call("Apply", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::MapApply => Ok(canonical_call("MapApply", vec![lowered_lhs, lowered_rhs])),

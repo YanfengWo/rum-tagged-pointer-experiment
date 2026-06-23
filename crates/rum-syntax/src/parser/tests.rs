@@ -56,6 +56,78 @@ fn parses_right_associative_apply_sugar() {
 }
 
 #[test]
+fn parses_postfix_apply_as_left_associative() {
+    let parsed = parse_expr("a // f // g").unwrap();
+    assert_eq!(parsed.to_string(), "a // f // g");
+
+    assert_eq!(
+        parsed,
+        SyntaxExpr::binary(
+            BinaryOp::PostfixApply,
+            SyntaxExpr::binary(
+                BinaryOp::PostfixApply,
+                SyntaxExpr::symbol("a", z()),
+                SyntaxExpr::symbol("f", z()),
+                z(),
+            ),
+            SyntaxExpr::symbol("g", z()),
+            z(),
+        )
+    );
+}
+
+#[test]
+fn parses_postfix_apply_between_set_and_replace_all_precedence() {
+    let set = parse_expr("a = b // f").unwrap();
+    assert_eq!(
+        set,
+        SyntaxExpr::binary(
+            BinaryOp::Set,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::PostfixApply,
+                SyntaxExpr::symbol("b", z()),
+                SyntaxExpr::symbol("f", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+
+    let replace_all = parse_expr("a // f /. r").unwrap();
+    assert_eq!(
+        replace_all,
+        SyntaxExpr::binary(
+            BinaryOp::PostfixApply,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::ReplaceAll,
+                SyntaxExpr::symbol("f", z()),
+                SyntaxExpr::symbol("r", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+
+    let plus = parse_expr("a + b // f").unwrap();
+    assert_eq!(
+        plus,
+        SyntaxExpr::binary(
+            BinaryOp::PostfixApply,
+            SyntaxExpr::binary(
+                BinaryOp::Add,
+                SyntaxExpr::symbol("a", z()),
+                SyntaxExpr::symbol("b", z()),
+                z(),
+            ),
+            SyntaxExpr::symbol("f", z()),
+            z(),
+        )
+    );
+}
+
+#[test]
 fn parses_compound_expression_sugar() {
     let parsed = parse_expr("a; b;").unwrap();
     assert_eq!(parsed.to_string(), "a; b; Null");

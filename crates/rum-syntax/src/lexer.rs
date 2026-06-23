@@ -321,6 +321,8 @@ impl<'a> Lexer<'a> {
                     TokenKind::SlashAt
                 } else if self.consume_str("//=") {
                     TokenKind::SlashSlashEqual
+                } else if self.consume_str("//") {
+                    TokenKind::SlashSlash
                 } else if self.consume_str("/=") {
                     TokenKind::SlashEqual
                 } else if self.consume_str("/.") {
@@ -1023,6 +1025,16 @@ mod tests {
         let tokens = lex("expr //. rule").unwrap();
 
         assert!(matches!(tokens[1].kind, TokenKind::ReplaceRepeated));
+    }
+
+    #[test]
+    fn lexes_specific_slash_operators_before_postfix_apply() {
+        let tokens = lex("a //. b a //= b a /. b a // b").unwrap();
+
+        assert!(matches!(tokens[1].kind, TokenKind::ReplaceRepeated));
+        assert!(matches!(tokens[4].kind, TokenKind::SlashSlashEqual));
+        assert!(matches!(tokens[7].kind, TokenKind::ReplaceAll));
+        assert!(matches!(tokens[10].kind, TokenKind::SlashSlash));
     }
 
     #[test]

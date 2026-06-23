@@ -174,6 +174,7 @@ impl Parser {
             TokenKind::Question => Some(BinaryOp::PatternTest),
             TokenKind::StringJoin => Some(BinaryOp::StringJoin),
             TokenKind::At => Some(BinaryOp::Apply),
+            TokenKind::SlashSlash => Some(BinaryOp::PostfixApply),
             TokenKind::SlashAt => Some(BinaryOp::Map),
             TokenKind::AtAt => Some(BinaryOp::ApplyHead),
             TokenKind::AtAtAt => Some(BinaryOp::MapApply),
