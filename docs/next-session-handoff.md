@@ -32,17 +32,24 @@
 > /Max/Min) → symbol scan catches; "present-but-incomplete" (2-arg Sort) and "missing
 > syntax" (`//`) → scan does NOT catch, need demo/patch-and-trace.
 >
-> **IN PROGRESS (background): authoritative full-chain COLD rebuild →
-> `/Users/fft/Developments/rum-snapshot-checkpoints-v6/`** (`scripts/snapshot-
-> checkpoint-chain.sh --mma-hol …acceptance --output-dir …v6`, log
-> `/tmp/cold_rebuild_v6.log`). WHY: the frontier was driven with FAST Stable
-> extend-on-snapshot (cp34 + re-extend), which is the correct iteration tool but is
-> NOT authoritative — it shares the Stable-vs-Strict gap AND the lower checkpoints
-> cp00–cp34 were built with the OLD (pre-fix) binary, so a cold Strict rebuild with
-> the FIXED binary is the real gate (also settles whether any lower checkpoint was
-> tainted; risk judged LOW since the 4 bugs are call-time, not store-time, but
-> unverified). v6 supersedes v5 once green. **NEXT: gate the v6 cold rebuild; then
-> either drive more demos/test stages, or pick up the deferred perf line.**
+> **DONE: authoritative full-chain COLD rebuild GREEN →
+> `/Users/fft/Developments/rum-snapshot-checkpoints-v6/`** (28 checkpoints
+> cp00…cp42, ~65 min, log `/tmp/cold_rebuild_v6.log`). All modules cold-build clean
+> from the Simp base with the FIXED binary to the bottom — this AUTHORITATIVELY
+> confirms the 100% load (not just the fast Stable extend) AND REFUTES the
+> lower-checkpoint taint worry (cp00–cp34 rebuilt fresh, still reach the bottom).
+> Caveat: still Stable-mode extends, not the maximal Strict `run_all` (a further
+> optional rung). **`demos/Continuous.wl` is now MODULE #42** of the chain:
+> extended onto cp41 → `cp42-demos_Continuous_wl.mx`, AND `scripts/snapshot-
+> checkpoint-chain.sh` now auto-appends it (rum-side `extra_modules` default,
+> env-overridable `RUM_SNAPSHOT_EXTRA_MODULES`; the pristine clone's
+> `build_snapshot.wls` is NEVER edited) so a future v7 cold-builds all 42. v6
+> supersedes v5. **NEXT: the 5+5+2 syntax-axis operator gaps — briefs 036
+> (`^= ^:= ** //@ |->`), 037 (`! !! ' .. ...` + `Factorial2`), 038 (`~~`, `~f~`)
+> are WRITTEN and ready to dispatch SEQUENTIALLY (shared parser files), gate+commit
+> each; deferred 🔴 = `>>`(Put I/O), `x_.`(Optional-default matcher is BROKEN —
+> `MatchQ[f[1], f[1,x_:9]]`=False, its own bug), `.`(Dot builtin). Then more
+> demos/test stages or the deferred perf line.**
 >
 > ---
 >

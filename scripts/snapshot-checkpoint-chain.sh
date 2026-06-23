@@ -38,6 +38,19 @@ limit=0
 rum_cli_bin=${RUM_CLI_BIN:-}
 list_only=0
 
+# Extra modules to extend AFTER build_snapshot.wls's stdlib library list — e.g.
+# demos that are deliberately NOT part of the pristine build list. These live
+# HERE, in rum's tooling; they are NEVER added to the pristine mma-hol
+# build_snapshot.wls (the acceptance standard stays unmodified). Repo-root-
+# relative paths. Override with RUM_SNAPSHOT_EXTRA_MODULES (space-separated;
+# set empty to disable). A listed module absent from the source is skipped, not
+# fatal.
+if [[ -z "${RUM_SNAPSHOT_EXTRA_MODULES+x}" ]]; then
+  extra_modules=("demos/Continuous.wl")
+else
+  read -r -a extra_modules <<< "${RUM_SNAPSHOT_EXTRA_MODULES}"
+fi
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --mma-hol)
@@ -364,6 +377,22 @@ if [[ "${#source_libs[@]}" -eq 0 ]]; then
   exit 2
 fi
 
+# Append the rum-side extra modules after the stdlib list, continuing the index
+# (e.g. demos/Continuous.wl becomes #42). Filtered to those present in the
+# source so the same set can be mirrored onto scratch_libs below.
+applied_extras=()
+extra_next_index=${source_lib_indices[${#source_lib_indices[@]} - 1]}
+for extra in ${extra_modules[@]+"${extra_modules[@]}"}; do
+  if [[ ! -f "${mma_hol_source}/${extra}" ]]; then
+    echo "[checkpoint-chain] skip extra module (not found in source): ${extra}" >&2
+    continue
+  fi
+  extra_next_index=$((10#${extra_next_index} + 1))
+  source_lib_indices+=("${extra_next_index}")
+  source_libs+=("${extra}")
+  applied_extras+=("${extra}")
+done
+
 base_array_index=-1
 for i in "${!source_libs[@]}"; do
   filename=$(basename "${source_libs[$i]}")
@@ -418,6 +447,13 @@ while IFS=$'\t' read -r index rel; do
   scratch_lib_indices+=("${index}")
   scratch_libs+=("${rel}")
 done < <(load_library_list "${scratch_root}/tests/build_snapshot.wls")
+
+# Mirror the rum-side extras onto the scratch list so the order-equality check
+# below holds (scratch is an rsync of the same source; the extras exist there).
+for extra in ${applied_extras[@]+"${applied_extras[@]}"}; do
+  scratch_lib_indices+=("0")
+  scratch_libs+=("${extra}")
+done
 
 if [[ "${source_libs[*]}" != "${scratch_libs[*]}" ]]; then
   echo "error: scratch build_snapshot library order differs from source" >&2
