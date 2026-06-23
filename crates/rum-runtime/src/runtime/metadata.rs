@@ -266,6 +266,7 @@ pub enum BuiltinHandler {
     Factorial,
     Total,
     Denominator,
+    Numerator,
     Mod,
     Quotient,
     PowerMod,

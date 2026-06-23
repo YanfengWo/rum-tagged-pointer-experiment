@@ -67,6 +67,11 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Denominator,
     ),
     BuiltinSpec::ordinary(
+        "Numerator",
+        "Returns the numerator of exact integers and rationals.",
+        BuiltinHandler::Numerator,
+    ),
+    BuiltinSpec::ordinary(
         "Mod",
         "Returns the modulus of one integer with respect to another.",
         BuiltinHandler::Mod,

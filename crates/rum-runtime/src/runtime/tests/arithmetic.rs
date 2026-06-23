@@ -108,6 +108,52 @@ fn exact_division_and_negative_integer_powers_produce_rationals() {
 }
 
 #[test]
+fn numerator_mirrors_denominator_for_exact_numbers_and_registration() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Numerator /@ {1/2, 3/4, -3/4, 5, -5, 0}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 3, -3, 5, -5, 0]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Context[Numerator]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"System`\""
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[\"System`Numerator\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"System`Numerator\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("FullForm[Numerator[x]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"Numerator[x]\""
+    );
+    assert_eq!(
+        session
+            .eval_text("Denominator /@ {3/4, 5}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[4, 1]"
+    );
+}
+
+#[test]
 fn plus_and_times_fold_numeric_parts_without_forcing_symbolic_algebra() {
     let mut session = Session::new();
 

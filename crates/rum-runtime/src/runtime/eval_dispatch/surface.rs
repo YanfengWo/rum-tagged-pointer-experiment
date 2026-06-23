@@ -23,6 +23,7 @@ impl Session {
             BuiltinHandler::Factorial => self.eval_factorial(head, args),
             BuiltinHandler::Total => self.eval_total(head, args),
             BuiltinHandler::Denominator => self.eval_denominator(head, args),
+            BuiltinHandler::Numerator => self.eval_numerator(head, args),
             BuiltinHandler::Mod => self.eval_mod(head, args),
             BuiltinHandler::Quotient => self.eval_quotient(head, args),
             BuiltinHandler::PowerMod => self.eval_power_mod(head, args),

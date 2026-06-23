@@ -187,6 +187,18 @@ impl Session {
         }
     }
 
+    pub(super) fn eval_numerator(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() != 1 {
+            return Ok(self.invalid_call_with_exact_arg_count("Numerator", args, 1));
+        }
+
+        match &args[0] {
+            Expr::Atom(Atom::Integer(value)) => Ok(Expr::integer(value.clone())),
+            Expr::Atom(Atom::Rational(value)) => Ok(Expr::integer(value.numerator().clone())),
+            _ => Ok(Expr::call(head.clone(), args.to_vec())),
+        }
+    }
+
     fn enforce_integer_work_limit_for_factorial(&self, value: &BigInt) -> Result<(), EvalError> {
         let one = BigInt::from(1_u8);
         let work_units = if value > &one {
