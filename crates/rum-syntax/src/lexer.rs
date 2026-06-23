@@ -1151,6 +1151,19 @@ mod tests {
     }
 
     #[test]
+    fn lexes_bare_dot_without_regressing_decimal_or_repeated_tokens() {
+        let tokens = lex("a . b 1.5 .5 1. 1.5e3 x_.. x_...").unwrap();
+
+        assert!(matches!(tokens[1].kind, TokenKind::Dot));
+        assert!(matches!(&tokens[3].kind, TokenKind::Integer(value) if value == "1.5"));
+        assert!(matches!(&tokens[4].kind, TokenKind::Integer(value) if value == ".5"));
+        assert!(matches!(&tokens[5].kind, TokenKind::Integer(value) if value == "1."));
+        assert!(matches!(&tokens[6].kind, TokenKind::Integer(value) if value == "1.5e3"));
+        assert!(matches!(tokens[9].kind, TokenKind::Repeated));
+        assert!(matches!(tokens[12].kind, TokenKind::RepeatedNull));
+    }
+
+    #[test]
     fn lexes_new_infix_operators_before_shared_prefixes() {
         let tokens = lex(
             "a ^:= b a ^= b a ^ b a ** b a *= b a * b f //@ x f /@ x a // f x |-> y a || b a | b a ~~ b a ~ f ~ b",

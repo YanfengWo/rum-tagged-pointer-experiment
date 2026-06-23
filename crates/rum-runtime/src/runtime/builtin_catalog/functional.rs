@@ -78,6 +78,11 @@ pub(super) const FUNCTIONAL_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Inner,
     ),
     BuiltinSpec::ordinary(
+        "Dot",
+        "Contracts list tensors over the last axis of each left operand and the first axis of each right operand.",
+        BuiltinHandler::Dot,
+    ),
+    BuiltinSpec::ordinary(
         "Fold",
         "Accumulates over elements in the current first-pass subset.",
         BuiltinHandler::Fold,

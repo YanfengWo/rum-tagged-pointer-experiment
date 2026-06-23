@@ -634,6 +634,7 @@ pub enum BuiltinHandler {
     TakeWhile,
     LengthWhile,
     Inner,
+    Dot,
     Fold,
     FoldList,
     FoldPair,

@@ -319,6 +319,70 @@ fn parses_new_infix_binary_operators() {
         )
     );
 
+    let dot_chain = parse_expr("a . b . c").unwrap();
+    assert_eq!(
+        dot_chain,
+        SyntaxExpr::binary(
+            BinaryOp::Dot,
+            SyntaxExpr::binary(
+                BinaryOp::Dot,
+                SyntaxExpr::symbol("a", z()),
+                SyntaxExpr::symbol("b", z()),
+                z(),
+            ),
+            SyntaxExpr::symbol("c", z()),
+            z(),
+        )
+    );
+
+    let dot_tighter_than_times = parse_expr("a . b * c").unwrap();
+    assert_eq!(
+        dot_tighter_than_times,
+        SyntaxExpr::binary(
+            BinaryOp::Times,
+            SyntaxExpr::binary(
+                BinaryOp::Dot,
+                SyntaxExpr::symbol("a", z()),
+                SyntaxExpr::symbol("b", z()),
+                z(),
+            ),
+            SyntaxExpr::symbol("c", z()),
+            z(),
+        )
+    );
+
+    let power_tighter_than_dot = parse_expr("a . b ^ c").unwrap();
+    assert_eq!(
+        power_tighter_than_dot,
+        SyntaxExpr::binary(
+            BinaryOp::Dot,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::Power,
+                SyntaxExpr::symbol("b", z()),
+                SyntaxExpr::symbol("c", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+
+    let non_commutative_tighter_than_dot = parse_expr("a . b ** c").unwrap();
+    assert_eq!(
+        non_commutative_tighter_than_dot,
+        SyntaxExpr::binary(
+            BinaryOp::Dot,
+            SyntaxExpr::symbol("a", z()),
+            SyntaxExpr::binary(
+                BinaryOp::NonCommutativeMultiply,
+                SyntaxExpr::symbol("b", z()),
+                SyntaxExpr::symbol("c", z()),
+                z(),
+            ),
+            z(),
+        )
+    );
+
     let map_all = parse_expr("f //@ g //@ x").unwrap();
     assert_eq!(
         map_all,

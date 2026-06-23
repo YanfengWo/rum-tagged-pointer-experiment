@@ -22,6 +22,79 @@ fn inner_arrayfilter_and_arrayreduce_cover_current_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Dot[{1, 2, 3}, {4, 5, 6}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "32"
+    );
+    assert_eq!(
+        session
+            .eval_text("{{1, 2}, {3, 4}} . {5, 6}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[17, 39]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Dot[{1, 2}, {{1, 2}, {3, 4}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[7, 10]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Dot[{{1, 2}, {3, 4}}, {{1, 0}, {0, 1}}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1, 2], List[3, 4]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Dot[{a, b}, {c, d}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Plus[Times[a, c], Times[b, d]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Dot[{1/2, 2}, {2, 1/2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(session.eval_text("Dot[x]").unwrap().value.to_string(), "x");
+    assert_eq!(
+        session.eval_text("Dot[]").unwrap().value.to_string(),
+        "Dot[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Dot[{{1, 2}, {3, 4}}, {{1, 0}, {0, 1}}, {5, 6}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[17, 39]"
+    );
+    assert_eq!(
+        session.eval_text("Dot[x, y]").unwrap().value.to_string(),
+        "Dot[x, y]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Dot[{1, 2}, {3, 4, 5}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Dot[List[1, 2], List[3, 4, 5]]"
+    );
+    assert_eq!(
+        session
             .eval_text("ArrayFilter[f, {a, b, c}, 1]")
             .unwrap()
             .value

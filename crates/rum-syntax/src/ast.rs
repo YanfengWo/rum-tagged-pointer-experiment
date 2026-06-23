@@ -238,6 +238,7 @@ pub enum BinaryOp {
     Add,
     Subtract,
     Times,
+    Dot,
     NonCommutativeMultiply,
     Divide,
     Power,
@@ -334,6 +335,7 @@ impl BinaryOp {
             Self::Add => "+",
             Self::Subtract => "-",
             Self::Times => "*",
+            Self::Dot => ".",
             Self::NonCommutativeMultiply => "**",
             Self::Divide => "/",
             Self::Power => "^",
@@ -372,6 +374,7 @@ impl BinaryOp {
             Self::Composition | Self::RightComposition => 73,
             Self::Add | Self::Subtract => 50,
             Self::Times | Self::Divide => 60,
+            Self::Dot => 63,
             Self::NonCommutativeMultiply => 65,
             Self::Power => 70,
         }

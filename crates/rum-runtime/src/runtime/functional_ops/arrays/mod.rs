@@ -28,6 +28,31 @@ impl Session {
         Ok(result)
     }
 
+    pub(in crate::runtime) fn eval_dot(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let Some((first, rest)) = args.split_first() else {
+            return Ok(Expr::call(head.clone(), Vec::new()));
+        };
+        if rest.is_empty() {
+            return Ok(first.clone());
+        }
+
+        let times = system_expr("Times");
+        let plus = system_expr("Plus");
+        let mut current = first.clone();
+        for next in rest {
+            let Some(result) = compute_inner(self, &times, &current, next, &plus)? else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
+            current = result;
+        }
+
+        Ok(current)
+    }
+
     pub(in crate::runtime) fn eval_array_filter(
         &mut self,
         _head: &Expr,

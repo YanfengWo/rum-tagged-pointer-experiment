@@ -404,6 +404,7 @@ where
             heads::arithmetic::TIMES,
             vec![lowered_lhs, lowered_rhs],
         )),
+        BinaryOp::Dot => Ok(canonical_call("Dot", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::NonCommutativeMultiply => Ok(canonical_call(
             "NonCommutativeMultiply",
             vec![lowered_lhs, lowered_rhs],

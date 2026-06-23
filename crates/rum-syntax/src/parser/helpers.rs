@@ -186,6 +186,7 @@ impl Parser {
             TokenKind::Plus => Some(BinaryOp::Add),
             TokenKind::Minus => Some(BinaryOp::Subtract),
             TokenKind::Star => Some(BinaryOp::Times),
+            TokenKind::Dot => Some(BinaryOp::Dot),
             TokenKind::StarStar => Some(BinaryOp::NonCommutativeMultiply),
             TokenKind::Slash => Some(BinaryOp::Divide),
             TokenKind::SlashStar => Some(BinaryOp::RightComposition),

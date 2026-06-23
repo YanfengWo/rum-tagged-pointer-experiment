@@ -55,6 +55,7 @@ impl Session {
             BuiltinHandler::TakeWhile => self.eval_take_while(head, args),
             BuiltinHandler::LengthWhile => self.eval_length_while(head, args),
             BuiltinHandler::Inner => self.eval_inner(head, args),
+            BuiltinHandler::Dot => self.eval_dot(head, args),
             BuiltinHandler::Fold => self.eval_fold(head, args),
             BuiltinHandler::FoldList => self.eval_fold_list(head, args),
             BuiltinHandler::FoldPair => self.eval_fold_pair(head, args),
