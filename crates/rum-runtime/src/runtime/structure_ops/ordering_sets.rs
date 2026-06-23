@@ -12,17 +12,31 @@ struct SortByEntry {
 impl Session {
     pub(in crate::runtime) fn eval_sort(
         &mut self,
-        head: &Expr,
+        _head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         match args {
             [expr] => self.sort_normal_expression("Sort", args, expr),
-            [expr, _ordering] => {
-                if matches!(expr, Expr::Atom(_)) {
-                    Ok(self.invalid_ordering_normal_call("Sort", args, 1))
-                } else {
-                    Ok(Expr::call(head.clone(), args.to_vec()))
-                }
+            [expr, ordering] => {
+                let Expr::Call {
+                    head: expr_head,
+                    args: expr_args,
+                } = expr
+                else {
+                    return Ok(self.invalid_ordering_normal_call("Sort", args, 1));
+                };
+
+                let items = expr_args.to_vec();
+                let before = vec![vec![false; items.len()]; items.len()];
+                self.resume_sort_comparator_from_pair(
+                    args.to_vec(),
+                    expr_head.as_ref().clone(),
+                    ordering.clone(),
+                    items,
+                    0,
+                    0,
+                    before,
+                )
             }
             _ => Ok(self.invalid_call_with_arg_range("Sort", args, 1, 2)),
         }
@@ -217,6 +231,85 @@ impl Session {
         self.resume_sort_by_from_index(call_args, expr_head, function, items, index + 1, decorated)
     }
 
+    fn resume_sort_comparator_from_pair(
+        &mut self,
+        call_args: Vec<Expr>,
+        expr_head: Expr,
+        ordering: Expr,
+        items: Vec<Expr>,
+        mut lhs_index: usize,
+        mut rhs_index: usize,
+        before: Vec<Vec<bool>>,
+    ) -> Result<Expr, EvalError> {
+        loop {
+            if lhs_index >= items.len() {
+                return Ok(sort_by_comparator_table(expr_head, items, &before));
+            }
+            if rhs_index >= items.len() {
+                lhs_index += 1;
+                rhs_index = 0;
+                continue;
+            }
+            if lhs_index != rhs_index {
+                break;
+            }
+            rhs_index += 1;
+        }
+
+        let comparison_result = self.evaluate(Expr::call(
+            ordering.clone(),
+            vec![items[lhs_index].clone(), items[rhs_index].clone()],
+        ));
+        let suspended_call_args = call_args.clone();
+        let suspended_expr_head = expr_head.clone();
+        let suspended_ordering = ordering.clone();
+        let suspended_items = items.clone();
+        let suspended_before = before.clone();
+        let value = self.suspend_with_frame(comparison_result, move |session, value| {
+            session.resume_sort_comparator_with_value(
+                suspended_call_args,
+                suspended_expr_head,
+                suspended_ordering,
+                suspended_items,
+                lhs_index,
+                rhs_index,
+                suspended_before,
+                value,
+            )
+        })?;
+
+        self.resume_sort_comparator_with_value(
+            call_args, expr_head, ordering, items, lhs_index, rhs_index, before, value,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn resume_sort_comparator_with_value(
+        &mut self,
+        call_args: Vec<Expr>,
+        expr_head: Expr,
+        ordering: Expr,
+        items: Vec<Expr>,
+        lhs_index: usize,
+        rhs_index: usize,
+        mut before: Vec<Vec<bool>>,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        if is_system_symbol_name(&value, "True") {
+            before[lhs_index][rhs_index] = true;
+        }
+
+        self.resume_sort_comparator_from_pair(
+            call_args,
+            expr_head,
+            ordering,
+            items,
+            lhs_index,
+            rhs_index + 1,
+            before,
+        )
+    }
+
     fn invalid_ordering_normal_call(
         &mut self,
         symbol: &str,
@@ -281,6 +374,23 @@ fn sorted_unique_exprs(mut items: Vec<Expr>) -> Vec<Expr> {
         unique.push(item);
     }
     unique
+}
+
+fn sort_by_comparator_table(expr_head: Expr, items: Vec<Expr>, before: &[Vec<bool>]) -> Expr {
+    let mut indices = (0..items.len()).collect::<Vec<_>>();
+    indices.sort_by(|lhs, rhs| match (before[*lhs][*rhs], before[*rhs][*lhs]) {
+        (true, false) => Ordering::Less,
+        (false, true) => Ordering::Greater,
+        _ => lhs.cmp(rhs),
+    });
+
+    Expr::call(
+        expr_head,
+        indices
+            .into_iter()
+            .map(|index| items[index].clone())
+            .collect(),
+    )
 }
 
 fn compare_structural_order(lhs: &Expr, rhs: &Expr) -> Ordering {
