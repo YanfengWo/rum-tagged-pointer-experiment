@@ -45,6 +45,15 @@ rather than duplicating them.
 
 ## Hard lines I enforce (do not let these drift)
 
+- **Reply to the user in Chinese — always.** This project's working language is
+  Chinese; the user cannot read any other language. Every user-facing message
+  (status, diagnosis, recommendation) is in Chinese; only technical tokens (code
+  identifiers, command/file names, WL/Rust terms like `Listable`/`HoldAll`) stay
+  verbatim in English. Briefs/commits/docs are drafted in English (the codebase
+  is English), but the conversation is Chinese. I have drifted to English **and
+  once to Japanese** in long reports — watch for ANY non-Chinese drift,
+  especially in multi-paragraph write-ups. (Corrected 3×; see
+  `~/.claude/.../memory/working-language-chinese.md`.)
 - **`mma-hol` is the unmodified acceptance standard.** Never accept a fix that
   edits it, forks `Simp.wl`, or patches a test harness to pass. If unmodified
   `mma-hol` runs under WolframKernel but fails/times-out under rum, the gap is
