@@ -55,7 +55,17 @@
 > =32, mat·vec={17,39}, symbolic `{a,b}.{c,d}`=`a c+b d`, `a.b*c`->`Times[Dot[a,b],c]`;
 > decimals/`..`/`x_.` regressions clean). REMAINING 🔴: `>>`/`<<` (Put/Get — special
 > unquoted-filename lexing; Get exists, Put missing) — the last syntax-axis gap, and
-> the lowest value (I/O, irrelevant to HOL). Also
+> the lowest value (I/O, irrelevant to HOL).
+> **BEHAVIOR VERIFIED (not just loads): the full Real-tower test suite passes
+> 1122/0 under rum** (`tests/run_fast.wls real` on the v6 cp42 snapshot — real_*,
+> real_seq/seqaux/compact/compactset/connected/topology/minmax/abs/complete/arith
+> _tests.wl). So this session's Real tower (4 bugs + operators) is correct at the
+> behavior level, no semantic bugs. NEXT TEST STEPS: (1) run the REST of the
+> `*_tests.wl` suites (stdlib: pair/num/set/int/rat/list/finite/fta/sum/option;
+> engine: kernel/terms/types/equal/drule/bool/tactics; HEAVY provers
+> meson/proptaut/simp — slow + some KNOWN pre-existing failures, run separately);
+> (2) THEN the user-queued **Strict-mode cold-start full test** (`run_all.wls`,
+> not run_all_stable — the maximal-rigor authoritative gate, time-consuming). Also
 > a DELIBERATE DESIGN DECISION (NOT a gap to fix): rum is RATIONALS-ONLY — no
 > machine/arbitrary-precision `Real` type. Decimal literals `1.5`/`.5`/`1.5e3`
 > parse but lower to EXACT rationals/integers (`1.5`→`3/2`, `0.1+0.2`→`3/10`,
