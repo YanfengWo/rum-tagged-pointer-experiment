@@ -6,6 +6,59 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-23 Correctness mainline: checkpoint chain drives the mma-hol load frontier — 3 parser/lexer bugs fixed, number-tower foundation now loads (stuck at Int)
+
+Goal (user): push the unmodified-`mma-hol` load all the way to "the bottom" —
+either the last theorem verifies, or a hard time/space wall on this machine.
+Driver: `scripts/snapshot-checkpoint-chain.sh` (brief-025) builds a named
+per-module snapshot (`cpNN-<module>.mx`) + profile + manifest, stopping at the
+first failing module. Checkpoints in `rum-snapshot-checkpoints-v4/` (v4 = with
+all three fixes below; cp00-cp20 are byte-identical to the pre-fix v1/v2 runs —
+the early libraries were never affected).
+
+**Harness blind-spot fixed first (`ca6312f`):** the chain classified 15
+silently-failing libraries as "ok" and "completed all 27" because the real
+errors are `! Get::syntax` / `! Get::load: uncaught throw: Failure[HOLError...]`
+on STDERR while `extend_snapshot.wls` swallows them and exits 0 with "ok" on
+stdout. `classify_step` now greps stderr for `uncaught throw|Get::syntax|
+Get::load|holErrorTag|^! ` and stops at the first real failure (user flagged
+this; "盯报错就停").
+
+**Three parser/lexer bugs, each found by a rebuild and advancing the frontier
+deeper into the arithmetic prover (`auto/Arith.wl`'s Cooper/Presburger +
+Farkas/Fourier-Motzkin engine):**
+1. **Juxtaposition (`67a3bdc`, brief-026):** rum had no implicit multiplication;
+   `a b`/`2 x`/`g #` failed to parse. `Arith.wl`'s `Map[g # &, a]` threw
+   `Get::syntax`, so Arith defined NOTHING, `arithProve` was undefined, and every
+   `arithProve[...]` returned inert -> `concl: not a theorem`. Fix unblocked
+   Arith + List.
+2. **`#` slot adjacency (`df4b368`, brief-027):** `parse_slot` consumed a
+   whitespace-separated token as the slot spec, so `# lcm` -> `Slot["lcm"]`
+   (named) not `Times[#, lcm]`. `clearProvToInt`'s `Map[(# lcm) &, prov]` then
+   produced a garbage Farkas certificate -> `farkasFM: certificate is not a
+   positive constant` at Finite. Fix: require `leading_trivia.is_empty()`.
+3. **`\[Name]` named characters (`9bcf231`, brief-028):** rum decoded no
+   `\[Name]` escapes; `mkConst["\[Exists]", ...]` built a constant named
+   `[Exists]` instead of `∃` -> `constType: unknown constant [Exists]` at Finite.
+   Fix: a 128-entry table (authoritative from WK, incl. quirks `\[Phi]`=U+03D5,
+   `\[Epsilon]`=U+03F5; Greek lower/upper + Curly variants + common logic/set/
+   arrow symbols), decoded in both string and code contexts. (Side gap noted:
+   `FromCharacterCode` is not a rum builtin yet — symbol-axis.)
+
+**Frontier now (v4):** `core → … → Pair → Sum → Option → Set → Num → Arith →
+List → Finite → FTA` all load clean; **stuck at `stdlib/Int.wl` (index 25)** with
+`arith-farkas: no Farkas certificate` (then `concl: not a theorem`), 22s fast
+fail in `proveConclUnderHyps`. Constants are CLEAN now (`const["≤"/"+"/"FST"/
+"SND"/"SUC"]`), so this is NOT another surface bug — it is the first
+algorithm-level frontier (the Farkas search finds no certificate for an ℕ
+linear-arithmetic goal with SUC/FST/SND that WK proves). Per-library load times
+(heavy): Set 395s, Finite 574s, Sum 277s, Pair 208s; the Real tower is downstream
+of Int. Methodology lesson (user, blast-radius): to test a fix, restore the
+checkpoint just before the EARLIEST file the fix affects and extend forward — the
+full rebuild is only needed when the fix taints early checkpoints (see
+[[feedback-test-fix-from-checkpoint]]); the systematic conformance/difftest
+complement is [[coverage-conformance-direction]].
+
 ## 2026-06-23 Snapshot reliability harness GREEN — BUG-MSG fixed + deterministic preamble; three round-trip bugs closed
 
 Completed the snapshot-reliability line. The brief-023 harness
