@@ -64,9 +64,18 @@
 > (`Set[...]` expressions, symbol/context names spelled out, no interning), while
 > WK's is compact interned BINARY. Proof: rum's 4.8M `.mx` gzips 17.6x to ~0.3M
 > (< WK's 1.5M), so rum's actual info content is comparable/smaller; the gap is
-> pure text-encoding redundancy. Also makes restore slower (re-parse+eval the
-> text vs binary deserialize). CHEAP DEFERRED WIN if snapshot size/restore ever
-> matters: binary/compressed snapshot format. Not on the critical path (dev tool). **NEXT: more demos/test stages, the 🔴 operators, or the deferred
+> pure text-encoding redundancy. rum's `DumpSave` is implemented AS TEXT (shares
+> `eval_persist_package_state` with `Save`; the `true` flag only toggles
+> attributes, not binary) — so rum's `DumpSave` is effectively `Save`, the real
+> binary `.mx` is NOT implemented, and the `.mx` extension is misleading. BUT
+> MEASURED (don't assume): restore is FAST — `Get` of the full 4.8M snapshot ≈ 1.0s
+> (cp00 450K→0.08s, cp34 2.9M→0.60s, cp42 4.8M→1.04s, ~0.2s/MB) because it stores
+> pre-computed definitions (re-assign, NOT re-prove). DEV-EFFICIENCY IMPACT ≈ 0
+> (cold rebuild's ~41 restores ≈ ~40s of ~65min = ~1%; module loads dominate). So
+> the 3.3x size is DISK-ONLY; a binary DumpSave saves space, not time — LOW priority,
+> NOT a perf win. Result semantics are correct (snapshots round-trip faithfully);
+> this is a format/completeness gap, not a correctness/result-semantic bug. **NEXT:
+> more demos/test stages, the 🔴 operators (`.` Dot, `>>`/`<<` I/O), or the deferred
 > perf line.**
 >
 > ---
