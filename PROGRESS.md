@@ -89,6 +89,27 @@ monkey-patch + dynamic-own-value scope interaction is unreliable). Remaining aft
 Seq: SeqAux, Compact, Connected, Topology, CompactSet (the real-analysis topology
 layer). Authoritative checkpoints: `rum-snapshot-checkpoints-v5/`.
 
+**Root of the Real/Seq frontier was a missing builtin — `Nothing` (5th bug,
+`35a6a82`, brief-030).** `auto/RealArith.wl`'s `negativePart` maps unwanted
+entries to `Nothing` and lets them vanish from the result list/association; rum
+had no `Nothing` (it resolved to `Global``, was kept in lists), so a real linear
+form came out malformed -> `rLinIsZero[negRec]` non-Boolean -> the
+`If[rLinIsZero[negRec], ...]` took neither branch -> Module local `leftTerm`
+UNBOUND -> `realarith-norm`. Fix: register `Nothing` as System + drop it from
+direct `List` elements (List-only). BLAST-RADIUS lesson re-applied: `Nothing` is
+used (stored) only in `auto/RealArith.wl` (1 use), so the incremental test had to
+restore cp34 (Real/MinMax) and RE-extend RealArith with the new binary (the cp35
+snapshot baked the OLD `Private`Nothing` into negativePart's stored DownValue) —
+an old checkpoint that stores a definition using the changed symbol is tainted.
+**That validated the fix and revealed the NEXT Real/Seq sub-frontier:** `mkComb:
+argument type mismatch` (tag `term`) in `proveRealConclUnderFacts ->
+realLinNormConv -> normLinRAux -> rMulComm -> buildLinRAny` (types `fun`/`real`) —
+a deeper real-arithmetic proof-reconstruction issue. So Real/Seq is multi-layered;
+fast iteration base = cp34 + re-extended RealArith. Total rum bugs fixed this
+push: 5 (juxtaposition, slot-adjacency, `\[Name]`, Function extra-args, `Nothing`)
++ the harness/preamble infra; the load reaches the full ℤ→ℚ→ℝ tower + real
+construction (88%).
+
 ## 2026-06-23 Snapshot reliability harness GREEN — BUG-MSG fixed + deterministic preamble; three round-trip bugs closed
 
 Completed the snapshot-reliability line. The brief-023 harness
