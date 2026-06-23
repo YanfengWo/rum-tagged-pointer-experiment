@@ -17,6 +17,15 @@ fn lowers_simple_decimal_literals_to_exact_rationals() {
     let lowered = lower_syntax_expr(&parse_expr("0.01").unwrap()).unwrap();
 
     assert_eq!(lowered.to_string(), "1/100");
+
+    let lowered = lower_syntax_expr(&parse_expr(".5").unwrap()).unwrap();
+    assert_eq!(lowered.to_string(), "1/2");
+
+    let lowered = lower_syntax_expr(&parse_expr("1.").unwrap()).unwrap();
+    assert_eq!(lowered.to_string(), "1");
+
+    let lowered = lower_syntax_expr(&parse_expr("1.5e3").unwrap()).unwrap();
+    assert_eq!(lowered.to_string(), "1500");
 }
 
 #[test]

@@ -248,6 +248,11 @@ pub enum PostfixOp {
     Function,
     Increment,
     Decrement,
+    Factorial,
+    Factorial2,
+    Derivative(u32),
+    Repeated,
+    RepeatedNull,
     Unset,
 }
 
@@ -405,6 +410,11 @@ impl PostfixOp {
             Self::Function => "&",
             Self::Increment => "++",
             Self::Decrement => "--",
+            Self::Factorial => "!",
+            Self::Factorial2 => "!!",
+            Self::Derivative(_) => "'",
+            Self::Repeated => "..",
+            Self::RepeatedNull => "...",
             Self::Unset => "=.",
         }
     }
@@ -412,7 +422,12 @@ impl PostfixOp {
     pub(crate) fn precedence(self) -> u8 {
         match self {
             Self::Function => 15,
-            Self::Increment | Self::Decrement => 80,
+            Self::Increment
+            | Self::Decrement
+            | Self::Factorial
+            | Self::Factorial2
+            | Self::Derivative(_) => 80,
+            Self::Repeated | Self::RepeatedNull => 76,
             Self::Unset => 10,
         }
     }
@@ -502,7 +517,15 @@ fn format_expr(
         }
         SyntaxExprKind::Postfix { op, expr } => {
             format_expr(expr, f, op.precedence())?;
-            write!(f, " {}", op.token())?;
+            match op {
+                PostfixOp::Derivative(order) => {
+                    for _ in 0..*order {
+                        f.write_str("'")?;
+                    }
+                }
+                PostfixOp::Factorial | PostfixOp::Factorial2 => f.write_str(op.token())?,
+                _ => write!(f, " {}", op.token())?,
+            }
         }
         SyntaxExprKind::Call { head, args } => {
             format_expr(head, f, precedence)?;

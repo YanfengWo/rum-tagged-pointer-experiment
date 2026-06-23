@@ -289,6 +289,8 @@ impl<'a> Lexer<'a> {
                     self.single(TokenKind::Bang)
                 }
             }
+            '\'' => self.single(TokenKind::Prime),
+            '.' => self.lex_dot_prefixed_token(),
             '?' => self.single(TokenKind::Question),
             '#' => self.single(TokenKind::Hash),
             '-' => {
@@ -362,7 +364,7 @@ impl<'a> Lexer<'a> {
             }
             '"' => self.lex_string()?,
             '\\' => self.lex_named_character_token(start)?,
-            ch if ch.is_ascii_digit() => self.lex_integer(),
+            ch if ch.is_ascii_digit() => self.lex_number(),
             ch if unicode_operator_token_kind(ch).is_some() => {
                 self.bump_char();
                 unicode_operator_token_kind(ch).expect("checked unicode operator above")
@@ -383,23 +385,71 @@ impl<'a> Lexer<'a> {
         )))
     }
 
-    fn lex_integer(&mut self) -> TokenKind {
+    fn lex_number(&mut self) -> TokenKind {
         let start = self.offset;
 
         while matches!(self.peek_char(), Some(ch) if ch.is_ascii_digit()) {
             self.bump_char();
         }
 
-        if self.peek_char() == Some('.')
-            && self.peek_next_char().is_some_and(|ch| ch.is_ascii_digit())
-        {
+        let has_decimal_point = self.peek_char() == Some('.') && self.peek_next_char() != Some('.');
+        if has_decimal_point {
             self.bump_char();
             while matches!(self.peek_char(), Some(ch) if ch.is_ascii_digit()) {
                 self.bump_char();
             }
+            self.consume_decimal_exponent();
         }
 
         TokenKind::Integer(self.input[start..self.offset].to_string())
+    }
+
+    fn lex_dot_prefixed_token(&mut self) -> TokenKind {
+        if self.peek_next_char().is_some_and(|ch| ch.is_ascii_digit()) {
+            let start = self.offset;
+            self.bump_char();
+            while matches!(self.peek_char(), Some(ch) if ch.is_ascii_digit()) {
+                self.bump_char();
+            }
+            self.consume_decimal_exponent();
+            return TokenKind::Integer(self.input[start..self.offset].to_string());
+        }
+
+        if self.consume_str("...") {
+            TokenKind::RepeatedNull
+        } else if self.consume_str("..") {
+            TokenKind::Repeated
+        } else {
+            self.single(TokenKind::Dot)
+        }
+    }
+
+    fn consume_decimal_exponent(&mut self) {
+        let Some(exponent_marker) = self.peek_char() else {
+            return;
+        };
+        if !matches!(exponent_marker, 'e' | 'E') {
+            return;
+        }
+
+        let mut scan = self.offset + exponent_marker.len_utf8();
+        if let Some(sign) = self.input[scan..].chars().next() {
+            if matches!(sign, '+' | '-') {
+                scan += sign.len_utf8();
+            }
+        }
+
+        let digits_start = scan;
+        while let Some(ch) = self.input[scan..].chars().next() {
+            if !ch.is_ascii_digit() {
+                break;
+            }
+            scan += ch.len_utf8();
+        }
+
+        if scan > digits_start {
+            self.offset = scan;
+        }
     }
 
     fn lex_symbol(&mut self) -> Result<TokenKind, SyntaxError> {
@@ -1074,6 +1124,23 @@ mod tests {
         assert!(matches!(tokens[4].kind, TokenKind::SlashSlashEqual));
         assert!(matches!(tokens[7].kind, TokenKind::ReplaceAll));
         assert!(matches!(tokens[10].kind, TokenKind::SlashSlash));
+    }
+
+    #[test]
+    fn lexes_postfix_operator_tokens_without_splitting_decimal_literals() {
+        let tokens = lex("a .. b ... f' 1.5 .5 1. 1.. 1... 1.5e3").unwrap();
+
+        assert!(matches!(tokens[1].kind, TokenKind::Repeated));
+        assert!(matches!(tokens[3].kind, TokenKind::RepeatedNull));
+        assert!(matches!(tokens[5].kind, TokenKind::Prime));
+        assert!(matches!(&tokens[6].kind, TokenKind::Integer(value) if value == "1.5"));
+        assert!(matches!(&tokens[7].kind, TokenKind::Integer(value) if value == ".5"));
+        assert!(matches!(&tokens[8].kind, TokenKind::Integer(value) if value == "1."));
+        assert!(matches!(&tokens[9].kind, TokenKind::Integer(value) if value == "1"));
+        assert!(matches!(tokens[10].kind, TokenKind::Repeated));
+        assert!(matches!(&tokens[11].kind, TokenKind::Integer(value) if value == "1"));
+        assert!(matches!(tokens[12].kind, TokenKind::RepeatedNull));
+        assert!(matches!(&tokens[13].kind, TokenKind::Integer(value) if value == "1.5e3"));
     }
 
     #[test]

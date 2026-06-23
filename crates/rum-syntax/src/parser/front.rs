@@ -219,6 +219,36 @@ impl Parser {
                 continue;
             }
 
+            if let Some(factorial2_span) = self.consume_factorial2() {
+                let span = expr.span().merge(factorial2_span);
+                expr = SyntaxExpr::postfix(PostfixOp::Factorial2, expr, span);
+                continue;
+            }
+
+            if let Some(factorial_span) = self.consume_factorial() {
+                let span = expr.span().merge(factorial_span);
+                expr = SyntaxExpr::postfix(PostfixOp::Factorial, expr, span);
+                continue;
+            }
+
+            if let Some((order, derivative_span)) = self.consume_derivative() {
+                let span = expr.span().merge(derivative_span);
+                expr = SyntaxExpr::postfix(PostfixOp::Derivative(order), expr, span);
+                continue;
+            }
+
+            if let Some(repeated_null_span) = self.consume_repeated_null() {
+                let span = expr.span().merge(repeated_null_span);
+                expr = SyntaxExpr::postfix(PostfixOp::RepeatedNull, expr, span);
+                continue;
+            }
+
+            if let Some(repeated_span) = self.consume_repeated() {
+                let span = expr.span().merge(repeated_span);
+                expr = SyntaxExpr::postfix(PostfixOp::Repeated, expr, span);
+                continue;
+            }
+
             break;
         }
 

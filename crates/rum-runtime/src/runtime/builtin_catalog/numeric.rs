@@ -57,6 +57,11 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Factorial,
     ),
     BuiltinSpec::ordinary(
+        "Factorial2",
+        "Computes double factorials for non-negative exact integers.",
+        BuiltinHandler::Factorial2,
+    ),
+    BuiltinSpec::ordinary(
         "Total",
         "Totals list elements through the current exact Plus semantics.",
         BuiltinHandler::Total,

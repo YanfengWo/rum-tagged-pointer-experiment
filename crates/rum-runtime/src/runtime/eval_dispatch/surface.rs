@@ -21,6 +21,7 @@ impl Session {
             BuiltinHandler::Abs => self.eval_abs(head, args),
             BuiltinHandler::Round => self.eval_round(head, args),
             BuiltinHandler::Factorial => self.eval_factorial(head, args),
+            BuiltinHandler::Factorial2 => self.eval_factorial2(head, args),
             BuiltinHandler::Total => self.eval_total(head, args),
             BuiltinHandler::Denominator => self.eval_denominator(head, args),
             BuiltinHandler::Numerator => self.eval_numerator(head, args),

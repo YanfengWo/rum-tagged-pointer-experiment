@@ -35,6 +35,46 @@ fn exact_integer_arithmetic_evaluates_core_heads() {
             .to_string(),
         "Factorial[-1]"
     );
+    assert_eq!(
+        session
+            .eval_text("Factorial2[0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Factorial2[6]")
+            .unwrap()
+            .value
+            .to_string(),
+        "48"
+    );
+    assert_eq!(
+        session
+            .eval_text("Factorial2[7]")
+            .unwrap()
+            .value
+            .to_string(),
+        "105"
+    );
+    assert_eq!(
+        session
+            .eval_text("Factorial2[-1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Factorial2[-1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Factorial2[3/2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Factorial2[3/2]"
+    );
 }
 
 #[test]
@@ -81,6 +121,18 @@ fn factorial_respects_integer_work_limit() {
     session.set_integer_work_limit(3);
 
     let limited = session.eval_text("Factorial[5]").unwrap();
+    assert_eq!(
+        limited.value.to_string(),
+        "TerminatedEvaluation[\"ResourceLimit\"]"
+    );
+    assert!(
+        limited
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+
+    let limited = session.eval_text("Factorial2[5]").unwrap();
     assert_eq!(
         limited.value.to_string(),
         "TerminatedEvaluation[\"ResourceLimit\"]"

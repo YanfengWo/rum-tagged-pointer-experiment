@@ -20,6 +20,15 @@ fn parses_large_integer_literal() {
 fn parses_simple_decimal_literal_as_numeric_atom() {
     let parsed = parse_expr("0.01").unwrap();
     assert_eq!(parsed, SyntaxExpr::integer("0.01", z()));
+
+    let parsed = parse_expr(".5").unwrap();
+    assert_eq!(parsed, SyntaxExpr::integer(".5", z()));
+
+    let parsed = parse_expr("1.").unwrap();
+    assert_eq!(parsed, SyntaxExpr::integer("1.", z()));
+
+    let parsed = parse_expr("1.5e3").unwrap();
+    assert_eq!(parsed, SyntaxExpr::integer("1.5e3", z()));
 }
 
 #[test]
@@ -933,6 +942,49 @@ fn parses_unset_postfix() {
                 )],
                 z(),
             ),
+            z(),
+        )
+    );
+}
+
+#[test]
+fn parses_factorial_derivative_and_repeated_postfix_forms() {
+    assert_eq!(
+        parse_expr("a!^2").unwrap(),
+        SyntaxExpr::binary(
+            BinaryOp::Power,
+            SyntaxExpr::postfix(PostfixOp::Factorial, SyntaxExpr::symbol("a", z()), z()),
+            SyntaxExpr::integer("2", z()),
+            z(),
+        )
+    );
+    assert_eq!(
+        parse_expr("a!!").unwrap(),
+        SyntaxExpr::postfix(PostfixOp::Factorial2, SyntaxExpr::symbol("a", z()), z())
+    );
+    assert_eq!(
+        parse_expr("f'''").unwrap(),
+        SyntaxExpr::postfix(PostfixOp::Derivative(3), SyntaxExpr::symbol("f", z()), z(),)
+    );
+    assert_eq!(
+        parse_expr("{a ..}").unwrap(),
+        SyntaxExpr::list(
+            vec![SyntaxExpr::postfix(
+                PostfixOp::Repeated,
+                SyntaxExpr::symbol("a", z()),
+                z(),
+            )],
+            z(),
+        )
+    );
+    assert_eq!(
+        parse_expr("{a ...}").unwrap(),
+        SyntaxExpr::list(
+            vec![SyntaxExpr::postfix(
+                PostfixOp::RepeatedNull,
+                SyntaxExpr::symbol("a", z()),
+                z(),
+            )],
             z(),
         )
     );

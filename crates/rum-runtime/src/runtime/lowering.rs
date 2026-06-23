@@ -54,11 +54,11 @@ fn lower_integer_atom(value: &str) -> Result<Expr, EvalError> {
 }
 
 fn lower_decimal_atom(value: &str) -> Result<Option<Expr>, EvalError> {
-    let Some((whole, fractional)) = value.split_once('.') else {
+    let (mantissa, exponent) = split_decimal_exponent(value)?;
+    let Some((whole, fractional)) = mantissa.split_once('.') else {
         return Ok(None);
     };
-    if whole.is_empty()
-        || fractional.is_empty()
+    if (whole.is_empty() && fractional.is_empty())
         || !whole.chars().all(|ch| ch.is_ascii_digit())
         || !fractional.chars().all(|ch| ch.is_ascii_digit())
     {
@@ -67,21 +67,51 @@ fn lower_decimal_atom(value: &str) -> Result<Option<Expr>, EvalError> {
         });
     }
 
-    let numerator =
-        BigInt::parse_bytes(format!("{whole}{fractional}").as_bytes(), 10).ok_or_else(|| {
-            EvalError::InvalidInteger {
-                literal: value.to_owned(),
-            }
-        })?;
+    let whole = if whole.is_empty() { "0" } else { whole };
+    let numerator_text = format!("{whole}{fractional}");
+    let mut numerator = BigInt::parse_bytes(numerator_text.as_bytes(), 10).ok_or_else(|| {
+        EvalError::InvalidInteger {
+            literal: value.to_owned(),
+        }
+    })?;
     let mut denominator = BigInt::from(1_u8);
     for _ in fractional.chars() {
         denominator *= BigInt::from(10_u8);
+    }
+
+    if let Some(exponent) = exponent {
+        if exponent >= 0 {
+            multiply_by_power_of_ten(&mut numerator, exponent as u64);
+        } else {
+            multiply_by_power_of_ten(&mut denominator, exponent.unsigned_abs());
+        }
     }
 
     Ok(Some(Expr::rational(
         Rational::new(numerator, denominator)
             .expect("decimal literal denominator is always positive"),
     )))
+}
+
+fn split_decimal_exponent(value: &str) -> Result<(&str, Option<i64>), EvalError> {
+    let Some(exponent_index) = value.find(|ch| matches!(ch, 'e' | 'E')) else {
+        return Ok((value, None));
+    };
+
+    let exponent =
+        value[exponent_index + 1..]
+            .parse::<i64>()
+            .map_err(|_| EvalError::InvalidInteger {
+                literal: value.to_owned(),
+            })?;
+
+    Ok((&value[..exponent_index], Some(exponent)))
+}
+
+fn multiply_by_power_of_ten(value: &mut BigInt, exponent: u64) {
+    for _ in 0..exponent {
+        *value *= BigInt::from(10_u8);
+    }
 }
 
 fn lower_syntax_args<F>(args: &[SyntaxExpr], resolve_symbol: &mut F) -> Result<Vec<Expr>, EvalError>
@@ -530,6 +560,14 @@ where
         PostfixOp::Function => Ok(canonical_call(heads::functions::FUNCTION, vec![lowered])),
         PostfixOp::Increment => Ok(canonical_call("Increment", vec![lowered])),
         PostfixOp::Decrement => Ok(canonical_call("Decrement", vec![lowered])),
+        PostfixOp::Factorial => Ok(canonical_call("Factorial", vec![lowered])),
+        PostfixOp::Factorial2 => Ok(canonical_call("Factorial2", vec![lowered])),
+        PostfixOp::Derivative(order) => Ok(Expr::call(
+            canonical_call("Derivative", vec![Expr::integer(BigInt::from(order))]),
+            vec![lowered],
+        )),
+        PostfixOp::Repeated => Ok(canonical_call("Repeated", vec![lowered])),
+        PostfixOp::RepeatedNull => Ok(canonical_call("RepeatedNull", vec![lowered])),
         PostfixOp::Unset => Ok(canonical_call(heads::rules::UNSET, vec![lowered])),
     }
 }

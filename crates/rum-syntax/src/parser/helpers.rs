@@ -218,6 +218,70 @@ impl Parser {
         }
     }
 
+    pub(super) fn consume_factorial2(&mut self) -> Option<Span> {
+        if !matches!(self.current().kind, TokenKind::Bang)
+            || !self.current().leading_trivia.is_empty()
+        {
+            return None;
+        }
+        if !self.tokens.get(self.index + 1).is_some_and(|next| {
+            matches!(next.kind, TokenKind::Bang) && next.leading_trivia.is_empty()
+        }) {
+            return None;
+        }
+
+        let first = self.bump();
+        let second = self.bump();
+        Some(first.merge(second))
+    }
+
+    pub(super) fn consume_factorial(&mut self) -> Option<Span> {
+        if matches!(self.current().kind, TokenKind::Bang)
+            && self.current().leading_trivia.is_empty()
+        {
+            Some(self.bump())
+        } else {
+            None
+        }
+    }
+
+    pub(super) fn consume_derivative(&mut self) -> Option<(u32, Span)> {
+        if !matches!(self.current().kind, TokenKind::Prime)
+            || !self.current().leading_trivia.is_empty()
+        {
+            return None;
+        }
+
+        let mut count = 1_u32;
+        let start_span = self.bump();
+        let mut end_span = start_span;
+
+        while matches!(self.current().kind, TokenKind::Prime)
+            && self.current().leading_trivia.is_empty()
+        {
+            count += 1;
+            end_span = self.bump();
+        }
+
+        Some((count, start_span.merge(end_span)))
+    }
+
+    pub(super) fn consume_repeated(&mut self) -> Option<Span> {
+        if matches!(self.current().kind, TokenKind::Repeated) {
+            Some(self.bump())
+        } else {
+            None
+        }
+    }
+
+    pub(super) fn consume_repeated_null(&mut self) -> Option<Span> {
+        if matches!(self.current().kind, TokenKind::RepeatedNull) {
+            Some(self.bump())
+        } else {
+            None
+        }
+    }
+
     pub(super) fn consume_unset(&mut self) -> Option<Span> {
         if matches!(self.current().kind, TokenKind::Unset) {
             Some(self.bump())

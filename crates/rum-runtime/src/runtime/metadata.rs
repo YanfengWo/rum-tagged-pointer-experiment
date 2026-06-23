@@ -264,6 +264,7 @@ pub enum BuiltinHandler {
     Abs,
     Round,
     Factorial,
+    Factorial2,
     Total,
     Denominator,
     Numerator,
