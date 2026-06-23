@@ -59,6 +59,36 @@ full rebuild is only needed when the fix taints early checkpoints (see
 [[feedback-test-fix-from-checkpoint]]); the systematic conformance/difftest
 complement is [[coverage-conformance-direction]].
 
+**4th bug — Function ignores extra args (`7d04aab`, brief-029), the FIRST
+non-syntax / eval-semantics one, and the highest-leverage:** the Int
+`no Farkas certificate` was NOT a farkasFM bug — the 7 `diffs` genuinely have no
+rational certificate without ℕ non-negativity (verified by hand: `d0 + d6 +
+(atom$3≥0) = 1 ≤ 0`). `auto/Arith.wl`'s `refuteWithNonneg = Catch[farkasRefute[
+facts], holErrorTag, Function[err, <add non-negativity, retry>]]` is supposed to
+catch the first failure and retry WITH non-negativity, but `try_apply_function`
+(scoping/callable.rs) required EXACT arity and left a named-param `Function`
+UNEVALUATED when given extra args — and WL's `Catch[e, tag, handler]` invokes
+`handler[value, tag]` (2 args) on the 1-param handler. So the retry never ran.
+Fix: error only when `args.len() < params.len()`; extras are ignored (WL
+semantics). This breaks the standard `Catch[e, tag, handler]` idiom broadly, not
+just here.
+
+**Frontier now (v5, with all 4 fixes):** `core → … → Int → Rat → Real/{Cut,
+RatAux, Field, Mul, Inv, Complete, Abs, MinMax} → auto/RealArith` ALL load clean —
+the FULL ℤ→ℚ→ℝ number tower + real-number construction. **36 of 41 modules =
+88%.** Int now loads in 526s (was a 22s fast-fail), Real/Mul 213s; the rest are
+fast. **Stuck at `stdlib/Real/Seq.wl` (index 36)**, 1s fast fail:
+`realarith-norm: term is not a real linear expression` from
+`HOL`Auto`RealArith`parseLinRAux` — `typeOf[t] =!= realTy`. Diagnosed (patched
+`parseLinRAux` on the cp35 checkpoint): the rejected `t` is an UNBOUND Module-local
+gensym (`Head[t] = Symbol`, `leftTerm$NNN`), not a HOL term, so `typeOf[t]` stays
+unevaluated. So this is a Module-local binding / scoping bug (the local isn't
+carrying its value when passed to `realLinNormConv`) — the second scoping-area
+frontier, murkier than the surface ones; needs a clean minimal repro (the
+monkey-patch + dynamic-own-value scope interaction is unreliable). Remaining after
+Seq: SeqAux, Compact, Connected, Topology, CompactSet (the real-analysis topology
+layer). Authoritative checkpoints: `rum-snapshot-checkpoints-v5/`.
+
 ## 2026-06-23 Snapshot reliability harness GREEN — BUG-MSG fixed + deterministic preamble; three round-trip bugs closed
 
 Completed the snapshot-reliability line. The brief-023 harness
