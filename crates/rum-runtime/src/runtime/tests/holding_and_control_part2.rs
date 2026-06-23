@@ -39,6 +39,44 @@ fn function_applies_slots_positionally() {
 }
 
 #[test]
+fn explicit_parameter_functions_ignore_extra_arguments() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Function[e, e + 1][42, 99]")
+            .unwrap()
+            .value
+            .to_string(),
+        "43"
+    );
+    assert_eq!(
+        session
+            .eval_text("Function[{x}, x^2][5, 6, 7]")
+            .unwrap()
+            .value
+            .to_string(),
+        "25"
+    );
+    assert_eq!(
+        session
+            .eval_text("Function[x, x][1, 2, 3]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Catch[Throw[42, foo], foo, Function[e, {\"h\", e}]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"h\", 42]"
+    );
+}
+
+#[test]
 fn pure_function_syntax_uses_slots_and_evaluated_arguments() {
     let mut session = Session::new();
 

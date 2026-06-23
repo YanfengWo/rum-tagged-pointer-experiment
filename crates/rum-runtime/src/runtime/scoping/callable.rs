@@ -10,12 +10,12 @@ impl Session {
             match function {
                 FunctionSpec::SlotBased { body, .. } => substitute_slots(body, args),
                 FunctionSpec::Explicit { params, body, .. } => {
-                    if params.len() != args.len() {
+                    if args.len() < params.len() {
                         self.push_message(
                             "Function",
                             "argx",
                             format!(
-                                "expected exactly {} argument(s), got {}",
+                                "expected at least {} argument(s), got {}",
                                 params.len(),
                                 args.len()
                             ),
