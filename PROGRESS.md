@@ -6,6 +6,67 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-23 (LATE) Real tower 100% (41/41) + Continuous demo loads — 4 more bugs (#6-#9) via Codex briefs 032-035; two-axis conformance method
+
+Continued the correctness mainline from the 88%/Real-Seq wall (block below) to the
+BOTTOM. **The full ℤ→ℚ→ℝ tower now loads 41/41 = 100%** (`Seq, SeqAux, Compact,
+Connected, Topology, CompactSet` all clean), and **`demos/Continuous.wl`** (the
+next-chapter continuous-functions demo, OUTSIDE the tower — IVT/EVT/compact-image
+capstones) **also loads and its theorems verify**. Driver: fast Stable
+extend-on-snapshot from v5 `cp34` (re-extend RealArith with the current binary,
+then extend each module) — seconds-to-minutes per module vs a full cold rebuild.
+
+**4 bugs fixed (each a Codex brief I diagnosed + gated + committed):**
+- **#6 `Numerator` (`33f1795`, brief-032):** rum had `Denominator` but not
+  `Numerator`; bare `Numerator[1/2]` resolved to a non-System context and stayed
+  inert, so RealArith's `positiveScalarTerm[1/2]` built `rnumTm[Private`Numerator[
+  1/2]]` and `mkComb` raised `argument type mismatch` (fun/real) at Real/Seq.
+  Root-caused by a two-engine diff (brief-031 diagnostic): WK had every
+  intermediate `real`-typed, rum diverged at `Numerator`. Mirror of
+  `eval_denominator`, Integer arm returns itself.
+- **#7 `Max`/`Min` (`f2d3906`, brief-033):** missing variadic numeric builtins,
+  found PROACTIVELY by the symbol-axis scan (used in `RealArith` `rnumNe` +
+  `CompactSet`), not yet bitten. Mirror `eval_gcd`: flatten lists, compare exact
+  Integer/Rational, empty→∓Infinity.
+- **#8 2-arg `Sort[list, p]` (`dca37c4`, brief-034):** the ordering-function form
+  was a no-op stub (`[expr, _ordering]` returned the call inert), so
+  `varKeysSorted = Sort[Keys[vs], Order[#1,#2]===1 &]` stayed unevaluated, a
+  downstream `Map` distributed over the inert `Sort`, the real linear form built
+  malformed → `SPEC: term type does not match binder` / `Missing[KeyAbsent]` at
+  Seq. Implemented the GENERAL ordering function (resumable per-pair comparator
+  eval, mirror of `resume_sort_by_from_index`; stable), NOT a canonical-order
+  special-case — mma-hol is the stress test, not the target ([[prefer-general-wl-semantics]]).
+- **#9 `//` postfix operator (`49b081b`, brief-035):** rum's parser had the whole
+  apply family (`@ @@ @@@ /@ @* /*`) but not `//`; `x // f` failed `expected
+  expression, found /`. mma-hol's stdlib is explicit-`f[x]` style and never used
+  `//`, so it slipped corpus-driven testing until `demos/Continuous.wl:516`
+  (notebook-pipe style) hit it. Added the `//` token + `BinaryOp::PostfixApply`
+  (precedence 15, between Set and ReplaceAll; left-assoc) + reversed lowering
+  `x // f → Expr::call(rhs, [lhs])`.
+
+**Method (record for reuse) — TWO conformance axes + demo stress test:**
+- SYMBOL axis: mma-hol call-form System builtins (perl word-boundary extract, NOT
+  `[A-Z]\w+\[` which catches camelCase suffixes like `tyArrow[`→"Arrow") ∩ WK
+  `Names["System`*"]` − rum `Names["System`*"]` → complete missing-builtin set was
+  exactly `{Max, Min}`.
+- SYNTAX axis: WL operator inventory → rum parser (`FullForm[Hold[…]]`) → complete
+  missing-operator inventory: `~f~`, `n!`/`!!`, `a..`/`...`, `x_.`, `^=`/`^:=`,
+  `|->`, `~~`, `f'`, `a.b` Dot, `**`, `//@`, `%`/`>>`/`<<`. Functional forms of
+  `! ' . %` exist; interactive ones irrelevant to loading. Fix on demand (no more
+  surprises). (Watch the `|`-as-IFS-delimiter trap: `|` `||` `<|…|>` are supported,
+  a harness artifact mis-flagged them.)
+- Bug TAXONOMY: "missing builtin" (Nothing/Numerator/Max/Min) → symbol scan
+  catches; "present-but-incomplete" (2-arg Sort) + "missing syntax" (`//`) → scan
+  does NOT catch, need demo stress + patch-and-trace.
+
+**Authoritative gate IN PROGRESS:** the frontier was driven with fast Stable
+extend (correct iteration tool, NOT authoritative — Stable-vs-Strict gap + lower
+cp00–cp34 built with the OLD binary). Launched the full-chain COLD rebuild →
+`rum-snapshot-checkpoints-v6/` (`scripts/snapshot-checkpoint-chain.sh`, log
+`/tmp/cold_rebuild_v6.log`) as the Strict authoritative gate (also settles
+lower-checkpoint taint; risk LOW since the 4 bugs are call-time not store-time,
+but unverified). v6 supersedes v5 once green.
+
 ## 2026-06-23 Correctness mainline: checkpoint chain drives the mma-hol load frontier — 3 parser/lexer bugs fixed, number-tower foundation now loads (stuck at Int)
 
 Goal (user): push the unmodified-`mma-hol` load all the way to "the bottom" —

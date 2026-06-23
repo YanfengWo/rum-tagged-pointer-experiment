@@ -1,6 +1,53 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-06-23 — CURRENT STATUS (read THIS first; supersedes every block below).**
+> **2026-06-23 (LATE) — CURRENT STATUS (read THIS FIRST; supersedes ALL below,
+> including the earlier 2026-06-23 block).**
+> **MILESTONE: the full real-number tower LOADS 100% (41/41)** — the 88%/Real-Seq
+> wall is gone. `core → … → ℤ → ℚ → ℝ → {Seq, SeqAux, Compact, Connected, Topology,
+> CompactSet}` all load clean. **And `demos/Continuous.wl` (the NEXT-chapter
+> continuous-functions demo — IVT/EVT/compact-image capstones, OUTSIDE the tower)
+> also loads + its theorems verify in rum.** 4 bugs fixed this push (briefs
+> 032-035, all gated+committed): **#6 `Numerator`** (`33f1795`, missing builtin,
+> mirror of `Denominator`); **#7 `Max`/`Min`** (`f2d3906`, missing variadic numeric
+> builtins — found PROACTIVELY by the symbol-axis scan, not yet bitten); **#8 2-arg
+> `Sort[list, p]`** (`dca37c4`, the ordering-function form was a no-op stub →
+> `SPEC`/`Missing[KeyAbsent]` at Seq; implemented general, NOT a canonical-order
+> special-case per [[prefer-general-wl-semantics]]); **#9 `//` postfix operator**
+> (`49b081b`, `x // f → f[x]`; the whole apply family `@ @@ @@@ /@ @* /*` existed
+> but `//` was missing — found via the Continuous stress test + a syntax-axis
+> operator survey).
+>
+> **METHOD that worked (record for reuse): two conformance axes + demo stress test.**
+> (a) SYMBOL axis — mma-hol call-form System builtins (perl word-boundary extract)
+> ∩ WK `Names["System`*"]` − rum `Names["System`*"]` → the COMPLETE missing-builtin
+> set was exactly `{Max, Min}` (proactively fixed). (b) SYNTAX axis — feed the WL
+> operator inventory through rum's parser (`FullForm[Hold[…]]`) → the complete
+> missing-operator inventory (fix on demand, no more surprises): `~f~` infix-apply,
+> `n!`/`n!!` Factorial, `a..`/`a...` Repeated, `x_.` Optional, `a^=`/`a^:=` UpSet,
+> `|->`, `a~~b` StringExpression, `f'` Derivative, `a.b` Dot, `a**b`, `//@` MapAll,
+> `%`/`>>`/`<<` (interactive — irrelevant to loading). The functional forms of
+> `! ' . %` (Factorial/Derivative/Dot/Out) already work; only the operator sugar is
+> missing. Continuous.wl used NONE of these except `//` (cross-referenced), which is
+> why it loaded after just #9. The bug TAXONOMY: "missing builtin" (Nothing/Numerator
+> /Max/Min) → symbol scan catches; "present-but-incomplete" (2-arg Sort) and "missing
+> syntax" (`//`) → scan does NOT catch, need demo/patch-and-trace.
+>
+> **IN PROGRESS (background): authoritative full-chain COLD rebuild →
+> `/Users/fft/Developments/rum-snapshot-checkpoints-v6/`** (`scripts/snapshot-
+> checkpoint-chain.sh --mma-hol …acceptance --output-dir …v6`, log
+> `/tmp/cold_rebuild_v6.log`). WHY: the frontier was driven with FAST Stable
+> extend-on-snapshot (cp34 + re-extend), which is the correct iteration tool but is
+> NOT authoritative — it shares the Stable-vs-Strict gap AND the lower checkpoints
+> cp00–cp34 were built with the OLD (pre-fix) binary, so a cold Strict rebuild with
+> the FIXED binary is the real gate (also settles whether any lower checkpoint was
+> tainted; risk judged LOW since the 4 bugs are call-time, not store-time, but
+> unverified). v6 supersedes v5 once green. **NEXT: gate the v6 cold rebuild; then
+> either drive more demos/test stages, or pick up the deferred perf line.**
+>
+> ---
+>
+> **2026-06-23 — earlier status (SUPERSEDED by the block above; kept for the resume
+> recipe + method notes).**
 > Active line: the **correctness mainline** — drive the UNMODIFIED acceptance
 > standard `/Users/fft/Developments/mma-hol-acceptance` (HEAD `200f13a`) load to
 > "the bottom" (user's goal: the last theorem verifies, OR a hard time/space wall
