@@ -1,5 +1,26 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
+> **2026-06-24 — ATTRIBUTE-AXIS conformance scan (3rd axis) found a batch of bugs.**
+> Diffing `Attributes` for every System symbol in rum∩WK (recipe in
+> [[coverage-conformance-direction]]; drop Protected/ReadProtected/Locked noise —
+> rum doesn't Protect builtins): 34 rum-EXTRA + 78 rum-MISSING eval-attr mismatches.
+> TRIAGE (behaviorally verified): **rum-EXTRA = real bugs** — `FullForm +HoldAll`
+> (`FullForm[1+1]`→`Plus[1,1]` not `2` — this BURNED ~15 diagnosis probes), `Evaluate
+> +HoldAll` (`Hold[Evaluate[1+1]]` stays unevaluated — Evaluate is broken!), + ~32
+> more EXTRA-Hold*/Listable to triage. **MISSING Listable (23, e.g. Abs) = real bugs**
+> (`Abs[{-1,-2}]` stays inert, no threading). **MISSING Hold*/SequenceHold (~40) =
+> mostly BENIGN** — rum hardcodes hold in the evaluator not via the attr table
+> (`Set` lacks HoldFirst attr yet `aa=5;aa=10;aa`→10 works); confirm each before
+> touching. NEXT: a fix brief for the CONFIRMED attribute bugs (remove spurious
+> EXTRA Hold* like FullForm/Evaluate after per-symbol WK check; add Listable where
+> WK has it). SEPARATE still-open bug: the 50 batch-A `FAIL shape` (the inline
+> `MatchQ[concl[thm], quantNestPat-pattern]` divergence) is NOT an attribute issue
+> (MatchQ attrs match WK) — narrowed to the 2nd-arg pattern (containing HOL
+> `abs[bvar[0,_],…]` Blanks) matching differently when evaluated INLINE vs
+> pre-bound; needs source-level matcher/eval diagnosis. LESSON: the diagnostic
+> tools are themselves under test ([[diagnostic-tool-trust]]).
+
+
 > **2026-06-23 (LATE) — CURRENT STATUS (read THIS FIRST; supersedes ALL below,
 > including the earlier 2026-06-23 block).**
 > **MILESTONE: the full real-number tower LOADS 100% (41/41)** — the 88%/Real-Seq
