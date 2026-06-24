@@ -239,7 +239,7 @@ fn power_threads_over_lists_without_disturbing_canonicalization() {
         ("Power[a,2]", "Power[a, 2]"),
         ("2^10", "1024"),
         ("x^2 x^3", "Power[x, 5]"),
-        ("(2 x)^2", "Power[Times[2, x], 2]"),
+        ("(2 x)^2", "Times[4, Power[x, 2]]"),
         ("x^2/x", "x"),
         ("Power[0,0]", "Power[0, 0]"),
     ];

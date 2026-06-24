@@ -41,6 +41,53 @@ impl Session {
             }
         }
 
+        if let Expr::Call {
+            head: times_head,
+            args: factors,
+        } = &args[0]
+        {
+            if is_system_symbol_name(times_head, "Times")
+                && expr_as_exact_rational(&args[1]).is_some()
+            {
+                let mut numeric = Rational::one();
+                let mut symbolic = Vec::new();
+                for factor in factors.iter() {
+                    if let Some(value) = expr_as_exact_rational(factor) {
+                        numeric = numeric.mul(&value);
+                    } else {
+                        symbolic.push(factor.clone());
+                    }
+                }
+
+                let power_head = system_expr("Power");
+                let times_head = system_expr("Times");
+                let numeric_part = if numeric.is_one() {
+                    Expr::integer(1_i32.into())
+                } else {
+                    self.eval_power(&power_head, &[Expr::rational(numeric), args[1].clone()])?
+                };
+                if expr_as_signed_integer_value(&args[1]).is_some() {
+                    let mut parts = Vec::with_capacity(symbolic.len() + 1);
+                    parts.push(numeric_part);
+                    for factor in symbolic {
+                        parts.push(self.eval_power(&power_head, &[factor, args[1].clone()])?);
+                    }
+                    return self.combine_multiplicative_args(&times_head, &parts);
+                }
+
+                let symbolic_part = match symbolic.as_slice() {
+                    [] => Expr::integer(1_i32.into()),
+                    [factor] => self.eval_power(&power_head, &[factor.clone(), args[1].clone()])?,
+                    _ => Expr::call(
+                        power_head,
+                        vec![Expr::call(times_head.clone(), symbolic), args[1].clone()],
+                    ),
+                };
+                return self
+                    .combine_multiplicative_args(&times_head, &[numeric_part, symbolic_part]);
+            }
+        }
+
         Ok(Expr::call(head.clone(), args.to_vec()))
     }
 

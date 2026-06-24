@@ -66,17 +66,27 @@
 > (intrinsic to merging) — ACCEPTED tradeoff: real-tower (small term counts) shows
 > NO macro regression (extend even slightly faster, since combination cuts
 > downstream term counts); deferred to TODO "Performance And Representation".
-> OUT OF SCOPE (deliberately left, locked as guards): Power-over-Times distribution
-> `(2 x)^2 -> 4 x^2` / `(a b)^2 -> a^2 b^2`, and symbolic-exponent combination
-> `x^a x^b -> x^(a+b)`.
+> Still OUT OF SCOPE for the symbolic-`Power` line: symbolic-exponent combination
+> `x^a x^b -> x^(a+b)` and `(2 x)^n -> 2^n x^n` (numeric `c` lifts, but symbolic
+> distribution needs an INTEGER exponent — a separate axis, not yet done).
 >
-> **NEXT:** brief-045 — Power-over-Times distribution (`(c·rest)^n` lifts the
-> numeric `c^n` for any `n`; symbolic factors distribute only for INTEGER `n`:
-> `(2 x)^2 -> 4 x^2`, `(2 x)^(1/2) -> Sqrt[2] Sqrt[x]`, `(a b)^2 -> a^2 b^2`, but
-> `(a b)^(1/2) -> Sqrt[a b]` stays; verified vs WK this session). It reuses the
-> (A) nested-power flatten already landed. Then the SEPARATE 50 batch-A `FAIL
-> shape` (inline `MatchQ` divergence, source-level matcher/eval diagnosis; NOT an
-> attribute issue).
+> **DONE — Power-over-Times distribution (brief-045).** `eval_power` now distributes
+> a `Times` base for numeric exponents: the numeric product `c^n` lifts for ANY
+> numeric `n`, symbolic factors distribute only for INTEGER `n`
+> (`(2 x)^2 -> 4 x^2`, `(2 x)^-2 -> 1/(4 x^2)`, `(2/3 x)^2 -> 4/9 x^2`,
+> `(a b)^2 -> a^2 b^2`, `(a/b)^2 -> a^2/b^2` via the brief-043 (A) flatten,
+> `((a b)^2)^2 -> a^4 b^4`; but `(a b)^(1/2)` stays `Sqrt[a b]`, and rum keeps
+> `Power[4,1/2]` un-rooted — rationals-only, a pre-existing limitation). Gate GREEN:
+> `cargo test -p rum-runtime` 691/0, real-tower **1122/0** (045 binary), 20
+> `===`/edge probes + the symbolic-exponent / non-integer guards. The Power/Times
+> WK-conformance line (brief-043/044/045) is COMPLETE for the numeric-exponent
+> scope.
+>
+> **NEXT:** the SEPARATE 50 batch-A `FAIL shape` — inline
+> `MatchQ[concl[thm], quantNestPat]` divergence, narrowed to the 2nd-arg pattern
+> (HOL `abs[bvar[0,_],…]` Blanks) matching differently INLINE vs pre-bound; needs
+> source-level matcher/eval diagnosis (NOT an attribute issue). The last open item
+> from the attribute-axis session.
 
 > **2026-06-24 — ATTRIBUTE-AXIS conformance scan (3rd axis) found a batch of bugs.**
 > Diffing `Attributes` for every System symbol in rum∩WK (recipe in
