@@ -6,6 +6,43 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-24 Power/Times WK-conformance line (Codex briefs 041-045) + attribute-axis fixes + v7 cold-rebuild baseline
+
+All via Codex briefs, each gated by me (cargo test + WK probes + real-tower 1122/0).
+
+- **brief-041** (`b7840a7`): attribute conformance — dropped FullForm's spurious
+  `HoldAll` (`FullForm[1+1]` now `2`, not `Plus[1,1]`); added `Listable` to 12
+  number-theory builtins (Abs/Round/Factorial/Factorial2/Denominator/Numerator/
+  Mod/Quotient/PowerMod/GCD/LCM/CoprimeQ). KEY: the scan's "Evaluate is broken"
+  was a MISDIAGNOSIS — a FullForm artifact (`Hold[Evaluate[1+1]]===Hold[2]` is
+  True); Evaluate untouched. The ~32 EXTRA-Hold attrs on control symbols are
+  BENIGN (rum hardcodes hold in the evaluator), verified behaviorally
+  (`ReleaseHold[1+1]`=2, `Catch[Throw[1,1+1],1+1]`=1). [[diagnostic-tool-trust]].
+- **brief-042** (`ca2dcff`): `Listable` on `Power`.
+- **brief-043+044** (`56c860c`): symbolic Plus/Times like-term/like-base
+  combination (numeric scope) — `x^2 x^3->x^5`, `x-x->0`, `x^3/x^2->x`,
+  `2 a 3 a->6 a^2`. (A) `eval_power` nested-power flatten, (B) `combine_mult`
+  like-base, (C) `combine_add` like-term. 044 = perf fast path (no-merge skip +
+  direct `Times[coeff,...]` build, no recursive combine): symbolic `Plus`
+  2.7x->1.96x, `Times` 2.0x->1.75x. Remaining O(n^2) like-term DETECTION is an
+  ACCEPTED tradeoff — real tower (small term counts) shows NO macro regression
+  (extend even slightly faster; combination cuts downstream term counts). Deferred
+  lever in TODO "Performance And Representation".
+- **brief-045** (`cec4bc7`): Power-over-Times distribution (numeric exponent) —
+  `(2x)^2->4x^2`, `(a b)^2->a^2 b^2`, `(a/b)^2->a^2/b^2` (reuses (A)). Numeric `c`
+  lifts for ANY numeric `n`; symbolic factors distribute only for INTEGER `n`
+  (`(a b)^(1/2)` stays `Sqrt[a b]`); rationals-only keeps `4^(1/2)` un-rooted.
+- **v7 cold rebuild + authoritative batch-A** (`b7e6eac`): full chain cold-built
+  with the 045 binary -> `rum-snapshot-checkpoints-v7/` (cp00..cp42, ~68min, times
+  ≈ v6 — no macro perf regression). v7 SUPERSEDES v6 (older binaries bake stale
+  theorem shapes). Authoritative non-heavy batch-A = **2440/50**: num 12 + rat 23
+  arithmetic SHAPE fails, set 15 (10 defining-equation + 5 lambda); real_arith now
+  0. The original 2026-06-23 "50 all shape" was a DIFFERENT 50 — 045 changed shapes
+  via the arith/rat decision procedures. LESSON: after any kernel/eval change,
+  COLD-rebuild before trusting a recheck — a mixed v6 snapshot masked the arith/num
+  fails. NEXT: diagnose the 50 (35 arith/rat shape via matcher inline-vs-prebound;
+  15 set defeq/lambda).
+
 ## 2026-06-23 (LATE) Real tower 100% (41/41) + Continuous demo loads — 4 more bugs (#6-#9) via Codex briefs 032-035; two-axis conformance method
 
 Continued the correctness mainline from the 88%/Real-Seq wall (block below) to the
