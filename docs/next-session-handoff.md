@@ -49,19 +49,34 @@
 >   Pre-existing, doesn't block HOL; a separate future item, locked as guards in
 >   brief-042 so the Listable change doesn't perturb them.
 >
-> **NEXT (under research):** the Power/Times SYMBOLIC-canonicalization gap — rum's
-> `combine_additive_args`/`combine_multiplicative_args` fold only NUMERIC constants
-> and never combine symbolic like-terms/like-bases (`x^2 x^3`≠`x^5`, `x-x`≠`0`,
-> `x^3/x^2`≠`x`). Diagnosed (this session): a mid-size HOT-PATH change in those two
-> `combine_*` fns + an `eval_power` nested-power flatten (`(x^2)^-1`→`x^-2`). Blast
-> radius is SMALLER than it looks — `Expand`/`Factor`/`Together`/`D`/`Coefficient`
-> already self-combine and feed `combine_*` already-distinct terms (so adding
-> combination there is idempotent for them); only bare `Plus`/`Times` change. Core
-> safety argument: WK's kernel already combines and mma-hol runs fine under WK, so
-> rum combining moves TOWARD WK. Needs WK-edge alignment + real-tower 1122 re-run +
-> microbench gate. SCOPE/philosophy decision pending (rum's minimal-kernel ethos;
-> no downstream blocker). Then the SEPARATE 50 batch-A `FAIL shape` (inline `MatchQ`
-> divergence, source-level matcher/eval diagnosis; NOT an attribute issue).
+> **DONE — Power/Times SYMBOLIC canonicalization (brief-043 + brief-044).** rum now
+> combines symbolic like-terms/like-bases like WK (numeric-exponent/coefficient
+> scope): `x^2 x^3 -> x^5`, `x-x -> 0`, `x^3/x^2 -> x`, `2 a 3 a -> 6 a^2`. THREE
+> changes in `arithmetic.rs`: (A) `eval_power` nested-power flatten
+> `(x^2)^-1 -> x^-2` (integer outer exponent only — `(x^2)^(1/2)` stays
+> `Sqrt[x^2]`), (B) `combine_multiplicative_args` like-base merge, (C)
+> `combine_additive_args` like-term merge. Gate GREEN: `cargo test -p rum-runtime`
+> 690/0, real-tower **1122/0** (rebuilt with the new binary AND re-run under the
+> 044 binary — behavior frozen), 19 `===` probes + out-of-scope guards. Blast
+> radius confirmed small: `Expand`/`Factor`/`Together`/`D`/`Coefficient` already
+> self-combine, their tests unchanged. **Perf:** brief-044 took the cheap win (no-
+> merge fast path + direct `Times[coeff,...]` build, no recursive
+> `combine_multiplicative_args`): symbolic `Plus` 2.7x->1.96x, `Times` 2.0x->1.75x
+> vs pre-043. Remaining micro regression is the O(n^2) like-term DETECTION
+> (intrinsic to merging) — ACCEPTED tradeoff: real-tower (small term counts) shows
+> NO macro regression (extend even slightly faster, since combination cuts
+> downstream term counts); deferred to TODO "Performance And Representation".
+> OUT OF SCOPE (deliberately left, locked as guards): Power-over-Times distribution
+> `(2 x)^2 -> 4 x^2` / `(a b)^2 -> a^2 b^2`, and symbolic-exponent combination
+> `x^a x^b -> x^(a+b)`.
+>
+> **NEXT:** brief-045 — Power-over-Times distribution (`(c·rest)^n` lifts the
+> numeric `c^n` for any `n`; symbolic factors distribute only for INTEGER `n`:
+> `(2 x)^2 -> 4 x^2`, `(2 x)^(1/2) -> Sqrt[2] Sqrt[x]`, `(a b)^2 -> a^2 b^2`, but
+> `(a b)^(1/2) -> Sqrt[a b]` stays; verified vs WK this session). It reuses the
+> (A) nested-power flatten already landed. Then the SEPARATE 50 batch-A `FAIL
+> shape` (inline `MatchQ` divergence, source-level matcher/eval diagnosis; NOT an
+> attribute issue).
 
 > **2026-06-24 — ATTRIBUTE-AXIS conformance scan (3rd axis) found a batch of bugs.**
 > Diffing `Attributes` for every System symbol in rum∩WK (recipe in

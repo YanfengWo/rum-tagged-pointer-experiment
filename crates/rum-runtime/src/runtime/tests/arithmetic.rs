@@ -1,5 +1,9 @@
 use super::*;
 
+fn eval_to_string(session: &mut Session, source: &str) -> String {
+    session.eval_text(source).unwrap().value.to_string()
+}
+
 #[test]
 fn exact_integer_arithmetic_evaluates_core_heads() {
     let mut session = Session::new();
@@ -231,6 +235,48 @@ fn plus_and_times_fold_numeric_parts_without_forcing_symbolic_algebra() {
     assert_eq!(session.eval_text("x + 0").unwrap().value.to_string(), "x");
     assert_eq!(session.eval_text("x * 1").unwrap().value.to_string(), "x");
     assert_eq!(session.eval_text("0 * x").unwrap().value.to_string(), "0");
+}
+
+#[test]
+fn power_times_combine_like_bases_and_terms() {
+    let mut session = Session::new();
+
+    let sameq_cases = [
+        "x x === x^2",
+        "x^2 x^3 === x^5",
+        "x^2 x === x^3",
+        "a b / b === a",
+        "x x x / x === x^2",
+        "2 a 3 a === 6 a^2",
+        "x/x === 1",
+        "x^2 y x === x^3 y",
+        "(x^2)^3 === x^6",
+        "(x^2)^-1 === x^-2",
+        "x^3/x^2 === x",
+        "x^2/x^3 === x^-1",
+        "x + x === 2 x",
+        "2 x + 3 x === 5 x",
+        "x - x === 0",
+        "3 x - x === 2 x",
+        "x + 2 x - 3 x === 0",
+        "a + b + a === 2 a + b",
+        "x + x^2 + x === 2 x + x^2",
+    ];
+
+    for source in sameq_cases {
+        assert_eq!(eval_to_string(&mut session, source), "True", "{source}");
+    }
+
+    let scalar_cases = [("x - x", "0"), ("x/x", "1"), ("x + 2 x - 3 x", "0")];
+
+    for (source, expected) in scalar_cases {
+        assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
+    }
+
+    assert_eq!(
+        eval_to_string(&mut session, "1 (x^2)^(1/2)"),
+        "Power[Power[x, 2], 1/2]"
+    );
 }
 
 #[test]

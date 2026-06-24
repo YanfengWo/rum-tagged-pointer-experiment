@@ -522,6 +522,29 @@ Completed history, archived planning detail, and operational lessons live in
   "minutes"). Scope when picked up: a binary serialization for `Expr` + the
   definition/attribute tables + interning, and binary `DumpSave`/`Get` paths
   (distinct from `Save`/text). Estimate-only until a prototype is measured.
+- [ ] **Symbolic `Plus`/`Times` like-term detection cost (deferred, LOW
+  priority — from brief-043/044).** brief-043 added like-term/like-base
+  combination to `combine_additive_args`/`combine_multiplicative_args` (WK-aligned
+  `x^2 x^3 -> x^5`, `x-x -> 0`); brief-044 took the cheap win (no-merge fast path
+  + direct `Times[coeff,...]` build instead of recursive `combine_multiplicative_args`),
+  cutting symbolic `Plus` 2.7x->1.96x, `Times` 2.0x->1.75x vs pre-043. The
+  REMAINING regression is the O(n^2) like-term DETECTION itself (per-term
+  `split_*` + linear `Expr ==` compare on every symbolic `Plus`/`Times`): measured
+  no-merge 6-term `Plus` `0.295s` (≈unchanged by 044 — detection is intrinsic to
+  merging), 3-term `0.074s` (the 4x for 2x terms = the O(n^2)). Lowering it needs
+  hash-bucketed grouping (`Expr`'s derived `Hash` is consistent with its manual
+  structural `PartialEq`, so a HashMap is sound) or a cheap pre-filter — both
+  algorithm-level with BOUNDED upside at small term counts. The real-number tower
+  has small term counts and shows NO macro regression (extend time even slightly
+  faster: combination cuts downstream term counts), so the micro cost is an
+  accepted tradeoff, not a net loss. A separate, even smaller lever: thread
+  `SharedArgs` (`Arc<Vec<Expr>>`) into the two `combine_*` (Layer A did this for
+  dispatch, not the arithmetic handlers) so the no-merge/no-fold case reuses the
+  input `Arc` (`Expr::call_shared`, zero Vec alloc) — but `Expr` clone is already
+  a SHALLOW `Arc` clone (no deep copy), so this only saves a Vec alloc + a few
+  atomic incs; pure in-place mutation is impossible (the `Arc<Vec>` is shared
+  through substitution). Pick up only with fresh profiler evidence that symbolic
+  algebra (not the HOL slice) is a real workload.
 
 ## Samples And Application Directions
 

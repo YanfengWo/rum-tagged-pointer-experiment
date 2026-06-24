@@ -1,4 +1,5 @@
 use super::*;
+use std::borrow::Cow;
 
 impl Session {
     pub(super) fn eval_plus(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -18,21 +19,29 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("Power", args, 2));
         }
 
-        let Some(base) = expr_as_exact_rational(&args[0]) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-        let Some(exponent) = expr_as_signed_integer_value(&args[1]) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
+        if let Some(base) = expr_as_exact_rational(&args[0]) {
+            let Some(exponent) = expr_as_signed_integer_value(&args[1]) else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
 
-        if exponent == BigInt::from(0_u8) && base.is_zero() {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+            if exponent == BigInt::from(0_u8) && base.is_zero() {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            }
+
+            return Ok(base
+                .pow(&exponent)
+                .map(Expr::rational)
+                .unwrap_or_else(|| Expr::call(head.clone(), args.to_vec())));
         }
 
-        Ok(base
-            .pow(&exponent)
-            .map(Expr::rational)
-            .unwrap_or_else(|| Expr::call(head.clone(), args.to_vec())))
+        if let Some((base, inner_exponent)) = split_power_base_exp(&args[0]) {
+            if let Some(outer_exponent) = expr_as_signed_integer_value(&args[1]) {
+                let exponent = inner_exponent.mul(&Rational::from_integer(outer_exponent));
+                return Ok(build_power_from_base_exp(base, exponent));
+            }
+        }
+
+        Ok(Expr::call(head.clone(), args.to_vec()))
     }
 
     pub(super) fn eval_subtract(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -424,6 +433,54 @@ impl Session {
             }
         }
 
+        if let Some(rebuilt) = combine_simple_additive_terms(&combined) {
+            if let Some(rebuilt) = rebuilt {
+                combined = rebuilt;
+            }
+        } else if !combined.is_empty() {
+            let mut grouped: Vec<(Expr, Rational)> = Vec::with_capacity(combined.len());
+            let mut rebuild_combined = false;
+            for term in &combined {
+                let (coefficient, kernel) = split_coeff_kernel(term);
+                if let Some((_, existing)) = grouped
+                    .iter_mut()
+                    .find(|(candidate, _)| candidate == kernel.as_ref())
+                {
+                    *existing = existing.add(&coefficient);
+                    rebuild_combined = true;
+                } else {
+                    if split_coeff_kernel_requires_rebuild(term, &coefficient, kernel.as_ref()) {
+                        rebuild_combined = true;
+                    }
+                    grouped.push((kernel.into_owned(), coefficient));
+                }
+            }
+
+            if rebuild_combined {
+                combined = Vec::with_capacity(grouped.len() + usize::from(!numeric.is_zero()));
+                for (kernel, coefficient) in grouped {
+                    if coefficient.is_zero() {
+                        continue;
+                    }
+
+                    if coefficient.is_one() {
+                        combined.push(kernel);
+                    } else {
+                        let coefficient = Expr::rational(coefficient);
+                        combined.push(match kernel {
+                            Expr::Call { head, args } if is_system_symbol_name(&head, "Times") => {
+                                let mut factors = Vec::with_capacity(args.len() + 1);
+                                factors.push(coefficient);
+                                factors.extend(args);
+                                Expr::call(system_expr("Times"), factors)
+                            }
+                            kernel => Expr::call(system_expr("Times"), vec![coefficient, kernel]),
+                        });
+                    }
+                }
+            }
+        }
+
         if !numeric.is_zero() {
             combined.push(Expr::rational(numeric));
         }
@@ -458,6 +515,41 @@ impl Session {
                 }
             } else {
                 combined.push(arg.clone());
+            }
+        }
+
+        if let Some(rebuilt) = combine_simple_multiplicative_factors(&combined) {
+            if let Some(rebuilt) = rebuilt {
+                combined = rebuilt;
+            }
+        } else if !combined.is_empty() {
+            let mut grouped: Vec<(Expr, Rational)> = Vec::with_capacity(combined.len());
+            let mut rebuild_combined = false;
+            for factor in &combined {
+                let (base, exponent) = split_base_exp(factor);
+                if let Some((_, existing)) = grouped
+                    .iter_mut()
+                    .find(|(candidate, _)| candidate == base.as_ref())
+                {
+                    *existing = existing.add(&exponent);
+                    rebuild_combined = true;
+                } else {
+                    if split_base_exp_requires_rebuild(factor, base.as_ref(), &exponent) {
+                        rebuild_combined = true;
+                    }
+                    grouped.push((base.into_owned(), exponent));
+                }
+            }
+
+            if rebuild_combined {
+                combined = Vec::with_capacity(grouped.len() + usize::from(!numeric.is_one()));
+                for (base, exponent) in grouped {
+                    if exponent.is_zero() {
+                        continue;
+                    }
+
+                    combined.push(build_power_from_base_exp(base, exponent));
+                }
             }
         }
 
@@ -505,6 +597,261 @@ pub(super) fn expr_as_exact_rational(expr: &Expr) -> Option<Rational> {
         Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.clone())),
         Expr::Atom(Atom::Rational(value)) => Some(value.clone()),
         _ => None,
+    }
+}
+
+fn build_power_from_base_exp(base: Expr, exponent: Rational) -> Expr {
+    if exponent.is_zero() {
+        return Expr::integer(1_i32.into());
+    }
+
+    if exponent.is_one() {
+        base
+    } else {
+        Expr::call(system_expr("Power"), vec![base, Expr::rational(exponent)])
+    }
+}
+
+fn split_base_exp(expr: &Expr) -> (Cow<'_, Expr>, Rational) {
+    let Some((base, exponent)) = split_power_base_exp_ref(expr) else {
+        return (Cow::Borrowed(expr), Rational::one());
+    };
+
+    if !exponent.is_integer() {
+        return (Cow::Borrowed(base), exponent);
+    }
+
+    let (inner_base, inner_exponent) = split_base_exp(base);
+    (inner_base, inner_exponent.mul(&exponent))
+}
+
+fn split_base_exp_requires_rebuild(factor: &Expr, base: &Expr, exponent: &Rational) -> bool {
+    if exponent.is_zero() {
+        return true;
+    }
+
+    if exponent.is_one() {
+        return base != factor;
+    }
+
+    let Expr::Call { head, args } = factor else {
+        return true;
+    };
+    if !is_system_symbol_name(head, "Power") || args.len() != 2 {
+        return true;
+    }
+
+    let Some(original_exponent) = expr_as_exact_rational(&args[1]) else {
+        return true;
+    };
+
+    &args[0] != base || &original_exponent != exponent
+}
+
+fn combine_simple_multiplicative_factors(args: &[Expr]) -> Option<Option<Vec<Expr>>> {
+    if args.is_empty() {
+        return Some(None);
+    }
+
+    let mut grouped: Vec<(Expr, Rational)> = Vec::with_capacity(args.len());
+    let mut rebuild_combined = false;
+    for factor in args {
+        let (base, exponent) = simple_base_exp(factor)?;
+        if let Some((_, existing)) = grouped.iter_mut().find(|(candidate, _)| candidate == base) {
+            *existing = existing.add(&exponent);
+            rebuild_combined = true;
+        } else {
+            if split_base_exp_requires_rebuild(factor, base, &exponent) {
+                rebuild_combined = true;
+            }
+            grouped.push((base.clone(), exponent));
+        }
+    }
+
+    if !rebuild_combined {
+        return Some(None);
+    }
+
+    let mut combined = Vec::with_capacity(grouped.len());
+    for (base, exponent) in grouped {
+        if exponent.is_zero() {
+            continue;
+        }
+
+        combined.push(build_power_from_base_exp(base, exponent));
+    }
+
+    Some(Some(combined))
+}
+
+fn simple_base_exp(expr: &Expr) -> Option<(&Expr, Rational)> {
+    if matches!(expr, Expr::Atom(_)) {
+        return Some((expr, Rational::one()));
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    if !is_system_symbol_name(head, "Power") || args.len() != 2 {
+        return None;
+    }
+
+    let Expr::Atom(_) = &args[0] else {
+        return None;
+    };
+    if expr_as_exact_rational(&args[0]).is_some() {
+        return None;
+    }
+    let exponent = expr_as_exact_rational(&args[1])?;
+    Some((&args[0], exponent))
+}
+
+fn split_power_base_exp(expr: &Expr) -> Option<(Expr, Rational)> {
+    let (base, exponent) = split_power_base_exp_ref(expr)?;
+    Some((base.clone(), exponent))
+}
+
+fn split_power_base_exp_ref(expr: &Expr) -> Option<(&Expr, Rational)> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    if !is_system_symbol_name(head, "Power") || args.len() != 2 {
+        return None;
+    }
+
+    let exponent = expr_as_exact_rational(&args[1])?;
+    if expr_as_exact_rational(&args[0]).is_some() {
+        return None;
+    }
+
+    Some((&args[0], exponent))
+}
+
+fn split_coeff_kernel(expr: &Expr) -> (Rational, Cow<'_, Expr>) {
+    let Expr::Call { head, args } = expr else {
+        return (Rational::one(), Cow::Borrowed(expr));
+    };
+    if !is_system_symbol_name(head, "Times") {
+        return (Rational::one(), Cow::Borrowed(expr));
+    }
+
+    let mut coefficient = Rational::one();
+    let mut rest = Vec::new();
+    for arg in args.iter() {
+        if let Some(value) = expr_as_exact_rational(arg) {
+            coefficient = coefficient.mul(&value);
+        } else {
+            rest.push(arg);
+        }
+    }
+
+    let kernel = match rest.as_slice() {
+        [] => Cow::Owned(Expr::integer(1_i32.into())),
+        [only] => Cow::Borrowed(*only),
+        _ => Cow::Owned(Expr::call(
+            system_expr("Times"),
+            rest.into_iter().cloned().collect(),
+        )),
+    };
+
+    (coefficient, kernel)
+}
+
+fn combine_simple_additive_terms(args: &[Expr]) -> Option<Option<Vec<Expr>>> {
+    if args.is_empty() {
+        return Some(None);
+    }
+
+    let mut grouped: Vec<(Expr, Rational)> = Vec::with_capacity(args.len());
+    let mut rebuild_combined = false;
+    for term in args {
+        let (coefficient, kernel) = simple_coeff_kernel(term)?;
+        if let Some((_, existing)) = grouped
+            .iter_mut()
+            .find(|(candidate, _)| candidate == kernel)
+        {
+            *existing = existing.add(&coefficient);
+            rebuild_combined = true;
+        } else {
+            if split_coeff_kernel_requires_rebuild(term, &coefficient, kernel) {
+                rebuild_combined = true;
+            }
+            grouped.push((kernel.clone(), coefficient));
+        }
+    }
+
+    if !rebuild_combined {
+        return Some(None);
+    }
+
+    let mut combined = Vec::with_capacity(grouped.len());
+    for (kernel, coefficient) in grouped {
+        if coefficient.is_zero() {
+            continue;
+        }
+
+        if coefficient.is_one() {
+            combined.push(kernel);
+        } else {
+            combined.push(Expr::call(
+                system_expr("Times"),
+                vec![Expr::rational(coefficient), kernel],
+            ));
+        }
+    }
+
+    Some(Some(combined))
+}
+
+fn simple_coeff_kernel(expr: &Expr) -> Option<(Rational, &Expr)> {
+    if matches!(expr, Expr::Atom(_)) {
+        return Some((Rational::one(), expr));
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    if !is_system_symbol_name(head, "Times") || args.len() != 2 {
+        return None;
+    }
+
+    let coefficient = expr_as_exact_rational(&args[0])?;
+    if !matches!(&args[1], Expr::Atom(_)) {
+        return None;
+    }
+
+    Some((coefficient, &args[1]))
+}
+
+fn split_coeff_kernel_requires_rebuild(term: &Expr, coefficient: &Rational, kernel: &Expr) -> bool {
+    if coefficient.is_zero() {
+        return true;
+    }
+
+    if coefficient.is_one() {
+        return kernel != term;
+    }
+
+    let Expr::Call { head, args } = term else {
+        return true;
+    };
+    if !is_system_symbol_name(head, "Times") || args.is_empty() {
+        return true;
+    }
+
+    let Some(first_coefficient) = expr_as_exact_rational(&args[0]) else {
+        return true;
+    };
+    if &first_coefficient != coefficient {
+        return true;
+    }
+
+    match kernel {
+        Expr::Call {
+            head: kernel_head,
+            args: kernel_args,
+        } if is_system_symbol_name(kernel_head, "Times") => args[1..] != kernel_args[..],
+        _ => args.len() != 2 || &args[1] != kernel,
     }
 }
 
