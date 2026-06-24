@@ -1,5 +1,38 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
+> **2026-06-24 (EVENING) — v7 COLD REBUILD (045 binary) + AUTHORITATIVE batch-A
+> recheck (read THIS FIRST).** After the Power/Times line (brief-043/044/045)
+> landed, the full checkpoint chain was rebuilt COLD with the 045 binary →
+> `rum-snapshot-checkpoints-v7/` (cp00…cp42 incl. demos/Continuous, all 28 extend
+> steps ok, ~68min, `/tmp/v7_cold_build.log`). **v7 SUPERSEDES v6** — v6's lower
+> checkpoints were built by a PRE-041 binary, so any test restored on them shows
+> STALE theorem shapes. This actually mattered: a mixed cp26+Real/* snapshot showed
+> `arith` 0-FAIL, but v7 (clean 045) shows arith/num DO fail. 045 cold-build times
+> ≈ v6 (Mul 212/208s, Seq 481/476s) — no macro perf regression; real suite still
+> **1122/0** under v7.
+>
+> **Authoritative batch-A (v7, non-heavy stdlib+engine via run_fast patterns):
+> 2440 passed / 50 failed.** Per-file (FAIL belongs to the file finishing right
+> after it): **num_tests 12** (arithmetic shapes `(a+b)+c=(a+c)+b`, `d|(x+d)=d|x`,
+> `m≤n⇒m+p≤n+p`), **rat_tests 23** (`ratAdd`/`ratMul`/`ratLe`/`ratCanon`/`gcd`/
+> `exDiv`/`bezout` shapes), **set_tests 15** (10 `X is a defining equation`:
+> IN/SUBSET/UNION/INTER/DIFF/EMPTY/UNIV/POW/IMAGE/PREIMAGE; 5 `X = <lambda>`:
+> BALL/BEX/INJ/SURJ/BIJ). **real_arith now 0 FAIL** — the original batch-A's
+> auto-RealArith ground-domain shape fails are GONE. The original 2026-06-23 "50
+> all shape in arith/rat/auto-RealArith" is a DIFFERENT 50: 045 changed shapes via
+> the arith/rat decision procedures (parseLin/buildLin use WL `Plus`/`Times`/`Power`
+> for linear terms), so an earlier "043-045 is orthogonal to the shape fails" guess
+> was WRONG — v7 is the real baseline. These are shape/structure RIGIDITY on
+> TRUE-and-used theorems (the 1122/0 real tower sits on them), not correctness bugs.
+>
+> **NEXT: diagnose the v7 50, two classes.** (1) 35 arithmetic/rat SHAPE fails
+> (`MatchQ[concl[thm], hardcoded-WK-pattern]` divergence — 2nd-arg pattern with HOL
+> `abs[bvar[0,_],…]` Blanks matches differently inline vs pre-bound; source-level
+> matcher/eval diagnosis). (2) 15 set defining-equation / lambda fails (separate
+> class — look at set_tests' defining-equation + lambda checks). Batch B heavy
+> provers (meson/proptaut/simp) NOT yet run on v7. v7 scratch snapshot for probing:
+> `rum-snapshot-checkpoints-v7/scratch.*/mma-hol/bootstrap.mx`.
+
 > **2026-06-24 (LATER) — ATTRIBUTE-AXIS triage RESOLVED + fixes landed (read FIRST;
 > supersedes the scan block just below).** The attribute-axis findings are now
 > fully triaged against WK (behavioral probes, not just the `Attributes[]` diff —
