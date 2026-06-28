@@ -6,6 +6,45 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-29 Matcher pattern-argument evaluation fix (brief-046) — the v7 batch-A 50-FAIL root cause, ALL 50 closed
+
+The 50 open v7 batch-A failures (num 12 + rat 23 + set 15) were ONE rum bug, not
+"shape rigidity". rum hard-holds the pattern argument of `MatchQ` (and the shared
+`Cases`/`Count`/`Position`/`DeleteCases`/`ReplacePart`/`Catch`-tag resolver
+`resolve_matcher_pattern_expr_owned`) and used an all-or-nothing gate: if the held
+argument contained ANY pattern syntax anywhere, the WHOLE argument was returned
+unevaluated. So ordinary subexpressions WK evaluates were skipped — the mma-hol
+test helper `quantNestPat[q,n,body] := Nest[comb[const[q,_],abs[bvar[0,_],#,_]]&,
+body,n]` never expanded (num/rat matched the literal, un-`Nest`ed
+`quantNestPat[...]`), and the set tests' `const[pair[[2]], _]` kept `pair[[2]]` (a
+`Part`) unevaluated so the const name never became `"IN"`.
+
+- **Diagnosis (Claude)**: WK does NOT Hold the MatchQ pattern arg — it evaluates it
+  normally and pattern leaves survive because they are inert. Confirmed against
+  `wolframscript`: the minimal repros (`qq[2,_]` Nest helper, `f[{10,1}[[2]],_]`
+  Part, `cc[pair[[2]],_]`) are all True in WK, False in rum. **[[diagnostic-tool-trust]]
+  bit twice this session** — I used `MatchQ` (the buggy subject) as the probe and
+  hit two ARTIFACTS that looked like a second bug: (a) `"\:2200"` through
+  shell→`rum-cli` became literal `":2200"` not `∀`; (b) an `ab = HOL\`Terms\`abs`
+  ownvalue indirection stayed unevaluated in the held pattern (the same bug firing
+  on my probe). The user re-flagged the circular-instrument trap; calibrating every
+  expected value against plain WK settled it. Also verified rum's `Pattern` is NOT
+  HoldFirst (`x=5; FullForm[x_]` → `Pattern[5,_]`), so the fix must keep pattern
+  constructs held, not blanket-evaluate.
+- **Fix (Codex brief-046, gated+committed `7b0e4cd`)**: `resolve_matcher_pattern_expr_owned`
+  recurses — pattern-syntax-free subtrees evaluate; `matches_pattern_head` nodes
+  stay held (protect bound names / held tests); ordinary-headed nodes with pattern
+  args are rebuilt and dispatched via `resume_call_from_prepared_args` so the head
+  fires (expands `quantNestPat`) WITHOUT re-evaluating the resolved pattern leaves.
+  One chokepoint fixes the whole matcher family. `_+_` now → `Times[2,Blank[]]`
+  (WK-conformant; mma-hol uses inert ADT constructors, unaffected).
+- **Gate (Claude, all verbatim)**: `cargo fmt --check` clean, `cargo test -p
+  rum-runtime` 692/0; batch-A 50→0 — set 189/0 (all 10 defining-equation + 5 lambda
+  now `ok`), num+rat 375/0; NO regression — real-tower 1122/0, remaining non-heavy
+  batch-A 1063/0. Run against the existing v7 cp42 snapshot with the new binary
+  (the fix is call-time MatchQ, not store-time theorem shape, so no snapshot
+  rebuild needed for the test results).
+
 ## 2026-06-24 Power/Times WK-conformance line (Codex briefs 041-045) + attribute-axis fixes + v7 cold-rebuild baseline
 
 All via Codex briefs, each gated by me (cargo test + WK probes + real-tower 1122/0).

@@ -1,5 +1,32 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
+> **2026-06-29 — the v7 batch-A 50-FAIL is CLOSED (brief-046, `7b0e4cd`). Read
+> THIS FIRST.** All 50 (num 12 + rat 23 + set 15) were ONE bug, not shape
+> rigidity: rum hard-holds the `MatchQ` pattern argument and, in
+> `resolve_matcher_pattern_expr_owned`, used an all-or-nothing gate that left the
+> WHOLE argument unevaluated when it contained any pattern syntax — so the
+> `quantNestPat[...]` test helper never expanded (num/rat) and `const[pair[[2]],_]`
+> kept its `Part` unevaluated (set). WK does not Hold the pattern arg; the fix
+> makes the resolver recurse (evaluate ordinary subexprs, keep pattern constructs
+> held, dispatch ordinary-headed pattern-bearing nodes via
+> `resume_call_from_prepared_args`). Fixes the whole matcher family (`Cases`/`Count`/
+> `Position`/`DeleteCases`/`ReplacePart`/`Catch`-tag) at one chokepoint. **Gate
+> (verbatim): `cargo test -p rum-runtime` 692/0; batch-A 50→0 (set 189/0, num+rat
+> 375/0); NO regression — real-tower 1122/0, remaining non-heavy batch-A 1063/0.**
+> Method note (logged in PROGRESS + [[diagnostic-tool-trust]]): I used `MatchQ` —
+> the buggy subject — as my own probe and hit two artifacts (`\:2200`→`":2200"` not
+> `∀`; an `ab=HOL\`Terms\`abs` ownvalue indirection unevaluated in the held
+> pattern); calibrate every expected value against plain `wolframscript`.
+>
+> **So v7 batch-A is now effectively 2490/0 (all non-heavy).** NEXT options:
+> (1) **batch-B heavy provers (meson/proptaut/simp) on v7** — still never run on
+> v7, slow + some KNOWN pre-existing failures, run separately. (2) An OPTIONAL v8
+> cold rebuild (`scripts/snapshot-checkpoint-chain.sh`) to refresh the authoritative
+> snapshot with the 046 binary — LOW urgency since the fix is call-time (it does
+> NOT change theorem construction; the 50→0 was verified against the existing v7
+> cp42 snapshot with the new binary). (3) Continue the correctness mainline /
+> the deferred perf line. Tree clean, all committed.
+
 > **2026-06-24 (EVENING) — v7 COLD REBUILD (045 binary) + AUTHORITATIVE batch-A
 > recheck (read THIS FIRST).** After the Power/Times line (brief-043/044/045)
 > landed, the full checkpoint chain was rebuilt COLD with the 045 binary →
