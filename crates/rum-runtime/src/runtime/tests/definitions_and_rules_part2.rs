@@ -294,6 +294,76 @@ fn matchq_supports_plain_blank_arguments_under_fixed_heads() {
 }
 
 #[test]
+fn matcher_pattern_arguments_resolve_ordinary_subexpressions() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("qq[n_, b_] := Nest[w[#]&, b, n]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Null"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[w[w[5]], qq[2, _]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[1, 2], f[{10, 1}[[2]], _]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("pair = {thm, \"IN\"}; MatchQ[cc[\"IN\", 9], cc[pair[[2]], _]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("wrap[b_] := h[cc, b]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Null"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[h[cc, 9], wrap[_]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("x = 5; MatchQ[7, x_]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("qn[n_, b_] := Nest[g[#]&, b, n]; Cases[{g[g[1]], g[2], x}, qn[2, _]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[g[g[1]]]"
+    );
+}
+
+#[test]
 fn matchq_supports_blanksequence_in_argument_lists() {
     let mut session = Session::new();
 

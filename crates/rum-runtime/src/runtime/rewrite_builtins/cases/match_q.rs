@@ -27,14 +27,32 @@ impl Session {
         &mut self,
         expr: Expr,
     ) -> Result<Expr, EvalError> {
-        let normalized = strip_hold_pattern(&expr).clone();
-        let resolved = if contains_pattern_syntax(&normalized) {
-            normalized
-        } else {
-            self.evaluate(normalized)?
-        };
-
+        let resolved = self.resolve_match_pattern_subexprs(strip_hold_pattern(&expr))?;
         Ok(self.normalize_match_expr(&resolved))
+    }
+
+    /// Evaluate the ordinary subexpressions of a held matcher pattern while keeping
+    /// genuine pattern constructs held.
+    fn resolve_match_pattern_subexprs(&mut self, expr: &Expr) -> Result<Expr, EvalError> {
+        if !contains_pattern_syntax(expr) {
+            return self.evaluate(expr.clone());
+        }
+
+        match expr {
+            Expr::Atom(_) => Ok(expr.clone()),
+            Expr::Call { head, args } => {
+                if matches_pattern_head(head) {
+                    return Ok(expr.clone());
+                }
+
+                let resolved_head = self.resolve_match_pattern_subexprs(head)?;
+                let mut resolved_args = Vec::with_capacity(args.len());
+                for arg in args.iter() {
+                    resolved_args.push(self.resolve_match_pattern_subexprs(arg)?);
+                }
+                self.resume_call_from_prepared_args(resolved_head, resolved_args)
+            }
+        }
     }
 
     #[allow(dead_code)]
