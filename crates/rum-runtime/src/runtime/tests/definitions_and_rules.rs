@@ -33,6 +33,52 @@ fn setdelayed_stores_rhs_without_immediate_evaluation() {
 }
 
 #[test]
+fn self_referential_ownvalue_returns_symbol_without_message() {
+    let mut session = Session::new();
+
+    let outcome = session.eval_text("a = a; a").unwrap();
+
+    assert_eq!(outcome.value.to_string(), "a");
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn self_referential_delayed_ownvalue_returns_symbol_without_message() {
+    let mut session = Session::new();
+
+    let outcome = session.eval_text("b := b; b").unwrap();
+
+    assert_eq!(outcome.value.to_string(), "b");
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn immediate_self_alias_preserves_downvalues() {
+    let mut session = Session::new();
+
+    let alias = session.eval_text("s[x_] := x + 1; s = s; s").unwrap();
+    let applied = session.eval_text("s[5]").unwrap();
+
+    assert_eq!(alias.value.to_string(), "s");
+    assert!(alias.messages.is_empty());
+    assert_eq!(applied.value.to_string(), "6");
+    assert!(applied.messages.is_empty());
+}
+
+#[test]
+fn delayed_self_alias_preserves_downvalues() {
+    let mut session = Session::new();
+
+    let alias = session.eval_text("c[x_] := x + 1; c := c; c").unwrap();
+    let applied = session.eval_text("c[5]").unwrap();
+
+    assert_eq!(alias.value.to_string(), "c");
+    assert!(alias.messages.is_empty());
+    assert_eq!(applied.value.to_string(), "6");
+    assert!(applied.messages.is_empty());
+}
+
+#[test]
 fn ownvalues_lists_immediate_and_delayed_symbol_definitions() {
     let mut session = Session::new();
 

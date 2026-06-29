@@ -287,15 +287,16 @@ fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
 fn cycle_detection_stops_self_referential_definitions_and_recovers_after_error() {
     let mut session = Session::new();
 
-    session.eval_text("x := x").unwrap();
+    session.eval_text("loopA := loopB").unwrap();
+    session.eval_text("loopB := loopA").unwrap();
 
     let error = session
-        .eval_text("x")
+        .eval_text("loopA")
         .expect_err("expected cycle detection error");
 
     assert!(matches!(
         error,
-        EvalError::EvaluationCycleDetected { ref expr } if expr == "x"
+        EvalError::EvaluationCycleDetected { ref expr } if expr == "loopA"
     ));
     assert_eq!(session.eval_text("1").unwrap().value.to_string(), "1");
 }

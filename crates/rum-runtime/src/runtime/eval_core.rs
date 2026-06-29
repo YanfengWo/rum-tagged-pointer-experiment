@@ -163,6 +163,9 @@ impl Session {
             .get(&symbol)
             .and_then(|definition| definition.own_value.clone())
         {
+            if matches!(&value, Expr::Atom(Atom::Symbol(value_symbol)) if value_symbol == &symbol) {
+                return Ok(value);
+            }
             return self.evaluate_own_value(value);
         }
 
@@ -171,6 +174,9 @@ impl Session {
             .get(&symbol)
             .and_then(|definition| definition.delayed_own_value.clone())
         {
+            if matches!(&value, Expr::Atom(Atom::Symbol(value_symbol)) if value_symbol == &symbol) {
+                return Ok(value);
+            }
             return self.evaluate_definition_rhs(None, value);
         }
 

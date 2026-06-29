@@ -6,6 +6,48 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-30 CORRECTNESS — the 2855-vs-3126 gap was a REAL bug: `Set[a,a]` self-fixed-point aborted `Get` mid-file (brief-051)
+
+**Supersedes the "NOT failures, a counting reconciliation" framing in the
+2026-06-29 cold-`run_all` entry below — that was WRONG.** The 271-assertion gap
+between rum's cold `run_all` (2855) and the README's 3126 is (mostly) a genuine
+correctness bug, not a counting artifact. Found by loading each silently-short
+test file against the v8 snapshot and diffing per-file assertion counts vs WK.
+
+ROOT CAUSE: `tests/arith_tests.wl` **silently aborted mid-file**. It ran only 41 of
+140 `runTests` groups (50 of 271 assertions, no FAIL), then `Get` stopped — the
+outer `Scan` over files continued, so the truncation was invisible. The abort line
+is 399, `nnfConv = HOL\`Auto\`Arith\`nnfConv`: the runners add every PUBLIC `HOL`*`
+context to `$ContextPath`, so the bare LHS `nnfConv` resolves to the SAME existing
+symbol → `Set[s, s]`. rum raised a fatal `General::cycle` /
+`EvaluationCycleDetected` on that benign self-fixed-point (ownvalue `a :> a`), where
+WK returns the symbol unchanged. (The earlier `parseLin = …Private\`parseLin`
+aliases are safe — Private contexts are off `$ContextPath`, so the LHS is a fresh
+`Global` symbol, no self-reference.) Per-file `:::`-group-count vs static
+`runTests`-count check across the WHOLE corpus: **arith is the ONLY truncated file**
+(all 38 others run every group), so this one bug is **221 of the 271** gap.
+
+FIX (`crates/rum-runtime/src/runtime/eval_core.rs` `evaluate_symbol`): when a
+symbol's stored `own_value` / `delayed_own_value` RHS is structurally the symbol
+itself, return it (fixed point) WITHOUT re-evaluating — the re-evaluation was what
+re-entered the symbol on `evaluation_stack` and tripped the guard. Surgical; the
+genuine-cycle path (`d := e; e := d`, RHS ≠ symbol) is untouched and still errors.
+Three older tests (messages_part2 / context_and_loader / holding_and_control_part2)
+that used `self := self` / `x := x` as a hard-error TRIGGER were re-pointed at a
+genuine mutual cycle `loopA := loopB; loopB := loopA` (still `General::cycle`); new
+regressions in definitions_and_rules lock the WK table (`a=a`→`a`, `b:=b`→`b`,
+`s=s` keeps downvalues with `s[5]=6`).
+
+GATE (verbatim): `cargo fmt --check` clean; `cargo test --workspace` green
+(rum_runtime 710/0 incl. the 4 new regressions + 3 redirected cycle tests, all
+other crates green); the 4 minimal rum-cli probes match WK; genuine cycle still
+errors. **arith_tests.wl on v8 cp21: 50→271/0, 159 groups — byte-for-byte the WK
+gold (WK measured 271/0/159).** Residual ~50 of the 271 is NOT truncation (every
+other file runs all groups) — that part IS the Stable-vs-Strict / disputed
+3124-vs-3126 reconciliation; chase separately. WK conformance note: a genuine cycle
+in WK gives `TerminatedEvaluation[IterationLimit]`, not a hard error — rum's
+`General::cycle` on real cycles is a separate, lower-priority conformance gap.
+
 ## 2026-06-30 v8 Stable snapshot tower rebuilt with the memory-fixed binary — byte-identical to v7
 
 Rebuilt the full Stable-mode snapshot checkpoint chain with the post-memory-line
@@ -46,9 +88,12 @@ The watchdog also proved out (a 1 GB self-test killed cleanly in one poll interv
 
 OPEN (pre-existing, not a regression): the 2855-vs-README-3126 count. rum runs 2855
 consistently (Stable run_fast AND cold Strict run_all); 3126 is a separate upstream
-number already disputed in mma-hol `docs/dev/PLAN.md` (3124 vs 3126) — likely WK
-expanding generated/`quantNestPat` assertions more granularly or a different commit.
-A coverage-counting reconciliation against WK, NOT failures.
+number already disputed in mma-hol `docs/dev/PLAN.md` (3124 vs 3126).
+**CORRECTED 2026-06-30 (see the top entry): this was NOT just a counting
+reconciliation — 221 of the 271 gap was a REAL correctness bug** (`arith_tests.wl`
+silently aborted mid-file on the `Set[a,a]` self-fixed-point cycle error), now fixed
+in brief-051. Only the remaining ~50 is the Stable-vs-Strict / disputed-count
+reconciliation.
 
 ## 2026-06-29 Memory line Phase 1b DONE — root-set mark-sweep GC for nested/recursive modules, brief-050
 

@@ -574,12 +574,12 @@ fn eval_script_preserves_messages_emitted_before_a_later_error() {
     let mut session = Session::new();
 
     let error = session
-        .eval_script("FindFile[\"Missing`\"]\nself := self\nself")
+        .eval_script("FindFile[\"Missing`\"]\nloopA := loopB\nloopB := loopA\nloopA")
         .expect_err("expected a later evaluation error");
 
     assert!(matches!(
         error,
-        EvalError::EvaluationCycleDetected { ref expr } if expr == "self"
+        EvalError::EvaluationCycleDetected { ref expr } if expr == "loopA"
     ));
     assert!(
         session
@@ -594,7 +594,7 @@ fn get_rolls_back_loader_side_effects_and_collapses_failed_file_messages() {
     let dir = TempDirGuard::new("get-rollback");
     let file = dir.write(
         "broken.rum",
-        "$Path = {\"/tmp/rum-loader-should-roll-back\"}\nBeginPackage[\"Broken`\"]\nFindFile[\"Missing`\"]\nflag = 1\nSetAttributes[f, HoldFirst]\nself := self\nself",
+        "$Path = {\"/tmp/rum-loader-should-roll-back\"}\nBeginPackage[\"Broken`\"]\nFindFile[\"Missing`\"]\nflag = 1\nSetAttributes[f, HoldFirst]\nloopA := loopB\nloopB := loopA\nloopA",
     );
     let mut session = Session::new();
     session.set_package_search_paths([dir.path().to_path_buf()]);

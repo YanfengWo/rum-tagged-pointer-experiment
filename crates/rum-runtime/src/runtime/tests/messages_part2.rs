@@ -243,15 +243,16 @@ fn invalid_message_selector_specs_emit_runtime_messages() {
 #[test]
 fn non_loader_evaluation_errors_emit_general_messages_at_top_level() {
     let mut session = Session::new();
-    session.eval_text("self := self").unwrap();
+    session.eval_text("loopA := loopB").unwrap();
+    session.eval_text("loopB := loopA").unwrap();
 
     let error = session
-        .eval_text("self")
-        .expect_err("expected a cycle error from delayed self reference");
+        .eval_text("loopA")
+        .expect_err("expected a cycle error from mutual delayed references");
 
     assert!(matches!(
         error,
-        EvalError::EvaluationCycleDetected { ref expr } if expr == "self"
+        EvalError::EvaluationCycleDetected { ref expr } if expr == "loopA"
     ));
 
     assert_eq!(
@@ -269,9 +270,10 @@ fn non_loader_evaluation_errors_emit_general_messages_at_top_level() {
 #[test]
 fn check_can_catch_non_loader_evaluation_errors_via_general_messages() {
     let mut session = Session::new();
-    session.eval_text("self := self").unwrap();
+    session.eval_text("loopA := loopB").unwrap();
+    session.eval_text("loopB := loopA").unwrap();
 
-    let outcome = session.eval_text("Check[self, 99, General]").unwrap();
+    let outcome = session.eval_text("Check[loopA, 99, General]").unwrap();
 
     assert_eq!(outcome.value.to_string(), "99");
     assert!(
@@ -285,14 +287,15 @@ fn check_can_catch_non_loader_evaluation_errors_via_general_messages() {
 #[test]
 fn check_can_match_specific_general_error_selectors() {
     let mut session = Session::new();
-    session.eval_text("self := self").unwrap();
+    session.eval_text("loopA := loopB").unwrap();
+    session.eval_text("loopB := loopA").unwrap();
 
     let non_matching = session
-        .eval_text("Check[self, 99, \"General::reclim\"]")
+        .eval_text("Check[loopA, 99, \"General::reclim\"]")
         .expect_err("expected a cycle error when selector does not match");
     assert!(matches!(
         non_matching,
-        EvalError::EvaluationCycleDetected { ref expr } if expr == "self"
+        EvalError::EvaluationCycleDetected { ref expr } if expr == "loopA"
     ));
     assert!(
         session
@@ -302,7 +305,7 @@ fn check_can_match_specific_general_error_selectors() {
     );
 
     let matching = session
-        .eval_text("Check[self, 99, \"General::cycle\"]")
+        .eval_text("Check[loopA, 99, \"General::cycle\"]")
         .unwrap();
     assert_eq!(matching.value.to_string(), "99");
     assert!(
@@ -316,15 +319,16 @@ fn check_can_match_specific_general_error_selectors() {
 #[test]
 fn quiet_suppresses_general_error_messages_without_masking_errors() {
     let mut session = Session::new();
-    session.eval_text("self := self").unwrap();
+    session.eval_text("loopA := loopB").unwrap();
+    session.eval_text("loopB := loopA").unwrap();
 
     let error = session
-        .eval_text("Quiet[self]")
+        .eval_text("Quiet[loopA]")
         .expect_err("expected Quiet to preserve the underlying evaluation error");
 
     assert!(matches!(
         error,
-        EvalError::EvaluationCycleDetected { ref expr } if expr == "self"
+        EvalError::EvaluationCycleDetected { ref expr } if expr == "loopA"
     ));
     assert!(session.take_messages().is_empty());
 }

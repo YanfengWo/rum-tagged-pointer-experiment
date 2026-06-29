@@ -1,6 +1,35 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-06-29 (LATEST) — MEMORY LINE Phases 0/1/1b DONE; the authoritative cold
+> **2026-06-30 (LATEST) — the 2855-vs-3126 gap was a REAL correctness bug, now
+> FIXED (brief-051). Read THIS first; it corrects the "NOT failures, a counting
+> reconciliation" framing in the 2026-06-29 block below — that was WRONG.** The
+> previous session FOUND that `arith_tests.wl` truncates (rum 50, the rest silently
+> skipped) but never persisted it AND the handoff recorded the opposite ("a
+> coverage-counting question"). Re-derived + fixed this session. **Root cause:** rum
+> raised a fatal `General::cycle` / `EvaluationCycleDetected` on the benign
+> self-fixed-point `Set[a, a]` (ownvalue `a :> a`), where WK returns the symbol.
+> Because a fatal eval error inside `Get` silently aborts the rest of the file,
+> `arith_tests.wl` stopped at line 399 `nnfConv = HOL\`Auto\`Arith\`nnfConv` (a
+> PUBLIC self-alias — the bare LHS resolves through `$ContextPath` to the same
+> symbol → `Set[s,s]`), running 41/140 groups = 50/271 assertions, no FAIL, outer
+> `Scan` continued → invisible. Per-file `:::`-vs-`runTests` count proved **arith is
+> the ONLY truncated file** → this one bug = **221 of the 271** gap. **Fix:**
+> `eval_core.rs` `evaluate_symbol` short-circuits when own_value/delayed_own_value
+> RHS === the symbol (return it, no re-eval); genuine cycles (`d:=e;e:=d`) untouched.
+> 3 older `self:=self`-as-error-trigger tests re-pointed at a genuine mutual cycle;
+> new regressions lock the WK table. **GATE (verbatim):** `cargo fmt --check` clean,
+> `cargo test --workspace` green (rum_runtime 710/0), 4 rum-cli probes == WK,
+> **arith_tests.wl on v8 cp21 50→271/0/159 groups = WK gold exactly.** Residual ~50
+> of 271 is NOT truncation (all other files run complete) = the Stable-vs-Strict /
+> disputed 3124-vs-3126 reconciliation, still open, lower priority. WK-conformance
+> footnote: a genuine cycle in WK = `TerminatedEvaluation[IterationLimit]`, not a
+> hard error — rum's `General::cycle` on REAL cycles is a separate future gap.
+> Committed; tree clean. **NEXT options unchanged** from the block below (Phase 2
+> interner reclamation / Phase 3 representation / fresh perf line), plus: (a) the
+> residual ~50 cold-count reconciliation, (b) the genuine-cycle→IterationLimit
+> conformance.
+
+> **2026-06-29 — MEMORY LINE Phases 0/1/1b DONE; the authoritative cold
 > `run_all` BLOCKER is RESOLVED.** Briefs 048 (instruments `MaxMemoryUsed[]` +
 > `scripts/core-memory-microbench.sh`, `9140fd4`), 049 (Module-gensym DEFINITION GC,
 > leaf-only, `57603f8`), 050 (root-set mark-sweep GC for nested/recursive modules,
