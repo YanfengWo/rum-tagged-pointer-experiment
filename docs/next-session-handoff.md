@@ -15,7 +15,16 @@
 > upstream count (already "disputed 3124-vs-3126" in mma-hol `docs/dev/PLAN.md`) —
 > likely WK expanding generated/`quantNestPat` assertions more granularly OR a
 > different mma-hol commit. NOT failures; a coverage-counting question to reconcile
-> against WK if desired. **NEXT options:** (1) reconcile 2855-vs-3126 (cross-count
+> against WK if desired. (Fast confirmation path for that, found 2026-06-30:
+> `Get` the loaded-tower checkpoint and call the fn directly — e.g.
+> `rum-cli --eval 'Get[".../rum-snapshot-checkpoints-latest/cp21-auto_Arith_wl.mx"];
+> HOL\`Auto\`Arith\`nnfConv[...]'` — SECONDS, never cold-load; see
+> [[feedback-test-fix-from-checkpoint]].)
+> **v8 SNAPSHOT (2026-06-30):** the Stable snapshot tower was rebuilt with the
+> memory-fixed binary → `rum-snapshot-checkpoints-v8/` (cp00…cp42, all ok), and is
+> **byte-identical to v7** across all 29 checkpoints (GC correctness-neutral).
+> `rum-snapshot-checkpoints-latest` → v8. Future rebuilds: `scripts/rebuild-snapshot.sh`
+> (HEAD-tagged, one call). **NEXT options:** (1) reconcile 2855-vs-3126 (cross-count
 > a few files rum-vs-WK); (2) Phase 2 interner `&'static` reclamation (the ~100 B/
 > gensym RSS residual — now a small lever, no longer a blocker); (3) Phase 3
 > representation (the ~8x `ByteCount` factor); (4) a fresh perf line. Tree clean,

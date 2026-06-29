@@ -6,6 +6,25 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-30 v8 Stable snapshot tower rebuilt with the memory-fixed binary — byte-identical to v7
+
+Rebuilt the full Stable-mode snapshot checkpoint chain with the post-memory-line
+binary (briefs 048-050) →
+`/Users/fft/Developments/rum-snapshot-checkpoints-v8/` (cp00 base Simp + 28 extend
+steps to cp42 demos/Continuous.wl, all `ok`, ~68 min, cumulative 4076 s vs v7's
+4112 s — GC adds no load-time cost). **v8 == v7 byte-for-byte across all 29
+checkpoints** (size_bytes + num_contexts + num_names identical at every cpNN; e.g.
+cp42 5,002,496 B / 57 contexts / 3773 names in both) — confirming the Module-gensym
+GC is correctness-neutral at the snapshot level (same theorem construction, same
+definitions). v8 is the new authoritative Stable snapshot; `rum-snapshot-checkpoints-latest`
+now points at it.
+
+NEW TOOLING: `scripts/rebuild-snapshot.sh` (`e95abd4`) — one-call HEAD-tagged
+rebuild (builds the release binary, tags the output dir by git short HEAD, writes
+`rum-snapshot-checkpoints-<HEAD>/`, repoints `…-latest`). Future rebuilds use it
+(deterministic invoked tooling) instead of a remembered procedure; v8 was the last
+hand-named chain.
+
 ## 2026-06-29 MILESTONE — authoritative cold `run_all` UNBLOCKED: completes 2855/0, bounded memory
 
 The downstream validation of the memory line (Phases 0/1/1b) succeeded. The
