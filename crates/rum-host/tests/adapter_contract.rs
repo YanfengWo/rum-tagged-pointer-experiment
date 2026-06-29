@@ -105,11 +105,12 @@ fn public_contract_covers_editor_requests_and_failures() {
     assert_eq!(incomplete.status, HostCompletenessStatus::Incomplete);
     assert_eq!(incomplete.indent.as_deref(), Some("    "));
 
-    let invalid = session.is_complete("1 2");
+    // `1 2` is now valid juxtaposition (1*2) since 67a3bdc; use a still-invalid input.
+    let invalid = session.is_complete("f[1,]");
     assert_eq!(invalid.status, HostCompletenessStatus::Invalid);
     assert!(invalid.diagnostic.is_some());
 
-    match session.eval("1 2") {
+    match session.eval("f[1,]") {
         HostEvalOutcome::Failure(failure) => assert_eq!(failure.code, HostFailureCode::Syntax),
         other => panic!("expected syntax failure, got {other:?}"),
     }

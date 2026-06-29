@@ -208,7 +208,8 @@ fn is_complete_request_maps_runtime_completeness_to_kernel_shape() {
     );
     assert_eq!(incomplete.indent.as_deref(), Some("    "));
 
-    let invalid = adapter.is_complete(KernelIsCompleteRequest::new("f[1 2]"));
+    // `f[1 2]` is now valid juxtaposition (1*2) since 67a3bdc; use a still-invalid input.
+    let invalid = adapter.is_complete(KernelIsCompleteRequest::new("f[1,]"));
     assert_eq!(invalid.completion_status, KernelIsCompleteStatus::Invalid);
     assert!(invalid.indent.is_none());
 }

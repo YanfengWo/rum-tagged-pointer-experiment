@@ -181,7 +181,8 @@ fn repl_parse_command_prints_syntax_debug_output() {
 
 #[test]
 fn repl_parse_command_renders_source_diagnostic_for_bad_input() {
-    let input = Cursor::new(":parse f[1 2]\n:quit\n");
+    // `f[1 2]` is now valid juxtaposition (1*2) since 67a3bdc; use a still-invalid input.
+    let input = Cursor::new(":parse f[1,]\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
     let mut session = Session::new();
@@ -189,9 +190,9 @@ fn repl_parse_command_renders_source_diagnostic_for_bad_input() {
     repl.run(&mut session).unwrap();
 
     let rendered = String::from_utf8(output).unwrap();
-    assert!(rendered.contains("error: expected ,"));
+    assert!(rendered.contains("error: expected expression"));
     assert!(rendered.contains("--> 1:5"));
-    assert!(rendered.contains("1 | f[1 2]"));
+    assert!(rendered.contains("1 | f[1,]"));
 }
 
 #[test]
@@ -251,7 +252,8 @@ fn repl_format_command_rejects_invalid_line_width() {
 
 #[test]
 fn repl_renders_parser_diagnostics_for_regular_input_errors() {
-    let input = Cursor::new("f[1 2]\n:quit\n");
+    // `f[1 2]` is now valid juxtaposition (1*2) since 67a3bdc; use a still-invalid input.
+    let input = Cursor::new("f[1,]\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
     let mut session = Session::new();
@@ -259,7 +261,7 @@ fn repl_renders_parser_diagnostics_for_regular_input_errors() {
     repl.run(&mut session).unwrap();
 
     let rendered = String::from_utf8(output).unwrap();
-    assert!(rendered.contains("error: expected ,"));
+    assert!(rendered.contains("error: expected expression"));
     assert!(rendered.contains("--> 1:5"));
 }
 

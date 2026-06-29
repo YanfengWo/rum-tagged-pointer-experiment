@@ -85,7 +85,8 @@ fn host_parse_inspect_complete_and_is_complete_cover_editor_flows() {
 fn host_failures_use_stable_failure_codes() {
     let mut session = HostSession::new();
 
-    let outcome = session.eval("1 2");
+    // `1 2` is now valid juxtaposition (1*2) since 67a3bdc; use a still-invalid input.
+    let outcome = session.eval("f[1,]");
 
     match outcome {
         HostEvalOutcome::Failure(failure) => {

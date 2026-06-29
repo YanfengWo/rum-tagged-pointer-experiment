@@ -119,11 +119,12 @@ fn format_flag_rejects_invalid_line_width() {
 
 #[test]
 fn eval_flag_renders_source_aware_syntax_diagnostics() {
-    let output = run_cli(&["--eval", "f[1 2]"]);
+    // `f[1 2]` is now valid juxtaposition (1*2) since 67a3bdc; use a still-invalid input.
+    let output = run_cli(&["--eval", "f[1,]"]);
 
     assert!(!output.status.success());
     let stderr = stderr(&output);
-    assert!(stderr.contains("error: expected ,"));
+    assert!(stderr.contains("error: expected expression"));
     assert!(stderr.contains("--> 1:5"));
     assert!(stderr.contains("error: evaluation failed"));
 }
@@ -139,14 +140,15 @@ fn eval_flag_renders_prints_before_final_value() {
 
 #[test]
 fn file_flag_renders_source_aware_syntax_diagnostics() {
-    let file = TempFile::new("f[1 2]");
+    // `f[1 2]` is now valid juxtaposition (1*2) since 67a3bdc; use a still-invalid input.
+    let file = TempFile::new("f[1,]");
     let path = file.path().to_string_lossy().into_owned();
     let output = run_cli(&["--file", &path]);
 
     assert!(!output.status.success());
     let stderr = stderr(&output);
-    assert!(stderr.contains("error: expected ,"));
-    assert!(stderr.contains("1 | f[1 2]"));
+    assert!(stderr.contains("error: expected expression"));
+    assert!(stderr.contains("1 | f[1,]"));
     assert!(stderr.contains("error: file evaluation failed"));
 }
 
