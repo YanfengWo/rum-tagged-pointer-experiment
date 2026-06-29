@@ -6,6 +6,23 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-29 Memory-management line opened (research + plan) — `docs/memory-management-plan.md`
+
+User direction: replicate the time line's "WK parity to a constant factor" for
+MEMORY. Research done (no code). Findings: (1) `Do[Module[{x},x=i^2;x],{i,1,20000}]`
+grows `MemoryInUse` 6,002,561 B in rum vs 80 B in WK — the Module-gensym leak
+(`eval_module` allocates fresh symbols, returns with NO scope-exit cleanup; cf.
+`eval_block` which capture+restores). Two layers: definitions (reclaimable via
+`definition_clear`) + interned name (`&'static`, append-only in core/expr.rs — needs
+interner redesign). This is also the cold `run_all` 50 GB OOM cause. (2)
+`ByteCount[Range[1000]]` 66 KB vs 8 KB (~8x dense boxed-Integer vs packed array).
+(3) difftest Lane D has `--suite memory` but it is rum-LOCAL (no WK oracle);
+`MemoryInUse`/`ByteCount` are deterministic proxies that see the definition leak but
+are blind to the interner leak (RSS for the true total); `MaxMemoryUsed[]` is NOT
+implemented. Plan: Phase 0 instruments (`MaxMemoryUsed[]` + cross-engine memory
+comparator), Phase 1 sound Module-gensym definition GC, Phase 2 interner
+reclamation, Phase 3 packed-array/hash-consing. Start at Phase 0.
+
 ## 2026-06-29 Observability + tooling: streaming Print (brief-047), resource watchdog, 7 stale-test fixes, gate tightened
 
 Process work after the cold `run_all` OOM (above). All committed, workspace green.

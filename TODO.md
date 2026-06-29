@@ -8,6 +8,15 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Current Cut
 
+- [ ] **ACTIVE LINE — memory management: get rum within a constant factor of WK
+  memory across the supported `mma-hol` slice** (the analog of the time line).
+  Plan + research + calibration in
+  [docs/memory-management-plan.md](./docs/memory-management-plan.md). Start at
+  Phase 0 (implement `MaxMemoryUsed[]` + a cross-engine memory comparator); the
+  big lever is Phase 1, the Module-gensym definition GC (also the prerequisite for
+  the authoritative cold `run_all` 3126/0 gate, which OOMs at 50 GB today). Gate
+  every phase on the comparator + Lane D `--suite memory` no-regression +
+  correctness (`cargo test --workspace` + the 2855/0 corpus + `difftest check`).
 - [ ] Treat the next phase as `v0.1` kernel stabilization: correctness,
   contract boundaries, harnesses, and docs come before new same-name breadth.
   Use

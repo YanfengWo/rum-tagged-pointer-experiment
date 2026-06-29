@@ -1,5 +1,26 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
+> **2026-06-29 (LATEST) — ACTIVE LINE is now MEMORY MANAGEMENT. Read
+> `docs/memory-management-plan.md` FIRST.** User direction: after the time line hit
+> "WK parity to a constant factor" across the board, do the SAME for memory. Research
+> is DONE (no code yet); the plan doc has everything. Headline calibration:
+> `Do[Module[{x}, x=i^2; x], {i,1,20000}]` grows `MemoryInUse` by **6,002,561 B in
+> rum vs 80 B in WK** — the Module-gensym leak (WK GCs gensyms, rum never does),
+> which is ALSO why the single-process cold `run_all` OOM'd to 50 GB. `ByteCount[
+> Range[1000]]` is 66 KB vs 8 KB (~8x dense-representation constant factor).
+> **difftest answer:** Lane D HAS `--suite memory` but it is rum-LOCAL regression
+> (no WK oracle); `MemoryInUse`/`ByteCount` are deterministic structural PROXIES that
+> SEE the definition leak but are BLIND to the interner `&'static` leak (use RSS for
+> the true total); `MaxMemoryUsed[]` is NOT implemented. **Plan:** Phase 0 instruments
+> (`MaxMemoryUsed[]` + a cross-engine memory comparator mirroring
+> `core-language-microbench.sh`), Phase 1 Module-gensym DEFINITION GC (sound:
+> reclaim a gensym only when it is not in the result AND not written to a global —
+> escape via global write is the trap), Phase 2 interner reclamation, Phase 3
+> packed-array/hash-consing. **START at Phase 0** (no yardstick → no "constant
+> factor"). Key files in the plan doc (`eval_module` lexical.rs:48, memory proxy
+> debug_tools/resources/memory.rs, interner core/expr.rs:46). Tree clean, all
+> committed.
+
 > **2026-06-29 — the v7 batch-A 50-FAIL is CLOSED (brief-046, `7b0e4cd`). Read
 > THIS FIRST.** All 50 (num 12 + rat 23 + set 15) were ONE bug, not shape
 > rigidity: rum hard-holds the `MatchQ` pattern argument and, in

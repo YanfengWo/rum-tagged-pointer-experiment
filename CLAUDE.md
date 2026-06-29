@@ -98,15 +98,19 @@ from the profile before keeping a change.**
 
 ## Current direction (read these for state)
 
-- **ACTIVE LINE (2026-06-23): the correctness mainline** — drive the unmodified
-  `mma-hol-acceptance` (`200f13a`) load to "the bottom" (last theorem verifies,
-  or a hard time/space wall). Read `docs/next-session-handoff.md`'s **`2026-06-23`
-  top block** for the live state: the full ℤ→ℚ→ℝ tower + real construction loads
-  (88%, 36/41); frontier is `stdlib/Real/Seq.wl` (multi-layered; `Nothing` fixed,
-  next is a `mkComb` type mismatch). Driver: `scripts/snapshot-checkpoint-chain.sh`;
-  checkpoints in `rum-snapshot-checkpoints-v5/`. Method: rebuild fixes from the
-  checkpoint just before the earliest tainted file; patch-and-trace
-  `HOL`Auto`RealArith` functions on a restored checkpoint.
+- **ACTIVE LINE (2026-06-29): memory management** — get rum within a constant
+  factor of WK memory across the supported `mma-hol` slice (the analog of the now-
+  complete time line). Read `docs/memory-management-plan.md` (research + calibration
+  + the Phase 0-3 plan) and the `2026-06-29 (LATEST)` top block of
+  `docs/next-session-handoff.md`. Headline: Module×20000 grows `MemoryInUse` 6 MB in
+  rum vs 80 B in WK (the Module-gensym leak, also the cold `run_all` 50 GB OOM
+  cause). Start at Phase 0 (instruments: `MaxMemoryUsed[]` + a cross-engine memory
+  comparator); Phase 1 is the Module-gensym definition GC.
+- **The correctness mainline is COMPLETE for the loaded slice (2026-06-29):** the
+  full ℤ→ℚ→ℝ tower + demos load 100%, brief-046 closed the last batch-A 50 fails,
+  and the whole non-kernel test corpus is `2855/0` under `run_fast` on v7+046
+  (`run_fast` 2784/0 + `kernel_tests` cold 71/0). The authoritative cold Strict
+  `run_all` (the disputed 3126/0) is BLOCKED on the memory line (single-process OOM).
 - The **perf/representation line is PAUSED at a clean stop** (not the active
   line): `docs/representation-rewrite-plan.md` (Layer A done+gated; flaws 2-3
   refuted; hash-consing validated SOUND+~26% on Pair but DEFERRED). Deferred SAFE
