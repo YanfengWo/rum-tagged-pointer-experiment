@@ -18,14 +18,25 @@
 > `∀`; an `ab=HOL\`Terms\`abs` ownvalue indirection unevaluated in the held
 > pattern); calibrate every expected value against plain `wolframscript`.
 >
-> **So v7 batch-A is now effectively 2490/0 (all non-heavy).** NEXT options:
-> (1) **batch-B heavy provers (meson/proptaut/simp) on v7** — still never run on
-> v7, slow + some KNOWN pre-existing failures, run separately. (2) An OPTIONAL v8
-> cold rebuild (`scripts/snapshot-checkpoint-chain.sh`) to refresh the authoritative
-> snapshot with the 046 binary — LOW urgency since the fix is call-time (it does
-> NOT change theorem construction; the 50→0 was verified against the existing v7
-> cp42 snapshot with the new binary). (3) Continue the correctness mainline /
-> the deferred perf line. Tree clean, all committed.
+> **So v7 batch-A is now effectively 2490/0 (all non-heavy).** AND **batch-B heavy
+> provers were then run on v7+046 for the first time — ALL GREEN**: meson 44/0
+> (122s), proptaut 81/0 (465s), simp 46/0 (109s), meson_proveprop 69/0 (836s, was
+> historically a 300s TIMEOUT — now completes). batch-B total 240/0; the old
+> "known pre-existing failures" are GONE. **MILESTONE: the entire mma-hol test
+> corpus passes 100% on v7+046** (non-heavy ~2490/0 + heavy 240/0).
+>
+> **NEXT options (correctness corpus is now fully green; pick a new line):**
+> (1) **Deferred perf line** — heavy provers are SLOW (proptaut 465s, meson_proveprop
+> 836s) but with NO clean v7+045 baseline (heavy provers never ran on v7 pre-046),
+> so a 046-vs-045 A/B on one heavy prover is the first step IF perf is reopened; the
+> larger deferred levers are hash-consing/value-memo + bytecode VM
+> (`docs/representation-rewrite-plan.md`, [[rum-project-context]]). (2) An OPTIONAL
+> v8 cold rebuild (`scripts/snapshot-checkpoint-chain.sh`) to refresh the
+> authoritative snapshot with the 046 binary — LOW urgency (the 046 fix is
+> call-time, does NOT change theorem construction; 50→0 + batch-B were verified
+> against the existing v7 cp42 snapshot with the new binary). (3) Push the
+> correctness mainline further (more demos / next mma-hol chapters / a Strict
+> `run_all` cold-start authoritative gate). Tree clean, all committed.
 
 > **2026-06-24 (EVENING) — v7 COLD REBUILD (045 binary) + AUTHORITATIVE batch-A
 > recheck (read THIS FIRST).** After the Power/Times line (brief-043/044/045)

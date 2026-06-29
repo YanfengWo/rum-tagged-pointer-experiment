@@ -44,6 +44,16 @@ body,n]` never expanded (num/rat matched the literal, un-`Nest`ed
   batch-A 1063/0. Run against the existing v7 cp42 snapshot with the new binary
   (the fix is call-time MatchQ, not store-time theorem shape, so no snapshot
   rebuild needed for the test results).
+- **batch-B heavy provers on v7+046 (first-ever heavy run on v7) — ALL GREEN, no
+  pre-existing failures remain**: meson_tests 44/0 (122s), proptaut_tests 81/0
+  (465s), simp_tests 46/0 (109s), **meson_proveprop_tests 69/0 (836s) — this had
+  historically TIMED OUT at 300s without a summary; it now COMPLETES green**.
+  batch-B total 240/0. **Milestone: the entire mma-hol test corpus passes 100% on
+  v7+046** — non-heavy batch-A ~2490/0 + heavy batch-B 240/0. Timing: proptaut /
+  meson_proveprop are slow (no clean v7+045 baseline to A/B against — heavy provers
+  were never run on v7 before; simp is FASTER than the old 208s, and
+  meson_proveprop went from timeout→complete), so any 046-vs-045 perf delta is
+  unmeasured and belongs to the deferred perf line, not a correctness concern.
 
 ## 2026-06-24 Power/Times WK-conformance line (Codex briefs 041-045) + attribute-axis fixes + v7 cold-rebuild baseline
 
