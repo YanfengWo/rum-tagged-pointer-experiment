@@ -34,8 +34,13 @@ rather than duplicating them.
 1. **Scope check**: `git status` / `git diff` touched only the brief's
    MAY-modify list. Nothing under any `mma-hol` clone, no `Expr`/`Symbol`/serde
    shape change unless that was the Goal.
-2. **Tests**: `cargo fmt --check` and `cargo test -p rum-runtime` (or
-   `--workspace`) green.
+2. **Tests**: `cargo fmt --check` and `cargo test` green. Default to
+   `--workspace`; use the narrower `-p rum-runtime` ONLY when the change is
+   provably runtime-local. (Cost of skimping: brief-046's `-p rum-runtime`-only
+   gate missed 7 PRE-EXISTING cross-crate test failures in rum-cli/host/jupyter/
+   repl — stale `f[1 2]` syntax fixtures obsoleted by juxtaposition `67a3bdc` —
+   which only surface under `--workspace`. A green narrow gate is not a green
+   tree.)
 3. **Performance claim**: I re-run the named microbench label myself and
    confirm the before/after ratio AND that same-tier neighbors did not regress.
    I verify Codex's profiling evidence with `scripts/sample-self-time.py` /

@@ -6,7 +6,37 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
-## 2026-06-29 Matcher pattern-argument evaluation fix (brief-046) — the v7 batch-A 50-FAIL root cause, ALL 50 closed
+## 2026-06-29 Observability + tooling: streaming Print (brief-047), resource watchdog, 7 stale-test fixes, gate tightened
+
+Process work after the cold `run_all` OOM (above). All committed, workspace green.
+
+- **`scripts/guarded-test-run.sh` (`9d460f7`)** — a deterministic resource watchdog:
+  poll a guarded command's RSS / system-free / swap each interval, KILL it on
+  breach (`--rss-limit-gb`, default 40). Built because the cold `run_all` thrashed
+  to 50GB RSS for 2h undetected (only ~50% CPU was the tell). Reacts within one
+  interval; an LLM poller is too slow for the OOM reflex. Tested both paths (clean
+  completion no false-kill; low limit → BREACH+KILL in 1s). [[feedback-guard-heavy-test-runs]].
+- **brief-047 streaming Print (`53ddba7`)** — a long `rum-cli --eval`/`--file` was a
+  black box: `Print` is captured into `Session.prints` and emitted only after the
+  top-level request returns, so the log is 0 bytes until exit (app-level capture,
+  NOT OS buffering — `script`/`stdbuf` don't help; verified). Added an opt-in print
+  sink on `Session`; `push_print` streams + skips accumulation when a sink is set
+  (bounded memory); rum-cli registers a stdout-flushing sink. rum-host/jupyter set
+  no sink → `outcome.prints` unchanged. Verified live: a 5-tick fib ticker showed 2
+  ticks mid-run (was 0), 5 final. **`Pause` is NOT broken** — re-verified `Pause[3]`
+  = 3.01s; the earlier "no-op" was a timing misread (a ticker had completed from
+  elapsed wall-clock, not instant `Pause`).
+- **7 stale syntax-error tests fixed (`c189b4d`)** — `f[1 2]`/`1 2` is valid
+  juxtaposition (`Times`) since `67a3bdc`, so seven tests across rum-cli/host/
+  jupyter/repl that used them as "syntax error"/"Invalid"/"Syntax failure"
+  fixtures had been failing on `main`. Repointed to `f[1,]` (still invalid). These
+  were PRE-EXISTING failures that `cargo test -p rum-runtime` (brief-046's gate)
+  missed — only `--workspace` shows them.
+- **Gate tightened (CLAUDE.md)** — the authoritative gate now DEFAULTS to
+  `cargo test --workspace`; `-p rum-runtime` only when provably runtime-local. A
+  green narrow gate is not a green tree.
+
+
 
 The 50 open v7 batch-A failures (num 12 + rat 23 + set 15) were ONE rum bug, not
 "shape rigidity". rum hard-holds the pattern argument of `MatchQ` (and the shared
