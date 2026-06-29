@@ -387,6 +387,7 @@ impl Default for Session {
             disabled_message_selectors: Vec::new(),
             messages: Vec::new(),
             prints: Vec::new(),
+            print_sink: None,
             last_message_list: Vec::new(),
             current_message_list_checkpoint: None,
             current_message_list_dirty: false,

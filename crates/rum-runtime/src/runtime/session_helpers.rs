@@ -154,7 +154,12 @@ impl Session {
     }
 
     pub(super) fn push_print(&mut self, text: impl Into<String>) {
-        self.prints.push(text.into());
+        let text = text.into();
+        if let Some(sink) = self.print_sink.as_mut() {
+            sink(&text);
+        } else {
+            self.prints.push(text);
+        }
     }
 
     pub(super) fn runtime_message_for_non_loader_eval_error(

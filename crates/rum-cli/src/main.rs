@@ -73,6 +73,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
                 io::Error::new(io::ErrorKind::InvalidInput, "--eval expects an expression")
             })?;
 
+            install_stdout_print_sink(&mut session);
             match session.eval_request(&input) {
                 Ok(response) => print_outcome(&response),
                 Err(failure) => {
@@ -112,6 +113,7 @@ fn run_repl(session: &mut Session) -> io::Result<()> {
 }
 
 fn eval_file(session: &mut Session, path: &str) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    install_stdout_print_sink(session);
     match session.eval_file_request(path) {
         Ok(response) => {
             print_outcome(&response);
@@ -131,13 +133,19 @@ fn eval_file(session: &mut Session, path: &str) -> Result<ExitCode, Box<dyn std:
     }
 }
 
+fn install_stdout_print_sink(session: &mut Session) {
+    session.set_print_sink(Box::new(|text| {
+        use std::io::Write;
+
+        let mut out = io::stdout().lock();
+        let _ = writeln!(out, "{text}");
+        let _ = out.flush();
+    }));
+}
+
 fn print_outcome(outcome: &SessionEvalResponse) {
     for message in &outcome.messages {
         eprintln!("{}", render_runtime_message(message));
-    }
-
-    for printed in &outcome.prints {
-        println!("{printed}");
     }
 
     println!("{}", outcome.value);
@@ -146,10 +154,6 @@ fn print_outcome(outcome: &SessionEvalResponse) {
 fn print_failure_side_effects(failure: &SessionRequestFailure) {
     for message in &failure.messages {
         eprintln!("{}", render_runtime_message(message));
-    }
-
-    for printed in &failure.prints {
-        println!("{printed}");
     }
 }
 

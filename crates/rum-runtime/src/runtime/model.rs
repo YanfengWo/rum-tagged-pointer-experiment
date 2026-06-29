@@ -339,6 +339,7 @@ pub struct Session {
     pub(super) disabled_message_selectors: Vec<MessageSelector>,
     pub(super) messages: Vec<RuntimeMessage>,
     pub(super) prints: Vec<String>,
+    pub(super) print_sink: Option<Box<dyn FnMut(&str) + Send>>,
     pub(super) last_message_list: Vec<RuntimeMessage>,
     pub(super) current_message_list_checkpoint: Option<usize>,
     pub(super) current_message_list_dirty: bool,
@@ -355,6 +356,16 @@ pub struct Session {
     pub(super) pending_input_request: Option<RuntimeInputRequest>,
     pub(super) pending_eval_request: Option<PendingEvalRequest>,
     pub(super) pending_suspension: Option<SuspendedEvaluation>,
+}
+
+impl Session {
+    pub fn set_print_sink(&mut self, sink: Box<dyn FnMut(&str) + Send>) {
+        self.print_sink = Some(sink);
+    }
+
+    pub fn clear_print_sink(&mut self) {
+        self.print_sink = None;
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
