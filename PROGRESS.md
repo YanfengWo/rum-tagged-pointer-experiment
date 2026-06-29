@@ -6,6 +6,31 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-29 MILESTONE — authoritative cold `run_all` UNBLOCKED: completes 2855/0, bounded memory
+
+The downstream validation of the memory line (Phases 0/1/1b) succeeded. The
+single-process cold Strict `run_all.wls` from the acceptance-clone source
+(`/Users/fft/Developments/mma-hol-acceptance`, HEAD `200f13a`), run under
+`scripts/guarded-test-run.sh --rss-limit-gb 40`, **completed on its own (exit 0)**:
+~113 min, **peak RSS 12.29 GB** (median 6.63 GB — load phase ~6.6 GB, post-bootstrap
+heavy-prover test phase ~12.3 GB, plateaued, 100% CPU throughout, no swap-thrash).
+Previously this was INFEASIBLE (pre-Phase-1 it OOM'd toward 50 GB; with Phase 1 only
+it still hit 41 GB and was watchdog-killed at 25 min — the nested/recursive
+definition leak). Phase 1b's mark-sweep bounded it.
+
+All **39 test files** ran (1 pre-bootstrap `kernel_tests` + 38 post-bootstrap,
+incl. the 4 heavy provers `meson`/`meson_proveprop`/`proptaut`/`simp` and the full
+real-analysis tower) → **`passed: 2855, failed: 0`**. This EQUALS the pre-memory-line
+clean count (run_fast 2784 + kernel_tests 71 = 2855), confirming the GC is
+correctness-neutral while making the authoritative single-process gate feasible.
+The watchdog also proved out (a 1 GB self-test killed cleanly in one poll interval).
+
+OPEN (pre-existing, not a regression): the 2855-vs-README-3126 count. rum runs 2855
+consistently (Stable run_fast AND cold Strict run_all); 3126 is a separate upstream
+number already disputed in mma-hol `docs/dev/PLAN.md` (3124 vs 3126) — likely WK
+expanding generated/`quantNestPat` assertions more granularly or a different commit.
+A coverage-counting reconciliation against WK, NOT failures.
+
 ## 2026-06-29 Memory line Phase 1b DONE — root-set mark-sweep GC for nested/recursive modules, brief-050
 
 Phase 1 (leaf-only) was too conservative for the real prover workload: cold

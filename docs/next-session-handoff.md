@@ -1,6 +1,27 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-06-29 (LATEST) — ACTIVE LINE is now MEMORY MANAGEMENT. Read
+> **2026-06-29 (LATEST) — MEMORY LINE Phases 0/1/1b DONE; the authoritative cold
+> `run_all` BLOCKER is RESOLVED.** Briefs 048 (instruments `MaxMemoryUsed[]` +
+> `scripts/core-memory-microbench.sh`, `9140fd4`), 049 (Module-gensym DEFINITION GC,
+> leaf-only, `57603f8`), 050 (root-set mark-sweep GC for nested/recursive modules,
+> `ab5d003`). The single-process cold Strict `run_all.wls` from the acceptance-clone
+> source — previously INFEASIBLE (OOM'd to 50 GB / watchdog-killed at 41 GB) — now
+> **COMPLETES under `scripts/guarded-test-run.sh` in ~113 min, peak RSS 12.3 GB
+> (median 6.6 GB, bounded, no thrash), all 39 test files incl. the 4 heavy provers,
+> = 2855 passed / 0 failed.** The mark-sweep is correctness-neutral (2855/0 ==
+> the pre-memory-line clean count: run_fast 2784 + kernel_tests 71) AND bounded the
+> memory. **OPEN: the 2855-vs-3126 reconciliation.** rum runs 2855 assertions
+> consistently (Stable run_fast AND cold Strict); the README's 3126 is a separate
+> upstream count (already "disputed 3124-vs-3126" in mma-hol `docs/dev/PLAN.md`) —
+> likely WK expanding generated/`quantNestPat` assertions more granularly OR a
+> different mma-hol commit. NOT failures; a coverage-counting question to reconcile
+> against WK if desired. **NEXT options:** (1) reconcile 2855-vs-3126 (cross-count
+> a few files rum-vs-WK); (2) Phase 2 interner `&'static` reclamation (the ~100 B/
+> gensym RSS residual — now a small lever, no longer a blocker); (3) Phase 3
+> representation (the ~8x `ByteCount` factor); (4) a fresh perf line. Tree clean,
+> all committed.
+
+> **2026-06-29 — ACTIVE LINE is now MEMORY MANAGEMENT. Read
 > `docs/memory-management-plan.md` FIRST.** User direction: after the time line hit
 > "WK parity to a constant factor" across the board, do the SAME for memory. Research
 > is DONE (no code yet); the plan doc has everything. Headline calibration:
