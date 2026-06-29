@@ -6,6 +6,49 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-29 Memory line Phase 1 DONE — Module-gensym DEFINITION GC (the ~6 MB leak), brief-049
+
+The dominant leak is FIXED. `Module` now reclaims its gensyms' definitions at
+scope exit when provably safe, via a conservative per-activation escape barrier:
+a `module_activations` stack (gensyms + `escaped` flag + a side-table size stamp);
+the `escaped` flag is tripped by (a) `bump_evaluation_epoch_for_symbol` for any
+write to a non-own-gensym symbol — the universal definition-write hook, covering
+Set/SetDelayed/TagSet/UpSet/Unset/etc. — and (b) the options/syntax/message keyed
+setters; the append-only channels (Once/Sow/Monitor/OptionValue/dynamic) are caught
+by the side-table stamp comparison. At a clean (`Ok`, non-escaped) exit,
+`finish_module_scope` retains the gensyms reachable from the result (transitive
+closure over the activation's own gensyms via `definition_references_symbol`) and
+reclaims the rest with `clear_symbol_state` (NOT `remove_symbol_state`, which would
+just move the leak into `removed_symbols`). The activation lifetime is threaded
+suspend-safely through `resume_module_initializers` mirroring `eval_block`
+(`suspend_with_result_frame` + `resume_module_after_initializer` + `finish_module_scope`,
+each handling `InputRequired`/`Err`). SOUND BY DESIGN: any escape (result, global
+write, options/message/syntax, Sow/Once/Monitor, nesting, or an `Err`/`Throw`
+outcome) → retain all = today's behavior. Only "leaf" modules using just their own
+locals reclaim — exactly the dominant loop-local leak.
+
+Two deviations from the brief, both accepted as correct refinements Codex found:
+(1) `module_activations` IS added to the in-memory `EvaluationRollbackSnapshot`
+(session_helpers.rs) — necessary so a `Check`/rollback keeps the activation stack
+consistent with the rolled-back eval state (NOT the bootstrap.mx serde snapshot,
+which is untouched); (2) Codex's stray `TODO.md` edit was reverted by me (out of
+my brief's scope; TODO.md is mine).
+
+Gate (verbatim, re-run by me): `cargo fmt --check` clean; `cargo test --workspace`
+**1157/0** (+6 new soundness tests). Comparator headline: `module-leak-20000` rum
+`MemoryInUse` delta **5,966,099 B → 293 B** (WK -80 B) — the ~6 MB definition leak
+is gone. `retain-range-*` unchanged at 8.11x/8.25x (representation = Phase 3, not
+touched). 7 soundness smokes + 5 complex HOL patterns (closures, recursion, nested,
+global-def, fixpoint loop) all return the WK-correct value, never an `x$N`.
+**Phase-2 residual IS visible and expected:** `module-leak-20000` rum peak-RSS
+delta is still ~5 MB — the symbol-interner `&'static` name strings (`x$1..x$20000`)
+are never freed (the proxy is blind to them; RSS sees them). That is exactly the
+Phase 2 (interner reclamation) target. No hot-path regression (non-module
+microbench labels — literal-integer/set-ownvalue/symbol-read — unaffected by
+design via the `is_empty()` guard; the per-Module GC cost is the intended trade).
+NEXT: Phase 2 interner reclamation (the ~5 MB RSS residual) or re-attempt the
+authoritative cold `run_all` now that the definition leak is bounded.
+
 ## 2026-06-29 Memory line Phase 0 DONE — instruments (`MaxMemoryUsed[]` + cross-engine comparator), brief-048
 
 Built the memory-line yardstick (the analog of `core-language-microbench.sh` for

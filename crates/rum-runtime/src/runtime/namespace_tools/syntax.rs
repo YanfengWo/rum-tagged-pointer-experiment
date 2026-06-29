@@ -33,6 +33,7 @@ impl Session {
         symbol: Symbol,
         syntax: Expr,
     ) {
+        self.note_active_modules_escaped();
         if syntax == default_system_syntax_information(&symbol) {
             self.syntax_information.remove(&symbol);
         } else {

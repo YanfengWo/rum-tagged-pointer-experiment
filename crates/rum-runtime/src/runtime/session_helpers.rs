@@ -4,6 +4,7 @@ use std::time::Instant;
 pub(super) struct EvaluationRollbackSnapshot {
     loader: LoaderSnapshot,
     option_value_scopes: Vec<OptionValueScope>,
+    module_activations: Vec<ModuleActivation>,
     load_stack: Vec<PathBuf>,
     evaluation_depth: usize,
     evaluation_stack: Vec<EvaluationStackEntry>,
@@ -80,6 +81,7 @@ impl Session {
         EvaluationRollbackSnapshot {
             loader: self.capture_loader_snapshot(),
             option_value_scopes: self.option_value_scopes.clone(),
+            module_activations: self.module_activations.clone(),
             load_stack: self.load_stack.clone(),
             evaluation_depth: self.evaluation_depth,
             evaluation_stack: self.evaluation_stack.clone(),
@@ -106,6 +108,7 @@ impl Session {
     ) {
         self.restore_loader_snapshot(snapshot.loader);
         self.option_value_scopes = snapshot.option_value_scopes;
+        self.module_activations = snapshot.module_activations;
         self.load_stack = snapshot.load_stack;
         self.evaluation_depth = snapshot.evaluation_depth;
         self.evaluation_stack = snapshot.evaluation_stack;

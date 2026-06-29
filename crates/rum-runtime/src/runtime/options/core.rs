@@ -28,6 +28,7 @@ impl Session {
         symbol: Symbol,
         options: SymbolOptions,
     ) {
+        self.note_active_modules_escaped();
         let default = default_system_options(&symbol);
 
         if options == default {

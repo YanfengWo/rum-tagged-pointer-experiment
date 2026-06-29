@@ -86,7 +86,13 @@ the cross-engine memory comparator (same workload in rum + WK, report the
 WK's ~80 B. Gate every later phase on this comparator + Lane D no-regression +
 correctness (`cargo test --workspace` + the 2855/0 corpus + `difftest check`).
 
-**Phase 1 — Module-gensym DEFINITION GC (the O(N)→O(1) win, lever 1a).** On Module
+**Phase 1 — Module-gensym DEFINITION GC (the O(N)→O(1) win, lever 1a). [DONE
+2026-06-29, brief-049.]** Landed: per-activation escape barrier + suspend-safe
+`finish_module_scope` reclamation via `clear_symbol_state`. `module-leak-20000` rum
+`MemoryInUse` delta dropped **5,966,099 B → 293 B** (WK -80 B); `cargo test
+--workspace` 1157/0; conservative (leaf-only, retain on any escape). The ~5 MB RSS
+residual it leaves is the interner name leak = Phase 2. Original plan text follows.
+On Module
 exit, for each gensym it created, remove its definitions — but ONLY when it is
 provably dead: it does NOT appear in the `result` AND the body did NOT write it into
 any global definition. Conservatively retain anything that escaped to a global

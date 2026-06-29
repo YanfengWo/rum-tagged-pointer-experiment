@@ -67,6 +67,7 @@ impl Session {
     }
 
     pub(super) fn define_message(&mut self, key: MessageNameKey, value: Expr, delayed: bool) {
+        self.note_active_modules_escaped();
         if !self.message_definitions.contains_key(&key) {
             *self.message_symbol_counts.entry(key.symbol).or_insert(0) += 1;
         }

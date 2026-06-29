@@ -221,6 +221,22 @@ pub(super) struct MessageDefinition {
     pub(super) delayed: Option<Expr>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct ModuleActivation {
+    pub(super) gensyms: Vec<Symbol>,
+    pub(super) escaped: bool,
+    pub(super) side_table_stamp: SideTableStamp,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct SideTableStamp {
+    pub(super) once_values: usize,
+    pub(super) monitor_scopes: usize,
+    pub(super) option_value_scopes: usize,
+    pub(super) dynamic_own_values: usize,
+    pub(super) reap_bucket_values: usize,
+}
+
 impl fmt::Display for RuntimeMessage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}::{}: {}", self.symbol, self.tag, self.text)
@@ -319,6 +335,7 @@ pub struct Session {
     pub(super) once_values: BTreeMap<String, Expr>,
     pub(super) option_value_scopes: Vec<OptionValueScope>,
     pub(super) dynamic_own_values: Vec<DynamicOwnValueFrame>,
+    pub(super) module_activations: Vec<ModuleActivation>,
     pub(super) current_context: String,
     pub(super) context_path: Vec<String>,
     pub(super) context_stack: Vec<ContextFrame>,
@@ -366,6 +383,32 @@ impl Session {
 
     pub fn clear_print_sink(&mut self) {
         self.print_sink = None;
+    }
+
+    pub(in crate::runtime) fn current_side_table_stamp(&self) -> SideTableStamp {
+        SideTableStamp {
+            once_values: self.once_values.len(),
+            monitor_scopes: self.monitor_scopes.len(),
+            option_value_scopes: self.option_value_scopes.len(),
+            dynamic_own_values: self.dynamic_own_values.len(),
+            reap_bucket_values: self
+                .reap_scopes
+                .iter()
+                .flat_map(|scope| scope.buckets_by_pattern.iter())
+                .flat_map(|buckets| buckets.iter())
+                .map(|bucket| bucket.values.len())
+                .sum(),
+        }
+    }
+
+    pub(in crate::runtime) fn note_active_modules_escaped(&mut self) {
+        if self.module_activations.is_empty() {
+            return;
+        }
+
+        for activation in &mut self.module_activations {
+            activation.escaped = true;
+        }
     }
 }
 

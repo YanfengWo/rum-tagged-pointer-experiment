@@ -293,6 +293,26 @@ pub(super) fn expr_contains_symbol(expr: &Expr, target: &Symbol) -> bool {
     }
 }
 
+pub(super) fn definition_references_symbol(definition: &SymbolDefinition, target: &Symbol) -> bool {
+    definition
+        .own_value
+        .as_ref()
+        .is_some_and(|value| expr_contains_symbol(value, target))
+        || definition
+            .delayed_own_value
+            .as_ref()
+            .is_some_and(|value| expr_contains_symbol(value, target))
+        || definition.up_values.iter().any(|value| {
+            expr_contains_symbol(&value.lhs, target) || expr_contains_symbol(&value.rhs, target)
+        })
+        || definition.down_values.iter().any(|value| {
+            expr_contains_symbol(&value.lhs, target) || expr_contains_symbol(&value.rhs, target)
+        })
+        || definition.sub_values.iter().any(|value| {
+            expr_contains_symbol(&value.lhs, target) || expr_contains_symbol(&value.rhs, target)
+        })
+}
+
 pub(super) fn collect_upvalue_candidate_symbols(args: &[Expr]) -> Vec<Symbol> {
     let mut symbols = Vec::new();
 

@@ -84,8 +84,21 @@ impl Session {
         }
         record_profile_runtime_path_timing(runtime_profile_allocate, RuntimeProfileOutcome::Ok);
 
+        let gensyms: Vec<Symbol> = renames
+            .values()
+            .filter_map(|expr| expr_as_symbol(expr).cloned())
+            .collect();
+        let activation_depth = self.module_activations.len();
+        let side_table_stamp = self.current_side_table_stamp();
+        self.module_activations.push(ModuleActivation {
+            gensyms,
+            escaped: false,
+            side_table_stamp,
+        });
+
         let runtime_profile_total = runtime_path_timing_start("module.eval.total");
-        let result = self.resume_module_initializers(items, args[1].clone(), renames, 0);
+        let result =
+            self.resume_module_initializers(items, args[1].clone(), renames, activation_depth, 0);
         record_profile_eval_module(profile_start);
         record_profile_eval_module_by_source(eval_cache_profile_start);
         record_profile_runtime_path_timing(
@@ -386,6 +399,7 @@ impl Session {
         items: Vec<(Symbol, Option<Expr>)>,
         body: Expr,
         renames: SymbolExprMap,
+        activation_depth: usize,
         index: usize,
     ) -> Result<Expr, EvalError> {
         let runtime_profile_resume = runtime_path_timing_start("module.resume_initializers");
@@ -403,6 +417,16 @@ impl Session {
                 runtime_profile_body,
                 runtime_profile_outcome_for_expr_result(&result),
             );
+            let outcome = self.suspend_with_result_frame(result, move |session, outcome| {
+                session.finish_module_scope(activation_depth, outcome)
+            });
+
+            let result = match outcome {
+                Err(EvalError::InputRequired { request }) => {
+                    Err(EvalError::InputRequired { request })
+                }
+                outcome => self.finish_module_scope(activation_depth, outcome),
+            };
             record_profile_runtime_path_timing(
                 runtime_profile_resume,
                 runtime_profile_outcome_for_expr_result(&result),
@@ -424,25 +448,71 @@ impl Session {
                 runtime_profile_init,
                 runtime_profile_outcome_for_expr_result(&init_result),
             );
-            let outcome = self.suspend_with_frame_lazy(init_result, || {
+            let outcome = self.suspend_with_result_frame_lazy(init_result, || {
                 let items = items.clone();
                 let body = body.clone();
                 let renames = renames.clone();
                 let symbol = symbol.clone();
-                move |session, value| {
-                    session.store_module_initializer_value(&renames, &symbol, value);
-                    session.resume_module_initializers(items, body, renames, index + 1)
+                move |session, outcome| {
+                    session.resume_module_after_initializer(
+                        items,
+                        body,
+                        renames,
+                        activation_depth,
+                        index,
+                        symbol,
+                        outcome,
+                    )
                 }
-            })?;
-            self.store_module_initializer_value(&renames, &symbol, outcome);
+            });
+
+            let result = match outcome {
+                Err(EvalError::InputRequired { request }) => {
+                    Err(EvalError::InputRequired { request })
+                }
+                outcome => self.resume_module_after_initializer(
+                    items,
+                    body,
+                    renames,
+                    activation_depth,
+                    index,
+                    symbol,
+                    outcome,
+                ),
+            };
+            record_profile_runtime_path_timing(
+                runtime_profile_resume,
+                runtime_profile_outcome_for_expr_result(&result),
+            );
+            return result;
         }
 
-        let result = self.resume_module_initializers(items, body, renames, index + 1);
+        let result =
+            self.resume_module_initializers(items, body, renames, activation_depth, index + 1);
         record_profile_runtime_path_timing(
             runtime_profile_resume,
             runtime_profile_outcome_for_expr_result(&result),
         );
         result
+    }
+
+    fn resume_module_after_initializer(
+        &mut self,
+        items: Vec<(Symbol, Option<Expr>)>,
+        body: Expr,
+        renames: SymbolExprMap,
+        activation_depth: usize,
+        index: usize,
+        symbol: Symbol,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) => {
+                self.store_module_initializer_value(&renames, &symbol, value);
+                self.resume_module_initializers(items, body, renames, activation_depth, index + 1)
+            }
+            Err(error) => self.finish_module_scope(activation_depth, Err(error)),
+        }
     }
 
     fn store_module_initializer_value(
@@ -462,6 +532,68 @@ impl Session {
         definition.own_value = Some(value);
         definition.delayed_own_value = None;
         self.bump_evaluation_epoch_for_symbol(&fresh_symbol);
+    }
+
+    fn finish_module_scope(
+        &mut self,
+        activation_depth: usize,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        let activation = self.module_activations[activation_depth].clone();
+        let escaped =
+            activation.escaped || self.current_side_table_stamp() != activation.side_table_stamp;
+
+        let mut reclaim = Vec::new();
+        if let Ok(result) = &outcome {
+            if !escaped {
+                let mut retained: BTreeSet<Symbol> = activation
+                    .gensyms
+                    .iter()
+                    .filter(|gensym| expr_contains_symbol(result, gensym))
+                    .cloned()
+                    .collect();
+
+                loop {
+                    let retained_snapshot: Vec<Symbol> = retained.iter().cloned().collect();
+                    let mut grew = false;
+
+                    for retained_gensym in retained_snapshot {
+                        let Some(definition) = self.definitions.get(&retained_gensym) else {
+                            continue;
+                        };
+
+                        for gensym in &activation.gensyms {
+                            if retained.contains(gensym) {
+                                continue;
+                            }
+
+                            if definition_references_symbol(definition, gensym) {
+                                retained.insert(gensym.clone());
+                                grew = true;
+                            }
+                        }
+                    }
+
+                    if !grew {
+                        break;
+                    }
+                }
+
+                reclaim = activation
+                    .gensyms
+                    .iter()
+                    .filter(|gensym| !retained.contains(*gensym))
+                    .cloned()
+                    .collect();
+            }
+        }
+
+        self.module_activations.truncate(activation_depth);
+        for gensym in reclaim {
+            self.clear_symbol_state(&gensym, true, true, true, true, true);
+        }
+
+        outcome
     }
 
     fn resume_block_initializers(

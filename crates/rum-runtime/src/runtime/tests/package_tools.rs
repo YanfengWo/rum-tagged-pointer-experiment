@@ -243,12 +243,12 @@ End[]
         )
         .unwrap();
 
-    let leaked_names = session
+    let generated_names = session
         .eval_text("Names[\"Sandbox`*$*\"]")
         .unwrap()
         .value
         .to_string();
-    assert!(contains_module_gensym_marker(&leaked_names));
+    assert!(!contains_module_gensym_marker(&generated_names));
 
     session
         .eval_text(&format!(
