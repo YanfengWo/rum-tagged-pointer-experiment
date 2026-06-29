@@ -114,6 +114,7 @@ mod polynomials;
 mod predicates;
 mod predicates_part2;
 mod print_sink;
+mod scoping_gensym_gc;
 mod scoping_unique;
 mod session_config;
 mod session_requests;

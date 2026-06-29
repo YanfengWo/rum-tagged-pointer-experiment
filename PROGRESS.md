@@ -6,6 +6,48 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-29 Memory line Phase 1b DONE — root-set mark-sweep GC for nested/recursive modules, brief-050
+
+Phase 1 (leaf-only) was too conservative for the real prover workload: cold
+`run_all` STILL ballooned to 41 GB (watchdog-killed at 40 GB) during the cold tower
+load, because that load is deeply nested/recursive Module/tactic code where Phase 1's
+escape barrier marks the OUTER activation escaped on any inner-gensym write →
+nested modules reclaim ~nothing. Measured: recursive `f[50]` grows `MemoryInUse`
+linearly (~291 B/activation: 29 MB at 100k acts, 145 MB at 500k). RSS marginal
+~1.3 KB/act (the proxy undercounts; the rest is real allocator cost of the SAME
+definitions — so reclaiming the definition frees the bulk of RSS, interner residual
+~100 B/act = Phase 2).
+
+Implemented a threshold-triggered root-set mark-sweep (`scoping/gensym_gc.rs`):
+escaped/retained gensyms go into a `gc_candidate_gensyms` registry at module exit;
+when it crosses `RUM_GENSYM_GC_THRESHOLD` (default 200k), `collect_and_sweep_dead_gensyms`
+marks every gensym reachable from the live root set and reclaims (via
+`clear_symbol_state`) the unreachable ones. SOUND BY CONSTRUCTION (real reachability,
+not a heuristic) → handles nesting/recursion. Three soundness pillars: (1) the MARK
+is authoritative, the registry only bounds what's checked (so it is NOT in the
+rollback snapshot — stale entry = no-op clear, missing entry = sound non-reclaim);
+(2) ALL active-module gensyms (`module_activations`) are seeded live — this covers
+gensyms captured in the un-walkable native suspend/resume continuation closures
+(they belong to modules not yet finished → on the activation stack); (3) the root
+walk `for_each_root_expr` covers every Expr-holding Session field (I audited it
+against `current_memory_proxy_bytes` AND beyond — Codex correctly added
+`dynamic_own_values`, which the proxy itself omits, and `ReapBucket.tag`; verified
+`pending_eval_request` carries no Expr). `gensym_gc_extra_roots_for_outcome` also
+roots Return/Throw payloads+tags. `in_gensym_sweep` guard stops the sweep's own
+clears from re-tripping escape flags.
+
+Gate (re-run by me): `cargo test --workspace` **1162/0** (+5 mark-sweep tests).
+Bounded-memory PLATEAU confirmed (`RUM_GENSYM_GC_THRESHOLD=20000`): recursive
+`f[50]` `MemoryInUse` delta = 5.3 MB / 3.0 MB / **498 B** at 100k / 500k / **2M**
+activations — bounded by ~threshold, NOT linear (would be ~580 MB without the sweep).
+All soundness smokes WK-correct incl. `RUM_GENSYM_GC_THRESHOLD=1` (sweep after EVERY
+module exit, mid-recursion) → `f[50]=50` and Do-loop sums = 2870 identical to default
+(the `Sum[i^2,…]` "unevaluated" result was a pre-existing rum Sum limitation,
+threshold-independent — NOT a sweep bug). Comparator leaf/representation rows
+unchanged (module-leak 293 B, retain-range 8.11x/8.25x). DOWNSTREAM VALIDATION IN
+FLIGHT: re-running cold `run_all` under the watchdog with the mark-sweep to confirm
+the cold load now stays bounded (was 41 GB-and-climbing); result to be logged.
+
 ## 2026-06-29 Memory line Phase 1 DONE — Module-gensym DEFINITION GC (the ~6 MB leak), brief-049
 
 The dominant leak is FIXED. `Module` now reclaims its gensyms' definitions at

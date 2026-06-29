@@ -253,6 +253,10 @@ impl Session {
 
         self.record_symbol_stability_write(symbol, location);
 
+        if self.in_gensym_sweep {
+            return;
+        }
+
         if !self.module_activations.is_empty() {
             for activation in &mut self.module_activations {
                 if !activation.gensyms.contains(symbol) {

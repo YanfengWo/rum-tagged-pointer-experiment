@@ -368,6 +368,8 @@ impl Default for Session {
             option_value_scopes: Vec::new(),
             dynamic_own_values: Vec::new(),
             module_activations: Vec::new(),
+            gc_candidate_gensyms: std::collections::HashSet::new(),
+            in_gensym_sweep: false,
             current_context: GLOBAL_CONTEXT.to_string(),
             context_path: vec![SYSTEM_CONTEXT.to_string(), GLOBAL_CONTEXT.to_string()],
             context_stack: Vec::new(),

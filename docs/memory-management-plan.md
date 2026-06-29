@@ -97,7 +97,15 @@ exit, for each gensym it created, remove its definitions — but ONLY when it is
 provably dead: it does NOT appear in the `result` AND the body did NOT write it into
 any global definition. Conservatively retain anything that escaped to a global
 (correct but un-reclaimed, = today). This safely captures the dominant
-"Module-in-a-loop using only its own locals" leak. SOUNDNESS IS THE RED LINE — a
+"Module-in-a-loop using only its own locals" leak. **[Phase 1b DONE 2026-06-29, brief-050]** The leaf-only barrier proved too
+conservative for the nested/recursive prover workload (cold `run_all` still hit
+41 GB), so the "Optional completeness follow-up" below was implemented: a
+threshold-triggered root-set mark-sweep (`scoping/gensym_gc.rs`) reclaims
+escaped-then-dead gensyms by real reachability. Plateau verified (recursive `f[50]`
+bounded to ~threshold, 498 B at 2M activations vs 580 MB without). Sound: active-module
+gensyms seeded live (covers continuation captures), root walk covers every
+Expr-holding field. The original Phase 1 text follows.
+SOUNDNESS IS THE RED LINE — a
 gensym can escape via a global write (`Module[{x}, x=5; glob=...x...; Null]` returns
 a result without `x$N` yet `glob` references it), so "not in result" alone is
 UNSAFE; track "wrote a global during the body" as the escape signal. Optional

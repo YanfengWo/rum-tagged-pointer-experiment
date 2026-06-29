@@ -336,6 +336,8 @@ pub struct Session {
     pub(super) option_value_scopes: Vec<OptionValueScope>,
     pub(super) dynamic_own_values: Vec<DynamicOwnValueFrame>,
     pub(super) module_activations: Vec<ModuleActivation>,
+    pub(super) gc_candidate_gensyms: std::collections::HashSet<Symbol>,
+    pub(super) in_gensym_sweep: bool,
     pub(super) current_context: String,
     pub(super) context_path: Vec<String>,
     pub(super) context_stack: Vec<ContextFrame>,
