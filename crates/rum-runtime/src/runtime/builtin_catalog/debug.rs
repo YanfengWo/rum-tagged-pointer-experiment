@@ -103,6 +103,11 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
         "Returns the current session memory-proxy byte count subset.",
         BuiltinHandler::MemoryInUse,
     ),
+    BuiltinSpec::ordinary(
+        "MaxMemoryUsed",
+        "Returns the peak session memory-proxy byte count high-water mark subset.",
+        BuiltinHandler::MaxMemoryUsed,
+    ),
     BuiltinSpec::ordinary_with_hold(
         "Monitor",
         "Evaluates an expression while exposing the current first-pass monitor display and callback subset.",

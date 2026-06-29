@@ -74,7 +74,11 @@ AND the prerequisite for the authoritative cold gate.
 
 ## The plan (measure-gated, mirrors the time line's discipline)
 
-**Phase 0 — instruments first (no optimization).** Implement `MaxMemoryUsed[]`
+**Phase 0 — instruments first (no optimization). [DONE 2026-06-29, brief-048.]**
+`MaxMemoryUsed[]` and `scripts/core-memory-microbench.sh` landed; the comparator
+reproduces this doc's calibration (`module-leak-20000` rum 5,966,099 B vs WK -80 B;
+`retain-range-*` rum/WK 8.11x–8.25x). Baseline frozen — Phase 1 gates against it.
+The original plan text follows. Implement `MaxMemoryUsed[]`
 (peak memory; track a high-water mark in the proxy + optionally real RSS). Build
 the cross-engine memory comparator (same workload in rum + WK, report the
 {proxy-delta, RSS-delta, MaxMemoryUsed} ratios). Freeze a baseline (Lane D

@@ -340,6 +340,7 @@ pub struct Session {
     pub(super) messages: Vec<RuntimeMessage>,
     pub(super) prints: Vec<String>,
     pub(super) print_sink: Option<Box<dyn FnMut(&str) + Send>>,
+    pub(super) peak_memory_proxy_bytes: std::cell::Cell<usize>,
     pub(super) last_message_list: Vec<RuntimeMessage>,
     pub(super) current_message_list_checkpoint: Option<usize>,
     pub(super) current_message_list_dirty: bool,

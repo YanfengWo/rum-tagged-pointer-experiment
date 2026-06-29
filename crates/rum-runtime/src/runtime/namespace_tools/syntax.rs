@@ -183,7 +183,9 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
                 ]),
             ),
         ],
-        "MemoryInUse" | "Stack" => vec![syntax_argument_pattern(Vec::new())],
+        "MemoryInUse" | "MaxMemoryUsed" | "Stack" => {
+            vec![syntax_argument_pattern(Vec::new())]
+        }
         "Monitor" => vec![
             syntax_argument_pattern(vec![
                 blank_expr(),

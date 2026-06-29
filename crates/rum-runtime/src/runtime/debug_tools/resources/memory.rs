@@ -29,6 +29,22 @@ impl Session {
         )))
     }
 
+    pub(in crate::runtime) fn eval_max_memory_used(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !args.is_empty() {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
+
+        // Sample the current proxy, then return the session high-water mark.
+        let _ = self.current_memory_proxy_bytes();
+        Ok(Expr::integer(BigInt::from(
+            self.peak_memory_proxy_bytes.get() as u64,
+        )))
+    }
+
     pub(in crate::runtime::debug_tools::resources) fn current_memory_proxy_bytes(&self) -> usize {
         let mut total = std::mem::size_of::<Session>();
 
@@ -231,6 +247,8 @@ impl Session {
         );
         total = total.saturating_add(std::mem::size_of::<ResourceLimits>());
 
+        let peak = self.peak_memory_proxy_bytes.get().max(total);
+        self.peak_memory_proxy_bytes.set(peak);
         total
     }
 }

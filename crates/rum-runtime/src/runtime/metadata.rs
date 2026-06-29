@@ -549,6 +549,7 @@ pub enum BuiltinHandler {
     TimeConstrained,
     MemoryConstrained,
     MemoryInUse,
+    MaxMemoryUsed,
     Monitor,
     EvaluationData,
     RumProfileReset,

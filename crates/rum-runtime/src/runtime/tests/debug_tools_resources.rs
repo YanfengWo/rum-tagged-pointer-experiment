@@ -206,6 +206,61 @@ fn memory_in_use_accounts_for_removed_symbol_identity_state() {
 }
 
 #[test]
+fn max_memory_used_tracks_session_memory_proxy_high_water_mark() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("IntegerQ[MaxMemoryUsed[]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    let initial = session.eval_text("MaxMemoryUsed[]").unwrap().value;
+    assert!(initial.to_string().parse::<usize>().unwrap() > 0);
+
+    assert_eq!(
+        session
+            .eval_text("MaxMemoryUsed[] >= MemoryInUse[]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+
+    let before = session.eval_text("MaxMemoryUsed[]").unwrap().value;
+    session.eval_text("Do[gmem[i] = i, {i, 1, 300}]").unwrap();
+    let after = session.eval_text("MaxMemoryUsed[]").unwrap().value;
+    assert_eq!(
+        session
+            .evaluate(Expr::call(
+                system_expr("GreaterEqual"),
+                vec![after.clone(), before.clone()]
+            ))
+            .unwrap()
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .evaluate(Expr::call(system_expr("Greater"), vec![after, before]))
+            .unwrap()
+            .to_string(),
+        "True"
+    );
+
+    assert_eq!(
+        session
+            .eval_text("MaxMemoryUsed[x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "MaxMemoryUsed[x]"
+    );
+}
+
+#[test]
 fn time_and_memory_constraints_cover_current_first_pass_resource_subset() {
     let mut session = Session::new();
 

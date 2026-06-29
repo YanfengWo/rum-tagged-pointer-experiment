@@ -113,6 +113,7 @@ impl Session {
             BuiltinHandler::TimeConstrained => self.eval_time_constrained(args),
             BuiltinHandler::MemoryConstrained => self.eval_memory_constrained(args),
             BuiltinHandler::MemoryInUse => self.eval_memory_in_use(head, args),
+            BuiltinHandler::MaxMemoryUsed => self.eval_max_memory_used(head, args),
             BuiltinHandler::Monitor => self.eval_monitor(args),
             BuiltinHandler::EvaluationData => self.eval_evaluation_data(args),
             BuiltinHandler::RumProfileReset => self.eval_rum_profile_reset(args),

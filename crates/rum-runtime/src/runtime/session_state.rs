@@ -388,6 +388,7 @@ impl Default for Session {
             messages: Vec::new(),
             prints: Vec::new(),
             print_sink: None,
+            peak_memory_proxy_bytes: std::cell::Cell::new(0),
             last_message_list: Vec::new(),
             current_message_list_checkpoint: None,
             current_message_list_dirty: false,

@@ -6,6 +6,28 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-29 Memory line Phase 0 DONE — instruments (`MaxMemoryUsed[]` + cross-engine comparator), brief-048
+
+Built the memory-line yardstick (the analog of `core-language-microbench.sh` for
+the time line). (1) `MaxMemoryUsed[]` builtin: a `Cell<usize>`
+`peak_memory_proxy_bytes` high-water mark on `Session` (non-serde, non-snapshot,
+monotonic like WK's), bumped inside `current_memory_proxy_bytes` so every
+`MemoryInUse`/`MaxMemoryUsed`/`MemoryConstrained` computation samples it — NO
+default-path cost (the proxy is never on the hot eval path). 0-arg form only; the
+1-arg peak-during-eval form is deferred (needs intra-eval sampling). (2)
+`scripts/core-memory-microbench.sh`: runs each workload in a fresh process under
+`/usr/bin/time -l`, same WL in rum + WK, reports per-label {`MemoryInUse` delta,
+`MaxMemoryUsed`, peak-RSS delta} and the rum/WK ratio. Gate (verbatim): `cargo fmt
+--check` clean, `cargo test --workspace` 1151/0 (incl. 4 new MaxMemoryUsed tests in
+rum-runtime). Comparator REPRODUCES the plan's headline calibration (re-run by me,
+deterministic proxy): `module-leak-20000` rum `MemoryInUse` delta **5,966,099 B
+(~6 MB) vs WK -80 B**; `retain-range-1000`/`-10000` rum/WK ratio **8.11x / 8.25x**
+(the ~8x dense boxed-Integer-vs-packed-array representation factor). RSS-delta is
+noisy at this scale (OS page granularity) — proxy delta is the clean signal; RSS is
+the secondary instrument that will see the interner `&'static` leak at large scale.
+NEXT: Phase 1 (Module-gensym definition GC, the O(N)→O(1) win) now has a measured
+before-baseline to gate against.
+
 ## 2026-06-29 Memory-management line opened (research + plan) — `docs/memory-management-plan.md`
 
 User direction: replicate the time line's "WK parity to a constant factor" for
