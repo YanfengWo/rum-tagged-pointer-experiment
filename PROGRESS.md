@@ -48,12 +48,32 @@ body,n]` never expanded (num/rat matched the literal, un-`Nest`ed
   pre-existing failures remain**: meson_tests 44/0 (122s), proptaut_tests 81/0
   (465s), simp_tests 46/0 (109s), **meson_proveprop_tests 69/0 (836s) — this had
   historically TIMED OUT at 300s without a summary; it now COMPLETES green**.
-  batch-B total 240/0. **Milestone: the entire mma-hol test corpus passes 100% on
-  v7+046** — non-heavy batch-A ~2490/0 + heavy batch-B 240/0. Timing: proptaut /
+  batch-B total 240/0. Timing: proptaut /
   meson_proveprop are slow (no clean v7+045 baseline to A/B against — heavy provers
   were never run on v7 before; simp is FASTER than the old 208s, and
   meson_proveprop went from timeout→complete), so any 046-vs-045 perf delta is
   unmeasured and belongs to the deferred perf line, not a correctness concern.
+- **CLEAN count reconciliation (corrects an over-claim — the batch-A/B subtotals
+  above were OVERLAPPING pattern runs, they DO NOT sum to a corpus total).**
+  Authoritative single `run_fast` (all 38 post-bootstrap files, Stable from the v7
+  cp42 snapshot, no overlap) = **2784/0**; `kernel_tests` run cold (small bounded
+  load, run_fast skips it) = **71/0**; total verified on v7+046 = **2855/0, zero
+  failures**. The README's `3126/0` is a DIFFERENT runner — cold Strict
+  `run_all.wls` from source, +kernel_tests — and is internally disputed in mma-hol's
+  own `docs/dev/PLAN.md` (README 3126 vs graduation commit 3124, flagged "needs
+  re-verification"). The ~271 residual (3126−2855) is Stable-vs-Strict mode
+  difference + the un-reproduced cold count, NOT failures.
+- **NEW FINDING — single-process cold `run_all.wls` is INFEASIBLE on this 64GB
+  machine (explains why the cold Strict authoritative gate has been DEFERRED all
+  along).** Launched it; at 2h20m it had ballooned to **50.7 GB RSS** (79% of 64GB),
+  exhausted RAM + 27GB swap (931 pages free), and was swap-THRASHING (~120M
+  swapins) — which is why it showed only ~50% CPU (half its time in page-fault I/O,
+  not compute). Root cause: rum's unbounded Module-gensym live growth (the deferred
+  GC; far worse than the recorded "~10GB" at full-corpus single-process scale).
+  Killed it. The authoritative cold 3126-comparable number needs either the
+  Module-gensym GC or a memory-bounded segmented cold pass (the checkpoint chain
+  bounds the LOAD, but upper-tower TEST execution still needs the whole tower
+  resident → same wall). [[snapshot-checkpointing-direction]].
 
 ## 2026-06-24 Power/Times WK-conformance line (Codex briefs 041-045) + attribute-axis fixes + v7 cold-rebuild baseline
 

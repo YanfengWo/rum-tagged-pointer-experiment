@@ -22,21 +22,36 @@
 > provers were then run on v7+046 for the first time — ALL GREEN**: meson 44/0
 > (122s), proptaut 81/0 (465s), simp 46/0 (109s), meson_proveprop 69/0 (836s, was
 > historically a 300s TIMEOUT — now completes). batch-B total 240/0; the old
-> "known pre-existing failures" are GONE. **MILESTONE: the entire mma-hol test
-> corpus passes 100% on v7+046** (non-heavy ~2490/0 + heavy 240/0).
+> "known pre-existing failures" are GONE.
 >
-> **NEXT options (correctness corpus is now fully green; pick a new line):**
-> (1) **Deferred perf line** — heavy provers are SLOW (proptaut 465s, meson_proveprop
-> 836s) but with NO clean v7+045 baseline (heavy provers never ran on v7 pre-046),
-> so a 046-vs-045 A/B on one heavy prover is the first step IF perf is reopened; the
-> larger deferred levers are hash-consing/value-memo + bytecode VM
-> (`docs/representation-rewrite-plan.md`, [[rum-project-context]]). (2) An OPTIONAL
-> v8 cold rebuild (`scripts/snapshot-checkpoint-chain.sh`) to refresh the
-> authoritative snapshot with the 046 binary — LOW urgency (the 046 fix is
-> call-time, does NOT change theorem construction; 50→0 + batch-B were verified
-> against the existing v7 cp42 snapshot with the new binary). (3) Push the
-> correctness mainline further (more demos / next mma-hol chapters / a Strict
-> `run_all` cold-start authoritative gate). Tree clean, all committed.
+> **CLEAN count (the per-pattern subtotals above OVERLAP — do NOT sum them):**
+> authoritative single `run_fast` (all 38 post-bootstrap files, Stable from cp42,
+> no overlap) = **2784/0**, plus `kernel_tests` cold = **71/0**, = **2855/0 verified,
+> zero failures on v7+046**. The README's `3126/0` is a DIFFERENT runner (cold
+> Strict `run_all.wls` from source, +kernel_tests) and is internally disputed in
+> mma-hol `docs/dev/PLAN.md` (3126 vs graduation-commit 3124). The ~271 residual is
+> Stable-vs-Strict + the un-reproduced cold count, NOT failures.
+>
+> **BLOCKER FOUND — single-process cold `run_all.wls` is INFEASIBLE on this 64GB
+> machine (this is WHY the cold Strict authoritative gate keeps getting deferred).**
+> It ballooned to **50.7 GB RSS** at 2h20m, exhausted RAM + 27GB swap, swap-thrashed
+> (only ~50% CPU — half its time in page-fault I/O); killed. Root cause = rum's
+> unbounded Module-gensym live growth (the deferred GC, far worse than "~10GB" at
+> full single-process corpus scale). Reproducing the authoritative 3126-comparable
+> cold number needs the Module-gensym GC first (or a bounded segmented cold pass,
+> but upper-tower TEST execution still needs the whole tower resident → same wall).
+>
+> **NEXT options (correctness verified 2855/0; pick a new line):**
+> (1) **Module-gensym GC (deferred SAFE perf/memory work)** — now has a concrete
+> forcing function: it is the prerequisite for the authoritative cold `run_all`
+> 3126-reconciliation, and the ~10GB→50GB leak is the dominant memory cost
+> ([[snapshot-checkpointing-direction]], [[rum-project-context]]). (2) Other
+> deferred perf line — heavy-prover 046-vs-045 A/B, then hash-consing/value-memo +
+> bytecode VM. (3) An OPTIONAL v8 cold rebuild (`scripts/snapshot-checkpoint-chain.sh`)
+> to refresh the snapshot with the 046 binary — LOW urgency (046 is call-time, does
+> NOT change theorem construction; 50→0 + batch-B verified on the existing v7 cp42).
+> (4) Push the correctness mainline further (more demos / next mma-hol chapters).
+> Tree clean, all committed.
 
 > **2026-06-24 (EVENING) — v7 COLD REBUILD (045 binary) + AUTHORITATIVE batch-A
 > recheck (read THIS FIRST).** After the Power/Times line (brief-043/044/045)
