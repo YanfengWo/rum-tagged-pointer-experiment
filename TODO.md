@@ -8,33 +8,22 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Current Cut
 
-- [ ] **ACTIVE LINE — memory management: get rum within a constant factor of WK
-  memory across the supported `mma-hol` slice** (the analog of the time line).
-  Plan + research + calibration in
-  [docs/memory-management-plan.md](./docs/memory-management-plan.md). Start at
-  Phase 0 (implement `MaxMemoryUsed[]` + a cross-engine memory comparator); the
-  big lever is Phase 1, the Module-gensym definition GC (also the prerequisite for
-  the authoritative cold `run_all` 3126/0 gate, which OOMs at 50 GB today). Gate
-  every phase on the comparator + Lane D `--suite memory` no-regression +
-  correctness (`cargo test --workspace` + the 3126/0 corpus + `difftest check`).
-- [ ] **Adopt the four-C memory-evaluation panel (external review 2026-06-30, the
-  most useful single idea from the cross-model consult).** Upgrade the Phase-0
-  comparator (`scripts/core-memory-microbench.sh`) from reporting only
-  {`MemoryInUse` delta, `MaxMemoryUsed`, peak-RSS delta} to the FOUR constants
-  vs WK, each as `C·M_ref + B`: (1) **peak RSS** (OOM risk), (2) **retained**
-  (final-representation fatness: live bytes after the result settles), (3)
-  **allocation traffic** (total allocated bytes — churn / temporary-object storms),
-  (4) **post-cleanup delta** (leaks / cache / intern-table growth after the result
-  is dropped + caches cleared). Plus the key derived metric
-  **`TransientOverhead = peakRSS − retained`** (mid-evaluation bloat, distinct from
-  representation overhead). Report `C_max`/`C_p95`/`C_geomean` + an outlier list,
-  and check each `C` does NOT drift with input size N (drift ⇒ a complexity/order
-  gap, not a constant). We already have the instruments to build on
-  (`MaxMemoryUsed`, the `MemoryInUse` proxy, `guarded-test-run` RSS, the
-  `alloc-count` GlobalAlloc) — this is mostly wiring + a richer report. This is the
-  yardstick the rest of the memory line (Phase 2 interner, Phase 3 representation)
-  gates against; the gensym leak = the post-cleanup `C`, the interner leak = the
-  retained/RSS gap the proxy is blind to.
+- [x] **MEMORY LINE — CONCLUDED for safe Rust (2026-06-30).** Phase 0 instruments +
+  0.5 four-C panel (brief-052; only `retained_ratio` is a clean cross-engine constant
+  factor) + 1/1b Module-gensym definition GC + Phase 3 per-node `Expr` compression
+  rungs 1-3 (briefs 053/054: `size_of::<Expr>()` 64→32, dense-list factor 8.3x→~4.0x,
+  kernel faster + alloc ~200x↓); Phase 2 interner residual kept as a bounded tradeoff.
+  Headline Module leak (6 MB→bounded) + dense-list factor addressed. Further needs
+  unsafe tagged-pointer or packed arrays (poor fit). See
+  [docs/memory-management-plan.md](./docs/memory-management-plan.md).
+- [ ] **NEXT-MAINLINE CANDIDATE — host embedding hardening** (mma-hol is through, so
+  "rum as an embeddable engine for other projects" is the forward line). Start from
+  [docs/host-embedding-and-hardening.md](./docs/host-embedding-and-hardening.md) — the
+  capability survey + tiered hardening map (Tier-1: interrupt/cancel, session
+  time/memory budget, structured `HostValue`, `catch_unwind` boundary; Tier-2: reset,
+  session-image-from-bytes, concurrency contract). Then a showcase (sandbox + WASM-ready
+  enablers recorded; specific project deliberately undecided). The deep-`Expr`-drop is
+  a documented known limitation there (not worth the hot-path cost).
 - [ ] Treat the next phase as `v0.1` kernel stabilization: correctness,
   contract boundaries, harnesses, and docs come before new same-name breadth.
   Use
