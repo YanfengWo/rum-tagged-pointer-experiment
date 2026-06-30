@@ -42,10 +42,22 @@ GATE (verbatim): `cargo fmt --check` clean; `cargo test --workspace` green
 (rum_runtime 710/0 incl. the 4 new regressions + 3 redirected cycle tests, all
 other crates green); the 4 minimal rum-cli probes match WK; genuine cycle still
 errors. **arith_tests.wl on v8 cp21: 50→271/0, 159 groups — byte-for-byte the WK
-gold (WK measured 271/0/159).** Residual ~50 of the 271 is NOT truncation (every
-other file runs all groups) — that part IS the Stable-vs-Strict / disputed
-3124-vs-3126 reconciliation; chase separately. WK conformance note: a genuine cycle
-in WK gives `TerminatedEvaluation[IterationLimit]`, not a hard error — rum's
+gold (WK measured 271/0/159).**
+
+**GAP NOW FULLY CLOSED — rum reproduces the README's 3126/0 exactly.** Authoritative
+fast confirmation (instead of the 113-min cold `run_all`): the real `tests/run_fast.wls`
+(Stable mode) in a scratch acceptance clone with v8 `cp42` as `bootstrap.mx`, under
+the brief-051 binary, gives **`passed: 3055, failed: 0`** over all 38 post-bootstrap
+files (self-consistent: `$pass` 3055 == 3055 printed `ok` lines); `kernel_tests`
+cold on the same binary is **71/0**. **3055 + 71 = 3126 = the README number, 0
+failures.** Per printed-`ok` line, the ONLY file that changed vs the old cold run is
+arith (50→271, +221). The earlier "residual ~50" was NOT separate content or
+failures: the OLD cold `run_all` log itself printed 2905 `ok` lines but its summary
+counted only 2855 (a 50 `$pass`-undercount in the old binary); the new run is
+internally consistent, so that 50 evaporates. (run_all = cold/Strict from source,
+run_fast = Stable snapshot restore — different load path, IDENTICAL test content, so
+the run_fast number is the authoritative equivalent.) WK conformance note: a genuine
+cycle in WK gives `TerminatedEvaluation[IterationLimit]`, not a hard error — rum's
 `General::cycle` on real cycles is a separate, lower-priority conformance gap.
 
 ## 2026-06-30 v8 Stable snapshot tower rebuilt with the memory-fixed binary — byte-identical to v7

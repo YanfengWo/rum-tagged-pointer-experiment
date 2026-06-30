@@ -19,15 +19,21 @@
 > 3 older `self:=self`-as-error-trigger tests re-pointed at a genuine mutual cycle;
 > new regressions lock the WK table. **GATE (verbatim):** `cargo fmt --check` clean,
 > `cargo test --workspace` green (rum_runtime 710/0), 4 rum-cli probes == WK,
-> **arith_tests.wl on v8 cp21 50→271/0/159 groups = WK gold exactly.** Residual ~50
-> of 271 is NOT truncation (all other files run complete) = the Stable-vs-Strict /
-> disputed 3124-vs-3126 reconciliation, still open, lower priority. WK-conformance
+> **arith_tests.wl on v8 cp21 50→271/0/159 groups = WK gold exactly.**
+> **GAP NOW FULLY CLOSED — rum reproduces 3126/0 exactly.** Authoritative fast
+> confirmation (no 113-min cold run needed): real `tests/run_fast.wls` (Stable) in a
+> scratch acceptance clone with v8 `cp42` as `bootstrap.mx`, new binary, =
+> **3055/0** over all 38 post-bootstrap files (self-consistent), + `kernel_tests`
+> cold **71/0** = **3126/0, 0 failures = the README number**. The only per-file
+> change vs the old cold run is arith (+221); the apparent "residual ~50" was an OLD
+> binary `$pass` undercount (old cold log printed 2905 `ok` but summary said 2855) —
+> the new run is internally consistent, so it evaporates. (run_all cold/Strict vs
+> run_fast Stable = different LOAD path, identical TEST content.) WK-conformance
 > footnote: a genuine cycle in WK = `TerminatedEvaluation[IterationLimit]`, not a
 > hard error — rum's `General::cycle` on REAL cycles is a separate future gap.
-> Committed; tree clean. **NEXT options unchanged** from the block below (Phase 2
-> interner reclamation / Phase 3 representation / fresh perf line), plus: (a) the
-> residual ~50 cold-count reconciliation, (b) the genuine-cycle→IterationLimit
-> conformance.
+> Committed; tree clean. **NEXT options** (the correctness/count line is now DONE):
+> Phase 2 interner reclamation / Phase 3 representation / a fresh perf line, plus the
+> optional genuine-cycle→IterationLimit conformance.
 
 > **2026-06-29 — MEMORY LINE Phases 0/1/1b DONE; the authoritative cold
 > `run_all` BLOCKER is RESOLVED.** Briefs 048 (instruments `MaxMemoryUsed[]` +
