@@ -127,10 +127,38 @@ completeness follow-up: a root-set mark-sweep (roots = all non-gensym definition
 RHSs + eval stack + bindings) triggered at a gensym-count threshold, to reclaim
 escaped-but-now-dead gensyms.
 
-**Phase 2 — symbol-interner reclamation (close the residual O(N), lever 1b).** Give
-the interner an un-intern path for dead gensyms (`&'static` HashSet → a reclaimable
-arena or refcounted entries). Deeper change; it closes the name-string leak Phase 1
-leaves behind, approaching WK's O(1).
+**Phase 2 — symbol-interner reclamation (lever 1b). [CONCLUDED 2026-06-30 as a
+documented bounded tradeoff — deliberately NOT done.]** The residual is the per-gensym
+interned `&'static` name (`x$1..x$N`) that Phase 1's definition GC leaves behind.
+MEASURED 2026-06-30: Module×20000 (completing) ≈ 6.5 MB peak RSS vs 1.8 MB empty =
+**~235 B/gensym** (name string + `SymbolText` + HashSet/HashMap entry + allocator
+rounding). It is **per-eval BOUNDED** by `iteration_work_limit` (Module×200000 trips
+`General::reslim` → `TerminatedEvaluation["ResourceLimit"]` before exhausting memory —
+graceful, messaged) and only accumulates modestly across a long session; the cold
+`run_all` already completes at a bounded 12 GB. **NON-BLOCKING.** Closing it needs one
+of: (A) free the dead names — but `Symbol` is `Copy` + holds a raw `&'static SymbolText`
+(equality uses the dense `id`), so freeing is dangling = UNSAFE, and the safe fix
+(Symbol → id-lookup or `Arc`) imposes a per-access/per-copy cost on the kernel's
+HOTTEST type = a TIME regression; or (B) prevent the leak at source (Module gensym →
+the existing `with_identity` fixed-name + `NonZeroU64` mechanism, no new interned name)
+— safe and zero-perf-cost, BUT with its own blast radius (gensym DISPLAY must render
+the identity as a `$N` suffix; the snapshot cleanup `Names["HOL\`*$*"]` keys on the
+`$N` IN THE NAME; anything parsing gensym name strings). Given a modest, non-blocking
+residual vs real risk/cost on the foundational `Symbol` type, this is **deliberately
+kept** — the `&'static` interner is the design tradeoff that buys an O(1) `Copy`
+`Symbol` + pointer-identity. Revisit (approach B as a measured spike) only if a
+long-session interner footprint ever becomes a real blocker.
+
+> **MEMORY LINE CONCLUDED for safe Rust (2026-06-30).** Phase 0 (instruments) + 0.5
+> (four-C panel) + 1/1b (Module-gensym definition GC, the dominant O(N) leak → bounded)
+> + 3 rungs 1-3 (per-node `Expr` compression 64→32 B, dense-list factor 8.3x→~4.0x,
+> while making the kernel FASTER and slashing allocation traffic) are DONE and gated.
+> Phase 2 (interner name residual) is concluded as a bounded tradeoff above. What
+> remains is OUT of safe-Rust-without-regression scope: per-node below 32 B needs
+> unsafe tagged-pointer/NaN-boxing; dense-collection parity needs packed arrays (a
+> numeric-kernel technique assessed as a poor fit for symbolic rationals-only rum,
+> Phase 3 below). The headline `Module×20000` leak (6 MB → bounded) and the dense-list
+> factor (8.3x → ~4.0x) are both addressed.
 
 **Phase 3 — representation constant-factor (levers 2 & 3). [STARTED 2026-06-30,
 brief-053 = rung 1.]** The `ByteCount[Range[1000]]` ~8.3x is dominated by

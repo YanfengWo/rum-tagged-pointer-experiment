@@ -6,6 +6,33 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-30 Memory line CONCLUDED for safe Rust — Phase 2 (interner) kept as a bounded tradeoff; resource-limit observability noted
+
+Diagnosed Phase 2 (the per-gensym interned `&'static` name residual Phase 1 leaves).
+MEASURED: Module×20000 (completing) ≈ 6.5 MB peak RSS vs 1.8 MB empty = ~235 B/gensym,
+per-eval BOUNDED by `iteration_work_limit` (Module×200000 trips `General::reslim` →
+`TerminatedEvaluation["ResourceLimit"]` gracefully), non-blocking (cold `run_all`
+completes at 12 GB). Closing it needs either UNSAFE/perf-regressing interner reclamation
+(A — `Symbol` is `Copy` + raw `&'static`, freeing = dangling; the safe fix adds
+per-access/per-copy cost to the hottest type) or a prevent-at-source spike (B — Module
+gensym → the existing `with_identity` mechanism; safe but with display + snapshot
+`Names["*$*"]` + name-parse blast radius). Given a modest non-blocking residual vs real
+risk on the foundational `Symbol`, **Phase 2 is concluded as a deliberate bounded
+tradeoff** (the `&'static` interner buys an O(1) `Copy` `Symbol`). **The safe-Rust
+memory line is CONCLUDED**: Phase 0/0.5/1/1b + Phase 3 rungs 1-3 done; the headline
+Module-leak (6 MB → bounded) and dense-list factor (8.3x → ~4.0x) addressed; further
+needs unsafe tagged-pointers or packed arrays (a poor fit for symbolic rationals-only
+rum). See `docs/memory-management-plan.md`.
+
+ALSO (an honest correction + a small finding): while measuring the above I first
+mis-reported the `iteration_work_limit` abort as a "silent truncation" — it is NOT;
+rum emits `General::reslim: evaluation exceeded iteration work limit (N)` AND returns a
+graceful `TerminatedEvaluation`, the session continues. So the resource-limit failure
+mode is already graceful + observable (ChatGPT's graceful-degradation dimension). The
+one real refinement noted in `TODO.md`: the `TerminatedEvaluation` tag is generic
+`"ResourceLimit"` for the work limit but specific `"IterationLimit"` for the pass limit
+— make all limit tags specific so a user knows which budget to raise.
+
 ## 2026-06-30 Memory line Phase 3 rungs 2+3 — Integer small-int hybrid + Symbol niche-pack, `Expr` 40→32, dense-list 5.3x→4.0x; safe-Rust per-node compression CONCLUDED (brief-054)
 
 Combined (neither moves the metric alone — `Integer` and `Symbol` are both 32 B and
