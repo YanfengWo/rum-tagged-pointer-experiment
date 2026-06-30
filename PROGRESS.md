@@ -65,15 +65,18 @@ re-export the type; brief forbade runtime changes; no Cargo.lock change). Gate: 
 712/0 + typed test 1/0 (Integer/BigInteger/Rational/Symbol/Str/List/Other, each asserting
 .text unchanged).
 
-**Memory budget — DEFERRED, needs a design decision.** The structural
-`current_memory_proxy_bytes` (memory.rs) is an O(state) full sweep (walks the whole
-definitions/attributes/options/stacks) — too costly to poll per eval step even amortized
-— AND it is blind to the interner `&'static` leak (the memory line established RSS is the
-true total). RSS is cheap-per-call and true, but it is a platform-specific syscall that
-breaks the WASM-clean core dep tree (the host-embedding selling point) and is process-wide
-(not per-session). proxy-vs-RSS is a real fork to decide; lower-urgency because the
-brief-059 wall-clock budget already bounds most memory-DoS (a runaway allocator also burns
-time → caught by the deadline). Pick this up after deciding the signal.
+**Memory budget — RESOLVED as a host-side pattern (user decision 2026-07-01); no new
+core/host code.** The structural `current_memory_proxy_bytes` is an O(state) full sweep
+(too costly to poll per step) AND blind to the interner `&'static` leak; RSS is the true
+total but a platform syscall + threads that would break the WASM-clean core. Resolution:
+impose the cap HOST-SIDE — a watchdog thread reads process RSS and reuses the brief-059
+`cancel_handle()` to `.cancel()` on breach (eval returns `TerminatedEvaluation["Cancelled"]`).
+This keeps `rum-core`/`rum-runtime` WASM-clean, gives the TRUE RSS bound (catches the
+interner leak), is process-wide (right for single-session embedding), and is ALREADY
+enabled by brief-059. Documented with a code example in
+`docs/host-embedding-and-hardening.md` §2 Tier-1; a native-only `eval_with_memory_budget`
+convenience wrapper in rum-host was considered and deliberately NOT added (keep rum-host
+platform/thread-free). So the Tier-1 host-hardening line is essentially complete.
 
 ## 2026-07-01 Matcher backtracking stack overflow — depth guard shipped (brief-058)
 

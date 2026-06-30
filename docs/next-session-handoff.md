@@ -16,15 +16,20 @@
 > does NOT catch stack-overflow aborts — those are the parser/matcher depth guards).
 > **brief-061 DONE** (`0423bb4`): structured/typed `HostValue` (`.text` unchanged + a new
 > `HostTyped` enum Integer/BigInteger/Rational/Symbol/Str/List/Other, depth-capped 64;
-> rum-host gained a direct rum-core dep to name Expr, no lock change). So 3 of the 4
-> Tier-1 items are done. **Memory budget is the only one left, DEFERRED with a design fork
-> to decide**: the structural
-> `current_memory_proxy_bytes` is an O(state) full sweep (too costly per-step) AND blind
-> to the interner leak; RSS is the true total but a platform syscall that breaks the
-> WASM-clean core — proxy-vs-RSS is a real decision, and it's lower-urgency since the
-> brief-059 time budget already bounds most memory-DoS (a runaway allocator also burns
-> time). See `PROGRESS.md` 2026-07-01 host entry. The matcher / pattern-matching blocks
-> below are the previous (now-closed) line.
+> rum-host gained a direct rum-core dep to name Expr, no lock change). **Memory budget —
+> RESOLVED as a host-side pattern (user decision 2026-07-01), no new core/host code**: the
+> structural proxy is an O(state) sweep + interner-blind, RSS would break the WASM-clean
+> core — so the cap is imposed host-side by a watchdog thread that reads process RSS and
+> reuses the brief-059 `cancel_handle()` to `.cancel()` on breach (true RSS bound, core
+> stays WASM-clean, already enabled by 059). Documented with a code example in
+> `docs/host-embedding-and-hardening.md` §2 Tier-1; a native-only rum-host convenience
+> wrapper was considered and deliberately not added (keep rum-host platform/thread-free).
+> **So the Tier-1 host-hardening line is essentially COMPLETE** (interrupt/cancel, time
+> budget, panic boundary, structured `HostValue` shipped; memory budget documented). OPEN
+> next: Tier-2 (reset/clear session, session snapshot from bytes, the Send/Sync concurrency
+> contract, whole-session introspection) or a showcase project (sandbox + WASM enablers).
+> See `PROGRESS.md` 2026-07-01 host entry. The matcher / pattern-matching blocks below are
+> the previous (now-closed) line.
 
 > **2026-07-01. Matcher backtracking stack-overflow
 > CRASH fixed (brief-058, `a2d5ee6`); this is a host-resilience / Tier-1 brick. Tree

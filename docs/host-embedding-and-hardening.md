@@ -41,20 +41,48 @@ near-trivial target (modulo a few loader file-path `cfg` guards).
 The framework is good and proven (`rum-jupyter` on `rum-host`); these are the
 "push it to the end" gaps for serving OTHER projects. Tiered by need.
 
-**Tier 1 — required for untrusted / embedded use:**
-- **Interrupt / cancel.** `HostSession` has no `cancel()`/`interrupt()`; `eval` is
-  synchronous and uninterruptible from another thread. (`docs/v0.1-acceptance-boundary.md`
-  already lists interrupt/cancel as deferred.) Needs a cancellation flag the eval
-  loop checks periodically. #1 gap.
-- **Session-level time + memory budget.** `HostResourceLimits` (config.rs) has
-  recursion / replace_repeated / pass / generated_element / integer_work /
-  iteration_work — but NO wall-clock time budget and NO memory budget.
-  `TimeConstrained`/`MemoryConstrained` exist only at the WL level (guest code must
-  wrap); `HostFailureCode` already surfaces both. The host cannot impose a per-eval
-  time/memory cap. DoS surface.
-- **Panic-safety boundary.** The host API should wrap eval in `catch_unwind` (a
-  future FFI/pyo3 boundary must NOT let a panic cross). [The deep-nesting parser
-  crash that motivated this is now fixed — see the limitation note below.]
+**Tier 1 — STATUS 2026-07-01: 4 of 5 items DONE (briefs 059/060/061); memory budget is
+documented as a host-side pattern (below). The KNOWN LIMITATION bullet still stands.**
+
+- **Interrupt / cancel — DONE (brief-059, `e5b13b9`).** `HostSession::cancel_handle()`
+  returns a `HostCancelHandle` (`Clone + Send + Sync`) the host obtains BEFORE `eval` and
+  `.cancel()`s from another thread; the eval loop checks an `Arc<AtomicBool>` at an
+  amortized poll point (`evaluate_once_*`, every 1024 armed steps) and returns
+  `TerminatedEvaluation["Cancelled"]`. Only the Arc crosses threads — `Session`'s thread
+  contract is unchanged.
+- **Session-level TIME budget — DONE (brief-059).** `HostSession::eval_with_timeout(src,
+  Duration)` sets a per-eval deadline checked at the same poll point → reuses
+  `TimeConstraintExceeded`. (`HostResourceLimits` still also has recursion / replace_repeated
+  / pass / generated_element / integer_work / iteration_work.)
+- **Session-level MEMORY budget — host-side pattern (no new core/host code needed).**
+  The structural memory proxy (`current_memory_proxy_bytes`) is an O(state) full sweep
+  (too costly to poll per eval step) AND blind to the interner `&'static` leak — so it is
+  NOT the right signal. RSS is the true total but is a platform syscall + threads that
+  would break the WASM-clean core. RESOLUTION (decided 2026-07-01): impose a memory cap
+  **host-side**, reusing the brief-059 cancel handle — a watchdog thread reads process RSS
+  and `.cancel()`s on breach. This keeps `rum-core`/`rum-runtime` WASM-clean, gives the
+  TRUE RSS bound (catches the interner leak the proxy misses), and is already enabled by
+  brief-059. It is process-wide (right for a single-session embedding; coarse for
+  multi-session). Pattern:
+  ```rust
+  let handle = session.cancel_handle();
+  let cap_bytes = 2 * 1024 * 1024 * 1024;
+  std::thread::spawn(move || loop {
+      if process_rss_bytes() >= cap_bytes { handle.cancel(); break; }
+      std::thread::sleep(std::time::Duration::from_millis(10));
+  });
+  let outcome = session.eval(src); // returns TerminatedEvaluation["Cancelled"] on breach
+  ```
+  `process_rss_bytes()` is the host app's platform code (macOS `task_info` /
+  Linux `/proc/self/statm` / Windows `GetProcessMemoryInfo`; WASM has no RSS and uses a
+  different mechanism). rum-host stays clean and just exposes the cancel handle. (A
+  native-only `eval_with_memory_budget` convenience wrapper in rum-host was considered and
+  deliberately NOT added, to keep rum-host platform/thread-free.)
+- **Panic-safety boundary — DONE (brief-060, `4e532a8`).** Every public `HostSession`
+  entry runs guest code under `catch_unwind(AssertUnwindSafe(...))`; a caught panic →
+  `HostFailureCode::Panic` (message from the payload) and the session is POISONED (a
+  later call returns `HostFailureCode::Poisoned`). Does NOT catch stack-overflow aborts —
+  those are the parser `MAX_PARSE_DEPTH` + matcher `MAX_MATCH_DEPTH` guards.
 - **KNOWN LIMITATION — do not build pathologically-deep `Expr`s via the Rust API.**
   rum-core's `Expr` `Drop` is the default RECURSIVE drop; dropping a `>~thousands`-deep
   `Arc<Expr>` chain overflows the native stack (SIGABRT) and takes the host process
@@ -69,10 +97,11 @@ The framework is good and proven (`rum-jupyter` on `rum-host`); these are the
   thousand levels of `Expr` nesting via the Rust API.** If a real host needs it, the
   options are a depth-limited builder, a dedicated iterative-drop helper the host calls
   explicitly for known-deep trees, or accepting the per-drop cost — revisit then.
-- **Structured value extraction.** `HostValue` is `{ text: String }` only — the
-  result comes back as a STRING. Embedders (Rust / Python / JS) need typed access
-  (Integer / Rational / Symbol / List / Expr → `i64` / `Vec` / native), else the
-  host re-parses.
+- **Structured value extraction — DONE (brief-061, `0423bb4`).** `HostValue` now carries
+  `typed: HostTyped` alongside the unchanged `.text`: `Integer(i64)` | `BigInteger(String)`
+  | `Rational{numerator,denominator}` | `Symbol(String)` | `Str(String)` |
+  `List(Vec<HostTyped>)` | `Other{head,text}`, built once from the result `Expr`,
+  depth-capped at 64. (rationals-only → no float variant; big values are decimal strings.)
 
 **Tier 2 — for long-running, multi-client hosts:**
 - **reset / clear session** to a clean state (multi-client reuse / isolation).
