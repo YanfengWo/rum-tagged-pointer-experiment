@@ -53,7 +53,9 @@ impl Session {
         };
 
         let is_even = match expr {
-            Expr::Atom(Atom::Integer(value)) => value % BigInt::from(2_u8) == BigInt::from(0_u8),
+            Expr::Atom(Atom::Integer(value)) => {
+                value.to_bigint() % BigInt::from(2_u8) == BigInt::from(0_u8)
+            }
             _ => false,
         };
 
@@ -70,7 +72,9 @@ impl Session {
         };
 
         let is_odd = match expr {
-            Expr::Atom(Atom::Integer(value)) => value % BigInt::from(2_u8) != BigInt::from(0_u8),
+            Expr::Atom(Atom::Integer(value)) => {
+                value.to_bigint() % BigInt::from(2_u8) != BigInt::from(0_u8)
+            }
             _ => false,
         };
 

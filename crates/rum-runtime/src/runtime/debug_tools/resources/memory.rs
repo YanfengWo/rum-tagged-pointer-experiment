@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::IntValue;
 
 impl Session {
     pub(in crate::runtime) fn eval_byte_count(
@@ -256,7 +257,12 @@ impl Session {
 pub(in crate::runtime::debug_tools::resources) fn expr_memory_proxy_bytes(expr: &Expr) -> usize {
     match expr {
         Expr::Atom(Atom::Integer(value)) => {
-            std::mem::size_of::<Expr>().saturating_add(bigint_memory_proxy_bytes(value))
+            std::mem::size_of::<Expr>().saturating_add(match value {
+                IntValue::Small(_) => 0,
+                IntValue::Big(value) => {
+                    std::mem::size_of::<BigInt>().saturating_add(bigint_memory_proxy_bytes(value))
+                }
+            })
         }
         Expr::Atom(Atom::Rational(value)) => std::mem::size_of::<Expr>()
             .saturating_add(std::mem::size_of::<Rational>())

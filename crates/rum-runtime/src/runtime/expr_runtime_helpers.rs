@@ -79,10 +79,10 @@ fn compare_atom_canonical(lhs: &Atom, rhs: &Atom) -> std::cmp::Ordering {
     match (lhs, rhs) {
         (Atom::Integer(lhs), Atom::Integer(rhs)) => lhs.cmp(rhs),
         (Atom::Integer(lhs), Atom::Rational(rhs)) => {
-            compare_rational_values(&Rational::from_integer(lhs.clone()), rhs)
+            compare_rational_values(&Rational::from_integer(lhs.to_bigint()), rhs)
         }
         (Atom::Rational(lhs), Atom::Integer(rhs)) => {
-            compare_rational_values(lhs, &Rational::from_integer(rhs.clone()))
+            compare_rational_values(lhs, &Rational::from_integer(rhs.to_bigint()))
         }
         (Atom::Rational(lhs), Atom::Rational(rhs)) => compare_rational_values(lhs, rhs),
         (Atom::String(lhs), Atom::String(rhs)) => lhs.cmp(rhs),
@@ -166,7 +166,7 @@ fn power_args(expr: &Expr) -> Option<&[Expr; 2]> {
 
 fn exact_atom_numeric_value(expr: &Expr) -> Option<Rational> {
     match expr {
-        Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.clone())),
+        Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.to_bigint())),
         Expr::Atom(Atom::Rational(value)) => Some(value.as_ref().clone()),
         _ => None,
     }

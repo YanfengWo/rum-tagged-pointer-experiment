@@ -225,11 +225,11 @@ impl Session {
 
 fn key_sort_ordering_decision(value: &Expr) -> KeySortOrderingDecision {
     match value {
-        Expr::Atom(Atom::Integer(integer)) if integer == &BigInt::from(1_i8) => {
+        Expr::Atom(Atom::Integer(integer)) if integer.as_i64() == Some(1) => {
             KeySortOrderingDecision::InsertBefore
         }
         Expr::Atom(Atom::Integer(integer))
-            if integer == &BigInt::from(0_i8) || integer == &BigInt::from(-1_i8) =>
+            if integer.as_i64() == Some(0) || integer.as_i64() == Some(-1) =>
         {
             KeySortOrderingDecision::KeepScanning
         }

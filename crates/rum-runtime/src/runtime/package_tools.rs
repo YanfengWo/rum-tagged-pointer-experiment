@@ -594,7 +594,7 @@ impl Session {
 
         !matches!(
             explicit.get_by_name("PersistenceTime"),
-            Some(Expr::Atom(Atom::Integer(value))) if *value == BigInt::from(0)
+            Some(Expr::Atom(Atom::Integer(value))) if value.as_i64() == Some(0)
         )
     }
 

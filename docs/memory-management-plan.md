@@ -144,14 +144,31 @@ variant. Measured rungs (the dense-list `retained` ratio is the gated metric):
   offset by the smaller `Expr` — rational-heavy probe ratio ~0.98 (neutral/slightly
   faster), core microbench dispatch labels neutral-to-faster, `cargo test --workspace`
   710/0. 7-file mechanical change (most match sites auto-deref through the `Box`).
-- **Rung 2 — `Atom::Integer` small-int hybrid** (`Integer(i64) | BigInteger(Box<BigInt>)`):
-  removes the per-element `BigInt` heap alloc for small ints AND lets the enum shrink
-  below 40 (caps `Integer` at 8). Not yet done.
-- **Rung 3 — shrink `Symbol`** (32 B; the `identity: Option<u64>` is the 16-byte
-  bloat): needed alongside rung 2 to take `Expr` 40 → ~24 → ~16. Not yet done.
+- **Rungs 2+3 — `Atom::Integer` small-int hybrid + `Symbol` identity niche-pack
+  (DONE together, brief-054, KEPT).** Neither moves the metric alone (`Integer` and
+  `Symbol` are BOTH 32 → co-cap the enum), so combined. `Atom::Integer(IntValue)` with
+  `IntValue = Small(i64) | Big(Box<BigInt>)` (invariant: `Big` never holds an
+  i64-fittable value; arithmetic still computes via `BigInt`, only STORAGE changes —
+  low risk) + `Symbol.identity: Option<u64> → Option<NonZeroU64>`. Result: `size_of::<Expr>()`
+  **40 → 32** (Atom 32, Symbol 32→24, IntValue 16), dense-list `retained` **5.3x →
+  ~4.0x**, `Range[100000]` allocation count **201090 → 1087** (~200x — the per-element
+  small-int heap alloc is gone), AND a broad TIME win (smaller Expr: core microbench
+  hot labels 8–18% faster, integer probe ~13% faster, rational neutral). Correctness:
+  `cargo test --workspace` 710/0 + Claude's mma-hol exact-arith corpus re-run 886/0
+  (num/rat/int/finite/fta 613 + arith 273, byte-identical counts). 19-file change.
+- **LINE CONCLUDED (safe-Rust per-node compression).** rungs 1+2+3 took `size_of::<Expr>()`
+  **64 → 32** and the dense-list factor **8.3x → ~4.0x**. Going further on the PER-NODE
+  axis needs **unsafe tagged-pointer / NaN-boxing** (pack a value into one machine
+  word) — the unsafe deep water, out of scope for a `#![forbid(unsafe)]`-leaning
+  kernel. The remaining SAFE lever is a DIFFERENT axis:
 - **Lever 2 proper — packed numeric arrays** for dense `List`s (a new `Expr` variant
-  holding a packed buffer): the only way to actually reach WK's ~8 B/elem; the
-  biggest, highest-blast-radius project (Part/Length/Map/matcher must see through it).
+  holding a packed buffer): the only way to actually reach WK's ~8 B/elem. ASSESSED
+  and DEFERRED as a poor fit for rum: it is a NUMERIC-kernel technique, but rum is
+  symbolic + rationals-only (rationals/bigints/symbolic can't pack; the HOL workload
+  has almost no packable dense arrays), it risks an unpack perf-CLIFF on the
+  pattern-matching-heavy main path, and it is the highest-blast-radius project
+  (Part/Length/Map/matcher must all see through it). Revisit only if rum ever targets
+  dense-numeric workloads.
 - **Lever 3 — hash-consing** for structural sharing (validated ~26% on Pair; both a
   time and memory win; still deferred).
 Original plan text: Packed numeric arrays for dense `List`s; hash-consing for

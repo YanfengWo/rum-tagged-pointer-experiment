@@ -231,7 +231,7 @@ pub(super) fn is_invalid_numeric_upto_limit(expr: &Expr) -> bool {
     }
 
     match expr {
-        Expr::Atom(Atom::Integer(value)) => value < &BigInt::from(0),
+        Expr::Atom(Atom::Integer(value)) => value.to_bigint() < BigInt::from(0),
         Expr::Atom(Atom::Rational(_)) => true,
         _ => false,
     }

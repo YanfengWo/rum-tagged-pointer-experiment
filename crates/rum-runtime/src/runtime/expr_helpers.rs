@@ -70,18 +70,18 @@ pub(super) fn expr_as_string_list(expr: &Expr) -> Option<Vec<String>> {
 
 pub(super) fn expr_as_non_negative_usize(expr: &Expr) -> Option<usize> {
     match expr {
-        Expr::Atom(Atom::Integer(value)) => value.to_string().parse::<usize>().ok(),
+        Expr::Atom(Atom::Integer(value)) => value.to_bigint().to_string().parse::<usize>().ok(),
         _ => None,
     }
 }
 
 pub(super) fn is_negative_one_expr(expr: &Expr) -> bool {
-    matches!(expr, Expr::Atom(Atom::Integer(value)) if value == &BigInt::from(-1))
+    matches!(expr, Expr::Atom(Atom::Integer(value)) if value.as_i64() == Some(-1))
 }
 
 pub(super) fn expr_as_signed_isize(expr: &Expr) -> Option<isize> {
     match expr {
-        Expr::Atom(Atom::Integer(value)) => value.to_string().parse::<isize>().ok(),
+        Expr::Atom(Atom::Integer(value)) => value.to_bigint().to_string().parse::<isize>().ok(),
         Expr::Call { head, args } if is_system_symbol_name(head, "Times") && args.len() == 2 => {
             if is_negative_one_expr(&args[0]) {
                 expr_as_non_negative_usize(&args[1])

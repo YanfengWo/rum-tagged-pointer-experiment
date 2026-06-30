@@ -3,7 +3,7 @@ pub mod heads;
 pub mod profiling;
 
 pub use expr::{
-    Atom, Expr, GLOBAL_CONTEXT, Rational, SYSTEM_CONTEXT, SharedArgs, SharedExpr, Symbol,
+    Atom, Expr, GLOBAL_CONTEXT, IntValue, Rational, SYSTEM_CONTEXT, SharedArgs, SharedExpr, Symbol,
 };
 pub use heads::{CANONICAL_CORE_HEADS, is_canonical_core_head_name};
 pub use num_bigint::BigInt;

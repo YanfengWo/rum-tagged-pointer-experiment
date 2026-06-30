@@ -60,11 +60,11 @@ pub(super) fn render_times(args: &[Expr]) -> String {
 
     for arg in args {
         if let Some(value) = integer_value(arg) {
-            let abs_value = if value < &BigInt::from(0_i32) {
+            let abs_value = if value < BigInt::from(0_i32) {
                 negative = !negative;
-                -value.clone()
+                -value
             } else {
-                value.clone()
+                value
             };
             if abs_value != BigInt::from(1_i32) {
                 numerator.push(abs_value.to_string());
@@ -113,11 +113,8 @@ pub(super) fn render_times(args: &[Expr]) -> String {
 
 pub(super) fn render_power(base: &Expr, exponent: &Expr) -> String {
     if let Some(value) = integer_value(exponent) {
-        if value < &BigInt::from(0_i32) {
-            return format!(
-                "1/{}",
-                render_positive_power(base, Expr::integer(-value.clone()))
-            );
+        if value < BigInt::from(0_i32) {
+            return format!("1/{}", render_positive_power(base, Expr::integer(-value)));
         }
     }
     render_positive_power(base, exponent.clone())
@@ -125,7 +122,7 @@ pub(super) fn render_power(base: &Expr, exponent: &Expr) -> String {
 
 fn render_positive_power(base: &Expr, exponent: Expr) -> String {
     match integer_value(&exponent) {
-        Some(value) if value == &BigInt::from(1_i32) => render_expr(base, Precedence::Power),
+        Some(value) if value == BigInt::from(1_i32) => render_expr(base, Precedence::Power),
         _ => format!(
             "{}^{}",
             render_expr(base, Precedence::Power),
@@ -169,12 +166,12 @@ fn negative_power(expr: &Expr) -> Option<(&Expr, Expr)> {
     }
 
     let exponent = integer_value(&args[1])?;
-    (exponent < &BigInt::from(0_i32)).then(|| (&args[0], Expr::integer(-exponent.clone())))
+    (exponent < BigInt::from(0_i32)).then(|| (&args[0], Expr::integer(-exponent)))
 }
 
 fn is_one_expr(expr: &Expr) -> bool {
     match expr {
-        Expr::Atom(Atom::Integer(value)) => value == &BigInt::from(1_i32),
+        Expr::Atom(Atom::Integer(value)) => value.as_i64() == Some(1),
         Expr::Atom(Atom::Rational(value)) => value.is_one(),
         _ => false,
     }
@@ -182,7 +179,7 @@ fn is_one_expr(expr: &Expr) -> bool {
 
 fn negative_integer_abs(expr: &Expr) -> Option<BigInt> {
     let value = integer_value(expr)?;
-    (value < &BigInt::from(0_i32)).then(|| -value.clone())
+    (value < BigInt::from(0_i32)).then(|| -value)
 }
 
 fn negative_rational_abs(expr: &Expr) -> Option<Rational> {
@@ -193,9 +190,9 @@ fn negative_rational_abs(expr: &Expr) -> Option<Rational> {
     })
 }
 
-fn integer_value(expr: &Expr) -> Option<&BigInt> {
+fn integer_value(expr: &Expr) -> Option<BigInt> {
     match expr {
-        Expr::Atom(Atom::Integer(value)) => Some(value),
+        Expr::Atom(Atom::Integer(value)) => Some(value.to_bigint()),
         _ => None,
     }
 }

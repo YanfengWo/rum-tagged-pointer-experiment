@@ -498,7 +498,7 @@ fn normalize_association_expr(expr: &Expr) -> Expr {
 fn normal_target_matches_association(target: &Expr) -> bool {
     is_system_symbol_name(target, "Association")
         || is_system_symbol_name(target, "All")
-        || matches!(target, Expr::Atom(Atom::Integer(value)) if value >= &BigInt::from(0))
+        || matches!(target, Expr::Atom(Atom::Integer(value)) if value.to_bigint() >= BigInt::from(0))
 }
 
 fn lookup_value(

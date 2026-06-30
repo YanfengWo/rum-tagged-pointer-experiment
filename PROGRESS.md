@@ -6,6 +6,40 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-30 Memory line Phase 3 rungs 2+3 — Integer small-int hybrid + Symbol niche-pack, `Expr` 40→32, dense-list 5.3x→4.0x; safe-Rust per-node compression CONCLUDED (brief-054)
+
+Combined (neither moves the metric alone — `Integer` and `Symbol` are both 32 B and
+co-cap the enum). `Atom::Integer(BigInt)` → `Atom::Integer(IntValue)` where
+`IntValue = Small(i64) | Big(Box<BigInt>)` (INVARIANT: `Big` never holds an i64-fittable
+value, so derived `Eq`/`Hash` are correct; custom `Ord` because variant order ≠ value
+order; arithmetic still computes via `BigInt`, only STORAGE changes — low risk). Plus
+`Symbol.identity: Option<u64>` → `Option<NonZeroU64>` (niche-packs 16→8 B; the gensym
+counter never yields 0, audited).
+
+RESULT: `size_of::<Expr>()` **40 → 32** (Atom 32, Symbol 32→24, IntValue 16). Dense-list
+`retained` ratio **5.17–5.33x → 3.96–4.00x** (`rum_retained` 42370→32438 at N=1000).
+`Range[100000]` **allocation count 201090 → 1087** (~200x — the per-element small-int
+`BigInt` heap alloc is eliminated; bytes_total 5.99M→3.56M). TIME is a broad WIN, not
+a cost: core microbench hot labels 8–18% faster (smaller Expr — `length-list` 0.82,
+`if-true` 0.82, `sameq-integer` 0.83, `part-list` 0.84), integer probe ~13% faster,
+rational neutral (+1.3%, within noise).
+
+GATE (verbatim): `cargo fmt --check` clean; `cargo test --workspace` **710/0** + doc-tests;
+Claude's mma-hol exact-arith corpus re-run on the v8 snapshot = **886/0** (num 198 / rat
+177 / int 94 / finite 69 / fta 75 = 613, + arith 273 — all byte-identical to baseline
+counts, so exact integer AND rational arithmetic is unchanged). 19-file change (the
+`IntValue` type + custom serde/Ord in `expr.rs`, ~30 `Atom::Integer` match arms, the
+`ByteCount` proxy, `Symbol.identity`).
+
+**LINE CONCLUDED — safe-Rust per-node Expr compression is done.** Rungs 1+2+3 took
+`size_of::<Expr>()` **64 → 32** and the dense-list factor **8.3x → ~4.0x**, while making
+the kernel FASTER (smaller nodes) and slashing allocation traffic. Further per-node
+shrink needs unsafe tagged-pointer / NaN-boxing (the unsafe deep water — out of scope).
+The remaining safe lever, packed numeric arrays, was assessed as a poor fit (a
+numeric-kernel technique vs rum's symbolic + rationals-only design; unpack perf-cliff on
+the pattern-heavy path; highest blast radius) and DEFERRED. See
+`docs/memory-management-plan.md` Phase 3.
+
 ## 2026-06-30 Memory line Phase 3 rung 1 — box `Atom::Rational`, `Expr` 64→40, dense-list ~8.3x→5.3x, FREE on time (brief-053)
 
 First representation lever, gated as a measured design spike (brief-053). Boxing the

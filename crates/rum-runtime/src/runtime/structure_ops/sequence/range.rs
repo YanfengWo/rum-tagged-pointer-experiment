@@ -90,6 +90,10 @@ fn integer_range_count(start: &BigInt, end: &BigInt, step: &BigInt) -> Option<Bi
 }
 
 fn integer_range_values(start: BigInt, step: BigInt, count: usize) -> Vec<Expr> {
+    if let Some(values) = small_integer_range_values(&start, &step, count) {
+        return values;
+    }
+
     let mut values = Vec::with_capacity(count);
     let mut current = start;
 
@@ -101,11 +105,25 @@ fn integer_range_values(start: BigInt, step: BigInt, count: usize) -> Vec<Expr> 
     values
 }
 
+fn small_integer_range_values(start: &BigInt, step: &BigInt, count: usize) -> Option<Vec<Expr>> {
+    let mut current = i64::try_from(start).ok()?;
+    let step = i64::try_from(step).ok()?;
+    let mut values = Vec::with_capacity(count);
+
+    for index in 0..count {
+        values.push(Expr::small_integer(current));
+        if index + 1 < count {
+            current = current.checked_add(step)?;
+        }
+    }
+
+    Some(values)
+}
+
 fn bigint_count_to_usize(count: &BigInt) -> Option<usize> {
     count.to_string().parse().ok()
 }
 
 fn range_memory_proxy_bytes(count: usize) -> usize {
-    let element_bytes = std::mem::size_of::<Expr>().saturating_add(std::mem::size_of::<BigInt>());
-    std::mem::size_of::<Expr>().saturating_add(count.saturating_mul(element_bytes))
+    std::mem::size_of::<Expr>().saturating_add(count.saturating_mul(std::mem::size_of::<Expr>()))
 }

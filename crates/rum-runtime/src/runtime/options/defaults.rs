@@ -47,10 +47,7 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
             system_rule_option("IncludedContexts", system_expr("All")),
         ],
         "DumpSave" => vec![
-            system_rule_option(
-                "CompressionLevel",
-                Expr::Atom(Atom::Integer(BigInt::from(1))),
-            ),
+            system_rule_option("CompressionLevel", Expr::integer(BigInt::from(1))),
             system_rule_option("SymbolAttributes", bool_option(true)),
         ],
         "Once" => vec![

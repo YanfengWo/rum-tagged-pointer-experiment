@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::num::NonZeroU64;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex, OnceLock};
 
@@ -34,7 +35,7 @@ pub struct SymbolText {
 #[derive(Clone, Copy, Debug)]
 pub struct Symbol {
     id: u32,
-    identity: Option<u64>,
+    identity: Option<NonZeroU64>,
     text: &'static SymbolText,
 }
 
@@ -116,6 +117,7 @@ impl Symbol {
 
     pub fn with_identity(context: impl AsRef<str>, name: impl AsRef<str>, identity: u64) -> Self {
         let text = intern_symbol_text(context.as_ref(), name.as_ref());
+        let identity = NonZeroU64::new(identity).expect("symbol identity must be non-zero");
         Self {
             id: text.id,
             identity: Some(identity),
@@ -156,7 +158,7 @@ impl Symbol {
     }
 
     pub fn identity(&self) -> Option<u64> {
-        self.identity
+        self.identity.map(NonZeroU64::get)
     }
 
     /// Dense id of the interned `(context, name)` pair. Symbols with the
@@ -188,10 +190,7 @@ impl Eq for Symbol {}
 
 impl Hash for Symbol {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        let identity = match self.identity {
-            Some(value) => value.rotate_left(1) | 1,
-            None => 0,
-        };
+        let identity = self.identity.map(NonZeroU64::get).unwrap_or(0);
         state.write_u64((u64::from(self.id)).wrapping_mul(0x9e3779b97f4a7c15) ^ identity);
     }
 }
@@ -228,7 +227,7 @@ impl Serialize for Symbol {
         state.serialize_field("context", self.text.context)?;
         state.serialize_field("name", self.text.name)?;
         if let Some(identity) = self.identity {
-            state.serialize_field("identity", &identity)?;
+            state.serialize_field("identity", &identity.get())?;
         }
         state.end()
     }
@@ -256,6 +255,82 @@ impl<'de> Deserialize<'de> for Symbol {
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.qualified_name())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum IntValue {
+    Small(i64),
+    Big(Box<BigInt>),
+}
+
+impl IntValue {
+    pub fn from_bigint(value: BigInt) -> Self {
+        match i64::try_from(&value) {
+            Ok(value) => Self::Small(value),
+            Err(_) => Self::Big(Box::new(value)),
+        }
+    }
+
+    pub fn from_i64(value: i64) -> Self {
+        Self::Small(value)
+    }
+
+    pub fn to_bigint(&self) -> BigInt {
+        match self {
+            Self::Small(value) => BigInt::from(*value),
+            Self::Big(value) => (**value).clone(),
+        }
+    }
+
+    pub fn as_i64(&self) -> Option<i64> {
+        match self {
+            Self::Small(value) => Some(*value),
+            Self::Big(_) => None,
+        }
+    }
+
+    pub fn is_zero(&self) -> bool {
+        matches!(self, Self::Small(0))
+    }
+}
+
+impl PartialOrd for IntValue {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for IntValue {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Self::Small(lhs), Self::Small(rhs)) => lhs.cmp(rhs),
+            _ => self.to_bigint().cmp(&other.to_bigint()),
+        }
+    }
+}
+
+impl Serialize for IntValue {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Small(value) => BigInt::from(*value).serialize(serializer),
+            Self::Big(value) => value.serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for IntValue {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        BigInt::deserialize(deserializer).map(Self::from_bigint)
+    }
+}
+
+impl fmt::Display for IntValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Small(value) => write!(f, "{value}"),
+            Self::Big(value) => write!(f, "{value}"),
+        }
     }
 }
 
@@ -393,7 +468,7 @@ impl fmt::Display for Rational {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Atom {
-    Integer(BigInt),
+    Integer(IntValue),
     Rational(Box<Rational>),
     String(String),
     Symbol(Symbol),
@@ -607,7 +682,11 @@ impl Eq for Expr {}
 
 impl Expr {
     pub fn integer(value: BigInt) -> Self {
-        Self::Atom(Atom::Integer(value))
+        Self::Atom(Atom::Integer(IntValue::from_bigint(value)))
+    }
+
+    pub fn small_integer(value: i64) -> Self {
+        Self::Atom(Atom::Integer(IntValue::from_i64(value)))
     }
 
     pub fn string(value: impl Into<String>) -> Self {
@@ -791,6 +870,20 @@ mod tests {
         assert_eq!(rational.numerator().to_string(), "-3");
         assert_eq!(rational.denominator().to_string(), "4");
         assert_eq!(Expr::rational(rational).to_string(), "-3/4");
+    }
+
+    #[test]
+    fn normalizes_int_values_and_orders_by_numeric_value() {
+        let small = IntValue::from_bigint(BigInt::from(i64::MAX));
+        assert!(matches!(small, IntValue::Small(value) if value == i64::MAX));
+
+        let big_positive = IntValue::from_bigint(BigInt::from(i64::MAX) + BigInt::from(1_u8));
+        assert!(matches!(big_positive, IntValue::Big(_)));
+
+        let big_negative = IntValue::from_bigint(BigInt::from(i64::MIN) - BigInt::from(1_u8));
+        assert!(matches!(big_negative, IntValue::Big(_)));
+        assert!(big_negative < IntValue::from_i64(0));
+        assert!(big_positive > IntValue::from_i64(0));
     }
 
     #[test]

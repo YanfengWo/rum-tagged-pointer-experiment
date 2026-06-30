@@ -286,7 +286,7 @@ impl Session {
         }
 
         match &args[0] {
-            Expr::Atom(Atom::Integer(value)) => Ok(Expr::integer(value.clone())),
+            Expr::Atom(Atom::Integer(value)) => Ok(Expr::integer(value.to_bigint())),
             Expr::Atom(Atom::Rational(value)) => Ok(Expr::integer(value.numerator().clone())),
             _ => Ok(Expr::call(head.clone(), args.to_vec())),
         }
@@ -634,14 +634,14 @@ fn fast_integer_plus(args: &[Expr]) -> Option<Expr> {
 
 pub(super) fn expr_as_exact_integer(expr: &Expr) -> Option<BigInt> {
     match expr {
-        Expr::Atom(Atom::Integer(value)) => Some(value.clone()),
+        Expr::Atom(Atom::Integer(value)) => Some(value.to_bigint()),
         _ => None,
     }
 }
 
 pub(super) fn expr_as_exact_rational(expr: &Expr) -> Option<Rational> {
     match expr {
-        Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.clone())),
+        Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.to_bigint())),
         Expr::Atom(Atom::Rational(value)) => Some(value.as_ref().clone()),
         _ => None,
     }
@@ -927,7 +927,7 @@ fn compare_exact_rational_values(lhs: &Rational, rhs: &Rational) -> std::cmp::Or
 
 fn expr_as_signed_integer_value(expr: &Expr) -> Option<BigInt> {
     match expr {
-        Expr::Atom(Atom::Integer(value)) => Some(value.clone()),
+        Expr::Atom(Atom::Integer(value)) => Some(value.to_bigint()),
         Expr::Call { head, args } if is_system_symbol_name(head, "Times") && args.len() == 2 => {
             if is_negative_one_expr(&args[0]) {
                 expr_as_exact_integer(&args[1]).map(|value| -value)

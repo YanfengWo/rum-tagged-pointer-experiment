@@ -161,8 +161,8 @@ pub(super) fn parse_array_filter_template(expr: &Expr, rank: usize) -> Option<Ar
     let mask = flat
         .into_iter()
         .map(|item| match item {
-            Expr::Atom(Atom::Integer(value)) if value == BigInt::from(1_u8) => Some(true),
-            Expr::Atom(Atom::Integer(value)) if value == BigInt::from(0_u8) => Some(false),
+            Expr::Atom(Atom::Integer(value)) if value.as_i64() == Some(1) => Some(true),
+            Expr::Atom(Atom::Integer(value)) if value.as_i64() == Some(0) => Some(false),
             _ => None,
         })
         .collect::<Option<Vec<_>>>()?;

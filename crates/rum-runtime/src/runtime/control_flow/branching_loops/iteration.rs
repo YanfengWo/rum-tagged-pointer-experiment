@@ -641,7 +641,9 @@ fn eval_single_spec_integer_plus_table_fast_path(
     let items = values
         .into_iter()
         .map(|value| match value {
-            Expr::Atom(Atom::Integer(integer)) => Expr::integer(integer + offset.clone()),
+            Expr::Atom(Atom::Integer(integer)) => {
+                Expr::integer(integer.to_bigint() + offset.clone())
+            }
             _ => unreachable!("values were prechecked as integers"),
         })
         .collect();
@@ -889,7 +891,7 @@ fn parse_held_loop_symbol(expr: &Expr) -> Option<Symbol> {
 
 fn expr_as_signed_bigint(expr: &Expr) -> Option<BigInt> {
     match expr {
-        Expr::Atom(Atom::Integer(value)) => Some(value.clone()),
+        Expr::Atom(Atom::Integer(value)) => Some(value.to_bigint()),
         Expr::Call { head, args } if is_system_symbol_name(head, "Times") && args.len() == 2 => {
             if is_negative_one_expr(&args[0]) {
                 expr_as_exact_integer(&args[1]).map(|value| -value)
@@ -984,6 +986,10 @@ fn integer_range_count(start: &BigInt, end: &BigInt, step: &BigInt) -> Option<Bi
 }
 
 fn integer_range_values(start: BigInt, step: BigInt, count: usize) -> Vec<Expr> {
+    if let Some(values) = small_integer_range_values(&start, &step, count) {
+        return values;
+    }
+
     let mut values = Vec::with_capacity(count);
     let mut current = start;
 
@@ -993,6 +999,21 @@ fn integer_range_values(start: BigInt, step: BigInt, count: usize) -> Vec<Expr> 
     }
 
     values
+}
+
+fn small_integer_range_values(start: &BigInt, step: &BigInt, count: usize) -> Option<Vec<Expr>> {
+    let mut current = i64::try_from(start).ok()?;
+    let step = i64::try_from(step).ok()?;
+    let mut values = Vec::with_capacity(count);
+
+    for index in 0..count {
+        values.push(Expr::small_integer(current));
+        if index + 1 < count {
+            current = current.checked_add(step)?;
+        }
+    }
+
+    Some(values)
 }
 
 fn bigint_count_to_usize(count: &BigInt) -> Option<usize> {

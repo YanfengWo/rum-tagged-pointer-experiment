@@ -142,7 +142,7 @@ fn canonical_call(head: &'static str, args: Vec<Expr>) -> Expr {
 
 fn negated_numeric_literal(expr: &Expr) -> Option<Expr> {
     match expr {
-        Expr::Atom(Atom::Integer(value)) => Some(Expr::integer(-value.clone())),
+        Expr::Atom(Atom::Integer(value)) => Some(Expr::integer(-value.to_bigint())),
         Expr::Atom(Atom::Rational(value)) => Some(Expr::rational(value.negated())),
         _ => None,
     }
@@ -150,7 +150,7 @@ fn negated_numeric_literal(expr: &Expr) -> Option<Expr> {
 
 fn numeric_literal_rational(expr: &Expr) -> Option<Rational> {
     match expr {
-        Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.clone())),
+        Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.to_bigint())),
         Expr::Atom(Atom::Rational(value)) => Some(value.as_ref().clone()),
         _ => None,
     }
