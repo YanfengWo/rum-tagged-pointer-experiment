@@ -1,7 +1,64 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-06-30 (LATEST) — the 2855-vs-3126 gap was a REAL correctness bug, now
-> FIXED (brief-051). Read THIS first; it corrects the "NOT failures, a counting
+> **2026-06-30 (LATEST — read THIS first; supersedes the blocks below). Two lines
+> CLOSED this session: (1) correctness — rum reproduces the README's 3126/0 exactly;
+> (2) the safe-Rust MEMORY LINE is CONCLUDED. Tree clean, all committed (HEAD on
+> `main`).** Session arc, newest first:
+>
+> - **Memory line CONCLUDED for safe Rust.** Phase 0 instruments (`MaxMemoryUsed[]` +
+>   `scripts/core-memory-microbench.sh`, briefs 048) + **Phase 0.5 four-C panel**
+>   (brief-052: peak/retained/transient/post-cleanup; **KEY: only `retained_ratio` is
+>   a clean cross-engine constant factor — peak/transient/post-cleanup/RSS WK columns
+>   are confounded by WK's sticky startup high-water, read them RUM-LOCAL**) + Phase
+>   1/1b Module-gensym definition GC (briefs 049/050, done 06-29; 6 MB→bounded, cold
+>   `run_all` completes at 12 GB) + **Phase 3 per-node `Expr` compression rungs 1-3**
+>   (briefs 053/054: box `Rational` + `Integer` small-int hybrid `IntValue` + `Symbol`
+>   `NonZeroU64` niche-pack → `size_of::<Expr>()` **64→32**, dense-list `retained`
+>   **8.3x→~4.0x**, AND kernel 8-18% FASTER + alloc ~200x↓ on dense ints; gated
+>   `cargo test --workspace` 710/0 + mma-hol exact-arith corpus 886/0 byte-identical).
+>   **Phase 2 (interner name residual) CONCLUDED as a deliberate bounded tradeoff**
+>   (~235 B/gensym, per-eval bounded by `iteration_work_limit`, non-blocking; closing
+>   needs unsafe or a perf-regression on the `Copy`/`&'static` `Symbol`, or a
+>   prevent-at-source spike). Further is OUT of safe-Rust-without-regression scope:
+>   per-node <32 B needs unsafe tagged-pointer/NaN-boxing; dense-collection parity
+>   needs packed arrays (a numeric-kernel technique assessed a poor fit for symbolic
+>   rationals-only rum). See `docs/memory-management-plan.md`.
+> - **`TerminatedEvaluation` resource-limit tags made specific** (`63efadd`):
+>   IterationWork/IntegerWork/GeneratedElement get distinct tags (was generic
+>   `"ResourceLimit"`) so a user knows which budget to raise. (Found while measuring
+>   Phase 2: the limit failure mode is already graceful + messaged, not a bug.)
+> - **Deep-nesting stack overflow — RESOLVED.** A ~5000-deep nested literal SIGABRT'd.
+>   **Parser depth guard shipped** (brief-055, `2a23d5e`: `MAX_PARSE_DEPTH`=128 →
+>   graceful `parse nesting exceeded limit 128`; corpus loads under 128). This closes
+>   every REACHABLE crash (WL paths depth-capped by parser + `recursion_limit` 1024 +
+>   resource limits). The iterative `Drop` (for a deep `Expr` built directly via the
+>   Rust API — host-only, pathological, NOT WL-reachable) was tried 3 ways (briefs
+>   056/057: unsafe `ManuallyDrop`, safe `Option<Arc>`, safe sentinel) — **all
+>   regressed the eval hot path 20-50%**, REJECTED; documented as a known host limit
+>   in `docs/host-embedding-and-hardening.md`.
+> - **PROCESS (important for future briefs): two standing rules added** to
+>   `docs/dev/codex/TEMPLATE.md` + `AGENTS.md` (`294d356`): (1) NO new `unsafe` in
+>   `rum-core`/`rum-runtime` (verified ZERO-unsafe; safe equivalents exist); (2)
+>   hot-path changes (eval/dispatch/matcher, `Expr`/`Shared*` construct/`Drop`,
+>   candidate lookup) MUST be gated with a `core-language-microbench` A/B. Root cause
+>   of brief-055's miss = under-constrained brief; the rules self-corrected 056/057.
+>
+> **OPEN directions (pick a new line):** (a) **host embedding hardening** — now the
+> natural mainline (mma-hol is through); Tier-1 in `docs/host-embedding-and-hardening.md`
+> (interrupt/cancel, session time/memory budget, structured `HostValue`, `catch_unwind`
+> boundary), then a showcase (sandbox + WASM-ready are the kept enablers; the specific
+> project is deliberately undecided — impression-vs-utility weighed, nothing chosen).
+> (b) deferred perf line (hash-consing/value-memo ~26% on Pair; bytecode VM). (c) small
+> conformance: genuine-cycle → `TerminatedEvaluation[IterationLimit]` not
+> `General::cycle`. (d) push mma-hol to more demos/chapters. The
+> `docs/host-embedding-and-hardening.md` capability survey + tiered hardening map is
+> the entry point for (a).
+>
+> The 2026-06-30 arith block below is still accurate for the correctness fix details;
+> the blocks under it are older history.
+
+> **2026-06-30 — the 2855-vs-3126 gap was a REAL correctness bug, now
+> FIXED (brief-051). It corrects the "NOT failures, a counting
 > reconciliation" framing in the 2026-06-29 block below — that was WRONG.** The
 > previous session FOUND that `arith_tests.wl` truncates (rum 50, the rest silently
 > skipped) but never persisted it AND the handoff recorded the opposite ("a

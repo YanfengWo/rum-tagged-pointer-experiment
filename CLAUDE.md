@@ -98,19 +98,29 @@ from the profile before keeping a change.**
 
 ## Current direction (read these for state)
 
-- **ACTIVE LINE (2026-06-29): memory management** — get rum within a constant
-  factor of WK memory across the supported `mma-hol` slice (the analog of the now-
-  complete time line). Read `docs/memory-management-plan.md` (research + calibration
-  + the Phase 0-3 plan) and the `2026-06-29 (LATEST)` top block of
-  `docs/next-session-handoff.md`. Headline: Module×20000 grows `MemoryInUse` 6 MB in
-  rum vs 80 B in WK (the Module-gensym leak, also the cold `run_all` 50 GB OOM
-  cause). Start at Phase 0 (instruments: `MaxMemoryUsed[]` + a cross-engine memory
-  comparator); Phase 1 is the Module-gensym definition GC.
-- **The correctness mainline is COMPLETE for the loaded slice (2026-06-29):** the
-  full ℤ→ℚ→ℝ tower + demos load 100%, brief-046 closed the last batch-A 50 fails,
-  and the whole non-kernel test corpus is `2855/0` under `run_fast` on v7+046
-  (`run_fast` 2784/0 + `kernel_tests` cold 71/0). The authoritative cold Strict
-  `run_all` (the disputed 3126/0) is BLOCKED on the memory line (single-process OOM).
+- **NO ACTIVE LINE right now — pick one (2026-06-30).** Both recent mainlines are
+  CLOSED; read the `2026-06-30 (LATEST)` top block of `docs/next-session-handoff.md`
+  for the full arc and the OPEN directions. The natural next mainline is **host
+  embedding hardening** (mma-hol is through, so "rum as an embeddable engine for other
+  projects" is the forward line) — entry point `docs/host-embedding-and-hardening.md`
+  (capability survey + tiered hardening map: Tier-1 = interrupt/cancel, session
+  time/memory budget, structured `HostValue`, `catch_unwind` boundary). Other open
+  lines: a showcase project (sandbox + WASM-ready enablers recorded, specific project
+  undecided), the deferred perf line (hash-consing/value-memo ~26% on Pair, bytecode
+  VM), and small conformance items (genuine-cycle → `TerminatedEvaluation[IterationLimit]`).
+- **MEMORY LINE CONCLUDED for safe Rust (2026-06-30).** Phase 0 instruments + 0.5
+  four-C panel + 1/1b gensym GC + Phase 3 per-node `Expr` compression (rungs 1-3:
+  `size_of::<Expr>()` 64→32, dense-list factor 8.3x→~4.0x, kernel faster + alloc
+  ~200x↓); Phase 2 interner residual kept as a bounded tradeoff. Headline Module leak
+  (6 MB→bounded) + dense-list factor addressed. Further needs unsafe tagged-pointer or
+  packed arrays (poor fit for symbolic rationals-only rum). Read
+  `docs/memory-management-plan.md`. KEY measurement caveat: only the four-C
+  `retained_ratio` is a clean cross-engine constant factor; peak/transient/RSS WK
+  columns are confounded by WK's startup high-water — read them rum-local.
+- **The correctness mainline is COMPLETE: rum reproduces the README's 3126/0 exactly
+  (2026-06-30).** The 2855-vs-3126 gap was a REAL bug (brief-051: `Set[a,a]`
+  self-fixed-point aborted `Get` mid-file in `arith_tests.wl`), now fixed; `run_fast`
+  3055/0 + `kernel_tests` cold 71/0 = 3126/0, 0 failures. v8 snapshot is authoritative.
 - The **perf/representation line is PAUSED at a clean stop** (not the active
   line): `docs/representation-rewrite-plan.md` (Layer A done+gated; flaws 2-3
   refuted; hash-consing validated SOUND+~26% on Pair but DEFERRED). Deferred SAFE
