@@ -296,6 +296,8 @@ pub enum EvalError {
     EvaluationCycleDetected { expr: String },
     #[error("evaluation exceeded recursion limit ({limit})")]
     RecursionLimitExceeded { limit: usize },
+    #[error("evaluation exceeded pattern-match recursion limit ({limit})")]
+    MatchRecursionLimitExceeded { limit: usize },
     #[error("evaluation exceeded TimeConstrained limit")]
     TimeConstraintExceeded,
     #[error("evaluation exceeded MemoryConstrained limit ({limit})")]
@@ -383,6 +385,7 @@ impl Default for Session {
             next_generated_symbol_id: 0,
             resource_limits: ResourceLimits::default(),
             evaluation_depth: 0,
+            match_depth: 0,
             evaluation_stack: Vec::new(),
             tracing_enabled: false,
             trace_events: Vec::new(),

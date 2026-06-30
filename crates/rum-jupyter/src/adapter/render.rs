@@ -159,6 +159,7 @@ const fn failure_code_name(code: HostFailureCode) -> &'static str {
         HostFailureCode::LoadPathNotFound => "LoadPathNotFound",
         HostFailureCode::EvaluationCycleDetected => "EvaluationCycleDetected",
         HostFailureCode::RecursionLimitExceeded => "RecursionLimitExceeded",
+        HostFailureCode::MatchRecursionLimitExceeded => "MatchRecursionLimitExceeded",
         HostFailureCode::TimeConstraintExceeded => "TimeConstraintExceeded",
         HostFailureCode::MemoryConstraintExceeded => "MemoryConstraintExceeded",
         HostFailureCode::GeneratedElementLimitExceeded => "GeneratedElementLimitExceeded",

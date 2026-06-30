@@ -268,6 +268,12 @@ impl fmt::Display for SessionRequestError {
             Self::RecursionLimitExceeded { limit } => {
                 write!(f, "evaluation exceeded recursion limit ({limit})")
             }
+            Self::MatchRecursionLimitExceeded { limit } => {
+                write!(
+                    f,
+                    "evaluation exceeded pattern-match recursion limit ({limit})"
+                )
+            }
             Self::TimeConstraintExceeded => {
                 f.write_str("evaluation exceeded TimeConstrained limit")
             }
@@ -351,6 +357,7 @@ pub struct Session {
     pub(super) next_generated_symbol_id: u64,
     pub(super) resource_limits: ResourceLimits,
     pub(super) evaluation_depth: usize,
+    pub(super) match_depth: usize,
     pub(super) evaluation_stack: Vec<EvaluationStackEntry>,
     pub(super) tracing_enabled: bool,
     pub(super) trace_events: Vec<TraceEvent>,
@@ -629,6 +636,9 @@ pub enum SessionRequestError {
         expr: String,
     },
     RecursionLimitExceeded {
+        limit: usize,
+    },
+    MatchRecursionLimitExceeded {
         limit: usize,
     },
     TimeConstraintExceeded,

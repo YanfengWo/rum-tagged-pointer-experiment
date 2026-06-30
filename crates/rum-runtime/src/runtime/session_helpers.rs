@@ -7,6 +7,7 @@ pub(super) struct EvaluationRollbackSnapshot {
     module_activations: Vec<ModuleActivation>,
     load_stack: Vec<PathBuf>,
     evaluation_depth: usize,
+    match_depth: usize,
     evaluation_stack: Vec<EvaluationStackEntry>,
     prints: Vec<String>,
     handled_non_loader_eval_errors: Vec<RuntimeMessage>,
@@ -84,6 +85,7 @@ impl Session {
             module_activations: self.module_activations.clone(),
             load_stack: self.load_stack.clone(),
             evaluation_depth: self.evaluation_depth,
+            match_depth: self.match_depth,
             evaluation_stack: self.evaluation_stack.clone(),
             prints: self.prints.clone(),
             handled_non_loader_eval_errors: self.handled_non_loader_eval_errors.clone(),
@@ -111,6 +113,7 @@ impl Session {
         self.module_activations = snapshot.module_activations;
         self.load_stack = snapshot.load_stack;
         self.evaluation_depth = snapshot.evaluation_depth;
+        self.match_depth = snapshot.match_depth;
         self.evaluation_stack = snapshot.evaluation_stack;
         self.prints = snapshot.prints;
         self.handled_non_loader_eval_errors = snapshot.handled_non_loader_eval_errors;
@@ -171,6 +174,7 @@ impl Session {
         let tag = match error {
             EvalError::EvaluationCycleDetected { .. } => "cycle",
             EvalError::RecursionLimitExceeded { .. } => "reclim",
+            EvalError::MatchRecursionLimitExceeded { .. } => "matchreclim",
             EvalError::TimeConstraintExceeded => "timelim",
             EvalError::MemoryConstraintExceeded { .. } => "memlim",
             EvalError::GeneratedElementLimitExceeded { .. }
@@ -196,6 +200,7 @@ impl Session {
         // fired). The tag mirrors the message text (e.g. "iteration work limit").
         match error {
             EvalError::RecursionLimitExceeded { .. } => Some("RecursionLimit"),
+            EvalError::MatchRecursionLimitExceeded { .. } => Some("PatternMatchRecursionLimit"),
             EvalError::EvaluationPassLimitExceeded { .. } => Some("IterationLimit"),
             EvalError::GeneratedElementLimitExceeded { .. } => Some("GeneratedElementLimit"),
             EvalError::IntegerWorkLimitExceeded { .. } => Some("IntegerWorkLimit"),

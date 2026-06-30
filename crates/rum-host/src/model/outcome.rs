@@ -46,6 +46,7 @@ pub enum HostFailureCode {
     LoadPathNotFound,
     EvaluationCycleDetected,
     RecursionLimitExceeded,
+    MatchRecursionLimitExceeded,
     TimeConstraintExceeded,
     MemoryConstraintExceeded,
     GeneratedElementLimitExceeded,
@@ -233,6 +234,9 @@ fn failure_code(error: &SessionRequestError) -> HostFailureCode {
         }
         SessionRequestError::RecursionLimitExceeded { .. } => {
             HostFailureCode::RecursionLimitExceeded
+        }
+        SessionRequestError::MatchRecursionLimitExceeded { .. } => {
+            HostFailureCode::MatchRecursionLimitExceeded
         }
         SessionRequestError::TimeConstraintExceeded => HostFailureCode::TimeConstraintExceeded,
         SessionRequestError::MemoryConstraintExceeded { .. } => {
