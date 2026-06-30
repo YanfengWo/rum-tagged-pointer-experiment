@@ -15,6 +15,42 @@ fn host_session_with_large_iteration_budget() -> HostSession {
 }
 
 #[test]
+fn host_session_and_cancel_handle_are_send() {
+    fn is_send<T: Send>() {}
+
+    is_send::<rum_runtime::Session>();
+    is_send::<HostSession>();
+    is_send::<HostCancelHandle>();
+    // HostSession is intentionally not asserted Sync: it is owned, mutable
+    // session state, with Cell/FnMut internals that should not be shared.
+}
+
+#[test]
+fn parallel_host_sessions_move_to_threads_and_isolate_definitions() {
+    const THREADS: usize = 8;
+
+    let handles = (0..THREADS)
+        .map(|i| {
+            let session = HostSession::new();
+            thread::spawn(move || {
+                let mut session = session;
+                let source = format!("x = {i}; x * x");
+                match session.eval(source) {
+                    HostEvalOutcome::Success(success) => (i, success.value.text),
+                    other => panic!("thread {i} expected success, got {other:?}"),
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+
+    for handle in handles {
+        let (i, text) = handle.join().expect("host session worker should not panic");
+        assert_eq!(text, (i * i).to_string(), "thread {i}");
+        eprintln!("parallel_host_sessions thread={i} result={text}");
+    }
+}
+
+#[test]
 fn host_eval_reports_value_messages_prints_and_structured_outputs() {
     let mut session = HostSession::new();
 

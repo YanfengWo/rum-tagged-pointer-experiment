@@ -195,7 +195,7 @@ impl Session {
         finish: F,
     ) -> Result<Expr, EvalError>
     where
-        F: FnOnce(usize) -> Expr + 'static,
+        F: FnOnce(usize) -> Expr + Send + 'static,
     {
         let traversal_result = self.resolve_traversal_without_limit_owned(option_exprs, defaults);
         self.drive_internal_value(traversal_result, move |session, traversal| {

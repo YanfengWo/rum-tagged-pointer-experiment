@@ -4,7 +4,7 @@ use super::*;
 
 pub(in crate::runtime) struct SuspendedEvaluation {
     pub(in crate::runtime) active_stack: Vec<EvaluationStackEntry>,
-    pub(in crate::runtime) frames: VecDeque<Box<dyn SuspensionFrame>>,
+    pub(in crate::runtime) frames: VecDeque<Box<dyn SuspensionFrame + Send>>,
 }
 
 pub(in crate::runtime) trait SuspensionFrame {
@@ -27,7 +27,7 @@ struct ClosureFrame<F> {
 
 impl<F> SuspensionFrame for ClosureFrame<F>
 where
-    F: FnOnce(&mut Session, Result<Expr, EvalError>) -> Result<Expr, EvalError> + 'static,
+    F: FnOnce(&mut Session, Result<Expr, EvalError>) -> Result<Expr, EvalError> + Send + 'static,
 {
     fn resume(
         mut self: Box<Self>,
@@ -60,7 +60,7 @@ impl Session {
     where
         T: ContinuationValue + 'static,
         U: ContinuationValue + 'static,
-        F: FnOnce(&mut Session, T) -> Result<U, EvalError> + 'static,
+        F: FnOnce(&mut Session, T) -> Result<U, EvalError> + Send + 'static,
     {
         match result {
             Ok(value) => cont(self, T::from_continuation_expr(value)),
@@ -86,7 +86,7 @@ impl Session {
     where
         T: ContinuationValue + 'static,
         U: ContinuationValue + 'static,
-        F: FnOnce(&mut Session, T) -> Result<U, EvalError> + 'static,
+        F: FnOnce(&mut Session, T) -> Result<U, EvalError> + Send + 'static,
     {
         match result {
             Ok(value) => cont(self, value),
@@ -110,7 +110,7 @@ impl Session {
         frame: F,
     ) -> Result<Expr, EvalError>
     where
-        F: FnOnce(&mut Session, Expr) -> Result<Expr, EvalError> + 'static,
+        F: FnOnce(&mut Session, Expr) -> Result<Expr, EvalError> + Send + 'static,
     {
         self.suspend_with_result_frame(result, move |session, outcome| match outcome {
             Ok(value) => frame(session, value),
@@ -125,7 +125,7 @@ impl Session {
     ) -> Result<Expr, EvalError>
     where
         M: FnOnce() -> F,
-        F: FnOnce(&mut Session, Expr) -> Result<Expr, EvalError> + 'static,
+        F: FnOnce(&mut Session, Expr) -> Result<Expr, EvalError> + Send + 'static,
     {
         self.suspend_with_result_frame_lazy(result, move || {
             let frame = make_frame();
@@ -142,7 +142,9 @@ impl Session {
         frame: F,
     ) -> Result<Expr, EvalError>
     where
-        F: FnOnce(&mut Session, Result<Expr, EvalError>) -> Result<Expr, EvalError> + 'static,
+        F: FnOnce(&mut Session, Result<Expr, EvalError>) -> Result<Expr, EvalError>
+            + Send
+            + 'static,
     {
         match result {
             Ok(value) => Ok(value),
@@ -161,7 +163,9 @@ impl Session {
     ) -> Result<Expr, EvalError>
     where
         M: FnOnce() -> F,
-        F: FnOnce(&mut Session, Result<Expr, EvalError>) -> Result<Expr, EvalError> + 'static,
+        F: FnOnce(&mut Session, Result<Expr, EvalError>) -> Result<Expr, EvalError>
+            + Send
+            + 'static,
     {
         match result {
             Ok(value) => Ok(value),
@@ -194,7 +198,9 @@ impl Session {
 
     pub(in crate::runtime) fn push_suspension_frame<F>(&mut self, frame: F)
     where
-        F: FnOnce(&mut Session, Result<Expr, EvalError>) -> Result<Expr, EvalError> + 'static,
+        F: FnOnce(&mut Session, Result<Expr, EvalError>) -> Result<Expr, EvalError>
+            + Send
+            + 'static,
     {
         let suspension = self
             .pending_suspension

@@ -51,7 +51,7 @@ impl Session {
     ) -> Result<U, EvalError>
     where
         U: ContinuationValue + 'static,
-        F: FnOnce(&mut Session, Option<Vec<Expr>>) -> Result<U, EvalError> + 'static,
+        F: FnOnce(&mut Session, Option<Vec<Expr>>) -> Result<U, EvalError> + Send + 'static,
     {
         let resolved_rule_exprs_result = self.resolve_rewrite_rule_exprs_owned(expr);
         self.drive_internal_value(resolved_rule_exprs_result, cont)
@@ -64,7 +64,7 @@ impl Session {
     ) -> Result<U, EvalError>
     where
         U: ContinuationValue + 'static,
-        F: FnOnce(&mut Session, Option<Vec<RewriteRule>>) -> Result<U, EvalError> + 'static,
+        F: FnOnce(&mut Session, Option<Vec<RewriteRule>>) -> Result<U, EvalError> + Send + 'static,
     {
         match self.evaluate(expr) {
             Ok(resolved) => cont(self, self.compile_rewrite_rules_for_matching(&resolved)),
