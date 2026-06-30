@@ -55,6 +55,19 @@ GATE (Claude): `cargo fmt --check`; `cargo test --workspace` 712/0; 5 CLI probes
 mma-hol v8 cp42 heavy-matcher subset arith+num+rat+simp 818/0 + proptaut+meson 125/0
 = 943/0, zero PatternMatchRecursionLimit leakage → 512 refuses no legitimate match.
 
+AXIS (a) MEASURED + CLOSED (same line, no code). The TODO pattern-matching entry's
+other half: rum's downvalue dispatch is a LINEAR scan O(total rules), not a
+discrimination net — does the corpus have a long tail where indexing would pay?
+Measured the per-symbol DownValues-count over the full cp42 tower (`Names["**"]` +
+`Length[DownValues[#]]`): 1451 symbols carry downvalues, 1530 total, MAX 6 on any one
+(`rnumMul`); histogram 1dv→1398 (96.3%), 2→41, 3→3, 4→5, 5→3, 6→1; only 12 symbols
+have ≥3. NO long tail → a discrimination net / term index has nothing to optimize
+(≤6 rules/symbol, cheap per-rule prefilter already); linear scan is optimal for HOL,
+indexing would only add overhead. Caveat (general WL): thousands of rules on one
+symbol would benefit — not rum's corpus. The whole pattern-matching line is now closed:
+per-match cost already optimized (compiled matcher), axis (b) resilience fixed, axis
+(a) a measured non-issue.
+
 ## 2026-06-30 Deep-nesting stack overflow — parser guard shipped; iterative Drop tried+rejected on perf (briefs 055-057)
 
 A ~5000-deep nested literal crashed `rum-cli` with SIGABRT. Two unguarded recursers:

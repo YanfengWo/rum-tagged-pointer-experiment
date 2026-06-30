@@ -24,10 +24,14 @@
 > proptaut+meson 125), zero limit leakage → 512 refuses no legitimate match. See
 > `PROGRESS.md` 2026-07-01 + memory `wk-ac-matching-is-naive-enumeration.md`. **The
 > perf half (smart pruning / iterative matcher rewrite) is NOT worth pursuing** —
-> NP-hard, no general solution, WK lacks it, HOL doesn't trigger it. **OPEN matcher
-> work: axis (a)** — the downvalue dispatch is a LINEAR scan (no discrimination-net /
-> term-index), still unmeasured (TODO `## Performance And Representation`). Other OPEN
-> lines unchanged from the 2026-06-30 block below (host-embedding Tier-1 continues —
+> NP-hard, no general solution, WK lacks it, HOL doesn't trigger it. **Axis (a) also
+> MEASURED + CLOSED 2026-07-01** (no code): per-symbol DownValues-count over the full
+> cp42 tower = 1451 symbols, MAX 6 on any one (`rnumMul`), 96.3% have exactly 1, only
+> 12 have ≥3 → NO long tail, so a discrimination-net/term-index has nothing to optimize;
+> the linear-scan dispatch is already optimal for HOL. **So the whole pattern-matching
+> line is now closed** (per-match cost already optimized, axis (b) resilience fixed,
+> axis (a) a measured non-issue). Other OPEN lines unchanged from the 2026-06-30 block
+> below (host-embedding Tier-1 continues —
 > interrupt/cancel, session time/memory budget, structured `HostValue`, `catch_unwind`;
 > this matcher fix is one of its bricks).
 

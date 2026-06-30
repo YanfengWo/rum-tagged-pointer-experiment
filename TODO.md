@@ -553,8 +553,20 @@ Completed history, archived planning detail, and operational lessons live in
     NOT crash. See [[wk-ac-matching-is-naive-enumeration]]. **The PERF half (smart
     pruning / iterative rewrite) is NOT worth pursuing** — NP-hard with no general
     solution, WK doesn't have it, HOL doesn't trigger deep blowup (heavy-matcher
-    mma-hol corpus 943/0 under the 512 guard). Axis (a) — the downvalue
-    discrimination-net / term-index question — remains OPEN and unmeasured.
+    mma-hol corpus 943/0 under the 512 guard).
+  - **UPDATE 2026-07-01 — axis (a) MEASURED + CLOSED (no code).** The per-symbol
+    DownValues-count distribution across the full cp42 tower: 1451 symbols carry
+    downvalues, 1530 total, **MAX 6 on any one symbol** (`rnumMul`), 96.3% have
+    exactly 1, 99.1% have ≤2, only 12 symbols have ≥3. NO long tail → a discrimination
+    net / term index has nothing to optimize (it turns O(total rules)→O(plausible
+    rules), but total rules/symbol ≤6 already, with the cheap per-rule prefilter on
+    top). The current linear-scan downvalue dispatch is already optimal for HOL;
+    indexing would only add net build/maintain overhead. Caveat (general WL): a
+    workload with thousands of rules on ONE symbol would benefit — not rum's corpus.
+    **So the pattern-matching line is now fully closed: per-match cost already
+    optimized (compiled matcher), axis (b) resilience fixed (brief-058), axis (a)
+    measured a non-issue.** (Probe: `Names["**"]` + `Length[DownValues[#]]` over the
+    loaded tower.)
 - [ ] Revisit `rum-core::Atom::Integer` only if performance measurements show
   that pure `BigInt` should become a small-int plus bigint hybrid.
 - [ ] Revisit matcher compilation/storage strategy after the attribute-revision
