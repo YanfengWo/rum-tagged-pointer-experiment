@@ -78,6 +78,30 @@ enabled by brief-059. Documented with a code example in
 convenience wrapper in rum-host was considered and deliberately NOT added (keep rum-host
 platform/thread-free). So the Tier-1 host-hardening line is essentially complete.
 
+TIER-2 STARTED. brief-062 (`1f5b1b0`): make Session/HostSession `Send` + pin the
+concurrency/isolation contract. Diagnosed HostSession was neither Send nor Sync; the only
+Send blocker was the suspension-frame trait object `Box<dyn SuspensionFrame>` lacking
+`+ Send` (Cell + FnMut additionally block Sync). Added `+ Send` to the frame trait object
++ stored-closure bounds (2 compiler-forced follow-on bounds in rewrite_rules.rs /
+count_like.rs); ZERO `!Send` capture fixes (the runtime is Arc-based — every continuation
+was already Send), no `unsafe impl Send`. Now Send (movable to a worker thread, proven by a
+static assert + an 8-thread move/isolation test, i*i for i in 0..8 isolated despite the
+shared interner Mutex), intentionally `!Sync` (single-threaded mutable state). Contract:
+move between threads, never share; the interner is a shared Mutex (contention + shared name
+table) but definitions are per-session. Gate: workspace 712/0, the 2 new tests, jupyter
+stable 5/5 reruns (Codex's one transient ZeroMQ failure was environmental, not the Send
+change — a zero-runtime marker-trait change, no microbench applies).
+
+rum-jupyter upgrades UNLOCKED (surveyed; a dedicated post-Tier-2 brief). `interrupt` is
+today a STUB (sets a flag, returns ok, does NOT stop a running eval) and the transport is a
+single-threaded poll loop where a blocking `execute_request` prevents even RECEIVING the
+interrupt. The hardening supplies the primitives: 059 `cancel_handle` (stop the eval), 062
+`Send` (run execute on a worker so the loop stays responsive to Control), 060 panic
+boundary (panic → error reply + restart-on-poison). Remaining = a jupyter restructure
+(execute-on-worker + interrupt→cancel + poison-restart) → real interrupt + panic-resilient
+kernel. Lower-value gaps: history/comm_info/debug stubs, typed display_data. See
+`docs/host-embedding-and-hardening.md` §2 "Downstream".
+
 ## 2026-07-01 Matcher backtracking stack overflow — depth guard shipped (brief-058)
 
 A SECOND, distinct reachable crash (separate from the 2026-06-30 deep-nesting one):

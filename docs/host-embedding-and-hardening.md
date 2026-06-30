@@ -104,16 +104,37 @@ documented as a host-side pattern (below). The KNOWN LIMITATION bullet still sta
   depth-capped at 64. (rationals-only → no float variant; big values are decimal strings.)
 
 **Tier 2 — for long-running, multi-client hosts:**
-- **reset / clear session** to a clean state (multi-client reuse / isolation).
+- **reset / clear session** to a clean state (multi-client reuse / isolation). [NEXT]
 - **Session snapshot / serialize as host ops.** `DumpSave`/`Get` are WL-level AND
   file-based; a `restore_from_bytes(...)` (load a session image from an in-memory
   buffer) is needed — also the enabler for any no-fs host (WASM).
-- **Concurrency / isolation contract.** Is `HostSession` `Send`/`Sync`? Can N
-  sessions run in parallel threads? The global symbol interner is a
-  `Mutex<HashSet>` (the memory line) shared process-wide — contention / cross-session
-  leakage. Make the contract explicit and tested (ties to the `Rc`-vs-`Arc` tradeoff).
+- **Concurrency / isolation contract — DONE (brief-062, `1f5b1b0`).** `HostSession` (and
+  inner `Session`) is now **`Send`** (movable to a worker thread; only blocker was the
+  suspension-frame trait object, fixed with a `+ Send` bound, no `unsafe`, no `!Send`
+  capture) but intentionally **`!Sync`** (single-threaded mutable state — `Cell`/`FnMut`;
+  run one per thread, don't share). Proven by a static assert + an 8-thread move/isolation
+  test. The process-global symbol interner is a shared `Mutex` (contention point + shared
+  interned-NAME table) but definitions/ownvalues/contexts are per-session and isolated.
 - **Whole-session introspection / enumeration.** `inspect` is per-symbol (you must
   name it); no host-level "enumerate all user definitions / contexts".
+
+**Downstream — rum-jupyter upgrades UNLOCKED by this hardening round (a dedicated
+post-Tier-2 brief).** Surveyed 2026-07-01:
+- **Real interrupt.** `KernelAdapter::interrupt` is today a STUB — it only sets
+  `lifecycle_state = InterruptRequested` and returns ok; it does NOT stop a running eval.
+  Worse, the transport (`zeromq.rs`) is a SINGLE-THREADED poll loop and `execute_request`
+  is a synchronous blocking call, so while execute runs the loop can't even RECEIVE the
+  interrupt message. The hardening supplies the missing primitives: brief-059
+  `cancel_handle()` (stop a running eval), brief-062 `Send` (run execute on a worker thread
+  holding the session so the loop stays responsive to the Control channel), brief-060
+  panic boundary (a kernel panic → graceful error reply + poison → restart the session,
+  not crash the process). The remaining work is a jupyter-side restructure: run execute on
+  a worker, keep polling Control, wire `interrupt_request` → `cancel_handle.cancel()`, and
+  auto-rebuild on `Poisoned`. This turns the stub interrupt into a real one + makes the
+  kernel panic-resilient.
+- Lower value: `history` (returns empty — a ring buffer could fill it), `comm_info` (empty
+  — rum has no comm/widget protocol), `debug` (returns a clean "not implemented"); typed
+  `display_data` from brief-061's `HostTyped` (marginal for a text kernel).
 
 **Tier 3 — nice-to-have:**
 - **Deeper debug.** The structured `trace` (EvaluationPass / DefinitionStored /

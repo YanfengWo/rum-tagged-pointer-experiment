@@ -24,12 +24,22 @@
 > stays WASM-clean, already enabled by 059). Documented with a code example in
 > `docs/host-embedding-and-hardening.md` §2 Tier-1; a native-only rum-host convenience
 > wrapper was considered and deliberately not added (keep rum-host platform/thread-free).
-> **So the Tier-1 host-hardening line is essentially COMPLETE** (interrupt/cancel, time
-> budget, panic boundary, structured `HostValue` shipped; memory budget documented). OPEN
-> next: Tier-2 (reset/clear session, session snapshot from bytes, the Send/Sync concurrency
-> contract, whole-session introspection) or a showcase project (sandbox + WASM enablers).
-> See `PROGRESS.md` 2026-07-01 host entry. The matcher / pattern-matching blocks below are
-> the previous (now-closed) line.
+> **The Tier-1 host-hardening line is COMPLETE** (interrupt/cancel, time budget, panic
+> boundary, structured `HostValue` shipped; memory budget documented). **TIER-2 STARTED:
+> brief-062 DONE** (`1f5b1b0`) — `Session`/`HostSession` is now `Send` (movable to a worker
+> thread; the only blocker was the suspension-frame trait object, fixed with `+ Send`, no
+> unsafe, zero `!Send` captures) and intentionally `!Sync` (single-threaded mutable state;
+> run one per thread). Proven by a static assert + an 8-thread move/isolation test.
+> **rum-jupyter upgrades UNLOCKED by this round (a dedicated post-Tier-2 brief):** the
+> `interrupt` handler is today a STUB (sets a flag, does NOT stop a running eval) and the
+> transport is a single-threaded poll loop where a blocking execute can't even receive the
+> interrupt — 059 cancel + 062 Send + 060 panic boundary now supply the primitives for a
+> REAL interrupt + panic-resilient kernel (execute-on-worker + interrupt→cancel +
+> poison-restart). See `docs/host-embedding-and-hardening.md` §2 "Downstream". OPEN Tier-2:
+> reset/clear (NEXT), session snapshot `restore_from_bytes` (WASM enabler), whole-session
+> introspection; then the jupyter real-interrupt brief; or a showcase project. See
+> `PROGRESS.md` 2026-07-01 host entry. The matcher / pattern-matching blocks below are the
+> previous (now-closed) line.
 
 > **2026-07-01. Matcher backtracking stack-overflow
 > CRASH fixed (brief-058, `a2d5ee6`); this is a host-resilience / Tier-1 brick. Tree
