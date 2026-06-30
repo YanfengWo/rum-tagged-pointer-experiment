@@ -394,7 +394,7 @@ impl fmt::Display for Rational {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Atom {
     Integer(BigInt),
-    Rational(Rational),
+    Rational(Box<Rational>),
     String(String),
     Symbol(Symbol),
 }
@@ -618,7 +618,7 @@ impl Expr {
         if let Some(integer) = value.as_integer() {
             Self::integer(integer.clone())
         } else {
-            Self::Atom(Atom::Rational(value))
+            Self::Atom(Atom::Rational(Box::new(value)))
         }
     }
 

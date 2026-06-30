@@ -259,6 +259,7 @@ pub(in crate::runtime::debug_tools::resources) fn expr_memory_proxy_bytes(expr: 
             std::mem::size_of::<Expr>().saturating_add(bigint_memory_proxy_bytes(value))
         }
         Expr::Atom(Atom::Rational(value)) => std::mem::size_of::<Expr>()
+            .saturating_add(std::mem::size_of::<Rational>())
             .saturating_add(bigint_memory_proxy_bytes(value.numerator()))
             .saturating_add(bigint_memory_proxy_bytes(value.denominator())),
         Expr::Atom(Atom::String(value)) => {

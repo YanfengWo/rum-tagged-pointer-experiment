@@ -286,7 +286,7 @@ fn compare_numeric_expr_pair(lhs: &Expr, rhs: &Expr) -> Option<std::cmp::Orderin
 fn numeric_comparable_value_from_expr(expr: &Expr) -> Option<Rational> {
     match expr {
         Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.clone())),
-        Expr::Atom(Atom::Rational(value)) => Some(value.clone()),
+        Expr::Atom(Atom::Rational(value)) => Some(value.as_ref().clone()),
         _ => None,
     }
 }
@@ -329,7 +329,7 @@ fn comparable_value_from_expr(expr: &Expr) -> Option<ComparableValue> {
         Expr::Atom(Atom::Integer(value)) => Some(ComparableValue::Number(Rational::from_integer(
             value.clone(),
         ))),
-        Expr::Atom(Atom::Rational(value)) => Some(ComparableValue::Number(value.clone())),
+        Expr::Atom(Atom::Rational(value)) => Some(ComparableValue::Number(value.as_ref().clone())),
         Expr::Atom(Atom::String(value)) => Some(ComparableValue::String(value.clone())),
         _ => None,
     }

@@ -132,9 +132,31 @@ the interner an un-intern path for dead gensyms (`&'static` HashSet → a reclai
 arena or refcounted entries). Deeper change; it closes the name-string leak Phase 1
 leaves behind, approaching WK's O(1).
 
-**Phase 3 — representation constant-factor (levers 2 & 3).** Packed numeric arrays
-for dense `List`s; hash-consing for structural sharing. The biggest project; last,
-and only if the constant factor after Phases 1-2 still misses the target.
+**Phase 3 — representation constant-factor (levers 2 & 3). [STARTED 2026-06-30,
+brief-053 = rung 1.]** The `ByteCount[Range[1000]]` ~8.3x is dominated by
+`size_of::<Expr>()`: every `Vec<Expr>` slot is inline, sized to the largest `Atom`
+variant. Measured rungs (the dense-list `retained` ratio is the gated metric):
+- **Rung 1 — box `Rational` (DONE, brief-053, KEPT).** `Atom::Rational(Box<Rational>)`
+  dropped `size_of::<Expr>()` **64 → 40** (the enum was sized by `Rational` = two
+  inline 32-byte `BigInt`s; after boxing the cap is `BigInt`/`Symbol` = 32 + an 8-byte
+  tag). `retain-range` `retained` ratio **8.1–8.3x → 5.17–5.33x** (≈1.57x). FREE on
+  time: the feared per-`Rational` heap-alloc cost (rum is rationals-only) was fully
+  offset by the smaller `Expr` — rational-heavy probe ratio ~0.98 (neutral/slightly
+  faster), core microbench dispatch labels neutral-to-faster, `cargo test --workspace`
+  710/0. 7-file mechanical change (most match sites auto-deref through the `Box`).
+- **Rung 2 — `Atom::Integer` small-int hybrid** (`Integer(i64) | BigInteger(Box<BigInt>)`):
+  removes the per-element `BigInt` heap alloc for small ints AND lets the enum shrink
+  below 40 (caps `Integer` at 8). Not yet done.
+- **Rung 3 — shrink `Symbol`** (32 B; the `identity: Option<u64>` is the 16-byte
+  bloat): needed alongside rung 2 to take `Expr` 40 → ~24 → ~16. Not yet done.
+- **Lever 2 proper — packed numeric arrays** for dense `List`s (a new `Expr` variant
+  holding a packed buffer): the only way to actually reach WK's ~8 B/elem; the
+  biggest, highest-blast-radius project (Part/Length/Map/matcher must see through it).
+- **Lever 3 — hash-consing** for structural sharing (validated ~26% on Pair; both a
+  time and memory win; still deferred).
+Original plan text: Packed numeric arrays for dense `List`s; hash-consing for
+structural sharing. The biggest project; last, and only if the constant factor after
+Phases 1-2 still misses the target.
 
 ## Key file pointers
 

@@ -151,7 +151,7 @@ fn negated_numeric_literal(expr: &Expr) -> Option<Expr> {
 fn numeric_literal_rational(expr: &Expr) -> Option<Rational> {
     match expr {
         Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.clone())),
-        Expr::Atom(Atom::Rational(value)) => Some(value.clone()),
+        Expr::Atom(Atom::Rational(value)) => Some(value.as_ref().clone()),
         _ => None,
     }
 }

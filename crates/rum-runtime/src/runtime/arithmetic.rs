@@ -642,7 +642,7 @@ pub(super) fn expr_as_exact_integer(expr: &Expr) -> Option<BigInt> {
 pub(super) fn expr_as_exact_rational(expr: &Expr) -> Option<Rational> {
     match expr {
         Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.clone())),
-        Expr::Atom(Atom::Rational(value)) => Some(value.clone()),
+        Expr::Atom(Atom::Rational(value)) => Some(value.as_ref().clone()),
         _ => None,
     }
 }

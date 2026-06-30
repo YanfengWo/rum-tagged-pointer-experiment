@@ -10,7 +10,7 @@ mod truth;
 fn exact_numeric_value(expr: &Expr) -> Option<Rational> {
     match expr {
         Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.clone())),
-        Expr::Atom(Atom::Rational(value)) => Some(value.clone()),
+        Expr::Atom(Atom::Rational(value)) => Some(value.as_ref().clone()),
         _ => None,
     }
 }

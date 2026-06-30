@@ -6,6 +6,33 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-30 Memory line Phase 3 rung 1 — box `Atom::Rational`, `Expr` 64→40, dense-list ~8.3x→5.3x, FREE on time (brief-053)
+
+First representation lever, gated as a measured design spike (brief-053). Boxing the
+`Rational` variant (`Atom::Rational(Box<Rational>)`) drops `size_of::<Expr>()`
+**64 → 40** — the `Atom` enum was sized by `Rational` (two inline 32-byte `BigInt`s);
+boxing it leaves the cap at `BigInt`/`Symbol` = 32 + an 8-byte tag. Every `Vec<Expr>`
+slot (the dominant memory cost of dense lists) shrinks accordingly.
+
+GATE (verbatim, reproduced by me — the tradeoff measurement was the deliverable):
+`cargo fmt --check` clean; `cargo test --workspace` **710/0** (rationals-only exact
+arithmetic unchanged). MEMORY: `core-memory-microbench` `retain-range` `retained`
+ratio **8.11/8.25/8.34x → 5.17/5.25/5.33x** (~1.57x; rum_retained 66538→42370 at
+N=1000). TIME — the feared cost did NOT materialize: rum is rationals-only so boxing
+adds a heap alloc + indirection per `Rational`, but the smaller `Expr` (cheaper
+clone/move/`Vec`) offsets it — my own 8-run interleaved A/B on a rational-heavy probe
+gave base median 2.105s vs new 2.069s (**ratio ~0.98, neutral/slightly faster**), and
+the core microbench dispatch labels (`downvalue-*`, `matchq`, `replaceall`) were
+neutral-to-faster (the new binary is even 358 KB smaller). 7-file mechanical change
+(`expr.rs` enum + constructor, the `expr_memory_proxy_bytes` Rational arm, and 5
+construction sites; matches auto-deref through the `Box`).
+
+So: kept as Phase 3 rung 1. The ~8x is not closed — `Expr` is now tag-limited at 40;
+the ladder forward is rung 2 (`Atom::Integer` small-int hybrid → caps Integer at 8 +
+removes the per-element `BigInt` heap alloc), rung 3 (shrink `Symbol`'s 16-byte
+`Option<u64> identity`) to reach `Expr` ~24→~16, then packed numeric arrays for the
+real WK ~8 B/elem. See `docs/memory-management-plan.md` Phase 3.
+
 ## 2026-06-30 CORRECTNESS — the 2855-vs-3126 gap was a REAL bug: `Set[a,a]` self-fixed-point aborted `Get` mid-file (brief-051)
 
 **Supersedes the "NOT failures, a counting reconciliation" framing in the
