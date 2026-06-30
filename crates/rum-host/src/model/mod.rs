@@ -17,5 +17,6 @@ pub use requests::{
 pub(crate) use inspection::inspect_response_from_runtime;
 pub(crate) use outcome::{
     eval_failure_from_runtime, eval_success_from_runtime, host_failure_from_runtime,
+    synthesized_host_failure,
 };
 pub(crate) use requests::completeness_status;

@@ -119,7 +119,7 @@ fn public_contract_covers_editor_requests_and_failures() {
 #[test]
 fn public_config_facade_controls_core_builtin_installation() {
     let disabled_config = HostConfig::default().with_core_builtins(false);
-    let disabled = HostSession::builder().with_config(disabled_config).build();
+    let mut disabled = HostSession::builder().with_config(disabled_config).build();
     assert!(!disabled.configuration().install_core_builtins);
 
     assert!(

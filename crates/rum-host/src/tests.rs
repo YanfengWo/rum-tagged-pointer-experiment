@@ -111,6 +111,58 @@ fn host_failures_use_stable_failure_codes() {
 }
 
 #[test]
+fn host_boundary_catches_panic_and_poisons_session() {
+    let mut session = HostSession::new();
+
+    let caught = session.eval_with_test_panic();
+
+    let (caught_code, caught_message) = match caught {
+        HostEvalOutcome::Failure(failure) => {
+            assert_eq!(failure.code, HostFailureCode::Panic);
+            assert!(failure.message.contains("host panic boundary test"));
+            (failure.code, failure.message)
+        }
+        other => panic!("expected panic failure, got {other:?}"),
+    };
+    assert!(session.poisoned_for_test());
+
+    let followup = session.eval("1 + 1");
+    match followup {
+        HostEvalOutcome::Failure(failure) => {
+            assert_eq!(failure.code, HostFailureCode::Poisoned);
+            assert!(failure.message.contains("poisoned"));
+            eprintln!(
+                "host_boundary_catches_panic_and_poisons_session caught_code={caught_code:?} caught_message={caught_message:?} followup_code={:?} followup_message={:?}",
+                failure.code, failure.message
+            );
+        }
+        other => panic!("expected poisoned failure, got {other:?}"),
+    }
+}
+
+#[test]
+fn host_boundary_normal_eval_does_not_poison_session() {
+    let mut session = HostSession::new();
+
+    match session.eval("1 + 2") {
+        HostEvalOutcome::Success(success) => assert_eq!(success.value.text, "3"),
+        other => panic!("expected normal success, got {other:?}"),
+    }
+    assert!(!session.poisoned_for_test());
+
+    match session.eval("3 + 4") {
+        HostEvalOutcome::Success(success) => {
+            assert_eq!(success.value.text, "7");
+            eprintln!(
+                "host_boundary_normal_eval_does_not_poison_session first=3 second=7 poisoned={}",
+                session.poisoned_for_test()
+            );
+        }
+        other => panic!("expected follow-up success, got {other:?}"),
+    }
+}
+
+#[test]
 fn host_cancel_handle_interrupts_running_eval_from_another_thread() {
     let mut session = host_session_with_large_iteration_budget();
     let cancel = session.cancel_handle();

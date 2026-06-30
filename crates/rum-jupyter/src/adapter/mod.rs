@@ -169,7 +169,7 @@ impl KernelAdapter {
         }
     }
 
-    pub fn inspect(&self, request: KernelInspectRequest) -> KernelInspectResponse {
+    pub fn inspect(&mut self, request: KernelInspectRequest) -> KernelInspectResponse {
         let result = self
             .session
             .inspect(HostInspectRequest::new(request.code, request.cursor_offset));
@@ -192,7 +192,7 @@ impl KernelAdapter {
         }
     }
 
-    pub fn complete(&self, request: KernelCompleteRequest) -> KernelCompleteResponse {
+    pub fn complete(&mut self, request: KernelCompleteRequest) -> KernelCompleteResponse {
         let completion = self.session.complete(HostCompletionRequest::new(
             request.code,
             request.cursor_offset,
@@ -212,7 +212,7 @@ impl KernelAdapter {
         }
     }
 
-    pub fn is_complete(&self, request: KernelIsCompleteRequest) -> KernelIsCompleteResponse {
+    pub fn is_complete(&mut self, request: KernelIsCompleteRequest) -> KernelIsCompleteResponse {
         let response = self
             .session
             .is_complete(HostIsCompleteRequest::new(request.code));
@@ -312,21 +312,18 @@ impl KernelAdapter {
             KernelRequest::Execute(request) => {
                 self.dispatch_execute_request(parent_header, request)
             }
-            KernelRequest::Inspect(request) => self.finish_non_execute_request(
-                envelope.channel,
-                parent_header,
-                KernelResponse::Inspect(self.inspect(request)),
-            ),
-            KernelRequest::Complete(request) => self.finish_non_execute_request(
-                envelope.channel,
-                parent_header,
-                KernelResponse::Complete(self.complete(request)),
-            ),
-            KernelRequest::IsComplete(request) => self.finish_non_execute_request(
-                envelope.channel,
-                parent_header,
-                KernelResponse::IsComplete(self.is_complete(request)),
-            ),
+            KernelRequest::Inspect(request) => {
+                let response = KernelResponse::Inspect(self.inspect(request));
+                self.finish_non_execute_request(envelope.channel, parent_header, response)
+            }
+            KernelRequest::Complete(request) => {
+                let response = KernelResponse::Complete(self.complete(request));
+                self.finish_non_execute_request(envelope.channel, parent_header, response)
+            }
+            KernelRequest::IsComplete(request) => {
+                let response = KernelResponse::IsComplete(self.is_complete(request));
+                self.finish_non_execute_request(envelope.channel, parent_header, response)
+            }
             KernelRequest::KernelInfo(request) => self.finish_non_execute_request(
                 envelope.channel,
                 parent_header,

@@ -107,7 +107,7 @@ fn execute_request_failure_emits_stderr_streams_and_error_payload() {
 fn inspect_request_maps_symbol_at_cursor_to_session_inspect_response() {
     let mut session = Session::new();
     eval_text(&mut session, "f = 1");
-    let adapter = KernelAdapter::new(session);
+    let mut adapter = KernelAdapter::new(session);
 
     let response = adapter.inspect(KernelInspectRequest::new("f", 1));
 
@@ -134,7 +134,7 @@ fn inspect_request_maps_symbol_at_cursor_to_session_inspect_response() {
 fn complete_request_maps_cursor_prefix_to_session_completion_response() {
     let mut session = Session::new();
     eval_text(&mut session, "localName = 1");
-    let adapter = KernelAdapter::new(session);
+    let mut adapter = KernelAdapter::new(session);
 
     let response = adapter.complete(KernelCompleteRequest::new("loc", 3));
 
@@ -151,7 +151,7 @@ fn complete_request_maps_cursor_prefix_to_session_completion_response() {
 fn complete_request_replaces_the_full_symbol_when_cursor_is_inside_it() {
     let mut session = Session::new();
     eval_text(&mut session, "localName = 1");
-    let adapter = KernelAdapter::new(session);
+    let mut adapter = KernelAdapter::new(session);
 
     let response = adapter.complete(KernelCompleteRequest::new("localName", 3));
 
@@ -198,7 +198,7 @@ fn execute_request_with_tracing_emits_display_data_separately_from_execute_resul
 #[test]
 fn is_complete_request_maps_runtime_completeness_to_kernel_shape() {
     let session = Session::new();
-    let adapter = KernelAdapter::new(session);
+    let mut adapter = KernelAdapter::new(session);
 
     let incomplete = adapter.is_complete(KernelIsCompleteRequest::new("f[\n  1"));
     assert_eq!(incomplete.reply_status, KernelReplyStatus::Ok);

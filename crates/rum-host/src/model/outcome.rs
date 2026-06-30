@@ -40,6 +40,8 @@ pub struct HostFailure {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HostFailureCode {
+    Panic,
+    Poisoned,
     Syntax,
     InvalidInteger,
     Io,
@@ -221,6 +223,20 @@ pub(crate) fn host_failure_from_runtime(failure: SessionRequestFailure) -> HostF
         prints,
         trace,
         outputs,
+    }
+}
+
+pub(crate) fn synthesized_host_failure(
+    code: HostFailureCode,
+    message: impl Into<String>,
+) -> HostFailure {
+    HostFailure {
+        code,
+        message: message.into(),
+        messages: Vec::new(),
+        prints: Vec::new(),
+        trace: Vec::new(),
+        outputs: Vec::new(),
     }
 }
 

@@ -153,6 +153,8 @@ fn input_required_error_output(suspension: &HostInputSuspension) -> KernelErrorO
 
 const fn failure_code_name(code: HostFailureCode) -> &'static str {
     match code {
+        HostFailureCode::Panic => "Panic",
+        HostFailureCode::Poisoned => "Poisoned",
         HostFailureCode::Syntax => "Syntax",
         HostFailureCode::InvalidInteger => "InvalidInteger",
         HostFailureCode::Io => "Io",
