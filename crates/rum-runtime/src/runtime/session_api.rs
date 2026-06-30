@@ -1,4 +1,6 @@
 use super::*;
+use std::sync::{Arc, atomic::AtomicBool};
+use std::time::Duration;
 
 impl Session {
     pub fn new() -> Self {
@@ -54,6 +56,17 @@ impl Session {
 
     pub fn set_iteration_work_limit(&mut self, limit: usize) {
         self.resource_limits.iteration_work_limit = limit;
+    }
+
+    pub fn interrupt_handle(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.interrupt_flag)
+    }
+
+    pub fn set_eval_timeout(&mut self, timeout: Option<Duration>) {
+        self.eval_timeout = timeout;
+        self.eval_deadline = None;
+        self.interrupt_armed =
+            self.eval_timeout.is_some() || Arc::strong_count(&self.interrupt_flag) > 1;
     }
 
     pub fn set_resource_limits(&mut self, limits: ResourceLimits) {

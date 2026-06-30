@@ -1,4 +1,9 @@
 use rum_runtime::Session;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+use std::time::Duration;
 
 use crate::config::HostConfig;
 use crate::cursor::{completion_prefix, symbol_at_cursor};
@@ -61,6 +66,17 @@ pub struct HostSession {
     install_core_builtins: bool,
 }
 
+#[derive(Clone, Debug)]
+pub struct HostCancelHandle {
+    flag: Arc<AtomicBool>,
+}
+
+impl HostCancelHandle {
+    pub fn cancel(&self) {
+        self.flag.store(true, Ordering::Relaxed);
+    }
+}
+
 impl Default for HostSession {
     fn default() -> Self {
         Self::new()
@@ -111,6 +127,23 @@ impl HostSession {
             Ok(response) => HostEvalOutcome::Success(eval_success_from_runtime(response)),
             Err(failure) => eval_failure_from_runtime(failure),
         }
+    }
+
+    pub fn cancel_handle(&self) -> HostCancelHandle {
+        HostCancelHandle {
+            flag: self.session.interrupt_handle(),
+        }
+    }
+
+    pub fn eval_with_timeout(
+        &mut self,
+        request: impl Into<HostEvalRequest>,
+        timeout: Duration,
+    ) -> HostEvalOutcome {
+        self.session.set_eval_timeout(Some(timeout));
+        let outcome = self.eval(request);
+        self.session.set_eval_timeout(None);
+        outcome
     }
 
     pub fn resume_with_input(&mut self, input: impl Into<String>) -> HostEvalOutcome {

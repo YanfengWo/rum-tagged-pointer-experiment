@@ -1,4 +1,5 @@
 use super::*;
+use std::sync::atomic::Ordering;
 use std::time::Instant;
 
 pub(super) struct EvaluationRollbackSnapshot {
@@ -26,6 +27,14 @@ pub(super) struct EvaluationRollbackSnapshot {
 }
 
 impl Session {
+    pub(super) fn begin_top_level_interrupt_budget(&mut self) {
+        self.interrupt_flag.store(false, Ordering::Relaxed);
+        self.interrupt_poll_counter = 0;
+        self.eval_deadline = self.eval_timeout.map(|timeout| Instant::now() + timeout);
+        self.interrupt_armed =
+            self.eval_deadline.is_some() || std::sync::Arc::strong_count(&self.interrupt_flag) > 1;
+    }
+
     pub(super) fn capture_loader_snapshot(&self) -> LoaderSnapshot {
         LoaderSnapshot {
             attributes: self.attributes.clone(),
@@ -175,6 +184,7 @@ impl Session {
             EvalError::EvaluationCycleDetected { .. } => "cycle",
             EvalError::RecursionLimitExceeded { .. } => "reclim",
             EvalError::MatchRecursionLimitExceeded { .. } => "matchreclim",
+            EvalError::Cancelled => "cancel",
             EvalError::TimeConstraintExceeded => "timelim",
             EvalError::MemoryConstraintExceeded { .. } => "memlim",
             EvalError::GeneratedElementLimitExceeded { .. }
@@ -201,6 +211,8 @@ impl Session {
         match error {
             EvalError::RecursionLimitExceeded { .. } => Some("RecursionLimit"),
             EvalError::MatchRecursionLimitExceeded { .. } => Some("PatternMatchRecursionLimit"),
+            EvalError::Cancelled => Some("Cancelled"),
+            EvalError::TimeConstraintExceeded => Some("TimeConstraint"),
             EvalError::EvaluationPassLimitExceeded { .. } => Some("IterationLimit"),
             EvalError::GeneratedElementLimitExceeded { .. } => Some("GeneratedElementLimit"),
             EvalError::IntegerWorkLimitExceeded { .. } => Some("IntegerWorkLimit"),

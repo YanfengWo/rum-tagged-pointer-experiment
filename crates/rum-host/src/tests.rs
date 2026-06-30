@@ -1,4 +1,17 @@
 use super::*;
+use std::sync::mpsc;
+use std::thread;
+use std::time::{Duration, Instant};
+
+const LONG_RUNNING_EVAL: &str = "Do[x = 1, 50000000]";
+
+fn host_session_with_large_iteration_budget() -> HostSession {
+    let mut limits = HostResourceLimits::default();
+    limits.iteration_work_limit = 50_000_000;
+    HostSession::builder()
+        .with_config(HostConfig::default().with_resource_limits(limits))
+        .build()
+}
 
 #[test]
 fn host_eval_reports_value_messages_prints_and_structured_outputs() {
@@ -94,5 +107,117 @@ fn host_failures_use_stable_failure_codes() {
             assert!(!failure.message.is_empty());
         }
         other => panic!("expected syntax failure, got {other:?}"),
+    }
+}
+
+#[test]
+fn host_cancel_handle_interrupts_running_eval_from_another_thread() {
+    let mut session = host_session_with_large_iteration_budget();
+    let cancel = session.cancel_handle();
+    let (cancelled_tx, cancelled_rx) = mpsc::channel();
+
+    let canceller = {
+        let cancel = cancel.clone();
+        thread::spawn(move || {
+            thread::sleep(Duration::from_millis(50));
+            let cancelled_at = Instant::now();
+            cancel.cancel();
+            cancelled_tx
+                .send(cancelled_at)
+                .expect("test should receive cancel timestamp");
+        })
+    };
+
+    let started = Instant::now();
+    let outcome = session.eval(LONG_RUNNING_EVAL);
+    let completed_at = Instant::now();
+    let elapsed = completed_at.duration_since(started);
+    let cancelled_at = cancelled_rx
+        .recv()
+        .expect("canceller should report cancel timestamp");
+    canceller.join().expect("canceller should not panic");
+    let cancel_latency = completed_at.duration_since(cancelled_at);
+
+    eprintln!(
+        "host_cancel_handle_interrupts_running_eval_from_another_thread elapsed_ms={} cancel_latency_ms={}",
+        elapsed.as_millis(),
+        cancel_latency.as_millis()
+    );
+
+    assert!(
+        elapsed < Duration::from_secs(2),
+        "cancelled eval took {elapsed:?}"
+    );
+    assert!(
+        cancel_latency < Duration::from_secs(1),
+        "cancel observation took {cancel_latency:?}"
+    );
+
+    match outcome {
+        HostEvalOutcome::Success(success) => {
+            assert_eq!(success.value.text, "TerminatedEvaluation[\"Cancelled\"]");
+            assert!(
+                success
+                    .messages
+                    .iter()
+                    .any(|message| message.symbol == "General" && message.tag == "cancel")
+            );
+        }
+        other => panic!("expected graceful cancelled value, got {other:?}"),
+    }
+}
+
+#[test]
+fn host_eval_with_timeout_interrupts_running_eval() {
+    let mut session = host_session_with_large_iteration_budget();
+
+    let started = Instant::now();
+    let outcome = session.eval_with_timeout(LONG_RUNNING_EVAL, Duration::from_millis(200));
+    let elapsed = started.elapsed();
+
+    eprintln!(
+        "host_eval_with_timeout_interrupts_running_eval elapsed_ms={}",
+        elapsed.as_millis()
+    );
+
+    assert!(
+        elapsed < Duration::from_secs(2),
+        "timed eval took {elapsed:?}"
+    );
+
+    match outcome {
+        HostEvalOutcome::Success(success) => {
+            assert_eq!(
+                success.value.text,
+                "TerminatedEvaluation[\"TimeConstraint\"]"
+            );
+            assert!(
+                success
+                    .messages
+                    .iter()
+                    .any(|message| message.symbol == "General" && message.tag == "timelim")
+            );
+        }
+        other => panic!("expected graceful timeout value, got {other:?}"),
+    }
+}
+
+#[test]
+fn host_eval_with_unused_handle_and_generous_timeout_still_succeeds() {
+    let mut session = HostSession::new();
+    let _cancel = session.cancel_handle();
+
+    let started = Instant::now();
+    let outcome = session.eval_with_timeout("1 + 2", Duration::from_secs(5));
+    let elapsed = started.elapsed();
+
+    eprintln!(
+        "host_eval_with_unused_handle_and_generous_timeout_still_succeeds elapsed_ms={}",
+        elapsed.as_millis()
+    );
+
+    match outcome {
+        HostEvalOutcome::Success(success) => assert_eq!(success.value.text, "3"),
+        other => panic!("expected normal success, got {other:?}"),
     }
 }

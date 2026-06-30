@@ -47,6 +47,7 @@ pub enum HostFailureCode {
     EvaluationCycleDetected,
     RecursionLimitExceeded,
     MatchRecursionLimitExceeded,
+    Cancelled,
     TimeConstraintExceeded,
     MemoryConstraintExceeded,
     GeneratedElementLimitExceeded,
@@ -238,6 +239,7 @@ fn failure_code(error: &SessionRequestError) -> HostFailureCode {
         SessionRequestError::MatchRecursionLimitExceeded { .. } => {
             HostFailureCode::MatchRecursionLimitExceeded
         }
+        SessionRequestError::Cancelled => HostFailureCode::Cancelled,
         SessionRequestError::TimeConstraintExceeded => HostFailureCode::TimeConstraintExceeded,
         SessionRequestError::MemoryConstraintExceeded { .. } => {
             HostFailureCode::MemoryConstraintExceeded

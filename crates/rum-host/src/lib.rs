@@ -18,7 +18,7 @@ pub use model::{
     HostParseRequest, HostParseResponse, HostStructuredOutput, HostStructuredOutputKind,
     HostSymbolInfo, HostTraceEvent, HostValue,
 };
-pub use session::{HostSession, HostSessionBuilder};
+pub use session::{HostCancelHandle, HostSession, HostSessionBuilder};
 
 #[cfg(test)]
 mod tests;

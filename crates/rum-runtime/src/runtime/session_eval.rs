@@ -155,6 +155,7 @@ impl Session {
         input: &str,
         terminated_handling: TerminatedEvaluationHandling,
     ) -> Result<EvalOutcome, EvalError> {
+        self.begin_top_level_interrupt_budget();
         let message_checkpoint = self.messages.len();
         let print_checkpoint = self.prints.len();
         let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();

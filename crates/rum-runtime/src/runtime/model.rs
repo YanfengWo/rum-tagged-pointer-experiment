@@ -1,7 +1,8 @@
 use super::*;
 use std::{
     hash::{BuildHasherDefault, Hash, Hasher},
-    time::Instant,
+    sync::{Arc, atomic::AtomicBool},
+    time::{Duration, Instant},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -274,6 +275,7 @@ impl fmt::Display for SessionRequestError {
                     "evaluation exceeded pattern-match recursion limit ({limit})"
                 )
             }
+            Self::Cancelled => f.write_str("evaluation cancelled by host"),
             Self::TimeConstraintExceeded => {
                 f.write_str("evaluation exceeded TimeConstrained limit")
             }
@@ -358,6 +360,7 @@ pub struct Session {
     pub(super) resource_limits: ResourceLimits,
     pub(super) evaluation_depth: usize,
     pub(super) match_depth: usize,
+    pub(super) interrupt_armed: bool,
     pub(super) evaluation_stack: Vec<EvaluationStackEntry>,
     pub(super) tracing_enabled: bool,
     pub(super) trace_events: Vec<TraceEvent>,
@@ -383,6 +386,10 @@ pub struct Session {
     pub(super) pending_input_request: Option<RuntimeInputRequest>,
     pub(super) pending_eval_request: Option<PendingEvalRequest>,
     pub(super) pending_suspension: Option<SuspendedEvaluation>,
+    pub(super) interrupt_flag: Arc<AtomicBool>,
+    pub(super) eval_timeout: Option<Duration>,
+    pub(super) eval_deadline: Option<Instant>,
+    pub(super) interrupt_poll_counter: u64,
 }
 
 impl Session {
@@ -641,6 +648,7 @@ pub enum SessionRequestError {
     MatchRecursionLimitExceeded {
         limit: usize,
     },
+    Cancelled,
     TimeConstraintExceeded,
     MemoryConstraintExceeded {
         limit: usize,

@@ -109,6 +109,7 @@ impl Session {
         &mut self,
         input: &str,
     ) -> Result<SessionEvalResponse, SessionRequestFailure> {
+        self.begin_top_level_interrupt_budget();
         let checkpoint = RequestCheckpoint::new(self);
         let parsed = parse_with_diagnostics(input).map_err(request_syntax_failure)?;
         let expr = self
@@ -387,6 +388,7 @@ fn session_request_error_from_eval_error_with_source(
         EvalError::MatchRecursionLimitExceeded { limit } => {
             SessionRequestError::MatchRecursionLimitExceeded { limit: *limit }
         }
+        EvalError::Cancelled => SessionRequestError::Cancelled,
         EvalError::TimeConstraintExceeded => SessionRequestError::TimeConstraintExceeded,
         EvalError::MemoryConstraintExceeded { limit } => {
             SessionRequestError::MemoryConstraintExceeded { limit: *limit }

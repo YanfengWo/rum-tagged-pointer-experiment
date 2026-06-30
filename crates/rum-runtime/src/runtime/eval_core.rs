@@ -1,4 +1,8 @@
 use super::*;
+use std::sync::atomic::Ordering;
+use std::time::Instant;
+
+const INTERRUPT_POLL_MASK: u64 = 1023;
 
 impl Session {
     pub(super) fn evaluate_once_unstable_after_input_check_with_cycle_tracking(
@@ -6,6 +10,10 @@ impl Session {
         expr: Expr,
         track_cycle: bool,
     ) -> Result<Expr, EvalError> {
+        if self.interrupt_armed {
+            self.poll_host_interrupt_if_due()?;
+        }
+
         if track_cycle
             && self
                 .evaluation_stack
@@ -42,6 +50,24 @@ impl Session {
             }
             Err(error) => Err(error),
         }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn poll_host_interrupt_if_due(&mut self) -> Result<(), EvalError> {
+        self.interrupt_poll_counter = self.interrupt_poll_counter.wrapping_add(1);
+        if self.interrupt_poll_counter & INTERRUPT_POLL_MASK != 0 {
+            return Ok(());
+        }
+        if self.interrupt_flag.load(Ordering::Relaxed) {
+            return Err(EvalError::Cancelled);
+        }
+        if let Some(deadline) = self.eval_deadline {
+            if Instant::now() >= deadline {
+                return Err(EvalError::TimeConstraintExceeded);
+            }
+        }
+        Ok(())
     }
 
     pub(super) fn evaluate_inner_unstable(&mut self, expr: Expr) -> Result<Expr, EvalError> {

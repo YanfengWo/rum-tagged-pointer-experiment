@@ -298,6 +298,8 @@ pub enum EvalError {
     RecursionLimitExceeded { limit: usize },
     #[error("evaluation exceeded pattern-match recursion limit ({limit})")]
     MatchRecursionLimitExceeded { limit: usize },
+    #[error("evaluation cancelled by host")]
+    Cancelled,
     #[error("evaluation exceeded TimeConstrained limit")]
     TimeConstraintExceeded,
     #[error("evaluation exceeded MemoryConstrained limit ({limit})")]
@@ -386,6 +388,7 @@ impl Default for Session {
             resource_limits: ResourceLimits::default(),
             evaluation_depth: 0,
             match_depth: 0,
+            interrupt_armed: false,
             evaluation_stack: Vec::new(),
             tracing_enabled: false,
             trace_events: Vec::new(),
@@ -411,6 +414,10 @@ impl Default for Session {
             pending_input_request: None,
             pending_eval_request: None,
             pending_suspension: None,
+            interrupt_flag: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            eval_timeout: None,
+            eval_deadline: None,
+            interrupt_poll_counter: 0,
         }
     }
 }
