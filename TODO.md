@@ -16,7 +16,25 @@ Completed history, archived planning detail, and operational lessons live in
   big lever is Phase 1, the Module-gensym definition GC (also the prerequisite for
   the authoritative cold `run_all` 3126/0 gate, which OOMs at 50 GB today). Gate
   every phase on the comparator + Lane D `--suite memory` no-regression +
-  correctness (`cargo test --workspace` + the 2855/0 corpus + `difftest check`).
+  correctness (`cargo test --workspace` + the 3126/0 corpus + `difftest check`).
+- [ ] **Adopt the four-C memory-evaluation panel (external review 2026-06-30, the
+  most useful single idea from the cross-model consult).** Upgrade the Phase-0
+  comparator (`scripts/core-memory-microbench.sh`) from reporting only
+  {`MemoryInUse` delta, `MaxMemoryUsed`, peak-RSS delta} to the FOUR constants
+  vs WK, each as `C·M_ref + B`: (1) **peak RSS** (OOM risk), (2) **retained**
+  (final-representation fatness: live bytes after the result settles), (3)
+  **allocation traffic** (total allocated bytes — churn / temporary-object storms),
+  (4) **post-cleanup delta** (leaks / cache / intern-table growth after the result
+  is dropped + caches cleared). Plus the key derived metric
+  **`TransientOverhead = peakRSS − retained`** (mid-evaluation bloat, distinct from
+  representation overhead). Report `C_max`/`C_p95`/`C_geomean` + an outlier list,
+  and check each `C` does NOT drift with input size N (drift ⇒ a complexity/order
+  gap, not a constant). We already have the instruments to build on
+  (`MaxMemoryUsed`, the `MemoryInUse` proxy, `guarded-test-run` RSS, the
+  `alloc-count` GlobalAlloc) — this is mostly wiring + a richer report. This is the
+  yardstick the rest of the memory line (Phase 2 interner, Phase 3 representation)
+  gates against; the gensym leak = the post-cleanup `C`, the interner leak = the
+  retained/RSS gap the proxy is blind to.
 - [ ] Treat the next phase as `v0.1` kernel stabilization: correctness,
   contract boundaries, harnesses, and docs come before new same-name breadth.
   Use
@@ -45,6 +63,24 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Immediate Correctness And Debt
 
+- [ ] **Deep-nesting stack-overflow — CONFIRMED real (probed 2026-06-30; Gemini's
+  catch). FIX needed.** A deeply-nested literal `f[f[…f[x]…]]` of depth **~5000
+  already crashes `rum-cli` with SIGABRT (exit 134, native stack overflow)** — far
+  below any pathological depth. Confirmed it is NOT (only) deep EVAL: the `Hold[…]`
+  path (eval blocked) crashes too, so the unguarded recursers are the
+  **recursive-descent PARSER** and/or the **default recursive `Drop`** of the
+  `Arc<Expr>` tree (rum-core has NO manual/iterative `Drop` impl for `Expr`). EVAL
+  is already guarded (`recursion_limit` 1024, `evaluation_pass_limit` 256 → graceful
+  `TerminatedEvaluation["IterationLimit"]`, WK-conformant) — but PARSE / CONSTRUCT /
+  DROP have NO depth guard. WK gives a graceful `$RecursionLimit`/`$IterationLimit`
+  here; rum aborts the whole process. NOT currently blocking (the HOL tower loads;
+  real terms aren't ~5000 deep; eval-built structures are bounded at 1024) — a
+  robustness gap, not a live blocker. FIX is bigger than "iterative Drop" alone:
+  (a) a PARSE-depth guard that errors gracefully well below the native-stack limit
+  (mirror the eval `recursion_limit` pattern); and/or (b) an iterative/manual `Drop`
+  for `Expr`/`SharedExpr` (explicit work-stack teardown, respecting `Arc` refcounts
+  — only unique nodes free). Gate any fix on no default-path cost. Side quest off
+  the memory line; brief separately.
 - [ ] Keep the suspension-safe helper boundary from the 2026-06-13 audit from
   regressing. The public callback-loop tranches are now closed for
   fold/window, functional iteration, targeted mapping (`MapAt`, `SubsetMap`),
@@ -490,6 +526,25 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Performance And Representation
 
+- [ ] **Pattern-matching as TWO under-evaluated axes (external review 2026-06-30;
+  measure before investing).** rum has optimized the PER-MATCH cost (compiled
+  `MatcherNode`, `fast_match_compiled`, the shallow prefilter) but never evaluated
+  the matching ALGORITHM on two distinct axes: (a) **dispatch strategy / average
+  case** — `try_apply_down_values_from_symbol` is a LINEAR scan over a symbol's
+  downvalues with a cheap per-rule prefilter, i.e. O(total rules), NOT a
+  discrimination net / term index (O(plausible rules)); a win only where a symbol
+  carries MANY downvalues and rum's NATIVE dispatch does the trying — NOT the HOL
+  Simp `~34x` (that rule-loop is WL-orchestrated `ORELSEC` in `Simp.wl`, the
+  rejected-fork wall). (b) **worst-case complexity / adversarial** — `Orderless` +
+  `BlankSequence` matching is AC-matching, NP-hard in general; the axis that
+  distinguishes implementations is the DEGRADATION CURVE on adversarial patterns
+  (graceful pruning vs exponential blowup), not the common-case constant. HOL
+  likely triggers neither, but both are real gaps for general WL conformance.
+  MEASURE FIRST: (a) the per-symbol downvalue-count distribution across the corpus
+  (long tail ⇒ indexing pays); (b) rum's backtracking behavior on a crafted
+  `f[a___, b___]`-style adversarial `Orderless`+`BlankSequence` pattern (is there
+  any pruning / backtrack bound, or naive enumeration?). Decide investment from the
+  measurement, per the project's measure-before-invest discipline.
 - [ ] Revisit `rum-core::Atom::Integer` only if performance measurements show
   that pure `BigInt` should become a small-int plus bigint hybrid.
 - [ ] Revisit matcher compilation/storage strategy after the attribute-revision
