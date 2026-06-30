@@ -541,6 +541,20 @@ Completed history, archived planning detail, and operational lessons live in
   `f[a___, b___]`-style adversarial `Orderless`+`BlankSequence` pattern (is there
   any pruning / backtrack bound, or naive enumeration?). Decide investment from the
   measurement, per the project's measure-before-invest discipline.
+  - **UPDATE 2026-07-01 — axis (b) MEASURED + its RESILIENCE half DONE (brief-058,
+    `a2d5ee6`).** Measured: rum's `Orderless`+`BlankNullSequence` backtracking was
+    NAIVE `k^n` enumeration with NO bound, and `Range[12]` (3-seq) / `Range[14]`
+    (2-seq) `STACK-OVERFLOW CRASHED` the host (un-TCO'd `index+1` recursion → native
+    stack depth ~= work). WolframKernel was probed too: it ALSO does naive `k^n`
+    (identical==distinct timing; subset-sum cond same exp base as `/;False`;
+    `$RecursionLimit=50` doesn't trip its matcher → iterative/bounded-stack) — so it
+    has NO general pruning either; it just degrades gracefully. Fix = a `match_depth`
+    guard (`MAX_MATCH_DEPTH=512`) → graceful `TerminatedEvaluation["PatternMatchRecursionLimit"]`,
+    NOT crash. See [[wk-ac-matching-is-naive-enumeration]]. **The PERF half (smart
+    pruning / iterative rewrite) is NOT worth pursuing** — NP-hard with no general
+    solution, WK doesn't have it, HOL doesn't trigger deep blowup (heavy-matcher
+    mma-hol corpus 943/0 under the 512 guard). Axis (a) — the downvalue
+    discrimination-net / term-index question — remains OPEN and unmeasured.
 - [ ] Revisit `rum-core::Atom::Integer` only if performance measurements show
   that pure `BigInt` should become a small-int plus bigint hybrid.
 - [ ] Revisit matcher compilation/storage strategy after the attribute-revision

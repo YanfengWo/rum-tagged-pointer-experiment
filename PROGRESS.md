@@ -6,6 +6,55 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-07-01 Matcher backtracking stack overflow — depth guard shipped (brief-058)
+
+A SECOND, distinct reachable crash (separate from the 2026-06-30 deep-nesting one):
+a tiny `Orderless` + `BlankNullSequence` input stack-overflowed the host. E.g.
+`SetAttributes[f,Orderless]; MatchQ[f@@Range[12], f[a___,b___,c___]/;False]` SIGABRT'd;
+`Range[14]` with 2 sequence vars too. Found while picking up the deferred TODO
+"pattern-matching axis (b)" (the user's question: how does WK handle the NP-hard
+`Orderless`+sequence AC-matching blowup, and is it actually smart?).
+
+DIAGNOSIS. The orderless backtracking (`pattern_matching/sequence/orderless/match_choices.rs`,
+`collect.rs`) retries the next candidate via a recursive `index+1` call driven by
+`drive_internal_value`, which in the normal path calls its continuation synchronously
+on the same native stack (`suspension/core.rs:91`). Rust does not TCO it, so each
+retry + each `rest` recursion adds an un-reclaimed clone-heavy frame; candidate count
+per sequence-var position is ~combinatorial, so native stack DEPTH grows ~with the
+WORK and ~`2^n` large frames overflow the 8 MB stack at n≈12 (3-seq) / 14 (2-seq).
+The binding resource is stack depth, not a work count — `iteration_work_limit` (100k)
+is far above the few-thousand frames that fit, so it never fires before the crash.
+Non-Orderless (ordered) variable-length matching is polynomial and fine at n=30 — the
+commutativity is the trigger.
+
+WK PROBED (wolframscript, bounded n; the key half of the user's question). WK is NOT
+smart here: it does naive `k^n` generate-and-test enumeration with NO pruning —
+identical-element timing == distinct (no multiset dedup); a real var-dependent
+subset-sum condition has the SAME exponential base as `/;False` (no condition-aware
+pruning); `$RecursionLimit=50` doesn't trip its matcher (iterative / bounded native
+stack). WK only beats rum because it degrades gracefully (slow, not crash) — an
+implementation property, not an algorithm. (Caveat: WK `TimeConstrained` does NOT
+reliably interrupt the C-level matcher.) See memory
+`wk-ac-matching-is-naive-enumeration.md`.
+
+FIX (brief-058, `a2d5ee6`). A `match_depth` counter + private `MAX_MATCH_DEPTH=512`
+via a safe `with_match_depth_guard` wrapper (no unsafe; balanced inc/dec) at the
+orderless choice/collect backtracking chokepoints. New
+`EvalError::MatchRecursionLimitExceeded` wired with its own specific tag
+(`General::matchreclim` + `TerminatedEvaluation["PatternMatchRecursionLimit"]`).
+512 set empirically (adversarial depth 258 at n=8, 1026 at n=10 → 512 sits above the
+small tractable cases, below the overflow). A depth guard is correct AND subsumes a
+work counter here: depth≈work, so the first over-limit path returns an Err that
+propagates and aborts the whole match fast (no `k^n` grind). NOT pursuing the perf
+half (smart pruning / iterative rewrite): NP-hard, no general solution, WK lacks it,
+HOL doesn't trigger it.
+
+GATE (Claude): `cargo fmt --check`; `cargo test --workspace` 712/0; 5 CLI probes
+(adversarial n=12/14/16 → TerminatedEvaluation not crash, normal matches → True);
+`core-language-microbench` no regression (guard is OFF the common non-Orderless path);
+mma-hol v8 cp42 heavy-matcher subset arith+num+rat+simp 818/0 + proptaut+meson 125/0
+= 943/0, zero PatternMatchRecursionLimit leakage → 512 refuses no legitimate match.
+
 ## 2026-06-30 Deep-nesting stack overflow — parser guard shipped; iterative Drop tried+rejected on perf (briefs 055-057)
 
 A ~5000-deep nested literal crashed `rum-cli` with SIGABRT. Two unguarded recursers:

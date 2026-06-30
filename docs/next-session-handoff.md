@@ -1,6 +1,37 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-06-30 (LATEST — read THIS first; supersedes the blocks below). Two lines
+> **2026-07-01 (LATEST — read THIS first). Matcher backtracking stack-overflow
+> CRASH fixed (brief-058, `a2d5ee6`); this is a host-resilience / Tier-1 brick. Tree
+> clean, committed on `main`.** A SECOND reachable crash, distinct from the
+> 2026-06-30 deep-nesting one: a tiny `Orderless` + `BlankNullSequence` input
+> stack-overflowed the host — `SetAttributes[f,Orderless]; MatchQ[f@@Range[12],
+> f[a___,b___,c___]/;False]` SIGABRT'd (n=14 for 2-seq). Found while picking up the
+> deferred TODO "pattern-matching axis (b)" after the user asked how WK handles the
+> NP-hard `Orderless`+sequence (AC-matching) blowup. **Measured both engines:** rum's
+> backtracking was naive `k^n` enumeration with NO bound, and the un-TCO'd `index+1`
+> recursion made native stack DEPTH grow ~with WORK → ~`2^n` clone-heavy frames
+> overflow the 8 MB stack. **WK was probed too and is NOT smart** — it also does naive
+> `k^n` (no multiset dedup, no condition-aware pruning; `$RecursionLimit=50` doesn't
+> trip its matcher → iterative/bounded-stack), it just degrades gracefully instead of
+> crashing. So the fix copies WK's RESILIENCE, not a (nonexistent) clever algorithm:
+> a `match_depth` guard (`MAX_MATCH_DEPTH=512`, safe `with_match_depth_guard`, no
+> unsafe) → graceful `TerminatedEvaluation["PatternMatchRecursionLimit"]` (new
+> `EvalError::MatchRecursionLimitExceeded`, own specific tag). A depth guard subsumes
+> a work counter here (depth≈work → first over-limit path Errs and aborts fast).
+> **Gate:** `cargo test --workspace` 712/0; 5 CLI probes (adversarial→Terminated not
+> crash, normal→True); microbench no regression (guard is OFF the common non-Orderless
+> path); mma-hol v8 cp42 heavy-matcher subset 943/0 (arith+num+rat+simp 818 +
+> proptaut+meson 125), zero limit leakage → 512 refuses no legitimate match. See
+> `PROGRESS.md` 2026-07-01 + memory `wk-ac-matching-is-naive-enumeration.md`. **The
+> perf half (smart pruning / iterative matcher rewrite) is NOT worth pursuing** —
+> NP-hard, no general solution, WK lacks it, HOL doesn't trigger it. **OPEN matcher
+> work: axis (a)** — the downvalue dispatch is a LINEAR scan (no discrimination-net /
+> term-index), still unmeasured (TODO `## Performance And Representation`). Other OPEN
+> lines unchanged from the 2026-06-30 block below (host-embedding Tier-1 continues —
+> interrupt/cancel, session time/memory budget, structured `HostValue`, `catch_unwind`;
+> this matcher fix is one of its bricks).
+
+> **2026-06-30 (read after the 2026-07-01 block above). Two lines
 > CLOSED this session: (1) correctness — rum reproduces the README's 3126/0 exactly;
 > (2) the safe-Rust MEMORY LINE is CONCLUDED. Tree clean, all committed (HEAD on
 > `main`).** Session arc, newest first:
