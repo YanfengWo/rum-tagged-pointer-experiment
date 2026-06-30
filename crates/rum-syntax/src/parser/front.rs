@@ -3,6 +3,10 @@ use crate::ast::SyntaxExprKind;
 
 const SPAN_PRECEDENCE: u8 = 45;
 const INFIX_APPLICATION_PRECEDENCE: u8 = 67;
+/// A parser-specific guard kept below the debug and release native stack limits.
+/// The recursive-descent parser uses multiple Rust frames per delimiter level,
+/// so this is intentionally lower than the runtime evaluator's recursion limit.
+pub(crate) const MAX_PARSE_DEPTH: usize = 128;
 
 pub fn parse_expr(input: &str) -> Result<SyntaxExpr, SyntaxError> {
     let tokens = lex(input)?;
@@ -12,11 +16,34 @@ pub fn parse_expr(input: &str) -> Result<SyntaxExpr, SyntaxError> {
 pub(super) struct Parser {
     pub(super) tokens: Vec<Token>,
     pub(super) index: usize,
+    parse_depth: usize,
 }
 
 impl Parser {
     pub(super) fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, index: 0 }
+        Self {
+            tokens,
+            index: 0,
+            parse_depth: 0,
+        }
+    }
+
+    fn with_nested_parse_depth<T>(
+        &mut self,
+        span: Span,
+        parse: impl FnOnce(&mut Self) -> Result<T, SyntaxError>,
+    ) -> Result<T, SyntaxError> {
+        if self.parse_depth >= MAX_PARSE_DEPTH {
+            return Err(SyntaxError::ParseDepthExceeded {
+                max: MAX_PARSE_DEPTH,
+                span,
+            });
+        }
+
+        self.parse_depth += 1;
+        let result = parse(self);
+        self.parse_depth -= 1;
+        result
     }
 
     pub(super) fn parse_root(&mut self) -> Result<SyntaxExpr, SyntaxError> {
@@ -237,8 +264,10 @@ impl Parser {
 
         loop {
             if let Some(open_span) = self.consume_double_lbracket() {
-                let (mut specs, close_span) =
-                    self.parse_double_bracket_expression_list(open_span)?;
+                let (mut specs, close_span) = self
+                    .with_nested_parse_depth(open_span, |parser| {
+                        parser.parse_double_bracket_expression_list(open_span)
+                    })?;
                 let span = expr.span().merge(close_span);
                 let mut args = vec![expr];
                 args.append(&mut specs);
@@ -247,8 +276,9 @@ impl Parser {
             }
 
             if let Some(open_span) = self.consume_lbracket() {
-                let (args, close_span) =
-                    self.parse_expression_list(TokenKind::RBracket, "]", open_span, "[")?;
+                let (args, close_span) = self.with_nested_parse_depth(open_span, |parser| {
+                    parser.parse_expression_list(TokenKind::RBracket, "]", open_span, "[")
+                })?;
                 let span = expr.span().merge(close_span);
                 expr = SyntaxExpr::call(expr, args, span);
                 continue;
@@ -470,21 +500,31 @@ impl Parser {
             }
             TokenKind::LParen => {
                 self.bump();
-                let expr = self.parse_function_expr()?;
-                let close_span = self.expect_rparen(token.span, "(")?;
-                Ok(expr.with_span(token.span.merge(close_span)))
+                self.with_nested_parse_depth(token.span, |parser| {
+                    let expr = parser.parse_function_expr()?;
+                    let close_span = parser.expect_rparen(token.span, "(")?;
+                    Ok(expr.with_span(token.span.merge(close_span)))
+                })
             }
             TokenKind::LBrace => {
                 self.bump();
-                let (items, close_span) =
-                    self.parse_expression_list(TokenKind::RBrace, "}", token.span, "{")?;
-                Ok(SyntaxExpr::list(items, token.span.merge(close_span)))
+                self.with_nested_parse_depth(token.span, |parser| {
+                    let (items, close_span) =
+                        parser.parse_expression_list(TokenKind::RBrace, "}", token.span, "{")?;
+                    Ok(SyntaxExpr::list(items, token.span.merge(close_span)))
+                })
             }
             TokenKind::LAssociation => {
                 self.bump();
-                let (items, close_span) =
-                    self.parse_expression_list(TokenKind::RAssociation, "|>", token.span, "<|")?;
-                Ok(SyntaxExpr::association(items, token.span.merge(close_span)))
+                self.with_nested_parse_depth(token.span, |parser| {
+                    let (items, close_span) = parser.parse_expression_list(
+                        TokenKind::RAssociation,
+                        "|>",
+                        token.span,
+                        "<|",
+                    )?;
+                    Ok(SyntaxExpr::association(items, token.span.merge(close_span)))
+                })
             }
             TokenKind::End => Err(SyntaxError::Incomplete {
                 expected: "expression",
