@@ -6,6 +6,38 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-07-01 Host hardening line — Tier-1 started (brief-059: interrupt/cancel + time budget)
+
+New mainline after the pattern-matching line closed: host-embedding Tier-1 hardening
+(`docs/host-embedding-and-hardening.md`). Sequenced as one-lever briefs:
+059 interrupt/cancel + wall-clock time budget (DONE), 060 catch_unwind panic boundary,
+061 structured HostValue, then the memory budget (deferred — has a real proxy-vs-RSS
+design fork + WASM-purity tradeoff, and is lower-urgency since the time budget already
+bounds most DoS; the structural `current_memory_proxy_bytes` is an O(state) full sweep,
+too costly per-step, and is blind to the interner leak — RSS is the true total but is a
+platform syscall that breaks the WASM-clean core).
+
+brief-059 (`e5b13b9`): `HostSession::eval` was synchronous + uninterruptible and had no
+wall-clock cap (the #1 + #2 Tier-1 gaps). BOTH now served by ONE amortized poll point in
+the eval loop: at `evaluate_once_unstable_*` (eval_core.rs, where recursion_limit is
+checked) a single `if self.interrupt_armed` branch gates a `#[cold] #[inline(never)]`
+poll fn that, every 1024 armed steps (POLL_MASK=1023), checks the cancel `Arc<AtomicBool>`
+(Relaxed) and the deadline. `interrupt_armed` is recomputed once per top-level eval from
+`Arc::strong_count(interrupt_flag)>1` OR a timeout being set — so the `&self`
+`cancel_handle()` API needs no `&mut`. New `EvalError::Cancelled` → own tag
+(`TerminatedEvaluation["Cancelled"]`); timeout reuses `TimeConstraintExceeded`. Host API:
+`HostCancelHandle` (Clone+Send+Sync over the Arc, `.cancel()`), `cancel_handle()`,
+`eval_with_timeout()`, `HostFailureCode::Cancelled`. Only the `Arc<AtomicBool>` crosses
+threads — Session's thread contract unchanged.
+
+GATE (Claude): cargo fmt; cargo test --workspace 712/0 + rum-host 7/0 incl. a real
+cross-thread cancel test (eval stopped ~60ms after cancel) + a 200ms timeout test
+(stopped at 201ms) + a positive unused-handle test. Hot-path microbench A/B (base-vs-new
+release binaries, scale 1/10/20, 3 interleaved rounds, median-of-medians): the
+eval-loop-heaviest label loop-empty is flat-to-faster (0.95-1.01) at every scale; the
+scattered 4-30% on sub-ms labels was run-to-run noise (uncorrelated with eval-loop
+intensity, swung both ways). No per-step regression — the disarmed branch is free.
+
 ## 2026-07-01 Matcher backtracking stack overflow — depth guard shipped (brief-058)
 
 A SECOND, distinct reachable crash (separate from the 2026-06-30 deep-nesting one):

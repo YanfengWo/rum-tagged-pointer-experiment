@@ -1,6 +1,27 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-07-01 (LATEST — read THIS first). Matcher backtracking stack-overflow
+> **2026-07-01 (LATEST — host-hardening line ACTIVE; read THIS first). After the
+> pattern-matching line closed, the active mainline is host-embedding Tier-1 hardening
+> (`docs/host-embedding-and-hardening.md`), as one-lever briefs.** Status: **brief-059
+> DONE** (`e5b13b9`) — interrupt/cancel + per-eval wall-clock timeout via ONE amortized
+> poll point in the eval loop (`if self.interrupt_armed` gates a `#[cold]` poll fn,
+> every 1024 steps checks an `Arc<AtomicBool>` cancel flag + a deadline; `armed`
+> recomputed per top-level eval from `Arc::strong_count>1` OR timeout-set, so
+> `cancel_handle(&self)` needs no `&mut`). New `HostCancelHandle`/`cancel_handle()`/
+> `eval_with_timeout()`/`HostFailureCode::Cancelled`; only the Arc crosses threads.
+> Gate: workspace 712/0 + rum-host 7/0 (real cross-thread cancel ~60ms + 200ms timeout +
+> positive), microbench loop-empty flat-to-faster at scale 1/10/20 (no per-step cost).
+> **brief-060 IN FLIGHT** (catch_unwind panic boundary + session poison, host-layer only,
+> zero hot-path). NEXT: 061 structured `HostValue` (typed enum vs today's `{text}`).
+> **Memory budget DEFERRED with a design fork to decide**: the structural
+> `current_memory_proxy_bytes` is an O(state) full sweep (too costly per-step) AND blind
+> to the interner leak; RSS is the true total but a platform syscall that breaks the
+> WASM-clean core — proxy-vs-RSS is a real decision, and it's lower-urgency since the
+> brief-059 time budget already bounds most memory-DoS (a runaway allocator also burns
+> time). See `PROGRESS.md` 2026-07-01 host entry. The matcher / pattern-matching blocks
+> below are the previous (now-closed) line.
+
+> **2026-07-01. Matcher backtracking stack-overflow
 > CRASH fixed (brief-058, `a2d5ee6`); this is a host-resilience / Tier-1 brick. Tree
 > clean, committed on `main`.** A SECOND reachable crash, distinct from the
 > 2026-06-30 deep-nesting one: a tiny `Orderless` + `BlankNullSequence` input
