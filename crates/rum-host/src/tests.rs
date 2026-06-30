@@ -4,6 +4,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 const LONG_RUNNING_EVAL: &str = "Do[x = 1, 50000000]";
+const TWO_TO_200: &str = "1606938044258990275541962092341162602522202993782792835301376";
 
 fn host_session_with_large_iteration_budget() -> HostSession {
     let mut limits = HostResourceLimits::default();
@@ -37,6 +38,60 @@ fn host_eval_reports_value_messages_prints_and_structured_outputs() {
             );
         }
         other => panic!("expected success, got {other:?}"),
+    }
+}
+
+#[test]
+fn host_eval_exposes_typed_value_variants() {
+    let mut session = HostSession::new();
+    let cases = vec![
+        ("2 + 3", "5", HostTyped::Integer(5)),
+        (
+            "2^200",
+            TWO_TO_200,
+            HostTyped::BigInteger(TWO_TO_200.to_string()),
+        ),
+        (
+            "1/3",
+            "1/3",
+            HostTyped::Rational {
+                numerator: "1".to_string(),
+                denominator: "3".to_string(),
+            },
+        ),
+        ("True", "True", HostTyped::Symbol("True".to_string())),
+        ("\"hi\"", "\"hi\"", HostTyped::Str("hi".to_string())),
+        (
+            "{1, 2, 3}",
+            "List[1, 2, 3]",
+            HostTyped::List(vec![
+                HostTyped::Integer(1),
+                HostTyped::Integer(2),
+                HostTyped::Integer(3),
+            ]),
+        ),
+        (
+            "f[1]",
+            "f[1]",
+            HostTyped::Other {
+                head: "f".to_string(),
+                text: "f[1]".to_string(),
+            },
+        ),
+    ];
+
+    for (input, expected_text, expected_typed) in cases {
+        match session.eval(input) {
+            HostEvalOutcome::Success(success) => {
+                assert_eq!(success.value.text, expected_text, "input {input}");
+                assert_eq!(success.value.typed, expected_typed, "input {input}");
+                eprintln!(
+                    "typed_value input={input:?} text={:?} typed={:?}",
+                    success.value.text, success.value.typed
+                );
+            }
+            other => panic!("expected success for {input}, got {other:?}"),
+        }
     }
 }
 

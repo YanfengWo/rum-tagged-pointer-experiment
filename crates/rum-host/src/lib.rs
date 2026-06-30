@@ -16,7 +16,7 @@ pub use model::{
     HostInputRequest, HostInputSuspension, HostInspectRequest, HostInspectResponse,
     HostIsCompleteRequest, HostIsCompleteResponse, HostMessage, HostMessageTemplate,
     HostParseRequest, HostParseResponse, HostStructuredOutput, HostStructuredOutputKind,
-    HostSymbolInfo, HostTraceEvent, HostValue,
+    HostSymbolInfo, HostTraceEvent, HostTyped, HostValue,
 };
 pub use session::{HostCancelHandle, HostSession, HostSessionBuilder};
 

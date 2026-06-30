@@ -1,7 +1,10 @@
+use rum_core::{Atom, Expr};
 use rum_runtime::{
     RuntimeInputKind, RuntimeInputRequest, RuntimeMessage, SessionEvalResponse,
     SessionRequestError, SessionRequestFailure, TraceEvent,
 };
+
+const MAX_TYPED_DEPTH: usize = 64;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HostEvalOutcome {
@@ -64,6 +67,24 @@ pub enum HostFailureCode {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostValue {
     pub text: String,
+    pub typed: HostTyped,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum HostTyped {
+    Integer(i64),
+    BigInteger(String),
+    Rational {
+        numerator: String,
+        denominator: String,
+    },
+    Symbol(String),
+    Str(String),
+    List(Vec<HostTyped>),
+    Other {
+        head: String,
+        text: String,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -171,9 +192,9 @@ impl From<TraceEvent> for HostTraceEvent {
 }
 
 pub(crate) fn eval_success_from_runtime(response: SessionEvalResponse) -> HostEvalSuccess {
-    let value = HostValue {
-        text: response.value.to_string(),
-    };
+    let text = response.value.to_string();
+    let typed = host_typed_from_expr(&response.value);
+    let value = HostValue { text, typed };
     let messages = host_messages(response.messages);
     let prints = response.prints;
     let trace = host_trace(response.trace);
@@ -237,6 +258,64 @@ pub(crate) fn synthesized_host_failure(
         prints: Vec::new(),
         trace: Vec::new(),
         outputs: Vec::new(),
+    }
+}
+
+fn host_typed_from_expr(expr: &Expr) -> HostTyped {
+    host_typed_from_expr_at_depth(expr, 0)
+}
+
+fn host_typed_from_expr_at_depth(expr: &Expr, depth: usize) -> HostTyped {
+    match expr {
+        Expr::Atom(atom) => host_typed_from_atom(atom),
+        Expr::Call { head, args } => {
+            if depth >= MAX_TYPED_DEPTH {
+                return host_typed_other(head.as_ref(), expr);
+            }
+
+            if is_list_head(head.as_ref()) {
+                return HostTyped::List(
+                    args.iter()
+                        .map(|arg| host_typed_from_expr_at_depth(arg, depth + 1))
+                        .collect(),
+                );
+            }
+
+            host_typed_other(head.as_ref(), expr)
+        }
+    }
+}
+
+fn host_typed_from_atom(atom: &Atom) -> HostTyped {
+    match atom {
+        Atom::Integer(value) => value
+            .as_i64()
+            .map(HostTyped::Integer)
+            .unwrap_or_else(|| HostTyped::BigInteger(value.to_bigint().to_string())),
+        Atom::Rational(value) => HostTyped::Rational {
+            numerator: value.numerator().to_string(),
+            denominator: value.denominator().to_string(),
+        },
+        Atom::String(value) => HostTyped::Str(value.clone()),
+        Atom::Symbol(symbol) => HostTyped::Symbol(symbol.to_string()),
+    }
+}
+
+fn is_list_head(expr: &Expr) -> bool {
+    matches!(expr, Expr::Atom(Atom::Symbol(symbol)) if symbol.is_system_name("List"))
+}
+
+fn host_typed_other(head: &Expr, expr: &Expr) -> HostTyped {
+    HostTyped::Other {
+        head: host_typed_head_name(head),
+        text: expr.to_string(),
+    }
+}
+
+fn host_typed_head_name(head: &Expr) -> String {
+    match head {
+        Expr::Atom(Atom::Symbol(symbol)) => symbol.to_string(),
+        _ => head.to_string(),
     }
 }
 
