@@ -70,24 +70,24 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Immediate Correctness And Debt
 
-- [ ] **Deep-nesting stack-overflow — CONFIRMED real (probed 2026-06-30; Gemini's
-  catch). FIX needed.** A deeply-nested literal `f[f[…f[x]…]]` of depth **~5000
-  already crashes `rum-cli` with SIGABRT (exit 134, native stack overflow)** — far
-  below any pathological depth. Confirmed it is NOT (only) deep EVAL: the `Hold[…]`
-  path (eval blocked) crashes too, so the unguarded recursers are the
-  **recursive-descent PARSER** and/or the **default recursive `Drop`** of the
-  `Arc<Expr>` tree (rum-core has NO manual/iterative `Drop` impl for `Expr`). EVAL
-  is already guarded (`recursion_limit` 1024, `evaluation_pass_limit` 256 → graceful
-  `TerminatedEvaluation["IterationLimit"]`, WK-conformant) — but PARSE / CONSTRUCT /
-  DROP have NO depth guard. WK gives a graceful `$RecursionLimit`/`$IterationLimit`
-  here; rum aborts the whole process. NOT currently blocking (the HOL tower loads;
-  real terms aren't ~5000 deep; eval-built structures are bounded at 1024) — a
-  robustness gap, not a live blocker. FIX is bigger than "iterative Drop" alone:
-  (a) a PARSE-depth guard that errors gracefully well below the native-stack limit
-  (mirror the eval `recursion_limit` pattern); and/or (b) an iterative/manual `Drop`
-  for `Expr`/`SharedExpr` (explicit work-stack teardown, respecting `Arc` refcounts
-  — only unique nodes free). Gate any fix on no default-path cost. Side quest off
-  the memory line; brief separately.
+- [x] **Deep-nesting stack-overflow — RESOLVED 2026-06-30 (parse guard shipped;
+  iterative Drop tried+rejected on perf, documented as a host limitation).** A
+  ~5000-deep nested literal `f[f[…f[x]…]]` crashed `rum-cli` with SIGABRT. Two
+  unguarded recursers: the recursive-descent PARSER and the default recursive `Drop`
+  of the `Arc<Expr>` tree. **DONE (brief-055, commit `2a23d5e`):** a `MAX_PARSE_DEPTH`
+  =128 parser guard → deep input now fails gracefully (`parse nesting exceeded limit
+  128`), process survives; the mma-hol corpus still loads under 128 (cp42 re-parse +
+  886/0). This closes every REACHABLE crash — WL paths are now depth-capped by the
+  parser guard + eval `recursion_limit` 1024 + the resource limits (`Nest` etc. trip a
+  limit before building a droppable deep tree). **REJECTED (briefs 056/057):** the
+  iterative `Drop` (for a deep `Expr` built directly via the rum-core Rust API — a
+  host-only, pathological path) was tried three ways — unsafe `ManuallyDrop`, safe
+  `Option<Arc>` (design B), safe `mem::replace`+sentinel (design A). All regressed the
+  eval hot path 20-50% on list/dispatch labels (every `Expr` drop pays the manual
+  drain instead of the default `Arc` drop; no cheap trigger exists). Per the standing
+  microbench-gate rule, none shipped. So a host must not build pathologically-deep
+  `Expr`s via the Rust API — documented as a known limitation in
+  `docs/host-embedding-and-hardening.md`; revisit only if a real host hits it.
 - [ ] Keep the suspension-safe helper boundary from the 2026-06-13 audit from
   regressing. The public callback-loop tranches are now closed for
   fold/window, functional iteration, targeted mapping (`MapAt`, `SubsetMap`),

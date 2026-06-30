@@ -52,11 +52,23 @@ The framework is good and proven (`rum-jupyter` on `rum-host`); these are the
   `TimeConstrained`/`MemoryConstrained` exist only at the WL level (guest code must
   wrap); `HostFailureCode` already surfaces both. The host cannot impose a per-eval
   time/memory cap. DoS surface.
-- **Panic-safety boundary + the deep-nesting crash.** The host API should wrap eval
-  in `catch_unwind` (a future FFI/pyo3 boundary must NOT let a panic cross). AND the
-  CONFIRMED ~5000-deep nesting SIGABRT (recursive-descent parser / default recursive
-  `Drop`, see TODO) aborts the whole process — a host-process crash, so that fix is
-  a host-hardening prerequisite, not a side quest.
+- **Panic-safety boundary.** The host API should wrap eval in `catch_unwind` (a
+  future FFI/pyo3 boundary must NOT let a panic cross). [The deep-nesting parser
+  crash that motivated this is now fixed — see the limitation note below.]
+- **KNOWN LIMITATION — do not build pathologically-deep `Expr`s via the Rust API.**
+  rum-core's `Expr` `Drop` is the default RECURSIVE drop; dropping a `>~thousands`-deep
+  `Arc<Expr>` chain overflows the native stack (SIGABRT) and takes the host process
+  with it. The reachable crash (deep PARSE input) is closed (a `MAX_PARSE_DEPTH`=128
+  parser guard, brief-055) and every WL path is depth-capped (parser guard + eval
+  `recursion_limit` 1024 + resource limits), so this CANNOT happen via evaluating WL.
+  It is only reachable by a host constructing a pathologically-deep `Expr` directly
+  via `Expr::call(...)` in a Rust loop. An iterative `Drop` was tried three ways
+  (briefs 056/057: unsafe `ManuallyDrop`, safe `Option<Arc>`, safe sentinel) and ALL
+  regressed the eval hot path 20-50% (every drop pays the manual drain) — rejected per
+  the no-default-path-cost rule. So: **a host must not build deeper than ~a few
+  thousand levels of `Expr` nesting via the Rust API.** If a real host needs it, the
+  options are a depth-limited builder, a dedicated iterative-drop helper the host calls
+  explicitly for known-deep trees, or accepting the per-drop cost — revisit then.
 - **Structured value extraction.** `HostValue` is `{ text: String }` only — the
   result comes back as a STRING. Embedders (Rust / Python / JS) need typed access
   (Integer / Rational / Symbol / List / Expr → `i64` / `Vec` / native), else the

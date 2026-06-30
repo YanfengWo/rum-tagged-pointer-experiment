@@ -6,6 +6,38 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-06-30 Deep-nesting stack overflow — parser guard shipped; iterative Drop tried+rejected on perf (briefs 055-057)
+
+A ~5000-deep nested literal crashed `rum-cli` with SIGABRT. Two unguarded recursers:
+the recursive-descent parser and the default recursive `Drop` of the `Arc<Expr>` tree.
+
+DONE (brief-055, `2a23d5e`): a `MAX_PARSE_DEPTH`=128 parser guard. Deep input now fails
+gracefully (`parse nesting exceeded limit 128`) and the process survives; the mma-hol
+corpus still loads under 128 (cp42 snapshot re-parse + num/rat/int/finite/fta 613/0,
+arith 273/0). This closes every REACHABLE crash — WL paths are depth-capped by the
+parser guard + eval `recursion_limit` 1024 + the resource limits (`Nest[ff,xx,60000]`
+trips `General::reslim` before building a droppable deep tree, verified).
+
+REJECTED (briefs 056/057): the iterative `Drop` — for a deep `Expr` built directly via
+the rum-core Rust API, a host-only pathological path NOT reachable via WL — was tried
+three ways: (1) unsafe `ManuallyDrop` (brief-055; also the FIRST `unsafe` in rum-core),
+(2) safe `Option<Arc>` (brief-056, design B; `Option` branch on the hot `Deref` →
++8-44%), (3) safe `mem::replace`+sentinel (brief-057, design A; `Arc` field unchanged
+so no per-access cost, but the per-drop drain → +22-49%, even with a `strong_count`
+fast-path). Every design regressed the eval hot path 20-50% on list/dispatch labels
+because every `Expr` drop pays the manual drain instead of the default `Arc` drop, and
+no cheap trigger exists. Per the new standing microbench-gate rule (added to
+TEMPLATE.md/AGENTS.md this session after brief-055's review), Codex measured + STOPPED
++ reported each time — none shipped. CONCLUSION: documented as a known host-API
+limitation (`docs/host-embedding-and-hardening.md`) — a host must not build
+pathologically-deep `Expr`s via the Rust API; the iterative drop's pathological-only
+benefit does not justify a 20-50% eval-hot-path cost.
+
+PROCESS: this is also where the two standing brief rules were added (no new `unsafe` in
+kernel crates; hot-path changes need a microbench A/B) after brief-055 introduced unsafe
++ an unmeasured O(N) probe — root cause was an under-constrained brief, and the gate +
+the new rules caught it.
+
 ## 2026-06-30 Memory line CONCLUDED for safe Rust — Phase 2 (interner) kept as a bounded tradeoff; resource-limit observability noted
 
 Diagnosed Phase 2 (the per-gensym interned `&'static` name residual Phase 1 leaves).
