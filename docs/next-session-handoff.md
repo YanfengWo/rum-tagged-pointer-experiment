@@ -11,9 +11,14 @@
 > `eval_with_timeout()`/`HostFailureCode::Cancelled`; only the Arc crosses threads.
 > Gate: workspace 712/0 + rum-host 7/0 (real cross-thread cancel ~60ms + 200ms timeout +
 > positive), microbench loop-empty flat-to-faster at scale 1/10/20 (no per-step cost).
-> **brief-060 IN FLIGHT** (catch_unwind panic boundary + session poison, host-layer only,
-> zero hot-path). NEXT: 061 structured `HostValue` (typed enum vs today's `{text}`).
-> **Memory budget DEFERRED with a design fork to decide**: the structural
+> **brief-060 DONE** (`4e532a8`): catch_unwind panic boundary + session poison (host-layer
+> only, zero hot-path; uniform guard → read-only methods became `&mut self`, accepted;
+> does NOT catch stack-overflow aborts — those are the parser/matcher depth guards).
+> **brief-061 DONE** (`0423bb4`): structured/typed `HostValue` (`.text` unchanged + a new
+> `HostTyped` enum Integer/BigInteger/Rational/Symbol/Str/List/Other, depth-capped 64;
+> rum-host gained a direct rum-core dep to name Expr, no lock change). So 3 of the 4
+> Tier-1 items are done. **Memory budget is the only one left, DEFERRED with a design fork
+> to decide**: the structural
 > `current_memory_proxy_bytes` is an O(state) full sweep (too costly per-step) AND blind
 > to the interner leak; RSS is the true total but a platform syscall that breaks the
 > WASM-clean core — proxy-vs-RSS is a real decision, and it's lower-urgency since the

@@ -6,7 +6,7 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
-## 2026-07-01 Host hardening line — Tier-1 started (brief-059: interrupt/cancel + time budget)
+## 2026-07-01 Host hardening line — Tier-1 (briefs 059/060/061; memory budget deferred)
 
 New mainline after the pattern-matching line closed: host-embedding Tier-1 hardening
 (`docs/host-embedding-and-hardening.md`). Sequenced as one-lever briefs:
@@ -37,6 +37,43 @@ release binaries, scale 1/10/20, 3 interleaved rounds, median-of-medians): the
 eval-loop-heaviest label loop-empty is flat-to-faster (0.95-1.01) at every scale; the
 scattered 4-30% on sub-ms labels was run-to-run noise (uncorrelated with eval-loop
 intensity, swung both ways). No per-step regression — the disarmed branch is free.
+
+brief-060 (`4e532a8`): catch_unwind panic boundary + session poison. A Rust panic inside
+eval unwound straight through the rum-host API (UB across a future FFI/pyo3 boundary,
+takes the host down). HostSession gains `poisoned: bool` + a `guard<T>(&mut self, body,
+on_panic)` helper running `catch_unwind(AssertUnwindSafe(|| body(self)))`; a caught panic
+sets poisoned + returns a graceful `HostFailureCode::Panic` (message from the downcast
+payload); subsequent calls return `Poisoned`. All entries uniformly guarded → the
+read-only query methods became `&mut self` (ACCEPTED: uniform safety, host owns the
+session mutably anyway; only ripple was trivial `let mut` + a borrow-split in the jupyter
+adapter). Host-layer only, zero runtime change, zero hot-path (wraps the outer entry).
+NOT caught: stack-overflow aborts (those are guarded by parser MAX_PARSE_DEPTH + matcher
+MAX_MATCH_DEPTH). No global panic hook (a lib must not impose process-global state) — the
+default hook still prints to stderr before catch_unwind returns; capturing that is a
+documented follow-up. Gate: workspace 712/0 + rum-host panic/poison test 2/0.
+
+brief-061 (`0423bb4`): structured (typed) HostValue. Was `{ text: String }` only; now
+ALSO carries a typed view (`.text` byte-identical, additive). New `HostTyped` enum:
+Integer(i64) | BigInteger(String) | Rational{num,den} | Symbol(String) | Str(String) |
+List(Vec<HostTyped>) | Other{head,text}, built once from `response.value: Expr` in
+`eval_success_from_runtime`. Rationals-only → no float variant; BigInteger/Rational use
+decimal strings (2^200 doesn't fit i64). Depth-capped (MAX_TYPED_DEPTH=64) so a deep
+List[List[...]] falls back to Other{text} instead of overflowing the converter (same
+discipline as the parser/matcher guards). rum-host gained a direct workspace-internal
+rum-core path dep to name Expr/Atom (runtime exposes the Expr publicly but doesn't
+re-export the type; brief forbade runtime changes; no Cargo.lock change). Gate: workspace
+712/0 + typed test 1/0 (Integer/BigInteger/Rational/Symbol/Str/List/Other, each asserting
+.text unchanged).
+
+**Memory budget — DEFERRED, needs a design decision.** The structural
+`current_memory_proxy_bytes` (memory.rs) is an O(state) full sweep (walks the whole
+definitions/attributes/options/stacks) — too costly to poll per eval step even amortized
+— AND it is blind to the interner `&'static` leak (the memory line established RSS is the
+true total). RSS is cheap-per-call and true, but it is a platform-specific syscall that
+breaks the WASM-clean core dep tree (the host-embedding selling point) and is process-wide
+(not per-session). proxy-vs-RSS is a real fork to decide; lower-urgency because the
+brief-059 wall-clock budget already bounds most memory-DoS (a runaway allocator also burns
+time → caught by the deadline). Pick this up after deciding the signal.
 
 ## 2026-07-01 Matcher backtracking stack overflow — depth guard shipped (brief-058)
 
