@@ -570,6 +570,7 @@ dependencies = [
 name = "rum-host"
 version = "0.1.0"
 dependencies = [
+ "rum-core",
  "rum-runtime",
  "rum-stdlib",
 ]
