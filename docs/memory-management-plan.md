@@ -74,10 +74,24 @@ AND the prerequisite for the authoritative cold gate.
 
 ## The plan (measure-gated, mirrors the time line's discipline)
 
-**Phase 0 — instruments first (no optimization). [DONE 2026-06-29, brief-048.]**
+**Phase 0 — instruments first (no optimization). [DONE 2026-06-29, brief-048;
+four-C panel 2026-06-30, brief-052.]**
 `MaxMemoryUsed[]` and `scripts/core-memory-microbench.sh` landed; the comparator
 reproduces this doc's calibration (`module-leak-20000` rum 5,966,099 B vs WK -80 B;
 `retain-range-*` rum/WK 8.11x–8.25x). Baseline frozen — Phase 1 gates against it.
+**brief-052 upgraded the comparator to the four-C panel** (peak / retained /
+transient / post-cleanup + `TransientOverhead = peak − retained` + aggregate
+`C_max`/`C_p95`/`C_geomean` + N-drift verdict). **KEY MEASUREMENT FINDING (drives how
+the "constant factor" claim is made):** only **`retained_ratio` is a clean
+cross-engine constant factor** (`MemoryInUse` deltas are workload-attributable in
+both engines → retain-range ~8.1–8.3x, STABLE across N, drift 2.7% — the dense-repr
+overhead Phase 3 targets). `peak`/`transient`/`post_cleanup`/RSS WK columns are
+CONFOUNDED by WK's sticky startup high-water (`MaxMemoryUsed` ~15.4M, not reset
+per-workload) + ~86M pre-allocated process RSS → read those as RUM-LOCAL
+(TransientOverhead + leak diagnosis), not WK ratios. So the memory line claims
+"within a constant factor of WK" on **retained**; peak/transient/post-cleanup are
+rum-local regression + diagnosis. (post_cleanup ~879 B on module-leak confirms the
+Phase-1 gensym GC; see the script `--help` for the full note.)
 The original plan text follows. Implement `MaxMemoryUsed[]`
 (peak memory; track a high-water mark in the proxy + optionally real RSS). Build
 the cross-engine memory comparator (same workload in rum + WK, report the
