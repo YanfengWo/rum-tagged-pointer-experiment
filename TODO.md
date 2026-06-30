@@ -57,7 +57,14 @@ Completed history, archived planning detail, and operational lessons live in
 - [ ] Promote new Wolfram-style functions only when the support matrix,
   `mma-hol`, or another concrete downstream blocker justifies them.
 - [ ] Keep project-owned Python adapter work frozen until a real downstream
-  need justifies reopening API, packaging, and binding decisions.
+  need justifies reopening API, packaging, and binding decisions. **When the
+  embedding line is reopened (after `mma-hol`), start from
+  [docs/host-embedding-and-hardening.md](./docs/host-embedding-and-hardening.md)**
+  — the surveyed capability boundary, the tiered host-hardening gaps (interrupt/
+  cancel, session time/memory budget, panic-safety + the deep-nesting crash,
+  structured `HostValue`, reset, session-image-from-bytes, concurrency contract),
+  and the two durable showcase enablers (sandbox-by-design; WASM-friendliness). The
+  specific showcase project is deliberately undecided.
 - [ ] Keep Jupyter scoped as a `rum-host`-backed basic Notebook tech preview:
   useful for contract validation, not a full notebook product.
 
