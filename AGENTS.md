@@ -243,6 +243,21 @@ rendering/mutation, transport vs codec vs backend, and so on.
 When editing a file already over threshold, avoid making it worse unless the
 change is urgent and the split plan is recorded in `TODO.md`.
 
+**Safe Rust is a hard convention.** `rum-core` and `rum-runtime` are
+ZERO-`unsafe` (verified; the only `unsafe` in the repo is the off-by-default
+alloc-count `GlobalAlloc` in `rum-cli`). Do not introduce `unsafe` into the
+kernel crates — there is almost always a safe equivalent at the same cost
+(e.g. `Option<Arc<…>>` niche-packs to `Arc<…>`'s size and gives a safe `.take()`
+for a manual `Drop`). If you believe `unsafe` is unavoidable, STOP and surface
+it for a decision rather than shipping it.
+
+**Hot-path changes are measured, not asserted.** A change touching an evaluation
+hot path (eval/dispatch/matcher, `Expr`/`SharedExpr`/`SharedArgs` construction or
+`Drop`, candidate-value lookup) must be gated with a
+`scripts/core-language-microbench.sh` base-vs-new A/B — a "no default-path cost"
+intention is not evidence; an O(N) cost hidden inside a "fast path" only shows up
+when measured.
+
 ## Testing And Conformance
 
 Follow [docs/testing-strategy.md](./docs/testing-strategy.md). In short,

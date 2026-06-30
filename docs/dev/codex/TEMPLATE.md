@@ -133,6 +133,20 @@ result without the verbatim count / ratio line.
   `rum-cli`, `sample` / the `scripts/sample-*.py` reducers, the microbench
   script, and `python3` for parsing.
 - Never edit any `mma-hol` file as the fix or the acceptance path.
+- **No new `unsafe`.** `rum-core` and `rum-runtime` are ZERO-`unsafe` today (the
+  only `unsafe` in the repo is the off-by-default alloc-count `GlobalAlloc` in
+  `rum-cli`). Do NOT introduce `unsafe` (incl. `ManuallyDrop::take`/`drop`,
+  `ptr::*`, transmute, raw-pointer deref) into these crates. There is almost
+  always a safe equivalent at the same cost (e.g. `Option<Arc<…>>` niche-packs to
+  the same size as `Arc<…>` and gives a safe `.take()` for manual `Drop`). If you
+  are convinced `unsafe` is unavoidable, STOP and report — do not ship it.
+- **Hot-path changes require a microbench A/B, not just the "no default-path cost"
+  rule.** If the change touches an evaluation hot path (eval/dispatch/matcher,
+  `Expr`/`SharedExpr`/`SharedArgs` construction or `Drop`, the down/up/sub-value
+  candidate path), you MUST run `scripts/core-language-microbench.sh` base-vs-new
+  and paste the per-label ratios — an O(N)/per-node cost hidden in a "fast path"
+  is exactly what a verbal rule misses. A regression on any hot label is a defect
+  to fix or report, not to ship.
 - Stop-loss: same failure twice, or no ratio movement → STOP and report.
 - Minimal diff: no drive-by reformatting, renames, or comment changes outside
   the task.
