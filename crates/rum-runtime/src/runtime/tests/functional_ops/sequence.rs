@@ -269,7 +269,7 @@ fn sequence_functional_builtins_report_current_argument_forms() {
         .unwrap();
     assert_eq!(
         limited.value.to_string(),
-        "TerminatedEvaluation[\"ResourceLimit\"]"
+        "TerminatedEvaluation[\"IterationWorkLimit\"]"
     );
 
     let fold_while = session.eval_text("FoldWhile[f, x, list, test, 0]").unwrap();

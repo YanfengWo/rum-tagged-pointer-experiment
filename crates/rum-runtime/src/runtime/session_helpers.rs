@@ -191,12 +191,15 @@ impl Session {
     pub(super) fn terminated_evaluation_reason_for_error(
         error: &EvalError,
     ) -> Option<&'static str> {
+        // Each limit gets a SPECIFIC tag so a user can tell which budget to raise
+        // (a generic "ResourceLimit" did not say which of the three work limits
+        // fired). The tag mirrors the message text (e.g. "iteration work limit").
         match error {
             EvalError::RecursionLimitExceeded { .. } => Some("RecursionLimit"),
             EvalError::EvaluationPassLimitExceeded { .. } => Some("IterationLimit"),
-            EvalError::GeneratedElementLimitExceeded { .. }
-            | EvalError::IntegerWorkLimitExceeded { .. }
-            | EvalError::IterationWorkLimitExceeded { .. } => Some("ResourceLimit"),
+            EvalError::GeneratedElementLimitExceeded { .. } => Some("GeneratedElementLimit"),
+            EvalError::IntegerWorkLimitExceeded { .. } => Some("IntegerWorkLimit"),
+            EvalError::IterationWorkLimitExceeded { .. } => Some("IterationWorkLimit"),
             _ => None,
         }
     }

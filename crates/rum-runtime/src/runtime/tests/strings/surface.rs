@@ -134,7 +134,7 @@ fn string_generators_respect_resource_limits() {
         .unwrap();
     assert_eq!(
         character_range.value.to_string(),
-        "TerminatedEvaluation[\"ResourceLimit\"]"
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
     );
     assert!(
         character_range
@@ -148,7 +148,7 @@ fn string_generators_respect_resource_limits() {
     let repeat = repeat_session.eval_text("StringRepeat[\"ab\", 2]").unwrap();
     assert_eq!(
         repeat.value.to_string(),
-        "TerminatedEvaluation[\"ResourceLimit\"]"
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
     );
     assert!(
         repeat

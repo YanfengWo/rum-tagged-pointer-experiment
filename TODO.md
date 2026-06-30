@@ -128,17 +128,6 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Core Runtime Semantics
 
-- [ ] **Make `TerminatedEvaluation` resource-limit tags specific (observability /
-  failure-mode polish, found 2026-06-30).** Today the tag is inconsistent: the
-  fixed-point pass limit returns `TerminatedEvaluation["IterationLimit"]` (specific)
-  but the iteration-work limit returns the generic `TerminatedEvaluation["ResourceLimit"]`
-  (message `General::reslim: evaluation exceeded iteration work limit (N)`). A
-  debugging user can't tell WHICH budget to raise from the generic tag. Give each
-  limit a specific tag (IterationWork / Recursion / GeneratedElement / IntegerWork /
-  Memory / Time …) and align the message tag. Small, safe, no default-path cost. NOT
-  a bug (rum already emits a message + a graceful `TerminatedEvaluation` + the session
-  continues — the failure mode is already graceful/observable); this is a conformance/
-  diagnosability refinement. Lands in ChatGPT's observability/failure-mode dimension.
 - [ ] Tighten remaining evaluator behavior that is still ad hoc, especially
   held/spec-driven target families outside the message/definition/attribute
   normalization cluster.

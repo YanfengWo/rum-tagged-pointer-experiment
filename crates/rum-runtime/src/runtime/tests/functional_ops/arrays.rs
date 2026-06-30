@@ -295,7 +295,7 @@ fn array_and_outer_respect_resource_limits() {
     let array = array_session.eval_text("Array[f, 5]").unwrap();
     assert_eq!(
         array.value.to_string(),
-        "TerminatedEvaluation[\"ResourceLimit\"]"
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
     );
     assert!(
         array
@@ -309,7 +309,7 @@ fn array_and_outer_respect_resource_limits() {
     let outer = outer_session.eval_text("Outer[f, {a, b}, {x, y}]").unwrap();
     assert_eq!(
         outer.value.to_string(),
-        "TerminatedEvaluation[\"ResourceLimit\"]"
+        "TerminatedEvaluation[\"IterationWorkLimit\"]"
     );
     assert!(
         outer

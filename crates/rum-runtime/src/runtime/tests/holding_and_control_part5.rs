@@ -142,7 +142,7 @@ fn do_and_table_respect_resource_limits() {
     let table = table_session.eval_text("Table[x, 5]").unwrap();
     assert_eq!(
         table.value.to_string(),
-        "TerminatedEvaluation[\"ResourceLimit\"]"
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
     );
     assert!(
         table
@@ -156,7 +156,7 @@ fn do_and_table_respect_resource_limits() {
     let do_result = do_session.eval_text("Do[Null, 5]").unwrap();
     assert_eq!(
         do_result.value.to_string(),
-        "TerminatedEvaluation[\"ResourceLimit\"]"
+        "TerminatedEvaluation[\"IterationWorkLimit\"]"
     );
     assert!(
         do_result
@@ -173,7 +173,7 @@ fn do_and_table_respect_resource_limits() {
             .unwrap()
             .value
             .to_string(),
-        "TerminatedEvaluation[\"ResourceLimit\"]"
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
     );
 
     let mut memory_session = Session::new();

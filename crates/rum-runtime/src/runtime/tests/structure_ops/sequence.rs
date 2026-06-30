@@ -46,7 +46,7 @@ fn range_respects_generated_element_limit_before_allocating() {
     let limited = session.eval_text("Range[5]").unwrap();
     assert_eq!(
         limited.value.to_string(),
-        "TerminatedEvaluation[\"ResourceLimit\"]"
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
     );
     assert!(
         limited

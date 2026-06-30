@@ -127,7 +127,7 @@ fn factorial_respects_integer_work_limit() {
     let limited = session.eval_text("Factorial[5]").unwrap();
     assert_eq!(
         limited.value.to_string(),
-        "TerminatedEvaluation[\"ResourceLimit\"]"
+        "TerminatedEvaluation[\"IntegerWorkLimit\"]"
     );
     assert!(
         limited
@@ -139,7 +139,7 @@ fn factorial_respects_integer_work_limit() {
     let limited = session.eval_text("Factorial2[5]").unwrap();
     assert_eq!(
         limited.value.to_string(),
-        "TerminatedEvaluation[\"ResourceLimit\"]"
+        "TerminatedEvaluation[\"IntegerWorkLimit\"]"
     );
     assert!(
         limited
