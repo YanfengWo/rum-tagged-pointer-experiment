@@ -80,6 +80,27 @@ The VM is a COMPILED FAST-PATH layered on the tree-walker, never a replacement:
   resume: an `Eval` that suspends must suspend the VM frame too (preserve the
   continuation contract) — see invariants.
 
+## Module is the project's LOAD-BEARING trust boundary — gate Module-touching slices against the REAL Strict-mode suite
+
+mma-hol's entire premise (README) is `Module`/`Unique` gensyms AS an encapsulation
+/ LCF trust boundary: in **Strict mode** the kernel-state symbols (`thmTag`, the
+constant/axiom/definition tables) are **Module-local gensyms with no stable name**,
+and soundness reduces to "no code outside the kernel can fabricate a `thmTag[...]`."
+So Module hygiene here is not an optimization detail — it is the point of the
+project. Consequences for any VM slice that compiles a Module body:
+
+- **The escape check must be airtight.** Register-izing a Module local (skipping its
+  gensym) is sound ONLY for a local that provably never escapes and is NOT a
+  kernel-state / theorem-constructor symbol. A compilable-shape match must be narrow
+  enough that it can NEVER match `defineKernel`'s kernel-state Module. When in doubt,
+  fall back.
+- **Correctness gate MUST include the real mma-hol theorem suite with the flag ON,
+  in Strict mode** — not just the Stable Pair probe + rum unit tests, which never
+  cross the trust boundary. Minimum: `tests/run_fast.wls` (Stable, all post-bootstrap
+  files) OFF vs ON identical pass count, PLUS a Strict-mode check (a `run_all.wls`
+  subset, real gensyms) OFF vs ON. A Module slice that passes rum unit tests + the
+  Stable Pair probe but is not run against the Strict suite is NOT adequately gated.
+
 ## Correctness invariants (the hard part — gate every slice on these)
 
 A compiled body MUST be byte-identical to the tree-walk, or it is a correctness
