@@ -6,6 +6,48 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-07-01 brief-069 per-call constant decomposition (v8) — VM prize is real on Pair (~58%) but body/combinator-specific; take cheap targeted levers first
+
+First brief of the bytecode-VM line (task-2; `docs/bytecode-vm-plan.md`). Pure
+diagnostic (no source change) re-decomposing the distributed per-call constant on
+the v8 binary via the existing `runtime_path_timing` infra
+(`RUM_PROFILE_LEXICAL_SUBSTITUTION=1`), classified into the plan's three buckets.
+
+- **D1 (primitive failing-dispatch):** `evaluate.total` 22.46% (2/call),
+  `prepare_arguments` 7.57%, `stability_check` 7.49% (4/call), `once_unstable`
+  6.90%, `dispatch` 5.60%, `down_values` 5.31% — matches the 2026-06-21 table; the
+  per-call constant is DISTRIBUTED and stable post-Layer-A.
+- **D3 (profiler OFF vs WK):** if-true 3.81x, downvalue-exact-hit 3.77x,
+  pattern-hit 3.79x, pattern-**miss** 2.16x, miss-repeat 1.56x (the failing path
+  the Pair descent leans on is already only 1.56-2.16x).
+- **Combinator amplification (unprofiled):** rum full/manual = 1.467x (31.84% WL
+  control-combinator overhead) — a solid VM-specific prize.
+- **D2 (Pair descent, closed):** biggest single row `module.resume_initializers`
+  **22.14%** (Module closures rebuilt/re-evaluated per subterm), then evaluate.total
+  8.97%, down_values.normalize_candidate 7.76%, prepare 5.02%, stability 4.93%.
+- **D4 buckets:** eval-strategy D1 49.31% / D2 21.12%; VM dispatch-glue D1 34.71% /
+  D2 21.89%; VM WL-body/combinator D1 0% / D2 35.87%; irreducible D1 15.97% /
+  D2 21.12%. **The A3 lesson holds:** primitive says strategy dominates, but the
+  REAL Pair workload is ~57.8% VM-addressable, dominated by WL-body re-interpretation
+  (Module/function/rule bodies).
+
+**Verdict + direction:** a VM prize is real on Pair but must target COMPILED WL
+BODIES/COMBINATORS, not a generic tree VM. Per the plan's incremental principle,
+take the cheap targeted levers FIRST (each Pair-validated), then size the residual
+VM: (1) the 22% Module-closure resume on Pair (avoid rebuild per subterm — a
+targeted fix, NOT a VM); (2) the eval-strategy fixed-point/stability multiplicity
+(~21% Pair). A full compiled-body VM is the multi-week step 3, justified only by
+the residual after (1)+(2). See brief-069 Outcome + `docs/bytecode-vm-plan.md`.
+
+**PROCESS FIX (this session, user-flagged):** briefs 067-069 each ballooned to
+35-70 min of probe time (brief-067 = 27 runs of a 90-234s probe) because gates used
+best-of-N of the most expensive probe across multiple modes, plus under-specified
+env/granularity forced full re-runs. Added a **"Probe budget" hard rule to
+`docs/dev/codex/TEMPLATE.md`** (best-of-2, slow modes once, cap+state run count,
+full env up front, cheaper bounded probe for quick A/B, one run for share
+diagnostics). Time estimates were correspondingly wrong (~15 min quoted vs 35-70
+real) — future estimates account for the run-count × per-run multiplier.
+
 ## 2026-07-01 brief-068 hash-consing intern cost — MARGINAL: enabler taxes 100% of constructions, pays back only on descents
 
 Follow-up to brief-067 (which left the hash-consing enabler cost unmeasured).

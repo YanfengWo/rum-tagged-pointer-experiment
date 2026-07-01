@@ -135,3 +135,59 @@ Paste: D1 table, D2 table (with divergence notes), D3 ratios, D4 three-bucket su
    `docs/bytecode-vm-plan.md`.
 4. Open questions — any phase that didn't close, or D1/D2 divergence you couldn't
    explain.
+
+---
+
+## Outcome (Claude gate, 2026-07-01) — DONE. Per-call constant confirmed stable; on Pair ~58% is VM-addressable, with a concrete 22% Module-closure hotspot. Do the cheap targeted levers before a full VM.
+
+Diagnostic only, tree clean (no source change; Codex added only a throwaway
+`/tmp` probe input). Gated by inspection; D1 matches history (the constant is
+stable post-Layer-A), D3 is profiler-OFF, the combinator amplification is
+unprofiled (both trustworthy).
+
+**D1 (primitive failing-dispatch `fMiss[x_String]` on ints):** `evaluate.total`
+22.46% (2/call), `prepare_arguments` 7.57%, `stability_check` 7.49% (4/call),
+`once_unstable` 6.90%, `dispatch` 5.60%, `down_values` 5.31% — matches the
+2026-06-21 table almost exactly. The per-call constant is DISTRIBUTED and stable.
+
+**D3 (profiler OFF, vs WK):** if-true 3.81x, downvalue-exact-hit 3.77x,
+downvalue-pattern-hit 3.79x, downvalue-pattern-**miss** 2.16x, miss-repeat 1.56x.
+(The failing-dispatch path — the Pair descent's dominant op — is already only
+1.56-2.16x WK; successful dispatch is ~3.8x.)
+
+**Combinator amplification (unprofiled, `basic-chain-orelsec-split`):** rum
+full/manual = **1.467x** (31.84% of the full path is WL control-combinator
+overhead). Cross-engine manual 4.54x, full 6.13x. This is a solid VM-specific
+prize.
+
+**D2 (Pair descent, phase-only, closed to ~parent):** biggest single row is
+`module.resume_initializers` **22.14%** (Module closures rebuilt/re-evaluated per
+subterm), then `evaluate.total` 8.97%, `down_values.normalize_candidate` 7.76%,
+`prepare_arguments` 5.02%, `stability_check` 4.93%, `dispatch` 3.22%.
+
+**D4 bucket split:**
+
+| bucket | D1 primitive | D2 Pair |
+| --- | ---: | ---: |
+| eval-strategy (no VM) | 49.31% | 21.12% |
+| VM dispatch glue | 34.71% | 21.89% |
+| VM WL body/combinator | 0.00% | 35.87% |
+| irreducible | 15.97% | 21.12% |
+
+**Verdict:** the A3 lesson holds — D1 (primitive) says the cheap eval-strategy
+chunk dominates, but D2 (the REAL Pair workload) is ~**57.8% VM-addressable**,
+dominated by WL-body re-interpretation (Module/function/rule bodies, incl. the
+22% Module-closure row) + dispatch glue, corroborated by the 1.467x combinator
+amplification. So a VM prize is real on Pair — but it must target **compiled WL
+bodies/combinators**, NOT a generic expression-tree VM (which would miss it).
+
+**Recommendation (per the plan's incremental principle — do NOT big-bang a VM):**
+the decomposition surfaces concrete, likely-cheaper-than-a-full-VM levers to take
+FIRST, each Pair-validated: (1) the **22% Module-closure resume** on Pair (avoid
+rebuilding/re-evaluating the Module closure per subterm — a targeted fix, not a
+VM); (2) the **eval-strategy fixed-point/stability multiplicity** (2x evaluate +
+4x stability per call, ~21% Pair / ~49% primitive — no VM). Bank these, re-measure
+the Pair descent, THEN size the residual compiled-body VM prize. A full
+compiled-body VM is the multi-week step 3 in `docs/bytecode-vm-plan.md`, justified
+only by the residual after (1)+(2). Next brief candidate: the Module-closure
+resume lever (biggest single Pair row, self-contained).

@@ -147,6 +147,20 @@ result without the verbatim count / ratio line.
   and paste the per-label ratios — an O(N)/per-node cost hidden in a "fast path"
   is exactly what a verbal rule misses. A regression on any hot label is a defect
   to fix or report, not to ship.
+- **Probe budget — keep gate runs bounded (added 2026-07-01 after briefs 067-069
+  each ballooned to 35-70 min of probe time).** The Pair-descent probe
+  (`runtime-profile-basic-only-pair4`) is ~90-270s per run (2.5-2.7x-slow
+  measurement modes push single runs to 250-270s); best-of-N × several modes
+  silently balloons. So: use **best-of-2, not N≥3**, for a wall A/B; run any
+  2x+-slow mode **ONCE** (it is defining, not a best-of candidate); **cap the total
+  probe-run count and state the cap** in your report; set the **FULL env** (every
+  `RUM_PROFILE_*` category you need on/off) up front so you never re-run on polluted
+  data; and if a number looks off, **REPORT it — do NOT silently re-measure every
+  mode again** (that is what turned brief-067 into 27 runs). For a quick RELATIVE
+  A/B prefer a cheaper bounded probe (e.g. `runtime-profile-loop-null-repeat`) and
+  reserve the full descent for the final confirm. Pure share/decomposition
+  diagnostics need ONE clean profiled run (shares are stable within a run), not a
+  best-of-N.
 - Stop-loss: same failure twice, or no ratio movement → STOP and report.
 - Minimal diff: no drive-by reformatting, renames, or comment changes outside
   the task.

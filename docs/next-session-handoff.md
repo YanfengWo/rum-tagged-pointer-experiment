@@ -1,6 +1,30 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-07-01 (NEWEST — read THIS first). brief-068 hash-consing intern-cost DONE
+> **2026-07-01 (NEWEST — read THIS first). Bytecode-VM line OPENED (task-2); brief-069
+> per-call decomposition DONE — VM prize is real on Pair (~58%) but body/combinator-
+> specific; recommend cheap targeted levers first (22% Module-closure + fixed-point/
+> stability), then size the residual VM. AWAITING a user go on the next lever.** After
+> task-1 (hash-consing/value-memo) measured marginal (067/068), the user picked task-2.
+> `docs/bytecode-vm-plan.md` is the design/feasibility plan (goal: cut the distributed
+> per-call constant; feasibility crux: symbolic dispatch/match/arg-eval is IRREDUCIBLE,
+> a VM helps only on compiled rule bodies + dispatch glue + a tighter fixed-point/
+> stability machine; three-bucket addressable-prize split). brief-069 (pure diagnostic,
+> no code) re-decomposed the constant on v8: D1 primitive matches the 2026-06-21 table
+> (constant distributed + stable); D3 profiler-OFF shows if-true 3.81x / failing-dispatch
+> 1.56-2.16x vs WK; the combinator amplification is 1.467x (unprofiled); D2 Pair is
+> ~57.8% VM-addressable, dominated by WL-body re-interpretation — biggest single row
+> `module.resume_initializers` **22.14%** (Module closures rebuilt per subterm). Verdict:
+> a VM must target COMPILED WL BODIES/COMBINATORS, not a generic tree VM; per the plan,
+> take cheap targeted levers FIRST — (1) the 22% Module-closure resume (a targeted fix,
+> NOT a VM), (2) the eval-strategy fixed-point/stability multiplicity (~21% Pair) —
+> then size the residual compiled-body VM (the multi-week step 3). Next brief candidate:
+> the Module-closure resume lever. See brief-069 Outcome + PROGRESS 2026-07-01.
+> **PROCESS FIX (user-flagged):** briefs 067-069 each cost 35-70 min of probe time
+> (067 = 27 runs of a 90-234s probe) from best-of-N × multi-mode gates + under-specified
+> env forcing re-runs; added a "Probe budget" hard rule to `TEMPLATE.md` (best-of-2,
+> slow modes once, cap run count, full env up front, cheaper probe for quick A/B).
+>
+> **2026-07-01 (prior). brief-068 hash-consing intern-cost DONE
 > — verdict MARGINAL: the enabler taxes 100% of constructions and pays back only on
 > descents; task-1 (hash-consing/value-memo) is NOT a clean go. AWAITING a user scope
 > decision.** Follow-up to brief-067. B0 diagnostic (throwaway `RUM_PROFILE_INTERN_COST`
