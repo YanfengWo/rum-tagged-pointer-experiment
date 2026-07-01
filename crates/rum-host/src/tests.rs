@@ -14,6 +14,13 @@ fn host_session_with_large_iteration_budget() -> HostSession {
         .build()
 }
 
+fn successful_eval(outcome: HostEvalOutcome) -> HostEvalSuccess {
+    match outcome {
+        HostEvalOutcome::Success(success) => success,
+        other => panic!("expected success, got {other:?}"),
+    }
+}
+
 #[test]
 fn host_session_and_cancel_handle_are_send() {
     fn is_send<T: Send>() {}
@@ -251,6 +258,111 @@ fn host_boundary_normal_eval_does_not_poison_session() {
         }
         other => panic!("expected follow-up success, got {other:?}"),
     }
+}
+
+#[test]
+fn host_session_reset_clears_user_state() {
+    let mut session = HostSession::new();
+
+    let assigned = successful_eval(session.eval("x = 41; x"));
+    assert_eq!(assigned.value.text, "41");
+
+    session.reset();
+
+    let reset_symbol = successful_eval(session.eval("x"));
+    assert_eq!(reset_symbol.value.text, "x");
+    assert_eq!(reset_symbol.value.typed, HostTyped::Symbol("x".to_string()));
+
+    let arithmetic = successful_eval(session.eval("2 + 2"));
+    assert_eq!(arithmetic.value.text, "4");
+
+    eprintln!(
+        "host_session_reset_clears_user_state assigned=41 after_reset={:?} arithmetic=4 poisoned={}",
+        reset_symbol.value.text,
+        session.poisoned_for_test()
+    );
+}
+
+#[test]
+fn host_session_reset_recovers_poisoned_session() {
+    let mut session = HostSession::new();
+
+    let caught = session.eval_with_test_panic();
+    match caught {
+        HostEvalOutcome::Failure(failure) => {
+            assert_eq!(failure.code, HostFailureCode::Panic);
+            assert!(failure.message.contains("host panic boundary test"));
+        }
+        other => panic!("expected panic failure, got {other:?}"),
+    }
+    assert!(session.poisoned_for_test());
+
+    let poisoned = session.eval("1 + 1");
+    match poisoned {
+        HostEvalOutcome::Failure(failure) => {
+            assert_eq!(failure.code, HostFailureCode::Poisoned);
+            assert!(failure.message.contains("poisoned"));
+        }
+        other => panic!("expected poisoned failure, got {other:?}"),
+    }
+
+    session.reset();
+    assert!(!session.poisoned_for_test());
+
+    let recovered = successful_eval(session.eval("1 + 1"));
+    assert_eq!(recovered.value.text, "2");
+
+    eprintln!(
+        "host_session_reset_recovers_poisoned_session poisoned_before_reset=true recovered_value=2 poisoned_after_reset={}",
+        session.poisoned_for_test()
+    );
+}
+
+#[test]
+fn host_session_reset_restores_original_config_not_mutated_state() {
+    let mut limits = HostResourceLimits::default();
+    limits.recursion_limit = 77;
+    let original_config = HostConfig::default()
+        .with_resource_limits(limits)
+        .with_current_context("Original")
+        .with_context_path(["System", "Original"]);
+    let mut session = HostSession::builder().with_config(original_config).build();
+
+    assert_eq!(session.configuration().current_context, "Original`");
+    assert_eq!(
+        session.configuration().context_path,
+        vec!["System`".to_string(), "Original`".to_string()]
+    );
+
+    let changed = successful_eval(
+        session.eval("Begin[\"Changed`\"]; $ContextPath = {\"Changed`\"}; $Context"),
+    );
+    assert_eq!(changed.value.text, "\"Changed`\"");
+    assert_eq!(session.configuration().current_context, "Changed`");
+    assert_eq!(
+        session.configuration().context_path,
+        vec!["Changed`".to_string()]
+    );
+
+    session.reset();
+
+    let reset_config = session.configuration();
+    assert_eq!(reset_config.current_context, "Original`");
+    assert_eq!(
+        reset_config.context_path,
+        vec!["System`".to_string(), "Original`".to_string()]
+    );
+    assert_eq!(reset_config.resource_limits.recursion_limit, 77);
+
+    let reset_context = successful_eval(session.eval("$Context"));
+    assert_eq!(reset_context.value.text, "\"Original`\"");
+
+    eprintln!(
+        "host_session_reset_restores_original_config_not_mutated_state current_context={:?} context_path={:?} recursion_limit={}",
+        reset_config.current_context,
+        reset_config.context_path,
+        reset_config.resource_limits.recursion_limit
+    );
 }
 
 #[test]

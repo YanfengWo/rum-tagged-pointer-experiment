@@ -51,15 +51,13 @@ impl HostSessionBuilder {
     }
 
     pub fn build(self) -> HostSession {
-        let mut session = Session::with_config(self.config.runtime_config());
-
-        if self.config.install_core_builtins {
-            rum_stdlib::install_core(&mut session);
-        }
+        let session = HostSession::build_inner_session(&self.config);
+        let install_core_builtins = self.config.install_core_builtins;
 
         HostSession {
             session,
-            install_core_builtins: self.config.install_core_builtins,
+            config: self.config,
+            install_core_builtins,
             poisoned: false,
         }
     }
@@ -67,6 +65,7 @@ impl HostSessionBuilder {
 
 pub struct HostSession {
     session: Session,
+    config: HostConfig,
     install_core_builtins: bool,
     poisoned: bool,
 }
@@ -95,6 +94,28 @@ impl HostSession {
 
     pub fn builder() -> HostSessionBuilder {
         HostSessionBuilder::new()
+    }
+
+    fn build_inner_session(config: &HostConfig) -> Session {
+        let mut session = Session::with_config(config.runtime_config());
+
+        if config.install_core_builtins {
+            rum_stdlib::install_core(&mut session);
+        }
+
+        session
+    }
+
+    /// Rebuilds this session to its original post-construction state.
+    ///
+    /// This drops all user state, including definitions, attributes, contexts,
+    /// loaded packages, messages, and gensyms. It also invalidates any
+    /// previously returned [`HostCancelHandle`], because the rebuilt session has
+    /// a fresh interrupt flag; obtain a new handle after reset. If the session
+    /// was poisoned by a caught panic, reset clears the poisoned flag.
+    pub fn reset(&mut self) {
+        self.session = Self::build_inner_session(&self.config);
+        self.poisoned = false;
     }
 
     pub fn configuration(&self) -> HostConfig {
