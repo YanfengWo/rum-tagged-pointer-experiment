@@ -103,3 +103,22 @@ failure + your analysis (a finding, not a defect to hide).
    "all covered contracts hold."
 4. Coverage note — which of the 10 areas are now covered and any you could not reach
    through the public API (with why).
+
+---
+
+## Outcome (Claude gate, 2026-07-01) — DONE + KEEP. Host/lifecycle vacuum covered; all contracts hold.
+
+Committed. TEST-ONLY: 12 public lifecycle tests (`tests/lifecycle_contract.rs`) + 1
+`#[cfg(test)]` panic/poison/reset test (`src/lifecycle_contract_tests.rs`) + `lib.rs`
+`#[cfg(test)] mod` registration (verified cfg-gated, zero product impact). All 10 brief
+areas covered (timeout, cancel, panic→poison→reset, reset, snapshot round-trip,
+introspection, typed HostValue depth-cap, Send/concurrency, input resume, resource limits).
+rum-host package tests 22 → 35 (+13). **All covered host-hardening (059-066) contracts
+HOLD — no bug/contract-gap found.** Gate (Claude reproduced): `cargo test -p rum-host`
+19+4+12 all green; `cargo test --workspace` green (rum-runtime 723 unchanged). No unsafe,
+no mma-hol edits. The only non-public path (deliberate panic injection) is covered via the
+crate-internal `#[cfg(test)]` test (public API rightly exposes no panic trigger).
+
+Next in the test-buildout line: measure the coverage delta with `cargo-llvm-cov` (now
+installing) to confirm the vacuum is filled + find residual gaps; then error/resource-limit
+paths + WK-conformance breadth.
