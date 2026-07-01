@@ -46,6 +46,19 @@
 > perf line (hash-consing ~26% on Pair, bytecode VM). See `PROGRESS.md` 2026-07-01 host
 > entry + memory `host-hardening-tier1.md`. The matcher / pattern-matching blocks below are
 > the previous (now-closed) line.
+>
+> **UPDATE — jupyter REAL INTERRUPT DONE (brief-066, `4c7771f`), the host-arc payoff.** The
+> stub `interrupt` is now real: execute runs on a WORKER thread (brief-062 `Send` session
+> moves in; brief-059 `cancel_handle` stays on the main pump), the pump defers Shell while
+> busy + keeps polling Control + worker completion, `interrupt_request` → `cancel()` stops
+> the cell, a panic → error reply + `reset()` (060/063) keeps the kernel alive. State machine
+> in `adapter/worker.rs`; session always returns (worker `catch_unwind`), join only after
+> `is_finished()` (no deadlock), Shell deferred not dropped, wire protocol unchanged. Hard
+> gate: workspace 712/0 + rum-jupyter 80/0, 2 interrupt tests (pump + native ZeroMQ, ~8ms),
+> **15× stability reruns clean** (10 me + 5 Codex). So the whole host-hardening arc (Tier-1 +
+> Tier-2 core + jupyter real-interrupt) is DONE. **OPEN next: lower-value jupyter stubs
+> (history/comm_info/debug), a showcase project (sandbox + WASM enablers ready), or the
+> deferred perf line (hash-consing ~26% on Pair, bytecode VM).**
 
 > **2026-07-01. Matcher backtracking stack-overflow
 > CRASH fixed (brief-058, `a2d5ee6`); this is a host-resilience / Tier-1 brick. Tree

@@ -127,23 +127,24 @@ documented as a host-side pattern (below). The KNOWN LIMITATION bullet still sta
   `contexts()`, pure `&self` reads (work on a poisoned session). Native builtins excluded
   (only the definitions map is read).
 
-**Downstream — rum-jupyter upgrades UNLOCKED by this hardening round (a dedicated
-post-Tier-2 brief).** Surveyed 2026-07-01:
-- **Real interrupt.** `KernelAdapter::interrupt` is today a STUB — it only sets
-  `lifecycle_state = InterruptRequested` and returns ok; it does NOT stop a running eval.
-  Worse, the transport (`zeromq.rs`) is a SINGLE-THREADED poll loop and `execute_request`
-  is a synchronous blocking call, so while execute runs the loop can't even RECEIVE the
-  interrupt message. The hardening supplies the missing primitives: brief-059
-  `cancel_handle()` (stop a running eval), brief-062 `Send` (run execute on a worker thread
-  holding the session so the loop stays responsive to the Control channel), brief-060
-  panic boundary (a kernel panic → graceful error reply + poison → restart the session,
-  not crash the process). The remaining work is a jupyter-side restructure: run execute on
-  a worker, keep polling Control, wire `interrupt_request` → `cancel_handle.cancel()`, and
-  auto-rebuild on `Poisoned`. This turns the stub interrupt into a real one + makes the
-  kernel panic-resilient.
-- Lower value: `history` (returns empty — a ring buffer could fill it), `comm_info` (empty
-  — rum has no comm/widget protocol), `debug` (returns a clean "not implemented"); typed
-  `display_data` from brief-061's `HostTyped` (marginal for a text kernel).
+**Downstream — rum-jupyter upgrades unlocked by this hardening round.**
+- **Real interrupt — DONE (brief-066, `4c7771f`).** `KernelAdapter::interrupt` was a STUB
+  (set a flag, returned ok, did NOT stop a running cell), and the single-threaded poll loop
+  couldn't receive the interrupt while a blocking execute ran. Now execute runs on a WORKER
+  thread (the brief-062 `Send` session MOVES in; only the brief-059 `cancel_handle` stays on
+  the main pump), the pump defers Shell while busy but keeps processing Control + polls
+  worker completion (`KernelPumpEvent::ExecuteCompletion`), and `interrupt_request` →
+  `cancel()` stops the cell; a panic → error reply + `reset()` (brief-060/063) keeps the
+  kernel alive. State machine in `adapter/worker.rs` (`ExecuteState = Idle | Running{worker,
+  cancel, ctx}`); the session always returns (worker wraps eval in `catch_unwind`), join only
+  after `is_finished()` (no deadlock), Shell deferred not dropped, wire protocol unchanged.
+  Gated: workspace 712/0 + rum-jupyter 80/0, two interrupt tests (pump + native ZeroMQ,
+  ~8 ms latency), 15× stability reruns clean. (Open: the adapter-level panic→reset path is
+  implemented + reviewed but not directly test-covered — the brief-060 hook is unreachable
+  from rum-jupyter; covered by composition.)
+- Lower value, still OPEN: `history` (returns empty — a ring buffer could fill it),
+  `comm_info` (empty — rum has no comm/widget protocol), `debug` (clean "not implemented");
+  typed `display_data` from brief-061's `HostTyped` (marginal for a text kernel).
 
 **Tier 3 — nice-to-have:**
 - **Deeper debug.** The structured `trace` (EvaluationPass / DefinitionStored /

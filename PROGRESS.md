@@ -127,11 +127,31 @@ Gate: workspace 712/0 + rum-host 18/0; round-trip composing with 064's definitio
 snapshot A (a/f/g/h+Orderless) → 145 B → fresh B restore → definitions match, f[7]=7,
 Attributes[h]=Orderless, pre-existing z=99 gone after restore.
 
-**TIER-2 CORE COMPLETE** (062 Send / 063 reset / 064 introspection / 065 snapshot). Remaining
-host work: the jupyter real-interrupt brief (execute-on-worker + interrupt→cancel +
-poison-restart, all primitives now in place), or a showcase project. (Aside: brief-065
-dispatch first hung on a codex self-update stdin prompt — see memory codex-update-hang.md;
-killed + re-dispatched with the updated codex, clean.)
+**TIER-2 CORE COMPLETE** (062 Send / 063 reset / 064 introspection / 065 snapshot). (Aside:
+brief-065 dispatch first hung on a codex self-update stdin prompt — see memory
+codex-update-hang.md; killed + re-dispatched with the updated codex, clean.)
+
+brief-066 (`4c7771f`): rum-jupyter REAL INTERRUPT — the biggest, most concurrency-sensitive
+change in this arc. `KernelAdapter::interrupt` was a STUB and the single-threaded poll loop
+couldn't receive the interrupt while a blocking execute ran. Now execute runs on a WORKER
+thread (the brief-062 Send session MOVES in; only the brief-059 cancel_handle stays on the
+main pump); the pump defers Shell while busy, keeps processing Control, and polls worker
+completion (KernelPumpEvent::ExecuteCompletion); interrupt_request → cancel() stops the cell;
+a panic → error reply + reset() (060/063) keeps the kernel alive. State machine in
+adapter/worker.rs (ExecuteState = Idle | Running{worker,cancel,ctx}); session always returns
+(worker wraps eval in catch_unwind), join only after is_finished() (no deadlock), Shell
+deferred not dropped, stdin-suspend still works (resume on a new worker), wire protocol
+unchanged. GATE (hard, given the concurrency risk): workspace 712/0 + rum-jupyter 80/0; two
+interrupt tests (pump-level integration + native ZeroMQ round-trip, ~8ms latency, deferred
+Shell runs after Idle, follow-up cell succeeds); concurrency reviewed by inspection (no
+deadlock, session always returns, no dropped messages); flakiness check = 15 clean rum-jupyter
+reruns incl. native ZeroMQ (10 by me + 5 by Codex), all 80/0. Host/runtime/core untouched.
+Open (accepted): adapter-level panic→reset not directly test-covered (brief-060 hook is
+pub(crate) in rum-host, unreachable from jupyter; covered by composition).
+
+So the host-hardening arc (Tier-1 + Tier-2 core + the jupyter real-interrupt payoff) is DONE.
+OPEN next: lower-value jupyter stubs (history/comm_info/debug), a showcase project (sandbox +
+WASM enablers ready), or the deferred perf line (hash-consing ~26% on Pair, bytecode VM).
 
 ## 2026-07-01 Matcher backtracking stack overflow — depth guard shipped (brief-058)
 
