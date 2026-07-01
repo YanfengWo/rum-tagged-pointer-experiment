@@ -7,7 +7,19 @@ for pure RHS substitution via `CodeProgram::Construct`; slices 2/3 = PER-SHAPE c
 programs `ModuleIfSameQ`/`ModuleRepeatC` for ORELSEC/TRYCONV/REPEATC). This plan
 generalizes the per-shape control programs into a GENERAL instruction stream so that
 ARBITRARY rule/function/Module bodies compile — no exact-shape matcher, no
-fallback-for-anything-non-exact. User chose this for the cross-project VM capability.
+fallback-for-anything-non-exact.
+
+## Why we build this regardless of mma-hol payoff (user directive 2026-07-01)
+
+**Do NOT gate this line on mma-hol-measured payoff, and do NOT run a payoff-sizing
+diagnostic for it.** rum is a GENERAL Wolfram-language kernel; mma-hol is ONE
+application, not the universal benchmark. Data measured on mma-hol (the ~parity real
+loads, the probe-specific 2x) says how the VM helps *this* project — it must NOT be
+used as a directional decision to build/skip a general CAPABILITY. The general VM is a
+technical-capability investment: once it exists it may be high-value in some OTHER
+workload we don't have yet, and it is OPT-IN (zero-cost off) so it costs nothing when
+unused. Therefore: **just build it.** The only non-negotiable gate is CORRECTNESS
+(byte-identical + opt-in); payoff is not a gate here.
 
 ## Goal
 
@@ -16,23 +28,6 @@ arbitrary body (the WL subset that appears in rule RHS / function / Module bodie
 a general IR instruction stream with control flow, run by a general executor. Replace
 the `ModuleIfSameQ`/`ModuleRepeatC` per-shape variants with the general path; keep the
 opt-in flag, zero-cost off, byte-identical on.
-
-## Honest payoff caveat — and the payoff-sizing FIRST step (do NOT skip)
-
-Measured reality (slices 1+2, `docs/bytecode-vm-design.md` "Measured value"): the 2x
-is PROBE-SPECIFIC; every REAL module load measured is ≈ parity, because body-eval /
-combinator conversion is a SMALL fraction of load time — most is the irreducible
-per-call dispatch/match/arg-eval constant (brief-069). **A general BODY-VM's real-load
-ceiling is therefore bounded by the body-eval fraction, which is small.** So the
-general VM's value is (a) the CAPABILITY, and (b) broader opt-in coverage for
-conversion-heavy tasks — NOT a general speedup.
-
-**First brief (0) = a payoff-sizing DIAGNOSTIC** (like brief-069, no build): on a real
-workload AND the Pair descent, measure what fraction of eval time is in COMPILABLE
-body-eval that a general VM would cover BEYOND the 3 combinators slices 1-3 already
-compile, and the achievable ceiling. If the incremental ceiling over slices 1-3 is
-small, the general VM is capability-only (a valid stop / scope-down). Decide from data
-before building the general compiler.
 
 ## The general IR (generalize the current `Op`/`CodeProgram`)
 
@@ -73,7 +68,7 @@ anything outside it (opt-in ⇒ fallback is always safe):
   `Eval` (hold-correct: only eval where WL would).
 - `SameQ`/comparisons → native op where total, else `Construct`+`Eval`.
 
-## Correctness = byte-identical for ARBITRARY bodies (the hard part)
+## Correctness = byte-identical for ARBITRARY bodies (the ONLY hard gate)
 
 The blast radius is far larger than 3 shapes. The general compiler+executor must
 replicate EXACTLY: evaluation ORDER, attributes/hold (`HoldAll`/`HoldFirst`/…),
@@ -87,17 +82,21 @@ Module HYGIENE (incl. escaping locals). Gate:
   `docs/bytecode-vm-design.md`), since a general compiler compiles bodies across the
   entire tower, not just Drule's combinators.
 
-## Incremental path (opt-in, byte-identical-gated, coverage-measured each step)
+(Note: the corpus differential here is a CORRECTNESS check — "the compiled path gives
+identical results" — NOT a payoff measurement.)
 
-0. **Payoff-sizing diagnostic** (no build) — the compilable-body-eval fraction beyond
-   slices 1-3 + the ceiling. Decide scope.
+## Incremental path (for ENGINEERING RISK, not payoff — byte-identical-gated each step)
+
+Build incrementally because byte-identical for arbitrary bodies is HARD, not to gate
+on payoff. Each step is opt-in, byte-identical-gated, and reports compile COVERAGE
+(how many more bodies compile — a capability metric, not a go/no-go).
+
 1. **General control flow + non-escaping locals**: replace `ModuleIfSameQ`/
    `ModuleRepeatC` with the general instruction stream (`Jump*`/`Return`/`SetLocal`/
    `Discard` + PC executor), compiling arbitrary `If`/`CompoundExpression`/`Return`/
    `Set`-to-local bodies where ALL Module locals are provably non-escaping
-   (register-ized). This generalizes slices 2/3 to arbitrary control shapes WITHOUT the
-   escaping-local hygiene risk. Byte-identical gate + coverage (how many more bodies
-   compile).
+   (register-ized). Generalizes slices 2/3 to arbitrary control shapes WITHOUT the
+   escaping-local hygiene risk. Byte-identical gate + coverage.
 2. **Escaping Module locals (general hygiene)** — `AllocGensym` + own-value binding,
    reusing the existing Module gensym machinery + GC (049/050), with the airtight
    kernel-state-Module exclusion. The riskiest step (the LCF trust boundary), done LAST,
@@ -114,14 +113,17 @@ Each step keeps the tree-walker the default; the VM stays opt-in.
 - **Escaping-local hygiene = the trust boundary.** Getting Module gensym hygiene wrong
   for escaping locals could break the LCF encapsulation (`docs/bytecode-vm-design.md`).
   Do it LAST, gate against Strict, exclude kernel-state Module airtight.
-- **Payoff bounded by the body-eval fraction (small on real loads).** The sizing
-  diagnostic (step 0) decides whether step 1/2 are worth it or the general VM is
-  capability-only. Do not build the general compiler on faith.
-- **Complexity budget.** If byte-identical for a grammar extension is too costly, STOP
-  at the prior step and bank the IR/capability.
+- **Do NOT over-index on mma-hol for directional decisions.** mma-hol is one
+  application; ~parity there is not a reason to stop a general capability. Payoff will
+  surface in other workloads; the feature is opt-in so it is free when unused.
+- **Complexity budget.** If byte-identical for a grammar extension is genuinely
+  unachievable at reasonable cost, STOP at the prior step and bank the IR/capability
+  (a correctness limit, not a payoff decision).
 
 ## First brief
 
-`docs/dev/codex/brief-073-general-vm-payoff-sizing.md` — the step-0 diagnostic
-(compilable-body-eval fraction beyond slices 1-3 + the general-VM ceiling). Nothing
-general gets built until its data is in.
+`docs/dev/codex/brief-073-general-vm-control-flow.md` — step 1: the general instruction
+stream (`Jump*`/`Return`/`SetLocal`/`Discard` + PC executor) + the recursive
+`compile_body` for arbitrary `If`/`CompoundExpression`/`Return`/`Set` bodies with
+non-escaping (register-ized) locals, replacing the `ModuleIfSameQ`/`ModuleRepeatC`
+per-shape programs. Opt-in, byte-identical, zero-cost off.
