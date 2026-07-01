@@ -332,7 +332,7 @@ impl Session {
             .unwrap_or(path)
     }
 
-    fn render_saved_symbols(
+    pub(super) fn render_saved_symbols(
         &self,
         symbols: &[Symbol],
         textual_dump: bool,

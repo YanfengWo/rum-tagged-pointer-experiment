@@ -11,9 +11,9 @@ use crate::config::HostConfig;
 use crate::cursor::{completion_prefix, symbol_at_cursor};
 use crate::model::{
     HostCompletionRequest, HostCompletionResponse, HostDefinitionSummary, HostEvalOutcome,
-    HostEvalRequest, HostFailure, HostFailureCode, HostInspectRequest, HostInspectResponse,
-    HostIsCompleteRequest, HostIsCompleteResponse, HostParseRequest, HostParseResponse,
-    completeness_status, eval_failure_from_runtime, eval_success_from_runtime,
+    HostEvalRequest, HostFailure, HostFailureCode, HostInputSuspension, HostInspectRequest,
+    HostInspectResponse, HostIsCompleteRequest, HostIsCompleteResponse, HostParseRequest,
+    HostParseResponse, completeness_status, eval_failure_from_runtime, eval_success_from_runtime,
     host_failure_from_runtime, inspect_response_from_runtime, synthesized_host_failure,
 };
 
@@ -116,6 +116,39 @@ impl HostSession {
     pub fn reset(&mut self) {
         self.session = Self::build_inner_session(&self.config);
         self.poisoned = false;
+    }
+
+    /// Serializes this session's WL-level user definitions to a text image.
+    ///
+    /// The image captures own values, delayed own values, down values, up values,
+    /// sub values, and attributes for symbols that have definitions. It does not
+    /// capture attribute-only symbols, `$` variables, options, messages, the
+    /// gensym counter, or contexts beyond what the generated source
+    /// re-establishes. This is a text image, not a binary `.mx` dump.
+    pub fn snapshot_to_bytes(&self) -> Vec<u8> {
+        self.session.snapshot_definitions_source().into_bytes()
+    }
+
+    /// Replaces this session's user state by restoring a text snapshot image.
+    ///
+    /// The snapshot format is the UTF-8 source emitted by [`Self::snapshot_to_bytes`].
+    /// Restore decodes the bytes, resets the session to its original
+    /// post-construction state, then evaluates the snapshot source. The image
+    /// captures WL-level definitions and attributes for defined symbols; it does
+    /// not capture attribute-only symbols, `$` variables, options, messages, the
+    /// gensym counter, or contexts beyond what the source re-establishes.
+    pub fn restore_from_bytes(&mut self, bytes: &[u8]) -> Result<(), HostFailure> {
+        let source = std::str::from_utf8(bytes).map_err(snapshot_decode_failure)?;
+        self.reset();
+        if source.trim().is_empty() {
+            return Ok(());
+        }
+
+        match self.eval(source) {
+            HostEvalOutcome::Success(_) => Ok(()),
+            HostEvalOutcome::Failure(failure) => Err(failure),
+            HostEvalOutcome::InputRequired(suspension) => Err(snapshot_input_failure(suspension)),
+        }
     }
 
     pub fn configuration(&self) -> HostConfig {
@@ -368,6 +401,24 @@ fn poisoned_failure() -> HostFailure {
         HostFailureCode::Poisoned,
         "host session is poisoned after a previously caught panic",
     )
+}
+
+fn snapshot_decode_failure(error: std::str::Utf8Error) -> HostFailure {
+    synthesized_host_failure(
+        HostFailureCode::Other,
+        format!("snapshot bytes are not valid UTF-8: {error}"),
+    )
+}
+
+fn snapshot_input_failure(suspension: HostInputSuspension) -> HostFailure {
+    HostFailure {
+        code: HostFailureCode::Other,
+        message: "snapshot restore unexpectedly requested input".to_string(),
+        messages: suspension.messages,
+        prints: suspension.prints,
+        trace: suspension.trace,
+        outputs: suspension.outputs,
+    }
 }
 
 fn panic_eval_outcome(message: String) -> HostEvalOutcome {

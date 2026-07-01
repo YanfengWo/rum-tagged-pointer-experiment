@@ -436,6 +436,34 @@ fn host_session_reset_restores_original_config_not_mutated_state() {
 }
 
 #[test]
+fn host_session_snapshot_bytes_roundtrip_and_restore_replaces_user_state() {
+    let mut a = HostSession::new();
+    successful_eval(
+        a.eval("a = 1; f[x_] := x; g[2] := 20; h[x_] := x; SetAttributes[h, Orderless]"),
+    );
+    let bytes = a.snapshot_to_bytes();
+
+    let mut b = HostSession::new();
+    successful_eval(b.eval("z = 99"));
+    b.restore_from_bytes(&bytes)
+        .expect("snapshot bytes should restore");
+
+    assert_eq!(b.definitions(), a.definitions());
+    assert_eq!(successful_eval(b.eval("f[7]")).value.text, "7");
+    assert_eq!(
+        successful_eval(b.eval("Attributes[h]")).value.text,
+        "List[Orderless]"
+    );
+    assert_eq!(successful_eval(b.eval("z")).value.text, "z");
+
+    eprintln!(
+        "host_session_snapshot_bytes_roundtrip_and_restore_replaces_user_state definitions={:?} bytes={} f7=7 attributes_h=List[Orderless] z_after_restore=z",
+        b.definitions(),
+        bytes.len()
+    );
+}
+
+#[test]
 fn host_cancel_handle_interrupts_running_eval_from_another_thread() {
     let mut session = host_session_with_large_iteration_budget();
     let cancel = session.cancel_handle();

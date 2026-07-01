@@ -166,6 +166,19 @@ impl Session {
         summaries
     }
 
+    /// Renders this session's WL-level user definitions as textual dump source.
+    ///
+    /// The image captures own values, delayed own values, down values, up values,
+    /// sub values, and attributes for symbols that have definitions. It does not
+    /// capture attribute-only symbols, `$` variables, options, messages, the
+    /// gensym counter, or contexts beyond what the generated source
+    /// re-establishes. This is a text image, not a binary `.mx` dump.
+    pub fn snapshot_definitions_source(&self) -> String {
+        let mut symbols = self.definitions.keys().cloned().collect::<Vec<_>>();
+        symbols.sort();
+        self.render_saved_symbols(&symbols, true, true)
+    }
+
     pub fn context_names(&self) -> Vec<String> {
         let mut contexts = self
             .context_path
