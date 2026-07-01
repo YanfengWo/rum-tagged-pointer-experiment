@@ -1,6 +1,27 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-07-01 (NEWEST — read THIS first). Bytecode-VM line COMPLETE: slice 3 (REPEATC)
+> **2026-07-01 (NEWEST — read THIS first). General-VM step-1 (brief-073) FAILED the
+> byte-identical gate and was REVERTED — root cause: a general body compiler needs
+> ATTRIBUTE/HOLD-AWARE compilation. Slices 1-3 remain the shipped opt-in VM (clean at
+> e02e39c). AWAITING a user decision: re-brief attribute-aware, or defer.** The general
+> refactor (one `CodeProgram` + control ops `JumpIfFalse`/`Jump`/`Return`/`SetLocal`/
+> `Discard` + PC executor + recursive `compile_body`, removing the per-shape
+> ModuleIfSameQ/ModuleRepeatC) built OK and workspace tested 723/0 OFF and ON, BUT
+> `drule_tests` ON = `List[38,11]` (OFF 50/0): the general `compile_body` OVER-ACCEPTED
+> bodies it couldn't compile byte-identically. Root cause = byte-identical general
+> compilation requires knowing each application head's attributes and only Eval'ing the
+> args WL evaluates, in WL's order; the naive grammar got hold/order wrong for some 2-local
+> Drule helper bodies. A non-byte-identical VM is unshippable even opt-in, so REVERTED to
+> e02e39c (slices 1-3 intact). Method note: this was a CAPABILITY line (per
+> [[rum-is-general-not-just-mma-hol]], build regardless of mma-hol payoff) — but CORRECTNESS
+> (byte-identical) is still the non-negotiable gate, and it failed. **Next (fresh decision):**
+> (A) re-brief a CONSERVATIVE, attribute-aware `compile_body` (compile only bodies where
+> every application head's attributes are known+handled hold-correctly; fall back otherwise;
+> gate = drule ON == 50/0) — note a conservative version may compile little more than slices
+> 2/3; OR (B) defer the general VM (slices 1-3 are the shipped opt-in VM). See brief-073
+> Outcome + `docs/bytecode-vm-general-plan.md`. Cold backup `rum-2026-07-01-e02e39c.bundle`.
+>
+> **2026-07-01 (prior). Bytecode-VM line COMPLETE: slice 3 (REPEATC)
 > SHIPPED (brief-072, KEEP) — Return+recursion compilation byte-identical; the compiled-body
 > VM combinator set is DONE (RHS templates + ORELSEC/TRYCONV + REPEATC), opt-in
 > (`RUM_VM_RHS_TEMPLATE`, zero-cost off), never default-ON. Natural completion milestone —

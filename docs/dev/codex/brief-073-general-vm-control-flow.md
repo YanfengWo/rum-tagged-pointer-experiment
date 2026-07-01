@@ -136,3 +136,33 @@ back — a CAPABILITY metric).
    compile coverage (how many more body shapes compile now).
 4. Stop-loss / open questions — what fell back, any order/hold/Return/suspension edge
    you were unsure about.
+
+---
+
+## Outcome (Claude gate, 2026-07-01) — FAILED the byte-identical gate; REVERTED. Root cause: the general compiler needs attribute-aware compilation.
+
+Codex built the general refactor (one `CodeProgram{ops, locals, evaluates}` + control ops
+`JumpIfFalse`/`Jump`/`Return`/`SetLocal`/`Discard` + native `SameQ` + a PC executor with
+suspension resume + a recursive `compile_body`, removing `ModuleIfSameQ`/`ModuleRepeatC`)
+and honestly STOPPED at the stop-loss when the gate failed:
+- `cargo test --workspace` 723/0 OFF and ON — but rum unit tests don't exercise the
+  problematic bodies, so this was a false-green.
+- **`drule_tests` OFF 50/0, ON `List[38, 11]`** — the general `compile_body` OVER-ACCEPTED
+  bodies it could not compile byte-identically → 11 real failures under the flag.
+  Coverage `general_body_distinct=22` (22 bodies compiled, some wrong).
+
+**Root cause:** byte-identical general body compilation requires ATTRIBUTE/HOLD-AWARE
+compilation — the compiler must know each application head's attributes and only `Eval`
+the args WL would evaluate, in WL's order. The naive grammar Eval'd/ordered wrong for
+some 2-local Drule helper bodies outside the combinator-safe subset. A non-byte-identical
+VM is not shippable even opt-in (the ON path returns wrong results), so Claude REVERTED to
+e02e39c (slices 1-3 intact, tree clean). The general IR/executor machinery looked sound;
+the defect is in `compile_body`'s acceptance being too permissive without attribute
+modeling.
+
+**Next (a fresh decision):** either re-brief with a CONSERVATIVE, ATTRIBUTE-AWARE
+`compile_body` (only compile a body if every application head's attributes are known and
+handled hold-correctly; fall back otherwise; gate = `drule_tests` ON == 50/0), OR defer the
+general VM (slices 1-3 remain the shipped opt-in VM). Note: a conservative attribute-aware
+version may compile little MORE than slices 2/3 already do — the attribute modeling is the
+hard general part.
