@@ -480,6 +480,24 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Harness And Conformance
 
+- [ ] **Comprehensive test-suite buildout — COVERAGE-driven, host/lifecycle first
+  (queued 2026-07-01).** rum's test base is NOT thin in absolute terms (1124 `#[test]`:
+  rum-runtime 723, rum-syntax 146, rum-difftest 122, rum-jupyter 80, rum-repl 25,
+  rum-host 18, rum-core 7, …) + the `rum-difftest` WK-conformance crate. The gap is
+  LOPSIDEDNESS, not count: mma-hol is a narrow-domain (HOL theorem) stress/acceptance
+  corpus that double-covers the LANGUAGE surface but does NOT touch the host/embedding
+  lifecycle. **Do NOT target a test COUNT (e.g. "match mma-hol's 3126" — that's a
+  narrow theorem corpus, and a count target incentivizes padding); target feature-surface
+  COVERAGE.** Approach: (1) measure objectively with `cargo-llvm-cov` (line/branch
+  coverage) to expose untested code; (2) build a feature-surface coverage map (builtins /
+  syntax / host API / error+resource-limit paths); (3) fill the gaps, PRIORITIZING the
+  host/kernel-lifecycle vacuum — `rum-host` is only 18 tests for a large surface:
+  interrupt/cancel, wall-clock timeout, `catch_unwind` poison-recovery, `reset()`,
+  snapshot/`restore_from_bytes` round-trip, typed `HostValue`, memory watchdog,
+  `Send`/concurrency (briefs 059-066, none exercised by mma-hol); then the
+  error/resource-limit paths (recursion/iteration/parse-depth/matcher-depth
+  `TerminatedEvaluation` tags, poison, genuine-cycle) and WK-conformance breadth. Aligns
+  with the host-embedding mainline (its lifecycle must be well-tested before it ships).
 - [ ] Maintain the page-driven core-language support matrix as the public
   definition of the kernel feature target.
 - [ ] For every matrix function or mechanism, keep status conservative:
