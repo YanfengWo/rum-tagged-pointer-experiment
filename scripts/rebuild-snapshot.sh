@@ -81,7 +81,7 @@ bash "${engine}" \
   --mma-hol "${mma_hol}" \
   --output-dir "${out_dir}" \
   --rum-cli "${rum_cli}" \
-  "${passthrough[@]}" \
+  ${passthrough[@]+"${passthrough[@]}"} \
   > "${log_file}" 2>&1
 rc=$?
 set -e
