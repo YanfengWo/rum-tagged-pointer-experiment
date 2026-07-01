@@ -27,7 +27,7 @@ pub use codec::{
     encode_input_reply_envelope, encode_input_request_envelope, encode_iopub_envelope,
     encode_request_envelope, encode_response_envelope,
 };
-pub use event_loop::{KernelEventPump, KernelTransportLoopReport};
+pub use event_loop::{KernelEventPump, KernelPumpEvent, KernelTransportLoopReport};
 pub use local::{
     InMemoryTransport, LocalFrontendConnection, LocalSocketTransport, MockSocketTransport,
 };

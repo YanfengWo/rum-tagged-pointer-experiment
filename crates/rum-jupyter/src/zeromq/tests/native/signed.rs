@@ -66,6 +66,11 @@ fn native_zeromq_backend_round_trips_signed_execute_and_signed_iopub_messages() 
         backend.transport_mut(),
         crate::KernelSocketPollEvent::Channel(KernelChannel::Shell),
     );
+    wait_for_socket_event(
+        &mut driver,
+        backend.transport_mut(),
+        crate::KernelSocketPollEvent::ExecuteCompletion,
+    );
 
     let reply_wire = frames_to_wire_message(
         KernelChannel::Shell,

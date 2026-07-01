@@ -86,7 +86,7 @@ pub fn run_native_kernel_with_config(
             return Ok(());
         }
 
-        if report.total_messages() == 0 {
+        if report.total_messages() == 0 && !driver.event_pump().adapter().execute_running() {
             thread::sleep(config.idle_sleep);
         }
     }

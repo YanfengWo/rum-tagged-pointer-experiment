@@ -89,6 +89,11 @@ fn native_zeromq_backend_frontend_style_multi_message_session_flow_tracks_counts
         backend.transport_mut(),
         crate::KernelSocketPollEvent::Channel(KernelChannel::Shell),
     );
+    wait_for_socket_event(
+        &mut driver,
+        backend.transport_mut(),
+        crate::KernelSocketPollEvent::ExecuteCompletion,
+    );
 
     let first_reply_wire = runtime.block_on(async {
         tokio::time::timeout(Duration::from_secs(2), shell.recv())
@@ -175,6 +180,11 @@ fn native_zeromq_backend_frontend_style_multi_message_session_flow_tracks_counts
         backend.transport_mut(),
         crate::KernelSocketPollEvent::Channel(KernelChannel::Shell),
     );
+    wait_for_socket_event(
+        &mut driver,
+        backend.transport_mut(),
+        crate::KernelSocketPollEvent::ExecuteCompletion,
+    );
 
     let stdin_request_wire = runtime.block_on(async {
         tokio::time::timeout(Duration::from_secs(2), stdin.recv())
@@ -219,6 +229,11 @@ fn native_zeromq_backend_frontend_style_multi_message_session_flow_tracks_counts
         &mut driver,
         backend.transport_mut(),
         crate::KernelSocketPollEvent::Channel(KernelChannel::Stdin),
+    );
+    wait_for_socket_event(
+        &mut driver,
+        backend.transport_mut(),
+        crate::KernelSocketPollEvent::ExecuteCompletion,
     );
 
     let second_reply_wire = runtime.block_on(async {
@@ -303,6 +318,11 @@ fn native_zeromq_backend_frontend_style_multi_message_session_flow_tracks_counts
         &mut driver,
         backend.transport_mut(),
         crate::KernelSocketPollEvent::Channel(KernelChannel::Shell),
+    );
+    wait_for_socket_event(
+        &mut driver,
+        backend.transport_mut(),
+        crate::KernelSocketPollEvent::ExecuteCompletion,
     );
 
     let third_reply_wire = runtime.block_on(async {

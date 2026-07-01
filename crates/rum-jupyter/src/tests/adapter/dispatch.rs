@@ -5,17 +5,21 @@ fn dispatch_request_emits_iopub_status_execute_input_and_execute_result() {
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);
 
-    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+    let initial = adapter.dispatch_request(KernelRequestEnvelope {
         channel: KernelChannel::Shell,
         header: KernelMessageHeader::new("client-msg-20", "session-3", "tester", "execute_request"),
         parent_header: None,
         metadata: KernelMetadata::new(),
         request: KernelRequest::Execute(KernelExecuteRequest::new("1")),
     });
+    assert!(initial.reply.is_none());
+    assert_eq!(initial.iopub.len(), 2);
+    assert_eq!(adapter.execution_state(), KernelExecutionState::Busy);
+    let dispatch = finish_adapter_execute(&mut adapter, initial);
     let reply = dispatch
         .reply
         .as_ref()
-        .expect("execute should reply immediately");
+        .expect("execute should reply after worker completion");
 
     assert_eq!(reply.channel, KernelChannel::Shell);
     assert_eq!(reply.header.msg_type, "execute_reply");
@@ -287,20 +291,18 @@ fn shell_request_envelope_dispatches_execute_requests() {
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);
 
-    let response = adapter
-        .handle_shell_request(KernelRequestEnvelope {
-            channel: KernelChannel::Shell,
-            header: KernelMessageHeader::new(
-                "client-msg-12",
-                "session-2",
-                "tester",
-                "execute_request",
-            ),
-            parent_header: None,
-            metadata: KernelMetadata::new(),
-            request: KernelRequest::Execute(KernelExecuteRequest::new("1")),
-        })
-        .expect("simple execute should reply immediately");
+    let initial = adapter.dispatch_request(KernelRequestEnvelope {
+        channel: KernelChannel::Shell,
+        header: KernelMessageHeader::new("client-msg-12", "session-2", "tester", "execute_request"),
+        parent_header: None,
+        metadata: KernelMetadata::new(),
+        request: KernelRequest::Execute(KernelExecuteRequest::new("1")),
+    });
+    assert!(initial.reply.is_none());
+    let dispatch = finish_adapter_execute(&mut adapter, initial);
+    let response = dispatch
+        .reply
+        .expect("simple execute should reply after worker completion");
 
     assert_eq!(response.channel, KernelChannel::Shell);
     assert_eq!(response.header.msg_type, "execute_reply");

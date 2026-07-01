@@ -1,6 +1,8 @@
 use std::{
     collections::VecDeque,
     sync::{Arc, Mutex},
+    thread,
+    time::{Duration, Instant},
 };
 
 use crate::KernelWireError;
@@ -41,6 +43,27 @@ impl FakeZeroMqSocketHandle {
             .expect("fake zeromq socket lock should not be poisoned")
             .bound
             .clone()
+    }
+}
+
+fn wait_for_fake_socket_event<S: ZeroMqSocket>(
+    driver: &mut KernelSocketDriver,
+    transport: &mut ZeroMqSocketSession<S>,
+    expected: crate::KernelSocketPollEvent,
+) {
+    let deadline = Instant::now() + Duration::from_secs(2);
+    loop {
+        let event = driver
+            .pump_once(transport)
+            .expect("fake socket driver should keep pumping");
+        if event == Some(expected) {
+            return;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "timed out waiting for fake socket event {expected:?}"
+        );
+        thread::sleep(Duration::from_millis(1));
     }
 }
 
@@ -202,6 +225,11 @@ fn zeromq_backend_round_trips_execute_over_fake_router_socket() {
             .pump_once(backend.transport_mut())
             .expect("driver should pump"),
         Some(crate::KernelSocketPollEvent::Channel(KernelChannel::Shell))
+    );
+    wait_for_fake_socket_event(
+        &mut driver,
+        backend.transport_mut(),
+        crate::KernelSocketPollEvent::ExecuteCompletion,
     );
 
     let reply_frames = factory.router_sockets[0].take_outgoing();

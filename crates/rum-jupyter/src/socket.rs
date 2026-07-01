@@ -167,6 +167,7 @@ impl KernelSocketSession for LocalSocketSession {
 pub enum KernelSocketPollEvent {
     Channel(KernelChannel),
     Heartbeat,
+    ExecuteCompletion,
 }
 
 pub trait KernelSocketPoller {
@@ -174,6 +175,7 @@ pub trait KernelSocketPoller {
         &mut self,
         session: &S,
         awaiting_stdin: bool,
+        execute_running: bool,
         shutdown_requested: bool,
     ) -> Option<KernelSocketPollEvent>;
 }
@@ -186,6 +188,7 @@ impl KernelSocketPoller for PriorityKernelSocketPoller {
         &mut self,
         session: &S,
         awaiting_stdin: bool,
+        execute_running: bool,
         shutdown_requested: bool,
     ) -> Option<KernelSocketPollEvent> {
         if session.has_pending_heartbeat() {
@@ -196,21 +199,23 @@ impl KernelSocketPoller for PriorityKernelSocketPoller {
             return None;
         }
 
-        let channels = if awaiting_stdin {
-            [
+        let channels: &[KernelChannel] = if execute_running {
+            &[KernelChannel::Control]
+        } else if awaiting_stdin {
+            &[
                 KernelChannel::Control,
                 KernelChannel::Stdin,
                 KernelChannel::Shell,
             ]
         } else {
-            [
+            &[
                 KernelChannel::Control,
                 KernelChannel::Shell,
                 KernelChannel::Stdin,
             ]
         };
 
-        for channel in channels {
+        for &channel in channels {
             if session.has_pending_channel(channel) {
                 return Some(KernelSocketPollEvent::Channel(channel));
             }
@@ -226,12 +231,17 @@ pub struct KernelSocketLoopReport {
     pub shell_messages: usize,
     pub stdin_messages: usize,
     pub heartbeat_messages: usize,
+    pub execute_completions: usize,
     pub stopped_for_shutdown: bool,
 }
 
 impl KernelSocketLoopReport {
     pub const fn total_messages(&self) -> usize {
-        self.control_messages + self.shell_messages + self.stdin_messages + self.heartbeat_messages
+        self.control_messages
+            + self.shell_messages
+            + self.stdin_messages
+            + self.heartbeat_messages
+            + self.execute_completions
     }
 }
 
@@ -267,11 +277,16 @@ impl<P: KernelSocketPoller> KernelSocketDriver<P> {
         &mut self,
         session: &mut S,
     ) -> Result<Option<KernelSocketPollEvent>, KernelWireError> {
+        if self.event_pump.pump_execute_completion(session)? {
+            return Ok(Some(KernelSocketPollEvent::ExecuteCompletion));
+        }
+
         let awaiting_stdin = self.event_pump.adapter().awaiting_stdin();
+        let execute_running = self.event_pump.adapter().execute_running();
         let shutdown_requested = self.event_pump.adapter().shutdown_requested();
-        let Some(event) = self
-            .poller
-            .next_event(session, awaiting_stdin, shutdown_requested)
+        let Some(event) =
+            self.poller
+                .next_event(session, awaiting_stdin, execute_running, shutdown_requested)
         else {
             return Ok(None);
         };
@@ -292,6 +307,9 @@ impl<P: KernelSocketPoller> KernelSocketDriver<P> {
                     Ok(None)
                 }
             }
+            KernelSocketPollEvent::ExecuteCompletion => {
+                Ok(Some(KernelSocketPollEvent::ExecuteCompletion))
+            }
         }
     }
 
@@ -309,6 +327,10 @@ impl<P: KernelSocketPoller> KernelSocketDriver<P> {
             }
 
             let Some(event) = self.pump_once(session)? else {
+                if self.event_pump.adapter().execute_running() {
+                    std::thread::yield_now();
+                    continue;
+                }
                 break;
             };
 
@@ -325,6 +347,9 @@ impl<P: KernelSocketPoller> KernelSocketDriver<P> {
                 KernelSocketPollEvent::Channel(KernelChannel::IoPub) => {}
                 KernelSocketPollEvent::Heartbeat => {
                     report.heartbeat_messages += 1;
+                }
+                KernelSocketPollEvent::ExecuteCompletion => {
+                    report.execute_completions += 1;
                 }
             }
         }

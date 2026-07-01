@@ -41,7 +41,7 @@ fn execute_request_with_inputstring_stages_stdin_and_defers_execute_reply() {
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);
 
-    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+    let initial = adapter.dispatch_request(KernelRequestEnvelope {
         channel: KernelChannel::Shell,
         header: KernelMessageHeader::new(
             "client-msg-input-1",
@@ -54,6 +54,12 @@ fn execute_request_with_inputstring_stages_stdin_and_defers_execute_reply() {
         request: KernelRequest::Execute(KernelExecuteRequest::new("InputString[\"name: \"]")),
     });
 
+    assert!(initial.reply.is_none());
+    assert!(initial.stdin.is_empty());
+    assert_eq!(initial.iopub.len(), 2);
+    assert!(!adapter.awaiting_stdin());
+
+    let dispatch = finish_adapter_execute(&mut adapter, initial);
     assert!(dispatch.reply.is_none());
     assert_eq!(dispatch.stdin.len(), 1);
     assert_eq!(dispatch.stdin[0].request.prompt, "name: ");
@@ -81,7 +87,7 @@ fn execute_request_with_disallowed_stdin_returns_input_error_reply() {
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);
 
-    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+    let initial = adapter.dispatch_request(KernelRequestEnvelope {
         channel: KernelChannel::Shell,
         header: KernelMessageHeader::new(
             "client-msg-input-2",
@@ -93,10 +99,13 @@ fn execute_request_with_disallowed_stdin_returns_input_error_reply() {
         metadata: super::KernelMetadata::new(),
         request: KernelRequest::Execute(KernelExecuteRequest::new("InputString[]").without_stdin()),
     });
+    assert!(initial.reply.is_none());
+    assert!(initial.stdin.is_empty());
+    let dispatch = finish_adapter_execute(&mut adapter, initial);
     let reply = dispatch
         .reply
         .as_ref()
-        .expect("disallowed stdin should fail immediately");
+        .expect("disallowed stdin should fail after worker completion");
 
     assert!(dispatch.stdin.is_empty());
     assert_eq!(dispatch.iopub.len(), 4);
@@ -142,10 +151,19 @@ fn input_reply_resumes_execute_and_preserves_shell_routing_ids() {
         .pump_next(&mut transport)
         .expect("first pump should succeed")
         .expect("one request should be processed");
-    assert_eq!(first_channel, KernelChannel::Shell);
+    assert_eq!(
+        first_channel,
+        KernelPumpEvent::Channel(KernelChannel::Shell)
+    );
     assert!(transport.shell.is_empty());
-    assert_eq!(transport.stdin.len(), 1);
+    assert!(transport.stdin.is_empty());
     assert_eq!(transport.iopub.len(), 2);
+
+    let first_completion = pump
+        .pump_until_idle(&mut transport)
+        .expect("stdin suspension poll should succeed");
+    assert_eq!(first_completion.execute_completions, 1);
+    assert_eq!(transport.stdin.len(), 1);
 
     let input_request =
         decode_input_request_message(&transport.stdin[0]).expect("stdin request should decode");
@@ -166,13 +184,22 @@ fn input_reply_resumes_execute_and_preserves_shell_routing_ids() {
         .pump_next(&mut transport)
         .expect("second pump should succeed")
         .expect("one request should be processed");
-    assert_eq!(second_channel, KernelChannel::Stdin);
+    assert_eq!(
+        second_channel,
+        KernelPumpEvent::Channel(KernelChannel::Stdin)
+    );
     assert_eq!(
         pump.adapter_mut()
             .take_last_input_reply()
             .map(|reply| reply.value),
         Some("Alice".to_string())
     );
+
+    assert!(transport.shell.is_empty());
+    let second_completion = pump
+        .pump_until_idle(&mut transport)
+        .expect("resumed execute completion poll should succeed");
+    assert_eq!(second_completion.execute_completions, 1);
 
     assert_eq!(transport.shell.len(), 1);
     assert_eq!(
@@ -213,7 +240,7 @@ fn input_reply_without_parent_header_resumes_pending_execute() {
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);
 
-    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+    let initial = adapter.dispatch_request(KernelRequestEnvelope {
         channel: KernelChannel::Shell,
         header: KernelMessageHeader::new(
             "client-msg-input-3b",
@@ -226,11 +253,12 @@ fn input_reply_without_parent_header_resumes_pending_execute() {
         request: KernelRequest::Execute(KernelExecuteRequest::new("InputString[\"name: \"]")),
     });
 
+    let dispatch = finish_adapter_execute(&mut adapter, initial);
     assert!(dispatch.reply.is_none());
     assert_eq!(dispatch.stdin.len(), 1);
     assert!(adapter.awaiting_stdin());
 
-    let resumed = adapter
+    let resumed_start = adapter
         .handle_input_reply(KernelInputReplyEnvelope {
             channel: KernelChannel::Stdin,
             header: KernelMessageHeader::new(
@@ -245,7 +273,9 @@ fn input_reply_without_parent_header_resumes_pending_execute() {
         })
         .expect("parent-less jupyter_client input_reply should be accepted")
         .expect("stdin reply should resume the suspended execute");
+    assert!(resumed_start.reply.is_none());
 
+    let resumed = wait_for_execute_completion(&mut adapter);
     let reply = resumed
         .reply
         .as_ref()
@@ -273,7 +303,7 @@ fn input_reply_resumes_execute_without_rerunning_prefix_side_effects() {
     eval_text(&mut session, "x = seed");
     let mut adapter = KernelAdapter::new(session);
 
-    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+    let initial = adapter.dispatch_request(KernelRequestEnvelope {
         channel: KernelChannel::Shell,
         header: KernelMessageHeader::new(
             "client-msg-input-4",
@@ -288,10 +318,11 @@ fn input_reply_resumes_execute_without_rerunning_prefix_side_effects() {
         )),
     });
 
+    let dispatch = finish_adapter_execute(&mut adapter, initial);
     assert!(dispatch.reply.is_none());
     assert_eq!(dispatch.stdin.len(), 1);
 
-    let resumed = adapter
+    let resumed_start = adapter
         .handle_input_reply(KernelInputReplyEnvelope {
             channel: KernelChannel::Stdin,
             header: KernelMessageHeader::new(
@@ -306,7 +337,9 @@ fn input_reply_resumes_execute_without_rerunning_prefix_side_effects() {
         })
         .expect("stdin reply should be accepted")
         .expect("stdin reply should resume the suspended execute");
+    assert!(resumed_start.reply.is_none());
 
+    let resumed = wait_for_execute_completion(&mut adapter);
     let reply = resumed
         .reply
         .as_ref()
@@ -345,7 +378,7 @@ fn input_reply_resumes_delayed_message_templates_through_internal_string_driver(
     eval_text(&mut session, "f::argx := InputString[\"msg: \"]");
     let mut adapter = KernelAdapter::new(session);
 
-    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+    let initial = adapter.dispatch_request(KernelRequestEnvelope {
         channel: KernelChannel::Shell,
         header: KernelMessageHeader::new(
             "client-msg-input-5",
@@ -358,11 +391,12 @@ fn input_reply_resumes_delayed_message_templates_through_internal_string_driver(
         request: KernelRequest::Execute(KernelExecuteRequest::new("Message[f::argx]")),
     });
 
+    let dispatch = finish_adapter_execute(&mut adapter, initial);
     assert!(dispatch.reply.is_none());
     assert_eq!(dispatch.stdin.len(), 1);
     assert_eq!(dispatch.stdin[0].request.prompt, "msg: ");
 
-    let resumed = adapter
+    let resumed_start = adapter
         .handle_input_reply(KernelInputReplyEnvelope {
             channel: KernelChannel::Stdin,
             header: KernelMessageHeader::new(
@@ -377,7 +411,9 @@ fn input_reply_resumes_delayed_message_templates_through_internal_string_driver(
         })
         .expect("stdin reply should be accepted")
         .expect("stdin reply should resume the suspended execute");
+    assert!(resumed_start.reply.is_none());
 
+    let resumed = wait_for_execute_completion(&mut adapter);
     let reply = resumed
         .reply
         .as_ref()
@@ -407,7 +443,7 @@ fn input_reply_resumes_multi_sequence_matcher_backtracking_across_multiple_promp
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);
 
-    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+    let initial = adapter.dispatch_request(KernelRequestEnvelope {
         channel: KernelChannel::Shell,
         header: KernelMessageHeader::new(
             "client-msg-input-6",
@@ -422,11 +458,12 @@ fn input_reply_resumes_multi_sequence_matcher_backtracking_across_multiple_promp
         )),
     });
 
+    let dispatch = finish_adapter_execute(&mut adapter, initial);
     assert!(dispatch.reply.is_none());
     assert_eq!(dispatch.stdin.len(), 1);
     assert_eq!(dispatch.stdin[0].request.prompt, "first: ");
 
-    let second = adapter
+    let second_start = adapter
         .handle_input_reply(KernelInputReplyEnvelope {
             channel: KernelChannel::Stdin,
             header: KernelMessageHeader::new(
@@ -441,12 +478,14 @@ fn input_reply_resumes_multi_sequence_matcher_backtracking_across_multiple_promp
         })
         .expect("first stdin reply should be accepted")
         .expect("first stdin reply should stage the next matcher prompt");
+    assert!(second_start.reply.is_none());
 
+    let second = wait_for_execute_completion(&mut adapter);
     assert!(second.reply.is_none());
     assert_eq!(second.stdin.len(), 1);
     assert_eq!(second.stdin[0].request.prompt, "second: ");
 
-    let third = adapter
+    let third_start = adapter
         .handle_input_reply(KernelInputReplyEnvelope {
             channel: KernelChannel::Stdin,
             header: KernelMessageHeader::new(
@@ -461,12 +500,14 @@ fn input_reply_resumes_multi_sequence_matcher_backtracking_across_multiple_promp
         })
         .expect("second stdin reply should be accepted")
         .expect("backtracking should be able to stage the repeated matcher prompt");
+    assert!(third_start.reply.is_none());
 
+    let third = wait_for_execute_completion(&mut adapter);
     assert!(third.reply.is_none());
     assert_eq!(third.stdin.len(), 1);
     assert_eq!(third.stdin[0].request.prompt, "second: ");
 
-    let resumed = adapter
+    let resumed_start = adapter
         .handle_input_reply(KernelInputReplyEnvelope {
             channel: KernelChannel::Stdin,
             header: KernelMessageHeader::new(
@@ -481,7 +522,9 @@ fn input_reply_resumes_multi_sequence_matcher_backtracking_across_multiple_promp
         })
         .expect("third stdin reply should be accepted")
         .expect("third stdin reply should finally complete the execute");
+    assert!(resumed_start.reply.is_none());
 
+    let resumed = wait_for_execute_completion(&mut adapter);
     let reply = resumed
         .reply
         .as_ref()

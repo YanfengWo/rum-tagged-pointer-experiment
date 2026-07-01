@@ -47,6 +47,11 @@ fn native_zeromq_backend_round_trips_execute_over_loopback_sockets() {
         backend.transport_mut(),
         crate::KernelSocketPollEvent::Channel(KernelChannel::Shell),
     );
+    wait_for_socket_event(
+        &mut driver,
+        backend.transport_mut(),
+        crate::KernelSocketPollEvent::ExecuteCompletion,
+    );
 
     let reply_frames = runtime.block_on(async {
         tokio::time::timeout(Duration::from_secs(2), dealer.recv())

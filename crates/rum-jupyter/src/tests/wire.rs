@@ -5,13 +5,14 @@ fn transport_encoding_serializes_reply_and_iopub_messages() {
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);
 
-    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+    let initial = adapter.dispatch_request(KernelRequestEnvelope {
         channel: KernelChannel::Shell,
         header: KernelMessageHeader::new("client-msg-50", "session-6", "tester", "execute_request"),
         parent_header: None,
         metadata: super::KernelMetadata::new(),
         request: KernelRequest::Execute(KernelExecuteRequest::new("1")),
     });
+    let dispatch = finish_adapter_execute(&mut adapter, initial);
 
     let batch = encode_dispatch_result(&dispatch);
     let reply = batch
@@ -268,7 +269,7 @@ fn mock_socket_transport_routes_reply_and_iopub_messages_by_channel() {
     let codec = KernelWireCodec::new(KernelWireConfig::default().with_session_id("session-10"));
     let mut transport = MockSocketTransport::default();
 
-    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+    let initial = adapter.dispatch_request(KernelRequestEnvelope {
         channel: KernelChannel::Shell,
         header: KernelMessageHeader::new(
             "client-msg-63",
@@ -280,6 +281,7 @@ fn mock_socket_transport_routes_reply_and_iopub_messages_by_channel() {
         metadata: super::KernelMetadata::new(),
         request: KernelRequest::Execute(KernelExecuteRequest::new("1")),
     });
+    let dispatch = finish_adapter_execute(&mut adapter, initial);
 
     codec
         .send_dispatch(&mut transport, &dispatch)
@@ -297,7 +299,7 @@ fn transport_codec_decodes_execute_reply_and_iopub_messages() {
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);
 
-    let dispatch = adapter.dispatch_request(KernelRequestEnvelope {
+    let initial = adapter.dispatch_request(KernelRequestEnvelope {
         channel: KernelChannel::Shell,
         header: KernelMessageHeader::new(
             "client-msg-64",
@@ -309,6 +311,7 @@ fn transport_codec_decodes_execute_reply_and_iopub_messages() {
         metadata: super::KernelMetadata::new(),
         request: KernelRequest::Execute(KernelExecuteRequest::new("1")),
     });
+    let dispatch = finish_adapter_execute(&mut adapter, initial);
 
     let batch = encode_dispatch_result(&dispatch);
     let reply = decode_response_message(

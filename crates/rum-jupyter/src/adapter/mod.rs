@@ -1,6 +1,6 @@
 use rum_host::{
-    HostCompletenessStatus, HostCompletionRequest, HostEvalOutcome, HostEvalRequest,
-    HostInspectRequest, HostIsCompleteRequest, HostSession,
+    HostCompletenessStatus, HostCompletionRequest, HostEvalRequest, HostInspectRequest,
+    HostIsCompleteRequest, HostSession,
 };
 
 use crate::{
@@ -21,30 +21,29 @@ use crate::{
 
 mod iopub;
 mod render;
+mod worker;
 
 use self::render::{
     build_execute_response, build_suspended_outputs, complete_metadata, input_request_from_outcome,
     input_request_metadata, inspect_metadata, inspect_mime_bundle, kernel_input_request,
     response_metadata, response_msg_type,
 };
+use self::worker::{
+    ExecuteContext, ExecuteState, force_cancelled_success, host_outcome_to_kernel,
+    outcome_is_cancelled, outcome_requires_session_reset,
+};
 
 pub struct KernelAdapter {
-    session: HostSession,
+    session: Option<HostSession>,
+    execute_state: ExecuteState,
     kernel_username: String,
     execution_count: u64,
     next_message_id: u64,
     execution_state: KernelExecutionState,
     lifecycle_state: KernelLifecycleState,
     pending_input: Option<KernelInputRequestEnvelope>,
-    pending_execute: Option<PendingExecute>,
+    pending_execute: Option<ExecuteContext>,
     last_input_reply: Option<KernelInputReply>,
-}
-
-#[derive(Clone, Debug)]
-struct PendingExecute {
-    parent_header: KernelMessageHeader,
-    request: KernelExecuteRequest,
-    execution_count: Option<u64>,
 }
 
 impl KernelAdapter {
@@ -54,7 +53,8 @@ impl KernelAdapter {
 
     pub fn with_username(session: HostSession, username: impl Into<String>) -> Self {
         Self {
-            session,
+            session: Some(session),
+            execute_state: ExecuteState::idle(),
             kernel_username: username.into(),
             execution_count: 0,
             next_message_id: 0,
@@ -93,6 +93,10 @@ impl KernelAdapter {
         self.pending_input.is_some()
     }
 
+    pub fn execute_running(&self) -> bool {
+        self.execute_state.is_running()
+    }
+
     pub fn pending_input_request(&self) -> Option<&KernelInputRequestEnvelope> {
         self.pending_input.as_ref()
     }
@@ -103,7 +107,7 @@ impl KernelAdapter {
 
     pub fn execute(&mut self, request: KernelExecuteRequest) -> KernelExecuteResponse {
         let execution_count = self.next_execution_count(request.store_history);
-        let outcome = self.run_execute_request(&request);
+        let outcome = run_execute_request(self.session_mut(), &request);
         build_execute_response(execution_count, outcome)
     }
 
@@ -113,19 +117,6 @@ impl KernelAdapter {
             Some(self.execution_count)
         } else {
             None
-        }
-    }
-
-    fn run_execute_request(&mut self, request: &KernelExecuteRequest) -> KernelExecuteOutcome {
-        match self
-            .session
-            .eval(HostEvalRequest::new(request.code.clone()))
-        {
-            HostEvalOutcome::Success(response) => KernelExecuteOutcome::Success(response),
-            HostEvalOutcome::InputRequired(suspension) => {
-                KernelExecuteOutcome::InputRequired(suspension)
-            }
-            HostEvalOutcome::Failure(failure) => KernelExecuteOutcome::Failure(failure),
         }
     }
 
@@ -162,6 +153,7 @@ impl KernelAdapter {
 
     pub fn interrupt(&mut self, _request: KernelInterruptRequest) -> KernelInterruptResponse {
         self.lifecycle_state = KernelLifecycleState::InterruptRequested;
+        self.execute_state.cancel();
         KernelInterruptResponse {
             status: KernelReplyStatus::Ok,
             interrupt_requested: true,
@@ -171,7 +163,7 @@ impl KernelAdapter {
 
     pub fn inspect(&mut self, request: KernelInspectRequest) -> KernelInspectResponse {
         let result = self
-            .session
+            .session_mut()
             .inspect(HostInspectRequest::new(request.code, request.cursor_offset));
         let target = result.target.clone();
         let found = result.found;
@@ -193,7 +185,7 @@ impl KernelAdapter {
     }
 
     pub fn complete(&mut self, request: KernelCompleteRequest) -> KernelCompleteResponse {
-        let completion = self.session.complete(HostCompletionRequest::new(
+        let completion = self.session_mut().complete(HostCompletionRequest::new(
             request.code,
             request.cursor_offset,
         ));
@@ -214,7 +206,7 @@ impl KernelAdapter {
 
     pub fn is_complete(&mut self, request: KernelIsCompleteRequest) -> KernelIsCompleteResponse {
         let response = self
-            .session
+            .session_mut()
             .is_complete(HostIsCompleteRequest::new(request.code));
 
         KernelIsCompleteResponse {
@@ -306,6 +298,26 @@ impl KernelAdapter {
         Ok(Some(self.resume_pending_execute(pending_execute)))
     }
 
+    pub fn poll_execute_completion(&mut self) -> Option<KernelDispatchResult> {
+        let worker = self.execute_state.take_finished()?;
+        let (context, mut session, mut outcome, interrupted) = worker.join();
+        if interrupted {
+            outcome = force_cancelled_success(outcome);
+        }
+
+        if outcome_requires_session_reset(&outcome) {
+            session.reset();
+        }
+        if outcome_is_cancelled(&outcome)
+            && self.lifecycle_state == KernelLifecycleState::InterruptRequested
+        {
+            self.lifecycle_state = KernelLifecycleState::Running;
+        }
+        self.session = Some(session);
+
+        Some(self.finish_execute_outcome(context, outcome))
+    }
+
     pub fn dispatch_request(&mut self, envelope: KernelRequestEnvelope) -> KernelDispatchResult {
         let parent_header = envelope.header.clone();
         match envelope.request {
@@ -378,29 +390,44 @@ impl KernelAdapter {
     ) -> KernelDispatchResult {
         let execution_count = self.next_execution_count(request.store_history);
         self.execution_state = KernelExecutionState::Busy;
+        let iopub = self.execute_prologue_iopub(&parent_header, execution_count, &request.code);
+        let context = ExecuteContext {
+            parent_header,
+            request,
+            execution_count,
+        };
 
-        let outcome = self.run_execute_request(&request);
+        let session = self.take_idle_session();
+        self.execute_state.start_eval(session, context);
+
+        KernelDispatchResult {
+            reply: None,
+            iopub,
+            stdin: Vec::new(),
+        }
+    }
+
+    fn finish_execute_outcome(
+        &mut self,
+        context: ExecuteContext,
+        outcome: KernelExecuteOutcome,
+    ) -> KernelDispatchResult {
         if let Some(input) = input_request_from_outcome(&outcome) {
-            if request.allow_stdin {
-                let mut iopub =
-                    self.execute_prologue_iopub(&parent_header, execution_count, &request.code);
+            if context.request.allow_stdin {
+                let mut iopub = Vec::new();
                 iopub.extend(
                     build_suspended_outputs(&outcome)
                         .iter()
-                        .map(|output| self.output_iopub(&parent_header, output)),
+                        .map(|output| self.output_iopub(&context.parent_header, output)),
                 );
                 let stdin = self
                     .request_stdin_for_execute(
-                        &parent_header,
-                        &request,
+                        &context.parent_header,
+                        &context.request,
                         kernel_input_request(&input),
                     )
                     .expect("execute request should be able to stage stdin exactly once");
-                self.pending_execute = Some(PendingExecute {
-                    parent_header: parent_header.clone(),
-                    request: request.clone(),
-                    execution_count,
-                });
+                self.pending_execute = Some(context);
 
                 return KernelDispatchResult {
                     reply: None,
@@ -411,53 +438,29 @@ impl KernelAdapter {
         }
 
         self.finish_execute_request(
-            &parent_header,
-            &request.code,
-            execution_count,
+            &context.parent_header,
+            &context.request.code,
+            context.execution_count,
             outcome,
-            true,
+            false,
         )
     }
 
-    fn resume_pending_execute(&mut self, pending: PendingExecute) -> KernelDispatchResult {
+    fn resume_pending_execute(&mut self, pending: ExecuteContext) -> KernelDispatchResult {
         let input = self
             .last_input_reply
             .as_ref()
             .map(|reply| reply.value.clone())
             .expect("pending execute resumes only after an input reply");
-        let outcome = match self.session.resume_with_input(input) {
-            HostEvalOutcome::Success(response) => KernelExecuteOutcome::Success(response),
-            HostEvalOutcome::InputRequired(suspension) => {
-                KernelExecuteOutcome::InputRequired(suspension)
-            }
-            HostEvalOutcome::Failure(failure) => KernelExecuteOutcome::Failure(failure),
-        };
-        if let Some(input) = input_request_from_outcome(&outcome) {
-            if pending.request.allow_stdin {
-                let stdin = self
-                    .request_stdin_for_execute(
-                        &pending.parent_header,
-                        &pending.request,
-                        kernel_input_request(&input),
-                    )
-                    .expect("resumed execute request should be able to stage stdin exactly once");
-                self.pending_execute = Some(pending);
+        self.execution_state = KernelExecutionState::Busy;
+        let session = self.take_idle_session();
+        self.execute_state.start_resume(session, pending, input);
 
-                return KernelDispatchResult {
-                    reply: None,
-                    iopub: Vec::new(),
-                    stdin: vec![stdin],
-                };
-            }
+        KernelDispatchResult {
+            reply: None,
+            iopub: Vec::new(),
+            stdin: Vec::new(),
         }
-
-        self.finish_execute_request(
-            &pending.parent_header,
-            &pending.request.code,
-            pending.execution_count,
-            outcome,
-            false,
-        )
     }
 
     fn finish_execute_request(
@@ -504,6 +507,14 @@ impl KernelAdapter {
         parent_header: KernelMessageHeader,
         response: KernelResponse,
     ) -> KernelDispatchResult {
+        if self.execute_running() {
+            return KernelDispatchResult {
+                reply: Some(self.response_envelope(channel, &parent_header, response)),
+                iopub: Vec::new(),
+                stdin: Vec::new(),
+            };
+        }
+
         self.execution_state = KernelExecutionState::Busy;
         let mut iopub = vec![self.status_iopub(&parent_header, KernelExecutionState::Busy)];
         self.execution_state = KernelExecutionState::Idle;
@@ -564,4 +575,23 @@ impl KernelAdapter {
         header.protocol_version = parent_header.protocol_version.clone();
         header
     }
+
+    fn session_mut(&mut self) -> &mut HostSession {
+        self.session
+            .as_mut()
+            .expect("host session is only borrowed on the adapter while execute is idle")
+    }
+
+    fn take_idle_session(&mut self) -> HostSession {
+        self.session
+            .take()
+            .expect("host session moves to the execute worker only while running")
+    }
+}
+
+fn run_execute_request(
+    session: &mut HostSession,
+    request: &KernelExecuteRequest,
+) -> KernelExecuteOutcome {
+    host_outcome_to_kernel(session.eval(HostEvalRequest::new(request.code.clone())))
 }

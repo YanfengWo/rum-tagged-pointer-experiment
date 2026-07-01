@@ -65,6 +65,11 @@ fn native_zeromq_backend_frontend_style_execute_preserves_headers_and_iopub_meta
         backend.transport_mut(),
         crate::KernelSocketPollEvent::Channel(KernelChannel::Shell),
     );
+    wait_for_socket_event(
+        &mut driver,
+        backend.transport_mut(),
+        crate::KernelSocketPollEvent::ExecuteCompletion,
+    );
 
     let shell_reply_wire = runtime.block_on(async {
         tokio::time::timeout(Duration::from_secs(2), shell.recv())

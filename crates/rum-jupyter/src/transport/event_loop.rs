@@ -1,7 +1,13 @@
 use super::{
-    KernelAdapter, KernelChannel, KernelQueuedTransport, KernelTransport, KernelWireCodec,
-    KernelWireError, KernelWireMessage,
+    KernelAdapter, KernelChannel, KernelQueuedTransport, KernelRequest, KernelTransport,
+    KernelWireCodec, KernelWireError, KernelWireMessage,
 };
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KernelPumpEvent {
+    Channel(KernelChannel),
+    ExecuteCompletion,
+}
 
 pub struct KernelEventPump {
     adapter: KernelAdapter,
@@ -14,12 +20,13 @@ pub struct KernelTransportLoopReport {
     pub control_messages: usize,
     pub shell_messages: usize,
     pub stdin_messages: usize,
+    pub execute_completions: usize,
     pub stopped_for_shutdown: bool,
 }
 
 impl KernelTransportLoopReport {
     pub const fn total_messages(&self) -> usize {
-        self.control_messages + self.shell_messages + self.stdin_messages
+        self.control_messages + self.shell_messages + self.stdin_messages + self.execute_completions
     }
 }
 
@@ -51,11 +58,12 @@ impl KernelEventPump {
     ) -> Result<(), KernelWireError> {
         let routing_ids = request.routing_ids.clone();
         let envelope = self.codec.decode_request_message(&request)?;
+        let is_execute = matches!(envelope.request, KernelRequest::Execute(_));
         let dispatch = self.adapter.dispatch_request(envelope);
-        if dispatch.reply.is_none() && !dispatch.stdin.is_empty() {
+        if is_execute && dispatch.reply.is_none() {
             self.pending_execute_routing_ids = Some(routing_ids.clone());
         }
-        if dispatch.reply.is_some() {
+        if is_execute && dispatch.reply.is_some() {
             self.pending_execute_routing_ids = None;
         }
         self.codec
@@ -83,6 +91,23 @@ impl KernelEventPump {
         Ok(())
     }
 
+    pub fn pump_execute_completion<T: KernelTransport>(
+        &mut self,
+        transport: &mut T,
+    ) -> Result<bool, KernelWireError> {
+        let Some(dispatch) = self.adapter.poll_execute_completion() else {
+            return Ok(false);
+        };
+
+        let routing_ids = self.pending_execute_routing_ids.clone().unwrap_or_default();
+        if dispatch.reply.is_some() {
+            self.pending_execute_routing_ids = None;
+        }
+        self.codec
+            .send_dispatch_with_routing(transport, &dispatch, routing_ids)?;
+        Ok(true)
+    }
+
     pub fn pump_once<T: KernelQueuedTransport>(
         &mut self,
         transport: &mut T,
@@ -90,6 +115,10 @@ impl KernelEventPump {
     ) -> Result<bool, KernelWireError> {
         if let Some(error) = transport.take_pending_error() {
             return Err(error);
+        }
+
+        if self.adapter.execute_running() && channel != KernelChannel::Control {
+            return Ok(false);
         }
 
         if let Some(request) = transport.pop_incoming(channel) {
@@ -111,28 +140,34 @@ impl KernelEventPump {
     pub fn pump_next<T: KernelQueuedTransport>(
         &mut self,
         transport: &mut T,
-    ) -> Result<Option<KernelChannel>, KernelWireError> {
+    ) -> Result<Option<KernelPumpEvent>, KernelWireError> {
+        if self.pump_execute_completion(transport)? {
+            return Ok(Some(KernelPumpEvent::ExecuteCompletion));
+        }
+
         if self.adapter.shutdown_requested() {
             return Ok(None);
         }
 
-        let channels = if self.adapter.awaiting_stdin() {
-            [
+        let channels: &[KernelChannel] = if self.adapter.execute_running() {
+            &[KernelChannel::Control]
+        } else if self.adapter.awaiting_stdin() {
+            &[
                 KernelChannel::Control,
                 KernelChannel::Stdin,
                 KernelChannel::Shell,
             ]
         } else {
-            [
+            &[
                 KernelChannel::Control,
                 KernelChannel::Shell,
                 KernelChannel::Stdin,
             ]
         };
 
-        for channel in channels {
+        for &channel in channels {
             if self.pump_once(transport, channel)? {
-                return Ok(Some(channel));
+                return Ok(Some(KernelPumpEvent::Channel(channel)));
             }
         }
 
@@ -152,14 +187,19 @@ impl KernelEventPump {
             }
 
             let Some(channel) = self.pump_next(transport)? else {
+                if self.adapter.execute_running() {
+                    std::thread::yield_now();
+                    continue;
+                }
                 break;
             };
 
             match channel {
-                KernelChannel::Control => report.control_messages += 1,
-                KernelChannel::Shell => report.shell_messages += 1,
-                KernelChannel::Stdin => report.stdin_messages += 1,
-                KernelChannel::IoPub => {}
+                KernelPumpEvent::Channel(KernelChannel::Control) => report.control_messages += 1,
+                KernelPumpEvent::Channel(KernelChannel::Shell) => report.shell_messages += 1,
+                KernelPumpEvent::Channel(KernelChannel::Stdin) => report.stdin_messages += 1,
+                KernelPumpEvent::Channel(KernelChannel::IoPub) => {}
+                KernelPumpEvent::ExecuteCompletion => report.execute_completions += 1,
             }
 
             if self.adapter.shutdown_requested() {

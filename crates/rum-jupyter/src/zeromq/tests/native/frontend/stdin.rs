@@ -82,6 +82,11 @@ fn native_zeromq_backend_frontend_style_stdin_round_trip_emits_iopub_and_shell_r
         backend.transport_mut(),
         crate::KernelSocketPollEvent::Channel(KernelChannel::Shell),
     );
+    wait_for_socket_event(
+        &mut driver,
+        backend.transport_mut(),
+        crate::KernelSocketPollEvent::ExecuteCompletion,
+    );
 
     let stdin_request_wire = runtime.block_on(async {
         tokio::time::timeout(Duration::from_secs(2), stdin.recv())
@@ -126,6 +131,11 @@ fn native_zeromq_backend_frontend_style_stdin_round_trip_emits_iopub_and_shell_r
         &mut driver,
         backend.transport_mut(),
         crate::KernelSocketPollEvent::Channel(KernelChannel::Stdin),
+    );
+    wait_for_socket_event(
+        &mut driver,
+        backend.transport_mut(),
+        crate::KernelSocketPollEvent::ExecuteCompletion,
     );
 
     let shell_reply_wire = runtime.block_on(async {

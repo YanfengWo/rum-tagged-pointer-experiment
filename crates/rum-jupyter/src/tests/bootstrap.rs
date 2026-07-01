@@ -281,11 +281,11 @@ fn frontend_style_stdin_round_trip_uses_local_socket_backend() {
             .expect("request should encode"),
     );
 
-    assert_eq!(
-        pump.pump_next(backend.transport_mut())
-            .expect("initial stdin-producing execute should pump"),
-        Some(KernelChannel::Shell)
-    );
+    let report = pump
+        .pump_until_idle(backend.transport_mut())
+        .expect("initial stdin-producing execute should pump");
+    assert_eq!(report.shell_messages, 1);
+    assert_eq!(report.execute_completions, 1);
 
     let stdin_wire = frontend
         .pop_outgoing(KernelChannel::Stdin)
@@ -420,6 +420,10 @@ fn socket_driver_pumps_heartbeat_and_execute_over_local_session() {
             .expect("execute should pump"),
         Some(KernelSocketPollEvent::Channel(KernelChannel::Shell))
     );
+    let completion = driver
+        .pump_until_idle(backend.transport_mut())
+        .expect("execute completion should pump");
+    assert_eq!(completion.execute_completions, 1);
 
     let reply_wire = frontend
         .pop_outgoing(KernelChannel::Shell)
