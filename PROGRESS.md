@@ -6,6 +6,38 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-07-01 brief-075 re-profile for new hotspots — NONE; constant-factor holds (better than stage0); safe perf confirmed at its ceiling
+
+The "within a constant factor of WK across the board" conclusion predated the memory line
+(Expr 64→32, gensym GC), host-hardening (eval-loop interrupt poll, panic boundary), and
+the VM gate — none given a careful segmented timing + counter pass. brief-075 (diagnostic,
+no source change, current binary, default path VM OFF) did that pass:
+- **D1 primitive:** phase shares stable vs brief-069 (evaluate.total 21.08 vs 22.46,
+  stability 7.04 vs 7.49; all ~1pt). No new primitive hotspot.
+- **D3 (profiler OFF, best-of-2):** ALL primitive labels FASTER than the stage0 baseline
+  (if-true 3.97 vs 5.96, exact-hit 3.48 vs 5.74, sameq 3.56 vs 5.38, length 2.90 vs 3.66);
+  vs brief-069 within noise. Constant-factor holds, no regression, actually improved (the
+  memory line's Expr compression + Layer A).
+- **D2 REPR:** primitive clone counters still ~0 (Layer A intact), node_allocs down vs
+  phase0. No new alloc hotspot.
+- **D4 new code paths:** interrupt poll disarmed (flat), gensym GC (default +5.8%, only
+  `forced` 1.27x — not the default path), Expr-32 atoms (literal-integer 1.28x WK, no
+  indirection cost), VM gate off (zero cost) — all flat/improved, none a hotspot.
+- **False signal:** the Pair D1 table (module.resume_initializers 33% +
+  `sub_values.rhs_substitution` 45%) is the profiling-mode POLLUTION artifact (only
+  `RUM_PROFILE_LEXICAL_SUBSTITUTION=1` set, not the full category-disable brief-069 used;
+  the `*rhs_substitution` rows are the signature), NOT a regression — profiler-OFF D3
+  confirms no primitive regression, and it isolates to no small tune.
+
+**Verdict: no new small safe tunable; the new lines introduced no default-path hotspot;
+the constant-factor conclusion holds.** This is the empirical confirmation that SAFE,
+clear, worth-doing-now perf optimization is at its ceiling for the current target. The
+whole perf line (Layer A + memory + hash-consing-marginal + the opt-in closure VM) closes
+cleanly. Remaining levers are all large-uncertain (full hash-consing, Cranelift meta-JIT),
+trust-boundary-risky (escaping-Module VM), unsafe (per-node <32B), or diminishing — none a
+clear win now. Next direction is non-perf (see TODO: coverage-driven test buildout /
+host-embedding mainline). See brief-075 Outcome.
+
 ## 2026-07-01 brief-074 closure-generation VM — KEEP: general body compilation byte-identical (the corrected architecture works); resolves brief-073's failure
 
 After brief-073's op-compiler FAILED byte-identical (it re-derived WL application semantics

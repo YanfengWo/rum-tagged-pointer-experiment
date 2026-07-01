@@ -1,6 +1,27 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-07-01 (NEWEST — read THIS first). General VM now WORKS via CLOSURE GENERATION
+> **2026-07-01 (NEWEST — read THIS first). PERF LINE CLOSED with empirical backing:
+> brief-075 re-profiled the current binary for new hotspots from the memory/host/VM lines —
+> found NONE; the constant-factor conclusion holds (primitives are actually FASTER than the
+> stage0 baseline). Safe, clear, worth-doing-now perf is at its ceiling. Next direction is
+> NON-perf (TODO: coverage-driven test buildout + host-embedding mainline).** brief-075
+> (diagnostic, no code): D1 primitive phase shares stable vs brief-069; D3 profiler-OFF
+> ratios ALL better than stage0 (if-true 3.97 vs 5.96, exact-hit 3.48 vs 5.74, …); D2 REPR
+> clone counters still ~0 (Layer A intact); D4 the four new code paths (interrupt poll
+> disarmed, gensym GC default, Expr-32 atoms, VM gate off) all flat/improved — none a
+> hotspot. (The Pair D1 module/rhs_substitution "shift" is a profiling-mode pollution
+> artifact, not a regression — profiler-OFF confirms.) So the whole perf line (Layer A +
+> memory line + hash-consing-measured-marginal + the opt-in closure VM) closes cleanly;
+> remaining levers are large-uncertain (full hash-consing, Cranelift meta-JIT), trust-
+> boundary-risky (escaping-Module VM), unsafe (per-node <32B), or diminishing. **Queued
+> next line: comprehensive test-suite buildout (coverage-driven, host/lifecycle-first — see
+> TODO "Harness And Conformance"; rum has 1124 tests but the host/embedding lifecycle is a
+> vacuum), and/or the host-embedding mainline.** VM state: general body VM works via closure
+> generation, byte-identical, opt-in (`RUM_VM_RHS_TEMPLATE`), off by default. Cold backups:
+> `rum-2026-07-01-c15bf6c.bundle` (+ e02e39c). See PROGRESS 2026-07-01. The brief-074 VM
+> milestone block is below.
+>
+> **2026-07-01 (prior). General VM now WORKS via CLOSURE GENERATION
 > (brief-074, KEEP) — byte-identical general body compilation, resolving brief-073's
 > failure. Opt-in, 135 body shapes compiled. Next: escaping Module locals (Strict-gated),
 > or stop here.** After brief-073's op-compiler failed byte-identical (re-derived WL

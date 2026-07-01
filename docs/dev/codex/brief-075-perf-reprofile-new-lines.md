@@ -112,3 +112,32 @@ D4 per-path findings — all verbatim, from saved raw files.
 3. The finding — the list of any NEW local hotspot (with magnitude + is-it-a-small-safe-
    tunable), or "no new hotspot; constant-factor holds on c15bf6c."
 4. Open questions — any table that didn't close, any path you couldn't attribute cleanly.
+
+---
+
+## Outcome (Claude gate, 2026-07-01) — DONE. No new hotspot; constant-factor holds (better than stage0); safe perf confirmed at its ceiling.
+
+Diagnostic only (tree clean, no source change). Findings:
+- **D1 primitive:** phase shares stable vs brief-069 (evaluate.total 21.08 vs 22.46,
+  stability 7.04 vs 7.49, …; all within ~1pt). No new primitive hotspot.
+- **D3 absolute ratios (profiler OFF, best-of-2):** ALL primitive labels FASTER than the
+  stage0 baseline (if-true 3.97 vs 5.96, exact-hit 3.48 vs 5.74, sameq 3.56 vs 5.38,
+  length 2.90 vs 3.66, …); vs brief-069 within noise. Constant-factor conclusion HOLDS,
+  no regression, actually improved (the memory line's Expr compression + Layer A).
+- **D2 REPR counters:** primitive clone counters still ~0 (Layer A elimination intact),
+  node_allocs down massively vs phase0. No new allocation hotspot.
+- **D4 new code paths:** interrupt poll disarmed (flat), gensym GC (default threshold
+  +5.8%, only `forced` is 1.27x — not the default path), Expr-32 atoms (literal-integer
+  1.28x WK, no indirection cost), VM gate off (zero cost) — all flat or improved; none
+  introduced a hotspot.
+- **False signal:** the Pair D1 table showed module.resume_initializers 33% +
+  `sub_values.rhs_substitution` 45% — this is the profiling-mode POLLUTION artifact
+  (Codex set only `RUM_PROFILE_LEXICAL_SUBSTITUTION=1`, not the full category-disable set
+  brief-069 used; the `*rhs_substitution` rows are the pollution signature), NOT a real
+  regression — the profiler-OFF D3 confirms no primitive regression, and it isolates to
+  no small tune.
+
+**Verdict:** no new small safe default-path tunable. The new lines (memory / host-
+hardening / VM gate) did NOT introduce a default-path hotspot; the constant-factor
+conclusion holds on the current binary. This is the empirical confirmation that safe,
+clear, worth-doing-now perf optimization is at its ceiling for the current target.
