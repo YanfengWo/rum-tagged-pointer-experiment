@@ -618,6 +618,19 @@ pub struct SessionEvalResponse {
     pub trace: Vec<TraceEvent>,
 }
 
+/// Summary of a WL-level symbol definition stored in a session.
+///
+/// Native builtins are excluded because they live in the builtin registry, not
+/// in the session definitions map.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SessionDefinitionSummary {
+    pub name: String,
+    pub has_own_value: bool,
+    pub down_value_count: usize,
+    pub up_value_count: usize,
+    pub sub_value_count: usize,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SessionInspectResponse {
     pub info: SymbolInfo,

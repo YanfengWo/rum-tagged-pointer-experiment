@@ -193,6 +193,76 @@ fn host_parse_inspect_complete_and_is_complete_cover_editor_flows() {
 }
 
 #[test]
+fn host_session_introspection_enumerates_user_definitions_and_contexts() {
+    let mut session = HostSession::new();
+
+    let fresh_definitions = session.definitions();
+    assert!(
+        fresh_definitions
+            .iter()
+            .all(|summary| summary.name != "System`Plus"),
+        "native builtin Plus should not appear in definition summaries"
+    );
+
+    let fresh_contexts = session.contexts();
+    assert_eq!(
+        fresh_contexts,
+        vec!["Global`".to_string(), "System`".to_string()]
+    );
+
+    successful_eval(session.eval("a = 1; f[x_] := x; f[2] := 9"));
+
+    let definitions = session.definitions();
+    assert_eq!(
+        definitions,
+        vec![
+            HostDefinitionSummary {
+                name: "Global`a".to_string(),
+                has_own_value: true,
+                down_value_count: 0,
+                up_value_count: 0,
+                sub_value_count: 0,
+            },
+            HostDefinitionSummary {
+                name: "Global`f".to_string(),
+                has_own_value: false,
+                down_value_count: 2,
+                up_value_count: 0,
+                sub_value_count: 0,
+            },
+        ]
+    );
+
+    let contexts = session.contexts();
+    assert_eq!(contexts, vec!["Global`".to_string(), "System`".to_string()]);
+    eprintln!("introspection definitions={definitions:?} contexts={contexts:?}");
+}
+
+#[test]
+fn host_session_introspection_survives_poisoned_session() {
+    let mut session = HostSession::new();
+
+    successful_eval(session.eval("p = 7"));
+    match session.eval_with_test_panic() {
+        HostEvalOutcome::Failure(failure) => assert_eq!(failure.code, HostFailureCode::Panic),
+        other => panic!("expected panic failure, got {other:?}"),
+    }
+    assert!(session.poisoned_for_test());
+
+    let definitions = session.definitions();
+    assert!(
+        definitions
+            .iter()
+            .any(|summary| summary.name == "Global`p" && summary.has_own_value)
+    );
+
+    let contexts = session.contexts();
+    assert!(contexts.iter().any(|context| context == "Global`"));
+    assert!(contexts.iter().any(|context| context == "System`"));
+    eprintln!("poisoned_introspection definitions={definitions:?} contexts={contexts:?}");
+}
+
+#[test]
 fn host_failures_use_stable_failure_codes() {
     let mut session = HostSession::new();
 

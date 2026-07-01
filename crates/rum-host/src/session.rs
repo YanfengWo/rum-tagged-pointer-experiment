@@ -10,11 +10,11 @@ use std::time::Duration;
 use crate::config::HostConfig;
 use crate::cursor::{completion_prefix, symbol_at_cursor};
 use crate::model::{
-    HostCompletionRequest, HostCompletionResponse, HostEvalOutcome, HostEvalRequest, HostFailure,
-    HostFailureCode, HostInspectRequest, HostInspectResponse, HostIsCompleteRequest,
-    HostIsCompleteResponse, HostParseRequest, HostParseResponse, completeness_status,
-    eval_failure_from_runtime, eval_success_from_runtime, host_failure_from_runtime,
-    inspect_response_from_runtime, synthesized_host_failure,
+    HostCompletionRequest, HostCompletionResponse, HostDefinitionSummary, HostEvalOutcome,
+    HostEvalRequest, HostFailure, HostFailureCode, HostInspectRequest, HostInspectResponse,
+    HostIsCompleteRequest, HostIsCompleteResponse, HostParseRequest, HostParseResponse,
+    completeness_status, eval_failure_from_runtime, eval_success_from_runtime,
+    host_failure_from_runtime, inspect_response_from_runtime, synthesized_host_failure,
 };
 
 #[derive(Clone, Debug)]
@@ -179,6 +179,18 @@ impl HostSession {
         HostCancelHandle {
             flag: self.session.interrupt_handle(),
         }
+    }
+
+    pub fn definitions(&self) -> Vec<HostDefinitionSummary> {
+        self.session
+            .definition_summaries()
+            .into_iter()
+            .map(Into::into)
+            .collect()
+    }
+
+    pub fn contexts(&self) -> Vec<String> {
+        self.session.context_names()
     }
 
     pub fn eval_with_timeout(

@@ -2,7 +2,9 @@ mod inspection;
 mod outcome;
 mod requests;
 
-pub use inspection::{HostDefinition, HostInspectResponse, HostMessageTemplate, HostSymbolInfo};
+pub use inspection::{
+    HostDefinition, HostDefinitionSummary, HostInspectResponse, HostMessageTemplate, HostSymbolInfo,
+};
 pub use outcome::{
     HostEvalOutcome, HostEvalSuccess, HostFailure, HostFailureCode, HostInputKind,
     HostInputRequest, HostInputSuspension, HostMessage, HostStructuredOutput,

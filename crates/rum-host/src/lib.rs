@@ -12,11 +12,11 @@ mod session;
 pub use config::{HostConfig, HostResourceLimits};
 pub use model::{
     HostCompletenessStatus, HostCompletionRequest, HostCompletionResponse, HostDefinition,
-    HostEvalOutcome, HostEvalRequest, HostEvalSuccess, HostFailure, HostFailureCode, HostInputKind,
-    HostInputRequest, HostInputSuspension, HostInspectRequest, HostInspectResponse,
-    HostIsCompleteRequest, HostIsCompleteResponse, HostMessage, HostMessageTemplate,
-    HostParseRequest, HostParseResponse, HostStructuredOutput, HostStructuredOutputKind,
-    HostSymbolInfo, HostTraceEvent, HostTyped, HostValue,
+    HostDefinitionSummary, HostEvalOutcome, HostEvalRequest, HostEvalSuccess, HostFailure,
+    HostFailureCode, HostInputKind, HostInputRequest, HostInputSuspension, HostInspectRequest,
+    HostInspectResponse, HostIsCompleteRequest, HostIsCompleteResponse, HostMessage,
+    HostMessageTemplate, HostParseRequest, HostParseResponse, HostStructuredOutput,
+    HostStructuredOutputKind, HostSymbolInfo, HostTraceEvent, HostTyped, HostValue,
 };
 pub use session::{HostCancelHandle, HostSession, HostSessionBuilder};
 

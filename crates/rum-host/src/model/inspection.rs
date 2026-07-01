@@ -1,4 +1,6 @@
-use rum_runtime::{DefinitionCatalogEntry, SessionInspectResponse, SymbolInfo};
+use rum_runtime::{
+    DefinitionCatalogEntry, SessionDefinitionSummary, SessionInspectResponse, SymbolInfo,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostInspectResponse {
@@ -31,6 +33,15 @@ pub struct HostDefinition {
     pub lhs: String,
     pub rhs: String,
     pub delayed: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HostDefinitionSummary {
+    pub name: String,
+    pub has_own_value: bool,
+    pub down_value_count: usize,
+    pub up_value_count: usize,
+    pub sub_value_count: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -68,6 +79,18 @@ impl From<DefinitionCatalogEntry> for HostDefinition {
             lhs: entry.lhs.to_string(),
             rhs: entry.rhs.to_string(),
             delayed: entry.delayed,
+        }
+    }
+}
+
+impl From<SessionDefinitionSummary> for HostDefinitionSummary {
+    fn from(summary: SessionDefinitionSummary) -> Self {
+        Self {
+            name: summary.name,
+            has_own_value: summary.has_own_value,
+            down_value_count: summary.down_value_count,
+            up_value_count: summary.up_value_count,
+            sub_value_count: summary.sub_value_count,
         }
     }
 }

@@ -148,6 +148,41 @@ impl Session {
         &self.context_path
     }
 
+    pub fn definition_summaries(&self) -> Vec<SessionDefinitionSummary> {
+        let mut summaries = self
+            .definitions
+            .iter()
+            .map(|(symbol, definition)| SessionDefinitionSummary {
+                name: symbol.fully_qualified_name(),
+                has_own_value: definition.own_value.is_some()
+                    || definition.delayed_own_value.is_some(),
+                down_value_count: definition.down_values.len(),
+                up_value_count: definition.up_values.len(),
+                sub_value_count: definition.sub_values.len(),
+            })
+            .collect::<Vec<_>>();
+
+        summaries.sort_by(|left, right| left.name.cmp(&right.name));
+        summaries
+    }
+
+    pub fn context_names(&self) -> Vec<String> {
+        let mut contexts = self
+            .context_path
+            .iter()
+            .cloned()
+            .chain(std::iter::once(self.current_context.clone()))
+            .collect::<BTreeSet<_>>();
+
+        contexts.extend(
+            self.definitions
+                .keys()
+                .map(|symbol| symbol.context().to_string()),
+        );
+
+        contexts.into_iter().collect()
+    }
+
     pub fn set_current_context(&mut self, context: impl Into<String>) {
         self.current_context = normalize_context_name(context.into());
     }
