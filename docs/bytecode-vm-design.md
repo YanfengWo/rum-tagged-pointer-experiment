@@ -101,7 +101,30 @@ Gate: `cargo test --workspace` + a dedicated byte-identical differential (run th
 same corpus with the VM OFF and ON, assert identical results) + the unmodified
 mma-hol smoke. A single divergence blocks the slice.
 
-## Incremental slices (feature-flagged; keep-or-revert per the Pair delta)
+## Grounding correction (2026-07-01, after brief-070): the hot combinators are Module-wrapped
+
+The `HOL`Drule`` conversion combinators that drive the 1.467x amplification are all
+curried down-values whose RHS body is a `Module`:
+
+```
+ORELSEC[c1_,c2_][t_] := Module[{res}, res = tryConv[c1[t]]; If[res===$convFailed, c2[t], res]]
+TRYCONV[c_][t_]      := Module[{res}, res = tryConv[c[t]];   If[res===$convFailed, REFL[t], res]]
+REPEATC[c_][t_]      := Module[{res,rhs}, res=tryConv[c[t]]; If[res===$convFailed, Return[REFL[t]]]; rhs=concl[res][[2]]; If[aconv[rhs,t], Return[res]]; TRANS[res, REPEATC[c][rhs]]]
+```
+
+So the control flow is NESTED INSIDE a `Module`, and slice 1 already falls back on
+all of them (`Module` → `rhs_contains_uncompiled_scope`). This means the 22%
+`module.resume_initializers` Pair row IS these combinator bodies, and the
+amplification prize requires compiling MODULE bodies — the Module frame is the
+FOUNDATION, control layers on top. The original "slice 2 = control, slice 3 =
+Module" ordering is revised accordingly. Also confirmed: suspension is triggered
+ONLY by `EvalError::InputRequired` (interactive input), which never arises in the
+hot conversion descent — so `Op::Eval` is effectively synchronous on the hot path,
+and suspension correctness is handled by REUSING rum's existing continuation
+primitives (`suspend_with_frame_lazy` / `drive_evaluated_value`) around each
+`Op::Eval`, NOT a bespoke VM resume loop.
+
+## Incremental slices (feature-flagged; keep-or-revert per the Pair delta) — REVISED per the grounding above
 
 Each slice compiles a strictly larger body class, is independently committable,
 byte-identical-gated, and measured on the Pair descent + microbench under the
@@ -118,13 +141,21 @@ its Pair number, not faith.
    body bucket) — this slice's real deliverable is the proven IR + code-object
    cache + fallback, which every later slice reuses. Fall back to the tree-walk for
    any RHS shape the template does not yet support.
-2. **Slice 2 — add `Eval` + control (`BranchIfFailure`/`Jump`/`Fixpoint`).**
-   Compile the hot control combinators (`ORELSEC`/`REPEATC`/`TRYCONV`, `If`) and
-   drive the constructed sub-nodes through `Op::Eval`. Attacks the 1.467x
-   combinator amplification — the first slice with a real expected Pair win.
-3. **Slice 3 — compiled Module bodies/closures with `AllocLocals` (hygiene).**
-   Attacks the 22% `module.resume_initializers` Pair row. Highest complexity
-   (gensym hygiene, escape analysis), done LAST on proven infra.
+2. **Slice 2 (brief-071) — compiled Module-combinator bodies ORELSEC/TRYCONV
+   (Module + Set + `Op::Eval` + `If`/`SameQ` branch).** Compile the exact
+   `Module[{res}, res = <eval>; If[res === <const>, <alt>, res]]` shape of the two
+   hottest combinators: allocate the Module local(s) via the EXISTING module
+   gensym-allocation path (so hygiene + the 049/050 gensym GC still apply), `Op::Eval`
+   the Set RHS into the local, compare via native `SameQ`, and construct+`Op::Eval`
+   ONLY the taken branch (the win: the untaken branch + the If-node dispatch are
+   skipped). Suspension is handled by REUSING `suspend_with_frame_lazy` around each
+   `Op::Eval` (the same primitive `eval_if` uses) — no bespoke resume loop. This is
+   the first slice with a real expected Pair win (attacks the 1.467x amplification +
+   part of the 22% Module row). REPEATC (Return + recursion) explicitly falls back.
+3. **Slice 3 — REPEATC (non-local `Return` + the self-recursive fixpoint) and any
+   remaining Module-body shapes.** Highest control complexity (early `Return` out of
+   the Module, the `TRANS[res, REPEATC[c][rhs]]` recursion), done LAST on the proven
+   slice-2 machinery.
 
 ## Risk register
 
