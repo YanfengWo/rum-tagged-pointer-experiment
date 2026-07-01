@@ -156,3 +156,41 @@ counter (how many distinct RHS bodies compiled vs fell back, so we know coverage
 3. The finding — the Pair delta (kept or not), the compile coverage, and whether
    the machinery (IR/cache/fallback/byte-identical) is proven for later slices.
 4. Stop-loss / open questions — what you narrowed to fallback, anything unsure.
+
+---
+
+## Outcome (Claude gate, 2026-07-01) — DONE + KEEP. Slice-1 machinery proven; byte-identical; ~6% Pair win; flag OFF-default.
+
+Committed (the first product-code commit of the VM line). Gated by reproducing the
+two load-bearing claims independently.
+
+- **Scope clean:** only `vm_rhs_template.rs` (new) + `definition_application.rs`
+  (3 hook swaps) + `mod.rs`; no `Expr`/serde/mma-hol.
+- **Byte-identical (the hard gate):** `cargo test --workspace` is 715/0 both OFF and
+  `RUM_VM_RHS_TEMPLATE=1` ON — reproduced by Claude. In debug builds the template
+  `debug_assert_eq!`s its result against `substitute_rule_bindings_for_rhs` on EVERY
+  execution, so a green ON suite = every RHS substitution in the whole suite verified
+  identical. New module unit tests cover compile/execute/splice + Module/With/Function
+  fallback.
+- **OFF zero-cost:** the hook is one relaxed `AtomicU8` load then the unchanged
+  `substitute_rule_bindings_for_rhs`.
+- **Pair delta (Claude repro, best-of-2, correct `simpFixpointConv` metric):** OFF
+  59.88/64.10s, ON 56.23/58.01s → **ON/OFF best = 0.939 (~6.1% faster)**, both runs
+  ON < OFF (Codex got 0.932); `is_thm=True changed=False` all runs. Coverage
+  `compiled_distinct=140 fallback_distinct=72` (~66% of distinct RHS bodies compiled).
+- **Cache correctness:** keyed by RHS `ptr_key` BUT guarded by a `source == *expr`
+  structural check (defeats Arc-address reuse) + cleared on `evaluation_epoch` bump +
+  a `code_compatible_with_bindings` slot/const check. Sound.
+
+**Verdict: KEEP, committed flag-OFF-default.** The IR + code-object cache + tree-walk
+fallback + byte-identical machinery is proven and is the foundation slices 2/3 build
+on; a modest ~6% Pair win is bankable and activatable via `RUM_VM_RHS_TEMPLATE=1`.
+
+**Before the default is ever flipped to ON (NOT in this slice):** (1) remove the
+per-distinct-body `eprintln!` coverage counter (it would spam stderr in normal use);
+(2) replace the global `Mutex<TemplateCache>` with a per-`Session` cache (Session is
+`Send`/!`Sync`, so a global lock is unnecessary contention on the hot path); (3) run
+a broader corpus differential (the 886-case exact-arith corpus and/or run_fast, OFF
+vs ON) beyond the workspace suite. Until then the tree-walker stays the default per
+`docs/bytecode-vm-design.md`. Next: slice 2 (add `Eval` + control combinators — the
+1.467x amplification, the first slice with a real expected Pair win).

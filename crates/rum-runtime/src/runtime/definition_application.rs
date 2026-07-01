@@ -108,10 +108,11 @@ impl Session {
 
             let (lhs, substituted) = {
                 let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
-                let substituted = substitute_rule_bindings_for_rhs(
+                let substituted = substitute_rule_bindings_for_rhs_with_template(
                     &down_value.rhs,
                     &SymbolExprMap::default(),
                     down_value.rhs_may_splice_without_bindings,
+                    self.evaluation_epoch,
                 );
                 (down_value.lhs.clone(), substituted)
             };
@@ -193,10 +194,11 @@ impl Session {
                 let runtime_profile_rhs_substitution =
                     runtime_path_timing_start("down_values.rhs_substitution");
                 let rhs_substitution_start = definition_dispatch_timing_start();
-                let substituted = substitute_rule_bindings_for_rhs(
+                let substituted = substitute_rule_bindings_for_rhs_with_template(
                     &down_value.rhs,
                     &outcome.bindings,
                     down_value.rhs_may_splice_without_bindings,
+                    self.evaluation_epoch,
                 );
                 record_profile_definition_dispatch_phase_timing(
                     "down_value",
@@ -275,10 +277,11 @@ impl Session {
             let runtime_profile_rhs_substitution =
                 runtime_path_timing_start("down_values.rhs_substitution");
             let rhs_substitution_start = definition_dispatch_timing_start();
-            let substituted = substitute_rule_bindings_for_rhs(
+            let substituted = substitute_rule_bindings_for_rhs_with_template(
                 &down_value.rhs,
                 &outcome.bindings,
                 down_value.rhs_may_splice_without_bindings,
+                session.evaluation_epoch,
             );
             record_profile_definition_dispatch_phase_timing(
                 "down_value",

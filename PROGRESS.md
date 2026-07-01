@@ -6,6 +6,37 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-07-01 brief-070 VM slice 1 (compiled RHS template) — KEEP: byte-identical, ~6% Pair, flag OFF-default
+
+First product-code step of the bytecode-VM line (`docs/bytecode-vm-design.md` slice
+1; user chose route C). New `vm_rhs_template.rs`: a compiled RHS substitution
+template (IR ops `PushConst`/`PushBinding`/`Construct` only, NO `Eval`/control),
+lazily compiled + cached (keyed by RHS `ptr_key`, guarded by a `source==expr`
+structural check + epoch-clear + a bindings-compat check), executed in place of the
+per-application discovery walk in `substitute_rule_bindings_for_rhs`. Behind
+`RUM_VM_RHS_TEMPLATE` (one relaxed `AtomicU8` load when off → unchanged path).
+Compilable boundary = plain substitution; anything with `Module`/`With`/`Function`
+scoping falls back.
+
+**Gate (Claude reproduced both load-bearing claims):**
+- Byte-identical: `cargo test --workspace` 715/0 both OFF and ON. In debug the
+  template `debug_assert_eq!`s vs `substitute_rule_bindings_for_rhs` on every exec,
+  so a green ON suite = every substitution verified identical. +3 module tests.
+- OFF zero-cost (one atomic load); Pair `simpFixpointConv` best-of-2: OFF
+  59.88/64.10s, ON 56.23/58.01s → ON/OFF best = 0.939 (~6.1% faster; Codex 0.932),
+  is_thm=True changed=False all runs; coverage compiled_distinct=140
+  fallback_distinct=72 (~66%).
+
+**Verdict: KEEP, committed flag-OFF-default.** Banks the IR + code-object cache +
+fallback + byte-identical machinery (foundation for slices 2/3) and a modest ~6%
+activatable Pair win. **Before ever flipping the default ON** (not this slice):
+remove the per-body `eprintln!` coverage counter (stderr spam in normal use);
+replace the global `Mutex<TemplateCache>` with a per-`Session` cache (Session is
+Send/!Sync — no global lock needed); run a broader corpus differential (886-case
+exact-arith + run_fast, OFF vs ON). Next: slice 2 (add `Eval` + control combinators
+— the 1.467x amplification, first slice with a real expected Pair win). See
+brief-070 Outcome.
+
 ## 2026-07-01 brief-069 per-call constant decomposition (v8) — VM prize is real on Pair (~58%) but body/combinator-specific; take cheap targeted levers first
 
 First brief of the bytecode-VM line (task-2; `docs/bytecode-vm-plan.md`). Pure

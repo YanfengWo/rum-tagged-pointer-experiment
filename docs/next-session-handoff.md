@@ -1,6 +1,28 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-07-01 (NEWEST — read THIS first). Bytecode-VM line OPENED (task-2); brief-069
+> **2026-07-01 (NEWEST — read THIS first). Bytecode-VM line: slice 1 SHIPPED (brief-070,
+> KEEP) — compiled RHS template, byte-identical, ~6% Pair, flag OFF-default. Next = slice 2
+> (Eval + control combinators).** User chose route C (compiled-body VM) for its cross-project
+> capability value. `docs/bytecode-vm-design.md` is the architecture (symbolic IR: PushConst/
+> PushBinding/Construct/Eval/control; VM = compiled fast-path on the tree-walker, lazy-compiled
+> +cached+epoch-invalidated, falls back for unsupported shapes; byte-identical invariants;
+> slices 1→2→3). **Slice 1 (brief-070) DONE + committed:** new `vm_rhs_template.rs` compiles a
+> down-value RHS into a PushConst/PushBinding/Construct template replacing the per-application
+> discovery walk in `substitute_rule_bindings_for_rhs`, behind `RUM_VM_RHS_TEMPLATE` (zero-cost
+> off). Gate (Claude-reproduced): `cargo test --workspace` 715/0 both OFF and ON (debug builds
+> `debug_assert_eq!` the template vs the tree-walk on every exec → byte-identical proof); Pair
+> `simpFixpointConv` ON/OFF best = 0.939 (~6% faster), is_thm unchanged; coverage 140 compiled /
+> 72 fallback (~66%). Committed flag-OFF-default = banked machinery + activatable win.
+> **Before EVER flipping the default ON** (not done, deliberately): (1) remove the per-body
+> `eprintln!` coverage counter (stderr spam); (2) global `Mutex<TemplateCache>` → per-`Session`
+> cache (Session is Send/!Sync); (3) broader corpus differential (886-case exact-arith +
+> run_fast OFF vs ON). **Next brief = slice 2:** add `Eval` + control combinators
+> (`ORELSEC`/`REPEATC`/`If`) to attack the 1.467x combinator amplification (069) — the first
+> slice with a real expected Pair win. Perf task-1 (hash-consing/value-memo) was measured
+> marginal (067/068) and set aside. See PROGRESS 2026-07-01 + brief-070 Outcome. Cold backup:
+> `../rum-2026-07-01-c1f4cf7.bundle`.
+>
+> **2026-07-01 (prior). Bytecode-VM line OPENED (task-2); brief-069
 > per-call decomposition DONE — VM prize is real on Pair (~58%) but body/combinator-
 > specific; recommend cheap targeted levers first (22% Module-closure + fixed-point/
 > stability), then size the residual VM. AWAITING a user go on the next lever.** After
