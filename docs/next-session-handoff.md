@@ -1,6 +1,28 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-07-01 (NEWEST — read THIS first). Perf line reopened; brief-067
+> **2026-07-01 (NEWEST — read THIS first). brief-068 hash-consing intern-cost DONE
+> — verdict MARGINAL: the enabler taxes 100% of constructions and pays back only on
+> descents; task-1 (hash-consing/value-memo) is NOT a clean go. AWAITING a user scope
+> decision.** Follow-up to brief-067. B0 diagnostic (throwaway `RUM_PROFILE_INTERN_COST`
+> probe in the three `Expr::call*` constructors, no layout change, reverted). The
+> faithfulness rule was decisive: real hash-consing keys are O(arity), not O(subtree).
+> On `runtime-profile-basic-only-pair4`: the faithful O(arity) intern cost is **≈ noise
+> on the descent SEGMENT** (internal `AbsoluteTiming` arity/base=0.98; O(subtree) upper
+> bound 2.68x), BUT the FULL run (wall) is **~1.12x (+12%, reproducible)** because
+> **26.1M of 27.2M constructions happen during load** where the tax has no descent work
+> to hide behind, and construction-heavy microbench labels show **+14-100%** per-op.
+> So the O(arity) cost is small but NOT free — a global construction tax that only pays
+> back on the ~7%-live descent prize. Task-1's net depends on the workload mix and the
+> real (deduped) table cost, which a cost-only probe can't settle. **Honest read: task-1
+> is marginal (modest prize + measured pervasive enabler tax).** Options now: (1) the
+> INTEGRATED confirm brief (deduping hash-cons + O(1)-key memo together, NET wall on
+> descent AND a construction-heavy workload) = task-1's definitive go/no-go; (2) pivot
+> to task-2 (bytecode VM — attacks the same per-call constant, no global construction
+> tax); (3) park the perf line. Nothing shipped but `docs/dev/codex/brief-068-*.md`
+> (Outcome) + `docs/dev/codex/brief-067-*.md` (Outcome) + the PROGRESS 2026-07-01
+> entries. The brief-067 verdict below is still the prize side of this.
+>
+> **2026-07-01 (prior). Perf line reopened; brief-067
 > value-memo scoping DONE — naive value-memo is a NET LOSS, hash-consing is the
 > required enabler. AWAITING a user scope decision on what's next.** The deferred
 > perf line has two tasks: (1) hash-consing/value-memo, (2) bytecode VM. brief-067

@@ -6,6 +6,45 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-07-01 brief-068 hash-consing intern cost — MARGINAL: enabler taxes 100% of constructions, pays back only on descents
+
+Follow-up to brief-067 (which left the hash-consing enabler cost unmeasured).
+B0 diagnostic: throwaway env-gated (`RUM_PROFILE_INTERN_COST=arity|subtree`) intern
+probe hooked in the three `Expr::call*` constructors (rum-core), a thread-local
+`HashMap` table, NO `Expr` layout change. Two cost models — faithful O(arity) key
+(head + immediate children's `ptr_key()` proxies, driving the verdict) and naive
+O(subtree) `expr.hash()` (upper bound). Reverted after gating; nothing shipped but
+the brief doc + these notes.
+
+**The faithfulness rule was decisive:** real hash-consing keys are O(arity)
+(combine children's cached ids), not O(subtree) rehash. Measured on
+`runtime-profile-basic-only-pair4`:
+- DESCENT SEGMENT (Codex, internal `AbsoluteTiming`): arity/base = **0.98** (≈ noise),
+  subtree/base = **2.68x** — on the descent the O(arity) intern cost is absorbed by
+  dispatch work; the naive O(subtree) model is disastrous (would have falsely killed
+  the project — the rule mattered).
+- FULL RUN (Claude repro, wall): base 94/95s → arity 106/107s = **~1.12x** (tight,
+  reproducible, NOT noise). The +12% lives in the NON-descent load: the counters show
+  **26.1M of 27.2M constructions** happen during load (avg_arity 1.88), where the
+  intern tax has no descent work to hide behind.
+- construction-heavy microbench (Codex, per-op): arity **+14% to +100%**
+  (`table-iterator-pair-list` 121→241 ns). OFF-path flat (off/main ~1.0), gate is
+  zero-cost when disabled.
+
+**Verdict: MARGINAL / conditional, NOT a clean go.** The O(arity) per-op cost is
+small but NOT free — it is a global tax on 100% of constructions that only pays back
+on memo-able descents (the ~7% live prize is descent-only). The full-run +12% is
+partly a no-dedup-prototype artifact (98.4% table miss → a 27M-entry HashMap with bad
+cache behavior; real hash-consing dedups to ~160K distinct → lower per-op), but the
+tax is real and engine-wide. Task-1's net (~7% descent prize vs a pervasive
+construction tax) depends on the deployment workload mix and the real deduped table's
+per-op cost — neither settled by a cost-only probe. It can only be closed by the
+INTEGRATED experiment (a deduping hash-cons prototype whose O(1) identities key the
+short-circuiting value-memo, measured NET on the descent AND a construction/load-heavy
+workload). **Honest read: task-1 is marginal (modest prize, now a measured pervasive
+enabler tax); pivoting to task-2 (bytecode VM, no global construction tax) is at least
+as attractive.** Scope decision is the user's. See brief-068 Outcome section.
+
 ## 2026-07-01 Perf line reopened — brief-067 value-memo scoping: naive memo is a NET LOSS, hash-consing is the required enabler
 
 Reopened the deferred perf line (task 1 of 2: hash-consing/value-memo; task 2 is
