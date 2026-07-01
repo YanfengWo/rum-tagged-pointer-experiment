@@ -98,16 +98,25 @@ from the profile before keeping a change.**
 
 ## Current direction (read these for state)
 
-- **NO ACTIVE LINE right now — pick one (2026-06-30).** Both recent mainlines are
-  CLOSED; read the `2026-06-30 (LATEST)` top block of `docs/next-session-handoff.md`
-  for the full arc and the OPEN directions. The natural next mainline is **host
-  embedding hardening** (mma-hol is through, so "rum as an embeddable engine for other
-  projects" is the forward line) — entry point `docs/host-embedding-and-hardening.md`
-  (capability survey + tiered hardening map: Tier-1 = interrupt/cancel, session
-  time/memory budget, structured `HostValue`, `catch_unwind` boundary). Other open
-  lines: a showcase project (sandbox + WASM-ready enablers recorded, specific project
-  undecided), the deferred perf line (hash-consing/value-memo ~26% on Pair, bytecode
-  VM), and small conformance items (genuine-cycle → `TerminatedEvaluation[IterationLimit]`).
+- **NO ACTIVE LINE right now — pick one (2026-07-01). Two full lines CLOSED this
+  session; read the `2026-07-01` top blocks of `docs/next-session-handoff.md` first.**
+  (1) **Pattern-matching line CLOSED** (briefs 058 + axis measurements): the adversarial
+  `Orderless`+`BlankNullSequence` stack-overflow crash is fixed (matcher `MAX_MATCH_DEPTH`
+  guard → graceful `TerminatedEvaluation`); WK was probed and is ALSO naive `k^n` (no
+  pruning) so chasing pruning is a trap; axis (a) measured — no downvalue long tail in HOL
+  (max 6/symbol), linear-scan dispatch is optimal. See memory
+  `wk-ac-matching-is-naive-enumeration.md`. (2) **Host-embedding hardening arc DONE**
+  (briefs 059-066): Tier-1 (interrupt/cancel + wall-clock timeout, `catch_unwind`+poison,
+  structured `HostValue`, memory budget as a documented host-side RSS watchdog) + Tier-2
+  core (`Session` is now `Send`, `reset()`, whole-session introspection, snapshot/
+  `restore_from_bytes` = the WASM no-fs enabler) + the **rum-jupyter REAL interrupt**
+  (execute-on-worker + interrupt→cancel + poison-restart, the payoff). Entry point +
+  status: `docs/host-embedding-and-hardening.md` (all Tier-1/Tier-2-core items marked DONE)
+  + memory `host-hardening-tier1.md`. **OPEN directions now:** a showcase project (sandbox +
+  WASM-ready enablers, specific project undecided), the deferred perf line
+  (hash-consing/value-memo ~26% on Pair, bytecode VM), lower-value jupyter stubs
+  (history/comm_info/debug), and small conformance items (genuine-cycle →
+  `TerminatedEvaluation[IterationLimit]`).
 - **MEMORY LINE CONCLUDED for safe Rust (2026-06-30).** Phase 0 instruments + 0.5
   four-C panel + 1/1b gensym GC + Phase 3 per-node `Expr` compression (rungs 1-3:
   `size_of::<Expr>()` 64→32, dense-list factor 8.3x→~4.0x, kernel faster + alloc

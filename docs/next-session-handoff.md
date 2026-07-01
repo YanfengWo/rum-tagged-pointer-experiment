@@ -1,9 +1,16 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-07-01 (LATEST — host-hardening line ACTIVE; read THIS first). After the
-> pattern-matching line closed, the active mainline is host-embedding Tier-1 hardening
-> (`docs/host-embedding-and-hardening.md`), as one-lever briefs.** Status: **brief-059
-> DONE** (`e5b13b9`) — interrupt/cancel + per-eval wall-clock timeout via ONE amortized
+> **2026-07-01 (LATEST — read THIS first). The host-embedding hardening arc is DONE (no
+> active line — pick one; OPEN directions at the bottom of this block).** This session
+> closed TWO lines: the pattern-matching line (briefs 058 + axis measurements — see the
+> matcher block further below) AND the host-embedding hardening arc (briefs 059-066, logged
+> here newest-context below). Tree clean, all committed on `main`. Bottom line for a new
+> session: Tier-1 + Tier-2-core + the rum-jupyter real interrupt all shipped and gated;
+> **OPEN next = a showcase project (sandbox + WASM enablers ready), the deferred perf line
+> (hash-consing ~26% on Pair, bytecode VM), or lower-value jupyter stubs.** The arc log:
+> host-embedding Tier-1 hardening (`docs/host-embedding-and-hardening.md`), as one-lever
+> briefs. **brief-059 DONE** (`e5b13b9`) — interrupt/cancel + per-eval wall-clock timeout
+> via ONE amortized
 > poll point in the eval loop (`if self.interrupt_armed` gates a `#[cold]` poll fn,
 > every 1024 steps checks an `Arc<AtomicBool>` cancel flag + a deadline; `armed`
 > recomputed per top-level eval from `Arc::strong_count>1` OR timeout-set, so

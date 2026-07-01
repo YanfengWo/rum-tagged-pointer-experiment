@@ -67,10 +67,11 @@ Before substantial work, read the smallest set needed for the task:
 - [docs/code-organization-guidelines.md](./docs/code-organization-guidelines.md):
   file-size and module-organization rules
 
-`docs/next-session-handoff.md` carries an active handoff when one is being
-prepared; as of 2026-06-22 its top block is the current state (Layer A complete,
-the unified `34x` model, the next target). Read that block before performance
-work.
+`docs/next-session-handoff.md` carries the running handoff; its TOP block is the
+current state — always read that block first (as of 2026-07-01: the correctness +
+safe-Rust-memory + pattern-matching lines are closed, and the host-embedding
+hardening arc — Tier-1 + Tier-2 core + the rum-jupyter real interrupt — is DONE;
+no active line, pick one). Read the top block before starting any work.
 
 ## Current Downstream Lane
 
