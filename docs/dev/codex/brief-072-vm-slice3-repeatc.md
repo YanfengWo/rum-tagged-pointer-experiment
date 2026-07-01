@@ -147,3 +147,28 @@ identical; (if run) the Pair best-of-2 + is_thm lines; and the coverage counter
    capability delivered); any Pair delta if measured (framed as nice-to-have).
 4. Stop-loss / open questions — what fell back, any Return/suspension/recursion edge
    you were unsure about.
+
+---
+
+## Outcome (Claude gate, 2026-07-01) — DONE + KEEP. Return+recursion machinery byte-identical; VM combinator set COMPLETE; opt-in.
+
+Committed flag-OFF-default (opt-in). Scope clean (only `vm_rhs_template.rs`, +692). New
+`ModuleRepeatC` support: `PushLocal` register reads for the two non-escaping temporaries
+`res`/`rhs` (no gensyms), the exact 5-statement REPEATC shape matcher, two compiled
+`Return` early-exits, recursive fall-through via a normal `Op::Eval(SF)` (redispatches into
+the compiled REPEATC, bounded by the normal recursion_limit), and a sub-call `Err(Return)`
+still propagates (not swallowed). Never matches `defineKernel`'s kernel-state Module.
+
+**Gate (Claude reproduced the byte-identical core):**
+- `cargo test --workspace` 723/0 both OFF and ON (debug `debug_assert_eq!` on every compiled
+  application) — reproduced. +4 new REPEATC tests (failed-Return path, stable-Return path,
+  recursive fall-through, rejects-held-local) + a rejects-repeatc-shape guard on slice 2.
+- `drule_tests` OFF vs ON identical `List[50, 0]` (the REAL REPEATC). Coverage
+  `module_repeatc_distinct=1` (+ slice-2 `module_if_sameq_distinct=2`).
+- No Pair perf run (it was optional/nice-to-have; the deliverable is the capability +
+  byte-identical correctness, per the opt-in framing — real loads are ~parity anyway).
+
+**Verdict: KEEP, flag-OFF-default (opt-in).** The Return/non-local-control + self-recursion
+compilation is proven byte-identical — the cross-project VM capability delivered. **This
+COMPLETES the compiled-body VM combinator set** (slice 1 RHS templates + slice 2
+ORELSEC/TRYCONV + slice 3 REPEATC). The VM line is at a natural completion milestone.

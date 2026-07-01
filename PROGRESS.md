@@ -6,6 +6,31 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-07-01 brief-072 VM slice 3 (compiled REPEATC) — KEEP: Return+recursion byte-identical; VM combinator set COMPLETE; opt-in
+
+Slice 3, the last combinator. Compiled `HOL`Drule`REPEATC` — the two hardest general-VM
+techniques: non-local `Return` (early-exit) and a self-recursive body. rum `Return` =
+`Err(EvalError::Return{value})` caught at the Module boundary, so the two top-level
+`If[cond, Return[R]]` compile to early-exits; the recursive `TRANS[res, REPEATC[c][rhs]]`
+is a normal `Op::Eval` (redispatches into the compiled REPEATC, bounded by recursion_limit);
+a sub-call `Err(Return)` still propagates. Both locals `res`/`rhs` register-ized (no gensym,
+provably non-escaping); never matches kernel-state Module. Extends vm_rhs_template.rs only.
+
+**Gate (Claude reproduced):** `cargo test --workspace` 723/0 both OFF and ON (debug
+differential on every application); +4 REPEATC tests (both Return paths + recursion +
+rejects-held-local); `drule_tests` OFF vs ON identical `List[50,0]` (real REPEATC); coverage
+`module_repeatc_distinct=1`. No Pair perf run (optional; capability is the deliverable, real
+loads are ~parity — see the slices-1+2 measurement entry below).
+
+**Verdict: KEEP, flag-OFF-default (opt-in).** The Return/non-local-control + recursion
+compilation is proven byte-identical = the cross-project VM capability delivered. **This
+COMPLETES the compiled-body VM combinator set** (slice 1 RHS templates + slice 2
+ORELSEC/TRYCONV + slice 3 REPEATC). The bytecode-VM line is at a natural completion
+milestone: an opt-in (`RUM_VM_RHS_TEMPLATE`, zero-cost off) compiled-body VM that is
+byte-identical and gives a probe-specific 2x on the SIMP conversion descent (~parity on
+real module loads). Further would be a larger general VM or a different line — a fresh
+decision. See brief-072 Outcome + `docs/bytecode-vm-design.md`.
+
 ## 2026-07-01 VM slices 1+2 ON/OFF on REAL module loads — 2x is PROBE-SPECIFIC, real loads ~parity; VM is opt-in acceleration
 
 After slice 2, measured the VM (slices 1+2, flag ON vs OFF, same binary) on REAL

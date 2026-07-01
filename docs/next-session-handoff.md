@@ -1,6 +1,28 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-07-01 (NEWEST — read THIS first). VM slices 1+2 measured on REAL loads: the 2x is
+> **2026-07-01 (NEWEST — read THIS first). Bytecode-VM line COMPLETE: slice 3 (REPEATC)
+> SHIPPED (brief-072, KEEP) — Return+recursion compilation byte-identical; the compiled-body
+> VM combinator set is DONE (RHS templates + ORELSEC/TRYCONV + REPEATC), opt-in
+> (`RUM_VM_RHS_TEMPLATE`, zero-cost off), never default-ON. Natural completion milestone —
+> next direction is a fresh decision.** Slice 3 compiled `HOL`Drule`REPEATC`: rum `Return` =
+> `Err(EvalError::Return{value})` caught at the Module boundary → the two `If[cond, Return[R]]`
+> compile to early-exits; the recursive `TRANS[res, REPEATC[c][rhs]]` is a normal `Op::Eval`
+> (redispatches into the compiled REPEATC, bounded by recursion_limit); sub-call `Err(Return)`
+> still propagates; both locals register-ized (no gensym), never matches kernel-state Module.
+> Gate (Claude-reproduced): `cargo test --workspace` 723/0 OFF and ON (debug differential);
+> +4 REPEATC tests (both Return paths + recursion + rejects-held-local); `drule_tests` OFF vs
+> ON identical `List[50,0]`; coverage `module_repeatc_distinct=1`. No Pair perf run (optional;
+> capability is the deliverable — real loads are ~parity, the 2x is probe-specific). **VM line
+> summary: an opt-in compiled-body VM, byte-identical, probe-specific 2x on the SIMP conversion
+> descent, ~parity on real module loads, kept flag-OFF-default as opt-in acceleration +
+> cross-project capability.** OPEN next (fresh decision): a larger general VM (bigger commitment,
+> uncertain real-workload payoff), OR pivot off the perf line entirely (showcase project /
+> jupyter stubs / the deferred host items / small conformance like genuine-cycle→IterationLimit).
+> Baseline snapshot `rum-snapshot-checkpoints-b471bb4` (v8 = the 3055/3126-validated fallback,
+> kept until a new binary+snapshot passes the same bar). See `docs/bytecode-vm-design.md` +
+> PROGRESS 2026-07-01.
+>
+> **2026-07-01 (prior). VM slices 1+2 measured on REAL loads: the 2x is
 > PROBE-SPECIFIC (real module loads ≈ parity); VM kept as OPT-IN acceleration (never
 > default-ON). Baseline snapshot rebuilt (b471bb4). Now building slice 3 (REPEATC).**
 > After slice 2, measured slices 1+2 (flag ON vs OFF) on REAL module loads via Method M
