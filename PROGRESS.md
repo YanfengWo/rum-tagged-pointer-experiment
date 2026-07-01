@@ -102,6 +102,23 @@ boundary (panic → error reply + restart-on-poison). Remaining = a jupyter rest
 kernel. Lower-value gaps: history/comm_info/debug stubs, typed display_data. See
 `docs/host-embedding-and-hardening.md` §2 "Downstream".
 
+brief-063 (`0bde8b7`): `HostSession::reset()` — rebuilds the inner session from the STORED
+original HostConfig (a shared `build_inner_session` helper used by build() + reset()) and
+clears `poisoned`. Not gated by poisoned — it is the RECOVERY path for a session poisoned
+by a caught panic (brief-060). Drops all user state, invalidates prior cancel_handles
+(new interrupt flag). Host-only. Gate: workspace 712/0 + rum-host 15/0; 3 tests (clear
+state, poison→reset→usable, original-config restored not mutated).
+
+brief-064 (`afad4de`): whole-session introspection. Runtime `definition_summaries()`
+(iterate the definitions map → per-symbol name + has_own_value + down/up/sub counts, sorted)
++ `context_names()`; host `definitions()`/`contexts()` (pure `&self`, work on a poisoned
+session). Native builtins excluded (only the definitions map is read). The enabler for a
+session snapshot (065). Gate: workspace 712/0 + rum-host 17/0; test — `a=1; f[x_]:=; f[2]:=`
+→ [Global`a own, Global`f down=2], builtin Plus absent, poisoned still introspectable.
+
+TIER-2 remaining: session snapshot `restore_from_bytes` (the WASM/no-fs enabler; then the
+jupyter real-interrupt brief).
+
 ## 2026-07-01 Matcher backtracking stack overflow — depth guard shipped (brief-058)
 
 A SECOND, distinct reachable crash (separate from the 2026-06-30 deep-nesting one):
