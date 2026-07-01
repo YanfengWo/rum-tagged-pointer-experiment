@@ -116,8 +116,22 @@ session). Native builtins excluded (only the definitions map is read). The enabl
 session snapshot (065). Gate: workspace 712/0 + rum-host 17/0; test — `a=1; f[x_]:=; f[2]:=`
 → [Global`a own, Global`f down=2], builtin Plus absent, poisoned still introspectable.
 
-TIER-2 remaining: session snapshot `restore_from_bytes` (the WASM/no-fs enabler; then the
-jupyter real-interrupt brief).
+brief-065 (`3d4a895`): session snapshot / restore through an in-memory buffer. Runtime
+`snapshot_definitions_source()` renders all definition-map symbols (sorted) + attributes via
+the existing `render_saved_symbols` (bumped to pub(super), signature unchanged) — no file;
+host `snapshot_to_bytes()` (&self) → Vec<u8>, `restore_from_bytes()` → decode UTF-8 +
+`reset()` + eval (faithful IMAGE load, replaces user state). NO filesystem touched — the
+WASM/no-fs enabler. Captures definitions + attributes of defined symbols (not attribute-only
+symbols / $-vars / options / messages / gensym-counter; TEXT image, binary .mx deferred).
+Gate: workspace 712/0 + rum-host 18/0; round-trip composing with 064's definitions() —
+snapshot A (a/f/g/h+Orderless) → 145 B → fresh B restore → definitions match, f[7]=7,
+Attributes[h]=Orderless, pre-existing z=99 gone after restore.
+
+**TIER-2 CORE COMPLETE** (062 Send / 063 reset / 064 introspection / 065 snapshot). Remaining
+host work: the jupyter real-interrupt brief (execute-on-worker + interrupt→cancel +
+poison-restart, all primitives now in place), or a showcase project. (Aside: brief-065
+dispatch first hung on a codex self-update stdin prompt — see memory codex-update-hang.md;
+killed + re-dispatched with the updated codex, clean.)
 
 ## 2026-07-01 Matcher backtracking stack overflow — depth guard shipped (brief-058)
 

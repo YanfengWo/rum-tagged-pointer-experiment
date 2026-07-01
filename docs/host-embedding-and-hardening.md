@@ -103,11 +103,18 @@ documented as a host-side pattern (below). The KNOWN LIMITATION bullet still sta
   `List(Vec<HostTyped>)` | `Other{head,text}`, built once from the result `Expr`,
   depth-capped at 64. (rationals-only → no float variant; big values are decimal strings.)
 
-**Tier 2 — for long-running, multi-client hosts:**
-- **reset / clear session** to a clean state (multi-client reuse / isolation). [NEXT]
-- **Session snapshot / serialize as host ops.** `DumpSave`/`Get` are WL-level AND
-  file-based; a `restore_from_bytes(...)` (load a session image from an in-memory
-  buffer) is needed — also the enabler for any no-fs host (WASM).
+**Tier 2 — for long-running, multi-client hosts — CORE ITEMS DONE (briefs 062/063/064/065).**
+- **reset / clear session — DONE (brief-063, `0bde8b7`).** `HostSession::reset()` rebuilds
+  the inner session from the STORED original `HostConfig` and clears `poisoned` — it is
+  also the RECOVERY path for a session poisoned by a caught panic (brief-060). Drops all
+  user state; invalidates prior `cancel_handle()`s (new interrupt flag).
+- **Session snapshot / restore from a buffer — DONE (brief-065, `3d4a895`).**
+  `snapshot_to_bytes()` (&self) renders all definition-map symbols (+ attributes) to a
+  WL-source `Vec<u8>` via the existing `render_saved_symbols` (no file); `restore_from_bytes()`
+  decodes UTF-8, `reset()`s, and evals — a faithful IMAGE load, NO filesystem touched (the
+  WASM point). Captures definitions + attributes of defined symbols; NOT attribute-only
+  symbols / `$`-vars / options / messages / gensym-counter; TEXT image (binary `.mx` stays
+  a separate deferred perf item).
 - **Concurrency / isolation contract — DONE (brief-062, `1f5b1b0`).** `HostSession` (and
   inner `Session`) is now **`Send`** (movable to a worker thread; only blocker was the
   suspension-frame trait object, fixed with a `+ Send` bound, no `unsafe`, no `!Send`
@@ -115,8 +122,10 @@ documented as a host-side pattern (below). The KNOWN LIMITATION bullet still sta
   run one per thread, don't share). Proven by a static assert + an 8-thread move/isolation
   test. The process-global symbol interner is a shared `Mutex` (contention point + shared
   interned-NAME table) but definitions/ownvalues/contexts are per-session and isolated.
-- **Whole-session introspection / enumeration.** `inspect` is per-symbol (you must
-  name it); no host-level "enumerate all user definitions / contexts".
+- **Whole-session introspection / enumeration — DONE (brief-064, `afad4de`).** Host
+  `definitions()` (per symbol: name + has_own_value + down/up/sub counts, sorted) +
+  `contexts()`, pure `&self` reads (work on a poisoned session). Native builtins excluded
+  (only the definitions map is read).
 
 **Downstream — rum-jupyter upgrades UNLOCKED by this hardening round (a dedicated
 post-Tier-2 brief).** Surveyed 2026-07-01:

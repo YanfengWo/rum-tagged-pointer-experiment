@@ -35,11 +35,17 @@
 > transport is a single-threaded poll loop where a blocking execute can't even receive the
 > interrupt — 059 cancel + 062 Send + 060 panic boundary now supply the primitives for a
 > REAL interrupt + panic-resilient kernel (execute-on-worker + interrupt→cancel +
-> poison-restart). See `docs/host-embedding-and-hardening.md` §2 "Downstream". OPEN Tier-2:
-> reset/clear (NEXT), session snapshot `restore_from_bytes` (WASM enabler), whole-session
-> introspection; then the jupyter real-interrupt brief; or a showcase project. See
-> `PROGRESS.md` 2026-07-01 host entry. The matcher / pattern-matching blocks below are the
-> previous (now-closed) line.
+> poison-restart). See `docs/host-embedding-and-hardening.md` §2 "Downstream".
+> **TIER-2 CORE NOW COMPLETE:** 063 reset/clear (`0bde8b7`, also the poison-recovery path),
+> 064 whole-session introspection (`afad4de`, `definitions()`/`contexts()`), 065 session
+> snapshot `restore_from_bytes` (`3d4a895`, in-memory buffer, no fs — the WASM enabler;
+> reuses `render_saved_symbols`, TEXT image). So the host-hardening line (Tier-1 + Tier-2
+> core) is DONE. **OPEN next: the jupyter real-interrupt brief** (execute-on-worker +
+> interrupt→cancel + poison-restart — all primitives now shipped; the biggest remaining
+> user-visible win) OR a showcase project (sandbox + WASM enablers ready) OR the deferred
+> perf line (hash-consing ~26% on Pair, bytecode VM). See `PROGRESS.md` 2026-07-01 host
+> entry + memory `host-hardening-tier1.md`. The matcher / pattern-matching blocks below are
+> the previous (now-closed) line.
 
 > **2026-07-01. Matcher backtracking stack-overflow
 > CRASH fixed (brief-058, `a2d5ee6`); this is a host-resilience / Tier-1 brick. Tree
