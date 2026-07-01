@@ -122,6 +122,35 @@ Gate: `cargo test --workspace` + a dedicated byte-identical differential (run th
 same corpus with the VM OFF and ON, assert identical results) + the unmodified
 mma-hol smoke. A single divergence blocks the slice.
 
+## Measured value + the OPT-IN TOGGLE principle (2026-07-01, user directive)
+
+Measured reality after slices 1+2 (ON vs OFF, same binary, Method M = restore
+checkpoint + timed single-file `Get`, raw logs in `/tmp/heavyprobe/`):
+
+| workload | ON/OFF | note |
+|---|---|---|
+| Pair descent probe (`simpFixpointConv` on a hand-hard nested term) | **~0.49 (2x)** | ~100% combinator conversion — slice-2's exact target |
+| Option/List/Rat/Real-Field module loads | 0.97–1.07 | ≈ parity (single-run noise band) |
+| Set/Finite/Int heavy module loads | 0.95–1.11 | ≈ parity; Int +11% (noise, or unrecouped compile cost) |
+
+**Conclusion: the 2x is PROBE-SPECIFIC, not a general speedup.** The gain is
+proportional to the combinator-conversion fraction of the workload; the probe is an
+artificial ~100%-combinator stress test, while every REAL module load measured is
+≈ parity (combinators are a small fraction). A worst case where a slice is NET
+NEGATIVE is plausible (a body compiled but rarely applied doesn't recoup its
+one-time compile cost). So the VM line is "opt-in acceleration for
+conversion-heavy tasks," NOT a broad win. (`rumPairProbePair4Same` is a specific
+expression — NOT the `Pair.wl` stdlib module; the name collision misled earlier.)
+
+**OPT-IN TOGGLE principle (user directive):** each VM/JIT feature is an INDEPENDENT
+opt-in switch (env flag), ZERO-cost when off, that a caller turns ON for a workload
+that benefits and leaves OFF otherwise. **We do NOT flip any VM feature to
+default-ON** — the tree-walker stays the default; the VM is a per-task accelerator.
+This makes "before flipping the default ON" moot for the common path (it stays OFF);
+the deferred validation (full-tower OFF==ON, Strict) only gates advertising a
+feature as safe-to-enable, not a default change. Slice 3 (and any later slice)
+follows the same pattern: its own flag, zero-cost off, kept opt-in.
+
 ## Grounding correction (2026-07-01, after brief-070): the hot combinators are Module-wrapped
 
 The `HOL`Drule`` conversion combinators that drive the 1.467x amplification are all

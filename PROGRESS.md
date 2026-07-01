@@ -6,6 +6,39 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-07-01 VM slices 1+2 ON/OFF on REAL module loads — 2x is PROBE-SPECIFIC, real loads ~parity; VM is opt-in acceleration
+
+After slice 2, measured the VM (slices 1+2, flag ON vs OFF, same binary) on REAL
+module loads via Method M (restore the checkpoint before a module, then time a single
+`AbsoluteTiming[Get[module.wl]]`; raw logs `/tmp/heavyprobe/`, checkpoint chain
+`rum-snapshot-checkpoints-b471bb4`). rum timing is an exact rational — parse num/den.
+
+| workload | ON/OFF | note |
+|---|---|---|
+| Pair descent probe (`simpFixpointConv` on a hand-hard nested term) | **0.49 (2x)** | ~100% combinator conversion = slice-2's exact target |
+| Option 13.6→13.3 / List 24.3→25.3 / Rat 29.4→29.6 / Real-Field 27.6→29.5 | 0.97–1.07 | ≈ parity |
+| Set 359.7→358.0 / Finite 534.5→509.5 / Int 479.9→534.6 | 0.95–1.11 | ≈ parity; Int +11% (noise/unrecouped compile cost) |
+
+**Key correction (user caught my conflation):** the probe's "pair4" is
+`rumPairProbePair4Same`, a SPECIFIC deeply-nested expression, NOT the `Pair.wl` stdlib
+module. So the 2x is PROBE-SPECIFIC: gain ∝ the combinator-conversion fraction of the
+workload; the probe is a ~100%-combinator stress test, every REAL load measured is
+≈ parity. A worst case NET-NEGATIVE is plausible (a body compiled but rarely applied
+doesn't recoup its compile cost). Method-M validity was cross-checked: the VM provably
+engages from restored state (coverage counters: Set ON compiled 128 templates + 2
+combinators) and `AbsoluteTiming` wraps the whole `Get`, so no combinator work escapes
+measurement — the ≈parity is REAL. (A direct "Pair descent under Method M" control was
+attempted but INVALID — restoring cp00 + the probe setup built a degenerate 0.13s term,
+not the 55s descent; the probe workload is coupled to its source-load setup.)
+
+**Verdict + user directive: keep the VM as OPT-IN acceleration.** Each VM/JIT feature
+is an independent opt-in env switch, zero-cost off, turned ON only for
+conversion-heavy tasks that benefit. **Do NOT flip any VM feature to default-ON** —
+the tree-walker stays the default. slices 1+2 stay flag-OFF-default (banked as
+capability + slice-3 foundation). Recorded in `docs/bytecode-vm-design.md`. Continuing
+to slice 3 (REPEATC) primarily for the cross-project VM capability (Return/non-local
+control flow + recursion compilation), immediate mma-hol value acknowledged as limited.
+
 ## 2026-07-01 brief-071 VM slice 2 (compiled ORELSEC/TRYCONV Module bodies) — KEEP: ~2x Pair, byte-identical, flag OFF-default
 
 Slice 2 of the bytecode-VM line. Grounding (Drule.wl) showed the hot conversion

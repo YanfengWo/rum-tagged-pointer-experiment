@@ -1,6 +1,27 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-07-01 (NEWEST — read THIS first). Bytecode-VM line: slice 2 SHIPPED (brief-071,
+> **2026-07-01 (NEWEST — read THIS first). VM slices 1+2 measured on REAL loads: the 2x is
+> PROBE-SPECIFIC (real module loads ≈ parity); VM kept as OPT-IN acceleration (never
+> default-ON). Baseline snapshot rebuilt (b471bb4). Now building slice 3 (REPEATC).**
+> After slice 2, measured slices 1+2 (flag ON vs OFF) on REAL module loads via Method M
+> (restore the pre-module checkpoint, time a single `AbsoluteTiming[Get[module.wl]]`; raw
+> logs `/tmp/heavyprobe/`): Option/List/Rat/Field 0.97–1.07, Set/Finite/Int 0.95–1.11 =
+> **≈ parity**, vs the Pair descent probe **0.49 (2x)**. KEY: the probe's "pair4" is
+> `rumPairProbePair4Same`, a SPECIFIC deeply-nested expression, NOT the `Pair.wl` module —
+> so the 2x is probe-specific (gain ∝ combinator-conversion fraction; the probe is a
+> ~100%-combinator stress test, real loads are ≈parity; worst-case net-negative plausible
+> from unrecouped compile cost). Method-M validity cross-checked (VM engages from restored
+> state per coverage counters + `AbsoluteTiming` wraps the whole Get). **User directive:
+> the VM is OPT-IN acceleration — each feature an independent zero-cost-off env switch,
+> turned ON only for conversion-heavy tasks; DO NOT flip any VM feature to default-ON.**
+> slices 1+2 stay flag-OFF-default (banked capability + slice-3 foundation). **Now building
+> slice 3 = REPEATC** (Return + self-recursion — the hardest control; primarily for the
+> cross-project VM capability, immediate mma-hol value limited). See
+> `docs/bytecode-vm-design.md` (Measured value + opt-in-toggle principle) + PROGRESS
+> 2026-07-01. Baseline: `rum-snapshot-checkpoints-b471bb4` (v8 kept as the 3055/3126-validated
+> fallback until a new binary+snapshot passes the same bar).
+>
+> **2026-07-01 (prior). Bytecode-VM line: slice 2 SHIPPED (brief-071,
 > KEEP) — compiled ORELSEC/TRYCONV Module bodies, ~2x Pair, byte-identical, flag OFF-default.
 > Rebuilding the snapshot baseline with the new HEAD next. Next slice = 3 (REPEATC).**
 > Grounding (Drule.wl): the hot conversion combinators are all Module-wrapped
