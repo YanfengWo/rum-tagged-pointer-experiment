@@ -81,6 +81,51 @@ hand-written compiler.
 - Could a Lineiform-style meta-JIT ever be worth it for rum, or is that too x86-specific /
   early-stage?
 
+## Backend & meta-JIT decision guidance (discussion 2026-07-01 — reference before any codegen work)
+
+Distilled from a discussion of "if we ever want a bigger win than closure generation."
+
+- **Compile-time LLVM ≠ runtime JIT.** rustc's default backend is LLVM (macOS `gcc` is
+  clang = LLVM too), and it compiles rum for ANY arch at BUILD time — that is why closure
+  generation (brief-074) is portable and FREE: the closures are plain Rust, AOT-compiled
+  by LLVM; there is NO codegen of our own. But that build-time LLVM is not in the shipped
+  binary and gives NO runtime JIT.
+- **If we do NOT do a meta-JIT: nothing to do.** Default LLVM AOT is all we need; the
+  closure layer has no backend concerns. This is the expected resting state.
+- **If we ever do a meta-JIT (far-future, uncertain): embed Cranelift as a runtime
+  codegen LIBRARY** — this is ADDING a dependency rum calls at runtime, NOT "switching
+  rustc's backend" (rustc keeps using LLVM to build rum). Cranelift > embedded LLVM
+  (llvm-sys/inkwell via ORC) for a JIT: pure-Rust, FAST compile, portable (x86-64 + arm64
+  + …). PyPy deliberately wrote its own backends rather than use LLVM precisely because
+  LLVM's codegen is too SLOW for a JIT's fast-compile needs.
+- **NEVER hand-write a codegen backend.** Instruction selection / register allocation /
+  arch lowering / scheduling is a research-grade, many-person-year effort; a naive
+  hand-written codegen produces WORSE machine code than the LLVM-AOT tree-walker (the
+  tree-walker's real work — `evaluate_call`, matching, arithmetic — is already
+  LLVM-optimized; a naive JIT only replaces glue with worse glue → net loss; cf.
+  Lineiform's still-immature hand-rolled x86). Use Cranelift; only write the FRONT (rum
+  body / closure chain → Cranelift IR).
+- **Use the meta-JIT IDEAS, do not sink to raw machine code.** Borrow the PRINCIPLE
+  (derive-from-interpreter, correct-by-construction — already embodied by closure
+  generation) and the GOAL (specialize the closure chain). Give a HIGH-LEVEL IR to
+  Cranelift and let IT descend to the arch; never lift host machine code or hand-write
+  x86 (Lineiform's mechanism — the reason it is x86-only: it needs a per-arch host-code
+  disassembler AND a per-arch codegen).
+- **Even with Cranelift, a meta-JIT's value is UNCERTAIN.** To be worth it, the JIT must
+  OUT-specialize LLVM's AOT (inline the closure chain, cross-node const-fold, eliminate
+  redundant checks) — Lineiform's goal, but early-stage and unproven. So: closure
+  generation is the sensible layer (capability + a free, portable, modest win); a meta-JIT
+  is SPECULATIVE — attempt it only if there is a concrete reason to believe specialization
+  beats AOT, otherwise stop at the closure layer.
+- **Dev-machine note:** currently x86_64 (Intel Mac, `rustc` host `x86_64-apple-darwin`),
+  so Lineiform's x86-only would even run here — but rum is a general kernel and must not
+  tie itself to x86; a portable backend (Cranelift) is the only acceptable JIT choice.
+
+**Bottom line for decisions:** no meta-JIT → just default LLVM AOT, zero backend worry
+(this is brief-074). Meta-JIT → embed Cranelift as a runtime codegen lib + borrow the
+meta-JIT ideas + let Cranelift own the arch; never hand-write codegen, never sink to
+x86_64; and only if specialization is plausibly worth more than AOT.
+
 ## Sources
 
 - [Tracing the Meta-Level: PyPy's Tracing JIT Compiler (Bolz et al.)](https://dl.acm.org/doi/pdf/10.1145/1565824.1565827)
