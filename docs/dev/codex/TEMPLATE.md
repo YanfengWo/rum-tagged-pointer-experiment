@@ -161,6 +161,18 @@ result without the verbatim count / ratio line.
   reserve the full descent for the final confirm. Pure share/decomposition
   diagnostics need ONE clean profiled run (shares are stable within a run), not a
   best-of-N.
+- **Timeout discipline — derive bounds from data, never guess (added 2026-07-01
+  after 4 mis-bounded correctness runs wasted ~40 min).** Set a run's `--timeout`
+  from the HISTORICAL per-file table (memory/PROGRESS: snapshot-path simp≈109s,
+  meson≈122s, proptaut≈465s, meson_proveprop≈836s; `set`+`setProve` is heavy
+  automated proving, NOT light), or from WK internal time × ~4-6 (the descent
+  amplification is higher than the ~3.8x primitive ratio). Also: (a) prefer the
+  SNAPSHOT path (restore a checkpoint + load one file — the reliable, progress-
+  visible way) over cold `bounded-smoke --mode tests` (cold-loads the whole tower,
+  far slower than the snapshot per-file figures); (b) `run_fast`/`run_all` are slow
+  and rum-cli does NOT forward run_fast's subset args — for a targeted check use the
+  snapshot-chain checkpoints, not the full runner; (c) remember an OFF/baseline run
+  can be ~2x SLOWER than the optimized ON run, so bound for the SLOWER side.
 - Stop-loss: same failure twice, or no ratio movement → STOP and report.
 - Minimal diff: no drive-by reformatting, renames, or comment changes outside
   the task.

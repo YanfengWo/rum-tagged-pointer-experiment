@@ -157,3 +157,39 @@ counter (ORELSEC/TRYCONV bodies compiled vs fallback).
    whether the Eval+branch+suspension machinery is proven for slice 3 (REPEATC).
 4. Stop-loss / open questions — what fell back, anything unsure (esp. any suspension
    or evaluation-order edge you were unsure about).
+
+---
+
+## Outcome (Claude gate, 2026-07-01) — DONE + KEEP. ~2x Pair, byte-identical, flag OFF-default.
+
+Committed flag-OFF-default. Codex compiled the exact `Module[{res}, res=eval;
+If[SameQ[res,C],alt,res]]` shape (ORELSEC/TRYCONV), register-izing the non-escaping
+`res` (no gensym), `Op::Eval` + native SameQ + branch, suspension via
+`suspend_with_frame_lazy`. Scope clean (`vm_rhs_template.rs` + `definition_application.rs`).
+
+- **Perf (Claude repro, best-of-2, clean release):** Pair `simpFixpointConv` OFF
+  55.67/58.89s, ON 27.44/29.35s → **ON/OFF best = 0.493 (~2.03x faster)**, non-overlapping.
+  Bigger than the ~modest expectation because ORELSEC/TRYCONV wrap ~every conversion
+  in the descent, so eliminating their Module frame + per-call Set/SameQ/If dispatches
+  compounds over the deep descent.
+- **Correctness (strong; one complete full-tower pass-count deferred):**
+  `cargo test --workspace` 719/0 OFF and ON (debug `debug_assert_eq!` template-vs-tree
+  on EVERY application); `drule_tests` OFF vs ON identical 50/0 (the actual
+  ORELSEC/TRYCONV mma-hol tests, complete, on-target); multiple run_fast attempts
+  byte-identical over their common prefix (arith/set/… hundreds of assertions), no
+  divergence/panic, coverage confirms the 2 combinators compiled; Pair
+  `is_thm=True changed=False`; +7 new unit tests. `res` never escapes and the shape
+  NEVER matches `defineKernel`'s kernel-state Module (trust boundary untouched).
+- **Could NOT obtain a single COMPLETE full-tower OFF==ON pass-count** via run_fast:
+  rum test files are slow (`set`+`setProve` is heavy automated proving, not "light"),
+  rum-cli does not forward run_fast's subset args, and OFF is ~2x slower so it times
+  out sooner — 4 mis-bounded timeout runs (a process failure, see the TEMPLATE
+  timeout rule added this session). Deferred to the pre-default-flip bucket, to be
+  done via the snapshot-chain method (build cp00→cp42 with the new HEAD, then restore
+  a checkpoint + load one file — the reliable targeted path), NOT run_fast/run_all.
+
+**Verdict: KEEP, flag-OFF-default.** Banks the Eval+control+suspension machinery
+(foundation for slice 3 = REPEATC) and a ~2x activatable Pair win. Before flipping
+the default ON (with slice 1's deferred items): the complete full-tower OFF==ON
+(ideally an ON-vs-OFF snapshot byte-diff) + a Strict-mode check + remove the
+eprintln coverage counter + per-Session cache.

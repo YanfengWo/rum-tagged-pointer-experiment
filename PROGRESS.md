@@ -6,6 +6,39 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-07-01 brief-071 VM slice 2 (compiled ORELSEC/TRYCONV Module bodies) — KEEP: ~2x Pair, byte-identical, flag OFF-default
+
+Slice 2 of the bytecode-VM line. Grounding (Drule.wl) showed the hot conversion
+combinators are all Module-wrapped `Module[{res}, res=tryConv[...]; If[res===$convFailed,
+alt, res]]`, so the amplification prize IS these Module bodies. Codex compiled the exact
+ORELSEC/TRYCONV shape into vm_rhs_template.rs (extends slice 1): `Op::Eval` + native
+SameQ + branch; the non-escaping local `res` is REGISTER-IZED (no gensym allocated —
+byte-identical since res never escapes, AND this eliminates the Module-frame setup that
+is the 22% module.resume_initializers cost); suspension via the existing
+suspend_with_frame_lazy. The shape NEVER matches defineKernel's kernel-state Module, so
+the LCF trust boundary ([[mma-hol-module-is-the-trust-boundary]]) is untouched.
+
+**Gate (Claude reproduced):**
+- Perf: Pair simpFixpointConv best-of-2 OFF 55.67/58.89s, ON 27.44/29.35s → ON/OFF best
+  0.493 (**~2.03x faster**). Bigger than expected because ORELSEC/TRYCONV wrap ~every
+  conversion, so eliminating their Module frame + Set/SameQ/If dispatches compounds.
+- Correctness (strong): cargo test --workspace 719/0 OFF and ON (debug differential on
+  every application); drule_tests OFF vs ON identical 50/0 (the actual combinators,
+  complete); multiple run_fast attempts byte-identical over their prefix, no divergence;
+  Pair is_thm=True changed=False; +7 unit tests.
+- NOT obtained: a single COMPLETE full-tower OFF==ON pass-count — rum test files are slow
+  (set+setProve heavy), rum-cli can't subset run_fast, OFF is 2x slower → 4 mis-bounded
+  timeouts (process failure; added a TEMPLATE "timeout discipline" rule). Deferred to the
+  snapshot-chain method (below), not run_fast.
+
+**Verdict: KEEP, flag-OFF-default** (banks Eval+control+suspension machinery for slice 3
+= REPEATC + a ~2x activatable win). Before flipping default ON: complete full-tower OFF==ON
+(ideally an ON-vs-OFF snapshot byte-diff) + Strict check + remove eprintln counter +
+per-Session cache (shared with slice 1's deferred items). User then directed: rebuild the
+snapshot set with the new HEAD as the reliable baseline (checkpoints visible on disk),
+and use checkpoint entry-points to test-load specific files rather than run_fast/run_all.
+See brief-071 Outcome.
+
 ## 2026-07-01 brief-070 VM slice 1 (compiled RHS template) — KEEP: byte-identical, ~6% Pair, flag OFF-default
 
 First product-code step of the bytecode-VM line (`docs/bytecode-vm-design.md` slice

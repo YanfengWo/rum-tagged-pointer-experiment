@@ -1,6 +1,31 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-07-01 (NEWEST — read THIS first). Bytecode-VM line: slice 1 SHIPPED (brief-070,
+> **2026-07-01 (NEWEST — read THIS first). Bytecode-VM line: slice 2 SHIPPED (brief-071,
+> KEEP) — compiled ORELSEC/TRYCONV Module bodies, ~2x Pair, byte-identical, flag OFF-default.
+> Rebuilding the snapshot baseline with the new HEAD next. Next slice = 3 (REPEATC).**
+> Grounding (Drule.wl): the hot conversion combinators are all Module-wrapped
+> `Module[{res}, res=tryConv[...]; If[res===$convFailed, alt, res]]`, so the amplification
+> prize IS these Module bodies. Slice 2 compiles the exact ORELSEC/TRYCONV shape (extends
+> slice 1's `vm_rhs_template.rs`): `Op::Eval` + native SameQ + branch; the non-escaping
+> local `res` is REGISTER-IZED (no gensym — byte-identical since res never escapes, AND it
+> eliminates the 22% module.resume_initializers cost); suspension via the existing
+> `suspend_with_frame_lazy`; the shape NEVER matches `defineKernel`'s kernel-state Module
+> (trust boundary untouched — see [[mma-hol-module-is-the-trust-boundary]] / bytecode-vm-design.md).
+> Gate (Claude-reproduced): Pair `simpFixpointConv` best-of-2 OFF 55.67/58.89 → ON
+> 27.44/29.35s = **0.493 (~2.03x faster)**; `cargo test --workspace` 719/0 OFF and ON
+> (debug differential); `drule_tests` OFF vs ON identical 50/0 (the actual combinators);
+> partial run_fast byte-identical, no divergence; is_thm unchanged; +7 tests. A COMPLETE
+> full-tower OFF==ON pass-count was NOT obtained (rum test files slow, rum-cli can't subset
+> run_fast, OFF 2x slower → 4 mis-bounded timeouts; added a TEMPLATE "timeout discipline"
+> rule). **Deferred to the snapshot-chain method** (build cp00→cp42 with the new HEAD,
+> restore a checkpoint + load one file — the reliable, disk-visible-progress path), NOT
+> run_fast/run_all. **In progress: rebuild the snapshot set with the new HEAD as the
+> reliable perf/correctness baseline** (`scripts/snapshot-checkpoint-chain.sh` /
+> `rebuild-snapshot.sh`). Before flipping the VM default ON: complete full-tower OFF==ON
+> (ideally ON-vs-OFF snapshot byte-diff) + Strict check + remove the eprintln coverage
+> counter + per-Session cache. Slice 1 (brief-070) below is the prior step.
+>
+> **2026-07-01 (prior). Bytecode-VM line: slice 1 SHIPPED (brief-070,
 > KEEP) — compiled RHS template, byte-identical, ~6% Pair, flag OFF-default. Next = slice 2
 > (Eval + control combinators).** User chose route C (compiled-body VM) for its cross-project
 > capability value. `docs/bytecode-vm-design.md` is the architecture (symbolic IR: PushConst/
