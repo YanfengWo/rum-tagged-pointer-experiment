@@ -20,6 +20,16 @@
 > gate = drule ON == 50/0) — note a conservative version may compile little more than slices
 > 2/3; OR (B) defer the general VM (slices 1-3 are the shipped opt-in VM). See brief-073
 > Outcome + `docs/bytecode-vm-general-plan.md`. Cold backup `rum-2026-07-01-e02e39c.bundle`.
+> **UPDATE (user: "a good failure — study before deciding"):** researched how mature
+> interpreted-language VMs avoid this trap → `docs/bytecode-vm-research-notes.md`. Key
+> lesson: our op-compiler RE-DERIVED WL semantics (a second spec that can diverge — and
+> did); mature designs DERIVE the fast path FROM the interpreter so it can't diverge
+> (PyPy meta-tracing = JIT generated from the interpreter; compile-to-closures/Feeley =
+> each node → a closure that CALLS the real eval, semantics by construction; Lineiform =
+> Rust meta-JIT over a closure-generation interpreter). **Reframed direction: closure
+> generation that DELEGATES hold/attributes/order to the existing `evaluate_call`
+> (precompute STRUCTURE only, never semantics) → byte-identical for arbitrary bodies by
+> construction.** Decision deliberately NOT rushed.
 >
 > **2026-07-01 (prior). Bytecode-VM line COMPLETE: slice 3 (REPEATC)
 > SHIPPED (brief-072, KEEP) — Return+recursion compilation byte-identical; the compiled-body
