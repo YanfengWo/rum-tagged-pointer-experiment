@@ -2,69 +2,69 @@ use super::*;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 const RHS_TEMPLATE_ENV: &str = "RUM_VM_RHS_TEMPLATE";
 
 static RHS_TEMPLATE_ENABLED: AtomicU8 = AtomicU8::new(0);
 static RHS_TEMPLATE_COMPILED_DISTINCT: AtomicU64 = AtomicU64::new(0);
 static RHS_TEMPLATE_FALLBACK_DISTINCT: AtomicU64 = AtomicU64::new(0);
-static RHS_TEMPLATE_MODULE_IF_SAMEQ_DISTINCT: AtomicU64 = AtomicU64::new(0);
-static RHS_TEMPLATE_MODULE_REPEATC_DISTINCT: AtomicU64 = AtomicU64::new(0);
 
-#[derive(Clone, Debug)]
-enum Op {
-    PushConst(SharedExpr),
-    PushBinding(usize),
-    PushLocal(usize),
-    Construct { argc: usize },
-    Eval,
-}
+type RuntimeStateRef = Arc<Mutex<RuntimeState>>;
+type CompiledClosure =
+    Arc<dyn Fn(&mut Session, RuntimeStateRef) -> Result<Expr, EvalError> + Send + Sync + 'static>;
 
-#[derive(Clone, Debug)]
-enum CodeProgram {
-    Construct {
-        ops: Vec<Op>,
-    },
-    ModuleIfSameQ {
-        rhs_ops: Vec<Op>,
-        const_ops: Vec<Op>,
-        alt_ops: Vec<Op>,
-    },
-    ModuleRepeatC {
-        res_rhs_ops: Vec<Op>,
-        failed_const_ops: Vec<Op>,
-        failed_return_ops: Vec<Op>,
-        rhs_rhs_ops: Vec<Op>,
-        stable_condition_ops: Vec<Op>,
-        stable_return_ops: Vec<Op>,
-        final_ops: Vec<Op>,
-    },
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 struct CodeObject {
     source: Expr,
-    program: CodeProgram,
+    body: CompiledClosure,
+    source_template: Option<TemplateNode>,
     slots: Vec<Symbol>,
     const_symbols: Vec<Symbol>,
+    local_specs: Vec<LocalSpec>,
+    shape_count: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum LocalKind {
+    Module,
+    With,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct LocalSpec {
+    symbol: Symbol,
+    kind: LocalKind,
 }
 
 #[derive(Clone, Debug)]
+struct RuntimeState {
+    slot_values: Vec<Expr>,
+    locals: Vec<LocalRuntime>,
+    option_scope: Option<OptionValueScope>,
+}
+
+#[derive(Clone, Debug)]
+enum LocalRuntime {
+    Module { fresh: Symbol, value: Option<Expr> },
+    With { value: Option<Expr> },
+}
+
+#[derive(Clone)]
 pub(super) enum PreparedRhsTemplate {
     Substituted(Expr),
-    CompiledModule(PreparedCompiledRhsTemplate),
+    Compiled(PreparedCompiledRhsTemplate),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(super) struct PreparedCompiledRhsTemplate {
-    code: CodeObject,
+    code: Arc<CodeObject>,
     slot_values: Vec<Expr>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 enum CacheEntry {
-    Compiled(CodeObject),
+    Compiled(Arc<CodeObject>),
     NonCompilable(Expr),
 }
 
@@ -98,11 +98,21 @@ struct TemplateCache {
     reported_fallback: HashSet<RhsTemplateKey>,
 }
 
+#[derive(Clone)]
+enum TemplateNode {
+    Const(SharedExpr),
+    Binding(usize),
+    Local(usize),
+    Call {
+        head: Box<TemplateNode>,
+        args: Vec<TemplateNode>,
+    },
+}
+
 #[derive(Clone, Copy)]
-enum CompiledTemplateKind {
-    Construct,
-    ModuleIfSameQ,
-    ModuleRepeatC,
+struct LocalBinding {
+    symbol: Symbol,
+    slot: usize,
 }
 
 pub(super) fn prepare_rule_bindings_for_rhs_with_template(
@@ -136,10 +146,10 @@ pub(super) fn trace_rhs_for_prepared_template(
 ) -> Expr {
     match prepared {
         PreparedRhsTemplate::Substituted(expr) => expr.clone(),
-        PreparedRhsTemplate::CompiledModule(_) if include_payload => {
+        PreparedRhsTemplate::Compiled(_) if include_payload => {
             substitute_rule_bindings_for_rhs(original, bindings, may_splice_without_bindings)
         }
-        PreparedRhsTemplate::CompiledModule(_) => original.clone(),
+        PreparedRhsTemplate::Compiled(_) => original.clone(),
     }
 }
 
@@ -150,10 +160,10 @@ pub(super) fn evaluate_prepared_rhs_template(
 ) -> Result<Expr, EvalError> {
     match prepared {
         PreparedRhsTemplate::Substituted(rhs) => session.evaluate_definition_rhs(option_scope, rhs),
-        PreparedRhsTemplate::CompiledModule(prepared) => {
-            let result = execute_compiled_module_template(session, prepared, option_scope);
-            let outcome = session.suspend_with_result_frame(result, |_, outcome| {
-                finish_compiled_definition_rhs_result(outcome)
+        PreparedRhsTemplate::Compiled(prepared) => {
+            let result = execute_compiled_body(session, prepared, option_scope);
+            let outcome = session.suspend_with_result_frame_lazy(result, || {
+                move |_, outcome| finish_compiled_definition_rhs_result(outcome)
             });
 
             match outcome {
@@ -192,29 +202,19 @@ fn prepare_rule_bindings_for_rhs_with_template_slow(
     evaluation_epoch: u64,
 ) -> PreparedRhsTemplate {
     if let Some(code) = cached_rhs_template(expr, bindings, evaluation_epoch) {
-        match &code.program {
-            CodeProgram::Construct { .. } => {
-                if let Some(result) = execute_rhs_template(&code, bindings) {
-                    #[cfg(debug_assertions)]
-                    {
-                        let expected = substitute_rule_bindings_for_rhs(
-                            expr,
-                            bindings,
-                            may_splice_without_bindings,
-                        );
-                        debug_assert_eq!(
-                            result, expected,
-                            "RHS template diverged from tree substitution"
-                        );
-                    }
-                    return PreparedRhsTemplate::Substituted(result);
-                }
-            }
-            CodeProgram::ModuleIfSameQ { .. } | CodeProgram::ModuleRepeatC { .. } => {
-                if let Some(prepared) = prepare_compiled_module_template(code, bindings) {
-                    return PreparedRhsTemplate::CompiledModule(prepared);
-                }
-            }
+        if let Some(slot_values) = slot_values_for_code(&code, bindings) {
+            #[cfg(debug_assertions)]
+            debug_assert_template_matches_tree_walk(
+                &code,
+                &slot_values,
+                expr,
+                bindings,
+                may_splice_without_bindings,
+            );
+            return PreparedRhsTemplate::Compiled(PreparedCompiledRhsTemplate {
+                code,
+                slot_values,
+            });
         }
     }
 
@@ -239,7 +239,7 @@ fn cached_rhs_template(
     expr: &Expr,
     bindings: &SymbolExprMap,
     evaluation_epoch: u64,
-) -> Option<CodeObject> {
+) -> Option<Arc<CodeObject>> {
     let key = rhs_template_key(expr);
     let mut cache = rhs_template_cache()
         .lock()
@@ -262,14 +262,13 @@ fn cached_rhs_template(
         }
     }
 
-    let compiled = compile_rhs_template(expr, bindings);
+    let compiled = compile_body(expr, bindings).map(Arc::new);
     match compiled {
         Some(code) => {
-            let kind = compiled_template_kind(&code.program);
             cache
                 .entries
                 .insert(key.clone(), CacheEntry::Compiled(code.clone()));
-            record_distinct_template_compile(&mut cache, key, kind);
+            record_distinct_template_compile(&mut cache, key, code.shape_count);
             Some(code)
         }
         None => {
@@ -300,23 +299,13 @@ fn rhs_template_key(expr: &Expr) -> RhsTemplateKey {
 fn record_distinct_template_compile(
     cache: &mut TemplateCache,
     key: RhsTemplateKey,
-    kind: CompiledTemplateKind,
+    shape_count: usize,
 ) {
     if cache.reported_compiled.insert(key) {
         let compiled = RHS_TEMPLATE_COMPILED_DISTINCT.fetch_add(1, Ordering::Relaxed) + 1;
         let fallback = RHS_TEMPLATE_FALLBACK_DISTINCT.load(Ordering::Relaxed);
-        let module_if_sameq = if matches!(kind, CompiledTemplateKind::ModuleIfSameQ) {
-            RHS_TEMPLATE_MODULE_IF_SAMEQ_DISTINCT.fetch_add(1, Ordering::Relaxed) + 1
-        } else {
-            RHS_TEMPLATE_MODULE_IF_SAMEQ_DISTINCT.load(Ordering::Relaxed)
-        };
-        let module_repeatc = if matches!(kind, CompiledTemplateKind::ModuleRepeatC) {
-            RHS_TEMPLATE_MODULE_REPEATC_DISTINCT.fetch_add(1, Ordering::Relaxed) + 1
-        } else {
-            RHS_TEMPLATE_MODULE_REPEATC_DISTINCT.load(Ordering::Relaxed)
-        };
         eprintln!(
-            "rum-vm-rhs-template coverage compiled_distinct={compiled} fallback_distinct={fallback} module_if_sameq_distinct={module_if_sameq} module_repeatc_distinct={module_repeatc}"
+            "rum-vm-rhs-template coverage closure_compiled_distinct={compiled} fallback_distinct={fallback} last_shape_nodes={shape_count}"
         );
     }
 }
@@ -325,204 +314,318 @@ fn record_distinct_template_fallback(cache: &mut TemplateCache, key: RhsTemplate
     if cache.reported_fallback.insert(key) {
         let fallback = RHS_TEMPLATE_FALLBACK_DISTINCT.fetch_add(1, Ordering::Relaxed) + 1;
         let compiled = RHS_TEMPLATE_COMPILED_DISTINCT.load(Ordering::Relaxed);
-        let module_if_sameq = RHS_TEMPLATE_MODULE_IF_SAMEQ_DISTINCT.load(Ordering::Relaxed);
-        let module_repeatc = RHS_TEMPLATE_MODULE_REPEATC_DISTINCT.load(Ordering::Relaxed);
         eprintln!(
-            "rum-vm-rhs-template coverage compiled_distinct={compiled} fallback_distinct={fallback} module_if_sameq_distinct={module_if_sameq} module_repeatc_distinct={module_repeatc}"
+            "rum-vm-rhs-template coverage closure_compiled_distinct={compiled} fallback_distinct={fallback}"
         );
     }
 }
 
-fn compiled_template_kind(program: &CodeProgram) -> CompiledTemplateKind {
-    match program {
-        CodeProgram::Construct { .. } => CompiledTemplateKind::Construct,
-        CodeProgram::ModuleIfSameQ { .. } => CompiledTemplateKind::ModuleIfSameQ,
-        CodeProgram::ModuleRepeatC { .. } => CompiledTemplateKind::ModuleRepeatC,
-    }
-}
-
-fn compile_rhs_template(expr: &Expr, bindings: &SymbolExprMap) -> Option<CodeObject> {
-    let mut module_compiler = RhsTemplateCompiler::new(bindings);
-    if let Some(program) = module_compiler.compile_module_repeatc(expr) {
-        return Some(CodeObject {
-            source: expr.clone(),
-            program,
-            slots: module_compiler.slots,
-            const_symbols: module_compiler.const_symbols,
-        });
-    }
-
-    let mut module_compiler = RhsTemplateCompiler::new(bindings);
-    if let Some(program) = module_compiler.compile_module_if_sameq(expr) {
-        return Some(CodeObject {
-            source: expr.clone(),
-            program,
-            slots: module_compiler.slots,
-            const_symbols: module_compiler.const_symbols,
-        });
-    }
-
-    let mut compiler = RhsTemplateCompiler::new(bindings);
-    compiler.compile_expr(expr)?;
+fn compile_body(expr: &Expr, bindings: &SymbolExprMap) -> Option<CodeObject> {
+    let mut compiler = ClosureBodyCompiler::new(bindings);
+    let body = compiler.compile_eval(expr)?;
+    let source_template = if compiler.local_specs.is_empty() {
+        Some(compiler.compile_template(expr)?)
+    } else {
+        None
+    };
     Some(CodeObject {
         source: expr.clone(),
-        program: CodeProgram::Construct { ops: compiler.ops },
+        body,
+        source_template,
         slots: compiler.slots,
         const_symbols: compiler.const_symbols,
+        local_specs: compiler.local_specs,
+        shape_count: compiler.shape_count,
     })
 }
 
-struct RhsTemplateCompiler<'a> {
-    bindings: &'a SymbolExprMap,
-    ops: Vec<Op>,
-    slots: Vec<Symbol>,
-    const_symbols: Vec<Symbol>,
-    local_symbols: Vec<Symbol>,
+#[cfg(debug_assertions)]
+fn debug_assert_template_matches_tree_walk(
+    code: &CodeObject,
+    slot_values: &[Expr],
+    expr: &Expr,
+    bindings: &SymbolExprMap,
+    may_splice_without_bindings: bool,
+) {
+    let Some(source_template) = &code.source_template else {
+        return;
+    };
+    let state = Arc::new(Mutex::new(RuntimeState {
+        slot_values: slot_values.to_vec(),
+        locals: Vec::new(),
+        option_scope: None,
+    }));
+    let result = instantiate_template(source_template, &state)
+        .expect("compiled source template should instantiate with prepared bindings");
+    let expected = substitute_rule_bindings_for_rhs(expr, bindings, may_splice_without_bindings);
+    debug_assert_eq!(
+        result, expected,
+        "RHS closure template diverged from tree substitution"
+    );
 }
 
-impl<'a> RhsTemplateCompiler<'a> {
+struct ClosureBodyCompiler<'a> {
+    bindings: &'a SymbolExprMap,
+    slots: Vec<Symbol>,
+    const_symbols: Vec<Symbol>,
+    local_specs: Vec<LocalSpec>,
+    locals: Vec<LocalBinding>,
+    shape_count: usize,
+}
+
+impl<'a> ClosureBodyCompiler<'a> {
     fn new(bindings: &'a SymbolExprMap) -> Self {
         Self {
             bindings,
-            ops: Vec::new(),
             slots: Vec::new(),
             const_symbols: Vec::new(),
-            local_symbols: Vec::new(),
+            local_specs: Vec::new(),
+            locals: Vec::new(),
+            shape_count: 0,
         }
     }
 
-    fn compile_module_repeatc(&mut self, expr: &Expr) -> Option<CodeProgram> {
-        let parts = module_repeatc_parts(expr)?;
-        if self.bindings.contains_key(&parts.res_local)
-            || self.bindings.contains_key(&parts.rhs_local)
-        {
-            return None;
-        }
-
-        let locals = [parts.res_local, parts.rhs_local];
-        if expr_contains_any_symbol(parts.res_rhs, &locals)
-            || expr_contains_any_symbol(parts.failed_const, &locals)
-            || expr_contains_any_symbol(parts.failed_return, &locals)
-            || !local_reads_are_register_safe(parts.rhs_rhs, &locals)
-            || !local_reads_are_register_safe(parts.stable_condition, &locals)
-            || !local_reads_are_register_safe(parts.stable_return, &locals)
-            || !local_reads_are_register_safe(parts.final_expr, &locals)
-            || repeatc_part_contains_nested_return(&parts)
-        {
-            return None;
-        }
-
-        self.local_symbols = locals.to_vec();
-
-        let mut res_rhs_ops = self.compile_expr_to_ops(parts.res_rhs)?;
-        res_rhs_ops.push(Op::Eval);
-        let failed_const_ops = self.compile_expr_to_ops(parts.failed_const)?;
-        let mut failed_return_ops = self.compile_expr_to_ops(parts.failed_return)?;
-        failed_return_ops.push(Op::Eval);
-        let mut rhs_rhs_ops = self.compile_expr_to_ops(parts.rhs_rhs)?;
-        rhs_rhs_ops.push(Op::Eval);
-        let mut stable_condition_ops = self.compile_expr_to_ops(parts.stable_condition)?;
-        stable_condition_ops.push(Op::Eval);
-        let mut stable_return_ops = self.compile_expr_to_ops(parts.stable_return)?;
-        stable_return_ops.push(Op::Eval);
-        let mut final_ops = self.compile_expr_to_ops(parts.final_expr)?;
-        final_ops.push(Op::Eval);
-
-        Some(CodeProgram::ModuleRepeatC {
-            res_rhs_ops,
-            failed_const_ops,
-            failed_return_ops,
-            rhs_rhs_ops,
-            stable_condition_ops,
-            stable_return_ops,
-            final_ops,
-        })
-    }
-
-    fn compile_module_if_sameq(&mut self, expr: &Expr) -> Option<CodeProgram> {
-        let parts = module_if_sameq_parts(expr)?;
-        if self.is_top_level_bound_symbol(parts.rhs)
-            || self.is_top_level_bound_symbol(parts.const_expr)
-            || self.is_top_level_bound_symbol(parts.alt)
-        {
-            return None;
-        }
-
-        let mut rhs_ops = self.compile_expr_to_ops(parts.rhs)?;
-        rhs_ops.push(Op::Eval);
-        let const_ops = self.compile_expr_to_ops(parts.const_expr)?;
-        let mut alt_ops = self.compile_expr_to_ops(parts.alt)?;
-        alt_ops.push(Op::Eval);
-
-        Some(CodeProgram::ModuleIfSameQ {
-            rhs_ops,
-            const_ops,
-            alt_ops,
-        })
-    }
-
-    fn compile_expr_to_ops(&mut self, expr: &Expr) -> Option<Vec<Op>> {
-        let start = self.ops.len();
-        self.compile_expr(expr)?;
-        Some(self.ops.split_off(start))
-    }
-
-    fn compile_expr(&mut self, expr: &Expr) -> Option<()> {
-        if rhs_contains_uncompiled_scope(expr) {
-            return None;
-        }
-
-        if self.can_push_const_subtree(expr) {
-            self.collect_const_symbols(expr);
-            self.ops.push(Op::PushConst(SharedExpr::from(expr.clone())));
-            return Some(());
-        }
-
+    fn compile_eval(&mut self, expr: &Expr) -> Option<CompiledClosure> {
+        self.shape_count += 1;
         match expr {
-            Expr::Atom(Atom::Symbol(symbol)) if self.local_slot(*symbol).is_some() => {
-                let slot = self
-                    .local_slot(*symbol)
-                    .expect("checked local slot should still exist");
-                self.ops.push(Op::PushLocal(slot));
-                Some(())
+            Expr::Call { head, args } if is_system_symbol_name(head, "If") => self.compile_if(args),
+            Expr::Call { head, args } if is_system_symbol_name(head, "CompoundExpression") => {
+                self.compile_compound(args)
+            }
+            Expr::Call { head, args } if is_system_symbol_name(head, "Return") => {
+                self.compile_return(args)
+            }
+            Expr::Call { head, args } if is_system_symbol_name(head, "Set") => {
+                self.compile_set(args).or_else(|| self.compile_leaf(expr))
+            }
+            Expr::Call { head, args }
+                if is_system_symbol_name(head, "Module") && args.len() == 2 =>
+            {
+                self.compile_module(args)
+            }
+            Expr::Call { head, args } if is_system_symbol_name(head, "With") && args.len() == 2 => {
+                self.compile_with(args)
+            }
+            Expr::Call { head, .. } if is_system_symbol_name(head, "Function") => None,
+            _ => self.compile_leaf(expr),
+        }
+    }
+
+    fn compile_if(&mut self, args: &SharedArgs) -> Option<CompiledClosure> {
+        if !(2..=4).contains(&args.len()) {
+            return None;
+        }
+        let condition = self.compile_eval(&args[0])?;
+        let true_branch = self.compile_eval(&args[1])?;
+        let false_branch = if args.len() >= 3 {
+            Some(self.compile_eval(&args[2])?)
+        } else {
+            None
+        };
+        let unknown_branch = if args.len() == 4 {
+            Some(self.compile_eval(&args[3])?)
+        } else {
+            None
+        };
+        let residual_templates = args
+            .iter()
+            .map(|arg| self.compile_template(arg))
+            .collect::<Option<Vec<_>>>()?;
+
+        Some(Arc::new(move |session, state| {
+            let result = condition(session, state.clone());
+            let value = session.suspend_with_frame_lazy(result, || {
+                let true_branch = true_branch.clone();
+                let false_branch = false_branch.clone();
+                let unknown_branch = unknown_branch.clone();
+                let residual_templates = residual_templates.clone();
+                let state = state.clone();
+                move |session, condition| {
+                    resume_compiled_if(
+                        session,
+                        state,
+                        condition,
+                        true_branch,
+                        false_branch,
+                        unknown_branch,
+                        residual_templates,
+                    )
+                }
+            })?;
+            resume_compiled_if(
+                session,
+                state,
+                value,
+                true_branch.clone(),
+                false_branch.clone(),
+                unknown_branch.clone(),
+                residual_templates.clone(),
+            )
+        }))
+    }
+
+    fn compile_compound(&mut self, args: &SharedArgs) -> Option<CompiledClosure> {
+        let items = args
+            .iter()
+            .map(|arg| self.compile_eval(arg))
+            .collect::<Option<Vec<_>>>()?;
+        let items = Arc::new(items);
+        Some(Arc::new(move |session, state| {
+            resume_compiled_compound(session, items.clone(), state, 0)
+        }))
+    }
+
+    fn compile_return(&mut self, args: &SharedArgs) -> Option<CompiledClosure> {
+        match args.as_slice() {
+            [] => Some(Arc::new(|_, _| {
+                Err(EvalError::Return {
+                    value: system_expr("Null"),
+                })
+            })),
+            [value] => {
+                let value = self.compile_eval(value)?;
+                Some(Arc::new(move |session, state| {
+                    let result = value(session, state.clone());
+                    let value = session.suspend_with_frame_lazy(result, || {
+                        move |_, value| Err(EvalError::Return { value })
+                    })?;
+                    Err(EvalError::Return { value })
+                }))
+            }
+            _ => None,
+        }
+    }
+
+    fn compile_set(&mut self, args: &SharedArgs) -> Option<CompiledClosure> {
+        let [lhs, rhs] = args.as_slice() else {
+            return None;
+        };
+        let symbol = expr_as_symbol(lhs)?;
+        let local = self.visible_local(*symbol)?;
+        let rhs = self.compile_eval(rhs)?;
+        Some(Arc::new(move |session, state| {
+            let result = rhs(session, state.clone());
+            let value = session.suspend_with_frame_lazy(result, || {
+                let state = state.clone();
+                move |_, value| {
+                    set_local_value(&state, local.slot, value.clone());
+                    Ok(value)
+                }
+            })?;
+            set_local_value(&state, local.slot, value.clone());
+            Ok(value)
+        }))
+    }
+
+    fn compile_module(&mut self, args: &SharedArgs) -> Option<CompiledClosure> {
+        let items = parse_module_binding_list(&args[0])?;
+        if items.is_empty() || duplicate_scoped_symbols(items.iter().map(|(symbol, _)| *symbol)) {
+            return None;
+        }
+        let local_symbols = items.iter().map(|(symbol, _)| *symbol).collect::<Vec<_>>();
+        if !locals_are_safe_in_compiled_expr(&args[1], &local_symbols) {
+            return None;
+        }
+
+        let local_base = self.locals.len();
+        let mut local_slots = Vec::with_capacity(items.len());
+        for (symbol, _) in &items {
+            let slot = self.push_local(*symbol, LocalKind::Module);
+            local_slots.push((slot, *symbol));
+        }
+
+        let mut initializers = Vec::new();
+        for (index, (_, init)) in items.iter().enumerate() {
+            if let Some(init) = init {
+                initializers.push((local_slots[index].0, self.compile_eval(init)?));
+            }
+        }
+        let body = self.compile_eval(&args[1])?;
+        self.locals.truncate(local_base);
+
+        let initializers = Arc::new(initializers);
+        Some(Arc::new(move |session, state| {
+            initialize_module_locals(session, &state, &local_slots);
+            resume_module_initializers(session, initializers.clone(), body.clone(), state, 0)
+        }))
+    }
+
+    fn compile_with(&mut self, args: &SharedArgs) -> Option<CompiledClosure> {
+        let items = parse_with_binding_list(&args[0])?;
+        if items.is_empty() || duplicate_scoped_symbols(items.iter().map(|(symbol, _)| *symbol)) {
+            return None;
+        }
+
+        let local_base = self.locals.len();
+        let mut initializers = Vec::with_capacity(items.len());
+        for (symbol, rhs) in &items {
+            let rhs = self.compile_eval(rhs)?;
+            let slot = self.push_local(*symbol, LocalKind::With);
+            initializers.push((slot, rhs));
+        }
+        let body = self.compile_eval(&args[1])?;
+        self.locals.truncate(local_base);
+
+        let initializers = Arc::new(initializers);
+        Some(Arc::new(move |session, state| {
+            initialize_with_locals(&state, &initializers);
+            resume_with_initializers(session, initializers.clone(), body.clone(), state, 0)
+        }))
+    }
+
+    fn compile_leaf(&mut self, expr: &Expr) -> Option<CompiledClosure> {
+        if leaf_contains_uncompiled_scope(expr) {
+            return None;
+        }
+        let template = self.compile_template(expr)?;
+        Some(Arc::new(move |session, state| {
+            let expr = instantiate_template(&template, &state)
+                .expect("compiled leaf template should instantiate with prepared bindings");
+            evaluate_instantiated_expr(session, state, expr)
+        }))
+    }
+
+    fn compile_template(&mut self, expr: &Expr) -> Option<TemplateNode> {
+        match expr {
+            Expr::Atom(Atom::Symbol(symbol)) if self.visible_local(*symbol).is_some() => {
+                Some(TemplateNode::Local(
+                    self.visible_local(*symbol)
+                        .expect("checked local should remain visible")
+                        .slot,
+                ))
             }
             Expr::Atom(Atom::Symbol(symbol)) if self.bindings.contains_key(symbol) => {
-                let slot = self.binding_slot(*symbol);
-                self.ops.push(Op::PushBinding(slot));
-                Some(())
+                Some(TemplateNode::Binding(self.binding_slot(*symbol)))
             }
             Expr::Atom(Atom::Symbol(symbol)) => {
                 self.record_const_symbol(*symbol);
-                self.ops.push(Op::PushConst(SharedExpr::from(expr.clone())));
-                Some(())
+                Some(TemplateNode::Const(SharedExpr::from(expr.clone())))
             }
-            Expr::Atom(_) => {
-                self.ops.push(Op::PushConst(SharedExpr::from(expr.clone())));
-                Some(())
-            }
+            Expr::Atom(_) => Some(TemplateNode::Const(SharedExpr::from(expr.clone()))),
             Expr::Call { head, args } => {
-                self.compile_expr(head)?;
-                for arg in args.iter() {
-                    self.compile_expr(arg)?;
-                }
-                self.ops.push(Op::Construct { argc: args.len() });
-                Some(())
+                let head = Box::new(self.compile_template(head)?);
+                let args = args
+                    .iter()
+                    .map(|arg| self.compile_template(arg))
+                    .collect::<Option<Vec<_>>>()?;
+                Some(TemplateNode::Call { head, args })
             }
         }
     }
 
-    fn is_top_level_bound_symbol(&self, expr: &Expr) -> bool {
-        matches!(expr, Expr::Atom(Atom::Symbol(symbol)) if self.bindings.contains_key(symbol))
+    fn push_local(&mut self, symbol: Symbol, kind: LocalKind) -> usize {
+        let slot = self.local_specs.len();
+        self.local_specs.push(LocalSpec { symbol, kind });
+        self.locals.push(LocalBinding { symbol, slot });
+        slot
     }
 
-    fn can_push_const_subtree(&self, expr: &Expr) -> bool {
-        !expr_contains_bound_symbol(expr, self.bindings)
-            && !expr_contains_any_symbol(expr, &self.local_symbols)
-            && !rule_rhs_may_splice_without_bindings(expr)
-    }
-
-    fn local_slot(&self, symbol: Symbol) -> Option<usize> {
-        self.local_symbols.iter().position(|slot| *slot == symbol)
+    fn visible_local(&self, symbol: Symbol) -> Option<LocalBinding> {
+        self.locals
+            .iter()
+            .rev()
+            .find(|local| local.symbol == symbol)
+            .copied()
     }
 
     fn binding_slot(&mut self, symbol: Symbol) -> usize {
@@ -535,328 +638,11 @@ impl<'a> RhsTemplateCompiler<'a> {
         }
     }
 
-    fn collect_const_symbols(&mut self, expr: &Expr) {
-        match expr {
-            Expr::Atom(Atom::Symbol(symbol)) => self.record_const_symbol(*symbol),
-            Expr::Atom(_) => {}
-            Expr::Call { head, args } => {
-                self.collect_const_symbols(head);
-                for arg in args.iter() {
-                    self.collect_const_symbols(arg);
-                }
-            }
-        }
-    }
-
     fn record_const_symbol(&mut self, symbol: Symbol) {
         if !self.const_symbols.contains(&symbol) {
             self.const_symbols.push(symbol);
         }
     }
-}
-
-struct ModuleIfSameQParts<'a> {
-    rhs: &'a Expr,
-    const_expr: &'a Expr,
-    alt: &'a Expr,
-}
-
-struct ModuleRepeatCParts<'a> {
-    res_local: Symbol,
-    rhs_local: Symbol,
-    res_rhs: &'a Expr,
-    failed_const: &'a Expr,
-    failed_return: &'a Expr,
-    rhs_rhs: &'a Expr,
-    stable_condition: &'a Expr,
-    stable_return: &'a Expr,
-    final_expr: &'a Expr,
-}
-
-fn module_repeatc_parts(expr: &Expr) -> Option<ModuleRepeatCParts<'_>> {
-    let Expr::Call { head, args } = expr else {
-        return None;
-    };
-    if !is_system_symbol_name(head, "Module") || args.len() != 2 {
-        return None;
-    }
-
-    let locals = parse_module_binding_list(&args[0])?;
-    let [(res_local, res_init), (rhs_local, rhs_init)] = locals.as_slice() else {
-        return None;
-    };
-    if res_init.is_some() || rhs_init.is_some() || res_local == rhs_local {
-        return None;
-    }
-
-    let items = compound_expression_items(&args[1])?;
-    let [set_res, failed_if, set_rhs, stable_if, final_expr] = items else {
-        return None;
-    };
-
-    let (set_res_lhs, res_rhs) = set_assignment_parts(set_res)?;
-    if set_res_lhs != res_local {
-        return None;
-    }
-
-    let (failed_condition, failed_return_call) = if_two_arg_parts(failed_if)?;
-    let (failed_lhs, failed_const) = sameq_two_arg_parts(failed_condition)?;
-    if failed_lhs != res_local {
-        return None;
-    }
-    let failed_return = return_one_arg_parts(failed_return_call)?;
-
-    let (set_rhs_lhs, rhs_rhs) = set_assignment_parts(set_rhs)?;
-    if set_rhs_lhs != rhs_local {
-        return None;
-    }
-
-    let (stable_condition, stable_return_call) = if_two_arg_parts(stable_if)?;
-    let stable_return = return_one_arg_parts(stable_return_call)?;
-
-    Some(ModuleRepeatCParts {
-        res_local: *res_local,
-        rhs_local: *rhs_local,
-        res_rhs,
-        failed_const,
-        failed_return,
-        rhs_rhs,
-        stable_condition,
-        stable_return,
-        final_expr,
-    })
-}
-
-fn module_if_sameq_parts(expr: &Expr) -> Option<ModuleIfSameQParts<'_>> {
-    let Expr::Call { head, args } = expr else {
-        return None;
-    };
-    if !is_system_symbol_name(head, "Module") || args.len() != 2 {
-        return None;
-    }
-
-    let locals = parse_module_binding_list(&args[0])?;
-    let [(local, init)] = locals.as_slice() else {
-        return None;
-    };
-    if init.is_some() {
-        return None;
-    }
-
-    let (set_expr, if_expr) = compound_expression_pair(&args[1])?;
-    let (set_lhs, rhs) = set_assignment_parts(set_expr)?;
-    if set_lhs != local {
-        return None;
-    }
-
-    let (condition, alt, else_branch) = if_three_arg_parts(if_expr)?;
-    if expr_as_symbol(else_branch) != Some(local) {
-        return None;
-    }
-
-    let (same_lhs, const_expr) = sameq_two_arg_parts(condition)?;
-    if same_lhs != local {
-        return None;
-    }
-
-    if expr_contains_symbol(rhs, local)
-        || expr_contains_symbol(const_expr, local)
-        || expr_contains_symbol(alt, local)
-    {
-        return None;
-    }
-
-    Some(ModuleIfSameQParts {
-        rhs,
-        const_expr,
-        alt,
-    })
-}
-
-fn compound_expression_pair(expr: &Expr) -> Option<(&Expr, &Expr)> {
-    let Expr::Call { head, args } = expr else {
-        return None;
-    };
-    if is_system_symbol_name(head, "CompoundExpression") && args.len() == 2 {
-        Some((&args[0], &args[1]))
-    } else {
-        None
-    }
-}
-
-fn compound_expression_items(expr: &Expr) -> Option<&[Expr]> {
-    let Expr::Call { head, args } = expr else {
-        return None;
-    };
-    if is_system_symbol_name(head, "CompoundExpression") {
-        Some(args.as_slice())
-    } else {
-        None
-    }
-}
-
-fn set_assignment_parts(expr: &Expr) -> Option<(&Symbol, &Expr)> {
-    let Expr::Call { head, args } = expr else {
-        return None;
-    };
-    if is_system_symbol_name(head, "Set") && args.len() == 2 {
-        Some((expr_as_symbol(&args[0])?, &args[1]))
-    } else {
-        None
-    }
-}
-
-fn if_two_arg_parts(expr: &Expr) -> Option<(&Expr, &Expr)> {
-    let Expr::Call { head, args } = expr else {
-        return None;
-    };
-    if is_system_symbol_name(head, "If") && args.len() == 2 {
-        Some((&args[0], &args[1]))
-    } else {
-        None
-    }
-}
-
-fn if_three_arg_parts(expr: &Expr) -> Option<(&Expr, &Expr, &Expr)> {
-    let Expr::Call { head, args } = expr else {
-        return None;
-    };
-    if is_system_symbol_name(head, "If") && args.len() == 3 {
-        Some((&args[0], &args[1], &args[2]))
-    } else {
-        None
-    }
-}
-
-fn return_one_arg_parts(expr: &Expr) -> Option<&Expr> {
-    let Expr::Call { head, args } = expr else {
-        return None;
-    };
-    if is_system_symbol_name(head, "Return") && args.len() == 1 {
-        Some(&args[0])
-    } else {
-        None
-    }
-}
-
-fn sameq_two_arg_parts(expr: &Expr) -> Option<(&Symbol, &Expr)> {
-    let Expr::Call { head, args } = expr else {
-        return None;
-    };
-    if is_system_symbol_name(head, "SameQ") && args.len() == 2 {
-        Some((expr_as_symbol(&args[0])?, &args[1]))
-    } else {
-        None
-    }
-}
-
-fn rhs_contains_uncompiled_scope(expr: &Expr) -> bool {
-    match expr {
-        Expr::Call { head, args } => {
-            (is_system_symbol_name(head, "Module") && args.len() == 2)
-                || (is_system_symbol_name(head, "With") && args.len() == 2)
-                || is_system_symbol_name(head, "Function")
-                || rhs_contains_uncompiled_scope(head)
-                || args.iter().any(rhs_contains_uncompiled_scope)
-        }
-        Expr::Atom(_) => false,
-    }
-}
-
-fn expr_contains_bound_symbol(expr: &Expr, bindings: &SymbolExprMap) -> bool {
-    match expr {
-        Expr::Atom(Atom::Symbol(symbol)) => bindings.contains_key(symbol),
-        Expr::Atom(_) => false,
-        Expr::Call { head, args } => {
-            expr_contains_bound_symbol(head, bindings)
-                || args
-                    .iter()
-                    .any(|arg| expr_contains_bound_symbol(arg, bindings))
-        }
-    }
-}
-
-fn expr_contains_any_symbol(expr: &Expr, symbols: &[Symbol]) -> bool {
-    match expr {
-        Expr::Atom(Atom::Symbol(symbol)) => symbols.contains(symbol),
-        Expr::Atom(_) => false,
-        Expr::Call { head, args } => {
-            expr_contains_any_symbol(head, symbols)
-                || args
-                    .iter()
-                    .any(|arg| expr_contains_any_symbol(arg, symbols))
-        }
-    }
-}
-
-fn expr_contains_system_head(expr: &Expr, name: &str) -> bool {
-    match expr {
-        Expr::Call { head, args } => {
-            is_system_symbol_name(head, name)
-                || expr_contains_system_head(head, name)
-                || args.iter().any(|arg| expr_contains_system_head(arg, name))
-        }
-        Expr::Atom(_) => false,
-    }
-}
-
-fn repeatc_part_contains_nested_return(parts: &ModuleRepeatCParts<'_>) -> bool {
-    [
-        parts.res_rhs,
-        parts.failed_const,
-        parts.failed_return,
-        parts.rhs_rhs,
-        parts.stable_condition,
-        parts.stable_return,
-        parts.final_expr,
-    ]
-    .into_iter()
-    .any(|expr| expr_contains_system_head(expr, "Return"))
-}
-
-fn local_reads_are_register_safe(expr: &Expr, locals: &[Symbol]) -> bool {
-    match expr {
-        Expr::Atom(_) => true,
-        Expr::Call { head, args } => {
-            if expr_as_symbol(head).is_some_and(|symbol| locals.contains(symbol)) {
-                return false;
-            }
-            if head_blocks_registerized_locals(head)
-                && args.iter().any(|arg| expr_contains_any_symbol(arg, locals))
-            {
-                return false;
-            }
-            local_reads_are_register_safe(head, locals)
-                && args
-                    .iter()
-                    .all(|arg| local_reads_are_register_safe(arg, locals))
-        }
-    }
-}
-
-fn head_blocks_registerized_locals(head: &Expr) -> bool {
-    [
-        "CompoundExpression",
-        "Condition",
-        "Defer",
-        "Function",
-        "Hold",
-        "HoldComplete",
-        "HoldForm",
-        "If",
-        "Inactive",
-        "Optional",
-        "Pattern",
-        "PatternTest",
-        "Rule",
-        "RuleDelayed",
-        "Set",
-        "SetDelayed",
-        "Unevaluated",
-        "Verbatim",
-    ]
-    .into_iter()
-    .any(|name| is_system_symbol_name(head, name))
 }
 
 fn code_compatible_with_bindings(code: &CodeObject, bindings: &SymbolExprMap) -> bool {
@@ -867,28 +653,6 @@ fn code_compatible_with_bindings(code: &CodeObject, bindings: &SymbolExprMap) ->
             .const_symbols
             .iter()
             .all(|symbol| !bindings.contains_key(symbol))
-}
-
-fn execute_rhs_template(code: &CodeObject, bindings: &SymbolExprMap) -> Option<Expr> {
-    let CodeProgram::Construct { ops } = &code.program else {
-        return None;
-    };
-    let slot_values = slot_values_for_code(code, bindings)?;
-    execute_construct_ops(ops, &slot_values)
-}
-
-fn prepare_compiled_module_template(
-    code: CodeObject,
-    bindings: &SymbolExprMap,
-) -> Option<PreparedCompiledRhsTemplate> {
-    if !matches!(
-        code.program,
-        CodeProgram::ModuleIfSameQ { .. } | CodeProgram::ModuleRepeatC { .. }
-    ) {
-        return None;
-    }
-    let slot_values = slot_values_for_code(&code, bindings)?;
-    Some(PreparedCompiledRhsTemplate { code, slot_values })
 }
 
 fn slot_values_for_code(code: &CodeObject, bindings: &SymbolExprMap) -> Option<Vec<Expr>> {
@@ -907,361 +671,405 @@ fn slot_values_for_code(code: &CodeObject, bindings: &SymbolExprMap) -> Option<V
     Some(slot_values)
 }
 
-fn execute_construct_ops(ops: &[Op], slot_values: &[Expr]) -> Option<Expr> {
-    let mut stack = Vec::new();
-    for op in ops {
-        match op {
-            Op::PushConst(expr) => stack.push(expr.as_ref().clone()),
-            Op::PushBinding(slot) => stack.push(slot_values.get(*slot)?.clone()),
-            Op::Construct { argc } => {
-                apply_construct_op(&mut stack, *argc)?;
-            }
-            Op::PushLocal(_) | Op::Eval => return None,
-        }
-    }
-
-    if stack.len() == 1 { stack.pop() } else { None }
-}
-
-fn execute_compiled_module_template(
+fn execute_compiled_body(
     session: &mut Session,
     prepared: PreparedCompiledRhsTemplate,
     option_scope: Option<OptionValueScope>,
 ) -> Result<Expr, EvalError> {
-    match &prepared.code.program {
-        CodeProgram::ModuleIfSameQ { .. } => {
-            execute_compiled_module_if_sameq_template(session, prepared, option_scope)
-        }
-        CodeProgram::ModuleRepeatC { .. } => {
-            execute_compiled_module_repeatc_template(session, prepared, option_scope)
-        }
-        CodeProgram::Construct { .. } => Ok(prepared.code.source),
-    }
+    let state = runtime_state(session, &prepared.code, prepared.slot_values, option_scope);
+    (prepared.code.body)(session, state)
 }
 
-fn execute_compiled_module_if_sameq_template(
+fn runtime_state(
     session: &mut Session,
-    prepared: PreparedCompiledRhsTemplate,
-    option_scope: Option<OptionValueScope>,
-) -> Result<Expr, EvalError> {
-    let CodeProgram::ModuleIfSameQ { rhs_ops, .. } = &prepared.code.program else {
-        return Ok(prepared.code.source);
-    };
-    let rhs_result = execute_vm_ops(
-        session,
-        rhs_ops.clone(),
-        prepared.slot_values.clone(),
-        Vec::new(),
-        option_scope.clone(),
-        Vec::new(),
-        0,
-    );
-    let value = session.suspend_with_frame_lazy(rhs_result, || {
-        let prepared = prepared.clone();
-        let option_scope = option_scope.clone();
-        move |session, value| {
-            resume_compiled_module_after_rhs(session, prepared, option_scope, value)
-        }
-    })?;
-
-    resume_compiled_module_after_rhs(session, prepared, option_scope, value)
-}
-
-fn resume_compiled_module_after_rhs(
-    session: &mut Session,
-    prepared: PreparedCompiledRhsTemplate,
-    option_scope: Option<OptionValueScope>,
-    value: Expr,
-) -> Result<Expr, EvalError> {
-    let CodeProgram::ModuleIfSameQ {
-        const_ops, alt_ops, ..
-    } = &prepared.code.program
-    else {
-        return Ok(value);
-    };
-
-    let const_expr = execute_construct_ops(const_ops, &prepared.slot_values)
-        .expect("compiled SameQ constant ops should be stack-valid");
-    if value != const_expr {
-        return Ok(value);
-    }
-
-    execute_vm_ops(
-        session,
-        alt_ops.clone(),
-        prepared.slot_values,
-        Vec::new(),
-        option_scope,
-        Vec::new(),
-        0,
-    )
-}
-
-fn execute_compiled_module_repeatc_template(
-    session: &mut Session,
-    prepared: PreparedCompiledRhsTemplate,
-    option_scope: Option<OptionValueScope>,
-) -> Result<Expr, EvalError> {
-    let CodeProgram::ModuleRepeatC { res_rhs_ops, .. } = &prepared.code.program else {
-        return Ok(prepared.code.source);
-    };
-    let res_result = execute_vm_ops(
-        session,
-        res_rhs_ops.clone(),
-        prepared.slot_values.clone(),
-        repeatc_local_values(None, None),
-        option_scope.clone(),
-        Vec::new(),
-        0,
-    );
-    let res = session.suspend_with_frame_lazy(res_result, || {
-        let prepared = prepared.clone();
-        let option_scope = option_scope.clone();
-        move |session, res| resume_repeatc_after_res(session, prepared, option_scope, res)
-    })?;
-
-    resume_repeatc_after_res(session, prepared, option_scope, res)
-}
-
-fn resume_repeatc_after_res(
-    session: &mut Session,
-    prepared: PreparedCompiledRhsTemplate,
-    option_scope: Option<OptionValueScope>,
-    res: Expr,
-) -> Result<Expr, EvalError> {
-    let CodeProgram::ModuleRepeatC {
-        failed_const_ops,
-        failed_return_ops,
-        ..
-    } = &prepared.code.program
-    else {
-        return Ok(res);
-    };
-    let local_values = repeatc_local_values(Some(res.clone()), None);
-    let failed_const = execute_construct_ops(failed_const_ops, &prepared.slot_values)
-        .expect("compiled REPEATC failed constant ops should be stack-valid");
-    if res == failed_const {
-        return execute_vm_ops(
-            session,
-            failed_return_ops.clone(),
-            prepared.slot_values,
-            local_values,
-            option_scope,
-            Vec::new(),
-            0,
-        );
-    }
-
-    execute_repeatc_rhs_statement(session, prepared, option_scope, local_values)
-}
-
-fn execute_repeatc_rhs_statement(
-    session: &mut Session,
-    prepared: PreparedCompiledRhsTemplate,
-    option_scope: Option<OptionValueScope>,
-    local_values: Vec<Option<Expr>>,
-) -> Result<Expr, EvalError> {
-    let CodeProgram::ModuleRepeatC { rhs_rhs_ops, .. } = &prepared.code.program else {
-        return Ok(system_expr("Null"));
-    };
-    let rhs_result = execute_vm_ops(
-        session,
-        rhs_rhs_ops.clone(),
-        prepared.slot_values.clone(),
-        local_values.clone(),
-        option_scope.clone(),
-        Vec::new(),
-        0,
-    );
-    let rhs = session.suspend_with_frame_lazy(rhs_result, || {
-        let prepared = prepared.clone();
-        let option_scope = option_scope.clone();
-        let local_values = local_values.clone();
-        move |session, rhs| {
-            resume_repeatc_after_rhs(session, prepared, option_scope, local_values, rhs)
-        }
-    })?;
-
-    resume_repeatc_after_rhs(session, prepared, option_scope, local_values, rhs)
-}
-
-fn resume_repeatc_after_rhs(
-    session: &mut Session,
-    prepared: PreparedCompiledRhsTemplate,
-    option_scope: Option<OptionValueScope>,
-    mut local_values: Vec<Option<Expr>>,
-    rhs: Expr,
-) -> Result<Expr, EvalError> {
-    local_values[1] = Some(rhs);
-    execute_repeatc_stable_condition(session, prepared, option_scope, local_values)
-}
-
-fn execute_repeatc_stable_condition(
-    session: &mut Session,
-    prepared: PreparedCompiledRhsTemplate,
-    option_scope: Option<OptionValueScope>,
-    local_values: Vec<Option<Expr>>,
-) -> Result<Expr, EvalError> {
-    let CodeProgram::ModuleRepeatC {
-        stable_condition_ops,
-        ..
-    } = &prepared.code.program
-    else {
-        return Ok(system_expr("Null"));
-    };
-    let condition_result = execute_vm_ops(
-        session,
-        stable_condition_ops.clone(),
-        prepared.slot_values.clone(),
-        local_values.clone(),
-        option_scope.clone(),
-        Vec::new(),
-        0,
-    );
-    let condition = session.suspend_with_frame_lazy(condition_result, || {
-        let prepared = prepared.clone();
-        let option_scope = option_scope.clone();
-        let local_values = local_values.clone();
-        move |session, condition| {
-            resume_repeatc_after_stable_condition(
-                session,
-                prepared,
-                option_scope,
-                local_values,
-                condition,
-            )
-        }
-    })?;
-
-    resume_repeatc_after_stable_condition(session, prepared, option_scope, local_values, condition)
-}
-
-fn resume_repeatc_after_stable_condition(
-    session: &mut Session,
-    prepared: PreparedCompiledRhsTemplate,
-    option_scope: Option<OptionValueScope>,
-    local_values: Vec<Option<Expr>>,
-    condition: Expr,
-) -> Result<Expr, EvalError> {
-    let CodeProgram::ModuleRepeatC {
-        stable_return_ops,
-        final_ops,
-        ..
-    } = &prepared.code.program
-    else {
-        return Ok(condition);
-    };
-    let ops = if truthiness_symbol(&condition) == Some(true) {
-        stable_return_ops.clone()
-    } else {
-        final_ops.clone()
-    };
-
-    execute_vm_ops(
-        session,
-        ops,
-        prepared.slot_values,
-        local_values,
-        option_scope,
-        Vec::new(),
-        0,
-    )
-}
-
-fn repeatc_local_values(res: Option<Expr>, rhs: Option<Expr>) -> Vec<Option<Expr>> {
-    vec![res, rhs]
-}
-
-fn execute_vm_ops(
-    session: &mut Session,
-    ops: Vec<Op>,
+    code: &CodeObject,
     slot_values: Vec<Expr>,
-    local_values: Vec<Option<Expr>>,
     option_scope: Option<OptionValueScope>,
-    mut stack: Vec<Expr>,
-    mut ip: usize,
+) -> RuntimeStateRef {
+    let locals = code
+        .local_specs
+        .iter()
+        .map(|spec| match spec.kind {
+            LocalKind::Module => LocalRuntime::Module {
+                fresh: session.allocate_fresh_symbol(&spec.symbol),
+                value: None,
+            },
+            LocalKind::With => LocalRuntime::With { value: None },
+        })
+        .collect();
+    Arc::new(Mutex::new(RuntimeState {
+        slot_values,
+        locals,
+        option_scope,
+    }))
+}
+
+fn instantiate_template(template: &TemplateNode, state: &RuntimeStateRef) -> Option<Expr> {
+    match template {
+        TemplateNode::Const(expr) => Some(expr.as_ref().clone()),
+        TemplateNode::Binding(slot) => {
+            let state = state
+                .lock()
+                .expect("compiled RHS state lock should not poison");
+            state.slot_values.get(*slot).cloned()
+        }
+        TemplateNode::Local(slot) => local_expr(state, *slot),
+        TemplateNode::Call { head, args } => {
+            let head = instantiate_template(head, state)?;
+            let mut output_args = Vec::with_capacity(args.len());
+            for arg in args {
+                let value = instantiate_template(arg, state)?;
+                if let Some(items) = sequence_items(&value) {
+                    output_args.extend(items.iter().cloned());
+                } else {
+                    output_args.push(value);
+                }
+            }
+            Some(Expr::call(head, output_args))
+        }
+    }
+}
+
+fn local_expr(state: &RuntimeStateRef, slot: usize) -> Option<Expr> {
+    let state = state
+        .lock()
+        .expect("compiled RHS state lock should not poison");
+    match state.locals.get(slot)? {
+        LocalRuntime::Module { fresh, .. } => Some(Expr::Atom(Atom::Symbol(*fresh))),
+        LocalRuntime::With { value } => value.clone(),
+    }
+}
+
+fn set_local_value(state: &RuntimeStateRef, slot: usize, value: Expr) {
+    let mut state = state
+        .lock()
+        .expect("compiled RHS state lock should not poison");
+    match state
+        .locals
+        .get_mut(slot)
+        .expect("compiled RHS local slot should exist")
+    {
+        LocalRuntime::Module {
+            value: local_value, ..
+        }
+        | LocalRuntime::With { value: local_value } => *local_value = Some(value),
+    }
+}
+
+fn evaluate_instantiated_expr(
+    session: &mut Session,
+    state: RuntimeStateRef,
+    expr: Expr,
 ) -> Result<Expr, EvalError> {
-    while let Some(op) = ops.get(ip).cloned() {
-        match op {
-            Op::PushConst(expr) => stack.push(expr.as_ref().clone()),
-            Op::PushBinding(slot) => {
-                stack.push(
-                    slot_values
-                        .get(slot)
-                        .cloned()
-                        .expect("compiled RHS binding slot should exist"),
-                );
-            }
-            Op::PushLocal(slot) => {
-                stack.push(
-                    local_values
-                        .get(slot)
-                        .and_then(|value| value.clone())
-                        .expect("compiled RHS local slot should be initialized"),
-                );
-            }
-            Op::Construct { argc } => {
-                apply_construct_op(&mut stack, argc)
-                    .expect("compiled RHS construct ops should be stack-valid");
-            }
-            Op::Eval => {
-                let expr = stack
-                    .pop()
-                    .expect("compiled RHS Eval should have one operand");
-                let result = session.evaluate_with_option_value_scope(option_scope.clone(), expr);
-                let value = session.suspend_with_frame_lazy(result, || {
-                    let ops = ops.clone();
-                    let slot_values = slot_values.clone();
-                    let local_values = local_values.clone();
-                    let option_scope = option_scope.clone();
-                    let stack = stack.clone();
-                    move |session, value| {
-                        let mut stack = stack;
-                        stack.push(value);
-                        execute_vm_ops(
-                            session,
-                            ops,
-                            slot_values,
-                            local_values,
-                            option_scope,
-                            stack,
-                            ip + 1,
-                        )
-                    }
-                })?;
-                stack.push(value);
-            }
+    if expr_is_self_evaluating_atom(&expr) {
+        return Ok(expr);
+    }
+
+    let option_scope = {
+        let state = state
+            .lock()
+            .expect("compiled RHS state lock should not poison");
+        state.option_scope.clone()
+    };
+    let dynamic_depth = push_module_local_bindings(session, &state);
+    let result = session.evaluate_with_option_value_scope(option_scope, expr);
+    match result {
+        Ok(value) => {
+            truncate_dynamic_locals(session, dynamic_depth);
+            Ok(value)
         }
-        ip += 1;
-    }
-
-    debug_assert_eq!(stack.len(), 1, "compiled RHS ops should leave one value");
-    Ok(stack
-        .pop()
-        .expect("compiled RHS ops should leave a result value"))
-}
-
-fn apply_construct_op(stack: &mut Vec<Expr>, argc: usize) -> Option<()> {
-    if stack.len() < argc.saturating_add(1) {
-        return None;
-    }
-    let args_start = stack.len() - argc;
-    let args = stack.split_off(args_start);
-    let head = stack.pop()?;
-    stack.push(Expr::call(head, splice_sequence_args(args)));
-    Some(())
-}
-
-fn splice_sequence_args(args: Vec<Expr>) -> Vec<Expr> {
-    let mut output = Vec::with_capacity(args.len());
-    for arg in args {
-        if let Some(items) = sequence_items(&arg) {
-            output.extend(items.iter().cloned());
-        } else {
-            output.push(arg);
+        Err(EvalError::InputRequired { request }) => {
+            session.push_suspension_frame(move |session, outcome| {
+                truncate_dynamic_locals(session, dynamic_depth);
+                outcome
+            });
+            Err(EvalError::InputRequired { request })
+        }
+        Err(error) => {
+            truncate_dynamic_locals(session, dynamic_depth);
+            Err(error)
         }
     }
-    output
+}
+
+fn push_module_local_bindings(session: &mut Session, state: &RuntimeStateRef) -> Option<usize> {
+    let locals = {
+        let state = state
+            .lock()
+            .expect("compiled RHS state lock should not poison");
+        state
+            .locals
+            .iter()
+            .filter_map(|local| match local {
+                LocalRuntime::Module { fresh, value } => Some((*fresh, value.clone())),
+                LocalRuntime::With { .. } => None,
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let mut depth = None;
+    for (symbol, value) in locals {
+        let pushed_depth = session.push_dynamic_own_value_binding(symbol, value);
+        depth.get_or_insert(pushed_depth);
+    }
+    depth
+}
+
+fn truncate_dynamic_locals(session: &mut Session, depth: Option<usize>) {
+    if let Some(depth) = depth {
+        session.truncate_dynamic_own_value_bindings(depth);
+    }
+}
+
+fn resume_compiled_if(
+    session: &mut Session,
+    state: RuntimeStateRef,
+    condition: Expr,
+    true_branch: CompiledClosure,
+    false_branch: Option<CompiledClosure>,
+    unknown_branch: Option<CompiledClosure>,
+    residual_templates: Vec<TemplateNode>,
+) -> Result<Expr, EvalError> {
+    match truthiness_symbol(&condition) {
+        Some(true) => true_branch(session, state),
+        Some(false) => {
+            if let Some(false_branch) = false_branch {
+                false_branch(session, state)
+            } else {
+                Ok(system_expr("Null"))
+            }
+        }
+        None => {
+            if let Some(unknown_branch) = unknown_branch {
+                return unknown_branch(session, state);
+            }
+            let mut args = Vec::with_capacity(residual_templates.len());
+            args.push(condition);
+            for template in residual_templates.iter().skip(1) {
+                args.push(instantiate_template(template, &state).expect(
+                    "compiled If residual templates should instantiate with current bindings",
+                ));
+            }
+            Ok(Expr::call(system_expr("If"), args))
+        }
+    }
+}
+
+fn resume_compiled_compound(
+    session: &mut Session,
+    items: Arc<Vec<CompiledClosure>>,
+    state: RuntimeStateRef,
+    index: usize,
+) -> Result<Expr, EvalError> {
+    let Some(item) = items.get(index).cloned() else {
+        return Ok(system_expr("Null"));
+    };
+    let result = item(session, state.clone());
+    let value = session.suspend_with_frame_lazy(result, || {
+        let items = items.clone();
+        let state = state.clone();
+        move |session, value| {
+            if index + 1 >= items.len() {
+                Ok(value)
+            } else {
+                resume_compiled_compound(session, items, state, index + 1)
+            }
+        }
+    })?;
+
+    if index + 1 >= items.len() {
+        Ok(value)
+    } else {
+        resume_compiled_compound(session, items, state, index + 1)
+    }
+}
+
+fn initialize_module_locals(
+    session: &mut Session,
+    state: &RuntimeStateRef,
+    local_slots: &[(usize, Symbol)],
+) {
+    let mut state = state
+        .lock()
+        .expect("compiled RHS state lock should not poison");
+    for (slot, symbol) in local_slots {
+        state.locals[*slot] = LocalRuntime::Module {
+            fresh: session.allocate_fresh_symbol(symbol),
+            value: None,
+        };
+    }
+}
+
+fn resume_module_initializers(
+    session: &mut Session,
+    initializers: Arc<Vec<(usize, CompiledClosure)>>,
+    body: CompiledClosure,
+    state: RuntimeStateRef,
+    index: usize,
+) -> Result<Expr, EvalError> {
+    let Some((slot, init)) = initializers.get(index).cloned() else {
+        return body(session, state);
+    };
+    let result = init(session, state.clone());
+    let value = session.suspend_with_frame_lazy(result, || {
+        let initializers = initializers.clone();
+        let body = body.clone();
+        let state = state.clone();
+        move |session, value| {
+            set_local_value(&state, slot, value);
+            resume_module_initializers(session, initializers, body, state, index + 1)
+        }
+    })?;
+    set_local_value(&state, slot, value);
+    resume_module_initializers(session, initializers, body, state, index + 1)
+}
+
+fn initialize_with_locals(
+    state: &RuntimeStateRef,
+    initializers: &Arc<Vec<(usize, CompiledClosure)>>,
+) {
+    let mut state = state
+        .lock()
+        .expect("compiled RHS state lock should not poison");
+    for (slot, _) in initializers.iter() {
+        state.locals[*slot] = LocalRuntime::With { value: None };
+    }
+}
+
+fn resume_with_initializers(
+    session: &mut Session,
+    initializers: Arc<Vec<(usize, CompiledClosure)>>,
+    body: CompiledClosure,
+    state: RuntimeStateRef,
+    index: usize,
+) -> Result<Expr, EvalError> {
+    let Some((slot, init)) = initializers.get(index).cloned() else {
+        return body(session, state);
+    };
+    let result = init(session, state.clone());
+    let value = session.suspend_with_frame_lazy(result, || {
+        let initializers = initializers.clone();
+        let body = body.clone();
+        let state = state.clone();
+        move |session, value| {
+            set_local_value(&state, slot, value);
+            resume_with_initializers(session, initializers, body, state, index + 1)
+        }
+    })?;
+    set_local_value(&state, slot, value);
+    resume_with_initializers(session, initializers, body, state, index + 1)
+}
+
+fn duplicate_scoped_symbols(symbols: impl Iterator<Item = Symbol>) -> bool {
+    let mut seen = HashSet::new();
+    symbols.into_iter().any(|symbol| !seen.insert(symbol))
+}
+
+fn leaf_contains_uncompiled_scope(expr: &Expr) -> bool {
+    match expr {
+        Expr::Call { head, args } => {
+            is_system_symbol_name(head, "Module")
+                || is_system_symbol_name(head, "With")
+                || is_system_symbol_name(head, "Function")
+                || leaf_contains_uncompiled_scope(head)
+                || args.iter().any(leaf_contains_uncompiled_scope)
+        }
+        Expr::Atom(_) => false,
+    }
+}
+
+fn locals_are_safe_in_compiled_expr(expr: &Expr, locals: &[Symbol]) -> bool {
+    match expr {
+        Expr::Atom(_) => true,
+        Expr::Call { head, args } if is_system_symbol_name(head, "If") => args
+            .iter()
+            .all(|arg| locals_are_safe_in_compiled_expr(arg, locals)),
+        Expr::Call { head, args } if is_system_symbol_name(head, "CompoundExpression") => {
+            if args
+                .last()
+                .and_then(expr_as_symbol)
+                .is_some_and(|symbol| locals.contains(symbol))
+            {
+                return false;
+            }
+            args.iter()
+                .all(|arg| locals_are_safe_in_compiled_expr(arg, locals))
+        }
+        Expr::Call { head, args } if is_system_symbol_name(head, "Return") => args
+            .iter()
+            .all(|arg| locals_are_safe_in_compiled_expr(arg, locals)),
+        Expr::Call { head, args } if is_system_symbol_name(head, "Set") && args.len() == 2 => {
+            if expr_as_symbol(&args[0]).is_some_and(|symbol| locals.contains(symbol)) {
+                locals_are_safe_in_compiled_expr(&args[1], locals)
+            } else {
+                local_reads_are_leaf_safe(expr, locals)
+            }
+        }
+        Expr::Call { head, args }
+            if (is_system_symbol_name(head, "Module") || is_system_symbol_name(head, "With"))
+                && args.len() == 2 =>
+        {
+            !expr_contains_any_symbol(expr, locals)
+        }
+        Expr::Call { head, .. } if is_system_symbol_name(head, "Function") => false,
+        Expr::Call { .. } => local_reads_are_leaf_safe(expr, locals),
+    }
+}
+
+fn local_reads_are_leaf_safe(expr: &Expr, locals: &[Symbol]) -> bool {
+    match expr {
+        Expr::Atom(_) => true,
+        Expr::Call { head, args } => {
+            if expr_as_symbol(head).is_some_and(|symbol| locals.contains(symbol)) {
+                return false;
+            }
+            if head_blocks_registerized_locals(head)
+                && args.iter().any(|arg| expr_contains_any_symbol(arg, locals))
+            {
+                return false;
+            }
+            local_reads_are_leaf_safe(head, locals)
+                && args
+                    .iter()
+                    .all(|arg| local_reads_are_leaf_safe(arg, locals))
+        }
+    }
+}
+
+fn head_blocks_registerized_locals(head: &Expr) -> bool {
+    [
+        "Condition",
+        "Defer",
+        "Function",
+        "Hold",
+        "HoldComplete",
+        "HoldForm",
+        "Inactive",
+        "Optional",
+        "Pattern",
+        "PatternTest",
+        "Rule",
+        "RuleDelayed",
+        "Set",
+        "SetDelayed",
+        "Unevaluated",
+        "Verbatim",
+    ]
+    .into_iter()
+    .any(|name| is_system_symbol_name(head, name))
+}
+
+fn expr_contains_any_symbol(expr: &Expr, symbols: &[Symbol]) -> bool {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => symbols.contains(symbol),
+        Expr::Atom(_) => false,
+        Expr::Call { head, args } => {
+            expr_contains_any_symbol(head, symbols)
+                || args
+                    .iter()
+                    .any(|arg| expr_contains_any_symbol(arg, symbols))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1269,7 +1077,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn rhs_template_matches_plain_binding_substitution() {
+    fn closure_template_matches_plain_rule_rhs() {
         let x = Symbol::from_name("x");
         let y = Symbol::from_name("y");
         let rhs = Expr::call(
@@ -1283,11 +1091,11 @@ mod tests {
         bindings.insert(x, Expr::integer(BigInt::from(1_u8)));
         bindings.insert(y, Expr::integer(BigInt::from(2_u8)));
 
-        assert_template_matches_tree_walk(&rhs, &bindings);
+        assert_compiled_body_matches_tree_walk(&rhs, &bindings);
     }
 
     #[test]
-    fn rhs_template_splices_bound_and_existing_sequences() {
+    fn closure_template_splices_bound_and_existing_sequences() {
         let x = Symbol::from_name("x");
         let rhs = Expr::call(
             system_expr("f"),
@@ -1311,31 +1119,37 @@ mod tests {
             ]),
         );
 
-        assert_template_matches_tree_walk(&rhs, &bindings);
+        assert_compiled_body_matches_tree_walk(&rhs, &bindings);
     }
 
     #[test]
-    fn rhs_template_keeps_scoped_forms_on_fallback_path() {
+    fn closure_template_keeps_nested_scopes_on_fallback_path() {
         let bindings = SymbolExprMap::default();
         let module_rhs = Expr::call(
-            system_expr("Module"),
-            vec![
-                Expr::call(system_expr("List"), vec![Expr::symbol("x")]),
-                Expr::symbol("x"),
-            ],
+            system_expr("f"),
+            vec![Expr::call(
+                system_expr("Module"),
+                vec![
+                    Expr::call(system_expr("List"), vec![Expr::symbol("x")]),
+                    Expr::symbol("x"),
+                ],
+            )],
         );
         let with_rhs = Expr::call(
-            system_expr("With"),
-            vec![
-                Expr::call(
-                    system_expr("List"),
-                    vec![Expr::call(
-                        system_expr("Set"),
-                        vec![Expr::symbol("x"), Expr::integer(BigInt::from(1_u8))],
-                    )],
-                ),
-                Expr::symbol("x"),
-            ],
+            system_expr("f"),
+            vec![Expr::call(
+                system_expr("With"),
+                vec![
+                    Expr::call(
+                        system_expr("List"),
+                        vec![Expr::call(
+                            system_expr("Set"),
+                            vec![Expr::symbol("x"), Expr::integer(BigInt::from(1_u8))],
+                        )],
+                    ),
+                    Expr::symbol("x"),
+                ],
+            )],
         );
         let function_rhs = Expr::call(
             system_expr("Function"),
@@ -1345,13 +1159,13 @@ mod tests {
             ],
         );
 
-        assert!(compile_rhs_template(&module_rhs, &bindings).is_none());
-        assert!(compile_rhs_template(&with_rhs, &bindings).is_none());
-        assert!(compile_rhs_template(&function_rhs, &bindings).is_none());
+        assert!(compile_body(&module_rhs, &bindings).is_none());
+        assert!(compile_body(&with_rhs, &bindings).is_none());
+        assert!(compile_body(&function_rhs, &bindings).is_none());
     }
 
     #[test]
-    fn module_if_sameq_template_matches_tree_walk_when_branch_not_taken() {
+    fn closure_module_if_sameq_matches_tree_walk_when_branch_not_taken() {
         let x = Symbol::from_name("x");
         let rhs = module_if_sameq_rhs(
             Expr::call(
@@ -1375,7 +1189,7 @@ mod tests {
     }
 
     #[test]
-    fn module_if_sameq_template_matches_tree_walk_when_branch_taken() {
+    fn closure_module_if_sameq_matches_tree_walk_when_branch_taken() {
         let x = Symbol::from_name("x");
         let rhs = module_if_sameq_rhs(
             Expr::call(
@@ -1399,57 +1213,22 @@ mod tests {
     }
 
     #[test]
-    fn module_if_sameq_template_rejects_escaping_local() {
+    fn closure_module_rejects_held_local_escape() {
         let x = Symbol::from_name("x");
         let res = Symbol::from_name("res");
         let rhs = module_if_sameq_rhs(
             Expr::call(system_expr("Hold"), vec![symbol_expr(&res)]),
             Expr::symbol("failed"),
-            Expr::call(system_expr("fallback"), vec![symbol_expr(&x)]),
+            Expr::call(Expr::symbol("fallback"), vec![symbol_expr(&x)]),
         );
         let mut bindings = SymbolExprMap::default();
         bindings.insert(x, Expr::symbol("value"));
 
-        assert!(compile_rhs_template(&rhs, &bindings).is_none());
+        assert!(compile_body(&rhs, &bindings).is_none());
     }
 
     #[test]
-    fn module_if_sameq_template_rejects_repeatc_shape() {
-        let res = Symbol::from_name("res");
-        let rhs = Expr::call(
-            system_expr("Module"),
-            vec![
-                Expr::call(
-                    system_expr("List"),
-                    vec![symbol_expr(&res), Expr::symbol("rhs")],
-                ),
-                Expr::call(
-                    system_expr("CompoundExpression"),
-                    vec![
-                        Expr::call(
-                            system_expr("Set"),
-                            vec![symbol_expr(&res), Expr::symbol("x")],
-                        ),
-                        Expr::call(
-                            system_expr("If"),
-                            vec![
-                                Expr::call(
-                                    system_expr("SameQ"),
-                                    vec![symbol_expr(&res), Expr::symbol("failed")],
-                                ),
-                                Expr::call(system_expr("Return"), vec![Expr::symbol("fallback")]),
-                            ],
-                        ),
-                    ],
-                ),
-            ],
-        );
-
-        assert!(compile_rhs_template(&rhs, &SymbolExprMap::default()).is_none());
-    }
-
-    #[test]
-    fn module_repeatc_template_matches_tree_walk_when_failed_return_taken() {
+    fn closure_repeatc_matches_tree_walk_when_failed_return_taken() {
         let (rhs, mut bindings) = repeatc_rhs_and_bindings("failConv", "start");
         assert_compiled_repeatc_matches_tree_walk(&rhs, &bindings, "refl[start]");
 
@@ -1458,13 +1237,13 @@ mod tests {
     }
 
     #[test]
-    fn module_repeatc_template_matches_tree_walk_when_stable_return_taken() {
+    fn closure_repeatc_matches_tree_walk_when_stable_return_taken() {
         let (rhs, bindings) = repeatc_rhs_and_bindings("stableConv", "start");
         assert_compiled_repeatc_matches_tree_walk(&rhs, &bindings, "thm[start, start]");
     }
 
     #[test]
-    fn module_repeatc_template_matches_tree_walk_when_recursive_fallthrough_runs() {
+    fn closure_repeatc_matches_tree_walk_when_recursive_fallthrough_runs() {
         let (rhs, bindings) = repeatc_rhs_and_bindings("stepConv", "start");
         assert_compiled_repeatc_matches_tree_walk(
             &rhs,
@@ -1474,7 +1253,7 @@ mod tests {
     }
 
     #[test]
-    fn module_repeatc_template_rejects_held_local_read() {
+    fn closure_repeatc_rejects_held_local_read() {
         let c = Symbol::from_name("c");
         let t = Symbol::from_name("t");
         let mut bindings = SymbolExprMap::default();
@@ -1486,36 +1265,44 @@ mod tests {
             Expr::call(system_expr("Hold"), vec![Expr::symbol("res")]),
         );
 
-        assert!(compile_rhs_template(&rhs, &bindings).is_none());
+        assert!(compile_body(&rhs, &bindings).is_none());
     }
 
-    fn assert_template_matches_tree_walk(rhs: &Expr, bindings: &SymbolExprMap) {
-        let code = compile_rhs_template(rhs, bindings).expect("RHS should compile");
-        let actual = execute_rhs_template(&code, bindings).expect("template should execute");
-        let expected = substitute_rule_bindings_for_rhs(
-            rhs,
-            bindings,
-            rule_rhs_may_splice_without_bindings(rhs),
+    #[test]
+    fn closure_compiles_general_control_skeleton() {
+        let x = Symbol::from_name("x");
+        let rhs = Expr::call(
+            system_expr("CompoundExpression"),
+            vec![
+                Expr::call(
+                    system_expr("If"),
+                    vec![
+                        Expr::call(
+                            system_expr("SameQ"),
+                            vec![symbol_expr(&x), Expr::symbol("a")],
+                        ),
+                        Expr::symbol("Null"),
+                    ],
+                ),
+                Expr::call(Expr::symbol("h"), vec![symbol_expr(&x)]),
+            ],
         );
-        assert_eq!(actual, expected);
+        let mut bindings = SymbolExprMap::default();
+        bindings.insert(x, Expr::symbol("a"));
+
+        assert_compiled_body_matches_tree_walk(&rhs, &bindings);
     }
 
-    fn assert_compiled_module_matches_tree_walk(
-        rhs: &Expr,
-        bindings: &SymbolExprMap,
-        expected_text: &str,
-    ) {
-        let code = compile_rhs_template(rhs, bindings).expect("Module RHS should compile");
-        assert!(matches!(code.program, CodeProgram::ModuleIfSameQ { .. }));
-        let prepared = prepare_compiled_module_template(code, bindings)
-            .expect("compiled module should prepare");
+    fn assert_compiled_body_matches_tree_walk(rhs: &Expr, bindings: &SymbolExprMap) {
+        let code = Arc::new(compile_body(rhs, bindings).expect("RHS should compile"));
+        let slot_values = slot_values_for_code(&code, bindings).expect("slots should prepare");
         let mut actual_session = Session::new();
-        let actual = evaluate_prepared_rhs_template(
+        let actual = finish_compiled_definition_rhs_result(execute_compiled_body(
             &mut actual_session,
-            PreparedRhsTemplate::CompiledModule(prepared),
+            PreparedCompiledRhsTemplate { code, slot_values },
             None,
-        )
-        .expect("compiled module should evaluate");
+        ))
+        .expect("compiled body should evaluate");
 
         let substituted = substitute_rule_bindings_for_rhs(
             rhs,
@@ -1525,10 +1312,19 @@ mod tests {
         let mut expected_session = Session::new();
         let expected = expected_session
             .evaluate_definition_rhs(None, substituted)
-            .expect("tree-walk Module should evaluate");
+            .expect("tree-walk RHS should evaluate");
 
         assert_eq!(actual, expected);
-        assert_eq!(actual.to_string(), expected_text);
+    }
+
+    fn assert_compiled_module_matches_tree_walk(
+        rhs: &Expr,
+        bindings: &SymbolExprMap,
+        expected_text: &str,
+    ) {
+        assert_compiled_body_matches_tree_walk(rhs, bindings);
+        let actual = eval_compiled_to_string(rhs, bindings);
+        assert_eq!(actual, expected_text);
     }
 
     fn assert_compiled_repeatc_matches_tree_walk(
@@ -1536,18 +1332,7 @@ mod tests {
         bindings: &SymbolExprMap,
         expected_text: &str,
     ) {
-        let code = compile_rhs_template(rhs, bindings).expect("REPEATC Module RHS should compile");
-        assert!(matches!(code.program, CodeProgram::ModuleRepeatC { .. }));
-        let prepared = prepare_compiled_module_template(code, bindings)
-            .expect("compiled REPEATC module should prepare");
-        let mut actual_session = repeatc_test_session();
-        let actual = evaluate_prepared_rhs_template(
-            &mut actual_session,
-            PreparedRhsTemplate::CompiledModule(prepared),
-            None,
-        )
-        .expect("compiled REPEATC module should evaluate");
-
+        let actual = eval_compiled_repeatc_to_string(rhs, bindings);
         let substituted = substitute_rule_bindings_for_rhs(
             rhs,
             bindings,
@@ -1558,8 +1343,34 @@ mod tests {
             .evaluate_definition_rhs(None, substituted)
             .expect("tree-walk REPEATC Module should evaluate");
 
-        assert_eq!(actual, expected);
-        assert_eq!(actual.to_string(), expected_text);
+        assert_eq!(actual, expected.to_string());
+        assert_eq!(actual, expected_text);
+    }
+
+    fn eval_compiled_to_string(rhs: &Expr, bindings: &SymbolExprMap) -> String {
+        let code = Arc::new(compile_body(rhs, bindings).expect("RHS should compile"));
+        let slot_values = slot_values_for_code(&code, bindings).expect("slots should prepare");
+        let mut session = Session::new();
+        finish_compiled_definition_rhs_result(execute_compiled_body(
+            &mut session,
+            PreparedCompiledRhsTemplate { code, slot_values },
+            None,
+        ))
+        .expect("compiled body should evaluate")
+        .to_string()
+    }
+
+    fn eval_compiled_repeatc_to_string(rhs: &Expr, bindings: &SymbolExprMap) -> String {
+        let code = Arc::new(compile_body(rhs, bindings).expect("REPEATC RHS should compile"));
+        let slot_values = slot_values_for_code(&code, bindings).expect("slots should prepare");
+        let mut session = repeatc_test_session();
+        finish_compiled_definition_rhs_result(execute_compiled_body(
+            &mut session,
+            PreparedCompiledRhsTemplate { code, slot_values },
+            None,
+        ))
+        .expect("compiled REPEATC body should evaluate")
+        .to_string()
     }
 
     fn module_if_sameq_rhs(eval_expr: Expr, const_expr: Expr, alt_expr: Expr) -> Expr {

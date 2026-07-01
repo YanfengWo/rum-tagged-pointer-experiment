@@ -6,6 +6,35 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-07-01 brief-074 closure-generation VM — KEEP: general body compilation byte-identical (the corrected architecture works); resolves brief-073's failure
+
+After brief-073's op-compiler FAILED byte-identical (it re-derived WL application semantics
+→ drule ON 38/11) and a study of mature VM design (docs/bytecode-vm-research-notes.md:
+derive the fast path FROM the interpreter, don't re-specify semantics), rebuilt the general
+body VM as CLOSURE GENERATION (docs/bytecode-vm-closure-plan.md). `vm_rhs_template.rs`
+rewritten (op-stream ModuleIfSameQ/ModuleRepeatC removed + subsumed; 761 ins/950 del).
+The ONE rule: compile only the control skeleton (If/CompoundExpression/Return/Set-to-local/
+non-escaping-Module) + substitution structure into closures; DELEGATE all leaf-application
+hold/attributes/order/dispatch to the real evaluate (leaf apps substitute bindings into
+held args → hand the call to evaluate). Semantics inherited by construction.
+
+**Gate (Claude reproduced):** cargo test --workspace 723/0 both OFF and ON (debug
+differential); ALL slice-1/2/3 tests subsumed by the general compile_body; **drule_tests
+OFF 50/0, ON 50/0, diff IDENTICAL** — THE gate brief-073 failed (ON 38/11), now
+byte-identical. Coverage closure_compiled_distinct=135 (vs the old 3 hand-matched shapes)
+— GENERALIZED, all byte-identical. Scope clean (vm_rhs_template.rs only), no unsafe,
+opt-in (RUM_VM_RHS_TEMPLATE, zero-cost off), no default flip, no perf measured (capability
+line).
+
+**Verdict: KEEP.** The general body VM now works via closure generation (the corrected
+architecture); validates the research→correction chain and closes brief-073. Direct win is
+bounded (skip AST re-match + substitution walk + control-node dispatch; leaf dispatch stays
+delegated) — consistent with ~parity real loads; the value is the general capability +
+byte-identical foundation. Remaining: escaping Module locals (fall back now — next brief,
+Strict-gated for the LCF trust boundary); meta-JIT (Cranelift, never hand-write codegen)
+is speculative/far-future — see the backend guidance in the research notes. Cold backup
+rum-2026-07-01-e02e39c.bundle predates this; a fresh one is warranted at a stopping point.
+
 ## 2026-07-01 brief-072 VM slice 3 (compiled REPEATC) — KEEP: Return+recursion byte-identical; VM combinator set COMPLETE; opt-in
 
 Slice 3, the last combinator. Compiled `HOL`Drule`REPEATC` — the two hardest general-VM

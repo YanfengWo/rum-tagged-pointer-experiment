@@ -137,3 +137,31 @@ metric).
    op-compiler failed); compile coverage (how many more shapes than slices 1-3).
 4. Stop-loss / open questions — what fell back, any control-skeleton edge you were unsure
    about.
+
+---
+
+## Outcome (Claude gate, 2026-07-01) — DONE + KEEP. The corrected architecture WORKS: closure generation is byte-identical where the op-compiler failed.
+
+Committed (product code: `vm_rhs_template.rs` rewritten to closure generation, op-stream
+`ModuleIfSameQ`/`ModuleRepeatC` removed + subsumed; 761 ins / 950 del — net simpler).
+The DELEGATION rule held: leaf applications substitute bindings into held args and hand
+the call to `evaluate`; only the control skeleton is compiled.
+
+**Gate (Claude reproduced the two load-bearing claims):**
+- `cargo test --workspace` 723/0 both OFF and ON (debug `debug_assert_eq!` vs tree-walk on
+  every compiled body); all slice-1/2/3 tests subsumed by the general `compile_body`.
+- **`drule_tests` OFF 50/0, ON 50/0, stdout diff IDENTICAL** — THE gate brief-073 failed
+  (it was ON `List[38,11]`). The closure/delegation architecture is byte-identical where
+  the op-compiler-that-re-derived-semantics was not.
+- Coverage `closure_compiled_distinct=135, fallback_distinct=51` — the closure path
+  compiles 135 distinct body shapes (vs the old 3 hand-matched combinator shapes), i.e. it
+  GENERALIZED, all byte-identical.
+- Scope clean (only `vm_rhs_template.rs`); no `Expr`/serde change; no `unsafe`; opt-in
+  (`RUM_VM_RHS_TEMPLATE`, zero-cost off); no default flip. No perf measured (capability line).
+
+**Verdict: KEEP.** The general body VM now works via closure generation (the corrected
+architecture from `docs/bytecode-vm-research-notes.md`: compile the control skeleton,
+DELEGATE application semantics to `evaluate`). This validates the whole research→correction
+chain and closes brief-073's failure. Remaining: escaping Module locals (currently fall
+back — the next brief, Strict-gated for the trust boundary); meta-JIT is speculative/
+far-future (see the backend guidance in the research notes).

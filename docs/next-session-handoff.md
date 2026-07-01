@@ -1,6 +1,29 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-07-01 (NEWEST — read THIS first). General-VM step-1 (brief-073) FAILED the
+> **2026-07-01 (NEWEST — read THIS first). General VM now WORKS via CLOSURE GENERATION
+> (brief-074, KEEP) — byte-identical general body compilation, resolving brief-073's
+> failure. Opt-in, 135 body shapes compiled. Next: escaping Module locals (Strict-gated),
+> or stop here.** After brief-073's op-compiler failed byte-identical (re-derived WL
+> semantics → drule ON 38/11) and a study of mature VM design (derive the fast path FROM
+> the interpreter, not a second semantics spec — `docs/bytecode-vm-research-notes.md`), the
+> general VM was rebuilt as CLOSURE GENERATION (`docs/bytecode-vm-closure-plan.md`). THE
+> RULE: compile only the control skeleton (If/CompoundExpression/Return/Set-to-local/
+> non-escaping-Module) + substitution structure into closures; DELEGATE all leaf-application
+> hold/attributes/order/dispatch to the real `evaluate`. `vm_rhs_template.rs` rewritten
+> (op-stream ModuleIfSameQ/ModuleRepeatC removed + subsumed). Gate (Claude-reproduced):
+> `cargo test --workspace` 723/0 OFF and ON (debug differential); all slice-1/2/3 tests
+> subsumed; **`drule_tests` OFF 50/0 == ON 50/0, diff IDENTICAL** (the gate brief-073
+> failed at 38/11); coverage `closure_compiled_distinct=135` (generalized far beyond the 3
+> hand-matched shapes). Opt-in (`RUM_VM_RHS_TEMPLATE`), zero-cost off, no default flip, no
+> perf measured (capability line; direct win bounded, value is the general capability). **VM
+> state:** the general body VM works via closures, byte-identical, opt-in. OPEN next:
+> (a) escaping Module locals (general hygiene — the LCF trust boundary, Strict-gated, the
+> next brief); (b) stop here (the capability is delivered); (c) far-future speculative
+> meta-JIT (Cranelift, NEVER hand-write codegen — see the backend guidance in the research
+> notes). Cold backup `rum-2026-07-01-e02e39c.bundle` predates brief-074; a fresh bundle is
+> warranted. Prior (now-resolved) brief-073 failure block below.
+>
+> **2026-07-01 (prior, RESOLVED by brief-074 above). General-VM step-1 (brief-073) FAILED the
 > byte-identical gate and was REVERTED — root cause: a general body compiler needs
 > ATTRIBUTE/HOLD-AWARE compilation. Slices 1-3 remain the shipped opt-in VM (clean at
 > e02e39c). AWAITING a user decision: re-brief attribute-aware, or defer.** The general
