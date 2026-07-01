@@ -6,6 +6,46 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-07-01 Perf line reopened — brief-067 value-memo scoping: naive memo is a NET LOSS, hash-consing is the required enabler
+
+Reopened the deferred perf line (task 1 of 2: hash-consing/value-memo; task 2 is
+the bytecode VM). brief-067 was a B0 diagnostic re-measuring the deferred
+value-memo on the CURRENT v8 binary + 32-byte `Expr` (the 2026-06-22 shadow
+numbers were on the old 64-byte layout). Throwaway env-gated
+(`RUM_PROFILE_VALUE_MEMO`) instrumentation in `evaluate_inner_unstable`'s Call
+arm: `shadow` (hash+store+compare, no short-circuit) and `short` (real
+short-circuit). Diagnostic-only — reverted after gating; nothing shipped but the
+brief doc + these notes.
+
+**Measured (`runtime-profile-basic-only-pair4`, best-of-3, v3 authoritative round;
+Claude reproduced the base-vs-short direction independently):**
+- shadow `total=397106 hits=101851 hit_rate=0.2565 mismatches=0 distinct=160448`
+  — reproduces the 2026-06-22 count-weighted 26% prize + soundness EXACTLY on the
+  32-byte layout (validates the instrument).
+- **shadow/base wall = ~2.36x** — the O(expr) recursive-SipHash structural key on
+  100% of dispatches ALONE adds ~+135% to the descent (per-dispatch ~197us).
+- **short/base wall = ~1.72x** (Codex internal AbsoluteTiming; Claude repro
+  133s/87s = 1.53x) — a REAL short-circuiting naive-key memo is a decisive NET
+  LOSS. `is_thm=True changed=False` for base==short (short-circuit is sound too).
+- **short real `hit_rate=0.066-0.074`** (vs the 0.2565 shadow ceiling) —
+  short-circuiting eliminates the downstream repeats it feeds on, so the
+  achievable prize is ~4x below the count-weighted ceiling.
+- OFF-path microbench flat vs `main` (if-true/downvalue ~0.95-0.96) — the gate is
+  zero-cost when disabled.
+
+**Verdict (branch 2 of the brief's three):** the prize is real and sound but
+BLOCKED by the key cost. Naive value-memo is off the table. Converting the 26%
+ceiling to wall time needs O(1) identity keys = hash-consing, whose own cost (a
+global intern on 100% of *constructions*, hotter than dispatch) is UNMEASURED and
+could itself eat the (shrunken ~7% live) prize. This is exactly PROGRESS
+2026-06-22 caveat 2, now measured on the current binary. Full hash-consing stays
+the `representation-rewrite-plan.md` §"Out of scope" largest-commitment lever.
+**Recommendation: do NOT start the hash-consing build on this evidence** — either
+a tighter O(1)-key + interning-cost follow-up before committing, or pivot to task
+2 (bytecode VM). Scope decision is the user's; go/no-go remains a scope question,
+not a measurement one. See `docs/dev/codex/brief-067-value-memo-scoping.md`
+Outcome section.
+
 ## 2026-07-01 Host hardening line — Tier-1 (briefs 059/060/061; memory budget deferred)
 
 New mainline after the pattern-matching line closed: host-embedding Tier-1 hardening

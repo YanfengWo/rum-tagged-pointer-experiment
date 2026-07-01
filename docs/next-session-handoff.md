@@ -1,6 +1,27 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-07-01 (LATEST — read THIS first). The host-embedding hardening arc is DONE (no
+> **2026-07-01 (NEWEST — read THIS first). Perf line reopened; brief-067
+> value-memo scoping DONE — naive value-memo is a NET LOSS, hash-consing is the
+> required enabler. AWAITING a user scope decision on what's next.** The deferred
+> perf line has two tasks: (1) hash-consing/value-memo, (2) bytecode VM. brief-067
+> was a B0 diagnostic re-measuring task 1's value-memo on the CURRENT v8 binary +
+> 32-byte `Expr` (the 2026-06-22 shadow numbers were on the old 64-byte layout).
+> Result: shadow `hit_rate=0.2565 mismatches=0` reproduces the 26% count-weighted
+> prize + soundness EXACTLY, BUT a real short-circuiting memo with naive structural
+> keys is **~1.72x baseline (net loss)** — the O(expr) recursive-SipHash key on
+> 100% of dispatches alone is **~2.36x baseline (+135%)**, and the real short-circuit
+> hit rate collapses to **~7%** (short-circuiting removes the downstream repeats it
+> feeds on). Verdict: prize real+sound but BLOCKED by key cost → hash-consing (O(1)
+> identity keys) is the required enabler, and its OWN interning cost (100% of
+> constructions) is unmeasured. Diagnostic-only, reverted; nothing shipped but
+> `docs/dev/codex/brief-067-value-memo-scoping.md` (Outcome section) + the PROGRESS
+> 2026-07-01 entry. **My recommendation: do NOT start the hash-consing build on this
+> evidence** — either a tighter O(1)-key + interning-cost follow-up first, or pivot
+> to task 2 (bytecode VM, attacks the same distributed per-call constant directly),
+> or park the perf line. Awaiting the user's pick. The host-hardening arc below is
+> the previous (done) line.
+
+> **2026-07-01 (read after the block above). The host-embedding hardening arc is DONE (no
 > active line — pick one; OPEN directions at the bottom of this block).** This session
 > closed TWO lines: the pattern-matching line (briefs 058 + axis measurements — see the
 > matcher block further below) AND the host-embedding hardening arc (briefs 059-066, logged
