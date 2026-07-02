@@ -6,6 +6,36 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-07-01 Test-buildout line started — coverage baseline + host/lifecycle vacuum FILLED (brief-076)
+
+Coverage-driven test buildout (TODO "Harness And Conformance"). Tool: `cargo-llvm-cov`
+0.6.21 installed pinned+`--locked` (latest 0.8.7 needs rustc 1.87; this machine is 1.85 —
+did NOT bump the toolchain for a coverage tool; `llvm-tools-preview` added).
+
+**Objective baseline (`cargo llvm-cov --workspace --summary-only`, all 1124+ tests):**
+region **78.72%** / function 83.33% / line 82.10%. rum is ~79% covered — solid, not
+under-tested; the issue was lopsidedness, now being addressed.
+
+**brief-076 (host/lifecycle) DONE + committed (`c92d8fb`):** +13 rum-host tests (12 public
+`tests/lifecycle_contract.rs` + 1 `#[cfg(test)]` panic/poison/reset; lib.rs cfg(test) mod
+only) covering all 10 lifecycle areas of briefs 059-066 (timeout/cancel/panic-poison-reset/
+reset/snapshot round-trip/introspection/typed HostValue/Send/resume/resource-limits). ALL
+contracts HOLD (no bug found). Post-076 host coverage: `session.rs` 81.88% region / 87.5%
+line — the vacuum mma-hol never touched is now filled.
+
+**Residual vacuum map (next targets; report in `/tmp/cov_workspace.txt`):**
+- `runtime/evaluation_cache.rs` 32% (441 missed) — LARGEST, but suspected mostly
+  `RUM_PROFILE_EVALUATION_CACHE` profiling branches (0% because env off); needs triage
+  (real logic vs instrumentation) before filling.
+- `pattern_matching/sequence/orderless/optional.rs` **0%** (224 lines) — a REAL gap:
+  Orderless+Optional matching has zero tests; core semantics; cleanest high-value target
+  (next brief).
+- `scoping/gensym_gc.rs` 51% (78 missed) — memory-line escape/mark-sweep paths.
+- rum-jupyter transport JSON parse 44-51% (jupyter is low-priority per prior decision).
+- rum-syntax `trivia.rs` 28%.
+**Excluded (not real gaps):** `rum-difftest/oracle/kernel/session.rs` 0% (WK oracle, only
+runs with a live WolframKernel), and `RUM_PROFILE_*` profiling-only branches (env-gated).
+
 ## 2026-07-01 brief-075 re-profile for new hotspots — NONE; constant-factor holds (better than stage0); safe perf confirmed at its ceiling
 
 The "within a constant factor of WK across the board" conclusion predated the memory line
