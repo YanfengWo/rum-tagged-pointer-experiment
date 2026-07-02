@@ -49,6 +49,60 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Abs,
     ),
     BuiltinSpec::ordinary_with_attributes(
+        "Sign",
+        "Returns the sign of exact integers and rationals.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected),
+        BuiltinHandler::Sign,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Floor",
+        "Returns the greatest integer not greater than an exact number.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected),
+        BuiltinHandler::Floor,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Ceiling",
+        "Returns the least integer not less than an exact number.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected),
+        BuiltinHandler::Ceiling,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "IntegerPart",
+        "Returns the integer part of an exact number by truncating toward zero.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected),
+        BuiltinHandler::IntegerPart,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "FractionalPart",
+        "Returns the exact fractional part after truncating toward zero.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected),
+        BuiltinHandler::FractionalPart,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Minus",
+        "Negates one exact or symbolic argument.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected),
+        BuiltinHandler::Minus,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
         "Round",
         "Rounds exact numbers to the nearest integer or exact multiple in the current snapshot-helper subset.",
         AttributeSet::from_attribute(Attribute::Listable),
@@ -122,6 +176,12 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         "Min",
         "Returns the minimum exact integer or rational operand.",
         BuiltinHandler::Min,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "MinMax",
+        "Returns the exact minimum and maximum for one scalar or list argument.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        BuiltinHandler::MinMax,
     ),
     BuiltinSpec::ordinary(
         "Expand",

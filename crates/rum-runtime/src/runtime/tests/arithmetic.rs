@@ -120,6 +120,99 @@ fn round_handles_exact_numbers_decimal_literals_and_half_even_ties() {
 }
 
 #[test]
+fn scalar_math_builtins_match_exact_wolfram_kernel_cases() {
+    let mut session = Session::new();
+
+    let cases = [
+        ("Sign[-3/2]", "-1"),
+        ("Sign[0]", "0"),
+        ("Sign[3]", "1"),
+        ("Sign[x]", "Sign[x]"),
+        ("Floor[7/2]", "3"),
+        ("Floor[-7/2]", "-4"),
+        ("Floor[3]", "3"),
+        ("Floor[x]", "Floor[x]"),
+        ("Ceiling[7/2]", "4"),
+        ("Ceiling[-7/2]", "-3"),
+        ("Ceiling[3]", "3"),
+        ("Ceiling[x]", "Ceiling[x]"),
+        ("IntegerPart[7/2]", "3"),
+        ("IntegerPart[-7/2]", "-3"),
+        ("IntegerPart[0]", "0"),
+        ("IntegerPart[x]", "IntegerPart[x]"),
+        ("FractionalPart[7/2]", "1/2"),
+        ("FractionalPart[-7/2]", "-1/2"),
+        ("FractionalPart[0]", "0"),
+        ("FractionalPart[x]", "FractionalPart[x]"),
+        ("Minus[3]", "-3"),
+        ("Minus[-3/2]", "3/2"),
+        ("Minus[0]", "0"),
+        ("Minus[x]", "Times[-1, x]"),
+        ("MinMax[{3, 1, 2}]", "List[1, 3]"),
+        ("MinMax[{3/2, 1, -2}]", "List[-2, 3/2]"),
+        ("MinMax[{}]", "List[Infinity, Times[-1, Infinity]]"),
+        ("MinMax[{3}]", "List[3, 3]"),
+        ("MinMax[x]", "List[x, x]"),
+        ("MinMax[{x, 3}]", "List[Min[3, x], Max[3, x]]"),
+        ("MinMax[{3, {x}}]", "List[Min[3, x], Max[3, x]]"),
+    ];
+
+    for (source, expected) in cases {
+        assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
+    }
+}
+
+#[test]
+fn scalar_math_builtins_thread_over_lists_and_leave_skipped_forms_symbolic() {
+    let mut session = Session::new();
+
+    let cases = [
+        ("Sign[{7/2, -1/2, x}]", "List[1, -1, Sign[x]]"),
+        ("Floor[{7/2, -1/2, x}]", "List[3, -1, Floor[x]]"),
+        ("Ceiling[{7/2, -1/2, x}]", "List[4, 0, Ceiling[x]]"),
+        ("IntegerPart[{7/2, -1/2, x}]", "List[3, 0, IntegerPart[x]]"),
+        (
+            "FractionalPart[{7/2, -1/2, x}]",
+            "List[1/2, -1/2, FractionalPart[x]]",
+        ),
+        ("Minus[{3, -1/2, x}]", "List[-3, 1/2, Times[-1, x]]"),
+        ("Floor[7/2, 2]", "Floor[7/2, 2]"),
+        ("MinMax[{3, 1, 2}, 2]", "MinMax[List[3, 1, 2], 2]"),
+    ];
+
+    for (source, expected) in cases {
+        assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
+    }
+}
+
+#[test]
+fn scalar_math_builtins_report_wolfram_kernel_attributes() {
+    let mut session = Session::new();
+
+    let scalar_attributes = "List[Listable, NumericFunction, Protected]";
+    for name in [
+        "Sign",
+        "Floor",
+        "Ceiling",
+        "IntegerPart",
+        "FractionalPart",
+        "Minus",
+    ] {
+        let source = format!("Attributes[{name}]");
+        assert_eq!(
+            eval_to_string(&mut session, &source),
+            scalar_attributes,
+            "{source}"
+        );
+    }
+
+    assert_eq!(
+        eval_to_string(&mut session, "Attributes[MinMax]"),
+        "List[Protected]"
+    );
+}
+
+#[test]
 fn factorial_respects_integer_work_limit() {
     let mut session = Session::new();
     session.set_integer_work_limit(3);

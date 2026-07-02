@@ -77,3 +77,21 @@ rationals).
 3. Verification — `cargo test -p rum-runtime` + `--workspace` + `mma_hol` byte-identical,
    verbatim; the new tests.
 4. Anything that diverged from WK you couldn't match (should be none for these).
+
+---
+
+## Outcome (Claude gate, 2026-07-02) — DONE + KEEP. 7 exact scalar-math builtins, WK-conformant.
+
+Committed. Implemented `Sign`, `Floor`, `Ceiling`, `IntegerPart`, `FractionalPart`, `Minus`,
+`MinMax` (arithmetic.rs handlers + builtin_catalog/numeric.rs registration + metadata.rs
+attributes/variants + eval_dispatch wiring). Folk/rationals-only exact, symbolic passthrough,
+WK-calibrated attributes (Listable threading verified). Gate (Claude reproduced): behavioral
+spot-check all match WK (Sign[-3/2]=-1, Floor[-7/2]=-4, Ceiling[-7/2]=-3, IntegerPart[-7/2]=-3,
+FractionalPart[-7/2]=-1/2, Minus[x]=-x, MinMax[{3,1,2}]={1,3}, Floor[{7/2,-1/2}]={3,-1},
+Sign[x] symbolic); `cargo test -p rum-runtime` 748/0/2 (+3 test fns); `cargo test --workspace`
+no failures; `mma_hol_cold_lane` 4/0 byte-identical; fmt clean. No WK divergence in the 1-arg
+scope; 2-arg round-to-multiple forms intentionally skipped (folk scope). Round/Abs/Min/Max
+untouched. Matrix update deferred to the consolidated accuracy pass.
+
+Next: batch-1b (string helpers: StringReverse/ToLowerCase/LowerCaseQ/UpperCaseQ/Capitalize/
+Decapitalize).

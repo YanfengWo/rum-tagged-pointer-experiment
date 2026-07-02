@@ -19,6 +19,7 @@ const EXTRA_SYSTEM_NAME_SYMBOLS: &[&str] = &[
     "HoldFirst",
     "HoldRest",
     "Listable",
+    "NumericFunction",
     "OneIdentity",
     "OptionsPattern",
     "Orderless",

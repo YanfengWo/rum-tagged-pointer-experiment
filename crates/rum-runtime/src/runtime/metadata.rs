@@ -34,6 +34,7 @@ pub enum Attribute {
     HoldRest,
     SequenceHold,
     Listable,
+    NumericFunction,
     Orderless,
     Flat,
     OneIdentity,
@@ -50,11 +51,12 @@ impl Attribute {
             Self::HoldRest => 1 << 3,
             Self::SequenceHold => 1 << 4,
             Self::Listable => 1 << 5,
-            Self::Orderless => 1 << 6,
-            Self::Flat => 1 << 7,
-            Self::OneIdentity => 1 << 8,
-            Self::Protected => 1 << 9,
-            Self::Temporary => 1 << 10,
+            Self::NumericFunction => 1 << 6,
+            Self::Orderless => 1 << 7,
+            Self::Flat => 1 << 8,
+            Self::OneIdentity => 1 << 9,
+            Self::Protected => 1 << 10,
+            Self::Temporary => 1 << 11,
         }
     }
 
@@ -66,6 +68,7 @@ impl Attribute {
             Self::HoldRest => "HoldRest",
             Self::SequenceHold => "SequenceHold",
             Self::Listable => "Listable",
+            Self::NumericFunction => "NumericFunction",
             Self::Orderless => "Orderless",
             Self::Flat => "Flat",
             Self::OneIdentity => "OneIdentity",
@@ -92,6 +95,7 @@ impl Attribute {
             "HoldRest" => Some(Self::HoldRest),
             "SequenceHold" => Some(Self::SequenceHold),
             "Listable" => Some(Self::Listable),
+            "NumericFunction" => Some(Self::NumericFunction),
             "Orderless" => Some(Self::Orderless),
             "Flat" => Some(Self::Flat),
             "OneIdentity" => Some(Self::OneIdentity),
@@ -217,13 +221,14 @@ impl AttributeSet {
     }
 }
 
-pub(super) const ALL_ATTRIBUTES: [Attribute; 11] = [
+pub(super) const ALL_ATTRIBUTES: [Attribute; 12] = [
     Attribute::HoldAllComplete,
     Attribute::HoldAll,
     Attribute::HoldFirst,
     Attribute::HoldRest,
     Attribute::SequenceHold,
     Attribute::Listable,
+    Attribute::NumericFunction,
     Attribute::Orderless,
     Attribute::Flat,
     Attribute::OneIdentity,
@@ -262,6 +267,12 @@ pub enum BuiltinHandler {
     Subtract,
     Divide,
     Abs,
+    Sign,
+    Floor,
+    Ceiling,
+    IntegerPart,
+    FractionalPart,
+    Minus,
     Round,
     Factorial,
     Factorial2,
@@ -275,6 +286,7 @@ pub enum BuiltinHandler {
     LCM,
     Max,
     Min,
+    MinMax,
     Expand,
     Coefficient,
     CoefficientList,

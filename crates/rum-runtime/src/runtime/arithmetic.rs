@@ -140,6 +140,91 @@ impl Session {
         ))
     }
 
+    pub(super) fn eval_sign(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [arg] = args else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let Some(value) = expr_as_exact_rational(arg) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let sign = match value.numerator().cmp(&BigInt::from(0_u8)) {
+            std::cmp::Ordering::Less => -1_i32,
+            std::cmp::Ordering::Equal => 0_i32,
+            std::cmp::Ordering::Greater => 1_i32,
+        };
+        Ok(Expr::integer(BigInt::from(sign)))
+    }
+
+    pub(super) fn eval_floor(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [arg] = args else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let Some(value) = expr_as_exact_rational(arg) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        Ok(Expr::integer(floor_exact_rational_to_integer(&value)))
+    }
+
+    pub(super) fn eval_ceiling(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [arg] = args else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let Some(value) = expr_as_exact_rational(arg) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        Ok(Expr::integer(ceiling_exact_rational_to_integer(&value)))
+    }
+
+    pub(super) fn eval_integer_part(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [arg] = args else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let Some(value) = expr_as_exact_rational(arg) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        Ok(Expr::integer(truncate_exact_rational_to_integer(&value)))
+    }
+
+    pub(super) fn eval_fractional_part(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [arg] = args else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let Some(value) = expr_as_exact_rational(arg) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let integer_part = Rational::from_integer(truncate_exact_rational_to_integer(&value));
+        Ok(Expr::rational(value.sub(&integer_part)))
+    }
+
+    pub(super) fn eval_minus(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [arg] = args else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        self.combine_multiplicative_args(
+            &system_expr("Times"),
+            &[Expr::integer((-1_i32).into()), arg.clone()],
+        )
+    }
+
     pub(super) fn eval_round(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let (value_expr, multiple_expr) = match args {
             [value] => (value, None),
@@ -398,6 +483,51 @@ impl Session {
 
     pub(super) fn eval_min(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         self.eval_exact_extremum(head, args, false)
+    }
+
+    pub(super) fn eval_min_max(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [arg] = args else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let (min, max) = match arg {
+            Expr::Call {
+                head: list_head,
+                args: items,
+            } if is_system_symbol_name(list_head, "List") => {
+                let mut operands = Vec::new();
+                flatten_list_operands(items.as_ref(), &mut operands);
+                match operands.as_slice() {
+                    [] => {
+                        let min_head = system_expr("Min");
+                        let max_head = system_expr("Max");
+                        (
+                            self.eval_min(&min_head, &[])?,
+                            self.eval_max(&max_head, &[])?,
+                        )
+                    }
+                    [only] => ((*only).clone(), (*only).clone()),
+                    _ => {
+                        let min_head = system_expr("Min");
+                        let max_head = system_expr("Max");
+                        let orderless = AttributeSet::from_attribute(Attribute::Orderless);
+                        let extrema_args = operands.into_iter().cloned().collect();
+                        let extrema_args = self.normalize_call_args_by_attributes(
+                            &min_head,
+                            extrema_args,
+                            orderless,
+                        );
+                        (
+                            self.eval_min(&min_head, &extrema_args)?,
+                            self.eval_max(&max_head, &extrema_args)?,
+                        )
+                    }
+                }
+            }
+            _ => (arg.clone(), arg.clone()),
+        };
+
+        Ok(Expr::call(system_expr("List"), vec![min, max]))
     }
 
     fn eval_exact_extremum(
@@ -923,6 +1053,20 @@ fn compare_exact_rational_values(lhs: &Rational, rhs: &Rational) -> std::cmp::Or
     let lhs_cross = lhs.numerator() * rhs.denominator();
     let rhs_cross = rhs.numerator() * lhs.denominator();
     lhs_cross.cmp(&rhs_cross)
+}
+
+fn floor_exact_rational_to_integer(value: &Rational) -> BigInt {
+    floor_quotient(value.numerator(), value.denominator())
+        .expect("normalized exact rational has a non-zero denominator")
+}
+
+fn ceiling_exact_rational_to_integer(value: &Rational) -> BigInt {
+    -floor_quotient(&(-value.numerator().clone()), value.denominator())
+        .expect("normalized exact rational has a non-zero denominator")
+}
+
+fn truncate_exact_rational_to_integer(value: &Rational) -> BigInt {
+    value.numerator() / value.denominator()
 }
 
 fn expr_as_signed_integer_value(expr: &Expr) -> Option<BigInt> {

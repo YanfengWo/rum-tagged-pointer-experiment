@@ -325,6 +325,7 @@ fn is_extra_known_system_symbol_name(name: &str) -> bool {
             | "HoldRest"
             | "Listable"
             | "NearestTo"
+            | "NumericFunction"
             | "OptionsPattern"
             | "EvaluationMonitor"
             | "DigitCharacter"
