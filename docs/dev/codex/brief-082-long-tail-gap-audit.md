@@ -12,9 +12,15 @@ to rum's scope.
 
 ## Method
 
-1. **Enumerate both symbol sets.**
-   - WK: run `wolframscript`/WolframKernel `Names["System`*"]` → the full System symbol set
-     (save raw to a file). Oracle kernel: `/Applications/Wolfram.app/Contents/MacOS/WolframKernel`.
+1. **Enumerate both symbol sets** (use the RECORDED oracle method — do NOT hardcode a kernel
+   path). The documented local-kernel policy resolves the WK oracle via
+   `RUM_DIFFTEST_ORACLE_KERNEL`, then PATH `WolframKernel`/`MathKernel`, then common install
+   paths (see `rum-difftest` `resolve_oracle_kernel` in `crates/rum-difftest/src/config.rs`
+   and `docs/testing-strategy.md`). For this one-off enumeration (there is no difftest
+   "list symbols" subcommand), run `Names["System`*"]` through that resolved kernel — e.g.
+   `wolframscript -code 'Export["/tmp/wk-system-symbols.txt", Names["System`*"], "Lines"]'`
+   (wolframscript auto-resolves the kernel), or the kernel from
+   `RUM_DIFFTEST_ORACLE_KERNEL`. Save raw to a file.
    - rum: `target/debug/rum-cli --eval 'Names["System`*"]'` (rum has ~504). (A pre-dumped
      rum list may be at `/tmp/rum-system-symbols.txt`; regenerate to be safe.)
 2. **Diff:** WK-minus-rum = every System symbol rum lacks (~5000+, mostly out of scope).
