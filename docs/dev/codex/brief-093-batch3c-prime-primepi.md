@@ -66,3 +66,20 @@ Spot-check against WK via the documented oracle resolution
 3. Verification — `cargo test -p rum-runtime` + `--workspace` + `mma_hol` byte-identical,
    verbatim; the new tests.
 4. Any WK divergence you couldn't match (e.g. the Prime::intpp message), with analysis.
+
+---
+
+## Outcome (Claude gate, 2026-07-02) — DONE + KEEP. Prime/PrimePi (folk sieve); number-theory line COMPLETE.
+
+Committed (number_theory.rs + catalog + metadata + dispatch + tests). Gate (Claude reproduced):
+Prime[1]=2/[100]=541/[1000]=7919/[10000]=104729 (on-demand sieve), PrimePi[10]=4/[100]=25/
+[1000]=168/[13/2]=3 (rational floor)/[1]=0, Prime[0]→unevaluated, Prime[{5,6}]={11,13}
+(Listable), symbolic passthrough. `cargo test -p rum-runtime` 781/0/2; `--workspace` no
+failures; `mma_hol_cold_lane` 4/0 byte-identical; fmt clean. Both {Listable,Protected}
+(single-probed). Work-limit guarded; no static table. PrimeQ untouched.
+
+Long-tail line COMPLETE: 50 + 2 = **52 new builtins** across b1(scalar/string/introspection/
+integer-digits) + b2(list-plumbing/set-ops) + b2c(iterators/Binomial/Fibonacci) + b3a(Pollard
+factorization group) + b3b(recurrence combinatorics) + b3c(Prime/PrimePi). Next (pre-ship
+finish): the consolidated support-matrix accuracy pass — record all 52 + Factor linear-only +
+factorization work-limit + the partial limits.

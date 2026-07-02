@@ -319,6 +319,8 @@ pub enum BuiltinHandler {
     EulerPhi,
     MoebiusMu,
     DivisorSigma,
+    Prime,
+    PrimePi,
     PrimeNu,
     PrimeOmega,
     NextPrime,

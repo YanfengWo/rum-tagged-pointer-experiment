@@ -56,6 +56,8 @@ impl Session {
             BuiltinHandler::EulerPhi => self.eval_euler_phi(head, args),
             BuiltinHandler::MoebiusMu => self.eval_moebius_mu(head, args),
             BuiltinHandler::DivisorSigma => self.eval_divisor_sigma(head, args),
+            BuiltinHandler::Prime => self.eval_prime(head, args),
+            BuiltinHandler::PrimePi => self.eval_prime_pi(head, args),
             BuiltinHandler::PrimeNu => self.eval_prime_nu(head, args),
             BuiltinHandler::PrimeOmega => self.eval_prime_omega(head, args),
             BuiltinHandler::NextPrime => self.eval_next_prime(head, args),

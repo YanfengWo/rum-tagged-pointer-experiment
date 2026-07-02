@@ -6,6 +6,8 @@ use std::sync::OnceLock;
 
 const SMALL_TRIAL_LIMIT: usize = 100_000;
 const MILLER_RABIN_WITNESSES: [u64; 12] = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
+const SMALL_INDEXED_PRIMES: [usize; 5] = [2, 3, 5, 7, 11];
+const SIEVE_WORK_CHUNK: usize = 16;
 
 impl Session {
     pub(super) fn eval_divisors(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -109,6 +111,52 @@ impl Session {
         Ok(Expr::rational(sigma))
     }
 
+    pub(super) fn eval_prime(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [arg] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Prime", args, 1));
+        };
+        if let Some(threaded) = self.try_thread_number_theory_call(head, args)? {
+            return Ok(threaded);
+        }
+
+        let Some(index) = expr_as_exact_integer(arg) else {
+            if matches!(arg, Expr::Atom(Atom::Rational(_))) {
+                self.push_prime_intpp_message(head, args);
+            }
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        if index <= BigInt::zero() {
+            self.push_prime_intpp_message(head, args);
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
+
+        let mut budget = IntegerWorkBudget::new(self.resource_limits.integer_work_limit);
+        budget.charge_bigint_units(&index)?;
+        let prime = nth_positive_prime(&index, &mut budget)?;
+        Ok(Expr::integer(BigInt::from(prime)))
+    }
+
+    pub(super) fn eval_prime_pi(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        let [arg] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("PrimePi", args, 1));
+        };
+        if let Some(threaded) = self.try_thread_number_theory_call(head, args)? {
+            return Ok(threaded);
+        }
+
+        let Some(value) = expr_as_exact_rational(arg) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let limit = floor_exact_rational_for_number_theory(&value);
+        if limit < BigInt::from(2_u8) {
+            return Ok(Expr::integer(BigInt::zero()));
+        }
+
+        let mut budget = IntegerWorkBudget::new(self.resource_limits.integer_work_limit);
+        let primes = primes_up_to_bigint_limit(&limit, &mut budget)?;
+        Ok(Expr::integer(BigInt::from(primes.len())))
+    }
+
     pub(super) fn eval_prime_nu(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let [arg] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("PrimeNu", args, 1));
@@ -210,6 +258,15 @@ impl Session {
             ThreadingDispatch::Threaded(threaded) => self.evaluate(threaded).map(Some),
             ThreadingDispatch::Mismatch => Ok(Some(Expr::call(head.clone(), args.to_vec()))),
         }
+    }
+
+    fn push_prime_intpp_message(&mut self, head: &Expr, args: &[Expr]) {
+        let call = Expr::call(head.clone(), args.to_vec());
+        self.push_message(
+            "Prime",
+            "intpp",
+            format!("Positive integer argument expected in {call}."),
+        );
     }
 }
 
@@ -366,6 +423,115 @@ fn rational_prime_power(
         .ok_or(EvalError::IntegerWorkLimitExceeded {
             limit: budget.limit,
         })
+}
+
+fn nth_positive_prime(index: &BigInt, budget: &mut IntegerWorkBudget) -> Result<usize, EvalError> {
+    let Some(index) = index.to_usize() else {
+        return Err(EvalError::IntegerWorkLimitExceeded {
+            limit: budget.limit,
+        });
+    };
+    if let Some(prime) = SMALL_INDEXED_PRIMES.get(index - 1) {
+        return Ok(*prime);
+    }
+
+    let mut sieve_limit = nth_prime_upper_bound(index, budget.limit)?;
+    loop {
+        let primes = primes_up_to_usize_limit(sieve_limit, budget)?;
+        if let Some(prime) = primes.get(index - 1) {
+            return Ok(*prime);
+        }
+
+        sieve_limit = sieve_limit
+            .checked_mul(2)
+            .ok_or(EvalError::IntegerWorkLimitExceeded {
+                limit: budget.limit,
+            })?;
+    }
+}
+
+fn nth_prime_upper_bound(index: usize, limit: usize) -> Result<usize, EvalError> {
+    debug_assert!(index >= 6);
+
+    let bit_len = usize::BITS as usize - index.leading_zeros() as usize;
+    index
+        .checked_mul(bit_len)
+        .and_then(|bound| bound.checked_mul(2))
+        .and_then(|bound| bound.checked_add(3))
+        .ok_or(EvalError::IntegerWorkLimitExceeded { limit })
+}
+
+fn primes_up_to_bigint_limit(
+    limit: &BigInt,
+    budget: &mut IntegerWorkBudget,
+) -> Result<Vec<usize>, EvalError> {
+    let Some(limit) = limit.to_usize() else {
+        return Err(EvalError::IntegerWorkLimitExceeded {
+            limit: budget.limit,
+        });
+    };
+    primes_up_to_usize_limit(limit, budget)
+}
+
+fn primes_up_to_usize_limit(
+    limit: usize,
+    budget: &mut IntegerWorkBudget,
+) -> Result<Vec<usize>, EvalError> {
+    if limit < 2 {
+        return Ok(Vec::new());
+    }
+
+    budget.charge(sieve_work_units(limit))?;
+    if limit <= SMALL_TRIAL_LIMIT {
+        return Ok(small_trial_primes()
+            .iter()
+            .copied()
+            .take_while(|prime| (*prime as usize) <= limit)
+            .map(|prime| prime as usize)
+            .collect());
+    }
+
+    let len = limit
+        .checked_add(1)
+        .ok_or(EvalError::IntegerWorkLimitExceeded {
+            limit: budget.limit,
+        })?;
+    let mut composite = vec![false; len];
+    let mut primes = Vec::new();
+
+    for candidate in 2..=limit {
+        if composite[candidate] {
+            continue;
+        }
+
+        primes.push(candidate);
+        if candidate <= limit / candidate {
+            let mut multiple = candidate * candidate;
+            while multiple <= limit {
+                composite[multiple] = true;
+                multiple += candidate;
+            }
+        }
+    }
+
+    Ok(primes)
+}
+
+fn sieve_work_units(limit: usize) -> usize {
+    limit.saturating_add(SIEVE_WORK_CHUNK - 1) / SIEVE_WORK_CHUNK
+}
+
+fn floor_exact_rational_for_number_theory(value: &Rational) -> BigInt {
+    let numerator = value.numerator();
+    let denominator = value.denominator();
+    let quotient = numerator / denominator;
+    let remainder = numerator % denominator;
+
+    if remainder.is_zero() || !numerator.is_negative() {
+        quotient
+    } else {
+        quotient - BigInt::one()
+    }
 }
 
 fn nth_next_signed_prime(

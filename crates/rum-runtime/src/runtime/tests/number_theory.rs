@@ -37,6 +37,18 @@ fn factorization_builtins_match_wolfram_kernel_integer_anchors() {
         ("DivisorSigma[-2, 12]", "35/24"),
         ("DivisorSigma[1, -12]", "28"),
         ("DivisorSigma[1, 0]", "DivisorSigma[1, 0]"),
+        ("Prime[1]", "2"),
+        ("Prime[10]", "29"),
+        ("Prime[100]", "541"),
+        ("Prime[1000]", "7919"),
+        ("Prime[10000]", "104729"),
+        ("PrimePi[10]", "4"),
+        ("PrimePi[100]", "25"),
+        ("PrimePi[1000]", "168"),
+        ("PrimePi[2]", "1"),
+        ("PrimePi[1]", "0"),
+        ("PrimePi[13/2]", "3"),
+        ("PrimePi[-1/2]", "0"),
         ("PrimeNu[12]", "2"),
         ("PrimeNu[1]", "0"),
         ("PrimeNu[8]", "1"),
@@ -98,6 +110,8 @@ fn factorization_builtins_thread_and_passthrough_like_current_scope() {
             "List[12, 8, DivisorSigma[1, x]]",
         ),
         ("DivisorSigma[{1, 2}, 6]", "List[12, 50]"),
+        ("Prime[{1, 3, x}]", "List[2, 5, Prime[x]]"),
+        ("PrimePi[{10, 13/2, x}]", "List[4, 3, PrimePi[x]]"),
         ("PrimeNu[{12, 1, x}]", "List[2, 0, PrimeNu[x]]"),
         ("PrimeOmega[{12, 1, x}]", "List[3, 0, PrimeOmega[x]]"),
         ("NextPrime[{10, 11, x}]", "List[11, 13, NextPrime[x]]"),
@@ -108,6 +122,8 @@ fn factorization_builtins_thread_and_passthrough_like_current_scope() {
         ("MoebiusMu[x]", "MoebiusMu[x]"),
         ("DivisorSigma[x, 12]", "DivisorSigma[x, 12]"),
         ("DivisorSigma[1, x]", "DivisorSigma[1, x]"),
+        ("Prime[x]", "Prime[x]"),
+        ("PrimePi[x]", "PrimePi[x]"),
         ("PrimeNu[3/2]", "PrimeNu[3/2]"),
         ("PrimeOmega[x]", "PrimeOmega[x]"),
         ("NextPrime[x]", "NextPrime[x]"),
@@ -131,6 +147,8 @@ fn factorization_builtins_report_wolfram_kernel_attributes() {
             "Attributes[DivisorSigma]",
             "List[Listable, NHoldAll, Protected]",
         ),
+        ("Attributes[Prime]", "List[Listable, Protected]"),
+        ("Attributes[PrimePi]", "List[Listable, Protected]"),
         ("Attributes[PrimeNu]", "List[Protected, ReadProtected]"),
         ("Attributes[PrimeOmega]", "List[Protected, ReadProtected]"),
         ("Attributes[NextPrime]", "List[Protected, ReadProtected]"),
@@ -161,6 +179,27 @@ fn large_semiprime_factorization_uses_pollard_rho_path() {
 }
 
 #[test]
+fn prime_reports_wolfram_kernel_positive_integer_message() {
+    let mut session = Session::new();
+
+    let zero = session.eval_text("Prime[0]").unwrap();
+    assert_eq!(zero.value.to_string(), "Prime[0]");
+    assert!(zero.messages.iter().any(|message| {
+        message.symbol == "Prime"
+            && message.tag == "intpp"
+            && message.text == "Positive integer argument expected in Prime[0]."
+    }));
+
+    let rational = session.eval_text("Prime[3/2]").unwrap();
+    assert_eq!(rational.value.to_string(), "Prime[3/2]");
+    assert!(rational.messages.iter().any(|message| {
+        message.symbol == "Prime"
+            && message.tag == "intpp"
+            && message.text == "Positive integer argument expected in Prime[3/2]."
+    }));
+}
+
+#[test]
 fn factorization_respects_integer_work_limit() {
     let mut session = Session::new();
     session.set_integer_work_limit(1);
@@ -172,6 +211,36 @@ fn factorization_respects_integer_work_limit() {
     );
     assert!(
         limited
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+}
+
+#[test]
+fn prime_and_prime_pi_respect_integer_work_limit() {
+    let mut session = Session::new();
+    session.set_integer_work_limit(1);
+
+    let limited_prime = session.eval_text("Prime[10000]").unwrap();
+    assert_eq!(
+        limited_prime.value.to_string(),
+        "TerminatedEvaluation[\"IntegerWorkLimit\"]"
+    );
+    assert!(
+        limited_prime
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+
+    let limited_prime_pi = session.eval_text("PrimePi[1000]").unwrap();
+    assert_eq!(
+        limited_prime_pi.value.to_string(),
+        "TerminatedEvaluation[\"IntegerWorkLimit\"]"
+    );
+    assert!(
+        limited_prime_pi
             .messages
             .iter()
             .any(|message| message.symbol == "General" && message.tag == "reslim")

@@ -337,6 +337,22 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::DivisorSigma,
     ),
     BuiltinSpec::ordinary_with_attributes(
+        "Prime",
+        "Returns the n-th positive prime for a positive integer n.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::Prime,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "PrimePi",
+        "Counts primes not greater than an exact integer or rational argument.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::PrimePi,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
         "PrimeNu",
         "Counts distinct prime factors of an exact integer.",
         AttributeSet::empty()
