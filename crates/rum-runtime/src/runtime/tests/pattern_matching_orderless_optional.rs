@@ -105,7 +105,7 @@ fn orderless_optional_dot_uses_head_default() {
 }
 
 #[test]
-#[ignore = "KNOWN WK DIVERGENCE (brief-077): Flat+Orderless+Optional binding order + ReplaceList grouped-match collection differ from WK; TODO fix matcher, see PROGRESS/TODO 2026-07-01"]
+#[ignore = "KNOWN WK DIVERGENCE (brief-080): Flat+Orderless+Optional still lacks WK's flat-wrapped singleton candidates/order; non-Flat Optional sequence omission is fixed"]
 fn flat_orderless_optional_matches_collects_and_omits_like_wk() {
     let mut session = Session::new();
 
@@ -137,7 +137,6 @@ fn flat_orderless_optional_matches_collects_and_omits_like_wk() {
 }
 
 #[test]
-#[ignore = "KNOWN WK DIVERGENCE (brief-077): Orderless+Optional with Blank/BlankSequence neighbors under-collects default/omission branches in ReplaceList vs WK; TODO fix matcher, see PROGRESS/TODO 2026-07-01"]
 fn orderless_optional_with_sequence_neighbors_uses_wk_backtracking_order() {
     let mut session = Session::new();
 
@@ -175,7 +174,7 @@ fn orderless_optional_with_sequence_neighbors_uses_wk_backtracking_order() {
 }
 
 #[test]
-#[ignore = "KNOWN WK DIVERGENCE (brief-077): Flat+Orderless+Optional with sequence neighbors picks a different first binding and heavily under-collects ReplaceList (WK 10 vs rum 3); TODO fix matcher, see PROGRESS/TODO 2026-07-01"]
+#[ignore = "KNOWN WK DIVERGENCE (brief-080): Flat+Orderless+Optional sequence-neighbor case still compounds flat-wrapped singleton order with grouped-match under-collection"]
 fn flat_orderless_optional_with_sequence_neighbors_uses_wk_backtracking_order() {
     let mut session = Session::new();
 

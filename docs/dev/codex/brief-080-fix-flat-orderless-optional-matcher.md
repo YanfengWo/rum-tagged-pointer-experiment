@@ -88,3 +88,26 @@ microbench if you touched a shared routine).
    all verbatim; the ignored-count before→after.
 4. Not fixed — each bug left `#[ignore]`'d, with why it couldn't be fixed without regressing.
 5. Open questions.
+
+---
+
+## Outcome (Claude gate, 2026-07-01) — DONE + KEEP. 1 of 4 fixed (bug 3); 3 Flat ones left #[ignore]'d (honest stop-loss).
+
+Committed. Product-code matcher fix, LOCALIZED to collect-mode (ReplaceList/Cases) Orderless+
+Optional omission: bug 3 (non-Flat Orderless+Optional with sequence neighbors under-collected
+the default/omission branches — collect-mode called the single-match omission helper, kept
+only the first). Fix = new `collect_compiled_orderless_optional_omission_matches_owned` that
+resolves the default, matches the inner pattern, then collects ALL remaining Orderless rest
+matches (mirrors the present-branch collection). The single-match path (MatchQ/ReplaceAll) is
+UNTOUCHED — blast radius is only ReplaceList/Cases Orderless+Optional omission.
+
+Bugs 1, 2, 4 (all **Flat**+Orderless) remain `#[ignore]`'d: WK needs flat-wrapped-singleton
+candidates (`a→g[1]`) plus atomic candidates; Codex tried a localized flat-candidate fix,
+it did NOT make match+collect byte-identical without regressing existing Flat/Orderless, so
+reverted under the stop-loss rule (correct call). Left as spec with updated reasons.
+
+Gate (Claude reproduced): fmt clean; `cargo test -p rum-runtime` 744 passed / 0 failed /
+2 ignored (was 743/0/3 — one un-ignored); the un-ignored test passes; `cargo test
+--workspace` no failures (25 ok result-lines); `mma_hol_cold_lane` 4/0 byte-identical;
+Codex's matcher hot-path spot-check 0.99–1.03x (no slowdown). No new unsafe, no mma-hol
+edits, no Expr/serde change.

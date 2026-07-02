@@ -59,18 +59,20 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Immediate Correctness And Debt
 
-- [ ] **Flat/Orderless + Optional matching diverges from WK (found by brief-077, LOW
-  urgency — exotic corner, nothing in mma-hol uses it).** WK-calibrated tests in
-  `tests/pattern_matching_orderless_optional.rs` are `#[ignore]`'d documenting 4
-  divergences in `pattern_matching/sequence/orderless/optional.rs`: (1)
-  Flat+Orderless+Optional binding ORDER (`g[1,2] /. g[a_,b_:0]:>{a,b}` → WK `{1,2}`, rum
-  `{2,1}`; WK binds the Flat singleton `a→g[1]`, rum `a→1`); (2) Flat+Orderless ReplaceList
-  under-collects grouped Flat matches; (3) Orderless+Optional with Blank/BlankSequence
-  neighbors under-collects default/omission branches in ReplaceList; (4) Flat+Orderless+
-  Optional with sequence neighbors picks a different first binding + heavily
-  under-collects (WK 10 vs rum 3). Fix = a matcher change (intricate WL semantics); the
-  `#[ignore]`'d tests are the ready spec — remove `#[ignore]` when fixed. Basic
-  Orderless+Optional (present/omit/default/dot) already matches WK (5 tests pass).
+- [ ] **Flat+Orderless+Optional matching diverges from WK — 3 remaining (brief-077 found 4;
+  brief-080 fixed 1). LOW urgency — exotic corner, nothing in mma-hol uses it.** FIXED
+  (brief-080): the non-Flat Orderless+Optional-with-sequence-neighbor ReplaceList
+  under-collection (collect-mode omission now collects ALL omitted-default rest matches, not
+  just the first — new `collect_compiled_orderless_optional_omission_matches_owned`). STILL
+  `#[ignore]`'d in `tests/pattern_matching_orderless_optional.rs` (2 test fns, 3 divergences,
+  all **Flat**+Orderless): (1) Flat+Orderless+Optional binding ORDER (`g[1,2] /. g[a_,b_:0]
+  :>{a,b}` → WK `{1,2}`, rum `{2,1}`; WK binds the Flat-wrapped singleton `a→g[1]`, rum
+  `a→1`); (2) Flat+Orderless ReplaceList under-collects grouped Flat matches; (4) Flat+
+  Orderless+Optional sequence-neighbor compounds (1)+(2). Root: the Flat+Orderless
+  candidate/selected-value arm needs flat-wrapped-singleton candidates without regressing
+  existing Flat/Orderless behavior (brief-080 tried a localized fix, couldn't make it
+  byte-identical without regression, reverted under stop-loss). The `#[ignore]`'d tests are
+  the ready spec. Basic Orderless+Optional + the non-Flat sequence case now match WK.
 
 - [x] **Deep-nesting stack-overflow — RESOLVED 2026-06-30 (parse guard shipped;
   iterative Drop tried+rejected on perf, documented as a host limitation).** A
