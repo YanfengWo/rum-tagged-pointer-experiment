@@ -102,3 +102,25 @@ WK-vs-rum analysis (a finding).
 3. Findings — any rum-vs-WK divergence a test revealed (with the case + analysis), or
    "Orderless+Optional matches WK on all covered cases."
 4. Open questions — any Orderless-binding case where WK's choice was ambiguous/surprising.
+
+---
+
+## Outcome (Claude gate, 2026-07-01) — DONE + KEEP. Coverage 0%→71%; found + quarantined 4 real WK-conformance bugs.
+
+The coverage push did exactly what good tests should: it FOUND REAL BUGS. Committed
+test-only (`tests/pattern_matching_orderless_optional.rs` + mod.rs wiring).
+- 8 tests / 39 WK-calibrated WL cases. **5 pass** (basic Orderless+Optional: present/
+  omit/explicit-default/`x_.` via `Default[f]`/other-args/non-match — all match WK).
+- **3 quarantined `#[ignore]`** documenting 4 WK divergences in the Flat/Orderless+Optional
+  + sequence-neighbor corner (binding order + ReplaceList under-collection; see the
+  ignore reasons + TODO "Immediate Correctness And Debt"). Left as executable bug-spec
+  (remove `#[ignore]` when the matcher is fixed).
+- Coverage: `optional.rs` 0% → **71.43% region / 76.34% line** from the 5 passing tests
+  alone (90%/97% with the ignored ones); the vacuum is filled for the WORKING paths and
+  the buggy paths are now documented.
+- Gate (Claude reproduced): `cargo test -p rum-runtime` 728 passed / 0 failed / 3 ignored;
+  fmt clean; no product-code change (test file + mod.rs only).
+
+**Findings queued:** the 4 Flat/Orderless+Optional matcher divergences (TODO, LOW urgency —
+exotic corner, mma-hol doesn't use it). Next coverage targets: evaluation_cache.rs (triage
+real-logic vs profiling branches) and gensym_gc.rs.

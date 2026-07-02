@@ -110,6 +110,7 @@ mod namespace_names;
 mod nothing;
 mod options_and_protection;
 mod package_tools;
+mod pattern_matching_orderless_optional;
 mod polynomials;
 mod predicates;
 mod predicates_part2;
