@@ -92,3 +92,19 @@ Write `docs/long-tail-gap-audit.md`:
 3. The recommended batch order for the implementation line.
 4. Uncertain/needs-decision items (scope calls you want confirmed).
 5. Confirm `docs/long-tail-gap-audit.md` written and NO product-code change.
+
+---
+
+## Outcome (Claude gate, 2026-07-02) — DONE (first cut) → superseded by brief-083.
+
+Produced `docs/long-tail-gap-audit.md` with 96 in-scope gaps by CL category + batches;
+validated WK=7800 / rum=504 (matches the recorded-method anchor). But the manual "plausibly
+common" filter was PROVABLY incomplete: cross-checking the WK `FunctionalityAreas` grouping
+(the recorded "radical route", `scripts/export-wl-builtins.wls` restored + regenerated
+`WLBuiltin/wolfram-language-groups.json`) caught common in-scope gaps it missed (`Binomial`,
+`PadLeft`, `PadRight`, `IntegerDigits`, `FromDigits`, `Prime`, `PrimePi`, `Cancel`, `Collect`).
+The grouping is coarse (in-scope areas mix in float-math/graphics/linalg/nlp/notation members,
+so the raw in-scope-group diff over-counts at ~461+327), so grouping alone is necessary but
+not sufficient — hence brief-083 reconciles grouping ∩ scope-rules with the manual 96 for the
+authoritative list. Also fixed the brief's hardcoded-WK-path shortcut to the documented oracle
+resolution.
