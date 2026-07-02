@@ -6,6 +6,30 @@ lessons that are useful history but should not keep cluttering `TODO.md`.
 `TODO.md` should stay focused on active or near-term work. When a completed
 checklist stops helping prioritization, move or summarize it here.
 
+## 2026-07-01 Test-buildout line COMPLETE — jupyter live verified (3 layers), stale fixture fixed
+
+Unit coverage (all committed, test-only): 076 host/lifecycle (+13, contracts hold, session.rs
+82%), 077 Orderless+Optional (0->71%, found+queued 4 Flat/Orderless+Optional WK bugs),
+078 gensym-GC (51->71%, sound), 079 jupyter transport + syntax trivia/ast (trivia 28->99%,
+no bug). Workspace region baseline 78.72%; evaluation_cache.rs skipped as a false vacuum
+(profiling instrumentation).
+
+**jupyter LIVE verification (the layer unit tests + llvm-cov can't reach):** ran the
+scripts/rum-jupyter-home.sh smokes on the current binary (`jupyter_home` venv + playwright).
+kernel-smoke 16/16 GREEN (lifecycle/restart/shutdown, stdin single/multi/disallowed resume,
+protocol complete/inspect/is_complete/history/streams/failure, unsupported comm_info/
+comm_messages/debug/unknown keepalive); browser-smoke (headless JupyterLab e2e) = ok. So
+brief-066's worker-thread real interrupt + the closure VM etc. did NOT break the live kernel.
+The one initial failure (is_complete("f[1 2]") expected 'invalid') was a STALE SMOKE FIXTURE,
+NOT a rum bug: `f[1 2]` is VALID WL (juxtaposition => f[1*2] = f[2]) post brief-026, so rum
+correctly returns 'complete'; fixed the smoke to use `f[1 ! 2]` (genuinely invalid, matches
+the rum-runtime is_complete unit test). The launcher/zeromq/socket files (0% in llvm-cov) are
+covered by this e2e layer, not unit tests -- not real vacuums.
+
+Test-buildout line DONE. Remaining lower-value coverage (jupyter transport further / other)
+is diminishing. Next line: pick from the A/B survey (showcase / v0.1 stabilization /
+small conformance incl. the 4 queued matcher bugs + genuine-cycle->IterationLimit).
+
 ## 2026-07-01 Test-buildout line started — coverage baseline + host/lifecycle vacuum FILLED (brief-076)
 
 Coverage-driven test buildout (TODO "Harness And Conformance"). Tool: `cargo-llvm-cov`

@@ -364,7 +364,10 @@ def protocol_smoke() -> None:
         assert_equal(incomplete_content.get("status"), "incomplete", "is_complete incomplete status")
         assert_equal(incomplete_content.get("indent"), "    ", "is_complete incomplete indent")
 
-        invalid_id = client.is_complete("f[1 2]")
+        # NOTE: "f[1 2]" is VALID in WL (juxtaposition => f[1*2] = f[2]), so it is
+        # 'complete', not 'invalid' (stale pre-juxtaposition fixture, brief-026). Use a
+        # genuinely-invalid input (matches the rum-runtime is_complete unit test).
+        invalid_id = client.is_complete("f[1 ! 2]")
         invalid = shell_reply_for(client, invalid_id, "is_complete invalid")
         assert_equal(
             invalid.get("content", {}).get("status"),
