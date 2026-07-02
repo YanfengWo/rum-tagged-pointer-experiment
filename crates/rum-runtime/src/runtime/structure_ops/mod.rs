@@ -1,5 +1,6 @@
 use super::*;
 
+mod combinatorial_lists;
 mod dedup;
 mod exact_paths;
 mod flatten;

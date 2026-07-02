@@ -68,3 +68,18 @@ file, parse.
 3. Verification — `cargo test -p rum-runtime` + `--workspace` + `mma_hol` byte-identical,
    verbatim; the new tests.
 4. Any WK divergence you couldn't match, with analysis.
+
+---
+
+## Outcome (Claude gate, 2026-07-02) — DONE + KEEP. 4 set/combinatorial ops, WK-conformant.
+
+Committed. `Intersection` (in ordering_sets.rs next to Union/Complement, same
+{Flat,OneIdentity,Protected,ReadProtected} attributes) + `Subsets`/`Tuples`/`Partition` (new
+combinatorial_lists.rs). Gate (Claude reproduced): anchors match WK — Intersection n-arg={3,4},
+Subsets {2}-form={{1,2},{1,3},{2,3}} + <=n form, Tuples n-form + cartesian list-of-lists,
+Partition 3-arg offset sliding; Attributes[Intersection]==Attributes[Union]; symbolic
+passthrough. `cargo test -p rum-runtime` 765/0/2; `--workspace` no failures; `mma_hol_cold_lane`
+4/0 byte-identical; fmt clean. Union/Complement untouched.
+
+Long-tail progress: batch-1 (22) + batch-2 (4) + 2b (4) = 30 new builtins. Next: iterators
+Sum/Product, cheap combinatorics Binomial/Fibonacci, then folk number-theory.

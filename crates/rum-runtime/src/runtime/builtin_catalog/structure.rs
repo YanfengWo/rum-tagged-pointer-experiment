@@ -1,5 +1,11 @@
 use super::*;
 
+const SET_OPERATION_ATTRIBUTES: AttributeSet = AttributeSet::empty()
+    .with(Attribute::Flat)
+    .with(Attribute::OneIdentity)
+    .with(Attribute::Protected)
+    .with(Attribute::ReadProtected);
+
 pub(super) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary(
         "FullForm",
@@ -110,6 +116,24 @@ pub(super) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::from_attribute(Attribute::Protected),
         BuiltinHandler::PadRight,
     ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Subsets",
+        "Returns subsets of a normal expression in Wolfram-compatible size-major order for the current size-spec subset.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        BuiltinHandler::Subsets,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Tuples",
+        "Returns repeated tuples or cartesian products for normal expressions in the current subset.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        BuiltinHandler::Tuples,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Partition",
+        "Partitions a normal expression into fixed-size blocks using the current positive offset subset.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        BuiltinHandler::Partition,
+    ),
     BuiltinSpec::ordinary(
         "Flatten",
         "Flattens nested expressions through the current non-negative level, single-head-spec, and level-list subset.",
@@ -150,10 +174,17 @@ pub(super) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
         "Sorts top-level elements by an evaluated key in the current unary-function subset.",
         BuiltinHandler::SortBy,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "Union",
         "Returns sorted unique elements across same-head normal expressions.",
+        SET_OPERATION_ATTRIBUTES,
         BuiltinHandler::Union,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Intersection",
+        "Returns sorted unique elements common to all same-head normal expressions.",
+        SET_OPERATION_ATTRIBUTES,
+        BuiltinHandler::Intersection,
     ),
     BuiltinSpec::ordinary(
         "Complement",

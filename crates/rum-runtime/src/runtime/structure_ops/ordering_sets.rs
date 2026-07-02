@@ -95,6 +95,36 @@ impl Session {
         Ok(Expr::call(expr_head, sorted_unique_exprs(items)))
     }
 
+    pub(in crate::runtime) fn eval_intersection(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if args.is_empty() {
+            return Ok(self.invalid_call_with_message(
+                "Intersection",
+                args,
+                "argm",
+                "Intersection called with 0 arguments; 1 or more arguments are expected.",
+            ));
+        }
+
+        let (expr_head, mut groups) = match self.same_head_argument_groups("Intersection", args) {
+            Ok(groups) => groups,
+            Err(value) => return Ok(value),
+        };
+        let first = groups.remove(0);
+        let common = first
+            .into_iter()
+            .filter(|item| {
+                groups
+                    .iter()
+                    .all(|group| group.iter().any(|candidate| candidate == item))
+            })
+            .collect::<Vec<_>>();
+        Ok(Expr::call(expr_head, sorted_unique_exprs(common)))
+    }
+
     pub(in crate::runtime) fn eval_complement(
         &mut self,
         _head: &Expr,
