@@ -41,6 +41,42 @@ fn head_length_and_depth_cover_atoms_calls_and_compound_heads() {
         "3"
     );
     assert_eq!(
+        session
+            .eval_text("Attributes[LeafCount]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Protected]"
+    );
+    assert_eq!(
+        session
+            .eval_text("LeafCount[f[x, y]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("LeafCount[1 + 2 x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "5"
+    );
+    assert_eq!(
+        session.eval_text("LeafCount[5]").unwrap().value.to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("LeafCount[f[g[x], h[1, 2]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "6"
+    );
+    assert_eq!(
         session.eval_text("Depth[5]").unwrap().value.to_string(),
         "1"
     );
@@ -192,6 +228,27 @@ fn fullform_evaluates_its_argument_but_preserves_inner_hold() {
     assert_eq!(
         eval_to_string(&mut session, "Hold[Evaluate[1+1]] === Hold[2]"),
         "True"
+    );
+}
+
+#[test]
+fn hold_form_holds_argument_and_fullform_shows_wrapper() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "Attributes[HoldForm]"),
+        "List[HoldAll, Protected]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "FullForm[HoldForm[1 + 1]]"),
+        "\"HoldForm[Plus[1, 1]]\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "FullForm[HoldForm[1 + 1]] === \"HoldForm[2]\""
+        ),
+        "False"
     );
 }
 

@@ -166,6 +166,8 @@ impl Session {
             BuiltinHandler::Context => self.eval_context(args),
             BuiltinHandler::Contexts => self.eval_contexts(args),
             BuiltinHandler::Names => self.eval_names(args),
+            BuiltinHandler::SymbolName => self.eval_symbol_name(head, args),
+            BuiltinHandler::NameQ => self.eval_name_q(head, args),
             BuiltinHandler::Begin => self.eval_begin(args),
             BuiltinHandler::End => self.eval_end(args),
             BuiltinHandler::BeginPackage => self.eval_begin_package(args),

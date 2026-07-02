@@ -72,3 +72,24 @@ expr's string). Spot-check against WK via the documented oracle resolution
 3. Verification — `cargo test -p rum-runtime` + `--workspace` + `mma_hol` byte-identical,
    verbatim; the new tests.
 4. Any divergence you couldn't match (esp. HoldForm display) with analysis.
+
+---
+
+## Outcome (Claude gate, 2026-07-02) — DONE + KEEP. 3 introspection builtins + HoldForm, WK-conformant.
+
+Committed. `SymbolName` (context-strip → "foo"), `NameQ` (exact existence: Plus→True, ZZQ12→
+False; WK pattern form skipped/folk), `LeafCount` (FullForm atoms: 3/5/1), `HoldForm`
+({HoldAll,Protected} + formatter transparency in strings/text/render.rs). Gate (Claude
+reproduced): all behaviors match WK; **HoldForm verified against WK directly** — it now HOLDS
+(`FullForm[HoldForm[1+1]]`=`HoldForm[Plus[1,1]]`, not 2) and the wrapper is transparent in
+OutputForm (`ToString[HoldForm[1+1]]`="1 + 1" in both rum and WK) but KEPT in InputForm
+(`ToString[...,InputForm]`="HoldForm[1 + 1]" in both). `cargo test -p rum-runtime` 751/0/2;
+`cargo test --workspace` no failures; `mma_hol_cold_lane` 4/0 byte-identical; fmt clean.
+
+Codex correctly followed the real WK probe over the brief's mistaken claim that InputForm is
+transparent (WK keeps the wrapper in InputForm) — good calibration discipline. NameQ pattern-
+string form is the only skipped WK behavior (folk scope). The `a b`→`"a * b"` Times rendering
+is a PRE-EXISTING rum OutputForm choice (`*` vs space), unrelated to this batch.
+
+Long-tail batch 1 progress: 1a (7 scalar math) + 1b (6 string) + 1c (4 introspection) done.
+Next: batch-1d (integer digits: IntegerLength/IntegerReverse/IntegerDigits/FromDigits/DigitCount).

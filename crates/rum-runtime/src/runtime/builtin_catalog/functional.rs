@@ -7,6 +7,11 @@ pub(super) const FUNCTIONAL_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
         BuiltinHandler::HoldLiteral,
     ),
+    BuiltinSpec::with_attributes(
+        "HoldForm",
+        "Holds an expression while rendering transparently in output-like forms.",
+        AttributeSet::from_hold(HoldAttribute::HoldAll).with(Attribute::Protected),
+    ),
     BuiltinSpec::ordinary(
         "BlockMap",
         "Maps a function over contiguous blocks in the current first-pass subset.",

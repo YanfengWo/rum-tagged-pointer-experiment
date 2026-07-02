@@ -138,6 +138,7 @@ impl Session {
             BuiltinHandler::Head => self.eval_head(head, args),
             BuiltinHandler::Length => self.eval_length(head, args),
             BuiltinHandler::Depth => self.eval_depth(head, args),
+            BuiltinHandler::LeafCount => self.eval_leaf_count(head, args),
             BuiltinHandler::First => self.eval_first(head, args),
             BuiltinHandler::Last => self.eval_last(head, args),
             BuiltinHandler::Rest => self.eval_rest(head, args),

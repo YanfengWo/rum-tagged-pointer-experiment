@@ -102,15 +102,10 @@ fn render_to_string_expr_with_precedence(
                 return wrap_rendered(rendered, PREC_RULE, parent_precedence);
             }
 
-            if is_system_symbol_name(head, "HoldForm") && args.len() == 1 {
-                if format == ToStringFormat::InputForm {
-                    let rendered = format!(
-                        "HoldForm[{}]",
-                        render_to_string_expr_with_precedence(&args[0], format, PREC_LOWEST)
-                    );
-                    return wrap_rendered(rendered, PREC_CALL, parent_precedence);
-                }
-
+            if format == ToStringFormat::OutputLike
+                && is_system_symbol_name(head, "HoldForm")
+                && args.len() == 1
+            {
                 return render_to_string_expr_with_precedence(&args[0], format, parent_precedence);
             }
 

@@ -59,6 +59,18 @@ impl Session {
         ))))
     }
 
+    pub(in crate::runtime) fn eval_leaf_count(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("LeafCount", args, 1));
+        };
+
+        Ok(Expr::integer(BigInt::from(structural_leaf_count(expr))))
+    }
+
     pub(in crate::runtime) fn eval_full_form(
         &mut self,
         _head: &Expr,

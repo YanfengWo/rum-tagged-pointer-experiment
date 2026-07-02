@@ -169,3 +169,88 @@ fn names_accepts_current_options_subset() {
             .any(|message| message.symbol == "Names" && message.tag == "argform")
     );
 }
+
+#[test]
+fn symbol_name_and_name_q_match_wolfram_kernel_anchors() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text("Attributes[SymbolName]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Protected]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Attributes[NameQ]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Protected]"
+    );
+
+    assert_eq!(
+        session
+            .eval_text("SymbolName[Global`foo]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"foo\""
+    );
+    assert_eq!(
+        session
+            .eval_text("SymbolName[x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"x\""
+    );
+    assert_eq!(
+        session
+            .eval_text("SymbolName[1 + 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "SymbolName[2]"
+    );
+
+    session.eval_text("ExactNameQ`present = 1").unwrap();
+    assert_eq!(
+        session
+            .eval_text("NameQ[\"Plus\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("NameQ[\"ExactNameQ`present\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("NameQ[\"ExactNameQ`missing\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("NameQ[\"ZZQ12\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session.eval_text("NameQ[Plus]").unwrap().value.to_string(),
+        "NameQ[Plus]"
+    );
+}

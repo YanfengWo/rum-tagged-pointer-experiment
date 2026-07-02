@@ -76,6 +76,22 @@ fn characters_character_range_and_tostring_cover_basic_text_flows() {
         "\"(a + b) ^ 2\""
     );
     assert_eq!(
+        eval_to_string(&mut session, "ToString[HoldForm[1 + 1]]"),
+        "\"1 + 1\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[HoldForm[1 + 1], OutputForm]"),
+        "\"1 + 1\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[HoldForm[1 + 1], StandardForm]"),
+        "\"1 + 1\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToString[HoldForm[1 + 1], InputForm]"),
+        "\"HoldForm[1 + 1]\""
+    );
+    assert_eq!(
         eval_to_string(&mut session, "ToString[{a, b -> c}]"),
         "\"{a, b -> c}\""
     );

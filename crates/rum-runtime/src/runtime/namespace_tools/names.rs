@@ -76,6 +76,42 @@ impl Session {
         )))
     }
 
+    pub(in crate::runtime) fn eval_symbol_name(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let Some(symbol) = expr_as_symbol(expr) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        Ok(Expr::string(symbol.name().to_string()))
+    }
+
+    pub(in crate::runtime) fn eval_name_q(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        let Some(name) = expr_as_string(expr) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+
+        Ok(system_expr(if self.exact_symbol_name_exists(name) {
+            "True"
+        } else {
+            "False"
+        }))
+    }
+
     pub(in crate::runtime) fn resolve_names_matching_expr(
         &self,
         expr: &Expr,
@@ -229,6 +265,16 @@ impl Session {
             .map(String::as_str)
             .chain(std::iter::once(self.current_context.as_str()))
             .collect()
+    }
+
+    fn exact_symbol_name_exists(&self, raw: &str) -> bool {
+        if let Some((context, name)) = split_symbol_name(raw) {
+            let context = normalize_context_name(context);
+            let symbol = self.active_symbol_for_name(&context, name);
+            return self.symbol_exists(&symbol);
+        }
+
+        self.resolve_symbol_name(raw, false).is_some()
     }
 }
 

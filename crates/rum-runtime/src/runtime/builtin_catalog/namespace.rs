@@ -96,6 +96,18 @@ pub(super) const NAMESPACE_BUILTINS: &[BuiltinSpec] = &[
         "Lists symbol names matching a current first-pass name pattern subset.",
         BuiltinHandler::Names,
     ),
+    BuiltinSpec::ordinary_with_attributes(
+        "SymbolName",
+        "Returns the short name of a symbol without its context.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        BuiltinHandler::SymbolName,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "NameQ",
+        "Tests whether a string is the exact name of an existing symbol.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        BuiltinHandler::NameQ,
+    ),
     BuiltinSpec::new(
         "ResolveContextAliases",
         "Represents the current Names option symbol for context-alias resolution.",

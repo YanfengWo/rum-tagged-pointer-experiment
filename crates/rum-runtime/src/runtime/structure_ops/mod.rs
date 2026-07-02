@@ -147,3 +147,12 @@ fn structural_depth(expr: &Expr, include_heads: bool) -> usize {
         }
     }
 }
+
+fn structural_leaf_count(expr: &Expr) -> usize {
+    match expr {
+        Expr::Atom(_) => 1,
+        Expr::Call { head, args } => {
+            structural_leaf_count(head) + args.iter().map(structural_leaf_count).sum::<usize>()
+        }
+    }
+}

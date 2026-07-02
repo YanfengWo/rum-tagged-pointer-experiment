@@ -21,6 +21,12 @@ pub(super) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
         "Returns the structural depth of an expression, optionally including heads.",
         BuiltinHandler::Depth,
     ),
+    BuiltinSpec::ordinary_with_attributes(
+        "LeafCount",
+        "Counts atomic leaves in an expression's full structural tree, including heads.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        BuiltinHandler::LeafCount,
+    ),
     BuiltinSpec::ordinary_with_hold(
         "First",
         "Returns the first structural element, with an optional held default.",
