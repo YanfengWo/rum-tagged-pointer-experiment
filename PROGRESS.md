@@ -30,6 +30,37 @@ Test-buildout line DONE. Remaining lower-value coverage (jupyter transport furth
 is diminishing. Next line: pick from the A/B survey (showcase / v0.1 stabilization /
 small conformance incl. the 4 queued matcher bugs + genuine-cycle->IterationLimit).
 
+## 2026-07-02 Long-tail builtin line COMPLETE — 52 new builtins, all WK-calibrated, zero regression
+
+Pre-ship "general kernel" polish (后2 of the coverage/scope work). Implemented the
+authoritative long-tail gap list (docs/long-tail-gap-audit.md, briefs 082/083) folk-style
+([[rum-folk-implementation-scope]]), batched by commonness×ease, each WK-calibrated + gated
+(cargo test -p rum-runtime + --workspace green + mma_hol_cold_lane byte-identical). 52 new
+builtins across briefs 084-093:
+- **084 scalar math (7):** Sign Floor Ceiling IntegerPart FractionalPart Minus MinMax.
+- **085 strings (6):** StringReverse ToLowerCase LowerCaseQ UpperCaseQ Capitalize Decapitalize.
+- **086 introspection (4):** SymbolName NameQ LeafCount + HoldForm (HoldAll + transparent in
+  OutputForm, wrapper kept in InputForm — matches WK both forms).
+- **087 integer digits (5):** IntegerLength IntegerDigits IntegerReverse FromDigits DigitCount.
+- **088 list plumbing (4):** Differences PadLeft PadRight ConstantArray (cyclic pad + trunc).
+- **089 set ops (4):** Intersection(mirrors Union) Subsets Tuples Partition.
+- **090 iterators+combinatorics (4):** Sum Product (reuse Table/Do iteration; symbolic-bound
+  unevaluated) + Binomial (multiplicative, generalized neg-n) + Fibonacci (FAST DOUBLING).
+- **091 factorization group (7) + num-integer/num-traits (free deps):** Divisors EulerPhi
+  MoebiusMu DivisorSigma PrimeNu PrimeOmega NextPrime via shared Pollard's-rho factorizer
+  (trial + Brent rho + deterministic Miller-Rabin, factors to ~1e9 at the default work-limit).
+- **092 recurrence combinatorics (9):** PartitionsP/Q BernoulliB(exact rational) Subfactorial
+  StirlingS1(signed)/S2 CatalanNumber Multinomial(Orderless) Pochhammer(symbolic-a).
+- **093 Prime/PrimePi (2):** on-demand sieve, PrimePi accepts rational (floor), work-limited.
+KEY method notes: folk = simple/exact-on-common + message/fallback on heavy (Factor stays
+structural/linear-only, a documented non-goal). Fibonacci fast doubling + Binomial
+multiplicative + Pollard's rho are the "elegant fast + exact" picks (user-approved). Attribute
+anchors: ALWAYS single-probe WK (my nested-probe guesses were wrong 4×; Codex single-probed +
+matched each). num-integer/num-traits promoted to direct deps for free (already transitive via
+num-bigint) → .gcd()/.sqrt()/.extended_gcd() + inherent modpow. Remaining pre-ship: the
+consolidated support-matrix accuracy pass (record the 52 + Factor linear-only + work-limit +
+partial limits). See docs/long-tail-gap-audit.md + [[long-tail-audit-and-inventory-tool]].
+
 ## 2026-07-01 Test-buildout line started — coverage baseline + host/lifecycle vacuum FILLED (brief-076)
 
 Coverage-driven test buildout (TODO "Harness And Conformance"). Tool: `cargo-llvm-cov`
