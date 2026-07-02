@@ -41,6 +41,7 @@ mod expr_runtime_helpers;
 mod function_and_subst_helpers;
 mod functional_ops;
 mod hold_thread;
+mod integer_digits;
 mod lexical_presence;
 mod lexical_substitution;
 mod listable_dispatch;
@@ -86,13 +87,14 @@ use self::{
     definition_catalog::*, definition_clear::*, definition_tags::*, definition_updates::*,
     definitions::*, eval_call_prepare::*, eval_core::*, eval_dispatch::*, evaluation_cache::*,
     expr_helpers::*, expr_runtime_helpers::*, function_and_subst_helpers::*, functional_ops::*,
-    hold_thread::*, lexical_substitution::*, listable_dispatch::*, logic::*, lowering::*,
-    matcher_and_symbols::*, message_catalog::*, message_format::*, message_selector_parsing::*,
-    metadata::*, model::*, namespace_tools::*, options::*, package_tools::*,
-    parse_and_message_helpers::*, pattern_matching::*, polynomials::*, predicates::*, profiling::*,
-    resolution::*, rewrite_builtins::*, scoping::*, session_api::*, session_eval::*,
-    session_helpers::*, session_requests::*, session_state::*, slot_substitution::*, strings::*,
-    structure_ops::*, suspension::*, tree_walkers::*, vm_rhs_template::*,
+    hold_thread::*, integer_digits::*, lexical_substitution::*, listable_dispatch::*, logic::*,
+    lowering::*, matcher_and_symbols::*, message_catalog::*, message_format::*,
+    message_selector_parsing::*, metadata::*, model::*, namespace_tools::*, options::*,
+    package_tools::*, parse_and_message_helpers::*, pattern_matching::*, polynomials::*,
+    predicates::*, profiling::*, resolution::*, rewrite_builtins::*, scoping::*, session_api::*,
+    session_eval::*, session_helpers::*, session_requests::*, session_state::*,
+    slot_substitution::*, strings::*, structure_ops::*, suspension::*, tree_walkers::*,
+    vm_rhs_template::*,
 };
 pub use self::{
     builtin_catalog::core_builtin_specs, lowering::lower_syntax_expr, metadata::*, model::*,

@@ -74,3 +74,23 @@ check against WK via the documented oracle resolution (`RUM_DIFFTEST_ORACLE_KERN
 3. Verification — `cargo test -p rum-runtime` + `--workspace` + `mma_hol` byte-identical,
    verbatim; the new tests.
 4. Any WK divergence you couldn't match, with analysis.
+
+---
+
+## Outcome (Claude gate, 2026-07-02) — DONE + KEEP. 5 integer-digit builtins, WK-conformant.
+
+Committed. `IntegerLength`, `IntegerDigits`, `IntegerReverse`, `FromDigits`, `DigitCount`
+(new `integer_digits.rs` + builtin_catalog/numeric.rs + metadata + dispatch + mod.rs). Exact
+BigInt, abs for negatives, base/multi-arg forms, symbolic passthrough. Gate (Claude reproduced):
+all anchors match WK — IntegerLength[0]=0/[255,16]=2, IntegerDigits[5,2,8]={0,0,0,0,0,1,0,1}/
+[-12]={1,2}, IntegerReverse[1230]=321/[100,2]=19, FromDigits[{1,0,1},2]=5/["123"]=123,
+DigitCount[121]={2,1,0,...}/[121,10,1]=2. `cargo test -p rum-runtime` 754/0/2; `--workspace`
+no failures; `mma_hol_cold_lane` 4/0 byte-identical; fmt clean.
+
+Attribute discrepancy settled in Codex's favor: WK `Attributes[IntegerReverse]` =
+`{Protected, ReadProtected}` (NO Listable — the brief was wrong; I had misread the earlier
+nested-list probe). WK's IntegerReverse threads over lists anyway (built-in, not via the
+attribute) — `IntegerReverse[{12,340}]`={21,43} in both. Good WK-over-brief calibration.
+
+Long-tail batch 1 DONE: 1a(7) + 1b(6) + 1c(4) + 1d(5) = 22 new builtins. Next: batch-2
+(list plumbing: Differences/PadLeft/PadRight/ConstantArray) + moderate (Sum/Product, set ops).

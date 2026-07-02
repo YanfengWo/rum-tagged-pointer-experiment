@@ -138,6 +138,44 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Numerator,
     ),
     BuiltinSpec::ordinary_with_attributes(
+        "IntegerLength",
+        "Returns the number of digits in an exact integer.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::IntegerLength,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "IntegerDigits",
+        "Returns the digits of an exact integer in a given base.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::IntegerDigits,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "IntegerReverse",
+        "Reverses the digits of an exact integer in a given base.",
+        AttributeSet::empty()
+            .with(Attribute::Protected)
+            .with(Attribute::ReadProtected),
+        BuiltinHandler::IntegerReverse,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "FromDigits",
+        "Constructs an exact integer from a list or string of digits.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        BuiltinHandler::FromDigits,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "DigitCount",
+        "Counts digits in the absolute value of an exact integer.",
+        AttributeSet::empty()
+            .with(Attribute::Protected)
+            .with(Attribute::ReadProtected),
+        BuiltinHandler::DigitCount,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
         "Mod",
         "Returns the modulus of one integer with respect to another.",
         AttributeSet::from_attribute(Attribute::Listable),
