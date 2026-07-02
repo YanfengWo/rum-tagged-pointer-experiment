@@ -82,3 +82,32 @@ Add rum-runtime tests (calibrated where WK applies):
    verbatim; the new tests.
 4. Open questions — anything about the message alignment or a cycle shape that didn't map
    cleanly.
+
+---
+
+## Outcome (Claude gate, 2026-07-01) — DONE + KEEP. Genuine cycle → TerminatedEvaluation["IterationLimit"], WK-conformant.
+
+Committed. WK-calibrated: mutual-ownvalue + mutual-downvalue cycles → WK `$IterationLimit::itlim`
++ `TerminatedEvaluation["IterationLimit"]` (so rum's target is correct). Change is NARROW and
+diff-proven:
+- `session_helpers.rs`: `EvaluationCycleDetected` message tag `cycle`→`passlim`; added to
+  `terminated_evaluation_reason_for_error` → `Some("IterationLimit")` (same as pass-limit).
+- `session_eval.rs`: loader handling `PropagateError`→`ConvertCyclesToValue` — the new
+  `finalize_cycle_termination_value` converts ONLY `EvaluationCycleDetected` to a
+  `TerminatedEvaluation["IterationLimit"]` value; EVERY other error still goes through
+  `finalize_top_level_control_flow` (byte-identical to the old loader). Early cycle DETECTION
+  in resolution.rs unchanged; brief-051 benign self-fixed-point preserved.
+
+Gate (Claude reproduced): behavioral — `ClearAll[a,b];a:=b;b:=a;a` → `TerminatedEvaluation
+["IterationLimit"]` (+`General::passlim`); `ClearAll[c];c:=c;c` → `c` (brief-051 held);
+`cargo test -p rum-runtime` 745/0/2; `cargo test --workspace` no failures; fmt clean.
+
+**mma-hol byte-identical — argued, not fully re-run (transparent caveat):** Codex's COLD
+external smokes for `arith_tests`/`proptaut` TIMED OUT at 600s (cold arith must load Pair.wl
+~190s+ first — a timeout-budget issue, not a regression; parser_tests smoke passed 78/0).
+NOT re-run to completion. But the change is PROVABLY inert for the corpus: it fires only on
+`EvaluationCycleDetected`; the whole mma-hol corpus is green, so no file hits a genuine cycle
+(one would have aborted→failed); the sole benign case (Set[a,a]) is short-circuited upstream
+(brief-051, unit-tested preserved) and never reaches the changed code; all non-cycle
+eval/loader paths are byte-identical by diff. A full snapshot-path corpus re-run remains
+available if belt-and-suspenders certainty is wanted.

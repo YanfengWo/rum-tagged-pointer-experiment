@@ -42,7 +42,7 @@ fn execute_request_maps_to_session_eval_and_tracks_execution_count() {
 }
 
 #[test]
-fn execute_request_failure_emits_stderr_streams_and_error_payload() {
+fn execute_request_cycle_termination_emits_stderr_trace_and_result() {
     let mut session = tracing_session();
     eval_text(&mut session, "f[x_Integer] := g[x]");
     eval_text(&mut session, "g[x_Integer] := f[x]");
@@ -50,21 +50,15 @@ fn execute_request_failure_emits_stderr_streams_and_error_payload() {
 
     let response = adapter.execute(KernelExecuteRequest::new("f[1]"));
 
-    assert_eq!(response.status, KernelReplyStatus::Error);
+    assert_eq!(response.status, KernelReplyStatus::Ok);
     assert_eq!(response.execution_count, Some(1));
     assert_eq!(response.outputs.len(), 3);
-    assert_eq!(
-        response
-            .error
-            .as_ref()
-            .map(|error| error.error_name.as_str()),
-        Some("EvaluationCycleDetected")
-    );
+    assert!(response.error.is_none());
 
     match &response.outputs[0] {
         KernelOutput::Stream(output) => {
             assert_eq!(output.name, KernelStreamName::Stderr);
-            assert!(output.text.contains("General::cycle:"));
+            assert!(output.text.contains("General::passlim:"));
         }
         other => panic!("expected stderr stream output, got {other:?}"),
     }
@@ -87,19 +81,28 @@ fn execute_request_failure_emits_stderr_streams_and_error_payload() {
     }
 
     match &response.outputs[2] {
-        KernelOutput::Error(output) => {
-            assert_eq!(output.error_name, "EvaluationCycleDetected");
-            assert!(output.error_value.contains("evaluation cycle detected"));
-            assert!(output.rendered.is_none());
+        KernelOutput::ExecuteResult(output) => {
+            assert_eq!(
+                output.data.get("text/plain"),
+                Some("TerminatedEvaluation[\"IterationLimit\"]")
+            );
+            assert_eq!(
+                output.data.get("application/vnd.rum.expr"),
+                Some("TerminatedEvaluation[\"IterationLimit\"]")
+            );
         }
-        other => panic!("expected error output, got {other:?}"),
+        other => panic!("expected execute result output, got {other:?}"),
     }
 
     match response.outcome {
-        KernelExecuteOutcome::Failure(failure) => {
-            assert!(!failure.messages.is_empty());
+        KernelExecuteOutcome::Success(result) => {
+            assert_eq!(
+                result.value.text,
+                "TerminatedEvaluation[\"IterationLimit\"]"
+            );
+            assert!(!result.messages.is_empty());
         }
-        other => panic!("expected execute failure, got {other:?}"),
+        other => panic!("expected execute success, got {other:?}"),
     }
 }
 

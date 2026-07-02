@@ -241,29 +241,29 @@ fn invalid_message_selector_specs_emit_runtime_messages() {
 }
 
 #[test]
-fn non_loader_evaluation_errors_emit_general_messages_at_top_level() {
+fn cycle_termination_emits_pass_limit_message_at_top_level() {
     let mut session = Session::new();
     session.eval_text("loopA := loopB").unwrap();
     session.eval_text("loopB := loopA").unwrap();
 
-    let error = session
+    let outcome = session
         .eval_text("loopA")
-        .expect_err("expected a cycle error from mutual delayed references");
+        .expect("cycle should return a termination value");
 
-    assert!(matches!(
-        error,
-        EvalError::EvaluationCycleDetected { ref expr } if expr == "loopA"
-    ));
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
 
     assert_eq!(
         session.eval_text("$MessageList").unwrap().value.to_string(),
-        "List[HoldForm[General::cycle]]"
+        "List[HoldForm[General::passlim]]"
     );
     assert!(
-        session
-            .take_messages()
+        outcome
+            .messages
             .iter()
-            .any(|message| { message.symbol == "General" && message.tag == "cycle" })
+            .any(|message| { message.symbol == "General" && message.tag == "passlim" })
     );
 }
 
@@ -280,7 +280,7 @@ fn check_can_catch_non_loader_evaluation_errors_via_general_messages() {
         outcome
             .messages
             .iter()
-            .any(|message| { message.symbol == "General" && message.tag == "cycle" })
+            .any(|message| { message.symbol == "General" && message.tag == "passlim" })
     );
 }
 
@@ -292,43 +292,43 @@ fn check_can_match_specific_general_error_selectors() {
 
     let non_matching = session
         .eval_text("Check[loopA, 99, \"General::reclim\"]")
-        .expect_err("expected a cycle error when selector does not match");
-    assert!(matches!(
-        non_matching,
-        EvalError::EvaluationCycleDetected { ref expr } if expr == "loopA"
-    ));
+        .unwrap();
+    assert_eq!(
+        non_matching.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
     assert!(
-        session
-            .take_messages()
+        non_matching
+            .messages
             .iter()
-            .any(|message| { message.symbol == "General" && message.tag == "cycle" })
+            .any(|message| { message.symbol == "General" && message.tag == "passlim" })
     );
 
     let matching = session
-        .eval_text("Check[loopA, 99, \"General::cycle\"]")
+        .eval_text("Check[loopA, 99, \"General::passlim\"]")
         .unwrap();
     assert_eq!(matching.value.to_string(), "99");
     assert!(
         matching
             .messages
             .iter()
-            .any(|message| { message.symbol == "General" && message.tag == "cycle" })
+            .any(|message| { message.symbol == "General" && message.tag == "passlim" })
     );
 }
 
 #[test]
-fn quiet_suppresses_general_error_messages_without_masking_errors() {
+fn quiet_suppresses_cycle_termination_messages_without_masking_value() {
     let mut session = Session::new();
     session.eval_text("loopA := loopB").unwrap();
     session.eval_text("loopB := loopA").unwrap();
 
-    let error = session
+    let outcome = session
         .eval_text("Quiet[loopA]")
-        .expect_err("expected Quiet to preserve the underlying evaluation error");
+        .expect("Quiet should preserve the termination value");
 
-    assert!(matches!(
-        error,
-        EvalError::EvaluationCycleDetected { ref expr } if expr == "loopA"
-    ));
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
     assert!(session.take_messages().is_empty());
 }

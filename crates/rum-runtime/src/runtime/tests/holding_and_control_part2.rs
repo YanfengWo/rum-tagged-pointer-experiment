@@ -284,38 +284,56 @@ fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
 }
 
 #[test]
-fn cycle_detection_stops_self_referential_definitions_and_recovers_after_error() {
+fn cycle_detection_returns_iteration_limit_for_mutual_ownvalues_and_recovers() {
     let mut session = Session::new();
 
     session.eval_text("loopA := loopB").unwrap();
     session.eval_text("loopB := loopA").unwrap();
 
-    let error = session
+    let outcome = session
         .eval_text("loopA")
-        .expect_err("expected cycle detection error");
+        .expect("cycle detection should return a termination value");
 
-    assert!(matches!(
-        error,
-        EvalError::EvaluationCycleDetected { ref expr } if expr == "loopA"
-    ));
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "passlim")
+    );
+    assert!(
+        !outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "cycle")
+    );
     assert_eq!(session.eval_text("1").unwrap().value.to_string(), "1");
 }
 
 #[test]
-fn cycle_detection_stops_mutually_recursive_downvalues() {
+fn cycle_detection_returns_iteration_limit_for_mutual_downvalues() {
     let mut session = Session::new();
 
     session.eval_text("f[x_Integer] := g[x]").unwrap();
     session.eval_text("g[x_Integer] := f[x]").unwrap();
 
-    let error = session
+    let outcome = session
         .eval_text("f[1]")
-        .expect_err("expected cycle detection error");
+        .expect("cycle detection should return a termination value");
 
-    assert!(matches!(
-        error,
-        EvalError::EvaluationCycleDetected { ref expr } if expr == "f[1]"
-    ));
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "passlim")
+    );
 }
 
 #[test]

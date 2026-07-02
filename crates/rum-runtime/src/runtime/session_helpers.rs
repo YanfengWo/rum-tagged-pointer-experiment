@@ -181,7 +181,7 @@ impl Session {
         error: &EvalError,
     ) -> Option<RuntimeMessage> {
         let tag = match error {
-            EvalError::EvaluationCycleDetected { .. } => "cycle",
+            EvalError::EvaluationCycleDetected { .. } => "passlim",
             EvalError::RecursionLimitExceeded { .. } => "reclim",
             EvalError::MatchRecursionLimitExceeded { .. } => "matchreclim",
             EvalError::Cancelled => "cancel",
@@ -213,7 +213,8 @@ impl Session {
             EvalError::MatchRecursionLimitExceeded { .. } => Some("PatternMatchRecursionLimit"),
             EvalError::Cancelled => Some("Cancelled"),
             EvalError::TimeConstraintExceeded => Some("TimeConstraint"),
-            EvalError::EvaluationPassLimitExceeded { .. } => Some("IterationLimit"),
+            EvalError::EvaluationCycleDetected { .. }
+            | EvalError::EvaluationPassLimitExceeded { .. } => Some("IterationLimit"),
             EvalError::GeneratedElementLimitExceeded { .. } => Some("GeneratedElementLimit"),
             EvalError::IntegerWorkLimitExceeded { .. } => Some("IntegerWorkLimit"),
             EvalError::IterationWorkLimitExceeded { .. } => Some("IterationWorkLimit"),

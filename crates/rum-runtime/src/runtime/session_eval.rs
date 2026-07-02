@@ -3,7 +3,7 @@ use super::*;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum TerminatedEvaluationHandling {
     ConvertToValue,
-    PropagateError,
+    ConvertCyclesToValue,
 }
 
 impl Session {
@@ -32,6 +32,25 @@ impl Session {
                 }
                 None => Err(error),
             },
+            other => other,
+        }
+    }
+
+    pub(super) fn finalize_cycle_termination_value(
+        &mut self,
+        outcome: Result<Expr, EvalError>,
+        handled_error_checkpoint: usize,
+    ) -> Result<Expr, EvalError> {
+        match self.finalize_top_level_control_flow(outcome) {
+            Err(error @ EvalError::EvaluationCycleDetected { .. }) => {
+                match Self::terminated_evaluation_expr_for_error(&error) {
+                    Some(value) => {
+                        self.emit_non_loader_eval_message(handled_error_checkpoint, &error);
+                        Ok(value)
+                    }
+                    None => Err(error),
+                }
+            }
             other => other,
         }
     }
@@ -172,8 +191,8 @@ impl Session {
                 TerminatedEvaluationHandling::ConvertToValue => {
                     self.finalize_top_level_eval_value(result, handled_error_checkpoint)
                 }
-                TerminatedEvaluationHandling::PropagateError => {
-                    self.finalize_top_level_control_flow(result)
+                TerminatedEvaluationHandling::ConvertCyclesToValue => {
+                    self.finalize_cycle_termination_value(result, handled_error_checkpoint)
                 }
             }
         })();
@@ -214,7 +233,7 @@ impl Session {
     fn eval_script_for_loader(&mut self, source: &str) -> Result<EvalOutcome, EvalError> {
         self.eval_script_with_terminated_handling(
             source,
-            TerminatedEvaluationHandling::PropagateError,
+            TerminatedEvaluationHandling::ConvertCyclesToValue,
         )
     }
 

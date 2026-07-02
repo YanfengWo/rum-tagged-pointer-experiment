@@ -86,21 +86,21 @@ fn eval_request_returns_transport_friendly_success_data() {
 }
 
 #[test]
-fn eval_request_returns_transport_friendly_failure_data() {
+fn eval_request_returns_transport_friendly_cycle_termination_data() {
     let mut session = Session::new();
     session.enable_tracing(true);
     session.eval_text("f[x_Integer] := g[x]").unwrap();
     session.eval_text("g[x_Integer] := f[x]").unwrap();
 
-    let failure = session
+    let response = session
         .eval_request("f[1]")
-        .expect_err("recursive evaluation should surface a request failure");
+        .expect("recursive evaluation should surface a termination value");
 
-    assert!(matches!(
-        failure.error,
-        SessionRequestError::EvaluationCycleDetected { ref expr } if expr == "f[1]"
-    ));
-    assert!(failure.trace.iter().any(|event| matches!(
+    assert_eq!(
+        response.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
+    assert!(response.trace.iter().any(|event| matches!(
         event,
         TraceEvent::RuleApplied {
             source: RuleApplicationSource::DownValue,
@@ -109,10 +109,10 @@ fn eval_request_returns_transport_friendly_failure_data() {
         } if input == "f[1]" || input == "g[1]"
     )));
     assert!(
-        failure
+        response
             .messages
             .iter()
-            .any(|message| message.symbol == "General" && message.tag == "cycle")
+            .any(|message| message.symbol == "General" && message.tag == "passlim")
     );
 }
 

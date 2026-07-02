@@ -574,13 +574,10 @@ fn eval_script_preserves_messages_emitted_before_a_later_error() {
     let mut session = Session::new();
 
     let error = session
-        .eval_script("FindFile[\"Missing`\"]\nloopA := loopB\nloopB := loopA\nloopA")
+        .eval_script("FindFile[\"Missing`\"]\n1 ! 2")
         .expect_err("expected a later evaluation error");
 
-    assert!(matches!(
-        error,
-        EvalError::EvaluationCycleDetected { ref expr } if expr == "loopA"
-    ));
+    assert!(matches!(error, EvalError::Syntax(_)));
     assert!(
         session
             .take_messages()
@@ -594,7 +591,7 @@ fn get_rolls_back_loader_side_effects_and_collapses_failed_file_messages() {
     let dir = TempDirGuard::new("get-rollback");
     let file = dir.write(
         "broken.rum",
-        "$Path = {\"/tmp/rum-loader-should-roll-back\"}\nBeginPackage[\"Broken`\"]\nFindFile[\"Missing`\"]\nflag = 1\nSetAttributes[f, HoldFirst]\nloopA := loopB\nloopB := loopA\nloopA",
+        "$Path = {\"/tmp/rum-loader-should-roll-back\"}\nBeginPackage[\"Broken`\"]\nFindFile[\"Missing`\"]\nflag = 1\nSetAttributes[f, HoldFirst]\n1 ! 2",
     );
     let mut session = Session::new();
     session.set_package_search_paths([dir.path().to_path_buf()]);
@@ -608,7 +605,7 @@ fn get_rolls_back_loader_side_effects_and_collapses_failed_file_messages() {
         outcome
             .messages
             .iter()
-            .any(|message| message.symbol == "Get" && message.tag == "load")
+            .any(|message| message.symbol == "Get" && message.tag == "syntax")
     );
     assert!(
         !outcome
@@ -639,6 +636,42 @@ fn get_rolls_back_loader_side_effects_and_collapses_failed_file_messages() {
             .value
             .to_string(),
         "List[]"
+    );
+}
+
+#[test]
+fn get_cycle_termination_does_not_abort_remaining_file_forms() {
+    let dir = TempDirGuard::new("get-cycle-termination");
+    let file = dir.write(
+        "cycle-termination.rum",
+        "loopA := loopB\nloopB := loopA\nloopA\npostCycleFlag = 2\npostCycleFlag",
+    );
+    let mut session = Session::new();
+
+    let outcome = session
+        .eval_text(&format!("Get[\"{}\"]", rum_path(&file)))
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "2");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "passlim")
+    );
+    assert!(
+        !outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Get" && message.tag == "load")
+    );
+    assert_eq!(
+        session
+            .eval_text("postCycleFlag")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
     );
 }
 
