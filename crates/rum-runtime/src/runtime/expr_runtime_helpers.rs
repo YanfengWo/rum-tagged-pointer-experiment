@@ -336,6 +336,7 @@ fn is_extra_known_system_symbol_name(name: &str) -> bool {
             | "PatternTest"
             | "PatternSequence"
             | "Protected"
+            | "ReadProtected"
             | "RegularExpression"
             | "StepMonitor"
             | "StringExpression"

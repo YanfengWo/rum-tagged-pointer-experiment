@@ -27,6 +27,7 @@ const EXTRA_SYSTEM_NAME_SYMBOLS: &[&str] = &[
     "PatternTest",
     "PatternSequence",
     "Protected",
+    "ReadProtected",
     "RegularExpression",
     "ResolveContextAliases",
     "SequenceHold",

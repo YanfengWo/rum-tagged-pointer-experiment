@@ -354,6 +354,118 @@ fn string_character_classes_and_case_mapping_extend_the_string_subset() {
 }
 
 #[test]
+fn string_helper_builtins_match_wolfram_kernel_edges() {
+    let mut session = Session::new();
+
+    for name in ["StringReverse", "ToLowerCase"] {
+        let source = format!("Attributes[{name}]");
+        assert_eq!(
+            eval_to_string(&mut session, &source),
+            "List[Listable, Protected]",
+            "{source}"
+        );
+    }
+    for name in ["LowerCaseQ", "UpperCaseQ"] {
+        let source = format!("Attributes[{name}]");
+        assert_eq!(
+            eval_to_string(&mut session, &source),
+            "List[Protected]",
+            "{source}"
+        );
+    }
+    for name in ["Capitalize", "Decapitalize"] {
+        let source = format!("Attributes[{name}]");
+        assert_eq!(
+            eval_to_string(&mut session, &source),
+            "List[Protected, ReadProtected]",
+            "{source}"
+        );
+    }
+
+    assert_eq!(
+        eval_to_string(&mut session, "ToLowerCase[\"HELLO\"]"),
+        "\"hello\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToLowerCase[\"AB\\u{1F642}C\"]"),
+        "\"ab🙂c\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToLowerCase[{\"A\", \"B\"}]"),
+        "List[\"a\", \"b\"]"
+    );
+
+    assert_eq!(
+        eval_to_string(&mut session, "StringReverse[\"hello\"]"),
+        "\"olleh\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringReverse[\"a\\u{1F642}b\"]"),
+        "\"b🙂a\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringReverse[{\"ab\", \"cd\"}]"),
+        "List[\"ba\", \"dc\"]"
+    );
+
+    assert_eq!(
+        eval_to_string(&mut session, "Capitalize[\"hello world\"]"),
+        "\"Hello world\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Capitalize[{\"alpha\", \"beta\"}]"),
+        "List[\"Alpha\", \"Beta\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Decapitalize[\"Hello\"]"),
+        "\"hello\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Decapitalize[{\"Alpha\", \"Beta\"}]"),
+        "List[\"alpha\", \"beta\"]"
+    );
+
+    assert_eq!(eval_to_string(&mut session, "LowerCaseQ[\"abc\"]"), "True");
+    assert_eq!(eval_to_string(&mut session, "LowerCaseQ[\"aBc\"]"), "False");
+    assert_eq!(eval_to_string(&mut session, "LowerCaseQ[\"a1\"]"), "False");
+    assert_eq!(eval_to_string(&mut session, "LowerCaseQ[\"123\"]"), "False");
+    assert_eq!(eval_to_string(&mut session, "LowerCaseQ[\"\"]"), "True");
+    assert_eq!(
+        eval_to_string(&mut session, "LowerCaseQ[\"\\u{00DF}\"]"),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "LowerCaseQ[\"\\u{1F642}\"]"),
+        "False"
+    );
+
+    assert_eq!(eval_to_string(&mut session, "UpperCaseQ[\"ABC\"]"), "True");
+    assert_eq!(eval_to_string(&mut session, "UpperCaseQ[\"ABc\"]"), "False");
+    assert_eq!(eval_to_string(&mut session, "UpperCaseQ[\"A1\"]"), "False");
+    assert_eq!(eval_to_string(&mut session, "UpperCaseQ[\"123\"]"), "False");
+    assert_eq!(eval_to_string(&mut session, "UpperCaseQ[\"\"]"), "True");
+    assert_eq!(
+        eval_to_string(&mut session, "UpperCaseQ[\"\\u{00DF}\"]"),
+        "False"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "UpperCaseQ[\"\\u{1F642}\"]"),
+        "False"
+    );
+
+    for source in [
+        "StringReverse[x]",
+        "ToLowerCase[x]",
+        "LowerCaseQ[x]",
+        "UpperCaseQ[x]",
+        "Capitalize[x]",
+        "Decapitalize[x]",
+    ] {
+        assert_eq!(eval_to_string(&mut session, source), source, "{source}");
+    }
+}
+
+#[test]
 fn string_formatting_padding_and_riffle_cover_the_next_surface_wave() {
     let mut session = Session::new();
 

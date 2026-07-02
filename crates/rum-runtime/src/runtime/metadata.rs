@@ -39,6 +39,7 @@ pub enum Attribute {
     Flat,
     OneIdentity,
     Protected,
+    ReadProtected,
     Temporary,
 }
 
@@ -56,7 +57,8 @@ impl Attribute {
             Self::Flat => 1 << 8,
             Self::OneIdentity => 1 << 9,
             Self::Protected => 1 << 10,
-            Self::Temporary => 1 << 11,
+            Self::ReadProtected => 1 << 11,
+            Self::Temporary => 1 << 12,
         }
     }
 
@@ -73,6 +75,7 @@ impl Attribute {
             Self::Flat => "Flat",
             Self::OneIdentity => "OneIdentity",
             Self::Protected => "Protected",
+            Self::ReadProtected => "ReadProtected",
             Self::Temporary => "Temporary",
         }
     }
@@ -100,6 +103,7 @@ impl Attribute {
             "Flat" => Some(Self::Flat),
             "OneIdentity" => Some(Self::OneIdentity),
             "Protected" => Some(Self::Protected),
+            "ReadProtected" => Some(Self::ReadProtected),
             "Temporary" => Some(Self::Temporary),
             _ => None,
         }
@@ -221,7 +225,7 @@ impl AttributeSet {
     }
 }
 
-pub(super) const ALL_ATTRIBUTES: [Attribute; 12] = [
+pub(super) const ALL_ATTRIBUTES: [Attribute; 13] = [
     Attribute::HoldAllComplete,
     Attribute::HoldAll,
     Attribute::HoldFirst,
@@ -233,6 +237,7 @@ pub(super) const ALL_ATTRIBUTES: [Attribute; 12] = [
     Attribute::Flat,
     Attribute::OneIdentity,
     Attribute::Protected,
+    Attribute::ReadProtected,
     Attribute::Temporary,
 ];
 
@@ -295,7 +300,13 @@ pub enum BuiltinHandler {
     D,
     StringJoin,
     StringLength,
+    StringReverse,
+    ToLowerCase,
     ToUpperCase,
+    LowerCaseQ,
+    UpperCaseQ,
+    Capitalize,
+    Decapitalize,
     StringForm,
     Row,
     StringRiffle,

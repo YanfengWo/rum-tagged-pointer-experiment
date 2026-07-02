@@ -1,6 +1,7 @@
 use super::*;
 
 mod builtins;
+mod case;
 mod diacritics;
 mod render;
 mod values;

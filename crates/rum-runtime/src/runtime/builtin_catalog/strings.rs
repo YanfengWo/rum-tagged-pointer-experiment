@@ -12,10 +12,42 @@ pub(super) const STRING_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::StringLength,
     ),
+    BuiltinSpec::ordinary_with_attributes(
+        "StringReverse",
+        "Reverses the Unicode code-point characters in a string.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::StringReverse,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "ToLowerCase",
+        "Converts a string to lowercase using the current Unicode-aware subset.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::ToLowerCase,
+    ),
     BuiltinSpec::ordinary(
         "ToUpperCase",
         "Converts a string or list of strings to uppercase using the current Unicode-aware subset.",
         BuiltinHandler::ToUpperCase,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Capitalize",
+        "Uppercases the first character of a string or each string in a list.",
+        AttributeSet::empty()
+            .with(Attribute::Protected)
+            .with(Attribute::ReadProtected),
+        BuiltinHandler::Capitalize,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Decapitalize",
+        "Lowercases the first character of a string or each string in a list.",
+        AttributeSet::empty()
+            .with(Attribute::Protected)
+            .with(Attribute::ReadProtected),
+        BuiltinHandler::Decapitalize,
     ),
     BuiltinSpec::ordinary(
         "StringForm",
@@ -188,6 +220,18 @@ pub(super) const STRING_BUILTINS: &[BuiltinSpec] = &[
         "LetterQ",
         "Tests whether all characters in a string belong to the current letter subset.",
         BuiltinHandler::LetterQ,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "LowerCaseQ",
+        "Tests whether every character in a string is lowercase.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        BuiltinHandler::LowerCaseQ,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "UpperCaseQ",
+        "Tests whether every character in a string is uppercase.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        BuiltinHandler::UpperCaseQ,
     ),
     BuiltinSpec::ordinary(
         "DigitQ",

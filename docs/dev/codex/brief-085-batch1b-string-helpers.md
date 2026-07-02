@@ -71,3 +71,19 @@ a few directly against WK via the documented oracle resolution (`RUM_DIFFTEST_OR
 3. Verification — `cargo test -p rum-runtime` + `--workspace` + `mma_hol` byte-identical,
    verbatim; the new tests.
 4. Any WK divergence you couldn't match (with analysis).
+
+---
+
+## Outcome (Claude gate, 2026-07-02) — DONE + KEEP. 6 string helpers, WK-conformant (incl. *Q edges).
+
+Committed. Implemented `StringReverse`, `ToLowerCase`, `LowerCaseQ`, `UpperCaseQ`, `Capitalize`,
+`Decapitalize` (new `strings/text/case.rs` + builtin_catalog/strings.rs + metadata + dispatch +
+tests). Folk, Unicode-aware (mirrors ToUpperCase), symbolic passthrough. Gate (Claude
+reproduced): behavior matches WK (StringReverse "olleh", ToLowerCase, Capitalize/Decapitalize
+first-char, Listable `ToLowerCase[{"A","B"}]={"a","b"}`); **the *Q edge semantics verified
+directly against WK: `{LowerCaseQ["a1"],["123"],[""],["aBc"]}` = `{False,False,True,False}` in
+BOTH** (the subtle non-letter/empty cases match). `cargo test -p rum-runtime` 749/0/2; `cargo
+test --workspace` no failures; `mma_hol_cold_lane` 4/0 byte-identical; fmt clean. Only skipped:
+`Capitalize[s,"AllWords"]` (folk scope, allowed). ToUpperCase untouched.
+
+Next: batch-1c (symbol/expr introspection: SymbolName/NameQ/LeafCount + HoldForm HoldAll fix).
