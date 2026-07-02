@@ -16,6 +16,7 @@ impl Session {
     pub fn configuration(&self) -> SessionConfig {
         SessionConfig {
             resource_limits: self.resource_limits,
+            capability_policy: self.capability_policy,
             current_context: self.current_context.clone(),
             context_path: self.context_path.clone(),
             package_search_paths: self.package_search_paths.clone(),
@@ -27,6 +28,7 @@ impl Session {
     pub fn apply_config(&mut self, config: SessionConfig) {
         let config = config.normalized();
         self.resource_limits = config.resource_limits;
+        self.capability_policy = config.capability_policy;
         self.current_context = config.current_context;
         self.context_path = config.context_path;
         self.package_search_paths = config.package_search_paths;
@@ -75,6 +77,14 @@ impl Session {
 
     pub fn resource_limits(&self) -> ResourceLimits {
         self.resource_limits
+    }
+
+    pub fn set_capability_policy(&mut self, policy: CapabilityPolicy) {
+        self.capability_policy = policy;
+    }
+
+    pub fn capability_policy(&self) -> CapabilityPolicy {
+        self.capability_policy
     }
 
     pub fn enable_tracing(&mut self, enabled: bool) {

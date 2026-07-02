@@ -18,6 +18,7 @@ pub use model::{
     HostMessageTemplate, HostParseRequest, HostParseResponse, HostStructuredOutput,
     HostStructuredOutputKind, HostSymbolInfo, HostTraceEvent, HostTyped, HostValue,
 };
+pub use rum_runtime::{Capability, CapabilityPolicy, CapabilityPolicyBuilder};
 pub use session::{HostCancelHandle, HostSession, HostSessionBuilder};
 
 #[cfg(test)]

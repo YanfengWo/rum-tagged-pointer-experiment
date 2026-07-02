@@ -122,6 +122,12 @@ impl Session {
             return Ok(None);
         };
 
+        if !self.capability_policy.is_unrestricted()
+            && !self.capability_policy.allows(handler.capability())
+        {
+            return Ok(Some(self.sandbox_denied_builtin(head, handler)));
+        }
+
         let builtin_symbol = expr_as_symbol(head).copied();
         if let Some(symbol) = builtin_symbol {
             self.record_profile_builtin_application(&symbol);
@@ -131,6 +137,18 @@ impl Session {
         let result = self.run_builtin_handler(handler, head, args);
         record_profile_builtin_timing(profile_builtin_start.flatten(), result.is_ok());
         result.map(Some)
+    }
+
+    fn sandbox_denied_builtin(&mut self, head: &Expr, handler: BuiltinHandler) -> Expr {
+        let name = expr_as_symbol(head)
+            .map(|symbol| symbol.name().to_string())
+            .unwrap_or_else(|| format!("{handler:?}"));
+        self.push_message(
+            "General",
+            "sandbox",
+            format!("{name} is not permitted in this sandbox."),
+        );
+        system_expr("$Failed")
     }
 
     pub(super) fn run_builtin_handler(

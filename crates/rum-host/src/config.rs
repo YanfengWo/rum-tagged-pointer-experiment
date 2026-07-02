@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use rum_runtime::{ResourceLimits, SessionConfig};
+use rum_runtime::{Capability, CapabilityPolicy, ResourceLimits, SessionConfig};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HostResourceLimits {
@@ -47,6 +47,7 @@ impl From<HostResourceLimits> for ResourceLimits {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostConfig {
     pub resource_limits: HostResourceLimits,
+    pub capability_policy: CapabilityPolicy,
     pub current_context: String,
     pub context_path: Vec<String>,
     pub package_search_paths: Vec<PathBuf>,
@@ -61,6 +62,7 @@ impl Default for HostConfig {
 
         Self {
             resource_limits: config.resource_limits.into(),
+            capability_policy: config.capability_policy,
             current_context: config.current_context,
             context_path: config.context_path,
             package_search_paths: config.package_search_paths,
@@ -72,8 +74,17 @@ impl Default for HostConfig {
 }
 
 impl HostConfig {
+    pub fn sandboxed() -> Self {
+        Self::default().with_capability_policy(CapabilityPolicy::allow([Capability::Pure]))
+    }
+
     pub fn with_resource_limits(mut self, limits: HostResourceLimits) -> Self {
         self.resource_limits = limits;
+        self
+    }
+
+    pub fn with_capability_policy(mut self, policy: CapabilityPolicy) -> Self {
+        self.capability_policy = policy;
         self
     }
 
@@ -118,6 +129,7 @@ impl HostConfig {
     pub(crate) fn runtime_config(&self) -> SessionConfig {
         SessionConfig::default()
             .with_resource_limits(self.resource_limits.into())
+            .with_capability_policy(self.capability_policy)
             .with_current_context(self.current_context.clone())
             .with_context_path(self.context_path.clone())
             .with_package_search_paths(self.package_search_paths.clone())

@@ -1,4 +1,4 @@
-use rum_runtime::Session;
+use rum_runtime::{CapabilityPolicy, Session};
 use std::any::Any;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{
@@ -42,6 +42,11 @@ impl HostSessionBuilder {
 
     pub fn with_tracing(mut self, enabled: bool) -> Self {
         self.config.tracing_enabled = enabled;
+        self
+    }
+
+    pub fn with_capability_policy(mut self, policy: CapabilityPolicy) -> Self {
+        self.config.capability_policy = policy;
         self
     }
 
@@ -156,6 +161,7 @@ impl HostSession {
 
         HostConfig {
             resource_limits: config.resource_limits.into(),
+            capability_policy: config.capability_policy,
             current_context: config.current_context,
             context_path: config.context_path,
             package_search_paths: config.package_search_paths,

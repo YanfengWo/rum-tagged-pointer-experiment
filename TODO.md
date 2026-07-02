@@ -59,17 +59,17 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Immediate Correctness And Debt
 
-- [ ] **`rum-host` sandbox profile — default catalog exposes the filesystem to untrusted code**
-  (filed by the TTT project 2026-07-02, see `ISSUE-sandbox-profile-fs-builtins.md`). rum-host
-  is the "untrusted embedding" facade but its default builtin catalog includes fs builtins
-  (`Get` reads+evaluates, `Needs`/`FindFile`/`FileNames`, `Save`/`DumpSave` write, template-to-
-  file); `package_search_paths` doesn't stop absolute paths; `install_core_builtins` is
-  all-or-nothing. Fix = capability-tag builtins (`pure`/`fs-read`/`fs-write`, required field,
-  default-deny) + a `HostConfig::sandboxed()` profile that omits the fs group + adversarial
-  tests; CLI/REPL/Jupyter keep the full catalog. **Sequencing**: after the pre-release
-  wrap-up; **blocks TTT P2**. v0.1 DOC-HONESTY caveat (do BEFORE v0.1 ships): the host-embedding
-  docs must NOT claim "safe for untrusted code" without noting the default catalog is trusted
-  (fs-exposing) and the sandboxed profile is a follow-up — don't overclaim.
+- [x] **`rum-host` sandbox profile — RESOLVED 2026-07-02 (brief-095).** The TTT-filed
+  fs-exposure issue is fixed with a capability system: `Capability` enum
+  (`Pure`/`FileRead`/`FileWrite`) classified per builtin via an exhaustive no-wildcard match
+  (compile-enforced default-deny), `CapabilityPolicy` set by the caller
+  (`HostConfig::sandboxed()` = `{Pure}`, default unrestricted), enforced at DISPATCH (airtight
+  vs runtime-constructed calls), zero hot-path cost (mma-hol byte-identical), rum-host
+  adversarial tests green. TTT P2 unblocked; rum provides partition+policy+enforcement, no
+  role/RBAC. The v0.1 doc-honesty caveat is now MOOT — the host-embedding docs can POSITIVELY
+  document `HostConfig::sandboxed()` for untrusted embedding (do this in the pre-ship doc pass).
+  See `ISSUE-sandbox-profile-fs-builtins.md`. Follow-up (deferred): scoped-fs roots for a
+  trusted-but-limited profile.
 
 - [ ] **Flat+Orderless+Optional matching diverges from WK — 3 remaining (brief-077 found 4;
   brief-080 fixed 1). LOW urgency — exotic corner, nothing in mma-hol uses it.** FIXED

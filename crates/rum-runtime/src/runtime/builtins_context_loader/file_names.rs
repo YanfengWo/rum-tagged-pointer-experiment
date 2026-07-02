@@ -69,17 +69,10 @@ impl Session {
             ));
         };
 
-        let path = Path::new(path);
-        if !path.is_dir() {
-            return Ok(self.invalid_call_with_message(
-                "ParentDirectory",
-                args,
-                "dirnex",
-                format!("Directory {} does not exist.", path.display()),
-            ));
-        }
-
-        Ok(Expr::string(render_directory_name(parent_path_n(path, 1))))
+        Ok(Expr::string(render_directory_name(parent_path_n(
+            Path::new(path),
+            1,
+        ))))
     }
 
     pub(in crate::runtime) fn eval_file_name_take(

@@ -1,7 +1,10 @@
 use super::*;
+use std::env;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 const LONG_RUNNING_EVAL: &str = "Do[x = 1, 50000000]";
 const TWO_TO_200: &str = "1606938044258990275541962092341162602522202993782792835301376";
@@ -14,11 +17,73 @@ fn host_session_with_large_iteration_budget() -> HostSession {
         .build()
 }
 
+struct TempDirGuard {
+    path: PathBuf,
+}
+
+impl TempDirGuard {
+    fn new(prefix: &str) -> Self {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path = env::temp_dir().join(format!("rum-host-{prefix}-{unique}"));
+        fs::create_dir_all(&path).unwrap();
+        Self { path }
+    }
+
+    fn path(&self) -> &Path {
+        &self.path
+    }
+
+    fn write(&self, relative: &str, source: &str) -> PathBuf {
+        let path = self.path.join(relative);
+
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+
+        fs::write(&path, source).unwrap();
+        path
+    }
+}
+
+impl Drop for TempDirGuard {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.path);
+    }
+}
+
 fn successful_eval(outcome: HostEvalOutcome) -> HostEvalSuccess {
     match outcome {
         HostEvalOutcome::Success(success) => success,
         other => panic!("expected success, got {other:?}"),
     }
+}
+
+fn rum_path(path: &Path) -> String {
+    fs::canonicalize(path)
+        .unwrap_or_else(|_| path.to_path_buf())
+        .display()
+        .to_string()
+        .replace('\\', "/")
+}
+
+fn wl_string(value: &str) -> String {
+    format!("{value:?}")
+}
+
+fn assert_sandbox_denied(session: &mut HostSession, source: &str) {
+    let success = successful_eval(session.eval(source));
+    assert_eq!(success.value.text, "$Failed", "source {source}");
+    assert!(
+        success
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "sandbox"),
+        "source {source} messages {:?}",
+        success.messages
+    );
 }
 
 #[test]
@@ -82,6 +147,162 @@ fn host_eval_reports_value_messages_prints_and_structured_outputs() {
         }
         other => panic!("expected success, got {other:?}"),
     }
+}
+
+#[test]
+fn sandboxed_host_config_blocks_filesystem_builtins_at_dispatch() {
+    let dir = TempDirGuard::new("sandbox-blocks-fs");
+    let package = dir.write("Pkg.rum", "BeginPackage[\"Pkg`\"]\nvalue = 7\nEndPackage[]");
+    let input = dir.write("input.wl", "77");
+    let template = dir.write("template.txt", "Hello, `name`!");
+    let save_path = dir.path().join("save.wl");
+    let dump_path = dir.path().join("dump.mx");
+
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::sandboxed().with_package_search_paths([dir.path().to_path_buf()]))
+        .build();
+
+    assert_sandbox_denied(
+        &mut session,
+        &format!("Get[{}]", wl_string(&rum_path(&input))),
+    );
+    assert_sandbox_denied(
+        &mut session,
+        &format!("Needs[\"Pkg`\", {}]", wl_string(&rum_path(&package))),
+    );
+    assert_sandbox_denied(
+        &mut session,
+        &format!("FindFile[{}]", wl_string(&rum_path(&input))),
+    );
+    assert_sandbox_denied(
+        &mut session,
+        &format!("FileNames[\"*\", {}]", wl_string(&rum_path(dir.path()))),
+    );
+    assert_sandbox_denied(
+        &mut session,
+        &format!("FileExistsQ[File[{}]]", wl_string(&rum_path(&input))),
+    );
+    assert_sandbox_denied(
+        &mut session,
+        &format!("Import[File[{}], \"Text\"]", wl_string(&rum_path(&input))),
+    );
+    assert_sandbox_denied(
+        &mut session,
+        &format!("x = 1; Save[{}, x]", wl_string(&rum_path(&save_path))),
+    );
+    assert_sandbox_denied(
+        &mut session,
+        &format!("x = 1; DumpSave[{}, x]", wl_string(&rum_path(&dump_path))),
+    );
+    assert_sandbox_denied(
+        &mut session,
+        &format!(
+            "FileTemplateApply[{}, <|\"name\" -> \"Ada\"|>]",
+            wl_string(&rum_path(&template))
+        ),
+    );
+}
+
+#[test]
+fn sandboxed_host_config_blocks_runtime_constructed_filesystem_calls() {
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::sandboxed())
+        .build();
+
+    assert_sandbox_denied(&mut session, "Symbol[\"Get\"][\"/etc/passwd\"]");
+
+    let runtime_constructed = format!(
+        "ToExpression[{}]",
+        wl_string(&format!("Get[{}]", wl_string("/etc/passwd")))
+    );
+    assert_sandbox_denied(&mut session, &runtime_constructed);
+}
+
+#[test]
+fn sandboxed_host_config_still_allows_pure_work_and_path_string_helpers() {
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::sandboxed())
+        .build();
+
+    assert_eq!(successful_eval(session.eval("2 + 3")).value.text, "5");
+    assert_eq!(
+        successful_eval(session.eval("Reverse[{1, 2, 3}]"))
+            .value
+            .text,
+        "List[3, 2, 1]"
+    );
+    assert_eq!(
+        successful_eval(session.eval("FileNameJoin[{\"alpha\", \"beta.wl\"}]"))
+            .value
+            .text,
+        "\"alpha/beta.wl\""
+    );
+    assert_eq!(
+        successful_eval(session.eval("DirectoryName[\"/tmp/a/b.txt\"]"))
+            .value
+            .text,
+        "\"/tmp/a/\""
+    );
+    assert_eq!(
+        successful_eval(session.eval("ParentDirectory[\"/tmp/a/b/\"]"))
+            .value
+            .text,
+        "\"/tmp/a/\""
+    );
+    assert_eq!(
+        successful_eval(session.eval("FileNameTake[\"/tmp/a/b.txt\"]"))
+            .value
+            .text,
+        "\"b.txt\""
+    );
+}
+
+#[test]
+fn capability_policy_can_allow_reads_without_writes() {
+    let dir = TempDirGuard::new("sandbox-read-only");
+    let input = dir.write("input.wl", "loaded = 42\nloaded");
+    let save_path = dir.path().join("save.wl");
+    let policy = CapabilityPolicy::allow([Capability::Pure, Capability::FileRead]);
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::default().with_capability_policy(policy))
+        .build();
+
+    assert_eq!(
+        successful_eval(session.eval(format!("Get[{}]", wl_string(&rum_path(&input)))))
+            .value
+            .text,
+        "42"
+    );
+    assert_sandbox_denied(
+        &mut session,
+        &format!("Save[{}, loaded]", wl_string(&rum_path(&save_path))),
+    );
+}
+
+#[test]
+fn default_host_config_keeps_filesystem_catalog_unrestricted() {
+    let dir = TempDirGuard::new("default-unrestricted");
+    let input = dir.write("input.wl", "loaded = 42\nloaded");
+    let save_path = dir.path().join("save.wl");
+    let mut session = HostSession::new();
+
+    assert_eq!(
+        successful_eval(session.eval(format!("Get[{}]", wl_string(&rum_path(&input)))))
+            .value
+            .text,
+        "42"
+    );
+    assert_eq!(
+        successful_eval(session.eval(format!(
+            "Save[{}, loaded]",
+            wl_string(&rum_path(&save_path))
+        )))
+        .value
+        .text,
+        "Null"
+    );
+    assert!(save_path.exists());
+    assert!(!fs::read_to_string(save_path).unwrap().is_empty());
 }
 
 #[test]

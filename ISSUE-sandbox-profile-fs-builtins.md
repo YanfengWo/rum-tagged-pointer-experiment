@@ -1,5 +1,19 @@
 # Issue: `rum-host` needs a sandbox profile — default builtin catalog exposes the filesystem
 
+> **RESOLVED 2026-07-02 (brief-095).** Fixed with a capability system: a `Capability` enum
+> (`Pure`/`FileRead`/`FileWrite`, extensible), every `BuiltinHandler` classified via an
+> EXHAUSTIVE no-wildcard match (compile-enforced default-deny — no silent-Pure leak), a
+> `CapabilityPolicy` the caller sets (`HostConfig::sandboxed()` = `{Pure}`; default
+> unrestricted), enforced at builtin DISPATCH (airtight — blocks `Symbol["Get"][...]` /
+> `ToExpression` too). All fs builtins (Get/Needs/FindFile/FileNames/FileExistsQ/FileByteCount/
+> FileDate/Import/Save/DumpSave/FileTemplateApply) classified fs-*; CLI/REPL/Jupyter stay
+> unrestricted; zero hot-path cost (mma-hol byte-identical); rum-host adversarial tests
+> (absolute-path + runtime-constructed) green. TTT P2 is unblocked. The proposals below are
+> kept for the record. Deferred follow-up: scoped-fs roots for a trusted-but-limited profile.
+
+---
+
+
 **Filed**: 2026-07-02, from the TTT project (Tauri Typst editor showcasing rum as its
 untrusted-plugin sandbox). Verified against this tree at `162ff90` (main).
 **Requested by**: TTT director review (AUDIT.md §4 invariant check).

@@ -31,6 +31,7 @@ impl Default for ResourceLimits {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SessionConfig {
     pub resource_limits: ResourceLimits,
+    pub capability_policy: CapabilityPolicy,
     pub current_context: String,
     pub context_path: Vec<String>,
     pub package_search_paths: Vec<PathBuf>,
@@ -42,6 +43,7 @@ impl Default for SessionConfig {
     fn default() -> Self {
         Self {
             resource_limits: ResourceLimits::default(),
+            capability_policy: CapabilityPolicy::unrestricted(),
             current_context: GLOBAL_CONTEXT.to_string(),
             context_path: vec![SYSTEM_CONTEXT.to_string(), GLOBAL_CONTEXT.to_string()],
             package_search_paths: vec![PathBuf::from(".")],
@@ -54,6 +56,11 @@ impl Default for SessionConfig {
 impl SessionConfig {
     pub fn with_resource_limits(mut self, limits: ResourceLimits) -> Self {
         self.resource_limits = limits;
+        self
+    }
+
+    pub fn with_capability_policy(mut self, policy: CapabilityPolicy) -> Self {
+        self.capability_policy = policy;
         self
     }
 
@@ -390,6 +397,7 @@ pub struct Session {
     pub(super) eval_timeout: Option<Duration>,
     pub(super) eval_deadline: Option<Instant>,
     pub(super) interrupt_poll_counter: u64,
+    pub(super) capability_policy: CapabilityPolicy,
 }
 
 impl Session {

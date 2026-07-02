@@ -101,3 +101,26 @@ out of the hot loop).
 3. Confirm: default profile byte-identical to before; CLI/REPL/Jupyter unaffected; no
    role/identity logic added.
 4. Anything deferred (e.g. scoped-fs for a trusted-but-limited profile) noted for follow-up.
+
+---
+
+## Outcome (Claude gate, 2026-07-02) — DONE + KEEP. Capability sandbox landed; fs-exposure issue RESOLVED.
+
+Committed. New `capabilities.rs` (Capability enum + CapabilityPolicy) + rum-runtime dispatch
+enforcement + rum-host `HostConfig::sandboxed()`/policy setters + re-exports. Gate (Claude
+reproduced):
+- Classification is an EXHAUSTIVE match with NO `_ => Pure` wildcard (verified) — compile-
+  enforced default-deny. All fs builtins classified fs-*: Get/Needs/FindFile/FileNames/
+  FileExistsQ/FileByteCount/FileDate/Import = FileRead; Save/DumpSave/FileTemplateApply =
+  FileWrite; ParentDirectory made string-only → Pure. Cross-checked std::fs handler files map
+  to classified builtins (no missed fs surface).
+- `cargo test -p rum-runtime` 784/0/2; `cargo test -p rum-host` 24/4/12 (adversarial sandbox
+  tests: absolute-path + runtime-constructed `Symbol["Get"]`/`ToExpression` blocked; Pure runs;
+  `{Pure,FileRead}` allows Get blocks Save); `--workspace` no failures; `mma_hol_cold_lane` 4/0
+  byte-identical; fmt clean. Default unrestricted unchanged (CLI Get/ParentDirectory work).
+- Hot-path A/B (release, ×10, 5 reps): 0.97–1.04x — zero default-path cost (unrestricted fast
+  path). No unsafe, no Expr/serde change, no role/identity logic.
+
+fs-exposure issue RESOLVED (ISSUE-sandbox-profile-fs-builtins.md marked resolved); TTT P2
+unblocked; the v0.1 doc-honesty caveat is now MOOT — the host-embedding docs can positively
+document `HostConfig::sandboxed()`. Deferred: scoped-fs roots for a trusted-but-limited profile.
