@@ -665,6 +665,17 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Samples And Application Directions
 
+- [ ] **SHOWCASE (decided 2026-07-01; DEFERRED — separate project, start AFTER rum
+  ships).** A Tauri-based Typst editor with a plugin system whose plugin SANDBOX is
+  rum (rum embedded as the safe, resource-limited plugin runtime — validates the whole
+  host-embedding + WASM-enabler + interrupt/timeout/poison arc). First plugins: small
+  LaTeX-theorem-environment + auto-numbering → Typst converters (format conversion is
+  rum's comfort zone). Rationale: demonstrates rum as an embeddable plugin engine with a
+  real, useful app; the sandbox exercises the Tier-1/Tier-2 host contracts under real
+  untrusted-plugin load. Build as an INDEPENDENT repo/project, launched once rum is
+  stable/shipped — not now. (This also defines "rum as a plugin sandbox" requirements to
+  keep in mind for host-embedding: per-plugin resource limits, cancel/timeout, clean
+  reset between plugin runs, structured value I/O.)
 - [ ] Prepare a small, polished sample set only after the core kernel and
   host-adapter surfaces are stable enough to demonstrate end-to-end value.
 - [ ] Avoid project-owned speculative showcase packages for now; survey
