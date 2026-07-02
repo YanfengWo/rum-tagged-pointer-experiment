@@ -91,6 +91,66 @@ fn table_supports_count_iterators_and_nested_iterators() {
 }
 
 #[test]
+fn sum_and_product_reuse_concrete_iterator_specs() {
+    let mut session = Session::new();
+
+    let cases = [
+        ("Sum[i, {i, 1, 10}]", "55"),
+        ("Product[i, {i, 1, 5}]", "120"),
+        ("Sum[i, {i, 0, 10, 2}]", "30"),
+        ("Product[k, {k, 2, 6, 2}]", "48"),
+        ("Sum[i j, {i, 1, 2}, {j, 1, 3}]", "18"),
+        ("Sum[i, {i, {2, 3, 5}}]", "10"),
+        ("Sum[i, {i, 5, 1}]", "0"),
+        ("Product[i, {i, 5, 1}]", "1"),
+        ("Sum[x, {3}]", "Times[3, x]"),
+        ("Product[x, {3}]", "Power[x, 3]"),
+        ("i = 100; Sum[i, {i, 1, 3}]", "6"),
+        ("i", "100"),
+    ];
+
+    for (source, expected) in cases {
+        assert_eq!(
+            session.eval_text(source).unwrap().value.to_string(),
+            expected,
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn sum_and_product_leave_symbolic_bounds_unevaluated() {
+    let mut session = Session::new();
+
+    let cases = [
+        ("Sum[i, {i, 1, n}]", "Sum[i, List[i, 1, n]]"),
+        ("Product[i, {i, 1, n}]", "Product[i, List[i, 1, n]]"),
+        ("Sum[x, 3]", "Sum[x, 3]"),
+        ("Product[x, 3]", "Product[x, 3]"),
+    ];
+
+    for (source, expected) in cases {
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+        assert!(outcome.messages.is_empty(), "{source}");
+    }
+}
+
+#[test]
+fn sum_and_product_report_wolfram_kernel_attributes() {
+    let mut session = Session::new();
+
+    for name in ["Sum", "Product"] {
+        let source = format!("Attributes[{name}]");
+        assert_eq!(
+            session.eval_text(&source).unwrap().value.to_string(),
+            "List[HoldAll, Protected, ReadProtected]",
+            "{source}"
+        );
+    }
+}
+
+#[test]
 fn iterator_variables_expose_dynamic_ownvalues_without_leaking_assignments() {
     let mut session = Session::new();
 

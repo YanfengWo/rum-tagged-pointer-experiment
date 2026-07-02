@@ -1,14 +1,16 @@
 use super::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum DoSpec {
+pub(super) enum DoSpec {
     Count(usize),
     Iterator { symbol: Symbol, values: Vec<Expr> },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum IterationConsumer {
+pub(super) enum IterationConsumer {
     Do,
+    Product,
+    Sum,
     Table,
 }
 
@@ -19,11 +21,17 @@ enum IteratorListTemplateArg {
 }
 
 impl DoSpec {
-    fn iteration_count(&self) -> usize {
+    pub(super) fn iteration_count(&self) -> usize {
         match self {
             Self::Count(count) => *count,
             Self::Iterator { values, .. } => values.len(),
         }
+    }
+}
+
+impl IterationConsumer {
+    fn accepts_bare_count(self) -> bool {
+        matches!(self, Self::Do | Self::Table)
     }
 }
 
@@ -266,7 +274,7 @@ impl Session {
         }
     }
 
-    fn evaluate_loop_iterator_body(
+    pub(super) fn evaluate_loop_iterator_body(
         &mut self,
         symbol: Symbol,
         value: Expr,
@@ -448,7 +456,10 @@ impl Session {
         outcome
     }
 }
-fn evaluate_do_spec_expr(session: &mut Session, raw_spec: Expr) -> Result<Expr, EvalError> {
+pub(super) fn evaluate_do_spec_expr(
+    session: &mut Session,
+    raw_spec: Expr,
+) -> Result<Expr, EvalError> {
     match raw_spec {
         Expr::Call { head, args } if is_system_symbol_name(&head, heads::structure::LIST) => {
             let evaluated = if let Some((first, rest)) = args.split_first() {
@@ -470,12 +481,15 @@ fn evaluate_do_spec_expr(session: &mut Session, raw_spec: Expr) -> Result<Expr, 
     }
 }
 
-fn parse_do_spec(
+pub(super) fn parse_do_spec(
     session: &Session,
     expr: &Expr,
     consumer: IterationConsumer,
 ) -> Result<Option<DoSpec>, EvalError> {
     if let Some(count) = expr_as_non_negative_bigint(expr) {
+        if !consumer.accepts_bare_count() {
+            return Ok(None);
+        }
         return Ok(Some(DoSpec::Count(checked_iteration_count(
             session, &count, consumer,
         )?)));
@@ -557,7 +571,11 @@ fn parse_do_spec(
     })
 }
 
-fn build_iteration_body_or_nested(args: &[Expr], spec_index: usize, nested_head: &str) -> Expr {
+pub(super) fn build_iteration_body_or_nested(
+    args: &[Expr],
+    spec_index: usize,
+    nested_head: &str,
+) -> Expr {
     if spec_index + 2 >= args.len() {
         args[0].clone()
     } else {
@@ -943,7 +961,9 @@ fn checked_iteration_count(
     consumer: IterationConsumer,
 ) -> Result<usize, EvalError> {
     match consumer {
-        IterationConsumer::Do => session.enforce_iteration_work_limit_for_big_count(count)?,
+        IterationConsumer::Do | IterationConsumer::Product | IterationConsumer::Sum => {
+            session.enforce_iteration_work_limit_for_big_count(count)?;
+        }
         IterationConsumer::Table => {
             if let Some(limit) = session.current_memory_limit {
                 if count > &BigInt::from(usize::MAX) {

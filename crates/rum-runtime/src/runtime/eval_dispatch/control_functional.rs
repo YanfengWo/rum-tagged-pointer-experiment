@@ -13,6 +13,8 @@ impl Session {
             BuiltinHandler::Which => self.eval_which(args),
             BuiltinHandler::Switch => self.eval_switch(args),
             BuiltinHandler::Do => self.eval_do(args),
+            BuiltinHandler::Product => self.eval_product(args),
+            BuiltinHandler::Sum => self.eval_sum(args),
             BuiltinHandler::While => self.eval_while(args),
             BuiltinHandler::Until => self.eval_until(args),
             BuiltinHandler::For => self.eval_for(args),

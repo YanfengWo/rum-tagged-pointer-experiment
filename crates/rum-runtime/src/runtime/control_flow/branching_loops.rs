@@ -1,6 +1,7 @@
 use super::*;
 
 mod iteration;
+mod iteration_aggregate;
 
 impl Session {
     pub(in crate::runtime) fn eval_compound_expression(

@@ -31,6 +31,22 @@ pub(super) const CONTROL_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
         BuiltinHandler::Do,
     ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Product",
+        "Multiplies expression values over concrete iterator specifications.",
+        AttributeSet::from_hold(HoldAttribute::HoldAll)
+            .with(Attribute::Protected)
+            .with(Attribute::ReadProtected),
+        BuiltinHandler::Product,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Sum",
+        "Adds expression values over concrete iterator specifications.",
+        AttributeSet::from_hold(HoldAttribute::HoldAll)
+            .with(Attribute::Protected)
+            .with(Attribute::ReadProtected),
+        BuiltinHandler::Sum,
+    ),
     BuiltinSpec::ordinary_with_hold(
         "While",
         "Evaluates a body while its test yields True.",

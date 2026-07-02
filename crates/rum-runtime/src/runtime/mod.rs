@@ -22,6 +22,7 @@ mod builtins_input;
 mod builtins_messages;
 mod builtins_messages_inspect;
 mod calculus;
+mod combinatorics;
 mod context_and_load_helpers;
 mod control_flow;
 mod debug_tools;
@@ -82,8 +83,8 @@ mod vm_rhs_template;
 use self::{
     arithmetic::*, associations::*, attributes::*, binding_substitution::*, builtin_catalog::*,
     builtins_context_loader::*, builtins_input::*, builtins_messages::*,
-    builtins_messages_inspect::*, calculus::*, context_and_load_helpers::*, control_flow::*,
-    debug_tools::*, definition_analysis_helpers::*, definition_application::*,
+    builtins_messages_inspect::*, calculus::*, combinatorics::*, context_and_load_helpers::*,
+    control_flow::*, debug_tools::*, definition_analysis_helpers::*, definition_application::*,
     definition_catalog::*, definition_clear::*, definition_tags::*, definition_updates::*,
     definitions::*, eval_call_prepare::*, eval_core::*, eval_dispatch::*, evaluation_cache::*,
     expr_helpers::*, expr_runtime_helpers::*, function_and_subst_helpers::*, functional_ops::*,

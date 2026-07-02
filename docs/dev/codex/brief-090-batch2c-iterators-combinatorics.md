@@ -80,3 +80,23 @@ hardcoded path); save raw to a file, parse.
 3. Verification — `cargo test -p rum-runtime` + `--workspace` + `mma_hol` byte-identical,
    verbatim; the new tests (incl. the large-Fibonacci one).
 4. Divergences — the symbolic-summation gap (expected) + anything else.
+
+---
+
+## Outcome (Claude gate, 2026-07-02) — DONE + KEEP. Sum/Product iterators + Binomial/Fibonacci(fast-doubling), WK-conformant.
+
+Committed. `Sum`/`Product` ({HoldAll}) reuse the Table/Do iteration machinery (new
+`control_flow/branching_loops/iteration_aggregate.rs`); `Binomial`/`Fibonacci` in new
+`combinatorics.rs` (Fibonacci = FAST DOUBLING over n's binary digits; Binomial with
+integer-work-limit guard + generalized negative-index). Gate (Claude reproduced): Sum
+single/step/multi/list/empty = 55/30/18/10/0, Product=120, symbolic-bound Sum→unevaluated
+(folk); Binomial[5,2]=10/[4,6]=0/[-3,2]=6 (generalized neg-n); Fibonacci[100]=
+354224848179261915075, [-6]=-8, symbolic passthrough. **Fast doubling confirmed**:
+Fibonacci[200000] (41798 digits) in ~1.7s (debug + decimal conversion; an O(n) iterative would
+be far slower). `cargo test -p rum-runtime` 772/0/2; `--workspace` no failures;
+`mma_hol_cold_lane` 4/0 byte-identical; fmt clean. Attribute settled vs local WK 14.3.0:
+Binomial={Listable,NumericFunction,Protected} (no ReadProtected — Codex followed the live probe).
+
+Long-tail progress: batch-1 (22) + 2 (4) + 2b (4) + 2c (4) = 34 new builtins. Remaining: folk
+number-theory (Divisors/EulerPhi/MoebiusMu/PartitionsP/Prime-small-table/PrimePi/…) + odds
+and ends, then the consolidated support-matrix accuracy pass (incl. the Factor linear-only note).

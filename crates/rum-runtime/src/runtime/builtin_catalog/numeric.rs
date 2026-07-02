@@ -109,6 +109,15 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         BuiltinHandler::Round,
     ),
     BuiltinSpec::ordinary_with_attributes(
+        "Binomial",
+        "Computes exact binomial coefficients for integer arguments.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected),
+        BuiltinHandler::Binomial,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
         "Factorial",
         "Computes factorials for non-negative exact integers.",
         AttributeSet::from_attribute(Attribute::Listable),
@@ -119,6 +128,16 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         "Computes double factorials for non-negative exact integers.",
         AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::Factorial2,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Fibonacci",
+        "Computes exact Fibonacci numbers for integer indices.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected)
+            .with(Attribute::ReadProtected),
+        BuiltinHandler::Fibonacci,
     ),
     BuiltinSpec::ordinary(
         "Total",
