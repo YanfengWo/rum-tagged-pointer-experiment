@@ -593,4 +593,314 @@ mod tests {
         assert_eq!(rendered, "\"a\\\"b\\\\c\\nd\\t\"");
         assert_eq!(parse_expr(&rendered).unwrap(), expr);
     }
+
+    #[test]
+    fn constructors_preserve_kinds_and_spans_while_equality_ignores_spans() {
+        let span = Span::new(1, 3);
+        let moved_span = Span::new(10, 12);
+        let integer = SyntaxExpr::integer("42", span);
+
+        assert_eq!(integer.span(), span);
+        assert_eq!(integer.clone().with_span(moved_span).span(), moved_span);
+        assert_eq!(integer, integer.clone().with_span(moved_span));
+
+        assert!(matches!(
+            SyntaxExpr::list(vec![integer.clone()], span).kind,
+            SyntaxExprKind::List(items) if items == vec![integer.clone()]
+        ));
+        assert!(matches!(
+            SyntaxExpr::association(vec![integer.clone()], span).kind,
+            SyntaxExprKind::Association(items) if items == vec![integer.clone()]
+        ));
+        assert!(matches!(
+            SyntaxExpr::slot(SlotSpec::Named("name".to_string()), span).kind,
+            SyntaxExprKind::Slot(SlotSpec::Named(name)) if name == "name"
+        ));
+        assert!(matches!(
+            SyntaxExpr::blank(
+                BlankKind::BlankSequence,
+                Some(SyntaxExpr::symbol("Integer", span)),
+                span
+            )
+            .kind,
+            SyntaxExprKind::Blank {
+                kind: BlankKind::BlankSequence,
+                head: Some(_)
+            }
+        ));
+        assert!(matches!(
+            SyntaxExpr::pattern(
+                SyntaxExpr::symbol("x", span),
+                SyntaxExpr::blank(BlankKind::Blank, None, span),
+                span
+            )
+            .kind,
+            SyntaxExprKind::Pattern { .. }
+        ));
+        assert!(matches!(
+            SyntaxExpr::prefix(PrefixOp::PreIncrement, SyntaxExpr::symbol("x", span), span).kind,
+            SyntaxExprKind::Prefix {
+                op: PrefixOp::PreIncrement,
+                ..
+            }
+        ));
+        assert!(matches!(
+            SyntaxExpr::binary(
+                BinaryOp::RuleDelayed,
+                SyntaxExpr::symbol("lhs", span),
+                SyntaxExpr::symbol("rhs", span),
+                span,
+            )
+            .kind,
+            SyntaxExprKind::Binary {
+                op: BinaryOp::RuleDelayed,
+                ..
+            }
+        ));
+        assert!(matches!(
+            SyntaxExpr::postfix(PostfixOp::RepeatedNull, SyntaxExpr::symbol("x", span), span).kind,
+            SyntaxExprKind::Postfix {
+                op: PostfixOp::RepeatedNull,
+                ..
+            }
+        ));
+        assert!(matches!(
+            SyntaxExpr::call(
+                SyntaxExpr::symbol("f", span),
+                vec![SyntaxExpr::string("arg", span)],
+                span,
+            )
+            .kind,
+            SyntaxExprKind::Call { args, .. } if args == vec![SyntaxExpr::string("arg", span)]
+        ));
+    }
+
+    #[test]
+    fn operator_tokens_cover_all_ast_operator_variants() {
+        assert_eq!(BlankKind::Blank.token(), "_");
+        assert_eq!(BlankKind::BlankSequence.token(), "__");
+        assert_eq!(BlankKind::BlankNullSequence.token(), "___");
+
+        let prefix = [
+            (PrefixOp::Plus, "+", 65),
+            (PrefixOp::Minus, "-", 65),
+            (PrefixOp::Not, "!", 65),
+            (PrefixOp::PreIncrement, "++", 80),
+            (PrefixOp::PreDecrement, "--", 80),
+        ];
+        for (op, token, precedence) in prefix {
+            assert_eq!(op.token(), token);
+            assert_eq!(op.precedence(), precedence);
+        }
+
+        let binary_tokens = [
+            (BinaryOp::CompoundExpression, ";"),
+            (BinaryOp::MessageName, "::"),
+            (BinaryOp::TagSet, "/:"),
+            (BinaryOp::Set, "="),
+            (BinaryOp::UpSet, "^="),
+            (BinaryOp::AddTo, "+="),
+            (BinaryOp::SubtractFrom, "-="),
+            (BinaryOp::TimesBy, "*="),
+            (BinaryOp::DivideBy, "/="),
+            (BinaryOp::ApplyTo, "//="),
+            (BinaryOp::SetDelayed, ":="),
+            (BinaryOp::UpSetDelayed, "^:="),
+            (BinaryOp::ReplaceAll, "/."),
+            (BinaryOp::ReplaceRepeated, "//."),
+            (BinaryOp::Rule, "->"),
+            (BinaryOp::RuleDelayed, ":>"),
+            (BinaryOp::Condition, "/;"),
+            (BinaryOp::Or, "||"),
+            (BinaryOp::And, "&&"),
+            (BinaryOp::SameQ, "==="),
+            (BinaryOp::UnsameQ, "=!="),
+            (BinaryOp::Equal, "=="),
+            (BinaryOp::Unequal, "!="),
+            (BinaryOp::Less, "<"),
+            (BinaryOp::Greater, ">"),
+            (BinaryOp::LessEqual, "<="),
+            (BinaryOp::GreaterEqual, ">="),
+            (BinaryOp::Pattern, ":"),
+            (BinaryOp::Alternatives, "|"),
+            (BinaryOp::PatternTest, "?"),
+            (BinaryOp::StringExpression, "~~"),
+            (BinaryOp::StringJoin, "<>"),
+            (BinaryOp::Apply, "@"),
+            (BinaryOp::PostfixApply, "//"),
+            (BinaryOp::Map, "/@"),
+            (BinaryOp::MapAll, "//@"),
+            (BinaryOp::ApplyHead, "@@"),
+            (BinaryOp::MapApply, "@@@"),
+            (BinaryOp::Composition, "@*"),
+            (BinaryOp::RightComposition, "/*"),
+            (BinaryOp::Add, "+"),
+            (BinaryOp::Subtract, "-"),
+            (BinaryOp::Times, "*"),
+            (BinaryOp::Dot, "."),
+            (BinaryOp::NonCommutativeMultiply, "**"),
+            (BinaryOp::Divide, "/"),
+            (BinaryOp::Power, "^"),
+            (BinaryOp::Function, "|->"),
+        ];
+        for (op, token) in binary_tokens {
+            assert_eq!(op.token(), token);
+            assert!(op.precedence() <= 85);
+        }
+
+        let right_associative = [
+            BinaryOp::CompoundExpression,
+            BinaryOp::TagSet,
+            BinaryOp::Set,
+            BinaryOp::UpSet,
+            BinaryOp::AddTo,
+            BinaryOp::SubtractFrom,
+            BinaryOp::TimesBy,
+            BinaryOp::DivideBy,
+            BinaryOp::ApplyTo,
+            BinaryOp::SetDelayed,
+            BinaryOp::UpSetDelayed,
+            BinaryOp::Rule,
+            BinaryOp::RuleDelayed,
+            BinaryOp::Condition,
+            BinaryOp::Or,
+            BinaryOp::And,
+            BinaryOp::Apply,
+            BinaryOp::Map,
+            BinaryOp::MapAll,
+            BinaryOp::ApplyHead,
+            BinaryOp::MapApply,
+            BinaryOp::Composition,
+            BinaryOp::Power,
+            BinaryOp::Function,
+        ];
+        for (op, _) in binary_tokens {
+            assert_eq!(
+                op.is_right_associative(),
+                right_associative.contains(&op),
+                "associativity mismatch for {op:?}"
+            );
+        }
+
+        let postfix = [
+            (PostfixOp::Function, "&", 15),
+            (PostfixOp::Increment, "++", 80),
+            (PostfixOp::Decrement, "--", 80),
+            (PostfixOp::Factorial, "!", 80),
+            (PostfixOp::Factorial2, "!!", 80),
+            (PostfixOp::Derivative(3), "'", 80),
+            (PostfixOp::Optional, ".", 76),
+            (PostfixOp::Repeated, "..", 76),
+            (PostfixOp::RepeatedNull, "...", 76),
+            (PostfixOp::Unset, "=.", 10),
+        ];
+        for (op, token, precedence) in postfix {
+            assert_eq!(op.token(), token);
+            assert_eq!(op.precedence(), precedence);
+        }
+    }
+
+    #[test]
+    fn display_formats_less_common_nodes_and_precedence_parentheses() {
+        let s = |name| SyntaxExpr::symbol(name, z());
+        let i = |value| SyntaxExpr::integer(value, z());
+
+        let cases = [
+            (SyntaxExpr::list(vec![i("1"), s("x")], z()), "{1, x}"),
+            (
+                SyntaxExpr::association(
+                    vec![SyntaxExpr::binary(BinaryOp::Rule, s("a"), i("1"), z())],
+                    z(),
+                ),
+                "<|a -> 1|>",
+            ),
+            (SyntaxExpr::slot(SlotSpec::Anonymous, z()), "#"),
+            (
+                SyntaxExpr::slot(SlotSpec::Number("2".to_string()), z()),
+                "#2",
+            ),
+            (
+                SyntaxExpr::slot(SlotSpec::Named("name".to_string()), z()),
+                "#name",
+            ),
+            (SyntaxExpr::slot(SlotSpec::Sequence, z()), "##"),
+            (
+                SyntaxExpr::slot(SlotSpec::SequenceNumber("3".to_string()), z()),
+                "##3",
+            ),
+            (
+                SyntaxExpr::blank(BlankKind::BlankNullSequence, Some(s("Integer")), z()),
+                "___Integer",
+            ),
+            (
+                SyntaxExpr::pattern(
+                    s("x"),
+                    SyntaxExpr::blank(BlankKind::Blank, Some(s("Integer")), z()),
+                    z(),
+                ),
+                "x_Integer",
+            ),
+            (SyntaxExpr::prefix(PrefixOp::Not, s("flag"), z()), "!flag"),
+            (
+                SyntaxExpr::binary(BinaryOp::CompoundExpression, s("a"), s("b"), z()),
+                "a; b",
+            ),
+            (SyntaxExpr::postfix(PostfixOp::Function, s("x"), z()), "x &"),
+            (
+                SyntaxExpr::postfix(PostfixOp::Increment, s("x"), z()),
+                "x ++",
+            ),
+            (SyntaxExpr::postfix(PostfixOp::Factorial, s("x"), z()), "x!"),
+            (
+                SyntaxExpr::postfix(PostfixOp::Factorial2, s("x"), z()),
+                "x!!",
+            ),
+            (
+                SyntaxExpr::postfix(PostfixOp::Derivative(3), s("f"), z()),
+                "f'''",
+            ),
+            (SyntaxExpr::postfix(PostfixOp::Optional, s("x"), z()), "x."),
+            (
+                SyntaxExpr::postfix(PostfixOp::Repeated, s("x"), z()),
+                "x ..",
+            ),
+            (
+                SyntaxExpr::postfix(PostfixOp::RepeatedNull, s("x"), z()),
+                "x ...",
+            ),
+            (SyntaxExpr::postfix(PostfixOp::Unset, s("x"), z()), "x =."),
+            (
+                SyntaxExpr::call(s("f"), vec![i("1"), s("x")], z()),
+                "f[1, x]",
+            ),
+        ];
+
+        for (expr, expected) in cases {
+            assert_eq!(expr.to_string(), expected);
+        }
+
+        let parenthesized_add = SyntaxExpr::binary(
+            BinaryOp::Times,
+            SyntaxExpr::binary(BinaryOp::Add, s("a"), s("b"), z()),
+            s("c"),
+            z(),
+        );
+        assert_eq!(parenthesized_add.to_string(), "(a + b) * c");
+
+        let left_power_tree = SyntaxExpr::binary(
+            BinaryOp::Power,
+            SyntaxExpr::binary(BinaryOp::Power, s("a"), s("b"), z()),
+            s("c"),
+            z(),
+        );
+        assert_eq!(left_power_tree.to_string(), "(a ^ b) ^ c");
+
+        let right_power_tree = SyntaxExpr::binary(
+            BinaryOp::Power,
+            s("a"),
+            SyntaxExpr::binary(BinaryOp::Power, s("b"), s("c"), z()),
+            z(),
+        );
+        assert_eq!(right_power_tree.to_string(), "a ^ b ^ c");
+    }
 }

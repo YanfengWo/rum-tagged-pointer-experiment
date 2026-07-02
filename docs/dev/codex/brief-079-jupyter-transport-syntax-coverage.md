@@ -88,3 +88,21 @@ files' coverage before→after, and any bug a test revealed (failure + analysis)
 3. Findings — any bug revealed (malformed-input/codec/trivia), or "all covered behavior
    holds."
 4. Open questions — any file arm unreachable via unit tests (with why).
+
+---
+
+## Outcome (Claude gate, 2026-07-01) — DONE + KEEP. jupyter transport + syntax trivia/ast covered; no bug.
+
+Committed test-only (verified: all 6 modified `src` files are additions to existing
+`#[cfg(test)] mod tests` or new test files — the lone "deletion" in json_support.rs is an
+import-line expansion; NO product-logic change). rum-jupyter 80→96, rum-syntax 146→152;
+workspace 1251 passed / 0 failed / 3 ignored (Claude reproduced jupyter 96/0 + syntax 152/0).
+Coverage jumps: trivia.rs 28→99%, status.rs 43→100%, fields.rs 44→80%, json_support 62→80%,
+encode 73→86%, local 77→84%, ast.rs 66→86%, codec/validation 82→89%. No bug (malformed
+JSON / tampered codec / trivia all handled gracefully). False vacuums skipped as intended
+(launcher/bin/zeromq/socket/connection — covered by the e2e/browser smoke layer instead).
+
+Test-buildout line (unit) DONE: host/lifecycle (076), Orderless+Optional (077, 4 bugs
+queued), gensym-GC (078), jupyter transport + syntax trivia/ast (079). Next: run the
+jupyter e2e/browser smoke (scripts/rum-jupyter-*smoke*) to verify the live-kernel path that
+unit tests can't reach.

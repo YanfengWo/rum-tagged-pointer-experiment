@@ -456,3 +456,115 @@ pub(in crate::transport) fn json_option_u64(value: Option<u64>) -> String {
         .map(|value| value.to_string())
         .unwrap_or_else(|| "null".to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        KernelExecutionState, KernelLifecycleState,
+        json_support::{JsonValue, parse_json_object},
+    };
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn encodes_less_common_request_and_response_shapes_as_structured_json() {
+        let debug_request = encode_request_content(&KernelRequest::Debug(KernelDebugRequest {
+            request_seq: Some(12),
+            command: Some("stackTrace".to_string()),
+        }));
+        let debug = parse_json_object(&debug_request).expect("debug request json should parse");
+        assert_eq!(
+            debug.get("type"),
+            Some(&JsonValue::String("request".to_string()))
+        );
+        assert_eq!(debug.get("seq"), Some(&JsonValue::Number("12".to_string())));
+        assert_eq!(
+            debug.get("command"),
+            Some(&JsonValue::String("stackTrace".to_string()))
+        );
+        assert!(matches!(debug.get("arguments"), Some(JsonValue::Object(map)) if map.is_empty()));
+
+        let mut user_expressions = BTreeMap::new();
+        user_expressions.insert("expr".to_string(), KernelMimeBundle::text_plain("value"));
+        let execute = encode_response_content(&KernelResponse::Execute(KernelExecuteResponse {
+            status: KernelReplyStatus::Error,
+            execution_count: None,
+            payload: vec![KernelExecutePayload {
+                source: "page".to_string(),
+                data: KernelMimeBundle::text_plain("payload"),
+                metadata: KernelMetadata::new(),
+            }],
+            user_expressions,
+            error: Some(KernelErrorOutput {
+                error_name: "Failure".to_string(),
+                error_value: "bad".to_string(),
+                rendered: Some("rendered traceback".to_string()),
+            }),
+            outputs: Vec::new(),
+            outcome: KernelExecuteOutcome::WireDecoded,
+        }));
+        let execute = parse_json_object(&execute).expect("execute reply json should parse");
+        assert_eq!(
+            execute.get("status"),
+            Some(&JsonValue::String("error".to_string()))
+        );
+        assert_eq!(execute.get("execution_count"), Some(&JsonValue::Null));
+        assert!(
+            matches!(execute.get("payload"), Some(JsonValue::Array(values)) if values.len() == 1)
+        );
+        assert_eq!(
+            execute.get("ename"),
+            Some(&JsonValue::String("Failure".to_string()))
+        );
+
+        let history = encode_response_content(&KernelResponse::History(KernelHistoryResponse {
+            status: KernelReplyStatus::Ok,
+            history: vec![KernelHistoryEntry {
+                session: 1,
+                line_number: 2,
+                input: "1+1".to_string(),
+                output: Some("2".to_string()),
+            }],
+        }));
+        let history = parse_json_object(&history).expect("history reply json should parse");
+        assert!(
+            matches!(history.get("history"), Some(JsonValue::Array(values)) if values.len() == 1)
+        );
+    }
+
+    #[test]
+    fn encodes_iopub_and_helper_json_values_without_losing_escaping() {
+        let status = encode_iopub_content(&KernelIoPubPayload::Status(KernelStatusOutput {
+            execution_state: KernelExecutionState::Idle,
+            lifecycle_state: KernelLifecycleState::ShutdownRequested,
+        }));
+        let status = parse_json_object(&status).expect("status json should parse");
+        assert_eq!(
+            status.get("execution_state"),
+            Some(&JsonValue::String("idle".to_string()))
+        );
+        assert_eq!(
+            status.get("lifecycle_state"),
+            Some(&JsonValue::String("shutdown_requested".to_string()))
+        );
+
+        let stream = encode_iopub_content(&KernelIoPubPayload::Stream(KernelStreamOutput {
+            name: KernelStreamName::Stdout,
+            text: "line\n\"quoted\"\t\u{0007}".to_string(),
+        }));
+        let stream = parse_json_object(&stream).expect("stream json should parse");
+        assert_eq!(
+            stream.get("text"),
+            Some(&JsonValue::String("line\n\"quoted\"\t\u{0007}".to_string()))
+        );
+
+        assert_eq!(
+            json_string("quote \" slash \\ bell \u{0007}"),
+            "\"quote \\\" slash \\\\ bell \\u0007\""
+        );
+        assert_eq!(json_bool(false), "false");
+        assert_eq!(json_usize(42), "42");
+        assert_eq!(json_option_u64(Some(9)), "9");
+        assert_eq!(json_option_u64(None), "null");
+    }
+}

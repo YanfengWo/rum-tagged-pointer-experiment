@@ -100,4 +100,5 @@ mod adapter;
 mod bootstrap;
 mod pump;
 mod stdin;
+mod transport_coverage;
 mod wire;

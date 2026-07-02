@@ -359,7 +359,7 @@ fn hex_value(byte: u8) -> Option<u16> {
 
 #[cfg(test)]
 mod tests {
-    use super::{JsonValue, parse_json};
+    use super::{JsonValue, parse_json, parse_json_object};
 
     #[test]
     fn parser_round_trips_utf8_and_surrogate_pairs_in_strings() {
@@ -370,6 +370,66 @@ mod tests {
         assert_eq!(
             object.get("text"),
             Some(&JsonValue::String("你好 🚀".to_string()))
+        );
+    }
+
+    #[test]
+    fn parser_handles_nested_json_scalars_and_arrays() {
+        let value =
+            parse_json(r#"{"array":[null,true,false,-12.5e+2],"object":{"escaped":"a\nb\tc"}}"#)
+                .expect("nested json should parse");
+
+        let JsonValue::Object(object) = value else {
+            panic!("expected object");
+        };
+        assert_eq!(
+            object.get("array"),
+            Some(&JsonValue::Array(vec![
+                JsonValue::Null,
+                JsonValue::Bool(true),
+                JsonValue::Bool(false),
+                JsonValue::Number("-12.5e+2".to_string()),
+            ]))
+        );
+
+        let Some(JsonValue::Object(nested)) = object.get("object") else {
+            panic!("expected nested object");
+        };
+        assert_eq!(
+            nested.get("escaped"),
+            Some(&JsonValue::String("a\nb\tc".to_string()))
+        );
+    }
+
+    #[test]
+    fn parser_reports_malformed_json_without_panicking() {
+        assert_eq!(
+            parse_json_object("[1]").expect_err("top-level arrays are not objects"),
+            "expected top-level object, found array"
+        );
+        assert_eq!(
+            parse_json("01").expect_err("leading zero should leave trailing input"),
+            "trailing characters after JSON value"
+        );
+        assert_eq!(
+            parse_json(r#""\uD83D\u0000""#).expect_err("surrogate pair should validate"),
+            "invalid low surrogate in \\u escape"
+        );
+        assert_eq!(
+            parse_json(r#""\uDE80""#).expect_err("low surrogate cannot stand alone"),
+            "unexpected low surrogate in \\u escape"
+        );
+        assert_eq!(
+            parse_json(r#""\x""#).expect_err("unknown escapes should be rejected"),
+            "unsupported escape sequence `\\x`"
+        );
+        assert_eq!(
+            parse_json("\"unterminated").expect_err("unterminated strings should be rejected"),
+            "unterminated string literal"
+        );
+        assert_eq!(
+            parse_json("[1 true]").expect_err("array items need separators"),
+            "unexpected byte `t` while parsing array"
         );
     }
 }
