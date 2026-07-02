@@ -1,6 +1,23 @@
 # Next Session Handoff: Simp-Descent Loop Diagnosis (Task 2c), then Representation Work
 
-> **2026-07-01 (NEWEST — read THIS first). PERF LINE CLOSED with empirical backing:
+> **2026-07-01 (NEWEST — read THIS first). TEST-BUILDOUT LINE COMPLETE. Coverage-driven,
+> vacuum-first. Unit: brief-076 host/lifecycle (+13, contracts hold), 077 Orderless+Optional
+> (0→71%, found+queued 4 Flat/Orderless+Optional WK matcher bugs, #[ignore]'d as spec),
+> 078 gensym-GC (51→71%, sound), 079 jupyter transport + syntax trivia/ast (trivia 28→99%,
+> no bug). Workspace region baseline 78.72% (cargo-llvm-cov 0.6.21, pinned for rustc 1.85).
+> jupyter LIVE verified: kernel-smoke 16/16 + headless-browser e2e ok (scripts/rum-jupyter-
+> home.sh, jupyter_home venv+playwright) — the live-kernel path (launcher/zeromq/notebook)
+> unit tests can't reach; the worker real-interrupt (066) + closure VM did NOT break it. One
+> smoke failure was a STALE fixture (is_complete("f[1 2]") — valid WL via juxtaposition since
+> brief-026), fixed to f[1 ! 2]. evaluation_cache.rs skipped (false vacuum = profiling
+> instrumentation). ALL test-only + smoke; no product-code change. OPEN NEXT: pick from the
+> A/B survey — (A) showcase project or v0.1 stabilization (forward mainline); (B) small
+> conformance (fix the 4 queued Flat/Orderless+Optional matcher bugs, genuine-cycle→
+> IterationLimit, WK-conformance breadth). Deferred perf (hash-consing/meta-JIT/escaping-
+> Module VM) stays parked. Cold backup `rum-2026-07-01-c15bf6c.bundle` predates the test
+> line; a fresh one is warranted. See PROGRESS 2026-07-01.
+>
+> **2026-07-01 (prior). PERF LINE CLOSED with empirical backing:
 > brief-075 re-profiled the current binary for new hotspots from the memory/host/VM lines —
 > found NONE; the constant-factor conclusion holds (primitives are actually FASTER than the
 > stage0 baseline). Safe, clear, worth-doing-now perf is at its ceiling. Next direction is
