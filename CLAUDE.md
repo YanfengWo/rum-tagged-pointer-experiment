@@ -15,19 +15,31 @@ rather than duplicating them.
   reporting with verbatim evidence. It does not commit, branch, or push — it
   leaves changes in the working tree for me to gate.
 - The brief method lives in `docs/dev/codex/`: `TEMPLATE.md` is the format,
-  `brief-NNN-<slug>.md` are the packages. Dispatch:
+  `brief-NNN-<slug>.md` are the packages. Dispatch via the helper (commit the brief
+  FIRST, as a separate step):
+
+  ```
+  scripts/dispatch-brief.sh NNN     # e.g. 081, or brief-081, or a slug fragment
+  ```
+
+  It resolves `docs/dev/codex/brief-NNN-*.md`, runs `cdx exec -s danger-full-access`
+  with stdin from `/dev/null`, and logs the full report to `/tmp/cdx_brief_NNN.log`
+  (`DRY_RUN=1` prints the resolution without dispatching). **Launch it via the Bash
+  tool's `run_in_background:true`** so the run is harness-tracked — do NOT hand-type
+  `cdx exec … &`; the `&`-detach is not tracked (I made that mistake twice, hence the
+  script). The raw `cdx exec` line it wraps:
 
   ```
   cdx exec -C "$(git rev-parse --show-toplevel)" -s danger-full-access \
     "Read docs/dev/codex/brief-NNN-<slug>.md and execute it exactly. Follow its Hard rules." \
-    > /tmp/cdx_brief_NNN.log 2>&1
+    < /dev/null > /tmp/cdx_brief_NNN.log 2>&1
   ```
 
   `-s danger-full-access` = Codex's sandbox level (needed for `cargo`,
   `rum-cli`, and `sample`); the brief's **Scope + Hard rules** are the real
   fence. My own dispatch/gate commands are allowlisted in
-  `.claude/settings.local.json` (`cdx exec *`, the microbench script, the
-  sample reducers) so I am not prompted each round.
+  `.claude/settings.local.json` (`cdx exec *`, `scripts/dispatch-brief.sh *`, the
+  microbench script, the sample reducers) so I am not prompted each round.
 
 ## The gate I run before crediting any brief
 
