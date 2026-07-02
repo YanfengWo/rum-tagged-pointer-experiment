@@ -20,21 +20,58 @@ Arithmetic is **exact rationals only** (`num-bigint`, no machine/arbitrary-preci
 floats — a deliberate design choice).
 
 **Deliberately excluded** (support-matrix CL-X): graphics / plotting / visualization,
-notebook / front-end UI, `Dataset`, AND **external operations — `Import`/`Export`/
-file/web**. The I/O exclusion is the key fact below: rum has **no ambient
-file/network access baked into the language**.
+notebook / front-end UI, `Dataset`. rum has **no network / process / arbitrary-system
+access** at all.
+
+**Filesystem: present in the default catalog, gated by capability policy.** Unlike the
+above, the default (trusted) catalog DOES ship filesystem builtins — `Get` (reads AND
+evaluates), `Needs`, `FindFile`, `FileNames`, `FileExistsQ`, `FileByteCount`, `FileDate`,
+`Import` (reads); `Save`, `DumpSave`, `FileTemplateApply` (write) — for trusted hosts
+(CLI / REPL / Jupyter). rum is therefore **NOT ambient-authority-free by omission**; it is
+made sandbox-safe by the **capability policy** (§1a). An earlier version of this doc
+overclaimed "no ambient file access baked in" — that was wrong (the default catalog exposes
+the fs); the capability system is what makes the claim true under a sandboxed policy.
 
 **Net shape:** a faithful-WL **symbolic-rewrite / rule-engine / structured-data**
-language — exact, deterministic, **sandboxed by design**, and embeddable. Two proofs
-this is real, not aspirational: (a) it runs the unmodified `mma-hol` HOL development
-(faithful WL semantics); (b) `rum-jupyter` is a working adapter layered on the
-`rum-host` embedding boundary.
+language — exact, deterministic, **sandboxable to a pure core via a capability policy**, and
+embeddable. Three proofs this is real, not aspirational: (a) it runs the unmodified `mma-hol`
+HOL development (faithful WL semantics); (b) `rum-jupyter` is a working adapter on the
+`rum-host` boundary; (c) `HostConfig::sandboxed()` provably blocks every fs builtin at
+dispatch (rum-host adversarial tests, brief-095).
+
+## 1a. Capability policy — running UNTRUSTED code (brief-095, DONE)
+
+For hosts that run untrusted code (e.g. an editor's plugins), the embedding boundary is a
+**capability policy** enforced at builtin dispatch:
+
+- **`Capability`** (`rum_runtime`, re-exported from `rum-host`): `Pure` / `FileRead` /
+  `FileWrite` (extensible — future `Network`/`Process`/… would be new variants). EVERY builtin
+  is classified via an exhaustive, no-wildcard match → **compile-enforced default-deny**: a new
+  builtin cannot ship unclassified, and an unsafe one is never silently `Pure`.
+- **`CapabilityPolicy`** = the allowed-capability set the CALLER chooses:
+  `CapabilityPolicy::allow([Capability::Pure, Capability::FileRead])`, a
+  `CapabilityPolicyBuilder`, and the default `unrestricted` (all).
+- **`HostConfig::sandboxed()`** = policy `{Pure}` — the headline: no fs at all. Fine-grained
+  policies (e.g. read-only: `{Pure, FileRead}`) are expressible.
+- **Enforcement is at DISPATCH**, not input-scanning — so `Symbol["Get"][…]` and
+  `ToExpression["Get[…]"]` are blocked too (a denied call → a `sandbox` message + `$Failed`).
+  It is **zero-cost when unrestricted** (a single fast branch; CLI/mma-hol hot path unchanged,
+  byte-identical).
+- **Separation of concerns:** rum provides the PARTITION (capabilities) + the POLICY KNOB +
+  ENFORCEMENT only. **Role / RBAC / per-plugin-identity is the caller's job** — a caller maps
+  its roles/plugins to a `CapabilityPolicy` and hands it in. rum has no role logic.
+
+This is what lets a host state the invariant *"untrusted code can do nothing but return a
+value from a resource-limited, capability-scoped rum evaluation."* (Deferred follow-up:
+scoped-fs roots for a trusted-BUT-limited profile — allow fs only under a path whitelist.)
 
 **Dependency surface (embedding / WASM relevance):** `rum-core` deps = `num-bigint`
-+ `serde`; `rum-runtime` deps = `rum-syntax` + `thiserror`. All pure-Rust,
-wasm-compatible; `mimalloc` is `rum-cli`-only; **no `std::fs` / threads / network in
-the core dep tree** (because the language excludes Import/Export). So `wasm32` is a
-near-trivial target (modulo a few loader file-path `cfg` guards).
++ `serde`; `rum-runtime` deps = `rum-syntax` + `thiserror`. All pure-Rust, no crate-level
+threads / network; `mimalloc` is `rum-cli`-only. `rum-runtime` DOES use `std::fs` directly
+in the fs builtins (loader / `package_tools` / `strings/template` / `file_names`) — these are
+the `FileRead`/`FileWrite`-classified builtins, gated by the capability policy (§1a). So
+`wasm32` needs those fs paths `cfg`-gated or absent (a sandboxed/`{Pure}` build never reaches
+them anyway); otherwise the core is wasm-friendly.
 
 ## 2. Embedding / host hardening directions (the surveyed, concrete gaps)
 

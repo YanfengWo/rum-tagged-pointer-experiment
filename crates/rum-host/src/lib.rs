@@ -3,6 +3,18 @@
 //! `rum-host` deliberately wraps the broader `rum-runtime` request API in
 //! transport-friendly host types. It is the public boundary future Rust and
 //! Python adapters should prefer over depending on evaluator internals.
+//!
+//! # Running untrusted code
+//!
+//! For hosts that run untrusted code (e.g. editor plugins), use the capability policy:
+//! [`HostConfig::sandboxed`] installs a `{Pure}` policy that blocks every filesystem
+//! builtin (`Get`/`Save`/`Import`/…) at dispatch — including runtime-constructed calls like
+//! `Symbol["Get"][…]`. Fine-grained policies are expressible via [`CapabilityPolicy`] /
+//! [`Capability`] (e.g. read-only `{Pure, FileRead}`); the default is unrestricted (trusted
+//! hosts: CLI / REPL / Jupyter). Combined with the resource limits, cancel, timeout, and
+//! poison boundary, an untrusted evaluation can do nothing but return a value from a
+//! resource-limited, capability-scoped session. Role/identity mapping is the caller's
+//! concern — map your roles to a `CapabilityPolicy` and pass it in.
 
 mod config;
 mod cursor;
