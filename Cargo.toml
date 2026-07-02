@@ -18,6 +18,7 @@ default-members = ["crates/rum-cli"]
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
+license = "MIT"
 
 [workspace.dependencies]
 num-bigint = { version = "0.4", features = ["serde"] }
