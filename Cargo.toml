@@ -22,5 +22,7 @@ license = "MIT"
 
 [workspace.dependencies]
 num-bigint = { version = "0.4", features = ["serde"] }
+num-integer = "0.1"
+num-traits = "0.2"
 serde = { version = "1", features = ["derive", "rc"] }
 thiserror = "2"

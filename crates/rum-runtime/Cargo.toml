@@ -7,4 +7,6 @@ rust-version.workspace = true
 [dependencies]
 rum-core = { path = "../rum-core" }
 rum-syntax = { path = "../rum-syntax" }
+num-integer.workspace = true
+num-traits.workspace = true
 thiserror.workspace = true

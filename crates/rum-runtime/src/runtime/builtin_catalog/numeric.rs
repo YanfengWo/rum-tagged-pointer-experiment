@@ -224,6 +224,63 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::from_attribute(Attribute::Listable),
         BuiltinHandler::LCM,
     ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Divisors",
+        "Returns the sorted positive divisors of an exact integer.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::Divisors,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "EulerPhi",
+        "Computes Euler's totient function for an exact integer.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::EulerPhi,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "MoebiusMu",
+        "Computes the Moebius mu function for an exact integer.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::MoebiusMu,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "DivisorSigma",
+        "Computes exact divisor power sums for exact integer arguments.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NHoldAll)
+            .with(Attribute::Protected),
+        BuiltinHandler::DivisorSigma,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "PrimeNu",
+        "Counts distinct prime factors of an exact integer.",
+        AttributeSet::empty()
+            .with(Attribute::Protected)
+            .with(Attribute::ReadProtected),
+        BuiltinHandler::PrimeNu,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "PrimeOmega",
+        "Counts prime factors with multiplicity for an exact integer.",
+        AttributeSet::empty()
+            .with(Attribute::Protected)
+            .with(Attribute::ReadProtected),
+        BuiltinHandler::PrimeOmega,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "NextPrime",
+        "Returns the next or previous signed prime in Wolfram order.",
+        AttributeSet::empty()
+            .with(Attribute::Protected)
+            .with(Attribute::ReadProtected),
+        BuiltinHandler::NextPrime,
+    ),
     BuiltinSpec::ordinary(
         "Max",
         "Returns the maximum exact integer or rational operand.",

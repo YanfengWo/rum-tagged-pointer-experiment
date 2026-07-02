@@ -55,6 +55,7 @@ mod message_selector_parsing;
 mod metadata;
 mod model;
 mod namespace_tools;
+mod number_theory;
 mod options;
 mod package_tools;
 mod parse_and_message_helpers;
@@ -90,10 +91,10 @@ use self::{
     expr_helpers::*, expr_runtime_helpers::*, function_and_subst_helpers::*, functional_ops::*,
     hold_thread::*, integer_digits::*, lexical_substitution::*, listable_dispatch::*, logic::*,
     lowering::*, matcher_and_symbols::*, message_catalog::*, message_format::*,
-    message_selector_parsing::*, metadata::*, model::*, namespace_tools::*, options::*,
-    package_tools::*, parse_and_message_helpers::*, pattern_matching::*, polynomials::*,
-    predicates::*, profiling::*, resolution::*, rewrite_builtins::*, scoping::*, session_api::*,
-    session_eval::*, session_helpers::*, session_requests::*, session_state::*,
+    message_selector_parsing::*, metadata::*, model::*, namespace_tools::*, number_theory::*,
+    options::*, package_tools::*, parse_and_message_helpers::*, pattern_matching::*,
+    polynomials::*, predicates::*, profiling::*, resolution::*, rewrite_builtins::*, scoping::*,
+    session_api::*, session_eval::*, session_helpers::*, session_requests::*, session_state::*,
     slot_substitution::*, strings::*, structure_ops::*, suspension::*, tree_walkers::*,
     vm_rhs_template::*,
 };

@@ -93,3 +93,28 @@ are direct and Cargo.lock unchanged. Spot-check against WK via the documented or
 4. Verification — `cargo test -p rum-runtime` + `--workspace` + `mma_hol` byte-identical +
    the large-factorization test, verbatim.
 5. Any WK divergence you couldn't match, with analysis.
+
+---
+
+## Outcome (Claude gate, 2026-07-02) — DONE + KEEP. Factorization group (Pollard's rho) + free deps, WK-conformant.
+
+Committed. (A) num-integer + num-traits are now DIRECT deps of rum-runtime — Cargo.lock diff is
+ONLY the two dependency edges, NO new [[package]] (free, as predicted). (B) `number_theory.rs`:
+trial division to 100k + Brent's Pollard rho + deterministic Miller-Rabin ({2..37} witnesses,
+exact < 3.317e24), all under the integer-work-limit guard. (C) 7 builtins: Divisors/EulerPhi/
+MoebiusMu/DivisorSigma(NHoldAll)/PrimeNu/PrimeOmega/NextPrime.
+
+Gate (Claude reproduced): anchors match WK (Divisors[12]/[-12], EulerPhi[12]=4, MoebiusMu
+[30]=-1/[12]=0, DivisorSigma[1,12]=28/[0,12]=6, PrimeNu/PrimeOmega[12]=2/3, NextPrime[10,3]=17/
+[2,-1]=-2, PrimeNu[{12,30}]={2,3} threading). Pollard's rho earns its keep: factors up to ~1e9
+(9-digit-factor 1e18 semiprimes work: PrimeOmega[999999937*999999929]=2); 10-digit-factor 1e20
+semiprimes → TerminatedEvaluation["IntegerWorkLimit"] (graceful, raisable, folk-acceptable).
+`cargo test -p rum-runtime` 778/0/2; `--workspace` no failures; `mma_hol_cold_lane` 4/0
+byte-identical; fmt clean. PrimeQ untouched. Attribute settled vs live WK: PrimeNu/PrimeOmega=
+{Protected,ReadProtected} (no Listable — Codex matched WK + manual threading; the brief anchor
+was wrong again — I keep misreading the nested-list probe).
+
+Long-tail progress: 34 (b1/2/2b/2c) + 7 = 41 new builtins. Remaining folk number-theory:
+recurrence group (PartitionsP/Q, BernoulliB, Subfactorial, StirlingS1/S2) + trivial closed forms
+(CatalanNumber/Multinomial/Pochhammer) + Prime/PrimePi (small table). Doc note for the matrix:
+factorization-derived fns handle factors to ~1e9 at the default work-limit (raisable).
