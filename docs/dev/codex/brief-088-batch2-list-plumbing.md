@@ -68,3 +68,19 @@ check against WK via the documented oracle resolution (`RUM_DIFFTEST_ORACLE_KERN
 3. Verification — `cargo test -p rum-runtime` + `--workspace` + `mma_hol` byte-identical,
    verbatim; the new tests.
 4. Any WK divergence you couldn't match, with analysis.
+
+---
+
+## Outcome (Claude gate, 2026-07-02) — DONE + KEEP. 4 list-plumbing builtins, WK-conformant.
+
+Committed. `Differences`, `PadLeft`, `PadRight`, `ConstantArray` (new
+`structure_ops/list_plumbing.rs` + builtin_catalog/structure.rs + metadata + dispatch + tests).
+Gate (Claude reproduced): all anchors match WK incl. the tricky ones — Differences order-2={2,2},
+PadLeft truncation `[{1,2,3,4,5},3]={3,4,5}` + cyclic `[{1,2},5,{7,8}]={8,7,8,1,2}`,
+ConstantArray multi-dim `{{x,x},{x,x}}`, symbolic passthrough. `cargo test -p rum-runtime`
+759/0/2; `--workspace` no failures; `mma_hol_cold_lane` 4/0 byte-identical; fmt clean. Only
+skipped: WK's symbolic-dimension ConstantArray (→ SymbolicOnesArray, folk out-of-scope).
+
+Long-tail progress: batch-1 (22) + batch-2 (4) = 26 new builtins. Next: set ops
+(Intersection/Union/Complement/Partition/Subsets/Tuples), then iterators (Sum/Product) +
+cheap combinatorics (Binomial/Fibonacci), folk number-theory last.

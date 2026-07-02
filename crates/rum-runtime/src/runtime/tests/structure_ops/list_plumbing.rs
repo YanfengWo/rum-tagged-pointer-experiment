@@ -1,0 +1,183 @@
+use super::*;
+
+fn eval_to_string(session: &mut Session, source: &str) -> String {
+    session.eval_text(source).unwrap().value.to_string()
+}
+
+#[test]
+fn list_plumbing_attributes_match_wk_anchors() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "Attributes[Differences]"),
+        "List[NonThreadable, Protected]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Attributes[ConstantArray]"),
+        "List[Protected]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Attributes[PadLeft]"),
+        "List[Protected]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Attributes[PadRight]"),
+        "List[Protected]"
+    );
+}
+
+#[test]
+fn differences_covers_successive_and_ordered_plain_list_subset() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "Differences[{1, 4, 9, 16}]"),
+        "List[3, 5, 7]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Differences[{1, 4, 9, 16}, 2]"),
+        "List[2, 2]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Differences[{1, 4, 9, 16}, 0]"),
+        "List[1, 4, 9, 16]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Differences[x]"),
+        "Differences[x]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Differences[f[1, 4, 9]]"),
+        "Differences[f[1, 4, 9]]"
+    );
+
+    let invalid_order = session.eval_text("Differences[{1, 4}, x]").unwrap();
+    assert_eq!(
+        invalid_order.value.to_string(),
+        "Differences[List[1, 4], x]"
+    );
+    assert!(
+        invalid_order
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Differences" && message.tag == "ilsmn")
+    );
+}
+
+#[test]
+fn constant_array_covers_scalar_and_multidimensional_integer_shapes() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "ConstantArray[0, 3]"),
+        "List[0, 0, 0]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ConstantArray[x, {2, 2}]"),
+        "List[List[x, x], List[x, x]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ConstantArray[x, 0]"),
+        "List[]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ConstantArray[x, {2, 0}]"),
+        "List[List[], List[]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "n = 0; {ConstantArray[n = n + 1, 3], n}"),
+        "List[List[1, 1, 1], 1]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ConstantArray[x, y]"),
+        "ConstantArray[x, y]"
+    );
+}
+
+#[test]
+fn pad_left_covers_padding_truncation_cyclic_and_normal_heads() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "PadLeft[{1, 2}, 5]"),
+        "List[0, 0, 0, 1, 2]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "PadLeft[{1, 2}, 5, x]"),
+        "List[x, x, x, 1, 2]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "PadLeft[{1, 2, 3, 4, 5}, 3]"),
+        "List[3, 4, 5]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "PadLeft[{1, 2}, 5, {7, 8}]"),
+        "List[8, 7, 8, 1, 2]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "PadLeft[f[1, 2], 5]"),
+        "f[0, 0, 0, 1, 2]"
+    );
+
+    let atomic = session.eval_text("PadLeft[x, 5]").unwrap();
+    assert_eq!(atomic.value.to_string(), "PadLeft[x, 5]");
+    assert!(
+        atomic
+            .messages
+            .iter()
+            .any(|message| message.symbol == "PadLeft" && message.tag == "normal")
+    );
+
+    let invalid_len = session.eval_text("PadLeft[{1, 2}, x]").unwrap();
+    assert_eq!(invalid_len.value.to_string(), "PadLeft[List[1, 2], x]");
+    assert!(
+        invalid_len
+            .messages
+            .iter()
+            .any(|message| message.symbol == "PadLeft" && message.tag == "ilsm")
+    );
+}
+
+#[test]
+fn pad_right_covers_padding_truncation_cyclic_and_normal_heads() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        eval_to_string(&mut session, "PadRight[{1, 2}, 5]"),
+        "List[1, 2, 0, 0, 0]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "PadRight[{1, 2}, 5, x]"),
+        "List[1, 2, x, x, x]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "PadRight[{1, 2, 3, 4, 5}, 3]"),
+        "List[1, 2, 3]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "PadRight[{1, 2}, 5, {7, 8}]"),
+        "List[1, 2, 7, 8, 7]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "PadRight[f[1, 2], 5]"),
+        "f[1, 2, 0, 0, 0]"
+    );
+
+    let atomic = session.eval_text("PadRight[x, 5]").unwrap();
+    assert_eq!(atomic.value.to_string(), "PadRight[x, 5]");
+    assert!(
+        atomic
+            .messages
+            .iter()
+            .any(|message| message.symbol == "PadRight" && message.tag == "normal")
+    );
+
+    let invalid_len = session.eval_text("PadRight[{1, 2}, x]").unwrap();
+    assert_eq!(invalid_len.value.to_string(), "PadRight[List[1, 2], x]");
+    assert!(
+        invalid_len
+            .messages
+            .iter()
+            .any(|message| message.symbol == "PadRight" && message.tag == "ilsm")
+    );
+}

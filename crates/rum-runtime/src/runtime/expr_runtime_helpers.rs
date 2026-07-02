@@ -330,6 +330,7 @@ fn is_extra_known_system_symbol_name(name: &str) -> bool {
             | "EvaluationMonitor"
             | "DigitCharacter"
             | "LetterCharacter"
+            | "NonThreadable"
             | "OneIdentity"
             | "Orderless"
             | "OrderlessPatternSequence"

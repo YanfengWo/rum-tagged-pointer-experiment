@@ -38,6 +38,7 @@ pub enum Attribute {
     Orderless,
     Flat,
     OneIdentity,
+    NonThreadable,
     Protected,
     ReadProtected,
     Temporary,
@@ -56,6 +57,7 @@ impl Attribute {
             Self::Orderless => 1 << 7,
             Self::Flat => 1 << 8,
             Self::OneIdentity => 1 << 9,
+            Self::NonThreadable => 1 << 13,
             Self::Protected => 1 << 10,
             Self::ReadProtected => 1 << 11,
             Self::Temporary => 1 << 12,
@@ -74,6 +76,7 @@ impl Attribute {
             Self::Orderless => "Orderless",
             Self::Flat => "Flat",
             Self::OneIdentity => "OneIdentity",
+            Self::NonThreadable => "NonThreadable",
             Self::Protected => "Protected",
             Self::ReadProtected => "ReadProtected",
             Self::Temporary => "Temporary",
@@ -102,6 +105,7 @@ impl Attribute {
             "Orderless" => Some(Self::Orderless),
             "Flat" => Some(Self::Flat),
             "OneIdentity" => Some(Self::OneIdentity),
+            "NonThreadable" => Some(Self::NonThreadable),
             "Protected" => Some(Self::Protected),
             "ReadProtected" => Some(Self::ReadProtected),
             "Temporary" => Some(Self::Temporary),
@@ -225,7 +229,7 @@ impl AttributeSet {
     }
 }
 
-pub(super) const ALL_ATTRIBUTES: [Attribute; 13] = [
+pub(super) const ALL_ATTRIBUTES: [Attribute; 14] = [
     Attribute::HoldAllComplete,
     Attribute::HoldAll,
     Attribute::HoldFirst,
@@ -236,6 +240,7 @@ pub(super) const ALL_ATTRIBUTES: [Attribute; 13] = [
     Attribute::Orderless,
     Attribute::Flat,
     Attribute::OneIdentity,
+    Attribute::NonThreadable,
     Attribute::Protected,
     Attribute::ReadProtected,
     Attribute::Temporary,
@@ -380,6 +385,10 @@ pub enum BuiltinHandler {
     Delete,
     TakeList,
     Range,
+    Differences,
+    ConstantArray,
+    PadLeft,
+    PadRight,
     Flatten,
     Join,
     Reverse,

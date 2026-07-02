@@ -84,6 +84,32 @@ pub(super) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
         "Constructs a plain list of exact integers from the current one-, two-, and three-argument subset.",
         BuiltinHandler::Range,
     ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Differences",
+        "Returns successive differences for plain lists, including the current non-negative order subset.",
+        AttributeSet::empty()
+            .with(Attribute::NonThreadable)
+            .with(Attribute::Protected),
+        BuiltinHandler::Differences,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "ConstantArray",
+        "Constructs a constant plain list for non-negative integer scalar and list dimensions.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        BuiltinHandler::ConstantArray,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "PadLeft",
+        "Pads or truncates a normal expression on the left using the current length and padding-element subset.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        BuiltinHandler::PadLeft,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "PadRight",
+        "Pads or truncates a normal expression on the right using the current length and padding-element subset.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        BuiltinHandler::PadRight,
+    ),
     BuiltinSpec::ordinary(
         "Flatten",
         "Flattens nested expressions through the current non-negative level, single-head-spec, and level-list subset.",
