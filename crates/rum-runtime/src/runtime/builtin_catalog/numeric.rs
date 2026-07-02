@@ -139,6 +139,85 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::ReadProtected),
         BuiltinHandler::Fibonacci,
     ),
+    BuiltinSpec::ordinary_with_attributes(
+        "PartitionsP",
+        "Computes the number of integer partitions by Euler's pentagonal recurrence.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::PartitionsP,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "PartitionsQ",
+        "Computes the number of partitions into distinct parts.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::PartitionsQ,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "BernoulliB",
+        "Computes exact Bernoulli numbers for non-negative integer indices.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::BernoulliB,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Subfactorial",
+        "Computes derangement numbers for non-negative integer indices.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected)
+            .with(Attribute::ReadProtected),
+        BuiltinHandler::Subfactorial,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "StirlingS1",
+        "Computes signed Stirling numbers of the first kind.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::StirlingS1,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "StirlingS2",
+        "Computes Stirling numbers of the second kind.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
+        BuiltinHandler::StirlingS2,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "CatalanNumber",
+        "Computes exact Catalan numbers for non-negative integer indices.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected)
+            .with(Attribute::ReadProtected),
+        BuiltinHandler::CatalanNumber,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Multinomial",
+        "Computes exact multinomial coefficients for non-negative integer arguments.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Orderless)
+            .with(Attribute::Protected),
+        BuiltinHandler::Multinomial,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Pochhammer",
+        "Computes finite rising factorial products for non-negative integer counts.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected),
+        BuiltinHandler::Pochhammer,
+    ),
     BuiltinSpec::ordinary(
         "Total",
         "Totals list elements through the current exact Plus semantics.",

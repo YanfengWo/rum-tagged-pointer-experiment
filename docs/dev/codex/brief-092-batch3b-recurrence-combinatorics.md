@@ -84,3 +84,22 @@ returns exact rationals — parse BernoulliB with Fraction).
 3. Verification — `cargo test -p rum-runtime` + `--workspace` + `mma_hol` byte-identical,
    verbatim; the new tests.
 4. Any WK divergence you couldn't match, with analysis.
+
+---
+
+## Outcome (Claude gate, 2026-07-02) — DONE + KEEP. 9 recurrence/closed-form combinatorics, WK-conformant.
+
+Committed (combinatorics.rs + numeric.rs + metadata + dispatch + tests). Gate (Claude
+reproduced, all 9 spot-checked vs WK): PartitionsP[5]=7/[100]=190569292 (Euler pentagonal),
+PartitionsQ[10]=10, BernoulliB table {1,-1/2,1/6,0,-1/30,0,1/42,0,-1/30} (EXACT rational),
+Subfactorial[5]=44, StirlingS1[5,2]=-50 (signed), StirlingS2[4,2]=7, CatalanNumber[6]=132
+(via Binomial), Multinomial[1,2,3]=[3,2,1]=60 (Orderless), Pochhammer[2,3]=24 /
+Pochhammer[a,3]=a(1+a)(2+a) (symbolic-a), symbolic passthrough. `cargo test -p rum-runtime`
+779/0/2; `--workspace` no failures; `mma_hol_cold_lane` 4/0 byte-identical; fmt clean.
+Attributes single-probed (BernoulliB={Listable,Protected} — the brief's guess was wrong
+again; single-probe is the rule). Out-of-scope symbolic extensions (Multinomial[1,x],
+non-integer Catalan/Pochhammer) passthrough per folk.
+
+Long-tail progress: 41 + 9 = 50 new builtins. Remaining number-theory: Prime/PrimePi (small
+table) = batch-3c. Then the consolidated support-matrix accuracy pass (all new builtins +
+Factor linear-only + factorization work-limit note + the partial limits).
