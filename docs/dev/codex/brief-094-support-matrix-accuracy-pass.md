@@ -82,3 +82,53 @@ material). Every one is verifiable: `rum-cli --eval` it before listing it as `im
 2. Verification — the rum-cli probes confirming presence/limits; `git status` proving
    doc-only.
 3. Any entry you were unsure how to classify (implemented vs partial) — list for the director.
+
+---
+
+## Outcome (Codex, 2026-07-02) — DONE. Support matrix reconciled; doc-only.
+
+Updated `docs/core-language-support-matrix.md` only: CL-01 now records the scalar,
+introspection, integer-digit, list/set, finite iterator, `Factor`, number-theory, and
+combinatorics additions; CL-07 records the string additions and moves `ToUpperCase` from
+partial to implemented with its sibling case helpers; CL-08 records `SymbolName` and exact-name
+`NameQ`; CL-X no longer excludes `Sum`. Added the required implementation-fidelity note and
+partial notes for structural/linear-only `Factor`, factorization integer-work limits,
+numeric-only `Sum`/`Product`, integer-scope combinatorics, sieve-limited `Prime`/`PrimePi`, and
+trial-division `PrimeQ`.
+
+Live `rum-cli --eval` probes covered all 52 new names plus `Factor`. Representative anchors:
+scalar/list/string/introspection/digits/set probes returned the expected exact values;
+`Sum[i,{i,1,5}]`/`Product[i,{i,1,5}]` returned `15`/`120` while symbolic bounds stayed inert;
+factorization and recurrence anchors returned `Divisors[12] -> {1,2,3,4,6,12}`,
+`BernoulliB[4] -> -1/30`, `Prime[10] -> 29`, `PrimePi[13/2] -> 3`; `Factor[x^4+4]` and
+`Factor[x^4+4 y^4]` stayed unfactored; large sieve / 10-digit-factor probes returned
+`TerminatedEvaluation["IntegerWorkLimit"]`. WK spot checks confirmed the behavior-specific
+limits: WK factors `x^4+4` / `x^4+4 y^4`, gives symbolic closed forms for `Sum[i,{i,1,n}]`,
+`Product[i,{i,1,n}]`, and `Binomial[n,2]`, counts `PrimePi[13/2]` as `3`, and agrees on
+symbolic `Pochhammer[x,4]`.
+
+Verification: `cargo fmt --check` passed. Tracked diff is only
+`docs/core-language-support-matrix.md` and this brief; `git diff -- crates` is empty; no
+`mma-hol`, no commit. `git status --short` also showed an unrelated untracked
+`ISSUE-sandbox-profile-fs-builtins.md`, not touched by this pass.
+
+---
+
+## Outcome (Claude gate, 2026-07-02) — DONE + KEEP. Matrix reconciled; doc-only; v0.1 contract accurate.
+
+Committed `docs/core-language-support-matrix.md` (only). All 52 new builtins (+ Factor) recorded
+in the right CL sections; folk-implementation-fidelity note added; partial notes with exact
+criteria for: Factor (structural/linear-factor extraction only — general poly factorization a
+non-goal), factorization-derived (trial+Pollard-rho+Miller-Rabin, integer-work-limit →
+TerminatedEvaluation, raisable), Sum/Product (numeric iterators only, symbolic bounds inert),
+integer-scope combinatorics (symbolic passthrough), Prime/PrimePi (sieve, PrimePi Floor[x] for
+rational x), PrimeQ (trial). ToUpperCase moved partial→implemented with its case siblings.
+Gate (Claude verified): doc-only (`git diff -- crates` empty); spot-checked the matrix entries
+match rum-cli + WK-confirmed limits (Codex probed all 52 + Factor). The v0.1 support-matrix
+contract is now accurate.
+
+NOTE: an unrelated untracked `ISSUE-sandbox-profile-fs-builtins.md` appeared in the tree — it
+is NOT from this brief; it is a real finding filed by the TTT project's director (the sandbox
+audit we designed caught that rum-host's default catalog exposes the filesystem to untrusted
+code). Handled separately (tracked + TODO), sequenced after the pre-release wrap-up per the
+filer.

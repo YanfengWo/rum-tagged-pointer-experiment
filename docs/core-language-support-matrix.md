@@ -84,6 +84,14 @@ real-project acceptance lane. Items promoted by `CL-Y` should still be small,
 evidence-backed kernel or harness tasks, not a broad promise to implement every
 Wolfram feature that appears in a neighboring project.
 
+## Implementation-Fidelity Note
+
+Several exact helper families follow the current folk-implementation policy:
+simple integer/rational or common structural cases are implemented exactly,
+while heavyweight symbolic, machine-real, or general-CAS algorithms either
+remain inert, emit messages, or terminate through structured resource limits.
+Unless a row says otherwise, these helpers should be read as rationals-only.
+
 ## Overlap Policy
 
 Many functions appear on more than one official page. Each item is listed only
@@ -162,7 +170,11 @@ once in its primary implementation group. Other groups may mention it as
   `Join` beyond the current top-level same-head / association /
   positive-integer level subset, `Range` beyond the current exact-integer
   one-, two-, and three-argument subset, `Abs` / `Factorial` beyond the
-  current exact numeric / non-negative exact-integer subset, general
+  current exact numeric / non-negative exact-integer subset, structural
+  `Factor` beyond the current linear-factor extraction subset, finite
+  numeric `Sum` / `Product` beyond concrete iterator bounds, exact
+  number-theory and recurrence/combinatorics helpers beyond integer/rational
+  folk scope and explicit integer-work limits, and general
   boolean/comparison evaluation beyond the current exact-numeric order-chain
   reductions
 - `planned`: richer expression introspection, broader list-manipulation
@@ -173,17 +185,27 @@ once in its primary implementation group. Other groups may mention it as
   - `implemented`: `Identity`, `List`, `Head`, `Length`, `Depth`, `TrueQ`,
     `BooleanQ`, `Boole`, `AtomQ`, `ListQ`, `StringQ`, `IntegerQ`, `NumberQ`,
     `True`, `False`, `SameQ`, `UnsameQ`, `LessThan`, `GreaterThan`,
-    `LessEqualThan`, `GreaterEqualThan`, `EqualTo`, `UnequalTo`, `SameAs`
+    `LessEqualThan`, `GreaterEqualThan`, `EqualTo`, `UnequalTo`, `SameAs`,
+    `Sign`, `Floor`, `Ceiling`, `IntegerPart`, `FractionalPart`, `Minus`,
+    `MinMax`, `LeafCount`, `HoldForm`, `IntegerLength`, `IntegerDigits`,
+    `IntegerReverse`, `FromDigits`, `DigitCount`, `Differences`, `PadLeft`,
+    `PadRight`, `ConstantArray`, `Intersection`, `Subsets`, `Tuples`,
+    `Partition`
   - `partial`: `Part`, `Extract`, `ReplacePart`, `Thread`, `First`, `Last`,
     `Rest`, `Most`, `Take`, `Drop`, `TakeDrop`, `Insert`, `Delete`,
     `TakeList`, `Flatten`, `Join`, `Reverse`, `Transpose`,
     `DeleteDuplicates`, `DeleteDuplicatesBy`, `Sort`, `SortBy`, `Union`,
     `Complement`, `Append`, `Prepend`, `Range`, `FullForm`, `Symbol`,
-    `Construct`, `Abs`, `Factorial`,
+    `Construct`, `Abs`, `Factorial`, `Factor`, `Sum`, `Product`,
     `Equal`, `Unequal`, `Less`, `Greater`, `LessEqual`,
     `GreaterEqual`, `And`, `Or`, `Nand`, `Nor`, `Xor`, `Equivalent`, `Implies`, `Not`, `NumericQ`, `EvenQ`, `OddQ`,
     `Positive`, `Negative`, `NonPositive`, `NonNegative`, `PossibleZeroQ`,
     `MachineNumberQ`, `RealValuedNumberQ`, `RealValuedNumericQ`, `PrimeQ`,
+    `Prime`, `PrimePi`, `Divisors`, `EulerPhi`, `MoebiusMu`,
+    `DivisorSigma`, `PrimeNu`, `PrimeOmega`, `NextPrime`, `Binomial`,
+    `Fibonacci`, `PartitionsP`, `PartitionsQ`, `BernoulliB`,
+    `Subfactorial`, `StirlingS1`, `StirlingS2`, `CatalanNumber`,
+    `Multinomial`, `Pochhammer`,
     `AlgebraicIntegerQ`, `DuplicateFreeQ`, `IntersectingQ`, `DisjointQ`,
     `SubsetQ`, `Order`, `OrderedQ`, `ContainsAll`, `ContainsAny`,
     `LexicographicOrder`, `NumericalOrder`, `AlphabeticOrder`,
@@ -191,6 +213,30 @@ once in its primary implementation group. Other groups may mention it as
     `MatrixQ`, `ArrayQ`, `AllTrue`, `AnyTrue`, `NoneTrue`, `CoprimeQ`,
     `NearestTo`, `PolynomialQ`, `PolynomialExpressionQ`,
     `RationalExpressionQ`, `DateObjectQ`, `TimeObjectQ`
+  - `partial notes`: `Factor` is structural and linear-factor oriented: it
+    extracts rational-root / linear factors but does not implement general
+    polynomial factorization, so quadratic-or-higher irreducible factors such
+    as `x^4 + 4` and `x^4 + 4 y^4` remain unfactored; general
+    Berlekamp-Zassenhaus-style factorization is outside the current project
+    scope. The factorization-derived helpers (`Divisors`, `EulerPhi`,
+    `MoebiusMu`, `DivisorSigma`, `PrimeNu`, `PrimeOmega`, `NextPrime`) use
+    exact trial division plus Pollard rho plus deterministic Miller-Rabin
+    under the default integer-work limit; 9-digit-factor semiprimes are in
+    scope, while larger or pathological cases can return
+    `TerminatedEvaluation["IntegerWorkLimit"]` unless the host raises the
+    limit. `Sum` / `Product` support numeric iterators with concrete bounds
+    through the current `Table` / `Do` iterator forms; symbolic bounds such
+    as `Sum[i, {i, 1, n}]` stay unevaluated rather than producing closed
+    forms. `Binomial`, `Fibonacci`, `Subfactorial`, `CatalanNumber`,
+    `StirlingS1`, `StirlingS2`, `BernoulliB`, `PartitionsP`,
+    `PartitionsQ`, `Multinomial`, and `Pochhammer` are exact for integer
+    arguments in the current folk scope; symbolic arguments usually pass
+    through, except `Pochhammer[a, n]` computes the finite product for a
+    symbolic first argument, and `BernoulliB` returns exact rationals.
+    `Prime` / `PrimePi` use an on-demand sieve under the integer-work limit;
+    `PrimePi` counts primes not exceeding `Floor[x]` for rational `x`.
+    `PrimeQ` is exact in the current integer scope but still uses trial
+    division, so very large inputs are expected to be slow.
   - `planned`: `Heads`
 - `cross-tracked elsewhere`: `Apply`, `Array`, `Cases`, `Count`,
   `DeleteCases`, `FreeQ`, `Map`, `MapAll`, `MapAt`, `MemberQ`, `Outer`,
@@ -607,11 +653,13 @@ once in its primary implementation group. Other groups may mention it as
 ### Functions and Symbols
 
 - `implemented`: `Characters`, `StringJoin`, `StringLength`, `StringRepeat`,
-  `StringTake`, `StringDrop`, `StringPart`
+  `StringTake`, `StringDrop`, `StringPart`, `StringReverse`,
+  `ToUpperCase`, `ToLowerCase`, `LowerCaseQ`, `UpperCaseQ`, `Capitalize`,
+  `Decapitalize`
 - `partial`: `ToString`, `StringContainsQ`, `StringExpression`,
   `StringReplace`, `StringCases`, `StringPosition`, `StringSplit`,
   `StringTakeDrop`, `StringCount`, `StringMatchQ`, `StringFreeQ`,
-  `ToUpperCase`, `Whitespace`, `NumberString`, `LetterQ`, `DigitQ`,
+  `Whitespace`, `NumberString`, `LetterQ`, `DigitQ`,
   `StringApply`, `StringDelete`, `StringForm`, `StringPadLeft`,
   `StringRiffle`, `StringTemplate`, `TemplateApply`, `TextWords`,
   `ToCharacterCode`, `ToExpression`, `SyntaxQ`, `TextString`,
@@ -677,7 +725,10 @@ once in its primary implementation group. Other groups may mention it as
   including the current bounded / alternation / grouping /
   non-capturing-group regex subset, plus the current default option surface
   and `IgnoreCase -> True` matching for wildcard and supported regex
-  patterns; `Save` now rejects unknown options in
+  patterns; namespace introspection now includes context-stripping
+  `SymbolName` plus exact-name `NameQ`, while wildcard / pattern-string
+  `NameQ` remains outside the current folk subset; `Save` now rejects unknown
+  options in
   the current package-tooling subset, and `Once` now accepts option rules in
   second position, reports unknown option names, and honors
   `PersistenceTime -> 0` as a no-cache subset;
@@ -705,11 +756,11 @@ once in its primary implementation group. Other groups may mention it as
 ### Functions and Symbols
 
 - `implemented`: `$ContextPath`, `$Packages`, `Begin`, `BeginPackage`, `End`,
-  `EndPackage`, `Needs`, `Message`, `MessageName`
+  `EndPackage`, `Needs`, `Message`, `MessageName`, `SymbolName`
 - `partial`: `Protect`, `Unprotect`, `Protected`, `Options`, `SetOptions`,
   `OptionValue`, `OptionsPattern`, `Names`, `SyntaxInformation`,
   `ArgumentsOptions`, `CheckArguments`, `UpSet`, `UpSetDelayed`,
-  `DeclarePackage`, `DumpSave`, `Once`, `Save`
+  `DeclarePackage`, `DumpSave`, `Once`, `Save`, `NameQ`
 - `planned`: long-tail `DeclarePackage` / `Save` / `DumpSave` / `Once`
   parity, richer `Names` regex coverage beyond the current wildcard /
   bounded / alternation / ignore-case subset, and broader
@@ -1120,7 +1171,6 @@ kept outside the kernel-first project phase.
 ### Mathematics Outside The Current Non-Math Core Target
 
 - `N`
-- `Sum`
 - `NDSolve`
 
 ## Project-Owned Extensions Outside The Official Matrix
