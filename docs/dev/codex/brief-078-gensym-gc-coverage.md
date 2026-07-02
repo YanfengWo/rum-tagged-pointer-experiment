@@ -87,3 +87,26 @@ coverage before/after, and — if a test reveals a GC soundness bug — the fail
 3. Findings — any GC soundness bug (live reclaimed / dead leaked), or "GC keeps every
    escape kind live and reclaims every dead gensym on all covered cases."
 4. Open questions — any definition-kind arm you couldn't reach or an ambiguous escape case.
+
+---
+
+## Outcome (Claude gate, 2026-07-01) — DONE + KEEP. gensym_gc.rs 51%→71% region / 82% line / 100% fns; no soundness bug.
+
+Committed test-only (`tests/scoping_gensym_gc.rs`). +15 GC tests (5→20) covering the
+per-definition-kind escape arms (own/delayed-own/down/up/sub-value escapes kept live),
+options/syntax-info/messages roots, extra_roots_for_outcome, transitive definition chains,
+and edges (empty candidates early-return, active module-activation kept, threshold env
+parsing valid/invalid/default, dead candidate cleanup). Coverage: 51.25%→**71.25% region /
+82.45% line / 100% function**. Gate (Claude reproduced): `cargo test -p rum-runtime` 743
+passed / 0 failed / 3 ignored; fmt clean; test-only.
+
+**No GC soundness bug** — the memory-line GC keeps every covered escape kind live and
+reclaims every dead gensym after its root clears. Honest note (Codex): a positive
+"attributes contain a gensym" case is UNREACHABLE (attributes are `AttributeSet` bit flags,
+not `Expr` storage, so `for_each_root_expr` has no attributes arm — the brief's assumption
+was wrong); the reachable dead-candidate cleanup path was covered instead.
+
+Test-buildout line status: host/lifecycle (076, +13, contracts hold), Orderless+Optional
+(077, 0→71%, found+queued 4 WK bugs), gensym-GC (078, 51→71%, sound). evaluation_cache.rs
+skipped (false vacuum = profiling instrumentation). Remaining lower-priority coverage:
+jupyter transport (67%), syntax trivia (28%).
