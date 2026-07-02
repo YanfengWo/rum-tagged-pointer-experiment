@@ -47,9 +47,11 @@ if [[ "${DRY_RUN:-0}" == "1" ]]; then
   exit 0
 fi
 
+# `cdx` is a zsh function from ~/.zshrc (`with_proxy codex`), so it is NOT visible to a
+# bash subshell — run it through an interactive zsh, which sources ~/.zshrc (giving both the
+# cdx function and the proxy env). Redirections stay on the outer call so codex inherits them.
 set +e
-cdx exec -C "$repo_root" -s danger-full-access \
-  "Read $rel and execute it exactly. Follow its Hard rules." \
+zsh -ic "cdx exec -C '$repo_root' -s danger-full-access 'Read $rel and execute it exactly. Follow its Hard rules.'" \
   < /dev/null > "$log" 2>&1
 rc=$?
 set -e
