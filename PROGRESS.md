@@ -17,6 +17,29 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 Stage-3 batch 5 DONE (brief-106) — logic moved; the comparisons left the kernel
+
+The user chose Option 1 for the load-bearing tier (tests migrate WITH their
+families; no dev-dep cycle; runtime test tree trends mechanism-only), and the
+first mass migration turned out MILD: measured reality was 31 test fns
+(22 whole-file + 9 partial), not the feared hundreds — runtime tests lean on
+comparisons far less than assumed. Logic itself was the lowest-increment move
+(free-fn conversion + kernel-method pub-ification all done in 099/101):
+21 specs moved, runtime catalog 400, stdlib 113; the leftover catalog slice
+renamed honestly to `builtin_catalog/predicates.rs` (50 specs); obsolete
+nand/nor adapter shims deleted. Workspace 1300/0 conserved (runtime 679,
+stdlib 111); CLI smoke `If[Xor[True, False] && 1 <= 1, 42, 0]` → 42.
+
+Promotions: 3 (within the ≤5 line) — the gensym-GC introspection counters
+(`collect_and_sweep_dead_gensyms` visibility flip + 2 read-only count
+accessors), needed because the gensym-GC MECHANISM test uses logic builtins in
+its probes and migrated per the Option-1 rule. Noted for a future cleanup
+line: mechanism tests exiled to the stdlib only because their probe
+expressions use stdlib builtins could be probe-rewritten and repatriated
+later; the rule "don't rewrite probes to dodge migration" was correct for
+keeping this batch honest, but the exile list is worth tracking (currently:
+scoping_gensym_gc partial, debug_tools_resources partial).
+
 ## 2026-07-04 Stage-3 batch 4 DONE (brief-105) — strings moved (largest batch); 6 families out
 
 The biggest single family so far: `strings` (facade + 21 files ≈6.5k lines, 61

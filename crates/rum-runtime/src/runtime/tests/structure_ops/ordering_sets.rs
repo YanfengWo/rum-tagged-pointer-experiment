@@ -65,68 +65,6 @@ fn sort_and_sortby_cover_current_top_level_subset() {
 }
 
 #[test]
-fn sort_with_ordering_function_evaluates_comparator() {
-    let mut session = Session::new();
-
-    assert_eq!(
-        session
-            .eval_text("Sort[{3, 1, 2}, Greater]")
-            .unwrap()
-            .value
-            .to_string(),
-        "List[3, 2, 1]"
-    );
-    assert_eq!(
-        session
-            .eval_text("Sort[{3, 1, 2}, #1 > #2 &]")
-            .unwrap()
-            .value
-            .to_string(),
-        "List[3, 2, 1]"
-    );
-    assert_eq!(
-        session
-            .eval_text("Sort[{3, 1, 2}, Order[#1, #2] === 1 &]")
-            .unwrap()
-            .value
-            .to_string(),
-        "List[1, 2, 3]"
-    );
-    assert_eq!(
-        session
-            .eval_text("Sort[{c, a, b}, Order[#1, #2] === 1 &]")
-            .unwrap()
-            .value
-            .to_string(),
-        "List[a, b, c]"
-    );
-    assert_eq!(
-        session
-            .eval_text("Sort[f[3, 1, 2], Less]")
-            .unwrap()
-            .value
-            .to_string(),
-        "f[1, 2, 3]"
-    );
-    assert_eq!(
-        session
-            .eval_text("Sort[{1, 3, 2, 3, 1}, Less]")
-            .unwrap()
-            .value
-            .to_string(),
-        "List[1, 1, 2, 3, 3]"
-    );
-    assert_eq!(
-        session
-            .eval_text("Sort[{3, 1, 2}, #1 + #2 &]")
-            .unwrap()
-            .value
-            .to_string(),
-        "List[3, 1, 2]"
-    );
-}
-
-#[test]
 fn union_and_complement_cover_current_same_head_subset() {
     let mut session = Session::new();
 

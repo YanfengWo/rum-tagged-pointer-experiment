@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn and_or_short_circuit_side_effects_and_compare_exact_values() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("x = seed").unwrap();
     assert_eq!(
@@ -362,7 +362,7 @@ fn and_or_short_circuit_side_effects_and_compare_exact_values() {
 
 #[test]
 fn equal_and_unequal_leave_mixed_symbolic_chains_intact() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     for (input, expected) in [
         ("Equal[a, a, b]", "Equal[a, a, b]"),
@@ -381,7 +381,7 @@ fn equal_and_unequal_leave_mixed_symbolic_chains_intact() {
 
 #[test]
 fn comparison_operator_forms_apply_single_arguments_on_the_left() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session.eval_text("LessThan[3]").unwrap().value.to_string(),

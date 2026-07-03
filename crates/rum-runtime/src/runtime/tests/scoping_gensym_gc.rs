@@ -1,32 +1,6 @@
 use super::*;
 
 #[test]
-fn recursive_module_sweep_reclaims_dead_retained_gensyms() {
-    let mut session = Session::new();
-
-    session
-        .eval_text(
-            "ClearAll[gcRec050]; gcRec050[n_] := Module[{r}, If[n <= 0, 0, r = gcRec050[n - 1] + 1; r]]",
-        )
-        .unwrap();
-
-    for _ in 0..4 {
-        assert_eq!(eval_string(&mut session, "Do[gcRec050[12], {15}]"), "Null");
-        assert!(
-            retained_candidate_definition_count(&session) > 0,
-            "recursive Module workload should retain escaped gensyms before sweep"
-        );
-
-        session.collect_and_sweep_dead_gensyms(&[]);
-
-        assert_eq!(retained_candidate_definition_count(&session), 0);
-        assert!(session.gc_candidate_gensyms.is_empty());
-    }
-
-    assert_eq!(eval_string(&mut session, "gcRec050[5]"), "5");
-}
-
-#[test]
 fn own_value_escape_keeps_candidate_until_definition_is_cleared() {
     assert_definition_escape_kept_then_reclaimed(
         "own value",
@@ -501,12 +475,4 @@ fn assert_candidate_definition_count(session: &Session, candidates: &[Symbol], c
             .count(),
         count
     );
-}
-
-fn retained_candidate_definition_count(session: &Session) -> usize {
-    session
-        .gc_candidate_gensyms
-        .iter()
-        .filter(|candidate| session.definitions.contains_key(candidate))
-        .count()
 }

@@ -4,12 +4,16 @@ mod calculus;
 mod catalog;
 mod combinatorics;
 mod integer_digits;
+mod logic;
 mod number_theory;
 mod polynomials;
 mod strings;
 
 pub fn install_core(session: &mut Session) {
     for spec in core_builtin_specs() {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::LOGIC_BUILTINS {
         session.register_builtin(*spec);
     }
     for spec in catalog::COMBINATORICS_BUILTINS {

@@ -176,19 +176,6 @@ fn compiled_downvalue_matcher_preserves_exact_vs_pattern_precedence() {
 }
 
 #[test]
-fn compiled_downvalue_matcher_falls_back_for_condition_patterns() {
-    let mut session = Session::new();
-
-    session.eval_text("p[x_] /; x > 0 := x").unwrap();
-
-    assert_eq!(session.eval_text("p[3]").unwrap().value.to_string(), "3");
-    assert_eq!(
-        session.eval_text("p[-1]").unwrap().value.to_string(),
-        "p[-1]"
-    );
-}
-
-#[test]
 fn compiled_downvalue_matcher_falls_back_for_sequence_patterns() {
     let mut session = Session::new();
 

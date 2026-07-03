@@ -1,6 +1,6 @@
 use super::shared::predicate_bool_expr;
-use crate::runtime::kernel_api::{EvalError, Session, system_expr, truthiness_symbol};
 use rum_core::{Atom, Expr, Rational, heads};
+use rum_runtime::kernel_api::{EvalError, Session, system_expr, truthiness_symbol};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ComparisonRelation {
@@ -24,7 +24,7 @@ enum EqualityKnownValue {
     Boolean(bool),
 }
 
-pub(in crate::runtime) fn eval_equal(
+pub(crate) fn eval_equal(
     session: &mut Session,
     head: &Expr,
     args: &[Expr],
@@ -37,7 +37,7 @@ pub(in crate::runtime) fn eval_equal(
     ))
 }
 
-pub(in crate::runtime) fn eval_unequal(
+pub(crate) fn eval_unequal(
     session: &mut Session,
     head: &Expr,
     args: &[Expr],
@@ -50,7 +50,7 @@ pub(in crate::runtime) fn eval_unequal(
     ))
 }
 
-pub(in crate::runtime) fn eval_less(
+pub(crate) fn eval_less(
     session: &mut Session,
     head: &Expr,
     args: &[Expr],
@@ -63,7 +63,7 @@ pub(in crate::runtime) fn eval_less(
     ))
 }
 
-pub(in crate::runtime) fn eval_greater(
+pub(crate) fn eval_greater(
     session: &mut Session,
     head: &Expr,
     args: &[Expr],
@@ -76,7 +76,7 @@ pub(in crate::runtime) fn eval_greater(
     ))
 }
 
-pub(in crate::runtime) fn eval_less_equal(
+pub(crate) fn eval_less_equal(
     session: &mut Session,
     head: &Expr,
     args: &[Expr],
@@ -89,7 +89,7 @@ pub(in crate::runtime) fn eval_less_equal(
     ))
 }
 
-pub(in crate::runtime) fn eval_greater_equal(
+pub(crate) fn eval_greater_equal(
     session: &mut Session,
     head: &Expr,
     args: &[Expr],
@@ -102,7 +102,7 @@ pub(in crate::runtime) fn eval_greater_equal(
     ))
 }
 
-pub(in crate::runtime) fn eval_comparison_operator_wrapper(
+pub(crate) fn eval_comparison_operator_wrapper(
     _session: &mut Session,
     head: &Expr,
     args: &[Expr],

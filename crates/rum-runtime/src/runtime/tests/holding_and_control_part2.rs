@@ -337,28 +337,6 @@ fn cycle_detection_returns_iteration_limit_for_mutual_downvalues() {
 }
 
 #[test]
-fn cycle_detection_allows_same_call_after_state_progress() {
-    let mut session = Session::new();
-
-    assert_eq!(
-        session
-            .eval_text("n = 2; f[] := If[n > 0, n--; f[], 7]; f[]")
-            .unwrap()
-            .value
-            .to_string(),
-        "7"
-    );
-    assert_eq!(
-        session
-            .eval_text("n = 2; g[x_] := If[n > 0, n--; g[x], x]; g[7]")
-            .unwrap()
-            .value
-            .to_string(),
-        "7"
-    );
-}
-
-#[test]
 fn recursion_limit_stops_expanding_recursive_downvalues() {
     let mut session = Session::new();
     session.set_recursion_limit(32);

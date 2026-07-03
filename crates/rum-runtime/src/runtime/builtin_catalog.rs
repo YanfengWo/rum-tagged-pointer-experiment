@@ -7,9 +7,9 @@ mod associations;
 mod control;
 mod debug;
 mod functional;
-mod logic;
 mod namespace;
 mod numeric;
+mod predicates;
 mod rules;
 mod scoping;
 #[path = "builtin_catalog/strings.rs"]
@@ -30,7 +30,7 @@ pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
                     + control::CONTROL_BUILTINS.len()
                     + functional::FUNCTIONAL_BUILTINS.len()
                     + scoping::SCOPING_BUILTINS.len()
-                    + logic::LOGIC_BUILTINS.len()
+                    + predicates::PREDICATE_BUILTINS.len()
                     + rules::RULE_BUILTINS.len()
                     + namespace::NAMESPACE_BUILTINS.len(),
             );
@@ -42,7 +42,7 @@ pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
             specs.extend_from_slice(control::CONTROL_BUILTINS);
             specs.extend_from_slice(functional::FUNCTIONAL_BUILTINS);
             specs.extend_from_slice(scoping::SCOPING_BUILTINS);
-            specs.extend_from_slice(logic::LOGIC_BUILTINS);
+            specs.extend_from_slice(predicates::PREDICATE_BUILTINS);
             specs.extend_from_slice(rules::RULE_BUILTINS);
             specs.extend_from_slice(namespace::NAMESPACE_BUILTINS);
             specs

@@ -1,8 +1,15 @@
-use super::*;
+use crate::install_core;
+use rum_runtime::Session;
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 #[test]
 fn do_supports_count_iterators_and_nested_iterators() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -40,7 +47,7 @@ fn do_supports_count_iterators_and_nested_iterators() {
 
 #[test]
 fn while_until_and_for_support_first_pass_loop_control() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -70,7 +77,7 @@ fn while_until_and_for_support_first_pass_loop_control() {
 
 #[test]
 fn break_and_continue_are_handled_by_current_loop_forms() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -102,7 +109,7 @@ fn break_and_continue_are_handled_by_current_loop_forms() {
 
 #[test]
 fn return_propagates_through_loop_bodies_to_function_boundaries() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session

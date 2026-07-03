@@ -1,10 +1,10 @@
 use super::shared::{negated_relation_head_name, predicate_bool_expr};
-use crate::runtime::kernel_api::{
+use rum_core::{Expr, heads};
+use rum_runtime::kernel_api::{
     EvalError, Session, is_system_symbol_name, system_expr, truthiness_symbol,
 };
-use rum_core::{Expr, heads};
 
-pub(in crate::runtime) fn eval_and(
+pub(crate) fn eval_and(
     session: &mut Session,
     _head: &Expr,
     args: &[Expr],
@@ -12,7 +12,7 @@ pub(in crate::runtime) fn eval_and(
     resume_and_from_index(session, args.to_vec(), 0, Vec::new())
 }
 
-pub(in crate::runtime) fn eval_or(
+pub(crate) fn eval_or(
     session: &mut Session,
     _head: &Expr,
     args: &[Expr],
@@ -20,21 +20,23 @@ pub(in crate::runtime) fn eval_or(
     resume_or_from_index(session, args.to_vec(), 0, Vec::new())
 }
 
-pub(in crate::runtime) fn eval_nand(
+pub(crate) fn eval_nand(
     session: &mut Session,
+    _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     resume_nand_from_index(session, args.to_vec(), 0, Vec::new())
 }
 
-pub(in crate::runtime) fn eval_nor(
+pub(crate) fn eval_nor(
     session: &mut Session,
+    _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     resume_nor_from_index(session, args.to_vec(), 0, Vec::new())
 }
 
-pub(in crate::runtime) fn eval_xor(
+pub(crate) fn eval_xor(
     _session: &mut Session,
     head: &Expr,
     args: &[Expr],
@@ -53,7 +55,7 @@ pub(in crate::runtime) fn eval_xor(
     Ok(finalize_xor(head, residual, invert))
 }
 
-pub(in crate::runtime) fn eval_equivalent(
+pub(crate) fn eval_equivalent(
     _session: &mut Session,
     head: &Expr,
     args: &[Expr],
@@ -73,7 +75,7 @@ pub(in crate::runtime) fn eval_equivalent(
     Ok(finalize_equivalent(head, residual, saw_true, saw_false))
 }
 
-pub(in crate::runtime) fn eval_implies(
+pub(crate) fn eval_implies(
     session: &mut Session,
     head: &Expr,
     args: &[Expr],
@@ -94,7 +96,7 @@ pub(in crate::runtime) fn eval_implies(
     })
 }
 
-pub(in crate::runtime) fn eval_not(
+pub(crate) fn eval_not(
     session: &mut Session,
     _head: &Expr,
     args: &[Expr],

@@ -5,7 +5,7 @@ const GENSYM_GC_THRESHOLD_ENV: &str = "RUM_GENSYM_GC_THRESHOLD";
 const DEFAULT_GENSYM_GC_THRESHOLD: usize = 200_000;
 
 impl Session {
-    pub(in crate::runtime) fn collect_and_sweep_dead_gensyms(&mut self, extra_roots: &[Expr]) {
+    pub fn collect_and_sweep_dead_gensyms(&mut self, extra_roots: &[Expr]) {
         if self.gc_candidate_gensyms.is_empty() {
             return;
         }
@@ -60,6 +60,17 @@ impl Session {
             self.gc_candidate_gensyms.remove(&gensym);
         }
         self.in_gensym_sweep = false;
+    }
+
+    pub fn gc_candidate_gensym_count(&self) -> usize {
+        self.gc_candidate_gensyms.len()
+    }
+
+    pub fn retained_candidate_definition_count(&self) -> usize {
+        self.gc_candidate_gensyms
+            .iter()
+            .filter(|candidate| self.definitions.contains_key(candidate))
+            .count()
     }
 
     pub(in crate::runtime) fn for_each_root_expr(&self, visit: &mut dyn FnMut(&Expr)) {

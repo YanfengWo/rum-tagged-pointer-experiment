@@ -1,8 +1,17 @@
-use super::*;
+use crate::install_core;
+use rum_core::Expr;
+use rum_runtime::Session;
+use rum_runtime::kernel_api::system_expr;
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 #[test]
 fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -270,7 +279,7 @@ fn testcreate_testreport_and_stack_cover_current_first_pass_subset() {
 
 #[test]
 fn testreport_merges_existing_reports_and_accepts_report_level_options() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let merged = session
         .eval_text(

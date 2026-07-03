@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session.eval_text("And[]").unwrap().value.to_string(),

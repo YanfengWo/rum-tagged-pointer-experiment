@@ -1,8 +1,15 @@
-use super::*;
+use crate::install_core;
+use rum_runtime::{EvalError, Session, SessionRequestError};
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 #[test]
 fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("x = 0").unwrap();
     assert_eq!(
@@ -79,7 +86,7 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
     assert_eq!(disabled_extra_args.value.to_string(), "Assert[1, 2, 3]");
     assert!(disabled_extra_args.messages.is_empty());
 
-    let mut callback_session = Session::new();
+    let mut callback_session = core_session();
     assert_eq!(
         callback_session
             .eval_text("Context[$AssertFunction]")
@@ -264,7 +271,7 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
 
 #[test]
 fn abortprotect_and_failsafe_resume_through_host_input() {
-    let mut session = Session::new();
+    let mut session = core_session();
     session.eval_text("x = 0").unwrap();
 
     let failure = session

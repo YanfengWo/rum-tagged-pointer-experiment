@@ -132,22 +132,6 @@ pub(in crate::runtime) fn builtin_stack(
     session.eval_stack(args)
 }
 
-pub(in crate::runtime) fn builtin_nand(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    crate::runtime::logic::eval_nand(session, args)
-}
-
-pub(in crate::runtime) fn builtin_nor(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    crate::runtime::logic::eval_nor(session, args)
-}
-
 pub(in crate::runtime) fn builtin_set(
     session: &mut Session,
     _head: &Expr,

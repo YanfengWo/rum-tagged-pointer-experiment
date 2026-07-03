@@ -262,20 +262,6 @@ fn large_do_count_loop_does_not_recurse_through_the_rust_stack() {
 }
 
 #[test]
-fn table_propagates_return_to_function_boundaries() {
-    let mut session = Session::new();
-
-    assert_eq!(
-        session
-            .eval_text("Function[Table[If[Equal[i, 2], Return[i], i], {i, 3}]][]")
-            .unwrap()
-            .value
-            .to_string(),
-        "2"
-    );
-}
-
-#[test]
 fn confirm_info_is_lazy_and_explicit_tags_are_dynamically_caught() {
     let mut session = Session::new();
 

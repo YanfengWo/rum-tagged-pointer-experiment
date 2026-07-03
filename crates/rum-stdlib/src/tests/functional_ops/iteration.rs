@@ -1,8 +1,15 @@
-use super::*;
+use crate::install_core;
+use rum_runtime::Session;
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 #[test]
 fn nest_and_fixed_point_families_cover_current_iteration_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -127,7 +134,7 @@ fn nest_and_fixed_point_families_cover_current_iteration_subset() {
 
 #[test]
 fn iteration_builtins_report_current_argument_forms() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let nest = session.eval_text("Nest[f, expr, bad]").unwrap();
     assert_eq!(nest.value.to_string(), "Nest[f, expr, bad]");

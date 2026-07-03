@@ -1,0 +1,19 @@
+mod comparison;
+mod shared;
+mod truth;
+
+pub(crate) use self::comparison::eval_comparison_operator_wrapper;
+pub(crate) use self::comparison::eval_equal;
+pub(crate) use self::comparison::eval_greater;
+pub(crate) use self::comparison::eval_greater_equal;
+pub(crate) use self::comparison::eval_less;
+pub(crate) use self::comparison::eval_less_equal;
+pub(crate) use self::comparison::eval_unequal;
+pub(crate) use self::truth::eval_and;
+pub(crate) use self::truth::eval_equivalent;
+pub(crate) use self::truth::eval_implies;
+pub(crate) use self::truth::eval_nand;
+pub(crate) use self::truth::eval_nor;
+pub(crate) use self::truth::eval_not;
+pub(crate) use self::truth::eval_or;
+pub(crate) use self::truth::eval_xor;

@@ -1,7 +1,5 @@
 use super::*;
 
-mod logic;
-
 #[test]
 fn resume_eval_request_with_input_can_finish_conditioned_matchq() {
     let mut session = Session::new();

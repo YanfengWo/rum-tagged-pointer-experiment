@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn equal_reduces_adjacent_mixed_comparable_pairs_only() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -40,7 +40,7 @@ fn equal_reduces_adjacent_mixed_comparable_pairs_only() {
 
 #[test]
 fn equal_and_unequal_handle_boolean_pairs_without_overreaching() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -94,7 +94,7 @@ fn equal_and_unequal_handle_boolean_pairs_without_overreaching() {
 
 #[test]
 fn unequal_detects_repeated_known_prefix_values_before_unknown_tail() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -132,7 +132,7 @@ fn unequal_detects_repeated_known_prefix_values_before_unknown_tail() {
 
 #[test]
 fn equality_operator_forms_accept_multi_argument_applications() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session.eval_text("EqualTo[3][]").unwrap().value.to_string(),
@@ -210,7 +210,7 @@ fn equality_operator_forms_accept_multi_argument_applications() {
 
 #[test]
 fn order_comparison_operator_forms_report_application_arity() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     for (input, expected, count) in [
         ("LessThan[3][]", "LessThan[3][]", 0),

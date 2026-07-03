@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn logic_short_circuit_can_avoid_or_resume_input_requests() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let response = session
         .eval_request("And[False, InputString[\"rhs: \"]]")
@@ -79,7 +79,7 @@ fn logic_short_circuit_can_avoid_or_resume_input_requests() {
 
 #[test]
 fn truth_aggregates_short_circuit_and_resume_input_requests() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let response = session
         .eval_request(
