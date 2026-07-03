@@ -455,7 +455,7 @@ fn apply_association_to_key_path(head: &Expr, keys: &[Expr]) -> Option<Expr> {
     Some(current)
 }
 
-pub(in crate::runtime) fn missing_key_absent_expr(key: Expr) -> Expr {
+pub fn missing_key_absent_expr(key: Expr) -> Expr {
     Expr::call(system_expr("Missing"), vec![Expr::string("KeyAbsent"), key])
 }
 

@@ -13,7 +13,7 @@ pub(in crate::runtime) struct KeyedEntries {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(in crate::runtime) struct AssociationEntryForm {
+pub struct AssociationEntryForm {
     pub(in crate::runtime) key: Expr,
     pub(in crate::runtime) value: Expr,
     pub(in crate::runtime) delayed: bool,
@@ -25,7 +25,7 @@ pub(in crate::runtime) enum KeyedEntriesListError {
     InvalidElement(Expr),
 }
 
-pub(in crate::runtime) fn association_entries_from_expr(expr: &Expr) -> Option<Vec<(Expr, Expr)>> {
+pub fn association_entries_from_expr(expr: &Expr) -> Option<Vec<(Expr, Expr)>> {
     let Expr::Call { head, args } = expr else {
         return None;
     };
@@ -89,9 +89,7 @@ pub(in crate::runtime) fn single_rule_or_keyed_entry_forms_from_expr(
     rule_list_entry_forms_from_expr(expr)
 }
 
-pub(in crate::runtime) fn association_entry_forms_from_expr(
-    expr: &Expr,
-) -> Option<Vec<AssociationEntryForm>> {
+pub fn association_entry_forms_from_expr(expr: &Expr) -> Option<Vec<AssociationEntryForm>> {
     let Expr::Call { head, args } = expr else {
         return None;
     };
@@ -149,7 +147,7 @@ fn parse_association_item_deep(expr: &Expr) -> Option<Vec<(Expr, Expr)>> {
     parse_association_entries_deep(args)
 }
 
-pub(in crate::runtime) fn render_association(entries: Vec<(Expr, Expr)>) -> Expr {
+pub fn render_association(entries: Vec<(Expr, Expr)>) -> Expr {
     let entries = canonicalize_association_entries(entries);
     Expr::call(
         system_expr("Association"),
@@ -166,9 +164,7 @@ pub(in crate::runtime) fn render_association_preserving_rule_heads(args: &[Expr]
     ))
 }
 
-pub(in crate::runtime) fn render_association_entry_forms_preserving_heads(
-    entries: Vec<AssociationEntryForm>,
-) -> Expr {
+pub fn render_association_entry_forms_preserving_heads(entries: Vec<AssociationEntryForm>) -> Expr {
     render_association_entry_forms(entries)
 }
 
@@ -268,7 +264,7 @@ pub(in crate::runtime) fn normalize_key_value_pattern_spec(spec: &Expr) -> Optio
     ))
 }
 
-pub(in crate::runtime) fn list_items(expr: &Expr) -> Option<&[Expr]> {
+pub fn list_items(expr: &Expr) -> Option<&[Expr]> {
     match expr {
         Expr::Call { head, args } if is_system_symbol_name(head, heads::structure::LIST) => {
             Some(args)
@@ -357,9 +353,7 @@ pub(in crate::runtime) fn parse_association_entry(expr: &Expr) -> Option<(Expr, 
     Some((args[0].clone(), args[1].clone()))
 }
 
-pub(in crate::runtime) fn parse_association_entry_form(
-    expr: &Expr,
-) -> Option<AssociationEntryForm> {
+pub fn parse_association_entry_form(expr: &Expr) -> Option<AssociationEntryForm> {
     let Expr::Call { head, args } = expr else {
         return None;
     };
@@ -457,7 +451,7 @@ fn canonicalize_association_entry_forms(
     canonical
 }
 
-pub(in crate::runtime) fn predicate_bool_expr(value: bool) -> Expr {
+pub fn predicate_bool_expr(value: bool) -> Expr {
     system_expr(if value {
         heads::structure::TRUE
     } else {

@@ -15,7 +15,7 @@ pub(in crate::runtime) trait SuspensionFrame {
     ) -> Result<Expr, EvalError>;
 }
 
-pub(in crate::runtime) trait ContinuationValue: Sized {
+pub trait ContinuationValue: Sized {
     fn into_continuation_expr(self) -> Expr;
 
     fn from_continuation_expr(expr: Expr) -> Self;

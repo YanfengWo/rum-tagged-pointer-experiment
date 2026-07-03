@@ -449,8 +449,7 @@ pub(super) struct SymbolStabilityCacheEntry {
 }
 
 pub(super) type SymbolCountMap = HashMap<Symbol, u32, BuildHasherDefault<RuntimeCacheHasher>>;
-pub(in crate::runtime) type SymbolExprMap =
-    HashMap<Symbol, Expr, BuildHasherDefault<RuntimeCacheHasher>>;
+pub type SymbolExprMap = HashMap<Symbol, Expr, BuildHasherDefault<RuntimeCacheHasher>>;
 
 pub(super) type SymbolSet =
     std::collections::HashSet<Symbol, BuildHasherDefault<RuntimeCacheHasher>>;
@@ -488,8 +487,10 @@ pub(super) struct CallEffectCacheEntry {
 pub(super) type SymbolCallEffectCache =
     HashMap<SymbolCallEffectKey, CallEffectCacheEntry, BuildHasherDefault<RuntimeCacheHasher>>;
 
+// `pub` only so the promoted `SymbolExprMap` alias has a fully-public interface;
+// the private parent module keeps it unreachable outside the crate.
 #[derive(Clone, Copy, Debug, Default)]
-pub(super) struct RuntimeCacheHasher(u64);
+pub struct RuntimeCacheHasher(u64);
 
 impl Hasher for RuntimeCacheHasher {
     fn finish(&self) -> u64 {
@@ -964,7 +965,7 @@ fn expr_has_symbol_head(value: &Expr, expected_symbol: &Symbol) -> bool {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) struct RewriteRule {
+pub struct RewriteRule {
     pub(super) lhs: Expr,
     pub(super) rhs: Expr,
     pub(super) delayed: bool,
@@ -979,7 +980,7 @@ pub(super) enum CasesSpec {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) struct CasesLevelSpec {
+pub struct CasesLevelSpec {
     pub(super) min: isize,
     pub(super) max: Option<isize>,
 }
@@ -1026,7 +1027,7 @@ impl CasesLevelSpec {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) struct CasesTraversalConfig {
+pub struct CasesTraversalConfig {
     pub(super) levels: CasesLevelSpec,
     pub(super) max_matches: Option<usize>,
     pub(super) include_heads: bool,

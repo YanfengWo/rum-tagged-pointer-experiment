@@ -104,7 +104,7 @@ pub(super) fn message_name_key_from_expr(expr: &Expr) -> Option<MessageNameKey> 
     Some(MessageNameKey { symbol, tag })
 }
 
-pub(super) fn truthiness_symbol(expr: &Expr) -> Option<bool> {
+pub fn truthiness_symbol(expr: &Expr) -> Option<bool> {
     match expr_as_symbol(expr) {
         Some(symbol) if symbol.context() == SYSTEM_CONTEXT && symbol.name() == "True" => Some(true),
         Some(symbol) if symbol.context() == SYSTEM_CONTEXT && symbol.name() == "False" => {

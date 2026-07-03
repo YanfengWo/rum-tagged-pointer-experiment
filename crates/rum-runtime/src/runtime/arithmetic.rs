@@ -762,14 +762,14 @@ fn fast_integer_plus(args: &[Expr]) -> Option<Expr> {
     Some(Expr::integer(total))
 }
 
-pub(super) fn expr_as_exact_integer(expr: &Expr) -> Option<BigInt> {
+pub fn expr_as_exact_integer(expr: &Expr) -> Option<BigInt> {
     match expr {
         Expr::Atom(Atom::Integer(value)) => Some(value.to_bigint()),
         _ => None,
     }
 }
 
-pub(super) fn expr_as_exact_rational(expr: &Expr) -> Option<Rational> {
+pub fn expr_as_exact_rational(expr: &Expr) -> Option<Rational> {
     match expr {
         Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.to_bigint())),
         Expr::Atom(Atom::Rational(value)) => Some(value.as_ref().clone()),

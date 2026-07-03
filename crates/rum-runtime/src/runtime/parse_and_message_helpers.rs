@@ -143,7 +143,7 @@ pub(super) fn clamp_thread_position(position: isize, arg_count: usize) -> Option
     }
 }
 
-pub(super) fn parse_standard_level_spec(expr: &Expr) -> Option<CasesLevelSpec> {
+pub fn parse_standard_level_spec(expr: &Expr) -> Option<CasesLevelSpec> {
     if let Some(level) = expr_as_signed_isize(expr) {
         return Some(match level.cmp(&0) {
             std::cmp::Ordering::Greater => CasesLevelSpec::range(1, Some(level)),
@@ -339,7 +339,7 @@ pub(super) fn heads_option_classification_looks_like_option_syntax(
     }
 }
 
-pub(super) fn parse_heads_option(expr: &Expr) -> Option<bool> {
+pub fn parse_heads_option(expr: &Expr) -> Option<bool> {
     match classify_heads_option_expr(expr) {
         HeadsOptionClassification::Value(value) => value,
         _ => None,

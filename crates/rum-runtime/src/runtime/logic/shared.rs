@@ -1,4 +1,5 @@
-use super::*;
+use crate::runtime::kernel_api::{is_system_symbol_name, system_expr};
+use rum_core::{Expr, heads};
 
 pub(in crate::runtime::logic) fn negated_relation_head_name(head: &Expr) -> Option<&'static str> {
     [

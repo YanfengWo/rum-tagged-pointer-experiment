@@ -589,7 +589,7 @@ fn contains_missing_within(expr: &Expr, depth: DeleteMissingDepth) -> bool {
         .any(|arg| contains_missing_within(arg, child_depth))
 }
 
-pub(in crate::runtime) fn is_missing_expr(expr: &Expr) -> bool {
+pub fn is_missing_expr(expr: &Expr) -> bool {
     matches!(expr, Expr::Call { head, .. } if is_system_symbol_name(head, "Missing"))
 }
 

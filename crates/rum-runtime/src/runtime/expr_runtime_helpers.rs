@@ -18,7 +18,7 @@ pub(super) fn sequence_items(expr: &Expr) -> Option<&[Expr]> {
     }
 }
 
-pub(super) fn call_items_with_head<'a>(expr: &'a Expr, expected_head: &Expr) -> Option<&'a [Expr]> {
+pub fn call_items_with_head<'a>(expr: &'a Expr, expected_head: &Expr) -> Option<&'a [Expr]> {
     match expr {
         Expr::Call { head, args } if head.as_ref() == expected_head => Some(args),
         _ => None,
@@ -49,7 +49,7 @@ pub(super) fn flatten_flat_call_args(head: &Expr, args: Vec<Expr>) -> Vec<Expr> 
     flattened
 }
 
-pub(super) fn compare_expr_canonical(lhs: &Expr, rhs: &Expr) -> std::cmp::Ordering {
+pub fn compare_expr_canonical(lhs: &Expr, rhs: &Expr) -> std::cmp::Ordering {
     if let Some(ordering) = compare_negative_power_canonical(lhs, rhs) {
         return ordering;
     }
@@ -352,7 +352,7 @@ fn is_extra_known_system_symbol_name(name: &str) -> bool {
     )
 }
 
-pub(super) fn is_system_symbol_name(expr: &Expr, name: &str) -> bool {
+pub fn is_system_symbol_name(expr: &Expr, name: &str) -> bool {
     expr_as_symbol(expr)
         .map(|symbol| symbol.is_system_name(name))
         .unwrap_or(false)

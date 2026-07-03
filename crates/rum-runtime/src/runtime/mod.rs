@@ -45,6 +45,7 @@ mod function_and_subst_helpers;
 mod functional_ops;
 mod hold_thread;
 mod integer_digits;
+pub mod kernel_api;
 mod lexical_presence;
 mod lexical_substitution;
 mod listable_dispatch;

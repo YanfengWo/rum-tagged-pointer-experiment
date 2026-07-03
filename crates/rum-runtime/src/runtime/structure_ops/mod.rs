@@ -24,10 +24,7 @@ use selectors::{
     select_positioned_parts_for_span,
 };
 
-pub(super) fn exact_position_paths_from_expr(
-    expr: &Expr,
-    spec_expr: &Expr,
-) -> Option<Vec<Vec<isize>>> {
+pub fn exact_position_paths_from_expr(expr: &Expr, spec_expr: &Expr) -> Option<Vec<Vec<isize>>> {
     exact_paths::exact_position_paths_from_expr(expr, spec_expr)
 }
 
@@ -67,11 +64,11 @@ pub(super) fn selected_expr_from_part_target_selector_exprs(
     apply_part_selectors(expr, &selectors)
 }
 
-pub(super) fn exact_expr_at_path(expr: &Expr, path: &[isize]) -> Option<Expr> {
+pub fn exact_expr_at_path(expr: &Expr, path: &[isize]) -> Option<Expr> {
     exact_paths::exact_expr_at_path(expr, path)
 }
 
-pub(super) fn replace_exact_path(expr: Expr, path: &[isize], rhs: Expr) -> Expr {
+pub fn replace_exact_path(expr: Expr, path: &[isize], rhs: Expr) -> Expr {
     exact_paths::replace_exact_path(expr, path, rhs)
 }
 

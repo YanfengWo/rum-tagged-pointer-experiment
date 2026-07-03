@@ -6,4 +6,5 @@ mod primitive;
 mod rewrite_rules;
 mod traversal;
 
-pub(super) use core::{ContinuationValue, SuspendedEvaluation};
+pub use self::core::ContinuationValue;
+pub(super) use self::core::SuspendedEvaluation;

@@ -1,5 +1,6 @@
 use super::shared::predicate_bool_expr;
-use super::*;
+use crate::runtime::kernel_api::{EvalError, Session, system_expr, truthiness_symbol};
+use rum_core::{Atom, Expr, Rational, heads};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ComparisonRelation {

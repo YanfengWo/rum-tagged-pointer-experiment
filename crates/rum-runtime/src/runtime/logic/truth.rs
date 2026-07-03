@@ -1,5 +1,8 @@
 use super::shared::{negated_relation_head_name, predicate_bool_expr};
-use super::*;
+use crate::runtime::kernel_api::{
+    EvalError, Session, is_system_symbol_name, system_expr, truthiness_symbol,
+};
+use rum_core::{Expr, heads};
 
 impl Session {
     pub(in crate::runtime) fn eval_and(

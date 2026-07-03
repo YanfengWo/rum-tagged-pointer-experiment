@@ -106,7 +106,7 @@ impl CallDispatchState {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) enum ThreadingDispatch {
+pub enum ThreadingDispatch {
     NotApplicable,
     Threaded(Expr),
     Mismatch,
@@ -262,7 +262,7 @@ pub(super) enum AttributeUpdate {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) enum ThreadArgSpec {
+pub enum ThreadArgSpec {
     All,
     None,
     Prefix(usize),

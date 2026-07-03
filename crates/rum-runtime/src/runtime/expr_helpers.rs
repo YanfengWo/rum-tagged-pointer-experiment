@@ -6,7 +6,7 @@ pub(super) fn resolve_unqualified_symbol(raw: &str) -> Option<Symbol> {
         .or_else(|| is_known_system_symbol_name(raw).then(|| Symbol::system(raw)))
 }
 
-pub(super) fn system_expr(name: &str) -> Expr {
+pub fn system_expr(name: &str) -> Expr {
     Expr::system_symbol(name)
 }
 
@@ -17,14 +17,14 @@ pub(super) fn removed_symbol_expr(symbol: &Symbol) -> Expr {
     )
 }
 
-pub(super) fn expr_as_symbol(expr: &Expr) -> Option<&Symbol> {
+pub fn expr_as_symbol(expr: &Expr) -> Option<&Symbol> {
     match expr {
         Expr::Atom(Atom::Symbol(symbol)) => Some(symbol),
         _ => None,
     }
 }
 
-pub(super) fn expr_as_string(expr: &Expr) -> Option<&str> {
+pub fn expr_as_string(expr: &Expr) -> Option<&str> {
     match expr {
         Expr::Atom(Atom::String(value)) => Some(value),
         _ => None,
@@ -68,18 +68,18 @@ pub(super) fn expr_as_string_list(expr: &Expr) -> Option<Vec<String>> {
         .collect()
 }
 
-pub(super) fn expr_as_non_negative_usize(expr: &Expr) -> Option<usize> {
+pub fn expr_as_non_negative_usize(expr: &Expr) -> Option<usize> {
     match expr {
         Expr::Atom(Atom::Integer(value)) => value.to_bigint().to_string().parse::<usize>().ok(),
         _ => None,
     }
 }
 
-pub(super) fn is_negative_one_expr(expr: &Expr) -> bool {
+pub fn is_negative_one_expr(expr: &Expr) -> bool {
     matches!(expr, Expr::Atom(Atom::Integer(value)) if value.as_i64() == Some(-1))
 }
 
-pub(super) fn expr_as_signed_isize(expr: &Expr) -> Option<isize> {
+pub fn expr_as_signed_isize(expr: &Expr) -> Option<isize> {
     match expr {
         Expr::Atom(Atom::Integer(value)) => value.to_bigint().to_string().parse::<isize>().ok(),
         Expr::Call { head, args } if is_system_symbol_name(head, "Times") && args.len() == 2 => {

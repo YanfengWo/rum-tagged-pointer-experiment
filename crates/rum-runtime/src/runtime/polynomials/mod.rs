@@ -355,7 +355,7 @@ fn is_pattern_language_head(expr: &Expr) -> bool {
     )
 }
 
-pub(super) fn parse_indeterminate_expr(expr: &Expr) -> Option<Expr> {
+pub fn parse_indeterminate_expr(expr: &Expr) -> Option<Expr> {
     if expr_contains_pattern_language(expr) {
         return None;
     }

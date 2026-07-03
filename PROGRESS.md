@@ -17,6 +17,28 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-03 Stage-2 step 1 DONE (brief-099) — kernel_api v1 exists, logic family de-globbed
+
+`runtime/kernel_api.rs` is now the single public door to the kernel's helper
+surface: 40 audited fan-out ≥2 items re-exported in 14 grouped `pub use` lines
+(`pub mod kernel_api` from `runtime/mod.rs`; defining `mod`s stay private, so
+the promoted `pub` items are unreachable except via kernel_api). Pilot: the
+`logic` family (`logic.rs` + `logic/{comparison,shared,truth}.rs`) carries NO
+`use super::*` — only explicit `kernel_api`/`rum_core` imports. The pilot
+CONFIRMED the audit model: demanded exactly the predicted 9 items (5 kernel_api
++ 4 rum_core), zero unplanned promotions.
+
+Learned (now standing for briefs 100+): promoted items sit in private
+submodules behind family facades; Rust cannot re-export a restricted re-export
+(E0364/E0365), so facades need per-item `pub use self::<submod>::item;` lines
+(never widen a glob re-export) — facade files belong in MAY-modify from the
+start. Codex stop-lossed correctly on this and was resumed with a scoped
+authorization. Gate: fmt + `cargo test --workspace` 1297/0; visibility/imports
+only (rustfmt reflow aside, no body/signature changes; no microbench — no
+codegen delta); the `SymbolExprMap`-vs-private-hasher warning closed at gate
+time by making `RuntimeCacheHasher` `pub` inside its private mod (one word +
+comment). Diff: 21 files, ~+56/−51.
+
 ## 2026-07-03 Stage-2 audit COMPLETE (brief-098) — the real kernel API is tiny
 
 Method: per-family compile-error audit (comment out `use super::*` in each of the
