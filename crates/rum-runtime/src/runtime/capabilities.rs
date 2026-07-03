@@ -143,7 +143,6 @@ mod tests {
         assert_eq!(capability("Import"), Capability::FileRead);
         assert_eq!(capability("Save"), Capability::FileWrite);
         assert_eq!(capability("DumpSave"), Capability::FileWrite);
-        assert_eq!(capability("FileTemplateApply"), Capability::FileWrite);
         assert_eq!(capability("FileNameJoin"), Capability::Pure);
         assert_eq!(capability("DirectoryName"), Capability::Pure);
         assert_eq!(capability("ParentDirectory"), Capability::Pure);

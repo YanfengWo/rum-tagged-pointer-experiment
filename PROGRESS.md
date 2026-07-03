@@ -17,6 +17,32 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 Stage-3 batch 4 DONE (brief-105) — strings moved (largest batch); 6 families out
+
+The biggest single family so far: `strings` (facade + 21 files ≈6.5k lines, 61
+handler-backed specs) now lives in rum-stdlib (which gained the `rum-syntax`
+dep for ToExpression/SyntaxQ). Runtime catalog 482 → 421 (19 symbol-only
+string specs legitimately stay); stdlib catalog 92; workspace 1300/0; CLI
+smoke `StringLength[StringJoin[{"ab","cd"}]] + ToExpression["3*4"]` → 16.
+Tests: the whole `tests/strings/` directory + 19 measured-failure fns
+(→ `tests/strings/incidental_runtime.rs`) + the FileTemplateApply capability
+assertion moved with the handler.
+
+The one structural judgment call, gate-audited in depth: ToString/TextString's
+expression RENDERER is shared kernel machinery (message_format,
+builtins_input, scoping, control_flow all render through it) — it stayed in
+the kernel as `runtime/text_rendering.rs`. Verified: byte-identical to the old
+`strings/text/render.rs` modulo visibility/docs, plus `string_form_value`
+folded in from template.rs (its only caller is the renderer itself). No
+formatting code was copied or forked. Promotions within stop-loss: 7
+kernel_api exports (incl. `Capability`, `ToStringFormat`, `render_*`) + 7 pub
+Session methods (incl. the suspension API `suspend_with_frame`,
+`drive_evaluated_value`/`drive_internal_value`,
+`enforce_active_memory_limit_for_projected_bytes`) — 10 of 14 were
+audit-predicted. Stop-loss lines (>12 new promotions / >40 failing fns /
+pattern-matcher entanglement) NOT hit: measured 20 failing fns, no
+entanglement (the string-pattern compiler moved cleanly with the family).
+
 ## 2026-07-04 Stage-3 batch 3 DONE (brief-104) — calculus + polynomials moved; 5 families out
 
 First multi-file directory family through the pipeline: `polynomials/`

@@ -12,7 +12,8 @@ mod namespace;
 mod numeric;
 mod rules;
 mod scoping;
-mod strings;
+#[path = "builtin_catalog/strings.rs"]
+mod string_symbols;
 mod structure;
 
 pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
@@ -22,7 +23,7 @@ pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
         .get_or_init(|| {
             let mut specs = Vec::with_capacity(
                 numeric::NUMERIC_BUILTINS.len()
-                    + strings::STRING_BUILTINS.len()
+                    + string_symbols::STRING_BUILTINS.len()
                     + structure::STRUCTURE_BUILTINS.len()
                     + associations::ASSOCIATION_BUILTINS.len()
                     + debug::DEBUG_BUILTINS.len()
@@ -34,7 +35,7 @@ pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
                     + namespace::NAMESPACE_BUILTINS.len(),
             );
             specs.extend_from_slice(numeric::NUMERIC_BUILTINS);
-            specs.extend_from_slice(strings::STRING_BUILTINS);
+            specs.extend_from_slice(string_symbols::STRING_BUILTINS);
             specs.extend_from_slice(structure::STRUCTURE_BUILTINS);
             specs.extend_from_slice(associations::ASSOCIATION_BUILTINS);
             specs.extend_from_slice(debug::DEBUG_BUILTINS);

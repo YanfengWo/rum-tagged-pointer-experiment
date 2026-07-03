@@ -329,31 +329,6 @@ fn delayed_message_templates_are_evaluated_when_emitted() {
 }
 
 #[test]
-fn message_list_reports_last_top_level_messages() {
-    let mut session = Session::new();
-
-    session.eval_text("Message[FindFile::notfound]").unwrap();
-
-    assert_eq!(
-        session.eval_text("$MessageList").unwrap().value.to_string(),
-        "List[HoldForm[FindFile::notfound]]"
-    );
-
-    let mut string_session = Session::new();
-    string_session
-        .eval_text("Message[FindFile::notfound]")
-        .unwrap();
-    assert_eq!(
-        string_session
-            .eval_text("ToString[$MessageList, InputForm]")
-            .unwrap()
-            .value
-            .to_string(),
-        "\"{HoldForm[FindFile::notfound]}\""
-    );
-}
-
-#[test]
 fn message_list_reports_messages_emitted_so_far_in_current_input() {
     let mut session = Session::new();
 

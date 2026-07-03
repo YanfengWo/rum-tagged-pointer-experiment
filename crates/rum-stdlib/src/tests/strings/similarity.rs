@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn alphabet_distance_alignment_and_diff_extend_cl07() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "Alphabet[]"),

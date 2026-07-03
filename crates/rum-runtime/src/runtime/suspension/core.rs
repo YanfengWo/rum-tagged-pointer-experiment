@@ -52,7 +52,8 @@ impl SuspendedEvaluation {
 }
 
 impl Session {
-    pub(in crate::runtime) fn drive_evaluated_value<T, U, F>(
+    /// Drives a potentially suspended evaluated value through a continuation.
+    pub fn drive_evaluated_value<T, U, F>(
         &mut self,
         result: Result<Expr, EvalError>,
         cont: F,
@@ -78,7 +79,8 @@ impl Session {
         }
     }
 
-    pub(in crate::runtime) fn drive_internal_value<T, U, F>(
+    /// Drives a potentially suspended internal value through a continuation.
+    pub fn drive_internal_value<T, U, F>(
         &mut self,
         result: Result<T, EvalError>,
         cont: F,
@@ -104,7 +106,8 @@ impl Session {
         }
     }
 
-    pub(in crate::runtime) fn suspend_with_frame<F>(
+    /// Adds a suspension frame that resumes with the evaluated expression value.
+    pub fn suspend_with_frame<F>(
         &mut self,
         result: Result<Expr, EvalError>,
         frame: F,

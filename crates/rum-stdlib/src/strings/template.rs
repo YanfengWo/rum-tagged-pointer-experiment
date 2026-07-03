@@ -7,126 +7,105 @@ enum TemplateSegment {
     NamedSlot(String),
 }
 
-impl Session {
-    pub(in crate::runtime) fn eval_string_form(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        if args.is_empty() {
-            return Ok(self.invalid_call_with_arg_range("StringForm", args, 1, usize::MAX));
-        }
-
-        let Some(template) = expr_as_string(&args[0]) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        Ok(Expr::call(
-            head.clone(),
-            std::iter::once(Expr::string(template))
-                .chain(args[1..].iter().cloned())
-                .collect(),
-        ))
+pub(crate) fn eval_string_form(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if args.is_empty() {
+        return Ok(session.invalid_call_with_arg_range("StringForm", args, 1, usize::MAX));
     }
 
-    pub(in crate::runtime) fn eval_string_template(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        if args.len() != 1 {
-            return Ok(self.invalid_call_with_exact_arg_count("StringTemplate", args, 1));
-        }
+    let Some(template) = expr_as_string(&args[0]) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
 
-        let Some(template) = expr_as_string(&args[0]) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
+    Ok(Expr::call(
+        head.clone(),
+        std::iter::once(Expr::string(template))
+            .chain(args[1..].iter().cloned())
+            .collect(),
+    ))
+}
 
-        Ok(render_template_object(template))
+pub(crate) fn eval_string_template(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if args.len() != 1 {
+        return Ok(session.invalid_call_with_exact_arg_count("StringTemplate", args, 1));
     }
 
-    pub(in crate::runtime) fn eval_template_apply(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        match args {
-            [template] => Ok(Expr::call(
-                system_expr("Function"),
-                vec![Expr::call(
-                    system_expr("TemplateApply"),
-                    vec![template.clone(), string_slot_expr()],
-                )],
-            )),
-            [template, data] => {
-                let Some(template) = expr_as_template_source(template) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
-                };
-                let Some(rendered) = template_apply_value(template, data) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
-                };
-                Ok(Expr::string(rendered))
-            }
-            _ => Ok(self.invalid_call_with_arg_range("TemplateApply", args, 1, 2)),
+    let Some(template) = expr_as_string(&args[0]) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+
+    Ok(render_template_object(template))
+}
+
+pub(crate) fn eval_template_apply(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    match args {
+        [template] => Ok(Expr::call(
+            system_expr("Function"),
+            vec![Expr::call(
+                system_expr("TemplateApply"),
+                vec![template.clone(), string_slot_expr()],
+            )],
+        )),
+        [template, data] => {
+            let Some(template) = expr_as_template_source(template) else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
+            let Some(rendered) = template_apply_value(template, data) else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
+            Ok(Expr::string(rendered))
         }
-    }
-
-    pub(in crate::runtime) fn eval_file_template_apply(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        match args {
-            [template_path] => Ok(Expr::call(
-                system_expr("Function"),
-                vec![Expr::call(
-                    system_expr("FileTemplateApply"),
-                    vec![template_path.clone(), string_slot_expr()],
-                )],
-            )),
-            [template_path, data] => {
-                let Some(path) = expr_as_string(template_path) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
-                };
-
-                let template_source = fs::read_to_string(path).map_err(|source| EvalError::Io {
-                    path: path.to_string(),
-                    source,
-                })?;
-                let Some(rendered) = template_apply_value(&template_source, data) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
-                };
-
-                let output_path = temp_rendered_template_path(Path::new(path));
-                fs::write(&output_path, rendered).map_err(|source| EvalError::Io {
-                    path: output_path.display().to_string(),
-                    source,
-                })?;
-
-                Ok(Expr::string(output_path.display().to_string()))
-            }
-            _ => Ok(self.invalid_call_with_arg_range("FileTemplateApply", args, 1, 2)),
-        }
+        _ => Ok(session.invalid_call_with_arg_range("TemplateApply", args, 1, 2)),
     }
 }
 
-pub(in crate::runtime::strings) fn string_form_value(template: &str, args: &[Expr]) -> String {
-    let mut remaining = template;
-    let mut output = String::new();
-    let mut replacements = args.iter();
+pub(crate) fn eval_file_template_apply(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    match args {
+        [template_path] => Ok(Expr::call(
+            system_expr("Function"),
+            vec![Expr::call(
+                system_expr("FileTemplateApply"),
+                vec![template_path.clone(), string_slot_expr()],
+            )],
+        )),
+        [template_path, data] => {
+            let Some(path) = expr_as_string(template_path) else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
 
-    while let Some(index) = remaining.find("``") {
-        output.push_str(&remaining[..index]);
-        if let Some(arg) = replacements.next() {
-            output.push_str(&arg.to_string());
-        } else {
-            output.push_str("``");
+            let template_source = fs::read_to_string(path).map_err(|source| EvalError::Io {
+                path: path.to_string(),
+                source,
+            })?;
+            let Some(rendered) = template_apply_value(&template_source, data) else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
+
+            let output_path = temp_rendered_template_path(Path::new(path));
+            fs::write(&output_path, rendered).map_err(|source| EvalError::Io {
+                path: output_path.display().to_string(),
+                source,
+            })?;
+
+            Ok(Expr::string(output_path.display().to_string()))
         }
-        remaining = &remaining[index + 2..];
+        _ => Ok(session.invalid_call_with_arg_range("FileTemplateApply", args, 1, 2)),
     }
-
-    output.push_str(remaining);
-    output
 }
 
 fn render_template_object(template: &str) -> Expr {

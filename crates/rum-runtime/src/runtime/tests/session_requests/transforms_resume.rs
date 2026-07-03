@@ -47,32 +47,6 @@ fn resume_eval_request_with_input_can_finish_replacepart_after_suspending_patter
 }
 
 #[test]
-fn resume_eval_request_with_input_can_finish_replacepart_pattern_bindings_in_delayed_rhs() {
-    let mut session = Session::new();
-
-    let failure = session
-        .eval_request(
-            "ReplacePart[f[g[a]], {1, i_} :> StringJoin[InputString[\"rhs: \"], ToString[i]]]",
-        )
-        .expect_err(
-            "ReplacePart should suspend when a delayed rhs with pattern bindings requests input",
-        );
-
-    match &failure.error {
-        SessionRequestError::InputRequired { request } => {
-            assert_eq!(request.prompt, "rhs: ");
-        }
-        other => panic!("expected input-required failure, got {other:?}"),
-    }
-
-    let response = session
-        .resume_eval_request_with_input("done")
-        .expect("resume should continue ReplacePart after the delayed rhs resolves");
-
-    assert_eq!(response.value.to_string(), "f[g[\"done1\"]]");
-}
-
-#[test]
 fn resume_eval_request_with_input_can_finish_normalize_rules_after_suspending_rule_source() {
     let mut session = Session::new();
     session

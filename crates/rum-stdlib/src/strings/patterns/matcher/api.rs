@@ -7,7 +7,7 @@ use super::split_trim::{
 };
 use super::*;
 
-pub(in crate::runtime::strings::patterns) fn string_contains_q(
+pub(in crate::strings::patterns) fn string_contains_q(
     haystack: &[char],
     pattern: &StringPattern,
     config: StringPatternMatchConfig,
@@ -16,7 +16,7 @@ pub(in crate::runtime::strings::patterns) fn string_contains_q(
         .any(|start| best_pattern_match_state(pattern, haystack, start, config).is_some())
 }
 
-pub(in crate::runtime::strings::patterns) fn string_starts_q(
+pub(in crate::strings::patterns) fn string_starts_q(
     haystack: &[char],
     pattern: &StringPattern,
     config: StringPatternMatchConfig,
@@ -24,7 +24,7 @@ pub(in crate::runtime::strings::patterns) fn string_starts_q(
     best_pattern_match_state(pattern, haystack, 0, config).is_some()
 }
 
-pub(in crate::runtime::strings::patterns) fn string_ends_q(
+pub(in crate::strings::patterns) fn string_ends_q(
     haystack: &[char],
     pattern: &StringPattern,
     config: StringPatternMatchConfig,
@@ -35,7 +35,7 @@ pub(in crate::runtime::strings::patterns) fn string_ends_q(
     })
 }
 
-pub(in crate::runtime::strings::patterns) fn string_match_q(
+pub(in crate::strings::patterns) fn string_match_q(
     haystack: &[char],
     patterns: &[StringPattern],
     config: StringPatternMatchConfig,
@@ -44,7 +44,7 @@ pub(in crate::runtime::strings::patterns) fn string_match_q(
         .is_some_and(|(_, state)| state.end == haystack.len())
 }
 
-pub(in crate::runtime::strings::patterns) fn string_free_q(
+pub(in crate::strings::patterns) fn string_free_q(
     haystack: &[char],
     patterns: &[StringPattern],
     config: StringPatternMatchConfig,
@@ -54,7 +54,7 @@ pub(in crate::runtime::strings::patterns) fn string_free_q(
     })
 }
 
-pub(in crate::runtime::strings::patterns) fn string_count_matches(
+pub(in crate::strings::patterns) fn string_count_matches(
     value: &str,
     patterns: &[StringPattern],
     config: StringCountConfig,
@@ -93,7 +93,7 @@ pub(in crate::runtime::strings::patterns) fn string_count_matches(
     matches
 }
 
-pub(in crate::runtime::strings::patterns) fn string_delete_matches(
+pub(in crate::strings::patterns) fn string_delete_matches(
     value: &str,
     patterns: &[StringPattern],
     config: StringDeleteConfig,
@@ -124,7 +124,7 @@ pub(in crate::runtime::strings::patterns) fn string_delete_matches(
     output
 }
 
-pub(in crate::runtime::strings::patterns) fn split_string_value(
+pub(in crate::strings::patterns) fn split_string_value(
     value: &str,
     spec: &StringBoundarySpec,
     limit: StringSplitLimit,
@@ -136,7 +136,7 @@ pub(in crate::runtime::strings::patterns) fn split_string_value(
     }
 }
 
-pub(in crate::runtime::strings::patterns) fn trim_string_value(
+pub(in crate::strings::patterns) fn trim_string_value(
     value: &str,
     spec: &StringBoundarySpec,
 ) -> String {
@@ -147,7 +147,7 @@ pub(in crate::runtime::strings::patterns) fn trim_string_value(
     }
 }
 
-pub(in crate::runtime::strings::patterns) fn collect_string_cases(
+pub(in crate::strings::patterns) fn collect_string_cases(
     value: &str,
     spec: &ExactStringCaseSpec,
     max_matches: usize,
@@ -216,7 +216,7 @@ pub(in crate::runtime::strings::patterns) fn collect_string_cases(
     matches
 }
 
-pub(in crate::runtime::strings::patterns) fn string_position_expr(
+pub(in crate::strings::patterns) fn string_position_expr(
     value: &str,
     pattern: &StringPattern,
     max_results: Option<usize>,

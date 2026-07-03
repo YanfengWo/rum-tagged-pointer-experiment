@@ -362,7 +362,8 @@ fn substitute_arg_list_changed(
     substituted_args
 }
 
-pub(super) fn substitute_lexical_bindings(
+/// Substitutes lexical bindings while respecting local binding shadowing.
+pub fn substitute_lexical_bindings(
     expr: &Expr,
     bindings: &SymbolExprMap,
     shadowed: &BTreeSet<Symbol>,

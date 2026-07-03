@@ -52,33 +52,6 @@ fn resume_eval_request_with_input_can_finish_associationmap_over_association_ent
 }
 
 #[test]
-fn resume_eval_request_with_input_can_finish_keysortby_after_suspending_sort_key() {
-    let mut session = Session::new();
-
-    let failure = session
-        .eval_request(
-            "KeySortBy[{bb -> 2, a -> 1}, Function[If[SameQ[Slot[1], bb], StringLength[InputString[\"key: \"]], StringLength[ToString[Slot[1]]]]]]",
-        )
-        .expect_err("KeySortBy should suspend when a transformed sort key requests input");
-
-    match &failure.error {
-        SessionRequestError::InputRequired { request } => {
-            assert_eq!(request.prompt, "key: ");
-        }
-        other => panic!("expected input-required failure, got {other:?}"),
-    }
-
-    let response = session
-        .resume_eval_request_with_input("xxxx")
-        .expect("resume should continue KeySortBy after the transformed sort key resolves");
-
-    assert_eq!(
-        response.value.to_string(),
-        "Association[Rule[a, 1], Rule[bb, 2]]"
-    );
-}
-
-#[test]
 fn resume_eval_request_with_input_can_finish_keysort_after_suspending_comparer() {
     let mut session = Session::new();
 

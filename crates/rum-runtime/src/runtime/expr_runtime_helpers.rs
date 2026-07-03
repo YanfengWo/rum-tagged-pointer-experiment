@@ -25,6 +25,67 @@ pub fn call_items_with_head<'a>(expr: &'a Expr, expected_head: &Expr) -> Option<
     }
 }
 
+/// Encodes bytes using the kernel's current base64 transport alphabet.
+pub fn base64_encode(bytes: &[u8]) -> String {
+    const BASE64_ALPHABET: &[u8; 64] =
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    let mut rendered = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    let mut index = 0;
+    while index + 3 <= bytes.len() {
+        let chunk = ((bytes[index] as u32) << 16)
+            | ((bytes[index + 1] as u32) << 8)
+            | (bytes[index + 2] as u32);
+        rendered.push(BASE64_ALPHABET[((chunk >> 18) & 0x3f) as usize] as char);
+        rendered.push(BASE64_ALPHABET[((chunk >> 12) & 0x3f) as usize] as char);
+        rendered.push(BASE64_ALPHABET[((chunk >> 6) & 0x3f) as usize] as char);
+        rendered.push(BASE64_ALPHABET[(chunk & 0x3f) as usize] as char);
+        index += 3;
+    }
+
+    match bytes.len() - index {
+        1 => {
+            let chunk = (bytes[index] as u32) << 16;
+            rendered.push(BASE64_ALPHABET[((chunk >> 18) & 0x3f) as usize] as char);
+            rendered.push(BASE64_ALPHABET[((chunk >> 12) & 0x3f) as usize] as char);
+            rendered.push('=');
+            rendered.push('=');
+        }
+        2 => {
+            let chunk = ((bytes[index] as u32) << 16) | ((bytes[index + 1] as u32) << 8);
+            rendered.push(BASE64_ALPHABET[((chunk >> 18) & 0x3f) as usize] as char);
+            rendered.push(BASE64_ALPHABET[((chunk >> 12) & 0x3f) as usize] as char);
+            rendered.push(BASE64_ALPHABET[((chunk >> 6) & 0x3f) as usize] as char);
+            rendered.push('=');
+        }
+        _ => {}
+    }
+
+    rendered
+}
+
+impl Session {
+    /// Restores a transport payload according to the stored original form marker.
+    pub fn restore_transport_expr(&self, payload: &[u8], original_form: Expr) -> Option<Expr> {
+        if is_system_symbol_name(&original_form, "String") {
+            return Some(Expr::string(std::str::from_utf8(payload).ok()?.to_string()));
+        }
+        if is_system_symbol_name(&original_form, "ByteArray") {
+            return Some(Expr::call(
+                system_expr("ByteArray"),
+                vec![Expr::string(base64_encode(payload))],
+            ));
+        }
+        if is_system_symbol_name(&original_form, "InputForm") {
+            let source = std::str::from_utf8(payload).ok()?;
+            let syntax = parse_expr(source).ok()?;
+            return self.lower_syntax_expr(&syntax).ok();
+        }
+
+        None
+    }
+}
+
 pub(super) fn format_list_lengths(lengths: &[usize]) -> String {
     lengths
         .iter()

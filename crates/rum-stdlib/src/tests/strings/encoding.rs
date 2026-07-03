@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "StringToByteArray[\"abc\"]"),
@@ -164,7 +164,7 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
         ))
         .unwrap();
     assert_eq!(
-        crate::runtime::strings::render_input_like_expr(&decrypted),
+        crate::strings::render_input_like_expr(&decrypted),
         "f[x_ /; True]"
     );
     assert_eq!(

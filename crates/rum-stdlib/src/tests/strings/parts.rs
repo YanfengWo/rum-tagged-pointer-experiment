@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn string_take_drop_and_part_support_basic_integer_and_range_specs() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "StringTake[\"abcdef\", 3]"),
@@ -52,7 +52,7 @@ fn string_take_drop_and_part_support_basic_integer_and_range_specs() {
 
 #[test]
 fn string_builtins_preserve_current_boundary_for_non_string_or_invalid_specs() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "StringLength[x]"),
@@ -129,7 +129,7 @@ fn string_builtins_preserve_current_boundary_for_non_string_or_invalid_specs() {
 
 #[test]
 fn string_apply_delete_and_count_options_cover_the_next_wave() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(

@@ -63,7 +63,8 @@ impl Session {
         }
     }
 
-    pub(super) fn lower_syntax_expr(&self, syntax: &SyntaxExpr) -> Result<Expr, EvalError> {
+    /// Lowers parsed syntax using the session's current context resolution.
+    pub fn lower_syntax_expr(&self, syntax: &SyntaxExpr) -> Result<Expr, EvalError> {
         lower_syntax_expr_with(syntax, &mut |raw| self.resolve_symbol_name(raw, true))
     }
 

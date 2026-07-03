@@ -95,7 +95,8 @@ impl Session {
         Ok(merged)
     }
 
-    pub(in crate::runtime) fn merged_option_exprs_for_system_symbol(
+    /// Returns evaluated default and explicit options for a System` symbol.
+    pub fn merged_option_exprs_for_system_symbol(
         &mut self,
         symbol_name: &str,
         explicit: &[Expr],

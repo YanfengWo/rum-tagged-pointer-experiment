@@ -72,9 +72,9 @@ mod session_helpers;
 mod session_requests;
 mod session_state;
 mod slot_substitution;
-mod strings;
 mod structure_ops;
 mod suspension;
+mod text_rendering;
 mod tree_walkers;
 mod vm_rhs_template;
 
@@ -92,8 +92,8 @@ use self::{
     metadata::*, model::*, namespace_tools::*, options::*, package_tools::*,
     parse_and_message_helpers::*, pattern_matching::*, predicates::*, profiling::*, resolution::*,
     rewrite_builtins::*, scoping::*, session_api::*, session_eval::*, session_helpers::*,
-    session_requests::*, session_state::*, slot_substitution::*, strings::*, structure_ops::*,
-    suspension::*, tree_walkers::*, vm_rhs_template::*,
+    session_requests::*, session_state::*, slot_substitution::*, structure_ops::*, suspension::*,
+    text_rendering::*, tree_walkers::*, vm_rhs_template::*,
 };
 pub use self::{
     builtin_catalog::core_builtin_specs, capabilities::*, lowering::lower_syntax_expr, metadata::*,

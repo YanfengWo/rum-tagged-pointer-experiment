@@ -3,7 +3,7 @@ use std::fs;
 
 #[test]
 fn string_construction_and_measurement_use_code_point_semantics() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "StringJoin[\"ru\", \"m\"]"),
@@ -33,7 +33,7 @@ fn string_construction_and_measurement_use_code_point_semantics() {
 
 #[test]
 fn characters_character_range_and_tostring_cover_basic_text_flows() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "Characters[\"a\\u{1F642}\"]"),
@@ -143,7 +143,7 @@ fn characters_character_range_and_tostring_cover_basic_text_flows() {
 
 #[test]
 fn string_generators_respect_resource_limits() {
-    let mut character_range_session = Session::new();
+    let mut character_range_session = core_session();
     character_range_session.set_generated_element_limit(2);
     let character_range = character_range_session
         .eval_text("CharacterRange[\"x\", \"z\"]")
@@ -159,7 +159,7 @@ fn string_generators_respect_resource_limits() {
             .any(|message| message.symbol == "General" && message.tag == "reslim")
     );
 
-    let mut repeat_session = Session::new();
+    let mut repeat_session = core_session();
     repeat_session.set_generated_element_limit(3);
     let repeat = repeat_session.eval_text("StringRepeat[\"ab\", 2]").unwrap();
     assert_eq!(
@@ -173,7 +173,7 @@ fn string_generators_respect_resource_limits() {
             .any(|message| message.symbol == "General" && message.tag == "reslim")
     );
 
-    let mut memory_session = Session::new();
+    let mut memory_session = core_session();
     assert_eq!(
         memory_session
             .eval_text("MemoryConstrained[StringRepeat[\"x\", 100], 20, memfail]")
@@ -198,7 +198,7 @@ fn input_like_renderer_uses_part_and_map_family_syntax() {
         ],
     );
     assert_eq!(
-        crate::runtime::strings::render_input_like_expr(&part),
+        crate::strings::render_input_like_expr(&part),
         "f[[1, 2 ;;]]"
     );
 
@@ -206,26 +206,20 @@ fn input_like_renderer_uses_part_and_map_family_syntax() {
         system_expr("Map"),
         vec![system_expr("g"), system_expr("xs")],
     );
-    assert_eq!(
-        crate::runtime::strings::render_input_like_expr(&map),
-        "g /@ xs"
-    );
+    assert_eq!(crate::strings::render_input_like_expr(&map), "g /@ xs");
 
     let apply = Expr::call(
         system_expr("Apply"),
         vec![system_expr("h"), system_expr("xs")],
     );
-    assert_eq!(
-        crate::runtime::strings::render_input_like_expr(&apply),
-        "h @@ xs"
-    );
+    assert_eq!(crate::strings::render_input_like_expr(&apply), "h @@ xs");
 
     let map_apply = Expr::call(
         system_expr("MapApply"),
         vec![system_expr("k"), system_expr("xss")],
     );
     assert_eq!(
-        crate::runtime::strings::render_input_like_expr(&map_apply),
+        crate::strings::render_input_like_expr(&map_apply),
         "k @@@ xss"
     );
 
@@ -240,7 +234,7 @@ fn input_like_renderer_uses_part_and_map_family_syntax() {
         ],
     );
     assert_eq!(
-        crate::runtime::strings::render_input_like_expr(&pattern_test),
+        crate::strings::render_input_like_expr(&pattern_test),
         "x_?NumberQ"
     );
 
@@ -251,10 +245,7 @@ fn input_like_renderer_uses_part_and_map_family_syntax() {
             vec![system_expr("y"), Expr::call(system_expr("Blank"), vec![])],
         )],
     );
-    assert_eq!(
-        crate::runtime::strings::render_input_like_expr(&optional),
-        "y_."
-    );
+    assert_eq!(crate::strings::render_input_like_expr(&optional), "y_.");
 
     let held = Expr::call(
         system_expr("HoldForm"),
@@ -266,10 +257,7 @@ fn input_like_renderer_uses_part_and_map_family_syntax() {
             ],
         )],
     );
-    assert_eq!(
-        crate::runtime::strings::render_input_like_expr(&held),
-        "1 + 2"
-    );
+    assert_eq!(crate::strings::render_input_like_expr(&held), "1 + 2");
 
     let deferred = Expr::call(
         system_expr("Defer"),
@@ -285,7 +273,7 @@ fn input_like_renderer_uses_part_and_map_family_syntax() {
         )],
     );
     assert_eq!(
-        crate::runtime::strings::render_input_like_expr(&deferred),
+        crate::strings::render_input_like_expr(&deferred),
         "f /@ {\"🙂\", \"中\"}"
     );
 
@@ -296,21 +284,18 @@ fn input_like_renderer_uses_part_and_map_family_syntax() {
             vec![system_expr("x"), Expr::call(system_expr("Blank"), vec![])],
         )],
     );
-    assert_eq!(
-        crate::runtime::strings::render_input_like_expr(&repeated),
-        "x_.."
-    );
+    assert_eq!(crate::strings::render_input_like_expr(&repeated), "x_..");
 
     let repeated_null = Expr::call(system_expr("RepeatedNull"), vec![Expr::string("🙂")]);
     assert_eq!(
-        crate::runtime::strings::render_input_like_expr(&repeated_null),
+        crate::strings::render_input_like_expr(&repeated_null),
         "\"🙂\"..."
     );
 }
 
 #[test]
 fn string_character_classes_and_case_mapping_extend_the_string_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "ToUpperCase[\"ab🙂c\"]"),
@@ -371,7 +356,7 @@ fn string_character_classes_and_case_mapping_extend_the_string_subset() {
 
 #[test]
 fn string_helper_builtins_match_wolfram_kernel_edges() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     for name in ["StringReverse", "ToLowerCase"] {
         let source = format!("Attributes[{name}]");
@@ -483,7 +468,7 @@ fn string_helper_builtins_match_wolfram_kernel_edges() {
 
 #[test]
 fn string_formatting_padding_and_riffle_cover_the_next_surface_wave() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "StringForm[\"a``b``\", 1, x]"),
@@ -520,7 +505,7 @@ fn string_formatting_padding_and_riffle_cover_the_next_surface_wave() {
 
 #[test]
 fn templates_text_words_codes_and_to_expression_extend_cl07() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "StringTemplate[\"Hello, `name`!\"]"),
@@ -561,7 +546,7 @@ fn templates_text_words_codes_and_to_expression_extend_cl07() {
 
 #[test]
 fn syntaxq_textstring_filetemplateapply_charactercounts_and_removediacritics_extend_cl07() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(eval_to_string(&mut session, "SyntaxQ[\"1+2\"]"), "True");
     assert_eq!(eval_to_string(&mut session, "SyntaxQ[\"1+\"]"), "False");
@@ -616,7 +601,7 @@ fn syntaxq_textstring_filetemplateapply_charactercounts_and_removediacritics_ext
         ],
     );
     assert_eq!(
-        crate::runtime::strings::render_input_like_expr(&rendered_expr),
+        crate::strings::render_input_like_expr(&rendered_expr),
         "f[x_?NumberQ, y_.]"
     );
     assert_eq!(

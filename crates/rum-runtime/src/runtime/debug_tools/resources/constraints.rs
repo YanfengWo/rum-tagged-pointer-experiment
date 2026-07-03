@@ -151,7 +151,8 @@ impl Session {
         Ok(())
     }
 
-    pub(in crate::runtime) fn enforce_active_memory_limit_for_projected_bytes(
+    /// Enforces the active memory limit for a projected additional byte count.
+    pub fn enforce_active_memory_limit_for_projected_bytes(
         &self,
         bytes: usize,
     ) -> Result<(), EvalError> {

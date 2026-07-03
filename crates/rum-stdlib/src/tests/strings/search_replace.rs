@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn string_repeat_and_exact_substring_predicates_cover_first_tier_two_wave() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "StringRepeat[\"ha\", 3]"),
@@ -42,7 +42,7 @@ fn string_repeat_and_exact_substring_predicates_cover_first_tier_two_wave() {
 
 #[test]
 fn string_position_reports_overlapping_one_based_ranges() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "StringPosition[\"banana\", \"an\"]"),
@@ -67,7 +67,7 @@ fn string_position_reports_overlapping_one_based_ranges() {
 
 #[test]
 fn string_split_trim_replace_and_cases_cover_common_text_processing_flows() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "StringSplit[\"  alpha\\tbeta\\n gamma  \"]"),
@@ -149,7 +149,7 @@ fn string_split_trim_replace_and_cases_cover_common_text_processing_flows() {
 
 #[test]
 fn string_expression_and_alternatives_extend_the_current_string_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(
@@ -218,7 +218,7 @@ fn string_expression_and_alternatives_extend_the_current_string_subset() {
 
 #[test]
 fn string_count_matchq_and_freeq_extend_current_pattern_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "StringCount[\"bananarama\", \"ana\"]"),
@@ -276,7 +276,7 @@ fn string_count_matchq_and_freeq_extend_current_pattern_subset() {
 
 #[test]
 fn delayed_string_rules_evaluate_at_application_time() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("x = \"first\"").unwrap();
     assert_eq!(
@@ -299,7 +299,7 @@ fn delayed_string_rules_evaluate_at_application_time() {
 
 #[test]
 fn symbolic_string_patterns_bind_named_captures_in_rules() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(

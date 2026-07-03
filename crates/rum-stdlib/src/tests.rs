@@ -10,6 +10,8 @@ mod integer_digits;
 mod number_theory;
 #[path = "tests/polynomials.rs"]
 mod polynomials;
+#[path = "tests/strings/mod.rs"]
+mod strings;
 
 #[test]
 fn installs_identity_builtin() {

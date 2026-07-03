@@ -51,7 +51,8 @@ pub(super) fn load_spec_from_expr(expr: &Expr) -> Option<String> {
     }
 }
 
-pub(super) fn expr_as_string_list(expr: &Expr) -> Option<Vec<String>> {
+/// Extracts a System`List of string atoms into owned Rust strings.
+pub fn expr_as_string_list(expr: &Expr) -> Option<Vec<String>> {
     let Expr::Call { head, args } = expr else {
         return None;
     };

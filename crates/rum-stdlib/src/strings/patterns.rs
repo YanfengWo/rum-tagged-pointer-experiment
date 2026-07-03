@@ -4,6 +4,16 @@ mod parts;
 mod regex;
 mod search;
 
+pub(crate) use parts::{
+    eval_string_drop, eval_string_part, eval_string_take, eval_string_take_drop,
+};
+pub(crate) use search::{
+    eval_string_apply, eval_string_cases, eval_string_contains_q, eval_string_count,
+    eval_string_delete, eval_string_ends_q, eval_string_free_q, eval_string_match_q,
+    eval_string_position, eval_string_replace, eval_string_split, eval_string_starts_q,
+    eval_string_trim,
+};
+
 use self::regex::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

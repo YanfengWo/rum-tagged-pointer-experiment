@@ -1,10 +1,10 @@
 use super::*;
 
-pub(in crate::runtime::strings::patterns) fn pattern_match_text(chars: &[char]) -> String {
+pub(in crate::strings::patterns) fn pattern_match_text(chars: &[char]) -> String {
     chars.iter().collect()
 }
 
-pub(in crate::runtime::strings::patterns) fn best_pattern_match_at(
+pub(in crate::strings::patterns) fn best_pattern_match_at(
     patterns: &[StringPattern],
     chars: &[char],
     start: usize,
@@ -19,7 +19,7 @@ pub(in crate::runtime::strings::patterns) fn best_pattern_match_at(
         .max_by_key(|(index, end)| (*end, usize::MAX - *index))
 }
 
-pub(in crate::runtime::strings::patterns) fn best_pattern_match_at_with_bindings(
+pub(in crate::strings::patterns) fn best_pattern_match_at_with_bindings(
     patterns: &[StringPattern],
     chars: &[char],
     start: usize,
@@ -54,7 +54,7 @@ pub(super) fn best_pattern_suffix_start(
         .min()
 }
 
-pub(in crate::runtime::strings::patterns) fn best_pattern_match_end(
+pub(in crate::strings::patterns) fn best_pattern_match_end(
     pattern: &StringPattern,
     chars: &[char],
     start: usize,
@@ -68,7 +68,7 @@ pub(in crate::runtime::strings::patterns) fn best_pattern_match_end(
     }
 }
 
-pub(in crate::runtime::strings::patterns) fn best_pattern_match_state(
+pub(in crate::strings::patterns) fn best_pattern_match_state(
     pattern: &StringPattern,
     chars: &[char],
     start: usize,

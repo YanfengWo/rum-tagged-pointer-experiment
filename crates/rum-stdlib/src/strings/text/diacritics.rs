@@ -1,4 +1,4 @@
-pub(in crate::runtime::strings) fn remove_diacritics_value(value: &str) -> String {
+pub(in crate::strings) fn remove_diacritics_value(value: &str) -> String {
     let mut output = String::new();
     for ch in value.chars() {
         output.push_str(&strip_diacritic_char(ch));

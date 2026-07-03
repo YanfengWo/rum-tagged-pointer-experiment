@@ -5,6 +5,9 @@
 //! conversion at a time. Items exported here become semver-relevant when the
 //! crate split ships.
 
+// capabilities
+pub use super::capabilities::Capability;
+
 // arithmetic
 pub use super::arithmetic::{expr_as_exact_integer, expr_as_exact_rational};
 
@@ -23,14 +26,17 @@ pub use super::associations::is_missing_expr;
 
 // expr_helpers
 pub use super::expr_helpers::{
-    expr_as_non_negative_usize, expr_as_signed_isize, expr_as_string, expr_as_symbol,
-    is_negative_one_expr, system_expr,
+    expr_as_non_negative_usize, expr_as_signed_isize, expr_as_string, expr_as_string_list,
+    expr_as_symbol, is_negative_one_expr, system_expr,
 };
 
 // expr_runtime_helpers
 pub use super::expr_runtime_helpers::{
-    call_items_with_head, compare_expr_canonical, is_system_symbol_name,
+    base64_encode, call_items_with_head, compare_expr_canonical, is_system_symbol_name,
 };
+
+// lexical_substitution
+pub use super::lexical_substitution::substitute_lexical_bindings;
 
 // message_selector_parsing
 pub use super::message_selector_parsing::truthiness_symbol;
@@ -64,3 +70,6 @@ pub use super::structure_ops::{
 
 // suspension/core
 pub use super::suspension::ContinuationValue;
+
+// text_rendering
+pub use super::text_rendering::{ToStringFormat, render_input_like_expr, render_to_string_expr};

@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn repeated_anchors_and_shortest_longest_extend_string_patterns() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "StringMatchQ[\"aaa\", Repeated[\"a\"]]"),
@@ -72,7 +72,7 @@ fn repeated_anchors_and_shortest_longest_extend_string_patterns() {
 
 #[test]
 fn bounded_repetition_and_except_extend_string_patterns() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "StringCases[\"aaaa\", Repeated[\"a\", {2}]]"),
@@ -125,7 +125,7 @@ fn bounded_repetition_and_except_extend_string_patterns() {
 
 #[test]
 fn character_class_pattern_atoms_extend_the_current_string_pattern_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(
@@ -160,7 +160,7 @@ fn character_class_pattern_atoms_extend_the_current_string_pattern_subset() {
 
 #[test]
 fn regular_expression_patterns_extend_the_current_string_pattern_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(
@@ -194,7 +194,7 @@ fn regular_expression_patterns_extend_the_current_string_pattern_subset() {
 
 #[test]
 fn symbolic_blank_patterns_extend_the_current_string_pattern_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         eval_to_string(&mut session, "StringMatchQ[\"a\", _]"),

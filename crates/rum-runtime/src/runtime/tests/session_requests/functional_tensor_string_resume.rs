@@ -66,61 +66,6 @@ fn resume_eval_request_with_input_can_finish_inner_term_and_reducer_callbacks() 
     );
 }
 
-#[test]
-fn resume_eval_request_with_input_can_finish_string_apply_list_callbacks() {
-    let mut session = Session::new();
-
-    let first = session
-        .eval_request("StringApply[Function[List[InputString[\"apply: \"]]], {\"ab\", \"cd\"}]")
-        .expect_err("StringApply callback should suspend on the first string");
-    assert_input_prompt(&first.error, "apply: ");
-
-    let second = session
-        .resume_eval_request_with_input("one")
-        .expect_err("StringApply should continue to the second string after resuming");
-    assert_input_prompt(&second.error, "apply: ");
-
-    let response = session
-        .resume_eval_request_with_input("two")
-        .expect("StringApply should finish after resumed callbacks");
-    assert_eq!(response.value.to_string(), "List[\"one\", \"two\"]");
-}
-
-#[test]
-fn resume_eval_request_with_input_can_finish_delayed_string_rules() {
-    let mut session = Session::new();
-
-    let first = session
-        .eval_request("StringReplace[{\"a\", \"a\"}, \"a\" :> InputString[\"replace: \"]]")
-        .expect_err("StringReplace delayed rule should suspend on the first string");
-    assert_input_prompt(&first.error, "replace: ");
-
-    let second = session
-        .resume_eval_request_with_input("x")
-        .expect_err("StringReplace should continue to the second string after resuming");
-    assert_input_prompt(&second.error, "replace: ");
-
-    let response = session
-        .resume_eval_request_with_input("y")
-        .expect("StringReplace should finish after resumed delayed rules");
-    assert_eq!(response.value.to_string(), "List[\"x\", \"y\"]");
-
-    let first = session
-        .eval_request("StringCases[{\"a\", \"b\"}, x_ :> InputString[\"case: \"]]")
-        .expect_err("StringCases delayed rule should suspend on the first string");
-    assert_input_prompt(&first.error, "case: ");
-
-    let second = session
-        .resume_eval_request_with_input("a")
-        .expect_err("StringCases should continue to the second string after resuming");
-    assert_input_prompt(&second.error, "case: ");
-
-    let response = session
-        .resume_eval_request_with_input("b")
-        .expect("StringCases should finish after resumed delayed rules");
-    assert_eq!(response.value.to_string(), "List[List[\"a\"], List[\"b\"]]");
-}
-
 fn assert_input_prompt(error: &SessionRequestError, expected: &str) {
     match error {
         SessionRequestError::InputRequired { request } => {

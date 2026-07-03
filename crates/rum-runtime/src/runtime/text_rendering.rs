@@ -1,7 +1,7 @@
 use super::*;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(super) enum ToStringFormat {
+pub enum ToStringFormat {
     FullForm,
     InputForm,
     OutputLike,
@@ -15,12 +15,33 @@ const PREC_TIMES: u8 = 30;
 const PREC_POWER: u8 = 40;
 const PREC_CALL: u8 = 90;
 
-pub(in crate::runtime) fn render_input_like_expr(expr: &Expr) -> String {
+/// Renders an expression in the kernel's current input-like text form.
+pub fn render_input_like_expr(expr: &Expr) -> String {
     render_to_string_expr(expr, ToStringFormat::OutputLike)
 }
 
-pub(super) fn render_to_string_expr(expr: &Expr, format: ToStringFormat) -> String {
+/// Renders an expression using the requested current kernel text format.
+pub fn render_to_string_expr(expr: &Expr, format: ToStringFormat) -> String {
     render_to_string_expr_with_precedence(expr, format, PREC_LOWEST)
+}
+
+fn string_form_value(template: &str, args: &[Expr]) -> String {
+    let mut remaining = template;
+    let mut output = String::new();
+    let mut replacements = args.iter();
+
+    while let Some(index) = remaining.find("``") {
+        output.push_str(&remaining[..index]);
+        if let Some(arg) = replacements.next() {
+            output.push_str(&arg.to_string());
+        } else {
+            output.push_str("``");
+        }
+        remaining = &remaining[index + 2..];
+    }
+
+    output.push_str(remaining);
+    output
 }
 
 fn render_to_string_expr_with_precedence(

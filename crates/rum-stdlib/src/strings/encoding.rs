@@ -1,174 +1,155 @@
-use super::text::render_input_like_expr;
 use super::*;
 
-impl Session {
-    pub(in crate::runtime) fn eval_string_to_byte_array(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        if !(1..=2).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("StringToByteArray", args, 1, 2));
-        }
-
-        if let Some(encoding) = args.get(1).and_then(expr_as_string) {
-            if encoding != "UTF8" {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
-            }
-        } else if args.len() == 2 {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        }
-
-        if let Some(value) = expr_as_string(&args[0]) {
-            return Ok(byte_array_expr(value.as_bytes()));
-        }
-
-        if let Some(values) = expr_as_string_list(&args[0]) {
-            return Ok(list_expr(
-                values
-                    .into_iter()
-                    .map(|value| byte_array_expr(value.as_bytes()))
-                    .collect(),
-            ));
-        }
-
-        Ok(Expr::call(head.clone(), args.to_vec()))
+pub(crate) fn eval_string_to_byte_array(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if !(1..=2).contains(&args.len()) {
+        return Ok(session.invalid_call_with_arg_range("StringToByteArray", args, 1, 2));
     }
 
-    pub(in crate::runtime) fn eval_hash(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        if !(1..=3).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Hash", args, 1, 3));
+    if let Some(encoding) = args.get(1).and_then(expr_as_string) {
+        if encoding != "UTF8" {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
         }
+    } else if args.len() == 2 {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
 
-        if let Some(algorithm_expr) = args.get(1) {
-            let Some(algorithm) = expr_as_string(algorithm_expr) else {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
-            };
-            if algorithm != "SHA256" {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
-            }
-        }
+    if let Some(value) = expr_as_string(&args[0]) {
+        return Ok(byte_array_expr(value.as_bytes()));
+    }
 
-        let digest = sha256_bytes(&hash_input_bytes(&args[0]));
-        let integer_value = sha256_integer(&digest);
+    if let Some(values) = expr_as_string_list(&args[0]) {
+        return Ok(list_expr(
+            values
+                .into_iter()
+                .map(|value| byte_array_expr(value.as_bytes()))
+                .collect(),
+        ));
+    }
 
-        match args.get(2).and_then(|format| expr_as_string(format)) {
-            None => Ok(Expr::integer(integer_value)),
-            Some("Integer") => Ok(Expr::integer(integer_value)),
-            Some("HexString") => Ok(Expr::string(bytes_to_hex(&digest))),
-            Some("DecimalString") => Ok(Expr::string(sha256_decimal_string(&integer_value))),
-            Some("ByteArray") => Ok(byte_array_expr(&digest)),
-            Some(_) => Ok(Expr::call(head.clone(), args.to_vec())),
+    Ok(Expr::call(head.clone(), args.to_vec()))
+}
+
+pub(crate) fn eval_hash(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if !(1..=3).contains(&args.len()) {
+        return Ok(session.invalid_call_with_arg_range("Hash", args, 1, 3));
+    }
+
+    if let Some(algorithm_expr) = args.get(1) {
+        let Some(algorithm) = expr_as_string(algorithm_expr) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        if algorithm != "SHA256" {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
         }
     }
 
-    pub(in crate::runtime) fn eval_compress(
-        &mut self,
-        _head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        if args.len() != 1 {
-            return Ok(self.invalid_call_with_exact_arg_count("Compress", args, 1));
-        }
+    let digest = sha256_bytes(&hash_input_bytes(&args[0]));
+    let integer_value = sha256_integer(&digest);
 
-        Ok(Expr::string(compress_envelope(&args[0])))
+    match args.get(2).and_then(|format| expr_as_string(format)) {
+        None => Ok(Expr::integer(integer_value)),
+        Some("Integer") => Ok(Expr::integer(integer_value)),
+        Some("HexString") => Ok(Expr::string(bytes_to_hex(&digest))),
+        Some("DecimalString") => Ok(Expr::string(sha256_decimal_string(&integer_value))),
+        Some("ByteArray") => Ok(byte_array_expr(&digest)),
+        Some(_) => Ok(Expr::call(head.clone(), args.to_vec())),
+    }
+}
+
+pub(crate) fn eval_compress(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if args.len() != 1 {
+        return Ok(session.invalid_call_with_exact_arg_count("Compress", args, 1));
     }
 
-    pub(in crate::runtime) fn eval_uncompress(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        if !(1..=2).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Uncompress", args, 1, 2));
-        }
+    Ok(Expr::string(compress_envelope(&args[0])))
+}
 
-        let Some(source) = expr_as_string(&args[0]) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-        let Some((payload, original_form)) = parse_compress_envelope(source) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-        let Some(restored) = self.restore_transport_expr(&payload, original_form) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        if let Some(wrapper) = args.get(1) {
-            let wrapped_result = self.evaluate(Expr::call(wrapper.clone(), vec![restored]));
-            return self.suspend_with_frame(wrapped_result, |_, value| Ok(value));
-        }
-
-        Ok(restored)
+pub(crate) fn eval_uncompress(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if !(1..=2).contains(&args.len()) {
+        return Ok(session.invalid_call_with_arg_range("Uncompress", args, 1, 2));
     }
 
-    pub(in crate::runtime) fn eval_encrypt(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        if args.len() != 2 {
-            return Ok(self.invalid_call_with_exact_arg_count("Encrypt", args, 2));
-        }
+    let Some(source) = expr_as_string(&args[0]) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    let Some((payload, original_form)) = parse_compress_envelope(source) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    let Some(restored) = session.restore_transport_expr(&payload, original_form) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
 
-        let Some(key) = encryption_key_bytes(&args[0]) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        let (payload, original_form) = expr_transport_bytes(&args[1]);
-        let ciphertext = xor_with_sha256_keystream(&key, &payload);
-        Ok(encrypted_object_expr(
-            &ciphertext,
-            &sha256_bytes(&key),
-            original_form,
-        ))
+    if let Some(wrapper) = args.get(1) {
+        let wrapped_result = session.evaluate(Expr::call(wrapper.clone(), vec![restored]));
+        return session.suspend_with_frame(wrapped_result, |_, value| Ok(value));
     }
 
-    pub(in crate::runtime) fn eval_decrypt(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        if args.len() != 2 {
-            return Ok(self.invalid_call_with_exact_arg_count("Decrypt", args, 2));
-        }
+    Ok(restored)
+}
 
-        let Some(key) = encryption_key_bytes(&args[0]) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-        let Some((ciphertext, key_hash, original_form)) = encrypted_object_payload(&args[1]) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        if sha256_bytes(&key).as_slice() != key_hash.as_slice() {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        }
-
-        let decrypted = xor_with_sha256_keystream(&key, &ciphertext);
-        let Some(restored) = self.restore_transport_expr(&decrypted, original_form) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-        Ok(restored)
+pub(crate) fn eval_encrypt(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if args.len() != 2 {
+        return Ok(session.invalid_call_with_exact_arg_count("Encrypt", args, 2));
     }
 
-    fn restore_transport_expr(&self, payload: &[u8], original_form: Expr) -> Option<Expr> {
-        if is_system_symbol_name(&original_form, "String") {
-            return Some(Expr::string(std::str::from_utf8(payload).ok()?.to_string()));
-        }
-        if is_system_symbol_name(&original_form, "ByteArray") {
-            return Some(byte_array_expr(payload));
-        }
-        if is_system_symbol_name(&original_form, "InputForm") {
-            let source = std::str::from_utf8(payload).ok()?;
-            let syntax = parse_expr(source).ok()?;
-            return self.lower_syntax_expr(&syntax).ok();
-        }
+    let Some(key) = encryption_key_bytes(&args[0]) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
 
-        None
+    let (payload, original_form) = expr_transport_bytes(&args[1]);
+    let ciphertext = xor_with_sha256_keystream(&key, &payload);
+    Ok(encrypted_object_expr(
+        &ciphertext,
+        &sha256_bytes(&key),
+        original_form,
+    ))
+}
+
+pub(crate) fn eval_decrypt(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if args.len() != 2 {
+        return Ok(session.invalid_call_with_exact_arg_count("Decrypt", args, 2));
     }
+
+    let Some(key) = encryption_key_bytes(&args[0]) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    let Some((ciphertext, key_hash, original_form)) = encrypted_object_payload(&args[1]) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+
+    if sha256_bytes(&key).as_slice() != key_hash.as_slice() {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
+    let decrypted = xor_with_sha256_keystream(&key, &ciphertext);
+    let Some(restored) = session.restore_transport_expr(&decrypted, original_form) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    Ok(restored)
 }
 
 fn byte_array_expr(bytes: &[u8]) -> Expr {
@@ -313,44 +294,6 @@ const SHA256_ROUND_CONSTANTS: [u32; 64] = [
     0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ];
-
-const BASE64_ALPHABET: &[u8; 64] =
-    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-fn base64_encode(bytes: &[u8]) -> String {
-    let mut rendered = String::with_capacity(bytes.len().div_ceil(3) * 4);
-    let mut index = 0;
-    while index + 3 <= bytes.len() {
-        let chunk = ((bytes[index] as u32) << 16)
-            | ((bytes[index + 1] as u32) << 8)
-            | (bytes[index + 2] as u32);
-        rendered.push(BASE64_ALPHABET[((chunk >> 18) & 0x3f) as usize] as char);
-        rendered.push(BASE64_ALPHABET[((chunk >> 12) & 0x3f) as usize] as char);
-        rendered.push(BASE64_ALPHABET[((chunk >> 6) & 0x3f) as usize] as char);
-        rendered.push(BASE64_ALPHABET[(chunk & 0x3f) as usize] as char);
-        index += 3;
-    }
-
-    match bytes.len() - index {
-        1 => {
-            let chunk = (bytes[index] as u32) << 16;
-            rendered.push(BASE64_ALPHABET[((chunk >> 18) & 0x3f) as usize] as char);
-            rendered.push(BASE64_ALPHABET[((chunk >> 12) & 0x3f) as usize] as char);
-            rendered.push('=');
-            rendered.push('=');
-        }
-        2 => {
-            let chunk = ((bytes[index] as u32) << 16) | ((bytes[index + 1] as u32) << 8);
-            rendered.push(BASE64_ALPHABET[((chunk >> 18) & 0x3f) as usize] as char);
-            rendered.push(BASE64_ALPHABET[((chunk >> 12) & 0x3f) as usize] as char);
-            rendered.push(BASE64_ALPHABET[((chunk >> 6) & 0x3f) as usize] as char);
-            rendered.push('=');
-        }
-        _ => {}
-    }
-
-    rendered
-}
 
 fn base64_decode(encoded: &str) -> Option<Vec<u8>> {
     let bytes = encoded.as_bytes();
