@@ -1,8 +1,5 @@
 use super::*;
 
-mod control_functional;
-mod surface;
-mod symbolic;
 impl Session {
     pub(super) fn build_call_dispatch_plan(&mut self, head: &Expr) -> CallDispatchPlan {
         let attributes = self.cached_attribute_set_for_head(head);
@@ -10,10 +7,9 @@ impl Session {
         let builtin_spec =
             head_symbol.and_then(|symbol| self.cached_builtin_dispatch_spec_for_symbol(symbol));
         let builtin_dispatch = builtin_spec.map(|spec| spec.dispatch);
-        let builtin_handler = builtin_spec.and_then(|spec| spec.handler);
 
         if builtin_dispatch == Some(BuiltinDispatch::SpecialForm) {
-            return CallDispatchPlan::special_form(attributes, builtin_handler);
+            return CallDispatchPlan::special_form(attributes, builtin_spec);
         }
 
         let value_definition = head_symbol
@@ -24,7 +20,7 @@ impl Session {
         let has_sub_values =
             value_definition.is_some_and(|definition| !definition.sub_values.is_empty());
 
-        let mut plan = CallDispatchPlan::new(attributes, builtin_handler);
+        let mut plan = CallDispatchPlan::new(attributes, builtin_spec);
 
         plan.push(CallDispatchStage::PrepareArguments);
 
@@ -67,12 +63,12 @@ impl Session {
         stage: CallDispatchStage,
         head: &Expr,
         attributes: AttributeSet,
-        builtin_handler: Option<BuiltinHandler>,
+        builtin_spec: Option<BuiltinSpec>,
         state: &mut CallDispatchState,
     ) -> Result<Option<Expr>, EvalError> {
         match stage {
             CallDispatchStage::SpecialForm => {
-                self.try_dispatch_builtin_call(builtin_handler, head, state.raw_args.as_ref())
+                self.try_dispatch_builtin_call(builtin_spec, head, state.raw_args.as_ref())
             }
             CallDispatchStage::PrepareArguments => {
                 let raw_args = std::mem::take(&mut state.raw_args);
@@ -106,7 +102,7 @@ impl Session {
                 self.try_apply_sub_values(head, state.evaluated_shared_args(), attributes)
             }
             CallDispatchStage::OrdinaryBuiltin => {
-                self.try_dispatch_builtin_call(builtin_handler, head, state.evaluated_args())
+                self.try_dispatch_builtin_call(builtin_spec, head, state.evaluated_args())
             }
             CallDispatchStage::Function => self.try_apply_function(head, state.evaluated_args()),
         }
@@ -114,18 +110,21 @@ impl Session {
 
     pub(super) fn try_dispatch_builtin_call(
         &mut self,
-        builtin_handler: Option<BuiltinHandler>,
+        builtin_spec: Option<BuiltinSpec>,
         head: &Expr,
         args: &[Expr],
     ) -> Result<Option<Expr>, EvalError> {
-        let Some(handler) = builtin_handler else {
+        let Some(spec) = builtin_spec else {
+            return Ok(None);
+        };
+        let Some(handler) = spec.handler else {
             return Ok(None);
         };
 
         if !self.capability_policy.is_unrestricted()
-            && !self.capability_policy.allows(handler.capability())
+            && !self.capability_policy.allows(spec.capability)
         {
-            return Ok(Some(self.sandbox_denied_builtin(head, handler)));
+            return Ok(Some(self.sandbox_denied_builtin(head, spec)));
         }
 
         let builtin_symbol = expr_as_symbol(head).copied();
@@ -139,10 +138,10 @@ impl Session {
         result.map(Some)
     }
 
-    fn sandbox_denied_builtin(&mut self, head: &Expr, handler: BuiltinHandler) -> Expr {
+    fn sandbox_denied_builtin(&mut self, head: &Expr, spec: BuiltinSpec) -> Expr {
         let name = expr_as_symbol(head)
             .map(|symbol| symbol.name().to_string())
-            .unwrap_or_else(|| format!("{handler:?}"));
+            .unwrap_or_else(|| spec.name.to_string());
         self.push_message(
             "General",
             "sandbox",
@@ -153,10 +152,10 @@ impl Session {
 
     pub(super) fn run_builtin_handler(
         &mut self,
-        handler: BuiltinHandler,
+        handler: BuiltinFn,
         head: &Expr,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        self.run_builtin_handler_surface(handler, head, args)
+        handler(self, head, args)
     }
 }

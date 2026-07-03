@@ -4,7 +4,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary(
         "Identity",
         "Returns its argument unchanged.",
-        BuiltinHandler::Identity,
+        builtin_identity,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Plus",
@@ -14,7 +14,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Orderless)
             .with(Attribute::Flat)
             .with(Attribute::OneIdentity),
-        BuiltinHandler::Plus,
+        Session::eval_plus,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Times",
@@ -24,29 +24,29 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Orderless)
             .with(Attribute::Flat)
             .with(Attribute::OneIdentity),
-        BuiltinHandler::Times,
+        Session::eval_times,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Power",
         "Raises an exact number to an integer power when possible.",
         AttributeSet::from_attribute(Attribute::Listable),
-        BuiltinHandler::Power,
+        Session::eval_power,
     ),
     BuiltinSpec::ordinary(
         "Subtract",
         "Subtracts one exact number from another.",
-        BuiltinHandler::Subtract,
+        Session::eval_subtract,
     ),
     BuiltinSpec::ordinary(
         "Divide",
         "Divides exact numbers, producing exact rationals when possible.",
-        BuiltinHandler::Divide,
+        Session::eval_divide,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Abs",
         "Returns the absolute value of exact integers and rationals.",
         AttributeSet::from_attribute(Attribute::Listable),
-        BuiltinHandler::Abs,
+        Session::eval_abs,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Sign",
@@ -55,7 +55,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::NumericFunction)
             .with(Attribute::Protected),
-        BuiltinHandler::Sign,
+        Session::eval_sign,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Floor",
@@ -64,7 +64,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::NumericFunction)
             .with(Attribute::Protected),
-        BuiltinHandler::Floor,
+        Session::eval_floor,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Ceiling",
@@ -73,7 +73,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::NumericFunction)
             .with(Attribute::Protected),
-        BuiltinHandler::Ceiling,
+        Session::eval_ceiling,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "IntegerPart",
@@ -82,7 +82,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::NumericFunction)
             .with(Attribute::Protected),
-        BuiltinHandler::IntegerPart,
+        Session::eval_integer_part,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "FractionalPart",
@@ -91,7 +91,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::NumericFunction)
             .with(Attribute::Protected),
-        BuiltinHandler::FractionalPart,
+        Session::eval_fractional_part,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Minus",
@@ -100,13 +100,13 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::NumericFunction)
             .with(Attribute::Protected),
-        BuiltinHandler::Minus,
+        Session::eval_minus,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Round",
         "Rounds exact numbers to the nearest integer or exact multiple in the current snapshot-helper subset.",
         AttributeSet::from_attribute(Attribute::Listable),
-        BuiltinHandler::Round,
+        Session::eval_round,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Binomial",
@@ -115,19 +115,19 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::NumericFunction)
             .with(Attribute::Protected),
-        BuiltinHandler::Binomial,
+        Session::eval_binomial,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Factorial",
         "Computes factorials for non-negative exact integers.",
         AttributeSet::from_attribute(Attribute::Listable),
-        BuiltinHandler::Factorial,
+        Session::eval_factorial,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Factorial2",
         "Computes double factorials for non-negative exact integers.",
         AttributeSet::from_attribute(Attribute::Listable),
-        BuiltinHandler::Factorial2,
+        Session::eval_factorial2,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Fibonacci",
@@ -137,7 +137,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::NumericFunction)
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
-        BuiltinHandler::Fibonacci,
+        Session::eval_fibonacci,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "PartitionsP",
@@ -145,7 +145,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Listable)
             .with(Attribute::Protected),
-        BuiltinHandler::PartitionsP,
+        Session::eval_partitions_p,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "PartitionsQ",
@@ -153,7 +153,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Listable)
             .with(Attribute::Protected),
-        BuiltinHandler::PartitionsQ,
+        Session::eval_partitions_q,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "BernoulliB",
@@ -161,7 +161,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Listable)
             .with(Attribute::Protected),
-        BuiltinHandler::BernoulliB,
+        Session::eval_bernoulli_b,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Subfactorial",
@@ -171,7 +171,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::NumericFunction)
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
-        BuiltinHandler::Subfactorial,
+        Session::eval_subfactorial,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "StirlingS1",
@@ -179,7 +179,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Listable)
             .with(Attribute::Protected),
-        BuiltinHandler::StirlingS1,
+        Session::eval_stirling_s1,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "StirlingS2",
@@ -187,7 +187,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Listable)
             .with(Attribute::Protected),
-        BuiltinHandler::StirlingS2,
+        Session::eval_stirling_s2,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "CatalanNumber",
@@ -197,7 +197,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::NumericFunction)
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
-        BuiltinHandler::CatalanNumber,
+        Session::eval_catalan_number,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Multinomial",
@@ -207,7 +207,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::NumericFunction)
             .with(Attribute::Orderless)
             .with(Attribute::Protected),
-        BuiltinHandler::Multinomial,
+        Session::eval_multinomial,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Pochhammer",
@@ -216,24 +216,24 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::NumericFunction)
             .with(Attribute::Protected),
-        BuiltinHandler::Pochhammer,
+        Session::eval_pochhammer,
     ),
     BuiltinSpec::ordinary(
         "Total",
         "Totals list elements through the current exact Plus semantics.",
-        BuiltinHandler::Total,
+        Session::eval_total,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Denominator",
         "Returns the denominator of exact integers and rationals.",
         AttributeSet::from_attribute(Attribute::Listable),
-        BuiltinHandler::Denominator,
+        Session::eval_denominator,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Numerator",
         "Returns the numerator of exact integers and rationals.",
         AttributeSet::from_attribute(Attribute::Listable),
-        BuiltinHandler::Numerator,
+        Session::eval_numerator,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "IntegerLength",
@@ -241,7 +241,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Listable)
             .with(Attribute::Protected),
-        BuiltinHandler::IntegerLength,
+        Session::eval_integer_length,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "IntegerDigits",
@@ -249,7 +249,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Listable)
             .with(Attribute::Protected),
-        BuiltinHandler::IntegerDigits,
+        Session::eval_integer_digits,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "IntegerReverse",
@@ -257,13 +257,13 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
-        BuiltinHandler::IntegerReverse,
+        Session::eval_integer_reverse,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "FromDigits",
         "Constructs an exact integer from a list or string of digits.",
         AttributeSet::from_attribute(Attribute::Protected),
-        BuiltinHandler::FromDigits,
+        Session::eval_from_digits,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "DigitCount",
@@ -271,37 +271,37 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
-        BuiltinHandler::DigitCount,
+        Session::eval_digit_count,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Mod",
         "Returns the modulus of one integer with respect to another.",
         AttributeSet::from_attribute(Attribute::Listable),
-        BuiltinHandler::Mod,
+        Session::eval_mod,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Quotient",
         "Returns the floor-division quotient of two integers.",
         AttributeSet::from_attribute(Attribute::Listable),
-        BuiltinHandler::Quotient,
+        Session::eval_quotient,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "PowerMod",
         "Computes modular exponentiation for exact integers.",
         AttributeSet::from_attribute(Attribute::Listable),
-        BuiltinHandler::PowerMod,
+        Session::eval_power_mod,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "GCD",
         "Computes the greatest common divisor of exact integers.",
         AttributeSet::from_attribute(Attribute::Listable),
-        BuiltinHandler::GCD,
+        Session::eval_gcd,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "LCM",
         "Computes the least common multiple of exact integers.",
         AttributeSet::from_attribute(Attribute::Listable),
-        BuiltinHandler::LCM,
+        Session::eval_lcm,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Divisors",
@@ -309,7 +309,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Listable)
             .with(Attribute::Protected),
-        BuiltinHandler::Divisors,
+        Session::eval_divisors,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "EulerPhi",
@@ -317,7 +317,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Listable)
             .with(Attribute::Protected),
-        BuiltinHandler::EulerPhi,
+        Session::eval_euler_phi,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "MoebiusMu",
@@ -325,7 +325,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Listable)
             .with(Attribute::Protected),
-        BuiltinHandler::MoebiusMu,
+        Session::eval_moebius_mu,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "DivisorSigma",
@@ -334,7 +334,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::NHoldAll)
             .with(Attribute::Protected),
-        BuiltinHandler::DivisorSigma,
+        Session::eval_divisor_sigma,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Prime",
@@ -342,7 +342,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Listable)
             .with(Attribute::Protected),
-        BuiltinHandler::Prime,
+        Session::eval_prime,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "PrimePi",
@@ -350,7 +350,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Listable)
             .with(Attribute::Protected),
-        BuiltinHandler::PrimePi,
+        Session::eval_prime_pi,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "PrimeNu",
@@ -358,7 +358,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
-        BuiltinHandler::PrimeNu,
+        Session::eval_prime_nu,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "PrimeOmega",
@@ -366,7 +366,7 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
-        BuiltinHandler::PrimeOmega,
+        Session::eval_prime_omega,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "NextPrime",
@@ -374,53 +374,53 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty()
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
-        BuiltinHandler::NextPrime,
+        Session::eval_next_prime,
     ),
     BuiltinSpec::ordinary(
         "Max",
         "Returns the maximum exact integer or rational operand.",
-        BuiltinHandler::Max,
+        Session::eval_max,
     ),
     BuiltinSpec::ordinary(
         "Min",
         "Returns the minimum exact integer or rational operand.",
-        BuiltinHandler::Min,
+        Session::eval_min,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "MinMax",
         "Returns the exact minimum and maximum for one scalar or list argument.",
         AttributeSet::from_attribute(Attribute::Protected),
-        BuiltinHandler::MinMax,
+        Session::eval_min_max,
     ),
     BuiltinSpec::ordinary(
         "Expand",
         "Expands rational-coefficient polynomial expressions over pattern-free indeterminates.",
-        BuiltinHandler::Expand,
+        Session::eval_expand,
     ),
     BuiltinSpec::ordinary(
         "Coefficient",
         "Extracts coefficients of exact monomial powers from rational-coefficient polynomial expressions.",
-        BuiltinHandler::Coefficient,
+        Session::eval_coefficient,
     ),
     BuiltinSpec::ordinary(
         "CoefficientList",
         "Builds coefficient arrays for rational-coefficient polynomial expressions in specified indeterminates.",
-        BuiltinHandler::CoefficientList,
+        Session::eval_coefficient_list,
     ),
     BuiltinSpec::ordinary(
         "Together",
         "Combines rational-function terms over a common polynomial denominator.",
-        BuiltinHandler::Together,
+        Session::eval_together,
     ),
     BuiltinSpec::ordinary(
         "Factor",
         "Factors rational-coefficient polynomials over the rationals using the current polynomial kernel.",
-        BuiltinHandler::Factor,
+        Session::eval_factor,
     ),
     BuiltinSpec::ordinary_with_hold(
         "D",
         "Differentiates exact arithmetic, rational-function, and abstract-function expressions with held differentiation variables.",
         HoldAttribute::HoldRest,
-        BuiltinHandler::D,
+        Session::eval_d,
     ),
 ];

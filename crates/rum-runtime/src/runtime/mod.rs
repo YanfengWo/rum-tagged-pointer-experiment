@@ -16,6 +16,7 @@ mod arithmetic;
 mod associations;
 mod attributes;
 mod binding_substitution;
+mod builtin_adapters;
 mod builtin_catalog;
 mod builtins_context_loader;
 mod builtins_input;
@@ -83,8 +84,8 @@ mod vm_rhs_template;
 
 #[allow(unused_imports)]
 use self::{
-    arithmetic::*, associations::*, attributes::*, binding_substitution::*, builtin_catalog::*,
-    builtins_context_loader::*, builtins_input::*, builtins_messages::*,
+    arithmetic::*, associations::*, attributes::*, binding_substitution::*, builtin_adapters::*,
+    builtin_catalog::*, builtins_context_loader::*, builtins_input::*, builtins_messages::*,
     builtins_messages_inspect::*, calculus::*, capabilities::*, combinatorics::*,
     context_and_load_helpers::*, control_flow::*, debug_tools::*, definition_analysis_helpers::*,
     definition_application::*, definition_catalog::*, definition_clear::*, definition_tags::*,

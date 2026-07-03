@@ -776,7 +776,7 @@ impl Session {
             stage,
             evaluated_head.as_ref(),
             plan.attributes,
-            plan.builtin_handler,
+            plan.builtin_spec,
             &mut state,
         );
         record_profile_runtime_path_timing(

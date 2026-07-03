@@ -32,16 +32,16 @@ const MAX_CALL_DISPATCH_STAGES: usize = 7;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct CallDispatchPlan {
     pub(super) attributes: AttributeSet,
-    pub(super) builtin_handler: Option<BuiltinHandler>,
+    pub(super) builtin_spec: Option<BuiltinSpec>,
     stages: [CallDispatchStage; MAX_CALL_DISPATCH_STAGES],
     stage_count: usize,
 }
 
 impl CallDispatchPlan {
-    pub(super) fn new(attributes: AttributeSet, builtin_handler: Option<BuiltinHandler>) -> Self {
+    pub(super) fn new(attributes: AttributeSet, builtin_spec: Option<BuiltinSpec>) -> Self {
         Self {
             attributes,
-            builtin_handler,
+            builtin_spec,
             stages: [CallDispatchStage::SpecialForm; MAX_CALL_DISPATCH_STAGES],
             stage_count: 0,
         }
@@ -49,9 +49,9 @@ impl CallDispatchPlan {
 
     pub(super) fn special_form(
         attributes: AttributeSet,
-        builtin_handler: Option<BuiltinHandler>,
+        builtin_spec: Option<BuiltinSpec>,
     ) -> Self {
-        let mut plan = Self::new(attributes, builtin_handler);
+        let mut plan = Self::new(attributes, builtin_spec);
         plan.push(CallDispatchStage::SpecialForm);
         plan
     }
