@@ -17,6 +17,27 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-03 Stage-2 step 2 DONE (brief-100) — registration is the ONLY builtin dispatch path
+
+Discovery that motivated it: dispatch resolution silently fell back to a static
+`OnceLock` map over `core_builtin_specs()`, so builtins never needed
+registration and `rum-stdlib::install_core` was decorative — families cannot
+leave the crate while the kernel statically consults its own catalog. Now:
+`resolution.rs` reads ONLY the session's registered map (fallback deleted);
+`Session::default()`/`new()` auto-install `core_builtin_specs()` (the
+transitional bridge — shrinks as families move out); `with_config()` builds a
+truly RAW session (hosts/stdlib must install — they already do);
+`register_builtin` applies the `with_fallback_dispatch` merge against the
+previously REGISTERED spec, preserving user-override semantics; `Names`
+enumerates registered specs. The static `default_builtin_dispatch_spec*`
+helpers legitimately REMAIN as vocabulary (known-system-symbol predicates in
+`expr_runtime_helpers.rs` — a dispatch-vs-vocabulary distinction the original
+brief's grep gate missed; Codex stop-lossed on it and the gate was amended).
+New test: fresh session evaluates a builtin + DumpSave/Get restore keeps the
+registered set. Gate: fmt + workspace 1298/0; resolution grep = 0; microbench
+A/B flat-to-better (−8%…+1.6%, no consistent regression; mechanism touches
+only the cache-miss resolution path).
+
 ## 2026-07-03 Stage-2 step 1 DONE (brief-099) — kernel_api v1 exists, logic family de-globbed
 
 `runtime/kernel_api.rs` is now the single public door to the kernel's helper

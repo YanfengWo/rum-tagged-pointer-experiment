@@ -347,8 +347,8 @@ pub enum EvalError {
     InputRequired { request: RuntimeInputRequest },
 }
 
-impl Default for Session {
-    fn default() -> Self {
+impl Session {
+    pub(super) fn empty() -> Self {
         Self {
             builtins: BuiltinSpecMap::default(),
             attributes: AttributeMap::default(),
@@ -420,6 +420,17 @@ impl Default for Session {
             interrupt_poll_counter: 0,
             capability_policy: CapabilityPolicy::unrestricted(),
         }
+    }
+}
+
+impl Default for Session {
+    fn default() -> Self {
+        let mut session = Self::empty();
+        for spec in core_builtin_specs() {
+            session.register_builtin(*spec);
+        }
+
+        session
     }
 }
 

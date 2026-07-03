@@ -79,17 +79,7 @@ impl Session {
             return None;
         }
 
-        if let Some(spec) = self.builtin_spec_for_symbol(symbol).copied() {
-            if spec.dispatch != BuiltinDispatch::None && spec.handler.is_some() {
-                return Some(spec);
-            }
-
-            return default_builtin_dispatch_spec_for_symbol(symbol)
-                .map(|fallback| spec.with_fallback_dispatch(fallback))
-                .or(Some(spec));
-        }
-
-        default_builtin_dispatch_spec_for_symbol(symbol)
+        self.builtin_spec_for_symbol(symbol).copied()
     }
 
     pub(super) fn cached_builtin_dispatch_spec_for_symbol(

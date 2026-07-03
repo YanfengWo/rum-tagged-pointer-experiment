@@ -4,11 +4,11 @@ use std::time::Duration;
 
 impl Session {
     pub fn new() -> Self {
-        Self::with_config(SessionConfig::default())
+        Self::default()
     }
 
     pub fn with_config(config: SessionConfig) -> Self {
-        let mut session = Self::default();
+        let mut session = Self::empty();
         session.apply_config(config);
         session
     }
@@ -139,6 +139,12 @@ impl Session {
 
     pub fn register_builtin(&mut self, spec: BuiltinSpec) {
         let symbol = Symbol::system(spec.name);
+        let spec = self
+            .builtins
+            .get(&symbol)
+            .copied()
+            .map(|fallback| spec.with_fallback_dispatch(fallback))
+            .unwrap_or(spec);
         self.builtins.insert(symbol, spec);
         self.builtin_dispatch_spec_cache.clear();
 

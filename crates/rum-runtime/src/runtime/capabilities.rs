@@ -104,7 +104,7 @@ impl Default for CapabilityPolicyBuilder {
 
 #[cfg(test)]
 mod tests {
-    use super::super::default_builtin_dispatch_spec;
+    use super::super::core_builtin_specs;
     use super::*;
 
     #[test]
@@ -130,7 +130,9 @@ mod tests {
     #[test]
     fn catalog_capabilities_classify_filesystem_builtins() {
         fn capability(name: &str) -> Capability {
-            default_builtin_dispatch_spec(name)
+            core_builtin_specs()
+                .iter()
+                .find(|spec| spec.name == name)
                 .expect("builtin should be cataloged")
                 .capability
         }
