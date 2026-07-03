@@ -110,8 +110,33 @@ from the profile before keeping a change.**
 
 ## Current direction (read these for state)
 
-- **NO ACTIVE LINE right now — pick one (2026-07-01). Two full lines CLOSED this
-  session; read the `2026-07-01` top blocks of `docs/next-session-handoff.md` first.**
+- **ACTIVE LINE (2026-07-03): crate responsibility/size REBALANCING — route 2a (full
+  builtin extraction). Public release is DEFERRED (not urgent; user chose code cleanliness
+  first).** See memory `crate-rebalance-line.md` for the full plan + data. Summary: the
+  post-long-tail codebase is crate-imbalanced — `rum-runtime` is a 116k-line/391-file
+  MONOLITH (evaluator + ALL builtins) while `rum-stdlib` is a misnamed 21-line installer
+  facade. The KEY constraint: builtins are DEEPLY woven into the kernel (528
+  `pub(in crate::runtime)` symbols, builtins `use super::*`, dispatch is a CLOSED
+  `BuiltinHandler` enum + big match), so a clean extraction is a real architecture change,
+  not a move. **Route 2a plan:** (1) convert `BuiltinHandler` closed-enum dispatch → an
+  OPEN registry (fn-pointer/trait handlers); (2) define a clean `pub` kernel API (promote
+  the subset of the 528 internal symbols that builtins actually need); (3) move the builtin
+  families (`strings/`, `structure_ops/`, `functional_ops/`, `associations/`, `polynomials/`,
+  `logic/`, `predicates/`, `arithmetic`, `number_theory`, `combinatorics`, `calculus`,
+  `integer_digits`, control-flow builtins, …) into a REAL stdlib crate (rename `rum-stdlib`
+  honestly), leaving `rum-runtime` as the pure kernel (eval/patterns/scoping/definitions/
+  model/cache/session). **DEFERRED within this line:** file-slimming (7 files >35k chars =
+  architecture debt — `profiling.rs` 138KB, `evaluation_cache.rs` 62KB,
+  `definition_application.rs` 55KB, `vm_rhs_template.rs` 51KB, `lexer.rs` 40KB,
+  `arithmetic.rs` 39KB, `parser/tests.rs` 37KB — + 27 split-plan files; convention =
+  `docs/code-organization-guidelines.md`, unit is CHARACTERS) is done AFTER the crate split
+  (files move more easily once split; slimming a file about to move is wasted). **OPEN
+  sub-decisions:** fate of `profiling.rs`/`vm_rhs_template.rs`/`debug_tools/` (diagnostic +
+  opt-in-experimental) — stay-in-kernel vs feature-gate vs move — decide during 2a design.
+  `release-staging/` was DELETED (will be re-created after cleanup via the committed
+  brief-096 scrub method + the recorded whitelist); legal framing settled (independent
+  sandboxed evaluator, NO WK-parity narrative — memory has the details).
+- **Earlier lines CLOSED (2026-07-01), historical context below.**
   (1) **Pattern-matching line CLOSED** (briefs 058 + axis measurements): the adversarial
   `Orderless`+`BlankNullSequence` stack-overflow crash is fixed (matcher `MAX_MATCH_DEPTH`
   guard → graceful `TerminatedEvaluation`); WK was probed and is ALSO naive `k^n` (no
