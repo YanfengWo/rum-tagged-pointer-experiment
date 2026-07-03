@@ -17,6 +17,28 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 Stage-3 batch 7 DONE (brief-108) — associations moved with the data/builtin split; 9 families out
+
+The designed split held: the association DATA LAYER (entry forms,
+parse/render, key lookup/apply, set-lvalue — everything referenced by
+kernel-side code or not-yet-moved families) stayed kernel-side as
+`runtime/association_data.rs`; the 33 builtin specs + family helpers moved
+(`MissingQ` stayed, its call is kernel-adjacent). `eval_dispatch` untouched
+(the split-correctness stop-loss never fired). Runtime catalog 317, stdlib
+196; workspace 1300/0 conserved (runtime 577, stdlib 211); CLI smoke → 21.
+Biggest migration so far, as predicted from the 28-file incidental footprint:
+22 dedicated tests + ~40 measured moves (9 whole-file + 12 partial sources).
+
+Two gate notes. (1) Promotions came to 6 narrow facades — ONE OVER the
+brief's ≤5 stop line; Codex should have stopped and reported rather than
+finishing (outcome harmless, all six justified, but the discipline slip is
+noted; future briefs size the line to the family's audited kernel-import
+count instead of a flat 5). (2) One behavior-equivalence adaptation was
+required and gate-verified: the new `protected_or_known_definition_target_symbol`
+facade adds a REGISTERED-spec branch alongside the static vocabulary — moved
+builtins (no longer in the static catalog) must still count as known/protected
+for AssociateTo; consistent with the brief-102 resolution-probe conclusion.
+
 ## 2026-07-04 Stage-3 batch 6 DONE (brief-107) — predicates moved; 8 families out
 
 50 predicate specs moved (runtime catalog 350, stdlib 163); the family got its

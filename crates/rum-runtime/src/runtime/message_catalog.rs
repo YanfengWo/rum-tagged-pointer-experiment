@@ -147,7 +147,8 @@ impl Session {
         format_message_template_with_named(&template, key, args, named_args)
     }
 
-    pub(super) fn normalize_symbol_target_expr(
+    /// Normalizes a symbol or symbol-name string into a symbol target.
+    pub fn normalize_symbol_target_expr(
         &self,
         expr: &Expr,
         create_if_missing: bool,

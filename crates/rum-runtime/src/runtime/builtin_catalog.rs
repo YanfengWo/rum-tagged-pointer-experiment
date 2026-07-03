@@ -3,7 +3,8 @@ use std::sync::OnceLock;
 
 use super::*;
 
-mod associations;
+#[path = "builtin_catalog/associations.rs"]
+mod association_symbols;
 mod control;
 mod debug;
 mod functional;
@@ -24,7 +25,7 @@ pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
                 numeric::NUMERIC_BUILTINS.len()
                     + string_symbols::STRING_BUILTINS.len()
                     + structure::STRUCTURE_BUILTINS.len()
-                    + associations::ASSOCIATION_BUILTINS.len()
+                    + association_symbols::ASSOCIATION_BUILTINS.len()
                     + debug::DEBUG_BUILTINS.len()
                     + control::CONTROL_BUILTINS.len()
                     + functional::FUNCTIONAL_BUILTINS.len()
@@ -35,7 +36,7 @@ pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
             specs.extend_from_slice(numeric::NUMERIC_BUILTINS);
             specs.extend_from_slice(string_symbols::STRING_BUILTINS);
             specs.extend_from_slice(structure::STRUCTURE_BUILTINS);
-            specs.extend_from_slice(associations::ASSOCIATION_BUILTINS);
+            specs.extend_from_slice(association_symbols::ASSOCIATION_BUILTINS);
             specs.extend_from_slice(debug::DEBUG_BUILTINS);
             specs.extend_from_slice(control::CONTROL_BUILTINS);
             specs.extend_from_slice(functional::FUNCTIONAL_BUILTINS);

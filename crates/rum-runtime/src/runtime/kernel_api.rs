@@ -11,18 +11,12 @@ pub use super::capabilities::Capability;
 // arithmetic
 pub use super::arithmetic::{expr_as_exact_integer, expr_as_exact_rational};
 
-// associations/basic
-pub use super::associations::missing_key_absent_expr;
-
-// associations/data
-pub use super::associations::{
+// association_data
+pub use super::association_data::{
     AssociationEntryForm, association_entries_from_expr, association_entry_forms_from_expr,
-    list_items, parse_association_entry_form, predicate_bool_expr, render_association,
-    render_association_entry_forms_preserving_heads,
+    is_missing_expr, list_items, missing_key_absent_expr, parse_association_entry_form,
+    render_association, render_association_entry_forms_preserving_heads,
 };
-
-// associations/missing
-pub use super::associations::is_missing_expr;
 
 // expr_helpers
 pub use super::expr_helpers::{
@@ -62,7 +56,8 @@ pub use super::session_state::{EvalError, ThreadArgSpec, ThreadingDispatch};
 
 // structure_ops
 pub use super::structure_ops::{
-    exact_expr_at_path, exact_position_paths_from_expr, replace_exact_path,
+    exact_expr_at_path, exact_position_paths_from_expr,
+    exact_position_paths_from_part_selector_exprs, replace_exact_path,
 };
 
 // tree_walkers

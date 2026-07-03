@@ -1,22 +1,6 @@
 use super::*;
 
 #[test]
-fn replacepart_supports_keyed_association_paths() {
-    let mut session = Session::new();
-
-    assert_eq!(
-        session
-            .eval_text(
-                "ReplacePart[Association[a -> 1, b -> Association[c -> 3]], {Key[b], Key[c]} -> 9]"
-            )
-            .unwrap()
-            .value
-            .to_string(),
-        "Association[Rule[a, 1], Rule[b, Association[Rule[c, 9]]]]"
-    );
-}
-
-#[test]
 fn replacepart_supports_immediate_delayed_and_head_replacements() {
     let mut session = Session::new();
 
@@ -300,35 +284,5 @@ fn replaceat_supports_exact_positions_operator_form_and_rule_lists() {
             .value
             .to_string(),
         "y"
-    );
-}
-
-#[test]
-fn replaceat_supports_sequential_paths_all_and_keyed_positions() {
-    let mut session = Session::new();
-
-    assert_eq!(
-        session
-            .eval_text("ReplaceAt[f[a], x_ :> h[x], {{1}, {1}}]")
-            .unwrap()
-            .value
-            .to_string(),
-        "f[h[h[a]]]"
-    );
-    assert_eq!(
-        session
-            .eval_text("ReplaceAt[f[g[a, b], h[c, d]], x_ :> q[x], {All, 2}]")
-            .unwrap()
-            .value
-            .to_string(),
-        "f[g[a, q[b]], h[c, q[d]]]"
-    );
-    assert_eq!(
-        session
-            .eval_text("ReplaceAt[Association[a -> 1, b -> Association[c -> 3]], _Integer -> z, {Key[b], Key[c]}]")
-            .unwrap()
-            .value
-            .to_string(),
-        "Association[Rule[a, 1], Rule[b, Association[Rule[c, z]]]]"
     );
 }

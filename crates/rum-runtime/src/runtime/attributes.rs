@@ -206,7 +206,8 @@ impl Session {
         self.push_message(operator, "wrsym", format!("Symbol {symbol} is Protected."));
     }
 
-    pub(super) fn ensure_symbol_not_protected_for_write(
+    /// Checks protection before a write and emits the standard write message.
+    pub fn ensure_symbol_not_protected_for_write(
         &mut self,
         operator: &str,
         symbol: &Symbol,

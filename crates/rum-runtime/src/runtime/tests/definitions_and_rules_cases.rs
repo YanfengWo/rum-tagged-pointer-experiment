@@ -312,56 +312,6 @@ fn cases_applies_rule_transformations() {
 }
 
 #[test]
-fn cases_and_deletecases_use_value_only_association_traversal() {
-    let mut session = Session::new();
-
-    assert_eq!(
-        session
-            .eval_text("Cases[Association[a -> 1, b -> f[2]], _Symbol, Infinity]")
-            .unwrap()
-            .value
-            .to_string(),
-        "List[]"
-    );
-    assert_eq!(
-        session
-            .eval_text("Cases[Association[a -> 1, b -> f[2]], _Symbol, Infinity, Heads -> True]")
-            .unwrap()
-            .value
-            .to_string(),
-        "List[Association, f]"
-    );
-    assert_eq!(
-        session
-            .eval_text(
-                "DeleteCases[Association[a -> 1, b -> f[2]], _Symbol, Infinity, Heads -> True]"
-            )
-            .unwrap()
-            .value
-            .to_string(),
-        "Association[]"
-    );
-    assert_eq!(
-        session
-            .eval_text("DeleteCases[Association[a -> 1, b -> f[2]], f, Infinity, Heads -> True]")
-            .unwrap()
-            .value
-            .to_string(),
-        "Association[Rule[a, 1]]"
-    );
-    assert_eq!(
-        session
-            .eval_text(
-                "DeleteCases[Association[a -> 1, b -> f[2]], Association, Infinity, Heads -> True]",
-            )
-            .unwrap()
-            .value
-            .to_string(),
-        "Association[]"
-    );
-}
-
-#[test]
 fn cases_preserves_immediate_and_delayed_rule_behavior() {
     let mut session = Session::new();
 

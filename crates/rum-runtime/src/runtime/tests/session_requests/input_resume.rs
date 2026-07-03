@@ -199,67 +199,6 @@ fn resume_eval_request_with_input_reports_input_parse_errors_as_syntax_diagnosti
 }
 
 #[test]
-fn resume_eval_request_with_input_finishes_evaluation_data_capture() {
-    let mut session = Session::new();
-
-    let failure = session
-        .eval_request("EvaluationData[Echo[1 + 1]; InputString[\"name: \"]]")
-        .expect_err("EvaluationData should suspend when the wrapped evaluation requests input");
-
-    match &failure.error {
-        SessionRequestError::InputRequired { request } => {
-            assert_eq!(request.prompt, "name: ");
-        }
-        other => panic!("expected input-required failure, got {other:?}"),
-    }
-
-    let response = session
-        .resume_eval_request_with_input("Alice")
-        .expect("resume should finish the suspended EvaluationData");
-
-    assert_eq!(
-        session
-            .evaluate(Expr::call(
-                system_expr("Lookup"),
-                vec![response.value.clone(), Expr::string("Result")],
-            ))
-            .unwrap()
-            .to_string(),
-        "\"Alice\""
-    );
-    assert_eq!(
-        session
-            .evaluate(Expr::call(
-                system_expr("Lookup"),
-                vec![response.value.clone(), Expr::string("OutputLog")],
-            ))
-            .unwrap()
-            .to_string(),
-        "List[\"2\"]"
-    );
-    assert_eq!(
-        session
-            .evaluate(Expr::call(
-                system_expr("Lookup"),
-                vec![response.value.clone(), Expr::string("Input")],
-            ))
-            .unwrap()
-            .to_string(),
-        "Hold[CompoundExpression[Echo[Plus[1, 1]], InputString[\"name: \"]]]"
-    );
-    assert_eq!(
-        session
-            .evaluate(Expr::call(
-                system_expr("Lookup"),
-                vec![response.value, Expr::string("Success")],
-            ))
-            .unwrap()
-            .to_string(),
-        "True"
-    );
-}
-
-#[test]
 fn resume_eval_request_with_input_keeps_monitor_display_and_finishes_the_body() {
     let mut session = Session::new();
 

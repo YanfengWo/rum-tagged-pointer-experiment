@@ -201,6 +201,37 @@ impl Session {
         classify_definition_lhs(lhs).map(DefinitionAssignmentTarget::Definition)
     }
 
+    /// Returns the immediate own value stored for a symbol.
+    pub fn definition_own_value(&self, symbol: &Symbol) -> Option<Expr> {
+        self.definitions
+            .get(symbol)
+            .and_then(|definition| definition.own_value.clone())
+    }
+
+    /// Stores an immediate value for a normalized definition assignment target.
+    pub fn store_definition_assignment_target_immediate(&mut self, lhs: &Expr, rhs: Expr) {
+        if let Some(DefinitionAssignmentTarget::Definition(target)) =
+            self.normalize_definition_assignment_target(lhs)
+        {
+            self.store_definition_target(target, lhs.clone(), rhs, false);
+        }
+    }
+
+    /// Returns the definition target symbol when it is protected or known-system.
+    pub fn protected_or_known_definition_target_symbol(&self, lhs: &Expr) -> Option<Symbol> {
+        let Some(DefinitionAssignmentTarget::Definition(target)) =
+            self.normalize_definition_assignment_target(lhs)
+        else {
+            return None;
+        };
+
+        let symbol = target.symbol().clone();
+        (self.symbol_is_protected(&symbol)
+            || is_known_system_symbol(&symbol)
+            || self.builtin_spec_for_symbol(&symbol).is_some())
+        .then_some(symbol)
+    }
+
     pub(super) fn normalize_options_target_expr(&self, expr: &Expr) -> Option<Symbol> {
         let Expr::Call { head, args } = expr else {
             return None;

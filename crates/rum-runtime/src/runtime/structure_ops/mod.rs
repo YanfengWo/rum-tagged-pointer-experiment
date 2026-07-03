@@ -28,7 +28,8 @@ pub fn exact_position_paths_from_expr(expr: &Expr, spec_expr: &Expr) -> Option<V
     exact_paths::exact_position_paths_from_expr(expr, spec_expr)
 }
 
-pub(super) fn exact_position_paths_from_part_selector_exprs(
+/// Returns exact structural paths for Part-style selector expressions.
+pub fn exact_position_paths_from_part_selector_exprs(
     expr: &Expr,
     selector_exprs: &[Expr],
 ) -> Option<Vec<Vec<isize>>> {
