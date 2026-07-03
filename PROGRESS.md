@@ -17,6 +17,42 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-03 Stage-2 audit COMPLETE (brief-098) — the real kernel API is tiny
+
+Method: per-family compile-error audit (comment out `use super::*` in each of the
+14 builtin family modules, one at a time; collect unresolved names from
+`cargo check`; restore) + a grep axis for kernel `Session` methods called from
+family code. Full artifact: `docs/dev/kernel-api-audit-2026-07-03.md` (from
+`/tmp/cdx_brief_098_report.md`); raw logs `/tmp/cdx_brief_098_raw_<family>.log`.
+Diagnostic only — tree clean, final `cargo check` green. (Operational note: the
+first run stopped at 6/14 families because Claude's concurrent PROGRESS-archive
+commit tripped the whole-tree clean-check; resumed with the check scoped to
+`crates/`. Lesson recorded: no repo mutation while a brief is in flight.)
+
+Findings (free-item axis): of the runtime-internal namespace, only **258 items
+are used by any family at all**; **24 have fan-out ≥3 families** (the prelude
+core: `Session`/`EvalError` types, `system_expr`, `is_system_symbol_name`, the
+`expr_as_*` coercion helpers, `compare_expr_canonical`, a few model/session
+types like `ThreadingDispatch`/`ThreadArgSpec`/`CasesLevelSpec`), 16 have
+fan-out 2, **218 are single-family** (move WITH their family, don't promote),
+and ~600 internal symbols are used by no family (stay kernel-private). Known
+family→family couplings that constrain move order: `arithmetic` numeric
+helpers (`expr_as_exact_integer` 7 families, `expr_as_exact_rational` 5),
+`associations/data` helpers (`association_entries_from_expr`,
+`render_association` — 6 families each), structure path helpers.
+
+Findings (Session-method axis, the future pub method surface, top of ~15-25):
+`evaluate` (148 calls), the `invalid_call_with_*` argument-error helpers
+(131+113+112+67), `suspend_with_frame` (100) + `drive_internal_value` (41) +
+`suspend_with_result_frame` (17), `push_message` (37), the `enforce_*` resource
+limits, `match_expr_owned`, `merged_option_exprs_for_system_symbol`.
+
+Cheapest first move: **`logic`** — 9 free items, no same-family glob fallout, no
+other-family coupling. Count reconciliation note: the earlier "528
+`pub(in crate::runtime)` symbols" was a grep line count; the audit's item-name
+scan counts 651 unique names — same order of magnitude, the design conclusion
+(promote ~40, not 500+) is insensitive to the method.
+
 ## 2026-07-03 Crate-rebalance line OPENED (route 2a) — Stage 1 DONE: builtin dispatch is open
 
 Line context: `rum-runtime` had grown into a 116,293-line / 391-file monolith
