@@ -1,5 +1,8 @@
 use super::*;
 
+#[path = "tests/combinatorics.rs"]
+mod combinatorics;
+
 #[test]
 fn installs_identity_builtin() {
     let mut session = Session::new();

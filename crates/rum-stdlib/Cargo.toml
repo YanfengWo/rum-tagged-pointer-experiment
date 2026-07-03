@@ -5,4 +5,5 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+rum-core = { path = "../rum-core" }
 rum-runtime = { path = "../rum-runtime" }

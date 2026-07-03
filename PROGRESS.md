@@ -17,6 +17,34 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 Stage 3 OPENED and the MOVE pipeline is PROVEN (brief-102) — combinatorics lives in rum-stdlib
+
+The first family physically left the monolith. `rum-stdlib` now owns the
+combinatorics implementation (`src/combinatorics.rs`, 11 handlers converted to
+free fns while moving, bodies verbatim), its specs (`src/catalog.rs`, 11
+entries byte-identical to the deleted runtime ones modulo handler path), and
+its 5 behavioral tests; `install_core` = runtime catalog (now 502 entries)
+then stdlib specs. rum-runtime greps CLEAN for combinatorics. Pilot family was
+combinatorics (not logic) because it has zero incidental test usage — logic
+owns the comparison operators the kernel's own tests use everywhere.
+
+Step-0 resolution probe (the one real unknown) PASSED: a builtin registered
+under a name ABSENT from the static catalog resolves and dispatches through
+`eval_text` — no vocabulary fix needed; the probe stays as a regression test
+(`registered_builtin_resolution.rs`). Kernel promotions were restrained and
+documented: `Session::{invalid_call_with_exact_arg_count,
+combine_additive_args, combine_multiplicative_args}` now `pub`;
+`kernel_api` re-exports `BuiltinSpec` + `num_traits::ToPrimitive` (spares the
+stdlib a num-traits dep). rum-stdlib gained the `rum-core` dep.
+
+Gate: fmt + workspace 1299/0 (runtime −5 moved tests +1 probe, stdlib +5);
+CLI smoke `--eval "Fibonacci[10] + CatalanNumber[4]"` → 69 (the brief's
+literal `eval` subcommand syntax was wrong — rum-cli takes `--eval`; noted for
+future briefs). No microbench (registration source only). Remaining Stage-3
+work: the other 12 families through the same pipeline; load-bearing ones
+(logic/predicates/arithmetic/…) additionally need the test-migration /
+dev-dep-cycle decision recorded in the memory notes.
+
 ## 2026-07-03 Stage-2 step 3 DONE (brief-101) — logic handlers are free functions
 
 The pilot family's handlers no longer live in `impl Session`: 16 handlers

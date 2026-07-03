@@ -24,7 +24,6 @@ mod builtins_messages;
 mod builtins_messages_inspect;
 mod calculus;
 mod capabilities;
-mod combinatorics;
 mod context_and_load_helpers;
 mod control_flow;
 mod debug_tools;
@@ -87,19 +86,19 @@ mod vm_rhs_template;
 use self::{
     arithmetic::*, associations::*, attributes::*, binding_substitution::*, builtin_adapters::*,
     builtin_catalog::*, builtins_context_loader::*, builtins_input::*, builtins_messages::*,
-    builtins_messages_inspect::*, calculus::*, capabilities::*, combinatorics::*,
-    context_and_load_helpers::*, control_flow::*, debug_tools::*, definition_analysis_helpers::*,
-    definition_application::*, definition_catalog::*, definition_clear::*, definition_tags::*,
-    definition_updates::*, definitions::*, eval_call_prepare::*, eval_core::*, eval_dispatch::*,
-    evaluation_cache::*, expr_helpers::*, expr_runtime_helpers::*, function_and_subst_helpers::*,
-    functional_ops::*, hold_thread::*, integer_digits::*, lexical_substitution::*,
-    listable_dispatch::*, logic::*, lowering::*, matcher_and_symbols::*, message_catalog::*,
-    message_format::*, message_selector_parsing::*, metadata::*, model::*, namespace_tools::*,
-    number_theory::*, options::*, package_tools::*, parse_and_message_helpers::*,
-    pattern_matching::*, polynomials::*, predicates::*, profiling::*, resolution::*,
-    rewrite_builtins::*, scoping::*, session_api::*, session_eval::*, session_helpers::*,
-    session_requests::*, session_state::*, slot_substitution::*, strings::*, structure_ops::*,
-    suspension::*, tree_walkers::*, vm_rhs_template::*,
+    builtins_messages_inspect::*, calculus::*, capabilities::*, context_and_load_helpers::*,
+    control_flow::*, debug_tools::*, definition_analysis_helpers::*, definition_application::*,
+    definition_catalog::*, definition_clear::*, definition_tags::*, definition_updates::*,
+    definitions::*, eval_call_prepare::*, eval_core::*, eval_dispatch::*, evaluation_cache::*,
+    expr_helpers::*, expr_runtime_helpers::*, function_and_subst_helpers::*, functional_ops::*,
+    hold_thread::*, integer_digits::*, lexical_substitution::*, listable_dispatch::*, logic::*,
+    lowering::*, matcher_and_symbols::*, message_catalog::*, message_format::*,
+    message_selector_parsing::*, metadata::*, model::*, namespace_tools::*, number_theory::*,
+    options::*, package_tools::*, parse_and_message_helpers::*, pattern_matching::*,
+    polynomials::*, predicates::*, profiling::*, resolution::*, rewrite_builtins::*, scoping::*,
+    session_api::*, session_eval::*, session_helpers::*, session_requests::*, session_state::*,
+    slot_substitution::*, strings::*, structure_ops::*, suspension::*, tree_walkers::*,
+    vm_rhs_template::*,
 };
 pub use self::{
     builtin_catalog::core_builtin_specs, capabilities::*, lowering::lower_syntax_expr, metadata::*,

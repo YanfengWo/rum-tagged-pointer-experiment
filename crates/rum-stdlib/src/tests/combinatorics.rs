@@ -1,4 +1,11 @@
-use super::*;
+use crate::install_core;
+use rum_runtime::Session;
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 fn eval_to_string(session: &mut Session, source: &str) -> String {
     session.eval_text(source).unwrap().value.to_string()
@@ -6,7 +13,7 @@ fn eval_to_string(session: &mut Session, source: &str) -> String {
 
 #[test]
 fn cheap_combinatorics_builtins_match_wolfram_kernel_integer_anchors() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let cases = [
         ("Binomial[5, 2]", "10"),
@@ -58,7 +65,7 @@ fn cheap_combinatorics_builtins_match_wolfram_kernel_integer_anchors() {
 
 #[test]
 fn cheap_combinatorics_builtins_thread_and_passthrough_like_wolfram_kernel() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let cases = [
         ("Binomial[{5, 6}, 2]", "List[10, 15]"),
@@ -114,7 +121,7 @@ fn cheap_combinatorics_builtins_thread_and_passthrough_like_wolfram_kernel() {
 
 #[test]
 fn cheap_combinatorics_builtins_report_wolfram_kernel_attributes() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let cases = [
         (
@@ -155,7 +162,7 @@ fn cheap_combinatorics_builtins_report_wolfram_kernel_attributes() {
 
 #[test]
 fn binomial_respects_integer_work_limit() {
-    let mut session = Session::new();
+    let mut session = core_session();
     session.set_integer_work_limit(3);
 
     let limited = session.eval_text("Binomial[-1, 5]").unwrap();
@@ -175,7 +182,7 @@ fn binomial_respects_integer_work_limit() {
 
 #[test]
 fn recurrence_combinatorics_respect_integer_work_limit() {
-    let mut session = Session::new();
+    let mut session = core_session();
     session.set_integer_work_limit(3);
 
     let cases = [

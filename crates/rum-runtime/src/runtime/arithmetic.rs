@@ -594,11 +594,8 @@ impl Session {
             .unwrap_or_else(|| Expr::call(head.clone(), args.to_vec())))
     }
 
-    pub(super) fn combine_additive_args(
-        &self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
+    /// Canonically combines arguments using the kernel's Plus semantics.
+    pub fn combine_additive_args(&self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
         let mut numeric = Rational::zero();
         let mut combined = Vec::new();
 
@@ -675,7 +672,8 @@ impl Session {
         })
     }
 
-    pub(super) fn combine_multiplicative_args(
+    /// Canonically combines arguments using the kernel's Times semantics.
+    pub fn combine_multiplicative_args(
         &self,
         head: &Expr,
         args: &[Expr],

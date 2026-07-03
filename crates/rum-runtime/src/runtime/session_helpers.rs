@@ -336,7 +336,8 @@ impl Session {
         self.invalid_call(symbol, args)
     }
 
-    pub(super) fn invalid_call_with_exact_arg_count(
+    /// Builds the standard invalid-call expression for an exact arity violation.
+    pub fn invalid_call_with_exact_arg_count(
         &mut self,
         symbol: &str,
         args: &[Expr],

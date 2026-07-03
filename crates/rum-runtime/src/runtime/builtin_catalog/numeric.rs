@@ -109,15 +109,6 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         Session::eval_round,
     ),
     BuiltinSpec::ordinary_with_attributes(
-        "Binomial",
-        "Computes exact binomial coefficients for integer arguments.",
-        AttributeSet::empty()
-            .with(Attribute::Listable)
-            .with(Attribute::NumericFunction)
-            .with(Attribute::Protected),
-        Session::eval_binomial,
-    ),
-    BuiltinSpec::ordinary_with_attributes(
         "Factorial",
         "Computes factorials for non-negative exact integers.",
         AttributeSet::from_attribute(Attribute::Listable),
@@ -128,95 +119,6 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         "Computes double factorials for non-negative exact integers.",
         AttributeSet::from_attribute(Attribute::Listable),
         Session::eval_factorial2,
-    ),
-    BuiltinSpec::ordinary_with_attributes(
-        "Fibonacci",
-        "Computes exact Fibonacci numbers for integer indices.",
-        AttributeSet::empty()
-            .with(Attribute::Listable)
-            .with(Attribute::NumericFunction)
-            .with(Attribute::Protected)
-            .with(Attribute::ReadProtected),
-        Session::eval_fibonacci,
-    ),
-    BuiltinSpec::ordinary_with_attributes(
-        "PartitionsP",
-        "Computes the number of integer partitions by Euler's pentagonal recurrence.",
-        AttributeSet::empty()
-            .with(Attribute::Listable)
-            .with(Attribute::Protected),
-        Session::eval_partitions_p,
-    ),
-    BuiltinSpec::ordinary_with_attributes(
-        "PartitionsQ",
-        "Computes the number of partitions into distinct parts.",
-        AttributeSet::empty()
-            .with(Attribute::Listable)
-            .with(Attribute::Protected),
-        Session::eval_partitions_q,
-    ),
-    BuiltinSpec::ordinary_with_attributes(
-        "BernoulliB",
-        "Computes exact Bernoulli numbers for non-negative integer indices.",
-        AttributeSet::empty()
-            .with(Attribute::Listable)
-            .with(Attribute::Protected),
-        Session::eval_bernoulli_b,
-    ),
-    BuiltinSpec::ordinary_with_attributes(
-        "Subfactorial",
-        "Computes derangement numbers for non-negative integer indices.",
-        AttributeSet::empty()
-            .with(Attribute::Listable)
-            .with(Attribute::NumericFunction)
-            .with(Attribute::Protected)
-            .with(Attribute::ReadProtected),
-        Session::eval_subfactorial,
-    ),
-    BuiltinSpec::ordinary_with_attributes(
-        "StirlingS1",
-        "Computes signed Stirling numbers of the first kind.",
-        AttributeSet::empty()
-            .with(Attribute::Listable)
-            .with(Attribute::Protected),
-        Session::eval_stirling_s1,
-    ),
-    BuiltinSpec::ordinary_with_attributes(
-        "StirlingS2",
-        "Computes Stirling numbers of the second kind.",
-        AttributeSet::empty()
-            .with(Attribute::Listable)
-            .with(Attribute::Protected),
-        Session::eval_stirling_s2,
-    ),
-    BuiltinSpec::ordinary_with_attributes(
-        "CatalanNumber",
-        "Computes exact Catalan numbers for non-negative integer indices.",
-        AttributeSet::empty()
-            .with(Attribute::Listable)
-            .with(Attribute::NumericFunction)
-            .with(Attribute::Protected)
-            .with(Attribute::ReadProtected),
-        Session::eval_catalan_number,
-    ),
-    BuiltinSpec::ordinary_with_attributes(
-        "Multinomial",
-        "Computes exact multinomial coefficients for non-negative integer arguments.",
-        AttributeSet::empty()
-            .with(Attribute::Listable)
-            .with(Attribute::NumericFunction)
-            .with(Attribute::Orderless)
-            .with(Attribute::Protected),
-        Session::eval_multinomial,
-    ),
-    BuiltinSpec::ordinary_with_attributes(
-        "Pochhammer",
-        "Computes finite rising factorial products for non-negative integer counts.",
-        AttributeSet::empty()
-            .with(Attribute::Listable)
-            .with(Attribute::NumericFunction)
-            .with(Attribute::Protected),
-        Session::eval_pochhammer,
     ),
     BuiltinSpec::ordinary(
         "Total",

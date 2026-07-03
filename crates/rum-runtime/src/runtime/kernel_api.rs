@@ -36,7 +36,10 @@ pub use super::expr_runtime_helpers::{
 pub use super::message_selector_parsing::truthiness_symbol;
 
 // metadata
-pub use super::metadata::{Attribute, AttributeSet};
+pub use super::metadata::{Attribute, AttributeSet, BuiltinSpec};
+
+// numeric conversion traits
+pub use num_traits::ToPrimitive;
 
 // model
 pub use super::model::{
