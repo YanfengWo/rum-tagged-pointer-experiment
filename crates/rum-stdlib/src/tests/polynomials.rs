@@ -1,8 +1,15 @@
-use super::*;
+use crate::install_core;
+use rum_runtime::Session;
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 #[test]
 fn polynomial_predicates_cover_current_expression_subsets() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -72,7 +79,7 @@ fn polynomial_predicates_cover_current_expression_subsets() {
 
 #[test]
 fn expand_distributes_products_and_positive_integer_powers() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -94,7 +101,7 @@ fn expand_distributes_products_and_positive_integer_powers() {
 
 #[test]
 fn expand_supports_rational_coefficients_and_indexed_indeterminates() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -116,7 +123,7 @@ fn expand_supports_rational_coefficients_and_indexed_indeterminates() {
 
 #[test]
 fn expand_preserves_non_polynomial_or_pattern_bearing_regions() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -138,7 +145,7 @@ fn expand_preserves_non_polynomial_or_pattern_bearing_regions() {
 
 #[test]
 fn coefficient_extracts_exact_monomial_powers_without_requiring_manual_expand() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -184,7 +191,7 @@ fn coefficient_extracts_exact_monomial_powers_without_requiring_manual_expand() 
 
 #[test]
 fn coefficient_list_builds_rectangular_grids_in_the_requested_variable_order() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -214,7 +221,7 @@ fn coefficient_list_builds_rectangular_grids_in_the_requested_variable_order() {
 
 #[test]
 fn coefficient_family_keeps_current_pattern_bearing_boundary_for_now() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -236,7 +243,7 @@ fn coefficient_family_keeps_current_pattern_bearing_boundary_for_now() {
 
 #[test]
 fn together_combines_rational_function_terms_over_common_polynomial_denominators() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -274,7 +281,7 @@ fn together_combines_rational_function_terms_over_common_polynomial_denominators
 
 #[test]
 fn together_keeps_current_pattern_bearing_boundary_for_now() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -288,7 +295,7 @@ fn together_keeps_current_pattern_bearing_boundary_for_now() {
 
 #[test]
 fn factor_extracts_content_common_monomials_and_linear_factors_over_q() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -326,7 +333,7 @@ fn factor_extracts_content_common_monomials_and_linear_factors_over_q() {
 
 #[test]
 fn factor_handles_symmetric_multivariate_cubic_example() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -344,7 +351,7 @@ fn factor_handles_symmetric_multivariate_cubic_example() {
 
 #[test]
 fn together_now_cancels_common_polynomial_factors_after_combining() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -366,7 +373,7 @@ fn together_now_cancels_common_polynomial_factors_after_combining() {
 
 #[test]
 fn factor_keeps_current_pattern_bearing_boundary_for_now() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session

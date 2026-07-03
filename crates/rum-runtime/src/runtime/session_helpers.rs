@@ -326,7 +326,8 @@ impl Session {
         Expr::call(system_expr(symbol), args.to_vec())
     }
 
-    pub(super) fn invalid_call_with_message(
+    /// Builds an invalid-call expression after emitting the supplied message.
+    pub fn invalid_call_with_message(
         &mut self,
         symbol: &str,
         args: &[Expr],

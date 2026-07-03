@@ -1,6 +1,6 @@
-use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec};
+use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec, HoldAttribute};
 
-use crate::{combinatorics, integer_digits, number_theory};
+use crate::{calculus, combinatorics, integer_digits, number_theory, polynomials};
 
 pub(crate) const COMBINATORICS_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary_with_attributes(
@@ -217,5 +217,40 @@ pub(crate) const NUMBER_THEORY_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
         number_theory::eval_next_prime,
+    ),
+];
+
+pub(crate) const CALCULUS_BUILTINS: &[BuiltinSpec] = &[BuiltinSpec::ordinary_with_hold(
+    "D",
+    "Differentiates exact arithmetic, rational-function, and abstract-function expressions with held differentiation variables.",
+    HoldAttribute::HoldRest,
+    calculus::eval_d,
+)];
+
+pub(crate) const POLYNOMIAL_BUILTINS: &[BuiltinSpec] = &[
+    BuiltinSpec::ordinary(
+        "Expand",
+        "Expands rational-coefficient polynomial expressions over pattern-free indeterminates.",
+        polynomials::eval_expand,
+    ),
+    BuiltinSpec::ordinary(
+        "Coefficient",
+        "Extracts coefficients of exact monomial powers from rational-coefficient polynomial expressions.",
+        polynomials::eval_coefficient,
+    ),
+    BuiltinSpec::ordinary(
+        "CoefficientList",
+        "Builds coefficient arrays for rational-coefficient polynomial expressions in specified indeterminates.",
+        polynomials::eval_coefficient_list,
+    ),
+    BuiltinSpec::ordinary(
+        "Together",
+        "Combines rational-function terms over a common polynomial denominator.",
+        polynomials::eval_together,
+    ),
+    BuiltinSpec::ordinary(
+        "Factor",
+        "Factors rational-coefficient polynomials over the rationals using the current polynomial kernel.",
+        polynomials::eval_factor,
     ),
 ];

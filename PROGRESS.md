@@ -17,6 +17,25 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 Stage-3 batch 3 DONE (brief-104) — calculus + polynomials moved; 5 families out
+
+First multi-file directory family through the pipeline: `polynomials/`
+(mod/candidates/core/core/factors/factorization/rational_function) moved with
+its layout intact; `calculus` (the `D` handler) along. Runtime catalog
+488 → 482, stdlib 31 (11+5+9+1+5); runtime greps clean; CLI smoke
+`--eval "Coefficient[Expand[(x+1)^4], x, 2] + D[x^3, x] /. x -> 2"` → 18;
+workspace 1299/0 (runtime 753 + stdlib 34; 4 calculus + 13 polynomials test
+fns migrated). One family-boundary discovery handled correctly: the
+`PolynomialQ`/`PolynomialExpressionQ`/`RationalExpressionQ` PREDICATE handlers
+physically lived inside `polynomials/mod.rs` — they moved VERBATIM (md5-equal
+bodies, gate-checked) into `runtime/predicates.rs` so the predicates family
+stays runtime-owned; their catalog entries never left. Promotions:
+`HoldAttribute` + `Session::invalid_call_with_message` pub;
+`parse_indeterminate_expr` facade retargeted. Remaining Stage-3 families: 8
+(predicates, logic, arithmetic, strings, structure_ops, functional_ops,
+associations, control_flow, rewrite_builtins — the load-bearing tier; test
+strategy per family by measured failing-fn count).
+
 ## 2026-07-04 Stage-3 batch 2 DONE (brief-103) — integer_digits + number_theory moved; 3 families out
 
 First BATCH move (two families in one brief) through the proven pipeline:

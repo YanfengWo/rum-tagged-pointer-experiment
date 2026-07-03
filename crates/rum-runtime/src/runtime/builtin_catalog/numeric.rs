@@ -183,35 +183,4 @@ pub(super) const NUMERIC_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::from_attribute(Attribute::Protected),
         Session::eval_min_max,
     ),
-    BuiltinSpec::ordinary(
-        "Expand",
-        "Expands rational-coefficient polynomial expressions over pattern-free indeterminates.",
-        Session::eval_expand,
-    ),
-    BuiltinSpec::ordinary(
-        "Coefficient",
-        "Extracts coefficients of exact monomial powers from rational-coefficient polynomial expressions.",
-        Session::eval_coefficient,
-    ),
-    BuiltinSpec::ordinary(
-        "CoefficientList",
-        "Builds coefficient arrays for rational-coefficient polynomial expressions in specified indeterminates.",
-        Session::eval_coefficient_list,
-    ),
-    BuiltinSpec::ordinary(
-        "Together",
-        "Combines rational-function terms over a common polynomial denominator.",
-        Session::eval_together,
-    ),
-    BuiltinSpec::ordinary(
-        "Factor",
-        "Factors rational-coefficient polynomials over the rationals using the current polynomial kernel.",
-        Session::eval_factor,
-    ),
-    BuiltinSpec::ordinary_with_hold(
-        "D",
-        "Differentiates exact arithmetic, rational-function, and abstract-function expressions with held differentiation variables.",
-        HoldAttribute::HoldRest,
-        Session::eval_d,
-    ),
 ];

@@ -1,7 +1,7 @@
 use super::*;
 
 impl VariableBasis {
-    pub(in crate::runtime::polynomials) fn from_polynomials(polynomials: &[&Polynomial]) -> Self {
+    pub(in crate::polynomials) fn from_polynomials(polynomials: &[&Polynomial]) -> Self {
         let mut variables = Vec::new();
 
         for polynomial in polynomials {
@@ -16,7 +16,7 @@ impl VariableBasis {
         Self { variables }
     }
 
-    pub(in crate::runtime::polynomials) fn compare_terms(
+    pub(in crate::polynomials) fn compare_terms(
         &self,
         lhs: &Term,
         rhs: &Term,
@@ -44,21 +44,21 @@ impl VariableBasis {
 }
 
 impl Term {
-    pub(in crate::runtime::polynomials) fn constant(coefficient: Rational) -> Self {
+    pub(in crate::polynomials) fn constant(coefficient: Rational) -> Self {
         Self {
             coefficient,
             factors: Vec::new(),
         }
     }
 
-    pub(in crate::runtime::polynomials) fn indeterminate(base: Expr) -> Self {
+    pub(in crate::polynomials) fn indeterminate(base: Expr) -> Self {
         Self {
             coefficient: Rational::one(),
             factors: vec![Factor { base, exponent: 1 }],
         }
     }
 
-    pub(in crate::runtime::polynomials) fn multiply(&self, rhs: &Self) -> Self {
+    pub(in crate::polynomials) fn multiply(&self, rhs: &Self) -> Self {
         let mut factors = self.factors.clone();
         factors.extend(rhs.factors.clone());
 
@@ -69,11 +69,11 @@ impl Term {
         .normalized()
     }
 
-    pub(in crate::runtime::polynomials) fn total_degree(&self) -> usize {
+    pub(in crate::polynomials) fn total_degree(&self) -> usize {
         self.factors.iter().map(|factor| factor.exponent).sum()
     }
 
-    pub(in crate::runtime::polynomials) fn exponent_for_factor(&self, base: &Expr) -> usize {
+    pub(in crate::polynomials) fn exponent_for_factor(&self, base: &Expr) -> usize {
         self.factors
             .iter()
             .find(|factor| factor.base == *base)
@@ -81,10 +81,7 @@ impl Term {
             .unwrap_or(0)
     }
 
-    pub(in crate::runtime::polynomials) fn divide_by_monomial(
-        &self,
-        monomial: &Monomial,
-    ) -> Option<Self> {
+    pub(in crate::polynomials) fn divide_by_monomial(&self, monomial: &Monomial) -> Option<Self> {
         let mut quotient = self.clone();
 
         for factor in &monomial.factors {
@@ -103,7 +100,7 @@ impl Term {
         Some(quotient.normalized())
     }
 
-    pub(in crate::runtime::polynomials) fn divide_by_term(&self, divisor: &Self) -> Option<Self> {
+    pub(in crate::polynomials) fn divide_by_term(&self, divisor: &Self) -> Option<Self> {
         let mut quotient = self.divide_by_monomial(&Monomial {
             factors: divisor.factors.clone(),
         })?;
@@ -111,7 +108,7 @@ impl Term {
         Some(quotient.normalized())
     }
 
-    pub(in crate::runtime::polynomials) fn coefficient_after_exact_monomial_power(
+    pub(in crate::polynomials) fn coefficient_after_exact_monomial_power(
         &self,
         target: &Monomial,
         power: usize,
@@ -139,15 +136,12 @@ impl Term {
         Some(remainder.normalized())
     }
 
-    pub(in crate::runtime::polynomials) fn normalized(mut self) -> Self {
+    pub(in crate::polynomials) fn normalized(mut self) -> Self {
         self.factors = normalize_factors(self.factors);
         self
     }
 
-    pub(in crate::runtime::polynomials) fn to_expr(
-        &self,
-        session: &Session,
-    ) -> Result<Expr, EvalError> {
+    pub(in crate::polynomials) fn to_expr(&self, session: &Session) -> Result<Expr, EvalError> {
         let mut factors = Vec::with_capacity(self.factors.len() + 1);
 
         if !self.coefficient.is_one() || self.factors.is_empty() {
@@ -174,13 +168,13 @@ impl Term {
 }
 
 impl Monomial {
-    pub(in crate::runtime::polynomials) fn one() -> Self {
+    pub(in crate::polynomials) fn one() -> Self {
         Self {
             factors: Vec::new(),
         }
     }
 
-    pub(in crate::runtime::polynomials) fn from_expr(expr: &Expr) -> Option<Self> {
+    pub(in crate::polynomials) fn from_expr(expr: &Expr) -> Option<Self> {
         if let Some(value) = expr_as_exact_rational(expr) {
             return value.is_one().then(Self::one);
         }
@@ -220,7 +214,7 @@ impl Monomial {
         }
     }
 
-    pub(in crate::runtime::polynomials) fn from_indeterminate(expr: &Expr) -> Option<Self> {
+    pub(in crate::polynomials) fn from_indeterminate(expr: &Expr) -> Option<Self> {
         Some(Self {
             factors: vec![Factor {
                 base: parse_indeterminate_expr(expr)?,
@@ -229,11 +223,11 @@ impl Monomial {
         })
     }
 
-    pub(in crate::runtime::polynomials) fn is_one(&self) -> bool {
+    pub(in crate::polynomials) fn is_one(&self) -> bool {
         self.factors.is_empty()
     }
 
-    pub(in crate::runtime::polynomials) fn exact_multiplicity_in_term(&self, term: &Term) -> usize {
+    pub(in crate::polynomials) fn exact_multiplicity_in_term(&self, term: &Term) -> usize {
         if self.factors.is_empty() {
             return 0;
         }
@@ -252,12 +246,12 @@ impl Monomial {
             .unwrap_or(0)
     }
 
-    pub(in crate::runtime::polynomials) fn normalized(mut self) -> Self {
+    pub(in crate::polynomials) fn normalized(mut self) -> Self {
         self.factors = normalize_factors(self.factors);
         self
     }
 
-    pub(in crate::runtime::polynomials) fn to_polynomial_factors(&self) -> Vec<Polynomial> {
+    pub(in crate::polynomials) fn to_polynomial_factors(&self) -> Vec<Polynomial> {
         let mut factors = Vec::new();
 
         for factor in &self.factors {
@@ -289,7 +283,7 @@ fn normalize_factors(mut factors: Vec<Factor>) -> Vec<Factor> {
     merged
 }
 
-pub(in crate::runtime::polynomials) fn parse_coefficient_list_monomials(
+pub(in crate::polynomials) fn parse_coefficient_list_monomials(
     expr: &Expr,
 ) -> Option<Vec<Monomial>> {
     match expr {

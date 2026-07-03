@@ -36,7 +36,7 @@ pub use super::expr_runtime_helpers::{
 pub use super::message_selector_parsing::truthiness_symbol;
 
 // metadata
-pub use super::metadata::{Attribute, AttributeSet, BuiltinSpec};
+pub use super::metadata::{Attribute, AttributeSet, BuiltinSpec, HoldAttribute};
 
 // numeric traits
 pub use num_integer::{Integer, Roots};
@@ -51,8 +51,8 @@ pub use super::model::{
 // parse_and_message_helpers
 pub use super::parse_and_message_helpers::{parse_heads_option, parse_standard_level_spec};
 
-// polynomials
-pub use super::polynomials::parse_indeterminate_expr;
+// predicates
+pub use super::predicates::parse_indeterminate_expr;
 
 // session_state
 pub use super::session_state::{EvalError, ThreadArgSpec, ThreadingDispatch};

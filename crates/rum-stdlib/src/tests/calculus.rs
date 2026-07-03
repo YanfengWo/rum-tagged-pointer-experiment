@@ -1,8 +1,15 @@
-use super::*;
+use crate::install_core;
+use rum_runtime::Session;
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 #[test]
 fn d_handles_polynomial_and_rational_function_rules() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -36,7 +43,7 @@ fn d_handles_polynomial_and_rational_function_rules() {
 
 #[test]
 fn d_supports_indexed_variables_and_higher_order_specs() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -66,7 +73,7 @@ fn d_supports_indexed_variables_and_higher_order_specs() {
 
 #[test]
 fn d_uses_abstract_derivative_forms_for_symbol_headed_calls() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session.eval_text("D[f[x], x]").unwrap().value.to_string(),
@@ -88,7 +95,7 @@ fn d_uses_abstract_derivative_forms_for_symbol_headed_calls() {
 
 #[test]
 fn d_keeps_current_variable_boundary_for_pattern_or_non_symbol_heads() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
