@@ -174,9 +174,10 @@ from the profile before keeping a change.**
   refuted; hash-consing validated SOUND+~26% on Pair but DEFERRED). Deferred SAFE
   perf work after correctness: hash-consing/value-memo + Module-gensym GC (~10GB
   live leak). Entry point for that line: `scripts/core-language-microbench.sh`.
-- `PROGRESS.md` — full running log; the `2026-06-23` entries cover the correctness
-  chain + the 5 parser/lexer/eval bugs; `2026-06-21`/`2026-06-22` cover the perf
-  line (Layer A, the Pair re-diagnosis, the eliminated dead-ends).
+- `PROGRESS.md` — running log, RESTARTED 2026-07-03 at the crate-rebalance line;
+  everything earlier (correctness chain, perf line, memory line, host-hardening,
+  long-tail) lives in `docs/PROGRESS-archive-2026-07-03.md`. I do not read either
+  for context (user ban — CLAUDE.md + memory carry the state); I only append.
 - `docs/proptaut-performance-audit.md` — the profiling method and reducers.
 - **Unified model (corrected this session):** the Pair `~34x` is NOT a separate
   failed-dispatch defect distinct from the ~3x constant — it is the SAME
