@@ -112,7 +112,9 @@ from the profile before keeping a change.**
 
 - **ACTIVE LINE (2026-07-03): crate responsibility/size REBALANCING — route 2a (full
   builtin extraction). Public release is DEFERRED (not urgent; user chose code cleanliness
-  first).** See memory `crate-rebalance-line.md` for the full plan + data. Summary: the
+  first).** Canonical plan doc: `docs/crate-rebalance-plan.md` (stages + per-brief gate);
+  Stage 1 = brief-097 (open the dispatch). See memory `crate-rebalance-line.md` for the
+  full plan + data. Summary: the
   post-long-tail codebase is crate-imbalanced — `rum-runtime` is a 116k-line/391-file
   MONOLITH (evaluator + ALL builtins) while `rum-stdlib` is a misnamed 21-line installer
   facade. The KEY constraint: builtins are DEEPLY woven into the kernel (528
