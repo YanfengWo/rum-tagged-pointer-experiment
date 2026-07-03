@@ -157,7 +157,7 @@ fn collect_level_parts_in_standard_call(
     }
 }
 
-pub(in crate::runtime) fn collect_level_parts_owned(
+pub fn collect_level_parts_owned(
     expr: &Expr,
     traversal: CasesTraversalConfig,
     level: usize,

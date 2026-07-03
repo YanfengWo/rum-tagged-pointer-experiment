@@ -7,6 +7,7 @@ mod integer_digits;
 mod logic;
 mod number_theory;
 mod polynomials;
+mod predicates;
 mod strings;
 
 pub fn install_core(session: &mut Session) {
@@ -14,6 +15,9 @@ pub fn install_core(session: &mut Session) {
         session.register_builtin(*spec);
     }
     for spec in catalog::LOGIC_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::PREDICATE_BUILTINS {
         session.register_builtin(*spec);
     }
     for spec in catalog::COMBINATORICS_BUILTINS {

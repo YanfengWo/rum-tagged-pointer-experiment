@@ -57,9 +57,6 @@ pub use super::model::{
 // parse_and_message_helpers
 pub use super::parse_and_message_helpers::{parse_heads_option, parse_standard_level_spec};
 
-// predicates
-pub use super::predicates::parse_indeterminate_expr;
-
 // session_state
 pub use super::session_state::{EvalError, ThreadArgSpec, ThreadingDispatch};
 
@@ -67,6 +64,9 @@ pub use super::session_state::{EvalError, ThreadArgSpec, ThreadingDispatch};
 pub use super::structure_ops::{
     exact_expr_at_path, exact_position_paths_from_expr, replace_exact_path,
 };
+
+// tree_walkers
+pub use super::tree_walkers::collect_level_parts_owned;
 
 // suspension/core
 pub use super::suspension::ContinuationValue;

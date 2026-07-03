@@ -1,8 +1,15 @@
-use super::*;
+use crate::install_core;
+use rum_runtime::{Session, SessionRequestError};
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 #[test]
 fn resume_eval_request_with_input_can_finish_mapat_callback_loop() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let first = session
         .eval_request(
@@ -29,7 +36,7 @@ fn resume_eval_request_with_input_can_finish_mapat_callback_loop() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_subsetmap_callback_and_final_eval() {
-    let mut session = Session::new();
+    let mut session = core_session();
     session
         .eval_text("f[x, b] := InputString[\"final: \"]")
         .unwrap();

@@ -1,8 +1,15 @@
-use super::*;
+use crate::install_core;
+use rum_runtime::{Session, SessionRequestError};
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 #[test]
 fn resume_eval_request_with_input_can_finish_nest_callback_loop() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let first = session
         .eval_request("Nest[Function[List[Slot[1], InputString[\"nest: \"]]], seed, 2]")
@@ -26,7 +33,7 @@ fn resume_eval_request_with_input_can_finish_nest_callback_loop() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_nestlist_callback_loop() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let failure = session
         .eval_request("NestList[Function[List[Slot[1], InputString[\"nestlist: \"]]], seed, 1]")
@@ -45,7 +52,7 @@ fn resume_eval_request_with_input_can_finish_nestlist_callback_loop() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_fixedpoint_callback_loop() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let failure = session
         .eval_request(
@@ -63,7 +70,7 @@ fn resume_eval_request_with_input_can_finish_fixedpoint_callback_loop() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_fixedpointlist_callback_loop() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let failure = session
         .eval_request(
@@ -81,7 +88,7 @@ fn resume_eval_request_with_input_can_finish_fixedpointlist_callback_loop() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_nestwhile_test_and_step() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let test = session
         .eval_request(
@@ -104,7 +111,7 @@ fn resume_eval_request_with_input_can_finish_nestwhile_test_and_step() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_nestwhilelist_test_and_step() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let test = session
         .eval_request(

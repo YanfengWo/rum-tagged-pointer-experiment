@@ -1,6 +1,6 @@
 use super::*;
 
-mod predicates;
+mod key_predicates;
 
 impl Session {
     pub(in crate::runtime) fn eval_association(

@@ -375,7 +375,8 @@ impl Session {
         )
     }
 
-    pub(super) fn invalid_call_with_arg_form(
+    /// Builds the standard invalid-call expression for an argument-form violation.
+    pub fn invalid_call_with_arg_form(
         &mut self,
         symbol: &str,
         args: &[Expr],

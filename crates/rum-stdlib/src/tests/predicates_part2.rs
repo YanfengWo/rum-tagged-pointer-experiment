@@ -1,8 +1,15 @@
-use super::*;
+use crate::install_core;
+use rum_runtime::Session;
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 #[test]
 fn order_places_negative_powers_before_their_bases() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -48,7 +55,7 @@ fn order_places_negative_powers_before_their_bases() {
 
 #[test]
 fn negative_power_order_compares_bases_before_exponents() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session

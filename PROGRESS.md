@@ -17,6 +17,26 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 Stage-3 batch 6 DONE (brief-107) — predicates moved; 8 families out
+
+50 predicate specs moved (runtime catalog 350, stdlib 163); the family got its
+free-fn conversion in transit; `builtin_catalog/predicates.rs` deleted whole
+(`MissingQ` stayed — its spec lives in the associations catalog). Migration
+measured 33 test fns (vs logic's 31 — the mild trend holds). Promotions 4
+(≤5 line): the audit-predicted `invalid_call_with_arg_form` +
+`collect_level_parts_owned` + 2 `CasesTraversalConfig` constructors.
+Workspace 1300/0 conserved (runtime 644, stdlib 144); CLI smoke → 2.
+
+Two gate-reviewed edge calls, both accepted with lessons: (1)
+`associations/basic/predicates.rs` renamed to `key_predicates.rs` ONLY because
+the brief's grep gate used a bare word — grep gates must be path-precise
+(second wide-grep incident after brief-100's); (2) the VM template tests lost
+`SameQ` and now register a TEST-LOCAL minimal SameQ (structural equality) via
+the open registry — probes unchanged, and crate-internal mechanism tests
+genuinely cannot migrate (they touch runtime internals). EXPECT this pattern
+to recur when control_flow moves (VM tests likely use If/Do too); the
+test-local registration list joins the exile list as future-cleanup tracking.
+
 ## 2026-07-04 Stage-3 batch 5 DONE (brief-106) — logic moved; the comparisons left the kernel
 
 The user chose Option 1 for the load-bearing tier (tests migrate WITH their

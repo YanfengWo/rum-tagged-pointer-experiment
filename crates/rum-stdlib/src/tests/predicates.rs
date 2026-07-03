@@ -1,8 +1,15 @@
-use super::*;
+use crate::install_core;
+use rum_runtime::Session;
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 #[test]
 fn list_relation_and_shape_predicates_cover_current_exact_subsets() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -424,7 +431,7 @@ fn list_relation_and_shape_predicates_cover_current_exact_subsets() {
 
 #[test]
 fn truth_aggregates_and_coprime_q_cover_current_subsets() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session

@@ -1,8 +1,15 @@
-use super::*;
+use crate::install_core;
+use rum_runtime::Session;
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 #[test]
 fn timing_and_absolute_timing_return_elapsed_and_value() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -58,7 +65,7 @@ fn timing_and_absolute_timing_return_elapsed_and_value() {
 
 #[test]
 fn time_and_memory_constraints_cover_current_first_pass_resource_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -88,7 +95,7 @@ fn time_and_memory_constraints_cover_current_first_pass_resource_subset() {
 
 #[test]
 fn monitor_runs_current_display_and_callback_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let outcome = session
         .eval_text(
@@ -131,7 +138,7 @@ fn monitor_runs_current_display_and_callback_subset() {
 
 #[test]
 fn sow_and_reap_collect_by_tag_and_optional_handler() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session.eval_text("Reap[Sow[1]]").unwrap().value.to_string(),

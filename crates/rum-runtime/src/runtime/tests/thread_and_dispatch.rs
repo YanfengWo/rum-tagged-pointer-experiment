@@ -136,45 +136,6 @@ fn downvalue_miss_stability_shortcut_invalidates_on_later_definition() {
 }
 
 #[test]
-fn dispatch_stage_guards_preserve_value_and_builtin_semantics() {
-    let mut session = Session::new();
-
-    assert_eq!(session.eval_text("k[1]").unwrap().value.to_string(), "k[1]");
-    session.eval_text("k[1] = 9").unwrap();
-    assert_eq!(session.eval_text("k[1]").unwrap().value.to_string(), "9");
-
-    session.eval_text("m /: f[m] := ok").unwrap();
-    assert_eq!(session.eval_text("f[m]").unwrap().value.to_string(), "ok");
-
-    session.eval_text("d[1][2] := 12").unwrap();
-    assert_eq!(
-        session.eval_text("d[1][2]").unwrap().value.to_string(),
-        "12"
-    );
-
-    assert_eq!(
-        session.eval_text("SameQ[1, 1]").unwrap().value.to_string(),
-        "True"
-    );
-    assert_eq!(
-        session
-            .eval_text("If[True, 1, 2]")
-            .unwrap()
-            .value
-            .to_string(),
-        "1"
-    );
-    assert_eq!(
-        session
-            .eval_text("Length[{1, 2, 3}]")
-            .unwrap()
-            .value
-            .to_string(),
-        "3"
-    );
-}
-
-#[test]
 fn argument_preparation_cow_preserves_dispatch_semantics() {
     let mut session = Session::new();
 

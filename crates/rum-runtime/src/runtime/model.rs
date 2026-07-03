@@ -1034,12 +1034,19 @@ pub struct CasesTraversalConfig {
 }
 
 impl CasesTraversalConfig {
-    pub(super) fn default_cases() -> Self {
+    /// Builds the default Cases-style traversal configuration.
+    pub fn default_cases() -> Self {
         Self {
             levels: CasesLevelSpec::default_cases(),
             max_matches: None,
             include_heads: false,
         }
+    }
+
+    /// Returns this traversal configuration with a different level spec.
+    pub fn with_levels(mut self, levels: CasesLevelSpec) -> Self {
+        self.levels = levels;
+        self
     }
 
     pub(super) fn default_member_q() -> Self {

@@ -8,12 +8,20 @@ mod calculus;
 mod combinatorics;
 #[path = "tests/debug_tools_reports.rs"]
 mod debug_tools_reports;
+#[path = "tests/debug_tools_resources.rs"]
+mod debug_tools_resources;
 #[path = "tests/functional_ops/mod.rs"]
 mod functional_ops;
 #[path = "tests/holding_and_control_abort.rs"]
 mod holding_and_control_abort;
 #[path = "tests/holding_and_control_part4.rs"]
 mod holding_and_control_part4;
+#[path = "tests/incidental_arithmetic.rs"]
+mod incidental_arithmetic;
+#[path = "tests/incidental_associations_part2.rs"]
+mod incidental_associations_part2;
+#[path = "tests/incidental_context_and_loader.rs"]
+mod incidental_context_and_loader;
 #[path = "tests/incidental_debug_tools_resources.rs"]
 mod incidental_debug_tools_resources;
 #[path = "tests/incidental_definitions_and_rules_patterns.rs"]
@@ -22,12 +30,26 @@ mod incidental_definitions_and_rules_patterns;
 mod incidental_holding_and_control_part2;
 #[path = "tests/incidental_holding_and_control_part5.rs"]
 mod incidental_holding_and_control_part5;
+#[path = "tests/incidental_holding_and_control_part6.rs"]
+mod incidental_holding_and_control_part6;
 #[path = "tests/incidental_predicates.rs"]
 mod incidental_predicates;
 #[path = "tests/incidental_scoping_gensym_gc.rs"]
 mod incidental_scoping_gensym_gc;
+#[path = "tests/incidental_session_requests_debug_tooling_resume.rs"]
+mod incidental_session_requests_debug_tooling_resume;
+#[path = "tests/incidental_session_requests_functional_sequence_resume.rs"]
+mod incidental_session_requests_functional_sequence_resume;
+#[path = "tests/incidental_session_requests_input_resume.rs"]
+mod incidental_session_requests_input_resume;
+#[path = "tests/incidental_session_requests_transforms_resume_associations.rs"]
+mod incidental_session_requests_transforms_resume_associations;
 #[path = "tests/incidental_structure_ops_ordering_sets.rs"]
 mod incidental_structure_ops_ordering_sets;
+#[path = "tests/incidental_structure_ops_surface.rs"]
+mod incidental_structure_ops_surface;
+#[path = "tests/incidental_thread_and_dispatch.rs"]
+mod incidental_thread_and_dispatch;
 #[path = "tests/integer_digits.rs"]
 mod integer_digits;
 #[path = "tests/logic/mod.rs"]
@@ -36,6 +58,14 @@ mod logic;
 mod number_theory;
 #[path = "tests/polynomials.rs"]
 mod polynomials;
+#[path = "tests/predicates.rs"]
+mod predicates;
+#[path = "tests/predicates_part2.rs"]
+mod predicates_part2;
+#[path = "tests/session_requests/functional_iteration_resume.rs"]
+mod session_requests_functional_iteration_resume;
+#[path = "tests/session_requests/functional_targeted_resume.rs"]
+mod session_requests_functional_targeted_resume;
 #[path = "tests/strings/mod.rs"]
 mod strings;
 

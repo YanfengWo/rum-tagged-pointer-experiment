@@ -1,8 +1,10 @@
 use rum_core::{Atom, BigInt, Expr, Rational};
 use rum_runtime::kernel_api::{
     EvalError, Session, expr_as_exact_rational, expr_as_non_negative_usize, expr_as_symbol,
-    is_system_symbol_name, parse_indeterminate_expr, system_expr,
+    is_system_symbol_name, system_expr,
 };
+
+use crate::polynomials::parse_indeterminate_expr;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct DerivativeSpec {

@@ -1,4 +1,9 @@
-use super::*;
+use rum_core::{Atom, BigInt, Expr, Rational, SYSTEM_CONTEXT, heads};
+use rum_runtime::kernel_api::{
+    CasesTraversalConfig, EvalError, Session, collect_level_parts_owned, compare_expr_canonical,
+    expr_as_exact_integer, expr_as_exact_rational, expr_as_non_negative_usize, expr_as_symbol,
+    is_system_symbol_name, parse_standard_level_spec, system_expr, truthiness_symbol,
+};
 
 mod arrays;
 mod basic;
@@ -6,6 +11,28 @@ mod collections;
 mod numeric;
 mod ordering;
 mod truth;
+
+pub(crate) use self::arrays::{eval_array_q, eval_matrix_q, eval_vector_q};
+pub(crate) use self::basic::{
+    eval_atom_q, eval_date_object_q, eval_list_q, eval_string_q, eval_time_object_q,
+};
+pub(crate) use self::collections::{
+    eval_contains_all, eval_contains_any, eval_contains_exactly, eval_contains_none,
+    eval_contains_only, eval_disjoint_q, eval_duplicate_free_q, eval_intersecting_q, eval_subset_q,
+};
+pub(crate) use self::numeric::{
+    eval_algebraic_integer_q, eval_coprime_q, eval_even_q, eval_integer_q, eval_machine_number_q,
+    eval_negative, eval_non_negative, eval_non_positive, eval_number_q, eval_numeric_q, eval_odd_q,
+    eval_positive, eval_possible_zero_q, eval_prime_q, eval_real_valued_number_q,
+    eval_real_valued_numeric_q,
+};
+pub(crate) use self::ordering::{
+    eval_alphabetic_order, eval_between, eval_lexicographic_order, eval_numerical_order,
+    eval_order, eval_ordered_q, eval_same_q, eval_unsame_q,
+};
+pub(crate) use self::truth::{
+    eval_all_true, eval_any_true, eval_boole, eval_boolean_q, eval_none_true, eval_true_q,
+};
 
 fn exact_numeric_value(expr: &Expr) -> Option<Rational> {
     match expr {
@@ -148,82 +175,82 @@ fn predicate_bool_expr(value: bool) -> Expr {
     })
 }
 
-impl Session {
-    pub(super) fn eval_polynomial_q(
-        &mut self,
-        _head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        match args {
-            [expr] => Ok(polynomial_predicate_bool_expr(
-                is_polynomial_expression_unconstrained(expr),
-            )),
-            [expr, vars_expr] => {
-                let Some(variables) = parse_polynomial_variable_spec(vars_expr) else {
-                    return Ok(self.invalid_call_with_arg_form(
-                        "PolynomialQ",
-                        args,
-                        "expected a variable or variable list",
-                    ));
-                };
-                Ok(polynomial_predicate_bool_expr(
-                    is_polynomial_expression_in_variables(expr, &variables),
-                ))
-            }
-            _ => Ok(self.invalid_call_with_arg_range("PolynomialQ", args, 1, 2)),
+pub(crate) fn eval_polynomial_q(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    match args {
+        [expr] => Ok(polynomial_predicate_bool_expr(
+            is_polynomial_expression_unconstrained(expr),
+        )),
+        [expr, vars_expr] => {
+            let Some(variables) = parse_polynomial_variable_spec(vars_expr) else {
+                return Ok(session.invalid_call_with_arg_form(
+                    "PolynomialQ",
+                    args,
+                    "expected a variable or variable list",
+                ));
+            };
+            Ok(polynomial_predicate_bool_expr(
+                is_polynomial_expression_in_variables(expr, &variables),
+            ))
         }
+        _ => Ok(session.invalid_call_with_arg_range("PolynomialQ", args, 1, 2)),
     }
+}
 
-    pub(super) fn eval_polynomial_expression_q(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        self.eval_polynomial_like_expression_q(
-            head,
-            args,
-            "PolynomialExpressionQ",
-            is_polynomial_expression_in_variables,
-        )
-    }
+pub(crate) fn eval_polynomial_expression_q(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    eval_polynomial_like_expression_q(
+        session,
+        head,
+        args,
+        "PolynomialExpressionQ",
+        is_polynomial_expression_in_variables,
+    )
+}
 
-    pub(super) fn eval_rational_expression_q(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        self.eval_polynomial_like_expression_q(
-            head,
-            args,
-            "RationalExpressionQ",
-            is_rational_expression_in_variables,
-        )
-    }
+pub(crate) fn eval_rational_expression_q(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    eval_polynomial_like_expression_q(
+        session,
+        head,
+        args,
+        "RationalExpressionQ",
+        is_rational_expression_in_variables,
+    )
+}
 
-    fn eval_polynomial_like_expression_q<F>(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-        symbol: &str,
-        predicate: F,
-    ) -> Result<Expr, EvalError>
-    where
-        F: Fn(&Expr, &[Expr]) -> bool,
-    {
-        match args {
-            [expr, vars_expr] => {
-                let Some(variables) = parse_polynomial_variable_spec(vars_expr) else {
-                    return Ok(self.invalid_call_with_arg_form(
-                        symbol,
-                        args,
-                        "expected a variable or variable list",
-                    ));
-                };
-                Ok(polynomial_predicate_bool_expr(predicate(expr, &variables)))
-            }
-            [_, _, _] => Ok(Expr::call(head.clone(), args.to_vec())),
-            _ => Ok(self.invalid_call_with_arg_range(symbol, args, 2, 3)),
+fn eval_polynomial_like_expression_q<F>(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+    symbol: &str,
+    predicate: F,
+) -> Result<Expr, EvalError>
+where
+    F: Fn(&Expr, &[Expr]) -> bool,
+{
+    match args {
+        [expr, vars_expr] => {
+            let Some(variables) = parse_polynomial_variable_spec(vars_expr) else {
+                return Ok(session.invalid_call_with_arg_form(
+                    symbol,
+                    args,
+                    "expected a variable or variable list",
+                ));
+            };
+            Ok(polynomial_predicate_bool_expr(predicate(expr, &variables)))
         }
+        [_, _, _] => Ok(Expr::call(head.clone(), args.to_vec())),
+        _ => Ok(session.invalid_call_with_arg_range(symbol, args, 2, 3)),
     }
 }
 

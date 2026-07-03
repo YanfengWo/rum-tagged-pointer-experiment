@@ -1296,7 +1296,7 @@ mod tests {
     fn assert_compiled_body_matches_tree_walk(rhs: &Expr, bindings: &SymbolExprMap) {
         let code = Arc::new(compile_body(rhs, bindings).expect("RHS should compile"));
         let slot_values = slot_values_for_code(&code, bindings).expect("slots should prepare");
-        let mut actual_session = Session::new();
+        let mut actual_session = vm_test_session();
         let actual = finish_compiled_definition_rhs_result(execute_compiled_body(
             &mut actual_session,
             PreparedCompiledRhsTemplate { code, slot_values },
@@ -1309,7 +1309,7 @@ mod tests {
             bindings,
             rule_rhs_may_splice_without_bindings(rhs),
         );
-        let mut expected_session = Session::new();
+        let mut expected_session = vm_test_session();
         let expected = expected_session
             .evaluate_definition_rhs(None, substituted)
             .expect("tree-walk RHS should evaluate");
@@ -1350,7 +1350,7 @@ mod tests {
     fn eval_compiled_to_string(rhs: &Expr, bindings: &SymbolExprMap) -> String {
         let code = Arc::new(compile_body(rhs, bindings).expect("RHS should compile"));
         let slot_values = slot_values_for_code(&code, bindings).expect("slots should prepare");
-        let mut session = Session::new();
+        let mut session = vm_test_session();
         finish_compiled_definition_rhs_result(execute_compiled_body(
             &mut session,
             PreparedCompiledRhsTemplate { code, slot_values },
@@ -1486,7 +1486,7 @@ mod tests {
     }
 
     fn repeatc_test_session() -> Session {
-        let mut session = Session::new();
+        let mut session = vm_test_session();
         session
             .eval_text(
                 "\
@@ -1508,6 +1508,30 @@ mod tests {
             )
             .expect("repeatc test definitions should install");
         session
+    }
+
+    fn vm_test_session() -> Session {
+        let mut session = Session::new();
+        session.register_builtin(BuiltinSpec::ordinary(
+            "SameQ",
+            "Tests whether all arguments are exactly identical after evaluation.",
+            test_eval_same_q,
+        ));
+        session
+    }
+
+    fn test_eval_same_q(
+        _session: &mut Session,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        Ok(system_expr(
+            if args.windows(2).all(|pair| pair[0] == pair[1]) {
+                heads::structure::TRUE
+            } else {
+                heads::structure::FALSE
+            },
+        ))
     }
 
     fn symbol_expr(symbol: &Symbol) -> Expr {

@@ -60,7 +60,6 @@ mod parse_and_message_helpers;
 mod pattern_matching;
 #[cfg(test)]
 mod pattern_matching_interpreted;
-mod predicates;
 mod profiling;
 mod resolution;
 mod rewrite_builtins;
@@ -89,7 +88,7 @@ use self::{
     hold_thread::*, lexical_substitution::*, listable_dispatch::*, lowering::*,
     matcher_and_symbols::*, message_catalog::*, message_format::*, message_selector_parsing::*,
     metadata::*, model::*, namespace_tools::*, options::*, package_tools::*,
-    parse_and_message_helpers::*, pattern_matching::*, predicates::*, profiling::*, resolution::*,
+    parse_and_message_helpers::*, pattern_matching::*, profiling::*, resolution::*,
     rewrite_builtins::*, scoping::*, session_api::*, session_eval::*, session_helpers::*,
     session_requests::*, session_state::*, slot_substitution::*, structure_ops::*, suspension::*,
     text_rendering::*, tree_walkers::*, vm_rhs_template::*,
@@ -98,6 +97,29 @@ pub use self::{
     builtin_catalog::core_builtin_specs, capabilities::*, lowering::lower_syntax_expr, metadata::*,
     model::*, session_state::EvalError,
 };
+
+impl Session {
+    pub(in crate::runtime) fn eval_missing_q(
+        &mut self,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let [expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("MissingQ", args, 1));
+        };
+
+        Ok(system_expr(
+            if matches!(
+                expr,
+                Expr::Call { head, .. } if is_system_symbol_name(head, "Missing")
+            ) {
+                heads::structure::TRUE
+            } else {
+                heads::structure::FALSE
+            },
+        ))
+    }
+}
 
 #[cfg(test)]
 mod tests;
