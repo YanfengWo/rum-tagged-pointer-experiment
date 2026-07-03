@@ -24,120 +24,148 @@ enum EqualityKnownValue {
     Boolean(bool),
 }
 
-impl Session {
-    pub(in crate::runtime) fn eval_equal(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        Ok(self.eval_comparison_subset(head, args, ComparisonRelation::Equal))
+pub(in crate::runtime) fn eval_equal(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    Ok(eval_comparison_subset(
+        session,
+        head,
+        args,
+        ComparisonRelation::Equal,
+    ))
+}
+
+pub(in crate::runtime) fn eval_unequal(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    Ok(eval_comparison_subset(
+        session,
+        head,
+        args,
+        ComparisonRelation::Unequal,
+    ))
+}
+
+pub(in crate::runtime) fn eval_less(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    Ok(eval_comparison_subset(
+        session,
+        head,
+        args,
+        ComparisonRelation::Less,
+    ))
+}
+
+pub(in crate::runtime) fn eval_greater(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    Ok(eval_comparison_subset(
+        session,
+        head,
+        args,
+        ComparisonRelation::Greater,
+    ))
+}
+
+pub(in crate::runtime) fn eval_less_equal(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    Ok(eval_comparison_subset(
+        session,
+        head,
+        args,
+        ComparisonRelation::LessEqual,
+    ))
+}
+
+pub(in crate::runtime) fn eval_greater_equal(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    Ok(eval_comparison_subset(
+        session,
+        head,
+        args,
+        ComparisonRelation::GreaterEqual,
+    ))
+}
+
+pub(in crate::runtime) fn eval_comparison_operator_wrapper(
+    _session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    Ok(Expr::call(head.clone(), args.to_vec()))
+}
+
+fn eval_comparison_subset(
+    _session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+    relation: ComparisonRelation,
+) -> Expr {
+    if args.len() <= 1 {
+        return predicate_bool_expr(true);
     }
 
-    pub(in crate::runtime) fn eval_unequal(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        Ok(self.eval_comparison_subset(head, args, ComparisonRelation::Unequal))
-    }
-
-    pub(in crate::runtime) fn eval_less(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        Ok(self.eval_comparison_subset(head, args, ComparisonRelation::Less))
-    }
-
-    pub(in crate::runtime) fn eval_greater(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        Ok(self.eval_comparison_subset(head, args, ComparisonRelation::Greater))
-    }
-
-    pub(in crate::runtime) fn eval_less_equal(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        Ok(self.eval_comparison_subset(head, args, ComparisonRelation::LessEqual))
-    }
-
-    pub(in crate::runtime) fn eval_greater_equal(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        Ok(self.eval_comparison_subset(head, args, ComparisonRelation::GreaterEqual))
-    }
-
-    pub(in crate::runtime) fn eval_comparison_operator_wrapper(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        Ok(Expr::call(head.clone(), args.to_vec()))
-    }
-
-    fn eval_comparison_subset(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-        relation: ComparisonRelation,
-    ) -> Expr {
-        if args.len() <= 1 {
-            return predicate_bool_expr(true);
-        }
-
-        if relation == ComparisonRelation::Equal {
-            if let Some(result) = reduce_equal_prefix_chain(args) {
-                return predicate_bool_expr(result);
-            }
-        } else if relation == ComparisonRelation::Unequal {
-            if let Some(result) = reduce_unequal_chain(args) {
-                return predicate_bool_expr(result);
-            }
-        } else if let Some(result) = comparison_result_from_expr_identity(args, relation) {
+    if relation == ComparisonRelation::Equal {
+        if let Some(result) = reduce_equal_prefix_chain(args) {
             return predicate_bool_expr(result);
         }
-
-        if matches!(
-            relation,
-            ComparisonRelation::Less
-                | ComparisonRelation::Greater
-                | ComparisonRelation::LessEqual
-                | ComparisonRelation::GreaterEqual
-        ) {
-            if known_order_chain_contradiction(args, relation) {
-                return predicate_bool_expr(false);
-            }
-            if let Some(result) = reduce_order_chain(head, args, relation) {
-                return result;
-            }
+    } else if relation == ComparisonRelation::Unequal {
+        if let Some(result) = reduce_unequal_chain(args) {
+            return predicate_bool_expr(result);
         }
+    } else if let Some(result) = comparison_result_from_expr_identity(args, relation) {
+        return predicate_bool_expr(result);
+    }
 
-        let result = match relation {
-            ComparisonRelation::Equal | ComparisonRelation::Unequal => args
-                .iter()
-                .map(comparable_value_from_expr)
-                .collect::<Option<Vec<_>>>()
-                .map(|values| compare_equality_values(&values, relation)),
-            ComparisonRelation::Less
+    if matches!(
+        relation,
+        ComparisonRelation::Less
             | ComparisonRelation::Greater
             | ComparisonRelation::LessEqual
-            | ComparisonRelation::GreaterEqual => args
-                .iter()
-                .map(numeric_comparable_value_from_expr)
-                .collect::<Option<Vec<_>>>()
-                .map(|values| compare_numeric_values(&values, relation)),
-        };
-
-        match result {
-            Some(result) => predicate_bool_expr(result),
-            None => Expr::call(head.clone(), args.to_vec()),
+            | ComparisonRelation::GreaterEqual
+    ) {
+        if known_order_chain_contradiction(args, relation) {
+            return predicate_bool_expr(false);
         }
+        if let Some(result) = reduce_order_chain(head, args, relation) {
+            return result;
+        }
+    }
+
+    let result = match relation {
+        ComparisonRelation::Equal | ComparisonRelation::Unequal => args
+            .iter()
+            .map(comparable_value_from_expr)
+            .collect::<Option<Vec<_>>>()
+            .map(|values| compare_equality_values(&values, relation)),
+        ComparisonRelation::Less
+        | ComparisonRelation::Greater
+        | ComparisonRelation::LessEqual
+        | ComparisonRelation::GreaterEqual => args
+            .iter()
+            .map(numeric_comparable_value_from_expr)
+            .collect::<Option<Vec<_>>>()
+            .map(|values| compare_numeric_values(&values, relation)),
+    };
+
+    match result {
+        Some(result) => predicate_bool_expr(result),
+        None => Expr::call(head.clone(), args.to_vec()),
     }
 }
 

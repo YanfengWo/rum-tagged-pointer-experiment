@@ -17,6 +17,23 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-03 Stage-2 step 3 DONE (brief-101) — logic handlers are free functions
+
+The pilot family's handlers no longer live in `impl Session`: 16 handlers
+(truth.rs 8 + comparison.rs 8, incl. the private `eval_comparison_subset` and
+the truth continuation helpers) are free functions
+`fn eval_x(session: &mut Session, …)` with bodies VERBATIM (receiver-only
+change); the facade re-exports them per-item; `builtin_catalog/logic.rs` and
+the nand/nor adapters reference `crate::runtime::logic::eval_*` explicitly.
+Scope note that shaped this brief: catalog file grouping ≠ implementation
+module grouping (catalog/logic.rs references 69 handlers; the logic MODULE
+owns 16 — the rest are predicates/structure_ops and stay untouched until their
+family's brief). Gate: fmt + workspace 1298/0; zero `impl Session` under
+logic*; no microbench (static call → static call, dispatch fn-pointer shape
+unchanged). The logic family is now move-ready: brief-102 = the physical move
+pilot (files → the stdlib crate, spec ownership, kernel Session-method
+pub-ification, test migration).
+
 ## 2026-07-03 Stage-2 step 2 DONE (brief-100) — registration is the ONLY builtin dispatch path
 
 Discovery that motivated it: dispatch resolution silently fell back to a static

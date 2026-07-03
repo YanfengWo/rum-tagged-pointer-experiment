@@ -137,7 +137,7 @@ pub(in crate::runtime) fn builtin_nand(
     _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    session.eval_nand(args)
+    crate::runtime::logic::eval_nand(session, args)
 }
 
 pub(in crate::runtime) fn builtin_nor(
@@ -145,7 +145,7 @@ pub(in crate::runtime) fn builtin_nor(
     _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    session.eval_nor(args)
+    crate::runtime::logic::eval_nor(session, args)
 }
 
 pub(in crate::runtime) fn builtin_set(
