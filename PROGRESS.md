@@ -17,6 +17,30 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 Stage-3 batch 2 DONE (brief-103) — integer_digits + number_theory moved; 3 families out
+
+First BATCH move (two families in one brief) through the proven pipeline:
+`rum-stdlib` now owns `integer_digits` (5 handlers) and `number_theory` (9
+handlers, incl. the Prime/PrimePi small tables and Pollard-rho path); runtime
+catalog 502 → 488, stdlib catalog 25 (11+5+9); runtime greps clean; CLI smoke
+`--eval "NextPrime[100] + FromDigits[{1,2,3}] + EulerPhi[10]"` → 228; workspace
+1299/0. Promotions: `Session::{invalid_call_with_arg_range,
+enforce_generated_element_limit_for_count, thread_call_args, push_message}`
+now `pub` (+ `evaluate` documented); `kernel_api` re-exports
+`num_integer::{Integer,Roots}` + `num_traits::{One,Signed,Zero}` additions.
+
+Two process notes. (1) The NEW test-migration rule proved out: `number_theory`
+tests moved as a whole file (8 fns), while `integer_digits` tests were embedded
+in `tests/arithmetic.rs` — the rule "run the runtime suite after the move; every
+MEASURED failing function moves whole to the stdlib" migrated exactly 3
+functions, no guesswork. (2) The first dispatch of this brief was killed
+mid-move by my own foreground-chained dispatch command (Bash tool 2-min
+timeout); the half-done tree was rolled back cleanly and re-dispatched. That
+failure mode is now MECHANICALLY blocked by a PreToolUse hook
+(`.claude/hooks/guard-dispatch.py`): any `dispatch-brief`/`cdx exec` Bash call
+that is chained, bare-`&` detached, or not run_in_background is denied by the
+harness before execution (DRY_RUN=1 exempt) — verified live.
+
 ## 2026-07-04 Stage 3 OPENED and the MOVE pipeline is PROVEN (brief-102) — combinatorics lives in rum-stdlib
 
 The first family physically left the monolith. `rum-stdlib` now owns the

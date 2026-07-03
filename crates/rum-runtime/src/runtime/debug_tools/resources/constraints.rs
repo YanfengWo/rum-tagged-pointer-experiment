@@ -165,10 +165,8 @@ impl Session {
         Ok(())
     }
 
-    pub(in crate::runtime) fn enforce_generated_element_limit_for_count(
-        &self,
-        count: usize,
-    ) -> Result<(), EvalError> {
+    /// Enforces the configured generated-element limit for a concrete count.
+    pub fn enforce_generated_element_limit_for_count(&self, count: usize) -> Result<(), EvalError> {
         let limit = self.resource_limits.generated_element_limit;
         if count > limit {
             return Err(EvalError::GeneratedElementLimitExceeded { limit });

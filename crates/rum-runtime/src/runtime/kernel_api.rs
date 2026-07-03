@@ -38,8 +38,9 @@ pub use super::message_selector_parsing::truthiness_symbol;
 // metadata
 pub use super::metadata::{Attribute, AttributeSet, BuiltinSpec};
 
-// numeric conversion traits
-pub use num_traits::ToPrimitive;
+// numeric traits
+pub use num_integer::{Integer, Roots};
+pub use num_traits::{One, Signed, ToPrimitive, Zero};
 
 // model
 pub use super::model::{

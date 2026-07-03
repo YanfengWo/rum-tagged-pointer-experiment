@@ -1,4 +1,11 @@
-use super::*;
+use crate::install_core;
+use rum_runtime::Session;
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 fn eval_to_string(session: &mut Session, source: &str) -> String {
     session.eval_text(source).unwrap().value.to_string()
@@ -6,7 +13,7 @@ fn eval_to_string(session: &mut Session, source: &str) -> String {
 
 #[test]
 fn factorization_builtins_match_wolfram_kernel_integer_anchors() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let cases = [
         ("Divisors[12]", "List[1, 2, 3, 4, 6, 12]"),
@@ -70,7 +77,7 @@ fn factorization_builtins_match_wolfram_kernel_integer_anchors() {
 
 #[test]
 fn next_prime_matches_wolfram_kernel_signed_prime_order() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let cases = [
         ("NextPrime[10]", "11"),
@@ -96,7 +103,7 @@ fn next_prime_matches_wolfram_kernel_signed_prime_order() {
 
 #[test]
 fn factorization_builtins_thread_and_passthrough_like_current_scope() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let cases = [
         (
@@ -137,7 +144,7 @@ fn factorization_builtins_thread_and_passthrough_like_current_scope() {
 
 #[test]
 fn factorization_builtins_report_wolfram_kernel_attributes() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let cases = [
         ("Attributes[Divisors]", "List[Listable, Protected]"),
@@ -161,7 +168,7 @@ fn factorization_builtins_report_wolfram_kernel_attributes() {
 
 #[test]
 fn large_semiprime_factorization_uses_pollard_rho_path() {
-    let mut session = Session::new();
+    let mut session = core_session();
     let semiprime = "1000003 * 1000033";
 
     assert_eq!(
@@ -180,7 +187,7 @@ fn large_semiprime_factorization_uses_pollard_rho_path() {
 
 #[test]
 fn prime_reports_wolfram_kernel_positive_integer_message() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let zero = session.eval_text("Prime[0]").unwrap();
     assert_eq!(zero.value.to_string(), "Prime[0]");
@@ -201,7 +208,7 @@ fn prime_reports_wolfram_kernel_positive_integer_message() {
 
 #[test]
 fn factorization_respects_integer_work_limit() {
-    let mut session = Session::new();
+    let mut session = core_session();
     session.set_integer_work_limit(1);
 
     let limited = session.eval_text("Divisors[12]").unwrap();
@@ -219,7 +226,7 @@ fn factorization_respects_integer_work_limit() {
 
 #[test]
 fn prime_and_prime_pi_respect_integer_work_limit() {
-    let mut session = Session::new();
+    let mut session = core_session();
     session.set_integer_work_limit(1);
 
     let limited_prime = session.eval_text("Prime[10000]").unwrap();

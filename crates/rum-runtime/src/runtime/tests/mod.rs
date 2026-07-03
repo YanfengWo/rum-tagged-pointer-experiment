@@ -108,7 +108,6 @@ mod messages_part3;
 mod mma_hol_cold_lane;
 mod namespace_names;
 mod nothing;
-mod number_theory;
 mod options_and_protection;
 mod package_tools;
 mod pattern_matching_orderless_optional;

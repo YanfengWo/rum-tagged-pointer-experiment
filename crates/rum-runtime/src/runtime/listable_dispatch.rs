@@ -20,7 +20,8 @@ impl Session {
         )
     }
 
-    pub(super) fn thread_call_args(
+    /// Threads selected call arguments over a common head and wrapper.
+    pub fn thread_call_args(
         &mut self,
         head: &Expr,
         args: &[Expr],

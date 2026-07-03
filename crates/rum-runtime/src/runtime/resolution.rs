@@ -281,6 +281,7 @@ impl Session {
         (candidates, searched)
     }
 
+    /// Evaluates an expression to a fixed point under the current session state.
     pub fn evaluate(&mut self, expr: Expr) -> Result<Expr, EvalError> {
         self.record_profile_evaluate_entry();
         let runtime_profile = runtime_path_timing_start("evaluate.total");

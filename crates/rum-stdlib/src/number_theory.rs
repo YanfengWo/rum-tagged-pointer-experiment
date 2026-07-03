@@ -1,6 +1,8 @@
-use super::*;
-use num_integer::{Integer, Roots};
-use num_traits::{One, Signed, ToPrimitive, Zero};
+use rum_core::{Atom, BigInt, Expr, Rational};
+use rum_runtime::kernel_api::{
+    EvalError, Integer, One, Roots, Session, Signed, ThreadArgSpec, ThreadingDispatch, ToPrimitive,
+    Zero, expr_as_exact_integer, expr_as_exact_rational, system_expr,
+};
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
@@ -9,265 +11,283 @@ const MILLER_RABIN_WITNESSES: [u64; 12] = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 3
 const SMALL_INDEXED_PRIMES: [usize; 5] = [2, 3, 5, 7, 11];
 const SIEVE_WORK_CHUNK: usize = 16;
 
-impl Session {
-    pub(super) fn eval_divisors(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [arg] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("Divisors", args, 1));
-        };
-        let Some(value) = expr_as_exact_integer(arg) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
+pub(crate) fn eval_divisors(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [arg] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("Divisors", args, 1));
+    };
+    let Some(value) = expr_as_exact_integer(arg) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
 
-        let value = value.abs();
-        if value.is_zero() {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        }
-
-        let mut budget = IntegerWorkBudget::new(self.resource_limits.integer_work_limit);
-        let factors = factorize(&value, &mut budget)?;
-        let divisors = positive_divisors_from_factorization(&factors, &mut budget)?;
-        Ok(Expr::call(
-            system_expr("List"),
-            divisors.into_iter().map(Expr::integer).collect(),
-        ))
+    let value = value.abs();
+    if value.is_zero() {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
     }
 
-    pub(super) fn eval_euler_phi(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [arg] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("EulerPhi", args, 1));
-        };
-        let Some(value) = expr_as_exact_integer(arg) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
+    let mut budget = IntegerWorkBudget::new(session.resource_limits().integer_work_limit);
+    let factors = factorize(&value, &mut budget)?;
+    let divisors = positive_divisors_from_factorization(&factors, &mut budget)?;
+    Ok(Expr::call(
+        system_expr("List"),
+        divisors.into_iter().map(Expr::integer).collect(),
+    ))
+}
 
-        let value = value.abs();
-        if value.is_zero() {
-            return Ok(Expr::integer(BigInt::zero()));
-        }
+pub(crate) fn eval_euler_phi(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [arg] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("EulerPhi", args, 1));
+    };
+    let Some(value) = expr_as_exact_integer(arg) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
 
-        let mut budget = IntegerWorkBudget::new(self.resource_limits.integer_work_limit);
-        let factors = factorize(&value, &mut budget)?;
-        let mut result = value;
-        for (prime, _) in factors {
-            budget.charge(1)?;
-            result = (result / &prime) * (prime - BigInt::one());
-        }
-
-        Ok(Expr::integer(result))
+    let value = value.abs();
+    if value.is_zero() {
+        return Ok(Expr::integer(BigInt::zero()));
     }
 
-    pub(super) fn eval_moebius_mu(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        let [arg] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("MoebiusMu", args, 1));
-        };
-        let Some(value) = expr_as_exact_integer(arg) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-
-        let value = value.abs();
-        if value.is_zero() {
-            return Ok(Expr::integer(BigInt::zero()));
-        }
-
-        let mut budget = IntegerWorkBudget::new(self.resource_limits.integer_work_limit);
-        let factors = factorize(&value, &mut budget)?;
-        if factors.iter().any(|(_, exponent)| *exponent > 1) {
-            return Ok(Expr::integer(BigInt::zero()));
-        }
-
-        let result = if factors.len() % 2 == 0 {
-            1_i32
-        } else {
-            -1_i32
-        };
-        Ok(Expr::integer(BigInt::from(result)))
+    let mut budget = IntegerWorkBudget::new(session.resource_limits().integer_work_limit);
+    let factors = factorize(&value, &mut budget)?;
+    let mut result = value;
+    for (prime, _) in factors {
+        budget.charge(1)?;
+        result = (result / &prime) * (prime - BigInt::one());
     }
 
-    pub(super) fn eval_divisor_sigma(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        let [k_arg, n_arg] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("DivisorSigma", args, 2));
-        };
-        let (Some(k), Some(value)) = (expr_as_exact_integer(k_arg), expr_as_exact_integer(n_arg))
-        else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
+    Ok(Expr::integer(result))
+}
 
-        let value = value.abs();
-        if value.is_zero() {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        }
+pub(crate) fn eval_moebius_mu(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [arg] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("MoebiusMu", args, 1));
+    };
+    let Some(value) = expr_as_exact_integer(arg) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
 
-        let mut budget = IntegerWorkBudget::new(self.resource_limits.integer_work_limit);
-        let factors = factorize(&value, &mut budget)?;
-        let sigma = divisor_sigma_from_factorization(&k, &factors, &mut budget)?;
-        Ok(Expr::rational(sigma))
+    let value = value.abs();
+    if value.is_zero() {
+        return Ok(Expr::integer(BigInt::zero()));
     }
 
-    pub(super) fn eval_prime(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [arg] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("Prime", args, 1));
-        };
-        if let Some(threaded) = self.try_thread_number_theory_call(head, args)? {
-            return Ok(threaded);
-        }
+    let mut budget = IntegerWorkBudget::new(session.resource_limits().integer_work_limit);
+    let factors = factorize(&value, &mut budget)?;
+    if factors.iter().any(|(_, exponent)| *exponent > 1) {
+        return Ok(Expr::integer(BigInt::zero()));
+    }
 
-        let Some(index) = expr_as_exact_integer(arg) else {
-            if matches!(arg, Expr::Atom(Atom::Rational(_))) {
-                self.push_prime_intpp_message(head, args);
+    let result = if factors.len() % 2 == 0 {
+        1_i32
+    } else {
+        -1_i32
+    };
+    Ok(Expr::integer(BigInt::from(result)))
+}
+
+pub(crate) fn eval_divisor_sigma(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [k_arg, n_arg] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("DivisorSigma", args, 2));
+    };
+    let (Some(k), Some(value)) = (expr_as_exact_integer(k_arg), expr_as_exact_integer(n_arg))
+    else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+
+    let value = value.abs();
+    if value.is_zero() {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
+    let mut budget = IntegerWorkBudget::new(session.resource_limits().integer_work_limit);
+    let factors = factorize(&value, &mut budget)?;
+    let sigma = divisor_sigma_from_factorization(&k, &factors, &mut budget)?;
+    Ok(Expr::rational(sigma))
+}
+
+pub(crate) fn eval_prime(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [arg] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("Prime", args, 1));
+    };
+    if let Some(threaded) = try_thread_number_theory_call(session, head, args)? {
+        return Ok(threaded);
+    }
+
+    let Some(index) = expr_as_exact_integer(arg) else {
+        if matches!(arg, Expr::Atom(Atom::Rational(_))) {
+            push_prime_intpp_message(session, head, args);
+        }
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    if index <= BigInt::zero() {
+        push_prime_intpp_message(session, head, args);
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
+    let mut budget = IntegerWorkBudget::new(session.resource_limits().integer_work_limit);
+    budget.charge_bigint_units(&index)?;
+    let prime = nth_positive_prime(&index, &mut budget)?;
+    Ok(Expr::integer(BigInt::from(prime)))
+}
+
+pub(crate) fn eval_prime_pi(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [arg] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("PrimePi", args, 1));
+    };
+    if let Some(threaded) = try_thread_number_theory_call(session, head, args)? {
+        return Ok(threaded);
+    }
+
+    let Some(value) = expr_as_exact_rational(arg) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    let limit = floor_exact_rational_for_number_theory(&value);
+    if limit < BigInt::from(2_u8) {
+        return Ok(Expr::integer(BigInt::zero()));
+    }
+
+    let mut budget = IntegerWorkBudget::new(session.resource_limits().integer_work_limit);
+    let primes = primes_up_to_bigint_limit(&limit, &mut budget)?;
+    Ok(Expr::integer(BigInt::from(primes.len())))
+}
+
+pub(crate) fn eval_prime_nu(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [arg] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("PrimeNu", args, 1));
+    };
+    if let Some(threaded) = try_thread_number_theory_call(session, head, args)? {
+        return Ok(threaded);
+    }
+
+    let Some(value) = expr_as_exact_integer(arg) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    let value = value.abs();
+    if value.is_zero() {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
+    let mut budget = IntegerWorkBudget::new(session.resource_limits().integer_work_limit);
+    let factors = factorize(&value, &mut budget)?;
+    Ok(Expr::integer(BigInt::from(factors.len())))
+}
+
+pub(crate) fn eval_prime_omega(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [arg] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("PrimeOmega", args, 1));
+    };
+    if let Some(threaded) = try_thread_number_theory_call(session, head, args)? {
+        return Ok(threaded);
+    }
+
+    let Some(value) = expr_as_exact_integer(arg) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    let value = value.abs();
+    if value.is_zero() {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
+    let mut budget = IntegerWorkBudget::new(session.resource_limits().integer_work_limit);
+    let factors = factorize(&value, &mut budget)?;
+    let total = factors
+        .iter()
+        .map(|(_, exponent)| BigInt::from(*exponent))
+        .sum();
+    Ok(Expr::integer(total))
+}
+
+pub(crate) fn eval_next_prime(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    match args {
+        [_] | [_, _] => {}
+        _ => return Ok(session.invalid_call_with_arg_range("NextPrime", args, 1, 2)),
+    }
+    if let Some(threaded) = try_thread_number_theory_call(session, head, args)? {
+        return Ok(threaded);
+    }
+
+    let Some(start) = expr_as_exact_integer(&args[0]) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    let step_count = match args {
+        [_] => BigInt::one(),
+        [_, count] => {
+            let Some(count) = expr_as_exact_integer(count) else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
+            if count.is_zero() {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
             }
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-        if index <= BigInt::zero() {
-            self.push_prime_intpp_message(head, args);
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+            count
         }
+        _ => unreachable!("argument count checked above"),
+    };
 
-        let mut budget = IntegerWorkBudget::new(self.resource_limits.integer_work_limit);
-        budget.charge_bigint_units(&index)?;
-        let prime = nth_positive_prime(&index, &mut budget)?;
-        Ok(Expr::integer(BigInt::from(prime)))
+    let mut budget = IntegerWorkBudget::new(session.resource_limits().integer_work_limit);
+    let prime = nth_next_signed_prime(&start, &step_count, &mut budget)?;
+    Ok(Expr::integer(prime))
+}
+
+fn try_thread_number_theory_call(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Option<Expr>, EvalError> {
+    match session.thread_call_args(
+        head,
+        args,
+        &system_expr("List"),
+        &system_expr("List"),
+        &ThreadArgSpec::All,
+    )? {
+        ThreadingDispatch::NotApplicable => Ok(None),
+        ThreadingDispatch::Threaded(threaded) => session.evaluate(threaded).map(Some),
+        ThreadingDispatch::Mismatch => Ok(Some(Expr::call(head.clone(), args.to_vec()))),
     }
+}
 
-    pub(super) fn eval_prime_pi(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [arg] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("PrimePi", args, 1));
-        };
-        if let Some(threaded) = self.try_thread_number_theory_call(head, args)? {
-            return Ok(threaded);
-        }
-
-        let Some(value) = expr_as_exact_rational(arg) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-        let limit = floor_exact_rational_for_number_theory(&value);
-        if limit < BigInt::from(2_u8) {
-            return Ok(Expr::integer(BigInt::zero()));
-        }
-
-        let mut budget = IntegerWorkBudget::new(self.resource_limits.integer_work_limit);
-        let primes = primes_up_to_bigint_limit(&limit, &mut budget)?;
-        Ok(Expr::integer(BigInt::from(primes.len())))
-    }
-
-    pub(super) fn eval_prime_nu(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [arg] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("PrimeNu", args, 1));
-        };
-        if let Some(threaded) = self.try_thread_number_theory_call(head, args)? {
-            return Ok(threaded);
-        }
-
-        let Some(value) = expr_as_exact_integer(arg) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-        let value = value.abs();
-        if value.is_zero() {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        }
-
-        let mut budget = IntegerWorkBudget::new(self.resource_limits.integer_work_limit);
-        let factors = factorize(&value, &mut budget)?;
-        Ok(Expr::integer(BigInt::from(factors.len())))
-    }
-
-    pub(super) fn eval_prime_omega(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        let [arg] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count("PrimeOmega", args, 1));
-        };
-        if let Some(threaded) = self.try_thread_number_theory_call(head, args)? {
-            return Ok(threaded);
-        }
-
-        let Some(value) = expr_as_exact_integer(arg) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-        let value = value.abs();
-        if value.is_zero() {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        }
-
-        let mut budget = IntegerWorkBudget::new(self.resource_limits.integer_work_limit);
-        let factors = factorize(&value, &mut budget)?;
-        let total = factors
-            .iter()
-            .map(|(_, exponent)| BigInt::from(*exponent))
-            .sum();
-        Ok(Expr::integer(total))
-    }
-
-    pub(super) fn eval_next_prime(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Expr, EvalError> {
-        match args {
-            [_] | [_, _] => {}
-            _ => return Ok(self.invalid_call_with_arg_range("NextPrime", args, 1, 2)),
-        }
-        if let Some(threaded) = self.try_thread_number_theory_call(head, args)? {
-            return Ok(threaded);
-        }
-
-        let Some(start) = expr_as_exact_integer(&args[0]) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        };
-        let step_count = match args {
-            [_] => BigInt::one(),
-            [_, count] => {
-                let Some(count) = expr_as_exact_integer(count) else {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
-                };
-                if count.is_zero() {
-                    return Ok(Expr::call(head.clone(), args.to_vec()));
-                }
-                count
-            }
-            _ => unreachable!("argument count checked above"),
-        };
-
-        let mut budget = IntegerWorkBudget::new(self.resource_limits.integer_work_limit);
-        let prime = nth_next_signed_prime(&start, &step_count, &mut budget)?;
-        Ok(Expr::integer(prime))
-    }
-
-    fn try_thread_number_theory_call(
-        &mut self,
-        head: &Expr,
-        args: &[Expr],
-    ) -> Result<Option<Expr>, EvalError> {
-        match self.thread_call_args(
-            head,
-            args,
-            &system_expr("List"),
-            &system_expr("List"),
-            &ThreadArgSpec::All,
-        )? {
-            ThreadingDispatch::NotApplicable => Ok(None),
-            ThreadingDispatch::Threaded(threaded) => self.evaluate(threaded).map(Some),
-            ThreadingDispatch::Mismatch => Ok(Some(Expr::call(head.clone(), args.to_vec()))),
-        }
-    }
-
-    fn push_prime_intpp_message(&mut self, head: &Expr, args: &[Expr]) {
-        let call = Expr::call(head.clone(), args.to_vec());
-        self.push_message(
-            "Prime",
-            "intpp",
-            format!("Positive integer argument expected in {call}."),
-        );
-    }
+fn push_prime_intpp_message(session: &mut Session, head: &Expr, args: &[Expr]) {
+    let call = Expr::call(head.clone(), args.to_vec());
+    session.push_message(
+        "Prime",
+        "intpp",
+        format!("Positive integer argument expected in {call}."),
+    );
 }
 
 #[derive(Debug)]

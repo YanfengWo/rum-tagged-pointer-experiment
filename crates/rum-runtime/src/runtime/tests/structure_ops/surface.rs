@@ -253,7 +253,7 @@ fn hold_form_holds_argument_and_fullform_shows_wrapper() {
 }
 
 #[test]
-fn arithmetic_and_number_theory_builtins_thread_over_lists() {
+fn arithmetic_builtins_thread_over_lists() {
     let mut session = Session::new();
 
     let cases = [

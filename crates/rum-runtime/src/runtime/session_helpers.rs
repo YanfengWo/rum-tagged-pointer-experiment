@@ -155,7 +155,8 @@ impl Session {
             .any(|selector| selector.covers(&candidate))
     }
 
-    pub(super) fn push_message(&mut self, symbol: &str, tag: &str, text: impl Into<String>) {
+    /// Appends a runtime message if the message selector is currently enabled.
+    pub fn push_message(&mut self, symbol: &str, tag: &str, text: impl Into<String>) {
         if !self.message_enabled(symbol, tag) {
             return;
         }
@@ -354,7 +355,8 @@ impl Session {
         )
     }
 
-    pub(super) fn invalid_call_with_arg_range(
+    /// Builds the standard invalid-call expression for an arity range violation.
+    pub fn invalid_call_with_arg_range(
         &mut self,
         symbol: &str,
         args: &[Expr],
