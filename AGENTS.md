@@ -20,9 +20,13 @@ The workspace is organized as Rust crates:
 
 - `rum-syntax`: syntax tree, lexer, parser, diagnostics, formatter
 - `rum-core`: shared runtime-neutral core values
-- `rum-runtime`: lowering, evaluation, definitions, scoping, messages,
-  matching, tracing, and host-facing request APIs
-- `rum-stdlib`: builtin installation for the implemented language slice
+- `rum-runtime`: the pure kernel — lowering, evaluation, definitions, scoping,
+  messages, matching, tracing, host-facing request APIs, and the kernel-resident
+  machinery (Part/control/rewrite data layers, instrumentation); builtins are
+  registered data, not kernel code
+- `rum-stdlib`: the standard library — owns every builtin family's
+  implementation and catalog specs (arithmetic through strings), installed
+  into sessions via `install_core`
 - `rum-host`: narrow Rust embedding facade over runtime sessions, requests,
   structured outcomes, and resumable input
 - `rum-terminal`, `rum-repl`, `rum-cli`: terminal and CLI layers

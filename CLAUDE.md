@@ -110,11 +110,23 @@ from the profile before keeping a change.**
 
 ## Current direction (read these for state)
 
-- **ACTIVE LINE (2026-07-03): crate responsibility/size REBALANCING — route 2a (full
-  builtin extraction). Public release is DEFERRED (not urgent; user chose code cleanliness
-  first).** Canonical plan doc: `docs/crate-rebalance-plan.md` (stages + per-brief gate);
-  Stage 1 = brief-097 (open the dispatch). See memory `crate-rebalance-line.md` for the
-  full plan + data. Summary: the
+- **STRUCTURAL HYGIENE ARC COMPLETE (2026-07-04, briefs 097-123); NO active line.
+  The NEXT DECISION is the public release** (it was deferred FOR cleanliness, which is
+  done) — the user plans to discuss it in a fresh session. What completed: crate
+  rebalancing route 2a (all 14 builtin families → real `rum-stdlib`, catalog 345;
+  `rum-runtime` = pure kernel 65k lines; `docs/crate-rebalance-plan.md` marked
+  COMPLETE with the end-state + boundary laws — Part machinery, shared data layers,
+  and STATIC ATTRIBUTE KNOWLEDGE stay kernel-side, the last learned from a 14x
+  fast-path regression the mandatory gate A/B caught in the finale); file slimming
+  (>35k debt: 9 files → ZERO; runtime/ fan-out 74→48 via five domain dirs); the
+  size-hygiene policy revised from evidence (`docs/code-organization-guidelines.md`
+  — test thresholds, Directory Fan-Out, assess-on-touch, §Splitting Is Organization);
+  Diagnostic capability (brief-122: RumProfile*/memory-observers hidden from
+  restricted hosts); test-local registration consolidation + GC-test repatriation
+  (brief-123). SETTLED sub-decisions: profiling/debug_tools STAY in kernel
+  runtime-gated (unsafe-line rationale: measure-what-you-ship config identity);
+  rum-stdlib KEEPS its name. Open small item: `vm_rhs_template/` fate. Memories:
+  `crate-rebalance-line.md`, `file-slimming-line.md`. Summary: the
   post-long-tail codebase is crate-imbalanced — `rum-runtime` is a 116k-line/391-file
   MONOLITH (evaluator + ALL builtins) while `rum-stdlib` is a misnamed 21-line installer
   facade. The KEY constraint: builtins are DEEPLY woven into the kernel (528

@@ -1,10 +1,20 @@
 # Crate rebalance plan — route 2a (full builtin extraction)
 
-Status: ACTIVE line (2026-07-03). Public release is deferred; this cleanup line was
-chosen first. Executed as a sequence of Codex briefs (`docs/dev/codex/brief-097-…`
-onward), one crate-boundary change per brief, each gated with `cargo fmt --check` +
-`cargo test --workspace` (never a narrow `-p` gate) and — for hot-path touches — a
-`scripts/core-language-microbench.sh` A/B.
+Status: **COMPLETE (2026-07-04)** — executed as briefs 097-113 (plus the follow-on
+file-slimming line, briefs 114-121, and the Diagnostic-capability/test-consolidation
+codas 122/123). End state: all 14 builtin families' spec ownership lives in
+`rum-stdlib` (catalog 345 specs, per-family files); `rum-runtime` is the pure kernel
+(65k lines vs the original 116k monolith; residual catalogs = evaluator semantics:
+definition/rule machinery + the Part family, `Function`/`HoldForm`, scoping,
+namespace, diagnostics); two solution shapes emerged (full implementation move vs
+spec-ownership move with kernel-resident wrappers — used for control_flow/
+rewrite_builtins/arithmetic); boundary laws recorded: the Part machinery, shared data
+layers (associations/text rendering), and STATIC ATTRIBUTE KNOWLEDGE stay
+kernel-side (the last learned from the brief-113 14x fast-path regression, fixed by
+the kernel attribute vocabulary + bidirectional drift test). Each batch was gated
+with `cargo fmt --check` + `cargo test --workspace` (never a narrow `-p` gate) and —
+for hot-path touches — a `scripts/core-language-microbench.sh` A/B. Original plan
+below for the record.
 
 ## The problem (measured 2026-07-03, dev repo, shipping crates)
 

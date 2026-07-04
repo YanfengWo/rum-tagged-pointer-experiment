@@ -8,41 +8,36 @@ Completed history, archived planning detail, and operational lessons live in
 
 ## Current Cut
 
-- [x] **MEMORY LINE — CONCLUDED for safe Rust (2026-06-30).** Phase 0 instruments +
-  0.5 four-C panel (brief-052; only `retained_ratio` is a clean cross-engine constant
-  factor) + 1/1b Module-gensym definition GC + Phase 3 per-node `Expr` compression
-  rungs 1-3 (briefs 053/054: `size_of::<Expr>()` 64→32, dense-list factor 8.3x→~4.0x,
-  kernel faster + alloc ~200x↓); Phase 2 interner residual kept as a bounded tradeoff.
-  Headline Module leak (6 MB→bounded) + dense-list factor addressed. Further needs
-  unsafe tagged-pointer or packed arrays (poor fit). See
-  [docs/memory-management-plan.md](./docs/memory-management-plan.md).
-- [ ] **NEXT-MAINLINE CANDIDATE — host embedding hardening** (mma-hol is through, so
-  "rum as an embeddable engine for other projects" is the forward line). Start from
-  [docs/host-embedding-and-hardening.md](./docs/host-embedding-and-hardening.md) — the
-  capability survey + tiered hardening map (Tier-1: interrupt/cancel, session
-  time/memory budget, structured `HostValue`, `catch_unwind` boundary; Tier-2: reset,
-  session-image-from-bytes, concurrency contract). Then a showcase (sandbox + WASM-ready
-  enablers recorded; specific project deliberately undecided). The deep-`Expr`-drop is
-  a documented known limitation there (not worth the hot-path cost).
+- [x] **STRUCTURAL HYGIENE ARC — COMPLETE (2026-07-04, briefs 097-123).** Crate
+  rebalancing route 2a (all 14 builtin families' spec ownership moved into a real
+  `rum-stdlib`; `rum-runtime` is the pure kernel — see
+  [docs/crate-rebalance-plan.md](./docs/crate-rebalance-plan.md), COMPLETE) +
+  file slimming (the >35k debt tier zeroed from 9 files; runtime/ fan-out grouped
+  74→48) + the size-hygiene policy revised from evidence
+  ([docs/code-organization-guidelines.md](./docs/code-organization-guidelines.md))
+  + the Diagnostic capability (internal instrumentation hidden from restricted
+  hosts) + test-local registration consolidation. Full history in PROGRESS.md.
+- [ ] **NEXT DECISION — the public release.** It was deferred FOR code
+  cleanliness, which is now done. Mechanical precursor: re-create
+  `release-staging/` via the committed brief-096 scrub method + the recorded
+  whitelist. Legal framing settled (independent sandboxed evaluator narrative,
+  DISCLAIMER.md draft, no WK-parity claims).
+- [ ] **Small open sub-decision**: `vm_rhs_template/` fate (experiment, not
+  instrumentation — gate/delete/keep, tied to the VM research line's future).
+  The profiling/debug_tools fate is SETTLED (2026-07-04): stay in kernel,
+  runtime-gated, release surface hidden via the Diagnostic capability —
+  rationale: the prospective unsafe-optimization line needs always-available,
+  measure-what-you-ship instrumentation.
+- [ ] Longer-horizon open directions (unchanged): the showcase project
+  (Tauri/Typst plugin sandbox, after shipping), the deferred perf line
+  (hash-consing/value-memo; bytecode VM per
+  [docs/bytecode-vm-research-notes.md](./docs/bytecode-vm-research-notes.md)),
+  lower-value jupyter stubs, small conformance items.
 - [ ] Treat the next phase as `v0.1` kernel stabilization: correctness,
   contract boundaries, harnesses, and docs come before new same-name breadth.
   Use
   [docs/v0.1-acceptance-boundary.md](./docs/v0.1-acceptance-boundary.md)
   as the concrete acceptance boundary.
-- [ ] Treat
-  [docs/representation-rewrite-plan.md](./docs/representation-rewrite-plan.md)
-  as the active performance mainline (supersedes
-  `docs/performance-kernel-rewrite-plan.md`). The goal is WolframKernel parity or
-  better on the supported `mma-hol` slice by lowering fundamental runtime
-  constants, not by patching downstream `mma-hol`. **Phase 0 + Layer A (A1-A4)
-  are done (2026-06-22).** Next: keep reducing the distributed per-call
-  dispatch/eval constant (the unified `~34x` lever) on the
-  `scripts/core-language-microbench.sh` proxy (`downvalue-exact-hit`/
-  `pattern-hit`), gating each cut with the `RUM_PROFILE_REPR` counters + a clean
-  back-to-back A/B + a bounded Pair re-measure. Prefer cuts that remove real
-  per-call WORK (clones/walks), not just allocations (A3's pure alloc cut did not
-  translate to Pair; A4's head-clone cut did). See the
-  `docs/next-session-handoff.md` `2026-06-22` block.
 - [ ] Promote new Wolfram-style functions only when the support matrix,
   `mma-hol`, or another concrete downstream blocker justifies them.
 - [ ] Keep project-owned Python adapter work frozen until a real downstream

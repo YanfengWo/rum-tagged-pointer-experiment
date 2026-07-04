@@ -45,9 +45,14 @@ For hosts that run untrusted code (e.g. an editor's plugins), the embedding boun
 **capability policy** enforced at builtin dispatch:
 
 - **`Capability`** (`rum_runtime`, re-exported from `rum-host`): `Pure` / `FileRead` /
-  `FileWrite` (extensible — future `Network`/`Process`/… would be new variants). EVERY builtin
-  is classified via an exhaustive, no-wildcard match → **compile-enforced default-deny**: a new
-  builtin cannot ship unclassified, and an unsafe one is never silently `Pure`.
+  `FileWrite` / `Diagnostic` (extensible — future `Network`/`Process`/… would be new
+  variants). `Diagnostic` (brief-122) covers rum-internal instrumentation
+  (`RumProfileReset`/`RumProfileSnapshot`) and host-side resource disclosure
+  (`MemoryInUse`/`MaxMemoryUsed`) — restricted policies hide the internal surface without
+  feature-gating the binary. Since the open-dispatch rework (brief-097) classification is
+  DATA on each `BuiltinSpec` (`with_capability`, default `Pure`), guarded by catalog tests
+  (fs/diagnostic classification assertions + the kernel/stdlib attribute drift test) rather
+  than an exhaustive enum match.
 - **`CapabilityPolicy`** = the allowed-capability set the CALLER chooses:
   `CapabilityPolicy::allow([Capability::Pure, Capability::FileRead])`, a
   `CapabilityPolicyBuilder`, and the default `unrestricted` (all).
