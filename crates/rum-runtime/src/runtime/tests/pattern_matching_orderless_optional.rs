@@ -25,7 +25,7 @@ fn assert_wk_cases(session: &mut Session, cases: &[(&str, &str)]) {
 
 #[test]
 fn orderless_optional_present_matches_and_binds_in_wk_order() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("SetAttributes[f, Orderless]").unwrap();
 
@@ -46,7 +46,7 @@ fn orderless_optional_present_matches_and_binds_in_wk_order() {
 
 #[test]
 fn orderless_optional_omission_uses_explicit_defaults() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("SetAttributes[f, Orderless]").unwrap();
 
@@ -67,7 +67,7 @@ fn orderless_optional_omission_uses_explicit_defaults() {
 
 #[test]
 fn orderless_optional_with_other_args_matches_present_and_omitted() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("SetAttributes[f, Orderless]").unwrap();
 
@@ -87,7 +87,7 @@ fn orderless_optional_with_other_args_matches_present_and_omitted() {
 
 #[test]
 fn orderless_optional_dot_uses_head_default() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session
         .eval_text("SetAttributes[f, Orderless]; Default[f] = d")
@@ -107,7 +107,7 @@ fn orderless_optional_dot_uses_head_default() {
 #[test]
 #[ignore = "KNOWN WK DIVERGENCE (brief-080): Flat+Orderless+Optional still lacks WK's flat-wrapped singleton candidates/order; non-Flat Optional sequence omission is fixed"]
 fn flat_orderless_optional_matches_collects_and_omits_like_wk() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session
         .eval_text("SetAttributes[g, {Flat, Orderless}]")
@@ -138,7 +138,7 @@ fn flat_orderless_optional_matches_collects_and_omits_like_wk() {
 
 #[test]
 fn orderless_optional_with_sequence_neighbors_uses_wk_backtracking_order() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("SetAttributes[f, Orderless]").unwrap();
 
@@ -176,7 +176,7 @@ fn orderless_optional_with_sequence_neighbors_uses_wk_backtracking_order() {
 #[test]
 #[ignore = "KNOWN WK DIVERGENCE (brief-080): Flat+Orderless+Optional sequence-neighbor case still compounds flat-wrapped singleton order with grouped-match under-collection"]
 fn flat_orderless_optional_with_sequence_neighbors_uses_wk_backtracking_order() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session
         .eval_text("SetAttributes[g, {Flat, Orderless}]")
@@ -199,7 +199,7 @@ fn flat_orderless_optional_with_sequence_neighbors_uses_wk_backtracking_order() 
 
 #[test]
 fn orderless_optional_nonmatch_edges_stay_false() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("SetAttributes[f, Orderless]").unwrap();
 
@@ -211,7 +211,7 @@ fn orderless_optional_nonmatch_edges_stay_false() {
         ],
     );
 
-    let mut flat_session = Session::new();
+    let mut flat_session = session_with_test_rewrite_builtins();
 
     flat_session
         .eval_text("SetAttributes[g, {Flat, Orderless}]")

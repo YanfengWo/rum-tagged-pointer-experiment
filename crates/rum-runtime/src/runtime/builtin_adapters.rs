@@ -292,30 +292,6 @@ pub(in crate::runtime) fn builtin_rule_delayed(
     session.eval_rule_delayed(args)
 }
 
-pub(in crate::runtime) fn builtin_match_q(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_match_q(args)
-}
-
-pub(in crate::runtime) fn builtin_cases(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_cases(args)
-}
-
-pub(in crate::runtime) fn builtin_delete_cases(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_delete_cases(args)
-}
-
 pub(in crate::runtime) fn builtin_count(
     session: &mut Session,
     _head: &Expr,
@@ -348,22 +324,6 @@ pub(in crate::runtime) fn builtin_position(
     session.eval_position(args)
 }
 
-pub(in crate::runtime) fn builtin_replace(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_replace(args)
-}
-
-pub(in crate::runtime) fn builtin_replace_list(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_replace_list(args)
-}
-
 pub(in crate::runtime) fn builtin_module(
     session: &mut Session,
     _head: &Expr,
@@ -386,22 +346,6 @@ pub(in crate::runtime) fn builtin_block(
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     session.eval_block(args)
-}
-
-pub(in crate::runtime) fn builtin_replace_all(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_replace_all(args)
-}
-
-pub(in crate::runtime) fn builtin_replace_repeated(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_replace_repeated(args)
 }
 
 pub(in crate::runtime) fn builtin_find_file(

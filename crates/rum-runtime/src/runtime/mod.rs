@@ -62,7 +62,7 @@ mod pattern_matching;
 mod pattern_matching_interpreted;
 mod profiling;
 mod resolution;
-mod rewrite_builtins;
+mod rewrite_data;
 mod scoping;
 mod session_api;
 mod session_eval;
@@ -89,7 +89,7 @@ use self::{
     matcher_and_symbols::*, message_catalog::*, message_format::*, message_selector_parsing::*,
     metadata::*, model::*, namespace_tools::*, options::*, package_tools::*,
     parse_and_message_helpers::*, pattern_matching::*, profiling::*, resolution::*,
-    rewrite_builtins::*, scoping::*, session_api::*, session_eval::*, session_helpers::*,
+    rewrite_data::*, scoping::*, session_api::*, session_eval::*, session_helpers::*,
     session_requests::*, session_state::*, slot_substitution::*, structure_data::*, suspension::*,
     text_rendering::*, tree_walkers::*, vm_rhs_template::*,
 };

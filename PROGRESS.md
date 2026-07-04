@@ -17,6 +17,28 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 Stage-3 batch 11 DONE (brief-112) — rewrite_builtins: wrapper shape, engine untouched
+
+Codex chose the brief-111 wrapper shape with clean evidence (the rewrite
+bodies are matcher machinery: match/compile/normalize, rewrite-rule drivers,
+traversal resolution, suspension drivers, trace hooks — a full move would
+blow the promotion line): implementation renamed `runtime/rewrite_data*`,
+7 specs moved (MatchQ, Cases, DeleteCases, Replace, ReplaceList, ReplaceAll,
+ReplaceRepeated; stdlib catalog 318) behind thin wrappers via
+`RewriteDataBuiltin` + one dispatch method (promotions: 2). Count/MemberQ/
+FreeQ/Position/Level/Rule/NormalizeRules and the definition machinery stayed
+(handlers not rewrite-module-owned). Tests: zero moved — mechanism tests use
+test-local registrations per the amended rule. Workspace 1300/0; CLI → 7.
+
+Gate ran the declared microbench A/B (wrapper covers hot ReplaceAll):
+rewrite/matcher labels flat-to-faster (replaceall −1.6~−2.8% across two runs,
+matchq −2.6~−4.2%, downvalue family ±2%). A +13% cluster appeared on the
+SMALLEST sub-ms labels (loop-empty, do-iterator-null, literal-integer) —
+re-run verdict: machine-state drift, not regression (second run halved it;
+`do-small` which actually executes Do bodies was NEGATIVE; literal-integer is
+untouched by both batches). Two wrapper batches, two neutral A/Bs — the
+wrapper shape is performance-safe. Remaining: arithmetic (the finale).
+
 ## 2026-07-04 Stage-3 batch 10 DONE (brief-111) — control_flow: spec ownership moved, implementation stays
 
 The highest-coupling family got a DIFFERENT solution shape, gate-reviewed in

@@ -1,5 +1,16 @@
 use super::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RewriteDataBuiltin {
+    Cases,
+    DeleteCases,
+    MatchQ,
+    Replace,
+    ReplaceAll,
+    ReplaceList,
+    ReplaceRepeated,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum DeleteCasesResult {
     Keep(Expr),
@@ -147,3 +158,23 @@ impl ContinuationValue for ReplaceOutcome {
 
 mod cases;
 mod replace;
+
+impl Session {
+    /// Dispatches rewrite-family builtin handlers whose bodies remain kernel-side.
+    pub fn eval_rewrite_data_builtin(
+        &mut self,
+        builtin: RewriteDataBuiltin,
+        _head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        match builtin {
+            RewriteDataBuiltin::Cases => self.eval_cases(args),
+            RewriteDataBuiltin::DeleteCases => self.eval_delete_cases(args),
+            RewriteDataBuiltin::MatchQ => self.eval_match_q(args),
+            RewriteDataBuiltin::Replace => self.eval_replace(args),
+            RewriteDataBuiltin::ReplaceAll => self.eval_replace_all(args),
+            RewriteDataBuiltin::ReplaceList => self.eval_replace_list(args),
+            RewriteDataBuiltin::ReplaceRepeated => self.eval_replace_repeated(args),
+        }
+    }
+}

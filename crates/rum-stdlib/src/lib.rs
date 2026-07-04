@@ -11,6 +11,7 @@ mod logic;
 mod number_theory;
 mod polynomials;
 mod predicates;
+mod rewrite_builtins;
 mod strings;
 mod structure_ops;
 
@@ -46,6 +47,9 @@ pub fn install_core(session: &mut Session) {
         session.register_builtin(*spec);
     }
     for spec in catalog::POLYNOMIAL_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::REWRITE_BUILTINS {
         session.register_builtin(*spec);
     }
     for spec in catalog::STRING_BUILTINS {

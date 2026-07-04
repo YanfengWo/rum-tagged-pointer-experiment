@@ -133,21 +133,6 @@ pub(super) const RULE_BUILTINS: &[BuiltinSpec] = &[
         builtin_rule_delayed,
     ),
     BuiltinSpec::special(
-        "MatchQ",
-        "Tests whether an expression matches a pattern.",
-        builtin_match_q,
-    ),
-    BuiltinSpec::special(
-        "Cases",
-        "Collects subexpressions matching a pattern or rule.",
-        builtin_cases,
-    ),
-    BuiltinSpec::special(
-        "DeleteCases",
-        "Deletes subexpressions matching a pattern on levels specified by a standard levelspec.",
-        builtin_delete_cases,
-    ),
-    BuiltinSpec::special(
         "Count",
         "Counts subexpressions matching a pattern on levels specified by a standard levelspec.",
         builtin_count,
@@ -171,26 +156,6 @@ pub(super) const RULE_BUILTINS: &[BuiltinSpec] = &[
         "Position",
         "Finds positions of subexpressions matching a pattern on levels specified by a standard levelspec.",
         builtin_position,
-    ),
-    BuiltinSpec::special(
-        "Replace",
-        "Applies rules at the current first-pass Replace levelspec subset.",
-        builtin_replace,
-    ),
-    BuiltinSpec::special(
-        "ReplaceList",
-        "Returns the current first-pass root replacement results across a rule list, with optional max-result limiting.",
-        builtin_replace_list,
-    ),
-    BuiltinSpec::special(
-        "ReplaceAll",
-        "Applies rules everywhere in an expression.",
-        builtin_replace_all,
-    ),
-    BuiltinSpec::special(
-        "ReplaceRepeated",
-        "Repeatedly applies rules until an expression reaches a fixed point.",
-        builtin_replace_repeated,
     ),
     BuiltinSpec::ordinary_with_hold(
         "NormalizeRules",

@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn compiled_matcher_matches_interpreted_matcher_on_supported_subset() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     for (pattern_src, value_src, expected) in [
         ("x_Integer", "7", true),
@@ -32,9 +32,13 @@ fn compiled_matcher_matches_interpreted_matcher_on_supported_subset() {
         ("f[x__, y_Integer]", "f[1, 2, 3]", true),
         ("f[x___]", "f[]", true),
     ] {
-        let pattern = lower_syntax_expr(&parse_expr(pattern_src).unwrap()).unwrap();
+        let pattern = session
+            .lower_syntax_expr(&parse_expr(pattern_src).unwrap())
+            .unwrap();
         let pattern = session.normalize_pattern_expr(&pattern).unwrap();
-        let value = lower_syntax_expr(&parse_expr(value_src).unwrap()).unwrap();
+        let value = session
+            .lower_syntax_expr(&parse_expr(value_src).unwrap())
+            .unwrap();
         let value = session.evaluate(value).unwrap();
         let mut interpreted_bindings = SymbolExprMap::default();
         let mut compiled_bindings = SymbolExprMap::default();
@@ -60,8 +64,8 @@ fn compiled_matcher_matches_interpreted_matcher_on_supported_subset() {
 
 #[test]
 fn interpreted_matcher_owned_can_resume_sequence_conditions_across_input() {
-    let mut session = Session::new();
-    let pattern = lower_syntax_expr(
+    let mut session = session_with_test_rewrite_builtins();
+    let pattern = session.lower_syntax_expr(
         &parse_expr(
             "f[x__ /; MatchQ[InputString[\"first: \"], \"yes\"], y__ /; MatchQ[InputString[\"second: \"], \"ok\"]]",
         )
@@ -69,7 +73,9 @@ fn interpreted_matcher_owned_can_resume_sequence_conditions_across_input() {
     )
     .unwrap();
     let pattern = session.normalize_pattern_expr(&pattern).unwrap();
-    let value = lower_syntax_expr(&parse_expr("f[1, 2, 3]").unwrap()).unwrap();
+    let value = session
+        .lower_syntax_expr(&parse_expr("f[1, 2, 3]").unwrap())
+        .unwrap();
     let value = session.evaluate(value).unwrap();
 
     let failure = session
@@ -116,7 +122,7 @@ fn interpreted_matcher_owned_can_resume_sequence_conditions_across_input() {
 
 #[test]
 fn inspect_definition_catalog_reports_kinds_and_delayedness() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("x = 42").unwrap();
     session.eval_text("y := x").unwrap();
@@ -163,7 +169,7 @@ fn inspect_definition_catalog_reports_kinds_and_delayedness() {
 
 #[test]
 fn set_supports_immediate_pattern_based_downvalues_and_subvalues() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session.eval_text("f[x_] = 1").unwrap().value.to_string(),
@@ -219,7 +225,7 @@ fn lowers_slots_and_pure_functions() {
 
 #[test]
 fn setdelayed_stores_and_applies_simple_downvalue() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -237,7 +243,7 @@ fn setdelayed_stores_and_applies_simple_downvalue() {
 
 #[test]
 fn matchq_reports_true_for_matching_pattern() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -251,7 +257,7 @@ fn matchq_reports_true_for_matching_pattern() {
 
 #[test]
 fn matchq_reports_false_for_non_matching_pattern() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -265,7 +271,7 @@ fn matchq_reports_false_for_non_matching_pattern() {
 
 #[test]
 fn matchq_supports_plain_blank_arguments_under_fixed_heads() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -295,7 +301,7 @@ fn matchq_supports_plain_blank_arguments_under_fixed_heads() {
 
 #[test]
 fn matchq_supports_blanksequence_in_argument_lists() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -317,7 +323,7 @@ fn matchq_supports_blanksequence_in_argument_lists() {
 
 #[test]
 fn matchq_supports_blanknullsequence_in_argument_lists() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -339,7 +345,7 @@ fn matchq_supports_blanknullsequence_in_argument_lists() {
 
 #[test]
 fn matchq_supports_conditions_on_sequence_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -361,7 +367,7 @@ fn matchq_supports_conditions_on_sequence_patterns() {
 
 #[test]
 fn matchq_supports_patterntest_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -383,7 +389,7 @@ fn matchq_supports_patterntest_patterns() {
 
 #[test]
 fn matchq_supports_alternatives_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -413,7 +419,7 @@ fn matchq_supports_alternatives_patterns() {
 
 #[test]
 fn matchq_supports_except_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -443,7 +449,7 @@ fn matchq_supports_except_patterns() {
 
 #[test]
 fn matchq_supports_optional_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -473,7 +479,7 @@ fn matchq_supports_optional_patterns() {
 
 #[test]
 fn matchq_supports_repeated_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -503,7 +509,7 @@ fn matchq_supports_repeated_patterns() {
 
 #[test]
 fn matchq_supports_patterntest_on_sequence_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -529,7 +535,7 @@ fn matchq_supports_patterntest_on_sequence_patterns() {
 
 #[test]
 fn downvalue_matches_after_argument_evaluation() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("f[x_Integer] := x").unwrap();
     session.eval_text("y = 11").unwrap();
@@ -539,7 +545,7 @@ fn downvalue_matches_after_argument_evaluation() {
 
 #[test]
 fn downvalue_can_substitute_multiple_named_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("pair[a_, b_] := {a, b}").unwrap();
 
@@ -551,7 +557,7 @@ fn downvalue_can_substitute_multiple_named_patterns() {
 
 #[test]
 fn downvalue_splices_named_blanksequence_into_rhs_calls() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("echo[x__] := g[x]").unwrap();
 
@@ -567,7 +573,7 @@ fn downvalue_splices_named_blanksequence_into_rhs_calls() {
 
 #[test]
 fn downvalue_splices_named_blanknullsequence_into_empty_lists() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("pack[x___] := {x}").unwrap();
 
@@ -583,7 +589,7 @@ fn downvalue_splices_named_blanknullsequence_into_empty_lists() {
 
 #[test]
 fn unmatched_downvalue_leaves_call_in_place() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("f[x_Integer] := x").unwrap();
 

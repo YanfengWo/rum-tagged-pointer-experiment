@@ -11,6 +11,9 @@ pub use super::capabilities::Capability;
 // control_data
 pub use super::control_data::ControlDataBuiltin;
 
+// rewrite_data
+pub use super::rewrite_data::RewriteDataBuiltin;
+
 // arithmetic
 pub use super::arithmetic::{expr_as_exact_integer, expr_as_exact_rational};
 

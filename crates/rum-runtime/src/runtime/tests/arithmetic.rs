@@ -6,7 +6,7 @@ fn eval_to_string(session: &mut Session, source: &str) -> String {
 
 #[test]
 fn exact_integer_arithmetic_evaluates_core_heads() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(session.eval_text("2 + 3").unwrap().value.to_string(), "5");
     assert_eq!(session.eval_text("2 - 5").unwrap().value.to_string(), "-3");
@@ -83,7 +83,7 @@ fn exact_integer_arithmetic_evaluates_core_heads() {
 
 #[test]
 fn round_handles_exact_numbers_decimal_literals_and_half_even_ties() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session.eval_text("Round[3/2]").unwrap().value.to_string(),
@@ -121,7 +121,7 @@ fn round_handles_exact_numbers_decimal_literals_and_half_even_ties() {
 
 #[test]
 fn scalar_math_builtins_match_exact_wolfram_kernel_cases() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     let cases = [
         ("Sign[-3/2]", "-1"),
@@ -164,7 +164,7 @@ fn scalar_math_builtins_match_exact_wolfram_kernel_cases() {
 
 #[test]
 fn scalar_math_builtins_thread_over_lists_and_leave_skipped_forms_symbolic() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     let cases = [
         ("Sign[{7/2, -1/2, x}]", "List[1, -1, Sign[x]]"),
@@ -187,7 +187,7 @@ fn scalar_math_builtins_thread_over_lists_and_leave_skipped_forms_symbolic() {
 
 #[test]
 fn scalar_math_builtins_report_wolfram_kernel_attributes() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     let scalar_attributes = "List[Listable, NumericFunction, Protected]";
     for name in [
@@ -214,7 +214,7 @@ fn scalar_math_builtins_report_wolfram_kernel_attributes() {
 
 #[test]
 fn factorial_respects_integer_work_limit() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
     session.set_integer_work_limit(3);
 
     let limited = session.eval_text("Factorial[5]").unwrap();
@@ -244,7 +244,7 @@ fn factorial_respects_integer_work_limit() {
 
 #[test]
 fn exact_division_and_negative_integer_powers_produce_rationals() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(session.eval_text("1 / 2").unwrap().value.to_string(), "1/2");
     assert_eq!(session.eval_text("6 / 4").unwrap().value.to_string(), "3/2");
@@ -258,7 +258,7 @@ fn exact_division_and_negative_integer_powers_produce_rationals() {
 
 #[test]
 fn plus_and_times_fold_numeric_parts_without_forcing_symbolic_algebra() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session.eval_text("x + 2 + 1/2").unwrap().value.to_string(),
@@ -286,7 +286,7 @@ fn plus_and_times_fold_numeric_parts_without_forcing_symbolic_algebra() {
 
 #[test]
 fn exact_integer_mod_quotient_gcd_lcm_and_powermod_follow_floor_style_semantics() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session.eval_text("Mod[-3, 2]").unwrap().value.to_string(),
@@ -340,7 +340,7 @@ fn exact_integer_mod_quotient_gcd_lcm_and_powermod_follow_floor_style_semantics(
 
 #[test]
 fn rational_atoms_expose_a_rational_head_for_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session

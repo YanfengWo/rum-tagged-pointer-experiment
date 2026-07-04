@@ -57,6 +57,14 @@ macro_rules! test_control_handler {
     };
 }
 
+macro_rules! test_rewrite_handler {
+    ($name:ident, $builtin:ident) => {
+        fn $name(session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+            session.eval_rewrite_data_builtin(RewriteDataBuiltin::$builtin, head, args)
+        }
+    };
+}
+
 test_control_handler!(test_control_compound_expression, CompoundExpression);
 test_control_handler!(test_control_if, If);
 test_control_handler!(test_control_which, Which);
@@ -90,6 +98,14 @@ test_control_handler!(test_control_failure, Failure);
 test_control_handler!(test_control_failure_q, FailureQ);
 test_control_handler!(test_control_success, Success);
 test_control_handler!(test_control_terminated_evaluation, TerminatedEvaluation);
+
+test_rewrite_handler!(test_rewrite_match_q, MatchQ);
+test_rewrite_handler!(test_rewrite_cases, Cases);
+test_rewrite_handler!(test_rewrite_delete_cases, DeleteCases);
+test_rewrite_handler!(test_rewrite_replace, Replace);
+test_rewrite_handler!(test_rewrite_replace_all, ReplaceAll);
+test_rewrite_handler!(test_rewrite_replace_list, ReplaceList);
+test_rewrite_handler!(test_rewrite_replace_repeated, ReplaceRepeated);
 
 fn register_test_control_builtins(session: &mut Session) {
     let specs = [
@@ -299,9 +315,60 @@ fn register_test_control_builtins(session: &mut Session) {
     }
 }
 
+fn register_test_rewrite_builtins(session: &mut Session) {
+    let specs = [
+        BuiltinSpec::special(
+            "MatchQ",
+            "Test-local moved rewrite builtin.",
+            test_rewrite_match_q,
+        ),
+        BuiltinSpec::special(
+            "Cases",
+            "Test-local moved rewrite builtin.",
+            test_rewrite_cases,
+        ),
+        BuiltinSpec::special(
+            "DeleteCases",
+            "Test-local moved rewrite builtin.",
+            test_rewrite_delete_cases,
+        ),
+        BuiltinSpec::special(
+            "Replace",
+            "Test-local moved rewrite builtin.",
+            test_rewrite_replace,
+        ),
+        BuiltinSpec::special(
+            "ReplaceList",
+            "Test-local moved rewrite builtin.",
+            test_rewrite_replace_list,
+        ),
+        BuiltinSpec::special(
+            "ReplaceAll",
+            "Test-local moved rewrite builtin.",
+            test_rewrite_replace_all,
+        ),
+        BuiltinSpec::special(
+            "ReplaceRepeated",
+            "Test-local moved rewrite builtin.",
+            test_rewrite_replace_repeated,
+        ),
+    ];
+
+    for spec in specs {
+        session.register_builtin(spec);
+    }
+}
+
 fn session_with_test_control_builtins() -> Session {
     let mut session = Session::new();
     register_test_control_builtins(&mut session);
+    register_test_rewrite_builtins(&mut session);
+    session
+}
+
+fn session_with_test_rewrite_builtins() -> Session {
+    let mut session = Session::new();
+    register_test_rewrite_builtins(&mut session);
     session
 }
 

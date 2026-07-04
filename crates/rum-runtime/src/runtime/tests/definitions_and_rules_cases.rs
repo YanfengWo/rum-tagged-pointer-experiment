@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn cases_collects_nested_matches() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -16,7 +16,7 @@ fn cases_collects_nested_matches() {
 
 #[test]
 fn cases_can_match_the_root_expression() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -30,7 +30,7 @@ fn cases_can_match_the_root_expression() {
 
 #[test]
 fn cases_does_not_treat_heads_as_separate_candidates() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -44,7 +44,7 @@ fn cases_does_not_treat_heads_as_separate_candidates() {
 
 #[test]
 fn cases_supports_standard_integer_level_specs() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -74,7 +74,7 @@ fn cases_supports_standard_integer_level_specs() {
 
 #[test]
 fn cases_supports_exact_range_negative_and_infinity_level_specs() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -160,7 +160,7 @@ fn cases_supports_exact_range_negative_and_infinity_level_specs() {
 
 #[test]
 fn cases_supports_explicit_head_traversal_control() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -269,7 +269,7 @@ fn cases_supports_explicit_head_traversal_control() {
 
 #[test]
 fn cases_traverses_depth_first_with_leaves_before_roots_and_respects_match_limits() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -291,7 +291,7 @@ fn cases_traverses_depth_first_with_leaves_before_roots_and_respects_match_limit
 
 #[test]
 fn cases_applies_rule_transformations() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -313,7 +313,7 @@ fn cases_applies_rule_transformations() {
 
 #[test]
 fn cases_preserves_immediate_and_delayed_rule_behavior() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("n = 1").unwrap();
     session.eval_text("immediate = x_Integer -> n").unwrap();
@@ -340,7 +340,7 @@ fn cases_preserves_immediate_and_delayed_rule_behavior() {
 
 #[test]
 fn cases_honors_condition_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -354,7 +354,7 @@ fn cases_honors_condition_patterns() {
 
 #[test]
 fn cases_honors_patterntest_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("goodQ[x_] := MatchQ[x, 8]").unwrap();
 
@@ -370,7 +370,7 @@ fn cases_honors_patterntest_patterns() {
 
 #[test]
 fn cases_honors_alternatives_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -384,7 +384,7 @@ fn cases_honors_alternatives_patterns() {
 
 #[test]
 fn cases_honors_except_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -398,7 +398,7 @@ fn cases_honors_except_patterns() {
 
 #[test]
 fn cases_honors_optional_and_repeated_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -420,7 +420,7 @@ fn cases_honors_optional_and_repeated_patterns() {
 
 #[test]
 fn cases_rule_rhs_splices_named_blanksequence_matches() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -434,7 +434,7 @@ fn cases_rule_rhs_splices_named_blanksequence_matches() {
 
 #[test]
 fn deletecases_deletes_top_level_matches_by_default() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -448,7 +448,7 @@ fn deletecases_deletes_top_level_matches_by_default() {
 
 #[test]
 fn deletecases_supports_standard_levelspecs_and_limits() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -470,7 +470,7 @@ fn deletecases_supports_standard_levelspecs_and_limits() {
 
 #[test]
 fn deletecases_can_delete_heads_and_association_values() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session

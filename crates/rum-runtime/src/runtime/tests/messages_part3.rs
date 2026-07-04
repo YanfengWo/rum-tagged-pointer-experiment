@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn check_can_catch_iteration_limit_messages_from_replace_repeated() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
     session.set_replace_repeated_limit(8);
 
     let outcome = session
@@ -29,7 +29,7 @@ fn beginpackage_can_load_dependencies_via_needs() {
         "Main.rum",
         "BeginPackage[\"Main`\", {\"Dep`\"}]\nvalue = Dep`depValue\nEndPackage[]",
     );
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
     session.set_package_search_paths([dir.path().to_path_buf()]);
 
     session.eval_text("Needs[\"Main`\"]").unwrap();
@@ -52,7 +52,7 @@ fn beginpackage_accepts_resolved_dependency_lists() {
         "Main.rum",
         "deps = {\"Dep`\"}\nBeginPackage[\"Main`\", deps]\nvalue = Dep`depValue\nEndPackage[]",
     );
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
     session.set_package_search_paths([dir.path().to_path_buf()]);
 
     session.eval_text("Needs[\"Main`\"]").unwrap();
@@ -67,7 +67,7 @@ fn beginpackage_accepts_resolved_dependency_lists() {
 #[test]
 fn path_builtin_reflects_package_search_roots() {
     let dir = TempDirGuard::new("path");
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
     session.set_package_search_paths([dir.path().to_path_buf()]);
 
     assert_eq!(
@@ -78,7 +78,7 @@ fn path_builtin_reflects_package_search_roots() {
 
 #[test]
 fn explicit_non_system_heads_do_not_trigger_builtin_dispatch() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
@@ -92,7 +92,7 @@ fn explicit_non_system_heads_do_not_trigger_builtin_dispatch() {
 
 #[test]
 fn hold_family_respects_builtin_hold_attributes() {
-    let mut session = Session::new();
+    let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
         session
