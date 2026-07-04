@@ -12,16 +12,16 @@ pub use super::capabilities::Capability;
 pub use super::builtin_catalog::{BuiltinAttributeSpec, stdlib_builtin_attribute_specs};
 
 // control_data
-pub use super::control_data::ControlDataBuiltin;
+pub use super::kernel_data::control_data::ControlDataBuiltin;
 
 // rewrite_data
-pub use super::rewrite_data::RewriteDataBuiltin;
+pub use super::kernel_data::rewrite_data::RewriteDataBuiltin;
 
 // arithmetic
 pub use super::arithmetic::{ArithmeticDataBuiltin, expr_as_exact_integer, expr_as_exact_rational};
 
 // association_data
-pub use super::association_data::{
+pub use super::kernel_data::association_data::{
     AssociationEntryForm, association_entries_from_expr, association_entry_forms_from_expr,
     is_missing_expr, list_items, missing_key_absent_expr, parse_association_entry_form,
     render_association, render_association_entry_forms_preserving_heads,
@@ -39,10 +39,10 @@ pub use super::expr_runtime_helpers::{
 };
 
 // lexical_substitution
-pub use super::lexical_substitution::substitute_lexical_bindings;
+pub use super::substitution::lexical_substitution::substitute_lexical_bindings;
 
 // message_selector_parsing
-pub use super::message_selector_parsing::truthiness_symbol;
+pub use super::messages::message_selector_parsing::truthiness_symbol;
 
 // metadata
 pub use super::metadata::{Attribute, AttributeSet, BuiltinSpec, HoldAttribute};
@@ -58,16 +58,16 @@ pub use super::model::{
 };
 
 // parse_and_message_helpers
-pub use super::parse_and_message_helpers::{
+pub use super::messages::parse_and_message_helpers::{
     HeadsOptionClassification, classify_heads_option_expr, parse_heads_option,
     parse_heads_option_with_default, parse_standard_level_spec,
 };
 
 // session_state
-pub use super::session_state::{EvalError, ThreadArgSpec, ThreadingDispatch};
+pub use super::session::session_state::{EvalError, ThreadArgSpec, ThreadingDispatch};
 
 // structure_data
-pub use super::structure_data::{
+pub use super::kernel_data::structure_data::{
     exact_expr_at_path, exact_position_paths_from_expr,
     exact_position_paths_from_part_selector_exprs, replace_exact_path,
 };
@@ -79,4 +79,6 @@ pub use super::tree_walkers::collect_level_parts_owned;
 pub use super::suspension::ContinuationValue;
 
 // text_rendering
-pub use super::text_rendering::{ToStringFormat, render_input_like_expr, render_to_string_expr};
+pub use super::kernel_data::text_rendering::{
+    ToStringFormat, render_input_like_expr, render_to_string_expr,
+};

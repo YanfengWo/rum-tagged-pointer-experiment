@@ -1,0 +1,423 @@
+use super::super::*;
+use std::sync::atomic::Ordering;
+use std::time::Instant;
+
+pub(in crate::runtime) struct EvaluationRollbackSnapshot {
+    loader: LoaderSnapshot,
+    option_value_scopes: Vec<OptionValueScope>,
+    module_activations: Vec<ModuleActivation>,
+    load_stack: Vec<PathBuf>,
+    evaluation_depth: usize,
+    match_depth: usize,
+    evaluation_stack: Vec<EvaluationStackEntry>,
+    prints: Vec<String>,
+    handled_non_loader_eval_errors: Vec<RuntimeMessage>,
+    reap_scopes: Vec<ReapScope>,
+    monitor_scopes: Vec<MonitorScope>,
+    monitor_callbacks_enabled: bool,
+    current_time_deadline: Option<Instant>,
+    current_memory_limit: Option<usize>,
+    asserts_enabled: bool,
+    abort_protect_depth: usize,
+    abort_protect_pending: usize,
+    queued_input_responses: VecDeque<String>,
+    pending_input_request: Option<RuntimeInputRequest>,
+    pending_eval_request: Option<PendingEvalRequest>,
+    had_pending_suspension: bool,
+}
+
+impl Session {
+    pub(in crate::runtime) fn begin_top_level_interrupt_budget(&mut self) {
+        self.interrupt_flag.store(false, Ordering::Relaxed);
+        self.interrupt_poll_counter = 0;
+        self.eval_deadline = self.eval_timeout.map(|timeout| Instant::now() + timeout);
+        self.interrupt_armed =
+            self.eval_deadline.is_some() || std::sync::Arc::strong_count(&self.interrupt_flag) > 1;
+    }
+
+    pub(in crate::runtime) fn capture_loader_snapshot(&self) -> LoaderSnapshot {
+        LoaderSnapshot {
+            attributes: self.attributes.clone(),
+            options: self.options.clone(),
+            syntax_information: self.syntax_information.clone(),
+            declared_stubs: self.declared_stubs.clone(),
+            removed_symbols: self.removed_symbols.clone(),
+            symbol_generations: self.symbol_generations.clone(),
+            once_values: self.once_values.clone(),
+            current_context: self.current_context.clone(),
+            context_path: self.context_path.clone(),
+            context_stack: self.context_stack.clone(),
+            package_search_paths: self.package_search_paths.clone(),
+            loaded_packages: self.loaded_packages.clone(),
+            definitions: self.definitions.clone(),
+            has_up_value_definitions: self.has_up_value_definitions,
+            message_definitions: self.message_definitions.clone(),
+            next_generated_symbol_id: self.next_generated_symbol_id,
+            trace_events: self.trace_events.clone(),
+            trace_event_depths: self.trace_event_depths.clone(),
+            disabled_message_selectors: self.disabled_message_selectors.clone(),
+            messages: self.messages.clone(),
+            last_message_list: self.last_message_list.clone(),
+        }
+    }
+
+    pub(in crate::runtime) fn restore_loader_snapshot(&mut self, snapshot: LoaderSnapshot) {
+        self.attributes = snapshot.attributes;
+        self.bump_attribute_revision();
+        self.options = snapshot.options;
+        self.syntax_information = snapshot.syntax_information;
+        self.declared_stubs = snapshot.declared_stubs;
+        self.removed_symbols = snapshot.removed_symbols;
+        self.symbol_generations = snapshot.symbol_generations;
+        self.once_values = snapshot.once_values;
+        self.current_context = snapshot.current_context;
+        self.context_path = snapshot.context_path;
+        self.context_stack = snapshot.context_stack;
+        self.package_search_paths = snapshot.package_search_paths;
+        self.loaded_packages = snapshot.loaded_packages;
+        self.definitions = snapshot.definitions;
+        self.has_up_value_definitions = snapshot.has_up_value_definitions;
+        self.message_definitions = snapshot.message_definitions;
+        self.rebuild_message_symbol_counts();
+        self.next_generated_symbol_id = snapshot.next_generated_symbol_id;
+        self.trace_events = snapshot.trace_events;
+        self.trace_event_depths = snapshot.trace_event_depths;
+        self.disabled_message_selectors = snapshot.disabled_message_selectors;
+        self.messages = snapshot.messages;
+        self.last_message_list = snapshot.last_message_list;
+    }
+
+    pub(in crate::runtime) fn capture_evaluation_rollback_snapshot(
+        &self,
+    ) -> EvaluationRollbackSnapshot {
+        EvaluationRollbackSnapshot {
+            loader: self.capture_loader_snapshot(),
+            option_value_scopes: self.option_value_scopes.clone(),
+            module_activations: self.module_activations.clone(),
+            load_stack: self.load_stack.clone(),
+            evaluation_depth: self.evaluation_depth,
+            match_depth: self.match_depth,
+            evaluation_stack: self.evaluation_stack.clone(),
+            prints: self.prints.clone(),
+            handled_non_loader_eval_errors: self.handled_non_loader_eval_errors.clone(),
+            reap_scopes: self.reap_scopes.clone(),
+            monitor_scopes: self.monitor_scopes.clone(),
+            monitor_callbacks_enabled: self.monitor_callbacks_enabled,
+            current_time_deadline: self.current_time_deadline,
+            current_memory_limit: self.current_memory_limit,
+            asserts_enabled: self.asserts_enabled,
+            abort_protect_depth: self.abort_protect_depth,
+            abort_protect_pending: self.abort_protect_pending,
+            queued_input_responses: self.queued_input_responses.clone(),
+            pending_input_request: self.pending_input_request.clone(),
+            pending_eval_request: self.pending_eval_request,
+            had_pending_suspension: self.pending_suspension.is_some(),
+        }
+    }
+
+    pub(in crate::runtime) fn restore_evaluation_rollback_snapshot(
+        &mut self,
+        snapshot: EvaluationRollbackSnapshot,
+    ) {
+        self.restore_loader_snapshot(snapshot.loader);
+        self.option_value_scopes = snapshot.option_value_scopes;
+        self.module_activations = snapshot.module_activations;
+        self.load_stack = snapshot.load_stack;
+        self.evaluation_depth = snapshot.evaluation_depth;
+        self.match_depth = snapshot.match_depth;
+        self.evaluation_stack = snapshot.evaluation_stack;
+        self.prints = snapshot.prints;
+        self.handled_non_loader_eval_errors = snapshot.handled_non_loader_eval_errors;
+        self.reap_scopes = snapshot.reap_scopes;
+        self.monitor_scopes = snapshot.monitor_scopes;
+        self.monitor_callbacks_enabled = snapshot.monitor_callbacks_enabled;
+        self.current_time_deadline = snapshot.current_time_deadline;
+        self.current_memory_limit = snapshot.current_memory_limit;
+        self.asserts_enabled = snapshot.asserts_enabled;
+        self.abort_protect_depth = snapshot.abort_protect_depth;
+        self.abort_protect_pending = snapshot.abort_protect_pending;
+        self.queued_input_responses = snapshot.queued_input_responses;
+        self.pending_input_request = snapshot.pending_input_request;
+        self.pending_eval_request = snapshot.pending_eval_request;
+
+        if !snapshot.had_pending_suspension {
+            self.pending_suspension = None;
+        }
+    }
+
+    pub(in crate::runtime) fn message_enabled(&self, symbol: &str, tag: &str) -> bool {
+        let candidate = MessageSelector {
+            symbol: symbol.to_string(),
+            tag: Some(tag.to_string()),
+        };
+
+        !self
+            .disabled_message_selectors
+            .iter()
+            .any(|selector| selector.covers(&candidate))
+    }
+
+    /// Appends a runtime message if the message selector is currently enabled.
+    pub fn push_message(&mut self, symbol: &str, tag: &str, text: impl Into<String>) {
+        if !self.message_enabled(symbol, tag) {
+            return;
+        }
+
+        self.current_message_list_dirty = true;
+        self.messages.push(RuntimeMessage {
+            symbol: symbol.to_string(),
+            tag: tag.to_string(),
+            text: text.into(),
+        });
+    }
+
+    pub(in crate::runtime) fn push_print(&mut self, text: impl Into<String>) {
+        let text = text.into();
+        if let Some(sink) = self.print_sink.as_mut() {
+            sink(&text);
+        } else {
+            self.prints.push(text);
+        }
+    }
+
+    pub(in crate::runtime) fn runtime_message_for_non_loader_eval_error(
+        error: &EvalError,
+    ) -> Option<RuntimeMessage> {
+        let tag = match error {
+            EvalError::EvaluationCycleDetected { .. } => "passlim",
+            EvalError::RecursionLimitExceeded { .. } => "reclim",
+            EvalError::MatchRecursionLimitExceeded { .. } => "matchreclim",
+            EvalError::Cancelled => "cancel",
+            EvalError::TimeConstraintExceeded => "timelim",
+            EvalError::MemoryConstraintExceeded { .. } => "memlim",
+            EvalError::GeneratedElementLimitExceeded { .. }
+            | EvalError::IntegerWorkLimitExceeded { .. }
+            | EvalError::IterationWorkLimitExceeded { .. } => "reslim",
+            EvalError::IterationLimitExceeded { .. } => "iterlim",
+            EvalError::EvaluationPassLimitExceeded { .. } => "passlim",
+            _ => return None,
+        };
+
+        Some(RuntimeMessage {
+            symbol: "General".to_string(),
+            tag: tag.to_string(),
+            text: error.to_string(),
+        })
+    }
+
+    pub(in crate::runtime) fn terminated_evaluation_reason_for_error(
+        error: &EvalError,
+    ) -> Option<&'static str> {
+        // Each limit gets a SPECIFIC tag so a user can tell which budget to raise
+        // (a generic "ResourceLimit" did not say which of the three work limits
+        // fired). The tag mirrors the message text (e.g. "iteration work limit").
+        match error {
+            EvalError::RecursionLimitExceeded { .. } => Some("RecursionLimit"),
+            EvalError::MatchRecursionLimitExceeded { .. } => Some("PatternMatchRecursionLimit"),
+            EvalError::Cancelled => Some("Cancelled"),
+            EvalError::TimeConstraintExceeded => Some("TimeConstraint"),
+            EvalError::EvaluationCycleDetected { .. }
+            | EvalError::EvaluationPassLimitExceeded { .. } => Some("IterationLimit"),
+            EvalError::GeneratedElementLimitExceeded { .. } => Some("GeneratedElementLimit"),
+            EvalError::IntegerWorkLimitExceeded { .. } => Some("IntegerWorkLimit"),
+            EvalError::IterationWorkLimitExceeded { .. } => Some("IterationWorkLimit"),
+            _ => None,
+        }
+    }
+
+    pub(in crate::runtime) fn terminated_evaluation_expr_for_error(
+        error: &EvalError,
+    ) -> Option<Expr> {
+        Self::terminated_evaluation_reason_for_error(error).map(|reason| {
+            Expr::call(
+                system_expr("TerminatedEvaluation"),
+                vec![Expr::string(reason)],
+            )
+        })
+    }
+
+    pub(in crate::runtime) fn emit_non_loader_eval_message(
+        &mut self,
+        checkpoint: usize,
+        error: &EvalError,
+    ) -> bool {
+        let Some(message) = Self::runtime_message_for_non_loader_eval_error(error) else {
+            return false;
+        };
+
+        if self.handled_non_loader_eval_errors[checkpoint..]
+            .iter()
+            .any(|existing| existing == &message)
+        {
+            return true;
+        }
+
+        self.handled_non_loader_eval_errors.push(message.clone());
+        if self.message_enabled(&message.symbol, &message.tag) {
+            self.messages.push(message);
+        }
+        true
+    }
+
+    pub(in crate::runtime) fn emit_top_level_control_flow_messages(&mut self, error: &EvalError) {
+        match error {
+            EvalError::Thrown {
+                value,
+                tag,
+                explicit_tag,
+            } => {
+                self.emit_uncaught_throw_message(value, tag, *explicit_tag);
+            }
+            EvalError::ThrownBypassingCatch {
+                value,
+                tag,
+                explicit_tag,
+                cleanup_value,
+                cleanup_tag,
+                cleanup_explicit_tag,
+            } => {
+                self.emit_uncaught_throw_message(cleanup_value, cleanup_tag, *cleanup_explicit_tag);
+                self.emit_uncaught_throw_message(value, tag, *explicit_tag);
+            }
+            EvalError::Break => self.push_message(
+                "Break",
+                "nofwd",
+                "No enclosing For, While, Until or Do found for Break[].",
+            ),
+            EvalError::Continue => self.push_message(
+                "Continue",
+                "nofwd",
+                "No enclosing For, While, Until or Do found for Continue[].",
+            ),
+            _ => {}
+        }
+    }
+
+    fn emit_uncaught_throw_message(&mut self, value: &Expr, tag: &Expr, explicit_tag: bool) {
+        self.push_message(
+            "Throw",
+            "nocatch",
+            format!(
+                "Uncaught {} returned to top level.",
+                uncaught_throw_message_expr(value, tag, explicit_tag)
+            ),
+        );
+    }
+
+    pub(in crate::runtime) fn emit_loader_message(&mut self, symbol: &str, error: &EvalError) {
+        match error {
+            EvalError::LoadPathNotFound { target, searched } => {
+                let detail = if searched.is_empty() {
+                    format!("could not locate `{target}`")
+                } else {
+                    format!("could not locate `{target}` in {}", searched.join(", "))
+                };
+                self.push_message(symbol, "notfound", detail);
+            }
+            EvalError::Io { path, source } => {
+                self.push_message(symbol, "io", format!("could not read `{path}`: {source}"));
+            }
+            EvalError::Syntax(err) => {
+                self.push_message(symbol, "syntax", err.to_string());
+            }
+            other => {
+                self.push_message(symbol, "load", other.to_string());
+            }
+        }
+    }
+
+    pub(in crate::runtime) fn invalid_call(&self, symbol: &str, args: &[Expr]) -> Expr {
+        Expr::call(system_expr(symbol), args.to_vec())
+    }
+
+    /// Builds an invalid-call expression after emitting the supplied message.
+    pub fn invalid_call_with_message(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        tag: &str,
+        text: impl Into<String>,
+    ) -> Expr {
+        self.push_message(symbol, tag, text);
+        self.invalid_call(symbol, args)
+    }
+
+    /// Builds the standard invalid-call expression for an exact arity violation.
+    pub fn invalid_call_with_exact_arg_count(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        expected: usize,
+    ) -> Expr {
+        self.invalid_call_with_message(
+            symbol,
+            args,
+            "argx",
+            format!(
+                "expected exactly {expected} argument(s), got {}",
+                args.len()
+            ),
+        )
+    }
+
+    /// Builds the standard invalid-call expression for an arity range violation.
+    pub fn invalid_call_with_arg_range(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        min: usize,
+        max: usize,
+    ) -> Expr {
+        self.invalid_call_with_message(
+            symbol,
+            args,
+            "argtu",
+            format!(
+                "expected between {min} and {max} argument(s), got {}",
+                args.len()
+            ),
+        )
+    }
+
+    /// Builds the standard invalid-call expression for an argument-form violation.
+    pub fn invalid_call_with_arg_form(
+        &mut self,
+        symbol: &str,
+        args: &[Expr],
+        detail: impl Into<String>,
+    ) -> Expr {
+        self.invalid_call_with_message(symbol, args, "argform", detail)
+    }
+
+    pub(in crate::runtime) fn messages_since_match(
+        &self,
+        checkpoint: usize,
+        selectors: &[MessageSelector],
+    ) -> bool {
+        self.messages[checkpoint..]
+            .iter()
+            .any(|message| selectors.iter().any(|selector| selector.matches(message)))
+    }
+
+    pub(in crate::runtime) fn suppress_messages_since(
+        &mut self,
+        checkpoint: usize,
+        selectors: &[MessageSelector],
+    ) {
+        let trailing_messages = self.messages.split_off(checkpoint);
+
+        for message in trailing_messages {
+            if !selectors.iter().any(|selector| selector.matches(&message)) {
+                self.messages.push(message);
+            }
+        }
+    }
+}
+
+fn uncaught_throw_message_expr(value: &Expr, tag: &Expr, explicit_tag: bool) -> String {
+    if !explicit_tag && is_system_symbol_name(tag, "None") {
+        format!("Throw[{value}]")
+    } else {
+        format!("Throw[{value}, {tag}]")
+    }
+}

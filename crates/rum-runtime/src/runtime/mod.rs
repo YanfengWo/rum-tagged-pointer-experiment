@@ -13,25 +13,14 @@ use rum_syntax::{
 };
 
 mod arithmetic;
-mod association_data;
 mod attributes;
-mod binding_substitution;
 mod builtin_adapters;
 mod builtin_catalog;
 mod builtins_context_loader;
 mod builtins_input;
-mod builtins_messages;
-mod builtins_messages_inspect;
 mod capabilities;
 mod context_and_load_helpers;
-mod control_data;
 mod debug_tools;
-mod definition_analysis_helpers;
-mod definition_application;
-mod definition_catalog;
-mod definition_clear;
-mod definition_tags;
-mod definition_updates;
 mod definitions;
 mod eval_call_prepare;
 mod eval_core;
@@ -39,65 +28,46 @@ mod eval_dispatch;
 mod evaluation_cache;
 mod expr_helpers;
 mod expr_runtime_helpers;
-mod function_and_subst_helpers;
-mod functional_data;
 mod hold_thread;
 pub mod kernel_api;
-mod lexical_presence;
-mod lexical_substitution;
+mod kernel_data;
 mod listable_dispatch;
 mod lowering;
 mod matcher_and_symbols;
-mod message_catalog;
-mod message_format;
-mod message_selector_parsing;
+mod messages;
 mod metadata;
 mod model;
 mod namespace_tools;
 mod options;
 mod package_tools;
-mod parse_and_message_helpers;
 mod pattern_matching;
 #[cfg(test)]
 mod pattern_matching_interpreted;
 mod profiling;
 mod resolution;
-mod rewrite_data;
 mod scoping;
-mod session_api;
-mod session_eval;
-mod session_helpers;
-mod session_requests;
-mod session_state;
-mod slot_substitution;
-mod structure_data;
+mod session;
+mod substitution;
 mod suspension;
 #[cfg(test)]
 mod test_builtins;
-mod text_rendering;
 mod tree_walkers;
 mod vm_rhs_template;
 
 #[allow(unused_imports)]
 use self::{
-    arithmetic::*, association_data::*, attributes::*, binding_substitution::*,
-    builtin_adapters::*, builtin_catalog::*, builtins_context_loader::*, builtins_input::*,
-    builtins_messages::*, builtins_messages_inspect::*, capabilities::*,
-    context_and_load_helpers::*, control_data::*, debug_tools::*, definition_analysis_helpers::*,
-    definition_application::*, definition_catalog::*, definition_clear::*, definition_tags::*,
-    definition_updates::*, definitions::*, eval_call_prepare::*, eval_core::*, eval_dispatch::*,
-    evaluation_cache::*, expr_helpers::*, expr_runtime_helpers::*, function_and_subst_helpers::*,
-    functional_data::*, hold_thread::*, lexical_substitution::*, listable_dispatch::*, lowering::*,
-    matcher_and_symbols::*, message_catalog::*, message_format::*, message_selector_parsing::*,
-    metadata::*, model::*, namespace_tools::*, options::*, package_tools::*,
-    parse_and_message_helpers::*, pattern_matching::*, profiling::*, resolution::*,
-    rewrite_data::*, scoping::*, session_api::*, session_eval::*, session_helpers::*,
-    session_requests::*, session_state::*, slot_substitution::*, structure_data::*, suspension::*,
-    text_rendering::*, tree_walkers::*, vm_rhs_template::*,
+    arithmetic::*, attributes::*, builtin_adapters::*, builtin_catalog::*,
+    builtins_context_loader::*, builtins_input::*, capabilities::*, context_and_load_helpers::*,
+    debug_tools::*, definitions::*, eval_call_prepare::*, eval_core::*, eval_dispatch::*,
+    evaluation_cache::*, expr_helpers::*, expr_runtime_helpers::*, hold_thread::*, kernel_data::*,
+    listable_dispatch::*, lowering::*, matcher_and_symbols::*, messages::*, metadata::*, model::*,
+    namespace_tools::*, options::*, package_tools::*, pattern_matching::*, profiling::*,
+    resolution::*, scoping::*, session::*, substitution::*, suspension::*, tree_walkers::*,
+    vm_rhs_template::*,
 };
 pub use self::{
     builtin_catalog::core_builtin_specs, capabilities::*, lowering::lower_syntax_expr, metadata::*,
-    model::*, session_state::EvalError,
+    model::*, session::session_state::EvalError,
 };
 
 impl Session {

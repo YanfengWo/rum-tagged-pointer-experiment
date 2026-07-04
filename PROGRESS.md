@@ -17,6 +17,29 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 Hygiene-policy revision + coda batches DONE (briefs 120/121) — the whole line closes
+
+The user asked for an evidence-based review of the size-hygiene policy
+before continuing; the review's four amendments landed in
+`docs/code-organization-guidelines.md` (4c88a44): quantified test-file
+thresholds (15k/25k/45k) + identity-proof rule, a NEW Directory Fan-Out
+section (~20 direct children soft ceiling), measure-implementation-after-
+test-extraction, and assess-on-touch replacing the split-plan blanket-TODO;
+plus an honest scoping of the incremental-compilation goal (crate is the
+unit) and a "Splitting Is Organization" section codifying the brief-114
+principles.
+
+Then two coda batches applied it. Brief-120 (932c4d9): the four 30k+ files
+split on real boundaries (iteration → spec/driver/table_fast_path with the
+113 fast path housed intact; model → 9 type-domain modules; scoping/lexical
+→ block/module/with; eval_core → symbol/call/stability) — 22 modules
+≤17.4k, sentinel improved both A/B runs, the assess-and-keep option was
+available but unneeded. Brief-121 (this commit): runtime/'s fan-out grouped
+74 → exactly 48 via five fixed domain directories (definitions/, messages/,
+session/, substitution/, kernel_data/ — the last collecting the rebalance
+line's kernel-resident *_data machinery), transparent re-exports, zero body
+changes, sentinel 55ns/iter. Workspace 1301/0 through everything.
+
 ## 2026-07-04 File-slimming line COMPLETE (brief-119) — the >35k debt tier is ZERO
 
 The final batch split the two test files by BEHAVIOR FAMILY with a

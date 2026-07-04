@@ -1,0 +1,446 @@
+use super::super::*;
+use thiserror::Error;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::runtime) enum ContextFrameKind {
+    Begin,
+    BeginPackage,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) struct ContextFrame {
+    pub(in crate::runtime) kind: ContextFrameKind,
+    pub(in crate::runtime) previous_context: String,
+    pub(in crate::runtime) previous_context_path: Vec<String>,
+    pub(in crate::runtime) opened_context: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::runtime) enum CallDispatchStage {
+    SpecialForm,
+    PrepareArguments,
+    Listable,
+    UpValues,
+    DownValues,
+    SubValues,
+    OrdinaryBuiltin,
+    Function,
+}
+
+const MAX_CALL_DISPATCH_STAGES: usize = 7;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) struct CallDispatchPlan {
+    pub(in crate::runtime) attributes: AttributeSet,
+    pub(in crate::runtime) builtin_spec: Option<BuiltinSpec>,
+    stages: [CallDispatchStage; MAX_CALL_DISPATCH_STAGES],
+    stage_count: usize,
+}
+
+impl CallDispatchPlan {
+    pub(in crate::runtime) fn new(
+        attributes: AttributeSet,
+        builtin_spec: Option<BuiltinSpec>,
+    ) -> Self {
+        Self {
+            attributes,
+            builtin_spec,
+            stages: [CallDispatchStage::SpecialForm; MAX_CALL_DISPATCH_STAGES],
+            stage_count: 0,
+        }
+    }
+
+    pub(in crate::runtime) fn special_form(
+        attributes: AttributeSet,
+        builtin_spec: Option<BuiltinSpec>,
+    ) -> Self {
+        let mut plan = Self::new(attributes, builtin_spec);
+        plan.push(CallDispatchStage::SpecialForm);
+        plan
+    }
+
+    pub(in crate::runtime) fn push(&mut self, stage: CallDispatchStage) {
+        debug_assert!(self.stage_count < MAX_CALL_DISPATCH_STAGES);
+        self.stages[self.stage_count] = stage;
+        self.stage_count += 1;
+    }
+
+    pub(in crate::runtime) fn len(&self) -> usize {
+        self.stage_count
+    }
+
+    pub(in crate::runtime) fn stage(&self, index: usize) -> CallDispatchStage {
+        self.stages[index]
+    }
+
+    #[cfg(test)]
+    pub(in crate::runtime) fn stages(&self) -> &[CallDispatchStage] {
+        &self.stages[..self.stage_count]
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(in crate::runtime) struct CallDispatchState {
+    pub(in crate::runtime) raw_args: SharedArgs,
+    pub(in crate::runtime) evaluated_args: Option<SharedArgs>,
+}
+
+impl CallDispatchState {
+    pub(in crate::runtime) fn new(raw_args: SharedArgs) -> Self {
+        Self {
+            raw_args,
+            evaluated_args: None,
+        }
+    }
+
+    pub(in crate::runtime) fn evaluated_args(&self) -> &[Expr] {
+        self.evaluated_shared_args().as_ref()
+    }
+
+    pub(in crate::runtime) fn evaluated_shared_args(&self) -> &SharedArgs {
+        self.evaluated_args
+            .as_ref()
+            .expect("call arguments should be prepared before this stage")
+    }
+
+    pub(in crate::runtime) fn into_final_shared_args(self) -> SharedArgs {
+        self.evaluated_args.unwrap_or(self.raw_args)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ThreadingDispatch {
+    NotApplicable,
+    Threaded(Expr),
+    Mismatch,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(in crate::runtime) struct BlockSymbolState {
+    pub(in crate::runtime) definition: Option<SymbolDefinition>,
+    pub(in crate::runtime) attributes: Option<AttributeSet>,
+    pub(in crate::runtime) options: Option<SymbolOptions>,
+    pub(in crate::runtime) syntax_information: Option<Expr>,
+    pub(in crate::runtime) messages: Vec<(MessageNameKey, MessageDefinition)>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) struct DynamicOwnValueFrame {
+    pub(in crate::runtime) symbol: Symbol,
+    pub(in crate::runtime) value: Option<Expr>,
+}
+
+#[derive(Clone, Debug)]
+pub(in crate::runtime) struct LoaderSnapshot {
+    pub(in crate::runtime) attributes: AttributeMap,
+    pub(in crate::runtime) options: BTreeMap<Symbol, SymbolOptions>,
+    pub(in crate::runtime) syntax_information: BTreeMap<Symbol, Expr>,
+    pub(in crate::runtime) declared_stubs: SymbolSet,
+    pub(in crate::runtime) removed_symbols: SymbolSet,
+    pub(in crate::runtime) symbol_generations: BTreeMap<(String, String), u64>,
+    pub(in crate::runtime) once_values: BTreeMap<String, Expr>,
+    pub(in crate::runtime) current_context: String,
+    pub(in crate::runtime) context_path: Vec<String>,
+    pub(in crate::runtime) context_stack: Vec<ContextFrame>,
+    pub(in crate::runtime) package_search_paths: Vec<PathBuf>,
+    pub(in crate::runtime) loaded_packages: Vec<String>,
+    pub(in crate::runtime) definitions: DefinitionMap,
+    pub(in crate::runtime) has_up_value_definitions: bool,
+    pub(in crate::runtime) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
+    pub(in crate::runtime) next_generated_symbol_id: u64,
+    pub(in crate::runtime) trace_events: Vec<TraceEvent>,
+    pub(in crate::runtime) trace_event_depths: Vec<usize>,
+    pub(in crate::runtime) disabled_message_selectors: Vec<MessageSelector>,
+    pub(in crate::runtime) messages: Vec<RuntimeMessage>,
+    pub(in crate::runtime) last_message_list: Vec<RuntimeMessage>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) struct ReapBucket {
+    pub(in crate::runtime) tag: Expr,
+    pub(in crate::runtime) values: Vec<Expr>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) struct ReapScope {
+    pub(in crate::runtime) patterns: Vec<Expr>,
+    pub(in crate::runtime) pattern_list_form: bool,
+    pub(in crate::runtime) handler: Option<Expr>,
+    pub(in crate::runtime) buckets_by_pattern: Vec<Vec<ReapBucket>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) struct MonitorScope {
+    pub(in crate::runtime) display_expr: Expr,
+    pub(in crate::runtime) evaluation_monitor: Option<Expr>,
+    pub(in crate::runtime) step_monitor: Option<Expr>,
+    pub(in crate::runtime) last_display: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) enum MatcherNode {
+    Exact(Expr),
+    Blank {
+        head_constraint: Option<Expr>,
+    },
+    KeyValuePattern(Vec<(MatcherNode, MatcherNode, bool)>),
+    Named {
+        name: Symbol,
+        inner: Box<MatcherNode>,
+    },
+    Condition {
+        inner: Box<MatcherNode>,
+        condition: Expr,
+    },
+    PatternTest {
+        inner: Box<MatcherNode>,
+        test: Expr,
+    },
+    Except {
+        excluded: Box<MatcherNode>,
+        inner: Box<MatcherNode>,
+    },
+    Alternatives(Vec<MatcherNode>),
+    Call {
+        head: Box<MatcherNode>,
+        args: Vec<MatcherArg>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) enum MatcherArg {
+    Single(MatcherNode),
+    Sequence(CompiledSequencePattern),
+    Optional(CompiledOptionalPattern),
+    PatternSequenceGroup(Vec<MatcherArg>),
+    OrderlessPatternSequenceGroup(Vec<MatcherArg>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) struct CompiledSequencePattern {
+    pub(in crate::runtime) min_len: usize,
+    pub(in crate::runtime) max_len: Option<usize>,
+    pub(in crate::runtime) matcher: MatcherNode,
+    pub(in crate::runtime) name: Option<Symbol>,
+    pub(in crate::runtime) checks: Vec<SequencePatternCheck>,
+    pub(in crate::runtime) greediness: SequenceGreediness,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) enum SequencePatternCheck {
+    Condition(Expr),
+    PatternTest(Expr),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::runtime) enum SequenceGreediness {
+    Shortest,
+    Longest,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) struct CompiledOptionalPattern {
+    pub(in crate::runtime) inner: Box<MatcherArg>,
+    pub(in crate::runtime) default: CompiledOptionalDefault,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) enum CompiledOptionalDefault {
+    Explicit(Expr),
+    Implicit { head: Expr, position: usize },
+    UnavailableImplicit,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) enum MessageCatalogQuery {
+    All,
+    Symbol(Symbol),
+    Key(MessageNameKey),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::runtime) enum AttributeUpdate {
+    Insert,
+    Remove,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ThreadArgSpec {
+    All,
+    None,
+    Prefix(usize),
+    Suffix(usize),
+    Single(isize),
+    Range {
+        start: isize,
+        end: isize,
+        step: isize,
+    },
+}
+
+#[derive(Debug, Error)]
+pub enum EvalError {
+    #[error(transparent)]
+    Syntax(#[from] SyntaxError),
+    #[error("invalid integer literal `{literal}`")]
+    InvalidInteger { literal: String },
+    #[error("could not read `{path}`: {source}")]
+    Io {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("could not resolve package or file `{target}`")]
+    LoadPathNotFound {
+        target: String,
+        searched: Vec<String>,
+    },
+    #[error("evaluation cycle detected while re-entering `{expr}`")]
+    EvaluationCycleDetected { expr: String },
+    #[error("evaluation exceeded recursion limit ({limit})")]
+    RecursionLimitExceeded { limit: usize },
+    #[error("evaluation exceeded pattern-match recursion limit ({limit})")]
+    MatchRecursionLimitExceeded { limit: usize },
+    #[error("evaluation cancelled by host")]
+    Cancelled,
+    #[error("evaluation exceeded TimeConstrained limit")]
+    TimeConstraintExceeded,
+    #[error("evaluation exceeded MemoryConstrained limit ({limit})")]
+    MemoryConstraintExceeded { limit: usize },
+    #[error("evaluation exceeded generated element limit ({limit})")]
+    GeneratedElementLimitExceeded { limit: usize },
+    #[error("evaluation exceeded integer work limit ({limit})")]
+    IntegerWorkLimitExceeded { limit: usize },
+    #[error("evaluation exceeded iteration work limit ({limit})")]
+    IterationWorkLimitExceeded { limit: usize },
+    #[error("ReplaceRepeated exceeded iteration limit ({limit})")]
+    IterationLimitExceeded { limit: usize },
+    #[error("evaluation exceeded fixed-point pass limit ({limit})")]
+    EvaluationPassLimitExceeded { limit: usize },
+    #[error("nonlocal return: {value}")]
+    Return { value: Expr },
+    #[error("uncaught throw: {value} with tag {tag}")]
+    Thrown {
+        value: Expr,
+        tag: Expr,
+        explicit_tag: bool,
+    },
+    #[error(
+        "uncaught throw: {cleanup_value} with tag {cleanup_tag}; uncaught throw: {value} with tag {tag}"
+    )]
+    ThrownBypassingCatch {
+        value: Expr,
+        tag: Expr,
+        explicit_tag: bool,
+        cleanup_value: Expr,
+        cleanup_tag: Expr,
+        cleanup_explicit_tag: bool,
+    },
+    #[error("uncaught Abort[]")]
+    Abort,
+    #[error("uncaught protected Abort[]")]
+    ProtectedAbort,
+    #[error("uncaught Break[]")]
+    Break,
+    #[error("uncaught Continue[]")]
+    Continue,
+    #[error("Exit[{code}]")]
+    Exit { code: i64 },
+    #[error("{request}")]
+    InputRequired { request: RuntimeInputRequest },
+}
+
+impl Session {
+    pub(in crate::runtime) fn empty() -> Self {
+        Self {
+            builtins: BuiltinSpecMap::default(),
+            attributes: AttributeMap::default(),
+            attribute_revision: 0,
+            attribute_set_cache: AttributeSetCache::default(),
+            builtin_dispatch_spec_cache: BuiltinDispatchSpecCache::default(),
+            evaluation_epoch: 0,
+            symbol_cache_generation: 0,
+            call_stability_generation: 0,
+            stability_dirty_bloom: StabilityBloom::default(),
+            stability_rewritten_dirty_bloom: StabilityBloom::default(),
+            stable_symbol_cache: SymbolStabilityCache::default(),
+            symbol_call_effect_cache: SymbolCallEffectCache::default(),
+            call_stability_cache: CallStabilityCache::default(),
+            options: BTreeMap::new(),
+            syntax_information: BTreeMap::new(),
+            declared_stubs: SymbolSet::default(),
+            removed_symbols: SymbolSet::default(),
+            symbol_generations: BTreeMap::new(),
+            once_values: BTreeMap::new(),
+            option_value_scopes: Vec::new(),
+            dynamic_own_values: Vec::new(),
+            module_activations: Vec::new(),
+            gc_candidate_gensyms: std::collections::HashSet::new(),
+            in_gensym_sweep: false,
+            current_context: GLOBAL_CONTEXT.to_string(),
+            context_path: vec![SYSTEM_CONTEXT.to_string(), GLOBAL_CONTEXT.to_string()],
+            context_stack: Vec::new(),
+            package_search_paths: vec![PathBuf::from(".")],
+            loaded_packages: Vec::new(),
+            load_stack: Vec::new(),
+            definitions: DefinitionMap::default(),
+            has_up_value_definitions: false,
+            message_definitions: BTreeMap::new(),
+            message_symbol_counts: SymbolCountMap::default(),
+            next_generated_symbol_id: 0,
+            resource_limits: ResourceLimits::default(),
+            evaluation_depth: 0,
+            match_depth: 0,
+            interrupt_armed: false,
+            evaluation_stack: Vec::new(),
+            tracing_enabled: false,
+            trace_events: Vec::new(),
+            trace_event_depths: Vec::new(),
+            disabled_message_selectors: Vec::new(),
+            messages: Vec::new(),
+            prints: Vec::new(),
+            print_sink: None,
+            peak_memory_proxy_bytes: std::cell::Cell::new(0),
+            last_message_list: Vec::new(),
+            current_message_list_checkpoint: None,
+            current_message_list_dirty: false,
+            handled_non_loader_eval_errors: Vec::new(),
+            reap_scopes: Vec::new(),
+            monitor_scopes: Vec::new(),
+            monitor_callbacks_enabled: true,
+            current_time_deadline: None,
+            current_memory_limit: None,
+            asserts_enabled: false,
+            abort_protect_depth: 0,
+            abort_protect_pending: 0,
+            queued_input_responses: VecDeque::new(),
+            pending_input_request: None,
+            pending_eval_request: None,
+            pending_suspension: None,
+            interrupt_flag: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            eval_timeout: None,
+            eval_deadline: None,
+            interrupt_poll_counter: 0,
+            capability_policy: CapabilityPolicy::unrestricted(),
+        }
+    }
+}
+
+impl Default for Session {
+    fn default() -> Self {
+        let mut session = Self::empty();
+        for spec in core_builtin_specs() {
+            session.register_builtin(*spec);
+        }
+        #[cfg(test)]
+        test_builtins::register_test_arithmetic_builtins(&mut session);
+
+        session
+    }
+}
+
+impl Drop for Session {
+    fn drop(&mut self) {
+        print_lexical_profile_summary_once();
+    }
+}
