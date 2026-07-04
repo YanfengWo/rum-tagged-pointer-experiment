@@ -17,6 +17,29 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 File-slimming batch 1 DONE (brief-114) — profiling.rs 138KB + catalog.rs 74KB split
+
+The slimming line opened (the debt deferred by the rebalance plan; user
+principles codified in the brief: split by logic/function never mechanically,
+optimize for incremental compilation — stable vs churning regions, sibling
+DAG only — and for future refactoring — boundaries movable wholesale; pure
+organization, split map first). Batch 1 took the two largest COLD files:
+
+`runtime/profiling.rs` (138k chars, 151 fns) → `profiling/` with 17 modules,
+all ≤14.8k: state/config/counters/scopes (stable declarations + env gates) →
+records/timing/presence/fingerprints (instrument domains) → report_* +
+summary + formatting (churny assembly). The split map survived one revision
+(mod.rs initially 24k → stable state extracted). Disabled-path red line
+asserted: same env-gated fast-outs, bodies verbatim. `stdlib/catalog.rs`
+(74k) → `catalog/` with 14 per-family files (≤12.5k) + an 881-char facade;
+install_core and the drift test compile UNCHANGED — and the bidirectional
+attribute-drift test passing IS the strongest verbatim proof for the spec
+data (gate also verified SET_OPERATION_ATTRIBUTES pre-existed and the 345
+count). Zero >20k exceptions; zero caller changes (git status shows exactly
+2 deletions + 2 new directories). Gate: fmt + workspace 1301/0; CLI smoke 61.
+Remaining debt: evaluation_cache 63k + definition_application 55k (HOT, next,
+with A/B), vm_rhs_template 53k, arithmetic 42k, lexer 41k, 2 test files.
+
 ## 2026-07-04 Stage-3 FINALE DONE (brief-113) — arithmetic moved; ALL 14 families' spec ownership in rum-stdlib
 
 The line's endpoint: `builtin_catalog/numeric.rs` is GONE; the 27 hottest
