@@ -555,3 +555,14 @@ unresolved names, restore) over 14 family modules + a grep axis for kernel
 for the explicit kernel API (≥3-family items → prelude; single-family items →
 move with the family; unused internals → stay private) + the family→family
 couplings that constrain move order.
+
+## 2026-07-04 — Release transformation line STARTED (plan committed)
+
+Decision (user, this session): drop the fresh-history release-staging approach;
+transform `main` itself into release shape, keep full history. New testing policy:
+rum tests only its own documented design + rum-vs-rum perf A/B; difftest and the
+mma-hol snapshot pipeline are removed (archived privately at
+../Archive/rum-history, MANIFEST there; WLBuiltin/ already moved). Support matrix
+dropped in favor of a hand-written language guide + a builtin reference generated
+from the stdlib catalog + rustdoc. Endpoint: clean tree + bundle cold backup (no
+remote). Plan: docs/dev/release-transformation-plan.md (briefs 124-130 + M0-M2).
