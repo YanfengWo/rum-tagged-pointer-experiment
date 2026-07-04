@@ -566,3 +566,18 @@ mma-hol snapshot pipeline are removed (archived privately at
 dropped in favor of a hand-written language guide + a builtin reference generated
 from the stdlib catalog + rustdoc. Endpoint: clean tree + bundle cold backup (no
 remote). Plan: docs/dev/release-transformation-plan.md (briefs 124-130 + M0-M2).
+
+## 2026-07-04 — M1: narrative + policy rewrite (release transformation)
+
+DISCLAIMER.md rewritten (user-reviewed): independent project, no compatibility
+claims, factual history of the early black-box method and its July 2026
+removal, standing policy. README repositioned (embeddable sandbox-first
+term-rewriting language; external-comparison framing removed). AGENTS.md
+rewritten around the new Testing Policy hard lines (own-documented-behavior
+tests + rum-vs-rum perf A/B only; no oracle harnesses/compat matrices — 
+permanent). testing-strategy.md rewritten (4 layers, coverage axes kept,
+documentation-as-contract, llvm-cov guidance). TODO.md rewritten (release line
+active items + post-cut queue: toolchain refresh to current stable, coverage
+rebuild, scoped-fs profile, pyo3-on-rum-host, showcase, vm_rhs_template).
+CLAUDE.md updated to the new world. Briefs 124-126 all gated green earlier
+today (commits 5eddf1b, 131614a, 3814ef0).

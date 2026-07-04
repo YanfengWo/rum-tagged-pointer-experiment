@@ -1,380 +1,108 @@
 # Testing Strategy
 
-This document defines how `rum` tests core-language behavior after the
-`CL-01` through `CL-09` mainlines have closed. The goal is not to claim full
-Wolfram Language coverage. The goal is to make each supported subset explicit,
-test it at the right layer, and use a local Wolfram oracle where same-name
-compatibility is part of the contract.
+`rum`'s tests verify exactly two things:
 
-## Compatibility Contract
+1. **`rum`'s behavior matches its own documented design.** The language guide
+   (`docs/guide/`), the generated builtin reference (`docs/reference/`), and
+   the host crates' rustdoc are the normative contract.
+2. **Performance does not regress between `rum` builds.** Optimization work is
+   gated by rum-vs-rum A/B on the microbench suites.
 
-For a Wolfram Language same-name function or symbol, compatibility is scoped by
-[core-language-support-matrix.md](./core-language-support-matrix.md):
-
-- `implemented`: the supported behavior should be Wolfram-compatible except
-  for ordinary follow-up polish or explicitly documented divergence.
-- `partial`: only the documented subset is compatibility-targeted.
-  Unsupported forms are not bugs unless promoted by `TODO.md` or by a concrete
-  downstream project.
-- `planned`: inside the scoped kernel target but not implemented.
-- `excluded`: deliberately outside the current project phase.
-- `extension`: project-owned surface, tested against `rum`'s own contract
-  rather than Wolfram behavior.
-
-Do not treat accidental behavior as supported just because one test passes. If
-a behavior matters, put it in the matrix or in an explicit deferred note before
-depending on it.
+There is no external oracle. The project does not run black-box differential
+testing against other vendors' engines, does not maintain compatibility
+matrices or conformance reports, and does not commit third-party engine
+outputs. This is a permanent policy; `DISCLAIMER.md` records its history.
 
 ## Test Layers
 
 Use the lowest layer that can prove the contract being tested.
 
-1. Crate-local unit tests
-   - Own small helper invariants, planners, parser/formatter pieces, matcher
-     branches, normalization functions, codec helpers, and host facades.
-   - Prefer direct helper tests when they make a high-risk policy branch
-     reachable without large evaluator setup.
-2. Runtime regression tests
-   - Own evaluator/session semantics, state mutation, messages, held
-     evaluation, suspension/resume, and `rum`-native request behavior.
-   - These tests may use Wolfram-shaped expectations when the behavior is
-     already known, but they should not replace oracle-backed conformance for
-     high-risk same-name semantics.
-3. Differential conformance tests
-   - Own Wolfram-oracle-comparable same-name behavior for the documented
-     subset.
-   - Keep oracle outputs transient. Fixtures should store inputs, metadata, and
-     deliberate known-difference notes, not generated Wolfram transcripts.
-4. Adapter and host-contract tests
-   - Own CLI, REPL, `rum-host`, future Python host, and Jupyter protocol
-     behavior. These are not Wolfram oracle lanes unless the behavior is a
-     same-name language surface.
-5. Real-project smoke tests
-   - Own package/script-level confidence such as future `mma-hol` smoke lanes.
-   - These prove integration maturity, not full language equivalence.
-   - For `mma-hol`, use
-     [`scripts/mma-hol-bounded-smoke.sh`](../scripts/mma-hol-bounded-smoke.sh)
-     as the bounded diagnostic driver. Treat it as a failure-localization
-     harness with captured logs, not as a benchmark suite.
+1. **Crate-local unit tests.** Own small helper invariants, planners,
+   parser/formatter pieces, matcher branches, normalization functions, codec
+   helpers, and host facades. Prefer direct helper tests when they make a
+   high-risk policy branch reachable without large evaluator setup.
+2. **Runtime regression tests.** Own evaluator/session semantics, state
+   mutation, messages, held evaluation, suspension/resume, and `rum`-native
+   request behavior, asserted against the documented contract.
+3. **Host and adapter contract tests.** Own the embedding lifecycle in
+   `rum-host` (interrupt/cancel, wall-clock timeout, panic isolation and
+   poison recovery, `reset()`, snapshot/restore round-trips, typed
+   `HostValue`, capability sandbox, `Send`/concurrency contract) and the
+   protocol surface in `rum-jupyter`. These are the layers a host depends on;
+   coverage here is prioritized.
+4. **Integration and stress tests.** rum-native corpora that exercise the
+   system end-to-end: deep recursion and nesting, large rewriting workloads,
+   package loading, resource-limit trips (recursion/iteration/parse-depth/
+   match-depth `TerminatedEvaluation` tags), and cancellation under load.
+   This is the current growth area; see `TODO.md`.
 
-## Coverage Axes For Same-Name Behavior
+## Coverage Axes
 
-Do not restrict conformance suites to happy paths. For each same-name function
-that is `implemented` or substantially `partial`, choose cases across the axes
-that matter for that function:
+Do not restrict suites to happy paths. For each documented function or
+mechanism, choose cases across the axes that matter for it:
 
-- canonical documented examples
+- canonical examples from the reference documentation
 - atom, empty, singleton, nested, and large-enough structural boundaries
 - symbolic, held, unevaluated, and delayed inputs
-- option defaults, explicit option overrides, invalid option names, and invalid
-  option values
+- option defaults, explicit overrides, invalid option names, invalid values
 - invalid arity, invalid specs, message tags, and inert residual expression
   shape
 - stateful behavior: definitions, attributes, contexts, messages, options,
   removed-symbol identity, package loading, and session-local caches
 - interactions with core mechanisms such as `Part`, `Heads`, pattern matching,
   replacement, `Quiet`, `Check`, `Failure`, and suspension/resume
-- deliberate divergence or unsupported forms, recorded as such rather than
-  hidden in generic failures
+- documented limits and deliberate design boundaries, asserted as such rather
+  than hidden in generic failures
 
 A small, well-tagged set that spans these axes is more useful than a large
-copy of similar happy-path examples.
+pile of similar happy-path examples.
 
-## Wolfram Documentation Examples
+## Documentation Is the Contract
 
-The Wolfram documentation is an input corpus, not an exhaustive test target.
-It includes front-end behavior, broad CAS behavior, platform state, historical
-quirks, and examples outside `rum`'s current kernel-first scope.
+Behavior worth keeping is documented; documentation is what tests cite.
 
-Use documentation examples in this order:
+- The builtin reference is **generated** from the `rum-stdlib` catalog
+  (`BuiltinSpec`), and a drift test regenerates it and fails if the committed
+  reference disagrees — so any contract change is visible as a reviewable
+  documentation diff.
+- Do not treat accidental behavior as supported just because one test passes.
+  If a behavior matters, promote it into the guide/reference (or an explicit
+  limits note) before depending on it.
+- When an intentional behavior change lands, the same change updates the
+  documentation and the affected tests.
 
-1. Canonical examples that define ordinary user expectations.
-2. Boundary and negative examples that expose evaluation, option, message, or
-   symbolic-shape semantics.
-3. Interaction examples that cross feature boundaries already claimed in the
-   matrix.
-4. Out-of-scope examples only as explicit `planned`, `excluded`, or divergence
-   notes.
+## Performance Gates
 
-## Differential Lanes
+- `scripts/core-language-microbench.sh` is the timing baseline: a labeled
+  suite of small core-language statements producing per-label `timings.tsv`.
+  An A/B is two runs — base build and candidate build — compared per label.
+- `scripts/core-memory-microbench.sh` is the memory panel (retained / peak /
+  transient / post-cleanup, per workload, fresh process each).
+- Any change touching an evaluation hot path requires an A/B (see
+  `AGENTS.md`); a regression on the target label's same-tier neighbors
+  rejects the change even if the target improves.
+- Keep measurement discipline: profiling/diagnostic env vars OFF for timing
+  numbers; one variable per A/B; persist raw output to files before parsing.
 
-`rum-difftest` should stay split into explicit lanes instead of becoming a
-single broad diff bucket:
+## Coverage Measurement
 
-- Lane A: single-expression, stateless Wolfram comparisons over values,
-  messages, and printed output. `rum` results use the shared difftest
-  InputForm-like renderer for common structural output shapes. This is the
-  first place to put compact canonical and boundary cases. Its default runner
-  includes both imported seed golden files and curated project-owned
-  `cases/wolfram/core` fixtures.
-- Lane B: stateful session scripts, including definitions, options, messages,
-  contexts, package loading, mutation/update operations, and repeated
-  evaluations.
-- Lane C: checked known-difference ledger, tying divergences to matrix entries
-  or TODO notes with explicit close criteria.
-- Lane D: local performance baseline inputs and runners. These are not
-  semantic conformance tests and should not use a Wolfram oracle. `lane-d
-  --summary-json PATH` writes a stable machine-readable summary for scripts or
-  CI dashboards, covering run counts and optional baseline/readiness gate
-  counts without freezing per-case result rows. `--suite core-language` is the
-  rum-local half of the bottom-up time-efficiency difftest: it runs the same
-  primitive families tracked by `scripts/core-language-microbench.sh` through
-  Lane D's baseline and summary machinery, while the script remains responsible
-  for rum/WolframKernel timing ratios.
-- Lane E: host-contract tests stay in host/native crate suites, currently
-  `cargo test -p rum-host` for the Rust host boundary.
-- Lane F: adapter/protocol tests stay in adapter-native suites, currently
-  `cargo test -p rum-jupyter` for the Jupyter protocol boundary.
-
-Use `rum-difftest inventory` as the non-oracle coverage-audit command for
-default Lane A/B fixtures. It reports fixture counts, source groups, semantic
-categories, normal entries, and known-difference entries; `--summary-json PATH`
-exposes the same stable counts for scripts or dashboards. The inventory JSON
-also exposes top-level `clean` and `baseline_checked` fields so scripts can
-distinguish a successful coverage inventory from a successful checked baseline
-gate without special-casing a missing `baseline` object. `--lane NAME`,
-`--source NAME`, and `--category NAME` provide focused coverage audits and
-apply to text output, summary JSON, baseline comparison, and baseline capture;
-focused baseline comparisons consider only baseline records matching the active
-filter scope and fail if none match. Filtered baseline captures include comment
-lines recording the active filters. Use the unfiltered command for the checked
-default coverage gate. Use
-`inventory --check-baseline --fail-on-regression` as a local gate against the
-checked fixture-coverage baseline when reviewing fixture pruning or large
-coverage reshuffles. The checked baseline covers both source groups and
-semantic categories; see
-[`crates/rum-difftest/coverage/README.md`](../crates/rum-difftest/coverage/README.md)
-for the executable coverage-goal policy. `inventory --write-baseline PATH`
-captures the current inventory in that baseline format when a coverage change
-is intentional.
-Use `rum-difftest check` as the fast non-oracle aggregate gate for local
-preflight scripts: it runs the checked inventory baseline, Lane C ledger
-validation, and artifact hygiene, exits non-zero if any default gate is
-dirty, and can write `--summary-json PATH` without starting a Wolfram oracle.
-The artifact-hygiene gate rejects generated oracle wrapper/input/session
-artifacts plus stray non-fixture files under `cases/`; text output and the
-artifact-hygiene JSON check entry expose stable `oracle_artifact` and
-`stray_fixture_file` counts, and JSON issue details include the issue kind.
-The default root is the `rum-difftest` crate root; use
-`--artifact-hygiene-root PATH` only for isolated diagnostics or tests that need
-to exercise dirty artifact-hygiene reporting without writing probe files into
-the real repository tree.
-The aggregate JSON includes bounded `issue_samples` with
-check/kind/location/message fields so scripts can surface representative
-failures without depending on each lane's full internal report shape;
-`--max-issue-samples N` adjusts that aggregate sample cap when the default 5
-entries are too few for a local script, and the JSON reports the sample limit,
-emitted count, filtered issue count, unfiltered issue count, and truncation
-status. `--issue-sample-check NAME` and `--issue-sample-kind KIND` can narrow
-only the bounded locator list during targeted aggregate-gate debugging. `KIND`
-uses checked aggregate issue-kind names so typoed filters fail fast instead of
-silently producing an empty locator list. Aggregate issue-sample controls
-require `--summary-json PATH` because they only affect the machine-readable
-locator list. The
-JSON also includes untruncated `issue_check_counts` and `issue_kind_counts`
-arrays grouped by aggregate check and by aggregate check plus issue kind, so
-scripts can keep stable failure dashboards even when representative samples are
-capped or filtered. The text and JSON
-reports also list optional gates that were
-intentionally skipped, so scripts can distinguish the default fast gate set
-from a broader opt-in run. It does not run Lane D timing inputs by default;
-opt into the local smoke performance baseline with `--include-lane-d-smoke`,
-or use `--lane-d-smoke-baseline PATH` when validating an alternate smoke
-artifact. Use `--include-lane-d-readiness` only when the aggregate gate should
-also enforce the checked Lane D artifact set; this readiness check is expected
-to remain dirty until runner-specific `ci-debug` / `ci-release` smoke
-artifacts exist.
-
-Every `rum-difftest --summary-json` shape includes a top-level
-`schema_version` field. Increment that value when a report change is
-intentionally incompatible for scripts or dashboards; additive fields that
-preserve existing consumers should remain on the current version. CLI tests
-should parse every generated summary as JSON, not only assert on string
-fragments, so report-generation changes cannot silently emit invalid machine
-output.
-
-Messages and diagnostics start in runtime regression tests unless the
-differential runner can capture and compare them reliably. Lane A can compare
-single-expression message and print output, while Lane B provides ordered
-session comparisons against one local Wolfram kernel process per fixture,
-including InputForm-like result values, per-step messages, per-step print
-output, and ordered state restoration checks for stateful scoping/control
-fixtures. That makes focused message and print behavior eligible for either
-lane when the behavior is Wolfram-oracle-comparable.
-
-Lane C is the synchronization check for `!!! id=...` fixture entries. Keep
-active known differences in
-`rum-difftest/divergences/known-differences.txt`, retired imported seed IDs in
-`rum-difftest/divergences/retired-seed-differences.txt`, and use
-`rum-difftest lane-c` to catch missing rows, unreferenced rows, and stale
-fixture metadata. Active ledger rows must carry machine-checked
-`tracked_by=path:needle` ownership metadata and `close_when` removal criteria.
-Lane C also checks active fixture/ledger `type=...` metadata alignment so an
-intentional or temporary divergence is recorded beside the fixture input and in
-the central ledger. `rum-difftest lane-c --summary-json PATH` writes a stable
-machine-readable summary for scripts or CI dashboards; that summary exposes
-lane status, checked artifact paths, issue counts, and active-ledger
-`status`/`type` count breakdowns rather than the full internal ledger row
-shape. Use `--fail-on-open-known-difference` on `lane-c` or aggregate `check`
-when a local script should fail on active `status=open` rows while still
-allowing deferred and intentional rows.
-
-Use Lane A/B `--include-known-diffs` when auditing open divergences against a
-local Wolfram oracle. Both lanes report included known-difference metadata and
-count confirmed vs resolved rows. Resolved rows are listed by ID and fixture
-location so newly matching divergences can be removed from fixtures and the
-ledger intentionally. For imported `seed/` rows, treat resolved output as a
-curation signal: keep the historical seed unchanged, migrate promoted coverage
-into `cases/`, then move seed-linked IDs from the active ledger into the
-retired seed manifest. Lane A/B `--summary-json PATH` writes a stable
-machine-readable summary for scripts or CI dashboards, covering oracle
-configuration, run options, comparison counts, known-difference counts, and
-seed-drift counts. It includes a bounded `issue_samples` locator list for the
-first non-matching, seed-drifted, or resolved known-difference items without
-freezing full per-case or per-step report rows. `--max-issue-samples N`
-adjusts the default 5-entry cap; `--issue-sample-kind` can narrow those samples
-to `non-match`, `seed-drift`, or `resolved-known-difference` during targeted
-audits; and the summary records the selected kind, sample limit, emitted count,
-filtered issue-sample count, and truncation status. Each emitted sample records
-`fixture_source` and `project_owned_fixture` so automation can distinguish
-imported seed drift from project-owned fixture drift without reparsing paths.
-Lane A/B issue-sample controls require `--summary-json PATH` because they only
-affect the machine-readable locator list.
-The sibling `issue_counts` object and `issue_source_counts` array remain
-unfiltered so automation can still see the full non-match, seed-drift, and
-resolved-known-difference breakdown overall and by fixture source. Use
-`--fail-on-seed-drift` only for deliberate fixture-snapshot audits; normal
-oracle conformance should continue to compare `rum` against fresh oracle output
-rather than against checked seed annotations. Use
-`--fail-on-project-seed-drift` when default Lane A audits should fail for
-project-owned fixture drift while tolerating historical drift in the imported
-`seed/ham-import` snapshot. Use
-`--fail-on-resolved-known-difference` with `--include-known-diffs` when an
-oracle audit should fail if active known-difference rows now match and are ready
-for ledger cleanup. Lane A/B summary JSON records the active
-`fail_on_mismatch`, `fail_on_seed_drift`, `fail_on_project_seed_drift`, and
-`fail_on_resolved_known_difference` gate options so automation can distinguish
-comparison cleanliness from the requested exit policy. It also reports
-`oracle_processes`, `oracle_batches`, and `oracle_batch_inputs` so process-reuse
-work can be evaluated against real batching rather than guessed from fixture
-counts. Lane B also keeps its session-specific batch and step counts for
-compatibility. Text reports mirror those generic oracle batch/input counts for
-quick local inspection. Text and JSON reports expose the concrete session-batch
-transport name and process count, distinguishing the local single-process
-`OracleKernel` transport from generic per-batch fallback behavior. Lane A
-submits compared cases through the same batch interface as isolated
-single-expression batches, and its JSON report exposes the same concrete
-transport metadata so the local `OracleKernel` path can amortize process
-startup without sharing case state.
-The Lane B runner submits prepared fixture groups through an oracle batch
-interface; the generic fallback still evaluates each fixture batch
-independently, while the local `OracleKernel` transport executes all Lane B
-fixture batches in one Wolfram process and resets Global-context symbols,
-newly introduced contexts,
-`$Packages`, `$Context`, and `$ContextPath` between fixture batches.
-
-Lane D currently executes imported timing/memory seed suites and the
-project-owned `core-language` suite through local `rum` sessions and reports
-raw metrics. Its default `smoke` profile skips heavy / very-large imported
-categories for routine validation; `--profile full` is the explicit all-input
-baseline mode. `--suite core-language` is intended for the current primitive
-time-efficiency work and is deliberately local-only; use
-`scripts/core-language-microbench.sh` when a rum/WolframKernel ratio is needed.
-`--baseline PATH` compares a run against a checked baseline artifact, and
-`--fail-on-regression` turns missing rows, stale rows, elapsed-threshold
-failures, and result-node-threshold failures into a non-zero exit.
-`--write-baseline PATH` captures the current successful run as a baseline
-artifact with configurable elapsed guardrails.
-`--capture-runs N` repeats the same run and writes median elapsed samples plus
-slowest-sample guardrails. Capture-only guardrail controls such as
-`--capture-runs`, `--baseline-elapsed-multiplier`, and
-`--baseline-min-elapsed-micros` require `--write-baseline PATH`.
-`--threshold-profile` selects the baseline
-threshold record set and capture defaults, separating local debug runs from
-CI debug and CI/release runners. `--check-baseline-readiness` checks the
-default checked smoke baseline artifacts for all threshold profiles and should
-remain red until runner-specific `ci-debug` / `ci-release` artifacts are
-captured on the intended machines. Its text and JSON reports list each expected
-artifact and a suggested capture command, so missing runner-specific baselines
-are actionable in CI logs. The `ci-release` suggestion uses
-`cargo run --release` so the release threshold profile is not captured from a
-debug build, and the same JSON entry exposes `cargo_profile` as `debug` or
-`release` for dashboards. Lane D remains a local `rum` performance lane; it
-should not use a Wolfram oracle.
-
-Project-specific performance investigations, such as the `mma-hol` Pair/Simp
-gate, are not allowed to proceed by chasing small probes in isolation. Treat
-them as top-down phase-tree work: fix the current root target, measure it with
-profiling off, split that target into phases whose times close over the parent
-wall time, and descend only into the largest closed child segment. Profilers,
-counters, and Wolfram comparisons are attribution tools after root ownership is
-established; they are not permission to switch the investigation to a smaller
-non-dominating probe.
-
-## Oracle Policy
-
-Oracle runs use a user-provided local Wolfram kernel such as `WolframKernel`,
-`MathKernel`, or a kernel-compatible wrapper command. Lane A/B accept
-`--oracle-kernel`, `--oracle-command`, config keys `oracle_kernel` /
-`oracle_command`, the `RUM_DIFFTEST_ORACLE_KERNEL` environment variable, `PATH`
-discovery, and common local install paths. Connector-hosted or MCP-wrapped
-sessions are acceptable for tiny manual spot checks but are not the baseline
-oracle. Every local oracle invocation has a finite timeout: 120 seconds by
-default, overridable through `--oracle-timeout-seconds`,
-`oracle_timeout_seconds`, or `RUM_DIFFTEST_ORACLE_TIMEOUT_SECONDS`. The runner
-terminates timed-out kernels and records them as oracle failures. Oracle
-stdout/stderr capture is bounded to 8 MiB per stream; exceeding the limit also
-terminates the process and produces an oracle failure with truncated diagnostics.
-
-Rules:
-
-- Do not require Wolfram tooling for default `cargo test --workspace`.
-- Do not commit generated oracle output.
-- Keep `rum-difftest` artifact hygiene tests enabled so generated oracle
-  wrappers, input files, session directories, stream captures, and stray
-  non-fixture files under `cases/` stay out of the repository.
-- Treat checked fixture `expected` fields as seed annotations. Lane A/B
-  pass/fail decisions must compare `rum` against fresh oracle output and report
-  seed-vs-oracle drift separately.
-- Record the oracle command and version in run output when practical.
-- Record the effective oracle timeout in run output and keep the same timeout
-  policy for Lane A cases, Lane B fixture sessions, and version probes.
-- Keep oracle output capture bounded and report the effective per-stream limit
-  so malformed wrappers cannot turn a conformance run into unbounded memory use.
-- Treat version differences as compatibility data, not as a reason to pin the
-  project to one hidden oracle environment. Lane A/B should keep the
-  `user-provided/unpinned` version policy visible and should not accept config
-  keys that pin one required oracle version.
-- Record deliberate divergences next to fixtures, with a matrix or TODO
-  reference.
+Use `cargo-llvm-cov` for line/branch coverage when auditing test depth.
+Coverage buildout is prioritized by surface, not by count: host lifecycle
+first, then error/resource-limit paths, then breadth across the builtin
+catalog. Do not target a test count; target documented-surface coverage.
 
 ## Fixture Admission Checklist
 
-Before adding a conformance fixture, identify:
+Before adding a regression fixture, identify:
 
-- Matrix group and function family.
-- Support status: `implemented`, `partial`, deliberate divergence, or deferred
-  tail.
-- Test layer: unit, runtime regression, difftest lane, adapter, or real-project
-  smoke.
-- Coverage axis: canonical, boundary, negative, stateful, interaction, or
-  divergence.
-- Expected comparison mode: value-only, held shape, messages, side effects,
-  request/suspension, or performance.
-- Whether the fixture should block ordinary development or require an explicit
-  oracle-enabled command.
+- the documented contract it proves (guide section, reference entry, or
+  rustdoc item);
+- the test layer (unit, runtime regression, host/adapter contract,
+  integration/stress);
+- the coverage axis (canonical, boundary, negative, stateful, interaction,
+  limit);
+- the comparison mode (value, held shape, messages, side effects,
+  request/suspension, resource-limit outcome, performance).
 
-## Practical Priorities
-
-Near-term conformance work should focus on the semantics most likely to break
-real packages:
-
-- rules, patterns, replacement, and traversal
-- definitions, attributes, messages, and option resolution
-- held evaluation, cleanup, failure/status objects, and host input
-- part specifications, structural mutation, and association/keyed data
-- syntax/lowering round trips for package-level source files
-
-String, arithmetic, and existing CL-04/CL-07 smoke fixtures already have first
-footholds. Extend them when real bugs or migration needs expose missing axes,
-not just to increase fixture count.
+If the contract is not yet documented, document it first or record it as
+explicitly unspecified — do not encode accidental behavior as a fixture.

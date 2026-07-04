@@ -1,76 +1,76 @@
 # rum
 
-`rum` is an experimental Rust implementation of a Mathematica / Wolfram-style
-core language runtime.
+`rum` is an embeddable symbolic term-rewriting language and runtime written in
+Rust, built sandbox-first: sessions run under caller-set resource limits
+(recursion, iteration, parse depth, wall-clock timeout), support interrupt and
+cancel, can be reset, snapshotted, and restored, and enforce a per-session
+capability policy so a host can evaluate untrusted scripts safely.
 
-The project is focused on the language kernel rather than a notebook system or
-computer algebra stack. The current emphasis is:
+The surface syntax belongs to the Wolfram Language family of notations; the
+evaluator implements `rum`'s own documented semantics. See
+[DISCLAIMER.md](./DISCLAIMER.md) for scope, trademarks, and project history —
+`rum` is an independent project and makes no compatibility claims.
 
-- symbolic expression trees
-- exact integers
-- parser/lowering infrastructure
-- definitions, rules, and pattern matching
+The project focuses on the language kernel rather than a notebook system or a
+computer-algebra stack:
+
+- symbolic expression trees with exact rational arithmetic
+- definitions, rules, pattern matching, and rewriting
 - scoping and held evaluation
-- embeddable session APIs
-- CLI / REPL tooling
-- an early optional Jupyter-facing adapter
+- parser / lowering / formatter infrastructure
+- embeddable session APIs with structured host I/O
+- CLI / REPL tooling and an optional Jupyter adapter
 
-## What A Reviewer Should Know First
+## Status
 
-`rum` is no longer a bootstrap prototype. The core language slice is already
-substantial:
+The core language slice is substantial and tested:
 
 - `rum-syntax` has a lexer, parser, spans, source-aware diagnostics, preserved
   trivia, and a document-IR formatter
-- `rum-core` and `rum-runtime` support exact integers, canonical lowering,
-  sessions, contexts, package loading, ownvalues/upvalues/downvalues/subvalues,
-  hold-aware evaluation, threading, tracing, and resource limits
-- rules and patterns already drive `MatchQ`, `Cases`, `DeleteCases`,
-  `ReplaceAll`, `ReplaceRepeated`, and current first passes of `Replace`,
-  `ReplaceList`, and `ReplaceAt`
-- `rum-cli` and `rum-repl` are usable developer tools
-- `rum-jupyter` is an early host-backed adapter layer, not part of the
-  evaluator core
-
-The main thing still in flight is not "whether evaluation exists" but how much
-of the intended Wolfram-style semantics has been tightened and how much surface
-area still remains to be filled in.
-
-If you are reviewing the project, the fastest reading path is:
-
-1. [Architecture](./ARCHITECTURE.md)
-2. [Lowering Canonical Forms](./docs/lowering-canonical-forms.md)
-3. [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md)
-4. [v0.1 Acceptance Boundary](./docs/v0.1-acceptance-boundary.md)
-5. [TODO / Roadmap](./TODO.md)
-6. [Performance Kernel Rewrite Plan](./docs/performance-kernel-rewrite-plan.md)
+- `rum-core` and `rum-runtime` support exact integers and rationals, canonical
+  lowering, sessions, contexts, package loading,
+  ownvalues/upvalues/downvalues/subvalues, hold-aware evaluation, threading,
+  tracing, and resource limits
+- rules and patterns drive `MatchQ`, `Cases`, `DeleteCases`, `ReplaceAll`,
+  `ReplaceRepeated`, `Replace`, `ReplaceList`, and `ReplaceAt`
+- `rum-stdlib` installs the builtin catalog: arithmetic, number theory,
+  combinatorics, structure and list operations, associations, functional
+  operators, strings, predicates, logic, and control flow
+- `rum-host` is the Rust embedding boundary: typed outcomes, interrupt/cancel,
+  wall-clock timeout, panic isolation with session poisoning and recovery,
+  `reset()`, snapshot / restore-from-bytes, and a sandbox capability policy
+  (`HostConfig::sandboxed()`)
+- `rum-cli` and `rum-repl` are usable developer tools; `rum-jupyter` is an
+  optional host-backed adapter
 
 ## Scope
 
 Current intended scope:
 
-- a programmable symbolic core language runtime
+- a programmable symbolic core-language runtime
 - embeddable rule execution for business / industrial / DSL-style workloads
+- sandboxed evaluation of untrusted scripts inside Rust hosts
 - interactive use through CLI and REPL
-- a future path to richer hosts such as Jupyter or GUI frontends
 
-Explicitly out of scope for the early phases:
+Explicitly out of scope:
 
 - notebook or GUI frontends as the primary product
-- full CAS coverage
+- full CAS coverage; floating-point numerics (exact rationals only, by design)
 - graphics / visualization
-- broad Wolfram front-end compatibility
+- compatibility with, or implementation of, other vendors' products and
+  protocols
 
 ## Workspace
 
-The repository is a Cargo workspace with these top-level crates:
+The repository is a Cargo workspace with these crates:
 
 - `rum-syntax`: syntax tree, lexer, parser, diagnostics, formatter
 - `rum-core`: shared runtime-neutral core values such as `Expr`, `Atom`, and
   `Symbol`
 - `rum-runtime`: lowering, evaluation sessions, definitions, scoping, messages,
   matching, tracing, and host-facing request APIs
-- `rum-stdlib`: builtin installation for the implemented core-language slice
+- `rum-stdlib`: the standard library — every builtin family's implementation
+  and catalog specs, installed into sessions via `install_core`
 - `rum-host`: narrow Rust embedding facade over `rum-runtime` for host
   sessions, requests, structured outcomes, and resumable input
 - `rum-terminal`: terminal-facing rendering for diagnostics, messages, and
@@ -78,67 +78,25 @@ The repository is a Cargo workspace with these top-level crates:
 - `rum-repl`: interactive shell layer
 - `rum-cli`: command-line entry point
 - `rum-jupyter`: optional Jupyter-facing adapter and transport work
-- `rum-difftest`: optional differential/conformance runner and fixture work
 
 ## Documentation
 
+- [Disclaimer, Trademarks, and Project History](./DISCLAIMER.md)
 - [Architecture](./ARCHITECTURE.md)
 - [TODO / Roadmap](./TODO.md)
 - [Progress Log](./PROGRESS.md)
-- [v0.1 Acceptance Boundary](./docs/v0.1-acceptance-boundary.md)
-- [Core-Language Support Matrix](./docs/core-language-support-matrix.md)
 - [Testing Strategy](./docs/testing-strategy.md)
 - [Lowering Canonical Forms](./docs/lowering-canonical-forms.md)
 - [Runtime Evaluation Audit](./docs/runtime-evaluation-audit.md)
-- [Performance Kernel Rewrite Plan](./docs/performance-kernel-rewrite-plan.md)
-- [Performance Stage 0 Baseline](./docs/performance-stage0-baseline.md)
-- [Jupyter Host Migration Audit](./docs/jupyter-host-migration-audit.md)
-- [`mma-hol` Smoke Driver And Snapshot Audit](./docs/mma-hol-smoke-and-snapshot.md)
+- [v0.1 Acceptance Boundary](./docs/v0.1-acceptance-boundary.md)
+- [Host Adapter Plan](./docs/host-adapter-plan.md)
+- [Host Embedding and Hardening](./docs/host-embedding-and-hardening.md)
 - [Formatter Style Notes](./docs/formatter-style.md)
 - [Code Organization Guidelines](./docs/code-organization-guidelines.md)
-- [Jupyter Console Manual Smoke](./docs/jupyter-console-manual.md)
+- [Jupyter Console Manual](./docs/jupyter-console-manual.md)
 
-## Application Directions
-
-The project is not currently maintaining detailed showcase-project plans.
-Future examples should be driven by concrete downstream needs rather than by
-speculative roadmap breadth.
-
-Plausible application directions include:
-
-- symbolic policy, validation, and rewrite layers for AI, data, or workflow
-  tooling
-- compiler, runtime, or DSL semantics prototypes where a Rust host owns system
-  infrastructure and `rum` owns symbolic rules, diagnostics, and explanation
-
-## Development Environment
-
-Primary day-to-day development should happen in a native local workspace for
-the current machine, using the locally installed toolchain directly (`git`,
-`cargo`, `rustc`, etc.).
-
-The current workspace expects Rust `1.85.x` as declared in `Cargo.toml`.
-
-On Windows, prefer a real WSL checkout over the old `C:\...` / `/mnt/c/...`
-portable-wrapper flow. On macOS and Linux, use the normal local checkout and
-native toolchain directly.
-
-```bash
-cargo test --workspace
-```
-
-The same rule applies to `git`, `cargo fmt`, and other routine commands.
-
-For Wolfram-oracle checks, prefer a local kernel binary such as
-`WolframKernel` or `MathKernel`. Connector-based or MCP-wrapped Mathematica
-instances can still be useful for tiny spot checks, but they may impose extra
-security, time, or memory limits and should not be treated as the primary
-semantic oracle.
-
-When running through sandboxed agent tooling, loopback proxies such as
-`127.0.0.1:10808` may be unavailable even when they work fine in a normal
-shell. Networked `cargo` or oracle commands may therefore need unsandboxed
-execution on this machine.
+A language guide (`docs/guide/`) and a generated builtin reference
+(`docs/reference/`) are being added as part of the current documentation pass.
 
 ## Quick Start
 
@@ -147,18 +105,6 @@ Run the full test suite:
 ```bash
 cargo test --workspace
 ```
-
-For long-running local probes, especially commands that may spawn child
-processes, prefer:
-
-```bash
-scripts/run-bounded.py --timeout 120 -- <command> ...
-```
-
-For performance diagnosis, keep probes anchored to the current root gate.
-Measure the root without profiling, split it into child phases that close over
-the parent wall time, and drill only into the largest closed child. Smaller
-probes are side evidence until they are shown to dominate that root.
 
 Run the CLI REPL:
 
@@ -190,31 +136,25 @@ Run the minimal Rust host embedding example:
 cargo run -p rum-host --example basic_embedding
 ```
 
-## Current Priorities
+## Development
 
-Near-term work is concentrated in these areas:
+- The workspace targets Rust `1.85` (edition 2024) as declared in
+  `Cargo.toml`; use the local native toolchain (`cargo fmt --check`,
+  `cargo test --workspace`).
+- `scripts/core-language-microbench.sh` and
+  `scripts/core-memory-microbench.sh` are the rum-local performance and
+  memory baselines: run them on two builds and compare per-label TSVs for an
+  A/B. Hot-path changes are expected to come with such an A/B.
+- For long-running local commands that may spawn child processes, prefer
+  `scripts/run-bounded.py --timeout SECONDS -- <command> ...`.
+- Agent-facing operational notes live in [AGENTS.md](./AGENTS.md).
 
-- hardening the `rum-host` embedding boundary and validating the now
-  host-backed `rum-jupyter` adapter against real Jupyter frontends
-- using `mma-hol` as the preferred real-project pressure test for the
-  supported Wolfram-style language surface
-- further tightening evaluator semantics where behavior is still somewhat ad hoc
-- continuing to expand the rule / matcher language
-- keeping the `CL-01` through `CL-09` mainlines documented as closed while
-  promoting only concrete downstream blockers from deferred long-tail notes
-  back into scheduled work
-- broadening conformance, regression, and adapter-focused test coverage
+## Direction
 
-`rum-jupyter` remains useful and actively maintained as a basic Notebook tech
-preview and `rum-host` contract validator, but it is not the primary driver of
-the core language roadmap.
-
-## Notes For Evaluators
-
-Two practical points are worth keeping in mind during review:
-
-- `rum-jupyter` is intentionally optional and should be layered through
-  `rum-host`; protocol details should not be treated as evaluator semantics
-- some roadmap and audit documents are intentionally candid about remaining
-  gaps; they are meant to make review easier, not to imply the current system
-  is only a stub
+Near-term work concentrates on the embedding story: polishing the `rum-host`
+boundary and its documentation, deepening rum-native integration and stress
+coverage (resource-limit and cancellation paths in particular), and the
+language guide / builtin reference documentation pass. A Python binding (via
+native Rust bindings layered on `rum-host`) and a plugin-sandbox showcase
+application are future directions, deliberately deferred until the kernel and
+host contract are stable.
