@@ -72,6 +72,8 @@ mod session_state;
 mod slot_substitution;
 mod structure_data;
 mod suspension;
+#[cfg(test)]
+mod test_builtins;
 mod text_rendering;
 mod tree_walkers;
 mod vm_rhs_template;

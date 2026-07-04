@@ -145,3 +145,66 @@ fn installs_identity_builtin() {
     let info = session.inspect("Identity").unwrap();
     assert!(info.is_builtin);
 }
+
+#[test]
+fn catalog_attributes_match_kernel_vocabulary() {
+    use std::collections::BTreeMap;
+
+    use rum_runtime::kernel_api::stdlib_builtin_attribute_specs;
+
+    let mut catalog_by_name = BTreeMap::new();
+    for spec in stdlib_catalog_specs() {
+        let previous = catalog_by_name.insert(spec.name, spec.attributes);
+        assert!(
+            previous.is_none(),
+            "duplicate stdlib catalog spec: {}",
+            spec.name
+        );
+    }
+
+    let mut kernel_by_name = BTreeMap::new();
+    for spec in stdlib_builtin_attribute_specs() {
+        let previous = kernel_by_name.insert(spec.name, spec.attributes);
+        assert!(
+            previous.is_none(),
+            "duplicate kernel attribute vocabulary spec: {}",
+            spec.name
+        );
+    }
+
+    for (name, attributes) in catalog_by_name.iter() {
+        assert_eq!(
+            kernel_by_name.get(name).copied(),
+            Some(*attributes),
+            "kernel attribute vocabulary drift for {name}"
+        );
+    }
+
+    for name in kernel_by_name.keys() {
+        assert!(
+            catalog_by_name.contains_key(name),
+            "kernel attribute vocabulary has non-stdlib symbol: {name}"
+        );
+    }
+}
+
+fn stdlib_catalog_specs() -> impl Iterator<Item = &'static rum_runtime::kernel_api::BuiltinSpec> {
+    [
+        catalog::ARITHMETIC_BUILTINS,
+        catalog::LOGIC_BUILTINS,
+        catalog::PREDICATE_BUILTINS,
+        catalog::ASSOCIATION_BUILTINS,
+        catalog::COMBINATORICS_BUILTINS,
+        catalog::CONTROL_BUILTINS,
+        catalog::FUNCTIONAL_BUILTINS,
+        catalog::INTEGER_DIGITS_BUILTINS,
+        catalog::NUMBER_THEORY_BUILTINS,
+        catalog::CALCULUS_BUILTINS,
+        catalog::POLYNOMIAL_BUILTINS,
+        catalog::REWRITE_BUILTINS,
+        catalog::STRING_BUILTINS,
+        catalog::STRUCTURE_BUILTINS,
+    ]
+    .into_iter()
+    .flatten()
+}

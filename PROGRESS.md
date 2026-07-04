@@ -17,6 +17,36 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 Stage-3 FINALE DONE (brief-113) — arithmetic moved; ALL 14 families' spec ownership in rum-stdlib
+
+The line's endpoint: `builtin_catalog/numeric.rs` is GONE; the 27 hottest
+handlers (Plus/Times/Power/…, + Identity) moved as wrapper-shape specs
+(stdlib catalog 345); arithmetic bodies + `combine_*` canonicalization stay
+kernel-side behind `ArithmeticDataBuiltin`. Kernel catalog residue is now
+pure evaluator/host machinery: definition/rule machinery + Part family
+(rules.rs), Function/HoldForm, scoping, namespace/context/loading,
+debug/resource tools, 19 symbol-only string specs, known-symbol vocabulary.
+A shared `#[cfg(test)] test_builtins.rs` now serves runtime mechanism tests.
+
+THE GATE CAUGHT THE LINE'S ONE REAL PERFORMANCE REGRESSION here — the
+mandatory finale A/B found `table-iterator-plus` at **14x** (63→907ns/iter)
+while all 1300 tests stayed green (a pure fast-path-eligibility loss,
+invisible to correctness). Root cause: the iterator fast path gates on
+`session attributes == default_system_attribute_set(symbol)`; the static
+side lost EVERY moved family's attribute data as catalogs left the kernel
+(latent since batch 5, exposed only when Plus — the hottest symbol — hit the
+check). Architectural conclusion recorded: symbol ATTRIBUTES
+(Orderless/Flat/Hold*) are evaluator semantics and must stay kernel-known —
+of the spec quintuple, handler and capability may move; static attribute
+knowledge may not. Fix: kernel-side attribute vocabulary covering all 345
+stdlib specs (112 non-empty) consulted as the fallback + a BIDIRECTIONAL
+drift test (stdlib spec attrs == kernel vocabulary, no missing/no extra).
+Fix verified: table-iterator-plus stable at −6~−10% vs base across two runs;
+remaining table-wide +10-19% swings re-run-verified as machine drift
+(receding + direction-flipping; the measurement environment ran ~15
+compile+bench cycles today — noise floor ±10% acknowledged in the judgment).
+Workspace 1301/0 (the drift test adds one); CLI smoke → 55.
+
 ## 2026-07-04 Stage-3 batch 11 DONE (brief-112) — rewrite_builtins: wrapper shape, engine untouched
 
 Codex chose the brief-111 wrapper shape with clean evidence (the rewrite

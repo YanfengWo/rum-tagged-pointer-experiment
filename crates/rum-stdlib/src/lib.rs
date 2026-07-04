@@ -1,5 +1,6 @@
 use rum_runtime::{Session, core_builtin_specs};
 
+mod arithmetic;
 mod associations;
 mod calculus;
 mod catalog;
@@ -17,6 +18,9 @@ mod structure_ops;
 
 pub fn install_core(session: &mut Session) {
     for spec in core_builtin_specs() {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::ARITHMETIC_BUILTINS {
         session.register_builtin(*spec);
     }
     for spec in catalog::LOGIC_BUILTINS {

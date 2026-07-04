@@ -385,6 +385,7 @@ fn is_extra_known_system_symbol_name(name: &str) -> bool {
             | "HoldAllComplete"
             | "HoldFirst"
             | "HoldRest"
+            | "Identity"
             | "Listable"
             | "NHoldAll"
             | "NearestTo"

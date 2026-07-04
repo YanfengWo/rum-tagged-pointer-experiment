@@ -155,6 +155,7 @@ fn repl_reads_multiline_input_until_a_form_is_complete() {
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
     let mut session = Session::new();
+    install_core(&mut session);
 
     repl.run(&mut session).unwrap();
 

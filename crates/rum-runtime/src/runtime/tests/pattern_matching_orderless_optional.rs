@@ -89,9 +89,8 @@ fn orderless_optional_with_other_args_matches_present_and_omitted() {
 fn orderless_optional_dot_uses_head_default() {
     let mut session = session_with_test_rewrite_builtins();
 
-    session
-        .eval_text("SetAttributes[f, Orderless]; Default[f] = d")
-        .unwrap();
+    session.eval_text("SetAttributes[f, Orderless]").unwrap();
+    session.eval_text("Default[f] = d").unwrap();
 
     assert_wk_cases(
         &mut session,

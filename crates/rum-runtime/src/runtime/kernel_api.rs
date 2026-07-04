@@ -8,6 +8,9 @@
 // capabilities
 pub use super::capabilities::Capability;
 
+// builtin_catalog
+pub use super::builtin_catalog::{BuiltinAttributeSpec, stdlib_builtin_attribute_specs};
+
 // control_data
 pub use super::control_data::ControlDataBuiltin;
 
@@ -15,7 +18,7 @@ pub use super::control_data::ControlDataBuiltin;
 pub use super::rewrite_data::RewriteDataBuiltin;
 
 // arithmetic
-pub use super::arithmetic::{expr_as_exact_integer, expr_as_exact_rational};
+pub use super::arithmetic::{ArithmeticDataBuiltin, expr_as_exact_integer, expr_as_exact_rational};
 
 // association_data
 pub use super::association_data::{

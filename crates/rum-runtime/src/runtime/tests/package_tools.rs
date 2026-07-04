@@ -144,7 +144,7 @@ fn dump_save_context_strings_skip_module_gensyms_but_keep_dollar_globals() {
     let dir = TempDirGuard::new("dumpsave-context-gensyms");
     let context_file = dir.path().join("context.mx");
     let explicit_file = dir.path().join("explicit.mx");
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_script(

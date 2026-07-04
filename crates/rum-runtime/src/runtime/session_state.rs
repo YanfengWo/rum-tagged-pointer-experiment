@@ -429,6 +429,8 @@ impl Default for Session {
         for spec in core_builtin_specs() {
             session.register_builtin(*spec);
         }
+        #[cfg(test)]
+        test_builtins::register_test_arithmetic_builtins(&mut session);
 
         session
     }
