@@ -17,6 +17,20 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 File-slimming batch 4 DONE (brief-117) — vm_rhs_template.rs 53KB + lexer.rs 41KB split
+
+The opt-in VM split into 7 modules (model/compiler/executor/cache/safety/
+tests + facade, ≤16.2k) with the disabled-gate check verbatim in cache.rs
+and boundaries that keep the future feature-gate/move decision trivial. The
+lexer split into 10 modules (core dispatch loop, cursor primitives, strings/
+escapes, named_characters table, numbers, symbols, operators, trivia, tests
++ facade, ≤14k) with a clean DAG rooted at cursor/operators. Zero caller
+changes (directory-module convention). The pre-existing source_template
+dead-code warning was left for the VM-fate decision (the fix-in-passing
+authorization was optional). Gate: 1301/0 conserved; lexer named-character
+escape smoke (`\[Alpha]`) → 21. Remaining debt: arithmetic 42k (HOT, next),
+the two test files.
+
 ## 2026-07-04 File-slimming batch 3 DONE (brief-116) — definition_application.rs 55KB split by value-application domain
 
 The hottest file of the line split into 8 modules, all ≤14k: down_values /
