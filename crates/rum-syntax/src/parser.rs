@@ -15,5 +15,5 @@ pub(crate) fn parse_tokens(tokens: Vec<Token>) -> Result<SyntaxExpr, SyntaxError
 }
 
 #[cfg(test)]
-#[path = "parser/tests.rs"]
+#[path = "parser/tests/mod.rs"]
 mod tests;

@@ -17,6 +17,23 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 File-slimming line COMPLETE (brief-119) — the >35k debt tier is ZERO
+
+The final batch split the two test files by BEHAVIOR FAMILY with a
+test-name identity proof (stdlib 359=359, syntax 152=152, normalized diff
+EMPTY): `incidental_runtime.rs` 67k → 12 behavior modules ≤12.2k (its
+migration-artifact grab-bag decomposed into what is actually being tested);
+`parser/tests.rs` 38k → 8 grammar-area modules ≤12.8k. Gate re-verified the
+line's end state: the workspace-wide >35k audit is EMPTY (was 9 files two
+days ago: profiling 138k, catalog 74k, incidental 67k, evaluation_cache
+63k, definition_application 55k, vm_rhs_template 53k, arithmetic 42k, lexer
+41k, parser/tests 38k); the 20-35k split-plan band stands at 26 files (the
+next-granularity decision, not urgent). Workspace 1301/0 conserved through
+all six batches; two hot splits carried independent gate A/Bs; zero
+behavior change end to end. The splitting principles (by logic/function,
+incremental-compilation-aware, future-refactoring-aligned, verbatim, split
+map first) are codified in brief-114 for reuse.
+
 ## 2026-07-04 File-slimming batch 5 DONE (brief-118) — arithmetic.rs 42KB split by numeric domain
 
 The hottest bodies split into 8 modules: `canonical.rs` (18.5k — Plus/Times/

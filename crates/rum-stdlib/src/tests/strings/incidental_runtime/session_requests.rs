@@ -1,0 +1,118 @@
+use super::super::*;
+use super::support::*;
+
+// Moved from crates/rum-runtime/src/runtime/tests/session_requests/functional_tensor_string_resume.rs.
+
+#[test]
+fn resume_eval_request_with_input_can_finish_delayed_string_rules() {
+    let mut session = core_session();
+
+    let first = session
+        .eval_request("StringReplace[{\"a\", \"a\"}, \"a\" :> InputString[\"replace: \"]]")
+        .expect_err("StringReplace delayed rule should suspend on the first string");
+    assert_input_prompt(&first.error, "replace: ");
+
+    let second = session
+        .resume_eval_request_with_input("x")
+        .expect_err("StringReplace should continue to the second string after resuming");
+    assert_input_prompt(&second.error, "replace: ");
+
+    let response = session
+        .resume_eval_request_with_input("y")
+        .expect("StringReplace should finish after resumed delayed rules");
+    assert_eq!(response.value.to_string(), "List[\"x\", \"y\"]");
+
+    let first = session
+        .eval_request("StringCases[{\"a\", \"b\"}, x_ :> InputString[\"case: \"]]")
+        .expect_err("StringCases delayed rule should suspend on the first string");
+    assert_input_prompt(&first.error, "case: ");
+
+    let second = session
+        .resume_eval_request_with_input("a")
+        .expect_err("StringCases should continue to the second string after resuming");
+    assert_input_prompt(&second.error, "case: ");
+
+    let response = session
+        .resume_eval_request_with_input("b")
+        .expect("StringCases should finish after resumed delayed rules");
+    assert_eq!(response.value.to_string(), "List[List[\"a\"], List[\"b\"]]");
+}
+
+// Moved from crates/rum-runtime/src/runtime/tests/session_requests/functional_tensor_string_resume.rs.
+
+#[test]
+fn resume_eval_request_with_input_can_finish_string_apply_list_callbacks() {
+    let mut session = core_session();
+
+    let first = session
+        .eval_request("StringApply[Function[List[InputString[\"apply: \"]]], {\"ab\", \"cd\"}]")
+        .expect_err("StringApply callback should suspend on the first string");
+    assert_input_prompt(&first.error, "apply: ");
+
+    let second = session
+        .resume_eval_request_with_input("one")
+        .expect_err("StringApply should continue to the second string after resuming");
+    assert_input_prompt(&second.error, "apply: ");
+
+    let response = session
+        .resume_eval_request_with_input("two")
+        .expect("StringApply should finish after resumed callbacks");
+    assert_eq!(response.value.to_string(), "List[\"one\", \"two\"]");
+}
+
+// Moved from crates/rum-runtime/src/runtime/tests/session_requests/transforms_resume.rs.
+
+#[test]
+fn resume_eval_request_with_input_can_finish_replacepart_pattern_bindings_in_delayed_rhs() {
+    let mut session = core_session();
+
+    let failure = session
+        .eval_request(
+            "ReplacePart[f[g[a]], {1, i_} :> StringJoin[InputString[\"rhs: \"], ToString[i]]]",
+        )
+        .expect_err(
+            "ReplacePart should suspend when a delayed rhs with pattern bindings requests input",
+        );
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "rhs: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("done")
+        .expect("resume should continue ReplacePart after the delayed rhs resolves");
+
+    assert_eq!(response.value.to_string(), "f[g[\"done1\"]]");
+}
+
+// Moved from crates/rum-runtime/src/runtime/tests/session_requests/transforms_resume_associations.rs.
+
+#[test]
+fn resume_eval_request_with_input_can_finish_keysortby_after_suspending_sort_key() {
+    let mut session = core_session();
+
+    let failure = session
+        .eval_request(
+            "KeySortBy[{bb -> 2, a -> 1}, Function[If[SameQ[Slot[1], bb], StringLength[InputString[\"key: \"]], StringLength[ToString[Slot[1]]]]]]",
+        )
+        .expect_err("KeySortBy should suspend when a transformed sort key requests input");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "key: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("xxxx")
+        .expect("resume should continue KeySortBy after the transformed sort key resolves");
+
+    assert_eq!(
+        response.value.to_string(),
+        "Association[Rule[a, 1], Rule[bb, 2]]"
+    );
+}

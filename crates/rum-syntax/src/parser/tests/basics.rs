@@ -1,0 +1,59 @@
+use super::support::*;
+
+#[test]
+fn parses_large_integer_literal() {
+    let parsed = parse_expr("123456789012345678901234567890").unwrap();
+    assert_eq!(
+        parsed,
+        SyntaxExpr::integer("123456789012345678901234567890", z())
+    );
+}
+
+#[test]
+fn parses_simple_decimal_literal_as_numeric_atom() {
+    let parsed = parse_expr("0.01").unwrap();
+    assert_eq!(parsed, SyntaxExpr::integer("0.01", z()));
+
+    let parsed = parse_expr(".5").unwrap();
+    assert_eq!(parsed, SyntaxExpr::integer(".5", z()));
+
+    let parsed = parse_expr("1.").unwrap();
+    assert_eq!(parsed, SyntaxExpr::integer("1.", z()));
+
+    let parsed = parse_expr("1.5e3").unwrap();
+    assert_eq!(parsed, SyntaxExpr::integer("1.5e3", z()));
+}
+
+#[test]
+fn parses_lists_and_nested_calls() {
+    let parsed = parse_expr("f[{1, 2}, g[x]]").unwrap();
+    assert_eq!(parsed.to_string(), "f[{1, 2}, g[x]]");
+}
+
+#[test]
+fn rejects_too_deep_nested_call_without_panicking() {
+    let depth = MAX_PARSE_DEPTH + 1;
+    let mut input = String::with_capacity(depth * 3 + 1);
+    for _ in 0..depth {
+        input.push_str("f[");
+    }
+    input.push('x');
+    for _ in 0..depth {
+        input.push(']');
+    }
+
+    let error = parse_expr(&input).expect_err("too-deep call should be a parse error");
+    assert!(matches!(
+        error,
+        SyntaxError::ParseDepthExceeded {
+            max: MAX_PARSE_DEPTH,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn parses_association_literals() {
+    let parsed = parse_expr("<|a -> 1, b -> <|c -> 3|>|>").unwrap();
+    assert_eq!(parsed.to_string(), "<|a -> 1, b -> <|c -> 3|>|>");
+}
