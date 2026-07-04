@@ -430,59 +430,8 @@ fn repeatc_test_session() -> Session {
 
 fn vm_test_session() -> Session {
     let mut session = Session::new();
-    session.register_builtin(BuiltinSpec::ordinary_with_hold(
-        "CompoundExpression",
-        "Test-local control builtin for VM template probes.",
-        HoldAttribute::HoldAll,
-        test_eval_compound_expression,
-    ));
-    session.register_builtin(BuiltinSpec::ordinary_with_hold(
-        "If",
-        "Test-local control builtin for VM template probes.",
-        HoldAttribute::HoldRest,
-        test_eval_if,
-    ));
-    session.register_builtin(BuiltinSpec::ordinary(
-        "Return",
-        "Test-local control builtin for VM template probes.",
-        test_eval_return,
-    ));
-    session.register_builtin(BuiltinSpec::ordinary(
-        "SameQ",
-        "Tests whether all arguments are exactly identical after evaluation.",
-        test_eval_same_q,
-    ));
+    crate::runtime::test_builtins::register_test_vm_template_builtins(&mut session);
     session
-}
-
-fn test_eval_compound_expression(
-    session: &mut Session,
-    head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_control_data_builtin(ControlDataBuiltin::CompoundExpression, head, args)
-}
-
-fn test_eval_if(session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-    session.eval_control_data_builtin(ControlDataBuiltin::If, head, args)
-}
-
-fn test_eval_return(session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-    session.eval_control_data_builtin(ControlDataBuiltin::Return, head, args)
-}
-
-fn test_eval_same_q(
-    _session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    Ok(system_expr(
-        if args.windows(2).all(|pair| pair[0] == pair[1]) {
-            heads::structure::TRUE
-        } else {
-            heads::structure::FALSE
-        },
-    ))
 }
 
 fn symbol_expr(symbol: &Symbol) -> Expr {

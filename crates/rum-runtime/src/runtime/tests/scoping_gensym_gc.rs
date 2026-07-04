@@ -2,24 +2,14 @@ use super::*;
 
 fn session_with_test_first() -> Session {
     let mut session = session_with_test_control_builtins();
-    session.register_builtin(BuiltinSpec::ordinary_with_hold(
-        "First",
-        "Test-local structural first for gensym GC probes.",
-        HoldAttribute::HoldRest,
-        eval_test_first,
-    ));
+    crate::runtime::test_builtins::register_test_first_builtin(&mut session);
     session
 }
 
-fn eval_test_first(session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
-    let [expr] = args else {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
-    };
-
-    match expr {
-        Expr::Call { args, .. } if !args.is_empty() => session.evaluate(args[0].clone()),
-        _ => Ok(Expr::call(head.clone(), args.to_vec())),
-    }
+fn session_with_test_gc_probe_builtins() -> Session {
+    let mut session = session_with_test_control_builtins();
+    crate::runtime::test_builtins::register_test_sameq_builtin(&mut session);
+    session
 }
 
 #[test]
@@ -344,6 +334,32 @@ fn unique_generated_symbols_are_not_module_gc_candidates() {
 
     assert_eq!(eval_string(&mut session, &generated), "17");
     assert_eq!(session.gc_candidate_gensyms.len(), 0);
+}
+
+#[test]
+fn recursive_module_sweep_reclaims_dead_retained_gensyms() {
+    let mut session = session_with_test_gc_probe_builtins();
+
+    session
+        .eval_text(
+            "ClearAll[gcRec050]; gcRec050[n_] := Module[{r}, If[SameQ[n, 0], 0, r = gcRec050[n - 1] + 1; r]]",
+        )
+        .unwrap();
+
+    for _ in 0..4 {
+        assert_eq!(eval_string(&mut session, "Do[gcRec050[12], {15}]"), "Null");
+        assert!(
+            session.retained_candidate_definition_count() > 0,
+            "recursive Module workload should retain escaped gensyms before sweep"
+        );
+
+        session.collect_and_sweep_dead_gensyms(&[]);
+
+        assert_eq!(session.retained_candidate_definition_count(), 0);
+        assert_eq!(session.gc_candidate_gensym_count(), 0);
+    }
+
+    assert_eq!(eval_string(&mut session, "gcRec050[5]"), "5");
 }
 
 #[test]

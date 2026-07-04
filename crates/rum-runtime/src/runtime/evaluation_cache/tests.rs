@@ -1,22 +1,7 @@
 use super::*;
 
 fn session_with_compound_expression() -> Session {
-    let mut session = Session::default();
-    session.register_builtin(BuiltinSpec::ordinary_with_hold(
-        "CompoundExpression",
-        "Test-local moved control builtin.",
-        HoldAttribute::HoldAll,
-        test_compound_expression,
-    ));
-    session
-}
-
-fn test_compound_expression(
-    session: &mut Session,
-    head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_control_data_builtin(ControlDataBuiltin::CompoundExpression, head, args)
+    crate::runtime::test_builtins::session_with_test_compound_expression_builtin()
 }
 
 #[test]

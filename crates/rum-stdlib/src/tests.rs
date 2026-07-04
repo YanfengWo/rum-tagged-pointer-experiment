@@ -80,8 +80,6 @@ mod incidental_package_tools;
 mod incidental_predicates;
 #[path = "tests/incidental_print_sink.rs"]
 mod incidental_print_sink;
-#[path = "tests/incidental_scoping_gensym_gc.rs"]
-mod incidental_scoping_gensym_gc;
 #[path = "tests/incidental_scoping_unique.rs"]
 mod incidental_scoping_unique;
 #[path = "tests/incidental_session_requests_debug_tooling_resume.rs"]
