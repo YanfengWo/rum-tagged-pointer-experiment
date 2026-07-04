@@ -48,7 +48,13 @@ work for the current patch.
 ### Incremental-compilation friendliness
 
 Module boundaries should help Rust reuse compiled artifacts and avoid
-unnecessary recompilation of unrelated code.
+unnecessary recompilation of unrelated code. Honest scoping of this goal:
+Rust's incremental unit is primarily the CRATE (then codegen units), so the
+big compilation wins come from crate boundaries; file/module splits serve it
+indirectly — they keep dependency structure explicit (DAGs, stable-vs-churn
+separation) and keep future crate-level extraction cheap. The primary direct
+payoffs of file splits are review granularity, navigation, merge-conflict
+surface, and movability.
 
 ### Unit-test friendliness
 
@@ -66,19 +72,29 @@ Use the following thresholds:
 - under `10k`: preferred range
 - `10k` to `20k`: warning range; the file should be reviewed for possible
   splitting
-- `20k` to `35k`: split-plan range; active work should not continue without an
-  explicit TODO item stating that the file should be split
+- `20k` to `35k`: split-plan range; any change that touches the file must
+  include a split assessment in its report — either perform/begin the split,
+  or state concretely why not and what the future boundary is (assess-on-touch;
+  this replaces the older blanket-TODO requirement, whose bookkeeping cost
+  exceeded its value)
 - over `35k`: default architecture debt; the file should usually be split
   immediately unless there is a written exception
 
 Additional rules:
 
+- measure the IMPLEMENTATION size: if a file carries an in-file
+  `#[cfg(test)]` module, split the tests out into a sibling `tests.rs` first
+  and re-measure before judging the file against the thresholds
 - if a file is still under active development and exceeds `10k`, add an
   explicit TODO item noting that the file should be split
 - if a file is mostly feature-complete and exceeds the threshold, treat
   splitting as immediate cleanup rather than indefinite future debt
 - if a large file is kept temporarily, document why it remains large and how it
   is expected to be split later
+- a cohesive module slightly over a threshold beats two fragmented halves
+  under it; when keeping such a module, say so where the split would otherwise
+  be recorded (validated in practice: the 2026-07 slimming line kept a
+  hot 18.5k canonicalization cluster whole and split everything else)
 
 ## Test File Guidance
 
@@ -86,14 +102,24 @@ Test files may be somewhat larger than implementation files because they often
 benefit from keeping related scenarios together, but they are not exempt from
 the same maintenance concerns.
 
+Test-file thresholds (looser than implementation files because scenario
+cohesion carries real value):
+
+- under `15k`: preferred range
+- `15k` to `25k`: warning range
+- over `45k`: debt; split by behavior family
+
 In practice:
 
-- prefer grouping tests by behavior family rather than piling all scenarios into
-  one `tests.rs`
-- once a test file becomes difficult to review in one pass, split it by feature
-  or behavior area
-- very large test files should be treated as structure debt in the same way as
-  large implementation files, even if the threshold is reached slightly later
+- prefer grouping tests by behavior family (WHAT is being tested) rather than
+  piling all scenarios into one `tests.rs` — and never by historical source
+  file or by size chunks
+- shared setup/factories belong in a small local `support` module
+- when splitting, prove identity: the test-name set before and after must be
+  equal modulo module-path prefixes (capture `cargo test -- --list` both
+  sides and diff)
+- once a test file becomes difficult to review in one pass, split it even
+  inside the warning range
 
 ## Preferred Split Style
 
@@ -120,6 +146,33 @@ Avoid:
 - arbitrary size-based splitting with no conceptual boundary
 - tiny micro-modules whose only benefit is reducing a character count
 
+## Directory Fan-Out
+
+File hygiene must not silently become directory debt: a flat directory of 50+
+files has the same navigation problem as one 50k file.
+
+- soft ceiling: a directory with more than ~20 DIRECT children should be
+  reviewed for domain grouping (e.g. `definition_*`, `session_*`, `eval_*`
+  clusters becoming subdirectories)
+- group by domain, never alphabetically or by size; a grouping is right when
+  its name is the answer to "what part of the system is this?"
+- the same assess-on-touch rule applies: work that adds files to an
+  over-ceiling directory should say why it does not group first
+
+## Splitting Is Organization, Not Rewriting
+
+A split moves code; it does not change it. When executing a split:
+
+- bodies move VERBATIM — no renames, no signature changes, no behavior change
+- visibility grows only where module boundaries force it, and minimally
+  (`pub(super)` before anything wider)
+- the facade (`mod.rs`) re-exports the old surface so external callers keep
+  compiling unchanged
+- write the SPLIT MAP first (target module → one-line responsibility →
+  approximate size) and keep the intra-directory dependencies a DAG
+- hot-path files additionally need a microbench A/B even though same-crate
+  module boundaries do not block inlining — measured, not assumed
+
 ## Function Design For Testability
 
 Function boundaries should support isolated unit tests.
@@ -141,13 +194,16 @@ steps should usually be reachable without full-stack setup.
 
 Large files should not be treated as a passive fact of life.
 
-Whenever a change touches a file that is already in the warning or debt range:
+Whenever a change touches a file that is already in the warning, split-plan,
+or debt range:
 
 1. Re-evaluate whether the current file still represents one clear
    responsibility.
 2. Decide whether the current patch should perform or begin a split.
-3. If not splitting immediately, leave a concrete TODO note that the file
-   should be split, or document the temporary exception.
+3. If not splitting immediately, record the assessment in the change's
+   report/commit — why not now, and what the future boundary is. (This
+   assess-on-touch record replaces the older requirement to maintain standing
+   TODO items for every split-plan file.)
 
 This rule exists to prevent the codebase from repeatedly adding new behavior to
 files that everyone already knows are too large.
