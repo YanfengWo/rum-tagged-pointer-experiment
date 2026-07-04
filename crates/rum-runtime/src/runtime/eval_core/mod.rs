@@ -1,0 +1,210 @@
+use super::*;
+
+use std::sync::atomic::Ordering;
+
+use std::time::Instant;
+
+mod call;
+
+mod stability;
+
+mod symbol;
+
+const INTERRUPT_POLL_MASK: u64 = 1023;
+
+impl Session {
+    pub(super) fn evaluate_once_unstable_after_input_check_with_cycle_tracking(
+        &mut self,
+        expr: Expr,
+        track_cycle: bool,
+    ) -> Result<Expr, EvalError> {
+        if self.interrupt_armed {
+            self.poll_host_interrupt_if_due()?;
+        }
+
+        if track_cycle
+            && self
+                .evaluation_stack
+                .iter()
+                .any(|active| active.epoch == self.evaluation_epoch && active.expr == expr)
+        {
+            return Err(EvalError::EvaluationCycleDetected {
+                expr: expr.to_string(),
+            });
+        }
+
+        if self.evaluation_depth >= self.resource_limits.recursion_limit {
+            return Err(EvalError::RecursionLimitExceeded {
+                limit: self.resource_limits.recursion_limit,
+            });
+        }
+
+        if track_cycle {
+            self.evaluation_stack.push(EvaluationStackEntry {
+                expr: expr.clone(),
+                epoch: self.evaluation_epoch,
+            });
+        }
+        self.evaluation_depth += 1;
+        let result = self.evaluate_inner_unstable(expr);
+        self.evaluation_depth -= 1;
+        if track_cycle {
+            self.evaluation_stack.pop();
+        }
+        match result {
+            Ok(value) => {
+                self.enforce_active_resource_limits_for_expr(&value)?;
+                Ok(value)
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn poll_host_interrupt_if_due(&mut self) -> Result<(), EvalError> {
+        self.interrupt_poll_counter = self.interrupt_poll_counter.wrapping_add(1);
+        if self.interrupt_poll_counter & INTERRUPT_POLL_MASK != 0 {
+            return Ok(());
+        }
+        if self.interrupt_flag.load(Ordering::Relaxed) {
+            return Err(EvalError::Cancelled);
+        }
+        if let Some(deadline) = self.eval_deadline {
+            if Instant::now() >= deadline {
+                return Err(EvalError::TimeConstraintExceeded);
+            }
+        }
+        Ok(())
+    }
+
+    pub(super) fn evaluate_inner_unstable(&mut self, expr: Expr) -> Result<Expr, EvalError> {
+        let runtime_profile_total = runtime_path_timing_start("evaluate_inner_unstable.total");
+        let result = match expr {
+            Expr::Atom(Atom::Symbol(symbol)) => {
+                let runtime_profile = runtime_path_timing_start("evaluate_inner_unstable.symbol");
+                let result = self.evaluate_symbol(symbol);
+                record_profile_runtime_path_timing(
+                    runtime_profile,
+                    runtime_profile_outcome_for_expr_result(&result),
+                );
+                result
+            }
+            Expr::Call { head, args } => {
+                let runtime_profile = runtime_path_timing_start("evaluate_inner_unstable.call");
+                let result = self.evaluate_call(head.clone(), args);
+                record_profile_runtime_path_timing(
+                    runtime_profile,
+                    runtime_profile_outcome_for_expr_result(&result),
+                );
+                result
+            }
+            other => {
+                let runtime_profile = runtime_path_timing_start("evaluate_inner_unstable.atom");
+                let result = Ok(other);
+                record_profile_runtime_path_timing(
+                    runtime_profile,
+                    runtime_profile_outcome_for_expr_result(&result),
+                );
+                result
+            }
+        };
+        record_profile_runtime_path_timing(
+            runtime_profile_total,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        result
+    }
+
+    pub(super) fn evaluate_atom_fast_path(&mut self, expr: Expr) -> Result<Expr, EvalError> {
+        let kind = EvaluateAtomFastPathKind::classify(self, &expr);
+        let runtime_profile_total = runtime_path_timing_start("evaluate_atom_fast_path.total");
+        let runtime_profile_kind = runtime_path_timing_start(kind.profile_name());
+        let result = match kind {
+            EvaluateAtomFastPathKind::StableSymbol | EvaluateAtomFastPathKind::Atom => Ok(expr),
+            EvaluateAtomFastPathKind::UnstableSymbol | EvaluateAtomFastPathKind::Call => {
+                self.evaluate(expr)
+            }
+        };
+        record_profile_runtime_path_timing(
+            runtime_profile_kind,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        record_profile_runtime_path_timing(
+            runtime_profile_total,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        result
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum EvaluateAtomFastPathKind {
+    StableSymbol,
+    UnstableSymbol,
+    Atom,
+    Call,
+}
+
+impl EvaluateAtomFastPathKind {
+    fn classify(session: &mut Session, expr: &Expr) -> Self {
+        match expr {
+            Expr::Atom(Atom::Symbol(symbol))
+                if session.symbol_is_atom_evaluation_stable(symbol) =>
+            {
+                Self::StableSymbol
+            }
+            Expr::Atom(Atom::Symbol(_)) => Self::UnstableSymbol,
+            Expr::Atom(_) => Self::Atom,
+            Expr::Call { .. } => Self::Call,
+        }
+    }
+
+    fn profile_name(self) -> &'static str {
+        match self {
+            Self::StableSymbol => "evaluate_atom_fast_path.stable_symbol",
+            Self::UnstableSymbol => "evaluate_atom_fast_path.unstable_symbol",
+            Self::Atom => "evaluate_atom_fast_path.atom",
+            Self::Call => "evaluate_atom_fast_path.call",
+        }
+    }
+}
+
+fn runtime_profile_outcome_for_optional_result(
+    result: &Result<Option<Expr>, EvalError>,
+) -> RuntimeProfileOutcome {
+    match result {
+        Ok(Some(_)) => RuntimeProfileOutcome::Some,
+        Ok(None) => RuntimeProfileOutcome::None,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
+    }
+}
+
+fn runtime_profile_outcome_for_expr_result(
+    result: &Result<Expr, EvalError>,
+) -> RuntimeProfileOutcome {
+    runtime_profile_outcome_for_result(result)
+}
+
+fn runtime_profile_outcome_for_shared_expr_result(
+    result: &Result<SharedExpr, EvalError>,
+) -> RuntimeProfileOutcome {
+    runtime_profile_outcome_for_result(result)
+}
+
+fn runtime_profile_outcome_for_result<T>(result: &Result<T, EvalError>) -> RuntimeProfileOutcome {
+    match result {
+        Ok(_) => RuntimeProfileOutcome::Ok,
+        Err(EvalError::Return { .. }) => RuntimeProfileOutcome::Return,
+        Err(EvalError::Thrown { .. }) | Err(EvalError::ThrownBypassingCatch { .. }) => {
+            RuntimeProfileOutcome::Throw
+        }
+        Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
+        Err(_) => RuntimeProfileOutcome::Error,
+    }
+}
