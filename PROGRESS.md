@@ -17,6 +17,21 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 File-slimming batch 3 DONE (brief-116) — definition_application.rs 55KB split by value-application domain
+
+The hottest file of the line split into 8 modules, all ≤14k: down_values /
+up_values / sub_values (dispatch paths), fast_match (the hot candidate/
+early-out layer, ISOLATED), default_values, rhs, replace_all (the rewrite
+drivers the rewrite_data wrappers consume), mod (facade + shared). DAG:
+dispatch paths → fast_match/rhs; replace_all → fast_match. Bodies verbatim;
+visibility adjusted only where module boundaries force it. Codex's A/B first
+run showed +3-13% across judged labels, receding on its rerun to ≤+5.6% on
+two labels — because this is the hottest file, the GATE ran an independent
+fresh A/B (HEAD worktree vs working tree): ALL judged labels within ±3.6%,
+mostly NEGATIVE (downvalue-exact-hit −1.4%, replaceall −2.8%, matchq
+−2.4~−3.5%) — drift confirmed, split neutral. Workspace 1301/0 conserved.
+Remaining debt: vm_rhs_template 53k, arithmetic 42k, lexer 41k, 2 test files.
+
 ## 2026-07-04 File-slimming batch 2 DONE (brief-115) — evaluation_cache.rs 63KB split on the mechanism/instrumentation axis
 
 The first HOT split held its red lines: `evaluation_cache/` now separates the
