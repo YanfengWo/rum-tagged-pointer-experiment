@@ -1,65 +1,68 @@
-# Disclaimer, Trademarks, and Implementation Notes
+# Disclaimer, Trademarks, and Project History
 
-> DRAFT for the author's review. This is not legal advice. Before release, verify the
-> statements below against the actual Wolfram product license(s) you use and, if in doubt,
-> consult a qualified professional.
+## Independent project
 
-## Unofficial, independent project
+`rum` is an independent, personal open-source project. It is **not affiliated
+with, sponsored by, endorsed by, or connected to Wolfram Research, Inc.** or
+any of its products or services in any way.
 
-`rum` is an **independent, unofficial, personal open-source project**. It is **not
-affiliated with, sponsored by, endorsed by, certified by, or connected to Wolfram Research,
-Inc.** or any of its products or services in any way.
+## What `rum` is
+
+`rum` is an embeddable, sandbox-first symbolic term-rewriting language and
+runtime written in Rust. Its surface syntax belongs to the Wolfram Language
+family of notations; its evaluator implements `rum`'s **own documented
+semantics** (see the language guide and builtin reference under `docs/`).
+
+- It contains **no Wolfram source code**, and does not include, embed, link
+  against, or redistribute any Wolfram software, libraries, or data.
+- It makes **no compatibility claims**: it is not a drop-in replacement for,
+  nor a clone of, any Wolfram product, and this repository publishes no
+  compatibility matrices or conformance reports.
+- It deliberately diverges where documented: exact rational arithmetic only, a
+  "good-enough" policy for a number of functions, its own host/embedding API.
+  It implements **no Wolfram communication protocols** (such as WSTP); host
+  integrations use native Rust interfaces.
 
 ## Trademarks
 
-Wolfram®, Mathematica®, Wolfram Language™, *Wolfram*, *WolframKernel*, *wolframscript*, and
-related names, logos, and marks are trademarks or registered trademarks of **Wolfram
-Research, Inc.** Any use of these names in this project is **nominative** — solely to
-describe compatibility with, or reference to, the Wolfram Language — and does **not** imply
-ownership, affiliation, or endorsement. All trademarks are the property of their respective
-owners.
+Wolfram®, Mathematica®, Wolfram Language™, and related names and marks are
+trademarks or registered trademarks of Wolfram Research, Inc. They are used
+here **nominatively** only — to name the notation family that influenced
+`rum`'s syntax and to state non-affiliation — and imply no endorsement. A few
+third-party ecosystem identifiers are retained so that existing editors
+highlight `rum` code sensibly (a `codemirror_mode` of `mathematica`, the `mma`
+Pygments lexer name, the `.wl` file extension); they name those ecosystems'
+modes, not an affiliation.
 
-## What `rum` is (and is not)
+## Development method and project history
 
-`rum` is a **clean, from-scratch implementation, in Rust, of a documented SUBSET of the
-Wolfram Language's semantics**. It:
+Through its early development (until July 2026), `rum`'s behavior was built
+from the publicly available Wolfram Language documentation and was checked in
+part by **black-box differential testing**. No reverse
+engineering, decompilation, or disassembly of any Wolfram software was ever
+performed, and no Wolfram-generated outputs, documentation text, or data were
+ever committed to this repository or redistributed.
 
-- contains **no Wolfram source code**, and does **not** include, embed, link against, or
-  redistribute any Wolfram software, libraries, binaries, or data;
-- implements only a subset of the language (see `docs/core-language-support-matrix.md`), with
-  its own independent evaluator, and deliberately diverges where documented (e.g. exact
-  rationals only; a "folk"/good-enough policy for some functions);
-- is **not** a drop-in replacement for, nor a clone of, any Wolfram product.
+In July 2026, out of respect for Wolfram Research's rights and license terms,
+the project **removed the differential-testing harness and all comparison
+pipelines, retired its compatibility matrix, and adopted a standing policy**:
+`rum`'s tests verify `rum`'s own documented behavior only, and the project
+neither performs nor accepts contributions that involve compatibility testing
+against Wolfram products. The complete development history, including these
+removals, is preserved unrewritten in this repository's git history.
 
-## Implementation method
+## Direction
 
-`rum`'s behavior is derived from:
+`rum`'s roadmap centers on embedded scripting and sandboxed evaluation for
+Rust hosts (and, later, other languages via native bindings). It does not aim
+to track, reimplement, or compete with the Wolfram product line.
 
-1. the **publicly available Wolfram Language documentation**, and
-2. **black-box behavioral observation** — evaluating expressions and comparing the resulting
-   outputs (differential testing).
+## Using Wolfram products
 
-`rum` was **not** produced by reverse-engineering, decompiling, or disassembling any Wolfram
-software, and contains no material extracted from Wolfram's software internals.
+This project neither requires nor encourages the use of any Wolfram product.
+If you use one, that use is governed by your own license agreement with
+Wolfram Research. Nothing in this repository grants any rights in Wolfram
+software.
 
-## No redistributed Wolfram content
-
-This repository does **not** ship any Wolfram-generated content — no function-documentation
-text, no symbol metadata, and no kernel outputs. The optional differential-testing harness
-(`rum-difftest`) is designed to use a **contributor's own, separately licensed** Wolfram
-installation at test time and to keep oracle outputs **transient** (never committed). Any
-function *names* referenced (e.g. in the support matrix or source) are used as API/identifier
-names.
-
-## Your responsibility when using a Wolfram product with `rum`
-
-Using a Wolfram product — for example, as a differential-testing oracle for `rum` — is
-governed by **that product's own license agreement (EULA)**. If you run such tests, **you are
-responsible for ensuring your own use complies with your Wolfram license.** Nothing here
-grants any rights in Wolfram software.
-
----
-
-*If you are the author preparing a release:* review this file against your Wolfram EULA (in
-particular any clauses on benchmarking, developing compatible/competing software, and
-permitted use), then remove this note and adjust the wording as appropriate.
+If any rights holder has a concern about anything in this repository, please
+contact the maintainer; it will be addressed promptly and in good faith.
