@@ -16,12 +16,26 @@ mod debug_tools_reports;
 mod debug_tools_resources;
 #[path = "tests/functional_ops/mod.rs"]
 mod functional_ops;
+#[path = "tests/holding_and_control.rs"]
+mod holding_and_control;
 #[path = "tests/holding_and_control_abort.rs"]
 mod holding_and_control_abort;
+#[path = "tests/holding_and_control_cleanup.rs"]
+mod holding_and_control_cleanup;
 #[path = "tests/holding_and_control_failure_edges.rs"]
 mod holding_and_control_failure_edges;
+#[path = "tests/holding_and_control_failure_properties.rs"]
+mod holding_and_control_failure_properties;
+#[path = "tests/holding_and_control_part3.rs"]
+mod holding_and_control_part3;
 #[path = "tests/holding_and_control_part4.rs"]
 mod holding_and_control_part4;
+#[path = "tests/holding_and_control_part5.rs"]
+mod holding_and_control_part5;
+#[path = "tests/holding_and_control_part6.rs"]
+mod holding_and_control_part6;
+#[path = "tests/holding_and_control_part8.rs"]
+mod holding_and_control_part8;
 #[path = "tests/holding_and_control_success.rs"]
 mod holding_and_control_success;
 #[path = "tests/incidental_arithmetic.rs"]
@@ -30,14 +44,20 @@ mod incidental_arithmetic;
 mod incidental_associations_part2;
 #[path = "tests/incidental_context_and_loader.rs"]
 mod incidental_context_and_loader;
+#[path = "tests/incidental_debug_tools_dialogs.rs"]
+mod incidental_debug_tools_dialogs;
 #[path = "tests/incidental_debug_tools_resources.rs"]
 mod incidental_debug_tools_resources;
 #[path = "tests/incidental_definitions_and_rules_cases.rs"]
 mod incidental_definitions_and_rules_cases;
+#[path = "tests/incidental_definitions_and_rules_lifecycle.rs"]
+mod incidental_definitions_and_rules_lifecycle;
 #[path = "tests/incidental_definitions_and_rules_part2.rs"]
 mod incidental_definitions_and_rules_part2;
 #[path = "tests/incidental_definitions_and_rules_patterns.rs"]
 mod incidental_definitions_and_rules_patterns;
+#[path = "tests/incidental_definitions_updates.rs"]
+mod incidental_definitions_updates;
 #[path = "tests/incidental_holding_and_control_part2.rs"]
 mod incidental_holding_and_control_part2;
 #[path = "tests/incidental_holding_and_control_part3.rs"]
@@ -58,6 +78,8 @@ mod incidental_options_and_protection;
 mod incidental_package_tools;
 #[path = "tests/incidental_predicates.rs"]
 mod incidental_predicates;
+#[path = "tests/incidental_print_sink.rs"]
+mod incidental_print_sink;
 #[path = "tests/incidental_scoping_gensym_gc.rs"]
 mod incidental_scoping_gensym_gc;
 #[path = "tests/incidental_scoping_unique.rs"]

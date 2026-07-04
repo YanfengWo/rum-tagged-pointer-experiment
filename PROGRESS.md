@@ -17,6 +17,36 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 Stage-3 batch 10 DONE (brief-111) — control_flow: spec ownership moved, implementation stays
+
+The highest-coupling family got a DIFFERENT solution shape, gate-reviewed in
+depth and accepted: reference analysis showed nearly the whole implementation
+is evaluator machinery (non-local-exit signals consumed by eval/VM paths,
+loop iterators on `BlockSymbolState`, abort/cleanup on the interrupt state,
+failure/confirmation helpers used by eval_core/eval_dispatch) — so the
+implementation stayed kernel-side (renamed `runtime/control_data/`), while
+the 35 SPECS moved to the stdlib catalog with thin wrapper handlers
+delegating through one promoted facade
+(`ControlDataBuiltin` enum + `Session::eval_control_data_builtin`). Semantics
+of the split: registration ownership (no stdlib install → no If/Do) is
+stdlib's; the machinery is honestly kernel. Promotions: 2 (vs ≤12 line).
+
+Because the wrapper adds a per-call indirection on HOT handlers
+(Do/CompoundExpression/If), the gate ran a full microbench A/B (HEAD worktree
+vs working tree): control-relevant labels flat-to-faster (do-small −4.2%,
+if-true −1.7%, do-count-null −6.8%), the few +5% entries are sub-ms jitter
+with contradicting same-mechanism neighbors — NO consistent regression;
+neutral confirmed. Also accepted with a SECOND discipline note: Codex kept
+~12 mechanism-test files runtime-side with TEST-LOCAL control registrations
+instead of migrating them per the Option-1 letter — the right instinct (it
+matches the batch-5 exile-list concern) but a rule deviation it should have
+STOPPED to report; the rule is now amended going forward: mechanism tests MAY
+stay runtime-side with test-local registrations, listed per batch. Behavior
+adaptation this batch: `$AssertFunction`/`PropagateAborts` added to the
+known-symbol vocabulary (string option forms). Workspace 1300/0 conserved
+(runtime 430, stdlib 358); stdlib catalog 311; CLI smoke → 22. Remaining:
+rewrite_builtins, arithmetic.
+
 ## 2026-07-04 Stage-3 batch 9 DONE (brief-110) — functional_ops moved; apply machinery stays
 
 The cleanest of the big moves: 42 specs out (Map/Apply/Fold/Nest/Select/

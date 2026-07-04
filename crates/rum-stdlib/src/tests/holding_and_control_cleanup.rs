@@ -1,8 +1,15 @@
 use super::*;
+use rum_runtime::SessionRequestError;
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 #[test]
 fn withcleanup_defers_cleanup_until_suspended_body_finishes() {
-    let mut session = Session::new();
+    let mut session = core_session();
     session.eval_text("x = 0").unwrap();
 
     let failure = session

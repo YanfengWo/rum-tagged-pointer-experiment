@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn set_assigns_simple_symbol_and_lookup_works() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let assigned = session.eval_text("x = 42").unwrap();
     assert_eq!(assigned.value.to_string(), "42");
@@ -17,7 +17,7 @@ fn set_assigns_simple_symbol_and_lookup_works() {
 
 #[test]
 fn setdelayed_stores_rhs_without_immediate_evaluation() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session.eval_text("y := x").unwrap().value.to_string(),
@@ -34,7 +34,7 @@ fn setdelayed_stores_rhs_without_immediate_evaluation() {
 
 #[test]
 fn self_referential_ownvalue_returns_symbol_without_message() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let outcome = session.eval_text("a = a; a").unwrap();
 
@@ -44,7 +44,7 @@ fn self_referential_ownvalue_returns_symbol_without_message() {
 
 #[test]
 fn self_referential_delayed_ownvalue_returns_symbol_without_message() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let outcome = session.eval_text("b := b; b").unwrap();
 
@@ -54,7 +54,7 @@ fn self_referential_delayed_ownvalue_returns_symbol_without_message() {
 
 #[test]
 fn immediate_self_alias_preserves_downvalues() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let alias = session.eval_text("s[x_] := x + 1; s = s; s").unwrap();
     let applied = session.eval_text("s[5]").unwrap();
@@ -67,7 +67,7 @@ fn immediate_self_alias_preserves_downvalues() {
 
 #[test]
 fn delayed_self_alias_preserves_downvalues() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let alias = session.eval_text("c[x_] := x + 1; c := c; c").unwrap();
     let applied = session.eval_text("c[5]").unwrap();
@@ -80,7 +80,7 @@ fn delayed_self_alias_preserves_downvalues() {
 
 #[test]
 fn ownvalues_lists_immediate_and_delayed_symbol_definitions() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("x = 42").unwrap();
     session.eval_text("y := x").unwrap();
@@ -105,7 +105,7 @@ fn ownvalues_lists_immediate_and_delayed_symbol_definitions() {
 
 #[test]
 fn defaultvalues_lists_optional_defaults_and_clearall_removes_them() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Default[h] = 7").unwrap();
     session.eval_text("Default[h, 1] = 9").unwrap();
@@ -176,7 +176,7 @@ fn defaultvalues_lists_optional_defaults_and_clearall_removes_them() {
 
 #[test]
 fn defaultvalues_and_definition_include_explicit_syntax_information() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text("SyntaxInformation[f] = {\"ArgumentsPattern\" -> {_}}")
@@ -221,7 +221,7 @@ fn defaultvalues_and_definition_include_explicit_syntax_information() {
 
 #[test]
 fn information_returns_first_pass_symbol_summary() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f::usage = \"desc\"").unwrap();
     session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
@@ -276,7 +276,7 @@ fn information_returns_first_pass_symbol_summary() {
 
 #[test]
 fn information_uses_symbol_name_usage_fallback_and_value_forms() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Default[g] = 3").unwrap();
 
@@ -294,7 +294,7 @@ fn information_uses_symbol_name_usage_fallback_and_value_forms() {
 
 #[test]
 fn definition_returns_held_first_pass_definition_statements() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f::usage = \"desc\"").unwrap();
     session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
@@ -324,7 +324,7 @@ fn definition_returns_held_first_pass_definition_statements() {
 
 #[test]
 fn definition_returns_empty_hold_for_symbols_without_definitions() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -338,7 +338,7 @@ fn definition_returns_empty_hold_for_symbols_without_definitions() {
 
 #[test]
 fn valueq_uses_rollback_trial_evaluation_without_side_effects() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session.eval_text("ValueQ[x]").unwrap().value.to_string(),
@@ -407,7 +407,7 @@ fn valueq_uses_rollback_trial_evaluation_without_side_effects() {
 
 #[test]
 fn definition_inspection_builtins_accept_symbol_name_strings() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("x = 42").unwrap();
     session.eval_text("f[y_Integer] := y").unwrap();

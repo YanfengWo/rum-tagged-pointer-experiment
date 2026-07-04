@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn syntax_information_defaults_assignment_and_unset_cover_current_first_pass_subset() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -42,7 +42,7 @@ fn syntax_information_defaults_assignment_and_unset_cover_current_first_pass_sub
 
 #[test]
 fn syntax_information_participates_in_block_and_clearall() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text("SyntaxInformation[f] = {\"LocalVariables\" -> {x}}")
@@ -88,7 +88,7 @@ fn syntax_information_participates_in_block_and_clearall() {
 
 #[test]
 fn protect_blocks_direct_syntax_information_assignment_and_unset() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text("SyntaxInformation[f] = {\"ArgumentsPattern\" -> {_}}")
@@ -132,7 +132,7 @@ fn protect_blocks_direct_syntax_information_assignment_and_unset() {
 
 #[test]
 fn unsetting_system_syntax_information_reverts_to_default_rules() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text("SyntaxInformation[Options] = {\"LocalVariables\" -> {x}}")

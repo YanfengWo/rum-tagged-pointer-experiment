@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn context_variables_and_builtin_inspection_reflect_session_contexts() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.set_current_context("Rules");
 
     assert_eq!(
@@ -23,7 +23,7 @@ fn context_variables_and_builtin_inspection_reflect_session_contexts() {
 
 #[test]
 fn context_path_and_packages_assignments_update_session_fields() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Rules`x = 10").unwrap();
     session.eval_text("Global`x = 20").unwrap();
@@ -53,7 +53,7 @@ fn context_path_and_packages_assignments_update_session_fields() {
 
 #[test]
 fn bare_symbols_search_context_path_before_current_context() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Global`x = 10").unwrap();
     session.set_current_context("Rules");
@@ -73,7 +73,7 @@ fn bare_symbols_search_context_path_before_current_context() {
 
 #[test]
 fn context_builtin_reports_session_and_symbol_contexts_without_evaluating_symbols() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("x = 1").unwrap();
 
@@ -113,7 +113,7 @@ fn context_builtin_reports_session_and_symbol_contexts_without_evaluating_symbol
 
 #[test]
 fn contexts_lists_known_session_contexts() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("BeginPackage[\"Demo`\"]").unwrap();
     session.eval_text("public = 1").unwrap();
@@ -131,7 +131,7 @@ fn contexts_lists_known_session_contexts() {
 
 #[test]
 fn begin_and_end_balance_context_and_context_path() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -178,7 +178,7 @@ fn begin_and_end_balance_context_and_context_path() {
 
 #[test]
 fn begin_package_and_end_package_restore_outer_context_and_export_package_context() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -227,7 +227,7 @@ fn begin_package_and_end_package_restore_outer_context_and_export_package_contex
 
 #[test]
 fn begin_package_usage_messages_make_public_symbols_visible_from_private_context() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("BeginPackage[\"Demo`\"]").unwrap();
     session.eval_text("foo::usage = \"foo[x]\"").unwrap();
@@ -252,7 +252,7 @@ fn begin_package_usage_messages_make_public_symbols_visible_from_private_context
 
 #[test]
 fn begin_package_dependencies_stay_on_private_context_path_when_already_loaded() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("BeginPackage[\"DepA`\"]").unwrap();
     session
@@ -304,7 +304,7 @@ fn begin_package_dependencies_stay_on_private_context_path_when_already_loaded()
 
 #[test]
 fn begin_package_expands_relative_context_specs_against_the_current_context() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.set_current_context("Outer`");
 
     assert_eq!(
@@ -345,7 +345,7 @@ fn get_loads_a_script_file_and_returns_the_last_value() {
         "script.rum",
         "Print[\"loading script\"]\nx = 1\npair = {\n  x,\n  2\n}\npair",
     );
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let outcome = session
         .eval_text(&format!("Get[\"{}\"]", rum_path(&file)))
@@ -359,7 +359,7 @@ fn get_loads_a_script_file_and_returns_the_last_value() {
 fn get_propagates_exit_without_collapsing_it_to_failed_load() {
     let dir = TempDirGuard::new("get-exit");
     let file = dir.write("script.rum", "Exit[6]");
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     match session
         .eval_text(&format!("Get[\"{}\"]", rum_path(&file)))
@@ -380,7 +380,7 @@ fn nested_get_prefers_the_current_loader_directory_over_package_search_paths() {
     root.write("nested/inner.rum", "source = \"local\"\nsource");
     fallback.write("nested/inner.rum", "source = \"fallback\"\nsource");
 
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.set_package_search_paths([fallback.path().to_path_buf()]);
 
     assert_eq!(
@@ -420,7 +420,7 @@ fn split_script_into_forms_treats_multiline_comments_as_incomplete_trivia() {
 
 #[test]
 fn eval_script_preserves_messages_emitted_before_a_later_error() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let error = session
         .eval_script("FindFile[\"Missing`\"]\n1 ! 2")
@@ -442,7 +442,7 @@ fn get_rolls_back_loader_side_effects_and_collapses_failed_file_messages() {
         "broken.rum",
         "$Path = {\"/tmp/rum-loader-should-roll-back\"}\nBeginPackage[\"Broken`\"]\nFindFile[\"Missing`\"]\nflag = 1\nSetAttributes[f, HoldFirst]\n1 ! 2",
     );
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.set_package_search_paths([dir.path().to_path_buf()]);
 
     let outcome = session
@@ -495,7 +495,7 @@ fn get_cycle_termination_does_not_abort_remaining_file_forms() {
         "cycle-termination.rum",
         "loopA := loopB\nloopB := loopA\nloopA\npostCycleFlag = 2\npostCycleFlag",
     );
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let outcome = session
         .eval_text(&format!("Get[\"{}\"]", rum_path(&file)))
@@ -531,7 +531,7 @@ fn get_treats_resource_termination_as_failed_load_and_rolls_back() {
         "resource-limit.rum",
         "preLimitFlag = 1\ngrow[x_] := grow[f[x]]\ngrow[1]\npostLimitFlag = 2",
     );
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.set_recursion_limit(32);
 
     let outcome = session
@@ -576,7 +576,7 @@ fn needs_loads_package_once_and_tracks_loaded_packages() {
         "Demo.rum",
         "BeginPackage[\"Demo`\"]\ntoken = 1\nEndPackage[]",
     );
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.set_package_search_paths([dir.path().to_path_buf()]);
 
     assert_eq!(
@@ -609,7 +609,7 @@ fn findfile_resolves_package_names_and_file_wrappers() {
         "Demo.rum",
         "BeginPackage[\"Demo`\"]\ntoken = 1\nEndPackage[]",
     );
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.set_package_search_paths([dir.path().to_path_buf()]);
 
     assert_eq!(
@@ -646,7 +646,7 @@ fn loader_builtins_accept_resolved_load_target_specs() {
         "BeginPackage[\"Demo`\"]\ntoken = 1\nEndPackage[]",
     );
     let script_file = dir.write("load-target.rum", "value = 42\nvalue");
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.set_package_search_paths([dir.path().to_path_buf()]);
 
     assert_eq!(
@@ -672,7 +672,7 @@ fn loader_builtins_accept_resolved_load_target_specs() {
 
 #[test]
 fn missing_findfile_emits_runtime_message() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let outcome = session.eval_text("FindFile[\"Missing`\"]").unwrap();
 
@@ -692,7 +692,7 @@ fn needs_supports_explicit_file_targets() {
         "custom-package.rum",
         "BeginPackage[\"Custom`\"]\nflag = 9\nEndPackage[]",
     );
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -725,7 +725,7 @@ fn needs_accepts_resolved_context_and_file_specs() {
         "custom-package.rum",
         "BeginPackage[\"Custom`\"]\nflag = 9\nEndPackage[]",
     );
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -743,7 +743,7 @@ fn needs_accepts_resolved_context_and_file_specs() {
 
 #[test]
 fn missing_needs_returns_failed_and_emits_messages() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let outcome = session.eval_text("Needs[\"Missing`\"]").unwrap();
 

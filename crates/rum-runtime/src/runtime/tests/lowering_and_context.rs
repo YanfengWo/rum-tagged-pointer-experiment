@@ -75,7 +75,7 @@ fn lowering_preserves_tagset_shape_for_runtime_semantic_validation() {
         "TagSetDelayed[f, g[h[f[Pattern[x, Blank[]]]]], 1]"
     );
 
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     let outcome = session.eval_text("f /: g[h[f[x_]]] := 1").unwrap();
 
     assert!(
@@ -88,7 +88,7 @@ fn lowering_preserves_tagset_shape_for_runtime_semantic_validation() {
 
 #[test]
 fn evaluates_identity_call() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     let outcome = session
         .eval_text("Identity[123456789012345678901234567890]")
         .unwrap();
@@ -98,7 +98,7 @@ fn evaluates_identity_call() {
 
 #[test]
 fn compound_expression_sugar_flows_through_lowering_and_evaluation() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -112,7 +112,7 @@ fn compound_expression_sugar_flows_through_lowering_and_evaluation() {
 
 #[test]
 fn attributes_reports_builtin_and_user_defined_attribute_sets() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session

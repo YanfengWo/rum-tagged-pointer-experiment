@@ -1,8 +1,14 @@
 use super::*;
 
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
+
 #[test]
 fn evaluate_forces_evaluation_inside_held_arguments() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -24,7 +30,7 @@ fn evaluate_forces_evaluation_inside_held_arguments() {
 
 #[test]
 fn sequence_splices_in_non_held_calls_but_not_in_raw_held_ones() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -61,7 +67,7 @@ fn sequence_splices_in_non_held_calls_but_not_in_raw_held_ones() {
 }
 #[test]
 fn setattributes_and_clearattributes_control_argument_evaluation() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -99,7 +105,7 @@ fn setattributes_and_clearattributes_control_argument_evaluation() {
 }
 #[test]
 fn setattributes_accepts_symbol_lists_and_combined_hold_attributes() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session
         .eval_text("SetAttributes[{f, g}, {HoldFirst, HoldRest}]")
@@ -133,7 +139,7 @@ fn setattributes_accepts_symbol_lists_and_combined_hold_attributes() {
 
 #[test]
 fn setattributes_accepts_resolved_attribute_specs() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("attrs = {HoldFirst, HoldRest}").unwrap();
     session.eval_text("SetAttributes[f, attrs]").unwrap();
@@ -172,7 +178,7 @@ fn setattributes_accepts_resolved_attribute_specs() {
 
 #[test]
 fn protect_and_unprotect_round_trip_and_leave_attribute_updates_available() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let protected = session.eval_text("Protect[{f, \"g\"}]").unwrap();
     assert_eq!(protected.value.to_string(), "List[\"f\", \"g\"]");
@@ -217,7 +223,7 @@ fn protect_and_unprotect_round_trip_and_leave_attribute_updates_available() {
 
 #[test]
 fn sequencehold_prevents_sequence_splicing() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("SetAttributes[f, SequenceHold]").unwrap();
 
@@ -233,7 +239,7 @@ fn sequencehold_prevents_sequence_splicing() {
 
 #[test]
 fn holdallcomplete_prevents_evaluate_override_and_sequence_splicing() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -249,7 +255,7 @@ fn holdallcomplete_prevents_evaluate_override_and_sequence_splicing() {
 
 #[test]
 fn holdallcomplete_blocks_upvalue_application() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session
         .eval_text("SetAttributes[gate, HoldAllComplete]")
@@ -268,7 +274,7 @@ fn holdallcomplete_blocks_upvalue_application() {
 
 #[test]
 fn user_defined_holdallcomplete_attribute_holds_all_arguments_completely() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session
         .eval_text("SetAttributes[f, HoldAllComplete]")
@@ -286,7 +292,7 @@ fn user_defined_holdallcomplete_attribute_holds_all_arguments_completely() {
 
 #[test]
 fn unevaluated_temporarily_preserves_direct_function_arguments() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -316,7 +322,7 @@ fn unevaluated_temporarily_preserves_direct_function_arguments() {
 
 #[test]
 fn holdpattern_preserves_patterns_without_prior_evaluation() {
-    let mut session = Session::new();
+    let mut session = core_session();
     session.eval_text("f = 1").unwrap();
 
     assert_eq!(
@@ -339,7 +345,7 @@ fn holdpattern_preserves_patterns_without_prior_evaluation() {
 
 #[test]
 fn releasehold_releases_supported_hold_wrappers() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -377,7 +383,7 @@ fn releasehold_releases_supported_hold_wrappers() {
 
 #[test]
 fn if_evaluates_only_the_selected_branch() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -419,7 +425,7 @@ fn if_evaluates_only_the_selected_branch() {
 
 #[test]
 fn which_evaluates_conditions_in_order() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session

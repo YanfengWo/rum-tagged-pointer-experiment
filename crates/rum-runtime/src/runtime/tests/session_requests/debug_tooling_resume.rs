@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn resume_eval_request_with_input_can_finish_repeated_timing_samples() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let first = session
         .eval_request("RepeatedTiming[InputString[\"rt: \"]]")
@@ -29,7 +29,7 @@ fn resume_eval_request_with_input_can_finish_repeated_timing_samples() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_reap_handler_rendering() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let first = session
         .eval_request(
@@ -54,7 +54,7 @@ fn resume_eval_request_with_input_can_finish_reap_handler_rendering() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_trace_capture() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("Trace[InputString[\"trace: \"]]")

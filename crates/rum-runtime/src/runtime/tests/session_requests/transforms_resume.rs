@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn resume_eval_request_with_input_can_finish_replacepart_with_suspending_delayed_rhs() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("ReplacePart[f[1, 2], 2 :> InputString[\"rhs: \"]]")
@@ -24,7 +24,7 @@ fn resume_eval_request_with_input_can_finish_replacepart_with_suspending_delayed
 
 #[test]
 fn resume_eval_request_with_input_can_finish_replacepart_after_suspending_pattern_position_spec() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -48,7 +48,7 @@ fn resume_eval_request_with_input_can_finish_replacepart_after_suspending_patter
 
 #[test]
 fn resume_eval_request_with_input_can_finish_normalize_rules_after_suspending_rule_source() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session
         .eval_text(
             "rules := If[MatchQ[InputString[\"rules: \"], \"yes\"], x_Integer -> 1, y_String :> y]",
@@ -78,7 +78,7 @@ fn resume_eval_request_with_input_can_finish_normalize_rules_after_suspending_ru
 
 #[test]
 fn resume_eval_request_with_input_can_finish_replaceall_after_suspending_rule_source() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session
         .eval_text(
             "rules := If[MatchQ[InputString[\"rules: \"], \"yes\"], x_Integer -> 1, y_String :> y]",
@@ -105,7 +105,7 @@ fn resume_eval_request_with_input_can_finish_replaceall_after_suspending_rule_so
 
 #[test]
 fn resume_eval_request_with_input_can_finish_replace_after_suspending_target() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("Replace[InputString[\"target: \"], _String -> ok]")
@@ -127,7 +127,7 @@ fn resume_eval_request_with_input_can_finish_replace_after_suspending_target() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_replace_after_suspending_levelspec() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -151,7 +151,7 @@ fn resume_eval_request_with_input_can_finish_replace_after_suspending_levelspec(
 
 #[test]
 fn resume_eval_request_with_input_can_finish_replacelist_after_suspending_delayed_rhs() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("ReplaceList[f[1], f[x_Integer] :> InputString[\"rhs: \"]]")
@@ -173,7 +173,7 @@ fn resume_eval_request_with_input_can_finish_replacelist_after_suspending_delaye
 
 #[test]
 fn resume_eval_request_with_input_can_finish_replacelist_after_multiple_backtracking_matches() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("ReplaceList[f[a, b, c], f[x__, y__] :> InputString[\"rhs: \"]]")
@@ -206,7 +206,7 @@ fn resume_eval_request_with_input_can_finish_replacelist_after_multiple_backtrac
 
 #[test]
 fn resume_eval_request_with_input_can_finish_replaceat_after_suspending_position_spec() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -230,7 +230,7 @@ fn resume_eval_request_with_input_can_finish_replaceat_after_suspending_position
 
 #[test]
 fn resume_eval_request_with_input_can_finish_replaceat_after_suspending_delayed_rhs() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("ReplaceAt[f[1], x_Integer :> InputString[\"rhs: \"], 1]")
@@ -252,7 +252,7 @@ fn resume_eval_request_with_input_can_finish_replaceat_after_suspending_delayed_
 
 #[test]
 fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_target() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("DeleteCases[f[InputString[\"target: \"], 2], _String]")
@@ -274,7 +274,7 @@ fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_target
 
 #[test]
 fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_pattern_symbol() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session
         .eval_text("p := x_Integer /; MatchQ[InputString[\"cond: \"], \"yes\"]")
         .unwrap();
@@ -299,7 +299,7 @@ fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_patter
 
 #[test]
 fn resume_eval_request_with_input_can_finish_deletecases_after_suspending_match_limit() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(

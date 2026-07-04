@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn replaceall_applies_single_rule() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -16,7 +16,7 @@ fn replaceall_applies_single_rule() {
 
 #[test]
 fn replaceall_applies_rule_list_in_order() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -30,7 +30,7 @@ fn replaceall_applies_rule_list_in_order() {
 
 #[test]
 fn replaceall_traverses_nested_expressions() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -44,7 +44,7 @@ fn replaceall_traverses_nested_expressions() {
 
 #[test]
 fn replaceall_splices_named_blanksequence_into_rhs_calls() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -58,7 +58,7 @@ fn replaceall_splices_named_blanksequence_into_rhs_calls() {
 
 #[test]
 fn replace_defaults_to_the_root_level() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -80,7 +80,7 @@ fn replace_defaults_to_the_root_level() {
 
 #[test]
 fn replace_supports_levelspecs_and_rule_lists() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -134,7 +134,7 @@ fn replace_supports_levelspecs_and_rule_lists() {
 
 #[test]
 fn replace_rewrites_association_values_without_touching_keys() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -150,7 +150,7 @@ fn replace_rewrites_association_values_without_touching_keys() {
 
 #[test]
 fn replacelist_supports_operator_form_rule_order_and_max_results() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -180,7 +180,7 @@ fn replacelist_supports_operator_form_rule_order_and_max_results() {
 
 #[test]
 fn replacelist_collects_multiple_backtracking_matches_for_sequence_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -202,7 +202,7 @@ fn replacelist_collects_multiple_backtracking_matches_for_sequence_patterns() {
 
 #[test]
 fn flat_and_orderless_flat_heads_regroup_for_match_replace_and_replacelist() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("SetAttributes[f, Flat]").unwrap();
 
@@ -266,7 +266,7 @@ fn flat_and_orderless_flat_heads_regroup_for_match_replace_and_replacelist() {
 
 #[test]
 fn replacerepeated_reaches_a_fixed_point() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -280,7 +280,7 @@ fn replacerepeated_reaches_a_fixed_point() {
 
 #[test]
 fn replacerepeated_errors_on_non_terminating_rewrite_cycle() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let error = session
         .eval_text("1 //. {1 -> 2, 2 -> 1}")
@@ -296,7 +296,7 @@ fn replacerepeated_errors_on_non_terminating_rewrite_cycle() {
 
 #[test]
 fn immediate_rule_captures_current_rhs_value() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("n = 1").unwrap();
     session.eval_text("rule = x_Integer -> n").unwrap();
@@ -310,7 +310,7 @@ fn immediate_rule_captures_current_rhs_value() {
 
 #[test]
 fn delayed_rule_uses_current_rhs_value_at_application_time() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("n = 1").unwrap();
     session.eval_text("rule = x_Integer :> n").unwrap();
@@ -324,7 +324,7 @@ fn delayed_rule_uses_current_rhs_value_at_application_time() {
 
 #[test]
 fn delayed_rhs_substitution_does_not_capture_inserted_values_in_lexical_scopes() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     assert_eq!(
         session
             .eval_text("ClearAll[f, x]; SetAttributes[f, HoldAll]; f[body_] := Module[{x}, Hold[body, x]]; f[x]")
@@ -334,7 +334,7 @@ fn delayed_rhs_substitution_does_not_capture_inserted_values_in_lexical_scopes()
         "Hold[x, x$1]"
     );
 
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     assert_eq!(
         session
             .eval_text("ClearAll[f, x]; f[body_] := With[{x = 1}, Hold[body, x]]; f[x]")
@@ -344,7 +344,7 @@ fn delayed_rhs_substitution_does_not_capture_inserted_values_in_lexical_scopes()
         "Hold[x, 1]"
     );
 
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     assert_eq!(
         session
             .eval_text("ClearAll[f, x, y]; SetAttributes[f, HoldAll]; f[body_] := Function[x, Hold[body, x], HoldAll][y]; f[x]")
@@ -354,7 +354,7 @@ fn delayed_rhs_substitution_does_not_capture_inserted_values_in_lexical_scopes()
         "Hold[x, y]"
     );
 
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     assert_eq!(
         session
             .eval_text("ClearAll[x]; Replace[x, body_ :> Module[{x}, Hold[body, x]]]")
@@ -364,7 +364,7 @@ fn delayed_rhs_substitution_does_not_capture_inserted_values_in_lexical_scopes()
         "Hold[x, x$1]"
     );
 
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     assert_eq!(
         session
             .eval_text("ClearAll[f, x]; SetAttributes[f, HoldAll]; f[body_] := Module[{x}, Module[{x}, Hold[body, x]]]; f[x]")
@@ -377,7 +377,7 @@ fn delayed_rhs_substitution_does_not_capture_inserted_values_in_lexical_scopes()
 
 #[test]
 fn delayed_rhs_substitution_keeps_inserted_compound_values_outside_new_locals() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     assert_eq!(
         session
             .eval_text("ClearAll[f, x]; SetAttributes[f, HoldAll]; f[body_] := Module[{x}, Hold[body, x]]; f[Hold[x]]")
@@ -387,7 +387,7 @@ fn delayed_rhs_substitution_keeps_inserted_compound_values_outside_new_locals() 
         "Hold[Hold[x], x$1]"
     );
 
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     assert_eq!(
         session
             .eval_text("ClearAll[f, x]; SetAttributes[f, HoldAll]; f[body_] := With[{x = 1}, Hold[body, x]]; f[Hold[x]]")
@@ -397,7 +397,7 @@ fn delayed_rhs_substitution_keeps_inserted_compound_values_outside_new_locals() 
         "Hold[Hold[x], 1]"
     );
 
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     assert_eq!(
         session
             .eval_text("ClearAll[f, x, y]; SetAttributes[f, HoldAll]; f[body_] := Function[x, Hold[body, x], HoldAll][y]; f[Hold[x]]")
@@ -410,7 +410,7 @@ fn delayed_rhs_substitution_keeps_inserted_compound_values_outside_new_locals() 
 
 #[test]
 fn delayed_rhs_substitution_preserves_same_name_local_binding_behavior() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     assert_eq!(
         session
             .eval_text("ClearAll[x, y]; Replace[y, x_ :> Module[{x}, Hold[x]]]")
@@ -420,7 +420,7 @@ fn delayed_rhs_substitution_preserves_same_name_local_binding_behavior() {
         "Hold[y$1]"
     );
 
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     assert_eq!(
         session
             .eval_text("ClearAll[x, y]; Replace[y, x_ :> With[{x = 1}, Hold[x]]]")
@@ -433,7 +433,7 @@ fn delayed_rhs_substitution_preserves_same_name_local_binding_behavior() {
 
 #[test]
 fn replaceall_honors_condition_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -455,7 +455,7 @@ fn replaceall_honors_condition_patterns() {
 
 #[test]
 fn replaceall_honors_patterntest_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("goodQ[x_] := MatchQ[x, 7]").unwrap();
 
@@ -479,7 +479,7 @@ fn replaceall_honors_patterntest_patterns() {
 
 #[test]
 fn replaceall_honors_alternatives_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -501,7 +501,7 @@ fn replaceall_honors_alternatives_patterns() {
 
 #[test]
 fn replaceall_honors_except_and_repeated_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session

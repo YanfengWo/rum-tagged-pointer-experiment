@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn matchq_honors_condition_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -24,7 +24,7 @@ fn matchq_honors_condition_patterns() {
 
 #[test]
 fn matchq_honors_patterntest_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("goodQ[x_] := MatchQ[x, 7]").unwrap();
 
@@ -48,7 +48,7 @@ fn matchq_honors_patterntest_patterns() {
 
 #[test]
 fn matchq_honors_alternatives_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -70,7 +70,7 @@ fn matchq_honors_alternatives_patterns() {
 
 #[test]
 fn rule_lhs_evaluates_values_without_evaluating_pattern_names() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -104,7 +104,7 @@ fn rule_lhs_evaluates_values_without_evaluating_pattern_names() {
 
 #[test]
 fn matchq_honors_except_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -126,7 +126,7 @@ fn matchq_honors_except_patterns() {
 
 #[test]
 fn except_downvalue_prefilter_stays_conservative() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("g[Except[x_Integer]] := ok").unwrap();
 
@@ -136,7 +136,7 @@ fn except_downvalue_prefilter_stays_conservative() {
 
 #[test]
 fn compiled_downvalue_matcher_handles_named_typed_blank_hit() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f[x_Integer] := x + 1").unwrap();
 
@@ -145,7 +145,7 @@ fn compiled_downvalue_matcher_handles_named_typed_blank_hit() {
 
 #[test]
 fn compiled_downvalue_matcher_keeps_typed_blank_miss_unevaluated() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f[x_Integer] := x + 1").unwrap();
 
@@ -157,7 +157,7 @@ fn compiled_downvalue_matcher_keeps_typed_blank_miss_unevaluated() {
 
 #[test]
 fn compiled_downvalue_matcher_binds_multiple_named_args() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("g[x_, y_] := x - y").unwrap();
 
@@ -166,7 +166,7 @@ fn compiled_downvalue_matcher_binds_multiple_named_args() {
 
 #[test]
 fn compiled_downvalue_matcher_preserves_exact_vs_pattern_precedence() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("h[x_] := x + 1").unwrap();
     session.eval_text("h[1] = 10").unwrap();
@@ -177,7 +177,7 @@ fn compiled_downvalue_matcher_preserves_exact_vs_pattern_precedence() {
 
 #[test]
 fn compiled_downvalue_matcher_falls_back_for_sequence_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("q[x__] := {x}").unwrap();
 
@@ -189,7 +189,7 @@ fn compiled_downvalue_matcher_falls_back_for_sequence_patterns() {
 
 #[test]
 fn compiled_downvalue_matcher_falls_back_for_alternatives_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("r[1 | 2] := ok").unwrap();
 
@@ -198,7 +198,7 @@ fn compiled_downvalue_matcher_falls_back_for_alternatives_patterns() {
 
 #[test]
 fn matchq_honors_optional_and_repeated_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -228,7 +228,7 @@ fn matchq_honors_optional_and_repeated_patterns() {
 
 #[test]
 fn patternsequence_flattens_argument_patterns_in_matching_rules_and_definitions() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session
         .eval_text("pair[PatternSequence[x_, y_]] := List[x, y]")
         .unwrap();
@@ -265,7 +265,7 @@ fn patternsequence_flattens_argument_patterns_in_matching_rules_and_definitions(
 
 #[test]
 fn orderless_heads_backtrack_across_exact_and_patternsequence_groups() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -295,7 +295,7 @@ fn orderless_heads_backtrack_across_exact_and_patternsequence_groups() {
 
 #[test]
 fn orderlesspatternsequence_uses_orderless_group_matching_inside_orderless_heads() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -325,7 +325,7 @@ fn orderlesspatternsequence_uses_orderless_group_matching_inside_orderless_heads
 
 #[test]
 fn orderless_sequence_matching_still_accepts_small_normal_cases() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -355,7 +355,7 @@ fn orderless_sequence_matching_still_accepts_small_normal_cases() {
 
 #[test]
 fn verbatim_matches_literal_pattern_language_forms() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -393,7 +393,7 @@ fn verbatim_matches_literal_pattern_language_forms() {
 
 #[test]
 fn longest_and_shortest_control_sequence_pattern_greediness() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -433,7 +433,7 @@ fn longest_and_shortest_control_sequence_pattern_greediness() {
 
 #[test]
 fn conditioned_downvalue_matches_only_when_test_passes() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text("f[x_Integer /; MatchQ[x, 7]] := x")
@@ -445,7 +445,7 @@ fn conditioned_downvalue_matches_only_when_test_passes() {
 
 #[test]
 fn patterntest_downvalue_matches_only_when_test_passes() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("goodQ[x_] := MatchQ[x, 7]").unwrap();
     session
@@ -458,7 +458,7 @@ fn patterntest_downvalue_matches_only_when_test_passes() {
 
 #[test]
 fn alternatives_downvalue_matches_each_branch() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text("f[Alternatives[x_String, x_Integer]] := x")
@@ -474,7 +474,7 @@ fn alternatives_downvalue_matches_each_branch() {
 
 #[test]
 fn except_optional_and_repeated_downvalues_match_expected_shapes() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f[Except[x_Integer]] := ok").unwrap();
     session.eval_text("g[Optional[x_Integer, 7]] := x").unwrap();
@@ -496,7 +496,7 @@ fn except_optional_and_repeated_downvalues_match_expected_shapes() {
 
 #[test]
 fn outer_conditioned_downvalue_is_stored_and_applied() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text("(f[x_Integer] /; MatchQ[x, 7]) := x")

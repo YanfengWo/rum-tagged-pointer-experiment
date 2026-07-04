@@ -1,8 +1,14 @@
 use super::*;
 
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
+
 #[test]
 fn clear_and_clearall_manage_symbol_lifecycle_state() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("f[x_] := x").unwrap();
     session.eval_text("f /: g[f[x_]] := x").unwrap();
@@ -56,7 +62,7 @@ fn clear_and_clearall_manage_symbol_lifecycle_state() {
 
 #[test]
 fn remove_clears_current_symbol_state_and_declared_stubs() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("f = 1").unwrap();
     session.eval_text("f[x_] := x").unwrap();
@@ -128,7 +134,7 @@ fn remove_clears_current_symbol_state_and_declared_stubs() {
 
 #[test]
 fn remove_marks_same_evaluation_symbols_stale_and_allows_later_reuse() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("cl02r = 1").unwrap();
 
@@ -156,7 +162,7 @@ fn remove_marks_same_evaluation_symbols_stale_and_allows_later_reuse() {
 
 #[test]
 fn remove_marks_missing_same_evaluation_symbols_stale() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -174,7 +180,7 @@ fn remove_marks_missing_same_evaluation_symbols_stale() {
 
 #[test]
 fn remove_reports_protected_symbols_without_clearing_state() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("f = 1").unwrap();
     session.eval_text("Protect[f]").unwrap();
@@ -192,7 +198,7 @@ fn remove_reports_protected_symbols_without_clearing_state() {
 
 #[test]
 fn set_list_destructuring_assigns_leaf_targets() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -237,7 +243,7 @@ fn set_list_destructuring_assigns_leaf_targets() {
 
 #[test]
 fn definition_lhs_evaluates_call_heads_before_storing_rules() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -263,7 +269,7 @@ fn definition_lhs_evaluates_call_heads_before_storing_rules() {
 
 #[test]
 fn definition_lhs_evaluates_non_pattern_constants_before_storing_rules() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -293,7 +299,7 @@ fn definition_lhs_evaluates_non_pattern_constants_before_storing_rules() {
 
 #[test]
 fn definition_lhs_evaluates_outer_call_head_before_selecting_definition_owner() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -319,7 +325,7 @@ fn definition_lhs_evaluates_outer_call_head_before_selecting_definition_owner() 
 
 #[test]
 fn protected_symbols_block_definition_and_clear_writes() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("Protect[f]").unwrap();
 

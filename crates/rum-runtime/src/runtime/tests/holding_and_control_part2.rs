@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn function_applies_slots_positionally() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -40,7 +40,7 @@ fn function_applies_slots_positionally() {
 
 #[test]
 fn binary_function_syntax_applies_explicit_parameter() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -54,7 +54,7 @@ fn binary_function_syntax_applies_explicit_parameter() {
 
 #[test]
 fn explicit_parameter_functions_ignore_extra_arguments() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -92,7 +92,7 @@ fn explicit_parameter_functions_ignore_extra_arguments() {
 
 #[test]
 fn pure_function_syntax_uses_slots_and_evaluated_arguments() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -162,7 +162,7 @@ fn pure_function_syntax_uses_slots_and_evaluated_arguments() {
 
 #[test]
 fn explicit_parameter_functions_respect_shadowing_and_pattern_locals() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -192,7 +192,7 @@ fn explicit_parameter_functions_respect_shadowing_and_pattern_locals() {
 
 #[test]
 fn head_evaluation_can_activate_special_forms_and_held_builtins() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("assign = Set").unwrap();
     assert_eq!(
@@ -248,7 +248,7 @@ fn head_evaluation_can_activate_special_forms_and_held_builtins() {
 
 #[test]
 fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let set_plan = session.build_call_dispatch_plan(&system_expr("Set"));
     assert_eq!(set_plan.stages(), [CallDispatchStage::SpecialForm]);
@@ -285,7 +285,7 @@ fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
 
 #[test]
 fn cycle_detection_returns_iteration_limit_for_mutual_ownvalues_and_recovers() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("loopA := loopB").unwrap();
     session.eval_text("loopB := loopA").unwrap();
@@ -315,7 +315,7 @@ fn cycle_detection_returns_iteration_limit_for_mutual_ownvalues_and_recovers() {
 
 #[test]
 fn cycle_detection_returns_iteration_limit_for_mutual_downvalues() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f[x_Integer] := g[x]").unwrap();
     session.eval_text("g[x_Integer] := f[x]").unwrap();
@@ -338,7 +338,7 @@ fn cycle_detection_returns_iteration_limit_for_mutual_downvalues() {
 
 #[test]
 fn recursion_limit_stops_expanding_recursive_downvalues() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.set_recursion_limit(32);
 
     session.eval_text("grow[x_] := grow[f[x]]").unwrap();
@@ -358,7 +358,7 @@ fn recursion_limit_stops_expanding_recursive_downvalues() {
 
 #[test]
 fn fixed_point_evaluation_revisits_expressions_after_side_effects_change_head_meaning() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -372,7 +372,7 @@ fn fixed_point_evaluation_revisits_expressions_after_side_effects_change_head_me
 
 #[test]
 fn evaluation_pass_limit_bounds_fixed_point_revisits() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.set_evaluation_pass_limit(1);
 
     let outcome = session.eval_text("f[f = Hold, Identity[1]]").unwrap();
@@ -391,7 +391,7 @@ fn evaluation_pass_limit_bounds_fixed_point_revisits() {
 
 #[test]
 fn tracing_records_definition_rule_and_evaluation_events() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.enable_tracing(true);
 
     session.eval_text("f[x_Integer] := x").unwrap();

@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn resume_eval_request_with_input_can_finish_conditioned_matchq() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("MatchQ[1, x_ /; MatchQ[InputString[\"cond: \"], \"yes\"]]")
@@ -24,7 +24,7 @@ fn resume_eval_request_with_input_can_finish_conditioned_matchq() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_sequence_conditioned_matchq() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("MatchQ[f[1, 2], f[x__ /; InputString[\"cond: \"], y_]]")
@@ -46,7 +46,7 @@ fn resume_eval_request_with_input_can_finish_sequence_conditioned_matchq() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_nested_matcher_inside_sequence_conditioned_matchq() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("MatchQ[f[1, 2], f[x__ /; MatchQ[InputString[\"cond: \"], \"yes\"], y_]]")
@@ -68,7 +68,7 @@ fn resume_eval_request_with_input_can_finish_nested_matcher_inside_sequence_cond
 
 #[test]
 fn resume_eval_request_with_input_can_finish_multi_sequence_backtracking_conditions() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -114,7 +114,7 @@ fn resume_eval_request_with_input_can_finish_multi_sequence_backtracking_conditi
 
 #[test]
 fn resume_eval_request_with_input_can_finish_conditioned_downvalue_matching() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session
         .eval_text("f[x_ /; MatchQ[InputString[\"cond: \"], \"yes\"]] := x")
         .unwrap();
@@ -139,7 +139,7 @@ fn resume_eval_request_with_input_can_finish_conditioned_downvalue_matching() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_conditioned_replace_all() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("ReplaceAll[1, x_ /; MatchQ[InputString[\"cond: \"], \"yes\"] :> List[x, x]]")
@@ -161,7 +161,7 @@ fn resume_eval_request_with_input_can_finish_conditioned_replace_all() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_orderless_patternsequence_group_matching() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -185,7 +185,7 @@ fn resume_eval_request_with_input_can_finish_orderless_patternsequence_group_mat
 
 #[test]
 fn resume_eval_request_with_input_can_finish_conditioned_cases() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("Cases[f[1], x_Integer /; MatchQ[InputString[\"cond: \"], \"yes\"]]")
@@ -207,7 +207,7 @@ fn resume_eval_request_with_input_can_finish_conditioned_cases() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_cases_with_suspending_symbol_spec() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session
         .eval_text("p := x_Integer /; MatchQ[InputString[\"cond: \"], \"yes\"]")
         .unwrap();
@@ -232,7 +232,7 @@ fn resume_eval_request_with_input_can_finish_cases_with_suspending_symbol_spec()
 
 #[test]
 fn resume_eval_request_with_input_can_finish_cases_with_suspending_level_spec() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("Cases[f[1], _Integer, If[MatchQ[InputString[\"lvl: \"], \"yes\"], 1, 0]]")
@@ -254,7 +254,7 @@ fn resume_eval_request_with_input_can_finish_cases_with_suspending_level_spec() 
 
 #[test]
 fn resume_eval_request_with_input_can_finish_cases_with_suspending_heads_option_as_third_arg() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -278,7 +278,7 @@ fn resume_eval_request_with_input_can_finish_cases_with_suspending_heads_option_
 
 #[test]
 fn resume_eval_request_with_input_can_finish_cases_with_suspending_heads_option_as_fourth_arg() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -302,7 +302,7 @@ fn resume_eval_request_with_input_can_finish_cases_with_suspending_heads_option_
 
 #[test]
 fn resume_eval_request_with_input_can_finish_cases_with_suspending_match_limit() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -326,7 +326,7 @@ fn resume_eval_request_with_input_can_finish_cases_with_suspending_match_limit()
 
 #[test]
 fn resume_eval_request_with_input_can_finish_cases_with_suspending_heads_option_as_fifth_arg() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -350,7 +350,7 @@ fn resume_eval_request_with_input_can_finish_cases_with_suspending_heads_option_
 
 #[test]
 fn resume_eval_request_with_input_can_finish_position_with_suspending_symbol_spec() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session
         .eval_text("p := x_Integer /; MatchQ[InputString[\"cond: \"], \"yes\"]")
         .unwrap();
@@ -375,7 +375,7 @@ fn resume_eval_request_with_input_can_finish_position_with_suspending_symbol_spe
 
 #[test]
 fn resume_eval_request_with_input_can_finish_position_with_suspending_match_limit() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -399,7 +399,7 @@ fn resume_eval_request_with_input_can_finish_position_with_suspending_match_limi
 
 #[test]
 fn resume_eval_request_with_input_can_finish_count_with_suspending_symbol_spec() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session
         .eval_text("p := x_Integer /; MatchQ[InputString[\"cond: \"], \"yes\"]")
         .unwrap();
@@ -426,7 +426,7 @@ fn resume_eval_request_with_input_can_finish_count_with_suspending_symbol_spec()
 
 #[test]
 fn resume_eval_request_with_input_can_finish_freeq_with_suspending_heads_option() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(

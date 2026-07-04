@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn withcleanup_runs_cleanup_on_values_throws_and_aborts() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("x = 0").unwrap();
     assert_eq!(
@@ -200,7 +200,7 @@ fn withcleanup_runs_cleanup_on_values_throws_and_aborts() {
 
 #[test]
 fn uncaught_throw_request_messages_follow_wolfram_nocatch_shape() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let plain = session
         .eval_request("Throw[1]")
@@ -268,7 +268,7 @@ fn uncaught_throw_request_messages_follow_wolfram_nocatch_shape() {
 
 #[test]
 fn catch_evaluates_symbol_valued_tag_form_before_matching() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -293,7 +293,7 @@ fn catch_evaluates_symbol_valued_tag_form_before_matching() {
 
 #[test]
 fn catch_tag_form_keeps_visible_side_effects() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let caught = session
         .eval_text("x = 0; Catch[Throw[1, \"$t$\"], (Print[\"tag\"]; x = 9; \"$t$\")]; x")

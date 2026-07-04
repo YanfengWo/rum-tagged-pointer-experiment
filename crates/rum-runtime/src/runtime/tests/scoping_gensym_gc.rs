@@ -1,7 +1,7 @@
 use super::*;
 
 fn session_with_test_first() -> Session {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.register_builtin(BuiltinSpec::ordinary_with_hold(
         "First",
         "Test-local structural first for gensym GC probes.",
@@ -104,7 +104,7 @@ fn message_root_escape_keeps_candidate_until_message_is_cleared() {
 
 #[test]
 fn returned_expr_extra_root_keeps_candidate_definition_live() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let outcome = session.eval_text("Module[{x}, x = 7; Hold[x]]").unwrap();
     let candidates = session
@@ -162,7 +162,7 @@ fn outcome_extra_roots_keep_success_return_throw_and_cleanup_candidates_live() {
 
 #[test]
 fn outcome_extra_roots_are_empty_for_non_value_errors_and_candidate_is_reclaimed() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     let candidate = allocate_retained_candidate(&mut session, 1);
     let outcome = Err(EvalError::Cancelled);
     let roots = gensym_gc_extra_roots_for_outcome(&outcome);
@@ -215,7 +215,7 @@ fn global_root_keeps_escaped_candidate_until_root_is_cleared() {
 
 #[test]
 fn transitive_definition_kind_chain_keeps_all_reachable_candidates_live() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         eval_string(
@@ -274,7 +274,7 @@ fn live_candidate_definition_marks_transitive_candidate_dependencies() {
 
 #[test]
 fn empty_candidate_set_sweep_is_a_noop() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text("ClearAll[gcNoop078]; gcNoop078 = 17")
@@ -289,7 +289,7 @@ fn empty_candidate_set_sweep_is_a_noop() {
 
 #[test]
 fn active_module_activation_keeps_candidate_until_activation_is_removed() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     let candidate = session.allocate_fresh_symbol(&Symbol::from_name("gcActive078"));
 
     session.gc_candidate_gensyms.insert(candidate);
@@ -314,7 +314,7 @@ fn active_module_activation_keeps_candidate_until_activation_is_removed() {
 
 #[test]
 fn attribute_state_on_dead_candidate_is_cleared_during_reclaim() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     let candidate = allocate_retained_candidate(&mut session, 7);
     let mut attributes = session.attribute_set_for_symbol(&candidate);
     attributes.insert(Attribute::HoldFirst);
@@ -331,7 +331,7 @@ fn attribute_state_on_dead_candidate_is_cleared_during_reclaim() {
 
 #[test]
 fn unique_generated_symbols_are_not_module_gc_candidates() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let generated = eval_string(&mut session, "Unique[gcUnique050]");
     assert_eq!(session.gc_candidate_gensyms.len(), 0);
@@ -428,7 +428,7 @@ fn assert_outcome_roots_keep_then_drop_candidates<F>(label: &str, count: usize, 
 where
     F: FnOnce(&[Expr]) -> Result<Expr, EvalError>,
 {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     let candidates = (0..count)
         .map(|index| allocate_retained_candidate(&mut session, index as i64))
         .collect::<Vec<_>>();

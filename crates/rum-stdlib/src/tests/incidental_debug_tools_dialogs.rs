@@ -1,8 +1,14 @@
 use super::*;
 
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
+
 #[test]
 fn dialog_catches_return_and_respects_current_option_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
     session.eval_text("x = global").unwrap();
 
     assert_eq!(
@@ -23,7 +29,7 @@ fn dialog_catches_return_and_respects_current_option_subset() {
 
 #[test]
 fn dialog_without_body_uses_a_current_single_input_line_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
     session.queue_input_response("Return[2 + 3]");
 
     let response = session.eval_text("Dialog[]").unwrap();
@@ -32,7 +38,7 @@ fn dialog_without_body_uses_a_current_single_input_line_subset() {
 
 #[test]
 fn dialog_uses_current_default_options_from_setoptions() {
-    let mut session = Session::new();
+    let mut session = core_session();
     session
         .eval_text("SetOptions[Dialog, DialogProlog :> Print[\"hi\"]]")
         .unwrap();

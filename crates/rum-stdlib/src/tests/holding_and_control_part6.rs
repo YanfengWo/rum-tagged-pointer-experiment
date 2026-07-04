@@ -1,10 +1,18 @@
 use super::*;
+use rum_runtime::{EvalError, SessionRequestError};
 
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
+
+#[path = "holding_and_control_part6/cleanup_throw.rs"]
 mod cleanup_throw;
 
 #[test]
 fn abort_and_checkabort_cover_current_first_pass_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session.eval_text("Abort[]").unwrap().value.to_string(),
@@ -157,7 +165,7 @@ fn abort_and_checkabort_cover_current_first_pass_subset() {
 
 #[test]
 fn checkabort_validates_entire_option_lists_before_evaluating_body() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("propagate = True").unwrap();
     assert_eq!(
@@ -238,7 +246,7 @@ fn checkabort_validates_entire_option_lists_before_evaluating_body() {
 
 #[test]
 fn exit_reports_a_request_level_code_and_stops_evaluation() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     match session
         .eval_text("Exit[7]")
@@ -277,7 +285,7 @@ fn exit_reports_a_request_level_code_and_stops_evaluation() {
 
 #[test]
 fn top_level_break_and_continue_report_wolfram_nofwd_messages() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let break_failure = session
         .eval_request("Break[]")

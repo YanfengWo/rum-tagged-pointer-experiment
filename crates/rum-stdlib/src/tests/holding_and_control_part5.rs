@@ -1,8 +1,14 @@
 use super::*;
 
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
+
 #[test]
 fn sum_and_product_reuse_concrete_iterator_specs() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let cases = [
         ("Sum[i, {i, 1, 10}]", "55"),
@@ -30,7 +36,7 @@ fn sum_and_product_reuse_concrete_iterator_specs() {
 
 #[test]
 fn sum_and_product_leave_symbolic_bounds_unevaluated() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let cases = [
         ("Sum[i, {i, 1, n}]", "Sum[i, List[i, 1, n]]"),
@@ -48,7 +54,7 @@ fn sum_and_product_leave_symbolic_bounds_unevaluated() {
 
 #[test]
 fn sum_and_product_report_wolfram_kernel_attributes() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     for name in ["Sum", "Product"] {
         let source = format!("Attributes[{name}]");
@@ -62,7 +68,7 @@ fn sum_and_product_report_wolfram_kernel_attributes() {
 
 #[test]
 fn iterator_variables_expose_dynamic_ownvalues_without_leaking_assignments() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -85,7 +91,7 @@ fn iterator_variables_expose_dynamic_ownvalues_without_leaking_assignments() {
 
 #[test]
 fn iterator_dynamic_values_interact_with_nested_block_shadowing() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -107,7 +113,7 @@ fn iterator_dynamic_values_interact_with_nested_block_shadowing() {
 
 #[test]
 fn do_and_table_respect_resource_limits() {
-    let mut table_session = Session::new();
+    let mut table_session = core_session();
     table_session.set_generated_element_limit(3);
     let table = table_session.eval_text("Table[x, 5]").unwrap();
     assert_eq!(
@@ -121,7 +127,7 @@ fn do_and_table_respect_resource_limits() {
             .any(|message| message.symbol == "General" && message.tag == "reslim")
     );
 
-    let mut do_session = Session::new();
+    let mut do_session = core_session();
     do_session.set_iteration_work_limit(3);
     let do_result = do_session.eval_text("Do[Null, 5]").unwrap();
     assert_eq!(
@@ -135,7 +141,7 @@ fn do_and_table_respect_resource_limits() {
             .any(|message| message.symbol == "General" && message.tag == "reslim")
     );
 
-    let mut iterator_session = Session::new();
+    let mut iterator_session = core_session();
     iterator_session.set_generated_element_limit(3);
     assert_eq!(
         iterator_session
@@ -146,7 +152,7 @@ fn do_and_table_respect_resource_limits() {
         "TerminatedEvaluation[\"GeneratedElementLimit\"]"
     );
 
-    let mut memory_session = Session::new();
+    let mut memory_session = core_session();
     assert_eq!(
         memory_session
             .eval_text("MemoryConstrained[Table[x, 100], 20, memfail]")
@@ -159,7 +165,7 @@ fn do_and_table_respect_resource_limits() {
 
 #[test]
 fn large_do_count_loop_does_not_recurse_through_the_rust_stack() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -173,7 +179,7 @@ fn large_do_count_loop_does_not_recurse_through_the_rust_stack() {
 
 #[test]
 fn confirm_info_is_lazy_and_explicit_tags_are_dynamically_caught() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session

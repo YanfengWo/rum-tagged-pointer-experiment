@@ -1,8 +1,14 @@
 use super::*;
 
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
+
 #[test]
 fn held_update_builtins_mutate_immediate_symbol_values() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -72,7 +78,7 @@ fn held_update_builtins_mutate_immediate_symbol_values() {
 
 #[test]
 fn held_update_syntax_mutates_module_locals() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -88,7 +94,7 @@ fn held_update_syntax_mutates_module_locals() {
 
 #[test]
 fn held_updates_mutate_single_exact_part_targets() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -168,7 +174,7 @@ fn held_updates_mutate_single_exact_part_targets() {
 
 #[test]
 fn held_updates_mutate_bulk_exact_part_targets() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -214,7 +220,7 @@ fn held_updates_mutate_bulk_exact_part_targets() {
 
 #[test]
 fn held_updates_allow_empty_bulk_part_targets_without_mutation() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -244,7 +250,7 @@ fn held_updates_allow_empty_bulk_part_targets_without_mutation() {
 
 #[test]
 fn held_updates_cover_duplicate_bulk_part_targets() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -274,7 +280,7 @@ fn held_updates_cover_duplicate_bulk_part_targets() {
 
 #[test]
 fn held_updates_reject_nested_part_selector_lists_without_mutation() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let outcome = session
         .eval_text("x = {{1, 2}, {3, 4}}; AddTo[x[[{{1}, {1, 2}}]], 10]")
@@ -303,7 +309,7 @@ fn held_updates_reject_nested_part_selector_lists_without_mutation() {
 
 #[test]
 fn held_updates_report_missing_or_invalid_targets_without_writing() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let missing = session.eval_text("AddTo[x, 2]").unwrap();
     assert_eq!(missing.value.to_string(), "AddTo[x, 2]");
@@ -347,7 +353,7 @@ fn held_updates_report_missing_or_invalid_targets_without_writing() {
 
 #[test]
 fn held_updates_respect_protected_symbols() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("x = 1; Protect[x]").unwrap();
     let blocked = session.eval_text("AddTo[x, 2]").unwrap();

@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn queued_input_responses_feed_inputstring_without_prompting_again() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.queue_input_response("Alice");
 
     let response = session
@@ -15,7 +15,7 @@ fn queued_input_responses_feed_inputstring_without_prompting_again() {
 
 #[test]
 fn resume_eval_request_with_input_preserves_already_evaluated_prefix_arguments() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.eval_text("x = seed").unwrap();
 
     let failure = session
@@ -46,7 +46,7 @@ fn resume_eval_request_with_input_preserves_already_evaluated_prefix_arguments()
 
 #[test]
 fn resume_eval_request_with_input_can_suspend_multiple_times_without_restarting() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.eval_text("x = seed").unwrap();
 
     let first = session
@@ -90,7 +90,7 @@ fn resume_eval_request_with_input_can_suspend_multiple_times_without_restarting(
 
 #[test]
 fn resume_eval_request_with_input_continues_symbol_evaluation_after_fixed_point_suspend() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session
         .eval_text("name := InputString[\"name: \"]")
         .unwrap();
@@ -116,7 +116,7 @@ fn resume_eval_request_with_input_continues_symbol_evaluation_after_fixed_point_
 
 #[test]
 fn resume_eval_request_with_input_finishes_with_bindings_without_reprompting() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("With[{x = InputString[\"name: \"]}, List[x, x]]")
@@ -138,7 +138,7 @@ fn resume_eval_request_with_input_finishes_with_bindings_without_reprompting() {
 
 #[test]
 fn resume_eval_request_with_input_preserves_block_scope_until_completion() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session.eval_text("x = global").unwrap();
 
     let failure = session
@@ -165,7 +165,7 @@ fn resume_eval_request_with_input_preserves_block_scope_until_completion() {
 
 #[test]
 fn resume_eval_request_with_input_reports_input_parse_errors_as_syntax_diagnostics() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("Input[\"expr: \"]")
@@ -200,7 +200,7 @@ fn resume_eval_request_with_input_reports_input_parse_errors_as_syntax_diagnosti
 
 #[test]
 fn resume_eval_request_with_input_keeps_monitor_display_and_finishes_the_body() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("Monitor[InputString[\"name: \"], progress]")
@@ -223,7 +223,7 @@ fn resume_eval_request_with_input_keeps_monitor_display_and_finishes_the_body() 
 
 #[test]
 fn resume_eval_request_with_input_finishes_dialog_subsets() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("Dialog[InputString[\"name: \"]]")
@@ -245,7 +245,7 @@ fn resume_eval_request_with_input_finishes_dialog_subsets() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_delayed_message_templates() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session
         .eval_text("f::argx := InputString[\"msg: \"]")
         .unwrap();
@@ -273,7 +273,7 @@ fn resume_eval_request_with_input_can_finish_delayed_message_templates() {
 
 #[test]
 fn resume_eval_request_with_input_formats_delayed_message_templates_after_resume() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session
         .eval_text(
             "f::argx := If[MatchQ[InputString[\"msg: \"], \"Alice\"], \"bad arg `1` from Alice\", \"bad arg `1` from stranger\"]",
@@ -303,7 +303,7 @@ fn resume_eval_request_with_input_formats_delayed_message_templates_after_resume
 
 #[test]
 fn resume_eval_request_with_input_continues_replace_all_without_restarting_target() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("ReplaceAll[InputString[\"name: \"], x_String :> List[x, x]]")

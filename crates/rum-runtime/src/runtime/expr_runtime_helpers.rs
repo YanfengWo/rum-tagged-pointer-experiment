@@ -375,7 +375,8 @@ pub(super) fn is_known_system_symbol_name(name: &str) -> bool {
 fn is_extra_known_system_symbol_name(name: &str) -> bool {
     matches!(
         name,
-        "Alternatives"
+        "$AssertFunction"
+            | "Alternatives"
             | "DateObject"
             | "DistanceFunction"
             | "Flat"
@@ -398,6 +399,7 @@ fn is_extra_known_system_symbol_name(name: &str) -> bool {
             | "OrderlessPatternSequence"
             | "PatternTest"
             | "PatternSequence"
+            | "PropagateAborts"
             | "Protected"
             | "ReadProtected"
             | "RegularExpression"

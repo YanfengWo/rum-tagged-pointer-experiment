@@ -1,8 +1,14 @@
 use super::*;
 
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
+
 #[test]
 fn failure_property_accessors_cover_current_subset() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session

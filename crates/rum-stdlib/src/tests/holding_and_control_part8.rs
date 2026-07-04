@@ -1,4 +1,11 @@
 use super::*;
+use rum_runtime::{SessionRequestError, SessionRequestFailure};
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 fn expect_input_prompt(error: SessionRequestFailure, prompt: &str) {
     match &error.error {
@@ -11,7 +18,7 @@ fn expect_input_prompt(error: SessionRequestFailure, prompt: &str) {
 
 #[test]
 fn enclose_handler_can_suspend_and_resume_through_host_input() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let failure = session
         .eval_request("Enclose[Confirm[$Failed], Function[InputString[\"handler: \"]]]")
@@ -26,7 +33,7 @@ fn enclose_handler_can_suspend_and_resume_through_host_input() {
 
 #[test]
 fn confirm_information_can_suspend_and_resume_inside_enclose() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let failure = session
         .eval_request("Enclose[Confirm[$Failed, InputString[\"info: \"]], \"Information\"]")
@@ -41,7 +48,7 @@ fn confirm_information_can_suspend_and_resume_inside_enclose() {
 
 #[test]
 fn confirm_predicate_and_test_can_suspend_and_resume_inside_enclose() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let failure = session
         .eval_request(
@@ -66,7 +73,7 @@ fn confirm_predicate_and_test_can_suspend_and_resume_inside_enclose() {
 
 #[test]
 fn assert_function_none_restores_normal_assert_control() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("$AssertFunction = None").unwrap();
     assert_eq!(

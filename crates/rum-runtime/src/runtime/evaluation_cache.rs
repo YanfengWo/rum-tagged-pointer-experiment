@@ -1573,6 +1573,25 @@ fn elapsed_nanos_since(start: Instant) -> u64 {
 mod tests {
     use super::*;
 
+    fn session_with_compound_expression() -> Session {
+        let mut session = Session::default();
+        session.register_builtin(BuiltinSpec::ordinary_with_hold(
+            "CompoundExpression",
+            "Test-local moved control builtin.",
+            HoldAttribute::HoldAll,
+            test_compound_expression,
+        ));
+        session
+    }
+
+    fn test_compound_expression(
+        session: &mut Session,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        session.eval_control_data_builtin(ControlDataBuiltin::CompoundExpression, head, args)
+    }
+
     #[test]
     fn evaluation_cache_is_invalidated_by_new_down_value() {
         let mut session = Session::default();
@@ -1605,7 +1624,7 @@ mod tests {
 
     #[test]
     fn repeated_writes_to_one_symbol_keep_invalidation_sound() {
-        let mut session = Session::default();
+        let mut session = session_with_compound_expression();
 
         session.eval_text("g[] := (s = s + 1; s)").unwrap();
         session.eval_text("s = 0").unwrap();

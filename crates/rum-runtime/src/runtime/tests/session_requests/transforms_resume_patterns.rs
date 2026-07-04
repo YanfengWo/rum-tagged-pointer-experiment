@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn resume_eval_request_with_input_can_finish_patterntest_matchq() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -26,7 +26,7 @@ fn resume_eval_request_with_input_can_finish_patterntest_matchq() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_sequence_patterntest_matchq() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -50,7 +50,7 @@ fn resume_eval_request_with_input_can_finish_sequence_patterntest_matchq() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_except_matchq() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("MatchQ[a, Except[x_ /; MatchQ[InputString[\"cond: \"], \"yes\"]]]")
@@ -72,7 +72,7 @@ fn resume_eval_request_with_input_can_finish_except_matchq() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_repeated_patterntest_matchq() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -96,7 +96,7 @@ fn resume_eval_request_with_input_can_finish_repeated_patterntest_matchq() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_thread_with_suspending_arg_spec() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -123,7 +123,7 @@ fn resume_eval_request_with_input_can_finish_thread_with_suspending_arg_spec() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_setattributes_with_suspending_attribute_spec() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request(
@@ -155,7 +155,7 @@ fn resume_eval_request_with_input_can_finish_setattributes_with_suspending_attri
 
 #[test]
 fn eval_request_reports_prints_on_failure_and_across_input_resume() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let failure = session
         .eval_request("Print[\"before\"]; Throw[1]")

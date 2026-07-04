@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn evaluated_head_function_attributes_control_argument_evaluation() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text("gate = Function[Hold[Slot[1]], HoldAll]")
@@ -20,7 +20,7 @@ fn evaluated_head_function_attributes_control_argument_evaluation() {
 
 #[test]
 fn block_localizes_definitions_attributes_and_messages() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f[x_] := x").unwrap();
     session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
@@ -56,7 +56,7 @@ fn block_localizes_definitions_attributes_and_messages() {
 
 #[test]
 fn module_skips_existing_generated_symbol_names() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("x$1 = occupied").unwrap();
     session.eval_text("x$2 = occupied").unwrap();
@@ -67,7 +67,7 @@ fn module_skips_existing_generated_symbol_names() {
 
 #[test]
 fn orderless_attribute_canonicalizes_calls_and_rules() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("SetAttributes[f, Orderless]").unwrap();
 
@@ -95,7 +95,7 @@ fn orderless_attribute_canonicalizes_calls_and_rules() {
 
 #[test]
 fn held_downvalue_matching_normalizes_nested_attribute_heads() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("SetAttributes[f, HoldAll]").unwrap();
     session.eval_text("SetAttributes[h, Orderless]").unwrap();
@@ -109,7 +109,7 @@ fn held_downvalue_matching_normalizes_nested_attribute_heads() {
 
 #[test]
 fn stable_call_shortcut_preserves_symbol_and_upvalue_evaluation() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("x = 1").unwrap();
     assert_eq!(
@@ -126,7 +126,7 @@ fn stable_call_shortcut_preserves_symbol_and_upvalue_evaluation() {
 
 #[test]
 fn downvalue_miss_stability_shortcut_invalidates_on_later_definition() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f[1] = 2").unwrap();
     assert_eq!(session.eval_text("f[2]").unwrap().value.to_string(), "f[2]");
@@ -137,7 +137,7 @@ fn downvalue_miss_stability_shortcut_invalidates_on_later_definition() {
 
 #[test]
 fn argument_preparation_cow_preserves_dispatch_semantics() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session.eval_text("g[1 + 1]").unwrap().value.to_string(),
@@ -203,7 +203,7 @@ fn argument_preparation_cow_preserves_dispatch_semantics() {
 
 #[test]
 fn flat_attribute_flattens_calls_and_matches_flat_patterns() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("SetAttributes[f, Flat]").unwrap();
 
@@ -235,7 +235,7 @@ fn flat_attribute_flattens_calls_and_matches_flat_patterns() {
 
 #[test]
 fn one_identity_allows_singleton_head_patterns_to_match_atoms() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("SetAttributes[f, OneIdentity]").unwrap();
 
@@ -271,7 +271,7 @@ fn one_identity_allows_singleton_head_patterns_to_match_atoms() {
 
 #[test]
 fn listable_threads_user_defined_calls_and_broadcasts_scalars() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("SetAttributes[f, Listable]").unwrap();
 
@@ -303,7 +303,7 @@ fn listable_threads_user_defined_calls_and_broadcasts_scalars() {
 
 #[test]
 fn listable_mismatched_lengths_emit_thread_message_and_leave_call_unevaluated() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("SetAttributes[f, Listable]").unwrap();
 
@@ -328,7 +328,7 @@ fn listable_mismatched_lengths_emit_thread_message_and_leave_call_unevaluated() 
 
 #[test]
 fn listable_interacts_with_builtin_and_function_attributes() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -350,7 +350,7 @@ fn listable_interacts_with_builtin_and_function_attributes() {
 
 #[test]
 fn thread_builtin_supports_default_and_custom_thread_heads() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -380,7 +380,7 @@ fn thread_builtin_supports_default_and_custom_thread_heads() {
 
 #[test]
 fn thread_builtin_supports_standard_sequence_spec_subset() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -434,7 +434,7 @@ fn thread_builtin_supports_standard_sequence_spec_subset() {
 
 #[test]
 fn thread_builtin_accepts_resolved_head_and_spec_values() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("threadHead = g").unwrap();
     session.eval_text("threadSpec = {2}").unwrap();
@@ -459,7 +459,7 @@ fn thread_builtin_accepts_resolved_head_and_spec_values() {
 
 #[test]
 fn thread_evaluates_its_first_argument_before_threading() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("x = f[{a, b}, c]").unwrap();
 

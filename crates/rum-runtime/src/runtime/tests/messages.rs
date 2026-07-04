@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn message_name_and_message_emit_runtime_messages() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let named = session
         .eval_text("MessageName[FindFile, \"notfound\"]")
@@ -23,7 +23,7 @@ fn message_name_and_message_emit_runtime_messages() {
 
 #[test]
 fn message_family_accepts_symbol_name_strings_and_messagename_targets() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f::argx = \"bad arg `1`\"").unwrap();
     session.eval_text("f::usage = \"usage text\"").unwrap();
@@ -64,7 +64,7 @@ fn message_family_accepts_symbol_name_strings_and_messagename_targets() {
 
 #[test]
 fn usage_message_assignment_holds_symbol_with_existing_own_value() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("a = 5").unwrap();
     session.eval_text("a::usage = \"doc-a\"").unwrap();
@@ -83,7 +83,7 @@ fn usage_message_assignment_holds_symbol_with_existing_own_value() {
 
 #[test]
 fn direct_set_and_setdelayed_calls_share_message_assignment_normalization() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
     session
         .eval_text("Set[MessageName[\"f\", \"argx\"], \"bad arg `1`\"]")
         .unwrap();
@@ -104,7 +104,7 @@ fn direct_set_and_setdelayed_calls_share_message_assignment_normalization() {
 
 #[test]
 fn message_templates_can_be_defined_and_formatted() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f::argx = \"bad arg `1`\"").unwrap();
     let outcome = session.eval_text("Message[f::argx, 42]").unwrap();
@@ -125,7 +125,7 @@ fn message_templates_can_be_defined_and_formatted() {
 }
 #[test]
 fn message_templates_support_message_name_and_all_args_placeholders() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text("f::argx = \"`0`: first=`1`; all=`*`; implicit=``/``\"")
@@ -148,7 +148,7 @@ fn message_templates_support_message_name_and_all_args_placeholders() {
 }
 #[test]
 fn message_templates_support_richer_format_specifiers() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text(
@@ -167,7 +167,7 @@ fn message_templates_support_richer_format_specifiers() {
 
 #[test]
 fn message_templates_leave_unknown_placeholders_unchanged() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text("f::argx = \"missing=`3`; literal=`name`\"")
@@ -184,7 +184,7 @@ fn message_templates_leave_unknown_placeholders_unchanged() {
 
 #[test]
 fn message_templates_leave_unsupported_format_specs_unchanged() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text("f::argx = \"ctx=`1:context`; bad=`*:head`; nope=`1:nope`\"")
@@ -201,7 +201,7 @@ fn message_templates_leave_unsupported_format_specs_unchanged() {
 
 #[test]
 fn messages_builtin_lists_defined_message_names() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f::argx = \"bad arg\"").unwrap();
     session.eval_text("f::usage = \"usage text\"").unwrap();
@@ -227,7 +227,7 @@ fn messages_builtin_lists_defined_message_names() {
 
 #[test]
 fn message_definitions_builtin_lists_immediate_and_delayed_templates() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f::argx = \"bad arg `1`\"").unwrap();
     session.eval_text("f::usage := suffix").unwrap();
@@ -252,7 +252,7 @@ fn message_definitions_builtin_lists_immediate_and_delayed_templates() {
 
 #[test]
 fn message_tags_builtin_lists_global_symbol_and_exact_message_tags() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f::argx = \"bad arg\"").unwrap();
     session.eval_text("f::usage := suffix").unwrap();
@@ -286,7 +286,7 @@ fn message_tags_builtin_lists_global_symbol_and_exact_message_tags() {
 
 #[test]
 fn inspect_reports_message_definition_presence() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f::argx = \"bad arg\"").unwrap();
 
@@ -297,7 +297,7 @@ fn inspect_reports_message_definition_presence() {
 
 #[test]
 fn inspect_message_catalog_exposes_templates_and_delayed_flags() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("f::argx = \"bad arg\"").unwrap();
     session.eval_text("f::usage := suffix").unwrap();
@@ -319,7 +319,7 @@ fn inspect_message_catalog_exposes_templates_and_delayed_flags() {
 
 #[test]
 fn delayed_message_templates_are_evaluated_when_emitted() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("suffix = 7").unwrap();
     session.eval_text("f::argx := suffix").unwrap();
@@ -330,7 +330,7 @@ fn delayed_message_templates_are_evaluated_when_emitted() {
 
 #[test]
 fn message_list_reports_messages_emitted_so_far_in_current_input() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let outcome = session
         .eval_text("Message[FindFile::notfound]; $MessageList")
@@ -345,7 +345,7 @@ fn message_list_reports_messages_emitted_so_far_in_current_input() {
 
 #[test]
 fn request_message_list_reports_messages_emitted_so_far_in_current_input() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let response = session
         .eval_request("Message[FindFile::notfound]; $MessageList")
@@ -360,7 +360,7 @@ fn request_message_list_reports_messages_emitted_so_far_in_current_input() {
 
 #[test]
 fn quiet_keeps_suppressed_messages_out_of_message_list() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session
         .eval_text("Quiet[Message[FindFile::notfound]]")
@@ -374,7 +374,7 @@ fn quiet_keeps_suppressed_messages_out_of_message_list() {
 
 #[test]
 fn invalid_message_name_form_emits_runtime_message() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let outcome = session.eval_text("MessageName[1, 2]").unwrap();
 
@@ -389,7 +389,7 @@ fn invalid_message_name_form_emits_runtime_message() {
 
 #[test]
 fn invalid_builtin_argument_shapes_emit_runtime_messages() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let with_outcome = session.eval_text("With[x, x]").unwrap();
     assert_eq!(with_outcome.value.to_string(), "With[x, x]");

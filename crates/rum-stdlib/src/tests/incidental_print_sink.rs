@@ -2,9 +2,15 @@ use std::sync::{Arc, Mutex};
 
 use super::*;
 
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
+
 #[test]
 fn print_sink_streams_prints_and_leaves_outcome_prints_empty() {
-    let mut session = Session::new();
+    let mut session = core_session();
     let received = Arc::new(Mutex::new(Vec::new()));
     let sink_received = Arc::clone(&received);
 
@@ -22,7 +28,7 @@ fn print_sink_streams_prints_and_leaves_outcome_prints_empty() {
 
 #[test]
 fn prints_accumulate_without_sink() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let outcome = session.eval_request("Do[Print[i], {i,1,3}]").unwrap();
     assert_eq!(outcome.prints, vec!["1", "2", "3"]);

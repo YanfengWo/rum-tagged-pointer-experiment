@@ -1,8 +1,15 @@
 use super::*;
+use rum_runtime::EvalError;
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
 
 #[test]
 fn configurable_replace_repeated_limit_is_respected() {
-    let mut session = Session::new();
+    let mut session = core_session();
     session.set_replace_repeated_limit(8);
 
     let error = session
@@ -18,7 +25,7 @@ fn configurable_replace_repeated_limit_is_respected() {
 
 #[test]
 fn with_evaluates_bindings_and_substitutes_lexically() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -40,7 +47,7 @@ fn with_evaluates_bindings_and_substitutes_lexically() {
 
 #[test]
 fn with_supports_rule_style_bindings_and_nested_shadowing() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -62,7 +69,7 @@ fn with_supports_rule_style_bindings_and_nested_shadowing() {
 
 #[test]
 fn scoping_builtins_accept_canonical_raw_binding_lists() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -92,7 +99,7 @@ fn scoping_builtins_accept_canonical_raw_binding_lists() {
 
 #[test]
 fn with_respects_pattern_local_names_but_substitutes_pattern_metadata() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -114,7 +121,7 @@ fn with_respects_pattern_local_names_but_substitutes_pattern_metadata() {
 
 #[test]
 fn module_generates_fresh_lexical_symbols_and_initializes_sequentially() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -138,7 +145,7 @@ fn module_generates_fresh_lexical_symbols_and_initializes_sequentially() {
 
 #[test]
 fn module_local_assignment_invalidates_after_prior_read() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -152,7 +159,7 @@ fn module_local_assignment_invalidates_after_prior_read() {
 
 #[test]
 fn module_leaf_definition_gc_reclaims_loop_local_gensyms() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     let before = eval_usize(&mut session, "MemoryInUse[]");
     session
@@ -169,7 +176,7 @@ fn module_leaf_definition_gc_reclaims_loop_local_gensyms() {
 
 #[test]
 fn module_global_definition_escape_retains_gensym_definition() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -183,7 +190,7 @@ fn module_global_definition_escape_retains_gensym_definition() {
 
 #[test]
 fn module_respects_nested_shadowing_and_pattern_locals() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -223,7 +230,7 @@ fn eval_usize(session: &mut Session, source: &str) -> usize {
 
 #[test]
 fn block_temporarily_rebinds_and_restores_symbol_values() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("x = 10").unwrap();
 
@@ -257,7 +264,7 @@ fn block_temporarily_rebinds_and_restores_symbol_values() {
 
 #[test]
 fn block_applies_dynamic_scope_across_called_definitions() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("x = 10").unwrap();
     session.eval_text("f[] := x").unwrap();
@@ -284,7 +291,7 @@ fn block_applies_dynamic_scope_across_called_definitions() {
 
 #[test]
 fn block_supports_sequential_initializers_and_nested_shadowing() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("x = 10").unwrap();
 
@@ -317,7 +324,7 @@ fn block_supports_sequential_initializers_and_nested_shadowing() {
 
 #[test]
 fn compound_expression_evaluates_sequentially_and_returns_the_last_value() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -341,7 +348,7 @@ fn compound_expression_evaluates_sequentially_and_returns_the_last_value() {
 
 #[test]
 fn switch_matches_against_held_forms_and_residualizes_when_nothing_matches() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -363,7 +370,7 @@ fn switch_matches_against_held_forms_and_residualizes_when_nothing_matches() {
 
 #[test]
 fn catch_throw_and_return_support_first_pass_nonlocal_control_flow() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -397,7 +404,7 @@ fn catch_throw_and_return_support_first_pass_nonlocal_control_flow() {
 
 #[test]
 fn return_is_consumed_at_definition_application_boundaries() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     assert_eq!(
         session
@@ -437,7 +444,7 @@ fn return_is_consumed_at_definition_application_boundaries() {
 
 #[test]
 fn throw_through_block_restores_dynamic_scope_before_catch_handles_it() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("x = 10").unwrap();
 
@@ -454,7 +461,7 @@ fn throw_through_block_restores_dynamic_scope_before_catch_handles_it() {
 
 #[test]
 fn scoping_builtins_require_raw_binding_lists_instead_of_resolved_variables() {
-    let mut session = Session::new();
+    let mut session = core_session();
 
     session.eval_text("bindings = {x = 1}").unwrap();
 

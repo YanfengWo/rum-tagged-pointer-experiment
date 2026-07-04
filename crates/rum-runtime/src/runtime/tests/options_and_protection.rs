@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn options_assignment_and_queries_cover_current_first_pass_subset() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let assigned = session.eval_text("Options[f] = {a -> 0, b -> 2}").unwrap();
     assert_eq!(assigned.value.to_string(), "List[Rule[a, 0], Rule[b, 2]]");
@@ -40,7 +40,7 @@ fn options_assignment_and_queries_cover_current_first_pass_subset() {
 
 #[test]
 fn optionvalue_emits_current_optnf_and_nodef_messages() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Options[f] = {a -> 0}").unwrap();
 
@@ -65,7 +65,7 @@ fn optionvalue_emits_current_optnf_and_nodef_messages() {
 
 #[test]
 fn setoptions_updates_known_options_but_rejects_unknown_ones() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Options[f] = {a -> 0, b -> 2}").unwrap();
 
@@ -92,7 +92,7 @@ fn setoptions_updates_known_options_but_rejects_unknown_ones() {
 
 #[test]
 fn options_assignment_unset_and_clearall_interact_with_symbol_state() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Options[f] = {a -> 0}").unwrap();
     session.eval_text("Clear[f]").unwrap();
@@ -117,7 +117,7 @@ fn options_assignment_unset_and_clearall_interact_with_symbol_state() {
 
 #[test]
 fn protect_blocks_direct_options_assignment_but_not_setoptions_updates() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Options[f] = {a -> 0}").unwrap();
     session.eval_text("Protect[f]").unwrap();
@@ -162,7 +162,7 @@ fn protect_blocks_direct_options_assignment_but_not_setoptions_updates() {
 
 #[test]
 fn block_localizes_options_alongside_other_symbol_state() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Options[f] = {a -> 0}").unwrap();
 
@@ -187,7 +187,7 @@ fn block_localizes_options_alongside_other_symbol_state() {
 
 #[test]
 fn optionspattern_and_one_arg_optionvalue_cover_current_first_pass_subset() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Options[f] = {a -> 1, b -> 2}").unwrap();
     session
@@ -206,7 +206,7 @@ fn optionspattern_and_one_arg_optionvalue_cover_current_first_pass_subset() {
 
 #[test]
 fn optionspattern_can_use_an_explicit_target_symbol() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Options[f] = {a -> 1}").unwrap();
     session
@@ -225,7 +225,7 @@ fn optionspattern_can_use_an_explicit_target_symbol() {
 
 #[test]
 fn setoptions_accepts_target_lists_and_returns_per_target_results() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Options[f] = {a -> 0, b -> 2}").unwrap();
     session.eval_text("Options[g] = {a -> 1, b -> 3}").unwrap();
@@ -250,7 +250,7 @@ fn setoptions_accepts_target_lists_and_returns_per_target_results() {
 
 #[test]
 fn optionvalue_accepts_lists_of_option_names() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Options[f] = {a -> 1, b -> 2}").unwrap();
     session
@@ -285,7 +285,7 @@ fn optionvalue_accepts_lists_of_option_names() {
 
 #[test]
 fn delayed_option_rules_are_preserved_and_evaluated_on_lookup() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("x = 1").unwrap();
     session.eval_text("Options[f] = {a :> x = x + 1}").unwrap();
@@ -331,7 +331,7 @@ fn delayed_option_rules_are_preserved_and_evaluated_on_lookup() {
 
 #[test]
 fn setoptions_and_optionvalue_match_known_system_options_by_name() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     assert_eq!(
         session
@@ -353,7 +353,7 @@ fn setoptions_and_optionvalue_match_known_system_options_by_name() {
 
 #[test]
 fn argumentsoptions_and_checkarguments_cover_current_first_pass_subset() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     session.eval_text("Options[f] = {a -> 1, b -> 2}").unwrap();
 
