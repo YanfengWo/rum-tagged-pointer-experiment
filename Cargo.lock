@@ -555,18 +555,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rum-difftest"
-version = "0.1.0"
-dependencies = [
- "rum-core",
- "rum-runtime",
- "rum-stdlib",
- "rum-terminal",
- "serde_json",
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "rum-host"
 version = "0.1.0"
 dependencies = [

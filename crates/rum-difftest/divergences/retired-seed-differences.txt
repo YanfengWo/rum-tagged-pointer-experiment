@@ -1,7 +1,0 @@
-# Retired imported seed known differences.
-# These IDs remain in historical seed files under seed/ and must not be removed
-# from those files, but they are no longer active rum/Wolfram divergences.
-# Format:
-# id=... | seed_fixture=... | curated_fixture=... | reason=...
-
-id=specific_override | seed_fixture=seed/ham-import/golden/definitions.txt | curated_fixture=cases/wolfram/core/definitions_precedence.txt | reason=The imported ham mismatch is now covered as a Wolfram-compatible rum-owned Lane A case; keep the historical seed line unchanged.

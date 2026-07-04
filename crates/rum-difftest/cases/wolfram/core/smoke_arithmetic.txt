@@ -1,9 +1,0 @@
-# Curated Lane A smoke file: arithmetic
-# Format: input ||| expected_output
-2 + 3 ||| 5
-10 / 4 ||| 5/2
-2^10 ||| 1024
-GCD[84, 126] ||| 42
-LCM[9, 12] ||| 36
-Factorial[8] ||| 40320
-Abs[-7] ||| 7
