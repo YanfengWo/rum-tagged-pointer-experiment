@@ -17,6 +17,22 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 Stage-3 batch 9 DONE (brief-110) — functional_ops moved; apply machinery stays
+
+The cleanest of the big moves: 42 specs out (Map/Apply/Fold/Nest/Select/
+Array/Outer/Composition/…), and the runtime functional catalog is now
+EXACTLY the evaluator-semantics residue — `Function` and `HoldForm`. The
+callable-application machinery the dispatcher consults
+(parse_composition/apply_composition_to_args, operator-wrapper apply,
+comparison/Key/NearestTo wrappers) stayed kernel-side as
+`runtime/functional_data.rs`; the pure-function apply machinery was never
+touched. Promotions 7/8 (line held). Test migration surprisingly small — 18
+fns (16 whole-file across 6 files + 2 partials) — because earlier batches had
+already pulled the functional test hotspots. Workspace 1300/0 conserved
+(runtime 510, stdlib 278); stdlib catalog 276; CLI smoke → 12; gate
+cross-boundary smoke (kernel Function × stdlib Map/Total) → 14. Remaining:
+control_flow, rewrite_builtins, arithmetic.
+
 ## 2026-07-04 Stage-3 batch 8 DONE (brief-109) — structure_ops moved; Part stays kernel
 
 The reference-analysis split produced a bigger stay than any batch yet, and

@@ -63,7 +63,6 @@ mod definitions_and_rules_patterns;
 mod definitions_and_rules_rewrite_inspect;
 mod definitions_and_rules_tags;
 mod definitions_updates;
-mod functional_ops;
 mod holding_and_control;
 mod holding_and_control_cleanup;
 mod holding_and_control_failure_properties;

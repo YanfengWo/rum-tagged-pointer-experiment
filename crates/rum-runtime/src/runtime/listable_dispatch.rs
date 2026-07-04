@@ -89,7 +89,8 @@ impl Session {
         )))
     }
 
-    pub(super) fn emit_thread_length_message(
+    /// Emits the standard threading length diagnostic for a failed thread.
+    pub fn emit_thread_length_message(
         &mut self,
         call_head: &Expr,
         thread_head: &Expr,

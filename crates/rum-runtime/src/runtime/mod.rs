@@ -40,7 +40,7 @@ mod evaluation_cache;
 mod expr_helpers;
 mod expr_runtime_helpers;
 mod function_and_subst_helpers;
-mod functional_ops;
+mod functional_data;
 mod hold_thread;
 pub mod kernel_api;
 mod lexical_presence;
@@ -85,7 +85,7 @@ use self::{
     definition_application::*, definition_catalog::*, definition_clear::*, definition_tags::*,
     definition_updates::*, definitions::*, eval_call_prepare::*, eval_core::*, eval_dispatch::*,
     evaluation_cache::*, expr_helpers::*, expr_runtime_helpers::*, function_and_subst_helpers::*,
-    functional_ops::*, hold_thread::*, lexical_substitution::*, listable_dispatch::*, lowering::*,
+    functional_data::*, hold_thread::*, lexical_substitution::*, listable_dispatch::*, lowering::*,
     matcher_and_symbols::*, message_catalog::*, message_format::*, message_selector_parsing::*,
     metadata::*, model::*, namespace_tools::*, options::*, package_tools::*,
     parse_and_message_helpers::*, pattern_matching::*, profiling::*, resolution::*,

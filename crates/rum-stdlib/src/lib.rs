@@ -4,6 +4,7 @@ mod associations;
 mod calculus;
 mod catalog;
 mod combinatorics;
+mod functional_ops;
 mod integer_digits;
 mod logic;
 mod number_theory;
@@ -26,6 +27,9 @@ pub fn install_core(session: &mut Session) {
         session.register_builtin(*spec);
     }
     for spec in catalog::COMBINATORICS_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::FUNCTIONAL_BUILTINS {
         session.register_builtin(*spec);
     }
     for spec in catalog::INTEGER_DIGITS_BUILTINS {

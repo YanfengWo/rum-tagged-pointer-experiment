@@ -346,7 +346,8 @@ pub fn parse_heads_option(expr: &Expr) -> Option<bool> {
     }
 }
 
-pub(super) fn parse_heads_option_with_default(expr: &Expr, default: bool) -> Option<bool> {
+/// Parses a Heads option expression, using `default` for bare `Heads`.
+pub fn parse_heads_option_with_default(expr: &Expr, default: bool) -> Option<bool> {
     match classify_heads_option_expr(expr) {
         HeadsOptionClassification::Value(value) => Some(value.unwrap_or(default)),
         _ => None,

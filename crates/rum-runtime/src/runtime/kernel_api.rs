@@ -51,7 +51,7 @@ pub use super::model::{
 // parse_and_message_helpers
 pub use super::parse_and_message_helpers::{
     HeadsOptionClassification, classify_heads_option_expr, parse_heads_option,
-    parse_standard_level_spec,
+    parse_heads_option_with_default, parse_standard_level_spec,
 };
 
 // session_state

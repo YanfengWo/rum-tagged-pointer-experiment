@@ -56,7 +56,8 @@ impl Session {
         }
     }
 
-    pub(in crate::runtime) fn option_rule_expr_for_symbol(
+    /// Returns the resolved option value as an option rule expression for a symbol.
+    pub fn option_rule_expr_for_symbol(
         &mut self,
         symbol: &Symbol,
         option: &Symbol,

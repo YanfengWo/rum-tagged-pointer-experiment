@@ -189,7 +189,8 @@ impl Session {
         Ok(())
     }
 
-    pub(in crate::runtime) fn enforce_iteration_work_limit_for_big_count(
+    /// Enforces the active iteration-work limit for a potentially large count.
+    pub fn enforce_iteration_work_limit_for_big_count(
         &self,
         count: &BigInt,
     ) -> Result<(), EvalError> {

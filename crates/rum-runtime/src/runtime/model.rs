@@ -990,18 +990,21 @@ impl CasesLevelSpec {
         Self::exact(1)
     }
 
-    pub(super) fn exact(level: isize) -> Self {
+    /// Builds a level specification matching exactly one level.
+    pub fn exact(level: isize) -> Self {
         Self {
             min: level,
             max: Some(level),
         }
     }
 
-    pub(super) fn range(min: isize, max: Option<isize>) -> Self {
+    /// Builds a level specification matching a signed inclusive range.
+    pub fn range(min: isize, max: Option<isize>) -> Self {
         Self { min, max }
     }
 
-    pub(super) fn matches(self, level: usize, depth: usize) -> bool {
+    /// Tests whether a traversal level and depth satisfy this specification.
+    pub fn matches(self, level: usize, depth: usize) -> bool {
         let level = level_as_signed(level);
         let depth = level_as_signed(depth);
 

@@ -60,6 +60,8 @@ mod incidental_package_tools;
 mod incidental_predicates;
 #[path = "tests/incidental_scoping_gensym_gc.rs"]
 mod incidental_scoping_gensym_gc;
+#[path = "tests/incidental_scoping_unique.rs"]
+mod incidental_scoping_unique;
 #[path = "tests/incidental_session_requests_debug_tooling_resume.rs"]
 mod incidental_session_requests_debug_tooling_resume;
 #[path = "tests/incidental_session_requests_functional_sequence_resume.rs"]
@@ -98,8 +100,12 @@ mod predicates;
 mod predicates_part2;
 #[path = "tests/session_requests/functional_iteration_resume.rs"]
 mod session_requests_functional_iteration_resume;
+#[path = "tests/session_requests/functional_sequence_resume.rs"]
+mod session_requests_functional_sequence_resume;
 #[path = "tests/session_requests/functional_targeted_resume.rs"]
 mod session_requests_functional_targeted_resume;
+#[path = "tests/session_requests/functional_tensor_string_resume.rs"]
+mod session_requests_functional_tensor_string_resume;
 #[path = "tests/session_requests/transforms_resume_associations.rs"]
 mod session_requests_transforms_resume_associations;
 #[path = "tests/strings/mod.rs"]
