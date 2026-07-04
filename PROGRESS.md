@@ -17,6 +17,19 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 File-slimming batch 5 DONE (brief-118) — arithmetic.rs 42KB split by numeric domain
+
+The hottest bodies split into 8 modules: `canonical.rs` (18.5k — Plus/Times/
+combine_* kept COHESIVE per principle 1, the biggest-but-justified module),
+exact (shared rational helpers), rounding, integer_ops, factorial, extremum,
+parts, facade. Bodies verbatim; public surface (ArithmeticDataBuiltin,
+eval_arithmetic_data_builtin, expr_as_exact_*, combine_*) unchanged; only two
+sibling-shared helpers widened to pub(super). A/B: the brief-113 regression
+SENTINEL table-iterator-plus at +1.7% (clean); do-small −5.7%; downvalue
+cluster +2-5% inside the day's drift band. Gate re-verified: 1301/0
+conserved, smoke 110, sentinel triple-probe 55-69ns/iter (matches the
+post-113-fix baseline). Remaining debt: the two test files (batch 6, last).
+
 ## 2026-07-04 File-slimming batch 4 DONE (brief-117) — vm_rhs_template.rs 53KB + lexer.rs 41KB split
 
 The opt-in VM split into 7 modules (model/compiler/executor/cache/safety/
