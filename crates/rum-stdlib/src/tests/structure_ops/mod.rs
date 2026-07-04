@@ -7,5 +7,11 @@ fn core_session() -> Session {
     session
 }
 
+mod dedup;
 mod join;
+mod list_plumbing;
+mod ordering_sets;
+mod reordering;
 mod selectors;
+mod sequence;
+mod surface;

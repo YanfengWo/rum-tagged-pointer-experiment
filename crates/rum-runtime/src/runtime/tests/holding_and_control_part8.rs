@@ -40,64 +40,6 @@ fn confirm_information_can_suspend_and_resume_inside_enclose() {
 }
 
 #[test]
-fn confirm_family_info_can_suspend_and_resume_inside_enclose() {
-    let mut session = Session::new();
-
-    let failure = session
-        .eval_request(
-            "Enclose[ConfirmBy[x, IntegerQ, InputString[\"by info: \"]], \"Information\"]",
-        )
-        .expect_err("ConfirmBy information expression should suspend when it requests host input");
-    expect_input_prompt(failure, "by info: ");
-    let response = session
-        .resume_eval_request_with_input("by-meta")
-        .expect("resuming ConfirmBy information should finish property projection");
-    assert_eq!(response.value.to_string(), "\"by-meta\"");
-
-    let failure = session
-        .eval_request(
-            "Enclose[ConfirmMatch[x, _Integer, InputString[\"match info: \"]], \"Information\"]",
-        )
-        .expect_err(
-            "ConfirmMatch information expression should suspend when it requests host input",
-        );
-    expect_input_prompt(failure, "match info: ");
-    let response = session
-        .resume_eval_request_with_input("match-meta")
-        .expect("resuming ConfirmMatch information should finish property projection");
-    assert_eq!(response.value.to_string(), "\"match-meta\"");
-
-    let failure = session
-        .eval_request(
-            "Enclose[ConfirmAssert[False, InputString[\"assert info: \"]], \"Information\"]",
-        )
-        .expect_err(
-            "ConfirmAssert information expression should suspend when it requests host input",
-        );
-    expect_input_prompt(failure, "assert info: ");
-    let response = session
-        .resume_eval_request_with_input("assert-meta")
-        .expect("resuming ConfirmAssert information should finish property projection");
-    assert_eq!(response.value.to_string(), "\"assert-meta\"");
-
-    let failure = session
-        .eval_request(
-            "Enclose[ConfirmQuiet[InputString[\"body: \"]; First[f[]], All, InputString[\"quiet info: \"]], \"Information\"]",
-        )
-        .expect_err("ConfirmQuiet body should suspend before the message-producing expression");
-    expect_input_prompt(failure, "body: ");
-    let failure = session
-        .resume_eval_request_with_input("continue")
-        .expect_err("resuming ConfirmQuiet body should suspend in the information expression");
-    expect_input_prompt(failure, "quiet info: ");
-    let response = session
-        .resume_eval_request_with_input("quiet-meta")
-        .expect("resuming ConfirmQuiet information should finish property projection");
-    assert_eq!(response.value.to_string(), "\"quiet-meta\"");
-    assert!(response.messages.is_empty());
-}
-
-#[test]
 fn confirm_predicate_and_test_can_suspend_and_resume_inside_enclose() {
     let mut session = Session::new();
 

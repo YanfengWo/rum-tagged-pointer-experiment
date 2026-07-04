@@ -17,6 +17,22 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 Stage-3 batch 8 DONE (brief-109) — structure_ops moved; Part stays kernel
+
+The reference-analysis split produced a bigger stay than any batch yet, and
+rightly so: `Part`/`Extract`/`ReplacePart`/`ReplaceAt` — specs (in
+`builtin_catalog/rules.rs`) AND implementation — stayed kernel-side as
+`runtime/structure_data/`, because Part-lvalue assignment is definitions-code
+machinery; their runtime tests stayed too (`tests/structure_data/`). The other
+38 specs (Length/Flatten/Sort/Take/…) + implementation moved. Runtime catalog
+279, stdlib 234; workspace 1300/0 conserved (runtime 529, stdlib 259); CLI
+smoke → 7, and the gate added a cross-boundary smoke (kernel-resident
+ReplacePart/Extract composed with stdlib-resident ops) → 104. Promotions 7/8 —
+the resized stop line held this time. Test-local registration list grew:
+scoping_gensym_gc now registers a minimal `First` (same pattern as the VM
+SameQ). Next: functional_ops — Codex flags `targeted_map.rs` as depending on
+kernel-side exact-path helpers; reference analysis before handlers move.
+
 ## 2026-07-04 Stage-3 batch 7 DONE (brief-108) — associations moved with the data/builtin split; 9 families out
 
 The designed split held: the association DATA LAYER (entry forms,

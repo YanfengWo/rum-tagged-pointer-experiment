@@ -70,7 +70,7 @@ mod session_helpers;
 mod session_requests;
 mod session_state;
 mod slot_substitution;
-mod structure_ops;
+mod structure_data;
 mod suspension;
 mod text_rendering;
 mod tree_walkers;
@@ -90,7 +90,7 @@ use self::{
     metadata::*, model::*, namespace_tools::*, options::*, package_tools::*,
     parse_and_message_helpers::*, pattern_matching::*, profiling::*, resolution::*,
     rewrite_builtins::*, scoping::*, session_api::*, session_eval::*, session_helpers::*,
-    session_requests::*, session_state::*, slot_substitution::*, structure_ops::*, suspension::*,
+    session_requests::*, session_state::*, slot_substitution::*, structure_data::*, suspension::*,
     text_rendering::*, tree_walkers::*, vm_rhs_template::*,
 };
 pub use self::{

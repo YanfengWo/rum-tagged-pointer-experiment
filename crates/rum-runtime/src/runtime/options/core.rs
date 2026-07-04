@@ -1,7 +1,8 @@
 use super::*;
 
 impl Session {
-    pub(in crate::runtime) fn system_option_bool(
+    /// Resolves a boolean system option for builtin families.
+    pub fn system_option_bool(
         &mut self,
         symbol_name: &str,
         option_name: &str,

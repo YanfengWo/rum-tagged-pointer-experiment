@@ -79,6 +79,11 @@ impl Session {
         self.resource_limits
     }
 
+    /// Returns the active dynamic memory limit, if one is installed.
+    pub fn active_memory_limit(&self) -> Option<usize> {
+        self.current_memory_limit
+    }
+
     pub fn set_capability_policy(&mut self, policy: CapabilityPolicy) {
         self.capability_policy = policy;
     }

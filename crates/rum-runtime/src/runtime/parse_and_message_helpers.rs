@@ -225,7 +225,7 @@ pub(super) fn parse_non_negative_match_limit(expr: &Expr) -> Option<usize> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) enum HeadsOptionClassification {
+pub enum HeadsOptionClassification {
     Value(Option<bool>),
     UnknownOption(Symbol),
     InvalidTruthValue { option: Symbol, value: Expr },
@@ -353,7 +353,8 @@ pub(super) fn parse_heads_option_with_default(expr: &Expr, default: bool) -> Opt
     }
 }
 
-pub(super) fn classify_heads_option_expr(expr: &Expr) -> HeadsOptionClassification {
+/// Classifies a Heads option expression for builtin diagnostics.
+pub fn classify_heads_option_expr(expr: &Expr) -> HeadsOptionClassification {
     if let Some(classification) = classify_heads_option_rule(expr) {
         return classification;
     }
@@ -491,7 +492,8 @@ impl Session {
         self.invalid_call(symbol, args)
     }
 
-    pub(super) fn invalid_heads_option_call(
+    /// Emits the standard diagnostic for an invalid Heads option.
+    pub fn invalid_heads_option_call(
         &mut self,
         symbol: &str,
         args: &[Expr],

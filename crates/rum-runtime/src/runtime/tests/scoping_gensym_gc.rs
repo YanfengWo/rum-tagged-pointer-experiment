@@ -1,5 +1,27 @@
 use super::*;
 
+fn session_with_test_first() -> Session {
+    let mut session = Session::new();
+    session.register_builtin(BuiltinSpec::ordinary_with_hold(
+        "First",
+        "Test-local structural first for gensym GC probes.",
+        HoldAttribute::HoldRest,
+        eval_test_first,
+    ));
+    session
+}
+
+fn eval_test_first(session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+    let [expr] = args else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+
+    match expr {
+        Expr::Call { args, .. } if !args.is_empty() => session.evaluate(args[0].clone()),
+        _ => Ok(Expr::call(head.clone(), args.to_vec())),
+    }
+}
+
 #[test]
 fn own_value_escape_keeps_candidate_until_definition_is_cleared() {
     assert_definition_escape_kept_then_reclaimed(
@@ -156,7 +178,7 @@ fn outcome_extra_roots_are_empty_for_non_value_errors_and_candidate_is_reclaimed
 
 #[test]
 fn global_root_keeps_escaped_candidate_until_root_is_cleared() {
-    let mut session = Session::new();
+    let mut session = session_with_test_first();
 
     assert_eq!(
         eval_string(
@@ -223,7 +245,7 @@ fn transitive_definition_kind_chain_keeps_all_reachable_candidates_live() {
 
 #[test]
 fn live_candidate_definition_marks_transitive_candidate_dependencies() {
-    let mut session = Session::new();
+    let mut session = session_with_test_first();
 
     assert_eq!(
         eval_string(
@@ -379,7 +401,7 @@ fn assert_definition_escape_kept_then_reclaimed(
     verify_source: &str,
     clear_source: &str,
 ) {
-    let mut session = Session::new();
+    let mut session = session_with_test_first();
 
     assert_eq!(eval_string(&mut session, setup_source), "0");
     let candidates = retained_candidates(&session);

@@ -7,5 +7,7 @@ fn core_session() -> Session {
     session
 }
 
+mod incidental_apply_map;
+mod incidental_callable;
 mod iteration;
 mod targeted_map;

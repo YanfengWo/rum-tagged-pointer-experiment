@@ -2,7 +2,7 @@ use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec, Capability, 
 
 use crate::{
     associations, calculus, combinatorics, integer_digits, logic, number_theory, polynomials,
-    predicates, strings,
+    predicates, strings, structure_ops,
 };
 
 pub(crate) const LOGIC_BUILTINS: &[BuiltinSpec] = &[
@@ -383,6 +383,219 @@ pub(crate) const PREDICATE_BUILTINS: &[BuiltinSpec] = &[
         "UnsameQ",
         "Tests whether no two arguments are exactly identical after evaluation.",
         predicates::eval_unsame_q,
+    ),
+];
+
+const SET_OPERATION_ATTRIBUTES: AttributeSet = AttributeSet::empty()
+    .with(Attribute::Flat)
+    .with(Attribute::OneIdentity)
+    .with(Attribute::Protected)
+    .with(Attribute::ReadProtected);
+
+pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
+    BuiltinSpec::ordinary(
+        "FullForm",
+        "Renders the held argument as a canonical structural-form string in the current core expression subset.",
+        structure_ops::eval_full_form,
+    ),
+    BuiltinSpec::ordinary(
+        "Head",
+        "Returns the structural head of an expression, optionally wrapped in a second head.",
+        structure_ops::eval_head,
+    ),
+    BuiltinSpec::ordinary(
+        "Length",
+        "Returns the number of structural elements in an expression.",
+        structure_ops::eval_length,
+    ),
+    BuiltinSpec::ordinary(
+        "Depth",
+        "Returns the structural depth of an expression, optionally including heads.",
+        structure_ops::eval_depth,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "LeafCount",
+        "Counts atomic leaves in an expression's full structural tree, including heads.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        structure_ops::eval_leaf_count,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "First",
+        "Returns the first structural element, with an optional held default.",
+        HoldAttribute::HoldRest,
+        structure_ops::eval_first,
+    ),
+    BuiltinSpec::ordinary_with_hold(
+        "Last",
+        "Returns the last structural element, with an optional held default.",
+        HoldAttribute::HoldRest,
+        structure_ops::eval_last,
+    ),
+    BuiltinSpec::ordinary(
+        "Rest",
+        "Returns an expression with its first structural element removed.",
+        structure_ops::eval_rest,
+    ),
+    BuiltinSpec::ordinary(
+        "Most",
+        "Returns an expression with its last structural element removed.",
+        structure_ops::eval_most,
+    ),
+    BuiltinSpec::ordinary(
+        "Take",
+        "Takes structural elements using the current standard sequence-spec subset.",
+        structure_ops::eval_take,
+    ),
+    BuiltinSpec::ordinary(
+        "Drop",
+        "Drops structural elements using the current standard sequence-spec subset.",
+        structure_ops::eval_drop,
+    ),
+    BuiltinSpec::ordinary(
+        "TakeDrop",
+        "Returns both the taken and dropped structural elements using the current standard sequence-spec subset.",
+        structure_ops::eval_take_drop,
+    ),
+    BuiltinSpec::ordinary(
+        "Insert",
+        "Inserts an element at a top-level structural position in the current first-pass subset.",
+        structure_ops::eval_insert,
+    ),
+    BuiltinSpec::ordinary(
+        "Delete",
+        "Deletes one or more top-level structural positions in the current first-pass subset.",
+        structure_ops::eval_delete,
+    ),
+    BuiltinSpec::ordinary(
+        "TakeList",
+        "Splits a normal expression into sequential chunks by non-negative counts.",
+        structure_ops::eval_take_list,
+    ),
+    BuiltinSpec::ordinary(
+        "Range",
+        "Constructs a plain list of exact integers from the current one-, two-, and three-argument subset.",
+        structure_ops::eval_range,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Differences",
+        "Returns successive differences for plain lists, including the current non-negative order subset.",
+        AttributeSet::empty()
+            .with(Attribute::NonThreadable)
+            .with(Attribute::Protected),
+        structure_ops::eval_differences,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "ConstantArray",
+        "Constructs a constant plain list for non-negative integer scalar and list dimensions.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        structure_ops::eval_constant_array,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "PadLeft",
+        "Pads or truncates a normal expression on the left using the current length and padding-element subset.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        structure_ops::eval_pad_left,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "PadRight",
+        "Pads or truncates a normal expression on the right using the current length and padding-element subset.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        structure_ops::eval_pad_right,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Subsets",
+        "Returns subsets of a normal expression in Wolfram-compatible size-major order for the current size-spec subset.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        structure_ops::eval_subsets,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Tuples",
+        "Returns repeated tuples or cartesian products for normal expressions in the current subset.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        structure_ops::eval_tuples,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Partition",
+        "Partitions a normal expression into fixed-size blocks using the current positive offset subset.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        structure_ops::eval_partition,
+    ),
+    BuiltinSpec::ordinary(
+        "Flatten",
+        "Flattens nested expressions through the current non-negative level, single-head-spec, and level-list subset.",
+        structure_ops::eval_flatten,
+    ),
+    BuiltinSpec::ordinary(
+        "Join",
+        "Concatenates same-head normal expressions and associations in the current top-level subset.",
+        structure_ops::eval_join,
+    ),
+    BuiltinSpec::ordinary(
+        "Reverse",
+        "Reverses normal-expression arguments at the current positive level subset.",
+        structure_ops::eval_reverse,
+    ),
+    BuiltinSpec::ordinary(
+        "Transpose",
+        "Transposes rectangular plain-list matrices in the current first-pass subset.",
+        structure_ops::eval_transpose,
+    ),
+    BuiltinSpec::ordinary(
+        "DeleteDuplicates",
+        "Keeps the first occurrence of structurally equal top-level elements.",
+        structure_ops::eval_delete_duplicates,
+    ),
+    BuiltinSpec::ordinary(
+        "DeleteDuplicatesBy",
+        "Keeps the first top-level element for each evaluated key in the current unary-function subset.",
+        structure_ops::eval_delete_duplicates_by,
+    ),
+    BuiltinSpec::ordinary(
+        "Sort",
+        "Sorts top-level elements using the current structural ordering subset.",
+        structure_ops::eval_sort,
+    ),
+    BuiltinSpec::ordinary(
+        "SortBy",
+        "Sorts top-level elements by an evaluated key in the current unary-function subset.",
+        structure_ops::eval_sort_by,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Union",
+        "Returns sorted unique elements across same-head normal expressions.",
+        SET_OPERATION_ATTRIBUTES,
+        structure_ops::eval_union,
+    ),
+    BuiltinSpec::ordinary_with_attributes(
+        "Intersection",
+        "Returns sorted unique elements common to all same-head normal expressions.",
+        SET_OPERATION_ATTRIBUTES,
+        structure_ops::eval_intersection,
+    ),
+    BuiltinSpec::ordinary(
+        "Complement",
+        "Returns sorted unique elements from the first expression that are absent from later same-head expressions.",
+        structure_ops::eval_complement,
+    ),
+    BuiltinSpec::ordinary(
+        "Append",
+        "Appends an element to the end of a normal expression, with current operator-form support.",
+        structure_ops::eval_append,
+    ),
+    BuiltinSpec::ordinary(
+        "Prepend",
+        "Prepends an element to the front of a normal expression, with current operator-form support.",
+        structure_ops::eval_prepend,
+    ),
+    BuiltinSpec::ordinary(
+        "Symbol",
+        "Resolves a symbol from a string name using the current context path.",
+        structure_ops::eval_symbol,
+    ),
+    BuiltinSpec::ordinary(
+        "Construct",
+        "Constructs an expression from a head and zero or more arguments.",
+        structure_ops::eval_construct,
     ),
 ];
 

@@ -10,6 +10,7 @@ mod number_theory;
 mod polynomials;
 mod predicates;
 mod strings;
+mod structure_ops;
 
 pub fn install_core(session: &mut Session) {
     for spec in core_builtin_specs() {
@@ -40,6 +41,9 @@ pub fn install_core(session: &mut Session) {
         session.register_builtin(*spec);
     }
     for spec in catalog::STRING_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::STRUCTURE_BUILTINS {
         session.register_builtin(*spec);
     }
 }

@@ -140,51 +140,6 @@ fn dump_save_overwrites_file_and_returns_saved_symbols() {
 }
 
 #[test]
-fn dump_save_restore_preserves_registered_core_builtins() {
-    let dir = TempDirGuard::new("dumpsave-core-builtins");
-    let file = dir.path().join("saved.mx");
-    let mut session = Session::new();
-
-    assert_core_builtins_registered(&mut session);
-    session.eval_text("f[x_] := x + 1").unwrap();
-    session
-        .eval_text(&format!("DumpSave[File[\"{}\"], f]", rum_path(&file)))
-        .unwrap();
-
-    let mut restored = Session::new();
-    restored
-        .eval_text(&format!("Get[File[\"{}\"]]", rum_path(&file)))
-        .unwrap();
-
-    assert_core_builtins_registered(&mut restored);
-    assert_eq!(restored.eval_text("f[1]").unwrap().value.to_string(), "2");
-}
-
-fn assert_core_builtins_registered(session: &mut Session) {
-    let expected = core_builtin_specs()
-        .iter()
-        .map(|spec| spec.name)
-        .collect::<std::collections::BTreeSet<_>>()
-        .len();
-    assert_eq!(session.builtins.len(), expected);
-
-    let length = Symbol::system("Length");
-    let spec = session
-        .builtin_dispatch_spec_for_symbol(&length)
-        .expect("Length should be registered for dispatch");
-    assert_eq!(spec.dispatch, BuiltinDispatch::Ordinary);
-    assert!(spec.handler.is_some());
-    assert_eq!(
-        session
-            .eval_text("Length[{1, 2, 3}]")
-            .unwrap()
-            .value
-            .to_string(),
-        "3"
-    );
-}
-
-#[test]
 fn dump_save_context_strings_skip_module_gensyms_but_keep_dollar_globals() {
     let dir = TempDirGuard::new("dumpsave-context-gensyms");
     let context_file = dir.path().join("context.mx");

@@ -97,7 +97,8 @@ impl Session {
         spec
     }
 
-    pub(super) fn resolve_symbol_name(&self, raw: &str, create_if_missing: bool) -> Option<Symbol> {
+    /// Resolves a symbol name through the active context path.
+    pub fn resolve_symbol_name(&self, raw: &str, create_if_missing: bool) -> Option<Symbol> {
         if let Some((context, name)) = split_symbol_name(raw) {
             let context = normalize_context_name(context);
             return Some(self.active_symbol_for_name(&context, name));

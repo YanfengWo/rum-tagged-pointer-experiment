@@ -90,3 +90,132 @@ fn power_over_times_distributes_numeric_exponents() {
         assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
     }
 }
+
+#[test]
+fn numerator_mirrors_denominator_for_exact_numbers_and_registration() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text("Numerator /@ {1/2, 3/4, -3/4, 5, -5, 0}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 3, -3, 5, -5, 0]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Context[Numerator]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"System`\""
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[\"System`Numerator\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"System`Numerator\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("FullForm[Numerator[x]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"Numerator[x]\""
+    );
+    assert_eq!(
+        session
+            .eval_text("Denominator /@ {3/4, 5}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[4, 1]"
+    );
+}
+
+#[test]
+fn max_min_handle_exact_extrema_lists_and_registration() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session.eval_text("Max[3, 5]").unwrap().value.to_string(),
+        "5"
+    );
+    assert_eq!(
+        session.eval_text("Min[3, 5]").unwrap().value.to_string(),
+        "3"
+    );
+    assert_eq!(session.eval_text("Max[3]").unwrap().value.to_string(), "3");
+    assert_eq!(
+        session.eval_text("Max[1, 5, 2]").unwrap().value.to_string(),
+        "5"
+    );
+    assert_eq!(
+        session.eval_text("Max[3/2, 1]").unwrap().value.to_string(),
+        "3/2"
+    );
+    assert_eq!(
+        session.eval_text("Min[3/2, 1]").unwrap().value.to_string(),
+        "1"
+    );
+    assert_eq!(
+        session.eval_text("Max[-3, -5]").unwrap().value.to_string(),
+        "-3"
+    );
+    assert_eq!(
+        session
+            .eval_text("Max[{3, {5}}, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "5"
+    );
+    assert_eq!(
+        session
+            .eval_text("Min[{4, 1}, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session.eval_text("Context[Max]").unwrap().value.to_string(),
+        "\"System`\""
+    );
+    assert_eq!(
+        session
+            .eval_text("Names[\"System`Min\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"System`Min\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("FullForm[Max[x, 3]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\"Max[x, 3]\""
+    );
+    assert_eq!(
+        session.eval_text("Min[]").unwrap().value.to_string(),
+        "Infinity"
+    );
+    assert_eq!(
+        session.eval_text("Max[]").unwrap().value.to_string(),
+        "Times[-1, Infinity]"
+    );
+    assert_eq!(
+        session.eval_text("Min[{}]").unwrap().value.to_string(),
+        "Infinity"
+    );
+    assert_eq!(
+        session.eval_text("Max[{}]").unwrap().value.to_string(),
+        "Times[-1, Infinity]"
+    );
+}

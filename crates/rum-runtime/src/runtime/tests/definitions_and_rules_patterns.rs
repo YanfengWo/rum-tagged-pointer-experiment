@@ -324,31 +324,6 @@ fn orderlesspatternsequence_uses_orderless_group_matching_inside_orderless_heads
 }
 
 #[test]
-fn orderless_sequence_backtracking_depth_limit_terminates_gracefully() {
-    std::thread::Builder::new()
-        .stack_size(8 * 1024 * 1024)
-        .spawn(|| {
-            let mut session = Session::new();
-
-            let response = session
-                .eval_text("SetAttributes[f, Orderless]; MatchQ[f @@ Range[14], f[a___, b___, c___] /; False]")
-                .unwrap();
-
-            assert_eq!(
-                response.value.to_string(),
-                "TerminatedEvaluation[\"PatternMatchRecursionLimit\"]"
-            );
-            assert!(response
-                .messages
-                .iter()
-                .any(|message| message.symbol == "General" && message.tag == "matchreclim"));
-        })
-        .expect("depth-limit regression test thread should start")
-        .join()
-        .expect("depth-limit regression test should finish");
-}
-
-#[test]
 fn orderless_sequence_matching_still_accepts_small_normal_cases() {
     let mut session = Session::new();
 

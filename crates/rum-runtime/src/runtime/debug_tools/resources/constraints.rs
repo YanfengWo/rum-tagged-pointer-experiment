@@ -176,7 +176,8 @@ impl Session {
         Ok(())
     }
 
-    pub(in crate::runtime) fn enforce_generated_element_limit_for_big_count(
+    /// Enforces the configured generated-element limit for an arbitrary-size count.
+    pub fn enforce_generated_element_limit_for_big_count(
         &self,
         count: &BigInt,
     ) -> Result<(), EvalError> {

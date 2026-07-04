@@ -49,13 +49,16 @@ pub use super::model::{
 };
 
 // parse_and_message_helpers
-pub use super::parse_and_message_helpers::{parse_heads_option, parse_standard_level_spec};
+pub use super::parse_and_message_helpers::{
+    HeadsOptionClassification, classify_heads_option_expr, parse_heads_option,
+    parse_standard_level_spec,
+};
 
 // session_state
 pub use super::session_state::{EvalError, ThreadArgSpec, ThreadingDispatch};
 
-// structure_ops
-pub use super::structure_ops::{
+// structure_data
+pub use super::structure_data::{
     exact_expr_at_path, exact_position_paths_from_expr,
     exact_position_paths_from_part_selector_exprs, replace_exact_path,
 };

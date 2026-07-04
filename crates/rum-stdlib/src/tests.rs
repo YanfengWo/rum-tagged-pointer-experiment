@@ -34,18 +34,28 @@ mod incidental_context_and_loader;
 mod incidental_debug_tools_resources;
 #[path = "tests/incidental_definitions_and_rules_cases.rs"]
 mod incidental_definitions_and_rules_cases;
+#[path = "tests/incidental_definitions_and_rules_part2.rs"]
+mod incidental_definitions_and_rules_part2;
 #[path = "tests/incidental_definitions_and_rules_patterns.rs"]
 mod incidental_definitions_and_rules_patterns;
 #[path = "tests/incidental_holding_and_control_part2.rs"]
 mod incidental_holding_and_control_part2;
+#[path = "tests/incidental_holding_and_control_part3.rs"]
+mod incidental_holding_and_control_part3;
 #[path = "tests/incidental_holding_and_control_part5.rs"]
 mod incidental_holding_and_control_part5;
 #[path = "tests/incidental_holding_and_control_part6.rs"]
 mod incidental_holding_and_control_part6;
 #[path = "tests/incidental_holding_and_control_part8.rs"]
 mod incidental_holding_and_control_part8;
+#[path = "tests/incidental_lowering_and_context.rs"]
+mod incidental_lowering_and_context;
 #[path = "tests/incidental_nothing.rs"]
 mod incidental_nothing;
+#[path = "tests/incidental_options_and_protection.rs"]
+mod incidental_options_and_protection;
+#[path = "tests/incidental_package_tools.rs"]
+mod incidental_package_tools;
 #[path = "tests/incidental_predicates.rs"]
 mod incidental_predicates;
 #[path = "tests/incidental_scoping_gensym_gc.rs"]
