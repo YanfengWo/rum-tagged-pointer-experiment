@@ -5,27 +5,24 @@ usage() {
   cat <<'EOF'
 Usage: scripts/core-language-microbench.sh [options]
 
-Collect a bottom-up core-language microbenchmark baseline for rum and
-WolframKernel. The suite runs small Wolfram-language statements and writes
-machine-readable TSV files.
+Collect a bottom-up core-language microbenchmark baseline for rum. The suite
+runs small core-language statements and writes machine-readable TSV files.
 
 Options:
   --output-dir PATH    Output directory. Defaults to a /tmp directory.
-  --engine ENGINE      rum, wolfram, or both. Defaults to both.
-  --timeout SECONDS    Per-engine timeout. Defaults to 180.
+  --timeout SECONDS    Run timeout. Defaults to 180.
   --build-timeout SEC  rum-cli build timeout when the binary is missing.
                        Defaults to 300.
   --scale N            Multiply benchmark iteration counts. Defaults to 1.
   --rum-cli PATH       Existing rum-cli binary. Defaults to target/release/rum-cli.
-  --wolfram PATH       WolframKernel binary.
   -h, --help           Show this help.
 
 Outputs:
   core-language-microbench.wls  Generated benchmark source.
-  runs.tsv                      One row per engine execution.
-  measurements.tsv              Parsed RUM_CORE_MICRO rows.
-  ratios.tsv                    rum/WolframKernel timing ratio by label.
-  raw/                          Per-engine stdout/stderr logs.
+  runs.tsv                      One row for the rum execution.
+  measurements.tsv              Parsed rum timing rows.
+  timings.tsv                   rum timing by label.
+  raw/                          rum stdout/stderr logs.
 EOF
 }
 
@@ -34,24 +31,17 @@ repo_root=$(cd "${script_dir}/.." && pwd)
 bounded_runner="${repo_root}/scripts/run-bounded.py"
 
 output_dir=${RUM_CORE_MICRO_OUTPUT_DIR:-}
-engine=${RUM_CORE_MICRO_ENGINE:-both}
 timeout_seconds=${RUM_CORE_MICRO_TIMEOUT:-180}
 build_timeout_seconds=${RUM_CORE_MICRO_BUILD_TIMEOUT:-300}
 scale=${RUM_CORE_MICRO_SCALE:-1}
 reps=${RUM_CORE_MICRO_REPS:-7}
 rum_cli_bin=${RUM_CLI_BIN:-"${repo_root}/target/release/rum-cli"}
-wolfram_bin=${WOLFRAM_KERNEL:-/Applications/Wolfram.app/Contents/MacOS/WolframKernel}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --output-dir)
       [[ $# -ge 2 ]] || { echo "error: --output-dir expects a path" >&2; exit 2; }
       output_dir=$2
-      shift 2
-      ;;
-    --engine)
-      [[ $# -ge 2 ]] || { echo "error: --engine expects rum, wolfram, or both" >&2; exit 2; }
-      engine=$2
       shift 2
       ;;
     --timeout)
@@ -79,11 +69,6 @@ while [[ $# -gt 0 ]]; do
       rum_cli_bin=$2
       shift 2
       ;;
-    --wolfram)
-      [[ $# -ge 2 ]] || { echo "error: --wolfram expects a path" >&2; exit 2; }
-      wolfram_bin=$2
-      shift 2
-      ;;
     -h|--help)
       usage
       exit 0
@@ -99,11 +84,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-case "${engine}" in
-  rum|wolfram|both) ;;
-  *) echo "error: --engine expects rum, wolfram, or both" >&2; exit 2 ;;
-esac
-
 for number in "${timeout_seconds}" "${build_timeout_seconds}" "${scale}" "${reps}"; do
   if ! [[ "${number}" =~ ^[1-9][0-9]*$ ]]; then
     echo "error: numeric options expect positive integers" >&2
@@ -116,24 +96,15 @@ if [[ ! -x "${bounded_runner}" ]]; then
   exit 2
 fi
 
-if [[ "${engine}" == "rum" || "${engine}" == "both" ]]; then
-  if [[ ! -x "${rum_cli_bin}" ]]; then
-    (
-      cd "${repo_root}"
-      "${bounded_runner}" --timeout "${build_timeout_seconds}" -- cargo build --release -p rum-cli >/dev/null
-    )
-  fi
-  if [[ ! -x "${rum_cli_bin}" ]]; then
-    echo "error: rum-cli binary is not executable: ${rum_cli_bin}" >&2
-    exit 2
-  fi
+if [[ ! -x "${rum_cli_bin}" ]]; then
+  (
+    cd "${repo_root}"
+    "${bounded_runner}" --timeout "${build_timeout_seconds}" -- cargo build --release -p rum-cli >/dev/null
+  )
 fi
-
-if [[ "${engine}" == "wolfram" || "${engine}" == "both" ]]; then
-  if [[ ! -x "${wolfram_bin}" ]]; then
-    echo "error: WolframKernel binary is not executable: ${wolfram_bin}" >&2
-    exit 2
-  fi
+if [[ ! -x "${rum_cli_bin}" ]]; then
+  echo "error: rum-cli binary is not executable: ${rum_cli_bin}" >&2
+  exit 2
 fi
 
 if [[ -z "${output_dir}" ]]; then
@@ -147,7 +118,7 @@ mkdir -p "${raw_dir}"
 bench_wls="${output_dir}/core-language-microbench.wls"
 runs_tsv="${output_dir}/runs.tsv"
 measurements_tsv="${output_dir}/measurements.tsv"
-ratios_tsv="${output_dir}/ratios.tsv"
+timings_tsv="${output_dir}/timings.tsv"
 
 cat > "${bench_wls}" <<EOF
 ClearAll[
@@ -180,8 +151,7 @@ rumMicroEmit[label_String, n_, seconds_] := Print[StringJoin[
 (* Min-of-reps: the timed loop runs the bare expression (NO per-iteration
    assignment — a per-iteration result-equals-expr injects one ownvalue Set
    plus cache invalidation per iteration, inflating rum time about 57 percent
-   on cheap primitives and inflating the rum/WK ratio because rum
-   Set-invalidation is hit harder than a WK local write). We time it
+   on cheap primitives. We time it
    rumMicroReps times and report the MINIMUM, which rejects OS scheduling
    spikes; sub-millisecond labels otherwise jitter 20-78 percent run-to-run.
    One untimed warm eval precedes the reps so the first timed rep is warm. *)
@@ -279,7 +249,7 @@ EOF
 
 printf 'engine\tstatus\texit_code\telapsed_seconds\tstdout\tstderr\n' > "${runs_tsv}"
 printf 'engine\tlabel\titerations\tseconds\tseconds_raw\tstdout\n' > "${measurements_tsv}"
-printf 'label\titerations\trum_seconds\twolfram_seconds\tratio\n' > "${ratios_tsv}"
+printf 'label\titerations\trum_seconds\n' > "${timings_tsv}"
 
 disable_profile_env=(
   RUM_PROFILE_LEXICAL_SUBSTITUTION=0
@@ -299,23 +269,17 @@ disable_profile_env=(
 )
 
 run_engine() {
-  local engine_name=$1
+  local engine_name=rum
   local stdout_path="${raw_dir}/${engine_name}.stdout"
   local stderr_path="${raw_dir}/${engine_name}.stderr"
   local start elapsed exit_code status
 
   start=$(perl -MTime::HiRes=time -e 'printf "%.6f\n", time')
   set +e
-  if [[ "${engine_name}" == "rum" ]]; then
-    env "${disable_profile_env[@]}" \
-      "${bounded_runner}" --timeout "${timeout_seconds}" -- \
-      "${rum_cli_bin}" --file "${bench_wls}" \
-      >"${stdout_path}" 2>"${stderr_path}"
-  else
+  env "${disable_profile_env[@]}" \
     "${bounded_runner}" --timeout "${timeout_seconds}" -- \
-      "${wolfram_bin}" -noprompt -script "${bench_wls}" \
-      >"${stdout_path}" 2>"${stderr_path}"
-  fi
+    "${rum_cli_bin}" --file "${bench_wls}" \
+    >"${stdout_path}" 2>"${stderr_path}"
   exit_code=$?
   set -e
   elapsed=$(perl -MTime::HiRes=time -e 'printf "%.6f\n", time - $ARGV[0]' "${start}")
@@ -363,39 +327,13 @@ run_engine() {
   fi
 }
 
-engines=()
-case "${engine}" in
-  both) engines=(rum wolfram) ;;
-  *) engines=("${engine}") ;;
-esac
-
-for engine_name in "${engines[@]}"; do
-  run_engine "${engine_name}"
-done
+run_engine
 
 awk -F '\t' '
   NR == 1 { next }
   {
-    label = $2;
-    if (!(label in seen)) {
-      labels[++label_count] = label;
-      seen[label] = 1;
-    }
-    iterations[label] = $3;
-    seconds[label, $1] = $4;
+    print $2 "\t" $3 "\t" $4;
   }
-  END {
-    for (i = 1; i <= label_count; i++) {
-      label = labels[i];
-      rum = seconds[label, "rum"];
-      wk = seconds[label, "wolfram"];
-      ratio = "";
-      if (rum != "" && wk != "" && wk + 0 > 0) {
-        ratio = sprintf("%.6f", (rum + 0) / (wk + 0));
-      }
-      print label "\t" iterations[label] "\t" rum "\t" wk "\t" ratio;
-    }
-  }
-' "${measurements_tsv}" >> "${ratios_tsv}"
+' "${measurements_tsv}" >> "${timings_tsv}"
 
 echo "core microbench output: ${output_dir}"
