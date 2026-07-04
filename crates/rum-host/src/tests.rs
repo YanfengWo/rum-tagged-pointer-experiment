@@ -219,6 +219,15 @@ fn sandboxed_host_config_blocks_runtime_constructed_filesystem_calls() {
 }
 
 #[test]
+fn sandboxed_host_config_blocks_diagnostic_builtins_at_dispatch() {
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::sandboxed())
+        .build();
+
+    assert_sandbox_denied(&mut session, "RumProfileSnapshot[]");
+}
+
+#[test]
 fn sandboxed_host_config_still_allows_pure_work_and_path_string_helpers() {
     let mut session = HostSession::builder()
         .with_config(HostConfig::sandboxed())
@@ -277,6 +286,7 @@ fn capability_policy_can_allow_reads_without_writes() {
         &mut session,
         &format!("Save[{}, loaded]", wl_string(&rum_path(&save_path))),
     );
+    assert_sandbox_denied(&mut session, "RumProfileSnapshot[]");
 }
 
 #[test]
@@ -303,6 +313,42 @@ fn default_host_config_keeps_filesystem_catalog_unrestricted() {
     );
     assert!(save_path.exists());
     assert!(!fs::read_to_string(save_path).unwrap().is_empty());
+}
+
+#[test]
+fn default_host_config_keeps_diagnostic_catalog_unrestricted() {
+    let mut session = HostSession::new();
+
+    assert_eq!(
+        successful_eval(session.eval("RumProfileSnapshot[]"))
+            .value
+            .text,
+        "Null"
+    );
+    assert_ne!(
+        successful_eval(session.eval("MemoryInUse[]")).value.text,
+        "$Failed"
+    );
+}
+
+#[test]
+fn capability_policy_can_explicitly_allow_diagnostics() {
+    let policy = CapabilityPolicy::allow([Capability::Pure, Capability::Diagnostic]);
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::default().with_capability_policy(policy))
+        .build();
+
+    assert_eq!(
+        successful_eval(session.eval("RumProfileSnapshot[]"))
+            .value
+            .text,
+        "Null"
+    );
+    assert_ne!(
+        successful_eval(session.eval("MaxMemoryUsed[]")).value.text,
+        "$Failed"
+    );
+    assert_sandbox_denied(&mut session, "Get[\"/etc/passwd\"]");
 }
 
 #[test]

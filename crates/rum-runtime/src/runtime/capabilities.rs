@@ -3,6 +3,7 @@ pub enum Capability {
     Pure,
     FileRead,
     FileWrite,
+    Diagnostic,
 }
 
 impl Capability {
@@ -11,6 +12,7 @@ impl Capability {
             Self::Pure => 1 << 0,
             Self::FileRead => 1 << 1,
             Self::FileWrite => 1 << 2,
+            Self::Diagnostic => 1 << 3,
         }
     }
 }
@@ -115,6 +117,7 @@ mod tests {
         assert!(policy.allows(Capability::Pure));
         assert!(policy.allows(Capability::FileRead));
         assert!(policy.allows(Capability::FileWrite));
+        assert!(policy.allows(Capability::Diagnostic));
     }
 
     #[test]
@@ -124,6 +127,18 @@ mod tests {
         assert!(!policy.is_unrestricted());
         assert!(policy.allows(Capability::Pure));
         assert!(policy.allows(Capability::FileRead));
+        assert!(!policy.allows(Capability::FileWrite));
+        assert!(!policy.allows(Capability::Diagnostic));
+    }
+
+    #[test]
+    fn capability_policy_can_explicitly_allow_diagnostics() {
+        let policy = CapabilityPolicy::allow([Capability::Pure, Capability::Diagnostic]);
+
+        assert!(!policy.is_unrestricted());
+        assert!(policy.allows(Capability::Pure));
+        assert!(policy.allows(Capability::Diagnostic));
+        assert!(!policy.allows(Capability::FileRead));
         assert!(!policy.allows(Capability::FileWrite));
     }
 
@@ -147,5 +162,30 @@ mod tests {
         assert_eq!(capability("DirectoryName"), Capability::Pure);
         assert_eq!(capability("ParentDirectory"), Capability::Pure);
         assert_eq!(capability("FileNameTake"), Capability::Pure);
+    }
+
+    #[test]
+    fn catalog_capabilities_classify_diagnostic_builtins() {
+        fn capability(name: &str) -> Capability {
+            core_builtin_specs()
+                .iter()
+                .find(|spec| spec.name == name)
+                .expect("builtin should be cataloged")
+                .capability
+        }
+
+        assert_eq!(capability("RumProfileReset"), Capability::Diagnostic);
+        assert_eq!(capability("RumProfileSnapshot"), Capability::Diagnostic);
+        assert_eq!(capability("MemoryInUse"), Capability::Diagnostic);
+        assert_eq!(capability("MaxMemoryUsed"), Capability::Diagnostic);
+        assert_eq!(capability("Timing"), Capability::Pure);
+        assert_eq!(capability("AbsoluteTiming"), Capability::Pure);
+        assert_eq!(capability("RepeatedTiming"), Capability::Pure);
+        assert_eq!(capability("Trace"), Capability::Pure);
+        assert_eq!(capability("TracePrint"), Capability::Pure);
+        assert_eq!(capability("ByteCount"), Capability::Pure);
+        assert_eq!(capability("EvaluationData"), Capability::Pure);
+        assert_eq!(capability("TestCreate"), Capability::Pure);
+        assert_eq!(capability("TestReport"), Capability::Pure);
     }
 }

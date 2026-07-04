@@ -102,12 +102,14 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
         "MemoryInUse",
         "Returns the current session memory-proxy byte count subset.",
         Session::eval_memory_in_use,
-    ),
+    )
+    .with_capability(Capability::Diagnostic),
     BuiltinSpec::ordinary(
         "MaxMemoryUsed",
         "Returns the peak session memory-proxy byte count high-water mark subset.",
         Session::eval_max_memory_used,
-    ),
+    )
+    .with_capability(Capability::Diagnostic),
     BuiltinSpec::ordinary_with_hold(
         "Monitor",
         "Evaluates an expression while exposing the current first-pass monitor display and callback subset.",
@@ -124,12 +126,14 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
         "RumProfileReset",
         "Internal diagnostic hook: resets rum runtime profile counters when profiling is enabled.",
         builtin_rum_profile_reset,
-    ),
+    )
+    .with_capability(Capability::Diagnostic),
     BuiltinSpec::ordinary(
         "RumProfileSnapshot",
         "Internal diagnostic hook: prints rum runtime profile counters when profiling is enabled.",
         builtin_rum_profile_snapshot,
-    ),
+    )
+    .with_capability(Capability::Diagnostic),
     BuiltinSpec::ordinary_with_hold(
         "TestCreate",
         "Builds a first-pass symbolic test specification.",
