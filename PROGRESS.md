@@ -17,6 +17,21 @@ sandbox landed (brief-095); public-release scrub method recorded and
 favor of code cleanliness. Active line: crate rebalancing, route 2a —
 `docs/crate-rebalance-plan.md`.
 
+## 2026-07-04 File-slimming batch 2 DONE (brief-115) — evaluation_cache.rs 63KB split on the mechanism/instrumentation axis
+
+The first HOT split held its red lines: `evaluation_cache/` now separates the
+per-eval cache MECHANISM (`stability.rs`, 15.5k — impl Session decisions +
+bloom) from the env-gated INSTRUMENTATION (`profile/{mod,source,report}.rs`,
+the future move-to-profiling/ candidate) with a 1.6k facade + verbatim
+tests.rs; all files ≤19.8k. Codex ran the A/B itself per the brief: machine
+labels improved-or-flat, the suspicious downvalue cluster (+8%) fell to
++2-3% on the allowed rerun — no consistent regression; measurement-hygiene
+note of the batch: it caught the microbench script reusing a STALE release
+binary, discarded the polluted run, and rebuilt before measuring. Gate
+re-verified 1301/0 conserved, pure-deletion diff (1681 lines), downvalue
+smoke 25. Pre-existing dead-code warning noted in vm_rhs_template.rs
+(source_template) — untouched, belongs to that file's own batch.
+
 ## 2026-07-04 File-slimming batch 1 DONE (brief-114) — profiling.rs 138KB + catalog.rs 74KB split
 
 The slimming line opened (the debt deferred by the rebalance plan; user
