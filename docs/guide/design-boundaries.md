@@ -96,12 +96,17 @@ A binary snapshot format is deferred work.
 
 ## Filesystem Is A Capability
 
-The standard library includes filesystem builtins.
+The kernel ships no general file utilities.
 
-They are not removed from the binary for sandboxing.
+The remaining filesystem builtins are not removed from the binary for
+sandboxing.
 
 Instead, each builtin has a capability class and the host chooses a
 `CapabilityPolicy`.
+
+The filesystem surface is the module system (`Get`, `Needs`, `FindFile`) and
+session persistence (`Save`, `DumpSave`) only; a broader filesystem surface is
+future downstream work.
 
 `HostConfig::sandboxed()` allows only `Pure`.
 
@@ -176,4 +181,3 @@ When in doubt:
 - add a focused test near the crate that owns the behavior
 
 That workflow keeps code and documentation tied to `rum`'s own behavior.
-

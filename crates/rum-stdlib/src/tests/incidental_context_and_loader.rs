@@ -77,9 +77,6 @@ fn path_variables_and_file_name_helpers_cover_current_script_environment_subset(
         "nested/script.rum",
         "{StringQ[$InputFileName], FileNameTake[$InputFileName], DirectoryName[$InputFileName]}",
     );
-    root.write("nested/a.wl", "");
-    root.write("nested/b.txt", "");
-    root.write("nested/deep/c.wl", "abcde");
 
     let mut session = core_session();
     assert_eq!(
@@ -124,79 +121,6 @@ fn path_variables_and_file_name_helpers_cover_current_script_environment_subset(
     assert_eq!(
         loaded.value.to_string(),
         format!("List[True, \"script.rum\", \"{nested_dir_rendered}\"]")
-    );
-
-    let files = session
-        .eval_text(&format!(
-            "FileNames[\"*.wl\", \"{}\"]",
-            rum_path(nested_dir)
-        ))
-        .unwrap();
-    assert_eq!(
-        files.value.to_string(),
-        format!("List[\"{}\"]", rum_path(&nested_dir.join("a.wl")))
-    );
-
-    let recursive_files = session
-        .eval_text(&format!(
-            "FileNames[\"*.wl\", \"{}\", Infinity]",
-            rum_path(root.path())
-        ))
-        .unwrap();
-    assert_eq!(
-        recursive_files.value.to_string(),
-        format!(
-            "List[\"{}\", \"{}\"]",
-            rum_path(&nested_dir.join("a.wl")),
-            rum_path(&nested_dir.join("deep/c.wl"))
-        )
-    );
-
-    assert_eq!(
-        session
-            .eval_text(&format!(
-                "List[FileExistsQ[File[\"{}\"]], FileExistsQ[\"{}\"]]",
-                rum_path(&nested_dir.join("a.wl")),
-                rum_path(&nested_dir.join("missing.wl"))
-            ))
-            .unwrap()
-            .value
-            .to_string(),
-        "List[True, False]"
-    );
-    assert_eq!(
-        session
-            .eval_text(&format!(
-                "FileByteCount[\"{}\"]",
-                rum_path(&nested_dir.join("deep/c.wl"))
-            ))
-            .unwrap()
-            .value
-            .to_string(),
-        "5"
-    );
-    assert_eq!(
-        session
-            .eval_text(&format!(
-                "List[DateObjectQ[FileDate[\"{}\", \"Modification\"]], NumberQ[AbsoluteTime[FileDate[\"{}\"]]]]",
-                rum_path(&nested_dir.join("deep/c.wl")),
-                rum_path(&nested_dir.join("deep/c.wl"))
-            ))
-            .unwrap()
-            .value
-            .to_string(),
-        "List[True, True]"
-    );
-    assert_eq!(
-        session
-            .eval_text(&format!(
-                "Import[File[\"{}\"], \"Text\"]",
-                rum_path(&nested_dir.join("deep/c.wl"))
-            ))
-            .unwrap()
-            .value
-            .to_string(),
-        "\"abcde\""
     );
 
     let parent = session

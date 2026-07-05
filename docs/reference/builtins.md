@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 513
+Builtin count: 507
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -1121,27 +1121,6 @@ Represents an explicit file specification.
 - Attributes: `None`
 - Capability: `Pure`
 
-### FileByteCount
-
-Returns the byte length of a string or File[...] path in the current snapshot-helper subset.
-
-- Attributes: `None`
-- Capability: `FileRead`
-
-### FileDate
-
-Returns a DateObject for a string or File[...] path's modification time in the current snapshot-helper subset.
-
-- Attributes: `None`
-- Capability: `FileRead`
-
-### FileExistsQ
-
-Tests whether a string or File[...] path exists.
-
-- Attributes: `None`
-- Capability: `FileRead`
-
 ### FileNameJoin
 
 Joins path components into a platform path string.
@@ -1155,20 +1134,6 @@ Takes file name components from a path string.
 
 - Attributes: `None`
 - Capability: `Pure`
-
-### FileNames
-
-Lists matching files in one or more directories in the current first-pass subset.
-
-- Attributes: `None`
-- Capability: `FileRead`
-
-### FileTemplateApply
-
-Applies a simple file-backed string template and writes the rendered result to a temporary file in the current first-pass subset.
-
-- Attributes: `None`
-- Capability: `FileWrite`
 
 ### FindFile
 
@@ -1435,13 +1400,6 @@ Evaluates binary logical implication over exact boolean arguments in the current
 
 - Attributes: `None`
 - Capability: `Pure`
-
-### Import
-
-Imports a string or File[...] path as text in the current lint-helper subset.
-
-- Attributes: `None`
-- Capability: `FileRead`
 
 ### Increment
 

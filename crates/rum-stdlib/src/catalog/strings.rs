@@ -1,4 +1,4 @@
-use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec, Capability};
+use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec};
 
 use crate::strings;
 
@@ -148,11 +148,6 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
         "Converts expressions to the current canonical text subset, leaving raw strings unquoted.",
         strings::eval_text_string,
     ),
-    BuiltinSpec::ordinary(
-        "FileTemplateApply",
-        "Applies a simple file-backed string template and writes the rendered result to a temporary file in the current first-pass subset.",
-        strings::eval_file_template_apply,
-    ).with_capability(Capability::FileWrite),
     BuiltinSpec::ordinary(
         "CharacterCounts",
         "Counts code-point occurrences in a string and returns an association in the current first-pass subset.",
@@ -324,5 +319,5 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
         "StringFreeQ",
         "Tests whether a string is free of exact or current string-pattern matches.",
         strings::eval_string_free_q,
-    )
+    ),
 ];

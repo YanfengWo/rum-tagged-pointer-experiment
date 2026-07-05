@@ -165,11 +165,12 @@ The current capability classes are:
 
 Most language and rewrite work is `Pure`.
 
-Filesystem readers such as `Get`, `Needs`, `FindFile`, `FileNames`,
-`FileExistsQ`, and `Import` are `FileRead`.
+Filesystem readers such as `Get`, `Needs`, and `FindFile` are `FileRead`.
 
-Filesystem writers such as `Save`, `DumpSave`, and `FileTemplateApply` are
-`FileWrite`.
+Filesystem writers such as `Save` and `DumpSave` are `FileWrite`.
+
+General file utilities are deliberately outside the kernel; the filesystem
+surface is the module system and session persistence only.
 
 Instrumentation and resource-disclosure builtins such as `RumProfileSnapshot`,
 `RumProfileReset`, `MemoryInUse`, and `MaxMemoryUsed` are `Diagnostic`.

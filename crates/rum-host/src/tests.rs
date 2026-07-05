@@ -154,7 +154,6 @@ fn sandboxed_host_config_blocks_filesystem_builtins_at_dispatch() {
     let dir = TempDirGuard::new("sandbox-blocks-fs");
     let package = dir.write("Pkg.rum", "BeginPackage[\"Pkg`\"]\nvalue = 7\nEndPackage[]");
     let input = dir.write("input.wl", "77");
-    let template = dir.write("template.txt", "Hello, `name`!");
     let save_path = dir.path().join("save.wl");
     let dump_path = dir.path().join("dump.mx");
 
@@ -176,30 +175,11 @@ fn sandboxed_host_config_blocks_filesystem_builtins_at_dispatch() {
     );
     assert_sandbox_denied(
         &mut session,
-        &format!("FileNames[\"*\", {}]", wl_string(&rum_path(dir.path()))),
-    );
-    assert_sandbox_denied(
-        &mut session,
-        &format!("FileExistsQ[File[{}]]", wl_string(&rum_path(&input))),
-    );
-    assert_sandbox_denied(
-        &mut session,
-        &format!("Import[File[{}], \"Text\"]", wl_string(&rum_path(&input))),
-    );
-    assert_sandbox_denied(
-        &mut session,
         &format!("x = 1; Save[{}, x]", wl_string(&rum_path(&save_path))),
     );
     assert_sandbox_denied(
         &mut session,
         &format!("x = 1; DumpSave[{}, x]", wl_string(&rum_path(&dump_path))),
-    );
-    assert_sandbox_denied(
-        &mut session,
-        &format!(
-            "FileTemplateApply[{}, <|\"name\" -> \"Ada\"|>]",
-            wl_string(&rum_path(&template))
-        ),
     );
 }
 

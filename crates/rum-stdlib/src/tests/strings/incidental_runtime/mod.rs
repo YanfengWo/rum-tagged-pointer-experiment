@@ -1,6 +1,5 @@
 mod association_aggregation;
 mod association_key_ops;
-mod catalog_capabilities;
 mod failure_messages;
 mod functional_ops;
 mod logical_syntax;

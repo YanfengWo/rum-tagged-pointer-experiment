@@ -1,6 +1,4 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::path::{Path, PathBuf};
 
 use rum_core::{Atom, BigInt, Expr, Rational, Symbol, heads};
 pub(crate) use rum_runtime::kernel_api::render_input_like_expr;
@@ -34,9 +32,7 @@ pub(crate) use similarity::{
     eval_alphabet, eval_alphabetic_sort, eval_diff, eval_edit_distance, eval_hamming_distance,
     eval_longest_common_subsequence, eval_nearest, eval_pluralize, eval_sequence_alignment,
 };
-pub(crate) use template::{
-    eval_file_template_apply, eval_string_form, eval_string_template, eval_template_apply,
-};
+pub(crate) use template::{eval_string_form, eval_string_template, eval_template_apply};
 pub(crate) use text::{
     eval_capitalize, eval_character_counts, eval_character_range, eval_characters,
     eval_decapitalize, eval_digit_q, eval_letter_q, eval_lower_case_q, eval_remove_diacritics,

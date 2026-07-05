@@ -70,44 +70,6 @@ pub(crate) fn eval_template_apply(
     }
 }
 
-pub(crate) fn eval_file_template_apply(
-    session: &mut Session,
-    head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    match args {
-        [template_path] => Ok(Expr::call(
-            system_expr("Function"),
-            vec![Expr::call(
-                system_expr("FileTemplateApply"),
-                vec![template_path.clone(), string_slot_expr()],
-            )],
-        )),
-        [template_path, data] => {
-            let Some(path) = expr_as_string(template_path) else {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
-            };
-
-            let template_source = fs::read_to_string(path).map_err(|source| EvalError::Io {
-                path: path.to_string(),
-                source,
-            })?;
-            let Some(rendered) = template_apply_value(&template_source, data) else {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
-            };
-
-            let output_path = temp_rendered_template_path(Path::new(path));
-            fs::write(&output_path, rendered).map_err(|source| EvalError::Io {
-                path: output_path.display().to_string(),
-                source,
-            })?;
-
-            Ok(Expr::string(output_path.display().to_string()))
-        }
-        _ => Ok(session.invalid_call_with_arg_range("FileTemplateApply", args, 1, 2)),
-    }
-}
-
 fn render_template_object(template: &str) -> Expr {
     Expr::call(
         system_expr("TemplateObject"),
@@ -267,17 +229,4 @@ fn template_fragment_value(expr: &Expr) -> String {
         Expr::Atom(Atom::String(value)) => value.clone(),
         _ => expr.to_string(),
     }
-}
-
-fn temp_rendered_template_path(source_path: &Path) -> PathBuf {
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("system clock should be after unix epoch")
-        .as_nanos();
-    let mut filename = format!("template-{}-{nanos}", std::process::id());
-    if let Some(extension) = source_path.extension().and_then(|ext| ext.to_str()) {
-        filename.push('.');
-        filename.push_str(extension);
-    }
-    std::env::temp_dir().join(filename)
 }

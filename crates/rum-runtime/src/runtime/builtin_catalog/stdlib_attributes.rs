@@ -276,7 +276,6 @@ const STDLIB_EMPTY_ATTRIBUTE_NAMES: &[&str] = &[
     "Failsafe",
     "Failure",
     "FailureQ",
-    "FileTemplateApply",
     "FixedPoint",
     "FixedPointList",
     "Flatten",

@@ -388,46 +388,6 @@ pub(in crate::runtime) fn builtin_file_name_take(
     session.eval_file_name_take(args)
 }
 
-pub(in crate::runtime) fn builtin_file_names(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_file_names(args)
-}
-
-pub(in crate::runtime) fn builtin_file_exists_q(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_file_exists_q(args)
-}
-
-pub(in crate::runtime) fn builtin_file_byte_count(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_file_byte_count(args)
-}
-
-pub(in crate::runtime) fn builtin_file_date(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_file_date(args)
-}
-
-pub(in crate::runtime) fn builtin_import(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_import(args)
-}
-
 pub(in crate::runtime) fn builtin_get(
     session: &mut Session,
     _head: &Expr,

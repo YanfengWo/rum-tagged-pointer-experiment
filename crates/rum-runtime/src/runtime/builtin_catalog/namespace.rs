@@ -55,31 +55,6 @@ pub(super) const NAMESPACE_BUILTINS: &[BuiltinSpec] = &[
         "Takes file name components from a path string.",
         builtin_file_name_take,
     ),
-    BuiltinSpec::ordinary(
-        "FileNames",
-        "Lists matching files in one or more directories in the current first-pass subset.",
-        builtin_file_names,
-    ).with_capability(Capability::FileRead),
-    BuiltinSpec::ordinary(
-        "FileExistsQ",
-        "Tests whether a string or File[...] path exists.",
-        builtin_file_exists_q,
-    ).with_capability(Capability::FileRead),
-    BuiltinSpec::ordinary(
-        "FileByteCount",
-        "Returns the byte length of a string or File[...] path in the current snapshot-helper subset.",
-        builtin_file_byte_count,
-    ).with_capability(Capability::FileRead),
-    BuiltinSpec::ordinary(
-        "FileDate",
-        "Returns a DateObject for a string or File[...] path's modification time in the current snapshot-helper subset.",
-        builtin_file_date,
-    ).with_capability(Capability::FileRead),
-    BuiltinSpec::ordinary(
-        "Import",
-        "Imports a string or File[...] path as text in the current lint-helper subset.",
-        builtin_import,
-    ).with_capability(Capability::FileRead),
     BuiltinSpec::ordinary_with_hold(
         "Context",
         "Returns the context of the current session or of a symbol.",

@@ -1,5 +1,4 @@
 use super::*;
-use std::fs;
 
 #[test]
 fn string_construction_and_measurement_use_code_point_semantics() {
@@ -545,7 +544,7 @@ fn templates_text_words_codes_and_to_expression_extend_cl07() {
 }
 
 #[test]
-fn syntaxq_textstring_filetemplateapply_charactercounts_and_removediacritics_extend_cl07() {
+fn syntaxq_textstring_charactercounts_and_removediacritics_extend_cl07() {
     let mut session = core_session();
 
     assert_eq!(eval_to_string(&mut session, "SyntaxQ[\"1+2\"]"), "True");
@@ -623,22 +622,4 @@ fn syntaxq_textstring_filetemplateapply_charactercounts_and_removediacritics_ext
         ),
         "List[\"cafe\", \"Sao\", \"Zizek\"]"
     );
-
-    let source_path =
-        std::env::temp_dir().join(format!("rum-file-template-{}.txt", std::process::id()));
-    fs::write(&source_path, "Hello, `name`!").unwrap();
-
-    let expr = format!(
-        "FileTemplateApply[\"{}\", <|\"name\" -> \"Alice\"|>]",
-        source_path.display()
-    );
-    let output = session.eval_text(&expr).unwrap().value;
-    let Expr::Atom(Atom::String(output_path)) = output else {
-        panic!("FileTemplateApply should return a path string");
-    };
-
-    assert_eq!(fs::read_to_string(&output_path).unwrap(), "Hello, Alice!");
-
-    fs::remove_file(&source_path).unwrap();
-    fs::remove_file(&output_path).unwrap();
 }
