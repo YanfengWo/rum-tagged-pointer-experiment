@@ -44,6 +44,13 @@ Coordination doc: [docs/dev/release-transformation-plan.md](./docs/dev/release-t
   recursion, large rewriting workloads, cancellation under load).
 - [ ] Scoped-filesystem roots for a trusted-but-limited host profile
   (follow-up to the capability sandbox; the sandboxed profile itself is done).
+- [ ] Filesystem surface expansion — infrastructure first: scoped-fs roots
+  (the item below) before breadth. Then a small coherent text-file set
+  (read/write string, line reads, create/delete/copy/rename, directory
+  helpers) and a folk-scope `Import`/`Export` JSON (maybe CSV) subset —
+  every addition capability-classified and reference-documented via the
+  drift test. Streams/ports and binary I/O stay deferred (stateful handles
+  interact with snapshot/reset/cancel); network I/O stays out of scope.
 - [ ] Python adapter stays frozen until a concrete downstream need; when
   reopened, bind via pyo3 to `rum-host`, not to runtime internals
   ([docs/python-adapter-plan.md](./docs/python-adapter-plan.md)).

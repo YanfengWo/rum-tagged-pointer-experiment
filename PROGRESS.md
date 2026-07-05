@@ -607,3 +607,13 @@ links guide + reference. Guide writing surfaced two real pre-release bugs
 (now in TODO §Pre-Release Fixes): unbounded user recursion natively
 overflows the stack instead of tripping recursion_limit; ReplaceRepeated
 limit surfaces as a CLI hard error instead of TerminatedEvaluation.
+
+## 2026-07-05 — brief-130 gated green; fs-expansion direction queued
+
+brief-130 (2089d35): rum-host fully rustdoc'd under warn(missing_docs) (zero
+warnings, doctest green; one grouped re-export split into per-item pub use —
+semantically identical), crate-level overviews for the library crates,
+workspace metadata (descriptions, license/keywords/categories inheritance, no
+vendor terms, repository field deferred to publication), ISSUE file archived.
+Workspace 1131/0. TODO gains the post-cut fs-surface expansion item (scoped
+roots first). Next: brief-131 fixes the two guide-surfaced bugs before M2.
