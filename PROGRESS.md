@@ -617,3 +617,16 @@ workspace metadata (descriptions, license/keywords/categories inheritance, no
 vendor terms, repository field deferred to publication), ISSUE file archived.
 Workspace 1131/0. TODO gains the post-cut fs-surface expansion item (scoped
 roots first). Next: brief-131 fixes the two guide-surfaced bugs before M2.
+
+## 2026-07-06 — brief-131 + M2: the release transformation line is COMPLETE
+
+brief-131 (cdeaa59): Phase A measured ~20 KiB native stack per WL recursion
+level (overflow at ~depth 412 of limit 1024) → native_stack_limit guard
+(default 6 MiB consumed) at the amortized poll point, recoverable
+TerminatedEvaluation["StackLimit"]; ReplaceRepeated overflow now
+TerminatedEvaluation["IterationLimit"]. Zero new unsafe; workspace 1136/0;
+A/B no hot-label regression (median 1.018, reproduced at the gate). M2:
+TEMPLATE.md rewritten to the new policy; briefs 124-131 + the plan doc
+archived; final sweep = whitelist-exact (DISCLAIMER nominative, three
+one-sentence family mentions, jupyter ecosystem identifiers); TODO/CLAUDE
+updated; bundle cold backup follows this commit.

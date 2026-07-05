@@ -86,19 +86,19 @@ rather than duplicating them.
 
 ## Current direction (read these for state)
 
-- **RELEASE TRANSFORMATION LINE (started 2026-07-04) — ACTIVE.** The decision:
-  no fresh-history staging repo; `main` itself is transformed into release
-  shape with full history kept (the repo has no remote; the endpoint is a
-  clean tree + a bundle cold backup, publication mechanics decided later).
-  Coordination doc: `docs/dev/release-transformation-plan.md`. Done: M0 plan;
-  brief-124 (difftest removal), brief-125 (scripts; microbenches rum-only),
-  brief-126 (docs archive), M1 (DISCLAIMER/README/AGENTS/testing-strategy/
-  TODO rewritten). Next: brief-127 wording scan → brief-128 reference
-  generator → brief-129 language guide → brief-130 rustdoc+metadata → M2
-  final sweep + bundle backup. Removed material lives in the private archive
-  `/Users/fft/Developments/Archive/rum-history/` (MANIFEST.md there maps each
-  item to its removal commit; recycling candidates flagged). Memory:
-  `release-transformation-line.md`.
+- **RELEASE TRANSFORMATION LINE — COMPLETE (2026-07-04 → 07-06).** `main`
+  itself was transformed into release shape with full history kept (no
+  remote; endpoint = clean tree + bundle cold backup; publication mechanics
+  are a later user decision). Landed: briefs 124-131 + M0/M1/M1.5/M2 —
+  difftest and external-engine tooling removed, docs archived, narrative and
+  policy rewritten, wording scan, generated builtin reference + drift test,
+  nine-chapter guide, rustdoc + metadata, native stack guard +
+  ReplaceRepeated limit-as-value. Removed material lives in the private
+  archive `/Users/fft/Developments/Archive/rum-history/` (MANIFEST.md maps
+  each item to its removal commit; recycling candidates flagged). Memory:
+  `release-transformation-line.md`. Next mainline candidates: post-cut queue
+  in `TODO.md` (coverage rebuild first; dun is the first downstream
+  embedder).
 - Earlier arcs (correctness mainline, memory line, host-hardening Tier-1/2,
   pattern-matching line, crate rebalance route 2a, file slimming) are all
   CLOSED; their plans/audits are in the archive and in git history. Cross-

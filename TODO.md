@@ -3,28 +3,19 @@
 This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
-## Release Transformation (ACTIVE)
+## Release Transformation — COMPLETE (2026-07-06)
 
-Coordination doc: [docs/dev/release-transformation-plan.md](./docs/dev/release-transformation-plan.md).
-
-- [x] M0 plan committed; brief-124 (differential-testing harness removed),
-  brief-125 (external-engine scripts archived; microbenches now rum-only),
-  brief-126 (closed-line docs + historical dev briefs archived), M1
-  (DISCLAIMER/README/AGENTS/testing-strategy/TODO rewritten to the new
-  policy).
-- [ ] brief-127: wording scan across `crates/` and kept docs (test renames,
-  comments, strings; nominative whitelist).
-- [ ] brief-128: builtin reference generator from the `rum-stdlib` catalog
-  (`BuiltinSpec` + limits notes) with a drift test.
-- [ ] brief-129: hand-written language guide under `docs/guide/` (syntax,
-  evaluation model, scoping, resource limits and sandbox, design boundaries,
-  embedding quick start).
-- [ ] brief-130: rustdoc pass (`rum-host` first), per-crate Cargo metadata,
-  top-level housekeeping (fold `ISSUE-sandbox-profile-fs-builtins.md` into
-  the entry below and remove the file).
-- [ ] M2: final sweep + full gate; archive briefs 124-130; bundle cold
-  backup. Publication mechanics (hosting, repo name, first tag) are a
-  separate later decision.
+- [x] The whole line (M0 + briefs 124-131 + M1/M1.5/M2): differential-testing
+  harness and external-engine scripts removed (archived privately),
+  closed-line docs and historical dev briefs archived, narrative/policy
+  documents rewritten (DISCLAIMER, README, AGENTS, testing-strategy,
+  ARCHITECTURE, v0.1 boundary), wording scan across crates and kept docs,
+  generated builtin reference + drift test, nine-chapter language guide,
+  rustdoc + Cargo metadata, the two guide-surfaced bugs fixed (native stack
+  guard; ReplaceRepeated limit-as-value), final sweep green, bundle cold
+  backup taken. Process docs live in git history and the private archive.
+- [ ] Publication mechanics (hosting, repo name, first tag) — a separate
+  later decision; add `repository` metadata and CI at that point.
 
 ## After the Release Cut
 
@@ -67,18 +58,6 @@ Coordination doc: [docs/dev/release-transformation-plan.md](./docs/dev/release-t
   gate/delete/keep). The profiling/debug_tools fate is settled: they stay in
   the kernel, runtime-gated, hidden from restricted hosts via the Diagnostic
   capability.
-
-## Pre-Release Fixes (found writing the guide, brief-129)
-
-- [ ] **Unbounded user recursion crashes the process**:
-  `f[n_] := f[n + 1]; f[0]` overflows the native stack instead of tripping
-  `recursion_limit` into a recoverable outcome. For a sandbox-first runtime
-  this is a must-fix before the release cut (guard the evaluator re-entry
-  depth against native stack exhaustion on this path).
-- [ ] **`ReplaceRepeated` limit surfaces as a CLI hard error**:
-  `1 //. x_ :> x + 1` reports `error: ReplaceRepeated exceeded iteration
-  limit (256)` instead of returning `TerminatedEvaluation[...]` like the
-  other recoverable budgets. Align it with the limits-as-values contract.
 
 ## Standing Engineering Debt
 
