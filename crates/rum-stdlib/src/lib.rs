@@ -16,6 +16,9 @@ mod rewrite_builtins;
 mod strings;
 mod structure_ops;
 
+#[doc(hidden)]
+pub mod docgen;
+
 pub fn install_core(session: &mut Session) {
     for spec in core_builtin_specs() {
         session.register_builtin(*spec);

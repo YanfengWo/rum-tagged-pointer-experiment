@@ -161,6 +161,11 @@ impl Session {
         }
     }
 
+    #[doc(hidden)]
+    pub fn registered_builtin_specs(&self) -> impl Iterator<Item = &BuiltinSpec> {
+        self.builtins.values()
+    }
+
     pub fn current_context(&self) -> &str {
         &self.current_context
     }

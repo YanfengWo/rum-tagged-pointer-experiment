@@ -188,12 +188,16 @@ impl AttributeSet {
         self.attributes().len()
     }
 
-    pub(super) fn attributes(self) -> Vec<Attribute> {
+    #[doc(hidden)]
+    pub fn iter(self) -> impl Iterator<Item = Attribute> {
         ALL_ATTRIBUTES
             .iter()
             .copied()
-            .filter(|attribute| self.contains(*attribute))
-            .collect()
+            .filter(move |attribute| self.contains(*attribute))
+    }
+
+    pub(super) fn attributes(self) -> Vec<Attribute> {
+        self.iter().collect()
     }
 
     pub(super) fn hold_attribute(self) -> HoldAttribute {

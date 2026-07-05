@@ -4,6 +4,8 @@ use super::*;
 mod associations;
 #[path = "tests/associations_missing_surface.rs"]
 mod associations_missing_surface;
+#[path = "tests/builtin_reference_docgen.rs"]
+mod builtin_reference_docgen;
 #[path = "tests/calculus.rs"]
 mod calculus;
 #[path = "tests/combinatorics.rs"]
