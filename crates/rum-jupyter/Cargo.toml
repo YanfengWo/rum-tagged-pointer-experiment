@@ -3,6 +3,10 @@ name = "rum-jupyter"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories = ["development-tools"]
+description = "Jupyter adapter and transport layer for rum host sessions."
 
 [dependencies]
 bytes = "1"

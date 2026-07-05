@@ -1,3 +1,8 @@
+//! Standard library for `rum` sessions.
+//!
+//! This crate owns builtin family implementations and catalog specs, and
+//! installs the core builtin set into runtime sessions through [`install_core`].
+
 use rum_runtime::{Session, core_builtin_specs};
 
 mod arithmetic;

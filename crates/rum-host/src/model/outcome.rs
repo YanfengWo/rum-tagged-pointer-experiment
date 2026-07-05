@@ -6,137 +6,227 @@ use rum_runtime::{
 
 const MAX_TYPED_DEPTH: usize = 64;
 
+/// Outcome returned by a host evaluation request.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HostEvalOutcome {
+    /// Evaluation completed with a value.
     Success(HostEvalSuccess),
+    /// Evaluation suspended for host-provided input.
     InputRequired(HostInputSuspension),
+    /// Evaluation failed before producing a final value.
     Failure(HostFailure),
 }
 
+/// Successful evaluation result.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostEvalSuccess {
+    /// Rendered and typed final value.
     pub value: HostValue,
+    /// Messages emitted before success.
     pub messages: Vec<HostMessage>,
+    /// Text printed before success.
     pub prints: Vec<String>,
+    /// Trace events collected when tracing is enabled.
     pub trace: Vec<HostTraceEvent>,
+    /// Flattened adapter-friendly output stream.
     pub outputs: Vec<HostStructuredOutput>,
 }
 
+/// Suspended evaluation waiting for host input.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostInputSuspension {
+    /// Input request that the host should answer.
     pub request: HostInputRequest,
+    /// Messages emitted before suspension.
     pub messages: Vec<HostMessage>,
+    /// Text printed before suspension.
     pub prints: Vec<String>,
+    /// Trace events collected before suspension.
     pub trace: Vec<HostTraceEvent>,
+    /// Flattened adapter-friendly output stream collected before suspension.
     pub outputs: Vec<HostStructuredOutput>,
 }
 
+/// Failed evaluation or host request.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostFailure {
+    /// Coarse failure classification for host dispatch.
     pub code: HostFailureCode,
+    /// User-facing failure message.
     pub message: String,
+    /// Messages emitted before failure.
     pub messages: Vec<HostMessage>,
+    /// Text printed before failure.
     pub prints: Vec<String>,
+    /// Trace events collected before failure.
     pub trace: Vec<HostTraceEvent>,
+    /// Flattened adapter-friendly output stream collected before failure.
     pub outputs: Vec<HostStructuredOutput>,
 }
 
+/// Coarse host failure classification.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HostFailureCode {
+    /// A panic was caught at the host session boundary.
     Panic,
+    /// The session was used after being poisoned by a caught panic.
     Poisoned,
+    /// Source text could not be parsed.
     Syntax,
+    /// Integer syntax or conversion failed.
     InvalidInteger,
+    /// An input/output request failed.
     Io,
+    /// A requested package or load path was not found.
     LoadPathNotFound,
+    /// Evaluation detected a recursive definition cycle.
     EvaluationCycleDetected,
+    /// The evaluator recursion limit was exceeded.
     RecursionLimitExceeded,
+    /// The pattern matcher recursion limit was exceeded.
     MatchRecursionLimitExceeded,
+    /// Evaluation was cancelled through a host cancel handle.
     Cancelled,
+    /// The request exceeded its wall-clock time constraint.
     TimeConstraintExceeded,
+    /// The request exceeded a memory constraint.
     MemoryConstraintExceeded,
+    /// The request generated more elements than allowed.
     GeneratedElementLimitExceeded,
+    /// The request exceeded the exact-integer work budget.
     IntegerWorkLimitExceeded,
+    /// The request exceeded the iteration work budget.
     IterationWorkLimitExceeded,
+    /// A language-level iteration limit was exceeded.
     IterationLimitExceeded,
+    /// The evaluator pass limit was exceeded.
     EvaluationPassLimitExceeded,
+    /// Evaluation requested process-style exit.
     Exit,
+    /// A failure that does not map to a more specific host code.
     Other,
 }
 
+/// Host-facing value with both rendered and typed forms.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostValue {
+    /// Rendered expression text.
     pub text: String,
+    /// Transport-friendly typed representation of the expression.
     pub typed: HostTyped,
 }
 
+/// Transport-friendly typed expression value.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HostTyped {
+    /// Small exact integer that fits in `i64`.
     Integer(i64),
+    /// Exact integer represented as a decimal string.
     BigInteger(String),
+    /// Exact rational represented by decimal numerator and denominator strings.
     Rational {
+        /// Decimal numerator.
         numerator: String,
+        /// Decimal denominator.
         denominator: String,
     },
+    /// Symbol name.
     Symbol(String),
+    /// String value.
     Str(String),
+    /// List elements, up to the typed-depth cap.
     List(Vec<HostTyped>),
+    /// Expression that does not have a specialized typed representation.
     Other {
+        /// Rendered head name.
         head: String,
+        /// Rendered expression text.
         text: String,
     },
 }
 
+/// Message emitted during evaluation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostMessage {
+    /// Qualified symbol name that owns the message.
     pub symbol: String,
+    /// Message tag.
     pub tag: String,
+    /// Rendered message text.
     pub text: String,
 }
 
+/// Kind of input requested by a suspended evaluation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HostInputKind {
+    /// Input should be treated as a raw string.
     InputString,
+    /// Input should be parsed as source before resuming.
     Input,
 }
 
+/// Host input request produced by `Input` or `InputString`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostInputRequest {
+    /// Requested input mode.
     pub kind: HostInputKind,
+    /// Prompt text to present to the user.
     pub prompt: String,
+    /// Whether the host should hide input while collecting it.
     pub password: bool,
 }
 
+/// Trace event exposed to host adapters.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HostTraceEvent {
+    /// One evaluation pass transformed an expression.
     EvaluationPass {
+        /// Expression before the pass.
         before: String,
+        /// Expression after the pass.
         after: String,
     },
+    /// A definition was stored in the session.
     DefinitionStored {
+        /// Symbol that received the definition.
         symbol: String,
+        /// Definition kind.
         kind: String,
+        /// Rendered stored value.
         value: String,
     },
+    /// A rule was applied during evaluation.
     RuleApplied {
+        /// Rule source classification.
         source: String,
+        /// Input expression before the rule.
         input: String,
+        /// Rendered rule.
         rule: String,
+        /// Result after applying the rule.
         result: String,
     },
 }
 
+/// Flattened output event for adapters.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostStructuredOutput {
+    /// Output event kind.
     pub kind: HostStructuredOutputKind,
+    /// Rendered output text.
     pub text: String,
 }
 
+/// Kind of flattened structured output.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HostStructuredOutputKind {
+    /// Final result value.
     Result,
+    /// Printed text.
     Print,
+    /// Message text.
     Message,
+    /// Trace event text.
     Trace,
 }
 

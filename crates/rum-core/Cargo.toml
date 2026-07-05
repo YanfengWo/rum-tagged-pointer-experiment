@@ -3,6 +3,10 @@ name = "rum-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Runtime-neutral core expression values shared by rum crates."
 
 [dependencies]
 num-bigint.workspace = true

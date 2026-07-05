@@ -2,13 +2,23 @@ use std::path::PathBuf;
 
 use rum_runtime::{Capability, CapabilityPolicy, ResourceLimits, SessionConfig};
 
+/// Resource limits applied by a host session.
+///
+/// These limits are copied into the runtime session configuration before each
+/// session is built.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HostResourceLimits {
+    /// Maximum evaluator recursion depth.
     pub recursion_limit: usize,
+    /// Maximum number of `ReplaceRepeated` iterations.
     pub replace_repeated_limit: usize,
+    /// Maximum number of evaluation passes for one request.
     pub evaluation_pass_limit: usize,
+    /// Maximum number of generated elements a request may produce.
     pub generated_element_limit: usize,
+    /// Maximum integer work budget for exact integer operations.
     pub integer_work_limit: usize,
+    /// Maximum iteration work budget for iterative builtins.
     pub iteration_work_limit: usize,
 }
 
@@ -44,15 +54,28 @@ impl From<HostResourceLimits> for ResourceLimits {
     }
 }
 
+/// Host-facing session configuration.
+///
+/// `HostConfig` is the stable embedding configuration surface for resource
+/// limits, capability policy, context state, tracing, assertions, and whether
+/// core builtins are installed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostConfig {
+    /// Resource limits installed into the runtime session.
     pub resource_limits: HostResourceLimits,
+    /// Capability policy checked by capability-gated builtins.
     pub capability_policy: CapabilityPolicy,
+    /// Current context used when evaluating source.
     pub current_context: String,
+    /// Context path searched when resolving unqualified symbols.
     pub context_path: Vec<String>,
+    /// Package search roots used by package-loading requests.
     pub package_search_paths: Vec<PathBuf>,
+    /// Whether evaluation tracing is enabled.
     pub tracing_enabled: bool,
+    /// Whether runtime assertion checks are enabled.
     pub asserts_enabled: bool,
+    /// Whether `rum-stdlib` core builtins are installed when the session is built.
     pub install_core_builtins: bool,
 }
 
@@ -74,25 +97,33 @@ impl Default for HostConfig {
 }
 
 impl HostConfig {
+    /// Returns a configuration for untrusted source.
+    ///
+    /// The sandboxed configuration installs a `{Pure}` capability policy and
+    /// otherwise uses the default host configuration.
     pub fn sandboxed() -> Self {
         Self::default().with_capability_policy(CapabilityPolicy::allow([Capability::Pure]))
     }
 
+    /// Replaces the resource limits for sessions built from this configuration.
     pub fn with_resource_limits(mut self, limits: HostResourceLimits) -> Self {
         self.resource_limits = limits;
         self
     }
 
+    /// Replaces the capability policy for sessions built from this configuration.
     pub fn with_capability_policy(mut self, policy: CapabilityPolicy) -> Self {
         self.capability_policy = policy;
         self
     }
 
+    /// Sets the current context used for source evaluation.
     pub fn with_current_context(mut self, context: impl Into<String>) -> Self {
         self.current_context = context.into();
         self
     }
 
+    /// Sets the context path used for unqualified symbol lookup.
     pub fn with_context_path<I, S>(mut self, contexts: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -102,6 +133,7 @@ impl HostConfig {
         self
     }
 
+    /// Sets the package search paths used by package-loading requests.
     pub fn with_package_search_paths<I, P>(mut self, paths: I) -> Self
     where
         I: IntoIterator<Item = P>,
@@ -111,16 +143,19 @@ impl HostConfig {
         self
     }
 
+    /// Enables or disables collection of evaluation trace events.
     pub fn with_tracing(mut self, enabled: bool) -> Self {
         self.tracing_enabled = enabled;
         self
     }
 
+    /// Enables or disables runtime assertion checks.
     pub fn with_asserts_enabled(mut self, enabled: bool) -> Self {
         self.asserts_enabled = enabled;
         self
     }
 
+    /// Enables or disables installation of the standard core builtins.
     pub fn with_core_builtins(mut self, enabled: bool) -> Self {
         self.install_core_builtins = enabled;
         self

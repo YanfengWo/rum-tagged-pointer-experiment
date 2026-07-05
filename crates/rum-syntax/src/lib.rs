@@ -1,3 +1,9 @@
+//! Syntax infrastructure for `rum` source text.
+//!
+//! This crate owns the syntax tree, lexer, parser, source diagnostics,
+//! preserved trivia, and formatter entrypoints used by the runtime and command
+//! line tools.
+
 mod ast;
 mod document;
 mod error;

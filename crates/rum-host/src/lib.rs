@@ -1,23 +1,43 @@
 //! Narrow Rust embedding facade for `rum`.
 //!
-//! `rum-host` deliberately wraps the broader `rum-runtime` request API in
-//! transport-friendly host types. It is the public boundary future Rust and
-//! Python adapters should prefer over depending on evaluator internals.
+//! `rum-host` wraps the broader `rum-runtime` request API in transport-friendly
+//! host types. Rust hosts should use this crate for session construction,
+//! evaluation, structured outcomes, resumable input, cancellation, timeouts,
+//! reset, snapshot/restore, and capability policy configuration instead of
+//! depending directly on evaluator internals.
+//!
+//! # Quick start
+//!
+//! ```
+//! use rum_host::{HostEvalOutcome, HostSession};
+//!
+//! let mut session = HostSession::new();
+//!
+//! match session.eval("rule[x_Integer] := x + 1; rule[41]") {
+//!     HostEvalOutcome::Success(success) => {
+//!         assert_eq!(success.value.text, "42");
+//!     }
+//!     HostEvalOutcome::InputRequired(suspension) => {
+//!         panic!("unexpected input request: {}", suspension.request.prompt);
+//!     }
+//!     HostEvalOutcome::Failure(failure) => {
+//!         panic!("evaluation failed: {}", failure.message);
+//!     }
+//! }
+//! ```
 //!
 //! # Running untrusted code
 //!
-//! For hosts that run untrusted code (e.g. editor plugins), use the capability policy:
-//! [`HostConfig::sandboxed`] installs a `{Pure}` policy that blocks every non-pure
-//! builtin, including filesystem (`Get`/`Save`/`Import`/…) and diagnostic
-//! (`RumProfileSnapshot`/`MemoryInUse`) capabilities, at dispatch — including
-//! runtime-constructed calls like `Symbol["Get"][…]`. Fine-grained policies are
-//! expressible via [`CapabilityPolicy`] / [`Capability`] (e.g. read-only
-//! `{Pure, FileRead}` or diagnostic-enabled `{Pure, Diagnostic}`); the default is
-//! unrestricted (trusted hosts: CLI / REPL / Jupyter). Combined with the resource
-//! limits, cancel, timeout, and poison boundary, an untrusted evaluation can do
-//! nothing but return a value from a resource-limited, capability-scoped session.
-//! Role/identity mapping is the caller's concern — map your roles to a
-//! `CapabilityPolicy` and pass it in.
+//! Use [`HostConfig::sandboxed`] when evaluating untrusted source. It installs a
+//! `{Pure}` capability policy that blocks non-pure builtins at dispatch,
+//! including runtime-constructed calls. Fine-grained policies are expressible
+//! through [`CapabilityPolicy`] and [`Capability`]; role and identity mapping is
+//! the caller's responsibility.
+//!
+//! See `docs/guide/embedding.md` for the embedding narrative and `DISCLAIMER.md`
+//! for the project boundary.
+
+#![warn(missing_docs)]
 
 mod config;
 mod cursor;
@@ -33,7 +53,12 @@ pub use model::{
     HostMessageTemplate, HostParseRequest, HostParseResponse, HostStructuredOutput,
     HostStructuredOutputKind, HostSymbolInfo, HostTraceEvent, HostTyped, HostValue,
 };
-pub use rum_runtime::{Capability, CapabilityPolicy, CapabilityPolicyBuilder};
+/// Capability label used by host capability policies.
+pub use rum_runtime::Capability;
+/// Per-session policy that authorizes builtin capability groups.
+pub use rum_runtime::CapabilityPolicy;
+/// Builder for constructing a [`CapabilityPolicy`].
+pub use rum_runtime::CapabilityPolicyBuilder;
 pub use session::{HostCancelHandle, HostSession, HostSessionBuilder};
 
 #[cfg(test)]

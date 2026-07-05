@@ -3,6 +3,10 @@ name = "rum-runtime"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Pure rum kernel for lowering, evaluation, definitions, matching, tracing, and host requests."
 
 [dependencies]
 rum-core = { path = "../rum-core" }

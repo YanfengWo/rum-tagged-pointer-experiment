@@ -3,6 +3,10 @@ name = "rum-syntax"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Syntax tree, lexer, parser, diagnostics, and formatter for rum."
 
 [dependencies]
 thiserror.workspace = true

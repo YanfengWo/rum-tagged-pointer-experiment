@@ -3,6 +3,10 @@ name = "rum-terminal"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Terminal rendering helpers for rum diagnostics, messages, and inspection."
 
 [dependencies]
 rum-runtime = { path = "../rum-runtime" }

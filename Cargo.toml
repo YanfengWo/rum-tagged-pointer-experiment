@@ -18,6 +18,8 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
+keywords = ["symbolic", "term-rewriting", "sandbox", "scripting", "embedded"]
+categories = ["mathematics", "compilers"]
 
 [workspace.dependencies]
 num-bigint = { version = "0.4", features = ["serde"] }

@@ -17,6 +17,10 @@ use crate::model::{
     host_failure_from_runtime, inspect_response_from_runtime, synthesized_host_failure,
 };
 
+/// Builder for [`HostSession`].
+///
+/// Use this when the default session configuration needs tracing, sandboxing,
+/// or core-builtin installation changes before construction.
 #[derive(Clone, Debug)]
 pub struct HostSessionBuilder {
     config: HostConfig,
@@ -29,32 +33,38 @@ impl Default for HostSessionBuilder {
 }
 
 impl HostSessionBuilder {
+    /// Creates a builder with [`HostConfig::default`].
     pub fn new() -> Self {
         Self {
             config: HostConfig::default(),
         }
     }
 
+    /// Replaces the full host configuration used by the builder.
     pub fn with_config(mut self, config: HostConfig) -> Self {
         self.config = config;
         self
     }
 
+    /// Enables or disables evaluation trace collection.
     pub fn with_tracing(mut self, enabled: bool) -> Self {
         self.config.tracing_enabled = enabled;
         self
     }
 
+    /// Replaces the capability policy for the built session.
     pub fn with_capability_policy(mut self, policy: CapabilityPolicy) -> Self {
         self.config.capability_policy = policy;
         self
     }
 
+    /// Enables or disables installation of the standard core builtins.
     pub fn with_core_builtins(mut self, enabled: bool) -> Self {
         self.config.install_core_builtins = enabled;
         self
     }
 
+    /// Builds a new host session from the builder configuration.
     pub fn build(self) -> HostSession {
         let session = HostSession::build_inner_session(&self.config);
         let install_core_builtins = self.config.install_core_builtins;
@@ -68,6 +78,11 @@ impl HostSessionBuilder {
     }
 }
 
+/// Stateful embedding session for evaluating `rum` source.
+///
+/// A session owns runtime definitions, contexts, pending input continuations,
+/// tracing state, timeout/cancel configuration, and the poison boundary used
+/// after a caught panic.
 pub struct HostSession {
     session: Session,
     config: HostConfig,
@@ -75,12 +90,17 @@ pub struct HostSession {
     poisoned: bool,
 }
 
+/// Cloneable cancellation handle for a [`HostSession`].
+///
+/// A handle interrupts the session instance that produced it. Handles returned
+/// before [`HostSession::reset`] are invalidated by that reset.
 #[derive(Clone, Debug)]
 pub struct HostCancelHandle {
     flag: Arc<AtomicBool>,
 }
 
 impl HostCancelHandle {
+    /// Requests cancellation of the associated session's current evaluation.
     pub fn cancel(&self) {
         self.flag.store(true, Ordering::Relaxed);
     }
@@ -93,10 +113,15 @@ impl Default for HostSession {
 }
 
 impl HostSession {
+    /// Creates a session with the default trusted-host configuration.
+    ///
+    /// The default installs the standard core builtins and uses the default
+    /// unrestricted capability policy.
     pub fn new() -> Self {
         Self::builder().build()
     }
 
+    /// Creates a builder for configuring a host session before construction.
     pub fn builder() -> HostSessionBuilder {
         HostSessionBuilder::new()
     }
@@ -156,6 +181,10 @@ impl HostSession {
         }
     }
 
+    /// Returns the current session configuration.
+    ///
+    /// The returned value reflects runtime configuration plus the host-level
+    /// core-builtin installation flag.
     pub fn configuration(&self) -> HostConfig {
         let config = self.session.configuration();
 
@@ -171,6 +200,9 @@ impl HostSession {
         }
     }
 
+    /// Parses source and returns a host-facing syntax rendering.
+    ///
+    /// A poisoned session returns [`HostFailureCode::Poisoned`].
     pub fn parse(
         &mut self,
         request: impl Into<HostParseRequest>,
@@ -195,6 +227,10 @@ impl HostSession {
         )
     }
 
+    /// Evaluates source and returns a structured host outcome.
+    ///
+    /// Input suspension is reported as [`HostEvalOutcome::InputRequired`] and
+    /// should be resumed with [`Self::resume_with_input`].
     pub fn eval(&mut self, request: impl Into<HostEvalRequest>) -> HostEvalOutcome {
         if self.poisoned {
             return poisoned_eval_outcome();
@@ -214,12 +250,17 @@ impl HostSession {
         }
     }
 
+    /// Returns a cancellation handle for this session.
+    ///
+    /// The handle may be cloned and used from another thread to request
+    /// interruption of the current evaluation.
     pub fn cancel_handle(&self) -> HostCancelHandle {
         HostCancelHandle {
             flag: self.session.interrupt_handle(),
         }
     }
 
+    /// Returns summaries of symbols with user-visible definitions.
     pub fn definitions(&self) -> Vec<HostDefinitionSummary> {
         self.session
             .definition_summaries()
@@ -228,10 +269,14 @@ impl HostSession {
             .collect()
     }
 
+    /// Returns the names of contexts known to this session.
     pub fn contexts(&self) -> Vec<String> {
         self.session.context_names()
     }
 
+    /// Evaluates source with a wall-clock timeout for this request.
+    ///
+    /// The timeout is cleared after the request completes or fails.
     pub fn eval_with_timeout(
         &mut self,
         request: impl Into<HostEvalRequest>,
@@ -253,6 +298,11 @@ impl HostSession {
         )
     }
 
+    /// Resumes a pending `Input` or `InputString` continuation.
+    ///
+    /// The host should call this only after receiving
+    /// [`HostEvalOutcome::InputRequired`] or observing
+    /// [`Self::pending_input_request`].
     pub fn resume_with_input(&mut self, input: impl Into<String>) -> HostEvalOutcome {
         if self.poisoned {
             return poisoned_eval_outcome();
@@ -267,6 +317,9 @@ impl HostSession {
         )
     }
 
+    /// Inspects the symbol located at a source cursor offset.
+    ///
+    /// If no symbol is found at the cursor, the response reports `found: false`.
     pub fn inspect(&mut self, request: HostInspectRequest) -> HostInspectResponse {
         if self.poisoned {
             return unavailable_inspect_response(None);
@@ -285,6 +338,10 @@ impl HostSession {
         )
     }
 
+    /// Inspects a symbol by name.
+    ///
+    /// The name may be qualified or unqualified according to the runtime's
+    /// symbol resolution rules.
     pub fn inspect_symbol(&mut self, symbol: &str) -> HostInspectResponse {
         if self.poisoned {
             return unavailable_inspect_response(Some(symbol.to_string()));
@@ -301,6 +358,7 @@ impl HostSession {
         )
     }
 
+    /// Returns completion candidates and replacement bounds for a cursor.
     pub fn complete(&mut self, request: HostCompletionRequest) -> HostCompletionResponse {
         if self.poisoned {
             return unavailable_completion_response();
@@ -323,6 +381,7 @@ impl HostSession {
         )
     }
 
+    /// Checks whether source is complete enough to submit for evaluation.
     pub fn is_complete(
         &mut self,
         request: impl Into<HostIsCompleteRequest>,
@@ -346,6 +405,7 @@ impl HostSession {
         )
     }
 
+    /// Returns the input request currently suspended in this session, if any.
     pub fn pending_input_request(&self) -> Option<crate::HostInputRequest> {
         self.session
             .pending_input_request()

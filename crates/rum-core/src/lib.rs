@@ -1,3 +1,9 @@
+//! Runtime-neutral core values shared across `rum`.
+//!
+//! This crate owns the expression, atom, symbol, shared-expression, and core
+//! head types that syntax, runtime, standard library, and host layers exchange
+//! without depending on evaluator state.
+
 pub mod expr;
 pub mod heads;
 pub mod profiling;
