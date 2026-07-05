@@ -357,6 +357,47 @@ fn recursion_limit_stops_expanding_recursive_downvalues() {
 }
 
 #[test]
+fn native_stack_limit_stops_unbounded_definition_recursion_and_session_stays_usable() {
+    let mut session = session_with_test_control_builtins();
+    session.set_native_stack_limit(512 * 1024);
+
+    let outcome = session
+        .eval_text("f[n_] := f[n + 1]; f[0]")
+        .expect("stack limit should return a termination value");
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"StackLimit\"]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+    assert_eq!(session.eval_text("1 + 1").unwrap().value.to_string(), "2");
+}
+
+#[test]
+fn bounded_recursive_definition_below_native_stack_limit_succeeds() {
+    let mut session = session_with_test_control_builtins();
+    let depth = 48;
+    let mut nested = "done".to_string();
+    for _ in 0..depth {
+        nested = format!("wrap[{nested}]");
+    }
+
+    session.eval_text("peel[done] := done").unwrap();
+    session.eval_text("peel[wrap[x_]] := peel[x]").unwrap();
+
+    let outcome = session
+        .eval_text(&format!("peel[{nested}]"))
+        .expect("bounded recursion should complete");
+
+    assert_eq!(outcome.value.to_string(), "done");
+}
+
+#[test]
 fn fixed_point_evaluation_revisits_expressions_after_side_effects_change_head_meaning() {
     let mut session = session_with_test_control_builtins();
 

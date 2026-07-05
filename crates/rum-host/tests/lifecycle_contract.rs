@@ -335,3 +335,14 @@ fn resource_limit_returns_terminated_evaluation_and_session_remains_usable() {
 
     assert_success_text(session.eval("1 + 1"), "2");
 }
+
+#[test]
+fn replace_repeated_limit_returns_terminated_success() {
+    let mut session = HostSession::new();
+
+    assert_terminated_value(
+        session.eval("1 //. x_ :> x + 1"),
+        "TerminatedEvaluation[\"IterationLimit\"]",
+        "iterlim",
+    );
+}

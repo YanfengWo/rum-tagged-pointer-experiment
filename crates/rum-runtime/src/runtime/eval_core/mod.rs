@@ -18,10 +18,10 @@ impl Session {
         expr: Expr,
         track_cycle: bool,
     ) -> Result<Expr, EvalError> {
+        let evaluation_depth = self.evaluation_depth;
         if self.interrupt_armed {
             self.poll_host_interrupt_if_due()?;
         }
-
         if track_cycle
             && self
                 .evaluation_stack
@@ -33,10 +33,15 @@ impl Session {
             });
         }
 
-        if self.evaluation_depth >= self.resource_limits.recursion_limit {
+        if evaluation_depth >= self.resource_limits.recursion_limit {
             return Err(EvalError::RecursionLimitExceeded {
                 limit: self.resource_limits.recursion_limit,
             });
+        }
+        if evaluation_depth >= self.native_stack_next_check_depth {
+            self.native_stack_next_check_depth =
+                evaluation_depth.saturating_add(NATIVE_STACK_DEPTH_POLL_STRIDE);
+            self.poll_native_stack_limit()?;
         }
 
         if track_cycle {
@@ -45,9 +50,9 @@ impl Session {
                 epoch: self.evaluation_epoch,
             });
         }
-        self.evaluation_depth += 1;
+        self.evaluation_depth = evaluation_depth + 1;
         let result = self.evaluate_inner_unstable(expr);
-        self.evaluation_depth -= 1;
+        self.evaluation_depth = evaluation_depth;
         if track_cycle {
             self.evaluation_stack.pop();
         }
@@ -58,6 +63,20 @@ impl Session {
             }
             Err(error) => Err(error),
         }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn poll_native_stack_limit(&mut self) -> Result<(), EvalError> {
+        let stack_marker = 0_u8;
+        let current_addr = (&stack_marker as *const u8) as usize;
+        let consumed = self.native_stack_base.saturating_sub(current_addr);
+        if consumed > self.resource_limits.native_stack_limit {
+            return Err(EvalError::StackLimitExceeded {
+                limit: self.resource_limits.native_stack_limit,
+            });
+        }
+        Ok(())
     }
 
     #[cold]

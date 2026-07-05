@@ -1,5 +1,4 @@
 use super::*;
-use rum_runtime::EvalError;
 
 fn core_session() -> Session {
     let mut session = Session::new();
@@ -12,14 +11,20 @@ fn configurable_replace_repeated_limit_is_respected() {
     let mut session = core_session();
     session.set_replace_repeated_limit(8);
 
-    let error = session
+    let outcome = session
         .eval_text("1 //. {1 -> 2, 2 -> 1}")
-        .expect_err("expected iteration limit error");
+        .expect("iteration limit should return a termination value");
 
-    assert!(matches!(
-        error,
-        EvalError::IterationLimitExceeded { limit: 8 }
-    ));
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "iterlim")
+    );
     assert_eq!(session.resource_limits().replace_repeated_limit, 8);
 }
 

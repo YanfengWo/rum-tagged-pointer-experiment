@@ -10,6 +10,10 @@ use rum_runtime::{Capability, CapabilityPolicy, ResourceLimits, SessionConfig};
 pub struct HostResourceLimits {
     /// Maximum evaluator recursion depth.
     pub recursion_limit: usize,
+    /// Maximum native stack bytes the evaluator may consume from request start.
+    ///
+    /// The default is 6 MiB, leaving about 2 MiB of headroom on an 8 MiB stack.
+    pub native_stack_limit: usize,
     /// Maximum number of `ReplaceRepeated` iterations.
     pub replace_repeated_limit: usize,
     /// Maximum number of evaluation passes for one request.
@@ -32,6 +36,7 @@ impl From<ResourceLimits> for HostResourceLimits {
     fn from(limits: ResourceLimits) -> Self {
         Self {
             recursion_limit: limits.recursion_limit,
+            native_stack_limit: limits.native_stack_limit,
             replace_repeated_limit: limits.replace_repeated_limit,
             evaluation_pass_limit: limits.evaluation_pass_limit,
             generated_element_limit: limits.generated_element_limit,
@@ -45,6 +50,7 @@ impl From<HostResourceLimits> for ResourceLimits {
     fn from(limits: HostResourceLimits) -> Self {
         Self {
             recursion_limit: limits.recursion_limit,
+            native_stack_limit: limits.native_stack_limit,
             replace_repeated_limit: limits.replace_repeated_limit,
             evaluation_pass_limit: limits.evaluation_pass_limit,
             generated_element_limit: limits.generated_element_limit,

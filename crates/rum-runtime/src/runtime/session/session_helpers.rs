@@ -190,8 +190,9 @@ impl Session {
             EvalError::Cancelled => "cancel",
             EvalError::TimeConstraintExceeded => "timelim",
             EvalError::MemoryConstraintExceeded { .. } => "memlim",
-            EvalError::GeneratedElementLimitExceeded { .. }
+            EvalError::StackLimitExceeded { .. }
             | EvalError::IntegerWorkLimitExceeded { .. }
+            | EvalError::GeneratedElementLimitExceeded { .. }
             | EvalError::IterationWorkLimitExceeded { .. } => "reslim",
             EvalError::IterationLimitExceeded { .. } => "iterlim",
             EvalError::EvaluationPassLimitExceeded { .. } => "passlim",
@@ -213,10 +214,12 @@ impl Session {
         // fired). The tag mirrors the message text (e.g. "iteration work limit").
         match error {
             EvalError::RecursionLimitExceeded { .. } => Some("RecursionLimit"),
+            EvalError::StackLimitExceeded { .. } => Some("StackLimit"),
             EvalError::MatchRecursionLimitExceeded { .. } => Some("PatternMatchRecursionLimit"),
             EvalError::Cancelled => Some("Cancelled"),
             EvalError::TimeConstraintExceeded => Some("TimeConstraint"),
             EvalError::EvaluationCycleDetected { .. }
+            | EvalError::IterationLimitExceeded { .. }
             | EvalError::EvaluationPassLimitExceeded { .. } => Some("IterationLimit"),
             EvalError::GeneratedElementLimitExceeded { .. } => Some("GeneratedElementLimit"),
             EvalError::IntegerWorkLimitExceeded { .. } => Some("IntegerWorkLimit"),

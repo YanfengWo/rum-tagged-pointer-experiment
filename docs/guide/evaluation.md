@@ -158,7 +158,11 @@ The resource chapter lists the caller-set limits.
 
 Recursive evaluator re-entry is guarded by `recursion_limit`.
 
-That limit is separate from the fixed-point pass limit and the pattern-match
+Native stack headroom is guarded separately by `native_stack_limit`; unbounded
+definitions can therefore terminate as `TerminatedEvaluation["StackLimit"]`
+before the logical recursion counter reaches `recursion_limit`.
+
+Those limits are separate from the fixed-point pass limit and the pattern-match
 depth guard.
 
 Hosts should set resource limits according to their workload, especially when
@@ -172,4 +176,3 @@ Host-driven input is part of the evaluator model.
 request with input instead of replaying the whole source string.
 
 The embedding chapter shows the `HostEvalOutcome::InputRequired` path.
-

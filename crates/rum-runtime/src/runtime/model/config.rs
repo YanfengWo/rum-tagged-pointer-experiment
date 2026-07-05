@@ -3,6 +3,7 @@ use super::*;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ResourceLimits {
     pub recursion_limit: usize,
+    pub native_stack_limit: usize,
     pub replace_repeated_limit: usize,
     pub evaluation_pass_limit: usize,
     pub generated_element_limit: usize,
@@ -14,6 +15,7 @@ impl Default for ResourceLimits {
     fn default() -> Self {
         Self {
             recursion_limit: DEFAULT_RECURSION_LIMIT,
+            native_stack_limit: DEFAULT_NATIVE_STACK_LIMIT,
             replace_repeated_limit: DEFAULT_REPLACE_REPEATED_LIMIT,
             evaluation_pass_limit: DEFAULT_EVALUATION_PASS_LIMIT,
             generated_element_limit: DEFAULT_GENERATED_ELEMENT_LIMIT,

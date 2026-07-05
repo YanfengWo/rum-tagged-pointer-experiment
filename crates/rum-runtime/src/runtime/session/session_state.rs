@@ -299,6 +299,8 @@ pub enum EvalError {
     EvaluationCycleDetected { expr: String },
     #[error("evaluation exceeded recursion limit ({limit})")]
     RecursionLimitExceeded { limit: usize },
+    #[error("evaluation exceeded native stack limit ({limit} bytes)")]
+    StackLimitExceeded { limit: usize },
     #[error("evaluation exceeded pattern-match recursion limit ({limit})")]
     MatchRecursionLimitExceeded { limit: usize },
     #[error("evaluation cancelled by host")]
@@ -391,6 +393,8 @@ impl Session {
             resource_limits: ResourceLimits::default(),
             evaluation_depth: 0,
             match_depth: 0,
+            native_stack_base: 0,
+            native_stack_next_check_depth: NATIVE_STACK_DEPTH_POLL_STRIDE,
             interrupt_armed: false,
             evaluation_stack: Vec::new(),
             tracing_enabled: false,

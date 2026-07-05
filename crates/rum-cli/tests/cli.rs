@@ -139,6 +139,18 @@ fn eval_flag_renders_prints_before_final_value() {
 }
 
 #[test]
+fn eval_flag_treats_replace_repeated_limit_as_recoverable_value() {
+    let output = run_cli(&["--eval", "1 //. x_ :> x + 1"]);
+
+    assert!(output.status.success());
+    assert_eq!(
+        stdout(&output),
+        "TerminatedEvaluation[\"IterationLimit\"]\n"
+    );
+    assert!(stderr(&output).contains("! General::iterlim:"));
+}
+
+#[test]
 fn file_flag_renders_source_aware_syntax_diagnostics() {
     // `f[1 2]` is now valid juxtaposition (1*2) since 67a3bdc; use a still-invalid input.
     let file = TempFile::new("f[1,]");

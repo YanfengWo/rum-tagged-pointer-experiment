@@ -15,6 +15,7 @@ The host hardening document gives the implementation background:
 `HostResourceLimits` exposes these caller-set budgets:
 
 - `recursion_limit`
+- `native_stack_limit` (default: 6,291,456 bytes)
 - `replace_repeated_limit`
 - `evaluation_pass_limit`
 - `generated_element_limit`
@@ -73,6 +74,10 @@ notes.
 
 `recursion_limit` guards recursive evaluator re-entry.
 
+`native_stack_limit` guards the host thread's native stack while evaluator
+recursion is active. The default is 6 MiB of consumed stack, chosen to leave
+about 2 MiB of headroom on an 8 MiB host thread stack.
+
 `evaluation_pass_limit` guards top-level fixed-point evaluation.
 
 An evaluation cycle in the fixed-point loop is reported separately, but the
@@ -80,6 +85,12 @@ recoverable top-level value reason is currently `IterationLimit`.
 
 Use these limits for recursive definitions, generated rewrite systems, and
 hosted workloads that should not monopolize a session.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'f[n_] := f[n + 1]; f[0]'
+TerminatedEvaluation["StackLimit"]
+! General::reslim: evaluation exceeded native stack limit (6291456 bytes)
+```
 
 ## ReplaceRepeated Limit
 
@@ -89,6 +100,12 @@ If repeated replacement does not stabilize within the limit, the runtime
 reports an iteration-limit condition.
 
 This is separate from traversal work limits.
+
+```text
+$ cargo run -q -p rum-cli -- --eval '1 //. x_ :> x + 1'
+TerminatedEvaluation["IterationLimit"]
+! General::iterlim: ReplaceRepeated exceeded iteration limit (256)
+```
 
 ## Parse Depth
 
@@ -201,4 +218,3 @@ Further calls fail with `HostFailureCode::Poisoned` until the host calls
 Stack-overflow aborts are not caught by this boundary. The parser and matcher
 depth guards prevent the covered source-evaluation paths that would otherwise
 reach the known deep-source crash class.
-

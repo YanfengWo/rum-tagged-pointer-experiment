@@ -279,19 +279,43 @@ fn replacerepeated_reaches_a_fixed_point() {
 }
 
 #[test]
-fn replacerepeated_errors_on_non_terminating_rewrite_cycle() {
+fn replacerepeated_limit_returns_terminated_value_for_non_terminating_rewrite_cycle() {
     let mut session = session_with_test_control_builtins();
 
-    let error = session
+    let outcome = session
         .eval_text("1 //. {1 -> 2, 2 -> 1}")
-        .expect_err("expected iteration limit error");
+        .expect("iteration limit should return a termination value");
 
-    assert!(matches!(
-        error,
-        EvalError::IterationLimitExceeded {
-            limit: DEFAULT_REPLACE_REPEATED_LIMIT
-        }
-    ));
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "iterlim")
+    );
+}
+
+#[test]
+fn replacerepeated_delayed_rule_limit_returns_terminated_value() {
+    let mut session = session_with_test_control_builtins();
+
+    let outcome = session
+        .eval_request("1 //. x_ :> x + 1")
+        .expect("iteration limit should return a request success");
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "iterlim")
+    );
 }
 
 #[test]

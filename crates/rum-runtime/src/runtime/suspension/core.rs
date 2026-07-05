@@ -223,6 +223,8 @@ impl Session {
         &mut self,
         input: impl Into<String>,
     ) -> Result<Expr, EvalError> {
+        let stack_marker = 0_u8;
+        self.native_stack_base = (&stack_marker as *const u8) as usize;
         let mut suspension = self
             .pending_suspension
             .take()
@@ -230,6 +232,9 @@ impl Session {
         let saved_stack = std::mem::replace(&mut self.evaluation_stack, suspension.active_stack);
         let saved_depth =
             std::mem::replace(&mut self.evaluation_depth, self.evaluation_stack.len());
+        self.native_stack_next_check_depth = self
+            .evaluation_depth
+            .saturating_add(NATIVE_STACK_DEPTH_POLL_STRIDE);
         self.pending_input_request = None;
         let mut outcome = Ok(Expr::string(input.into()));
 

@@ -40,6 +40,10 @@ impl Session {
         self.resource_limits.recursion_limit = limit;
     }
 
+    pub fn set_native_stack_limit(&mut self, limit: usize) {
+        self.resource_limits.native_stack_limit = limit;
+    }
+
     pub fn set_replace_repeated_limit(&mut self, limit: usize) {
         self.resource_limits.replace_repeated_limit = limit;
     }

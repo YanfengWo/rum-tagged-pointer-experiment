@@ -59,6 +59,8 @@ pub struct Session {
     pub(in crate::runtime) resource_limits: ResourceLimits,
     pub(in crate::runtime) evaluation_depth: usize,
     pub(in crate::runtime) match_depth: usize,
+    pub(in crate::runtime) native_stack_base: usize,
+    pub(in crate::runtime) native_stack_next_check_depth: usize,
     pub(in crate::runtime) interrupt_armed: bool,
     pub(in crate::runtime) evaluation_stack: Vec<EvaluationStackEntry>,
     pub(in crate::runtime) tracing_enabled: bool,

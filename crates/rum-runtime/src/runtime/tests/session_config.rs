@@ -15,6 +15,7 @@ fn session_with_config_normalizes_contexts_paths_and_limits() {
     let config = SessionConfig::default()
         .with_resource_limits(ResourceLimits {
             recursion_limit: 17,
+            native_stack_limit: 19,
             replace_repeated_limit: 23,
             evaluation_pass_limit: 31,
             generated_element_limit: 37,
@@ -45,6 +46,7 @@ fn session_with_config_normalizes_contexts_paths_and_limits() {
         session.resource_limits(),
         ResourceLimits {
             recursion_limit: 17,
+            native_stack_limit: 19,
             replace_repeated_limit: 23,
             evaluation_pass_limit: 31,
             generated_element_limit: 37,
@@ -70,6 +72,7 @@ fn apply_config_updates_host_settings_without_clearing_existing_definitions() {
             .with_asserts_enabled(true)
             .with_resource_limits(ResourceLimits {
                 recursion_limit: 9,
+                native_stack_limit: 15,
                 replace_repeated_limit: 10,
                 evaluation_pass_limit: 11,
                 generated_element_limit: 12,
@@ -92,6 +95,7 @@ fn apply_config_updates_host_settings_without_clearing_existing_definitions() {
         session.resource_limits(),
         ResourceLimits {
             recursion_limit: 9,
+            native_stack_limit: 15,
             replace_repeated_limit: 10,
             evaluation_pass_limit: 11,
             generated_element_limit: 12,

@@ -15,6 +15,9 @@ impl fmt::Display for SessionRequestError {
             Self::RecursionLimitExceeded { limit } => {
                 write!(f, "evaluation exceeded recursion limit ({limit})")
             }
+            Self::StackLimitExceeded { limit } => {
+                write!(f, "evaluation exceeded native stack limit ({limit} bytes)")
+            }
             Self::MatchRecursionLimitExceeded { limit } => {
                 write!(
                     f,
@@ -133,6 +136,9 @@ pub enum SessionRequestError {
         expr: String,
     },
     RecursionLimitExceeded {
+        limit: usize,
+    },
+    StackLimitExceeded {
         limit: usize,
     },
     MatchRecursionLimitExceeded {

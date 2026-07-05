@@ -285,6 +285,11 @@ impl Session {
 
     /// Evaluates an expression to a fixed point under the current session state.
     pub fn evaluate(&mut self, expr: Expr) -> Result<Expr, EvalError> {
+        if self.evaluation_depth == 0 {
+            let stack_marker = 0_u8;
+            self.native_stack_base = (&stack_marker as *const u8) as usize;
+            self.native_stack_next_check_depth = NATIVE_STACK_DEPTH_POLL_STRIDE;
+        }
         self.record_profile_evaluate_entry();
         let runtime_profile = runtime_path_timing_start("evaluate.total");
         let result = self.evaluate_profiled_fixed_point(expr);
