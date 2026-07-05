@@ -12,7 +12,7 @@ fn assert_has_message(outcome: &EvalOutcome, symbol: &str, tag: &str) {
 }
 
 #[test]
-fn level_reports_wolfram_style_invalid_levelspec_messages() {
+fn level_reports_invalid_levelspec_messages() {
     let mut session = session_with_test_rewrite_builtins();
 
     let three_item_levelspec = session.eval_text("Level[f[a], {1, 2, 3}]").unwrap();
@@ -38,7 +38,7 @@ fn level_reports_wolfram_style_invalid_levelspec_messages() {
 }
 
 #[test]
-fn traversal_family_reports_wolfram_style_invalid_levelspec_messages() {
+fn traversal_family_reports_invalid_levelspec_messages() {
     let mut session = session_with_test_rewrite_builtins();
 
     let cases = session.eval_text("Cases[f[a], _, {1, 2, 3}]").unwrap();
@@ -79,7 +79,7 @@ fn traversal_family_reports_wolfram_style_invalid_levelspec_messages() {
 }
 
 #[test]
-fn cases_and_position_report_wolfram_style_invalid_match_limit_messages() {
+fn cases_and_position_report_invalid_match_limit_messages() {
     let mut session = session_with_test_rewrite_builtins();
 
     let cases_limit = session.eval_text("Cases[f[a], _, {1, 2}, x]").unwrap();

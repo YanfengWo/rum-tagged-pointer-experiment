@@ -200,7 +200,7 @@ fn lexes_context_qualified_symbol() {
 }
 
 #[test]
-fn lexes_unicode_letter_symbols_used_by_wolfram_source() {
+fn lexes_unicode_letter_symbols_used_by_package_source() {
     let source = "Module[{\u{03C3} = <||>, \u{03B1}Ty = tyVar[\"A\"]}, \u{03C3}[\u{03B1}Ty]]";
     let tokens = lex(source).unwrap();
     let sigma = '\u{03C3}'.to_string();
@@ -282,12 +282,12 @@ fn skips_comments_and_nested_comments_as_trivia() {
 
 #[test]
 fn treats_initial_shebang_as_script_comment_trivia() {
-    let source = "#!/usr/bin/env wolframscript\nPrint[1]";
+    let source = "#!/usr/bin/env rum\nPrint[1]";
     let lexed = lex_with_trivia(source).unwrap();
     let trivia = lexed.trivia();
 
     assert_eq!(trivia[0].kind, TriviaKind::Comment);
-    assert_eq!(trivia[0].text, "#!/usr/bin/env wolframscript");
+    assert_eq!(trivia[0].text, "#!/usr/bin/env rum");
 
     let tokens = lex(source).unwrap();
     assert!(matches!(&tokens[0].kind, TokenKind::Symbol(value) if value == "Print"));

@@ -120,7 +120,7 @@ fn round_handles_exact_numbers_decimal_literals_and_half_even_ties() {
 }
 
 #[test]
-fn scalar_math_builtins_match_exact_wolfram_kernel_cases() {
+fn scalar_math_builtins_exact_cases() {
     let mut session = session_with_test_rewrite_builtins();
 
     let cases = [
@@ -186,7 +186,7 @@ fn scalar_math_builtins_thread_over_lists_and_leave_skipped_forms_symbolic() {
 }
 
 #[test]
-fn scalar_math_builtins_report_wolfram_kernel_attributes() {
+fn scalar_math_builtins_report_declared_attributes() {
     let mut session = session_with_test_rewrite_builtins();
 
     let scalar_attributes = "List[Listable, NumericFunction, Protected]";

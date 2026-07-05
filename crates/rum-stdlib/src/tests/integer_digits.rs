@@ -12,7 +12,7 @@ fn eval_to_string(session: &mut Session, source: &str) -> String {
 }
 
 #[test]
-fn integer_digit_builtins_match_wolfram_kernel_anchors() {
+fn integer_digit_builtins_integer_anchors() {
     let mut session = core_session();
 
     let cases = [
@@ -57,7 +57,7 @@ fn integer_digit_builtins_match_wolfram_kernel_anchors() {
 }
 
 #[test]
-fn integer_digit_builtins_thread_and_passthrough_like_wolfram_kernel() {
+fn integer_digit_builtins_thread_and_passthrough_current_scope() {
     let mut session = core_session();
 
     let cases = [
@@ -91,7 +91,7 @@ fn integer_digit_builtins_thread_and_passthrough_like_wolfram_kernel() {
 }
 
 #[test]
-fn integer_digit_builtins_report_wolfram_kernel_attributes() {
+fn integer_digit_builtins_report_declared_attributes() {
     let mut session = core_session();
 
     let cases = [

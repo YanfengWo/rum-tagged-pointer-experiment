@@ -70,7 +70,7 @@ pub(crate) const NUMBER_THEORY_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary_with_attributes(
         "NextPrime",
-        "Returns the next or previous signed prime in Wolfram order.",
+        "Returns the next or previous prime in rum's signed-prime order.",
         AttributeSet::empty()
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),

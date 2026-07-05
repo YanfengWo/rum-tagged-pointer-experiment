@@ -53,7 +53,7 @@ fn sum_and_product_leave_symbolic_bounds_unevaluated() {
 }
 
 #[test]
-fn sum_and_product_report_wolfram_kernel_attributes() {
+fn sum_and_product_report_declared_attributes() {
     let mut session = core_session();
 
     for name in ["Sum", "Product"] {

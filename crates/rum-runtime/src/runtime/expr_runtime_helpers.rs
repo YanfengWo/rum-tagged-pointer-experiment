@@ -256,7 +256,7 @@ fn system_call_head_rank(symbol: &Symbol) -> Option<(u8, u8)> {
         return None;
     }
 
-    // Wolfram's expression order gives common call heads precedence that is
+    // rum's expression order gives common call heads precedence that is
     // distinct from standalone symbol order; keep this as an explicit subset.
     match symbol.name() {
         "Association" => Some((0, 0)),

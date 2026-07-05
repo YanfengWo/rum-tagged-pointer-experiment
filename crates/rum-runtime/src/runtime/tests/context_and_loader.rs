@@ -406,7 +406,7 @@ fn split_script_into_forms_stops_hard_syntax_errors_from_poisoning_later_forms()
 
 #[test]
 fn split_script_into_forms_skips_initial_shebang_trivia() {
-    let forms = split_script_into_forms("#!/usr/bin/env wolframscript\n\n1\n2").unwrap();
+    let forms = split_script_into_forms("#!/usr/bin/env rum\n\n1\n2").unwrap();
 
     assert_eq!(forms, vec!["1".to_string(), "2".to_string()]);
 }

@@ -355,7 +355,7 @@ fn string_character_classes_and_case_mapping_extend_the_string_subset() {
 }
 
 #[test]
-fn string_helper_builtins_match_wolfram_kernel_edges() {
+fn string_helper_builtins_cover_surface_edges() {
     let mut session = core_session();
 
     for name in ["StringReverse", "ToLowerCase"] {

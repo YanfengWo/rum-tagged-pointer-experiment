@@ -3,7 +3,7 @@
 //! These helpers keep runtime tests independent from `rum-stdlib`. Some
 //! handlers deliberately delegate to kernel-side data evaluators because the
 //! test subject is runtime machinery. Others are small test doubles, such as
-//! structural `SameQ` and structural `First`; they are not complete Wolfram
+//! structural `SameQ` and structural `First`; they are not complete language
 //! semantics and should stay simple.
 
 use super::*;

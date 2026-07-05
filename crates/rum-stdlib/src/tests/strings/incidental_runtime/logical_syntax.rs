@@ -1,6 +1,6 @@
 use super::super::*;
 
-// Moved from crates/rum-runtime/src/runtime/tests/mma_hol_cold_lane.rs.
+// Moved from the runtime cold-lane tests when these checks moved under stdlib.
 
 #[test]
 fn logical_and_comparison_syntax_lowers_to_existing_builtins() {

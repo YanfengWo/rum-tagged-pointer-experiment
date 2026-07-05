@@ -107,7 +107,7 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "Input",
-        "Requests one line of host-provided text, parses it as Wolfram input, and evaluates the resulting expression in the current first-pass subset.",
+        "Requests one line of host-provided text, parses it as rum source, and evaluates the resulting expression in the current first-pass subset.",
         builtin_input,
     ),
     BuiltinSpec::ordinary(

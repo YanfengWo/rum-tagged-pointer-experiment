@@ -12,7 +12,7 @@ fn eval_to_string(session: &mut Session, source: &str) -> String {
 }
 
 #[test]
-fn factorization_builtins_match_wolfram_kernel_integer_anchors() {
+fn factorization_builtins_integer_anchors() {
     let mut session = core_session();
 
     let cases = [
@@ -76,7 +76,7 @@ fn factorization_builtins_match_wolfram_kernel_integer_anchors() {
 }
 
 #[test]
-fn next_prime_matches_wolfram_kernel_signed_prime_order() {
+fn next_prime_follows_signed_prime_order() {
     let mut session = core_session();
 
     let cases = [
@@ -143,7 +143,7 @@ fn factorization_builtins_thread_and_passthrough_like_current_scope() {
 }
 
 #[test]
-fn factorization_builtins_report_wolfram_kernel_attributes() {
+fn factorization_builtins_report_declared_attributes() {
     let mut session = core_session();
 
     let cases = [
@@ -186,7 +186,7 @@ fn large_semiprime_factorization_uses_pollard_rho_path() {
 }
 
 #[test]
-fn prime_reports_wolfram_kernel_positive_integer_message() {
+fn prime_reports_positive_integer_message() {
     let mut session = core_session();
 
     let zero = session.eval_text("Prime[0]").unwrap();

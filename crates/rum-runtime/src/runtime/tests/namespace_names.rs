@@ -171,7 +171,7 @@ fn names_accepts_current_options_subset() {
 }
 
 #[test]
-fn symbol_name_and_name_q_match_wolfram_kernel_anchors() {
+fn symbol_name_and_name_q_core_anchors() {
     let mut session = Session::new();
 
     assert_eq!(

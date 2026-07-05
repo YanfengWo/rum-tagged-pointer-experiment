@@ -14,6 +14,8 @@ mod debug_tools_evaluation;
 mod debug_tools_reports;
 #[path = "tests/debug_tools_resources.rs"]
 mod debug_tools_resources;
+#[path = "tests/exact_reduction_shapes.rs"]
+mod exact_reduction_shapes;
 #[path = "tests/functional_ops/mod.rs"]
 mod functional_ops;
 #[path = "tests/holding_and_control.rs"]
@@ -108,8 +110,6 @@ mod incidental_thread_and_dispatch;
 mod integer_digits;
 #[path = "tests/logic/mod.rs"]
 mod logic;
-#[path = "tests/mma_hol_cold_lane.rs"]
-mod mma_hol_cold_lane;
 #[path = "tests/number_theory.rs"]
 mod number_theory;
 #[path = "tests/polynomials.rs"]

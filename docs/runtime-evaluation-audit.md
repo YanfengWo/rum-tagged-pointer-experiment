@@ -1,8 +1,7 @@
 # Runtime Evaluation Audit
 
 This document captures the current `rum-runtime` evaluation model and the main
-semantic gaps that still separate it from the intended Mathematica /
-Wolfram-style core language.
+semantic gaps that remain in rum's documented core language.
 
 It is an engineering audit of the current implementation, not a promise that
 every listed behavior is final.
@@ -153,7 +152,7 @@ The following parts of the evaluation model are now coherent enough to build on:
 - runtime messages, `Check`, `Quiet`, and `$MessageList`
 - request-oriented input suspension/resume for host-driven execution
 
-These pieces do not yet amount to "full Wolfram semantics", but together they
+These pieces do not yet amount to the full documented core language, but together they
 form a real, internally consistent core-language runtime.
 
 ## Known Semantic Gaps
@@ -174,7 +173,7 @@ Missing or incomplete areas include:
 Practical impact:
 
 - the current attribute model is already useful, but still far from the broader
-  Wolfram attribute surface
+  documented attribute surface
 
 ### 2. Definition Lattice Is Usable But Not Exhaustive
 
@@ -189,7 +188,7 @@ Missing or incomplete areas include:
 - richer tag-based ownership and attachment edge cases beyond the current
   `TagSet` / `UpSet` subset
 - definition lhs normalization now covers the current non-pattern own-value
-  constant contract promoted by `mma-hol` (`p = a; f[p] := rhs` stores the
+  constant contract (`p = a; f[p] := rhs` stores the
   definition for `f[a]`), but broader multi-owner and tag-selection edges
   remain long-tail parity work
 - exact front-end-style definition introspection and print-layer rendering
@@ -295,7 +294,7 @@ Missing or incomplete areas include:
 Practical impact:
 
 - rule authoring is already useful across matcher, replacement, and tree-walker
-  flows, but still not expressive enough for many mature Wolfram-style idioms
+  flows, but still not expressive enough for many mature rule-language idioms
 
 ## Priority Order Suggested By This Audit
 
@@ -309,7 +308,7 @@ The cleanest next steps for `rum-runtime` are:
    starting with public callback loops before debug/tooling surfaces
 4. widen matcher and traversal semantics only after the current evaluator
    boundaries feel fully locked down
-5. strengthen verification and conformance coverage as the semantic surface
+5. strengthen documented-behavior coverage as the semantic surface
    expands
 
 ## Summary

@@ -284,7 +284,7 @@ fn exit_reports_a_request_level_code_and_stops_evaluation() {
 }
 
 #[test]
-fn top_level_break_and_continue_report_wolfram_nofwd_messages() {
+fn top_level_break_and_continue_report_nofwd_messages() {
     let mut session = core_session();
 
     let break_failure = session

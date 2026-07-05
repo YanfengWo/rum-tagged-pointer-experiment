@@ -88,7 +88,7 @@ pub(super) fn default_builtin_dispatch_spec_for_symbol(symbol: &Symbol) -> Optio
 }
 
 pub(super) fn default_system_attribute_set(symbol: &Symbol) -> AttributeSet {
-    // Wolfram's private Information display wrapper holds symbols that would
+    // rum's private Information display wrapper holds symbols that would
     // otherwise evaluate while an InformationData expression reaches a fixed point.
     if symbol.context() == "Information`" && symbol.name() == "InformationValueForm" {
         return AttributeSet::from_hold(HoldAttribute::HoldAll);

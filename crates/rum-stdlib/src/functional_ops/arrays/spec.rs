@@ -166,7 +166,7 @@ pub(super) fn parse_array_filter_template(expr: &Expr, rank: usize) -> Option<Ar
             _ => None,
         })
         .collect::<Option<Vec<_>>>()?;
-    // For even-sized templates, Wolfram anchors neighborhoods with maximal
+    // For even-sized templates, rum anchors neighborhoods with maximal
     // overhang at the beginning side, which corresponds to floor(len/2).
     let center = shape.iter().map(|len| len / 2).collect();
 

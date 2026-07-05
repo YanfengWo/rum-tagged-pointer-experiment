@@ -8,7 +8,7 @@ fn core_session() -> Session {
 }
 
 #[test]
-fn exact_aggregation_shapes_used_by_mma_hol_arith_reduce() {
+fn exact_aggregation_shapes_reduce_arithmetic_terms() {
     let mut session = core_session();
 
     assert_eq!(
@@ -48,7 +48,7 @@ fn exact_aggregation_shapes_used_by_mma_hol_arith_reduce() {
 }
 
 #[test]
-fn exact_denominator_and_apply_integer_reducers_match_mma_hol_certificate_shape() {
+fn exact_denominator_and_apply_integer_reducers_keep_certificate_shape() {
     let mut session = core_session();
 
     assert_eq!(

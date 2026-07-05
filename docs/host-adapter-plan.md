@@ -163,7 +163,7 @@ The first validation wave for `rum-host` includes:
 - one small example embedding binary or example module, with the current
   `crates/rum-host/examples/basic_embedding.rs` serving as the minimal smoke
   example; broader showcase work should be driven by concrete external
-  pressure such as `mma-hol`
+  pressure from a large downstream package or workload
 
 ## Suggested Build Order
 

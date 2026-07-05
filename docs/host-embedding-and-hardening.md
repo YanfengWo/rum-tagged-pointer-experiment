@@ -2,16 +2,16 @@
 
 > Forward-looking notes (recorded 2026-06-30) for the eventual "rum as an
 > embeddable engine other projects call" line. NOT active work — the active line is
-> the `mma-hol` correctness/memory mainline; pick this up only after `mma-hol` is
-> fully through. Grounded in a code survey of `rum-host` + `rum-runtime` +
-> `builtin_catalog` + the support matrix, plus a 2026-06-30 cross-model design
+> the documented core-language and host-hardening line; pick this up only after
+> that public contract is settled. Grounded in a code survey of `rum-host` +
+> `rum-runtime` + `builtin_catalog` + `docs/testing-strategy.md`, plus a 2026-06-30 cross-model design
 > consult. The concrete SHOWCASE PROJECT is deliberately left undecided (browser
-> CAS / mma-hol-in-WASM / desktop-AI-assistant plugin were all weighed and none
+> CAS / WASM embedding / desktop-AI-assistant plugin were all weighed and none
 > chosen); only the two durable enablers are recorded below.
 
 ## 1. rum's capability boundary (what an embedding can rely on)
 
-**Strong domains** (`builtin_catalog/*` + support-matrix CL-01..09): expression /
+**Strong domains** (`builtin_catalog/*` + the documented core-language surface): expression /
 structure ops, definitions / attributes / scoping, **rules / patterns / tree
 walkers** (the rewrite engine — the core strength), functional & list combinators,
 **associations / keyed data**, procedural control / exceptions / failure flow,
@@ -19,7 +19,7 @@ walkers** (the rewrite engine — the core strength), functional & list combinat
 Arithmetic is **exact rationals only** (`num-bigint`, no machine/arbitrary-precision
 floats — a deliberate design choice).
 
-**Deliberately excluded** (support-matrix CL-X): graphics / plotting / visualization,
+**Deliberately excluded** (current product boundary): graphics / plotting / visualization,
 notebook / front-end UI, `Dataset`. rum has **no network / process / arbitrary-system
 access** at all.
 
@@ -32,10 +32,10 @@ made sandbox-safe by the **capability policy** (§1a). An earlier version of thi
 overclaimed "no ambient file access baked in" — that was wrong (the default catalog exposes
 the fs); the capability system is what makes the claim true under a sandboxed policy.
 
-**Net shape:** a faithful-WL **symbolic-rewrite / rule-engine / structured-data**
+**Net shape:** rum's documented **symbolic-rewrite / rule-engine / structured-data**
 language — exact, deterministic, **sandboxable to a pure core via a capability policy**, and
-embeddable. Three proofs this is real, not aspirational: (a) it runs the unmodified `mma-hol`
-HOL development (faithful WL semantics); (b) `rum-jupyter` is a working adapter on the
+embeddable. Three proofs this is real, not aspirational: (a) a large downstream
+rule-heavy workload exercises the core; (b) `rum-jupyter` is a working adapter on the
 `rum-host` boundary; (c) `HostConfig::sandboxed()` provably blocks every fs builtin at
 dispatch (rum-host adversarial tests, brief-095).
 
@@ -60,7 +60,7 @@ For hosts that run untrusted code (e.g. an editor's plugins), the embedding boun
   policies (e.g. read-only: `{Pure, FileRead}`) are expressible.
 - **Enforcement is at DISPATCH**, not input-scanning — so `Symbol["Get"][…]` and
   `ToExpression["Get[…]"]` are blocked too (a denied call → a `sandbox` message + `$Failed`).
-  It is **zero-cost when unrestricted** (a single fast branch; CLI/mma-hol hot path unchanged,
+  It is **zero-cost when unrestricted** (a single fast branch; CLI and large-workload hot paths unchanged,
   byte-identical).
 - **Separation of concerns:** rum provides the PARTITION (capabilities) + the POLICY KNOB +
   ENFORCEMENT only. **Role / RBAC / per-plugin-identity is the caller's job** — a caller maps
@@ -129,8 +129,8 @@ documented as a host-side pattern (below). The KNOWN LIMITATION bullet still sta
   rum-core's `Expr` `Drop` is the default RECURSIVE drop; dropping a `>~thousands`-deep
   `Arc<Expr>` chain overflows the native stack (SIGABRT) and takes the host process
   with it. The reachable crash (deep PARSE input) is closed (a `MAX_PARSE_DEPTH`=128
-  parser guard, brief-055) and every WL path is depth-capped (parser guard + eval
-  `recursion_limit` 1024 + resource limits), so this CANNOT happen via evaluating WL.
+  parser guard, brief-055) and every source-evaluation path is depth-capped (parser guard + eval
+  `recursion_limit` 1024 + resource limits), so this CANNOT happen via evaluating rum source.
   It is only reachable by a host constructing a pathologically-deep `Expr` directly
   via `Expr::call(...)` in a Rust loop. An iterative `Drop` was tried three ways
   (briefs 056/057: unsafe `ManuallyDrop`, safe `Option<Arc>`, safe sentinel) and ALL
@@ -152,7 +152,7 @@ documented as a host-side pattern (below). The KNOWN LIMITATION bullet still sta
   user state; invalidates prior `cancel_handle()`s (new interrupt flag).
 - **Session snapshot / restore from a buffer — DONE (brief-065, `3d4a895`).**
   `snapshot_to_bytes()` (&self) renders all definition-map symbols (+ attributes) to a
-  WL-source `Vec<u8>` via the existing `render_saved_symbols` (no file); `restore_from_bytes()`
+  rum-source `Vec<u8>` via the existing `render_saved_symbols` (no file); `restore_from_bytes()`
   decodes UTF-8, `reset()`s, and evals — a faithful IMAGE load, NO filesystem touched (the
   WASM point). Captures definitions + attributes of defined symbols; NOT attribute-only
   symbols / `$`-vars / options / messages / gensym-counter; TEXT image (binary `.mx` stays
@@ -211,5 +211,5 @@ documented as a host-side pattern (below). The KNOWN LIMITATION bullet still sta
   single transport-agnostic boundary.
 
 > The specific showcase project (and whether to optimize for "impression" like
-> `mma-hol` vs "utility" like an embedded reasoning co-processor) is left open on
-> purpose — revisit after `mma-hol` is fully through.
+> a large downstream package or "utility" like an embedded reasoning co-processor) is left open on
+> purpose — revisit after the public host and language contracts are settled.

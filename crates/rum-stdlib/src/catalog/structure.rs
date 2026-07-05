@@ -120,7 +120,7 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Subsets",
-        "Returns subsets of a normal expression in Wolfram-compatible size-major order for the current size-spec subset.",
+        "Returns subsets of a normal expression in rum's size-major order for the current size-spec subset.",
         AttributeSet::from_attribute(Attribute::Protected),
         structure_ops::eval_subsets,
     ),

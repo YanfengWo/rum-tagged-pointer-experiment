@@ -199,7 +199,7 @@ fn withcleanup_runs_cleanup_on_values_throws_and_aborts() {
 }
 
 #[test]
-fn uncaught_throw_request_messages_follow_wolfram_nocatch_shape() {
+fn uncaught_throw_request_messages_follow_nocatch_shape() {
     let mut session = core_session();
 
     let plain = session
