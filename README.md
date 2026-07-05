@@ -95,8 +95,9 @@ The repository is a Cargo workspace with these crates:
 - [Code Organization Guidelines](./docs/code-organization-guidelines.md)
 - [Jupyter Console Manual](./docs/jupyter-console-manual.md)
 
-A language guide (`docs/guide/`) and a generated builtin reference
-(`docs/reference/`) are being added as part of the current documentation pass.
+The [language guide](./docs/guide/) and generated
+[builtin reference](./docs/reference/builtins.md) are part of the current
+documentation contract.
 
 ## Quick Start
 
