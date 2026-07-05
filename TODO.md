@@ -28,10 +28,12 @@ Coordination doc: [docs/dev/release-transformation-plan.md](./docs/dev/release-t
 
 ## After the Release Cut
 
-- [ ] **Toolchain refresh**: upgrade the local toolchain to current stable
-  Rust, re-baseline both microbench suites in the same session, update
-  `cargo-llvm-cov` to match; decide MSRV policy (keep `1.85` vs adopt
-  let-chains at `1.88`); consider committing a `rust-toolchain.toml` pin.
+- [x] **Toolchain / MSRV — SETTLED (2026-07-05): stay on Rust `1.85`.** It is
+  Debian stable's default rustc (zero toolchain burden for adopters and
+  distro builds) and the edition-2024 floor, so `rust-version = "1.85"` is
+  the public MSRV. Post-`1.85` language features are not used;
+  `cargo-llvm-cov` stays at the matching `0.6.21`. If an upgrade is ever
+  reconsidered, re-baseline both microbench suites in the same session.
 - [ ] **Coverage rebuild** (the integration-depth gap left by removing the
   external acceptance corpus): `cargo-llvm-cov`-driven buildout prioritizing
   the host lifecycle (interrupt/cancel, wall-clock timeout, poison recovery,

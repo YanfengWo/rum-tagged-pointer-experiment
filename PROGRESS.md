@@ -581,3 +581,16 @@ active items + post-cut queue: toolchain refresh to current stable, coverage
 rebuild, scoped-fs profile, pyo3-on-rum-host, showcase, vm_rhs_template).
 CLAUDE.md updated to the new world. Briefs 124-126 all gated green earlier
 today (commits 5eddf1b, 131614a, 3814ef0).
+
+## 2026-07-05 — M1.5: ARCHITECTURE + v0.1 boundary rewritten; toolchain settled
+
+ARCHITECTURE.md: independent positioning, rum-stdlib section updated to the
+post-rebalance reality, rum-difftest section removed, Compatibility Target →
+Behavior Contract (documentation is the contract), Performance Kernel
+Direction → Performance Discipline (rum-vs-rum A/B), Conformance Strategy
+removed, core-language boundary now defined by rum's own guide/reference.
+docs/v0.1-acceptance-boundary.md rewritten (acceptance = documented slice +
+hardened rum-host + CLI/REPL + jupyter preview; external-corpus lanes gone).
+Toolchain/MSRV SETTLED per user: stay on Rust 1.85 (Debian stable default
+rustc + edition-2024 floor); recorded in TODO/README. brief-127 gated green
+(e0448c9): crates wording scan, zero behavior change, suite totals identical.

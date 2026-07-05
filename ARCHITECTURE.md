@@ -2,18 +2,21 @@
 
 ## Mission
 
-`rum` is a Rust implementation of a Mathematica / Wolfram-style core language.
+`rum` is an embeddable symbolic term-rewriting language and runtime written
+in Rust. Its surface syntax is in the Wolfram Language family of notations;
+its semantics are `rum`'s own documented contract (see `DISCLAIMER.md`).
 
 The project's long-term goal is not merely to parse and evaluate expressions,
 but to grow a reusable language kernel that can support:
 
 - symbolic evaluation and rule-based programming
 - business, industrial, and DSL-oriented execution
+- sandboxed evaluation of untrusted scripts inside host applications
 - CLI and REPL use
 - future third-party GUI frontends
 - future third-party IDE or editor integrations
 - future protocol adapters such as Jupyter
-- future external host communication layers that may resemble WSTP-style links
+- future external host communication layers built on native Rust interfaces
 
 The early product is therefore the kernel, not a notebook application.
 
@@ -22,7 +25,7 @@ The early product is therefore the kernel, not a notebook application.
 ### In scope
 
 - symbolic expression trees
-- exact integers
+- exact integers and rationals
 - parser, lowering, and diagnostics
 - evaluator and rule engine
 - definitions, attributes, scoping, and contexts
@@ -37,7 +40,7 @@ The early product is therefore the kernel, not a notebook application.
 - project-owned IDE/editor plugins
 - graphics and visualization
 - full CAS coverage
-- broad front-end compatibility shims
+- compatibility shims for other vendors' front ends or protocols
 
 ## Design Goals
 
@@ -185,12 +188,14 @@ not terminal presentation or protocol envelopes.
 
 ### `rum-stdlib`
 
-Owns builtin installation and future library growth.
+Owns the standard library: every builtin family's implementation and its
+catalog specs (`BuiltinSpec` — name, one-line behavior, attributes),
+installed into sessions via `install_core`. The kernel exposes the
+registration API; builtins are registered data, not kernel code.
 
-The single source of truth for core builtin metadata now lives in
-`rum-runtime`, while `rum-stdlib` remains responsible for installation and
-library expansion. This keeps builtin semantics, dispatch metadata, and
-registration from drifting apart.
+The generated builtin reference under `docs/reference/` is produced from this
+catalog, which keeps documentation, dispatch metadata, and registration from
+drifting apart.
 
 ### `rum-terminal`
 
@@ -349,41 +354,6 @@ The design intent is for Python support to remain optional, downstream of the
 Rust host boundary, and inactive until a concrete use case justifies the API
 and packaging cost.
 
-### `rum-difftest`
-
-Owns differential and conformance-testing assets that are broader than any one
-crate-local unit suite:
-
-- imported seed corpora
-- future `rum`-owned curated fixture trees
-- fixture parsers and normalization helpers
-- future user-configured Wolfram/Mathematica oracle runners
-- divergence ledgers and fixture metadata
-- performance baseline inputs
-
-This crate is not part of the evaluator dependency chain. It exists so
-conformance work can grow as a first-class workstream without turning
-`rum-runtime` tests into one undifferentiated bucket of local regressions,
-oracle checks, performance baselines, and adapter-contract assertions.
-
-This crate is also intentionally optional and environment-gated. `rum` does
-not ship a Wolfram license, a bundled oracle binary, or checked-in
-oracle-generated expected outputs. If a contributor has access to a usable
-Wolfram environment of their own, `rum-difftest` should help them run
-differential checks against that local installation. If not, the rest of the
-project should remain fully buildable and testable without it.
-
-That boundary is useful for more than licensing. A user may diff `rum`
-against an older or otherwise non-project-standard Wolfram installation, so
-the oracle lane is also a compatibility probe against real preexisting user
-environments rather than only a check against one pinned project version.
-
-Just as importantly, `rum-difftest` is not the home for every kernel-facing
-test. If a behavior is specific to `rum`'s own runtime model, host-facing
-session APIs, suspension/resume mechanics, structured diagnostics, or any
-adapter/protocol contract, its primary tests should stay near the owning crate
-instead of being pulled into the oracle workstream.
-
 ## Architectural Principle: Kernel First, Adapters Second
 
 The central rule of this architecture is:
@@ -433,10 +403,9 @@ project-owned example plan.
 
 For a Rust host, the reference scenario is a compiler/runtime/DSL-style
 prototype that needs stable session lifecycles, predictable resource
-boundaries, transport-friendly outcomes, and embedding-friendly request flows.
-`mma-hol` is the preferred near-term external pressure test: `rum` should use
-it to identify missing kernel semantics without adopting that project's own
-scale or roadmap.
+boundaries, transport-friendly outcomes, and embedding-friendly request
+flows — including a plugin-sandbox shape where the host evaluates untrusted
+scripts under per-session limits and a capability policy.
 
 These scenarios are design pressure, not product definition. They should help
 the project choose a clean and useful host boundary, but they should not turn
@@ -543,8 +512,9 @@ future GUI prompts, embedding, and protocol-driven hosts.
 
 ## Numeric Model
 
-Exact integers are first-class kernel values, not an afterthought. That matters
-for both Wolfram-style language fidelity and practical deterministic DSL work.
+Exact integers and rationals are first-class kernel values, not an
+afterthought. That matters for both symbolic-language fidelity and practical
+deterministic DSL work.
 
 The current foundation is `num_bigint::BigInt` inside `rum-core::Atom::Integer`.
 Future numeric expansion should build from that exact baseline.
@@ -554,152 +524,65 @@ project should first stabilize the kernel semantics, then add the practical
 exact-arithmetic and symbolic math needed for business and industrial workloads
 before considering broader CAS-style expansion.
 
-## Compatibility Target
+## Behavior Contract
 
-For named Wolfram-language surface features, the default target is semantic
-compatibility rather than "close enough" resemblance.
+`rum`'s behavior contract is its own documentation: the language guide
+(`docs/guide/`), the generated builtin reference (`docs/reference/`), and the
+host crates' rustdoc. If `rum` ships a function or form, its documented
+behavior is the commitment; tests cite the documentation, and intentional
+changes update both together (see
+[Testing Strategy](./docs/testing-strategy.md)).
 
-In practice, that means:
+Deliberate design boundaries — exact rational arithmetic only, "good-enough"
+scope for a number of functions, resource-limited evaluation — are documented
+as limits, not hidden as failures. The project publishes no compatibility
+claims against other vendors' products (`DISCLAIMER.md`).
 
-- if `rum` ships a same-name function or form, it should aim to match Wolfram
-  behavior as closely as possible
-- deliberate divergence is acceptable only when it is documented explicitly
-- conformance should be checked with differential tests where practical rather
-  than inferred only from local intent
+## Performance Discipline
 
-This compatibility target is one reason the project treats conformance testing
-as a core engineering task rather than optional polish.
+Performance is a kernel architecture concern, held to measured evidence:
 
-## Performance Kernel Direction
-
-The `mma-hol` lane has made one architectural point explicit: matching
-Wolfram-style semantics is not enough if the evaluator pays much higher
-constants for ordinary symbolic-programming failure paths. Because `rum` only
-targets a supported kernel slice rather than the full WolframKernel feature
-surface, the long-term performance target for that slice is WolframKernel
-parity or better.
-
-This is a kernel architecture concern, not a local tuning lane. The next
-performance mainline is the staged plan in
-[Performance Kernel Rewrite Plan](./docs/performance-kernel-rewrite-plan.md):
-symbol identity, expression representation, borrowed evaluator frames,
-definition dispatch, matcher plans, conversion-chain plans, and memory
-strategy must all move toward low-constant native runtime behavior. Bytecode
-or JIT work is intentionally late; compiling the wrong abstraction is not a
-substitute for fixing representation and dispatch.
-
-The same downstream boundary still applies: performance wins must run
-unmodified `mma-hol`. Downstream rewrites are diagnostic evidence only, not
-architectural solutions.
-
-## Conformance Strategy
-
-Conformance work should not be treated as one monolithic test bucket. Different
-questions need different oracles.
-
-The intended split is:
-
-- Lane A: single-expression Wolfram diff for one-shot kernel semantics
-- Lane B: stateful session diff for multi-step evaluation behavior
-- Lane C: a known-difference ledger tracked as data rather than hidden in
-  comments
-- Lane D: performance regression suites whose oracle is `rum`'s own baseline,
-  not Wolfram
-- Lane E: host-contract tests for runtime session APIs, suspend/resume, and
-  structured outcomes
-- Lane F: adapter/protocol tests for Jupyter and future protocol layers
-
-`rum-difftest` should own the imported seed packs, future curated fixture
-directories, and the runners/helpers for the Wolfram-diff and divergence-ledger
-lanes. By contrast, host-contract and adapter/protocol tests should stay near
-the crates whose public contracts they validate.
-
-For the Wolfram-oracle lanes, the runner policy should stay explicit:
-
-- differential execution is optional and uses the contributor's own
-  Wolfram/Mathematica installation and license
-- the runner should accept a user-configured local oracle command such as
-  `wolframscript`, `WolframKernel`, or `MathKernel`
-- oracle-generated result files are transient run artifacts, not checked-in
-  repository assets
-- each oracle run should regenerate fresh comparison material rather than rely
-  on project-owned committed snapshots
-- version variance is expected and useful; a diff run can validate both `rum`
-  semantics and compatibility with the user's existing Wolfram environment
-
-The corresponding negative rule should also stay explicit:
-
-- same-name kernel semantics that a Wolfram oracle can judge belong in
-  `rum-difftest`
-- `rum`-specific kernel extensions, runtime inspection helpers, suspend/resume
-  flows, host-facing request/response contracts, and adapter/protocol behavior
-  do not
-- those `rum`-native tests should remain in crate-local unit, regression, and
-  integration suites where the owning contract is defined
-
-That split preserves the project's main architectural boundary:
-
-- Wolfram is the oracle for same-name kernel semantics where practical
-- `rum` itself is the oracle for host APIs, suspension payloads, and protocol
-  behavior
+- the rum-local microbench suites (`scripts/core-language-microbench.sh`,
+  `scripts/core-memory-microbench.sh`) are the baseline; optimization work is
+  gated by rum-vs-rum A/B per label, with same-tier neighbor labels checked
+  so a targeted win cannot hide a neighboring regression
+- changes to evaluation hot paths are measured, not asserted (`AGENTS.md`)
+- the retained representation and dispatch work (symbol interning with dense
+  ids, shared call trees, the compact `Expr` layout, staged dispatch) landed
+  under this gate and is the model for future work; bytecode or JIT work is
+  intentionally late — compiling the wrong abstraction is not a substitute
+  for fixing representation and dispatch
 
 ## Core Language Boundary For This Project Phase
 
 For the current project phase, `rum` defines its practical "core language"
-scope by the union of two official Wolfram documentation navigation groups:
+scope by its own documentation: the language guide (`docs/guide/`) and the
+generated builtin reference (`docs/reference/`).
 
-- the `Core Language & Structure` pages currently used as scope anchors:
-  - `List`
-  - `Expressions`
-  - `Associations`
-  - `Variables & Functions`
-  - `Rules & Patterns`
-  - `Functional Programming`
-  - `Procedural Programming`
-  - `String Manipulation`
-  - `Package Development`
-  - `Tuning & Debugging`
-- the `Language Overview` pages currently used as scope anchors:
-  - `Symbolic Expressions`
-  - `Lists & Expression Manipulation`
-  - `Associations`
-  - `Functional Operations`
-  - `Pattern Matching`
-  - `Rules & Transformations`
-  - `Definitions & Assignments`
-  - `Logic & Tests`
-  - `Scoping & Modularity`
-  - `Procedural Programming`
-  - `Error & Exception Handling`
-  - `String Manipulation`
+The covered ground is the classic symbolic core-language cluster:
 
-This definition includes both:
+- symbolic expressions and structural operations
+- lists and associations
+- rules, patterns, and transformations
+- definitions, assignments, and attributes
+- functional and procedural programming
+- logic and tests
+- scoping, modularity, contexts, and packages
+- error and exception handling
+- string manipulation
+- debugging- and tuning-oriented runtime behavior
 
-- same-name functions explicitly called out by those pages
-- language mechanisms those pages treat as foundational, such as symbolic
-  expressions, held evaluation, attributes, pattern matching, scoping,
-  contexts, packages, messages, and debugging-oriented runtime behavior
+Clearly non-kernel domains — front-end/UI behavior, graphics, web/network
+integration, external-process operations, compiler/parallel tooling, and
+numerical-algorithm features — remain out of scope unless the project
+explicitly adopts them later.
 
-This definition does not automatically pull in every adjacent area linked from
-those pages. When a page drifts into clearly non-kernel domains such as
-front-end-only behavior, notebook UI, graphics, web/network integration,
-external-process or filesystem operations, compiler/parallel tooling, or
-numerical-algorithm monitoring features, those remain out of scope unless the
-project explicitly adopts them later.
-
-The project should therefore treat these page sets as:
-
-- the public-facing definition of the current core-language target
-- the source of truth for support-matrix and conformance-planning work
-- the default place where any unimplemented, partial, or deliberately divergent
-  same-name feature must be recorded explicitly
-
-The working support matrix for that scope lives in
-[Core Language Support Matrix](./docs/core-language-support-matrix.md).
+Unimplemented, partial, or deliberately bounded behavior is recorded in the
+documentation's limits notes rather than left implicit.
 
 ## String Subsystem Direction
 
-Full Wolfram-style string functionality is important to the project's intended
+A broad string-manipulation surface is important to the project's intended
 commercial, industrial, and DSL-oriented use cases, so strings are treated as a
 planned core-language workstream rather than a peripheral convenience feature.
 
@@ -745,6 +628,5 @@ It should stay relatively stable and answer questions such as:
 - why are some Jupyter-motivated facilities still intentionally in the kernel?
 
 For active work, open gaps, and near-term sequencing, the source of truth is
-[TODO.md](./TODO.md). For page-driven language coverage, status, and divergence
-tracking, use
-[Core Language Support Matrix](./docs/core-language-support-matrix.md).
+[TODO.md](./TODO.md). For language coverage and documented limits, use the
+language guide and the generated builtin reference under `docs/`.

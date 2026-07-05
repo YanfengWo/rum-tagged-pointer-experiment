@@ -140,7 +140,9 @@ cargo run -p rum-host --example basic_embedding
 
 - The workspace targets Rust `1.85` (edition 2024) as declared in
   `Cargo.toml`; use the local native toolchain (`cargo fmt --check`,
-  `cargo test --workspace`).
+  `cargo test --workspace`). `1.85` is deliberate: it is the edition-2024
+  floor and Debian stable's default rustc, so adopters and distro builds
+  carry no extra toolchain burden.
 - `scripts/core-language-microbench.sh` and
   `scripts/core-memory-microbench.sh` are the rum-local performance and
   memory baselines: run them on two builds and compare per-label TSVs for an
