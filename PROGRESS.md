@@ -630,3 +630,13 @@ TEMPLATE.md rewritten to the new policy; briefs 124-131 + the plan doc
 archived; final sweep = whitelist-exact (DISCLAIMER nominative, three
 one-sentence family mentions, jupyter ecosystem identifiers); TODO/CLAUDE
 updated; bundle cold backup follows this commit.
+
+## 2026-07-06 — FS purity line STARTED
+
+Decision (user): strip the six general file builtins (FileNames, FileExistsQ,
+FileDate, FileByteCount, Import, FileTemplateApply) out of the repo entirely
+(archived for a future downstream rum-fs project, post-launch); keep the
+module system (Get/Needs/FindFile) and persistence (Save/DumpSave) with their
+I/O injected via a host provider; kernel crates become std::fs-free by
+construction with a hygiene test. Plan: docs/dev/fs-purity-plan.md
+(briefs 132-133 + M0/M1).
