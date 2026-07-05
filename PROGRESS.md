@@ -594,3 +594,16 @@ hardened rum-host + CLI/REPL + jupyter preview; external-corpus lanes gone).
 Toolchain/MSRV SETTLED per user: stay on Rust 1.85 (Debian stable default
 rustc + edition-2024 floor); recorded in TODO/README. brief-127 gated green
 (e0448c9): crates wording scan, zero behavior change, suite totals identical.
+
+## 2026-07-05 — briefs 128 + 129 gated green (reference + guide)
+
+brief-128 (8503321): generated builtin reference — 513 entries from the
+installed registry (attributes, capability class, summary, verified limits
+notes) + drift test (negative check demonstrated); determinism reproduced at
+the gate (double run, empty diff); minimal doc-hidden read-only iteration
+APIs in rum-runtime. brief-129 (64b7c08): nine-chapter language guide, all
+examples current-build transcripts, nine spot-reproduced at the gate; README
+links guide + reference. Guide writing surfaced two real pre-release bugs
+(now in TODO §Pre-Release Fixes): unbounded user recursion natively
+overflows the stack instead of tripping recursion_limit; ReplaceRepeated
+limit surfaces as a CLI hard error instead of TerminatedEvaluation.

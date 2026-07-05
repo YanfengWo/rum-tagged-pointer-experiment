@@ -61,6 +61,18 @@ Coordination doc: [docs/dev/release-transformation-plan.md](./docs/dev/release-t
   the kernel, runtime-gated, hidden from restricted hosts via the Diagnostic
   capability.
 
+## Pre-Release Fixes (found writing the guide, brief-129)
+
+- [ ] **Unbounded user recursion crashes the process**:
+  `f[n_] := f[n + 1]; f[0]` overflows the native stack instead of tripping
+  `recursion_limit` into a recoverable outcome. For a sandbox-first runtime
+  this is a must-fix before the release cut (guard the evaluator re-entry
+  depth against native stack exhaustion on this path).
+- [ ] **`ReplaceRepeated` limit surfaces as a CLI hard error**:
+  `1 //. x_ :> x + 1` reports `error: ReplaceRepeated exceeded iteration
+  limit (256)` instead of returning `TerminatedEvaluation[...]` like the
+  other recoverable budgets. Align it with the limits-as-values contract.
+
 ## Standing Engineering Debt
 
 - [ ] Matcher: three known gaps in `Flat`+`Orderless`+`Optional` combinations
