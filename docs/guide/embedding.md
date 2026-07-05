@@ -216,12 +216,15 @@ Use `HostConfig::sandboxed()` for untrusted source.
 
 It installs a `{Pure}` capability policy.
 
+Use `{Pure, Clock}` when untrusted scripts need time builtins such as
+`AbsoluteTime`, `Timing`, or `TimeConstrained`.
+
 Construct the session through `HostSession::builder().with_config(...)` and
 pass `HostConfig::sandboxed()`.
 
 That API shape is the same one used by the host tests. The sandboxed policy
-blocks file and diagnostic builtins at dispatch, including runtime-constructed
-calls.
+blocks file, clock, and diagnostic builtins at dispatch, including
+runtime-constructed calls.
 
 ## Cancel And Timeout
 

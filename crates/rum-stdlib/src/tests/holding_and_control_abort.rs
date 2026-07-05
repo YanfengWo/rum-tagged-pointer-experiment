@@ -258,15 +258,6 @@ fn abortprotect_assert_and_blockrandom_cover_current_first_pass_subset() {
             .to_string(),
         "Assert[False]"
     );
-
-    assert_eq!(
-        session
-            .eval_text("BlockRandom[x = 7; x]")
-            .unwrap()
-            .value
-            .to_string(),
-        "7"
-    );
 }
 
 #[test]

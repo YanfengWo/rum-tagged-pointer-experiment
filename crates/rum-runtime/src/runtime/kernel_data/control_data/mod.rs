@@ -2,7 +2,6 @@ use super::super::*;
 
 mod abort_cleanup;
 mod assertions;
-mod block_random;
 mod branching_loops;
 mod check_quiet;
 mod cleanup;

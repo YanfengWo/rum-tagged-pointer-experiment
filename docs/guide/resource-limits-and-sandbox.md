@@ -161,6 +161,7 @@ The current capability classes are:
 - `Pure`
 - `FileRead`
 - `FileWrite`
+- `Clock`
 - `Diagnostic`
 
 Most language and rewrite work is `Pure`.
@@ -168,6 +169,10 @@ Most language and rewrite work is `Pure`.
 Filesystem readers such as `Get`, `Needs`, and `FindFile` are `FileRead`.
 
 Filesystem writers such as `Save` and `DumpSave` are `FileWrite`.
+
+Wall-clock and time-effect builtins such as `AbsoluteTime`, `Timing`,
+`AbsoluteTiming`, `RepeatedTiming`, `TimeConstrained`, `Pause`,
+`EvaluationData`, and `TestReport` are `Clock`.
 
 General file utilities are deliberately outside the kernel; the filesystem
 surface is the module system and session persistence only.
@@ -179,7 +184,10 @@ Instrumentation and resource-disclosure builtins such as `RumProfileSnapshot`,
 
 `HostConfig::sandboxed()` installs a `{Pure}` policy.
 
-That denies every non-pure builtin at dispatch.
+Sandboxed sessions are deterministic: results depend only on session state and
+source. Grant `{Pure, Clock}` when scripts need time.
+
+That denies every non-allowed builtin at dispatch.
 
 Dispatch enforcement matters: runtime-constructed calls such as
 `Symbol["Get"][...]` or parsed strings through `ToExpression[...]` are still
@@ -191,7 +199,8 @@ Sandboxed host configuration also omits the file I/O provider, so provider
 absence is a construction-level layer after capability dispatch.
 
 Fine-grained policies can allow, for example, `{Pure, FileRead}` for read-only
-file access or `{Pure, Diagnostic}` for instrumentation without file access.
+file access, `{Pure, Clock}` for time, or `{Pure, Diagnostic}` for
+instrumentation without file access.
 
 Role or identity mapping is the caller's job. `rum` supplies the capability
 partition, policy object, and dispatch enforcement.

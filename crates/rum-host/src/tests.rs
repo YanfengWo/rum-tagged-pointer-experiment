@@ -208,6 +208,26 @@ fn sandboxed_host_config_blocks_diagnostic_builtins_at_dispatch() {
 }
 
 #[test]
+fn sandboxed_host_config_blocks_clock_builtins_at_dispatch() {
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::sandboxed())
+        .build();
+
+    let success = successful_eval(session.eval("AbsoluteTime[]"));
+    eprintln!(
+        "sandboxed AbsoluteTime[] value={} messages={:?}",
+        success.value.text, success.messages
+    );
+    assert_eq!(success.value.text, "$Failed");
+    assert!(
+        success
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "sandbox")
+    );
+}
+
+#[test]
 fn sandboxed_host_config_still_allows_pure_work_and_path_string_helpers() {
     let mut session = HostSession::builder()
         .with_config(HostConfig::sandboxed())
@@ -267,6 +287,33 @@ fn capability_policy_can_allow_reads_without_writes() {
         &format!("Save[{}, loaded]", wl_string(&rum_path(&save_path))),
     );
     assert_sandbox_denied(&mut session, "RumProfileSnapshot[]");
+}
+
+#[test]
+fn capability_policy_can_allow_clock_without_filesystem() {
+    let policy = CapabilityPolicy::allow([Capability::Pure, Capability::Clock]);
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::default().with_capability_policy(policy))
+        .build();
+
+    let absolute_time = successful_eval(session.eval("AbsoluteTime[]"));
+    eprintln!(
+        "clock policy AbsoluteTime[] value={}",
+        absolute_time.value.text
+    );
+    assert_ne!(absolute_time.value.text, "$Failed");
+
+    let get = successful_eval(session.eval("Get[\"/etc/passwd\"]"));
+    eprintln!(
+        "clock policy Get[] value={} messages={:?}",
+        get.value.text, get.messages
+    );
+    assert_eq!(get.value.text, "$Failed");
+    assert!(
+        get.messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "sandbox")
+    );
 }
 
 #[test]

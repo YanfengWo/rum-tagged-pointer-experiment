@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 507
+Builtin count: 506
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -102,14 +102,14 @@ Returns the absolute value of exact integers and rationals.
 Returns the current Unix time or converts a first-pass DateObject to exact seconds.
 
 - Attributes: `None`
-- Capability: `Pure`
+- Capability: `Clock`
 
 ### AbsoluteTiming
 
 Evaluates an expression and returns {elapsed, value} using the current wall-clock exact-rational subset.
 
 - Attributes: `HoldAll`
-- Capability: `Pure`
+- Capability: `Clock`
 
 ### Accumulate
 
@@ -347,13 +347,6 @@ Temporarily rebinds symbols dynamically.
 Maps a function over contiguous blocks in the current first-pass subset.
 
 - Attributes: `None`
-- Capability: `Pure`
-
-### BlockRandom
-
-Evaluates an expression with localized random state in the current first-pass subset.
-
-- Attributes: `HoldAll`
 - Capability: `Pure`
 
 ### Boole
@@ -1034,7 +1027,7 @@ Forces evaluation in held contexts.
 Evaluates an expression and returns a first-pass association of result and diagnostics.
 
 - Attributes: `HoldFirst`
-- Capability: `Pure`
+- Capability: `Clock`
 
 ### EvenQ
 
@@ -2288,7 +2281,7 @@ Computes the number of partitions into distinct parts.
 Pauses for at least a nonnegative exact number of seconds in the current first-pass subset.
 
 - Attributes: `None`
-- Capability: `Pure`
+- Capability: `Clock`
 
 ### Pluralize
 
@@ -2550,7 +2543,7 @@ Represents the current string-pattern repetition head for zero or more matches.
 Evaluates an expression multiple times and returns {elapsed, value} in the current fixed-sample wall-clock subset.
 
 - Attributes: `HoldFirst`, `SequenceHold`
-- Capability: `Pure`
+- Capability: `Clock`
 
 ### Replace
 
@@ -3236,7 +3229,7 @@ Builds a first-pass symbolic test specification.
 Runs one or more first-pass symbolic tests and returns an association summary.
 
 - Attributes: `None`
-- Capability: `Pure`
+- Capability: `Clock`
 
 ### TextString
 
@@ -3278,7 +3271,7 @@ Propagates a nonlocal value, optionally tagged for Catch matching.
 Evaluates an expression under the current cooperative exact-numeric timeout subset.
 
 - Attributes: `HoldAll`
-- Capability: `Pure`
+- Capability: `Clock`
 
 ### TimeObjectQ
 
@@ -3306,7 +3299,7 @@ Multiplies a held symbol or exact Part target by an evaluated factor and stores 
 Evaluates an expression and returns {elapsed, value} using the current wall-clock exact-rational subset.
 
 - Attributes: `HoldAll`
-- Capability: `Pure`
+- Capability: `Clock`
 
 ### ToCharacterCode
 

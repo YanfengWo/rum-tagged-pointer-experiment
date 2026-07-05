@@ -112,6 +112,18 @@ future downstream work.
 
 That makes sandboxing a dispatch policy, not a source-text scanner.
 
+## Determinism
+
+`rum` makes two sandbox claims: no ambient authority by construction, and
+deterministic by default.
+
+The default sandbox policy excludes filesystem, clock, and diagnostic
+capabilities. Evaluation results therefore depend only on session state and
+source unless the host grants more capability.
+
+This is not a claim of functional-programming referential transparency. The
+language has session state by design.
+
 ## Diagnostics Are A Capability
 
 Diagnostic builtins are also capability-gated.

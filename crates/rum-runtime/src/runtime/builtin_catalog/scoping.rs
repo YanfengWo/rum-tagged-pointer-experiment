@@ -119,11 +119,6 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
         "Pause",
         "Pauses for at least a nonnegative exact number of seconds in the current first-pass subset.",
         builtin_pause,
-    ),
-    BuiltinSpec::ordinary_with_hold(
-        "BlockRandom",
-        "Evaluates an expression with localized random state in the current first-pass subset.",
-        HoldAttribute::HoldAll,
-        builtin_block_random,
-    ),
+    )
+    .with_capability(Capability::Clock),
 ];

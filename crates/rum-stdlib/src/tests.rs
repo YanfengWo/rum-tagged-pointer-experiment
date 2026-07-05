@@ -12,6 +12,8 @@ mod associations_missing_surface;
 mod builtin_reference_docgen;
 #[path = "tests/calculus.rs"]
 mod calculus;
+#[path = "tests/catalog_capabilities.rs"]
+mod catalog_capabilities;
 #[path = "tests/combinatorics.rs"]
 mod combinatorics;
 #[path = "tests/debug_tools_evaluation.rs"]

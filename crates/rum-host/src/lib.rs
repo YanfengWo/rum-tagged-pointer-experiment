@@ -29,8 +29,9 @@
 //! # Running untrusted code
 //!
 //! Use [`HostConfig::sandboxed`] when evaluating untrusted source. It installs a
-//! `{Pure}` capability policy that blocks non-pure builtins at dispatch,
-//! including runtime-constructed calls, and omits the default file I/O provider.
+//! deterministic `{Pure}` capability policy that blocks clock, file, and
+//! diagnostic builtins at dispatch, including runtime-constructed calls, and
+//! omits the default file I/O provider.
 //! Fine-grained policies are expressible through [`CapabilityPolicy`] and
 //! [`Capability`]; role and identity mapping is the caller's responsibility.
 //!

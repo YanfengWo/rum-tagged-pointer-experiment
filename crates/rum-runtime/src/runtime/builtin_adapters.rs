@@ -828,11 +828,3 @@ pub(in crate::runtime) fn builtin_pause(
 ) -> Result<Expr, EvalError> {
     session.eval_pause(args)
 }
-
-pub(in crate::runtime) fn builtin_block_random(
-    session: &mut Session,
-    _head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    session.eval_block_random(args)
-}

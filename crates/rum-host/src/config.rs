@@ -110,8 +110,8 @@ impl Default for HostConfig {
 impl HostConfig {
     /// Returns a configuration for untrusted source.
     ///
-    /// The sandboxed configuration installs a `{Pure}` capability policy,
-    /// omits the file I/O provider, and otherwise uses the default host
+    /// The sandboxed configuration installs a deterministic `{Pure}` capability
+    /// policy, omits the file I/O provider, and otherwise uses the default host
     /// configuration.
     pub fn sandboxed() -> Self {
         Self::default()

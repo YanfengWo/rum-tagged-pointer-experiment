@@ -148,6 +148,7 @@ fn render_capability(capability: Capability) -> &'static str {
         Capability::Pure => "Pure",
         Capability::FileRead => "FileRead",
         Capability::FileWrite => "FileWrite",
+        Capability::Clock => "Clock",
         Capability::Diagnostic => "Diagnostic",
     }
 }

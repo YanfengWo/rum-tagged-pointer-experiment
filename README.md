@@ -4,7 +4,8 @@
 Rust, built sandbox-first: sessions run under caller-set resource limits
 (recursion, iteration, parse depth, wall-clock timeout), support interrupt and
 cancel, can be reset, snapshotted, and restored, and enforce a per-session
-capability policy so a host can evaluate untrusted scripts safely.
+capability policy so default sandboxed evaluation is deterministic and a host
+can evaluate untrusted scripts safely.
 
 The surface syntax belongs to the Wolfram Language family of notations; the
 evaluator implements `rum`'s own documented semantics. See

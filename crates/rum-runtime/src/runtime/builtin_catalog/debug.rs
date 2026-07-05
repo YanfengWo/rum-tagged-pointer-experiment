@@ -18,18 +18,21 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
         "Evaluates an expression and returns {elapsed, value} using the current wall-clock exact-rational subset.",
         HoldAttribute::HoldAll,
         builtin_timing,
-    ),
+    )
+    .with_capability(Capability::Clock),
     BuiltinSpec::ordinary(
         "AbsoluteTime",
         "Returns the current Unix time or converts a first-pass DateObject to exact seconds.",
         Session::eval_absolute_time,
-    ),
+    )
+    .with_capability(Capability::Clock),
     BuiltinSpec::ordinary_with_hold(
         "AbsoluteTiming",
         "Evaluates an expression and returns {elapsed, value} using the current wall-clock exact-rational subset.",
         HoldAttribute::HoldAll,
         builtin_absolute_timing,
-    ),
+    )
+    .with_capability(Capability::Clock),
     BuiltinSpec::ordinary_with_attributes(
         "RepeatedTiming",
         "Evaluates an expression multiple times and returns {elapsed, value} in the current fixed-sample wall-clock subset.",
@@ -37,7 +40,8 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::HoldFirst)
             .with(Attribute::SequenceHold),
         builtin_repeated_timing,
-    ),
+    )
+    .with_capability(Capability::Clock),
     BuiltinSpec::ordinary(
         "Short",
         "Returns the current canonical-text shortened display subset for an expression.",
@@ -91,7 +95,8 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
         "Evaluates an expression under the current cooperative exact-numeric timeout subset.",
         HoldAttribute::HoldAll,
         builtin_time_constrained,
-    ),
+    )
+    .with_capability(Capability::Clock),
     BuiltinSpec::ordinary_with_hold(
         "MemoryConstrained",
         "Evaluates an expression under the current cooperative memory-proxy limit subset.",
@@ -121,7 +126,8 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
         "Evaluates an expression and returns a first-pass association of result and diagnostics.",
         HoldAttribute::HoldFirst,
         builtin_evaluation_data,
-    ),
+    )
+    .with_capability(Capability::Clock),
     BuiltinSpec::ordinary(
         "RumProfileReset",
         "Internal diagnostic hook: resets rum runtime profile counters when profiling is enabled.",
@@ -144,7 +150,8 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
         "TestReport",
         "Runs one or more first-pass symbolic tests and returns an association summary.",
         Session::eval_test_report,
-    ),
+    )
+    .with_capability(Capability::Clock),
     BuiltinSpec::ordinary_with_hold(
         "Stack",
         "Returns the current evaluation stack in the first-pass held-expression subset.",
