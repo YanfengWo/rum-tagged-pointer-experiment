@@ -47,9 +47,15 @@ Coordination doc: [docs/dev/release-transformation-plan.md](./docs/dev/release-t
 - [ ] Python adapter stays frozen until a concrete downstream need; when
   reopened, bind via pyo3 to `rum-host`, not to runtime internals
   ([docs/python-adapter-plan.md](./docs/python-adapter-plan.md)).
-- [ ] Showcase project (separate repo, after shipping): a Tauri-based Typst
-  editor whose plugin sandbox is an embedded `rum` runtime (per-plugin
-  resource limits, cancel/timeout, clean reset, structured value I/O).
+- [ ] Downstream embedder (separate repo, own roadmap): `dun`, a
+  ratatui-based terminal editor, plans `rum` as its optional heavy-compute
+  plugin engine — plugins as pure computations (input snapshots in, output
+  intents out) under per-plugin resource limits, cancel/timeout, clean reset,
+  and the `Pure` capability sandbox. Light paths (config, themes) stay
+  native; `rum-host` is pulled in only when needed.
+- [ ] Document the embedding adoption cost for light hosts: `rum-host`
+  dependency footprint, binary-size delta, and cold `Session` +
+  `install_core` startup time.
 - [ ] `vm_rhs_template/` fate (experiment, not instrumentation —
   gate/delete/keep). The profiling/debug_tools fate is settled: they stay in
   the kernel, runtime-gated, hidden from restricted hosts via the Diagnostic
