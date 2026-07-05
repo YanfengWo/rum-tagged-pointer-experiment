@@ -1,18 +1,22 @@
-# Frozen Python Adapter Notes
+# Python Adapter Notes (downstream project)
 
-Project-owned Python adapter work is frozen for the current stabilization
-phase.
+Decision (2026-07-06): the Python binding is a **separate downstream
+repository**, not a crate in this workspace. It embeds `rum` into Python via
+`pyo3` on top of `rum-host`, and it starts after this repository's
+publication mechanics are settled (a path dependency works earlier if
+needed; wheels are self-contained either way). This repository does not grow
+Python binding code, packaging workflows, or Python-specific examples.
 
-Python remains a plausible future host for `rum`, especially for AI, data,
-automation, and notebook-adjacent workflows. It is not an active roadmap item,
-and the repository should not grow Python binding code, packaging workflows, or
-Python-specific examples until a concrete downstream need justifies reopening
-the work.
+This keeps the kernel workspace buildable with nothing but the declared Rust
+toolchain, and it makes the binding what it architecturally is: a downstream
+consumer of the public embedding boundary, like any other host.
 
 ## Standing Rule
 
-If Python support is revived later, it should bind to `rum-host`, not directly
-to broad `rum-runtime` internals.
+The binding binds to `rum-host`, never directly to broad `rum-runtime`
+internals. `rum`-side obligations are only: keep `rum-host` a sufficient,
+documented embedding boundary, and publish the embedding adoption-cost
+numbers tracked in `TODO.md`.
 
 The intended stack remains:
 

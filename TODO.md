@@ -42,9 +42,11 @@ operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
   every addition capability-classified and reference-documented via the
   drift test. Streams/ports and binary I/O stay deferred (stateful handles
   interact with snapshot/reset/cancel); network I/O stays out of scope.
-- [ ] Python adapter stays frozen until a concrete downstream need; when
-  reopened, bind via pyo3 to `rum-host`, not to runtime internals
-  ([docs/python-adapter-plan.md](./docs/python-adapter-plan.md)).
+- [ ] Python binding (Python embeds rum): a **separate downstream
+  repository** on top of `rum-host` via pyo3, started after publication
+  mechanics settle ([docs/python-adapter-plan.md](./docs/python-adapter-plan.md)).
+  rum-side obligations only: keep `rum-host` sufficient and publish the
+  embedding-cost numbers (item above).
 - [ ] Downstream embedder (separate repo, own roadmap): `dun`, a
   ratatui-based terminal editor, plans `rum` as its optional heavy-compute
   plugin engine — plugins as pure computations (input snapshots in, output
