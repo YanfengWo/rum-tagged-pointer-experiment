@@ -16,6 +16,7 @@ alloc-count = []
 [dependencies]
 mimalloc = "0.1.52"
 rum-repl = { path = "../rum-repl" }
+rum-host = { path = "../rum-host" }
 rum-runtime = { path = "../rum-runtime" }
 rum-stdlib = { path = "../rum-stdlib" }
 rum-syntax = { path = "../rum-syntax" }

@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use rum_runtime::{Capability, CapabilityPolicy, ResourceLimits, SessionConfig};
+use rum_runtime::{Capability, CapabilityPolicy, FileIoProvider, ResourceLimits, SessionConfig};
+
+use crate::StdFileIo;
 
 /// Resource limits applied by a host session.
 ///
@@ -63,8 +65,8 @@ impl From<HostResourceLimits> for ResourceLimits {
 /// Host-facing session configuration.
 ///
 /// `HostConfig` is the stable embedding configuration surface for resource
-/// limits, capability policy, context state, tracing, assertions, and whether
-/// core builtins are installed.
+/// limits, capability policy, context state, file I/O provider, tracing,
+/// assertions, and whether core builtins are installed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostConfig {
     /// Resource limits installed into the runtime session.
@@ -77,6 +79,8 @@ pub struct HostConfig {
     pub context_path: Vec<String>,
     /// Package search roots used by package-loading requests.
     pub package_search_paths: Vec<PathBuf>,
+    /// File I/O provider used by `Get`, `Needs`, `FindFile`, `Save`, and `DumpSave`.
+    pub file_io: Option<FileIoProvider>,
     /// Whether evaluation tracing is enabled.
     pub tracing_enabled: bool,
     /// Whether runtime assertion checks are enabled.
@@ -95,6 +99,7 @@ impl Default for HostConfig {
             current_context: config.current_context,
             context_path: config.context_path,
             package_search_paths: config.package_search_paths,
+            file_io: Some(StdFileIo::provider()),
             tracing_enabled: config.tracing_enabled,
             asserts_enabled: config.asserts_enabled,
             install_core_builtins: true,
@@ -105,10 +110,13 @@ impl Default for HostConfig {
 impl HostConfig {
     /// Returns a configuration for untrusted source.
     ///
-    /// The sandboxed configuration installs a `{Pure}` capability policy and
-    /// otherwise uses the default host configuration.
+    /// The sandboxed configuration installs a `{Pure}` capability policy,
+    /// omits the file I/O provider, and otherwise uses the default host
+    /// configuration.
     pub fn sandboxed() -> Self {
-        Self::default().with_capability_policy(CapabilityPolicy::allow([Capability::Pure]))
+        Self::default()
+            .with_capability_policy(CapabilityPolicy::allow([Capability::Pure]))
+            .without_file_io()
     }
 
     /// Replaces the resource limits for sessions built from this configuration.
@@ -146,6 +154,18 @@ impl HostConfig {
         P: Into<PathBuf>,
     {
         self.package_search_paths = paths.into_iter().map(Into::into).collect();
+        self
+    }
+
+    /// Sets the file I/O provider used by package loading and session persistence.
+    pub fn with_file_io(mut self, provider: impl Into<Option<FileIoProvider>>) -> Self {
+        self.file_io = provider.into();
+        self
+    }
+
+    /// Removes the file I/O provider from sessions built from this configuration.
+    pub fn without_file_io(mut self) -> Self {
+        self.file_io = None;
         self
     }
 

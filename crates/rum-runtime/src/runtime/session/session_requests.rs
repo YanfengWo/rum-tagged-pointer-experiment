@@ -256,7 +256,9 @@ impl Session {
             }),
             Err(err) => {
                 let source = match err {
-                    EvalError::Syntax(_) => fs::read_to_string(path).ok(),
+                    EvalError::Syntax(_) => self
+                        .file_io()
+                        .and_then(|file_io| file_io.read_to_string(path).ok()),
                     _ => None,
                 };
 
@@ -378,6 +380,9 @@ fn session_request_error_from_eval_error_with_source(
         EvalError::LoadPathNotFound { target, searched } => SessionRequestError::LoadPathNotFound {
             target: target.clone(),
             searched: searched.clone(),
+        },
+        EvalError::NoFileIoProvider => SessionRequestError::Other {
+            message: "no file provider installed".to_string(),
         },
         EvalError::EvaluationCycleDetected { expr } => {
             SessionRequestError::EvaluationCycleDetected { expr: expr.clone() }

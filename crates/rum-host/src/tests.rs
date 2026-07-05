@@ -270,6 +270,25 @@ fn capability_policy_can_allow_reads_without_writes() {
 }
 
 #[test]
+fn permissive_policy_without_file_provider_returns_noio_failed() {
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::default().without_file_io())
+        .build();
+
+    let success = successful_eval(session.eval("Get[\"/nonexistent\"]"));
+
+    assert_eq!(success.value.text, "$Failed");
+    assert_eq!(success.messages.len(), 1);
+    assert_eq!(success.messages[0].symbol, "General");
+    assert_eq!(success.messages[0].tag, "noio");
+    assert_eq!(success.messages[0].text, "no file provider installed");
+    eprintln!(
+        "no_provider_get value={} messages={:?}",
+        success.value.text, success.messages
+    );
+}
+
+#[test]
 fn default_host_config_keeps_filesystem_catalog_unrestricted() {
     let dir = TempDirGuard::new("default-unrestricted");
     let input = dir.write("input.wl", "loaded = 42\nloaded");

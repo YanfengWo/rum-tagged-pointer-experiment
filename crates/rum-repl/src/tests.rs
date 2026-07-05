@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{env, fs};
 
+use rum_host::StdFileIo;
 use rum_runtime::Session;
 use rum_stdlib::install_core;
 
@@ -141,6 +142,7 @@ fn repl_renders_runtime_messages_before_results() {
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
     let mut session = Session::new();
+    session.set_file_io(Some(StdFileIo::provider()));
 
     repl.run(&mut session).unwrap();
 

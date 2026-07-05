@@ -187,6 +187,9 @@ checked when the builtin dispatch is reached.
 
 A denied call emits a `General::sandbox` message and returns `$Failed`.
 
+Sandboxed host configuration also omits the file I/O provider, so provider
+absence is a construction-level layer after capability dispatch.
+
 Fine-grained policies can allow, for example, `{Pure, FileRead}` for read-only
 file access or `{Pure, Diagnostic}` for instrumentation without file access.
 

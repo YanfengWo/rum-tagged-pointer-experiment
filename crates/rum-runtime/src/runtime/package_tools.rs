@@ -1,5 +1,4 @@
 use super::*;
-use std::io::Write;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct DeclarePackageSpec {
@@ -193,6 +192,11 @@ impl Session {
         }
 
         let path = self.resolve_output_path(&path_spec);
+        if !self.has_file_io() {
+            self.emit_no_file_io_message();
+            return Ok(system_expr("$Failed"));
+        }
+
         let symbols = match self.compile_save_symbols_from_expr(objects_expr) {
             Ok(symbols) => symbols,
             Err(error) => {
@@ -523,16 +527,16 @@ impl Session {
         path: &Path,
         content: &str,
         overwrite: bool,
-    ) -> Result<(), std::io::Error> {
-        if overwrite {
-            return fs::write(path, content);
-        }
+    ) -> Result<(), FileIoError> {
+        let mode = if overwrite {
+            FileWriteMode::Replace
+        } else {
+            FileWriteMode::Append
+        };
 
-        let mut file = fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(path)?;
-        file.write_all(content.as_bytes())
+        self.file_io()
+            .ok_or_else(|| FileIoError::new("no file provider installed"))?
+            .write_string(path, content, mode)
     }
 
     fn once_cache_key(&self, expr: &Expr, location: Option<&Expr>) -> String {

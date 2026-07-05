@@ -323,10 +323,17 @@ impl Session {
             EvalError::Syntax(err) => {
                 self.push_message(symbol, "syntax", err.to_string());
             }
+            EvalError::NoFileIoProvider => {
+                self.emit_no_file_io_message();
+            }
             other => {
                 self.push_message(symbol, "load", other.to_string());
             }
         }
+    }
+
+    pub(in crate::runtime) fn emit_no_file_io_message(&mut self) {
+        self.push_message("General", "noio", "no file provider installed");
     }
 
     pub(in crate::runtime) fn invalid_call(&self, symbol: &str, args: &[Expr]) -> Expr {

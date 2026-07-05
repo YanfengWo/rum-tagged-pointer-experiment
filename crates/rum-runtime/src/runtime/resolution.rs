@@ -246,10 +246,15 @@ impl Session {
 
     pub(super) fn find_load_target(&self, spec: &str) -> Option<(PathBuf, Vec<String>)> {
         let (candidates, searched) = self.load_target_candidates(spec);
+        let file_io = self.file_io()?;
 
         for candidate in candidates {
-            if candidate.is_file() {
-                return Some((normalize_found_path(&candidate), searched));
+            let probe = file_io.probe(&candidate);
+            if probe.is_file {
+                let path = probe
+                    .resolved_path
+                    .unwrap_or_else(|| normalize_found_path(&candidate));
+                return Some((strip_windows_verbatim_prefix(path), searched));
             }
         }
 

@@ -288,8 +288,10 @@ pub enum EvalError {
     Io {
         path: String,
         #[source]
-        source: std::io::Error,
+        source: FileIoError,
     },
+    #[error("no file provider installed")]
+    NoFileIoProvider,
     #[error("could not resolve package or file `{target}`")]
     LoadPathNotFound {
         target: String,
@@ -385,6 +387,7 @@ impl Session {
             package_search_paths: vec![PathBuf::from(".")],
             loaded_packages: Vec::new(),
             load_stack: Vec::new(),
+            file_io: None,
             definitions: DefinitionMap::default(),
             has_up_value_definitions: false,
             message_definitions: BTreeMap::new(),
@@ -438,6 +441,8 @@ impl Default for Session {
         }
         #[cfg(test)]
         test_builtins::register_test_arithmetic_builtins(&mut session);
+        #[cfg(test)]
+        crate::runtime::tests::install_test_file_io(&mut session);
 
         session
     }

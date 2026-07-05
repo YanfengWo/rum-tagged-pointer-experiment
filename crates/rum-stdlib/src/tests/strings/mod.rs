@@ -1,9 +1,10 @@
 use super::*;
-use rum_core::{Atom, BigInt, Expr};
+use rum_core::{BigInt, Expr};
 use rum_runtime::kernel_api::system_expr;
 
 fn core_session() -> Session {
     let mut session = Session::new();
+    install_test_file_io(&mut session);
     install_core(&mut session);
     session
 }

@@ -30,9 +30,9 @@
 //!
 //! Use [`HostConfig::sandboxed`] when evaluating untrusted source. It installs a
 //! `{Pure}` capability policy that blocks non-pure builtins at dispatch,
-//! including runtime-constructed calls. Fine-grained policies are expressible
-//! through [`CapabilityPolicy`] and [`Capability`]; role and identity mapping is
-//! the caller's responsibility.
+//! including runtime-constructed calls, and omits the default file I/O provider.
+//! Fine-grained policies are expressible through [`CapabilityPolicy`] and
+//! [`Capability`]; role and identity mapping is the caller's responsibility.
 //!
 //! See `docs/guide/embedding.md` for the embedding narrative and `DISCLAIMER.md`
 //! for the project boundary.
@@ -41,10 +41,12 @@
 
 mod config;
 mod cursor;
+mod file_io;
 mod model;
 mod session;
 
 pub use config::{HostConfig, HostResourceLimits};
+pub use file_io::StdFileIo;
 pub use model::{
     HostCompletenessStatus, HostCompletionRequest, HostCompletionResponse, HostDefinition,
     HostDefinitionSummary, HostEvalOutcome, HostEvalRequest, HostEvalSuccess, HostFailure,

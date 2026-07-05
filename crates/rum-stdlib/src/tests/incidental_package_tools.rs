@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::install_core;
+use crate::tests::install_test_file_io;
 use rum_runtime::Session;
 
 struct TempDirGuard {
@@ -46,6 +47,7 @@ fn rum_path(path: &Path) -> String {
 
 fn core_session() -> Session {
     let mut session = Session::new();
+    install_test_file_io(&mut session);
     install_core(&mut session);
     session
 }

@@ -64,9 +64,13 @@ Use `HostSession::builder()` when you need to change configuration:
 - `current_context`
 - `context_path`
 - `package_search_paths`
+- `file_io`
 - `tracing_enabled`
 - `asserts_enabled`
 - `install_core_builtins`
+
+The default trusted configuration installs `StdFileIo`; sandboxed
+configuration omits a file provider.
 
 ## Evaluating
 

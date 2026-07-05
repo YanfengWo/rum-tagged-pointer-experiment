@@ -1,5 +1,6 @@
 use std::env;
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -45,8 +46,59 @@ impl Drop for TempDirGuard {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+struct TestFileIo;
+
+impl FileIo for TestFileIo {
+    fn read_to_string(&self, path: &Path) -> Result<String, FileIoError> {
+        fs::read_to_string(path).map_err(|error| FileIoError::new(error.to_string()))
+    }
+
+    fn probe(&self, path: &Path) -> FileProbe {
+        match fs::metadata(path) {
+            Ok(metadata) if metadata.is_file() => FileProbe::file(normalize_test_path(path)),
+            Ok(_) => FileProbe::non_file(),
+            Err(_) => FileProbe::missing(),
+        }
+    }
+
+    fn write_string(
+        &self,
+        path: &Path,
+        contents: &str,
+        mode: FileWriteMode,
+    ) -> Result<(), FileIoError> {
+        let result = match mode {
+            FileWriteMode::Replace => fs::write(path, contents),
+            FileWriteMode::Append => fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(path)
+                .and_then(|mut file| file.write_all(contents.as_bytes())),
+        };
+
+        result.map_err(|error| FileIoError::new(error.to_string()))
+    }
+}
+
+pub(in crate::runtime) fn install_test_file_io(session: &mut Session) {
+    session.set_file_io(Some(FileIoProvider::new(TestFileIo)));
+}
+
+fn normalize_test_path(path: &Path) -> PathBuf {
+    fs::canonicalize(path).unwrap_or_else(|_| {
+        if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            env::current_dir()
+                .map(|cwd| cwd.join(path))
+                .unwrap_or_else(|_| path.to_path_buf())
+        }
+    })
+}
+
 fn rum_path(path: &Path) -> String {
-    normalize_found_path(path)
+    normalize_test_path(path)
         .display()
         .to_string()
         .replace('\\', "/")
@@ -65,6 +117,7 @@ mod definitions_and_rules_rewrite_inspect;
 mod definitions_and_rules_tags;
 mod holding_and_control_io;
 mod holding_and_control_part2;
+mod hygiene;
 mod lowering_and_context;
 mod lowering_golden;
 mod messages;

@@ -128,6 +128,7 @@ impl HostSession {
 
     fn build_inner_session(config: &HostConfig) -> Session {
         let mut session = Session::with_config(config.runtime_config());
+        session.set_file_io(config.file_io.clone());
 
         if config.install_core_builtins {
             rum_stdlib::install_core(&mut session);
@@ -194,6 +195,7 @@ impl HostSession {
             current_context: config.current_context,
             context_path: config.context_path,
             package_search_paths: config.package_search_paths,
+            file_io: self.config.file_io.clone(),
             tracing_enabled: config.tracing_enabled,
             asserts_enabled: config.asserts_enabled,
             install_core_builtins: self.install_core_builtins,

@@ -44,17 +44,13 @@ pub(super) fn dedup_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
 }
 
 pub(super) fn normalize_found_path(path: &Path) -> PathBuf {
-    let canonical = fs::canonicalize(path).unwrap_or_else(|_| {
-        if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            std::env::current_dir()
-                .map(|cwd| cwd.join(path))
-                .unwrap_or_else(|_| path.to_path_buf())
-        }
-    });
-
-    strip_windows_verbatim_prefix(canonical)
+    strip_windows_verbatim_prefix(if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map(|cwd| cwd.join(path))
+            .unwrap_or_else(|_| path.to_path_buf())
+    })
 }
 
 pub(super) fn strip_windows_verbatim_prefix(path: PathBuf) -> PathBuf {

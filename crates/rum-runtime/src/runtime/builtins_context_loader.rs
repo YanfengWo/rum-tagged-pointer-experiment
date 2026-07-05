@@ -132,6 +132,11 @@ impl Session {
             }
         };
 
+        if !self.has_file_io() {
+            self.emit_no_file_io_message();
+            return Ok(system_expr("$Failed"));
+        }
+
         Ok(match self.find_load_target(&spec) {
             Some((path, _)) => Expr::string(path.display().to_string()),
             None => {
@@ -163,6 +168,11 @@ impl Session {
                 ));
             }
         };
+
+        if !self.has_file_io() {
+            self.emit_no_file_io_message();
+            return Ok(system_expr("$Failed"));
+        }
 
         let path = match self.resolve_load_target(&spec) {
             Ok(path) => path,
@@ -216,6 +226,11 @@ impl Session {
             .any(|loaded| loaded == &config.context)
         {
             return Ok(system_expr("Null"));
+        }
+
+        if !self.has_file_io() {
+            self.emit_no_file_io_message();
+            return Ok(system_expr("$Failed"));
         }
 
         let result = self.eval_get(&[Expr::string(config.load_spec.clone())])?;

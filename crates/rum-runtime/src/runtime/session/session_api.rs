@@ -245,6 +245,18 @@ impl Session {
         &self.package_search_paths
     }
 
+    pub fn set_file_io(&mut self, provider: Option<FileIoProvider>) {
+        self.file_io = provider;
+    }
+
+    pub fn file_io(&self) -> Option<&dyn FileIo> {
+        self.file_io.as_ref().map(FileIoProvider::as_file_io)
+    }
+
+    pub fn has_file_io(&self) -> bool {
+        self.file_io.is_some()
+    }
+
     pub fn set_package_search_paths<I, P>(&mut self, paths: I)
     where
         I: IntoIterator<Item = P>,

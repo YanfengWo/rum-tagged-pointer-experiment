@@ -282,10 +282,14 @@ impl Session {
 
     pub fn eval_file(&mut self, path: impl AsRef<Path>) -> Result<EvalOutcome, EvalError> {
         let path = path.as_ref().to_path_buf();
-        let source = fs::read_to_string(&path).map_err(|source| EvalError::Io {
-            path: path.display().to_string(),
-            source,
-        })?;
+        let source = self
+            .file_io()
+            .ok_or(EvalError::NoFileIoProvider)?
+            .read_to_string(&path)
+            .map_err(|source| EvalError::Io {
+                path: path.display().to_string(),
+                source,
+            })?;
         let snapshot = self.capture_loader_snapshot();
 
         self.load_stack.push(path);

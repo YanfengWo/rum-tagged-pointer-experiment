@@ -38,6 +38,9 @@ pub use super::expr_runtime_helpers::{
     base64_encode, call_items_with_head, compare_expr_canonical, is_system_symbol_name,
 };
 
+// file_io
+pub use super::file_io::{FileIo, FileIoError, FileIoProvider, FileProbe, FileWriteMode};
+
 // lexical_substitution
 pub use super::substitution::lexical_substitution::substitute_lexical_bindings;
 

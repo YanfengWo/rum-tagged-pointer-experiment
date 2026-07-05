@@ -1,6 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::fmt;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use rum_core::{
@@ -28,6 +27,7 @@ mod eval_dispatch;
 mod evaluation_cache;
 mod expr_helpers;
 mod expr_runtime_helpers;
+mod file_io;
 mod hold_thread;
 pub mod kernel_api;
 mod kernel_data;
@@ -59,15 +59,15 @@ use self::{
     arithmetic::*, attributes::*, builtin_adapters::*, builtin_catalog::*,
     builtins_context_loader::*, builtins_input::*, capabilities::*, context_and_load_helpers::*,
     debug_tools::*, definitions::*, eval_call_prepare::*, eval_core::*, eval_dispatch::*,
-    evaluation_cache::*, expr_helpers::*, expr_runtime_helpers::*, hold_thread::*, kernel_data::*,
-    listable_dispatch::*, lowering::*, matcher_and_symbols::*, messages::*, metadata::*, model::*,
-    namespace_tools::*, options::*, package_tools::*, pattern_matching::*, profiling::*,
-    resolution::*, scoping::*, session::*, substitution::*, suspension::*, tree_walkers::*,
-    vm_rhs_template::*,
+    evaluation_cache::*, expr_helpers::*, expr_runtime_helpers::*, file_io::*, hold_thread::*,
+    kernel_data::*, listable_dispatch::*, lowering::*, matcher_and_symbols::*, messages::*,
+    metadata::*, model::*, namespace_tools::*, options::*, package_tools::*, pattern_matching::*,
+    profiling::*, resolution::*, scoping::*, session::*, substitution::*, suspension::*,
+    tree_walkers::*, vm_rhs_template::*,
 };
 pub use self::{
-    builtin_catalog::core_builtin_specs, capabilities::*, lowering::lower_syntax_expr, metadata::*,
-    model::*, session::session_state::EvalError,
+    builtin_catalog::core_builtin_specs, capabilities::*, file_io::*, lowering::lower_syntax_expr,
+    metadata::*, model::*, session::session_state::EvalError,
 };
 
 impl Session {
