@@ -769,3 +769,14 @@ User decision: the coverage-rebuild debt splits — the infrastructure half
 (host lifecycle, limit paths, stress corpus) runs NOW as briefs 149-151;
 stdlib-breadth coverage is deferred until stdlib growth plateaus (batch
 discipline already covers new code). Plan: docs/dev/hardening-coverage-plan.md.
+
+## 2026-07-07 — brief-149 baseline: the net is better than feared
+
+Workspace region 79.00% / line 82.30%. ALL 12 TerminatedEvaluation tags
+have direct exercising tests (the batch discipline held). Real holes:
+error-mapping tables (SessionRequestError / HostFailureCode), snapshot/
+panic lifecycle edges, iterator-spec parsing, the memory-proxy path, and —
+highest risk — the suspension continuation serializers at 0% (never-run
+deserializers). Contract note: MemoryConstraintExceeded deliberately has no
+TerminatedEvaluation mapping (MemoryConstrained consumes it) — to be made
+explicit in docs at M1. brief-150 (test-only buildout) dispatched.
