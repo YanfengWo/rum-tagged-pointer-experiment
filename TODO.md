@@ -116,9 +116,12 @@ string-pattern surface. Batches, evidence-ranked:
   design: everything float (`math`/`cmath`/`decimal`/float statistics),
   concurrency, network protocol stacks, GUI, ambient os/io, pickle
   (DumpSave exists), sqlite.
-- [ ] Candidates parked: raw multiline string literals (parser-level, real
-  friction in every task, bigger blast radius — decide separately);
-  schema/validation helpers; `ByteArray` depth audit.
+- [x] Multiline string literals DONE (81ff8e5, brief-156): """ escaped +
+  \'\'\' raw (TOML-mirror), formatter-verbatim, derivative syntax pinned.
+- [x] Schema/validation helpers DONE (48ceecf, brief-155): SchemaErrors +
+  ConformSchema — patterns are the type language.
+- [ ] Candidates parked: `ByteArray` depth audit; compression codecs;
+  unicode normalization; ipaddress folk; fuzzing; codec follow-ons.
 - [ ] Downstream `rum-os` (process/env; post-launch, alongside `rum-fs`):
   process execution is the maximal ambient authority and never enters the
   kernel — kernel only reserves a `Capability::Process` variant (do this in
@@ -151,9 +154,9 @@ string-pattern surface. Batches, evidence-ranked:
   through the kernel API and the `FileIo` provider seam. Nothing returns to
   the kernel; network I/O stays permanently out of it; streams/ports and
   binary I/O deferred (stateful handles interact with snapshot/reset/cancel).
-- [ ] `rum-host`: verify (or add) an extension hook for downstream builtin
-  families before `rum-fs` starts — a downstream crate must be able to
-  register its family on a host session through the public boundary.
+- [x] `rum-host` downstream extension hook DONE (3cf45e6, brief-153):
+  `with_builtin_installer` — ordered installers, reset()/clone survival,
+  capability dispatch enforced on downstream builtins.
 - [ ] Python binding (Python embeds rum): a **separate downstream
   repository** on top of `rum-host` via pyo3, started after publication
   mechanics settle ([docs/python-adapter-plan.md](./docs/python-adapter-plan.md)).
@@ -165,9 +168,9 @@ string-pattern surface. Batches, evidence-ranked:
   intents out) under per-plugin resource limits, cancel/timeout, clean reset,
   and the `Pure` capability sandbox. Light paths (config, themes) stay
   native; `rum-host` is pulled in only when needed.
-- [ ] Document the embedding adoption cost for light hosts: `rum-host`
-  dependency footprint, binary-size delta, and cold `Session` +
-  `install_core` startup time.
+- [x] Embedding adoption cost DONE (d30fce2, brief-154): guide §Adoption
+  Cost — session 0.09 ms steady / eval 4.5 us / 6.5 MiB stripped delta /
+  23 external crates.
 - [ ] `vm_rhs_template/` fate (experiment, not instrumentation —
   gate/delete/keep). The profiling/debug_tools fate is settled: they stay in
   the kernel, runtime-gated, hidden from restricted hosts via the Diagnostic

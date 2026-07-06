@@ -807,3 +807,16 @@ loss on big main-thread restores). 152: loops for normal progression
 splitter; bug stubs are real tests (50k pipeline = exact 25000;
 500-definition snapshot round-trip); A/B in the noise band. Workspace
 1291/0. MemoryConstrained consume-contract now explicit in the guide.
+
+## 2026-07-07 — A-group + B1 + B2 complete (briefs 153-156)
+
+153: downstream builtin-installer hook (reset/clone survival, capability
+dispatch on downstream builtins — the rum-fs/rum-os/dun registration seam)
++ DecimalString + guide touch-ups; rust-toolchain.toml pinned at 1.85.0.
+154: adoption-cost numbers measured and documented (session 0.09 ms steady,
+eval 4.5 us, 6.5 MiB stripped delta, 23 external crates). 155: schema
+validation — patterns are the type language (SchemaErrors data + 
+ConformSchema defaults/strict-extras; FromYaml→ConformSchema pipeline).
+156: multiline string literals \"\"\"/''' (TOML-mirror), formatter-verbatim
+round-trip, ' derivative pinned both sides, is_complete aware. Workspace
+1315/0; reference 598. Process briefs archived.
