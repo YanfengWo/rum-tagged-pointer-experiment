@@ -22,6 +22,17 @@ semantics** (see the language guide and builtin reference under `docs/`).
   "good-enough" policy for a number of functions, its own host/embedding API.
   It implements **no Wolfram communication protocols** (such as WSTP); host
   integrations use native Rust interfaces.
+- It is **a different category of software from any Wolfram product**.
+  Wolfram's products form an integrated computational platform: notebook
+  front ends, curated data and knowledge-base services, cloud deployment, a
+  numeric tower, thousands of curated functions, proprietary protocols.
+  `rum` has none of these, by design: it is an embeddable scripting kernel
+  in the Lua/Guile/embedded-Scheme category — a small, deterministic,
+  capability-sandboxed term rewriter with a deliberately folk-scope standard
+  library, no front end, no data services, and no cloud. What it takes from
+  the Wolfram Language is the notation and the documented surface
+  conventions of a language family, in the same sense that Scheme
+  implementations adopt Lisp notation.
 
 ## Trademarks
 
