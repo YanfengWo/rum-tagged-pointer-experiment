@@ -4,7 +4,10 @@ pub enum Capability {
     FileRead,
     FileWrite,
     Clock,
+    Random,
     Diagnostic,
+    /// Reserved for future downstream process-control integrations.
+    Process,
 }
 
 impl Capability {
@@ -14,7 +17,9 @@ impl Capability {
             Self::FileRead => 1 << 1,
             Self::FileWrite => 1 << 2,
             Self::Clock => 1 << 3,
-            Self::Diagnostic => 1 << 4,
+            Self::Random => 1 << 4,
+            Self::Diagnostic => 1 << 5,
+            Self::Process => 1 << 6,
         }
     }
 }
@@ -120,7 +125,9 @@ mod tests {
         assert!(policy.allows(Capability::FileRead));
         assert!(policy.allows(Capability::FileWrite));
         assert!(policy.allows(Capability::Clock));
+        assert!(policy.allows(Capability::Random));
         assert!(policy.allows(Capability::Diagnostic));
+        assert!(policy.allows(Capability::Process));
     }
 
     #[test]
@@ -132,7 +139,9 @@ mod tests {
         assert!(policy.allows(Capability::FileRead));
         assert!(!policy.allows(Capability::FileWrite));
         assert!(!policy.allows(Capability::Clock));
+        assert!(!policy.allows(Capability::Random));
         assert!(!policy.allows(Capability::Diagnostic));
+        assert!(!policy.allows(Capability::Process));
     }
 
     #[test]
@@ -145,6 +154,8 @@ mod tests {
         assert!(!policy.allows(Capability::FileRead));
         assert!(!policy.allows(Capability::FileWrite));
         assert!(!policy.allows(Capability::Clock));
+        assert!(!policy.allows(Capability::Random));
+        assert!(!policy.allows(Capability::Process));
     }
 
     #[test]

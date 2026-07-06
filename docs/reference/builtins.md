@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 536
+Builtin count: 544
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -375,6 +375,13 @@ Temporarily rebinds symbols dynamically.
 Maps a function over contiguous blocks in the current first-pass subset.
 
 - Attributes: `None`
+- Capability: `Pure`
+
+### BlockRandom
+
+Evaluates an expression while restoring the deterministic session PRNG state afterward.
+
+- Attributes: `HoldAll`
 - Capability: `Pure`
 
 ### Boole
@@ -2573,6 +2580,46 @@ Returns the floor-division quotient of two integers.
 - Attributes: `Listable`
 - Capability: `Pure`
 
+### RandomBytes
+
+Returns entropy bytes as a ByteArray using the host entropy provider.
+
+- Attributes: `None`
+- Capability: `Random`
+- Limits: draws directly from the host entropy provider, not from the deterministic session PRNG.
+
+### RandomChoice
+
+Chooses elements from a list using the deterministic session PRNG.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: uses the deterministic session PRNG; it is not cryptographic.
+
+### RandomInteger
+
+Draws exact integers uniformly from the deterministic session PRNG.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: uses the deterministic session PRNG with rejection sampling for unbiased exact integers; it is not cryptographic. There is no RandomReal in the current exact-number boundary.
+
+### RandomSample
+
+Samples distinct positions from a list using the deterministic session PRNG.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: uses the deterministic session PRNG; it is not cryptographic.
+
+### RandomUuid
+
+Returns a reproducible version-4-format UUID string from the deterministic session PRNG.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: uses the deterministic session PRNG and is reproducible under the same seed; use an entropy reseed first when global uniqueness matters.
+
 ### Range
 
 Constructs a plain list of exact integers from the current one-, two-, and three-argument subset.
@@ -2832,6 +2879,14 @@ Evaluates a function across selected levels for side effects in the current firs
 
 - Attributes: `None`
 - Capability: `Pure`
+
+### SeedRandom
+
+Reseeds the deterministic session PRNG from an exact integer, or from host entropy in the zero-argument form.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: uses xoshiro256** with splitmix64 seed expansion; exact integer seeds fold magnitude bytes through splitmix64, with a sign tag for negative seeds. The zero-argument entropy form requires Capability::Random.
 
 ### Select
 
@@ -3679,6 +3734,13 @@ Lists stored tagged upvalue definitions for a symbol.
 Tests whether every character in a string is uppercase.
 
 - Attributes: `Protected`
+- Capability: `Pure`
+
+### UuidQ
+
+Tests whether a string has version-4 UUID format and variant bits.
+
+- Attributes: `None`
 - Capability: `Pure`
 
 ### ValueQ

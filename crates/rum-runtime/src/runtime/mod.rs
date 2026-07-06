@@ -44,6 +44,7 @@ mod pattern_matching;
 #[cfg(test)]
 mod pattern_matching_interpreted;
 mod profiling;
+mod random;
 mod resolution;
 mod scoping;
 mod session;
@@ -62,12 +63,12 @@ use self::{
     evaluation_cache::*, expr_helpers::*, expr_runtime_helpers::*, file_io::*, hold_thread::*,
     kernel_data::*, listable_dispatch::*, lowering::*, matcher_and_symbols::*, messages::*,
     metadata::*, model::*, namespace_tools::*, options::*, package_tools::*, pattern_matching::*,
-    profiling::*, resolution::*, scoping::*, session::*, substitution::*, suspension::*,
+    profiling::*, random::*, resolution::*, scoping::*, session::*, substitution::*, suspension::*,
     tree_walkers::*, vm_rhs_template::*,
 };
 pub use self::{
     builtin_catalog::core_builtin_specs, capabilities::*, file_io::*, lowering::lower_syntax_expr,
-    metadata::*, model::*, session::session_state::EvalError,
+    metadata::*, model::*, random::*, session::session_state::EvalError,
 };
 
 impl Session {

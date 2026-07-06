@@ -336,6 +336,10 @@ impl Session {
         self.push_message("General", "noio", "no file provider installed");
     }
 
+    pub fn emit_no_entropy_message(&mut self) {
+        self.push_message("General", "noentropy", "no entropy provider installed");
+    }
+
     pub(in crate::runtime) fn invalid_call(&self, symbol: &str, args: &[Expr]) -> Expr {
         Expr::call(system_expr(symbol), args.to_vec())
     }

@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 
-use rum_runtime::{Capability, CapabilityPolicy, FileIoProvider, ResourceLimits, SessionConfig};
+use rum_runtime::{
+    Capability, CapabilityPolicy, EntropyProvider, FileIoProvider, ResourceLimits, SessionConfig,
+};
 
-use crate::StdFileIo;
+use crate::{StdEntropySource, StdFileIo};
 
 /// Resource limits applied by a host session.
 ///
@@ -65,8 +67,8 @@ impl From<HostResourceLimits> for ResourceLimits {
 /// Host-facing session configuration.
 ///
 /// `HostConfig` is the stable embedding configuration surface for resource
-/// limits, capability policy, context state, file I/O provider, tracing,
-/// assertions, and whether core builtins are installed.
+/// limits, capability policy, context state, file I/O and entropy providers,
+/// tracing, assertions, and whether core builtins are installed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostConfig {
     /// Resource limits installed into the runtime session.
@@ -81,6 +83,8 @@ pub struct HostConfig {
     pub package_search_paths: Vec<PathBuf>,
     /// File I/O provider used by `Get`, `Needs`, `FindFile`, `Save`, and `DumpSave`.
     pub file_io: Option<FileIoProvider>,
+    /// Entropy provider used by `SeedRandom[]` and `RandomBytes`.
+    pub entropy_source: Option<EntropyProvider>,
     /// Whether evaluation tracing is enabled.
     pub tracing_enabled: bool,
     /// Whether runtime assertion checks are enabled.
@@ -100,6 +104,7 @@ impl Default for HostConfig {
             context_path: config.context_path,
             package_search_paths: config.package_search_paths,
             file_io: Some(StdFileIo::provider()),
+            entropy_source: Some(StdEntropySource::provider()),
             tracing_enabled: config.tracing_enabled,
             asserts_enabled: config.asserts_enabled,
             install_core_builtins: true,
@@ -111,12 +116,13 @@ impl HostConfig {
     /// Returns a configuration for untrusted source.
     ///
     /// The sandboxed configuration installs a deterministic `{Pure}` capability
-    /// policy, omits the file I/O provider, and otherwise uses the default host
-    /// configuration.
+    /// policy, omits file I/O and entropy providers, and otherwise uses the
+    /// default host configuration.
     pub fn sandboxed() -> Self {
         Self::default()
             .with_capability_policy(CapabilityPolicy::allow([Capability::Pure]))
             .without_file_io()
+            .without_entropy_source()
     }
 
     /// Replaces the resource limits for sessions built from this configuration.
@@ -166,6 +172,18 @@ impl HostConfig {
     /// Removes the file I/O provider from sessions built from this configuration.
     pub fn without_file_io(mut self) -> Self {
         self.file_io = None;
+        self
+    }
+
+    /// Sets the entropy provider used by no-argument random seeding and random bytes.
+    pub fn with_entropy_source(mut self, provider: impl Into<Option<EntropyProvider>>) -> Self {
+        self.entropy_source = provider.into();
+        self
+    }
+
+    /// Removes the entropy provider from sessions built from this configuration.
+    pub fn without_entropy_source(mut self) -> Self {
+        self.entropy_source = None;
         self
     }
 

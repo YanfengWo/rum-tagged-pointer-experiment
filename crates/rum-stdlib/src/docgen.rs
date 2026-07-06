@@ -25,6 +25,30 @@ pub const LIMITS: &[(&str, &str)] = &[
     ),
     ("PrimeQ", "uses direct trial division over exact integers."),
     (
+        "RandomBytes",
+        "draws directly from the host entropy provider, not from the deterministic session PRNG.",
+    ),
+    (
+        "RandomChoice",
+        "uses the deterministic session PRNG; it is not cryptographic.",
+    ),
+    (
+        "RandomInteger",
+        "uses the deterministic session PRNG with rejection sampling for unbiased exact integers; it is not cryptographic. There is no RandomReal in the current exact-number boundary.",
+    ),
+    (
+        "RandomSample",
+        "uses the deterministic session PRNG; it is not cryptographic.",
+    ),
+    (
+        "RandomUuid",
+        "uses the deterministic session PRNG and is reproducible under the same seed; use an entropy reseed first when global uniqueness matters.",
+    ),
+    (
+        "SeedRandom",
+        "uses xoshiro256** with splitmix64 seed expansion; exact integer seeds fold magnitude bytes through splitmix64, with a sign tag for negative seeds. The zero-argument entropy form requires Capability::Random.",
+    ),
+    (
         "Riffle",
         "supports only the single-separator form; cyclic and list-separator forms are outside the current contract.",
     ),
@@ -157,6 +181,8 @@ fn render_capability(capability: Capability) -> &'static str {
         Capability::FileRead => "FileRead",
         Capability::FileWrite => "FileWrite",
         Capability::Clock => "Clock",
+        Capability::Random => "Random",
         Capability::Diagnostic => "Diagnostic",
+        Capability::Process => "Process",
     }
 }

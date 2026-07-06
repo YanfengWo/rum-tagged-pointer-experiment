@@ -235,6 +235,20 @@ fn runtime_messages_go_to_stderr_and_values_go_to_stdout() {
 }
 
 #[test]
+fn random_default_seed_is_reproducible_across_cli_invocations() {
+    let source = "{RandomInteger[100], RandomInteger[100], RandomInteger[{-5, 5}, 4]}";
+    let first = run_cli(&["--eval", source]);
+    let second = run_cli(&["--eval", source]);
+
+    assert!(first.status.success());
+    assert!(second.status.success());
+    assert_eq!(stdout(&first), stdout(&second));
+    assert_eq!(stdout(&first), "List[52, 42, List[-5, 4, 5, 3]]\n");
+    assert!(stderr(&first).is_empty());
+    assert!(stderr(&second).is_empty());
+}
+
+#[test]
 fn eval_flag_treats_replace_repeated_limit_as_recoverable_value() {
     let output = run_cli(&["--eval", "1 //. x_ :> x + 1"]);
 

@@ -201,7 +201,7 @@ impl Session {
     /// The image captures own values, delayed own values, down values, up values,
     /// sub values, and attributes for symbols that have definitions. It does not
     /// capture attribute-only symbols, `$` variables, options, messages, the
-    /// gensym counter, or contexts beyond what the generated source
+    /// gensym counter, PRNG state, or contexts beyond what the generated source
     /// re-establishes. This is a text image, not a binary `.mx` dump.
     pub fn snapshot_definitions_source(&self) -> String {
         let mut symbols = self.definitions.keys().cloned().collect::<Vec<_>>();
@@ -255,6 +255,68 @@ impl Session {
 
     pub fn has_file_io(&self) -> bool {
         self.file_io.is_some()
+    }
+
+    pub fn set_entropy_source(&mut self, provider: Option<EntropyProvider>) {
+        self.entropy_source = provider;
+    }
+
+    pub fn entropy_source(&self) -> Option<&dyn EntropySource> {
+        self.entropy_source
+            .as_ref()
+            .map(EntropyProvider::as_entropy_source)
+    }
+
+    pub fn has_entropy_source(&self) -> bool {
+        self.entropy_source.is_some()
+    }
+
+    pub fn fill_entropy(&self, buf: &mut [u8]) -> Result<(), EntropyError> {
+        let Some(source) = self.entropy_source() else {
+            return Err(EntropyError::new("no entropy provider installed"));
+        };
+
+        source.fill(buf)
+    }
+
+    pub fn seed_random_with_integer(&mut self, seed: &BigInt) {
+        self.prng_state = PrngState::from_seed_integer(seed);
+    }
+
+    pub fn seed_random_with_bytes(&mut self, bytes: &[u8]) {
+        self.prng_state = PrngState::from_seed_bytes(bytes);
+    }
+
+    pub fn seed_random_from_entropy(&mut self) -> Result<(), EntropyError> {
+        let mut seed = [0_u8; 32];
+        self.fill_entropy(&mut seed)?;
+        self.seed_random_with_bytes(&seed);
+        Ok(())
+    }
+
+    pub fn random_u64(&mut self) -> u64 {
+        self.prng_state.next_u64()
+    }
+
+    pub fn random_fill_bytes(&mut self, buf: &mut [u8]) {
+        self.prng_state.fill_bytes(buf);
+    }
+
+    pub fn evaluate_with_random_state_restored(&mut self, body: Expr) -> Result<Expr, EvalError> {
+        let saved = self.prng_state;
+        let result = self.evaluate(body);
+        let outcome = self.suspend_with_result_frame(result, move |session, outcome| {
+            session.prng_state = saved;
+            outcome
+        });
+
+        match outcome {
+            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            other => {
+                self.prng_state = saved;
+                other
+            }
+        }
     }
 
     pub fn set_package_search_paths<I, P>(&mut self, paths: I)

@@ -6,7 +6,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
-use rum_host::StdFileIo;
+use rum_host::{StdEntropySource, StdFileIo};
 use rum_repl::Repl;
 use rum_runtime::{Session, SessionEvalResponse, SessionRequestError, SessionRequestFailure};
 use rum_stdlib::install_core;
@@ -46,6 +46,7 @@ fn main() -> ExitCode {
 fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut session = Session::new();
     session.set_file_io(Some(StdFileIo::provider()));
+    session.set_entropy_source(Some(StdEntropySource::provider()));
     install_core(&mut session);
 
     let invocation = parse_invocation(env::args().skip(1).collect())?;

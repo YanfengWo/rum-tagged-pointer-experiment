@@ -388,6 +388,8 @@ impl Session {
             loaded_packages: Vec::new(),
             load_stack: Vec::new(),
             file_io: None,
+            entropy_source: None,
+            prng_state: PrngState::default(),
             definitions: DefinitionMap::default(),
             has_up_value_definitions: false,
             message_definitions: BTreeMap::new(),

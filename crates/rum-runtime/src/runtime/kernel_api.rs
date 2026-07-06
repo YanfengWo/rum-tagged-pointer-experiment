@@ -41,6 +41,9 @@ pub use super::expr_runtime_helpers::{
 // file_io
 pub use super::file_io::{FileIo, FileIoError, FileIoProvider, FileProbe, FileWriteMode};
 
+// entropy/random
+pub use super::random::{EntropyError, EntropyProvider, EntropySource};
+
 // lexical_substitution
 pub use super::substitution::lexical_substitution::substitute_lexical_bindings;
 

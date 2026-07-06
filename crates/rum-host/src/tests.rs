@@ -73,6 +73,10 @@ fn wl_string(value: &str) -> String {
     format!("{value:?}")
 }
 
+fn byte_array_payload(text: &str) -> Option<&str> {
+    text.strip_prefix("ByteArray[\"")?.strip_suffix("\"]")
+}
+
 fn assert_sandbox_denied(session: &mut HostSession, source: &str) {
     let success = successful_eval(session.eval(source));
     assert_eq!(success.value.text, "$Failed", "source {source}");
@@ -333,6 +337,55 @@ fn permissive_policy_without_file_provider_returns_noio_failed() {
         "no_provider_get value={} messages={:?}",
         success.value.text, success.messages
     );
+}
+
+#[test]
+fn sandboxed_host_config_blocks_entropy_builtins_but_allows_prng_builtins() {
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::sandboxed())
+        .build();
+
+    assert_sandbox_denied(&mut session, "SeedRandom[]");
+    assert_sandbox_denied(&mut session, "RandomBytes[8]");
+
+    let pure = successful_eval(session.eval(
+        "SeedRandom[42]; {RandomInteger[10], RandomChoice[{a,b}], RandomSample[{a,b}], BlockRandom[RandomInteger[10]], UuidQ[RandomUuid[]]}",
+    ));
+    assert_ne!(pure.value.text, "$Failed");
+    assert!(pure.messages.is_empty(), "messages={:?}", pure.messages);
+}
+
+#[test]
+fn permissive_policy_without_entropy_provider_returns_noentropy_failed() {
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::default().without_entropy_source())
+        .build();
+
+    for source in ["RandomBytes[8]", "SeedRandom[]"] {
+        let success = successful_eval(session.eval(source));
+
+        assert_eq!(success.value.text, "$Failed", "source {source}");
+        assert_eq!(success.messages.len(), 1, "source {source}");
+        assert_eq!(success.messages[0].symbol, "General");
+        assert_eq!(success.messages[0].tag, "noentropy");
+        assert_eq!(success.messages[0].text, "no entropy provider installed");
+    }
+}
+
+#[test]
+fn default_host_config_installs_entropy_provider_for_random_bytes() {
+    let mut session = HostSession::new();
+
+    let first = successful_eval(session.eval("RandomBytes[8]"));
+    let second = successful_eval(session.eval("RandomBytes[8]"));
+
+    let first_payload =
+        byte_array_payload(&first.value.text).expect("RandomBytes should return ByteArray text");
+    let second_payload =
+        byte_array_payload(&second.value.text).expect("RandomBytes should return ByteArray text");
+    assert_eq!(first_payload.len(), 12);
+    assert_eq!(second_payload.len(), 12);
+    assert_ne!(first.value.text, second.value.text);
 }
 
 #[test]

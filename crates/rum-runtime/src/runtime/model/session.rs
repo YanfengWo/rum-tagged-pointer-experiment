@@ -52,6 +52,8 @@ pub struct Session {
     pub(in crate::runtime) loaded_packages: Vec<String>,
     pub(in crate::runtime) load_stack: Vec<PathBuf>,
     pub(in crate::runtime) file_io: Option<FileIoProvider>,
+    pub(in crate::runtime) entropy_source: Option<EntropyProvider>,
+    pub(in crate::runtime) prng_state: PrngState,
     pub(in crate::runtime) definitions: DefinitionMap,
     pub(in crate::runtime) has_up_value_definitions: bool,
     pub(in crate::runtime) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,

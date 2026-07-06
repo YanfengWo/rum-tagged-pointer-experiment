@@ -129,6 +129,7 @@ impl HostSession {
     fn build_inner_session(config: &HostConfig) -> Session {
         let mut session = Session::with_config(config.runtime_config());
         session.set_file_io(config.file_io.clone());
+        session.set_entropy_source(config.entropy_source.clone());
 
         if config.install_core_builtins {
             rum_stdlib::install_core(&mut session);
@@ -154,7 +155,7 @@ impl HostSession {
     /// The image captures own values, delayed own values, down values, up values,
     /// sub values, and attributes for symbols that have definitions. It does not
     /// capture attribute-only symbols, `$` variables, options, messages, the
-    /// gensym counter, or contexts beyond what the generated source
+    /// gensym counter, PRNG state, or contexts beyond what the generated source
     /// re-establishes. This is a text image, not a binary `.mx` dump.
     pub fn snapshot_to_bytes(&self) -> Vec<u8> {
         self.session.snapshot_definitions_source().into_bytes()
@@ -167,7 +168,7 @@ impl HostSession {
     /// post-construction state, then evaluates the snapshot source. The image
     /// captures WL-level definitions and attributes for defined symbols; it does
     /// not capture attribute-only symbols, `$` variables, options, messages, the
-    /// gensym counter, or contexts beyond what the source re-establishes.
+    /// gensym counter, PRNG state, or contexts beyond what the source re-establishes.
     pub fn restore_from_bytes(&mut self, bytes: &[u8]) -> Result<(), HostFailure> {
         let source = std::str::from_utf8(bytes).map_err(snapshot_decode_failure)?;
         self.reset();
@@ -196,6 +197,7 @@ impl HostSession {
             context_path: config.context_path,
             package_search_paths: config.package_search_paths,
             file_io: self.config.file_io.clone(),
+            entropy_source: self.config.entropy_source.clone(),
             tracing_enabled: config.tracing_enabled,
             asserts_enabled: config.asserts_enabled,
             install_core_builtins: self.install_core_builtins,

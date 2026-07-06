@@ -1,0 +1,374 @@
+use rum_core::{BigInt, Expr};
+use rum_runtime::kernel_api::{
+    Capability, EvalError, Session, ToPrimitive, base64_encode, expr_as_exact_integer,
+    expr_as_string, list_items, system_expr,
+};
+
+pub(crate) fn eval_seed_random(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    match args {
+        [] => {
+            if !random_capability_allowed(session, "SeedRandom") {
+                return Ok(system_expr("$Failed"));
+            }
+            match session.seed_random_from_entropy() {
+                Ok(()) => Ok(system_expr("Null")),
+                Err(error) => {
+                    push_entropy_error(session, "SeedRandom", error.message());
+                    Ok(system_expr("$Failed"))
+                }
+            }
+        }
+        [seed] => {
+            let Some(seed) = expr_as_exact_integer(seed) else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
+            session.seed_random_with_integer(&seed);
+            Ok(system_expr("Null"))
+        }
+        _ => Ok(session.invalid_call_with_arg_range("SeedRandom", args, 0, 1)),
+    }
+}
+
+pub(crate) fn eval_random_integer(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    match args {
+        [] => Ok(random_integer_between(
+            session,
+            &BigInt::from(0_u8),
+            &BigInt::from(1_u8),
+        )),
+        [spec] => {
+            let Some((min, max)) = random_integer_bounds(spec) else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
+            Ok(random_integer_between(session, &min, &max))
+        }
+        [spec, count] => {
+            let Some((min, max)) = random_integer_bounds(spec) else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
+            let Some(count) = parse_output_count(session, count)? else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
+            let values = (0..count)
+                .map(|_| random_integer_between(session, &min, &max))
+                .collect();
+            Ok(list_expr(values))
+        }
+        _ => Ok(session.invalid_call_with_arg_range("RandomInteger", args, 0, 2)),
+    }
+}
+
+pub(crate) fn eval_random_choice(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let (list, count) = match args {
+        [list] => (list, None),
+        [list, count] => (list, Some(count)),
+        _ => return Ok(session.invalid_call_with_arg_range("RandomChoice", args, 1, 2)),
+    };
+    let Some(items) = list_items(list) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    if items.is_empty() {
+        session.push_message("RandomChoice", "empty", "expected a non-empty list");
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
+    let Some(count) = count else {
+        return Ok(items[random_usize_below(session, items.len())].clone());
+    };
+    let Some(count) = parse_output_count(session, count)? else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+
+    let choices = (0..count)
+        .map(|_| items[random_usize_below(session, items.len())].clone())
+        .collect();
+    Ok(list_expr(choices))
+}
+
+pub(crate) fn eval_random_sample(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let (list, count) = match args {
+        [list] => (list, None),
+        [list, count] => (list, Some(count)),
+        _ => return Ok(session.invalid_call_with_arg_range("RandomSample", args, 1, 2)),
+    };
+    let Some(items) = list_items(list) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    let count = match count {
+        Some(count) => {
+            let Some(count) = parse_output_count(session, count)? else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
+            if count > items.len() {
+                return Ok(session.invalid_call_with_message(
+                    "RandomSample",
+                    args,
+                    "ksamp",
+                    "sample count cannot exceed list length",
+                ));
+            }
+            count
+        }
+        None => items.len(),
+    };
+    session.enforce_generated_element_limit_for_count(count)?;
+
+    let mut sampled = items.to_vec();
+    for index in 0..count {
+        let swap_index = index + random_usize_below(session, sampled.len() - index);
+        sampled.swap(index, swap_index);
+    }
+    sampled.truncate(count);
+    Ok(list_expr(sampled))
+}
+
+pub(crate) fn eval_block_random(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [body] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("BlockRandom", args, 1));
+    };
+
+    session.evaluate_with_random_state_restored(body.clone())
+}
+
+pub(crate) fn eval_random_uuid(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if !args.is_empty() {
+        return Ok(session.invalid_call_with_exact_arg_count("RandomUuid", args, 0));
+    }
+
+    let mut bytes = [0_u8; 16];
+    session.random_fill_bytes(&mut bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    Ok(Expr::string(uuid_string(&bytes)))
+}
+
+pub(crate) fn eval_uuid_q(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [arg] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("UuidQ", args, 1));
+    };
+
+    Ok(bool_expr(expr_as_string(arg).is_some_and(uuid_q)))
+}
+
+pub(crate) fn eval_random_bytes(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [count] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("RandomBytes", args, 1));
+    };
+    let Some(count) = parse_byte_count(session, count)? else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+
+    let mut bytes = vec![0_u8; count];
+    match session.fill_entropy(&mut bytes) {
+        Ok(()) => Ok(byte_array_expr(&bytes)),
+        Err(error) => {
+            push_entropy_error(session, "RandomBytes", error.message());
+            Ok(system_expr("$Failed"))
+        }
+    }
+}
+
+fn random_integer_bounds(spec: &Expr) -> Option<(BigInt, BigInt)> {
+    if let Some(max) = expr_as_exact_integer(spec) {
+        return (max >= BigInt::from(0_u8)).then_some((BigInt::from(0_u8), max));
+    }
+
+    let [min, max] = list_items(spec)? else {
+        return None;
+    };
+    let min = expr_as_exact_integer(min)?;
+    let max = expr_as_exact_integer(max)?;
+    (min <= max).then_some((min, max))
+}
+
+fn random_integer_between(session: &mut Session, min: &BigInt, max: &BigInt) -> Expr {
+    let width = max - min + BigInt::from(1_u8);
+    Expr::integer(min + random_bigint_below(session, &width))
+}
+
+fn random_bigint_below(session: &mut Session, upper: &BigInt) -> BigInt {
+    debug_assert!(upper > &BigInt::from(0_u8));
+    if upper == &BigInt::from(1_u8) {
+        return BigInt::from(0_u8);
+    }
+
+    let max = upper - BigInt::from(1_u8);
+    let (_, max_bytes) = max.to_bytes_le();
+    let bit_count = significant_bits(&max_bytes);
+    let byte_count = bit_count.div_ceil(8);
+    let high_mask = 0xff_u8 >> (byte_count * 8 - bit_count);
+
+    loop {
+        let mut bytes = vec![0_u8; byte_count];
+        session.random_fill_bytes(&mut bytes);
+        if let Some(last) = bytes.last_mut() {
+            *last &= high_mask;
+        }
+
+        let value = bigint_from_unsigned_le_bytes(&bytes);
+        if &value < upper {
+            return value;
+        }
+    }
+}
+
+fn random_usize_below(session: &mut Session, upper: usize) -> usize {
+    random_bigint_below(session, &BigInt::from(upper))
+        .to_usize()
+        .expect("usize upper bound produces usize random values")
+}
+
+fn parse_output_count(session: &Session, expr: &Expr) -> Result<Option<usize>, EvalError> {
+    let Some(count) = expr_as_exact_integer(expr) else {
+        return Ok(None);
+    };
+    if count < BigInt::from(0_u8) {
+        return Ok(None);
+    }
+    session.enforce_generated_element_limit_for_big_count(&count)?;
+    Ok(Some(count.to_usize().expect(
+        "generated element limit keeps count representable",
+    )))
+}
+
+fn parse_byte_count(session: &Session, expr: &Expr) -> Result<Option<usize>, EvalError> {
+    let Some(count) = expr_as_exact_integer(expr) else {
+        return Ok(None);
+    };
+    if count < BigInt::from(0_u8) {
+        return Ok(None);
+    }
+    session.enforce_generated_element_limit_for_big_count(&count)?;
+    session.enforce_active_memory_limit_for_projected_bytes(
+        count
+            .to_usize()
+            .expect("generated element limit keeps byte count representable"),
+    )?;
+    Ok(Some(count.to_usize().expect(
+        "generated element limit keeps byte count representable",
+    )))
+}
+
+fn significant_bits(bytes: &[u8]) -> usize {
+    let Some(last) = bytes.last().copied() else {
+        return 0;
+    };
+    (bytes.len() - 1) * 8 + (8 - last.leading_zeros() as usize)
+}
+
+fn bigint_from_unsigned_le_bytes(bytes: &[u8]) -> BigInt {
+    let mut value = BigInt::from(0_u8);
+    for byte in bytes.iter().rev() {
+        value <<= 8_usize;
+        value += BigInt::from(*byte);
+    }
+    value
+}
+
+fn random_capability_allowed(session: &mut Session, name: &str) -> bool {
+    let policy = session.capability_policy();
+    if policy.is_unrestricted() || policy.allows(Capability::Random) {
+        return true;
+    }
+
+    session.push_message(
+        "General",
+        "sandbox",
+        format!("{name} is not permitted in this sandbox."),
+    );
+    false
+}
+
+fn push_entropy_error(session: &mut Session, symbol: &str, message: &str) {
+    if !session.has_entropy_source() {
+        session.emit_no_entropy_message();
+        return;
+    }
+
+    session.push_message(
+        symbol,
+        "entropy",
+        format!("could not read entropy: {message}"),
+    );
+}
+
+fn byte_array_expr(bytes: &[u8]) -> Expr {
+    Expr::call(
+        system_expr("ByteArray"),
+        vec![Expr::string(base64_encode(bytes))],
+    )
+}
+
+fn list_expr(items: Vec<Expr>) -> Expr {
+    Expr::call(system_expr("List"), items)
+}
+
+fn bool_expr(value: bool) -> Expr {
+    system_expr(if value { "True" } else { "False" })
+}
+
+fn uuid_string(bytes: &[u8; 16]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(36);
+
+    for (index, byte) in bytes.iter().enumerate() {
+        if matches!(index, 4 | 6 | 8 | 10) {
+            out.push('-');
+        }
+        out.push(HEX[(byte >> 4) as usize] as char);
+        out.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+
+    out
+}
+
+fn uuid_q(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    if bytes.len() != 36 {
+        return false;
+    }
+
+    for (index, byte) in bytes.iter().copied().enumerate() {
+        if matches!(index, 8 | 13 | 18 | 23) {
+            if byte != b'-' {
+                return false;
+            }
+        } else if !byte.is_ascii_hexdigit() {
+            return false;
+        }
+    }
+
+    bytes[14] == b'4' && matches!(bytes[19], b'8' | b'9' | b'a' | b'b' | b'A' | b'B')
+}

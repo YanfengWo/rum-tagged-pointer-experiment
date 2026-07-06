@@ -29,9 +29,9 @@
 //! # Running untrusted code
 //!
 //! Use [`HostConfig::sandboxed`] when evaluating untrusted source. It installs a
-//! deterministic `{Pure}` capability policy that blocks clock, file, and
-//! diagnostic builtins at dispatch, including runtime-constructed calls, and
-//! omits the default file I/O provider.
+//! deterministic `{Pure}` capability policy that blocks clock, file, random,
+//! and diagnostic builtins at dispatch, including runtime-constructed calls,
+//! and omits the default file I/O and entropy providers.
 //! Fine-grained policies are expressible through [`CapabilityPolicy`] and
 //! [`Capability`]; role and identity mapping is the caller's responsibility.
 //!
@@ -42,11 +42,13 @@
 
 mod config;
 mod cursor;
+mod entropy;
 mod file_io;
 mod model;
 mod session;
 
 pub use config::{HostConfig, HostResourceLimits};
+pub use entropy::StdEntropySource;
 pub use file_io::StdFileIo;
 pub use model::{
     HostCompletenessStatus, HostCompletionRequest, HostCompletionResponse, HostDefinition,

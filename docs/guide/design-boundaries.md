@@ -117,9 +117,39 @@ That makes sandboxing a dispatch policy, not a source-text scanner.
 `rum` makes two sandbox claims: no ambient authority by construction, and
 deterministic by default.
 
-The default sandbox policy excludes filesystem, clock, and diagnostic
+The default sandbox policy excludes filesystem, clock, random, and diagnostic
 capabilities. Evaluation results therefore depend only on session state and
 source unless the host grants more capability.
+
+Randomness follows that same boundary. `RandomInteger`, `RandomChoice`,
+`RandomSample`, `BlockRandom`, `RandomUuid`, and `UuidQ` use a deterministic
+session PRNG and are `Pure`. The algorithm is xoshiro256** with splitmix64 seed
+expansion. A fresh session starts from default seed `0`, and `reset()` restores
+that same default seed. The same seed yields the same sequence on every
+platform and rum version; changing this algorithm or seed expansion would be a
+documented breaking change.
+
+`SeedRandom[n]` accepts an exact integer. The integer seed is folded by reading
+little-endian magnitude bytes through splitmix64; negative seeds add a sign tag
+before xoshiro256** state expansion. `SeedRandom[0]` matches the fresh-session
+default stream. `BlockRandom[body]` evaluates `body` and restores the prior
+PRNG state afterward.
+
+Host snapshots are textual definition images and do not capture PRNG state.
+Restoring a snapshot starts from the session configuration's current PRNG
+state after reset, not from the source session's random stream position.
+
+The session PRNG is not cryptographic. It is for reproducible symbolic scripts,
+sampling, and session-local identifiers. `RandomUuid[]` returns a version-4
+format UUID string from that deterministic stream; use an entropy reseed first
+when global uniqueness matters. Password-grade bytes come from `RandomBytes`,
+which uses the host entropy provider directly and requires `Capability::Random`.
+`SeedRandom[]` also requires `Capability::Random` because it reseeds the session
+PRNG from host entropy.
+
+There is no `RandomReal` in the current exact-number boundary. A script that
+needs a rational value in `[0, 1)` should draw
+`RandomInteger[{0, d - 1}]/d` explicitly.
 
 This is not a claim of functional-programming referential transparency. The
 language has session state by design.

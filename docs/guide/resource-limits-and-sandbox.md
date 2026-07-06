@@ -162,7 +162,9 @@ The current capability classes are:
 - `FileRead`
 - `FileWrite`
 - `Clock`
+- `Random`
 - `Diagnostic`
+- `Process`
 
 Most language and rewrite work is `Pure`.
 
@@ -174,18 +176,27 @@ Wall-clock and time-effect builtins such as `AbsoluteTime`, `Timing`,
 `AbsoluteTiming`, `RepeatedTiming`, `TimeConstrained`, `Pause`,
 `EvaluationData`, and `TestReport` are `Clock`.
 
+Entropy-effect builtins are `Random`: `RandomBytes` draws directly from the
+host entropy provider, and `SeedRandom[]` reseeds the deterministic session
+PRNG from that provider.
+
 General file utilities are deliberately outside the kernel; the filesystem
 surface is the module system and session persistence only.
 
 Instrumentation and resource-disclosure builtins such as `RumProfileSnapshot`,
 `RumProfileReset`, `MemoryInUse`, and `MaxMemoryUsed` are `Diagnostic`.
 
+`Process` is reserved for future downstream process-control integrations and
+has no core builtins today.
+
 ## Sandboxed Host Configuration
 
 `HostConfig::sandboxed()` installs a `{Pure}` policy.
 
 Sandboxed sessions are deterministic: results depend only on session state and
-source. Grant `{Pure, Clock}` when scripts need time.
+source. The deterministic PRNG is session state, starts from the fixed default
+seed, and remains available to `Pure` random builtins. Grant `{Pure, Clock}`
+when scripts need time, or `{Pure, Random}` when scripts need host entropy.
 
 That denies every non-allowed builtin at dispatch.
 
@@ -195,12 +206,12 @@ checked when the builtin dispatch is reached.
 
 A denied call emits a `General::sandbox` message and returns `$Failed`.
 
-Sandboxed host configuration also omits the file I/O provider, so provider
-absence is a construction-level layer after capability dispatch.
+Sandboxed host configuration also omits the file I/O and entropy providers, so
+provider absence is a construction-level layer after capability dispatch.
 
 Fine-grained policies can allow, for example, `{Pure, FileRead}` for read-only
-file access, `{Pure, Clock}` for time, or `{Pure, Diagnostic}` for
-instrumentation without file access.
+file access, `{Pure, Clock}` for time, `{Pure, Random}` for entropy, or
+`{Pure, Diagnostic}` for instrumentation without file access.
 
 Role or identity mapping is the caller's job. `rum` supplies the capability
 partition, policy object, and dispatch enforcement.
