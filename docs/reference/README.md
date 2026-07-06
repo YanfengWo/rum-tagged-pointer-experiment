@@ -9,7 +9,8 @@ Regenerate it with:
 cargo run -p rum-stdlib --bin generate-builtin-reference
 ```
 
-Current builtin count: 513.
+The current builtin count is stated in the header of `builtins.md` itself
+(generated; not tracked here).
 
 The `rum-stdlib` drift test regenerates the file in memory and fails when the
 committed reference is out of sync.

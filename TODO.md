@@ -26,28 +26,17 @@ always-on; small pure-Rust dep → default-on Cargo feature; heavy/C-lib dep
   deps; never in `rum-stdlib`). Heavy encryption beyond hashing = non-
   default feature or downstream.
 
-## Usability Pass (deferred — after breadth "works")
+## Usability Pass — ACTIVE (opened 2026-07-07)
 
-Current focus is the "works" layer: get every intended capability
-functional. Once breadth is in, a distinct pass raises the "works well"
-layer. The `RandomPassword` arc (briefs 157-159) is the worked example —
-"works" (157) then three usability axes layered on: flexibility (158's
-policy constraints), convenience (159's named constants), safety (159's
-`Protected`). The usability axes, as checkable review lenses (more may be
-added later):
+The mainline. Canonical plan, axes, rules, and the sweep-unit tracker:
+[docs/dev/usability-pass.md](./docs/dev/usability-pass.md). User
+directives at open: HIGH coverage (all 605 installed builtins, the
+WL-inherited surface included) and compatible enhancement (WL names keep
+WL-conformant defaults; improvements land as new options or rum-native
+siblings). Method: audit briefs produce all-rows findings tables per
+unit; gaps triage into small fix briefs (the 158/159 shape).
 
-- **Flexibility** — can it meet complex real-world needs? (options,
-  composability, escape hatches for the non-default case).
-- **Convenience** — can a user turn intent into code easily? (named
-  constants over literals, sensible defaults, readable option surfaces,
-  the common case being short).
-- **Safety** — does the design prevent foot-guns? (`Protected` constants,
-  fail-closed defaults, capability gating, determinism where surprising
-  non-determinism would bite).
-
-Method when the pass starts: sweep the builtin catalog family by family
-against these axes; each gap becomes a small brief (the 158/159 shape).
-Not started — breadth first.
+- [ ] brief-161 (unit 1): audit the strings family (99 builtins).
 
 ## Release Transformation — COMPLETE (2026-07-06)
 
