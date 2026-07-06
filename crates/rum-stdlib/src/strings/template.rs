@@ -59,13 +59,45 @@ pub(crate) fn eval_template_apply(
             let Some(template) = expr_as_template_source(template) else {
                 return Ok(Expr::call(head.clone(), args.to_vec()));
             };
-            let Some(rendered) = template_apply_value(template, data) else {
+            render_template_apply(session, head, args, template, data, &[])
+        }
+        [template, data, option_args @ ..] => {
+            let Some(template) = expr_as_template_source(template) else {
                 return Ok(Expr::call(head.clone(), args.to_vec()));
             };
-            Ok(Expr::string(rendered))
+            render_template_apply(session, head, args, template, data, option_args)
         }
         _ => Ok(session.invalid_call_with_arg_range("TemplateApply", args, 1, 2)),
     }
+}
+
+fn render_template_apply(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+    template: &str,
+    data: &Expr,
+    option_args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let Some(strict) = parse_strict_option(session, "TemplateApply", option_args)? else {
+        return Ok(session.invalid_call_with_arg_range("TemplateApply", args, 1, 2));
+    };
+
+    if strict {
+        return match template_apply_value_strict(template, data) {
+            Ok(Some(rendered)) => Ok(Expr::string(rendered)),
+            Ok(None) => Ok(Expr::call(head.clone(), args.to_vec())),
+            Err(message) => {
+                session.push_message("TemplateApply", "slot", message);
+                Ok(system_expr("$Failed"))
+            }
+        };
+    }
+
+    let Some(rendered) = template_apply_value(template, data) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    Ok(Expr::string(rendered))
 }
 
 fn render_template_object(template: &str) -> Expr {
@@ -114,6 +146,42 @@ fn template_apply_value(template: &str, data: &Expr) -> Option<String> {
     }
 
     Some(output)
+}
+
+fn template_apply_value_strict(template: &str, data: &Expr) -> Result<Option<String>, String> {
+    let Some(segments) = parse_template_segments(template) else {
+        return Ok(None);
+    };
+    let named_slots = template_named_slot_values(data);
+    let Some(positional_slots) = template_positional_slot_values(data) else {
+        return Ok(None);
+    };
+    let mut positional_index = 0usize;
+    let mut output = String::new();
+
+    for segment in segments {
+        match segment {
+            TemplateSegment::Text(text) => output.push_str(&text),
+            TemplateSegment::PositionalSlot => {
+                let Some(value) = positional_slots.get(positional_index) else {
+                    return Err(format!(
+                        "TemplateApply has no value for positional slot {}.",
+                        positional_index + 1
+                    ));
+                };
+                output.push_str(value);
+                positional_index += 1;
+            }
+            TemplateSegment::NamedSlot(name) => {
+                let Some(value) = named_slots.get(&name) else {
+                    return Err(format!("TemplateApply has no value for slot `{name}`."));
+                };
+                output.push_str(value);
+            }
+        }
+    }
+
+    Ok(Some(output))
 }
 
 fn parse_template_segments(template: &str) -> Option<Vec<TemplateSegment>> {

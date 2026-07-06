@@ -190,7 +190,7 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "HtmlUnescape",
-        "Unescapes the five named HTML entities and decimal or hexadecimal numeric character references, leaving unknown entities verbatim.",
+        "Unescapes the five named HTML entities and decimal or hexadecimal numeric character references, leaving unknown and malformed entities verbatim by default; with \"Strict\" -> True, malformed entities fail closed with $Failed.",
         strings::eval_html_unescape,
     ),
     BuiltinSpec::ordinary(
@@ -270,7 +270,7 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "TemplateApply",
-        "Applies a simple named or positional string template in the current first-pass subset.",
+        "Applies a simple named or positional string template in the current first-pass subset; unfilled slots leave the call inert by default, while \"Strict\" -> True reports them and returns $Failed.",
         strings::eval_template_apply,
     ),
     BuiltinSpec::ordinary_with_attributes(
@@ -308,7 +308,7 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "Uncompress",
-        "Recovers values from the current project-local compressed string envelope.",
+        "Recovers values from the current project-local compressed string envelope; malformed envelopes stay inert by default, while \"Strict\" -> True reports them and returns $Failed.",
         strings::eval_uncompress,
     ),
     BuiltinSpec::ordinary(
@@ -368,7 +368,7 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "HammingDistance",
-        "Computes mismatch counts for equal-length strings or lists in the current first-pass subset.",
+        "Computes mismatch counts for equal-length strings or lists in the current first-pass subset; unequal lengths emit a message and leave the call inert.",
         strings::eval_hamming_distance,
     ),
     BuiltinSpec::ordinary(

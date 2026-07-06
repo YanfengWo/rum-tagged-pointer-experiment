@@ -20,12 +20,27 @@ pub(crate) fn eval_html_unescape(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [text] = args else {
+    let [text, option_args @ ..] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("HtmlUnescape", args, 1));
     };
     let Some(text) = expr_as_string(text) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
+    let Some(strict) = parse_strict_option(session, "HtmlUnescape", option_args)? else {
+        return Ok(session.invalid_call_with_exact_arg_count("HtmlUnescape", args, 1));
+    };
+
+    if strict {
+        return match html_unescape_strict(text) {
+            Ok(value) => Ok(Expr::string(value)),
+            Err(message) => Ok(failed_with_message(
+                session,
+                "HtmlUnescape",
+                "entity",
+                message,
+            )),
+        };
+    }
 
     Ok(Expr::string(html_unescape(text)))
 }
@@ -77,6 +92,43 @@ fn html_unescape(text: &str) -> String {
     }
 
     output
+}
+
+fn html_unescape_strict(text: &str) -> Result<String, String> {
+    let chars = text.chars().collect::<Vec<_>>();
+    let mut output = String::new();
+    let mut index = 0usize;
+
+    while index < chars.len() {
+        if chars[index] != '&' {
+            output.push(chars[index]);
+            index += 1;
+            continue;
+        }
+
+        let Some(end_offset) = chars[index + 1..].iter().position(|ch| *ch == ';') else {
+            return Err("HtmlUnescape found an unterminated entity.".to_string());
+        };
+        let end = index + 1 + end_offset;
+        let entity = chars[index + 1..end].iter().collect::<String>();
+        if entity.is_empty() {
+            return Err("HtmlUnescape found an empty entity.".to_string());
+        }
+        if let Some(decoded) = decode_entity(&entity) {
+            output.push(decoded);
+            index = end + 1;
+        } else if entity.starts_with('#') {
+            return Err("HtmlUnescape found a malformed numeric entity.".to_string());
+        } else if let Some(decoded) = decode_named_entity(&entity) {
+            output.push_str(decoded);
+            index = end + 1;
+        } else {
+            output.extend(chars[index..=end].iter());
+            index = end + 1;
+        }
+    }
+
+    Ok(output)
 }
 
 fn decode_named_entity(entity: &str) -> Option<&'static str> {

@@ -33,6 +33,17 @@ fn alphabet_distance_alignment_and_diff_extend_cl07() {
         eval_to_string(&mut session, "HammingDistance[{a, b, c}, {a, x, c}]"),
         "1"
     );
+    let unequal_hamming = session.eval_text("HammingDistance[\"ab\", \"a\"]").unwrap();
+    assert_eq!(
+        unequal_hamming.value.to_string(),
+        "HammingDistance[\"ab\", \"a\"]"
+    );
+    assert!(
+        unequal_hamming
+            .messages
+            .iter()
+            .any(|message| message.symbol == "HammingDistance" && message.tag == "len")
+    );
 
     assert_eq!(
         eval_to_string(

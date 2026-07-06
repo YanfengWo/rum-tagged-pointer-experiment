@@ -102,6 +102,44 @@ fn html_shell_path_url_and_args_utilities_cover_boundaries() {
         "\"a<b & é 世 &unknown;\""
     );
     assert_eq!(
+        eval_to_string(&mut session, "HtmlUnescape[\"&#xZZ;\"]"),
+        "\"&#xZZ;\""
+    );
+    let strict_bad_entity = session
+        .eval_text("HtmlUnescape[\"&#xZZ;\", \"Strict\" -> True]")
+        .unwrap();
+    assert_eq!(strict_bad_entity.value.to_string(), "$Failed");
+    assert!(
+        strict_bad_entity
+            .messages
+            .iter()
+            .any(|message| message.symbol == "HtmlUnescape" && message.tag == "entity")
+    );
+    let strict_big_entity = session
+        .eval_text("HtmlUnescape[\"&#999999999;\", \"Strict\" -> True]")
+        .unwrap();
+    assert_eq!(strict_big_entity.value.to_string(), "$Failed");
+    assert!(
+        strict_big_entity
+            .messages
+            .iter()
+            .any(|message| message.symbol == "HtmlUnescape" && message.tag == "entity")
+    );
+    let strict_unterminated_entity = session
+        .eval_text("HtmlUnescape[\"&amp\", \"Strict\" -> True]")
+        .unwrap();
+    assert_eq!(strict_unterminated_entity.value.to_string(), "$Failed");
+    assert!(
+        strict_unterminated_entity
+            .messages
+            .iter()
+            .any(|message| message.symbol == "HtmlUnescape" && message.tag == "entity")
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "HtmlUnescape[\"&amp;\", \"Strict\" -> True]"),
+        "\"&\""
+    );
+    assert_eq!(
         eval_to_string(&mut session, "ShellSplit[\"cc -o \\\"my prog\\\" main.c\"]"),
         "List[\"cc\", \"-o\", \"my prog\", \"main.c\"]"
     );

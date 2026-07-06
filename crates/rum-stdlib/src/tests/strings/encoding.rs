@@ -132,6 +132,30 @@ fn byte_arrays_transport_and_nearest_extend_cl07() {
         eval_to_string(&mut session, "ToString[Uncompress[Compress[1 + 1], Hold]]"),
         "\"Hold[2]\""
     );
+    let malformed_envelope = session
+        .eval_text("Uncompress[\"not-an-envelope\"]")
+        .unwrap();
+    assert_eq!(
+        malformed_envelope.value.to_string(),
+        "Uncompress[\"not-an-envelope\"]"
+    );
+    let strict_malformed_envelope = session
+        .eval_text("Uncompress[\"not-an-envelope\", \"Strict\" -> True]")
+        .unwrap();
+    assert_eq!(strict_malformed_envelope.value.to_string(), "$Failed");
+    assert!(
+        strict_malformed_envelope
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Uncompress" && message.tag == "env")
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Uncompress[Compress[\"abc\"], \"Strict\" -> True]"
+        ),
+        "\"abc\""
+    );
     assert_eq!(
         eval_to_string(&mut session, "Nearest[{1, 2, 5}, 3]"),
         "List[2]"

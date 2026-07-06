@@ -263,7 +263,7 @@ pub(crate) fn eval_hamming_distance(
         let lhs = lhs.chars().collect::<Vec<_>>();
         let rhs = rhs.chars().collect::<Vec<_>>();
         let Some(distance) = hamming_distance(&lhs, &rhs) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+            return Ok(invalid_hamming_distance_length(session, head, args));
         };
         return Ok(Expr::integer(BigInt::from(distance as u64)));
     }
@@ -273,12 +273,26 @@ pub(crate) fn eval_hamming_distance(
         call_items_with_head(&args[1], &system_expr("List")),
     ) {
         let Some(distance) = hamming_distance(lhs, rhs) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+            return Ok(invalid_hamming_distance_length(session, head, args));
         };
         return Ok(Expr::integer(BigInt::from(distance as u64)));
     }
 
     Ok(Expr::call(head.clone(), args.to_vec()))
+}
+
+fn invalid_hamming_distance_length(session: &mut Session, head: &Expr, args: &[Expr]) -> Expr {
+    let call = Expr::call(head.clone(), args.to_vec());
+    let message = format!("HammingDistance expects inputs with the same length in {call}.");
+    if !session
+        .messages()
+        .last()
+        .map(|last| last.symbol == "HammingDistance" && last.tag == "len" && last.text == message)
+        .unwrap_or(false)
+    {
+        session.push_message("HammingDistance", "len", message);
+    }
+    call
 }
 
 pub(crate) fn eval_longest_common_subsequence(

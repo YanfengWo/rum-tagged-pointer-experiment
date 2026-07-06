@@ -1536,7 +1536,7 @@ Groups list elements by transformed keys, including the current reducer form.
 
 ### HammingDistance
 
-Computes mismatch counts for equal-length strings or lists in the current first-pass subset.
+Computes mismatch counts for equal-length strings or lists in the current first-pass subset; unequal lengths emit a message and leave the call inert.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -1620,7 +1620,7 @@ Escapes the five HTML text characters &, <, >, double quote, and single quote.
 
 ### HtmlUnescape
 
-Unescapes the five named HTML entities and decimal or hexadecimal numeric character references, leaving unknown entities verbatim.
+Unescapes the five named HTML entities and decimal or hexadecimal numeric character references, leaving unknown and malformed entities verbatim by default; with "Strict" -> True, malformed entities fail closed with $Failed.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3776,7 +3776,7 @@ Tallies structurally same top-level elements in first-occurrence order.
 
 ### TemplateApply
 
-Applies a simple named or positional string template in the current first-pass subset.
+Applies a simple named or positional string template in the current first-pass subset; unfilled slots leave the call inert by default, while "Strict" -> True reports them and returns $Failed.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -4040,7 +4040,7 @@ Returns repeated tuples or cartesian products for normal expressions in the curr
 
 ### Uncompress
 
-Recovers values from the current project-local compressed string envelope.
+Recovers values from the current project-local compressed string envelope; malformed envelopes stay inert by default, while "Strict" -> True reports them and returns $Failed.
 
 - Attributes: `None`
 - Capability: `Pure`

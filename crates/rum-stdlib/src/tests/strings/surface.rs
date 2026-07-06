@@ -641,6 +641,30 @@ fn templates_text_words_codes_and_to_expression_extend_cl07() {
         eval_to_string(&mut session, "TemplateApply[\"x = ``\", 7]"),
         "\"x = 7\""
     );
+    let missing_slot = session
+        .eval_text("TemplateApply[\"`name`\", <||>]")
+        .unwrap();
+    assert_eq!(
+        missing_slot.value.to_string(),
+        "TemplateApply[\"`name`\", Association[]]"
+    );
+    let strict_missing_slot = session
+        .eval_text("TemplateApply[\"`name`\", <||>, \"Strict\" -> True]")
+        .unwrap();
+    assert_eq!(strict_missing_slot.value.to_string(), "$Failed");
+    assert!(
+        strict_missing_slot
+            .messages
+            .iter()
+            .any(|message| message.symbol == "TemplateApply" && message.tag == "slot")
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "TemplateApply[\"`x`\", <|\"x\" -> 1|>, \"Strict\" -> True]"
+        ),
+        "\"1\""
+    );
     assert_eq!(
         eval_to_string(&mut session, "TextWords[\"alpha, beta 123 gamma\"]"),
         "List[\"alpha\", \"beta\", \"123\", \"gamma\"]"

@@ -97,26 +97,56 @@ pub(crate) fn eval_uncompress(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    if !(1..=2).contains(&args.len()) {
+    if args.is_empty() {
         return Ok(session.invalid_call_with_arg_range("Uncompress", args, 1, 2));
     }
 
     let Some(source) = expr_as_string(&args[0]) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
+    let (wrapper, option_args) = uncompress_wrapper_and_options(&args[1..]);
+    let Some(strict) = parse_strict_option(session, "Uncompress", option_args)? else {
+        return Ok(session.invalid_call_with_arg_range("Uncompress", args, 1, 2));
+    };
     let Some((payload, original_form)) = parse_compress_envelope(source) else {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
+        return Ok(invalid_uncompress_envelope(session, head, args, strict));
     };
     let Some(restored) = session.restore_transport_expr(&payload, original_form) else {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
+        return Ok(invalid_uncompress_envelope(session, head, args, strict));
     };
 
-    if let Some(wrapper) = args.get(1) {
+    if let Some(wrapper) = wrapper {
         let wrapped_result = session.evaluate(Expr::call(wrapper.clone(), vec![restored]));
         return session.suspend_with_frame(wrapped_result, |_, value| Ok(value));
     }
 
     Ok(restored)
+}
+
+fn uncompress_wrapper_and_options(args: &[Expr]) -> (Option<&Expr>, &[Expr]) {
+    match args {
+        [] => (None, &[]),
+        [option, ..] if is_strict_option_rule(option) => (None, args),
+        [wrapper, rest @ ..] => (Some(wrapper), rest),
+    }
+}
+
+fn invalid_uncompress_envelope(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+    strict: bool,
+) -> Expr {
+    if strict {
+        session.push_message(
+            "Uncompress",
+            "env",
+            "Uncompress found a malformed or corrupt compressed string envelope.",
+        );
+        system_expr("$Failed")
+    } else {
+        Expr::call(head.clone(), args.to_vec())
+    }
 }
 
 fn byte_array_expr(bytes: &[u8]) -> Expr {

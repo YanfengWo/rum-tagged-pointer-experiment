@@ -62,6 +62,70 @@ fn string_slot_expr() -> Expr {
     Expr::call(system_expr("Slot"), vec![Expr::integer(BigInt::from(1_u8))])
 }
 
+fn parse_strict_option(
+    session: &mut Session,
+    symbol: &str,
+    explicit: &[Expr],
+) -> Result<Option<bool>, EvalError> {
+    let option_exprs = session.merged_option_exprs_for_system_symbol(symbol, explicit)?;
+    let mut strict = false;
+
+    for expr in option_exprs {
+        let Some((name, value)) = string_option_rule(&expr) else {
+            return Ok(None);
+        };
+        match name {
+            "Strict" => {
+                let Some(value) = bool_option_value(value) else {
+                    return Ok(None);
+                };
+                strict = value;
+            }
+            _ => return Ok(None),
+        }
+    }
+
+    Ok(Some(strict))
+}
+
+fn is_strict_option_rule(expr: &Expr) -> bool {
+    string_option_rule(expr)
+        .map(|(name, _)| name == "Strict")
+        .unwrap_or(false)
+}
+
+fn string_option_rule(expr: &Expr) -> Option<(&str, &Expr)> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    if !(is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
+        || args.len() != 2
+    {
+        return None;
+    }
+    Some((string_option_name(&args[0])?, &args[1]))
+}
+
+fn string_option_name(expr: &Expr) -> Option<&str> {
+    if let Some(name) = expr_as_string(expr) {
+        return Some(name);
+    }
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => Some(symbol.name()),
+        _ => None,
+    }
+}
+
+fn bool_option_value(expr: &Expr) -> Option<bool> {
+    if is_system_symbol_name(expr, "True") {
+        Some(true)
+    } else if is_system_symbol_name(expr, "False") {
+        Some(false)
+    } else {
+        None
+    }
+}
+
 fn string_unary_operator_form(symbol: &str, operator: &Expr) -> Expr {
     Expr::call(
         system_expr("Function"),
