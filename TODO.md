@@ -60,12 +60,13 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   workspace 1345/0. (Watch item: one transient rum-jupyter test failure
   in Codex's first workspace pass, green on rerun — if it recurs, brief
   it together with the signature.rs sha256 debt.)
-- [ ] brief-166 (unit-1 batch 4a, text shaping): `StringWrap`
-  `"PreserveNewlines"`, `StringIndent` `"BlankLines"`, `AlignColumns`
-  `"Separator"`, `StringRiffle` `{left, sep, right}` form,
-  `StringPadLeft`/`Right` list/cyclic padding.
+- [x] brief-166 DONE (559d4ab): text-shaping options + WL forms;
+  workspace 1345/0. (Hygiene note from its assess-on-touch:
+  `text_shape.rs` in warning range; split boundaries recorded in the
+  report — option parsing / format helpers / catalog subfamilies.)
 - [ ] brief-167 (unit-1 batch 4b, url/argv/encoding): `UrlEncode`/
-  `UrlDecode` form mode, `UrlParse` options, `ParseArgs` short options,
+  `UrlDecode` symmetric `"FormEncoding"` option, `UrlParse`
+  `"DefaultScheme"`/`"DecodeQuery"`, `ParseArgs` `"ShortOptions"`,
   `ToCharacterCode` encoding arg, `StringToByteArray` `"UTF-8"` alias.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
