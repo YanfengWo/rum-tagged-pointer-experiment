@@ -139,6 +139,32 @@ The goal is not "fewest crates". The goal is to spend custom implementation
 effort where `rum`'s semantics are unique, and to rely on mature libraries
 where the problem is standard, security-sensitive, or protocol-critical.
 
+### No unwanted dependencies for anyone
+
+A stdlib family that pulls an external crate must not force that crate on
+users who do not want the family. The decision rule, by weight of the
+dependency:
+
+- **Pure / zero-dependency families** (arithmetic, strings, patterns, the
+  self-implemented codecs — JSON/CSV/INI/TOML/XML/YAML — schema, random,
+  datetime, hex/base64): always compiled. There is no burden to gate.
+- **Small, pure-Rust, broadly-wanted external dependency**: a Cargo feature
+  that is **on by default**, so behavior is unchanged but a size-conscious
+  user can opt out with `default-features = false`. The digest family
+  (`sha2`/`sha1`/`md-5`/`crc32fast`) is this tier — feature `hash`.
+- **Heavy dependency or a C-library dependency**: a **non-default** Cargo
+  feature (opt-in), e.g. a future heavy-cryptography family.
+- **OS-touching, very heavy, or ambient-authority** surface: a **separate
+  downstream crate** registered through the `rum-host` builtin-installer
+  hook, never in `rum-stdlib` at all — `rum-fs`, `rum-os`, and a future
+  `rum-compress` (compression pulls C libraries; it goes downstream, after
+  `rum-fs`). This is the WL "package" model in Cargo terms.
+
+Two consequences to keep true: the generated builtin reference and its
+drift test are defined at the DEFAULT feature set (so `cargo test
+--workspace` sees the full default catalog); and a `--no-default-features`
+build must compile and must not link the gated crates.
+
 ## Layering
 
 The workspace is split by responsibility.

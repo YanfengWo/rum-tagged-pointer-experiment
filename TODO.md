@@ -3,6 +3,24 @@
 This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
+## Feature-Gating Policy (ADOPTED 2026-07-07)
+
+External-dependency stdlib families must not be forced on users who do not
+want them (ARCHITECTURE.md §No unwanted dependencies). Rule: pure families
+always-on; small pure-Rust dep → default-on Cargo feature; heavy/C-lib dep
+→ non-default feature; OS-touching/very-heavy → downstream crate via the
+`with_builtin_installer` hook.
+
+- [ ] brief-160 (in flight): establish the feature skeleton in `rum-stdlib`
+  and retroactively gate the digest family behind a default-on `hash`
+  feature (`sha2`/`sha1`/`md-5`/`crc32fast` optional). Keep hex/base64/
+  ByteArray always-on (self-implemented). Reference/drift defined at
+  default features; `--no-default-features` must build without the digest
+  crates.
+- Compression = downstream `rum-compress` crate, AFTER `rum-fs` (C-library
+  deps; never in `rum-stdlib`). Heavy encryption beyond hashing = non-
+  default feature or downstream.
+
 ## Usability Pass (deferred — after breadth "works")
 
 Current focus is the "works" layer: get every intended capability
