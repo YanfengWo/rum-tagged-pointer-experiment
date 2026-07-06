@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 584
+Builtin count: 588
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -1387,6 +1387,14 @@ Decodes standard RFC 4648 base64 with padding into a ByteArray, failing closed o
 - Attributes: `None`
 - Capability: `Pure`
 
+### FromCsv
+
+Parses CSV text into Lists of Strings, optionally using the first row as Association headers.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: parses RFC 4180-style text into String fields only; plain rows may be ragged, while Headers -> True rejects duplicate headers and ragged data rows. Delimiter must be one non-quote, non-newline character.
+
 ### FromDateString
 
 Parses the documented ISO 8601 UTC/fixed-offset subset into an exact Unix timestamp.
@@ -1408,6 +1416,14 @@ Decodes even-length hexadecimal text into a ByteArray, failing closed on malform
 
 - Attributes: `None`
 - Capability: `Pure`
+
+### FromIni
+
+Parses rum's fail-closed INI dialect into an Association of section Associations.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: implements rum's documented INI dialect only: whole-line ;/# comments, [section] headers, key = value lines, trimmed keys/values, verbatim values, no nesting, no multiline values, and no inline comments.
 
 ### FromJson
 
@@ -3808,6 +3824,14 @@ Returns Unicode scalar values for strings in the current first-pass subset.
 - Attributes: `Listable`
 - Capability: `Pure`
 
+### ToCsv
+
+Renders Lists of String rows or String-keyed Association rows as CSV text.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: renders only String fields from list rows or String-keyed Association rows; Association rows imply a header row and must share the same keys. Delimiter must be one non-quote, non-newline character.
+
 ### ToExpression
 
 Parses and evaluates input strings using the current InputForm/StandardForm-compatible subset.
@@ -3821,6 +3845,14 @@ Encodes a string's UTF-8 bytes or a ByteArray as lowercase hexadecimal text.
 
 - Attributes: `None`
 - Capability: `Pure`
+
+### ToIni
+
+Renders an Association of section Associations as rum's INI dialect.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: renders only Association-of-Associations with String section names, keys, and values; unrepresentable names, multiline values, whitespace-trimming value loss, and an empty default section fail closed.
 
 ### ToJson
 

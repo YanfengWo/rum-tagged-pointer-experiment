@@ -1,7 +1,8 @@
 # Structured Data
 
-`FromJson` and `ToJson` convert between JSON text and the JSON-representable
-subset of `rum` expressions.
+`FromJson`/`ToJson`, `FromCsv`/`ToCsv`, and `FromIni`/`ToIni` convert between
+common structured-data text formats and the representable subset of `rum`
+expressions.
 
 They are pure string codecs. They do not read or write files, do not consult
 host capabilities beyond `Pure`, and fail closed with `$Failed` plus a runtime
@@ -165,3 +166,155 @@ with standard library functions before encoding again:
 $ cargo run -q -p rum-cli -- --eval 'ToJson[Mean[Map[Lookup[#, "v"] &, First[GatherBy[FromJson["[{\"g\":\"a\",\"v\":1},{\"g\":\"a\",\"v\":3},{\"g\":\"b\",\"v\":5}]"], Lookup[#, "g"] &]]]]]'
 "2"
 ```
+
+## CSV Mapping
+
+`FromCsv[str]` parses RFC 4180-style CSV into a `List` of row `List`s. Every
+field is a String. There is no numeric, boolean, date, or expression inference;
+scripts convert fields explicitly with tools such as `FromDigits` or
+`ToExpression`.
+
+Quoted fields may contain the delimiter, doubled quotes, and newlines. Rows
+split on LF or CRLF, and one trailing newline is not a final empty row.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromCsv["a,\"b,1\"\nc,d"]'
+List[List["a", "b,1"], List["c", "d"]]
+```
+
+Plain CSV mode allows ragged rows because real-world CSV often has them.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromCsv["a,b\n1"]'
+List[List["a", "b"], List["1"]]
+```
+
+`FromCsv[str, "Headers" -> True]` uses the first row as header names and returns
+a `List` of `Association`s. Header names must be unique, and data rows must
+have the same field count as the header row.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromCsv["name,qty\napple,3\nkiwi,10", "Headers" -> True]'
+List[Association[Rule["name", "apple"], Rule["qty", "3"]], Association[Rule["name", "kiwi"], Rule["qty", "10"]]]
+```
+
+`"Delimiter" -> "\t"` selects TSV. The delimiter must be a single non-quote,
+non-newline character.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromCsv["a\tb\n1\t2", "Delimiter" -> "\t"]'
+List[List["a", "b"], List["1", "2"]]
+```
+
+## CSV Output
+
+`ToCsv[rows]` accepts either a list of list rows whose fields are all Strings,
+or a list of Associations with identical String keys and String values.
+Association rows imply `"Headers" -> True`; the first row's key order supplies
+the output header order.
+
+Fields are quoted only when they contain the delimiter, a quote, LF, or CR.
+Quotes inside fields are doubled, and rows are joined with `\n`.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ToCsv[{{"x","y\"z"},{"1","2"}}]'
+"x,\"y\"\"z\"\n1,2"
+```
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ToCsv[{<|"name" -> "apple", "qty" -> "3"|>, <|"qty" -> "10", "name" -> "kiwi"|>}]'
+"name,qty\napple,3\nkiwi,10"
+```
+
+CSV decoding and encoding round-trip for the representable String-field subset
+in both plain and header modes.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromCsv[ToCsv[{{"a,b","q\"r"},{"line\nx","z"}}]]'
+List[List["a,b", "q\"r"], List["line\nx", "z"]]
+```
+
+Because header-mode CSV returns Associations, it composes directly with other
+structured-data codecs.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ToJson[Map[Function[row, <|"item" -> Lookup[row, "name"], "qty" -> FromDigits[Lookup[row, "qty"]]|>], FromCsv["name,qty\napple,3\nkiwi,10", "Headers" -> True]]]'
+"[{\"item\":\"apple\",\"qty\":3},{\"item\":\"kiwi\",\"qty\":10}]"
+```
+
+CSV parse errors use `FromCsv::csv` and name the byte offset.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromCsv["a,\"unterminated"]'
+! FromCsv::csv: Invalid CSV at byte offset 2: unterminated quoted field.
+$Failed
+```
+
+CSV encoding errors use `ToCsv::csv` and name the offending row/column when a
+field is not a String.
+
+## INI Mapping
+
+`FromIni[str]` parses rum's own INI dialect into an `Association` from section
+name to section `Association`. Section names, keys, and values are all Strings.
+
+The dialect has `[section]` headers and `key = value` lines. Keys and values are
+trimmed of surrounding whitespace. Values are otherwise taken verbatim: quotes
+are not stripped, and `;` or `#` inside a value is part of the value. Blank
+lines are ignored. Comment lines start with `;` or `#`, allowing leading
+whitespace. There is no nesting, no multiline value syntax, and no inline
+comments.
+
+Keys before any section header are stored under the section name `""`.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromIni["; c\ntop = 1\n[db]\nhost = h ; not a comment\n"]'
+Association[Rule["", Association[Rule["top", "1"]]], Rule["db", Association[Rule["host", "h ; not a comment"]]]]
+```
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromIni["[s]\nk = \"v\"\n"]'
+Association[Rule["s", Association[Rule["k", "\"v\""]]]]
+```
+
+## INI Output
+
+`ToIni[assoc]` renders an Association-of-Associations with String section names,
+String keys, and String values. The `""` section, when present, is emitted first
+without a header.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ToIni[<|"" -> <|"top" -> "1"|>, "db" -> <|"host" -> "h ; not a comment"|>|>]'
+"top = 1\n[db]\nhost = h ; not a comment"
+```
+
+Section and key names containing `[`, `]`, `=`, LF, or CR are not representable
+and fail closed. Names starting with `;` or `#` also fail closed. Because
+`FromIni` trims keys and values, `ToIni` rejects keys or values whose leading or
+trailing whitespace would be lost, and it rejects multiline values. An empty
+default `""` section is not representable.
+
+The representable subset round-trips exactly through `FromIni[ToIni[x]]`.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromIni[ToIni[<|"" -> <|"top" -> "1"|>, "s" -> <|"k" -> "v"|>|>]]'
+Association[Rule["", Association[Rule["top", "1"]]], Rule["s", Association[Rule["k", "v"]]]]
+```
+
+Because `FromIni` returns ordinary Associations, scripts can edit values before
+encoding again.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ToIni[<|"s" -> <|"k" -> StringJoin[Lookup[Lookup[FromIni["[s]\nk = v\n"], "s"], "k"], "2"]|>|>]'
+"[s]\nk = v2"
+```
+
+INI parse errors use `FromIni::ini` and name the byte offset.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromIni["[dup]\n[dup]\n"]'
+! FromIni::ini: Invalid INI at byte offset 6: duplicate section name "dup".
+$Failed
+```
+
+INI encoding errors use `ToIni::ini`.

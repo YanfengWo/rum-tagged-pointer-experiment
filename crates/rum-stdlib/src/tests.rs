@@ -16,6 +16,8 @@ mod bytes;
 mod calculus;
 #[path = "tests/catalog_capabilities.rs"]
 mod catalog_capabilities;
+#[path = "tests/codecs_text.rs"]
+mod codecs_text;
 #[path = "tests/combinatorics.rs"]
 mod combinatorics;
 #[path = "tests/datetime.rs"]
@@ -211,8 +213,10 @@ fn stdlib_catalog_specs() -> impl Iterator<Item = &'static rum_runtime::kernel_a
         catalog::BYTE_BUILTINS,
         catalog::COMBINATORICS_BUILTINS,
         catalog::CONTROL_BUILTINS,
+        catalog::CSV_BUILTINS,
         catalog::DATETIME_BUILTINS,
         catalog::FUNCTIONAL_BUILTINS,
+        catalog::INI_BUILTINS,
         catalog::INTEGER_DIGITS_BUILTINS,
         catalog::JSON_BUILTINS,
         catalog::NUMBER_THEORY_BUILTINS,

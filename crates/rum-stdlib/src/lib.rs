@@ -12,8 +12,10 @@ mod calculus;
 mod catalog;
 mod combinatorics;
 mod control_flow;
+mod csv;
 mod datetime;
 mod functional_ops;
+mod ini;
 mod integer_digits;
 mod json;
 mod logic;
@@ -53,10 +55,16 @@ pub fn install_core(session: &mut Session) {
     for spec in catalog::CONTROL_BUILTINS {
         session.register_builtin(*spec);
     }
+    for spec in catalog::CSV_BUILTINS {
+        session.register_builtin(*spec);
+    }
     for spec in catalog::DATETIME_BUILTINS {
         session.register_builtin(*spec);
     }
     for spec in catalog::FUNCTIONAL_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::INI_BUILTINS {
         session.register_builtin(*spec);
     }
     for spec in catalog::INTEGER_DIGITS_BUILTINS {

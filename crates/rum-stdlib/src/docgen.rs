@@ -48,8 +48,16 @@ pub const LIMITS: &[(&str, &str)] = &[
         "handles rational-coefficient polynomial expressions; current factorization extracts monomial factors and recursively splits discovered linear factors.",
     ),
     (
+        "FromCsv",
+        "parses RFC 4180-style text into String fields only; plain rows may be ragged, while Headers -> True rejects duplicate headers and ragged data rows. Delimiter must be one non-quote, non-newline character.",
+    ),
+    (
         "FromDateString",
         "accepts only the documented ISO 8601 subset with optional Z or fixed +/-HH:MM offsets; there is no time-zone database and no leap-second support.",
+    ),
+    (
+        "FromIni",
+        "implements rum's documented INI dialect only: whole-line ;/# comments, [section] headers, key = value lines, trimmed keys/values, verbatim values, no nesting, no multiline values, and no inline comments.",
     ),
     (
         "Prime",
@@ -91,6 +99,14 @@ pub const LIMITS: &[(&str, &str)] = &[
     (
         "ShellSplit",
         "implements only whitespace splitting, single and double quotes, and backslash escapes outside single quotes; expansion, globbing, command substitution, and short-option parsing are outside this text utility.",
+    ),
+    (
+        "ToCsv",
+        "renders only String fields from list rows or String-keyed Association rows; Association rows imply a header row and must share the same keys. Delimiter must be one non-quote, non-newline character.",
+    ),
+    (
+        "ToIni",
+        "renders only Association-of-Associations with String section names, keys, and values; unrepresentable names, multiline values, whitespace-trimming value loss, and an empty default section fail closed.",
     ),
     (
         "StringDedent",
