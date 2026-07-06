@@ -44,10 +44,12 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
 - [x] brief-162: correct stop-loss (Listable would change nested/mixed
   inert forms; pinned current behavior in a test). Resolution in the
   tracker: align upward.
-- [ ] brief-162b (unit-1 fixes, batch 1 v2): attribute hygiene with the
-  threading upgrade decided — `Protected` string-pattern symbols;
-  `Listable` case-conversion alignment (nested/mixed inert forms now
-  thread).
+- [x] brief-162b DONE (c474840): attribute hygiene — 18 `Protected`
+  pattern symbols; `Listable` case conversion with kernel threading
+  owning list mapping (net code reduction). Workspace 1342/0.
+- [ ] brief-163 (unit-1 crypto surface, plan A per user): remove toy
+  `Encrypt`/`Decrypt`/`EncryptedObject`; delete hand-rolled SHA-256;
+  `Hash` onto RustCrypto behind `hash` + SHA1/SHA512/MD5/CRC32 names.
 
 ## Release Transformation — COMPLETE (2026-07-06)
 

@@ -97,15 +97,16 @@ Audit brief-161: 101 rows / 99 names, findings in
    arg, `StringToByteArray` `"UTF-8"` alias.
 5. **Fail-closed strict modes** (safety): `TemplateApply`,
    `Uncompress`, `HtmlUnescape`, `HammingDistance`.
-6. **Crypto surface — BLOCKED on a user decision.** The audit flagged
-   `Encrypt`'s toy XOR-SHA256 as a hazard; triage found more:
-   `strings/encoding.rs` HAND-ROLLS SHA-256 (violates the digest
-   policy: RustCrypto, never hand-rolled) and duplicates
-   `bytes/digest.rs`. Candidate resolutions: remove
+6. **brief-163 — crypto surface, plan A (user decision 2026-07-07).**
+   The audit flagged `Encrypt`'s toy XOR-SHA256 as a hazard; triage
+   found more: `strings/encoding.rs` HAND-ROLLED SHA-256 (violates the
+   digest policy: RustCrypto, never hand-rolled) and duplicated
+   `bytes/digest.rs`. Decided: remove
    `Encrypt`/`Decrypt`/`EncryptedObject` (policy: encryption/signing
-   never in kernel) and re-plumb `Hash` onto the feature-gated
-   RustCrypto digests; or keep-and-document loudly. Not dispatched
-   until decided.
+   never in kernel — the guide already said so), delete the hand-rolled
+   SHA-256, re-plumb `Hash` onto the RustCrypto digests behind the
+   `hash` feature, and extend its method names to
+   SHA1/SHA512/MD5/CRC32.
 
 Corrections to audit findings (so fix briefs do not inherit them):
 `LongestCommonSubsequence`'s contiguous behavior IS the WL contract
