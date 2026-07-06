@@ -35,6 +35,15 @@ $ cargo run -q -p rum-cli -- --eval 'AlignColumns[{{"name","qty"},{"apple","3"},
 "name   qty\napple  3\nkiwi   10"
 ```
 
+`DecimalString[x, n]` renders an exact integer or rational as a decimal string
+with exactly `n` fractional digits, rounding half away from zero. It is useful
+with `AlignColumns` for fixed-width numeric report columns.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'AlignColumns[{{"item", "value"}, {"pi", DecimalString[157/50, 2]}, {"third", DecimalString[1/3, 4]}, {"carry", DecimalString[999/1000, 2]}}]'
+"item   value\npi     3.14\nthird  0.3333\ncarry  1.00"
+```
+
 ## HTML And Shell Strings
 
 `HtmlEscape` escapes `&`, `<`, `>`, `"`, and `'`. `HtmlUnescape` handles the

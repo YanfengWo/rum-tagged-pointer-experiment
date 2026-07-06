@@ -28,6 +28,10 @@ pub const LIMITS: &[(&str, &str)] = &[
         "renders ISO 8601 UTC only; non-integer seconds are rendered only when their exact rational value has a terminating decimal expansion, and the zero-argument current-time form requires Capability::Clock.",
     ),
     (
+        "DecimalString",
+        "uses exact integer/rational arithmetic only, rounds half away from zero, and always emits exactly n fractional digits.",
+    ),
+    (
         "FileExtension",
         "dotfiles such as .bashrc have no extension; only the final slash-separated path component is inspected.",
     ),

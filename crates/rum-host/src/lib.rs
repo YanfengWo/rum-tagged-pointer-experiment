@@ -3,8 +3,9 @@
 //! `rum-host` wraps the broader `rum-runtime` request API in transport-friendly
 //! host types. Rust hosts should use this crate for session construction,
 //! evaluation, structured outcomes, resumable input, cancellation, timeouts,
-//! reset, snapshot/restore, and capability policy configuration instead of
-//! depending directly on evaluator internals.
+//! reset, snapshot/restore, downstream builtin-family installation, and
+//! capability policy configuration instead of depending directly on evaluator
+//! internals.
 //!
 //! # Quick start
 //!
@@ -47,7 +48,7 @@ mod file_io;
 mod model;
 mod session;
 
-pub use config::{HostConfig, HostResourceLimits};
+pub use config::{BuiltinInstaller, HostConfig, HostResourceLimits};
 pub use entropy::StdEntropySource;
 pub use file_io::StdFileIo;
 pub use model::{

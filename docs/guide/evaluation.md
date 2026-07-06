@@ -28,6 +28,18 @@ The first expression stores a delayed downvalue.
 The second expression evaluates through that downvalue and then through exact
 arithmetic.
 
+A common memoization idiom is `f[x_] := f[x] = rhs`: the delayed definition
+computes a value once for a matching argument, then stores an immediate
+definition for that concrete call.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'calls = 0; fib[0] = 0; fib[1] = 1; fib[n_Integer] := fib[n] = (calls = calls + 1; fib[n - 1] + fib[n - 2]); {fib[8], fib[8], calls}'
+List[21, 21, 7]
+```
+
+The counter increments for `fib[2]` through `fib[8]`; the second `fib[8]` reads
+the stored immediate value.
+
 ## Call Pipeline
 
 For calls, the evaluator currently follows this staged shape:

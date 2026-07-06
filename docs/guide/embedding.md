@@ -55,6 +55,7 @@ Use `HostSession::builder()` when you need to change configuration:
 - tracing
 - capability policy
 - whether core builtins are installed
+- downstream builtin-family installers
 - the full `HostConfig`
 
 `HostConfig` carries:
@@ -68,9 +69,18 @@ Use `HostSession::builder()` when you need to change configuration:
 - `tracing_enabled`
 - `asserts_enabled`
 - `install_core_builtins`
+- `builtin_installers`
 
 The default trusted configuration installs `StdFileIo`; sandboxed
 configuration omits a file provider.
+
+Downstream builtin families install through
+`HostSession::builder().with_builtin_installer(...)`. Installers receive the
+runtime kernel session, run in builder order after the optional core builtin
+install, are retained by cloned `HostConfig` values, and are re-applied by
+`reset()`. Capability policy still gates these builtins at dispatch, so a
+sandboxed session can run a downstream `Pure` builtin while denying a
+downstream `FileRead` or `FileWrite` builtin.
 
 ## Evaluating
 

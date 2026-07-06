@@ -20,7 +20,8 @@ use crate::model::{
 /// Builder for [`HostSession`].
 ///
 /// Use this when the default session configuration needs tracing, sandboxing,
-/// or core-builtin installation changes before construction.
+/// core-builtin installation changes, or downstream builtin-family installers
+/// before construction.
 #[derive(Clone, Debug)]
 pub struct HostSessionBuilder {
     config: HostConfig,
@@ -61,6 +62,22 @@ impl HostSessionBuilder {
     /// Enables or disables installation of the standard core builtins.
     pub fn with_core_builtins(mut self, enabled: bool) -> Self {
         self.config.install_core_builtins = enabled;
+        self
+    }
+
+    /// Adds a downstream builtin-family installer.
+    ///
+    /// Installers are applied in the order added, after the optional core
+    /// builtin installation. They are part of the stored host configuration, so
+    /// sessions built from cloned configurations keep them, and
+    /// [`HostSession::reset`] re-applies them. Snapshot images capture user
+    /// definitions only; installer-provided builtin handlers come from the
+    /// restored session's configuration.
+    pub fn with_builtin_installer(
+        mut self,
+        installer: impl Fn(&mut Session) + Send + Sync + 'static,
+    ) -> Self {
+        self.config = self.config.with_builtin_installer(installer);
         self
     }
 
@@ -134,17 +151,22 @@ impl HostSession {
         if config.install_core_builtins {
             rum_stdlib::install_core(&mut session);
         }
+        for installer in &config.builtin_installers {
+            installer.install(&mut session);
+        }
 
         session
     }
 
     /// Rebuilds this session to its original post-construction state.
     ///
-    /// This drops all user state, including definitions, attributes, contexts,
-    /// loaded packages, messages, and gensyms. It also invalidates any
-    /// previously returned [`HostCancelHandle`], because the rebuilt session has
-    /// a fresh interrupt flag; obtain a new handle after reset. If the session
-    /// was poisoned by a caught panic, reset clears the poisoned flag.
+    /// This re-applies core builtins and downstream builtin installers from the
+    /// stored configuration, then drops all user state, including definitions,
+    /// attributes, contexts, loaded packages, messages, and gensyms. It also
+    /// invalidates any previously returned [`HostCancelHandle`], because the
+    /// rebuilt session has a fresh interrupt flag; obtain a new handle after
+    /// reset. If the session was poisoned by a caught panic, reset clears the
+    /// poisoned flag.
     pub fn reset(&mut self) {
         self.session = Self::build_inner_session(&self.config);
         self.poisoned = false;
@@ -154,9 +176,10 @@ impl HostSession {
     ///
     /// The image captures own values, delayed own values, down values, up values,
     /// sub values, and attributes for symbols that have definitions. It does not
-    /// capture attribute-only symbols, `$` variables, options, messages, the
-    /// gensym counter, PRNG state, or contexts beyond what the generated source
-    /// re-establishes. This is a text image, not a binary `.mx` dump.
+    /// capture attribute-only symbols, `$` variables, options, messages,
+    /// installer-provided builtin handlers, the gensym counter, PRNG state, or
+    /// contexts beyond what the generated source re-establishes. This is a text
+    /// image, not a binary `.mx` dump.
     pub fn snapshot_to_bytes(&self) -> Vec<u8> {
         self.session.snapshot_definitions_source().into_bytes()
     }
@@ -167,8 +190,9 @@ impl HostSession {
     /// Restore decodes the bytes, resets the session to its original
     /// post-construction state, then evaluates the snapshot source. The image
     /// captures WL-level definitions and attributes for defined symbols; it does
-    /// not capture attribute-only symbols, `$` variables, options, messages, the
-    /// gensym counter, PRNG state, or contexts beyond what the source re-establishes.
+    /// not capture attribute-only symbols, `$` variables, options, messages,
+    /// installer-provided builtin handlers, the gensym counter, PRNG state, or
+    /// contexts beyond what the source re-establishes.
     pub fn restore_from_bytes(&mut self, bytes: &[u8]) -> Result<(), HostFailure> {
         let source = std::str::from_utf8(bytes).map_err(snapshot_decode_failure)?;
         self.reset();
@@ -209,6 +233,7 @@ impl HostSession {
             tracing_enabled: config.tracing_enabled,
             asserts_enabled: config.asserts_enabled,
             install_core_builtins: self.install_core_builtins,
+            builtin_installers: self.config.builtin_installers.clone(),
         }
     }
 

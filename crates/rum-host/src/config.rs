@@ -1,10 +1,56 @@
+use std::fmt;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use rum_runtime::{
     Capability, CapabilityPolicy, EntropyProvider, FileIoProvider, ResourceLimits, SessionConfig,
+    kernel_api::Session,
 };
 
 use crate::{StdEntropySource, StdFileIo};
+
+/// Cloneable installer for a downstream builtin family.
+///
+/// Installers receive the runtime kernel [`Session`] and may register builtin
+/// specs through the public kernel API. Host sessions apply installers in
+/// stored order after the optional core builtin installation whenever a session
+/// is built or reset.
+#[derive(Clone)]
+pub struct BuiltinInstaller {
+    inner: Arc<dyn Fn(&mut Session) + Send + Sync + 'static>,
+}
+
+impl BuiltinInstaller {
+    /// Wraps a builtin-family installer callback.
+    pub fn new(installer: impl Fn(&mut Session) + Send + Sync + 'static) -> Self {
+        Self {
+            inner: Arc::new(installer),
+        }
+    }
+
+    /// Wraps a shared builtin-family installer callback.
+    pub fn from_arc(installer: Arc<dyn Fn(&mut Session) + Send + Sync + 'static>) -> Self {
+        Self { inner: installer }
+    }
+
+    pub(crate) fn install(&self, session: &mut Session) {
+        (self.inner)(session);
+    }
+}
+
+impl fmt::Debug for BuiltinInstaller {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("BuiltinInstaller")
+    }
+}
+
+impl PartialEq for BuiltinInstaller {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.inner, &other.inner)
+    }
+}
+
+impl Eq for BuiltinInstaller {}
 
 /// Resource limits applied by a host session.
 ///
@@ -68,7 +114,8 @@ impl From<HostResourceLimits> for ResourceLimits {
 ///
 /// `HostConfig` is the stable embedding configuration surface for resource
 /// limits, capability policy, context state, file I/O and entropy providers,
-/// tracing, assertions, and whether core builtins are installed.
+/// tracing, assertions, builtin-family installers, and whether core builtins
+/// are installed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostConfig {
     /// Resource limits installed into the runtime session.
@@ -91,6 +138,8 @@ pub struct HostConfig {
     pub asserts_enabled: bool,
     /// Whether `rum-stdlib` core builtins are installed when the session is built.
     pub install_core_builtins: bool,
+    /// Downstream builtin-family installers applied after the optional core install.
+    pub builtin_installers: Vec<BuiltinInstaller>,
 }
 
 impl Default for HostConfig {
@@ -108,6 +157,7 @@ impl Default for HostConfig {
             tracing_enabled: config.tracing_enabled,
             asserts_enabled: config.asserts_enabled,
             install_core_builtins: true,
+            builtin_installers: Vec::new(),
         }
     }
 }
@@ -202,6 +252,22 @@ impl HostConfig {
     /// Enables or disables installation of the standard core builtins.
     pub fn with_core_builtins(mut self, enabled: bool) -> Self {
         self.install_core_builtins = enabled;
+        self
+    }
+
+    /// Adds a downstream builtin-family installer to sessions built from this configuration.
+    ///
+    /// Installers are cloned with the configuration, applied in insertion order
+    /// after the optional core builtin installation, and re-applied by
+    /// [`crate::HostSession::reset`]. Snapshot images capture user definitions
+    /// only; installer-provided builtin handlers come from the restored
+    /// session's configuration.
+    pub fn with_builtin_installer(
+        mut self,
+        installer: impl Fn(&mut Session) + Send + Sync + 'static,
+    ) -> Self {
+        self.builtin_installers
+            .push(BuiltinInstaller::new(installer));
         self
     }
 

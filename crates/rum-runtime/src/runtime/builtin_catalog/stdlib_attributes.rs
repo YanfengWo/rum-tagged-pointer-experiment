@@ -268,6 +268,7 @@ const STDLIB_EMPTY_ATTRIBUTE_NAMES: &[&str] = &[
     "DateString",
     "DayOfWeek",
     "DaysInMonth",
+    "DecimalString",
     "Decrypt",
     "Delete",
     "DeleteCases",

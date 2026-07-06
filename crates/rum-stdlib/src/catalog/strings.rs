@@ -151,6 +151,11 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
         strings::eval_align_columns,
     ),
     BuiltinSpec::ordinary(
+        "DecimalString",
+        "Renders an exact number as a plain decimal string with exactly n fractional digits.",
+        strings::eval_decimal_string,
+    ),
+    BuiltinSpec::ordinary(
         "HtmlEscape",
         "Escapes the five HTML text characters &, <, >, double quote, and single quote.",
         strings::eval_html_escape,

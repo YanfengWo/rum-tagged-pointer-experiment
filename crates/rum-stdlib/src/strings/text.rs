@@ -2,6 +2,7 @@ use super::*;
 
 mod builtins;
 mod case;
+mod decimal;
 mod diacritics;
 mod values;
 
@@ -16,4 +17,5 @@ pub(crate) use case::{
     eval_capitalize, eval_decapitalize, eval_lower_case_q, eval_string_reverse, eval_to_lower_case,
     eval_upper_case_q,
 };
+pub(crate) use decimal::eval_decimal_string;
 pub(super) use diacritics::remove_diacritics_value;

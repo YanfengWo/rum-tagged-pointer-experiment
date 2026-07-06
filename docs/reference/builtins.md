@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 595
+Builtin count: 596
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -822,6 +822,14 @@ Lowercases the first character of a string or each string in a list.
 
 - Attributes: `Protected`, `ReadProtected`
 - Capability: `Pure`
+
+### DecimalString
+
+Renders an exact number as a plain decimal string with exactly n fractional digits.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: uses exact integer/rational arithmetic only, rounds half away from zero, and always emits exactly n fractional digits.
 
 ### DeclarePackage
 
