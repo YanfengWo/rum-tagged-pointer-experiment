@@ -154,6 +154,8 @@ mod session_requests_functional_targeted_resume;
 mod session_requests_functional_tensor_string_resume;
 #[path = "tests/session_requests/transforms_resume_associations.rs"]
 mod session_requests_transforms_resume_associations;
+#[path = "tests/stress_corpus.rs"]
+mod stress_corpus;
 #[path = "tests/strings/mod.rs"]
 mod strings;
 #[path = "tests/structure_ops/mod.rs"]

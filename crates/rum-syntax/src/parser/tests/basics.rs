@@ -53,6 +53,34 @@ fn rejects_too_deep_nested_call_without_panicking() {
 }
 
 #[test]
+fn pins_nested_call_parse_depth_boundary() {
+    fn nested_call(depth: usize) -> String {
+        let mut input = String::with_capacity(depth * 3 + 1);
+        for _ in 0..depth {
+            input.push_str("f[");
+        }
+        input.push('x');
+        for _ in 0..depth {
+            input.push(']');
+        }
+        input
+    }
+
+    let accepted = nested_call(127);
+    assert_eq!(parse_expr(&accepted).unwrap().to_string(), accepted);
+
+    let rejected = nested_call(129);
+    let error = parse_expr(&rejected).expect_err("depth 129 should exceed the parser guard");
+    assert!(matches!(
+        error,
+        SyntaxError::ParseDepthExceeded {
+            max: MAX_PARSE_DEPTH,
+            ..
+        }
+    ));
+}
+
+#[test]
 fn parses_association_literals() {
     let parsed = parse_expr("<|a -> 1, b -> <|c -> 3|>|>").unwrap();
     assert_eq!(parsed.to_string(), "<|a -> 1, b -> <|c -> 3|>|>");
