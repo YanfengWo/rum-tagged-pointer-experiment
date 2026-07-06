@@ -2,75 +2,98 @@ use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec};
 
 use crate::strings;
 
+const ATTR_PROTECTED: AttributeSet = AttributeSet::from_attribute(Attribute::Protected);
+
 pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "Alternatives",
         "Represents the current pattern alternative head.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "Blank",
         "Represents the current single-element pattern atom; in string patterns it matches one character.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "BlankNullSequence",
         "Represents the current zero-or-more sequence pattern atom; in string patterns it matches zero or more characters.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "BlankSequence",
         "Represents the current one-or-more sequence pattern atom; in string patterns it matches one or more characters.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "DigitCharacter",
         "Represents the current string-pattern atom for one ASCII decimal digit.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "EndOfLine",
         "Represents the current string-pattern anchor for the end of a string or a position before LF.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "EndOfString",
         "Represents the current string-pattern anchor for the end of a string.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new("Except", "Represents the current pattern exclusion head."),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
+        "Except",
+        "Represents the current pattern exclusion head.",
+        ATTR_PROTECTED,
+    ),
+    BuiltinSpec::with_attributes(
         "LetterCharacter",
         "Represents the current string-pattern atom for one alphabetic character.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "Pattern",
         "Represents the current named pattern-binding head.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "PunctuationCharacter",
         "Represents the current string-pattern atom for one ASCII punctuation character.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "RegularExpression",
         "Represents the current regular-expression string-pattern wrapper.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "StartOfLine",
         "Represents the current string-pattern anchor for the start of a string or a position after LF.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "StartOfString",
         "Represents the current string-pattern anchor for the start of a string.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "StringExpression",
         "Represents the current string-pattern sequence head produced by `~~` syntax.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "WhitespaceCharacter",
         "Represents the current string-pattern atom for one whitespace character.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "WordBoundary",
         "Represents the current string-pattern anchor at a transition between word and non-word text.",
+        ATTR_PROTECTED,
     ),
-    BuiltinSpec::new(
+    BuiltinSpec::with_attributes(
         "WordCharacter",
         "Represents the current string-pattern atom for one alphabetic, ASCII digit, or underscore character.",
+        ATTR_PROTECTED,
     ),
     BuiltinSpec::ordinary(
         "StringJoin",
@@ -99,15 +122,19 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Protected),
         strings::eval_to_lower_case,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "ToUpperCase",
         "Converts a string or list of strings to uppercase using the current Unicode-aware subset.",
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
         strings::eval_to_upper_case,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Capitalize",
         "Uppercases the first character of a string or each string in a list.",
         AttributeSet::empty()
+            .with(Attribute::Listable)
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
         strings::eval_capitalize,
@@ -116,6 +143,7 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
         "Decapitalize",
         "Lowercases the first character of a string or each string in a list.",
         AttributeSet::empty()
+            .with(Attribute::Listable)
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
         strings::eval_decapitalize,

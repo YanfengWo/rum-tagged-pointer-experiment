@@ -354,10 +354,83 @@ fn string_character_classes_and_case_mapping_extend_the_string_subset() {
 }
 
 #[test]
+fn string_pattern_symbols_are_protected() {
+    let mut session = core_session();
+
+    for name in [
+        "Alternatives",
+        "Blank",
+        "BlankNullSequence",
+        "BlankSequence",
+        "DigitCharacter",
+        "EndOfLine",
+        "EndOfString",
+        "Except",
+        "LetterCharacter",
+        "Pattern",
+        "PunctuationCharacter",
+        "RegularExpression",
+        "StartOfLine",
+        "StartOfString",
+        "StringExpression",
+        "WhitespaceCharacter",
+        "WordBoundary",
+        "WordCharacter",
+    ] {
+        let source = format!("Attributes[{name}]");
+        assert_eq!(
+            eval_to_string(&mut session, &source),
+            "List[Protected]",
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn protected_string_pattern_symbols_reject_definitions_without_changing_matching() {
+    let mut session = core_session();
+
+    let digit_assignment = session.eval_text("DigitCharacter = 5").unwrap();
+    assert_eq!(digit_assignment.value.to_string(), "5");
+    assert!(digit_assignment.messages.iter().any(|message| {
+        message.symbol == "Set" && message.tag == "wrsym" && message.text.contains("Protected")
+    }));
+    assert_eq!(
+        session
+            .eval_text("OwnValues[DigitCharacter]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringMatchQ[\"5\", DigitCharacter]"),
+        "True"
+    );
+
+    let blank_definition = session.eval_text("Blank[x_] := x").unwrap();
+    assert_eq!(blank_definition.value.to_string(), "Null");
+    assert!(blank_definition.messages.iter().any(|message| {
+        message.symbol == "SetDelayed"
+            && message.tag == "wrsym"
+            && message.text.contains("Protected")
+    }));
+    assert_eq!(
+        session
+            .eval_text("DownValues[Blank]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(eval_to_string(&mut session, "MatchQ[anything, _]"), "True");
+}
+
+#[test]
 fn string_helper_builtins_cover_surface_edges() {
     let mut session = core_session();
 
-    for name in ["StringReverse", "ToLowerCase"] {
+    for name in ["StringReverse", "ToLowerCase", "ToUpperCase"] {
         let source = format!("Attributes[{name}]");
         assert_eq!(
             eval_to_string(&mut session, &source),
@@ -377,7 +450,7 @@ fn string_helper_builtins_cover_surface_edges() {
         let source = format!("Attributes[{name}]");
         assert_eq!(
             eval_to_string(&mut session, &source),
-            "List[Protected, ReadProtected]",
+            "List[Listable, Protected, ReadProtected]",
             "{source}"
         );
     }
@@ -466,34 +539,28 @@ fn string_helper_builtins_cover_surface_edges() {
 }
 
 #[test]
-fn case_conversion_list_mapping_does_not_thread_nested_or_mixed_lists() {
+fn case_conversion_threads_nested_and_mixed_lists_like_listable() {
     let mut session = core_session();
 
     for (source, expected) in [
+        ("ToUpperCase[{\"a\", \"b\"}]", "List[\"A\", \"B\"]"),
+        ("Capitalize[{\"ab\", \"cd\"}]", "List[\"Ab\", \"Cd\"]"),
+        ("Decapitalize[{\"Ab\", \"Cd\"}]", "List[\"ab\", \"cd\"]"),
         (
             "ToUpperCase[{{\"a\"}, {\"b\"}}]",
-            "ToUpperCase[List[List[\"a\"], List[\"b\"]]]",
+            "List[List[\"A\"], List[\"B\"]]",
         ),
-        (
-            "ToUpperCase[{\"a\", 1}]",
-            "ToUpperCase[List[\"a\", 1]]",
-        ),
+        ("ToUpperCase[{\"a\", 1}]", "List[\"A\", ToUpperCase[1]]"),
         (
             "Capitalize[{{\"ab\"}, {\"cd\"}}]",
-            "Capitalize[List[List[\"ab\"], List[\"cd\"]]]",
+            "List[List[\"Ab\"], List[\"Cd\"]]",
         ),
-        (
-            "Capitalize[{\"ab\", 1}]",
-            "Capitalize[List[\"ab\", 1]]",
-        ),
+        ("Capitalize[{\"ab\", 1}]", "List[\"Ab\", Capitalize[1]]"),
         (
             "Decapitalize[{{\"Ab\"}, {\"Cd\"}}]",
-            "Decapitalize[List[List[\"Ab\"], List[\"Cd\"]]]",
+            "List[List[\"ab\"], List[\"cd\"]]",
         ),
-        (
-            "Decapitalize[{\"Ab\", 1}]",
-            "Decapitalize[List[\"Ab\", 1]]",
-        ),
+        ("Decapitalize[{\"Ab\", 1}]", "List[\"ab\", Decapitalize[1]]"),
     ] {
         assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
     }

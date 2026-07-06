@@ -70,15 +70,6 @@ pub(crate) fn eval_to_upper_case(
         ));
     }
 
-    if let Some(values) = expr_as_string_list(&args[0]) {
-        return Ok(string_list_expr(
-            values
-                .into_iter()
-                .map(|value| value.chars().flat_map(char::to_uppercase).collect())
-                .collect(),
-        ));
-    }
-
     Ok(Expr::call(head.clone(), args.to_vec()))
 }
 

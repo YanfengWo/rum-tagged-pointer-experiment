@@ -70,7 +70,7 @@ pub(crate) fn eval_capitalize(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    eval_string_or_string_list_map(session, head, args, "Capitalize", capitalize_value)
+    eval_string_map(session, head, args, "Capitalize", capitalize_value)
 }
 
 pub(crate) fn eval_decapitalize(
@@ -78,7 +78,7 @@ pub(crate) fn eval_decapitalize(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    eval_string_or_string_list_map(session, head, args, "Decapitalize", decapitalize_value)
+    eval_string_map(session, head, args, "Decapitalize", decapitalize_value)
 }
 
 fn eval_string_scalar_predicate(
@@ -99,7 +99,7 @@ fn eval_string_scalar_predicate(
     bool_expr(predicate(value))
 }
 
-fn eval_string_or_string_list_map(
+fn eval_string_map(
     session: &mut Session,
     head: &Expr,
     args: &[Expr],
@@ -112,12 +112,6 @@ fn eval_string_or_string_list_map(
 
     if let Some(value) = expr_as_string(&args[0]) {
         return Ok(Expr::string(mapper(value)));
-    }
-
-    if let Some(values) = expr_as_string_list(&args[0]) {
-        return Ok(string_list_expr(
-            values.into_iter().map(|value| mapper(&value)).collect(),
-        ));
     }
 
     Ok(Expr::call(head.clone(), args.to_vec()))

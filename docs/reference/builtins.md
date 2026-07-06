@@ -179,7 +179,7 @@ Evaluates to the uppercase, lowercase, and digit character-class string.
 
 Represents the current pattern alternative head.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### And
@@ -361,21 +361,21 @@ Computes exact binomial coefficients for integer arguments.
 
 Represents the current single-element pattern atom; in string patterns it matches one character.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### BlankNullSequence
 
 Represents the current zero-or-more sequence pattern atom; in string patterns it matches zero or more characters.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### BlankSequence
 
 Represents the current one-or-more sequence pattern atom; in string patterns it matches one or more characters.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### Block
@@ -452,7 +452,7 @@ Returns the current canonical-text byte count for an expression in the first-pas
 
 Uppercases the first character of a string or each string in a list.
 
-- Attributes: `Protected`, `ReadProtected`
+- Attributes: `Listable`, `Protected`, `ReadProtected`
 - Capability: `Pure`
 
 ### Cases
@@ -834,7 +834,7 @@ Returns the number of days in a proleptic Gregorian month.
 
 Lowercases the first character of a string or each string in a list.
 
-- Attributes: `Protected`, `ReadProtected`
+- Attributes: `Listable`, `Protected`, `ReadProtected`
 - Capability: `Pure`
 
 ### DecimalString
@@ -961,7 +961,7 @@ Returns successive differences for plain lists, including the current non-negati
 
 Represents the current string-pattern atom for one ASCII decimal digit.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### DigitCharacters
@@ -1130,14 +1130,14 @@ Restores the previous context after a matching Begin.
 
 Represents the current string-pattern anchor for the end of a string or a position before LF.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### EndOfString
 
 Represents the current string-pattern anchor for the end of a string.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### EndPackage
@@ -1200,7 +1200,7 @@ Tests whether an expression is currently an even exact integer.
 
 Represents the current pattern exclusion head.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### Exit
@@ -1972,7 +1972,7 @@ Represents a unary comparison operator equivalent to Less[#, bound] when applied
 
 Represents the current string-pattern atom for one alphabetic character.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### LetterQ
@@ -2625,7 +2625,7 @@ Computes the number of partitions into distinct parts.
 
 Represents the current named pattern-binding head.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### Pause
@@ -2810,7 +2810,7 @@ Adds the Protected attribute to one or more symbols.
 
 Represents the current string-pattern atom for one ASCII punctuation character.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### PunctuationCharacters
@@ -2936,7 +2936,7 @@ Evaluates an expression and collects values emitted by Sow in the current first-
 
 Represents the current regular-expression string-pattern wrapper.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### ReleaseHold
@@ -3353,14 +3353,14 @@ Represents the current formatting symbol accepted by the current ToExpression su
 
 Represents the current string-pattern anchor for the start of a string or a position after LF.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### StartOfString
 
 Represents the current string-pattern anchor for the start of a string.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### StirlingS1
@@ -3445,7 +3445,7 @@ Expands tabs in a string to the next fixed-width column stop, defaulting to widt
 
 Represents the current string-pattern sequence head produced by `~~` syntax.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### StringForm
@@ -3977,7 +3977,7 @@ Renders the TOML-representable subset of rum Associations as TOML text.
 
 Converts a string or list of strings to uppercase using the current Unicode-aware subset.
 
-- Attributes: `None`
+- Attributes: `Listable`, `Protected`
 - Capability: `Pure`
 
 ### ToXml
@@ -4239,7 +4239,7 @@ Represents the current string-pattern atom for one or more whitespace characters
 
 Represents the current string-pattern atom for one whitespace character.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### With
@@ -4260,14 +4260,14 @@ Evaluates cleanup code even when the main expression exits abnormally in the cur
 
 Represents the current string-pattern anchor at a transition between word and non-word text.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### WordCharacter
 
 Represents the current string-pattern atom for one alphabetic, ASCII digit, or underscore character.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### XmlElement
