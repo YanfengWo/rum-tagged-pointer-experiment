@@ -68,7 +68,7 @@ string-pattern surface. Batches, evidence-ranked:
   from a closed downstream exits quietly; streaming Print flush documented
   as a limitation (candidate follow-up). Payoff with 138:
   `cat a.json | rum-cli -e 'FromJson[$ScriptInput] // …' > out`.
-- [ ] brief-140 (M): Random family — kernel PRNG in session state with a
+- [x] brief-140 DONE (d80a640): Random family — kernel PRNG in session state with a
   FIXED default seed (Pure by the audit rule; deterministic by default),
   `SeedRandom`/`RandomInteger`/`RandomChoice`/`RandomSample`; entropy tap
   via `Capability::Random` + an `EntropySource` provider in rum-host
@@ -86,6 +86,17 @@ string-pattern surface. Batches, evidence-ranked:
   (dun highlighting plugins), never stdlib code — no grammar zoo. Codec
   family stays fail-closed/value-oriented; this is the tolerant/span-
   oriented counterpart.
+- [ ] Perl-scan additions (2026-07-07; Perl core + CPAN River proxies mostly
+  CONFIRMED the plan): `UrlEncode`/`UrlDecode`/`UrlParse` (pure string ops —
+  corrects the Python sweep's blanket urllib exclusion; the parse half is
+  pure), `ParseArgs[args, spec]` (folk argv→Association, downstream of
+  `$ScriptArgs`), tab expand + text-table alignment fold into the textwrap
+  batch; `Memoize` NOT needed (the `f[x_] := f[x] = …` idiom covers it —
+  add one guide sentence). Ecosystem scans CLOSED: further stdlib surveys
+  (Ruby/Go) expected to re-confirm, not extend.
+- [ ] StringForm mini-audit: cataloged but inert for the standard
+  placeholder call (StringForm["`1` + `2`", 3, 4] does not evaluate) —
+  another semi-dark surface; decide contract (implement or remove).
 - [ ] Python-stdlib sweep candidates (2026-07-06, pure/safe filter over
   docs.python.org/3/library): tier-1 small batch — `textwrap`-style
   `StringWrap`/`StringIndent`/`StringDedent`; `html` escape/unescape;

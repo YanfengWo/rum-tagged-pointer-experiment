@@ -704,3 +704,13 @@ config-conversion shell one-liner works end to end. Workspace 1166/0.
 Python-stdlib sweep candidates and the TokenizeWith/RumTokens mechanism
 (highlighting for dun as rum-package grammars, no grammar zoo) recorded in
 TODO. Next: brief-140 Random family.
+
+## 2026-07-07 — brief-140 gated: Random family
+
+xoshiro256**+splitmix64 as a public reproducibility contract (pinned
+literal sequences; two CLI runs identical); PRNG builtins Pure; BlockRandom
+back with a real backend; EntropySource seam (StdFileIo pattern) with
+Capability::Random gating RandomBytes and zero-arg SeedRandom (in-handler
+dual-form check); Capability::Process reserved. Workspace 1177/0. Perl-core
+/CPAN-River scan recorded (4 net-new candidates + StringForm inertness
+audit; ecosystem scans closed). Next: brief-141 date/time.
