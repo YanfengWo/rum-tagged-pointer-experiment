@@ -350,24 +350,58 @@ pub(crate) fn eval_to_character_code(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    if args.len() != 1 {
-        return Ok(session.invalid_call_with_exact_arg_count("ToCharacterCode", args, 1));
+    let (input, encoding) = match args {
+        [input] => (input, None),
+        [input, encoding] => {
+            let Some(encoding) = expr_as_string(encoding) else {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            };
+            if !is_utf8_encoding(encoding) {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            }
+            (input, Some(encoding))
+        }
+        _ => return Ok(session.invalid_call_with_arg_range("ToCharacterCode", args, 1, 2)),
+    };
+
+    if let Some(value) = expr_as_string(input) {
+        return Ok(if encoding.is_some() {
+            utf8_byte_code_expr(value)
+        } else {
+            character_code_expr(value)
+        });
     }
 
-    if let Some(value) = expr_as_string(&args[0]) {
-        return Ok(character_code_expr(value));
-    }
-
-    if let Some(values) = expr_as_string_list(&args[0]) {
+    if let Some(values) = expr_as_string_list(input) {
         return Ok(list_expr(
             values
                 .into_iter()
-                .map(|value| character_code_expr(&value))
+                .map(|value| {
+                    if encoding.is_some() {
+                        utf8_byte_code_expr(&value)
+                    } else {
+                        character_code_expr(&value)
+                    }
+                })
                 .collect(),
         ));
     }
 
     Ok(Expr::call(head.clone(), args.to_vec()))
+}
+
+fn is_utf8_encoding(encoding: &str) -> bool {
+    matches!(encoding, "UTF8" | "UTF-8")
+}
+
+fn utf8_byte_code_expr(value: &str) -> Expr {
+    list_expr(
+        value
+            .as_bytes()
+            .iter()
+            .map(|byte| Expr::integer(BigInt::from(*byte)))
+            .collect(),
+    )
 }
 
 pub(crate) fn eval_to_expression(

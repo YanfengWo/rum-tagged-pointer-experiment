@@ -83,6 +83,10 @@ fn byte_arrays_transport_and_nearest_extend_cl07() {
         "ByteArray[\"YWJj\"]"
     );
     assert_eq!(
+        eval_to_string(&mut session, "StringToByteArray[\"abc\", \"UTF-8\"]"),
+        "ByteArray[\"YWJj\"]"
+    );
+    assert_eq!(
         eval_to_string(&mut session, "StringToByteArray[\"🙂\"]"),
         "ByteArray[\"8J+Zgg==\"]"
     );

@@ -220,22 +220,22 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "UrlEncode",
-        "Percent-encodes a string using UTF-8 bytes and the RFC 3986 unreserved character set.",
+        "Percent-encodes a string using UTF-8 bytes and the RFC 3986 unreserved character set; with \"FormEncoding\" -> True, spaces are encoded as + for form query data.",
         strings::eval_url_encode,
     ),
     BuiltinSpec::ordinary(
         "UrlDecode",
-        "Decodes percent escapes in a UTF-8 URL string, returning $Failed for invalid escapes or invalid UTF-8.",
+        "Decodes percent escapes in a UTF-8 URL string, returning $Failed for invalid escapes or invalid UTF-8; with \"FormEncoding\" -> True, + decodes to a space.",
         strings::eval_url_decode,
     ),
     BuiltinSpec::ordinary(
         "UrlParse",
-        "Parses scheme://host[:port][/path][?query][#fragment] into an association of string fields.",
+        "Parses scheme://host[:port][/path][?query][#fragment] into an association of string fields; \"DefaultScheme\" can supply a scheme for schemeless inputs, and \"DecodeQuery\" decodes query text using form encoding.",
         strings::eval_url_parse,
     ),
     BuiltinSpec::ordinary(
         "ParseArgs",
-        "Parses long-form script arguments into positional arguments, --key=value options, and --flag names.",
+        "Parses script arguments into positional arguments, --key=value options, and --flag names; with \"ShortOptions\" -> True, single-dash clusters become single-letter flags, without attached-value syntax.",
         strings::eval_parse_args,
     ),
     BuiltinSpec::ordinary(
@@ -281,7 +281,7 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary_with_attributes(
         "ToCharacterCode",
-        "Returns Unicode scalar values for strings in the current first-pass subset.",
+        "Returns Unicode scalar values for strings, or UTF-8 byte values when given the \"UTF8\" or \"UTF-8\" encoding argument.",
         AttributeSet::from_attribute(Attribute::Listable),
         strings::eval_to_character_code,
     ),
@@ -292,7 +292,7 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "StringToByteArray",
-        "Converts strings to ByteArray objects using the current UTF-8 subset.",
+        "Converts strings to ByteArray objects using UTF8/UTF-8 encoding.",
         strings::eval_string_to_byte_array,
     ),
     #[cfg(feature = "hash")]

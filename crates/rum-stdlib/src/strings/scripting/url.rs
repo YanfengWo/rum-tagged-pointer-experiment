@@ -7,14 +7,17 @@ pub(crate) fn eval_url_encode(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [text] = args else {
-        return Ok(session.invalid_call_with_exact_arg_count("UrlEncode", args, 1));
+    let [text, option_args @ ..] = args else {
+        return Ok(session.invalid_call_with_arg_range("UrlEncode", args, 1, usize::MAX));
     };
     let Some(text) = expr_as_string(text) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
+    let Some(options) = parse_url_encode_options(session, option_args)? else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
 
-    Ok(Expr::string(url_encode(text)))
+    Ok(Expr::string(url_encode(text, options.form_encoding)))
 }
 
 pub(crate) fn eval_url_decode(
@@ -22,14 +25,17 @@ pub(crate) fn eval_url_decode(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [text] = args else {
-        return Ok(session.invalid_call_with_exact_arg_count("UrlDecode", args, 1));
+    let [text, option_args @ ..] = args else {
+        return Ok(session.invalid_call_with_arg_range("UrlDecode", args, 1, usize::MAX));
     };
     let Some(text) = expr_as_string(text) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
+    let Some(options) = parse_url_decode_options(session, option_args)? else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
 
-    match url_decode(text) {
+    match url_decode(text, options.form_encoding) {
         Ok(decoded) => Ok(Expr::string(decoded)),
         Err(message) => Ok(failed_with_message(session, "UrlDecode", "escape", message)),
     }
@@ -40,22 +46,118 @@ pub(crate) fn eval_url_parse(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [text] = args else {
-        return Ok(session.invalid_call_with_exact_arg_count("UrlParse", args, 1));
+    let [text, option_args @ ..] = args else {
+        return Ok(session.invalid_call_with_arg_range("UrlParse", args, 1, usize::MAX));
     };
     let Some(text) = expr_as_string(text) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
+    let Some(options) = parse_url_parse_options(session, option_args)? else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
 
-    match parse_url(text) {
-        Some(parsed) => Ok(parsed.into_expr()),
-        None => Ok(failed_with_message(
+    match parse_url(text, &options) {
+        Ok(Some(parsed)) => Ok(parsed.into_expr()),
+        Ok(None) => Ok(failed_with_message(
             session,
             "UrlParse",
             "syntax",
             "UrlParse expects scheme://host[:port][/path][?query][#fragment].",
         )),
+        Err(message) => Ok(failed_with_message(session, "UrlParse", "escape", message)),
     }
+}
+
+struct UrlFormOptions {
+    form_encoding: bool,
+}
+
+struct UrlParseOptions {
+    default_scheme: Option<String>,
+    decode_query: bool,
+}
+
+fn parse_url_encode_options(
+    session: &mut Session,
+    explicit: &[Expr],
+) -> Result<Option<UrlFormOptions>, EvalError> {
+    parse_url_form_options(session, "UrlEncode", explicit)
+}
+
+fn parse_url_decode_options(
+    session: &mut Session,
+    explicit: &[Expr],
+) -> Result<Option<UrlFormOptions>, EvalError> {
+    parse_url_form_options(session, "UrlDecode", explicit)
+}
+
+fn parse_url_form_options(
+    session: &mut Session,
+    symbol: &str,
+    explicit: &[Expr],
+) -> Result<Option<UrlFormOptions>, EvalError> {
+    let option_exprs = session.merged_option_exprs_for_system_symbol(symbol, explicit)?;
+    let mut options = UrlFormOptions {
+        form_encoding: false,
+    };
+
+    for expr in option_exprs {
+        let Some((name, value)) = option_rule(&expr) else {
+            return Ok(None);
+        };
+        match name {
+            "FormEncoding" => {
+                let Some(value) = bool_option_value(value) else {
+                    return Ok(None);
+                };
+                options.form_encoding = value;
+            }
+            _ => return Ok(None),
+        }
+    }
+
+    Ok(Some(options))
+}
+
+fn parse_url_parse_options(
+    session: &mut Session,
+    explicit: &[Expr],
+) -> Result<Option<UrlParseOptions>, EvalError> {
+    let option_exprs = session.merged_option_exprs_for_system_symbol("UrlParse", explicit)?;
+    let mut options = UrlParseOptions {
+        default_scheme: None,
+        decode_query: false,
+    };
+
+    for expr in option_exprs {
+        let Some((name, value)) = option_rule(&expr) else {
+            return Ok(None);
+        };
+        match name {
+            "DefaultScheme" => {
+                if is_system_symbol_name(value, "None") {
+                    options.default_scheme = None;
+                } else {
+                    let Some(value) = expr_as_string(value) else {
+                        return Ok(None);
+                    };
+                    if !valid_scheme(value) {
+                        return Ok(None);
+                    }
+                    options.default_scheme = Some(value.to_string());
+                }
+            }
+            "DecodeQuery" => {
+                let Some(value) = bool_option_value(value) else {
+                    return Ok(None);
+                };
+                options.decode_query = value;
+            }
+            _ => return Ok(None),
+        }
+    }
+
+    Ok(Some(options))
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -96,10 +198,12 @@ impl ParsedUrl {
     }
 }
 
-fn url_encode(text: &str) -> String {
+fn url_encode(text: &str, form_encoding: bool) -> String {
     let mut output = String::new();
     for byte in text.as_bytes() {
-        if is_unreserved(*byte) {
+        if form_encoding && *byte == b' ' {
+            output.push('+');
+        } else if is_unreserved(*byte) {
             output.push(*byte as char);
         } else {
             output.push_str(&format!("%{byte:02X}"));
@@ -108,13 +212,17 @@ fn url_encode(text: &str) -> String {
     output
 }
 
-fn url_decode(text: &str) -> Result<String, String> {
+fn url_decode(text: &str, form_encoding: bool) -> Result<String, String> {
     let bytes = text.as_bytes();
     let mut decoded = Vec::with_capacity(bytes.len());
     let mut index = 0usize;
     while index < bytes.len() {
         if bytes[index] != b'%' {
-            decoded.push(bytes[index]);
+            decoded.push(if form_encoding && bytes[index] == b'+' {
+                b' '
+            } else {
+                bytes[index]
+            });
             index += 1;
             continue;
         }
@@ -130,10 +238,22 @@ fn url_decode(text: &str) -> Result<String, String> {
         .map_err(|_| "UrlDecode produced bytes that are not valid UTF-8.".to_string())
 }
 
-fn parse_url(text: &str) -> Option<ParsedUrl> {
-    let (scheme, rest) = text.split_once("://")?;
+fn parse_url(text: &str, options: &UrlParseOptions) -> Result<Option<ParsedUrl>, String> {
+    let source;
+    let text = if text.contains("://") {
+        text
+    } else if let Some(default_scheme) = &options.default_scheme {
+        source = format!("{default_scheme}://{text}");
+        &source
+    } else {
+        return Ok(None);
+    };
+
+    let Some((scheme, rest)) = text.split_once("://") else {
+        return Ok(None);
+    };
     if !valid_scheme(scheme) {
-        return None;
+        return Ok(None);
     }
 
     let host_end = rest
@@ -142,7 +262,7 @@ fn parse_url(text: &str) -> Option<ParsedUrl> {
         .unwrap_or(rest.len());
     let host = &rest[..host_end];
     if host.is_empty() {
-        return None;
+        return Ok(None);
     }
 
     let mut tail = &rest[host_end..];
@@ -153,10 +273,13 @@ fn parse_url(text: &str) -> Option<ParsedUrl> {
             .unwrap_or(after_colon.len());
         let port_text = &after_colon[..port_end];
         if port_text.is_empty() || !port_text.chars().all(|ch| ch.is_ascii_digit()) {
-            return None;
+            return Ok(None);
         }
         tail = &after_colon[port_end..];
-        Some(BigInt::from_str(port_text).ok()?)
+        let Some(port) = BigInt::from_str(port_text).ok() else {
+            return Ok(None);
+        };
+        Some(port)
     } else {
         None
     };
@@ -178,7 +301,11 @@ fn parse_url(text: &str) -> Option<ParsedUrl> {
             .char_indices()
             .find_map(|(index, ch)| (ch == '#').then_some(index))
             .unwrap_or(after_question.len());
-        let query = after_question[..query_end].to_string();
+        let query = if options.decode_query {
+            url_decode(&after_question[..query_end], true)?
+        } else {
+            after_question[..query_end].to_string()
+        };
         tail = &after_question[query_end..];
         Some(query)
     } else {
@@ -192,14 +319,14 @@ fn parse_url(text: &str) -> Option<ParsedUrl> {
         None
     };
 
-    tail.is_empty().then_some(ParsedUrl {
+    Ok(tail.is_empty().then_some(ParsedUrl {
         scheme: scheme.to_string(),
         host: host.to_string(),
         port,
         path,
         query,
         fragment,
-    })
+    }))
 }
 
 fn is_unreserved(byte: u8) -> bool {
@@ -228,4 +355,36 @@ fn valid_scheme(scheme: &str) -> bool {
     };
     first.is_ascii_alphabetic()
         && chars.all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '+' | '-' | '.'))
+}
+
+fn option_rule(expr: &Expr) -> Option<(&str, &Expr)> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    if !(is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
+        || args.len() != 2
+    {
+        return None;
+    }
+    Some((option_name(&args[0])?, &args[1]))
+}
+
+fn option_name(expr: &Expr) -> Option<&str> {
+    if let Some(name) = expr_as_string(expr) {
+        return Some(name);
+    }
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => Some(symbol.name()),
+        _ => None,
+    }
+}
+
+fn bool_option_value(expr: &Expr) -> Option<bool> {
+    if is_system_symbol_name(expr, "True") {
+        Some(true)
+    } else if is_system_symbol_name(expr, "False") {
+        Some(false)
+    } else {
+        None
+    }
 }

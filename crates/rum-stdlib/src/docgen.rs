@@ -170,11 +170,11 @@ pub const LIMITS: &[(&str, &str)] = &[
     ),
     (
         "UrlParse",
-        "accepts only a strict scheme://host[:port][/path][?query][#fragment] shape with an ASCII scheme and decimal port; scheme-less host/path strings fail closed.",
+        "without \"DefaultScheme\", accepts only a strict scheme://host[:port][/path][?query][#fragment] shape with an ASCII scheme and decimal port; with \"DecodeQuery\" -> True, query text is decoded as application/x-www-form-urlencoded data.",
     ),
     (
         "ParseArgs",
-        "recognizes only --key=value options, bare --flag flags, and -- as the end of option parsing; short-option clustering is outside the current contract.",
+        "recognizes --key=value options, bare --flag flags, and -- as the end of option parsing; \"ShortOptions\" -> True recognizes single-dash flag clusters but does not support attached values.",
     ),
 ];
 

@@ -19,7 +19,7 @@ pub(crate) fn eval_string_to_byte_array(
     }
 
     if let Some(encoding) = args.get(1).and_then(expr_as_string) {
-        if encoding != "UTF8" {
+        if !matches!(encoding, "UTF8" | "UTF-8") {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         }
     } else if args.len() == 2 {

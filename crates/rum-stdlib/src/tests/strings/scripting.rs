@@ -136,6 +136,13 @@ fn html_shell_path_url_and_args_utilities_cover_boundaries() {
     assert_eq!(
         eval_to_string(
             &mut session,
+            "{UrlEncode[\"a b+c\"], UrlEncode[\"a b+c\", \"FormEncoding\" -> True], UrlDecode[\"a+b%20c\"], UrlDecode[\"a+b%20c\", \"FormEncoding\" -> True]}"
+        ),
+        "List[\"a%20b%2Bc\", \"a+b%2Bc\", \"a+b c\", \"a b c\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
             "UrlParse[\"https://example.com:8080/x/y?q=1#top\"]"
         ),
         "Association[Rule[\"Scheme\", \"https\"], Rule[\"Host\", \"example.com\"], Rule[\"Port\", 8080], Rule[\"Path\", \"/x/y\"], Rule[\"Query\", \"q=1\"], Rule[\"Fragment\", \"top\"]]"
@@ -143,6 +150,20 @@ fn html_shell_path_url_and_args_utilities_cover_boundaries() {
     assert_eq!(
         eval_to_string(&mut session, "UrlParse[\"https://example.com\"]"),
         "Association[Rule[\"Scheme\", \"https\"], Rule[\"Host\", \"example.com\"], Rule[\"Port\", Null], Rule[\"Path\", \"\"], Rule[\"Query\", Null], Rule[\"Fragment\", Null]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "UrlParse[\"https://h/p?q=a%20b\", \"DecodeQuery\" -> True]"
+        ),
+        "Association[Rule[\"Scheme\", \"https\"], Rule[\"Host\", \"h\"], Rule[\"Port\", Null], Rule[\"Path\", \"/p\"], Rule[\"Query\", \"q=a b\"], Rule[\"Fragment\", Null]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "UrlParse[\"example.com/a?x=1\", \"DefaultScheme\" -> \"https\"]"
+        ),
+        "Association[Rule[\"Scheme\", \"https\"], Rule[\"Host\", \"example.com\"], Rule[\"Port\", Null], Rule[\"Path\", \"/a\"], Rule[\"Query\", \"x=1\"], Rule[\"Fragment\", Null]]"
     );
 
     let bad_decode = session.eval_text("UrlDecode[\"%E4%ZZ\"]").unwrap();
@@ -169,6 +190,17 @@ fn html_shell_path_url_and_args_utilities_cover_boundaries() {
             "ParseArgs[{\"--verbose\", \"--out=x.txt\", \"--\", \"--literal\", \"pos\"}]"
         ),
         "Association[Rule[\"Positional\", List[\"--literal\", \"pos\"]], Rule[\"Options\", Association[Rule[\"out\", \"x.txt\"]]], Rule[\"Flags\", List[\"verbose\"]]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ParseArgs[{\"-abc\", \"--out=x\", \"pos\"}]"),
+        "Association[Rule[\"Positional\", List[\"-abc\", \"pos\"]], Rule[\"Options\", Association[Rule[\"out\", \"x\"]]], Rule[\"Flags\", List[]]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "ParseArgs[{\"-abc\", \"--out=x\", \"pos\"}, \"ShortOptions\" -> True]"
+        ),
+        "Association[Rule[\"Positional\", List[\"pos\"]], Rule[\"Options\", Association[Rule[\"out\", \"x\"]]], Rule[\"Flags\", List[\"a\", \"b\", \"c\"]]]"
     );
 }
 

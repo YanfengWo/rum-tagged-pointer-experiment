@@ -2566,11 +2566,11 @@ Returns the parent directory for an existing directory path.
 
 ### ParseArgs
 
-Parses long-form script arguments into positional arguments, --key=value options, and --flag names.
+Parses script arguments into positional arguments, --key=value options, and --flag names; with "ShortOptions" -> True, single-dash clusters become single-letter flags, without attached-value syntax.
 
 - Attributes: `None`
 - Capability: `Pure`
-- Limits: recognizes only --key=value options, bare --flag flags, and -- as the end of option parsing; short-option clustering is outside the current contract.
+- Limits: recognizes --key=value options, bare --flag flags, and -- as the end of option parsing; "ShortOptions" -> True recognizes single-dash flag clusters but does not support attached values.
 
 ### Part
 
@@ -3579,7 +3579,7 @@ Builds a simple TemplateObject wrapper from a template string in the current fir
 
 ### StringToByteArray
 
-Converts strings to ByteArray objects using the current UTF-8 subset.
+Converts strings to ByteArray objects using UTF8/UTF-8 encoding.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3888,7 +3888,7 @@ Encodes a string's UTF-8 bytes or a ByteArray as standard RFC 4648 base64 with p
 
 ### ToCharacterCode
 
-Returns Unicode scalar values for strings in the current first-pass subset.
+Returns Unicode scalar values for strings, or UTF-8 byte values when given the "UTF8" or "UTF-8" encoding argument.
 
 - Attributes: `Listable`
 - Capability: `Pure`
@@ -4145,25 +4145,25 @@ Evaluates to the uppercase ASCII letter character-class string.
 
 ### UrlDecode
 
-Decodes percent escapes in a UTF-8 URL string, returning $Failed for invalid escapes or invalid UTF-8.
+Decodes percent escapes in a UTF-8 URL string, returning $Failed for invalid escapes or invalid UTF-8; with "FormEncoding" -> True, + decodes to a space.
 
 - Attributes: `None`
 - Capability: `Pure`
 
 ### UrlEncode
 
-Percent-encodes a string using UTF-8 bytes and the RFC 3986 unreserved character set.
+Percent-encodes a string using UTF-8 bytes and the RFC 3986 unreserved character set; with "FormEncoding" -> True, spaces are encoded as + for form query data.
 
 - Attributes: `None`
 - Capability: `Pure`
 
 ### UrlParse
 
-Parses scheme://host[:port][/path][?query][#fragment] into an association of string fields.
+Parses scheme://host[:port][/path][?query][#fragment] into an association of string fields; "DefaultScheme" can supply a scheme for schemeless inputs, and "DecodeQuery" decodes query text using form encoding.
 
 - Attributes: `None`
 - Capability: `Pure`
-- Limits: accepts only a strict scheme://host[:port][/path][?query][#fragment] shape with an ASCII scheme and decimal port; scheme-less host/path strings fail closed.
+- Limits: without "DefaultScheme", accepts only a strict scheme://host[:port][/path][?query][#fragment] shape with an ASCII scheme and decimal port; with "DecodeQuery" -> True, query text is decoded as application/x-www-form-urlencoded data.
 
 ### UuidQ
 

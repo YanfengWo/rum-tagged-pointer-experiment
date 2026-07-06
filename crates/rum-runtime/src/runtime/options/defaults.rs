@@ -82,6 +82,12 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
             system_rule_option("IgnoreCase", bool_option(false)),
             system_rule_option("Overlaps", bool_option(false)),
         ],
+        "UrlEncode" | "UrlDecode" => vec![system_rule_option("FormEncoding", bool_option(false))],
+        "UrlParse" => vec![
+            system_rule_option("DefaultScheme", system_expr("None")),
+            system_rule_option("DecodeQuery", bool_option(false)),
+        ],
+        "ParseArgs" => vec![system_rule_option("ShortOptions", bool_option(false))],
         _ => Vec::new(),
     };
 

@@ -653,6 +653,17 @@ fn templates_text_words_codes_and_to_expression_extend_cl07() {
         eval_to_string(&mut session, "ToCharacterCode[{\"Ab\", \"中\"}]"),
         "List[List[65, 98], List[20013]]"
     );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{ToCharacterCode[\"é\"], ToCharacterCode[\"é\", \"UTF8\"], ToCharacterCode[\"é\", \"UTF-8\"]}"
+        ),
+        "List[List[233], List[195, 169], List[195, 169]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "ToCharacterCode[\"é\", \"Latin1\"]"),
+        "ToCharacterCode[\"é\", \"Latin1\"]"
+    );
     assert_eq!(eval_to_string(&mut session, "ToExpression[\"1+2\"]"), "3");
     assert_eq!(
         eval_to_string(
