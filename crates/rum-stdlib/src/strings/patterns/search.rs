@@ -185,6 +185,9 @@ pub(crate) fn eval_string_replace(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
+    if args.len() == 1 {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
     if !(2..=4).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("StringReplace", args, 2, 4));
     }
@@ -225,6 +228,9 @@ pub(crate) fn eval_string_cases(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
+    if args.len() == 1 {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
     if !(2..=4).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("StringCases", args, 2, 4));
     }
@@ -326,10 +332,7 @@ pub(crate) fn eval_string_delete(
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     if args.len() == 1 {
-        return Ok(string_unary_operator_form_slot_first(
-            "StringDelete",
-            &args[0],
-        ));
+        return Ok(Expr::call(head.clone(), args.to_vec()));
     }
     if args.len() < 2 {
         return Ok(session.invalid_call_with_arg_range("StringDelete", args, 1, 3));
@@ -406,6 +409,9 @@ fn eval_string_pattern_predicate(
     symbol: &str,
     predicate: fn(&[char], &StringPattern, StringPatternMatchConfig) -> bool,
 ) -> Result<Expr, EvalError> {
+    if args.len() == 1 {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
     if !(2..=3).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range(symbol, args, 2, 3));
     }
@@ -445,6 +451,9 @@ fn eval_string_patterns_predicate(
     symbol: &str,
     predicate: fn(&[char], &[StringPattern], StringPatternMatchConfig) -> bool,
 ) -> Result<Expr, EvalError> {
+    if args.len() == 1 {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
     if !(2..=3).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range(symbol, args, 2, 3));
     }

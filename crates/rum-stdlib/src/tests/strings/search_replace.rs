@@ -148,6 +148,36 @@ fn string_split_trim_replace_and_cases_cover_common_text_processing_flows() {
 }
 
 #[test]
+fn string_search_and_rewrite_builtins_support_wl_operator_forms() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{StringContainsQ[\"a\"][\"cat\"], StringStartsQ[\"a\"][\"abc\"], StringEndsQ[\"c\"][\"abc\"], StringMatchQ[LetterCharacter..][\"abc\"], StringFreeQ[\"z\"][\"abc\"], StringReplace[\"a\" -> \"b\"][\"cat\"], StringCases[\"a\", IgnoreCase -> True][\"A cat\"], StringDelete[\"a\"][\"banana\"], StringContainsQ[\"a\"][{\"cat\", \"dog\"}]}"
+        ),
+        "List[True, True, True, True, True, \"cbt\", List[\"A\", \"a\"], \"bnn\", List[True, False]]"
+    );
+
+    let inert = session
+        .eval_text("{StringReplace[\"a\" -> \"b\"], StringCases[\"a\"]}")
+        .unwrap();
+    assert_eq!(
+        inert.value.to_string(),
+        "List[StringReplace[Rule[\"a\", \"b\"]], StringCases[\"a\"]]"
+    );
+    assert!(inert.messages.is_empty());
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{StringContainsQ[\"cat\", \"a\"], StringReplace[\"cat\", \"a\" -> \"b\"], StringDelete[\"banana\", \"a\"]}"
+        ),
+        "List[True, \"cbt\", \"bnn\"]"
+    );
+}
+
+#[test]
 fn string_expression_and_alternatives_extend_the_current_string_subset() {
     let mut session = core_session();
 

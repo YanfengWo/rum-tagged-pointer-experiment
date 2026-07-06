@@ -72,16 +72,6 @@ fn string_unary_operator_form(symbol: &str, operator: &Expr) -> Expr {
     )
 }
 
-fn string_unary_operator_form_slot_first(symbol: &str, tail: &Expr) -> Expr {
-    Expr::call(
-        system_expr("Function"),
-        vec![Expr::call(
-            system_expr(symbol),
-            vec![string_slot_expr(), tail.clone()],
-        )],
-    )
-}
-
 #[derive(Clone)]
 struct StringApplyEvalState {
     head: Expr,

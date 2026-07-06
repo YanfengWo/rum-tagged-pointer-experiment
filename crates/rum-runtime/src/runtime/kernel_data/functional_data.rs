@@ -65,6 +65,7 @@ pub(in crate::runtime) fn is_callable_operator_wrapper(expr: &Expr) -> bool {
         || is_reverse_applied_wrapper(expr)
         || is_comparison_operator_wrapper(expr)
         || is_nearest_to_wrapper(expr)
+        || is_string_unary_operator_wrapper(expr)
         || parse_key_wrapper(expr).is_some()
 }
 
@@ -88,6 +89,10 @@ pub(in crate::runtime) fn apply_callable_operator_wrapper_to_args(
         return Some(expr);
     }
 
+    if let Some(expr) = apply_string_unary_operator_wrapper_to_args(head, args) {
+        return Some(expr);
+    }
+
     apply_key_wrapper_to_args(head, args)
 }
 
@@ -95,6 +100,10 @@ pub(in crate::runtime) fn invalid_callable_operator_wrapper_argx_symbol(
     head: &Expr,
     args: &[Expr],
 ) -> Option<&'static str> {
+    if let Some(symbol) = invalid_string_unary_operator_wrapper_argx_symbol(head, args) {
+        return Some(symbol);
+    }
+
     invalid_comparison_operator_wrapper_argx_symbol(head, args)
 }
 
@@ -548,6 +557,72 @@ fn compare_rationals_for_nearest_to(lhs: &Rational, rhs: &Rational) -> std::cmp:
     let lhs_cross = lhs.numerator() * rhs.denominator();
     let rhs_cross = rhs.numerator() * lhs.denominator();
     lhs_cross.cmp(&rhs_cross)
+}
+
+#[derive(Clone, Copy, Debug)]
+struct StringUnaryOperatorSpec<'a> {
+    symbol: &'static str,
+    tail: &'a [Expr],
+}
+
+fn is_string_unary_operator_wrapper(expr: &Expr) -> bool {
+    parse_string_unary_operator_wrapper(expr).is_some()
+}
+
+fn apply_string_unary_operator_wrapper_to_args(head: &Expr, args: &[Expr]) -> Option<Expr> {
+    let spec = parse_string_unary_operator_wrapper(head)?;
+    let [value] = args else {
+        return None;
+    };
+
+    let mut ordinary_args = Vec::with_capacity(spec.tail.len() + 1);
+    ordinary_args.push(value.clone());
+    ordinary_args.extend(spec.tail.iter().cloned());
+    Some(Expr::call(system_expr(spec.symbol), ordinary_args))
+}
+
+fn invalid_string_unary_operator_wrapper_argx_symbol(
+    head: &Expr,
+    args: &[Expr],
+) -> Option<&'static str> {
+    let spec = parse_string_unary_operator_wrapper(head)?;
+    (args.len() != 1).then_some(spec.symbol)
+}
+
+fn parse_string_unary_operator_wrapper(expr: &Expr) -> Option<StringUnaryOperatorSpec<'_>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    if args.is_empty() {
+        return None;
+    }
+
+    Some(StringUnaryOperatorSpec {
+        symbol: string_unary_operator_symbol(head)?,
+        tail: args,
+    })
+}
+
+fn string_unary_operator_symbol(head: &Expr) -> Option<&'static str> {
+    if is_system_symbol_name(head, "StringContainsQ") {
+        Some("StringContainsQ")
+    } else if is_system_symbol_name(head, "StringStartsQ") {
+        Some("StringStartsQ")
+    } else if is_system_symbol_name(head, "StringEndsQ") {
+        Some("StringEndsQ")
+    } else if is_system_symbol_name(head, "StringMatchQ") {
+        Some("StringMatchQ")
+    } else if is_system_symbol_name(head, "StringFreeQ") {
+        Some("StringFreeQ")
+    } else if is_system_symbol_name(head, "StringReplace") {
+        Some("StringReplace")
+    } else if is_system_symbol_name(head, "StringCases") {
+        Some("StringCases")
+    } else if is_system_symbol_name(head, "StringDelete") {
+        Some("StringDelete")
+    } else {
+        None
+    }
 }
 
 fn expr_as_positive_usize(expr: &Expr) -> Option<usize> {
