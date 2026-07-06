@@ -33,15 +33,15 @@ operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
   (recursion/iteration/parse-depth/match-depth `TerminatedEvaluation` tags,
   genuine-cycle handling), then a rum-native integration/stress corpus (deep
   recursion, large rewriting workloads, cancellation under load).
-- [ ] Scoped-filesystem roots for a trusted-but-limited host profile
-  (follow-up to the capability sandbox; the sandboxed profile itself is done).
-- [ ] Filesystem surface expansion — infrastructure first: scoped-fs roots
-  (the item below) before breadth. Then a small coherent text-file set
-  (read/write string, line reads, create/delete/copy/rename, directory
-  helpers) and a folk-scope `Import`/`Export` JSON (maybe CSV) subset —
-  every addition capability-classified and reference-documented via the
-  drift test. Streams/ports and binary I/O stay deferred (stateful handles
-  interact with snapshot/reset/cancel); network I/O stays out of scope.
+- [ ] Filesystem surface = the future downstream `rum-fs` repository (seed
+  implementation archived by brief-132): scoped-fs roots first, then a
+  coherent text-file set and a folk-scope JSON/CSV subset, registering
+  through the kernel API and the `FileIo` provider seam. Nothing returns to
+  the kernel; network I/O stays permanently out of it; streams/ports and
+  binary I/O deferred (stateful handles interact with snapshot/reset/cancel).
+- [ ] `rum-host`: verify (or add) an extension hook for downstream builtin
+  families before `rum-fs` starts — a downstream crate must be able to
+  register its family on a host session through the public boundary.
 - [ ] Python binding (Python embeds rum): a **separate downstream
   repository** on top of `rum-host` via pyo3, started after publication
   mechanics settle ([docs/python-adapter-plan.md](./docs/python-adapter-plan.md)).

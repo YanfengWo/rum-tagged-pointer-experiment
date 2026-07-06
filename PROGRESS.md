@@ -640,3 +640,20 @@ module system (Get/Needs/FindFile) and persistence (Save/DumpSave) with their
 I/O injected via a host provider; kernel crates become std::fs-free by
 construction with a hygiene test. Plan: docs/dev/fs-purity-plan.md
 (briefs 132-133 + M0/M1).
+
+## 2026-07-06 — FS purity line COMPLETE (briefs 132-134)
+
+brief-132 (a46836e): the six general fs builtins stripped and archived as the
+future downstream rum-fs seed; pure path-string helpers stay; reference 507.
+brief-133 (06dbbb6): FileIo provider seam — Get/Needs/FindFile/Save/DumpSave
+do I/O through a host-injected trait; StdFileIo lives in rum-host (absent
+under sandboxed()); General::noio contract for permissive-policy-no-provider;
+hygiene test forbids std::fs in kernel crates outside /tests/ paths.
+brief-134 (c92b84f): Capability::Clock — audit rule "Pure iff observable
+result depends only on session state + arguments" moved 8 clock readers out
+of Pure (incl. Pause/EvaluationData/TestReport the audit caught);
+MemoryConstrained stays Pure with evidence; BlockRandom removed as an inert
+shell; sandboxed() is now deterministic by construction; docs adopt the two
+claims (no ambient authority; deterministic by default). Reference 506;
+workspace 1141/0. Process docs archived; kernel hard lines now three: zero
+unsafe, zero std::fs (non-test), Pure=deterministic.
