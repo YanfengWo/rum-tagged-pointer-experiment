@@ -76,7 +76,7 @@ string-pattern surface. Batches, evidence-ranked:
   honest non-CSPRNG-in-kernel boundaries; no `RandomReal` (rationals only).
 - [x] brief-141 DONE (d672a79): date/time folk subset — pure parse/format/arithmetic
   on timestamp values; current-time readers are `Clock`.
-- [ ] Tokenizer mechanism for highlighting and text tooling (S/M):
+- [ ] brief-144 (in flight): Tokenizer mechanism for highlighting and text tooling (S/M):
   `TokenizeWith[rules, str]` — an error-tolerant span driver over the
   (brief-137) string-pattern language: rules as symbolic data
   (`{"class" -> pattern, …}`), longest-match + rule priority, unmatched
@@ -86,7 +86,7 @@ string-pattern surface. Batches, evidence-ranked:
   (dun highlighting plugins), never stdlib code — no grammar zoo. Codec
   family stays fail-closed/value-oriented; this is the tolerant/span-
   oriented counterpart.
-- [ ] Perl-scan additions (2026-07-07; Perl core + CPAN River proxies mostly
+- [x] Perl-scan additions folded into brief-143 (fe77af7) — notes: (2026-07-07; Perl core + CPAN River proxies mostly
   CONFIRMED the plan): `UrlEncode`/`UrlDecode`/`UrlParse` (pure string ops —
   corrects the Python sweep's blanket urllib exclusion; the parse half is
   pure), `ParseArgs[args, spec]` (folk argv→Association, downstream of
@@ -94,10 +94,11 @@ string-pattern surface. Batches, evidence-ranked:
   batch; `Memoize` NOT needed (the `f[x_] := f[x] = …` idiom covers it —
   add one guide sentence). Ecosystem scans CLOSED: further stdlib surveys
   (Ruby/Go) expected to re-confirm, not extend.
-- [ ] StringForm mini-audit: cataloged but inert for the standard
+- [x] StringForm mini-audit RESOLVED (brief-143): eager backtick-slot formatting is the contract now. Original note: cataloged but inert for the standard
   placeholder call (StringForm["`1` + `2`", 3, 4] does not evaluate) —
   another semi-dark surface; decide contract (implement or remove).
-- [ ] Python-stdlib sweep candidates (2026-07-06, pure/safe filter over
+- [x] Python/Perl tier-1 batch DONE (fe77af7, brief-143) — original sweep notes:
+  Python-stdlib sweep candidates (2026-07-06, pure/safe filter over
   docs.python.org/3/library): tier-1 small batch — `textwrap`-style
   `StringWrap`/`StringIndent`/`StringDedent`; `html` escape/unescape;
   `shlex`-style `ShellSplit`/`ShellQuote` (pure string ops; pairs with the
