@@ -51,10 +51,14 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   `Encrypt`/`Decrypt`/`EncryptedObject` removed, hand-rolled SHA-256
   deleted, `Hash` onto RustCrypto behind `hash` with
   SHA1/SHA512/MD5/CRC32; reference 602; workspace 1343/0; NDF green.
-- [ ] brief-164 (unit-1 batch 2): operator forms for the WL-documented
-  string set (`StringContainsQ`/`StartsQ`/`EndsQ`/`MatchQ`/`FreeQ`/
-  `Replace`/`Cases`/`Delete`) via the EXISTING curried mechanism
-  (`Select`/`Map`/`SortBy` already work).
+- [x] brief-164 DONE (e221abc): operator forms for the eight
+  WL-documented string builtins via the existing callable-wrapper
+  chain; microbench A/B twice — no reproducible delta (noise floor
+  13-53% on this machine's sub-ms labels; structural cost = one
+  fast-fail branch).
+- [ ] brief-165 (unit-1 batch 3): Overlaps parity (`StringCases`
+  `Overlaps -> True`, `StringPosition` `Overlaps -> False`) + register
+  `Nearest`'s `DistanceFunction` in `Options`.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
