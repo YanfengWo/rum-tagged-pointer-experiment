@@ -39,7 +39,7 @@ string-pattern surface. Batches, evidence-ranked:
   `StringSplit` `IgnoreCase`; fix four bug-like edges (`EndOfString` in
   Replace/Position, empty-string `RepeatedNull` cases, `Shortest[".."]`
   MatchQ). No regex engine — symbolic string patterns are the rum way.
-- [ ] brief-138 (M/L): in-language JSON codec, Pure, rum-native names
+- [x] brief-138 DONE (a067bda): in-language JSON codec, Pure, rum-native names
   (string↔expr; objects→Association, JSON decimals→exact rationals; folk
   scope with documented limits). This is the CORNERSTONE of the codec
   family — it sets the family conventions: `From*`/`To*` named pairs,
@@ -76,6 +76,24 @@ string-pattern surface. Batches, evidence-ranked:
   honest non-CSPRNG-in-kernel boundaries; no `RandomReal` (rationals only).
 - [ ] brief-141 (M): date/time folk subset — pure parse/format/arithmetic
   on timestamp values; current-time readers are `Clock`.
+- [ ] Python-stdlib sweep candidates (2026-07-06, pure/safe filter over
+  docs.python.org/3/library): tier-1 small batch — `textwrap`-style
+  `StringWrap`/`StringIndent`/`StringDedent`; `html` escape/unescape;
+  `shlex`-style `ShellSplit`/`ShellQuote` (pure string ops; pairs with the
+  future rum-os `RunCommand`); pure path-string helpers rounding out the
+  existing family (`FileExtension`, `FileBaseName`, `FileNameSplit`); exact
+  `statistics` subset (`Median`, `Mode`, `Quantile` — exact rationals).
+  Tier-1b algorithms — `graphlib`-style `TopologicalSort` (+ cycle error;
+  edges as Rule pairs) and `difflib`-style folk LCS diff
+  (`SequenceDiff`/line diff; LongestCommonSubsequence already exists).
+  Attach elsewhere: `hmac` folds into the hash brief; UUID
+  (parse/format pure + v4 from the PRNG/entropy) attaches to brief-140;
+  `$ScriptArgs` attaches to brief-139. Parked with conditions: unicode
+  normalization (table weight), compression codecs (after ByteArray audit),
+  `ipaddress` folk, glob-match-on-strings, binary search. Excluded by
+  design: everything float (`math`/`cmath`/`decimal`/float statistics),
+  concurrency, network protocol stacks, GUI, ambient os/io, pickle
+  (DumpSave exists), sqlite.
 - [ ] Candidates parked: raw multiline string literals (parser-level, real
   friction in every task, bigger blast radius — decide separately);
   schema/validation helpers; `ByteArray` depth audit.
