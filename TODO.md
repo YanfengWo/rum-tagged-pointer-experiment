@@ -60,13 +60,21 @@ string-pattern surface. Batches, evidence-ranked:
   round out the byte toolbox. Hex-string default output; `Md5`/`Sha1`
   limits-noted as non-collision-resistant. Hashing yes, encryption/signing
   never in kernel. One-time network step (cargo fetch) done by Claude.
-- [ ] brief-139 (M): Random family — kernel PRNG in session state with a
+- [ ] brief-139 (S): rum-cli pipeline citizenship (host-side only, zero
+  kernel impact): non-TTY stdin enters filter mode (no banner/prompt; `-`
+  reads the program from stdin); piped DATA reaches `--eval` scripts as a
+  host-bound `$ScriptInput` string; stream discipline pinned by tests
+  (results+Print→stdout, messages→stderr, documented exit codes); EPIPE
+  from a closed downstream exits quietly; streaming Print flush documented
+  as a limitation (candidate follow-up). Payoff with 138:
+  `cat a.json | rum-cli -e 'FromJson[$ScriptInput] // …' > out`.
+- [ ] brief-140 (M): Random family — kernel PRNG in session state with a
   FIXED default seed (Pure by the audit rule; deterministic by default),
   `SeedRandom`/`RandomInteger`/`RandomChoice`/`RandomSample`; entropy tap
   via `Capability::Random` + an `EntropySource` provider in rum-host
   (FileIo-seam pattern); `RandomBytes` for password-grade material with
   honest non-CSPRNG-in-kernel boundaries; no `RandomReal` (rationals only).
-- [ ] brief-140 (M): date/time folk subset — pure parse/format/arithmetic
+- [ ] brief-141 (M): date/time folk subset — pure parse/format/arithmetic
   on timestamp values; current-time readers are `Clock`.
 - [ ] Candidates parked: raw multiline string literals (parser-level, real
   friction in every task, bigger blast radius — decide separately);

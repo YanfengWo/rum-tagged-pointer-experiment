@@ -683,3 +683,12 @@ was wrong). Reference 518; workspace 1151/0. TODO gains: codec family plan
 INI/TOML/XML/YAML-subset), hash/encoding family (RustCrypto + self-impl
 hex/base64 + ByteArrayQ; hashing yes, encryption never), and the downstream
 rum-os sketch (RunCommand design, Capability::Process reservation).
+
+## 2026-07-06 — brief-137 gated: string-pattern language is now contract
+
+Four inert atoms implemented, StringSplit IgnoreCase, zero-width anchor
+semantics unified and documented ({pos, pos-1} spans), empty-match
+consistency, Shortest/MatchQ fix; the whole pattern language incl. the
+pre-existing undocumented RegularExpression subset cataloged in reference +
+new guide chapter with real transcripts; matrix all-W. Workspace 1151/0.
+Pipeline-citizenship brief planned as 139 (Random→140, date/time→141).
